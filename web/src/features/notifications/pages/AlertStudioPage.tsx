@@ -1150,13 +1150,13 @@ export default function AlertStudio() {
                     key={rule.id}
                     className={cn(
                       'group p-3 transition-all',
-                      active ? 'border-neon-cyan/30 bg-neon-cyan/5' : 'hover:border-white/10',
+                      active ? 'border-neon-cyan/30 bg-neon-cyan/5' : 'hover:border-[var(--border-subtle)]',
                     )}
                   >
                     <div className="flex items-start gap-2">
                       <input
                         type="checkbox"
-                        className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded border-white/20 bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
+                        className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded border-[var(--border-strong)] bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
                         checked={checked}
                         onClick={e => e.stopPropagation()}
                         onChange={e => toggleBulkSelected(rule.id, e.target.checked)}
@@ -1331,13 +1331,13 @@ export default function AlertStudio() {
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
                   {t('notifications.alertStudio.editor.kindLabel', 'Rule type')}
                 </label>
-                <div className="inline-flex rounded-lg border border-white/10 overflow-hidden">
+                <div className="inline-flex rounded-lg border border-[var(--border-subtle)] overflow-hidden">
                   <button
                     type="button"
                     className={cn(
                       'px-3 py-1.5 text-xs font-medium transition-colors',
                       editor.kind === 'signal'
-                        ? 'bg-white/10 text-[var(--text-primary)]'
+                        ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'
                         : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
                     )}
                     onClick={() => setEditor(s => ({ ...s, kind: 'signal' }))}
@@ -1347,9 +1347,9 @@ export default function AlertStudio() {
                   <button
                     type="button"
                     className={cn(
-                      'px-3 py-1.5 text-xs font-medium transition-colors border-l border-white/10',
+                      'px-3 py-1.5 text-xs font-medium transition-colors border-l border-[var(--border-subtle)]',
                       editor.kind === 'computed_metric'
-                        ? 'bg-white/10 text-[var(--text-primary)]'
+                        ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'
                         : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
                     )}
                     onClick={() => setEditor(s => ({ ...s, kind: 'computed_metric' }))}
@@ -1525,13 +1525,13 @@ export default function AlertStudio() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-xs">
                   <span className="w-2 h-2 rounded-full bg-neon-green" />
-                  <span className="text-white/90">
+                  <span className="text-[var(--text-primary)]">
                     {t('notifications.alertStudio.channels.browserToast', 'Browser toast notification (real-time via SSE)')}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <span className="w-2 h-2 rounded-full bg-neon-green" />
-                  <span className="text-white/90">
+                  <span className="text-[var(--text-primary)]">
                     {t('notifications.alertStudio.channels.alertHistory', 'Alert history (saved to database)')}
                   </span>
                 </div>
@@ -1563,7 +1563,7 @@ export default function AlertStudio() {
                                 'h-auto rounded-lg border px-3 py-1.5 text-xs transition-colors',
                                 isSelected
                                   ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
-                                  : 'bg-white/5 border-white/10 text-[var(--text-muted)] hover:border-white/20',
+                                  : 'bg-[var(--surface-2)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:border-[var(--border-strong)]',
                               )}
                               onClick={() => handleToggleTestChannel(ch.id)}
                             >
@@ -1585,7 +1585,7 @@ export default function AlertStudio() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+            <div className="flex items-center gap-2 pt-2 border-t border-[var(--border-subtle)]">
               <UiButton
                 variant="primary"
                 size="sm"

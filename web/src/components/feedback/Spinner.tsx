@@ -58,7 +58,7 @@ export function Spinner({ size = 'md', label, className }: SpinnerProps) {
           <path d="M112 30L62 108h34L78 170l58-82h-34z" fill="currentColor" className="text-white" />
         </svg>
       </div>
-      {label && <span className="text-sm text-white/60">{label}</span>}
+      {label && <span className="text-sm text-[var(--text-secondary)]">{label}</span>}
     </div>
   );
 }

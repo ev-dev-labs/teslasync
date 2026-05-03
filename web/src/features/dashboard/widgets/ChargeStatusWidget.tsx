@@ -35,24 +35,24 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <p className="text-[10px] text-white/40">{t('widget.power', 'Power')}</p>
+                <p className="text-[10px] text-[var(--text-muted)]">{t('widget.power', 'Power')}</p>
                 <p className="text-sm font-bold text-emerald-300">{fmtNumber(state.charger_power)} kW</p>
               </div>
               <div>
-                <p className="text-[10px] text-white/40">{t('widget.rate', 'Rate')}</p>
-                <p className="text-sm font-bold text-white/90">
+                <p className="text-[10px] text-[var(--text-muted)]">{t('widget.rate', 'Rate')}</p>
+                <p className="text-sm font-bold text-[var(--text-primary)]">
                   {fmtInt(convertDistance(state.charge_rate ?? 0))} {distanceUnit}/h
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-white/40">{t('widget.battery', 'Battery')}</p>
-                <p className="text-sm font-bold text-white/90">{state.battery_level}%</p>
+                <p className="text-[10px] text-[var(--text-muted)]">{t('widget.battery', 'Battery')}</p>
+                <p className="text-sm font-bold text-[var(--text-primary)]">{state.battery_level}%</p>
               </div>
               <div>
-                <p className="text-[10px] text-white/40">
+                <p className="text-[10px] text-[var(--text-muted)]">
                   {t('widget.timeToFull', 'Time to Full')}
                 </p>
-                <p className="text-sm font-bold text-white/90">
+                <p className="text-sm font-bold text-[var(--text-primary)]">
                   {state.time_to_full_charge > 0
                     ? `${fmtNumber(state.time_to_full_charge, 1)}h`
                     : '—'}
@@ -62,11 +62,11 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
           </div>
         ) : state ? (
           <div className="flex flex-col items-center justify-center text-center">
-            <Zap className="h-6 w-6 text-white/30 mb-2" />
-            <p className="text-sm font-medium text-white/90">
+            <Zap className="h-6 w-6 text-[var(--text-muted)] mb-2" />
+            <p className="text-sm font-medium text-[var(--text-primary)]">
               {t('widget.notCharging', 'Not Charging')}
             </p>
-            <p className="text-xs text-white/40">
+            <p className="text-xs text-[var(--text-muted)]">
               {state.battery_level}% · {fmtNumber(convertDistance(state.rated_range), 0)} {distanceUnit}
             </p>
           </div>

@@ -11,8 +11,8 @@ interface LifetimeSummaryProps {
 
 function LifetimeMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-white/5 p-3">
-      <p className="truncate text-[10px] text-gray-500">{label}</p>
+    <div className="rounded-lg bg-[var(--surface-2)] p-3">
+      <p className="truncate text-[10px] text-[var(--text-muted)]">{label}</p>
       <p className="mt-0.5 text-sm font-semibold text-white">{value}</p>
     </div>
   );
@@ -59,7 +59,7 @@ export function LifetimeSummary({ lifetimeMetrics, coreStats }: LifetimeSummaryP
           />
         </div>
       ) : (
-        <div className="flex h-32 items-center justify-center text-sm text-gray-500">
+        <div className="flex h-32 items-center justify-center text-sm text-[var(--text-muted)]">
           {t('costAnalysis.lifetime.noData', 'No data')}
         </div>
       )}

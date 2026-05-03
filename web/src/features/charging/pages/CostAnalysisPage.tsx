@@ -74,7 +74,7 @@ export default function CostAnalysisPage() {
       <FadeIn>
         <div className="flex min-h-[60vh] items-center justify-center p-6">
           <EmptyState
-            icon={<DollarSign className="h-12 w-12 text-gray-500" />}
+            icon={<DollarSign className="h-12 w-12 text-[var(--text-muted)]" />}
             title={t('costAnalysis.empty.title', 'No Charging Data')}
             message={t(
               'costAnalysis.empty.message',

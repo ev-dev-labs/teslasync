@@ -32,7 +32,7 @@ function MqttTestTool() {
           icon={<Radio className="h-4 w-4" />}
         />
         <div>
-          <span className="mb-1 block text-xs font-medium text-white/70">{t('Message')}</span>
+          <span className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">{t('Message')}</span>
           <Textarea
             rows={3}
             placeholder='{"key": "value"}'

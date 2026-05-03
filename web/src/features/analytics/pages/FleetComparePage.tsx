@@ -115,7 +115,7 @@ function VehicleStatusCard({
           'flex h-10 w-10 items-center justify-center rounded-xl',
           isOnline ? 'bg-neon-green/10 ring-1 ring-neon-green/20' : 'bg-white/[0.04] ring-1 ring-white/[0.06]',
         )}>
-          <Car className={cn('h-5 w-5', isOnline ? 'text-neon-green' : 'text-white/40')} />
+          <Car className={cn('h-5 w-5', isOnline ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-base font-semibold text-[var(--text-primary)]">

@@ -162,7 +162,7 @@ export function DataFreshness({
         'inline-flex items-center text-[10px] leading-none transition-colors',
         compact ? 'gap-0.5' : 'gap-1',
         cfg.color,
-        onRefresh && !isFetching && 'cursor-pointer hover:text-white/60',
+        onRefresh && !isFetching && 'cursor-pointer hover:text-[var(--text-secondary)]',
       )}
       onClick={handleClick}
       title={title}

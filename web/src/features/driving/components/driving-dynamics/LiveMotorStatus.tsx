@@ -34,7 +34,7 @@ export default function LiveMotorStatus({ motorLatest, convertTemp, tempUnit }: 
   return (
     <FadeIn>
       <GlassPanel className="p-6">
-        <h2 className="mb-4 text-lg font-semibold text-white/90">
+        <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
           {t('dynamics.liveMotor', 'Live Motor Status')}
         </h2>
         {motorLatest ? (
@@ -48,7 +48,7 @@ export default function LiveMotorStatus({ motorLatest, convertTemp, tempUnit }: 
                 color="#3b82f6"
                 size={120}
               />
-              <span className="text-xs text-white/50">
+              <span className="text-xs text-[var(--text-secondary)]">
                 {`${fmtNumber(torqueTotal)} Nm`}
               </span>
             </div>
@@ -61,7 +61,7 @@ export default function LiveMotorStatus({ motorLatest, convertTemp, tempUnit }: 
                 color="#a855f7"
                 size={120}
               />
-              <span className="text-xs text-white/50">
+              <span className="text-xs text-[var(--text-secondary)]">
                 {`${fmtNumber(rpmFront, 0)} RPM`}
               </span>
             </div>
@@ -74,7 +74,7 @@ export default function LiveMotorStatus({ motorLatest, convertTemp, tempUnit }: 
                 color="#f59e0b"
                 size={120}
               />
-              <span className="text-xs text-white/50">
+              <span className="text-xs text-[var(--text-secondary)]">
                 {motorTempC != null && isFinite(motorTempC)
                   ? `${fmtNumber(convertTemp(motorTempC), 1)}°${tempUnit}`
                   : t('dynamics.awaiting', 'Awaiting data')}
@@ -90,7 +90,7 @@ export default function LiveMotorStatus({ motorLatest, convertTemp, tempUnit }: 
                   {motorLatest.shift_state ?? t('dynamics.unknown', 'Unknown')}
                 </Badge>
               </div>
-              <span className="text-xs text-white/50">
+              <span className="text-xs text-[var(--text-secondary)]">
                 {t('dynamics.shiftState', 'Shift State')}
               </span>
             </div>

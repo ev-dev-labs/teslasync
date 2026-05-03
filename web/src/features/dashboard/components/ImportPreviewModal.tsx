@@ -184,11 +184,11 @@ export function ImportPreviewModal({
                 'border-2 border-dashed rounded-xl p-8 text-center transition-colors',
                 isDragOver
                   ? 'border-[var(--theme-primary)]/40 bg-[var(--theme-primary)]/5'
-                  : 'border-white/10',
+                  : 'border-[var(--border-subtle)]',
               )}
             >
-              <Upload className="h-8 w-8 text-white/30 mx-auto mb-3" />
-              <p className="text-sm text-white/50 mb-3">
+              <Upload className="h-8 w-8 text-[var(--text-muted)] mx-auto mb-3" />
+              <p className="text-sm text-[var(--text-secondary)] mb-3">
                 {t('import.dropFile', 'Drop a .json file here or click to browse')}
               </p>
               <UiButton variant="ghost" onClick={() => fileInputRef.current?.click()}>
@@ -306,7 +306,7 @@ function ImportPreview({
                 <MiniGridPreview dashboard={dashboard} />
               </div>
               <div className="min-w-0 space-y-1.5">
-                <h3 className="text-base font-semibold text-white/90 truncate">
+                <h3 className="text-base font-semibold text-[var(--text-primary)] truncate">
                   {dashboard.name}
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -328,7 +328,7 @@ function ImportPreview({
 
             {/* Widget availability list */}
             <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              <p className="text-xs font-medium text-white/50 uppercase tracking-wider">
+              <p className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
                 {t('import.widgets', 'Widgets')}
               </p>
               {availableWidgets.map((widgetId) => {
@@ -340,8 +340,8 @@ function ImportPreview({
                     className="flex items-center gap-2 text-sm rounded-lg bg-white/[0.02] border border-white/[0.04] px-3 py-2"
                   >
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                    {Icon && <Icon className="h-3.5 w-3.5 text-white/30 shrink-0" />}
-                    <span className="text-white/70 truncate">{def?.name ?? widgetId}</span>
+                    {Icon && <Icon className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" />}
+                    <span className="text-[var(--text-secondary)] truncate">{def?.name ?? widgetId}</span>
                   </div>
                 );
               })}
@@ -351,7 +351,7 @@ function ImportPreview({
                   className="flex items-center gap-2 text-sm rounded-lg bg-white/[0.02] border border-red-500/10 px-3 py-2"
                 >
                   <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />
-                  <span className="text-white/40 truncate line-through">{widgetId}</span>
+                  <span className="text-[var(--text-muted)] truncate line-through">{widgetId}</span>
                   <span className="text-xs text-red-400/60 ml-auto shrink-0">
                     {t('import.notAvailable', 'Not available')}
                   </span>

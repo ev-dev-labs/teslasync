@@ -643,7 +643,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
             // distinct visual treatment (top-anchored card, not centered
             // dialog). New interactive dialogs MUST use <Modal>.
             // eslint-disable-next-line no-restricted-syntax
-            className="fixed inset-0 z-[200] bg-slate-950/35 backdrop-blur-sm dark:bg-black/60"
+            className="fixed inset-0 z-[200] bg-[var(--bg-app)] backdrop-blur-sm dark:bg-[var(--surface-overlay)]"
             onClick={close}
           />
           <motion.div

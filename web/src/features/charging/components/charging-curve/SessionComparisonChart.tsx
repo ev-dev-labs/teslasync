@@ -99,7 +99,7 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
         </ResponsiveContainer>
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 px-2">
           {comparisonSessions.map((s, i) => (
-            <div key={s.id} className="flex items-center gap-1.5 text-xs text-white/60">
+            <div key={s.id} className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
               <span
                 className="inline-block h-2 w-3 rounded-sm"
                 style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}

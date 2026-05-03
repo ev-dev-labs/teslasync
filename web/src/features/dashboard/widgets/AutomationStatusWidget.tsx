@@ -45,10 +45,10 @@ function CompactView({
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1">
       <Workflow className="h-5 w-5 text-neon-cyan" />
-      <span className="text-lg font-bold text-white/90">
+      <span className="text-lg font-bold text-[var(--text-primary)]">
         {enabled}/{automations.length}
       </span>
-      <span className="text-[10px] text-white/40">{t('widget.active', 'Active')}</span>
+      <span className="text-[10px] text-[var(--text-muted)]">{t('widget.active', 'Active')}</span>
       {failing > 0 && (
         <Badge variant="warning" size="sm" dot>
           {failing} {t('widget.failing', 'Failing')}
@@ -76,20 +76,20 @@ function AutomationRow({
     <div className="flex items-center gap-2 py-1.5 border-b border-white/[0.04] last:border-b-0">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-xs font-medium text-white/80 truncate">{automation.name}</span>
+          <span className="text-xs font-medium text-[var(--text-primary)] truncate">{automation.name}</span>
           <Badge variant={status.variant} size="sm">
             {status.label}
           </Badge>
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           {lastRun && (
-            <span className="text-[10px] text-white/30 flex items-center gap-0.5">
+            <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-0.5">
               <Clock className="h-2.5 w-2.5" />
               {formatRelativeTime(lastRun, t)}
             </span>
           )}
           {automation.next_fire_time && (
-            <span className="text-[10px] text-white/30 flex items-center gap-0.5">
+            <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-0.5">
               ⏰ {formatRelativeTime(automation.next_fire_time, t)}
             </span>
           )}
@@ -128,7 +128,7 @@ function FullView({
       <div className="flex items-center gap-3 pb-1.5 border-b border-white/[0.06]">
         <div className="flex items-center gap-1">
           <CheckCircle2 className="h-3 w-3 text-neon-green" />
-          <span className="text-xs text-white/60">
+          <span className="text-xs text-[var(--text-secondary)]">
             {enabled} {t('widget.active', 'Active')}
           </span>
         </div>

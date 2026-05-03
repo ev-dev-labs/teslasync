@@ -82,10 +82,10 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
       ) : isCompact ? (
         /* ── Compact layout (1-col) ── */
         <div className="flex flex-col items-center justify-center gap-1 h-full min-h-[44px]">
-          <span className="text-2xl font-bold text-white/90">
+          <span className="text-2xl font-bold text-[var(--text-primary)]">
             {fmtInt(entries.length)}
           </span>
-          <span className="text-xs text-white/50">
+          <span className="text-xs text-[var(--text-secondary)]">
             {t('widget.signalCatalog.signalsAvailable', 'signals available')}
           </span>
         </div>
@@ -109,9 +109,9 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
             <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
               {grouped.map(([category, signals]) => (
                 <div key={category}>
-                  <h4 className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1 sticky top-0 bg-white/[0.03] backdrop-blur-sm py-1 px-1 -mx-1 rounded">
+                  <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1 sticky top-0 bg-white/[0.03] backdrop-blur-sm py-1 px-1 -mx-1 rounded">
                     {category}
-                    <span className="ml-1 text-white/20">({signals.length})</span>
+                    <span className="ml-1 text-[var(--text-muted)]">({signals.length})</span>
                   </h4>
                   <div className="space-y-0.5">
                     {signals.map((sig) => (
@@ -119,7 +119,7 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
                         key={sig.name}
                         className="flex items-center gap-2 min-h-[32px] px-1 rounded hover:bg-white/[0.04] transition-colors"
                       >
-                        <span className="text-xs font-mono text-white/80 truncate flex-1 min-w-0">
+                        <span className="text-xs font-mono text-[var(--text-primary)] truncate flex-1 min-w-0">
                           {sig.name}
                         </span>
                         {sig.unit && (
@@ -127,7 +127,7 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
                             {sig.unit}
                           </Badge>
                         )}
-                        <span className="text-[10px] text-white/40 tabular-nums shrink-0 min-w-[36px] text-right">
+                        <span className="text-[10px] text-[var(--text-muted)] tabular-nums shrink-0 min-w-[36px] text-right">
                           {fmtInt(observationCounts.get(sig.name) ?? 0)}
                         </span>
                       </div>

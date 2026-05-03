@@ -66,17 +66,17 @@ function DonutTooltip({
   if (!active || !payload?.[0]) return null;
   const seg = payload[0].payload;
   return (
-    <div className="rounded-lg border border-white/10 bg-gray-900/95 px-3 py-2 text-xs shadow-lg">
+    <div className="rounded-lg border border-[var(--border-subtle)] bg-gray-900/95 px-3 py-2 text-xs shadow-lg">
       <div className="flex items-center gap-2">
         <span
           className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0"
           style={{ backgroundColor: stateColor(seg.state) }}
         />
-        <span className="text-white/80 capitalize">
+        <span className="text-[var(--text-primary)] capitalize">
           {t(`widget.fsmDistribution.state.${seg.state}`, seg.state)}
         </span>
       </div>
-      <div className="mt-1 text-white/60">
+      <div className="mt-1 text-[var(--text-secondary)]">
         {fmtDuration(seg.value, t)} · {fmtNumber(seg.pct, 1)}%
       </div>
     </div>
@@ -101,12 +101,12 @@ function TransitionRow({
         <Badge variant="neutral" className="text-[10px] capitalize truncate max-w-[72px]">
           {t(`widget.fsmDistribution.state.${from}`, from)}
         </Badge>
-        <span className="text-[10px] text-white/40">→</span>
+        <span className="text-[10px] text-[var(--text-muted)]">→</span>
         <Badge variant="neutral" className="text-[10px] capitalize truncate max-w-[72px]">
           {t(`widget.fsmDistribution.state.${to}`, to)}
         </Badge>
       </div>
-      <span className="text-[10px] text-white/40 flex-shrink-0 tabular-nums">
+      <span className="text-[10px] text-[var(--text-muted)] flex-shrink-0 tabular-nums">
         {formatRelative(timestamp)}
       </span>
     </div>
@@ -167,10 +167,10 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
               className="inline-block h-3 w-3 rounded-full"
               style={{ backgroundColor: stateColor(currentState) }}
             />
-            <span className="text-sm font-semibold text-white/90 capitalize">
+            <span className="text-sm font-semibold text-[var(--text-primary)] capitalize">
               {t(`widget.fsmDistribution.state.${currentState}`, currentState)}
             </span>
-            <span className="text-xs text-white/50">
+            <span className="text-xs text-[var(--text-secondary)]">
               {fmtDuration(currentMs, t)}
             </span>
           </div>
@@ -237,10 +237,10 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
                   className="inline-block h-2 w-2 rounded-full flex-shrink-0"
                   style={{ backgroundColor: stateColor(seg.state) }}
                 />
-                <span className="text-[10px] text-white/60 capitalize">
+                <span className="text-[10px] text-[var(--text-secondary)] capitalize">
                   {t(`widget.fsmDistribution.state.${seg.state}`, seg.state)}
                 </span>
-                <span className="text-[10px] text-white/40 tabular-nums">
+                <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
                   {fmtInt(seg.pct)}%
                 </span>
               </div>
@@ -250,7 +250,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
           {/* Transitions feed */}
           {transitions.length > 0 && (
             <div className="flex flex-col gap-0.5 overflow-y-auto">
-              <span className="text-[10px] uppercase tracking-wider text-white/40">
+              <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
                 {t('widget.fsmDistribution.recentTransitions', 'Recent Transitions')}
               </span>
               {transitions.map((tr) => (

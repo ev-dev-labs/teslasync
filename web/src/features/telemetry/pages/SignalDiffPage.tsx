@@ -418,7 +418,7 @@ export default function SignalDiffPage() {
             ))}
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-white/5 pt-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-1 items-center gap-2">
               <Input
                 type="search"
@@ -440,7 +440,7 @@ export default function SignalDiffPage() {
                     'rounded-full border px-2.5 py-1 text-[11px] uppercase tracking-wide transition-colors',
                     activeCategory === c.id
                       ? 'border-blue-400/40 bg-blue-500/15 text-blue-200'
-                      : 'border-white/10 bg-white/5 text-[var(--text-muted)] hover:bg-white/10',
+                      : 'border-[var(--border-subtle)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]',
                   )}
                 >
                   {t(c.labelKey, c.defaultLabel)}
@@ -523,7 +523,7 @@ export default function SignalDiffPage() {
             />
           )}
           {pinnedSignals.size > 0 ? (
-            <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/5 pt-3">
+            <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--border-subtle)] pt-3">
               <span className="text-xs text-[var(--text-muted)]">
                 {t('signalDiff.pinnedLabel', 'Pinned:')}
               </span>

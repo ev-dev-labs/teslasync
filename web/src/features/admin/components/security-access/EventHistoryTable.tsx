@@ -25,7 +25,7 @@ export function EventHistoryTable({ history, isLoading }: EventHistoryTableProps
         header: t('admin.security.col.time', 'Time'),
         sortable: true,
         render: (row) => (
-          <span className="text-xs text-gray-400 whitespace-nowrap">
+          <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">
             {formatDateTime(row.createdAt)}
           </span>
         ),

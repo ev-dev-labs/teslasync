@@ -119,7 +119,7 @@ export default function ChargingCurvePage() {
           <h1 className="text-2xl font-bold text-white">
             {t('charging.curve.title', 'Charging Curve')}
           </h1>
-          <p className="mt-1 text-sm text-white/60">
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
             {t('charging.curve.subtitle', 'Power vs state-of-charge across sessions')}
           </p>
 
@@ -136,10 +136,10 @@ export default function ChargingCurvePage() {
           )}
 
           <GlassPanel className="mt-8 flex flex-col items-center justify-center py-16">
-            <p className="text-lg font-medium text-white/70">
+            <p className="text-lg font-medium text-[var(--text-secondary)]">
               {t('charging.curve.empty', 'No charging sessions to plot a curve.')}
             </p>
-            <p className="mt-2 text-sm text-white/40">
+            <p className="mt-2 text-sm text-[var(--text-muted)]">
               {t(
                 'charging.curve.emptyHint',
                 'Start a charging session and data will appear here.',
@@ -178,7 +178,7 @@ export default function ChargingCurvePage() {
             className="w-full sm:w-96"
           />
           {selectedSession && (
-            <span className="text-xs text-white/50">
+            <span className="text-xs text-[var(--text-secondary)]">
               {formatDateTime(selectedSession.start_ts)}
               {selectedSession.charger_location && ` · ${selectedSession.charger_location}`}
             </span>
@@ -199,7 +199,7 @@ export default function ChargingCurvePage() {
             </div>
           ) : (
             <GlassPanel className="flex h-48 items-center justify-center" data-tour="charging-curve">
-              <p className="text-sm text-white/40">
+              <p className="text-sm text-[var(--text-muted)]">
                 {t(
                   'charging.curve.selectSessionHint',
                   'Select a session above to view its charging curve',

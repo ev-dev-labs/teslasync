@@ -108,11 +108,11 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
           </div>
 
           {/* Totals row */}
-          <div className="flex items-center justify-between border-t border-white/10 pt-2 px-1">
-            <span className="text-xs text-white/50">
+          <div className="flex items-center justify-between border-t border-[var(--border-subtle)] pt-2 px-1">
+            <span className="text-xs text-[var(--text-secondary)]">
               {t('widget.superchargerHistory.totals', '30-day totals')}
             </span>
-            <div className="flex items-center gap-3 text-sm font-semibold tabular-nums text-white/90">
+            <div className="flex items-center gap-3 text-sm font-semibold tabular-nums text-[var(--text-primary)]">
               <span>{fmtNumber(totalKwh, 1)} kWh</span>
               <span>{formatCurrency(totalSpend)}</span>
             </div>

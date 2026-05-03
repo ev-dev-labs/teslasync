@@ -22,14 +22,14 @@ export function JsonFormatterTool() {
     <ToolCard icon={Braces} color="green" title={t('Json Formatter')} description={t('Json Formatter Desc')}>
       <div className="space-y-3">
         <div>
-          <span className="mb-1 block text-xs font-medium text-white/70">{t('Json Input')}</span>
+          <span className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">{t('Json Input')}</span>
           <Textarea rows={4} value={inputVal} onChange={(e) => setInputVal(e.target.value)} placeholder='{"key":"value"}' />
         </div>
         {result.error && <p className="text-sm text-rose-300">{result.error}</p>}
         {result.formatted && (
-          <div className="rounded bg-black/20 p-3">
+          <div className="rounded bg-[var(--surface-overlay)] p-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-white/50">{t('Formatted')}</span>
+              <span className="text-xs text-[var(--text-secondary)]">{t('Formatted')}</span>
               <CopyButton text={result.formatted} />
             </div>
             <pre className="mt-1 max-h-64 overflow-auto text-xs font-mono text-emerald-300">{result.formatted}</pre>

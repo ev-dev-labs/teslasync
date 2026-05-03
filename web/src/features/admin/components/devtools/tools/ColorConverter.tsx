@@ -30,18 +30,18 @@ export function ColorConverterTool() {
         </div>
         {parsed && (
           <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded bg-black/20 px-3 py-2">
-              <span className="text-xs text-white/50">RGB</span>
+            <div className="rounded bg-[var(--surface-overlay)] px-3 py-2">
+              <span className="text-xs text-[var(--text-secondary)]">RGB</span>
               <p className="font-mono text-sm text-white">rgb({parsed.r}, {parsed.g}, {parsed.b})</p>
               <CopyButton text={`rgb(${parsed.r}, ${parsed.g}, ${parsed.b})`} />
             </div>
-            <div className="rounded bg-black/20 px-3 py-2">
-              <span className="text-xs text-white/50">HSL</span>
+            <div className="rounded bg-[var(--surface-overlay)] px-3 py-2">
+              <span className="text-xs text-[var(--text-secondary)]">HSL</span>
               <p className="font-mono text-sm text-white">hsl({parsed.h}, {parsed.s}%, {parsed.l}%)</p>
               <CopyButton text={`hsl(${parsed.h}, ${parsed.s}%, ${parsed.l}%)`} />
             </div>
-            <div className="rounded bg-black/20 px-3 py-2">
-              <span className="text-xs text-white/50">HEX</span>
+            <div className="rounded bg-[var(--surface-overlay)] px-3 py-2">
+              <span className="text-xs text-[var(--text-secondary)]">HEX</span>
               <p className="font-mono text-sm text-white">{hex}</p>
               <CopyButton text={hex} />
             </div>

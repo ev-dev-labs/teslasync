@@ -181,10 +181,10 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
           {parsed.length > 0 ? (
             <>
               <CreditCard className="h-4 w-4 text-sky-400" />
-              <span className="text-2xl font-bold text-white/90">
+              <span className="text-2xl font-bold text-[var(--text-primary)]">
                 {activeCount}
               </span>
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.subscriptions.activeCount', 'active')}
               </span>
               {nextExpiry && (

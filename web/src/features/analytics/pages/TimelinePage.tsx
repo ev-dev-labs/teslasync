@@ -312,7 +312,7 @@ export default function TimelinePage() {
       {/* State timeline bar */}
       <FadeIn delay={0.1}>
         <GlassPanel className="mb-6 p-4">
-          <p className="mb-3 text-sm font-semibold text-white/90">
+          <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
             {t('timeline.stateTimeline', 'State Timeline')}
           </p>
           {stateRecords.length === 0 ? (
@@ -346,7 +346,7 @@ export default function TimelinePage() {
                   className="inline-block h-2.5 w-2.5 rounded-full"
                   style={{ backgroundColor: color }}
                 />
-                <span className="text-xs capitalize text-white/50">
+                <span className="text-xs capitalize text-[var(--text-secondary)]">
                   {state}
                 </span>
               </div>
@@ -358,7 +358,7 @@ export default function TimelinePage() {
       {/* Daily breakdown stacked chart */}
       <FadeIn delay={0.2}>
         <GlassPanel className="mb-6 p-4">
-          <p className="mb-3 text-sm font-semibold text-white/90">
+          <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
             {t('timeline.dailyBreakdown', 'Daily Breakdown')}
           </p>
           {dayLoading ? (
@@ -396,7 +396,7 @@ export default function TimelinePage() {
       {/* State transitions table */}
       <FadeIn delay={0.3}>
         <GlassPanel className="p-4">
-          <p className="mb-3 text-sm font-semibold text-white/90">
+          <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
             {t('timeline.stateTransitions', 'State Transitions')}
           </p>
           <DataTable

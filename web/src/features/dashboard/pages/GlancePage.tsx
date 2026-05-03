@@ -56,11 +56,11 @@ function QuickAction({ icon: Icon, label, onClick, disabled, loading }: QuickAct
       disabled={disabled}
       loading={loading}
       aria-label={label}
-      className="flex flex-col items-center gap-1 h-auto p-3 rounded-xl bg-white/5
-        border border-white/[0.06] hover:bg-white/10 min-w-[64px]"
+      className="flex flex-col items-center gap-1 h-auto p-3 rounded-xl bg-[var(--surface-2)]
+        border border-white/[0.06] hover:bg-[var(--surface-2)] min-w-[64px]"
     >
       {!loading && <Icon className="h-5 w-5 text-[var(--theme-primary)]" />}
-      <span className="text-[10px] text-white/50">{label}</span>
+      <span className="text-[10px] text-[var(--text-secondary)]">{label}</span>
     </Button>
   );
 }
@@ -129,7 +129,7 @@ export default function GlancePage() {
           <FadeIn>
             {/* Vehicle name + status */}
             <div className="flex flex-col items-center gap-2 mb-6">
-              <h1 className="text-xl font-semibold text-white/90">
+              <h1 className="text-xl font-semibold text-[var(--text-primary)]">
                 {vehicle.display_name || vehicle.model || t('glance.defaultName', 'Tesla')}
               </h1>
               <Badge
@@ -163,7 +163,7 @@ export default function GlancePage() {
                 }
                 icon={<Battery className="h-4 w-4" />}
                 color="green"
-                className="bg-white/5 border-white/[0.06]"
+                className="bg-[var(--surface-2)] border-white/[0.06]"
               />
               <MetricCard
                 label={t('glance.temp', 'Interior')}
@@ -174,7 +174,7 @@ export default function GlancePage() {
                 }
                 icon={<Thermometer className="h-4 w-4" />}
                 color="amber"
-                className="bg-white/5 border-white/[0.06]"
+                className="bg-[var(--surface-2)] border-white/[0.06]"
               />
               <MetricCard
                 label={t('glance.security', 'Security')}
@@ -185,14 +185,14 @@ export default function GlancePage() {
                 }
                 icon={state?.is_locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
                 color={state?.is_locked ? 'green' : 'red'}
-                className="bg-white/5 border-white/[0.06]"
+                className="bg-[var(--surface-2)] border-white/[0.06]"
               />
               <MetricCard
                 label={t('glance.locationLabel', 'Location')}
                 value={locationLabel}
                 icon={<MapPin className="h-4 w-4" />}
                 color="cyan"
-                className="bg-white/5 border-white/[0.06]"
+                className="bg-[var(--surface-2)] border-white/[0.06]"
               />
             </div>
 
@@ -250,7 +250,7 @@ export default function GlancePage() {
             <div className="flex justify-center mt-4">
               <Link
                 to="/"
-                className="text-xs text-white/30 hover:text-white/50 transition-colors"
+                className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
               >
                 {t('glance.openApp', 'Open full app →')}
               </Link>

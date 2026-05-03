@@ -32,7 +32,7 @@ export const VARIANT_THEME: Record<BadgeVariant, StateStyle> = {
   neutral: {
     badgeDot: 'bg-gray-400',
     bg:       'bg-gray-500/10',
-    text:     'text-gray-400',
+    text:     'text-[var(--text-muted)]',
     dot:      'bg-gray-400',
   },
 }

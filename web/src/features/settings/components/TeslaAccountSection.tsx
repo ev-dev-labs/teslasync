@@ -57,7 +57,7 @@ export function TeslaAccountSection() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/5">
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-[var(--border-subtle)]">
           {auth?.authenticated ? (
             <>
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neon-green/10">

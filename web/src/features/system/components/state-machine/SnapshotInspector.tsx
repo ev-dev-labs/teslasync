@@ -140,7 +140,7 @@ export function SnapshotInspector({
             </div>
           </div>
 
-          <div className="flex items-center justify-between border-t border-white/5 pt-3">
+          <div className="flex items-center justify-between border-t border-[var(--border-subtle)] pt-3">
             <PanelTitle>{t('debugger.inspector.signalsTitle', 'Signals at transition')}</PanelTitle>
             <Toggle
               checked={diffMode}
@@ -151,7 +151,7 @@ export function SnapshotInspector({
           </div>
 
           {rows.length === 0 ? (
-            <div className="rounded-md border border-white/5 bg-white/[0.02] px-3 py-6 text-center text-xs text-[var(--text-muted)]">
+            <div className="rounded-md border border-[var(--border-subtle)] bg-white/[0.02] px-3 py-6 text-center text-xs text-[var(--text-muted)]">
               {t('debugger.inspector.noSignals', 'No signals captured for this transition')}
             </div>
           ) : (
@@ -166,7 +166,7 @@ export function SnapshotInspector({
                       'flex items-start justify-between gap-3 rounded-md border px-2 py-1.5 text-xs',
                       highlight
                         ? 'border-amber-400/30 bg-amber-500/[0.06]'
-                        : 'border-white/5 bg-white/[0.02]',
+                        : 'border-[var(--border-subtle)] bg-white/[0.02]',
                       dim && 'opacity-40',
                     )}
                   >

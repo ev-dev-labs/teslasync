@@ -22,11 +22,11 @@ const statusConfig: Record<string, { icon: typeof CheckCircle; color: string; la
   success: { icon: CheckCircle, color: 'text-green-400', label: 'Succeeded' },
   partial: { icon: CheckCircle, color: 'text-amber-400', label: 'Partial' },
   failed: { icon: XCircle, color: 'text-red-400', label: 'Failed' },
-  skipped: { icon: SkipForward, color: 'text-white/40', label: 'Skipped' },
+  skipped: { icon: SkipForward, color: 'text-[var(--text-muted)]', label: 'Skipped' },
   test: { icon: Zap, color: 'text-neon-cyan', label: 'Test' },
   undo: { icon: Clock, color: 'text-purple-400', label: 'Undo' },
   running: { icon: Activity, color: 'text-blue-400', label: 'Running' },
-  cancelled: { icon: XCircle, color: 'text-white/40', label: 'Cancelled' },
+  cancelled: { icon: XCircle, color: 'text-[var(--text-muted)]', label: 'Cancelled' },
 };
 
 function timeAgo(iso: string): string {
@@ -47,15 +47,15 @@ function HistoryRow({ item }: { item: AutomationHistory }) {
     <div className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-white/[0.02]">
       <Icon className={cn('h-4 w-4 shrink-0', cfg.color)} />
       <div className="min-w-0 flex-1">
-        <span className="font-medium text-white/80">{item.automation_name}</span>
+        <span className="font-medium text-[var(--text-primary)]">{item.automation_name}</span>
         {item.error && (
           <span className="ml-2 text-xs text-red-400/80">— {item.error}</span>
         )}
       </div>
-      <span className="shrink-0 text-xs text-white/40">{timeAgo(item.triggered_at)}</span>
-      <span className="shrink-0 text-xs text-white/40">{formatDurationMs(item.duration_ms)}</span>
+      <span className="shrink-0 text-xs text-[var(--text-muted)]">{timeAgo(item.triggered_at)}</span>
+      <span className="shrink-0 text-xs text-[var(--text-muted)]">{formatDurationMs(item.duration_ms)}</span>
       {item.actions_total > 0 && (
-        <span className="shrink-0 text-xs text-white/40">
+        <span className="shrink-0 text-xs text-[var(--text-muted)]">
           {item.actions_succeeded}/{item.actions_total}
         </span>
       )}
@@ -70,7 +70,7 @@ function LiveEventRow({ event }: { event: AutomationActivityEvent }) {
     'automation.triggered': { icon: Zap, color: 'text-neon-cyan' },
     'automation.succeeded': { icon: CheckCircle, color: 'text-green-400' },
     'automation.failed': { icon: XCircle, color: 'text-red-400' },
-    'automation.skipped': { icon: SkipForward, color: 'text-white/40' },
+    'automation.skipped': { icon: SkipForward, color: 'text-[var(--text-muted)]' },
     'automation.state_changed': { icon: Activity, color: 'text-purple-400' },
   };
   const cfg = typeMap[event.type] ?? typeMap['automation.triggered'];
@@ -81,12 +81,12 @@ function LiveEventRow({ event }: { event: AutomationActivityEvent }) {
     <div className="flex items-center gap-3 rounded-lg bg-neon-cyan/[0.03] px-3 py-2 text-sm">
       <Icon className={cn('h-4 w-4 shrink-0 animate-pulse', cfg.color)} />
       <div className="min-w-0 flex-1">
-        <span className="font-medium text-white/80">{name}</span>
+        <span className="font-medium text-[var(--text-primary)]">{name}</span>
         {'error' in event.data && (event.data as { error?: string }).error && (
           <span className="ml-2 text-xs text-red-400/80">— {(event.data as { error: string }).error}</span>
         )}
         {'reason' in event.data && (event.data as { reason?: string }).reason && (
-          <span className="ml-2 text-xs text-white/40">— {(event.data as { reason: string }).reason}</span>
+          <span className="ml-2 text-xs text-[var(--text-muted)]">— {(event.data as { reason: string }).reason}</span>
         )}
       </div>
       <Badge variant="neutral">
@@ -124,8 +124,8 @@ export function AutomationActivityFeed({
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-white/70" />
-            <h2 className="text-lg font-semibold text-white/90">
+            <Activity className="h-5 w-5 text-[var(--text-secondary)]" />
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">
               {t('automations.recentActivity', 'Recent Activity')}
             </h2>
             {connectionState === 'connected' ? (
@@ -141,7 +141,7 @@ export function AutomationActivityFeed({
             ) : null}
           </div>
           {historyStats && historyStats.total_executions > 0 && (
-            <div className="flex items-center gap-3 text-xs text-white/50">
+            <div className="flex items-center gap-3 text-xs text-[var(--text-secondary)]">
               <span>{historyStats.total_executions} {t('automations.totalRuns', 'total')}</span>
               <span className="text-green-400">{historyStats.success_rate.toFixed(0)}% {t('automations.successRate', 'success')}</span>
               <span>{formatDurationMs(historyStats.avg_duration_ms)} {t('automations.avgDuration', 'avg')}</span>

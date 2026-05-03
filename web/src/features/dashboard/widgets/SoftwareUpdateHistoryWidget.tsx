@@ -42,7 +42,7 @@ function CompactView({
     <div className="flex items-center justify-between gap-2 min-h-[44px]">
       <div className="flex items-center gap-2 min-w-0">
         <Download className="h-4 w-4 flex-shrink-0 text-neon-cyan" />
-        <span className="text-sm text-white/90 truncate">{latestVersion}</span>
+        <span className="text-sm text-[var(--text-primary)] truncate">{latestVersion}</span>
       </div>
       <Badge variant={variant}>
         {latestStatus === 'installed'

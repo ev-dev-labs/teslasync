@@ -33,7 +33,7 @@ function ServiceRow({ label, status }: { label: string; status: ServiceStatus })
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
         <StatusDot status={status} />
-        <span className="text-xs text-white/70">{label}</span>
+        <span className="text-xs text-[var(--text-secondary)]">{label}</span>
       </div>
       <Badge variant={statusVariant(status)} className="text-[10px]">
         {status === 'ok' || status === 'healthy' ? 'OK' : status}
@@ -81,7 +81,7 @@ export default function UptimeMonitorWidget({ size }: WidgetProps) {
         <div className="flex flex-col gap-2 h-full">
           {/* Overall status badge */}
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-wider text-white/40">
+            <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
               {t('widget.uptime.overall', 'Overall')}
             </span>
             <Badge variant={statusVariant(overallStatus as ServiceStatus)}>
@@ -94,7 +94,7 @@ export default function UptimeMonitorWidget({ size }: WidgetProps) {
           {isCompact ? (
             /* Compact: just the count */
             <div className="flex-1 flex items-center justify-center">
-              <span className="text-2xl font-bold text-white/90">
+              <span className="text-2xl font-bold text-[var(--text-primary)]">
                 {healthyCount}/{services.length}
               </span>
             </div>
@@ -110,13 +110,13 @@ export default function UptimeMonitorWidget({ size }: WidgetProps) {
           {/* Extended detail in tall mode */}
           {isTall && !isCompact && (
             <div className="mt-auto pt-2 border-t border-white/[0.06]">
-              <div className="flex items-center justify-between text-[10px] text-white/40">
+              <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
                 <span>{t('widget.uptime.dbSize', 'DB Size')}</span>
-                <span className="text-white/60">{data.databaseSize ?? '—'}</span>
+                <span className="text-[var(--text-secondary)]">{data.databaseSize ?? '—'}</span>
               </div>
-              <div className="flex items-center justify-between text-[10px] text-white/40">
+              <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
                 <span>{t('widget.uptime.tables', 'Tables')}</span>
-                <span className="text-white/60">{data.tableCount ?? '—'}</span>
+                <span className="text-[var(--text-secondary)]">{data.tableCount ?? '—'}</span>
               </div>
             </div>
           )}

@@ -38,21 +38,21 @@ function FleetApiConfigTool() {
     <ToolCard icon={Icons.settings} color="cyan" title={t('Config')} description={t('Config Desc')}>
       <div className="grid gap-3 sm:grid-cols-2">
         <GlassPanel className="p-3">
-          <span className="text-xs text-white/50">{t('Base Url')}</span>
+          <span className="text-xs text-[var(--text-secondary)]">{t('Base Url')}</span>
           <div className="mt-1 flex items-center gap-2">
             <span className="truncate text-sm font-mono text-white">{baseUrl || '—'}</span>
             {baseUrl && <CopyButton text={baseUrl} />}
           </div>
         </GlassPanel>
         <GlassPanel className="p-3">
-          <span className="text-xs text-white/50">{t('Client Id')}</span>
+          <span className="text-xs text-[var(--text-secondary)]">{t('Client Id')}</span>
           <div className="mt-1 flex items-center gap-2">
             <span className="truncate text-sm font-mono text-white">{clientId || '—'}</span>
             {clientId && <CopyButton text={clientId} />}
           </div>
         </GlassPanel>
         <GlassPanel className="p-3">
-          <span className="text-xs text-white/50">{t('Auth Status')}</span>
+          <span className="text-xs text-[var(--text-secondary)]">{t('Auth Status')}</span>
           <div className="mt-1 flex items-center gap-2">
             {authStatus ? (
               <Badge variant="success" size="sm" dot>{t('Authenticated')}</Badge>
@@ -62,11 +62,11 @@ function FleetApiConfigTool() {
           </div>
         </GlassPanel>
         <GlassPanel className="p-3">
-          <span className="text-xs text-white/50">{t('Regions')}</span>
+          <span className="text-xs text-[var(--text-secondary)]">{t('Regions')}</span>
           <div className="mt-1 flex flex-wrap gap-1">
             {regions.length > 0
               ? regions.map((r) => <Badge key={r} variant="info" size="sm">{r}</Badge>)
-              : <span className="text-sm text-white/40">—</span>}
+              : <span className="text-sm text-[var(--text-muted)]">—</span>}
           </div>
         </GlassPanel>
       </div>
@@ -100,13 +100,13 @@ function PartnerRegistrationTool() {
         </GlassPanel>
 
         <div className="space-y-2">
-          <span className="text-xs font-medium text-white/70">{t('Openssl Commands')}</span>
+          <span className="text-xs font-medium text-[var(--text-secondary)]">{t('Openssl Commands')}</span>
           <div className="space-y-1">
-            <div className="flex items-center gap-2 rounded bg-black/30 px-3 py-1.5">
+            <div className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1.5">
               <code className="flex-1 text-xs text-cyan-300">{opensslGen}</code>
               <CopyButton text={opensslGen} />
             </div>
-            <div className="flex items-center gap-2 rounded bg-black/30 px-3 py-1.5">
+            <div className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1.5">
               <code className="flex-1 text-xs text-cyan-300">{opensslPub}</code>
               <CopyButton text={opensslPub} />
             </div>
@@ -201,9 +201,9 @@ function PartnerPublicKeyTool() {
 
             {publicKey && (
               <div className="space-y-1">
-                <span className="text-xs font-medium text-white/70">{t('devtools.partnerKey.pemLabel', 'Registered PEM')}</span>
-                <div className="rounded bg-black/30 p-3">
-                  <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all text-xs text-white/80">
+                <span className="text-xs font-medium text-[var(--text-secondary)]">{t('devtools.partnerKey.pemLabel', 'Registered PEM')}</span>
+                <div className="rounded bg-[var(--surface-overlay)] p-3">
+                  <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all text-xs text-[var(--text-primary)]">
                     {publicKey}
                   </pre>
                   <div className="mt-2 flex justify-end">
@@ -264,7 +264,7 @@ function PublicKeySetupTool() {
     <ToolCard icon={Icons.key} color="purple" title={t('Public Key')} description={t('Public Key Desc')}>
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-white/50">{t('Status')}:</span>
+          <span className="text-xs text-[var(--text-secondary)]">{t('Status')}:</span>
           {configured ? (
             <Badge variant="success" size="sm" dot>{t('Configured')}</Badge>
           ) : (
@@ -273,17 +273,17 @@ function PublicKeySetupTool() {
         </div>
 
         {fingerprint && (
-          <div className="flex items-center gap-2 rounded bg-black/30 px-3 py-1.5">
+          <div className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1.5">
             <Icons.fingerprint className="h-4 w-4 text-neon-purple" />
-            <code className="text-xs text-white/80">{fingerprint}</code>
+            <code className="text-xs text-[var(--text-primary)]">{fingerprint}</code>
             <CopyButton text={fingerprint} />
           </div>
         )}
 
         {wellKnownUrl && (
-          <div className="flex items-center gap-2 rounded bg-black/30 px-3 py-1.5">
+          <div className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1.5">
             <Icons.link className="h-4 w-4 text-neon-cyan" />
-            <code className="flex-1 truncate text-xs text-white/80">{wellKnownUrl}</code>
+            <code className="flex-1 truncate text-xs text-[var(--text-primary)]">{wellKnownUrl}</code>
             <CopyButton text={wellKnownUrl} />
           </div>
         )}
@@ -308,7 +308,7 @@ function PublicKeySetupTool() {
         <ResultPanel title={t('Delete Keypair')} data={deleteMut.data?.error ? undefined : deleteMut.data} error={typeof deleteMut.data?.error === 'string' ? deleteMut.data.error : undefined} idle={!deleteMut.data} />
 
         <div className="space-y-2">
-          <span className="text-xs font-medium text-white/70">{t('Upload Pem')}</span>
+          <span className="text-xs font-medium text-[var(--text-secondary)]">{t('Upload Pem')}</span>
           <Textarea
             rows={4}
             placeholder={t('Pem Placeholder')}
@@ -339,14 +339,14 @@ function VehicleKeyPairingTool() {
   return (
     <ToolCard icon={Icons.vehicle} color="green" title={t('Key Pairing')} description={t('Key Pairing Desc')}>
       <div className="space-y-3">
-        <div className="flex items-center gap-2 rounded bg-black/30 px-3 py-2">
+        <div className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-2">
           <Icons.link className="h-4 w-4 text-neon-green" />
           <code className="flex-1 truncate text-sm text-emerald-300">{pairingUrl}</code>
           <CopyButton text={pairingUrl} />
         </div>
         <div className="rounded-lg bg-neon-cyan/5 p-3">
-          <p className="text-xs text-white/60">{t('Pairing Instructions')}</p>
-          <ul className="mt-2 space-y-1 text-xs text-white/50">
+          <p className="text-xs text-[var(--text-secondary)]">{t('Pairing Instructions')}</p>
+          <ul className="mt-2 space-y-1 text-xs text-[var(--text-secondary)]">
             <li className="flex items-start gap-2">
               <Icons.next className="mt-0.5 h-3 w-3 shrink-0 text-neon-cyan" />
               <span>{t('devtools.fleet.pairingStep1', 'Pairing Step1')}</span>
@@ -424,7 +424,7 @@ function FleetTelemetrySubscribeTool() {
           />
         </div>
         <div>
-          <span className="mb-1 block text-xs font-medium text-white/70">{t('Ca Cert')}</span>
+          <span className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">{t('Ca Cert')}</span>
           <Textarea
             rows={3}
             placeholder={t('Ca Cert Placeholder')}
@@ -441,7 +441,7 @@ function FleetTelemetrySubscribeTool() {
           >
             {t('Configure Signals')} ({selectedSignals.length})
           </Button>
-          <span className="text-xs text-white/40">
+          <span className="text-xs text-[var(--text-muted)]">
             {t('Interval Label')}: {interval}s
           </span>
         </div>
@@ -502,7 +502,7 @@ function FleetTelemetryConfigTool() {
   const errorColumns: Column<TelemetryError>[] = useMemo(() => [
     { key: 'timestamp', header: t('Timestamp'), render: (r) => <span className="text-xs">{formatDateTime(r.timestamp)}</span> },
     { key: 'code', header: t('Code'), render: (r) => <Badge variant="danger" size="sm">{r.code}</Badge> },
-    { key: 'message', header: t('Message'), render: (r) => <span className="text-xs text-white/70">{r.message}</span> },
+    { key: 'message', header: t('Message'), render: (r) => <span className="text-xs text-[var(--text-secondary)]">{r.message}</span> },
   ], [t])
 
   return (
@@ -699,7 +699,7 @@ function OnboardingWorkflow() {
 
       {/* Progress bar */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs text-white/60">
+        <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
           <span>{t('Progress')}</span>
           <span>{completedCount} / {ONBOARDING_STEPS.length} ({fmtInt(progressPct)}%)</span>
         </div>
@@ -737,7 +737,7 @@ function OnboardingWorkflow() {
             <h3 className="text-sm font-semibold text-white">
               {t('devtools.onboarding.stepLabel', 'Step {{step}}', { step: currentStep + 1 })}: {step.label}
             </h3>
-            <p className="text-xs text-white/50">{step.desc}</p>
+            <p className="text-xs text-[var(--text-secondary)]">{step.desc}</p>
           </div>
         </div>
 
@@ -784,13 +784,13 @@ export function FleetApiSection() {
     <div className="space-y-6">
       {/* Onboarding wizard */}
       <div className="space-y-2">
-        <h2 className="text-sm font-semibold text-white/80">{t('devtools.fleet.setupWizard', 'Setup Wizard')}</h2>
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('devtools.fleet.setupWizard', 'Setup Wizard')}</h2>
         <OnboardingWorkflow />
       </div>
 
       {/* Fleet API tool grid */}
       <div className="space-y-2">
-        <h2 className="text-sm font-semibold text-white/80">{t('devtools.fleet.toolsTitle', 'Fleet API Tools')}</h2>
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('devtools.fleet.toolsTitle', 'Fleet API Tools')}</h2>
         <div className="grid gap-4 lg:grid-cols-2">
           <FleetApiConfigTool />
           <PartnerRegistrationTool />

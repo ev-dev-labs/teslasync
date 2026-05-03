@@ -53,7 +53,7 @@ export function Drawer({ open, onClose, title, children, footer, side = 'right',
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-[var(--surface-overlay)] backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -80,7 +80,7 @@ export function Drawer({ open, onClose, title, children, footer, side = 'right',
           {children}
         </div>
         {footer && (
-          <div className="shrink-0 border-t border-white/[0.06] bg-black/20 px-6 py-4 backdrop-blur-xl">
+          <div className="shrink-0 border-t border-white/[0.06] bg-[var(--surface-overlay)] px-6 py-4 backdrop-blur-xl">
             {footer}
           </div>
         )}

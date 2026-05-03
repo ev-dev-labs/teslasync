@@ -110,10 +110,10 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
       >
         {dynamics ? (
           <div className="h-full flex flex-col items-center justify-center gap-2">
-            <span className="text-3xl font-bold text-white/90">
+            <span className="text-3xl font-bold text-[var(--text-primary)]">
               {fmtNumber(maxG, 2)}
             </span>
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               {t('widget.drivingDynamics.maxG', 'Max g')}
             </span>
             <Badge
@@ -161,7 +161,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
                 color={gaugeColor(dynamics.avgAccelerationG ?? 0)}
                 size={80}
               />
-              <span className="text-[10px] text-white/40">
+              <span className="text-[10px] text-[var(--text-muted)]">
                 {t('widget.drivingDynamics.accel', 'Accel')}
               </span>
             </div>
@@ -173,7 +173,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
                 color={gaugeColor(dynamics.avgBrakingG ?? 0)}
                 size={80}
               />
-              <span className="text-[10px] text-white/40">
+              <span className="text-[10px] text-[var(--text-muted)]">
                 {t('widget.drivingDynamics.brake', 'Brake')}
               </span>
             </div>
@@ -185,7 +185,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
                 color={gaugeColor(dynamics.maxCorneringG ?? 0)}
                 size={80}
               />
-              <span className="text-[10px] text-white/40">
+              <span className="text-[10px] text-[var(--text-muted)]">
                 {t('widget.drivingDynamics.lateral', 'Lateral')}
               </span>
             </div>
@@ -206,7 +206,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
           {/* Wide: acceleration distribution histogram */}
           {isWide && histogramData.length > 0 && (
             <div className="flex-1 min-h-0">
-              <p className="text-[10px] text-white/40 mb-1">
+              <p className="text-[10px] text-[var(--text-muted)] mb-1">
                 {t('widget.drivingDynamics.distribution', 'G-Force Distribution')}
               </p>
               <ResponsiveContainer width="100%" height="100%">

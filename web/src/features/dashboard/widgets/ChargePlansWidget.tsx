@@ -189,14 +189,14 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
         {activePlan ? (
           <div className="h-full flex flex-col items-center justify-center gap-1 px-2">
             <Clock className="h-4 w-4 text-cyan-400" />
-            <span className="text-2xl font-bold text-white/90">
+            <span className="text-2xl font-bold text-[var(--text-primary)]">
               {fmtInt(activePlan.target_soc ?? 0)}%
             </span>
-            <span className="text-[10px] text-white/40 uppercase tracking-wider truncate max-w-full text-center">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider truncate max-w-full text-center">
               {t('widget.chargePlans.targetSoc', 'Target SOC')}
             </span>
             {activePlan.depart_by && (
-              <span className="text-xs text-white/60 truncate max-w-full">
+              <span className="text-xs text-[var(--text-secondary)] truncate max-w-full">
                 {formatTime(activePlan.depart_by)}
               </span>
             )}
@@ -232,7 +232,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
                 <Badge variant={badgeVariant(activePlan.status)} size="sm" dot>
                   {activePlan.status ?? '—'}
                 </Badge>
-                <span className="text-xs text-white/50 truncate">
+                <span className="text-xs text-[var(--text-secondary)] truncate">
                   {activePlan.rate_plan ?? ''}
                 </span>
               </div>
@@ -267,7 +267,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
           {/* Rate plans section */}
           {safeRates.length > 0 && (
             <div className="border-t border-white/[0.06] pt-2">
-              <h4 className="text-[10px] font-medium text-white/40 uppercase tracking-wider mb-1">
+              <h4 className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1">
                 {t('widget.chargePlans.ratePlans', 'Rate Plans')}
               </h4>
               <WidgetDetailCard

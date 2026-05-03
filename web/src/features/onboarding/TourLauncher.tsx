@@ -110,7 +110,7 @@ export function TourLauncher() {
                     'mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg border',
                     completed
                       ? 'border-emerald-300/30 bg-emerald-300/10 text-emerald-300'
-                      : 'border-white/10 bg-white/[0.04] text-[var(--text-secondary)]',
+                      : 'border-[var(--border-subtle)] bg-white/[0.04] text-[var(--text-secondary)]',
                   )}
                   aria-hidden
                 >

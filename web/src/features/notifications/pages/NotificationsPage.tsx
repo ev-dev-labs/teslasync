@@ -316,7 +316,7 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
             checked={allVisibleSelected}
             onChange={e => (e.target.checked ? selectAllVisible() : clearSelection())}
             aria-label={t('notifications.inbox.selectAll', 'Select all visible')}
-            className="h-4 w-4 cursor-pointer rounded border-white/20 bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
+            className="h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
           />
           <span className="text-xs text-[var(--text-muted)]">
             {t('notifications.inbox.countLabel', '{{count}} notifications', { count: rows.length })}

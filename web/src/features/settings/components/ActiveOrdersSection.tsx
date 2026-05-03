@@ -74,7 +74,7 @@ export function ActiveOrdersSection() {
         {(ordersData?.orders ?? []).length > 0 ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {(ordersData?.orders ?? []).map((order) => (
-              <div key={order.order_id} className="rounded-lg bg-white/[0.02] border border-white/5 p-4 space-y-3">
+              <div key={order.order_id} className="rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4 text-[var(--text-muted)]" />

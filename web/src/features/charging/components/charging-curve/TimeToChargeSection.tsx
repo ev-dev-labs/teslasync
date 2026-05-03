@@ -21,12 +21,12 @@ function TimeToChargeCard({
 }) {
   return (
     <GlassPanel className="p-4">
-      <p className="text-xs uppercase tracking-wider text-white/50">{label}</p>
+      <p className="text-xs uppercase tracking-wider text-[var(--text-secondary)]">{label}</p>
       <p className="mt-1 text-2xl font-semibold text-white">
         {value ?? '—'}
-        {unit && value && <span className="ml-1 text-sm text-white/60">{unit}</span>}
+        {unit && value && <span className="ml-1 text-sm text-[var(--text-secondary)]">{unit}</span>}
       </p>
-      {subtitle && <p className="mt-0.5 text-xs text-white/40">{subtitle}</p>}
+      {subtitle && <p className="mt-0.5 text-xs text-[var(--text-muted)]">{subtitle}</p>}
     </GlassPanel>
   );
 }
@@ -105,7 +105,7 @@ export default function TimeToChargeSection({ sessions }: TimeToChargeSectionPro
         <h2 className="text-lg font-semibold text-white">
           {t('charging.curve.timeToCharge', 'Time-to-Charge Analysis')}
         </h2>
-        <p className="text-sm text-white/50">
+        <p className="text-sm text-[var(--text-secondary)]">
           {t(
             'charging.curve.timeToChargeDesc',
             'How long DC sessions take to reach key SOC thresholds',

@@ -61,7 +61,7 @@ export default function SettingsPage() {
       {/* Fleet API Settings — link */}
       <FadeIn delay={0.05}>
         <a href="/fleet-api" className="block">
-          <GlassPanel className="p-5 flex items-center gap-4 hover:border-white/10 transition-colors cursor-pointer group">
+          <GlassPanel className="p-5 flex items-center gap-4 hover:border-[var(--border-subtle)] transition-colors cursor-pointer group">
             <div className={cn(
               'flex h-10 w-10 items-center justify-center rounded-xl ring-1',
               settings?.api_suspended
@@ -95,7 +95,7 @@ export default function SettingsPage() {
       {/* Data Export — link */}
       <FadeIn delay={0.18}>
         <a href="/data-export" className="block">
-          <GlassPanel className="p-5 flex items-center gap-4 hover:border-white/10 transition-colors cursor-pointer group">
+          <GlassPanel className="p-5 flex items-center gap-4 hover:border-[var(--border-subtle)] transition-colors cursor-pointer group">
             <IconBox color="green">
               <Download className="h-5 w-5" />
             </IconBox>

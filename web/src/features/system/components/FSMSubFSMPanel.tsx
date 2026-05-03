@@ -24,7 +24,7 @@ export function FSMSubFSMPanel({ activeSubs, fsmType }: FSMSubFSMPanelProps) {
   if (subs.length === 0) {
     return (
       <GlassPanel className="p-4">
-        <h2 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2">
+        <h2 className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider mb-2">
           {t('fsm.subFSMs', 'Active Sub-FSMs')}
         </h2>
         <EmptyState message={t('fsm.noSubFSMs', 'No active drive or charge sessions')} />
@@ -34,7 +34,7 @@ export function FSMSubFSMPanel({ activeSubs, fsmType }: FSMSubFSMPanelProps) {
 
   return (
     <GlassPanel className="p-4">
-      <h2 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3">
+      <h2 className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider mb-3">
         {t('fsm.subFSMs', 'Active Sub-FSMs')}
       </h2>
       <Grid cols={{ default: 1, md: 2 }} gap={3}>
@@ -54,16 +54,16 @@ export function FSMSubFSMPanel({ activeSubs, fsmType }: FSMSubFSMPanelProps) {
               className="flex items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
             >
               <div className={`p-2 rounded-lg ${isActive ? 'bg-green-500/10' : 'bg-white/[0.04]'}`}>
-                <Icon className={`h-4 w-4 ${isActive ? 'text-green-400' : 'text-white/40'}`} />
+                <Icon className={`h-4 w-4 ${isActive ? 'text-green-400' : 'text-[var(--text-muted)]'}`} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-white/80">{label}</span>
+                  <span className="text-xs font-medium text-[var(--text-primary)]">{label}</span>
                   {isActive && <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <StateBadge state={sub.state} fsmType={sub.type === 'drive' ? 'drive_session' : 'charge_session'} />
-                  <span className="text-[10px] text-white/40">{formatRelative(sub.start_time)}</span>
+                  <span className="text-[10px] text-[var(--text-muted)]">{formatRelative(sub.start_time)}</span>
                 </div>
               </div>
             </div>

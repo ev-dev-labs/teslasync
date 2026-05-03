@@ -97,7 +97,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
         isCompact ? (
           /* ── Compact layout (1×2) ── */
           <div className="h-full flex flex-col items-center justify-center gap-1">
-            <p className="text-2xl font-bold tabular-nums text-white/90">
+            <p className="text-2xl font-bold tabular-nums text-[var(--text-primary)]">
               {currentHealthPct != null ? `${fmtNumber(currentHealthPct, 1)}%` : '—'}
             </p>
             <Badge variant={tier.variant} size="sm">
@@ -109,10 +109,10 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
           <div className="h-full flex flex-col gap-3 overflow-y-auto">
             {/* Projected 80% date — hero section */}
             <div className="text-center py-2">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
                 {t('widget.forecast.projected80', 'Projected 80% Capacity')}
               </p>
-              <p className="text-2xl font-bold tabular-nums text-white/90">
+              <p className="text-2xl font-bold tabular-nums text-[var(--text-primary)]">
                 {projectedDate}
               </p>
               <div className="flex items-center justify-center gap-2 mt-1.5">
@@ -120,7 +120,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
                   {t(`widget.forecast.${tier.key}`, tier.label)}
                 </Badge>
                 {rate > 0 && (
-                  <span className="text-xs text-white/40">
+                  <span className="text-xs text-[var(--text-muted)]">
                     −{fmtNumber(rate, 2)}%/{t('widget.mo', 'mo')}
                   </span>
                 )}
@@ -138,7 +138,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
             {/* Risk factors list */}
             {riskFactors.length > 0 && (
               <div className="flex flex-col gap-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-white/40">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
                   {t('widget.forecast.riskFactors', 'Risk Factors')}
                 </p>
                 <ul className="flex flex-col gap-1 overflow-y-auto max-h-40">
@@ -147,14 +147,14 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
                       key={rf.name}
                       className="flex items-center gap-2 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2 min-h-[44px]"
                     >
-                      <span className="shrink-0 text-white/50">
+                      <span className="shrink-0 text-[var(--text-secondary)]">
                         {riskIcon(rf.name)}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <span className="text-sm text-white/80 truncate block">
+                        <span className="text-sm text-[var(--text-primary)] truncate block">
                           {rf.label ?? rf.name}
                         </span>
-                        <span className="text-[10px] text-white/40 truncate block">
+                        <span className="text-[10px] text-[var(--text-muted)] truncate block">
                           {rf.detail ?? '—'}
                         </span>
                       </div>
@@ -173,7 +173,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
             {/* Recommendations as tip cards */}
             {tipItems.length > 0 && (
               <div className="flex flex-col gap-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-white/40">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
                   {t('widget.forecast.recommendations', 'Recommendations')}
                 </p>
                 <WidgetTipCards tips={tipItems} maxTips={3} />

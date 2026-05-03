@@ -33,11 +33,11 @@ const statusStyles: Record<StatusCell['status'], { bg: string; dot: string }> = 
   },
   inactive: {
     bg: 'bg-white/[0.03] border-white/[0.06]',
-    dot: 'bg-white/30',
+    dot: 'bg-[var(--surface-2)]',
   },
   unknown: {
     bg: 'bg-white/[0.03] border-white/[0.06]',
-    dot: 'bg-white/30',
+    dot: 'bg-[var(--surface-2)]',
   },
 };
 
@@ -82,13 +82,13 @@ export function WidgetStatusGrid({
             />
 
             {cell.icon && (
-              <span className="shrink-0 text-white/70">{cell.icon}</span>
+              <span className="shrink-0 text-[var(--text-secondary)]">{cell.icon}</span>
             )}
 
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs text-white/60">{cell.label}</p>
+              <p className="truncate text-xs text-[var(--text-secondary)]">{cell.label}</p>
               {!compact && cell.value && (
-                <p className="truncate text-sm font-medium text-white/90">
+                <p className="truncate text-sm font-medium text-[var(--text-primary)]">
                   {cell.value}
                 </p>
               )}

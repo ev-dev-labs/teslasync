@@ -355,7 +355,7 @@ export default function MapOverviewPage() {
                 <Home
                   className={cn(
                     'h-5 w-5',
-                    (locationDetails?.located_at_home ?? locationDetails?.locatedAtHome) ? 'text-emerald-400' : 'text-gray-500',
+                    (locationDetails?.located_at_home ?? locationDetails?.locatedAtHome) ? 'text-emerald-400' : 'text-[var(--text-muted)]',
                   )}
                 />
                 <span className="flex-1 text-sm text-[var(--text-secondary)]">
@@ -379,7 +379,7 @@ export default function MapOverviewPage() {
                 <Briefcase
                   className={cn(
                     'h-5 w-5',
-                    (locationDetails?.located_at_work ?? locationDetails?.locatedAtWork) ? 'text-emerald-400' : 'text-gray-500',
+                    (locationDetails?.located_at_work ?? locationDetails?.locatedAtWork) ? 'text-emerald-400' : 'text-[var(--text-muted)]',
                   )}
                 />
                 <span className="flex-1 text-sm text-[var(--text-secondary)]">
@@ -403,7 +403,7 @@ export default function MapOverviewPage() {
                 <Link2
                   className={cn(
                     'h-5 w-5',
-                    locationDetails?.homelink_nearby ? 'text-cyan-400' : 'text-gray-500',
+                    locationDetails?.homelink_nearby ? 'text-cyan-400' : 'text-[var(--text-muted)]',
                   )}
                 />
                 <span className="flex-1 text-sm text-[var(--text-secondary)]">

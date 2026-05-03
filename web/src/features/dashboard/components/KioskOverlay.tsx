@@ -88,10 +88,10 @@ export function KioskOverlay({
             config.clockPosition === 'bottom-right' && 'bottom-4 right-4',
           )}
         >
-          <div className="text-2xl text-white/20 tabular-nums">
+          <div className="text-2xl text-[var(--text-muted)] tabular-nums">
             {now.toLocaleTimeString()}
           </div>
-          <div className="text-xs text-white/15">
+          <div className="text-xs text-[var(--text-muted)]">
             {now.toLocaleDateString(undefined, {
               weekday: 'short',
               month: 'short',
@@ -110,8 +110,8 @@ export function KioskOverlay({
               className={cn(
                 'h-1.5 rounded-full transition-all duration-300',
                 i === currentIndex
-                  ? 'w-6 bg-white/40'
-                  : 'w-1.5 bg-white/15',
+                  ? 'w-6 bg-[var(--surface-2)]'
+                  : 'w-1.5 bg-[var(--surface-2)]',
               )}
             />
           ))}
@@ -130,8 +130,8 @@ export function KioskOverlay({
           variant="ghost"
           size="sm"
           onClick={onExit}
-          className="h-auto px-3 py-2 rounded-lg bg-black/60 backdrop-blur-sm
-            text-white/50 text-xs hover:text-white/90 hover:bg-black/80 transition-colors
+          className="h-auto px-3 py-2 rounded-lg bg-[var(--surface-overlay)] backdrop-blur-sm
+            text-[var(--text-secondary)] text-xs hover:text-[var(--text-primary)] hover:bg-[var(--surface-overlay)] transition-colors
             focus:ring-white/20 focus:ring-offset-0"
           aria-label={t('kiosk.exit', 'Exit kiosk mode')}
         >

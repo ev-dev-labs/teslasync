@@ -65,7 +65,7 @@ export function ChargingSessionCard({ session, convertDistance, distanceUnit, se
         <label className="flex items-center pl-2">
           <input
             type="checkbox"
-            className="h-4 w-4 cursor-pointer rounded border-white/20 bg-white/[0.04] text-emerald-500 focus:ring-2 focus:ring-emerald-500"
+            className="h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-white/[0.04] text-emerald-500 focus:ring-2 focus:ring-emerald-500"
             checked={!!selected}
             onChange={e => onToggleSelect?.(session.id, e.target.checked)}
             aria-label={t('selectSession', 'Select charging session')}

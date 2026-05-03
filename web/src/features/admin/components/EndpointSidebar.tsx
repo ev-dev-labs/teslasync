@@ -54,7 +54,7 @@ export function MethodBadge({ method, className }: { method: string; className?:
     <span
       className={cn(
         'inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold w-12 text-center shrink-0',
-        METHOD_COLORS[method] ?? 'bg-gray-500/20 text-gray-400',
+        METHOD_COLORS[method] ?? 'bg-gray-500/20 text-[var(--text-muted)]',
         className,
       )}
     >
@@ -91,14 +91,14 @@ function TagGroup({
       >
         <ChevronDown
           className={cn(
-            'h-3 w-3 text-white/40 transition-transform duration-200',
+            'h-3 w-3 text-[var(--text-muted)] transition-transform duration-200',
             open && 'rotate-180',
           )}
         />
-        <span className="flex-1 text-xs font-semibold text-white/60 uppercase tracking-wider">
+        <span className="flex-1 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
           {tag}
         </span>
-        <span className="text-[10px] text-white/30 font-mono">{endpoints.length}</span>
+        <span className="text-[10px] text-[var(--text-muted)] font-mono">{endpoints.length}</span>
       </UiButton>
       {open && (
         <div>
@@ -119,7 +119,7 @@ function TagGroup({
                   title={ep.summary}
                 >
                   <MethodBadge method={ep.method} />
-                  <span className="truncate text-white/70 font-mono text-[11px]">
+                  <span className="truncate text-[var(--text-secondary)] font-mono text-[11px]">
                     {ep.path}
                   </span>
                 </UiButton>
@@ -173,7 +173,7 @@ export default function EndpointSidebar({ endpoints, selected, onSelect }: Endpo
       </div>
 
       {/* Endpoint count */}
-      <div className="px-3 py-1.5 text-[10px] text-white/30 border-b border-white/[0.04]">
+      <div className="px-3 py-1.5 text-[10px] text-[var(--text-muted)] border-b border-white/[0.04]">
         {filtered.length} {t('playground.endpoints', 'endpoints')}
       </div>
 
@@ -191,7 +191,7 @@ export default function EndpointSidebar({ endpoints, selected, onSelect }: Endpo
         ))}
 
         {filtered.length === 0 && (
-          <div className="px-3 py-6 text-center text-xs text-white/30">
+          <div className="px-3 py-6 text-center text-xs text-[var(--text-muted)]">
             {t('playground.noResults', 'No matching endpoints')}
           </div>
         )}

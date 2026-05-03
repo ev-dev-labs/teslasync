@@ -13,9 +13,11 @@
   --tesla-red: #e31937;
   /* Mode-aware vars — overridden by ThemeProvider */
   --bg: #0a0a0f;
+  --bg-app: #0a0a0f;
   --surface-1: #0f1019;
   --surface-2: #151621;
   --surface-3: #1a1b2e;
+  --surface-overlay: rgba(0, 0, 0, 0.6);
   --glass-bg: rgba(255, 255, 255, 0.04);
   --glass-border: rgba(255, 255, 255, 0.12);
   --text-primary: #ffffff;
@@ -29,6 +31,7 @@
   --surface-elevated: rgba(255, 255, 255, 0.04);
   --border-subtle: rgba(255, 255, 255, 0.06);
   --border-default: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.2);
   /* Dynamic color theme vars — overridden by ThemeProvider */
   --theme-primary: #00f0ff;
   --theme-primary-rgb: 0, 240, 255;
@@ -348,6 +351,9 @@ select option:checked {
   --surface-elevated: rgba(255, 255, 255, 0.95);
   --border-subtle: rgba(0, 0, 0, 0.06);
   --border-default: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.2);
+  --surface-overlay: rgba(15, 23, 42, 0.5);
+  --bg-app: #f8fafc;
 }
 
 /* Override white text → dark in light mode */
@@ -897,14 +903,17 @@ select option:checked {
 @media print {
   :root {
     --bg: #ffffff;
+    --bg-app: #ffffff;
     --surface-1: #ffffff;
     --surface-2: #ffffff;
     --surface-3: #ffffff;
     --surface-elevated: #ffffff;
+    --surface-overlay: rgba(0, 0, 0, 0.4);
     --glass-bg: #ffffff;
     --glass-border: #cccccc;
     --border-subtle: #dddddd;
     --border-default: #cccccc;
+    --border-strong: #888888;
     --text-primary: #000000;
     --text-secondary: #222222;
     --text-muted: #555555;

@@ -33,12 +33,12 @@ export function TimestampTool() {
   return (
     <ToolCard icon={Clock} color="green" title={t('Timestamp')} description={t('Timestamp Desc')}>
       <div className="space-y-3">
-        <div className="flex items-center gap-2 rounded bg-black/20 px-3 py-2">
+        <div className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-2">
           <Clock className="h-4 w-4 text-neon-green" />
           <div className="text-sm">
             <span className="font-mono text-white">{Math.floor(now.getTime() / 1000)}</span>
-            <span className="mx-2 text-white/30">|</span>
-            <span className="font-mono text-white/70">{now.toISOString()}</span>
+            <span className="mx-2 text-[var(--text-muted)]">|</span>
+            <span className="font-mono text-[var(--text-secondary)]">{now.toISOString()}</span>
           </div>
           <Button variant="ghost" size="sm" onClick={() => { setUnix(String(Math.floor(Date.now() / 1000))); setIso(new Date().toISOString()) }}>
             {t('Now')}
@@ -55,9 +55,9 @@ export function TimestampTool() {
             />
             {fromUnix && (
               <div className="mt-1 space-y-0.5">
-                <p className="text-xs text-white/60">{t('Iso')}: <span className="font-mono text-cyan-300">{fromUnix.toISOString()}</span></p>
-                <p className="text-xs text-white/60">{t('Local')}: <span className="font-mono text-cyan-300">{formatDateTime(fromUnix)}</span></p>
-                <p className="text-xs text-white/60">{t('Relative')}: <span className="font-mono text-cyan-300">{getRelativeTime(fromUnix)}</span></p>
+                <p className="text-xs text-[var(--text-secondary)]">{t('Iso')}: <span className="font-mono text-cyan-300">{fromUnix.toISOString()}</span></p>
+                <p className="text-xs text-[var(--text-secondary)]">{t('Local')}: <span className="font-mono text-cyan-300">{formatDateTime(fromUnix)}</span></p>
+                <p className="text-xs text-[var(--text-secondary)]">{t('Relative')}: <span className="font-mono text-cyan-300">{getRelativeTime(fromUnix)}</span></p>
               </div>
             )}
           </div>
@@ -71,9 +71,9 @@ export function TimestampTool() {
             />
             {fromIso && (
               <div className="mt-1 space-y-0.5">
-                <p className="text-xs text-white/60">{t('Unix')}: <span className="font-mono text-cyan-300">{Math.floor(fromIso.getTime() / 1000)}</span></p>
-                <p className="text-xs text-white/60">{t('Local')}: <span className="font-mono text-cyan-300">{formatDateTime(fromIso)}</span></p>
-                <p className="text-xs text-white/60">{t('Relative')}: <span className="font-mono text-cyan-300">{getRelativeTime(fromIso)}</span></p>
+                <p className="text-xs text-[var(--text-secondary)]">{t('Unix')}: <span className="font-mono text-cyan-300">{Math.floor(fromIso.getTime() / 1000)}</span></p>
+                <p className="text-xs text-[var(--text-secondary)]">{t('Local')}: <span className="font-mono text-cyan-300">{formatDateTime(fromIso)}</span></p>
+                <p className="text-xs text-[var(--text-secondary)]">{t('Relative')}: <span className="font-mono text-cyan-300">{getRelativeTime(fromIso)}</span></p>
               </div>
             )}
           </div>

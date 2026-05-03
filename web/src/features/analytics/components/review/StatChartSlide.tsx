@@ -44,7 +44,7 @@ export function StatChartSlide({ data }: Props) {
           duration={1.2}
           className="text-5xl md:text-7xl font-bold text-white"
         />
-        <span className="text-xl text-white/60">
+        <span className="text-xl text-[var(--text-secondary)]">
           {t('yearReview.drives', 'drives')}
         </span>
       </motion.div>
@@ -53,7 +53,7 @@ export function StatChartSlide({ data }: Props) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5, duration: 0.4 }}
-        className="text-white/40 mb-6"
+        className="text-[var(--text-muted)] mb-6"
       >
         {t('yearReview.avgPerWeek', { count: data.avg_drives_per_week.toFixed(1), defaultValue: '{{count}} drives per week on average' })}
       </motion.p>

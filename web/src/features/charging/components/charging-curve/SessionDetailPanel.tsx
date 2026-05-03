@@ -13,8 +13,8 @@ function SessionDetailRow({
   value: string;
 }) {
   return (
-    <div className="flex items-center justify-between border-b border-white/5 py-2 text-sm">
-      <span className="text-white/60">{label}</span>
+    <div className="flex items-center justify-between border-b border-[var(--border-subtle)] py-2 text-sm">
+      <span className="text-[var(--text-secondary)]">{label}</span>
       <span className="font-medium text-white">{value}</span>
     </div>
   );
@@ -30,7 +30,7 @@ export default function SessionDetailPanel({ session, currencySymbol }: SessionD
 
   return (
     <GlassPanel className="space-y-1 p-5">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-white/70">
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
         {t('charging.curve.sessionDetails', 'Session Details')}
       </h3>
       <SessionDetailRow

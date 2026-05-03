@@ -45,7 +45,7 @@ export default function PedalUsage({ vehicleId }: PedalUsageProps) {
   return (
     <FadeIn delay={0.1}>
       <GlassPanel className="p-6">
-        <h2 className="mb-4 text-lg font-semibold text-white/90">
+        <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
           {t('dynamics.pedalUsage', 'Pedal Usage')}
         </h2>
         {hasAny ? (
@@ -59,7 +59,7 @@ export default function PedalUsage({ vehicleId }: PedalUsageProps) {
                 color="#06b6d4"
                 size={140}
               />
-              <span className="text-xs text-white/50">
+              <span className="text-xs text-[var(--text-secondary)]">
                 {t('dynamics.throttlePosition', 'Throttle Position')}
               </span>
             </div>
@@ -72,12 +72,12 @@ export default function PedalUsage({ vehicleId }: PedalUsageProps) {
                 color="#ef4444"
                 size={140}
               />
-              <span className="text-xs text-white/50">
+              <span className="text-xs text-[var(--text-secondary)]">
                 {t('dynamics.brakePedalPosition', 'Brake Pedal Position')}
               </span>
             </div>
             <div className="flex flex-col items-center justify-center gap-3">
-              <Footprints className="h-8 w-8 text-white/20" />
+              <Footprints className="h-8 w-8 text-[var(--text-muted)]" />
               <Badge
                 variant={brakeActive ? 'danger' : 'success'}
                 size="lg"
@@ -86,7 +86,7 @@ export default function PedalUsage({ vehicleId }: PedalUsageProps) {
                   ? t('dynamics.brakeActive', 'Brake Active')
                   : t('dynamics.brakeInactive', 'Brake Inactive')}
               </Badge>
-              <span className="text-xs text-white/50">
+              <span className="text-xs text-[var(--text-secondary)]">
                 {t('dynamics.brakePedal', 'Brake Pedal Status')}
               </span>
             </div>

@@ -52,7 +52,7 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
       key: 'name',
       header: t('redis.signalName', 'Signal Name'),
       sortable: true,
-      render: (row) => <span className="font-mono text-sm text-white/90">{row.name}</span>,
+      render: (row) => <span className="font-mono text-sm text-[var(--text-primary)]">{row.name}</span>,
     },
     {
       key: 'value',
@@ -179,7 +179,7 @@ export default function RedisSignalViewerPage() {
               </div>
 
               <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
                 <UiInput
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -203,7 +203,7 @@ export default function RedisSignalViewerPage() {
 
               <div className="flex items-center gap-2">
                 <Toggle checked={autoRefresh} onChange={setAutoRefresh} />
-                <span className="text-sm text-white/60">{t('redis.autoRefresh', 'Auto-refresh')}</span>
+                <span className="text-sm text-[var(--text-secondary)]">{t('redis.autoRefresh', 'Auto-refresh')}</span>
               </div>
 
               <UiButton
@@ -211,7 +211,7 @@ export default function RedisSignalViewerPage() {
                 variant="secondary"
                 onClick={() => refetch()}
                 disabled={selectedVehicleId === null || isFetching}
-                className="gap-1.5 !rounded-lg !bg-white/[0.06] !px-3 !py-2 text-sm text-white/80 hover:!bg-white/10 disabled:opacity-40"
+                className="gap-1.5 !rounded-lg !bg-white/[0.06] !px-3 !py-2 text-sm text-[var(--text-primary)] hover:!bg-[var(--surface-2)] disabled:opacity-40"
               >
                 <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
                 {t('redis.refresh', 'Refresh')}

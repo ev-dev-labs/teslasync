@@ -66,7 +66,7 @@ export function StateTimeline({
       <div
         data-testid="state-timeline-empty"
         className={cn(
-          'rounded-lg border border-white/5 bg-white/[0.02] px-4 py-3 text-xs text-[var(--text-muted)]',
+          'rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3 text-xs text-[var(--text-muted)]',
           className,
         )}
       >
@@ -78,7 +78,7 @@ export function StateTimeline({
   return (
     <div
       data-testid="state-timeline"
-      className={cn('rounded-lg border border-white/5 bg-white/[0.02] px-4 py-3', className)}
+      className={cn('rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3', className)}
     >
       <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
         <span>{start.toLocaleTimeString()}</span>
@@ -88,7 +88,7 @@ export function StateTimeline({
         <span>{end.toLocaleTimeString()}</span>
       </div>
       <div className="relative h-10">
-        <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-white/10" />
+        <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-[var(--surface-2)]" />
         {ticks.map(({ tr, leftPct }) => {
           const color = getStateColor(fsmType, tr.to_state);
           const isSelected = selectedId != null && tr.id === selectedId;
@@ -106,7 +106,7 @@ export function StateTimeline({
                 className={cn(
                   'absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-all',
                   isSelected
-                    ? 'h-4 w-4 border-white/80 ring-2 ring-white/30'
+                    ? 'h-4 w-4 border-[var(--border-strong)] ring-2 ring-white/30'
                     : 'h-2.5 w-2.5 border-transparent hover:h-3.5 hover:w-3.5',
                   color.dot,
                 )}

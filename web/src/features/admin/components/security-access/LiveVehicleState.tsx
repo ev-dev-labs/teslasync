@@ -143,17 +143,17 @@ export function LiveVehicleState({ latest }: LiveVehicleStateProps) {
             {liveSignals.map((sig) => (
               <GlassPanel key={sig.key} className="p-3" hover>
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span className={cn(sig.active ? 'text-cyan-400' : 'text-gray-500')}>
+                  <span className={cn(sig.active ? 'text-cyan-400' : 'text-[var(--text-muted)]')}>
                     {sig.icon}
                   </span>
-                  <span className="text-[10px] font-medium text-gray-400 truncate">
+                  <span className="text-[10px] font-medium text-[var(--text-muted)] truncate">
                     {sig.label}
                   </span>
                 </div>
                 <span
                   className={cn(
                     'text-sm font-semibold block truncate',
-                    sig.active ? 'text-white' : 'text-gray-500',
+                    sig.active ? 'text-white' : 'text-[var(--text-muted)]',
                   )}
                 >
                   {sig.value}

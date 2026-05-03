@@ -86,10 +86,10 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
         <div className="flex flex-col gap-3 h-full">
           {isCompact ? (
             <div className="flex flex-col items-center justify-center h-full gap-1 min-h-[44px]">
-              <span className="text-2xl font-bold tabular-nums text-white/90">
+              <span className="text-2xl font-bold tabular-nums text-[var(--text-primary)]">
                 {fmtInt(dashStats?.totalTrips ?? 0)}
               </span>
-              <span className="text-xs text-white/50">
+              <span className="text-xs text-[var(--text-secondary)]">
                 {t('widget.dashboardStats.active', 'active')}
               </span>
             </div>
@@ -99,7 +99,7 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
 
               {/* FSM badge row */}
               <div className="flex items-center gap-2 min-h-[44px]">
-                <span className="text-xs text-white/50">
+                <span className="text-xs text-[var(--text-secondary)]">
                   {t('widget.dashboardStats.currentState', 'Current State')}
                 </span>
                 <StatusBadge status={fsmState} size="sm" />
@@ -110,7 +110,7 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
           {/* Wide: recent state transitions */}
           {isWide && recentTransitions.length > 0 && (
             <div className="space-y-1.5 overflow-y-auto">
-              <span className="text-[10px] uppercase tracking-wider text-white/40">
+              <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
                 {t('widget.dashboardStats.recentTransitions', 'Recent Transitions')}
               </span>
               <div className="flex flex-col gap-1">
@@ -124,7 +124,7 @@ export default function DashboardStatsWidget({ vehicleId, size }: WidgetProps) {
                         {tr.state ?? '—'}
                       </Badge>
                     </div>
-                    <span className="text-xs text-white/50 tabular-nums truncate">
+                    <span className="text-xs text-[var(--text-secondary)] tabular-nums truncate">
                       {tr.startedAt
                         ? formatRelative(tr.startedAt)
                         : '—'}

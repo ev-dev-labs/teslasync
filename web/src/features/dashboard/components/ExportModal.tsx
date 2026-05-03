@@ -64,7 +64,7 @@ export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModa
             <MiniGridPreview dashboard={dashboard} />
           </div>
           <div className="min-w-0 space-y-1.5">
-            <h3 className="text-base font-semibold text-white/90 truncate">
+            <h3 className="text-base font-semibold text-[var(--text-primary)] truncate">
               {dashboard.name}
             </h3>
             <div className="flex flex-wrap gap-2">
@@ -74,7 +74,7 @@ export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModa
               </Badge>
               <Badge variant="neutral">{jsonSize}</Badge>
             </div>
-            <p className="text-xs text-white/30">
+            <p className="text-xs text-[var(--text-muted)]">
               {t('export.updated', 'Updated {{date}}', {
                 date: new Date(dashboard.updatedAt).toLocaleDateString(),
               })}

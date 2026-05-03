@@ -331,7 +331,7 @@ export default function ApiPlaygroundPage() {
                   message={t('playground.selectEndpoint', 'Select an endpoint from the sidebar to start testing')}
                 />
                 {allEndpoints.length > 0 && (
-                  <p className="text-center text-xs text-white/30 mt-2">
+                  <p className="text-center text-xs text-[var(--text-muted)] mt-2">
                     {t('playground.endpointCount', '{{count}} endpoints available', { count: allEndpoints.length })}
                   </p>
                 )}

@@ -95,7 +95,7 @@ export function NotificationRow({
         checked={selected}
         onChange={e => onSelectionChange(log.id, e.target.checked)}
         aria-label={t('notifications.inbox.row.select', 'Select notification')}
-        className="mt-1 h-4 w-4 cursor-pointer rounded border-white/20 bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
+        className="mt-1 h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
       />
 
       <div className="flex-1 min-w-0">

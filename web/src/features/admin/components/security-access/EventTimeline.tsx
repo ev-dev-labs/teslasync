@@ -102,16 +102,16 @@ export function EventTimeline({ timelineEvents }: EventTimelineProps) {
                         ? 'bg-green-500/20 text-green-400'
                         : ev.variant === 'negative'
                           ? 'bg-red-500/20 text-red-400'
-                          : 'bg-gray-500/20 text-gray-400',
+                          : 'bg-gray-500/20 text-[var(--text-muted)]',
                     )}
                   >
                     {timelineIcon(ev)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-200">{title}</p>
-                    <p className="text-xs text-gray-500">{subtitle}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{subtitle}</p>
                   </div>
-                  <span className="text-[10px] text-gray-500 whitespace-nowrap shrink-0">
+                  <span className="text-[10px] text-[var(--text-muted)] whitespace-nowrap shrink-0">
                     {formatDateTime(ev.timestamp)}
                   </span>
                 </div>

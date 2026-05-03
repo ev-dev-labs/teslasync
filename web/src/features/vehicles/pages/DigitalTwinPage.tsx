@@ -123,7 +123,7 @@ export default function DigitalTwinPage() {
                 </div>
               ) : null}
               {twinState.lastUpdated && (
-                <p className="text-center text-xs text-white/40 mt-4">
+                <p className="text-center text-xs text-[var(--text-muted)] mt-4">
                   {t('digitalTwin.lastUpdated', 'Last updated')}: {new Date(twinState.lastUpdated).toLocaleTimeString()}
                 </p>
               )}
@@ -135,7 +135,7 @@ export default function DigitalTwinPage() {
             {/* Doors panel */}
             <FadeIn delay={0.05}>
               <GlassPanel className="p-4">
-                <h3 className="text-sm font-semibold text-white/80 mb-3">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
                   {t('digitalTwin.doorsTitle', 'Doors & Openings')}
                 </h3>
                 {securityData ? (
@@ -149,7 +149,7 @@ export default function DigitalTwinPage() {
             {/* Windows panel */}
             <FadeIn delay={0.1}>
               <GlassPanel className="p-4">
-                <h3 className="text-sm font-semibold text-white/80 mb-3">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
                   {t('digitalTwin.windowsTitle', 'Windows')}
                 </h3>
                 {securityData ? (
@@ -163,12 +163,12 @@ export default function DigitalTwinPage() {
             {/* Security & Status panel */}
             <FadeIn delay={0.15}>
               <GlassPanel className="p-4">
-                <h3 className="text-sm font-semibold text-white/80 mb-3">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
                   {t('digitalTwin.securityTitle', 'Security & Status')}
                 </h3>
                 <KVList items={securityItems} columns={2} />
                 {vehicle && (
-                  <div className="mt-3 pt-3 border-t border-white/5">
+                  <div className="mt-3 pt-3 border-t border-[var(--border-subtle)]">
                     <StatusBadge
                       status={vehicleState?.is_charging ? 'charging' : vehicleState?.state === 'online' ? 'online' : vehicleState?.state === 'asleep' ? 'asleep' : 'offline'}
                     />

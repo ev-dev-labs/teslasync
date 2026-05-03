@@ -10,8 +10,8 @@ import type { WidgetProps } from './types';
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs text-white/50">{label}</span>
-      <span className="text-sm font-bold text-white/90">{value}</span>
+      <span className="text-xs text-[var(--text-secondary)]">{label}</span>
+      <span className="text-sm font-bold text-[var(--text-primary)]">{value}</span>
     </div>
   );
 }

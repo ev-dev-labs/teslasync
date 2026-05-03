@@ -33,7 +33,7 @@ export function PageHeader({
               {title}
             </Heading>
             <div className="mt-1.5 sm:mt-2 h-0.5 w-12 sm:w-16 rounded-full bg-gradient-to-r from-neon-cyan to-neon-purple opacity-60" />
-            {subtitle && <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-white/60">{subtitle}</p>}
+            {subtitle && <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-[var(--text-secondary)]">{subtitle}</p>}
           </div>
         </div>
         {(actions || copyLink) && (

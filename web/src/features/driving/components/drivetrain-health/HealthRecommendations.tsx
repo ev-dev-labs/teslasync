@@ -119,7 +119,7 @@ export function HealthRecommendations({ overallHealth }: HealthRecommendationsPr
                     ? 'border-neon-red/20 bg-neon-red/5'
                     : tip.priority === 'medium'
                       ? 'border-neon-amber/20 bg-neon-amber/5'
-                      : 'border-white/5 bg-white/[0.02]',
+                      : 'border-[var(--border-subtle)] bg-white/[0.02]',
                 )}
               >
                 {tip.priority === 'high' ? (

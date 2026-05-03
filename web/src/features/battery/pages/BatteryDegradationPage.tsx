@@ -289,7 +289,7 @@ export default function BatteryDegradationPage() {
             {degradation?.prediction?.has_enough_data ? (
               <div className="space-y-4">
                 <div className="rounded-xl p-4 bg-neon-purple/[0.08] border border-neon-purple/15">
-                  <p className="text-sm text-white/70">
+                  <p className="text-sm text-[var(--text-secondary)]">
                     {t('battery.degradation.predictionDesc', 'At current rate, battery reaches')}{' '}
                     <span className="font-bold text-amber-300">80%</span>{' '}
                     {t('battery.degradation.inApprox', 'in approximately')}{' '}
@@ -332,7 +332,7 @@ export default function BatteryDegradationPage() {
             ) : (
               <div className="rounded-xl p-4 bg-white/[0.02] text-center">
                 <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-neon-amber/50" />
-                <p className="text-sm text-white/50">
+                <p className="text-sm text-[var(--text-secondary)]">
                   {t('battery.degradation.needMore', 'Need more data points to generate prediction (minimum 3 snapshots required)')}
                 </p>
               </div>
@@ -502,7 +502,7 @@ export default function BatteryDegradationPage() {
                         {rf.score}
                       </span>
                     </div>
-                    <p className="text-[10px] text-white/50">{rf.detail}</p>
+                    <p className="text-[10px] text-[var(--text-secondary)]">{rf.detail}</p>
                   </GlassPanel>
                 );
               })}
@@ -528,7 +528,7 @@ export default function BatteryDegradationPage() {
               {(degradation?.recommendations ?? []).map((rec, i) => (
                 <div key={i} className="flex items-start gap-3 rounded-xl p-3 bg-neon-amber/[0.05] border border-neon-amber/10">
                   <Zap className="h-4 w-4 mt-0.5 shrink-0 text-neon-amber" />
-                  <p className="text-sm text-white/80">{rec}</p>
+                  <p className="text-sm text-[var(--text-primary)]">{rec}</p>
                 </div>
               ))}
             </div>

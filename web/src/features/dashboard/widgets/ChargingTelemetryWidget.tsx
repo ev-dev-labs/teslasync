@@ -130,7 +130,7 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
             <span className="text-lg font-bold text-emerald-300">
               {fmtNumber(power, 1)} kW
             </span>
-            <span className="text-[10px] text-white/40">
+            <span className="text-[10px] text-[var(--text-muted)]">
               {fmtNumber(voltage, 0)}V · {fmtNumber(current, 0)}A
             </span>
           </div>

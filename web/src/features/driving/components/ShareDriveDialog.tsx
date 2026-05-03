@@ -53,7 +53,7 @@ export function ShareDriveDialog({ driveId, open, onClose }: ShareDriveDialogPro
         {/* Create new share */}
         {!shareUrl ? (
           <div className="space-y-4">
-            <p className="text-sm text-white/50">
+            <p className="text-sm text-[var(--text-secondary)]">
               {t('share.description', 'Generate a public link to share this drive report. Anyone with the link can view the map, stats, and charts — no login required.')}
             </p>
 
@@ -123,7 +123,7 @@ export function ShareDriveDialog({ driveId, open, onClose }: ShareDriveDialogPro
         {/* Existing shares */}
         {shares.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-white/60 border-t border-white/5 pt-4">
+            <h3 className="text-sm font-medium text-[var(--text-secondary)] border-t border-[var(--border-subtle)] pt-4">
               {t('share.existing', 'Active Share Links')}
             </h3>
             {shares.map((share) => {
@@ -133,10 +133,10 @@ export function ShareDriveDialog({ driveId, open, onClose }: ShareDriveDialogPro
               return (
                 <GlassPanel key={share.id} className="p-3 flex items-center justify-between">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white/80 truncate">
+                    <p className="text-sm text-[var(--text-primary)] truncate">
                       {share.title ?? t('share.untitled', 'Untitled share')}
                     </p>
-                    <div className="flex items-center gap-3 text-xs text-white/40">
+                    <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
                       <span className="flex items-center gap-1">
                         <Eye className="h-3 w-3" />
                         {share.views} {t('share.views', 'views')}

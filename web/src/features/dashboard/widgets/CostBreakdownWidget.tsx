@@ -35,15 +35,15 @@ function CostTooltip({
   if (!active || !payload?.[0]) return null;
   const seg = payload[0].payload;
   return (
-    <div className="rounded-lg border border-white/10 bg-gray-900/95 px-3 py-2 text-xs shadow-lg">
+    <div className="rounded-lg border border-[var(--border-subtle)] bg-gray-900/95 px-3 py-2 text-xs shadow-lg">
       <div className="flex items-center gap-2">
         <span
           className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0"
           style={{ backgroundColor: seg.color }}
         />
-        <span className="text-white/80">{seg.name}</span>
+        <span className="text-[var(--text-primary)]">{seg.name}</span>
       </div>
-      <div className="mt-1 text-white/60">
+      <div className="mt-1 text-[var(--text-secondary)]">
         {currencySymbol}{fmtNumber(seg.value, 2)}
       </div>
     </div>

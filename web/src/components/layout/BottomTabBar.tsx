@@ -35,7 +35,7 @@ export function BottomTabBar() {
     <nav
       aria-label={t('nav.quickNav', 'Quick navigation')}
       className="fixed bottom-0 left-0 right-0 z-50 lg:hidden
-        bg-black/80 backdrop-blur-xl border-t border-white/[0.06]
+        bg-[var(--surface-overlay)] backdrop-blur-xl border-t border-white/[0.06]
         flex items-center justify-around px-2 h-14 safe-bottom"
     >
       {TABS.map(tab => {
@@ -55,7 +55,7 @@ export function BottomTabBar() {
               'transition-colors min-w-[48px] min-h-[44px]',
               isActive
                 ? 'text-[var(--theme-primary)]'
-                : 'text-white/40 active:text-white/60'
+                : 'text-[var(--text-muted)] active:text-[var(--text-secondary)]'
             )}
           >
             <Icon className={cn('h-5 w-5', isActive && 'drop-shadow-[0_0_6px_currentColor]')} />

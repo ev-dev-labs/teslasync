@@ -22,7 +22,7 @@ function CompactView({ power, chargerPower, isCharging, batteryLevel, t }: {
 
   return (
     <div className="h-full flex flex-col items-center justify-center gap-2 py-2">
-      <div className="text-xl font-bold text-white/90">{batteryLevel}%</div>
+      <div className="text-xl font-bold text-[var(--text-primary)]">{batteryLevel}%</div>
       {isCharging && (
         <div className="flex items-center gap-1 text-xs text-amber-400">
           <Plug className="h-3 w-3" />
@@ -42,7 +42,7 @@ function CompactView({ power, chargerPower, isCharging, batteryLevel, t }: {
         </div>
       )}
       {!isConsuming && !isRegen && !isCharging && (
-        <span className="text-xs text-white/40">{t('widget.energyFlowAnimated.idle', 'Idle')}</span>
+        <span className="text-xs text-[var(--text-muted)]">{t('widget.energyFlowAnimated.idle', 'Idle')}</span>
       )}
     </div>
   );

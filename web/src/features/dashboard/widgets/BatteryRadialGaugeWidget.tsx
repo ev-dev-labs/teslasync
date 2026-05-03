@@ -77,7 +77,7 @@ export default function BatteryRadialGaugeWidget({ vehicleId, size }: WidgetProp
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.batteryRadial', 'Battery')}
-      icon={isCompact ? undefined : <Battery className="h-3.5 w-3.5 text-white/40" />}
+      icon={isCompact ? undefined : <Battery className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
       loading={isLoading}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}

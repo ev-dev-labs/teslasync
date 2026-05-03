@@ -22,12 +22,12 @@ export function BatteryPill({ level, label, className }: BatteryPillProps) {
     <GlassPanel className={cn('flex items-center gap-3 px-4 py-3', className)}>
       <Battery className="h-5 w-5" style={{ color }} />
       <span className="flex flex-col">
-        <span className="text-xs text-white/50">{label}</span>
+        <span className="text-xs text-[var(--text-secondary)]">{label}</span>
         <span className="text-sm font-bold" style={{ color }}>
           {fmtInt(level)}%
         </span>
       </span>
-      <span className="ml-auto h-2 w-16 overflow-hidden rounded-full bg-white/10">
+      <span className="ml-auto h-2 w-16 overflow-hidden rounded-full bg-[var(--surface-2)]">
         <span
           className="block h-full rounded-full transition-all"
           style={{ width: `${Math.min(level, 100)}%`, backgroundColor: color }}

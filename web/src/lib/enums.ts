@@ -25,7 +25,7 @@ export function getStateBadgeColor(state: string | undefined | null): 'green' | 
 export function getStateColor(state: string | undefined | null): string {
   const s = (state ?? '').toLowerCase() as VehicleState
   const entry = VEHICLE_STATE_ENTRIES[s]
-  return entry ? resolveStyle(entry).text : 'text-gray-400'
+  return entry ? resolveStyle(entry).text : 'text-[var(--text-muted)]'
 }
 
 /** Display label for a vehicle state */

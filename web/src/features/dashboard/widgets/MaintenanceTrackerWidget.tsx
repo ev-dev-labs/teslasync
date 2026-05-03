@@ -120,13 +120,13 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           {nextItem ? (
             <>
               <Wrench className="h-4 w-4 text-amber-400" />
-              <span className="text-2xl font-bold text-white/90">
+              <span className="text-2xl font-bold text-[var(--text-primary)]">
                 {fmtInt(nextItem.intervalMonths ?? 0)}
               </span>
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.maintenance.monthsLeft', 'months')}
               </span>
-              <span className="text-xs text-white/60 truncate max-w-full px-2 text-center">
+              <span className="text-xs text-[var(--text-secondary)] truncate max-w-full px-2 text-center">
                 {nextItem.name ?? '—'}
               </span>
             </>
@@ -155,17 +155,17 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           {nextItem && nextUrgency && (
             <div className="rounded-lg bg-white/[0.03] p-3 border border-white/[0.06]">
               <div className="flex items-center justify-between gap-2 mb-1.5">
-                <span className="text-[10px] text-white/40 uppercase tracking-wider">
+                <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
                   {t('widget.maintenance.nextService', 'Next Service')}
                 </span>
                 <Badge variant={urgencyBadgeVariant(nextUrgency)} size="sm" dot>
                   {urgencyLabel(nextUrgency, t)}
                 </Badge>
               </div>
-              <p className="text-sm font-semibold text-white/90 truncate">
+              <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
                 {nextItem.name ?? '—'}
               </p>
-              <div className="flex items-center gap-3 mt-1.5 text-xs text-white/50">
+              <div className="flex items-center gap-3 mt-1.5 text-xs text-[var(--text-secondary)]">
                 <span className="flex items-center gap-1 min-h-[44px] min-w-[44px] justify-center">
                   <Clock className="h-3 w-3 shrink-0" />
                   {t('widget.maintenance.every', 'Every')}{' '}
@@ -186,14 +186,14 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           {/* Bottom: Recent service records */}
           {recentRecords.length > 0 ? (
             <div className="flex-1 min-h-0">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider block mb-2">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-2">
                 {t('widget.maintenance.recentService', 'Recent Service')}
               </span>
               <Timeline items={timelineItems} />
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center">
-              <span className="text-xs text-white/30">
+              <span className="text-xs text-[var(--text-muted)]">
                 {t('widget.maintenance.noRecords', 'No service records yet')}
               </span>
             </div>

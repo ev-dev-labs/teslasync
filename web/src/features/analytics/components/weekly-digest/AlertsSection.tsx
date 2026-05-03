@@ -45,7 +45,7 @@ export function AlertsSection({ metrics, alertPieData }: AlertsSectionProps) {
           <span className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Alert count by severity */}
             <span className="space-y-3">
-              <span className="text-sm font-medium text-white/70">
+              <span className="text-sm font-medium text-[var(--text-secondary)]">
                 {t('analytics.weeklyDigest.alertsBySeverity', 'Alerts by Severity')}
               </span>
               <span className="grid gap-3">
@@ -73,7 +73,7 @@ export function AlertsSection({ metrics, alertPieData }: AlertsSectionProps) {
                           style={{ color: CHART_COLORS[0] }}
                         />
                       )}
-                      <span className="text-sm capitalize text-white/80">{severity}</span>
+                      <span className="text-sm capitalize text-[var(--text-primary)]">{severity}</span>
                     </span>
                     <Badge
                       variant={
@@ -94,7 +94,7 @@ export function AlertsSection({ metrics, alertPieData }: AlertsSectionProps) {
 
             {/* Alert distribution PieChart */}
             <span className="flex flex-col items-center">
-              <span className="mb-3 text-sm font-medium text-white/70">
+              <span className="mb-3 text-sm font-medium text-[var(--text-secondary)]">
                 {t('analytics.weeklyDigest.alertDistribution', 'Alert Distribution')}
               </span>
               <ResponsiveContainer width="100%" height={260}>

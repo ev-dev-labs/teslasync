@@ -39,7 +39,7 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
             value={pageSize}
             onChange={e => onPageSizeChange(Number(e.target.value))}
             aria-label={t('pagination.pageSize', 'Rows per page')}
-            className="rounded-md bg-white/[0.04] px-2 py-1 text-xs text-gray-300 outline-none ring-1 ring-white/[0.08]"
+            className="rounded-md bg-white/[0.04] px-2 py-1 text-xs text-[var(--text-secondary)] outline-none ring-1 ring-white/[0.08]"
           >
             {pageSizeOptions.map(s => (
               <option key={s} value={s} className="bg-[var(--bg)]">
@@ -61,7 +61,7 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
           <ChevronLeft className="h-4 w-4" aria-hidden="true" />
         </button>
         <span
-          className="px-3 text-xs font-medium text-gray-300"
+          className="px-3 text-xs font-medium text-[var(--text-secondary)]"
           aria-current="page"
           aria-label={t('pagination.currentPage', 'Page {{page}} of {{total}}', { page, total: totalPages })}
         >

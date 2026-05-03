@@ -42,7 +42,7 @@ export default function DrivingTips({ motorStats, throttleStyle }: DrivingTipsPr
       <GlassPanel className="p-6">
         <div className="mb-4 flex items-center gap-3">
           <Lightbulb className="h-5 w-5 text-yellow-400" />
-          <h2 className="text-lg font-semibold text-white/90">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
             {t('dynamics.recommendations', 'Driving Style Recommendations')}
           </h2>
         </div>
@@ -60,7 +60,7 @@ export default function DrivingTips({ motorStats, throttleStyle }: DrivingTipsPr
               ) : (
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-400" />
               )}
-              <span className="text-sm text-white/70">{tip}</span>
+              <span className="text-sm text-[var(--text-secondary)]">{tip}</span>
             </div>
           ))}
         </div>

@@ -204,7 +204,7 @@ export function ComputedMetricEditor({ value, onChange, metrics, loading }: Prop
           <p className="text-xs text-rose-300">{previewError}</p>
         )}
         {ready && !previewMut.isPending && !previewError && previewData && (
-          <p className="text-xs text-white/90">
+          <p className="text-xs text-[var(--text-primary)]">
             {t(
               'notifications.alertStudio.computedMetric.previewValue',
               'Right now this metric is {{value}}{{suffix}} — would {{verdict}} fire.',

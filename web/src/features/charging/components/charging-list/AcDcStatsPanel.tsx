@@ -66,7 +66,7 @@ export function AcDcStatsPanel({ breakdown }: AcDcStatsPanelProps) {
 
       {/* Free charging total */}
       {breakdown.total.freeCount > 0 && (
-        <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-center gap-4 text-xs text-[var(--text-secondary)]">
+        <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] flex items-center justify-center gap-4 text-xs text-[var(--text-secondary)]">
           <span>{t('charging.table.freeCharged', 'Free charged')}: <strong className="text-emerald-300">{breakdown.total.freeCount} sessions</strong></span>
           <span>{t('charging.table.freeEnergy', 'Free energy')}: <strong className="text-emerald-300">{fmtWithUnit(breakdown.total.freeEnergy, 'kWh')}</strong></span>
         </div>

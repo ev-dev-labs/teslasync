@@ -215,7 +215,7 @@ export default function AnomalyDashboardPage() {
                       <span>{new Date(a.detected_at).toLocaleString()}</span>
                     </div>
                   </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-white/20" />
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
                 </div>
               ))}
             </div>

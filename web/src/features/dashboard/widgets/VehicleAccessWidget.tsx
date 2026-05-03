@@ -25,8 +25,8 @@ function CompactView({
   return (
     <div className="flex items-center justify-between gap-2 min-h-[44px]">
       <div className="flex items-center gap-2 min-w-0">
-        <Users className="h-4 w-4 flex-shrink-0 text-white/60" />
-        <span className="text-sm text-white/90 truncate">
+        <Users className="h-4 w-4 flex-shrink-0 text-[var(--text-secondary)]" />
+        <span className="text-sm text-[var(--text-primary)] truncate">
           {driverCount} {t('widget.vehicleAccessDrivers', 'Drivers')}
         </span>
       </div>
@@ -36,7 +36,7 @@ function CompactView({
             ? 'bg-emerald-400'
             : mobileEnabled === false
               ? 'bg-red-400'
-              : 'bg-white/20'
+              : 'bg-[var(--surface-2)]'
         }`}
         title={
           mobileEnabled === true
@@ -69,7 +69,7 @@ function StandardView({
     <div className="flex flex-col gap-3 h-full">
       {/* Mobile access status */}
       <div className="flex items-center justify-between gap-2 flex-shrink-0 min-h-[44px]">
-        <span className="text-xs text-white/40 uppercase tracking-wide">
+        <span className="text-xs text-[var(--text-muted)] uppercase tracking-wide">
           {t('widget.vehicleAccessMobile', 'Mobile Access')}
         </span>
         <Badge variant={mobileEnabled === true ? 'success' : mobileEnabled === false ? 'danger' : 'neutral'}>
@@ -83,7 +83,7 @@ function StandardView({
 
       {/* Drivers section */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <p className="text-[10px] uppercase text-white/30 tracking-wide mb-1">
+        <p className="text-[10px] uppercase text-[var(--text-muted)] tracking-wide mb-1">
           {t('widget.vehicleAccessAuthorized', 'Authorized Drivers')}
         </p>
         <WidgetDetailCard
@@ -97,7 +97,7 @@ function StandardView({
       {/* Invitations section */}
       {invitationEntries.length > 0 && (
         <div className="flex-shrink-0 border-t border-white/[0.06] pt-2">
-          <p className="text-[10px] uppercase text-white/30 tracking-wide mb-1">
+          <p className="text-[10px] uppercase text-[var(--text-muted)] tracking-wide mb-1">
             {t('widget.vehicleAccessPending', 'Pending Invitations')}
           </p>
           <WidgetDetailCard

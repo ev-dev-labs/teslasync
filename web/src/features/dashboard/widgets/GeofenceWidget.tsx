@@ -195,14 +195,14 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
                   className={`flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 min-h-[44px] ${
                     f.inside && f.enabled
                       ? 'bg-green-500/10 ring-1 ring-green-500/30'
-                      : 'bg-white/5'
+                      : 'bg-[var(--surface-2)]'
                   }`}
                 >
                   <div className="flex flex-col min-w-0">
-                    <span className="truncate text-sm font-medium text-white/90">
+                    <span className="truncate text-sm font-medium text-[var(--text-primary)]">
                       {f.name}
                     </span>
-                    <span className="text-[10px] text-white/40">
+                    <span className="text-[10px] text-[var(--text-muted)]">
                       {t('widget.geofence.radius', 'Radius')}: {fmtRadius(f.radius)}
                     </span>
                   </div>

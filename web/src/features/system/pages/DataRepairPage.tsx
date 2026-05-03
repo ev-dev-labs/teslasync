@@ -268,7 +268,7 @@ export default function DataRepairPage() {
               staleCharging.map(s => (
                 <div key={s.id}>
                   <GlassPanel
-                    className={cn('p-4 cursor-pointer transition-all', expandedId === s.id ? 'bg-neon-amber/[0.06] border-neon-amber/20' : 'hover:border-white/10')}
+                    className={cn('p-4 cursor-pointer transition-all', expandedId === s.id ? 'bg-neon-amber/[0.06] border-neon-amber/20' : 'hover:border-[var(--border-subtle)]')}
                     onClick={() => setExpandedId(expandedId === s.id ? null : s.id)}
                   >
                     <div className="flex items-center gap-4 flex-wrap">
@@ -287,7 +287,7 @@ export default function DataRepairPage() {
               staleDrives.map(d => (
                 <div key={d.id}>
                   <GlassPanel
-                    className={cn('p-4 cursor-pointer transition-all', expandedId === d.id ? 'bg-neon-amber/[0.06] border-neon-amber/20' : 'hover:border-white/10')}
+                    className={cn('p-4 cursor-pointer transition-all', expandedId === d.id ? 'bg-neon-amber/[0.06] border-neon-amber/20' : 'hover:border-[var(--border-subtle)]')}
                     onClick={() => setExpandedId(expandedId === d.id ? null : d.id)}
                   >
                     <div className="flex items-center gap-4 flex-wrap">

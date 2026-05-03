@@ -30,7 +30,7 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
   return (
     <WidgetShell
       title={isCompact ? undefined : t('widget.rangeBar', 'Range')}
-      icon={isCompact ? undefined : <Gauge className="h-3 w-3 text-white/40" />}
+      icon={isCompact ? undefined : <Gauge className="h-3 w-3 text-[var(--text-muted)]" />}
       loading={isLoading}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
@@ -44,7 +44,7 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
             <p className="text-2xl font-bold text-cyan-300">
               {fmtNumber(ratedConverted, 0)}
             </p>
-            <p className="text-[10px] text-white/40">
+            <p className="text-[10px] text-[var(--text-muted)]">
               {distanceUnit} {t('widget.rated', 'rated')}
             </p>
           </div>
@@ -65,9 +65,9 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
               sublabel={`${fmtNumber(idealConverted, 0)} ${distanceUnit}`}
             />
             {rated > 0 && ideal > 0 && (
-              <p className="text-[10px] text-white/30 text-right">
+              <p className="text-[10px] text-[var(--text-muted)] text-right">
                 {t('widget.epaComparison', 'EPA variance')}{' '}
-                <span className="text-white/50 font-mono">
+                <span className="text-[var(--text-secondary)] font-mono">
                   {ideal >= rated ? '+' : ''}
                   {fmtNumber(((ideal - rated) / rated) * 100, 1)}%
                 </span>

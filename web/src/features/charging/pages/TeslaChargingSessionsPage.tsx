@@ -93,7 +93,7 @@ export default function TeslaChargingSessionsPage() {
       key: 'date',
       header: t('tesla_sessions.col.date', 'Date'),
       render: (row) => (
-        <span className="text-sm text-white/90">{formatDateTime(row.charge_start_datetime)}</span>
+        <span className="text-sm text-[var(--text-primary)]">{formatDateTime(row.charge_start_datetime)}</span>
       ),
       sortable: true,
       visibleOnMobile: true,
@@ -103,8 +103,8 @@ export default function TeslaChargingSessionsPage() {
       header: t('tesla_sessions.col.location', 'Location'),
       render: (row) => (
         <div className="flex items-center gap-1.5">
-          <MapPin className="h-3.5 w-3.5 text-white/40 shrink-0" />
-          <span className="text-sm text-white/80 truncate max-w-[200px]">
+          <MapPin className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" />
+          <span className="text-sm text-[var(--text-primary)] truncate max-w-[200px]">
             {row.site_location_name || '—'}
           </span>
         </div>
@@ -115,7 +115,7 @@ export default function TeslaChargingSessionsPage() {
       key: 'vin',
       header: t('tesla_sessions.col.vin', 'VIN'),
       render: (row) => (
-        <span className="text-sm text-white/70 font-mono">
+        <span className="text-sm text-[var(--text-secondary)] font-mono">
           {row.vin ? `…${row.vin.slice(-6)}` : '—'}
         </span>
       ),
@@ -146,7 +146,7 @@ export default function TeslaChargingSessionsPage() {
       key: 'duration',
       header: t('tesla_sessions.col.duration', 'Duration'),
       render: (row) => (
-        <span className="text-sm text-white/80">
+        <span className="text-sm text-[var(--text-primary)]">
           {formatDurationSeconds(row.charge_duration_s)}
         </span>
       ),
@@ -168,7 +168,7 @@ export default function TeslaChargingSessionsPage() {
       key: 'rate',
       header: t('tesla_sessions.col.rate', 'Rate/kWh'),
       render: (row) => (
-        <span className="text-sm text-white/70">
+        <span className="text-sm text-[var(--text-secondary)]">
           {row.per_kwh_rate != null ? `$${fmtNumber(row.per_kwh_rate, 3)}` : '—'}
         </span>
       ),
@@ -178,7 +178,7 @@ export default function TeslaChargingSessionsPage() {
       key: 'type',
       header: t('tesla_sessions.col.type', 'Type'),
       render: (row) => (
-        <span className="text-xs text-white/60 uppercase tracking-wide">
+        <span className="text-xs text-[var(--text-secondary)] uppercase tracking-wide">
           {row.charger_type ?? '—'}
         </span>
       ),
@@ -270,7 +270,7 @@ export default function TeslaChargingSessionsPage() {
         <GlassPanel className="p-4">
           <div className="flex items-start gap-3">
             <Building2 className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
-            <p className="text-sm text-white/70">
+            <p className="text-sm text-[var(--text-secondary)]">
               {t(
                 'tesla_sessions.businessNote',
                 'Fleet charging session data is only available for Tesla business accounts. Personal accounts will receive a 403 error when syncing.',
@@ -306,7 +306,7 @@ export default function TeslaChargingSessionsPage() {
               </span>
             )}
             {response && sessions.length > 0 && (
-              <span className="ml-auto text-xs text-white/40">
+              <span className="ml-auto text-xs text-[var(--text-muted)]">
                 {t('tesla_sessions.lastSync', 'Last synced')}: {formatDateTime(sessions[0]?.fetched_at)}
               </span>
             )}
@@ -392,7 +392,7 @@ export default function TeslaChargingSessionsPage() {
       {/* Charging session map */}
       <FadeIn delay={0.1}>
         <GlassPanel className="p-4">
-          <h3 className="text-lg font-semibold text-white/90 mb-4">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
             {t('tesla_sessions.map', 'Session Locations')}
           </h3>
           {mapPoints.length > 0 ? (
@@ -411,7 +411,7 @@ export default function TeslaChargingSessionsPage() {
       {/* Data table */}
       <FadeIn delay={0.12}>
         <GlassPanel className="p-4">
-          <h3 className="text-lg font-semibold text-white/90 mb-4">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
             {t('tesla_sessions.table', 'Charging Sessions')}
           </h3>
           {sessions.length > 0 ? (

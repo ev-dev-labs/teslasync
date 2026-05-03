@@ -498,7 +498,7 @@ export default function ChargingDetailPage() {
             <h2 className="text-lg font-semibold mb-4">
               {t('charging.detail.location', 'Location')}
             </h2>
-            <p className="text-sm text-white/80">{session.charger_location}</p>
+            <p className="text-sm text-[var(--text-primary)]">{session.charger_location}</p>
           </GlassPanel>
         )}
 

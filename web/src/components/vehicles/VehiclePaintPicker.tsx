@@ -39,7 +39,7 @@ export function VehiclePaintPicker({
       role="radiogroup"
       aria-label={t('paint.pickerLabel', 'Vehicle paint color')}
     >
-      <span className="text-xs uppercase tracking-wider text-white/50">
+      <span className="text-xs uppercase tracking-wider text-[var(--text-secondary)]">
         {t('paint.label', 'Paint')}
       </span>
       <div className="flex items-center gap-2">
@@ -61,7 +61,7 @@ export function VehiclePaintPicker({
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900',
                 selected
                   ? 'border-white scale-110 shadow-lg shadow-cyan-500/20'
-                  : 'border-white/25 hover:border-white/60 hover:scale-105',
+                  : 'border-[var(--border-strong)] hover:border-[var(--border-strong)] hover:scale-105',
               )}
               style={{ background: p.swatch }}
             >
@@ -91,7 +91,7 @@ export function VehiclePaintPicker({
           );
         })}
       </div>
-      <span className="text-xs text-white/60" aria-live="polite">
+      <span className="text-xs text-[var(--text-secondary)]" aria-live="polite">
         {t(paint.labelKey, paint.defaultLabel)}
       </span>
       {isOverridden && (

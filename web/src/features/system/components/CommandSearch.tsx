@@ -16,7 +16,7 @@ export function CommandSearch({ value, onChange }: CommandSearchProps) {
       onChange={(e) => onChange(e.target.value)}
       placeholder={t('commands.search.placeholder', 'Search commands...')}
       icon={<Search className="h-4 w-4" />}
-      className="bg-white/[0.03] border-white/[0.06] text-white/90 placeholder:text-white/30"
+      className="bg-white/[0.03] border-white/[0.06] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
     />
   );
 }

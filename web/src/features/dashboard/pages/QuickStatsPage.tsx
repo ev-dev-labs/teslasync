@@ -42,10 +42,10 @@ export default function QuickStatsPage() {
                   <Car className="h-5 w-5 text-cyan-400" />
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-white/90">
+                  <p className="text-lg font-bold text-[var(--text-primary)]">
                     {vehicle.display_name || t('quickStats.defaultName', 'Tesla')}
                   </p>
-                  <p className="text-xs text-white/40">
+                  <p className="text-xs text-[var(--text-muted)]">
                     {vehicle.model} · {stateData?.state?.state ?? 'offline'}
                   </p>
                 </div>
@@ -84,7 +84,7 @@ export default function QuickStatsPage() {
 
         {/* Footer */}
         <FadeIn delay={0.1}>
-          <p className="text-center text-[10px] text-white/30">
+          <p className="text-center text-[10px] text-[var(--text-muted)]">
             {t('quickStats.footer', 'Powered by TeslaSync')} ·{' '}
             <Link to="/" className="text-cyan-400 hover:underline">
               {t('quickStats.openDashboard', 'Open Dashboard')}

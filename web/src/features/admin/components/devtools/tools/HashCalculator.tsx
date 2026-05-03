@@ -31,14 +31,14 @@ export function HashCalculatorTool() {
     <ToolCard icon={Hash} color="red" title={t('Hash Calculator')} description={t('Hash Calculator Desc')}>
       <div className="space-y-3">
         <div>
-          <span className="mb-1 block text-xs font-medium text-white/70">{t('Hash Input')}</span>
+          <span className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">{t('Hash Input')}</span>
           <Textarea rows={2} value={inputVal} onChange={(e) => setInputVal(e.target.value)} placeholder={t('Hash Placeholder')} />
         </div>
         <Button variant="primary" size="sm" loading={computing} onClick={() => void compute()} icon={<Hash className="h-3.5 w-3.5" />}>
           {t('devtools.utils.computeSha256', 'Compute Sha256')}
         </Button>
         {hashResult && (
-          <div className="flex items-center gap-2 rounded bg-black/20 px-3 py-2">
+          <div className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-2">
             <code className="flex-1 break-all text-xs font-mono text-rose-300">{hashResult}</code>
             <CopyButton text={hashResult} />
           </div>

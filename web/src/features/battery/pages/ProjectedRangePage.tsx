@@ -298,7 +298,7 @@ export default function ProjectedRangePage() {
                             </div>
                           ) : (
                             <div className="rounded-lg px-3 py-2 bg-white/[0.03]">
-                              <span className="text-white/20 text-xs">—</span>
+                              <span className="text-[var(--text-muted)] text-xs">—</span>
                             </div>
                           )}
                         </div>
@@ -333,7 +333,7 @@ export default function ProjectedRangePage() {
                   value={whatIfSpeed}
                   onChange={(e) => setWhatIfSpeed(Number(e.target.value))}
                   aria-label={t('range.speed', 'Speed')}
-                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full border-0 bg-white/10 p-0 accent-neon-cyan dark:bg-white/10"
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full border-0 bg-[var(--surface-2)] p-0 accent-neon-cyan dark:bg-[var(--surface-2)]"
                 />
                 <div className="flex justify-between text-[9px] text-[var(--text-muted)] mt-0.5">
                   <span>30</span><span>90</span><span>150</span>
@@ -352,7 +352,7 @@ export default function ProjectedRangePage() {
                   value={whatIfTemp}
                   onChange={(e) => setWhatIfTemp(Number(e.target.value))}
                   aria-label={t('range.temperature', 'Temperature')}
-                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full border-0 bg-white/10 p-0 accent-neon-amber dark:bg-white/10"
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full border-0 bg-[var(--surface-2)] p-0 accent-neon-amber dark:bg-[var(--surface-2)]"
                 />
                 <div className="flex justify-between text-[9px] text-[var(--text-muted)] mt-0.5">
                   <span>-20°C</span><span>10°C</span><span>40°C</span>

@@ -341,7 +341,7 @@ export function PlaybackControls({
       {shortcutToast && (
         <div
           aria-live="polite"
-          className="pointer-events-none absolute -top-7 right-3 z-10 rounded-md border border-white/10 bg-black/85 px-2 py-1 text-[11px] font-mono text-white/90 shadow-lg backdrop-blur-md"
+          className="pointer-events-none absolute -top-7 right-3 z-10 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-2 py-1 text-[11px] font-mono text-[var(--text-primary)] shadow-lg backdrop-blur-md"
         >
           {shortcutToast.label}
         </div>
@@ -401,7 +401,7 @@ export function PlaybackControls({
         </div>
 
         {/* Time display */}
-        <span className="min-w-[90px] text-right font-mono text-xs text-white/60">
+        <span className="min-w-[90px] text-right font-mono text-xs text-[var(--text-secondary)]">
           {elapsed} / {total}
         </span>
 
@@ -411,7 +411,7 @@ export function PlaybackControls({
             <button
               type="button"
               aria-label={t('replay.shortcuts.help', 'Show keyboard shortcuts')}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-white/50 transition-colors hover:text-white/80 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
             >
               <Keyboard className="h-3.5 w-3.5" aria-hidden />
             </button>

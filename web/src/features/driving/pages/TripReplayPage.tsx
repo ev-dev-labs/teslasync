@@ -508,7 +508,7 @@ export default function TripReplayPage() {
       {/* ================================================================ */}
       <FadeIn delay={0.1}>
         <GlassPanel className="p-4">
-          <h3 className="mb-3 text-sm font-semibold text-white/70">
+          <h3 className="mb-3 text-sm font-semibold text-[var(--text-secondary)]">
             {t('replay.currentStats', 'Current Position Stats')}
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -662,7 +662,7 @@ export default function TripReplayPage() {
       {/* ================================================================ */}
       <FadeIn delay={0.25}>
         <GlassPanel className="p-6">
-          <h3 className="mb-4 text-sm font-semibold text-white/70">
+          <h3 className="mb-4 text-sm font-semibold text-[var(--text-secondary)]">
             {t('replay.summary.title', 'Drive Summary')}
           </h3>
           <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 gap-3">

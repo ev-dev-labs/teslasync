@@ -115,7 +115,7 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
         isCompact ? (
           /* ── Compact layout (1×2) ── */
           <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
-            <span className="text-sm font-bold text-white/90 truncate">{chartVersion}</span>
+            <span className="text-sm font-bold text-[var(--text-primary)] truncate">{chartVersion}</span>
             <Badge variant="neutral" className="text-[10px]">
               {truncatedSha}
             </Badge>
@@ -126,7 +126,7 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
             <KVList items={kvItems} />
 
             {isWide && (
-              <div className="flex items-center gap-2 text-xs text-white/50">
+              <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
                 <span>{t('widget.versionInfo.os', 'OS')}: {osInfo}</span>
                 <span>•</span>
                 <span>{t('widget.versionInfo.arch', 'Arch')}: {archInfo}</span>

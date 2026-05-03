@@ -409,7 +409,7 @@ export default function DBHealthPage() {
                       <span>{t('dbHealth.poolUsage', 'Pool Usage')}</span>
                       <span>{fmtInt(poolUsage)}%</span>
                     </div>
-                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-2 bg-[var(--surface-2)] rounded-full overflow-hidden">
                       <div
                         className={cn(
                           'h-full rounded-full transition-all',

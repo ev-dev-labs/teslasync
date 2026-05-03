@@ -44,7 +44,7 @@ export function StatHeroSlide({ data, field }: Props) {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.6, duration: 0.4 }}
-        className="text-xl md:text-2xl text-white/60 mt-3"
+        className="text-xl md:text-2xl text-[var(--text-secondary)] mt-3"
       >
         {config.unit}
       </motion.p>
@@ -53,7 +53,7 @@ export function StatHeroSlide({ data, field }: Props) {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.9, duration: 0.4 }}
-        className="text-lg text-white/40 mt-6 max-w-md"
+        className="text-lg text-[var(--text-muted)] mt-6 max-w-md"
       >
         {config.comparison}
       </motion.p>

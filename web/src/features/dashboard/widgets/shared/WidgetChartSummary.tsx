@@ -35,11 +35,11 @@ export function WidgetChartSummary({
         <div className={cn('flex gap-4', compact && 'grid grid-cols-2 gap-2')}>
           {stats.map((stat) => (
             <div key={stat.label} className="flex flex-col">
-              <span className="text-[10px] text-white/40">{stat.label}</span>
-              <span className="text-sm font-semibold text-white/90">
+              <span className="text-[10px] text-[var(--text-muted)]">{stat.label}</span>
+              <span className="text-sm font-semibold text-[var(--text-primary)]">
                 {stat.value}
                 {stat.unit && (
-                  <span className="ml-0.5 text-[10px] font-normal text-white/40">
+                  <span className="ml-0.5 text-[10px] font-normal text-[var(--text-muted)]">
                     {stat.unit}
                   </span>
                 )}

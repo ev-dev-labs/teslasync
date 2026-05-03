@@ -771,7 +771,7 @@ export default function BackupRestorePage() {
           </div>
 
           {/* dynamic provider fields */}
-          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-4">
+          <div className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-4">
             <p className="mb-3 text-sm font-medium text-[var(--text-secondary)]">
               {t('backup.providerSettings', 'Provider Settings')}
             </p>
@@ -871,7 +871,7 @@ export default function BackupRestorePage() {
 
             {/* Metadata */}
             {previewData.metadata && Object.keys(previewData.metadata).length > 0 && (
-              <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+              <div className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-3">
                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                   {t('backup.metadata', 'Backup Metadata')}
                 </p>

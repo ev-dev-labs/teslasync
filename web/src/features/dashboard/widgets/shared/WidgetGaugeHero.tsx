@@ -40,11 +40,11 @@ export function WidgetGaugeHero({ gauge, stats, compact, children }: WidgetGauge
         <div className="flex items-center gap-4">
           {stats.map((stat) => (
             <div key={stat.label} className="flex flex-col items-center text-center">
-              <span className="text-xs text-white/50">{stat.label}</span>
-              <span className="text-sm font-semibold text-white/90">
+              <span className="text-xs text-[var(--text-secondary)]">{stat.label}</span>
+              <span className="text-sm font-semibold text-[var(--text-primary)]">
                 {stat.value}
                 {stat.unit && (
-                  <span className="ml-0.5 text-xs font-normal text-white/50">{stat.unit}</span>
+                  <span className="ml-0.5 text-xs font-normal text-[var(--text-secondary)]">{stat.unit}</span>
                 )}
               </span>
             </div>

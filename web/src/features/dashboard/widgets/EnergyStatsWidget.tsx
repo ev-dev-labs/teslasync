@@ -120,9 +120,9 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
             <AnimatedNumber
               value={data.total_kwh ?? 0}
-              className="text-2xl font-bold text-white/90"
+              className="text-2xl font-bold text-[var(--text-primary)]"
             />
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               kWh
             </span>
           </div>

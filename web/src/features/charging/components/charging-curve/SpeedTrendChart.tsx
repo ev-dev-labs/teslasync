@@ -93,11 +93,11 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
         </LineChart>
       </ResponsiveContainer>
       <div className="mt-3 flex gap-4 px-2">
-        <div className="flex items-center gap-1.5 text-xs text-white/60">
+        <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
           <span className="inline-block h-2 w-3 rounded-sm bg-[#00f0ff]" />
           {t('charging.curve.dcFast', 'DC Fast')}
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-white/60">
+        <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
           <span className="inline-block h-2 w-3 rounded-sm bg-emerald-500" />
           {t('charging.curve.acHome', 'AC / Home')}
         </div>

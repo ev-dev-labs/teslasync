@@ -41,7 +41,7 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
         isCompact ? (
           <div className="h-full flex flex-col items-center justify-center gap-1">
             <WeatherIcon tempC={outsideTemp} className="h-6 w-6 text-neon-cyan" />
-            <span className="text-2xl font-bold text-white/90">
+            <span className="text-2xl font-bold text-[var(--text-primary)]">
               {fmtInt(convertTemp(outsideTemp))}{tempUnit}
             </span>
           </div>
@@ -49,14 +49,14 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
           <div className="h-full flex items-center gap-4 py-2">
             <WeatherIcon tempC={outsideTemp} className="h-10 w-10 text-neon-cyan flex-shrink-0" />
             <div className="flex flex-col gap-0.5">
-              <span className="text-3xl font-bold text-white/90">
+              <span className="text-3xl font-bold text-[var(--text-primary)]">
                 {fmtInt(convertTemp(outsideTemp))}{tempUnit}
               </span>
-              <span className="text-xs text-white/40">
+              <span className="text-xs text-[var(--text-muted)]">
                 {t('widget.outsideTemp', 'Outside Temperature')}
               </span>
               {state?.latitude != null && state?.longitude != null && (
-                <span className="text-[10px] text-white/25 tabular-nums">
+                <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
                   {state.latitude.toFixed(2)}°, {state.longitude.toFixed(2)}°
                 </span>
               )}

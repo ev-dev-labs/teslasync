@@ -52,13 +52,13 @@ export function CollapsibleCommandGroup({
         aria-expanded={open}
         className="group h-auto w-full justify-start py-2 text-left font-normal hover:bg-transparent"
       >
-        <Icon className="h-4 w-4 text-white/40" />
-        <span className="text-xs uppercase tracking-wider text-white/50 font-medium">
+        <Icon className="h-4 w-4 text-[var(--text-muted)]" />
+        <span className="text-xs uppercase tracking-wider text-[var(--text-secondary)] font-medium">
           {t(meta.labelKey, meta.fallback)}
         </span>
-        <span className="text-[10px] text-white/30 ml-1">({count})</span>
+        <span className="text-[10px] text-[var(--text-muted)] ml-1">({count})</span>
         <ChevronDown className={cn(
-          'h-3.5 w-3.5 text-white/30 ml-auto transition-transform duration-200',
+          'h-3.5 w-3.5 text-[var(--text-muted)] ml-auto transition-transform duration-200',
           open && 'rotate-180',
         )} />
       </ControlButton>

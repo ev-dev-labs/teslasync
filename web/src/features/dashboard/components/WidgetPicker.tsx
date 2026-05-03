@@ -326,10 +326,10 @@ export function WidgetPicker({
             <p className="text-xs text-[var(--text-muted)] mt-0.5">
               {highlightMatch(w.description, query)}
             </p>
-            <p className="text-[10px] text-white/20 mt-1">
+            <p className="text-[10px] text-[var(--text-muted)] mt-1">
               {w.defaultSize.cols}×{w.defaultSize.rows} grid
               {query && (
-                <span className="ml-2 text-white/30">
+                <span className="ml-2 text-[var(--text-muted)]">
                   {CATEGORY_LABELS[w.category]}
                 </span>
               )}
@@ -377,7 +377,7 @@ export function WidgetPicker({
             icon={<Search className="h-4 w-4" />}
             className="w-full"
           />
-          <span className="text-[10px] text-white/30 mt-1 block">
+          <span className="text-[10px] text-[var(--text-muted)] mt-1 block">
             {filteredWidgets.length} {t('widgets.available', 'widgets available')}
           </span>
         </div>
@@ -397,7 +397,7 @@ export function WidgetPicker({
               'h-7 rounded-full border px-3 text-[11px] font-medium transition-colors',
               categoryFilter === 'all'
                 ? 'border-[var(--theme-primary)]/40 bg-[var(--theme-primary)]/15 text-[var(--theme-primary)]'
-                : 'border-white/10 bg-white/[0.03] text-white/60 hover:bg-white/[0.06] hover:text-white',
+                : 'border-[var(--border-subtle)] bg-white/[0.03] text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-white',
             )}
           >
             {t('widgets.allCategories', 'All')}
@@ -413,7 +413,7 @@ export function WidgetPicker({
                 'h-7 rounded-full border px-3 text-[11px] font-medium transition-colors',
                 categoryFilter === cat
                   ? 'border-[var(--theme-primary)]/40 bg-[var(--theme-primary)]/15 text-[var(--theme-primary)]'
-                  : 'border-white/10 bg-white/[0.03] text-white/60 hover:bg-white/[0.06] hover:text-white',
+                  : 'border-[var(--border-subtle)] bg-white/[0.03] text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-white',
               )}
             >
               {CATEGORY_LABELS[cat]}
@@ -424,7 +424,7 @@ export function WidgetPicker({
         {/* Recently Added — only on the unfiltered, unsearched view */}
         {recentlyAddedVisible.length > 0 && (
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3 flex items-center gap-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-3 flex items-center gap-2">
               <Clock className="h-3.5 w-3.5" aria-hidden="true" />
               {t('widgets.recentlyAdded', 'Recently Added')}
             </h3>
@@ -439,7 +439,7 @@ export function WidgetPicker({
         {!query && categoryFilter === 'all' && (
           <>
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-3">
                 {t('dashboard.presets', 'Layout Presets')}
               </h3>
               <div className="grid grid-cols-1 gap-2">
@@ -479,7 +479,7 @@ export function WidgetPicker({
             <>
               {filteredWidgets.length > 1 && (
                 <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2">
-                  <span className="text-xs text-white/40">
+                  <span className="text-xs text-[var(--text-muted)]">
                     {t('widgets.searchResults', '{{count}} results for "{{query}}"', {
                       count: filteredWidgets.length,
                       query: search.trim(),
@@ -490,7 +490,7 @@ export function WidgetPicker({
                     size="sm"
                     disabled={addableSearchWidgets.length === 0}
                     onClick={() => handleAddMany(addableSearchWidgets.map((widget) => widget.id))}
-                    className="h-7 px-2 text-[10px] text-white/60 hover:text-white"
+                    className="h-7 px-2 text-[10px] text-[var(--text-secondary)] hover:text-white"
                   >
                     {t('widgets.addAllCount', '+ Add all {{count}}', {
                       count: addableSearchWidgets.length,
@@ -503,7 +503,7 @@ export function WidgetPicker({
               </div>
             </>
           ) : (
-            <p className="text-sm text-white/30 text-center py-8">
+            <p className="text-sm text-[var(--text-muted)] text-center py-8">
               {t('widgets.noResults', 'No widgets match "{{query}}"', { query: search.trim() })}
             </p>
           )
@@ -513,7 +513,7 @@ export function WidgetPicker({
             return (
               <div key={cat}>
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-white/40">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                     {CATEGORY_LABELS[cat]}
                   </h3>
                     <UiButton
@@ -521,7 +521,7 @@ export function WidgetPicker({
                     size="sm"
                     disabled={addableCategoryWidgets.length === 0}
                     onClick={() => handleAddMany(addableCategoryWidgets.map((widget) => widget.id))}
-                    className="h-7 px-2 text-[10px] text-white/50 hover:text-white"
+                    className="h-7 px-2 text-[10px] text-[var(--text-secondary)] hover:text-white"
                   >
                     {t('widgets.addAllCount', '+ Add all {{count}}', {
                       count: addableCategoryWidgets.length,

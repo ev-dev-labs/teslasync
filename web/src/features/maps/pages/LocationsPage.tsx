@@ -190,10 +190,10 @@ export default function LocationsPage() {
             <>
               <div className="space-y-2">
                 {filteredLocations.map((loc, i) => (
-                  <GlassPanel key={loc.id} className="p-4 flex items-center gap-4 hover:border-white/10 transition-colors">
+                  <GlassPanel key={loc.id} className="p-4 flex items-center gap-4 hover:border-[var(--border-subtle)] transition-colors">
                     <div className={cn(
                       'h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0',
-                      i === 0 ? 'bg-neon-amber/20 text-neon-amber' : i < 3 ? 'bg-neon-cyan/10 text-neon-cyan' : 'bg-white/5 text-[var(--text-muted)]',
+                      i === 0 ? 'bg-neon-amber/20 text-neon-amber' : i < 3 ? 'bg-neon-cyan/10 text-neon-cyan' : 'bg-[var(--surface-2)] text-[var(--text-muted)]',
                     )}>
                       #{i + 1}
                     </div>

@@ -59,7 +59,7 @@ export function SecurityStatusCards({ latest, isLoading }: SecurityStatusCardsPr
               ? t('admin.security.locked', 'Locked')
               : t('admin.security.unlocked', 'Unlocked')}
           </p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-[var(--text-muted)] mt-1">
             {t('admin.security.card.lockDesc', 'Vehicle lock state')}
           </p>
         </GlassPanel>
@@ -70,7 +70,7 @@ export function SecurityStatusCards({ latest, isLoading }: SecurityStatusCardsPr
             {latest?.sentryMode ? (
               <ShieldCheck className="h-6 w-6 text-blue-400" />
             ) : (
-              <ShieldAlert className="h-6 w-6 text-gray-500" />
+              <ShieldAlert className="h-6 w-6 text-[var(--text-muted)]" />
             )}
             <h3 className="text-sm font-semibold text-gray-200">
               {t('admin.security.card.sentryMode', 'Sentry Mode')}
@@ -79,14 +79,14 @@ export function SecurityStatusCards({ latest, isLoading }: SecurityStatusCardsPr
           <p
             className={cn(
               'text-2xl font-bold',
-              latest?.sentryMode ? 'text-blue-400' : 'text-gray-500',
+              latest?.sentryMode ? 'text-blue-400' : 'text-[var(--text-muted)]',
             )}
           >
             {latest?.sentryMode
               ? t('admin.security.active', 'Active')
               : t('admin.security.inactive', 'Inactive')}
           </p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-[var(--text-muted)] mt-1">
             {t('admin.security.card.sentryDesc', 'Camera surveillance system')}
           </p>
         </GlassPanel>
@@ -113,7 +113,7 @@ export function SecurityStatusCards({ latest, isLoading }: SecurityStatusCardsPr
               ? t('admin.security.closed', 'Closed')
               : (latest?.doorState ?? '—')}
           </p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-[var(--text-muted)] mt-1">
             {t('admin.security.card.doorsDesc', 'All vehicle doors')}
           </p>
         </GlassPanel>
@@ -139,7 +139,7 @@ export function SecurityStatusCards({ latest, isLoading }: SecurityStatusCardsPr
           >
             {windowSummary(latest)}
           </p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-[var(--text-muted)] mt-1">
             {t('admin.security.card.windowsDesc', 'Window positions')}
           </p>
         </GlassPanel>
@@ -150,7 +150,7 @@ export function SecurityStatusCards({ latest, isLoading }: SecurityStatusCardsPr
             <Home
               className={cn(
                 'h-6 w-6',
-                latest?.homelinkNearby ? 'text-purple-400' : 'text-gray-500',
+                latest?.homelinkNearby ? 'text-purple-400' : 'text-[var(--text-muted)]',
               )}
             />
             <h3 className="text-sm font-semibold text-gray-200">
@@ -160,14 +160,14 @@ export function SecurityStatusCards({ latest, isLoading }: SecurityStatusCardsPr
           <p
             className={cn(
               'text-2xl font-bold',
-              latest?.homelinkNearby ? 'text-purple-400' : 'text-gray-500',
+              latest?.homelinkNearby ? 'text-purple-400' : 'text-[var(--text-muted)]',
             )}
           >
             {latest?.homelinkNearby
               ? t('admin.security.nearby', 'Nearby')
               : t('admin.security.away', 'Away')}
           </p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-[var(--text-muted)] mt-1">
             {t('admin.security.card.homelinkDesc', 'Garage door opener')}
           </p>
         </GlassPanel>
@@ -178,7 +178,7 @@ export function SecurityStatusCards({ latest, isLoading }: SecurityStatusCardsPr
             <UserCheck
               className={cn(
                 'h-6 w-6',
-                latest?.guestMode ? 'text-amber-400' : 'text-gray-500',
+                latest?.guestMode ? 'text-amber-400' : 'text-[var(--text-muted)]',
               )}
             />
             <h3 className="text-sm font-semibold text-gray-200">
@@ -188,14 +188,14 @@ export function SecurityStatusCards({ latest, isLoading }: SecurityStatusCardsPr
           <p
             className={cn(
               'text-2xl font-bold',
-              latest?.guestMode ? 'text-amber-400' : 'text-gray-500',
+              latest?.guestMode ? 'text-amber-400' : 'text-[var(--text-muted)]',
             )}
           >
             {latest?.guestMode
               ? t('admin.security.enabled', 'Enabled')
               : t('admin.security.disabled', 'Disabled')}
           </p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-[var(--text-muted)] mt-1">
             {t('admin.security.card.guestDesc', 'Temporary access mode')}
           </p>
         </GlassPanel>

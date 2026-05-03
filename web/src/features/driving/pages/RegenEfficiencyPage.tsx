@@ -275,7 +275,7 @@ export default function RegenEfficiencyPage() {
                     <span className="text-right">{t('regen.ratioCol', 'Ratio')}</span>
                   </div>
                   {regenDrives.map((rd) => (
-                    <div key={rd.id} className="grid grid-cols-4 gap-2 text-xs py-2 px-2 border-t border-white/5">
+                    <div key={rd.id} className="grid grid-cols-4 gap-2 text-xs py-2 px-2 border-t border-[var(--border-subtle)]">
                       <span className="text-[var(--text-secondary)]">{rd.date}</span>
                       <span className="font-mono text-[var(--text-primary)]">{rd.distance}</span>
                       <span className="font-mono text-cyan-400">{rd.maxRegen}</span>

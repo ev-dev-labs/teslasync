@@ -35,12 +35,12 @@ export default function MotorEfficiencyInsights({
         <GlassPanel className="p-5">
           <div className="mb-3 flex items-center gap-2">
             <Zap className="h-4 w-4 text-blue-400" />
-            <h3 className="text-sm font-semibold text-white/90">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
               {t('dynamics.torqueDistribution', 'Torque Distribution')}
             </h3>
           </div>
           {motorStats ? (
-            <div className="space-y-2 text-sm text-white/70">
+            <div className="space-y-2 text-sm text-[var(--text-secondary)]">
               <div className="flex justify-between"><span>{t('dynamics.avgTorque', 'Avg Torque')}</span><span className="font-mono">{fmtNumber(motorStats.avgTorque, 1)} Nm</span></div>
               <div className="flex justify-between"><span>{t('dynamics.maxTorque', 'Max Torque')}</span><span className="font-mono">{fmtNumber(motorStats.maxTorque, 1)} Nm</span></div>
               <div className="flex justify-between"><span>{t('dynamics.highTorqueTime', 'High Torque Time')}</span><span className="font-mono">{fmtNumber(motorStats.highTorquePct, 1)}%</span></div>
@@ -52,18 +52,18 @@ export default function MotorEfficiencyInsights({
         <GlassPanel className="p-5">
           <div className="mb-3 flex items-center gap-2">
             <Gauge className="h-4 w-4 text-cyan-400" />
-            <h3 className="text-sm font-semibold text-white/90">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
               {t('dynamics.throttleBehavior', 'Throttle Behavior')}
             </h3>
           </div>
           {motorStats ? (
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm text-white/70">
+              <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
                 <span>{t('dynamics.avgPower', 'Avg Power')}</span>
                 <span className="font-mono">{fmtNumber(motorStats.avgPower, 1)} kW</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-white/70">{t('dynamics.drivingStyle', 'Style')}</span>
+                <span className="text-sm text-[var(--text-secondary)]">{t('dynamics.drivingStyle', 'Style')}</span>
                 <Badge
                   variant={throttleStyle === 'conservative' ? 'success' : throttleStyle === 'moderate' ? 'warning' : 'danger'}
                   size="sm"
@@ -90,17 +90,17 @@ export default function MotorEfficiencyInsights({
         <GlassPanel className="p-5">
           <div className="mb-3 flex items-center gap-2">
             <Thermometer className="h-4 w-4 text-amber-400" />
-            <h3 className="text-sm font-semibold text-white/90">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
               {t('dynamics.motorThermal', 'Motor Thermal')}
             </h3>
           </div>
           {motorStats ? (
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm text-white/70">
+              <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
                 <span>{t('dynamics.avgMotorTemp', 'Avg Motor Temp')}</span>
                 <span className="font-mono">{fmtNumber(convertTemp(motorStats.avgMotorTemp), 1)}°{tempUnit}</span>
               </div>
-              <div className="flex items-center justify-between text-sm text-white/70">
+              <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
                 <span>{t('dynamics.maxMotorTemp', 'Max Motor Temp')}</span>
                 <span className="font-mono">{fmtNumber(convertTemp(motorStats.maxMotorTemp), 1)}°{tempUnit}</span>
               </div>

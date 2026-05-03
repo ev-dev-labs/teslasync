@@ -36,7 +36,7 @@ export function MediaNavigationPanel({ mediaData, locationData }: MediaNavigatio
               </p>
               <div className="flex items-center gap-2">
                 {cleanNil(mediaData.playback_source) && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-[var(--text-muted)]">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--text-muted)]">
                     {cleanNil(mediaData.playback_source)}
                   </span>
                 )}

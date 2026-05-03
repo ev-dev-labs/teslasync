@@ -50,7 +50,7 @@ export function CommandTile({ def, onExecute, onRequestDialog, loading, lastStat
         onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
         className={cn(
           'absolute left-1.5 top-1.5 h-auto rounded p-0.5 transition-opacity hover:bg-transparent',
-          isFavorite ? 'opacity-100 text-amber-300' : 'opacity-0 group-hover:opacity-50 text-white/30',
+          isFavorite ? 'opacity-100 text-amber-300' : 'opacity-0 group-hover:opacity-50 text-[var(--text-muted)]',
         )}
         aria-label={t('commands.toggleFavorite', 'Toggle favorite')}
       >
@@ -63,13 +63,13 @@ export function CommandTile({ def, onExecute, onRequestDialog, loading, lastStat
         </div>
       )}
 
-      <div className="rounded-xl p-2.5 transition-colors bg-white/5 text-white/40">
+      <div className="rounded-xl p-2.5 transition-colors bg-[var(--surface-2)] text-[var(--text-muted)]">
         {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Icon className="h-5 w-5" />}
       </div>
       <div>
-        <span className="text-xs font-medium text-white/90 block">{t(def.labelKey, def.labelFallback)}</span>
+        <span className="text-xs font-medium text-[var(--text-primary)] block">{t(def.labelKey, def.labelFallback)}</span>
         {def.sublabelFallback && (
-          <span className="text-[10px] mt-0.5 font-medium block text-white/40">
+          <span className="text-[10px] mt-0.5 font-medium block text-[var(--text-muted)]">
             {t(def.sublabelKey ?? '', def.sublabelFallback)}
           </span>
         )}

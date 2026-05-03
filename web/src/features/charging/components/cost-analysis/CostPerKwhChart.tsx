@@ -41,7 +41,7 @@ export function CostPerKwhChart({ data }: CostPerKwhChartProps) {
           </LineChart>
         </ResponsiveContainer>
       ) : (
-        <div className="flex h-[260px] items-center justify-center text-sm text-gray-500">
+        <div className="flex h-[260px] items-center justify-center text-sm text-[var(--text-muted)]">
           {t('costAnalysis.charts.noData', 'Not enough data')}
         </div>
       )}

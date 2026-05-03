@@ -71,7 +71,7 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
       {/* Section heading */}
       <FadeIn delay={0.42}>
         <div className="mt-4 mb-2">
-          <h2 className="text-lg font-semibold text-white/80">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
             {t('dynamics.coach.title', 'Driving Coach')}
           </h2>
         </div>
@@ -91,7 +91,7 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
               }
               size={160}
             />
-            <p className="mt-2 text-xs text-white/50">
+            <p className="mt-2 text-xs text-[var(--text-secondary)]">
               {t('dynamics.coach.drivesAnalyzed', '{{count}} drives analyzed', { count: coachData?.total_drives_analyzed ?? 0 })}
             </p>
           </GlassPanel>
@@ -131,7 +131,7 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
                     <div key={key} className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
                         <span className={cn('inline-block h-2 w-2 rounded-full', color)} />
-                        <span className="capitalize text-white/70">{t(`dynamics.coach.style.${key}`, key)}</span>
+                        <span className="capitalize text-[var(--text-secondary)]">{t(`dynamics.coach.style.${key}`, key)}</span>
                       </div>
                       <span className={cn('font-bold tabular-nums', text)}>
                         {coachData.style_breakdown[key] ?? 0}
@@ -194,7 +194,7 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
             {patterns.map((p) => (
               <div key={p.label} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-white/70">{p.label}</span>
+                  <span className="text-[var(--text-secondary)]">{p.label}</span>
                   <span className={cn('font-bold tabular-nums',
                     p.value <= p.lo ? 'text-emerald-300' :
                     p.value <= p.hi ? 'text-amber-300' : 'text-red-400',
@@ -238,7 +238,7 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
                   >
                     {rec.impact}
                   </Badge>
-                  <p className="text-sm text-white/70">{rec.tip}</p>
+                  <p className="text-sm text-[var(--text-secondary)]">{rec.tip}</p>
                 </div>
               ))}
             </div>

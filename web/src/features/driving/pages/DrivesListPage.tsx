@@ -110,7 +110,7 @@ function DriveCard({
         <label className="flex items-center pl-2">
           <input
             type="checkbox"
-            className="h-4 w-4 cursor-pointer rounded border-white/20 bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
+            className="h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
             checked={!!selected}
             onChange={e => onToggleSelect?.(drive.id, e.target.checked)}
             aria-label={t('drives.selectDrive', 'Select drive on {{date}}', { date: formatDateTime(drive.startTs) })}
@@ -606,7 +606,7 @@ export default function DrivesListPage() {
                       : t('drives.sortEfficiency', 'Efficiency')}
                 </Button>
               ))}
-              <span className="mx-1 h-4 w-px bg-white/10" />
+              <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" />
               <a
                 href={`/api/v1/export/drives?format=csv${startDate ? `&start=${startDate}` : ''}${endDate ? `&end=${endDate}` : ''}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`}
                 download="teslasync-drives.csv"

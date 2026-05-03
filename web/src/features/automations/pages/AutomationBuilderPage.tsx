@@ -562,7 +562,7 @@ export default function AutomationBuilderPage() {
           variant="ghost"
           size="sm"
           onClick={handleBackToList}
-          className="self-start text-white/50 hover:text-white/80"
+          className="self-start text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           icon={<ArrowLeft className="h-4 w-4" />}
         >
           {t('automations.builder.backToList', 'Back to Automations')}
@@ -746,7 +746,7 @@ export default function AutomationBuilderPage() {
         {!isEdit && (
           <FadeIn delay={0.3}>
             <GlassPanel className="p-4 text-center">
-              <p className="text-sm text-white/50">
+              <p className="text-sm text-[var(--text-secondary)]">
                 {t(
                   'automations.builder.presetHint',
                    'Not sure where to start? Browse typed automation templates.',

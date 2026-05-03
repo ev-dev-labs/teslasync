@@ -50,11 +50,11 @@ export function RegionSettings() {
 
         {regionConfig?.data?.region ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="rounded-lg bg-white/[0.02] border border-white/5 p-4">
+            <div className="rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] p-4">
               <p className="text-xs text-[var(--text-muted)] mb-1 uppercase tracking-wider">{t('region.regionCode', 'Region')}</p>
               <p className="text-lg font-semibold text-[var(--text-primary)]">{regionConfig.data.region}</p>
             </div>
-            <div className="rounded-lg bg-white/[0.02] border border-white/5 p-4">
+            <div className="rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] p-4">
               <p className="text-xs text-[var(--text-muted)] mb-1 uppercase tracking-wider">{t('region.fleetApiUrl', 'Fleet API Base URL')}</p>
               <p className="text-sm font-mono text-[var(--text-primary)] break-all">{regionConfig.data.fleet_api_base_url ?? '—'}</p>
             </div>

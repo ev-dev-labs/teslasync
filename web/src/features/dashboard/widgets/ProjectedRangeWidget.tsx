@@ -121,9 +121,9 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
                 {projectedRange != null ? (
                   <AnimatedNumber value={Math.round(projectedRange)} className="text-3xl font-bold text-neon-cyan" />
                 ) : (
-                  <span className="text-3xl font-bold text-white/30">—</span>
+                  <span className="text-3xl font-bold text-[var(--text-muted)]">—</span>
                 )}
-                <span className="text-lg text-white/50">{distanceUnit}</span>
+                <span className="text-lg text-[var(--text-secondary)]">{distanceUnit}</span>
               </div>
               {badge && (
                 <Badge variant={badge.variant === 'success' ? 'success' : badge.variant === 'warning' ? 'warning' : 'danger'} size="sm" className="mt-1">
@@ -142,17 +142,17 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
 
             {/* Factors list */}
             <div className="flex-1 min-h-0 overflow-y-auto">
-              <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1.5">
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                 {t('widget.projectedRange.factors', 'Range Factors')}
               </p>
               <div className="flex flex-col gap-1.5">
                 {factors.map((f) => (
                   <div key={f.label} className="flex items-center justify-between text-xs py-1 border-b border-white/[0.04] last:border-0 min-h-[44px]">
                     <div className="flex items-center gap-2 min-w-0">
-                      <f.icon className="h-3.5 w-3.5 text-white/40 flex-shrink-0" />
-                      <span className="text-white/70 truncate">{f.label}</span>
+                      <f.icon className="h-3.5 w-3.5 text-[var(--text-muted)] flex-shrink-0" />
+                      <span className="text-[var(--text-secondary)] truncate">{f.label}</span>
                     </div>
-                    <span className="text-white/90 font-medium flex-shrink-0 ml-2">{f.value}</span>
+                    <span className="text-[var(--text-primary)] font-medium flex-shrink-0 ml-2">{f.value}</span>
                   </div>
                 ))}
               </div>
@@ -167,9 +167,9 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
                 {projectedRange != null ? (
                   <AnimatedNumber value={Math.round(projectedRange)} className="text-3xl font-bold text-neon-cyan" />
                 ) : (
-                  <span className="text-3xl font-bold text-white/30">—</span>
+                  <span className="text-3xl font-bold text-[var(--text-muted)]">—</span>
                 )}
-                <span className="text-lg text-white/50">{distanceUnit}</span>
+                <span className="text-lg text-[var(--text-secondary)]">{distanceUnit}</span>
               </div>
               {badge && (
                 <Badge variant={badge.variant === 'success' ? 'success' : badge.variant === 'warning' ? 'warning' : 'danger'} size="sm" className="mt-1">
@@ -211,13 +211,13 @@ function ComparisonBar({
 }) {
   return (
     <div className="flex-shrink-0">
-      <div className="flex items-center justify-between text-[10px] text-white/40 mb-1">
+      <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] mb-1">
         <span>{t('widget.projectedRange.projected', 'Projected')}</span>
         <span>
           {t('widget.projectedRange.epa', 'EPA')}: {epaRange != null ? `${fmtNumber(epaRange, 0)} ${distanceUnit}` : '—'}
         </span>
       </div>
-      <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+      <div className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{
@@ -227,7 +227,7 @@ function ComparisonBar({
         />
       </div>
       {rangePct != null && (
-        <p className="text-[10px] text-white/40 mt-0.5 text-center">
+        <p className="text-[10px] text-[var(--text-muted)] mt-0.5 text-center">
           {rangePct}% {t('widget.projectedRange.ofEpa', 'of EPA rated')}
         </p>
       )}

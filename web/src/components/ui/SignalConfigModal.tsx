@@ -205,7 +205,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
             className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
               allSelected ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'bg-white/[0.03] border-white/[0.08] text-[var(--text-secondary)]'
             )}>
-            <div className={clsx('h-3 w-3 rounded border flex items-center justify-center', allSelected ? 'bg-neon-cyan border-neon-cyan' : 'border-white/20')}>
+            <div className={clsx('h-3 w-3 rounded border flex items-center justify-center', allSelected ? 'bg-neon-cyan border-neon-cyan' : 'border-[var(--border-strong)]')}>
               {allSelected && <CheckCircle className="h-2 w-2 text-black" />}
             </div>
             {allSelected ? 'Deselect All' : 'Select All'}
@@ -253,7 +253,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
                 <ChevronDown className={clsx('h-3.5 w-3.5 text-[var(--text-muted)] transition-transform', !expanded && '-rotate-90')} />
                 <button onClick={e => { e.stopPropagation(); toggleCategory(category) }}
                   className={clsx('h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
-                    allCatSelected ? 'bg-neon-cyan border-neon-cyan' : someCatSelected ? 'bg-neon-cyan/40 border-neon-cyan/60' : 'border-white/20'
+                    allCatSelected ? 'bg-neon-cyan border-neon-cyan' : someCatSelected ? 'bg-neon-cyan/40 border-neon-cyan/60' : 'border-[var(--border-strong)]'
                   )}>
                   {allCatSelected && <CheckCircle className="h-2.5 w-2.5 text-black" />}
                 </button>
@@ -283,7 +283,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
                       )}>
                         <button onClick={() => updateSignal(sig.name, { selected: !sig.selected })}
                           className={clsx('h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
-                            sig.selected ? 'bg-neon-cyan border-neon-cyan' : 'border-white/20'
+                            sig.selected ? 'bg-neon-cyan border-neon-cyan' : 'border-[var(--border-strong)]'
                           )}>
                           {sig.selected && <CheckCircle className="h-2.5 w-2.5 text-black" />}
                         </button>

@@ -54,7 +54,7 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
   return (
     <FadeIn delay={0.17}>
       <GlassPanel className="p-6">
-        <h2 className="mb-4 text-lg font-semibold text-white/90">
+        <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
           {t('dynamics.autopilot', 'Autopilot & Cruise')}
         </h2>
         {hasAny ? (

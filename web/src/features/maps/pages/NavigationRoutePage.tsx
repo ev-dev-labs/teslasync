@@ -134,7 +134,7 @@ function LocationStatusCard({ icon, label, value, active }: LocationStatusCardPr
           'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
           active
             ? 'bg-emerald-500/20 text-emerald-400'
-            : 'bg-gray-500/20 text-gray-400',
+            : 'bg-gray-500/20 text-[var(--text-muted)]',
         )}
       >
         {icon}
@@ -324,10 +324,10 @@ export default function NavigationRoutePage() {
   /* ---- destination table columns ---- */
   const destColumns: Column<typeof recentDestinations[number]>[] = useMemo(
     () => [
-      { key: 'time', header: t('nav.col.time', 'Time'), render: (row) => <span className="text-xs text-gray-400 whitespace-nowrap">{row.time}</span> },
-      { key: 'destination', header: t('nav.col.destination', 'Destination'), render: (row) => <span className="text-sm text-white/80">{row.destination}</span> },
-      { key: 'distance', header: t('nav.col.distance', 'Distance'), render: (row) => <span className="text-xs text-gray-400">{fmtNumber(convertDistance(row.distance), 1)} {distanceUnit}</span> },
-      { key: 'eta', header: t('nav.col.eta', 'ETA'), render: (row) => <span className="text-xs text-gray-400">{fmtNumber(row.eta, 0)} min</span> },
+      { key: 'time', header: t('nav.col.time', 'Time'), render: (row) => <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">{row.time}</span> },
+      { key: 'destination', header: t('nav.col.destination', 'Destination'), render: (row) => <span className="text-sm text-[var(--text-primary)]">{row.destination}</span> },
+      { key: 'distance', header: t('nav.col.distance', 'Distance'), render: (row) => <span className="text-xs text-[var(--text-muted)]">{fmtNumber(convertDistance(row.distance), 1)} {distanceUnit}</span> },
+      { key: 'eta', header: t('nav.col.eta', 'ETA'), render: (row) => <span className="text-xs text-[var(--text-muted)]">{fmtNumber(row.eta, 0)} min</span> },
     ],
     [t, convertDistance, distanceUnit],
   );
@@ -606,7 +606,7 @@ export default function NavigationRoutePage() {
               </span>
             ) : (
               <EmptyState
-                icon={<Navigation className="h-8 w-8 text-gray-400" />}
+                icon={<Navigation className="h-8 w-8 text-[var(--text-muted)]" />}
                 message={t(
                   'nav.noActiveNav',
                   'No active navigation. Start a route in your vehicle to see details here.',
@@ -756,7 +756,7 @@ export default function NavigationRoutePage() {
                 <Skeleton height={260} />
               ) : chartData.length === 0 ? (
                 <EmptyState
-                  icon={<AlertTriangle className="h-8 w-8 text-gray-400" />}
+                  icon={<AlertTriangle className="h-8 w-8 text-[var(--text-muted)]" />}
                   message={t(
                     'nav.noHistory',
                     'No location history available for this vehicle.',
@@ -884,7 +884,7 @@ export default function NavigationRoutePage() {
                     >
                       {latest?.route_traffic_delay_min ?? 0}
                     </span>
-                    <span className="text-sm text-white/40">{t('nav.min', 'min')}</span>
+                    <span className="text-sm text-[var(--text-muted)]">{t('nav.min', 'min')}</span>
                   </div>
                   <TrafficDelayBadge
                     minutes={latest?.route_traffic_delay_min ?? 0}

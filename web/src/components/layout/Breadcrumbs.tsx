@@ -38,7 +38,7 @@ export function Breadcrumbs({
     >
       <Link
         to={homeHref}
-        className="text-white/30 hover:text-white/60 transition-colors shrink-0"
+        className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors shrink-0"
         aria-label={homeAriaLabel}
       >
         <Home className="h-3.5 w-3.5" />
@@ -50,12 +50,12 @@ export function Breadcrumbs({
 
         return (
           <Fragment key={i}>
-            <ChevronRight className="h-3 w-3 text-white/15 shrink-0" />
+            <ChevronRight className="h-3 w-3 text-[var(--text-muted)] shrink-0" />
             {isLast || !item.href ? (
               <span
                 className={cn(
                   'truncate max-w-[200px]',
-                  isLast ? 'text-white/70 font-medium' : 'text-white/40',
+                  isLast ? 'text-[var(--text-secondary)] font-medium' : 'text-[var(--text-muted)]',
                   isMiddle && 'hidden sm:inline',
                 )}
               >
@@ -65,7 +65,7 @@ export function Breadcrumbs({
               <Link
                 to={item.href}
                 className={cn(
-                  'text-white/40 hover:text-white/70 transition-colors truncate max-w-[200px]',
+                  'text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors truncate max-w-[200px]',
                   isMiddle && 'hidden sm:inline',
                 )}
               >
@@ -74,7 +74,7 @@ export function Breadcrumbs({
             )}
             {/* Collapsed indicator on mobile for hidden middle items */}
             {isMiddle && (
-              <span className="text-white/20 sm:hidden" aria-hidden="true">…</span>
+              <span className="text-[var(--text-muted)] sm:hidden" aria-hidden="true">…</span>
             )}
           </Fragment>
         );

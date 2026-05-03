@@ -61,13 +61,13 @@ export default function CommandsPage() {
         <div className="flex items-center gap-3">
           <Link
             to="/command-history"
-            className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/80 transition-colors"
+            className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
           >
             <History className="h-3.5 w-3.5" />
             {t('commands.viewHistory', 'View History')}
           </Link>
           {vehicles && vehicles.length > 0 && (
-            <span className="text-xs text-white/40">
+            <span className="text-xs text-[var(--text-muted)]">
               <span className="text-emerald-300 font-medium">{onlineCount}</span>/{vehicles.length} {t('online')}
             </span>
           )}

@@ -56,8 +56,8 @@ function WidgetChrome({
           opacity-0 group-hover:opacity-100 transition-opacity rounded-t-xl"
       >
         <div className="flex items-center gap-2">
-          <GripHorizontal className="h-3.5 w-3.5 text-white/40" />
-          <span className="text-[11px] text-white/50 font-medium">{def.name}</span>
+          <GripHorizontal className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+          <span className="text-[11px] text-[var(--text-secondary)] font-medium">{def.name}</span>
         </div>
         <div className="flex items-center gap-1">
           <UiButton
@@ -66,7 +66,7 @@ function WidgetChrome({
             size="sm"
             onClick={(e) => { e.stopPropagation(); onSettings(); }}
             onMouseDown={(e) => e.stopPropagation()}
-            className="h-auto p-1 rounded text-white/40 hover:bg-white/10 hover:text-white/70 transition-colors"
+            className="h-auto p-1 rounded text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-secondary)] transition-colors"
             aria-label={`Settings for ${def.name}`}
           >
             <Settings className="h-3.5 w-3.5" />
@@ -77,7 +77,7 @@ function WidgetChrome({
             size="sm"
             onClick={(e) => { e.stopPropagation(); onRemove(); }}
             onMouseDown={(e) => e.stopPropagation()}
-            className="h-auto p-1 rounded text-white/40 hover:bg-red-500/20 hover:text-red-400 transition-colors"
+            className="h-auto p-1 rounded text-[var(--text-muted)] hover:bg-red-500/20 hover:text-red-400 transition-colors"
             aria-label={`Remove ${def.name}`}
           >
             <X className="h-3.5 w-3.5" />
@@ -87,7 +87,7 @@ function WidgetChrome({
 
       {/* Resize indicator */}
       <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-50 transition-opacity">
-        <Maximize2 className="h-3 w-3 text-white/30" />
+        <Maximize2 className="h-3 w-3 text-[var(--text-muted)]" />
       </div>
 
       {/* Hover border */}
@@ -110,9 +110,9 @@ function FullscreenOverlay({ widget, def, onClose, getWidgetSize }: FullscreenOv
   const size = getWidgetSize(widget.id);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl p-6 flex flex-col">
+    <div className="fixed inset-0 z-50 bg-[var(--surface-overlay)] backdrop-blur-xl p-6 flex flex-col">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-white/90">{def.name}</h2>
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">{def.name}</h2>
         <UiButton variant="ghost" size="sm" onClick={onClose}>
           <Minimize2 className="h-4 w-4 mr-1" /> Exit Fullscreen
         </UiButton>
@@ -235,7 +235,7 @@ export function DashboardGrid({
   // Kiosk panel background boost: increases GlassPanel bg from default 5% white
   const kioskPanelStyle = useMemo(() => {
     if (kioskWidgetOpacity == null) return undefined;
-    // Scale from bg-white/8 at 0.3 to bg-white/20 at 1.0 for readability
+    // Scale from bg-[var(--surface-2)] at 0.3 to bg-[var(--surface-2)] at 1.0 for readability
     const alpha = 0.03 + kioskWidgetOpacity * 0.17;
     const blur = 4 + kioskWidgetOpacity * 12;
     return {
@@ -309,8 +309,8 @@ export function DashboardGrid({
                   variant="ghost"
                   size="sm"
                   onClick={() => setFullscreenWidget(widget.id)}
-                  className="absolute top-2 right-2 z-10 h-auto p-1.5 rounded-lg bg-black/40
-                    text-white/30 hover:text-white/70 hover:bg-black/60
+                  className="absolute top-2 right-2 z-10 h-auto p-1.5 rounded-lg bg-[var(--surface-overlay)]
+                    text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--surface-overlay)]
                     opacity-0 group-hover:opacity-100 transition-all"
                   aria-label={`Expand ${def.name}`}
                 >
@@ -328,7 +328,7 @@ export function DashboardGrid({
               <GlassPanel
                 className={cn(
                   'h-full w-full overflow-y-auto rounded-xl',
-                  showWidgetBorders && 'border border-white/10',
+                  showWidgetBorders && 'border border-[var(--border-subtle)]',
                 )}
                 style={kioskPanelStyle}
               >

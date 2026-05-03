@@ -52,13 +52,13 @@ export function WidgetDetailCard({
             i < visible.length - 1 && 'border-b border-white/[0.06]',
           )}
         >
-          <span className="text-[10px] uppercase text-white/40 tracking-wide">
+          <span className="text-[10px] uppercase text-[var(--text-muted)] tracking-wide">
             {entry.label}
           </span>
           <span className="flex items-center gap-2">
             <span
               className={cn(
-                'text-sm text-white/90',
+                'text-sm text-[var(--text-primary)]',
                 entry.mono && 'font-mono',
               )}
             >

@@ -333,7 +333,7 @@ export default function SmartChargePage() {
 
             {/* Alternative windows */}
             {(result.alternative_windows ?? []).length > 0 && (
-              <div className="mt-4 pt-4 border-t border-white/10">
+              <div className="mt-4 pt-4 border-t border-[var(--border-subtle)]">
                 <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-2">
                   {t('chargePlanner.alternatives', 'Alternative Windows')}
                 </h3>
@@ -365,7 +365,7 @@ export default function SmartChargePage() {
           {historyItems.length > 0 ? (
             <div className="overflow-x-auto">
               <div className="grid grid-cols-[1fr_1fr_1fr_auto_auto_auto] gap-x-4 text-sm">
-                <div className="contents text-[var(--text-muted)] border-b border-white/10">
+                <div className="contents text-[var(--text-muted)] border-b border-[var(--border-subtle)]">
                   <div className="py-2">{t('chargePlanner.date', 'Date')}</div>
                   <div className="py-2">{t('chargePlanner.window', 'Window')}</div>
                   <div className="py-2">{t('chargePlanner.plan', 'Plan')}</div>
@@ -375,18 +375,18 @@ export default function SmartChargePage() {
                 </div>
                 {historyItems.map(p => (
                   <div key={p.id} className="contents text-[var(--text-secondary)]">
-                    <div className="py-2 border-b border-white/5">{formatDate(p.created_at)}</div>
-                    <div className="py-2 border-b border-white/5">
+                    <div className="py-2 border-b border-[var(--border-subtle)]">{formatDate(p.created_at)}</div>
+                    <div className="py-2 border-b border-[var(--border-subtle)]">
                       {formatTime(p.scheduled_start)} — {formatTime(p.scheduled_end)}
                     </div>
-                    <div className="py-2 border-b border-white/5">{p.rate_plan}</div>
-                    <div className="py-2 border-b border-white/5 text-right">
+                    <div className="py-2 border-b border-[var(--border-subtle)]">{p.rate_plan}</div>
+                    <div className="py-2 border-b border-[var(--border-subtle)] text-right">
                       {p.estimated_cost != null ? `$${p.estimated_cost.toFixed(2)}` : '—'}
                     </div>
-                    <div className="py-2 border-b border-white/5 text-right text-emerald-400">
+                    <div className="py-2 border-b border-[var(--border-subtle)] text-right text-emerald-400">
                       {p.savings != null && p.savings > 0 ? `$${p.savings.toFixed(2)}` : '—'}
                     </div>
-                    <div className="py-2 border-b border-white/5">
+                    <div className="py-2 border-b border-[var(--border-subtle)]">
                       <span className={
                         p.status === 'scheduled' ? 'text-cyan-400' :
                         p.status === 'completed' ? 'text-emerald-400' :

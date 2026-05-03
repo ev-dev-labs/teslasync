@@ -128,14 +128,14 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
               const pct = totalSessions > 0 ? (safe(ct.count) / totalSessions) * 100 : 0;
               return (
                 <div key={i} className="flex items-center gap-3">
-                  <span className="w-28 text-xs text-right font-medium text-white/60">{ct.type}</span>
+                  <span className="w-28 text-xs text-right font-medium text-[var(--text-secondary)]">{ct.type}</span>
                   <div className="flex-1 h-3 rounded-full bg-white/[0.06] overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-700"
                       style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
                     />
                   </div>
-                  <span className="w-20 text-xs font-mono text-right text-white/80">
+                  <span className="w-20 text-xs font-mono text-right text-[var(--text-primary)]">
                     {safe(ct.count)} ({fmtInt(pct)}%)
                   </span>
                 </div>

@@ -891,7 +891,7 @@ export default function BatteryHealthPage() {
                   { label: t('battery.stats.totalEnergy', 'Total Energy Added'), value: `${fmtNumber(energyBreakdown.totalEnergy, 1)} kWh` },
                   { label: t('battery.stats.cycles', 'Charge Cycles'), value: String(health.total_cycles) },
                 ].map((row) => (
-                  <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5">
+                  <div key={row.label} className="flex justify-between items-center py-2 border-b border-[var(--border-subtle)]">
                     <span className="text-xs text-[var(--text-secondary)]">{row.label}</span>
                     <span className="text-sm font-semibold text-[var(--text-primary)]">{row.value}</span>
                   </div>

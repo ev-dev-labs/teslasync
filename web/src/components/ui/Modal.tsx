@@ -126,7 +126,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
       // eslint-disable-next-line no-restricted-syntax
       <div className="fixed inset-0 z-[60] overflow-y-auto">
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 bg-[var(--surface-overlay)] backdrop-blur-sm"
           onClick={onClose}
           aria-hidden="true"
         />

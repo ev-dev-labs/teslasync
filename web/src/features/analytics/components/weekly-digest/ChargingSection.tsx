@@ -30,7 +30,7 @@ export function ChargingSection({ metrics, dailyEnergyData }: ChargingSectionPro
 
         {/* Daily Energy Added BarChart */}
         <GlassPanel className="p-4">
-          <span className="mb-3 block text-sm font-medium text-white/70">
+          <span className="mb-3 block text-sm font-medium text-[var(--text-secondary)]">
             {t('analytics.weeklyDigest.dailyEnergyAdded', 'Daily Energy Added (kWh)')}
           </span>
           <ResponsiveContainer width="100%" height={260}>
@@ -79,7 +79,7 @@ export function ChargingSection({ metrics, dailyEnergyData }: ChargingSectionPro
 
         {/* Charge energy week-over-week */}
         <GlassPanel className="flex items-center gap-4 px-4 py-3">
-          <span className="text-xs text-white/50">
+          <span className="text-xs text-[var(--text-secondary)]">
             {t('analytics.weeklyDigest.energyVsLastWeek', 'Energy vs. Last Week')}
           </span>
           <Badge

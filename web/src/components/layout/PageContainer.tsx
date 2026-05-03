@@ -64,7 +64,7 @@ export function PageContainer({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-          {subtitle && <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>}
+          {subtitle && <p className="mt-1 text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">{subtitle}</p>}
         </div>
         {(actions || copyLink) && (
           <div className="flex items-center gap-2 flex-wrap shrink-0">
@@ -84,7 +84,7 @@ export function PageContainer({
         </div>
       ) : empty ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <p className="text-sm text-gray-500">{emptyMessage ?? `No ${title.toLowerCase()} found.`}</p>
+          <p className="text-sm text-[var(--text-muted)]">{emptyMessage ?? `No ${title.toLowerCase()} found.`}</p>
         </div>
       ) : (
         <PageErrorBoundary pageName={title}>{children}</PageErrorBoundary>

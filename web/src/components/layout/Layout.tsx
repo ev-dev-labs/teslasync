@@ -200,7 +200,7 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
   Diagnostics: { accent: 'text-neon-cyan', surface: 'bg-cyan-400/10', ring: 'ring-cyan-400/20', dot: 'bg-neon-cyan' },
   Infrastructure: { accent: 'text-emerald-300', surface: 'bg-emerald-400/10', ring: 'ring-emerald-400/20', dot: 'bg-emerald-400' },
   Developer: { accent: 'text-orange-300', surface: 'bg-orange-400/10', ring: 'ring-orange-400/20', dot: 'bg-orange-400' },
-  'Project Info': { accent: 'text-white/60', surface: 'bg-white/5', ring: 'ring-white/10', dot: 'bg-white/40' },
+  'Project Info': { accent: 'text-[var(--text-secondary)]', surface: 'bg-[var(--surface-2)]', ring: 'ring-white/10', dot: 'bg-[var(--surface-2)]' },
 }
 
 // NOTE: The legacy `SSEStatusDot` component lived here and rendered a bare
@@ -406,7 +406,7 @@ export const navSections = [
     title: 'Project Info',
     items: [
       { to: '/roadmap', icon: Icons.signpost, label: 'Roadmap', color: 'text-violet-400' },
-      { to: '/changelog', icon: Icons.fileText, label: 'Changelog', color: 'text-white/50' },
+      { to: '/changelog', icon: Icons.fileText, label: 'Changelog', color: 'text-[var(--text-secondary)]' },
     ],
   },
 ]
@@ -1013,7 +1013,7 @@ export default function Layout() {
             // with the <aside> sidebar (drawer pattern), not a dialog. New
             // interactive dialogs MUST use <Modal>.
             // eslint-disable-next-line no-restricted-syntax
-            className="fixed inset-0 z-[65] bg-slate-950/35 backdrop-blur-sm dark:bg-black/60 lg:hidden"
+            className="fixed inset-0 z-[65] bg-[var(--bg-app)] backdrop-blur-sm dark:bg-[var(--surface-overlay)] lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}

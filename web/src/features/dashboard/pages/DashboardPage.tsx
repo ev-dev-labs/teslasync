@@ -271,7 +271,7 @@ export default function DashboardPage() {
               onClick={undo}
               disabled={!canUndo}
               aria-label={t('dashboard.undo', 'Undo')}
-              className="text-white/60 hover:text-white disabled:opacity-30"
+              className="text-[var(--text-secondary)] hover:text-white disabled:opacity-30"
             >
               <Icons.undoAlt className="h-4 w-4" />
             </Button>
@@ -281,12 +281,12 @@ export default function DashboardPage() {
               onClick={redo}
               disabled={!canRedo}
               aria-label={t('dashboard.redo', 'Redo')}
-              className="text-white/60 hover:text-white disabled:opacity-30"
+              className="text-[var(--text-secondary)] hover:text-white disabled:opacity-30"
             >
               <Icons.redo className="h-4 w-4" />
             </Button>
             {canUndo && (
-              <span className="text-[10px] text-white/30 tabular-nums">
+              <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
                 {undoCount}
               </span>
             )}
@@ -422,7 +422,7 @@ export default function DashboardPage() {
             {/* Edit mode hint */}
             {editMode && (
               <FadeIn>
-                <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-3 text-center">
+                <div className="rounded-xl border border-dashed border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3 text-center">
                   <p className="text-sm text-[var(--text-secondary)]">
                     {t('dashboard.editHint', 'Drag widgets to reorder, resize from edges. Click the gear icon for widget settings.')}
                   </p>
@@ -608,7 +608,7 @@ function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
           ].map((f) => (
             <GlassPanel key={f.label} className="p-3 text-center">
               <f.icon className="h-6 w-6 mx-auto mb-2" style={{ color: f.color }} />
-              <p className="text-xs font-medium text-gray-300">{f.label}</p>
+              <p className="text-xs font-medium text-[var(--text-secondary)]">{f.label}</p>
             </GlassPanel>
           ))}
         </div>

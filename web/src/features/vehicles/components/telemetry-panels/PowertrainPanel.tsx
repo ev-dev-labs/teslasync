@@ -59,7 +59,7 @@ export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
               </span>
             </div>
             <div className="relative h-3 rounded-full bg-white/[0.04] overflow-hidden">
-              <div className="absolute inset-y-0 left-1/2 w-px bg-white/10" />
+              <div className="absolute inset-y-0 left-1/2 w-px bg-[var(--surface-2)]" />
               {motorData.power_kw != null && (
                 <div
                   className={cn(

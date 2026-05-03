@@ -28,7 +28,7 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
   const isTall = size.rows >= 2;
 
   const batteryColor = useMemo(() => {
-    if (!state) return 'text-white/40';
+    if (!state) return 'text-[var(--text-muted)]';
     if (state.battery_level > 50) return 'text-emerald-400';
     if (state.battery_level > 20) return 'text-amber-400';
     return 'text-red-400';
@@ -123,9 +123,9 @@ function CompactView({
           className={`text-xl font-bold ${batteryColor}`}
         />
       ) : (
-        <span className="text-xl font-bold text-white/30">—</span>
+        <span className="text-xl font-bold text-[var(--text-muted)]">—</span>
       )}
-      <span className="text-[10px] text-white/40 truncate max-w-full px-1">{name}</span>
+      <span className="text-[10px] text-[var(--text-muted)] truncate max-w-full px-1">{name}</span>
     </div>
   );
 }
@@ -162,12 +162,12 @@ function FullView({
     <div className="h-full flex flex-col justify-center gap-2">
       {/* Header: name + status badge */}
       <div className="flex items-center gap-2 min-w-0">
-        <h3 className="text-sm font-bold text-white/90 truncate">{name}</h3>
+        <h3 className="text-sm font-bold text-[var(--text-primary)] truncate">{name}</h3>
         <StatusBadge status={status} size="sm" className="shrink-0" />
       </div>
 
       {/* Subtitle: model + trim */}
-      <p className="text-[11px] text-white/40 truncate -mt-1">
+      <p className="text-[11px] text-[var(--text-muted)] truncate -mt-1">
         {model}{trimBadging ? ` ${trimBadging}` : ''}
       </p>
 
@@ -246,10 +246,10 @@ function MetricCell({
 }) {
   return (
     <div className="flex items-start gap-1.5 min-w-0">
-      <span className="mt-0.5 shrink-0 text-white/40">{icon}</span>
+      <span className="mt-0.5 shrink-0 text-[var(--text-muted)]">{icon}</span>
       <div className="min-w-0">
-        <p className="text-[10px] text-white/40 truncate">{label}</p>
-        <p className={`text-sm font-semibold truncate ${valueColor ?? 'text-white/90'}`}>
+        <p className="text-[10px] text-[var(--text-muted)] truncate">{label}</p>
+        <p className={`text-sm font-semibold truncate ${valueColor ?? 'text-[var(--text-primary)]'}`}>
           {value}
         </p>
       </div>

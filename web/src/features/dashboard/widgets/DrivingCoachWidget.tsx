@@ -65,7 +65,7 @@ export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
       onRefresh={() => refetch()}
     >
         <div className="flex h-full flex-col items-center justify-center gap-2 min-h-[44px]">
-          <span className="text-2xl font-bold text-white/90">
+          <span className="text-2xl font-bold text-[var(--text-primary)]">
             {fmtInt(score)}
           </span>
           {savingsPct > 0 && (
@@ -95,10 +95,10 @@ export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
         {/* Score header */}
         <div className="flex items-center justify-between">
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-white/90">
+            <span className="text-3xl font-bold text-[var(--text-primary)]">
               {fmtInt(score)}
             </span>
-            <span className="text-xs text-white/40">
+            <span className="text-xs text-[var(--text-muted)]">
               {t('widget.drivingCoach.scoreLabel', '/ 100')}
             </span>
           </div>

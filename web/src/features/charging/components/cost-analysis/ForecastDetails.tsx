@@ -53,14 +53,14 @@ export function ForecastDetails({ forecastData }: ForecastDetailsProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
-                    <span className="text-white/70">{t('Home')}</span>
+                    <span className="text-[var(--text-secondary)]">{t('Home')}</span>
                   </div>
                   <span className="font-medium text-white"><Currency value={forecastData.breakdown.home.avg_cost_per_kwh} precision={3} />/kWh</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
-                    <span className="text-white/70">{t('Supercharger')}</span>
+                    <span className="text-[var(--text-secondary)]">{t('Supercharger')}</span>
                   </div>
                   <span className="font-medium text-white"><Currency value={forecastData.breakdown.supercharger.avg_cost_per_kwh} precision={3} />/kWh</span>
                 </div>
@@ -82,7 +82,7 @@ export function ForecastDetails({ forecastData }: ForecastDetailsProps) {
           {forecastData ? (
             <div className="space-y-4">
               <div className="rounded-xl p-4 bg-neon-green/[0.06] border border-neon-green/10 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
                   {t('costAnalysis.forecast.monthlySavings', 'Monthly Savings')}
                 </p>
                 <p className="text-3xl font-bold text-emerald-300">
@@ -91,15 +91,15 @@ export function ForecastDetails({ forecastData }: ForecastDetailsProps) {
               </div>
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div className="rounded-lg bg-white/[0.04] p-3">
-                  <p className="text-[10px] text-white/40">{t('costAnalysis.forecast.annual', 'Annual')}</p>
+                  <p className="text-[10px] text-[var(--text-muted)]">{t('costAnalysis.forecast.annual', 'Annual')}</p>
                   <p className="text-lg font-semibold text-white"><Currency value={forecastData.gas_comparison.annual_savings} precision={0} /></p>
                 </div>
                 <div className="rounded-lg bg-white/[0.04] p-3">
-                  <p className="text-[10px] text-white/40">{t('costAnalysis.forecast.lifetime', 'Lifetime')}</p>
+                  <p className="text-[10px] text-[var(--text-muted)]">{t('costAnalysis.forecast.lifetime', 'Lifetime')}</p>
                   <p className="text-lg font-semibold text-white"><Currency value={forecastData.gas_comparison.lifetime_savings} precision={0} /></p>
                 </div>
               </div>
-              <div className="text-xs text-white/40 space-y-1">
+              <div className="text-xs text-[var(--text-muted)] space-y-1">
                 <div className="flex justify-between">
                   <span>{t('costAnalysis.forecast.gasCost', 'Gas cost/mo')}</span>
                   <Currency value={forecastData.gas_comparison.gas_cost_per_month} className="text-red-400" />
@@ -135,7 +135,7 @@ export function ForecastDetails({ forecastData }: ForecastDetailsProps) {
                   className="flex items-start gap-3 rounded-xl p-3 bg-white/[0.03] border border-white/[0.06]"
                 >
                   <Zap className="h-4 w-4 mt-0.5 shrink-0 text-neon-amber" />
-                  <p className="text-sm text-white/70">{insight}</p>
+                  <p className="text-sm text-[var(--text-secondary)]">{insight}</p>
                 </div>
               ))}
             </div>

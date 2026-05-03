@@ -101,7 +101,7 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
               suffix={` ${distanceUnit}`}
               className="text-3xl font-bold text-cyan-400"
             />
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               {t('widget.analyticsSummary.totalDistance', 'Total Distance')}
             </span>
           </div>

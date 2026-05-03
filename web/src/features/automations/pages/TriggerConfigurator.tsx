@@ -236,7 +236,7 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
                 className="w-36"
               />
               <div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <span className="text-sm font-medium text-gray-700 dark:text-[var(--text-secondary)]">
                   {t('automations.builder.days', 'Days')}
                 </span>
                 <div className="mt-1 flex gap-2">
@@ -252,7 +252,7 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
                         className={`!h-10 !w-10 !rounded-lg !p-0 text-xs font-medium ${
                           active
                             ? '!bg-[var(--accent)]/20 text-[var(--accent)] ring-1 ring-[var(--accent)]/50'
-                            : '!bg-white/[0.03] text-white/40 hover:!bg-white/[0.06]'
+                            : '!bg-white/[0.03] text-[var(--text-muted)] hover:!bg-white/[0.06]'
                         }`}
                         onClick={() => updateCron(hour, minute, handleDayToggle(selectedDays, index))}
                       >
@@ -278,7 +278,7 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
           <UiButton
             type="button"
             variant="ghost"
-            className="!h-auto !px-0 !py-0 text-xs text-white/40 underline hover:!bg-transparent hover:text-white/60"
+            className="!h-auto !px-0 !py-0 text-xs text-[var(--text-muted)] underline hover:!bg-transparent hover:text-[var(--text-secondary)]"
             onClick={() => {
               onChange({
                 ...trigger,

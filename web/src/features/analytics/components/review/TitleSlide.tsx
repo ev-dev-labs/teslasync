@@ -32,7 +32,7 @@ export function TitleSlide({ data }: Props) {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.5, duration: 0.5 }}
-        className="text-xl md:text-2xl text-white/70 mb-2"
+        className="text-xl md:text-2xl text-[var(--text-secondary)] mb-2"
       >
         {t('yearReview.title', 'Year in Review')}
       </motion.p>
@@ -40,7 +40,7 @@ export function TitleSlide({ data }: Props) {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.7, duration: 0.5 }}
-        className="text-lg text-white/50"
+        className="text-lg text-[var(--text-secondary)]"
       >
         {data.vehicle.display_name}
       </motion.p>

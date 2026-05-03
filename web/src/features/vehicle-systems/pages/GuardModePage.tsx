@@ -216,7 +216,7 @@ export default function GuardModePage() {
               'w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300',
               isArmed && !isTriggered && 'bg-emerald-500/20 text-emerald-400',
               isTriggered && 'bg-red-500/20 text-red-400',
-              !isArmed && 'bg-white/5 text-[var(--text-muted)]',
+              !isArmed && 'bg-[var(--surface-2)] text-[var(--text-muted)]',
             )}>
               {isTriggered ? (
                 <ShieldAlert className="h-10 w-10" />
@@ -527,7 +527,7 @@ function EventRow({
       className={cn(
         'flex items-start gap-3 p-3 rounded-lg border transition-colors',
         event.acknowledged
-          ? 'border-white/5 bg-white/[0.01]'
+          ? 'border-[var(--border-subtle)] bg-white/[0.01]'
           : 'border-red-500/20 bg-red-500/[0.03]',
       )}
     >

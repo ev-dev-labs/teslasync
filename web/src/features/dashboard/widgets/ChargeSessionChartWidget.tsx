@@ -160,7 +160,7 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
                     className="inline-block h-2 w-2 rounded-full"
                     style={{ background: CHARGER_COLORS[type] }}
                   />
-                  <span className="text-[10px] text-white/50">
+                  <span className="text-[10px] text-[var(--text-secondary)]">
                     {t(`widget.chargeSessionChart.type.${type}`, CHARGER_TYPE_LABEL[type])}
                   </span>
                 </div>

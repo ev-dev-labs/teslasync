@@ -878,7 +878,7 @@ export default function ClimateControlPage() {
                 className={cn(
                   'flex h-20 w-20 items-center justify-center rounded-full',
                   tempDelta == null
-                    ? 'bg-white/5'
+                    ? 'bg-[var(--surface-2)]'
                     : Math.abs(tempDelta) <= 1
                       ? 'bg-green-500/20'
                       : Math.abs(tempDelta) <= 3
@@ -903,7 +903,7 @@ export default function ClimateControlPage() {
                     : '—'}
                 </span>
               </div>
-              <span className="text-[10px] rounded-full bg-white/5 px-3 py-1 font-medium text-[var(--text-muted)]">
+              <span className="text-[10px] rounded-full bg-[var(--surface-2)] px-3 py-1 font-medium text-[var(--text-muted)]">
                 {tempDelta != null
                   ? Math.abs(tempDelta) <= 1
                     ? t('Near Target')

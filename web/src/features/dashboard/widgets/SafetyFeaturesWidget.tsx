@@ -139,7 +139,7 @@ export default function SafetyFeaturesWidget({ vehicleId, size }: WidgetProps) {
             <span className="text-3xl font-bold text-emerald-300">
               {fmtInt(activeCount)}
             </span>
-            <span className="text-xs text-white/50">
+            <span className="text-xs text-[var(--text-secondary)]">
               {t('widget.safety.activeFeatures', 'Active Features')}
             </span>
           </div>

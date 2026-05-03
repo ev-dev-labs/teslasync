@@ -55,12 +55,12 @@ export function WidgetTipCards({
           className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3 min-h-[44px] flex items-start gap-3"
         >
           {tip.icon && (
-            <span className="mt-0.5 shrink-0 text-white/50">{tip.icon}</span>
+            <span className="mt-0.5 shrink-0 text-[var(--text-secondary)]">{tip.icon}</span>
           )}
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
-              <span className="text-sm font-medium text-white/90">
+              <span className="text-sm font-medium text-[var(--text-primary)]">
                 {tip.title}
               </span>
               {tip.impact && (
@@ -75,7 +75,7 @@ export function WidgetTipCards({
             </div>
             <p
               className={cn(
-                'mt-0.5 text-xs text-white/50 leading-relaxed',
+                'mt-0.5 text-xs text-[var(--text-secondary)] leading-relaxed',
                 compact && 'line-clamp-2',
               )}
             >

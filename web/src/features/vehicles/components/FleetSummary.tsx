@@ -53,7 +53,7 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
         <p className="text-2xl font-bold text-gray-900 dark:text-white">
           <AnimatedNumber value={vehicles.length} />
         </p>
-        <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        <p className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
           {t('fleet.vehicles', 'Vehicles')}
         </p>
       </GlassPanel>
@@ -63,7 +63,7 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
         <p className="text-2xl font-bold text-gray-900 dark:text-white">
           <AnimatedNumber value={Math.round(avgBattery)} suffix="%" />
         </p>
-        <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        <p className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
           {t('fleet.avgBattery', 'Avg Battery')}
         </p>
       </GlassPanel>
@@ -73,7 +73,7 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
         <p className="text-2xl font-bold text-gray-900 dark:text-white">
           <AnimatedNumber value={Math.round(convertDistance(totalRange))} />
         </p>
-        <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        <p className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
           {t('fleet.totalRange', 'Total Range')} {distanceUnit}
         </p>
       </GlassPanel>
@@ -82,9 +82,9 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
         <Zap className="h-5 w-5 text-amber-400 mx-auto mb-2" />
         <p className="text-2xl font-bold text-green-500">
           <AnimatedNumber value={chargingCount} />{' '}
-          <span className="text-sm text-gray-500 dark:text-gray-400">/ {onlineCount}</span>
+          <span className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">/ {onlineCount}</span>
         </p>
-        <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        <p className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
           {t('fleet.chargingOnline', 'Charging / Online')}
         </p>
       </GlassPanel>

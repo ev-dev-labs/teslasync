@@ -38,7 +38,7 @@ export default function WatchFacePage() {
   if (error || !data) {
     return (
       <WatchShell>
-        <p className="text-white/50 text-sm text-center px-4">
+        <p className="text-[var(--text-secondary)] text-sm text-center px-4">
           {error ? String(error) : 'No vehicle found'}
         </p>
       </WatchShell>
@@ -48,7 +48,7 @@ export default function WatchFacePage() {
   return (
     <WatchShell>
       {/* Vehicle name */}
-      <div className="text-[10px] text-white/40 text-center truncate px-2">
+      <div className="text-[10px] text-[var(--text-muted)] text-center truncate px-2">
         {data.vehicle_name}
       </div>
 
@@ -98,7 +98,7 @@ export default function WatchFacePage() {
       </div>
 
       {/* Last updated */}
-      <div className="text-[8px] text-white/20 text-center">
+      <div className="text-[8px] text-[var(--text-muted)] text-center">
         {formatRelativeTime(data.last_updated)}
       </div>
 
@@ -141,7 +141,7 @@ function BatteryGauge({ level, rangeKm }: { level: number; rangeKm: number }) {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-3xl font-bold">{level}%</span>
-        <span className="text-[10px] text-white/50">
+        <span className="text-[10px] text-[var(--text-secondary)]">
           {Math.round(rangeKm)} km
         </span>
       </div>
@@ -175,7 +175,7 @@ function StatusIcon({ icon: Icon, active, color, label, onClick, loading }: Stat
       disabled={loading}
       className={cn(
         'h-11 w-11 flex-col rounded-full px-0 py-0 font-normal transition-colors duration-200',
-        active ? `bg-white/10 ${activeColor}` : 'bg-white/5 text-white/30',
+        active ? `bg-[var(--surface-2)] ${activeColor}` : 'bg-[var(--surface-2)] text-[var(--text-muted)]',
         onClick && 'active:scale-95',
         loading && 'opacity-50',
       )}
@@ -262,9 +262,9 @@ function watchStateClassName(state: string): string {
     case 'charging':
       return 'bg-emerald-500/20 text-emerald-400';
     case 'asleep':
-      return 'bg-white/5 text-white/30';
+      return 'bg-[var(--surface-2)] text-[var(--text-muted)]';
     case 'online':
-      return 'bg-white/10 text-white/60';
+      return 'bg-[var(--surface-2)] text-[var(--text-secondary)]';
     default:
       return '';
   }

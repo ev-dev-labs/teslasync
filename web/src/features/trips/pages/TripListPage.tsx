@@ -240,7 +240,7 @@ export default function TripListPage() {
       {/* Trip List */}
       <FadeIn delay={0.15}>
         <GlassPanel className="p-4 sm:p-6">
-          <h3 className="text-sm font-semibold text-white/90 mb-4">
+          <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
             {t('trips.list.heading', 'All Trips')}
           </h3>
           {allTrips.length === 0 ? (
@@ -303,17 +303,17 @@ function TripRow({ trip, convertDistance, convertEfficiency, distanceUnit, effic
           <Route className="h-5 w-5 text-cyan-400" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-white/90">
+          <p className="text-sm font-semibold text-[var(--text-primary)]">
             {trip.name ?? `${t('trips.row.trip', 'Trip')} #${trip.id}`}
           </p>
           <div className="flex items-center gap-3 mt-0.5">
             <InlineMetric icon={<Calendar />} value={formatDate(trip.start_date)} />
             <InlineMetric icon={<Clock />} value={formatDuration(trip.start_date, trip.end_date ?? null)} />
-            <span className="text-[11px] text-white/40">
+            <span className="text-[11px] text-[var(--text-muted)]">
               {t('trips.row.drives', '{{count}} drives', { count: trip.drive_count })}
             </span>
             {trip.charge_count > 0 && (
-              <span className="text-[11px] text-white/40">
+              <span className="text-[11px] text-[var(--text-muted)]">
                 {t('trips.row.charges', '{{count}} charges', { count: trip.charge_count })}
               </span>
             )}
@@ -323,10 +323,10 @@ function TripRow({ trip, convertDistance, convertEfficiency, distanceUnit, effic
 
       <div className="flex items-center gap-4 sm:gap-6 text-right w-full sm:w-auto justify-end">
         <div>
-          <p className="text-sm font-bold text-white/90">
+          <p className="text-sm font-bold text-[var(--text-primary)]">
             {fmtInt(convertDistance(trip.total_distance_km))} {distanceUnit}
           </p>
-          <p className="text-[10px] text-white/40">
+          <p className="text-[10px] text-[var(--text-muted)]">
             {t('trips.row.drives', '{{count}} drives', { count: trip.drive_count })}
           </p>
         </div>
@@ -334,7 +334,7 @@ function TripRow({ trip, convertDistance, convertEfficiency, distanceUnit, effic
           <p className="text-sm font-bold text-amber-400">
             {fmtNumber(trip.total_energy_kwh)} kWh
           </p>
-          <p className="text-[10px] text-white/40">
+          <p className="text-[10px] text-[var(--text-muted)]">
             {trip.total_distance_km > 0
               ? `${fmtInt(convertEfficiency(whPerKm))} ${efficiencyUnit}`
               : `0 ${efficiencyUnit}`}
@@ -345,7 +345,7 @@ function TripRow({ trip, convertDistance, convertEfficiency, distanceUnit, effic
             <p className="text-sm font-bold text-emerald-400">
               ${fmtNumber(trip.total_cost)}
             </p>
-            <p className="text-[10px] text-white/40">{t('trips.row.cost', 'cost')}</p>
+            <p className="text-[10px] text-[var(--text-muted)]">{t('trips.row.cost', 'cost')}</p>
           </div>
         )}
       </div>

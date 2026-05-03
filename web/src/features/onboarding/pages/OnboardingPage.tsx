@@ -110,7 +110,7 @@ export default function OnboardingPage() {
               <h2 className="text-lg font-semibold text-white">
                 {t('onboarding.intro.title', 'Setup checklist')}
               </h2>
-              <p className="mt-1 text-sm text-white/60">
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
                 {t(
                   'onboarding.intro.desc',
                   'TeslaSync runs entirely on your hardware. No data leaves your install, and you can revisit this page from Settings any time.',
@@ -174,8 +174,8 @@ export default function OnboardingPage() {
             }}
           />
 
-          <div className="mt-8 flex flex-col gap-3 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-white/60">
+          <div className="mt-8 flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-[var(--text-secondary)]">
               {isComplete
                 ? t('onboarding.ready', 'You are all set — your dashboard is ready.')
                 : t(
@@ -229,7 +229,7 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          <p className="mt-6 text-xs text-white/40">
+          <p className="mt-6 text-xs text-[var(--text-muted)]">
             {t('onboarding.footer.help', 'Need help? See the')}{' '}
             <Link
               to="/tesla-account"

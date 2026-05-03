@@ -45,7 +45,7 @@ export function TourOverlay({
       {/* Dark overlay with spotlight cutout */}
       <div
         className={cn(
-          'absolute inset-0 bg-black/60',
+          'absolute inset-0 bg-[var(--surface-overlay)]',
           reduce ? '' : 'transition-all duration-300',
         )}
         style={{
@@ -82,7 +82,7 @@ export function TourOverlay({
       <div
         className={cn(
           'absolute max-w-sm p-4 rounded-xl bg-[var(--bg-secondary)]',
-          'border border-white/10 shadow-2xl backdrop-blur-xl',
+          'border border-[var(--border-subtle)] shadow-2xl backdrop-blur-xl',
           reduce ? '' : 'animate-in fade-in slide-in-from-bottom-2 duration-200',
         )}
         style={tooltipStyle}
@@ -96,8 +96,8 @@ export function TourOverlay({
         {/* Close button — 44px touch target for mobile */}
         <button
           onClick={onSkip}
-          className="absolute top-1 right-1 p-2.5 rounded-md text-white/30
-            hover:text-white/60 hover:bg-white/5 transition-colors
+          className="absolute top-1 right-1 p-2.5 rounded-md text-[var(--text-muted)]
+            hover:text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors
             min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label={t('tour.close', 'Close tour')}
         >
@@ -105,19 +105,19 @@ export function TourOverlay({
         </button>
 
         {/* Step counter */}
-        <div className="text-[10px] text-white/30 mb-1">
+        <div className="text-[10px] text-[var(--text-muted)] mb-1">
           {currentStep + 1} / {totalSteps}
         </div>
 
         {/* Content */}
-        <h4 className="text-sm font-semibold text-white/90 mb-1">{step.title}</h4>
-        <p className="text-xs text-white/50 leading-relaxed mb-4">{step.description}</p>
+        <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-1">{step.title}</h4>
+        <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-4">{step.description}</p>
 
         {/* Navigation */}
         <div className="flex items-center justify-between">
           <button
             onClick={onSkip}
-            className="text-xs text-white/30 hover:text-white/50 transition-colors
+            className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors
               py-2.5 px-2 min-h-[44px] flex items-center"
           >
             {t('tour.skip', 'Skip tour')}
@@ -150,8 +150,8 @@ export function TourOverlay({
                 i === currentStep
                   ? 'w-4 bg-[var(--theme-primary)]'
                   : i < currentStep
-                    ? 'w-1.5 bg-white/20'
-                    : 'w-1.5 bg-white/10',
+                    ? 'w-1.5 bg-[var(--surface-2)]'
+                    : 'w-1.5 bg-[var(--surface-2)]',
               )}
             />
           ))}

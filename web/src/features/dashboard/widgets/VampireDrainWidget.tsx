@@ -117,7 +117,7 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
             >
               {fmtNumber(avgDrainPctPerDay, 1)}%
             </p>
-            <p className="text-[10px] text-white/40">
+            <p className="text-[10px] text-[var(--text-muted)]">
               {t('widget.vampireDrain.perDay', '/day')}
             </p>
           </div>
@@ -142,7 +142,7 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
             {/* Wide: sparkline */}
             {isWide && sparklineData.length > 1 && (
               <div className="flex-shrink-0">
-                <p className="text-[10px] text-white/40 mb-1">
+                <p className="text-[10px] text-[var(--text-muted)] mb-1">
                   {t('widget.vampireDrain.trend', 'Daily drain rate (last 30)')}
                 </p>
                 <Sparkline

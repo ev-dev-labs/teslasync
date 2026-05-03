@@ -54,7 +54,7 @@ export function LiveControls({
     <div
       data-testid="live-controls"
       className={cn(
-        'flex flex-wrap items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2',
+        'flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] px-3 py-2',
         className,
       )}
     >
@@ -67,7 +67,7 @@ export function LiveControls({
         <span
           className={cn(
             'mr-1.5 inline-block h-2 w-2 rounded-full',
-            isLive ? 'bg-emerald-300 animate-pulse' : 'bg-white/30',
+            isLive ? 'bg-emerald-300 animate-pulse' : 'bg-[var(--surface-2)]',
           )}
         />
         {t('debugger.controls.live', 'Live')}
@@ -80,7 +80,7 @@ export function LiveControls({
       >
         {t('debugger.controls.freeze', 'Freeze')}
       </Button>
-      <div className="mx-1 h-5 w-px bg-white/10" aria-hidden />
+      <div className="mx-1 h-5 w-px bg-[var(--surface-2)]" aria-hidden />
       <Button
         size="sm"
         variant="ghost"
@@ -99,7 +99,7 @@ export function LiveControls({
       >
         →
       </Button>
-      <div className="mx-1 h-5 w-px bg-white/10" aria-hidden />
+      <div className="mx-1 h-5 w-px bg-[var(--surface-2)]" aria-hidden />
       <Caption className="hidden sm:inline">{t('debugger.controls.window', 'Window')}</Caption>
       <Select
         size="sm"

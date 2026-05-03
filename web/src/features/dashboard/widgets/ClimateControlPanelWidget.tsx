@@ -86,7 +86,7 @@ function CompactView({ inside, tempUnit }: { inside: string | null; tempUnit: st
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1">
       <Thermometer className="h-5 w-5 text-neon-cyan" />
-      <span className="text-lg font-bold text-white/90">
+      <span className="text-lg font-bold text-[var(--text-primary)]">
         {inside != null ? `${inside}${tempUnit}` : '—'}
       </span>
     </div>
@@ -112,7 +112,7 @@ function FullView({ climateData, temps, tempUnit, seatHeaters, steeringHeat, t }
       {/* HVAC status badge */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <Power className="h-3.5 w-3.5 text-white/40" />
+          <Power className="h-3.5 w-3.5 text-[var(--text-muted)]" />
           <Badge variant={hvacOn ? 'success' : 'neutral'} size="sm">
             {hvacOn
               ? t('widget.climatePanel.hvacOn', 'HVAC On')
@@ -120,7 +120,7 @@ function FullView({ climateData, temps, tempUnit, seatHeaters, steeringHeat, t }
           </Badge>
         </div>
         {climateData.hvac_power != null && climateData.hvac_power > 0 && (
-          <span className="text-xs text-white/50">
+          <span className="text-xs text-[var(--text-secondary)]">
             {fmtNumber(climateData.hvac_power, 1)} kW
           </span>
         )}
@@ -143,12 +143,12 @@ function FullView({ climateData, temps, tempUnit, seatHeaters, steeringHeat, t }
       {/* Fan speed */}
       <div className="grid grid-cols-2 gap-2">
         <MetricCell
-          icon={<Fan className="h-3 w-3 text-white/40" />}
+          icon={<Fan className="h-3 w-3 text-[var(--text-muted)]" />}
           label={t('widget.climatePanel.fanSpeed', 'Fan Speed')}
           value={climateData.hvac_fan_speed != null ? `${climateData.hvac_fan_speed}` : '—'}
         />
         <MetricCell
-          icon={<CircleDot className="h-3 w-3 text-white/40" />}
+          icon={<CircleDot className="h-3 w-3 text-[var(--text-muted)]" />}
           label={t('widget.climatePanel.steeringHeat', 'Wheel Heat')}
           value={steeringHeat > 0 ? `${steeringHeat}/3` : t('widget.climatePanel.off', 'Off')}
         />
@@ -166,7 +166,7 @@ function FullView({ climateData, temps, tempUnit, seatHeaters, steeringHeat, t }
             </span>
           ))
         ) : (
-          <span className="text-[10px] text-white/30">
+          <span className="text-[10px] text-[var(--text-muted)]">
             {t('widget.climatePanel.noSeatHeat', 'No seat heaters active')}
           </span>
         )}
@@ -191,8 +191,8 @@ function MetricCell({ icon, label, value }: { icon: React.ReactNode; label: stri
     <div className="flex items-start gap-1.5 min-w-0">
       <span className="mt-0.5 shrink-0">{icon}</span>
       <div className="min-w-0">
-        <p className="text-[10px] text-white/40 truncate">{label}</p>
-        <p className="text-sm font-semibold text-white/90 truncate">{value}</p>
+        <p className="text-[10px] text-[var(--text-muted)] truncate">{label}</p>
+        <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{value}</p>
       </div>
     </div>
   );

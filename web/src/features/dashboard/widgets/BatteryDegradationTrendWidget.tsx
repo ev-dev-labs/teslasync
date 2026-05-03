@@ -88,7 +88,7 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
     </ResponsiveContainer>
   ) : (
     <div className="flex h-full items-center justify-center">
-      <p className="text-xs text-white/30">
+      <p className="text-xs text-[var(--text-muted)]">
         {t('widget.needMoreData', 'More data needed for trend')}
       </p>
     </div>

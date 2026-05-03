@@ -75,8 +75,8 @@ export default function APIUsageWidget({ size }: WidgetProps) {
       >
         {data ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
-            <span className="text-2xl font-bold text-white/90">{fmtInt(totalCalls)}</span>
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <span className="text-2xl font-bold text-[var(--text-primary)]">{fmtInt(totalCalls)}</span>
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               {t('widget.apiUsage.calls24h', 'Calls (24h)')}
             </span>
             {errorRate > 5 && (

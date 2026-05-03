@@ -1031,7 +1031,7 @@ function SecurityOverlay({
         <foreignObject x={cx - iconSize / 2} y={sentryY - iconSize / 2} width={iconSize} height={iconSize}>
           <Tooltip content="Sentry mode active" side="top">
             <motion.span
-              className="flex items-center justify-center w-full h-full rounded-full bg-slate-950/45"
+              className="flex items-center justify-center w-full h-full rounded-full bg-[var(--bg-app)]"
               animate={{ opacity: [1, 0.45, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
@@ -1044,7 +1044,7 @@ function SecurityOverlay({
         <foreignObject x={cx - iconSize / 2} y={cy - iconSize / 2} width={iconSize} height={iconSize}>
           {interactive ? (
             <Tooltip content={locked ? 'Locked' : 'Unlocked'} side="top">
-              <span className="flex items-center justify-center w-full h-full rounded-full bg-slate-950/45">
+              <span className="flex items-center justify-center w-full h-full rounded-full bg-[var(--bg-app)]">
                 {locked
                   ? <Lock className="w-4 h-4" fill={C.lockedGreen} stroke={C.lockedGreen} />
                   : <Unlock className="w-4 h-4" fill={C.unlockedRed} stroke={C.unlockedRed} />
@@ -1052,7 +1052,7 @@ function SecurityOverlay({
               </span>
             </Tooltip>
           ) : (
-            <span className="flex items-center justify-center w-full h-full rounded-full bg-slate-950/45">
+            <span className="flex items-center justify-center w-full h-full rounded-full bg-[var(--bg-app)]">
               {locked
                 ? <Lock className="w-4 h-4" fill={C.lockedGreen} stroke={C.lockedGreen} />
                 : <Unlock className="w-4 h-4" fill={C.unlockedRed} stroke={C.unlockedRed} />

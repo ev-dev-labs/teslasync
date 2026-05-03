@@ -51,7 +51,7 @@ export function SecurityPanel({ securityData, remoteStartEnabled }: SecurityPane
                       ? t('common.locked', 'Locked')
                       : t('common.unlocked', 'Unlocked')}
                   </p>
-                  <p className="text-[10px] text-white/40">
+                  <p className="text-[10px] text-[var(--text-muted)]">
                     {t('telemetry.lockStatus', 'Vehicle lock status')}
                   </p>
                 </div>

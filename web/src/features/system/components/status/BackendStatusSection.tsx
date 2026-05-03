@@ -65,7 +65,7 @@ export function BackendStatusSection() {
       key: 'name',
       header: t('Component'),
       sortable: true,
-      render: (row) => <span className="font-medium text-white/90">{row.name}</span>,
+      render: (row) => <span className="font-medium text-[var(--text-primary)]">{row.name}</span>,
     },
     {
       key: 'latency_ms',
@@ -110,7 +110,7 @@ export function BackendStatusSection() {
       ) : (
         <div className="space-y-6">
           <div>
-            <h4 className="text-sm font-semibold text-white/90 mb-3">{t('Component Health')}</h4>
+            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Component Health')}</h4>
             <DataTable
               columns={componentColumns}
               data={componentRows}
@@ -123,7 +123,7 @@ export function BackendStatusSection() {
 
           {pool && (
             <div>
-              <h4 className="text-sm font-semibold text-white/90 mb-3">{t('Database Connection Pool')}</h4>
+              <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Database Connection Pool')}</h4>
               <Grid cols={{ default: 2, md: 5 }} gap={3}>
                 <StatCard label={t('Max Open')} value={fmtInt(pool.maxOpen)} icon={<Database className="h-4 w-4" />} />
                 <StatCard label={t('Open')} value={fmtInt(pool.open)} icon={<Database className="h-4 w-4" />} />
@@ -136,7 +136,7 @@ export function BackendStatusSection() {
 
           {(extHealth?.system || version) && (
             <div>
-              <h4 className="text-sm font-semibold text-white/90 mb-3">{t('System Runtime')}</h4>
+              <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('System Runtime')}</h4>
               <KVList
                 columns={2}
                 items={[

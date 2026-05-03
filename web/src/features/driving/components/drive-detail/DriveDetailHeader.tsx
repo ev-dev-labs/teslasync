@@ -19,7 +19,7 @@ export function DriveDetailHeader({ drive, driveId, vehicleName, onShare }: Driv
   return (
     <FadeIn>
       <div className="flex items-center gap-4">
-        <Link to="/drives" className="rounded-xl p-2.5 text-[var(--text-muted)] hover:bg-white/5 hover:text-[var(--text-primary)] transition-all">
+        <Link to="/drives" className="rounded-xl p-2.5 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] transition-all">
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="flex-1">

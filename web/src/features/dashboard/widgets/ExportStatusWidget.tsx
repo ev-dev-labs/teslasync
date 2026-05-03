@@ -134,9 +134,9 @@ function JobRow({
   const format = (job.format ?? '').toUpperCase() || '—';
 
   return (
-    <div className="flex items-center gap-2 min-h-[44px] px-1 py-1.5 border-b border-white/5 last:border-b-0">
+    <div className="flex items-center gap-2 min-h-[44px] px-1 py-1.5 border-b border-[var(--border-subtle)] last:border-b-0">
       {/* Filename */}
-      <span className="flex-1 min-w-0 truncate text-xs text-white/80">
+      <span className="flex-1 min-w-0 truncate text-xs text-[var(--text-primary)]">
         {truncateFilename(job.filePath, 28)}
       </span>
 
@@ -146,7 +146,7 @@ function JobRow({
       </Badge>
 
       {/* File size */}
-      <span className="shrink-0 text-xs tabular-nums text-white/50 w-16 text-right">
+      <span className="shrink-0 text-xs tabular-nums text-[var(--text-secondary)] w-16 text-right">
         {fmtBytes(job.fileSize ?? 0)}
       </span>
 
@@ -156,7 +156,7 @@ function JobRow({
       </Badge>
 
       {/* Relative time */}
-      <span className="shrink-0 text-[10px] text-white/40 w-14 text-right">
+      <span className="shrink-0 text-[10px] text-[var(--text-muted)] w-14 text-right">
         {formatRelative(job.createdAt)}
       </span>
 

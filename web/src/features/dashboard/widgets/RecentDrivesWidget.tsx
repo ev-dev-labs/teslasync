@@ -38,7 +38,7 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
       actions={
         <Link
           to="/drives"
-          className="text-[10px] text-white/30 hover:text-cyan-300 transition-colors flex items-center gap-0.5"
+          className="text-[10px] text-[var(--text-muted)] hover:text-cyan-300 transition-colors flex items-center gap-0.5"
         >
           {t('widget.viewAll', 'View all')} <ArrowUpRight className="h-3 w-3" />
         </Link>
@@ -50,15 +50,15 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
             <Link key={d.id} to={`/drives/${d.id}`} className="block">
               <div className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] transition-colors">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-white/90 truncate">
+                  <p className="text-sm font-medium text-[var(--text-primary)] truncate">
                     {fmtNumber(convertDistance(d.distance_mi ?? 0), 1)} {distanceUnit}
                   </p>
-                  <p className="text-[10px] text-white/40">
+                  <p className="text-[10px] text-[var(--text-muted)]">
                     {fmtInt(d.duration_min ?? 0)} min · {d.start_battery_pct ?? '?'}% →{' '}
                     {d.end_battery_pct ?? '?'}%
                   </p>
                 </div>
-                <span className="text-[10px] text-white/40 shrink-0">
+                <span className="text-[10px] text-[var(--text-muted)] shrink-0">
                   {new Date(d.start_ts).toLocaleDateString(undefined, {
                     month: 'short',
                     day: 'numeric',

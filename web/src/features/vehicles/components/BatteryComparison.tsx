@@ -53,7 +53,7 @@ export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
           const color = batteryColor(level);
           return (
             <div key={vehicle.id} className="flex items-center gap-3">
-              <span className="text-xs text-gray-600 dark:text-gray-300 w-24 truncate">
+              <span className="text-xs text-gray-600 dark:text-[var(--text-secondary)] w-24 truncate">
                 {vehicle.display_name || vehicle.vin}
               </span>
               <div className="flex-1 h-3 rounded-full bg-white/[0.04] overflow-hidden">
@@ -69,7 +69,7 @@ export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
               <span className="text-xs font-medium text-gray-900 dark:text-white w-10 text-right">
                 {level}%
               </span>
-              <span className="text-[10px] text-gray-500 dark:text-gray-400 w-16 text-right">
+              <span className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)] w-16 text-right">
                 {fmtNumber(convertDistance(state.rated_range ?? 0))} {distanceUnit}
               </span>
             </div>

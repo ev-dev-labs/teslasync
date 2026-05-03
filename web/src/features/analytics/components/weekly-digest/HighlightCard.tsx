@@ -34,7 +34,7 @@ export function HighlightCard({
       glow={glowMap[color] ?? 'none'}
       className={cn('flex flex-col gap-2 p-5', className)}
     >
-      <span className="flex items-center gap-2 text-sm text-white/60">
+      <span className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
         {icon}
         {label}
       </span>
@@ -57,7 +57,7 @@ export function HighlightCard({
         </span>
       )}
       {subtitle && (
-        <span className="text-xs text-white/40">{subtitle}</span>
+        <span className="text-xs text-[var(--text-muted)]">{subtitle}</span>
       )}
     </GlassPanel>
   );

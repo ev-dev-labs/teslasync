@@ -41,7 +41,7 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
   if (!states || !edges) {
     return (
       <GlassPanel className="p-5">
-        <h2 className="text-sm font-semibold text-white/90 mb-3">
+        <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
           {t('fsm.stateDiagram', 'State Diagram')}
         </h2>
         <EmptyState message={t('fsm.selectFsmType', 'Select a specific FSM type to view its state diagram')} />
@@ -59,7 +59,7 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
 
   return (
     <GlassPanel className="p-5">
-      <h2 className="text-sm font-semibold text-white/90 mb-4">
+      <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
         {t('fsm.stateDiagram', 'State Diagram')}
       </h2>
       <div className="flex flex-wrap items-start gap-2 sm:gap-3">
@@ -76,23 +76,23 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
                 className={cn(
                   'relative flex flex-col items-center rounded-lg border px-3 py-2 min-w-[70px] sm:min-w-[80px] transition-all',
                   isCurrent
-                    ? 'border-white/30 bg-white/[0.08] ring-1 ring-white/20'
+                    ? 'border-[var(--border-strong)] bg-white/[0.08] ring-1 ring-white/20'
                     : count > 0
-                      ? 'border-white/10 bg-white/[0.04]'
+                      ? 'border-[var(--border-subtle)] bg-white/[0.04]'
                       : 'border-white/[0.05] bg-white/[0.02] opacity-50',
                 )}
               >
                 <span className={cn('h-2 w-2 rounded-full mb-1', color.dot)} />
                 <span className={cn('text-xs font-medium', color.text)}>{state}</span>
                 {count > 0 && (
-                  <span className="text-[10px] text-white/40 mt-0.5">{count}</span>
+                  <span className="text-[10px] text-[var(--text-muted)] mt-0.5">{count}</span>
                 )}
                 {isCurrent && (
                   <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-400 animate-pulse" />
                 )}
               </div>
               {hasArrow && (
-                <div className="flex items-center text-white/20">
+                <div className="flex items-center text-[var(--text-muted)]">
                   <svg width="20" height="12" viewBox="0 0 20 12" className="shrink-0">
                     <line x1="0" y1="6" x2="14" y2="6" stroke="currentColor" strokeWidth="1.5" />
                     <polygon points="14,2 20,6 14,10" fill="currentColor" />
@@ -101,7 +101,7 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
                     const edgeKey = `${state}->${states[i + 1]}`;
                     const edgeCount = edgeCounts.get(edgeKey);
                     return edgeCount ? (
-                      <span className="text-[9px] text-white/30 absolute -mt-4 ml-1">{edgeCount}</span>
+                      <span className="text-[9px] text-[var(--text-muted)] absolute -mt-4 ml-1">{edgeCount}</span>
                     ) : null;
                   })()}
                 </div>
@@ -122,12 +122,12 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
               return (
                 <span
                   key={edge}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white/[0.03] text-[10px] text-white/50"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white/[0.03] text-[10px] text-[var(--text-secondary)]"
                 >
                   <span className={getStateColor(fsmType, from).text}>{from}</span>
-                  <span className="text-white/20">→</span>
+                  <span className="text-[var(--text-muted)]">→</span>
                   <span className={getStateColor(fsmType, to).text}>{to}</span>
-                  <span className="text-white/30 font-mono">×{count}</span>
+                  <span className="text-[var(--text-muted)] font-mono">×{count}</span>
                 </span>
               );
             })}

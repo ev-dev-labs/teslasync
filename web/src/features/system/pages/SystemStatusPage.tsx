@@ -135,7 +135,7 @@ export default function SystemStatusPage() {
                 </Grid>
 
                 {version && (
-                  <div className="flex flex-wrap gap-4 text-xs text-white/40">
+                  <div className="flex flex-wrap gap-4 text-xs text-[var(--text-muted)]">
                     <span>{t('Chart')}: {version.chart_version}</span>
                     <span>{t('Go')}: {version.go_version}</span>
                     <span>{t('Uptime')}: {formatUptime(version.uptime_seconds)}</span>

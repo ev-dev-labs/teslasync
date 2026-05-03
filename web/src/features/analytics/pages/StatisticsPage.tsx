@@ -163,7 +163,7 @@ export default function StatisticsPage() {
           {/* ── Battery Health ────────────────────────────────── */}
           <FadeIn delay={0.1}>
             <GlassPanel className="p-6">
-              <h2 className="mb-4 text-lg font-semibold text-white/90">
+              <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
                 {t('statistics.batteryHealth', 'Battery Health')}
               </h2>
               {batteryHealth ? (
@@ -208,7 +208,7 @@ export default function StatisticsPage() {
 
               {/* Mileage Summary */}
               <GlassPanel className="p-6">
-                <h2 className="mb-4 text-lg font-semibold text-white/90">
+                <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
                   {t('statistics.mileage', 'Mileage Summary')}
                 </h2>
                 {mileage ? (

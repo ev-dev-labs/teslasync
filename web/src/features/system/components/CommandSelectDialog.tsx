@@ -34,14 +34,14 @@ export function CommandSelectDialog({
       open={open}
       onClose={onClose}
       size="sm"
-      className="bg-gray-900/95 dark:bg-gray-900/95 backdrop-blur-xl border border-white/10"
+      className="bg-gray-900/95 dark:bg-gray-900/95 backdrop-blur-xl border border-[var(--border-subtle)]"
     >
       <div onKeyDown={handleKeyDown}>
         <div className="flex items-center gap-3 mb-5">
-          <div className="rounded-xl p-2.5 bg-white/5 text-white/60">
+          <div className="rounded-xl p-2.5 bg-[var(--surface-2)] text-[var(--text-secondary)]">
             <Icon className="h-5 w-5" />
           </div>
-          <h2 className="text-base font-semibold text-white/90">
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">
             {t(def.labelKey, def.labelFallback)}
           </h2>
         </div>
@@ -57,17 +57,17 @@ export function CommandSelectDialog({
               onClick={() => onSelect(opt.value)}
               className={cn(
                 'h-auto w-full flex-col items-start gap-0.5 rounded-lg p-3 text-left font-normal transition-all duration-200',
-                'bg-white/5 border border-white/10',
-                'hover:bg-white/10 hover:border-neon-cyan/30',
+                'bg-[var(--surface-2)] border border-[var(--border-subtle)]',
+                'hover:bg-[var(--surface-2)] hover:border-neon-cyan/30',
                 'focus:outline-none focus:ring-2 focus:ring-neon-cyan/30',
                 loading && 'opacity-50 cursor-not-allowed',
               )}
             >
-              <span className="text-sm font-medium text-white/90">
+              <span className="text-sm font-medium text-[var(--text-primary)]">
                 {t(opt.labelKey, opt.labelFallback)}
               </span>
               {opt.description && (
-                <span className="block text-xs text-white/40 mt-0.5">
+                <span className="block text-xs text-[var(--text-muted)] mt-0.5">
                   {opt.description}
                 </span>
               )}
@@ -81,7 +81,7 @@ export function CommandSelectDialog({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-white/50 hover:text-white/80 hover:bg-white/5"
+            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
           >
             {t('common.cancel', 'Cancel')}
           </ControlButton>

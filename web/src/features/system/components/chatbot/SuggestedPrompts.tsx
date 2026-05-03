@@ -70,7 +70,7 @@ export function SuggestedPrompts({ onPick }: SuggestedPromptsProps) {
             role="listitem"
             onClick={() => onPick(text)}
             icon={<Sparkles className="h-3.5 w-3.5" />}
-            className="rounded-full border border-white/10 hover:border-purple-500/30 hover:text-purple-300"
+            className="rounded-full border border-[var(--border-subtle)] hover:border-purple-500/30 hover:text-purple-300"
           >
             {text}
           </Button>

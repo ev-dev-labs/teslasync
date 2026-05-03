@@ -16,7 +16,7 @@ describe('getStateBadgeColor', () => {
 describe('getStateColor', () => {
   it('driving → text-green-400', () => expect(getStateColor('driving')).toBe('text-green-400'))
   it('charging → text-cyan-400', () => expect(getStateColor('charging')).toBe('text-cyan-400'))
-  it('null → text-gray-400', () => expect(getStateColor(null)).toBe('text-gray-400'))
+  it('null → text-[var(--text-muted)]', () => expect(getStateColor(null)).toBe('text-[var(--text-muted)]'))
 })
 
 describe('getStateLabel', () => {

@@ -153,7 +153,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
           <Badge variant={locBadge.variant === 'success' ? 'success' : locBadge.variant === 'warning' ? 'warning' : 'neutral'} size="sm">
             {locBadge.label}
           </Badge>
-          <span className="text-xs text-white/40">
+          <span className="text-xs text-[var(--text-muted)]">
             {t('widget.destinationETA.noNav', 'No active navigation')}
           </span>
         </div>
@@ -178,7 +178,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
         {/* Destination name */}
         <div className="flex items-center gap-2 min-h-[44px]">
           <Navigation2 className="h-4 w-4 shrink-0 text-cyan-400" />
-          <span className="truncate text-sm font-medium text-white/90">
+          <span className="truncate text-sm font-medium text-[var(--text-primary)]">
             {destinationName}
           </span>
         </div>
@@ -190,16 +190,16 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
               value={Math.round(minutesToArrival)}
               className="text-3xl font-bold text-cyan-400"
             />
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               {etaDisplay}
             </span>
           </div>
 
           <div className="flex flex-col items-center gap-0.5">
-            <span className="text-xl font-semibold tabular-nums text-white/90">
+            <span className="text-xl font-semibold tabular-nums text-[var(--text-primary)]">
               {fmtNumber(displayDistance, 1)}
             </span>
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               {distanceUnit}
             </span>
           </div>
@@ -207,13 +207,13 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
 
         {/* Progress bar */}
         <div className="flex flex-col gap-1">
-          <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
             <div
               className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-700"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <div className="flex justify-between text-[10px] text-white/30">
+          <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
             <span>{t('widget.destinationETA.remaining', 'Remaining')}</span>
             <span>{fmtNumber(displayDistance, 1)} {distanceUnit}</span>
           </div>

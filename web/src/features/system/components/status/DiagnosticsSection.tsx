@@ -66,7 +66,7 @@ export function DiagnosticsSection() {
         <div className="space-y-6">
           {apiUsage && (
             <div>
-              <h4 className="text-sm font-semibold text-white/90 mb-3">{t('API Usage')}</h4>
+              <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('API Usage')}</h4>
               <Grid cols={{ default: 2, md: 4 }} gap={3} className="mb-4">
                 <MetricCard label={t('Total Requests')} value={fmtInt(apiUsage.total_requests)} icon={<Activity className="h-4 w-4" />} color="cyan" />
                 <MetricCard label={t('Estimated Cost')} value={`$${fmtNumber(apiUsage.estimated_cost, 2)}`} icon={<DollarSign className="h-4 w-4" />} color="green" />
@@ -123,7 +123,7 @@ export function DiagnosticsSection() {
 
           {workers ? (
             <div>
-              <h4 className="text-sm font-semibold text-white/90 mb-3">{t('Worker Health')}</h4>
+              <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Worker Health')}</h4>
               {workers.workers.length > 0 ? (
                 <Grid cols={{ default: 1, md: 2, lg: 3 }} gap={3}>
                   {workers.workers.map((w) => (
@@ -133,8 +133,8 @@ export function DiagnosticsSection() {
                           {getStatusIcon(w.status)}
                         </IconBox>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-white/90 truncate">{w.name}</div>
-                          <div className="text-xs text-white/40">{w.host} · {fmtNumber(w.latency_ms, 0)} ms</div>
+                          <div className="text-sm font-medium text-[var(--text-primary)] truncate">{w.name}</div>
+                          <div className="text-xs text-[var(--text-muted)]">{w.host} · {fmtNumber(w.latency_ms, 0)} ms</div>
                         </div>
                         <Badge variant={statusToBadgeVariant(w.status)} size="sm">{w.status}</Badge>
                       </div>

@@ -80,7 +80,7 @@ const MARKER_COLORS: Record<TimelineMarkerKind, string> = {
   'fast-segment': 'bg-amber-400',
   'regen-peak': 'bg-sky-300',
   'low-soc': 'bg-rose-300',
-  event: 'bg-white/60',
+  event: 'bg-[var(--surface-2)]',
 };
 
 /** Smooth-scrub interval — emit intermediate seeks every N ms while dragging. */
@@ -272,11 +272,11 @@ export function TimelineScrubber({
           className="pointer-events-none absolute -top-2 z-20 -translate-x-1/2 -translate-y-full"
           style={{ left: previewLeft }}
         >
-          <div className="flex flex-col items-center gap-1 rounded-md border border-white/10 bg-black/90 px-2.5 py-1.5 text-[11px] font-mono text-white/90 shadow-lg backdrop-blur-md">
-            {previewTimeStr && <div className="text-white/70">{previewTimeStr}</div>}
+          <div className="flex flex-col items-center gap-1 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-2.5 py-1.5 text-[11px] font-mono text-[var(--text-primary)] shadow-lg backdrop-blur-md">
+            {previewTimeStr && <div className="text-[var(--text-secondary)]">{previewTimeStr}</div>}
             {hoverPreview?.speed && (
               <div className="flex items-center gap-1 text-cyan-300">
-                <span className="text-white/40">⛰</span>
+                <span className="text-[var(--text-muted)]">⛰</span>
                 <span>{hoverPreview.speed}</span>
               </div>
             )}
@@ -287,7 +287,7 @@ export function TimelineScrubber({
               <div className="text-emerald-300">{hoverPreview.soc}</div>
             )}
             {hoverPreview?.elevation && (
-              <div className="text-white/60">{hoverPreview.elevation}</div>
+              <div className="text-[var(--text-secondary)]">{hoverPreview.elevation}</div>
             )}
           </div>
         </div>
@@ -351,7 +351,7 @@ export function TimelineScrubber({
         {/* Hover ghost playhead */}
         {hoverAt != null && !isDragging && (
           <div
-            className="pointer-events-none absolute top-1/2 h-3 w-px -translate-x-1/2 -translate-y-1/2 bg-white/40"
+            className="pointer-events-none absolute top-1/2 h-3 w-px -translate-x-1/2 -translate-y-1/2 bg-[var(--surface-2)]"
             style={{ left: previewLeft }}
           />
         )}
@@ -383,7 +383,7 @@ function TimelineMarkerTick({
 }) {
   const { t } = useTranslation();
   const left = `${Math.min(100, Math.max(0, marker.at * 100))}%`;
-  const color = MARKER_COLORS[marker.kind] ?? 'bg-white/60';
+  const color = MARKER_COLORS[marker.kind] ?? 'bg-[var(--surface-2)]';
   const ariaLabel = marker.label
     ? `${marker.label} ${t('replay.markers.atPercent', 'at {{pct}}%', { pct: Math.round(marker.at * 100) })}`
     : `${marker.kind} ${Math.round(marker.at * 100)}%`;
@@ -407,7 +407,7 @@ function TimelineMarkerTick({
         aria-label={ariaLabel}
       >
         {marker.count != null && marker.count > 1 && (
-          <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-1 text-[8px] font-mono text-white/80">
+          <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--surface-overlay)] px-1 text-[8px] font-mono text-[var(--text-primary)]">
             {marker.count}
           </span>
         )}

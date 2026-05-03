@@ -53,7 +53,7 @@ export function MonthlyCostChart({ data, vehicleId }: MonthlyCostChartProps) {
             </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-gray-500">
+          <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
             {t('costAnalysis.charts.noData', 'Not enough data')}
           </div>
         )

@@ -83,7 +83,7 @@ export function DataPipelineSection() {
         <div className="space-y-6">
           {compression && (
             <div>
-              <h4 className="text-sm font-semibold text-white/90 mb-3">{t('Compression Statistics')}</h4>
+              <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Compression Statistics')}</h4>
               <Grid cols={{ default: 2, md: 4 }} gap={3}>
                 <MetricCard label={t('Compression Ratio')} value={fmtPercent(compression.savings_percent)} icon={<TrendingUp className="h-4 w-4" />} color="green" />
                 <MetricCard label={t('Estimated Savings')} value={formatBytes(compression.estimated_saved_bytes)} icon={<HardDrive className="h-4 w-4" />} color="cyan" />
@@ -97,7 +97,7 @@ export function DataPipelineSection() {
           )}
 
           <div>
-            <h4 className="text-sm font-semibold text-white/90 mb-3">{t('Export Job Queue')}</h4>
+            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Export Job Queue')}</h4>
             {exportJobs && exportJobs.length > 0 ? (
               <>
                 <Grid cols={{ default: 2, md: 4 }} gap={3} className="mb-4">

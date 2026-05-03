@@ -87,7 +87,7 @@ export default function OnboardingWizard() {
     <div className="fixed inset-0 top-12 lg:top-0 z-50 flex items-center justify-center p-4"
       onKeyDown={e => { if (e.key === 'Escape') handleClose() }}>
       {/* Backdrop — doesn't cover mobile header so hamburger stays clickable */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
+      <div className="absolute inset-0 bg-[var(--surface-overlay)] backdrop-blur-sm" onClick={handleClose} />
 
       {/* Modal */}
       <div

@@ -155,7 +155,7 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <Zap className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-                    <span className="text-xs text-white/70 truncate">
+                    <span className="text-xs text-[var(--text-secondary)] truncate">
                       {fmtEventTime(ev.timestamp ?? '')}
                     </span>
                   </div>
@@ -214,10 +214,10 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
                 <div className="flex items-center gap-2.5 min-w-0">
                   <Zap className="h-3.5 w-3.5 shrink-0 text-amber-400" />
                   <div className="min-w-0">
-                    <p className="text-xs text-white/80 truncate">
+                    <p className="text-xs text-[var(--text-primary)] truncate">
                       {fmtEventTime(ev.timestamp ?? '')}
                     </p>
-                    <p className="text-[10px] text-white/40">
+                    <p className="text-[10px] text-[var(--text-muted)]">
                       {t('widget.backupHistory.duration', 'Duration')}: {fmtDuration(ev.duration_seconds ?? 0)}
                     </p>
                   </div>

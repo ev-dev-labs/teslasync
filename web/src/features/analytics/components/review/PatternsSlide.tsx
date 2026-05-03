@@ -29,7 +29,7 @@ export function PatternsSlide({ data }: Props) {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.4 }}
-        className="text-xl text-white/50 mb-8"
+        className="text-xl text-[var(--text-secondary)] mb-8"
       >
         {t('yearReview.drivingPatterns', 'Your driving patterns')}
       </motion.p>
@@ -44,7 +44,7 @@ export function PatternsSlide({ data }: Props) {
         >
           <Calendar className="h-8 w-8 text-indigo-400 shrink-0" />
           <div className="text-left">
-            <p className="text-sm text-white/40">{t('yearReview.favoriteDay', 'Favorite driving day')}</p>
+            <p className="text-sm text-[var(--text-muted)]">{t('yearReview.favoriteDay', 'Favorite driving day')}</p>
             <p className="text-2xl font-bold text-white">{data.most_active_day_of_week || '—'}</p>
           </div>
         </motion.div>
@@ -58,7 +58,7 @@ export function PatternsSlide({ data }: Props) {
         >
           <Clock className="h-8 w-8 text-sky-400 shrink-0" />
           <div className="text-left">
-            <p className="text-sm text-white/40">{t('yearReview.peakHour', 'Peak driving hour')}</p>
+            <p className="text-sm text-[var(--text-muted)]">{t('yearReview.peakHour', 'Peak driving hour')}</p>
             <p className="text-2xl font-bold text-white">{hourLabel}</p>
           </div>
         </motion.div>
@@ -72,15 +72,15 @@ export function PatternsSlide({ data }: Props) {
         >
           <div className="flex-1">
             <p className="text-3xl font-bold text-white">{data.avg_drives_per_week.toFixed(1)}</p>
-            <p className="text-xs text-white/40">{t('yearReview.drivesWeek', 'drives/week')}</p>
+            <p className="text-xs text-[var(--text-muted)]">{t('yearReview.drivesWeek', 'drives/week')}</p>
           </div>
           <div className="flex-1">
             <p className="text-3xl font-bold text-white">{Math.round(data.avg_distance_per_drive_km)}</p>
-            <p className="text-xs text-white/40">{t('yearReview.kmPerDrive', 'km/drive avg')}</p>
+            <p className="text-xs text-[var(--text-muted)]">{t('yearReview.kmPerDrive', 'km/drive avg')}</p>
           </div>
           <div className="flex-1">
             <p className="text-3xl font-bold text-white">{Math.round(data.avg_efficiency_wh_km)}</p>
-            <p className="text-xs text-white/40">Wh/km {t('yearReview.avg', 'avg')}</p>
+            <p className="text-xs text-[var(--text-muted)]">Wh/km {t('yearReview.avg', 'avg')}</p>
           </div>
         </motion.div>
       </div>

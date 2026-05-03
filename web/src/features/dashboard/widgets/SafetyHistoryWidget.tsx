@@ -108,13 +108,13 @@ function CompactView({
       <div className="flex items-center gap-2 min-h-[44px]">
         <AlertOctagon className="h-4 w-4 flex-shrink-0 text-red-400" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm text-white/90 truncate">
+          <p className="text-sm text-[var(--text-primary)] truncate">
             {totalEvents > 0
               ? `${fmtInt(totalEvents)} ${t('widget.safetyEvents', 'events')} (30d)`
               : t('widget.noSafetyEvents', 'No safety events')}
           </p>
           {totalEvents > 0 && (
-            <p className="text-xs text-white/50 truncate">
+            <p className="text-xs text-[var(--text-secondary)] truncate">
               {mostCommon} {trend}
             </p>
           )}

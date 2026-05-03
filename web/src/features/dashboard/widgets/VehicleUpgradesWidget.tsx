@@ -147,10 +147,10 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
           <ArrowUpCircle className="h-4 w-4 text-emerald-400" />
           {upgrades.length > 0 ? (
             <>
-              <span className="text-2xl font-bold text-white/90">
+              <span className="text-2xl font-bold text-[var(--text-primary)]">
                 {eligibleCount}
               </span>
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.upgrades.available', 'available')}
               </span>
             </>
@@ -174,7 +174,7 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
       <div className="overflow-y-auto h-full space-y-3">
         {/* Upgrades section */}
         <div>
-          <h4 className="text-[10px] uppercase text-white/40 tracking-wider mb-2">
+          <h4 className="text-[10px] uppercase text-[var(--text-muted)] tracking-wider mb-2">
             {t('widget.upgrades.upgradesHeading', 'Available Upgrades')}
           </h4>
           {upgrades.length > 0 ? (
@@ -186,7 +186,7 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-white/90 truncate">
+                      <span className="text-sm text-[var(--text-primary)] truncate">
                         {upgrade.name}
                       </span>
                       {upgrade.price && (
@@ -196,12 +196,12 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
                       )}
                     </div>
                     {upgrade.description && (
-                      <p className="text-xs text-white/50 mt-0.5 truncate">
+                      <p className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">
                         {upgrade.description}
                       </p>
                     )}
                     {isWide && (
-                      <span className="text-[10px] text-white/30 mt-0.5 block">
+                      <span className="text-[10px] text-[var(--text-muted)] mt-0.5 block">
                         {upgrade.eligible
                           ? t('widget.upgrades.eligible', 'Eligible')
                           : t('widget.upgrades.notEligible', 'Not eligible')}
@@ -222,7 +222,7 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
           ) : (
             <div className="flex items-center gap-2 py-3 justify-center">
               <span className="text-sm text-emerald-400">✅</span>
-              <span className="text-sm text-white/70">
+              <span className="text-sm text-[var(--text-secondary)]">
                 {t('widget.upgrades.allApplied', 'All upgrades applied')}
               </span>
             </div>
@@ -234,23 +234,23 @@ export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) 
 
         {/* Share Links section */}
         <div>
-          <h4 className="text-[10px] uppercase text-white/40 tracking-wider mb-2 flex items-center gap-1.5">
+          <h4 className="text-[10px] uppercase text-[var(--text-muted)] tracking-wider mb-2 flex items-center gap-1.5">
             <Link2 className="h-3 w-3" />
             {t('widget.upgrades.shareLinksHeading', 'Share Links')}
           </h4>
           {activeShareLinks.length > 0 ? (
             <div className="space-y-1">
               <div className="flex items-center justify-between py-1 px-1">
-                <span className="text-[10px] uppercase text-white/40 tracking-wide">
+                <span className="text-[10px] uppercase text-[var(--text-muted)] tracking-wide">
                   {t('widget.upgrades.activeLinks', 'Active links')}
                 </span>
-                <span className="text-sm text-white/90 font-medium">
+                <span className="text-sm text-[var(--text-primary)] font-medium">
                   {activeShareLinks.length}
                 </span>
               </div>
               {nearestExpiry && (
                 <div className="flex items-center justify-between py-1 px-1">
-                  <span className="text-[10px] uppercase text-white/40 tracking-wide">
+                  <span className="text-[10px] uppercase text-[var(--text-muted)] tracking-wide">
                     {t('widget.upgrades.nearestExpiry', 'Nearest expiry')}
                   </span>
                   <Badge variant="warning" size="sm">

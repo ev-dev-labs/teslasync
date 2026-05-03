@@ -117,7 +117,7 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
           {locBadge.label}
         </Badge>
         {snapshot?.destination_name && (
-          <span className="truncate text-xs text-white/50">
+          <span className="truncate text-xs text-[var(--text-secondary)]">
             → {snapshot.destination_name}
           </span>
         )}

@@ -81,18 +81,18 @@ export function CommandConfirmDialog({
           <div className="rounded-xl p-2.5 bg-red-500/10 text-red-400">
             <AlertTriangle className="h-5 w-5" />
           </div>
-          <h2 className="text-base font-semibold text-white/90">
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">
             {t(def.labelKey, def.labelFallback)}
           </h2>
         </div>
 
-        <p className="text-sm text-white/60 mb-4">
+        <p className="text-sm text-[var(--text-secondary)] mb-4">
           {t(def.confirmKey ?? '', def.confirmFallback ?? 'Are you sure?')}
         </p>
 
         {confirmInput && (
           <div className="mb-4">
-            <p className="text-xs text-white/40 mb-2">
+            <p className="text-xs text-[var(--text-muted)] mb-2">
               {t('commands.confirm.typeToConfirm', { word: confirmInput, defaultValue: 'Type "{{word}}" to confirm:' })}
             </p>
             <Input
@@ -101,7 +101,7 @@ export function CommandConfirmDialog({
               onChange={e => setInputValue(e.target.value)}
               placeholder={confirmInput}
               autoComplete="off"
-              className="bg-white/5 border-white/10 text-white placeholder:text-white/20"
+              className="bg-[var(--surface-2)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)]"
             />
           </div>
         )}
@@ -112,7 +112,7 @@ export function CommandConfirmDialog({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-white/50 hover:text-white/80 hover:bg-white/5"
+            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
           >
             {t('common.cancel', 'Cancel')}
           </Button>

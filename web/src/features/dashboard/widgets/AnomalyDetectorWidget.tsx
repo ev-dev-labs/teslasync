@@ -115,7 +115,7 @@ export default function AnomalyDetectorWidget({ vehicleId, size }: WidgetProps) 
         <div className="flex h-full flex-col items-center justify-center gap-2 min-h-[44px]">
           {count > 0 ? (
             <>
-              <span className="text-2xl font-bold text-white/90">{count}</span>
+              <span className="text-2xl font-bold text-[var(--text-primary)]">{count}</span>
               <Badge variant={badgeVariant} size="sm">
                 {t('widget.anomalyDetector.activeCount', '{{count}} active', { count })}
               </Badge>

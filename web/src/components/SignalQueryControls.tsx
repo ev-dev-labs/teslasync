@@ -70,7 +70,7 @@ export const TYPE_BADGE_COLOR: Record<string, 'cyan' | 'green' | 'amber' | 'neut
 // Body cells in a 100s-of-rows table — readability wins over saturation.
 // Use toned-down 300-shades; light-mode CSS overrides invert them on white.
 export const TYPE_VALUE_COLOR: Record<string, string> = {
-  num: 'text-cyan-300', str: 'text-emerald-300', bool: 'text-amber-300', null: 'text-white/40',
+  num: 'text-cyan-300', str: 'text-emerald-300', bool: 'text-amber-300', null: 'text-[var(--text-muted)]',
 }
 
 export const PAGE_SIZES = [25, 50, 100]
@@ -276,19 +276,19 @@ export function SignalDataTable({ rows, page, totalPages, total, perPage, onPage
       key: 'index',
       header: '#',
       render: (row) => row._rowNum,
-      className: 'text-white/40 font-mono',
+      className: 'text-[var(--text-muted)] font-mono',
     },
     {
       key: 'created_at',
       header: 'Timestamp',
       render: (row) => formatTimestampMs(row.created_at),
-      className: 'font-mono text-white/60',
+      className: 'font-mono text-[var(--text-secondary)]',
     },
     {
       key: 'signal',
       header: 'Signal',
       render: (row) => row.signal,
-      className: 'font-mono text-white/90',
+      className: 'font-mono text-[var(--text-primary)]',
     },
     {
       key: 'value',
@@ -322,11 +322,11 @@ export function SignalDataTable({ rows, page, totalPages, total, perPage, onPage
       {/* Server-side pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.06]">
-          <span className="text-[10px] text-white/40">{fmtInt(total)} records</span>
+          <span className="text-[10px] text-[var(--text-muted)]">{fmtInt(total)} records</span>
           <div className="flex items-center gap-1">
             <button onClick={() => onPageChange(1)} disabled={page <= 1} className="p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronsLeft className="h-3.5 w-3.5" /></button>
             <button onClick={() => onPageChange(page - 1)} disabled={page <= 1} className="p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronLeft className="h-3.5 w-3.5" /></button>
-            <span className="px-2 text-xs text-white/60">Page {page} of {totalPages}</span>
+            <span className="px-2 text-xs text-[var(--text-secondary)]">Page {page} of {totalPages}</span>
             <button onClick={() => onPageChange(page + 1)} disabled={page >= totalPages} className="p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronRight className="h-3.5 w-3.5" /></button>
             <button onClick={() => onPageChange(totalPages)} disabled={page >= totalPages} className="p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronsRight className="h-3.5 w-3.5" /></button>
           </div>
