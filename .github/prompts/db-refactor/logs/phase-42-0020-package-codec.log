@@ -1,0 +1,281 @@
+=== PREFLIGHT ===
+Datetime: 2026-05-02T23:19:27-07:00
+
+Predecessor: phase-42-0016-reflective-coverage-test.log
+Predecessor markers: EXIT=0 / STATUS=DONE (verified by reading last few
+lines: the predecessor's COMMIT section reports the coverage_test.go was
+staged and force-added; the file exists at
+internal/tesla/protomodel/coverage_test.go with three TestCoverage_*
+functions.)
+
+Allowed files this prompt:
+  NEW: internal/tesla/codec/codec.go
+  NEW: internal/tesla/codec/codec_test.go
+  NEW: internal/tesla/codec/types.go
+  NEW: internal/tesla/codec/flatten.go
+  NEW: internal/tesla/codec/flatten_test.go
+  NEW: .github/prompts/db-refactor/logs/phase-42-0020-package-codec.log
+
+Working-tree baseline before authoring (git status --porcelain):
+  (clean — only the new codec directory will appear under '??' after
+   creation)
+
+=== DESIGN ===
+
+OBJECTIVE
+The codec package is the wire-bytes <-> typed-Atomic boundary for the
+Tesla Fleet Telemetry pipeline. It owns three responsibilities and
+nothing else:
+
+  1. proto.Unmarshal of the outer Payload bytes.
+  2. Per-Datum decode via protomodel.DecodeDatum (Prompt 0014).
+  3. Compound flattening at the boundary so downstream consumers
+     (router, normalize.Pipeline, signal.Store) NEVER observe a nested
+     map/struct shape — ADR-004 #4.
+
+PUBLIC API
+The package surface is intentionally tiny:
+
+  type Atomic struct {
+      Field     string    // canonical signal name OR flatten-derived suffix
+      Value     any       // typed primitive (string/bool/int/float/time.Time/typed enum)
+      EmittedAt time.Time // Payload.CreatedAt; zero Time if producer omitted
+      VehicleID string    // Payload.Vin (NOT internal numeric vehicles.id)
+  }
+
+  func Decode(payload []byte) ([]Atomic, error)
+
+Per-compound flatten helpers, the per-datum dispatch, the metric
+registrations, and the protobuf Payload type are unexported. The codec
+is purely transformational: no Redis, no DB, no MQTT.
+
+DISPATCH
+flattenIfCompound switches on the runtime type of the value returned by
+DecodeDatum, dispatching as:
+
+  protomodel.Location     -> flattenLocation       (2 atomics: {field}Latitude, {field}Longitude)
+  protomodel.Doors        -> flattenDoors          (6 atomics: {field}{DriverFront..TrunkRear})
+  protomodel.TireLocation -> flattenTireLocation   (10 atomics: 4 wheels + 6 Semi positions)
+  protomodel.Time         -> flattenTime           (1 atomic: time.Time anchored to EmittedAt UTC date)
+  string + field=DoorState                  -> flattenDoorStateJSON                   (6 atomics)
+  string + field=ScheduledChargingStartTime -> flattenScheduledChargingStartTimeJSON  (1 atomic, time.Time)
+  string + field=ScheduledDepartureTime     -> flattenScheduledDepartureTimeJSON      (1 atomic, time.Time)
+  default                                   -> single-element pass-through
+
+The four typed compound message variants are returned by the protomodel
+decoder for proto Value_LocationValue / Value_DoorValue /
+Value_TireLocationValue / Value_TimeValue. The three JSON-shaped
+compounds arrive as *string* values whose Datum.Key matches one of the
+three compound field names; the codec dispatches on the field name
+because the wire shape is indistinguishable from any other string
+without that key.
+
+Of the seven SignalMeta entries with IsCompound=true today:
+  Location (21), OriginLocation (111), DestinationLocation (112)  -> Location flattener
+  TpmsHardWarnings (224), TpmsSoftWarnings (225)                  -> TireLocation flattener
+  DoorState (58)                                                  -> DoorState JSON flattener
+  ScheduledChargingStartTime (44), ScheduledDepartureTime (46)    -> respective JSON flatteners
+
+No live Field uses Value_DoorValue or Value_TimeValue today, but the
+codec covers them defensively because the proto schema permits them and
+the protomodel decoder already returns Doors/Time structs for those
+oneof variants.
+
+FAILURE SEMANTICS (per ADR-004)
+  - Outer proto.Unmarshal failure   -> Decode returns an error.
+                                       The MQTT handler may surface
+                                       this for redelivery; this is the
+                                       ONLY failure that triggers
+                                       redelivery per the architecture
+                                       document.
+  - ErrInvalid (Datum.Value.invalid)-> drop + bump invalid_values_total{field}.
+  - ErrUnsetValue (oneof unset)     -> drop + bump unset_values_total{field}.
+  - Unhandled DecodeDatum error     -> drop + bump decode_errors_total{field}.
+  - JSON parse failure inside one
+    of the three string compounds   -> drop + bump flatten_errors_total{field}.
+  - Per-Datum errors NEVER abort the surrounding Payload — the
+    remaining Data entries are decoded and returned to the caller. A
+    single producer bug must NOT trigger redelivery of the entire batch.
+
+CHILD-NAME PREFIXING
+Compound child atomics use {sourceFieldName}{ChildName} to disambiguate
+the three Location-typed fields (Location/OriginLocation/DestinationLocation)
+and the two TireLocation-typed fields (TpmsHardWarnings/TpmsSoftWarnings).
+The legacy internal/telemetry/flatten.go used bare "Latitude"/"Longitude"
+for Location only, which would collide if multiple Location-shaped fields
+ever appeared in the same payload. The new naming is collision-free by
+construction.
+
+DOORS vs DOORSTATE NAMING (the prompt's documented decision)
+The proto Doors struct uses {DriverFront, DriverRear, PassengerFront,
+PassengerRear, TrunkFront, TrunkRear}. The JSON DoorState wire shape
+uses {DriverFront, DriverRear, PassengerFront, PassengerRear, FrontTrunk,
+RearTrunk} — note the trunk pair is named differently. We preserve both
+shapes verbatim in their respective flatteners rather than aliasing one
+to the other:
+  - flattenDoors         -> ...TrunkFront / ...TrunkRear   (proto names)
+  - flattenDoorStateJSON -> DoorStateFrontTrunk / DoorStateRearTrunk (JSON keys)
+
+Production today only emits DoorState as JSON (Field=58 -> string_value
+-> flattenDoorStateJSON), so signal_log will only ever see the
+FrontTrunk/RearTrunk variants. If a future producer ever switches to
+Value_DoorValue for the same field, the divergent names will be
+externally observable in signal_log — that is the explicit design
+choice. Renaming proto field accessors inside the codec to "match" the
+JSON shape would silently corrupt provenance for any operator reading
+the schema.
+
+TIME ANCHORING
+flattenTime and the two scheduled-time JSON flatteners produce a single
+time.Time atomic constructed via time.Date(EmittedAt.Year/Month/Day,
+H, M, S, 0, time.UTC). The Hour/Minute/Second is the producer-emitted
+clock-time-of-day; the date is the Payload-level CreatedAt's UTC date.
+For ScheduledCharging/Departure times, the date is a downstream
+rendering convenience and is NOT a claim about the actual scheduled
+execution date. If EmittedAt is the zero Time (producer omitted
+CreatedAt), we anchor to year 1 UTC so the value is still a sortable
+timestamp — clockTimeOnDate handles this branch.
+
+OUT-OF-RANGE Hour/Minute/Second values are normalised by Go's time.Date
+(it wraps 25:00:00 to next-day 01:00:00 etc.). We accept the wrap
+rather than rejecting the row because the downstream router can already
+inspect the value and apply its own validation; dropping here would
+leak a producer bug as a missing-row gap rather than a visible
+out-of-range timestamp.
+
+VEHICLE_ID FIELD
+The Atomic.VehicleID carries the Payload's Vin string verbatim, NOT
+the internal vehicles.id numeric primary key. The codec is intentionally
+vendor-only; mapping VIN -> internal id happens at the next layer
+(router or signal.Store). This keeps the codec free of any database
+dependency and decision about how to handle unknown VINs.
+
+METRICS
+Four CounterVec metrics under namespace "teslasync", subsystem "codec":
+  invalid_values_total{field}  - Datum dropped because Value.invalid=true
+  unset_values_total{field}    - Datum dropped because oneof was unset
+  decode_errors_total{field}   - Datum dropped due to other DecodeDatum error
+  flatten_errors_total{field}  - Datum dropped because per-field flattener failed
+
+All registered via promauto so they auto-publish on /metrics without an
+explicit Register call. Label cardinality is bounded by the proto's Field
+enum (~260 entries) which is acceptable for Prometheus.
+
+=== UNIT_TEST ===
+
+flatten_test.go covers the per-compound flatten helpers in isolation:
+
+  TestFlattenLocation_FullyPopulated
+    - 1 fully-populated Location -> 2 atomics named LocationLatitude/Longitude
+    - asserts float64 type on Value, fixedEmittedAt on EmittedAt, fixedVIN on VehicleID
+
+  TestFlattenLocation_FieldNamePrefixDistinguishesSources
+    - same Location through "OriginLocation" prefix vs "DestinationLocation"
+    - locks in the {fieldName}Lat/Lng convention so a regression that
+      reverts to bare "Latitude"/"Longitude" trips the test
+
+  TestFlattenDoors_FullyPopulated
+    - 1 fully-populated proto Doors (TrunkFront/TrunkRear) -> 6 atomics
+    - asserts each child name + bool round-trip
+    - locks in the proto-style {Trunk}{Front,Rear} naming
+
+  TestFlattenTireLocation_FullyPopulated
+    - 1 fully-populated TireLocation (10 positions) -> 10 atomics
+    - asserts the full set of names including Semi-truck positions
+    - asserts a spot-checked child preserves the bool
+
+  TestFlattenTime_FullyPopulated
+    - protomodel.Time{14, 25, 33} + fixedEmittedAt -> 1 atomic with
+      Value of type time.Time at fixedEmittedAt's date, 14:25:33 UTC
+
+  TestFlattenTime_ZeroEmittedAtFallsBackToEpochYear
+    - locks in the year-1 fallback used by clockTimeOnDate when the
+      producer omitted CreatedAt — without this the codec would emit a
+      year-0 timestamp which TimescaleDB rejects
+
+  TestFlattenDoorStateJSON_FullyPopulated
+    - JSON DoorState string -> 6 atomics (FrontTrunk/RearTrunk shape)
+    - asserts each child name + bool round-trip
+
+  TestFlattenDoorStateJSON_MalformedReturnsError
+    - garbage JSON returns an error (caller drops + counts)
+
+  TestFlattenScheduledChargingStartTimeJSON_FullyPopulated
+  TestFlattenScheduledDepartureTimeJSON_FullyPopulated
+    - JSON {Hour,Minute,Second} payload -> 1 time.Time atomic at the
+      expected clock components, anchored to fixedEmittedAt
+
+  TestFlattenScheduledDepartureTimeJSON_MalformedReturnsError
+    - garbage JSON returns an error
+
+codec_test.go covers the bytes-in / atomics-out contract end-to-end:
+
+  TestDecode_MixedPayload
+    - one Payload with: a happy float scalar (VehicleSpeed), a happy
+      enum (Gear -> ftproto.ShiftState_D), a proto compound
+      (Location), a JSON string compound (DoorState), an
+      invalid-flagged Datum (BatteryLevel), and an unset-oneof Datum
+      (RatedRange).
+    - asserts the exact set of 10 output atomic Field names
+    - asserts the dropped fields (BatteryLevel, RatedRange) do NOT
+      appear in any guise
+    - asserts every atomic carries the Payload-level VIN and CreatedAt
+    - asserts scalar/enum/Location values preserve their decoded Go type
+
+  TestDecode_AtomicValuesAreFlat
+    - reflective enforcement of ADR-004 #4: no Atomic.Value may be of
+      type protomodel.Location/Doors/TireLocation/Time/DoorState/
+      ScheduledChargingStartTime/ScheduledDepartureTime. Uses reflect
+      so a future-added compound type in protomodel/compounds.go
+      requires updating the forbidden map but cannot bypass it.
+
+  TestDecode_MalformedBytesError
+    - garbage bytes -> Decode returns an error AND nil atoms. This is
+      the redelivery contract: only outer Unmarshal failures propagate.
+
+  TestDecode_EmptyPayloadIsEmptySlice
+    - Payload with zero Data entries -> empty atom slice, no error
+
+  TestDecode_PerDatumFailuresDoNotAbortPayload
+    - Payload with a malformed-JSON DoorState wedged between two valid
+      scalars: the JSON parse failure must drop the DoorState row
+      WITHOUT aborting the surrounding Payload. Both scalars must
+      survive in the output.
+
+  TestFlattenIfCompound_PassThroughForScalar
+    - non-compound float32 -> single-element pass-through atomic with
+      EmittedAt + VehicleID propagated correctly
+
+  TestFlattenIfCompound_StringNonCompoundFieldIsPassThrough
+    - string-typed value whose field is NOT one of the three JSON
+      compound fields (e.g. VehicleName) flows through unchanged. Locks
+      in the string-vs-JSON dispatch so the codec doesn't accidentally
+      JSON-parse arbitrary strings.
+
+LOCAL VERIFICATION RUN (before gate)
+$ go build ./internal/tesla/codec/...
+  (clean)
+
+$ go test -race ./internal/tesla/codec/...
+  ok    github.com/ev-dev-labs/teslasync/internal/tesla/codec    2.059s
+
+The first iteration failed with `undefined: ftproto.Field_ShiftState`
+because the ftproto enum constant for the gear field is named
+ftproto.Field_Gear (its EnumTypeName is "ShiftState" but the wire-level
+Field is "Gear"). The mixed-payload fixture and the assertion were
+updated to use Field_Gear / "Gear" before the second run passed.
+
+=== GATE ===
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/codec	(cached)
+All gate checks passed.
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+Files staged per the prompt's Commit step:
+  internal/tesla/codec/codec.go         (new)
+  internal/tesla/codec/codec_test.go    (new)
+  internal/tesla/codec/types.go         (new)
+  internal/tesla/codec/flatten.go       (new)
+  internal/tesla/codec/flatten_test.go  (new)
+  .github/prompts/db-refactor/logs/phase-42-0020-package-codec.log (new, force-added)
