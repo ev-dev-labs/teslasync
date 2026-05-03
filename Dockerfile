@@ -16,7 +16,17 @@ ARG VERSION=dev
 ARG COMMIT=unknown
 ARG BUILD_TIME=unknown
 
-RUN CGO_ENABLED=0 GOOS=linux go build \
+# Memory-conservative compile to avoid Go 1.25 inliner crashes on
+# constrained CI runners. The `internal/api` package is large (~219 files)
+# and the inliner can panic at sync/atomic/type.go under memory pressure.
+#  - GOMEMLIMIT bounds Go's GC growth so peak RSS stays within runner limits
+#  - `-p 2` caps parallel compile jobs (default = NumCPU, often too high)
+#  - `-gcflags=all=-l` disables inlining (sidesteps the inliner crash with
+#    a small binary-size / perf cost that's negligible for an I/O-bound
+#    worker)
+RUN GOMEMLIMIT=2GiB CGO_ENABLED=0 GOOS=linux go build \
+    -p 2 \
+    -gcflags=all=-l \
     -ldflags="-s -w -X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.buildTime=${BUILD_TIME}" \
     -o /bin/teslasync ./cmd/teslasync
 
