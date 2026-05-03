@@ -21,6 +21,7 @@ export { DraftRecoveryBanner, type DraftRecoveryBannerProps } from './DraftRecov
 export { OfflineBanner } from './OfflineBanner';
 export { LiveStaleDataBanner } from './LiveStaleDataBanner';
 export { AuthExpiredOverlay } from './AuthExpiredOverlay';
+export { TeslaReauthBanner } from './TeslaReauthBanner';
 export { GotoIndicator } from './GotoIndicator';
 export { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 export { TourOverlay } from './TourOverlay';

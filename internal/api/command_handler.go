@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -193,6 +194,32 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 
 	// Execute command via Tesla API
 	cmdErr := h.teslaClient.SendCommand(r.Context(), vehicle.VIN, body.Command, body.Params)
+
+	// Phase-45 / Prompt 30 — propagate Tesla third-party token expiry as a
+	// distinct error code so the frontend can surface the reauth banner and
+	// queue the failed mutation for replay after reconnect. Logged + counted
+	// as a normal command failure so the metrics path stays consistent.
+	if cmdErr != nil && errors.Is(cmdErr, tesla.ErrUnauthorized) {
+		fsm.MarkFailed(&cmdFSM.CommandError{
+			StatusCode: http.StatusUnauthorized,
+			Message:    cmdErr.Error(),
+			Category:   "auth",
+		})
+		cl := &models.CommandLog{
+			VehicleID: vehicleID,
+			Command:   body.Command,
+			Params:    string(paramsJSON),
+			Status:    "failed",
+			Error:     cmdErr.Error(),
+		}
+		if logErr := h.commandRepo.Create(r.Context(), cl); logErr != nil {
+			log.Error().Err(logErr).Msg("failed to log command")
+		}
+		log.Warn().Int64("vehicle_id", vehicleID).Str("command", body.Command).
+			Msg("Tesla command rejected: third-party token expired")
+		writeTeslaTokenExpired(w)
+		return
+	}
 
 	if cmdErr != nil {
 		category := "network"

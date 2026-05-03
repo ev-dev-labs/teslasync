@@ -491,7 +491,8 @@
     "update": "Update",
     "today": "Today",
     "yesterday": "Yesterday",
-    "undo": "Undo"
+    "undo": "Undo",
+    "dismiss": "Dismiss"
   },
   "units": {
     "km": "km",
@@ -5843,13 +5844,20 @@
     "title": "Tesla Account",
     "subtitle": "Connect your Tesla account to sync vehicles and data",
     "connected": "Connected",
+    "disconnected": "Disconnected",
     "tokenExpires": "Token expires",
+    "expiringSoon": "Expires in {{days}}d",
     "notConnected": "Not connected",
     "connect": "Connect Tesla Account",
     "refreshToken": "Refresh Token",
     "syncVehicles": "Sync Vehicles",
     "reauthorize": "Re-authorize",
-    "synced": "Synced {{count}} vehicle(s)."
+    "synced": "Synced {{count}} vehicle(s).",
+    "reauth": {
+      "title": "Tesla account disconnected",
+      "body": "Reconnect to resume live data and commands.",
+      "cta": "Reconnect"
+    }
   },
   "commands": {
     "search": {

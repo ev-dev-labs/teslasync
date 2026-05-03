@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http/httptest"
 	"testing"
 )
@@ -107,5 +108,52 @@ func TestAllowedBackupTables(t *testing.T) {
 		if allowedBackupTables[table] {
 			t.Errorf("table %q should NOT be in allowedBackupTables", table)
 		}
+	}
+}
+
+// TestTeslaTokenExpired_PropagatesCode verifies the contract between the
+// Tesla-token-expired backend response and the frontend's distinct
+// {@link TeslaAuthExpiredError} surface (Phase-45 / Prompt 30).
+//
+// The frontend distinguishes "Tesla third-party OAuth grant expired" from
+// "Authentik session expired" purely by the JSON body's `code` field
+// (HTTP status is 401 in both cases). If this code drifts, the reauth
+// banner stops firing and users see a generic 401 toast with no
+// recovery path — a silent regression we must catch in CI.
+func TestTeslaTokenExpired_PropagatesCode(t *testing.T) {
+	rec := httptest.NewRecorder()
+	writeTeslaTokenExpired(rec)
+
+	if rec.Code != 401 {
+		t.Fatalf("status = %d, want 401", rec.Code)
+	}
+
+	gotCT := rec.Header().Get("Content-Type")
+	if gotCT == "" || gotCT[:16] != "application/json" {
+		t.Fatalf("Content-Type = %q, want application/json", gotCT)
+	}
+
+	var body map[string]string
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+
+	if got := body["code"]; got != ErrCodeTeslaTokenExpired {
+		t.Errorf("body.code = %q, want %q", got, ErrCodeTeslaTokenExpired)
+	}
+	if got := body["code"]; got != "TESLA_TOKEN_EXPIRED" {
+		t.Errorf("body.code literal = %q, want %q (frontend matches on this exact string)", got, "TESLA_TOKEN_EXPIRED")
+	}
+	if body["error"] == "" {
+		t.Errorf("body.error is empty, want a human-readable message")
+	}
+}
+
+// TestTeslaTokenExpiredCodeConstant pins the wire value of the error
+// code so accidental renames are caught without grepping the frontend.
+func TestTeslaTokenExpiredCodeConstant(t *testing.T) {
+	if ErrCodeTeslaTokenExpired != "TESLA_TOKEN_EXPIRED" {
+		t.Errorf("ErrCodeTeslaTokenExpired = %q, want %q (frontend resilience.ts depends on this exact string)",
+			ErrCodeTeslaTokenExpired, "TESLA_TOKEN_EXPIRED")
 	}
 }

@@ -108,6 +108,27 @@ function handleAuthExpired(): void {
   }
 }
 
+// --- Tesla Third-Party OAuth Grant Expiry Detection ---
+//
+// Phase-45 / Prompt 30 — distinct from the Authentik-session expiry path
+// above. The Tesla third-party refresh token has a hard 8-week TTL; when
+// it expires, the backend signals { code: 'TESLA_TOKEN_EXPIRED' } in a
+// 401 body for any Tesla-backed call. Non-Tesla data continues to load
+// normally — the SPA reacts by showing the <TeslaReauthBanner> recovery
+// UI (a sticky top-of-page banner) rather than a full-screen blocker.
+//
+// We dispatch a single document-level CustomEvent so the banner (mounted
+// in <Layout>) and the inline status pill in <TeslaAccountSection> can
+// both pick up the same signal without prop-drilling. Tab-local only —
+// cross-tab sync is intentionally OUT OF SCOPE; each tab will see its
+// own first 401 and react independently.
+
+/** Dispatches the per-tab "Tesla account disconnected" signal. */
+function dispatchTeslaAuthExpired(): void {
+  if (typeof document === 'undefined') return
+  document.dispatchEvent(new CustomEvent('teslasync:tesla-auth-expired'))
+}
+
 // --- Token Refresh on 401 ---
 
 let _refreshing: Promise<void> | null = null
@@ -136,11 +157,42 @@ async function sleep(ms: number): Promise<void> {
 /** Custom error class for API responses. Includes the HTTP status code. */
 export class ApiError extends Error {
   status: number
+  /**
+   * Optional machine-readable error code from the JSON body's `code` field.
+   * Set when the backend response includes a structured error envelope so
+   * the frontend can switch on error type without parsing strings.
+   *
+   * Phase-45 / Prompt 30 — used by {@link TeslaAuthExpiredError} to
+   * surface the dedicated reauth banner without conflating with the
+   * Authentik-session 401 path.
+   */
+  code?: string
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    if (code) this.code = code
+  }
+}
+
+/**
+ * Thrown when the backend reports that the user's third-party Tesla OAuth
+ * grant has expired (`code === 'TESLA_TOKEN_EXPIRED'` in a 401 body).
+ *
+ * Distinct from a generic 401 so consumers can `instanceof`-check it and
+ * either (a) queue the failed mutation for replay after reconnect, or
+ * (b) suppress noisy retry behaviour while the {@link TeslaReauthBanner}
+ * is asking the user to re-authorize.
+ *
+ * The Authentik-session 401 path stays on the plain {@link ApiError} +
+ * `handleAuthExpired()` overlay. Tesla token expiry is a *partial*
+ * failure — non-Tesla data continues to load normally.
+ */
+export class TeslaAuthExpiredError extends ApiError {
+  constructor(message: string) {
+    super(message, 401, 'TESLA_TOKEN_EXPIRED')
+    this.name = 'TeslaAuthExpiredError'
   }
 }
 
@@ -157,7 +209,22 @@ export function isApiError(err: unknown): err is ApiError {
   if (err instanceof ApiError) return true
   if (err && typeof err === 'object' && 'name' in err && 'status' in err) {
     const e = err as { name: unknown; status: unknown }
-    return e.name === 'ApiError' && typeof e.status === 'number'
+    return (e.name === 'ApiError' || e.name === 'TeslaAuthExpiredError') && typeof e.status === 'number'
+  }
+  return false
+}
+
+/**
+ * Type guard for {@link TeslaAuthExpiredError}. Bundle-split safe via the
+ * same duck-type fallback as {@link isApiError} — the bundler may emit
+ * multiple copies of the class across chunks, so an `instanceof` check
+ * alone is not enough at runtime.
+ */
+export function isTeslaAuthExpiredError(err: unknown): err is TeslaAuthExpiredError {
+  if (err instanceof TeslaAuthExpiredError) return true
+  if (err && typeof err === 'object' && 'name' in err && 'code' in err) {
+    const e = err as { name: unknown; code: unknown }
+    return e.name === 'TeslaAuthExpiredError' && e.code === 'TESLA_TOKEN_EXPIRED'
   }
   return false
 }
@@ -236,7 +303,20 @@ async function _doFetch<T>(
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: res.statusText }))
-        const apiErr = new ApiError(err.error || `HTTP ${res.status}`, res.status)
+        const errCode = typeof err.code === 'string' ? err.code : undefined
+        const apiErr = new ApiError(err.error || `HTTP ${res.status}`, res.status, errCode)
+
+        // Phase-45 / Prompt 30 — Tesla third-party token expiry.
+        // The backend signals this via { code: 'TESLA_TOKEN_EXPIRED' } in
+        // a 401 body. Skip the auto-refresh-on-401 path (the Tesla refresh
+        // already failed server-side, retrying client-side is pointless),
+        // dispatch the recovery banner event, and throw a typed error so
+        // mutation hooks can queue the failed call for replay after the
+        // user reconnects.
+        if (res.status === 401 && errCode === 'TESLA_TOKEN_EXPIRED') {
+          dispatchTeslaAuthExpired()
+          throw new TeslaAuthExpiredError(apiErr.message || 'Tesla account disconnected')
+        }
 
         // 401 Unauthorized — attempt automatic token refresh and retry once
         if (res.status === 401 && attempt === 0) {
@@ -244,7 +324,8 @@ async function _doFetch<T>(
             await refreshTokenOnce()
             continue
           } catch {
-            throw new ApiError('Session expired. Please reconnect your Tesla account in Settings.', 401)
+            dispatchTeslaAuthExpired()
+            throw new TeslaAuthExpiredError('Session expired. Please reconnect your Tesla account in Settings.')
           }
         }
 

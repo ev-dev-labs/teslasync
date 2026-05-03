@@ -3,6 +3,7 @@ import { GuardedNavLink } from '../feedback/GuardedLink'
 import InstallPrompt from '../feedback/InstallPrompt'
 import { OfflineBanner } from '../feedback/OfflineBanner'
 import { NewVersionBanner } from '../feedback/NewVersionBanner'
+import { TeslaReauthBanner } from '../feedback/TeslaReauthBanner'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -1373,6 +1374,11 @@ export default function Layout() {
           when the backend redeploys mid-session, before the next chunk-load
           failure surfaces as an ErrorBoundary fallback. */}
       <NewVersionBanner />
+
+      {/* Tesla third-party token expiry banner (Phase-45 / Prompt 30) —
+          sticky top-of-page recovery surface for the partial-failure case
+          where Tesla-backed calls 401 but non-Tesla data still loads. */}
+      <TeslaReauthBanner />
 
       {/* Keyboard shortcut overlays */}
       <GlobalShortcuts />
