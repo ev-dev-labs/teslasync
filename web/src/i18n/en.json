@@ -1878,9 +1878,9 @@
     "responseBody": "Response Body",
     "previous": "Previous",
     "next": "Next",
-    "noData": "No ${label.toLowerCase()}",
-    "showing": "Showing ${page * limit + 1}–${Math.min((page + 1) * limit, total)} of ${fmtInt(total)}",
-    "pageOf": "Page ${page + 1} of ${totalPages}"
+    "noData": "No {{label}}",
+    "showing": "Showing {{from}}–{{to}} of {{total}}",
+    "pageOf": "Page {{page}} of {{total}}"
   },
   "backup": {
     "title": "Backup & Restore",
