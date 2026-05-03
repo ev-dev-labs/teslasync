@@ -5760,6 +5760,11 @@
       "badge": "Show unread count in browser tab",
       "flash": "Flash tab title on critical alerts",
       "hint": "Adds a \"(N)\" prefix and favicon dot when there are unread notifications. Critical alerts briefly flash \"(!) ALERT\" when the tab is in the background."
+    },
+    "search": {
+      "placeholder": "Search settings…",
+      "label": "Search settings",
+      "noResults": "No matching settings."
     }
   },
   "region": {

@@ -21,6 +21,7 @@ import {
   GasPriceSettings,
   NotificationSettings,
   AppearanceSettings,
+  SettingsSearch,
 } from '../components'
 
 export default function SettingsPage() {
@@ -51,12 +52,20 @@ export default function SettingsPage() {
       subtitle={t('subtitle', 'Configure TeslaSync preferences and Tesla account connection')}
       loading={isLoading}
     >
+      <SettingsSearch className="mb-2" />
+
       <section id="tesla-account">
         <TeslaAccountSection />
       </section>
-      <FeatureToggles />
-      <RegionSettings />
-      <ActiveOrdersSection />
+      <section id="features">
+        <FeatureToggles />
+      </section>
+      <section id="region">
+        <RegionSettings />
+      </section>
+      <section id="orders">
+        <ActiveOrdersSection />
+      </section>
 
       {/* Fleet API Settings — link */}
       <FadeIn delay={0.05}>
@@ -83,8 +92,12 @@ export default function SettingsPage() {
         </a>
       </FadeIn>
 
-      <GeneralSettings />
-      <GasPriceSettings />
+      <section id="general">
+        <GeneralSettings />
+      </section>
+      <section id="gas-price">
+        <GasPriceSettings />
+      </section>
       <section id="notifications">
         <NotificationSettings />
       </section>
