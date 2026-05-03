@@ -91,7 +91,7 @@ export function TourLauncher() {
           )}
         </p>
 
-        <ul className="space-y-2" role="list">
+        <ul className="space-y-2">
           {tours.map((def) => {
             const completed = isTourCompleted(def.id, def.version)
             const recommended = isRecommendedForRoute(def, location.pathname)

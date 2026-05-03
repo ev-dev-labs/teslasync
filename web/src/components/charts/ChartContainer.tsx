@@ -65,6 +65,20 @@ interface ChartContainerProps {
    *  full annotation flow (fetch, add, delete, hide). Children should be a
    *  function so they can read the visible annotations from context. */
   annotations?: ChartAnnotationsConfig;
+  /**
+   * Phase-45 / Prompt 13 — accessible description of the chart content.
+   *
+   * Recharts SVGs are otherwise an opaque "graphics-document" to assistive
+   * tech. This wraps the chart body in `role="img"` + `aria-label` so a
+   * screen-reader user hears one short summary instead of dozens of axis
+   * labels in series order.
+   *
+   * Pass a one-sentence description such as
+   * `"Line chart showing daily energy use over the last 30 days"`. When
+   * omitted, falls back to the existing `title` prop so the chart is at
+   * least announced as `Chart: {title}`.
+   */
+  ariaLabel?: string;
 }
 
 const HIDDEN_STORAGE_PREFIX = 'teslasync-annotations-hidden:';
@@ -103,6 +117,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       title, subtitle, loading, empty, height = 300, action, children, className,
       exportable, exportFilename, exportData,
       annotations: annotationsConfig,
+      ariaLabel,
     },
     ref,
   ) {
@@ -382,7 +397,15 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           </div>
         )}
 
-        <div style={{ height }} className="relative">
+        <div
+          style={{ height }}
+          className="relative"
+          // Phase-45 / Prompt 13 — give Recharts SVGs a single accessible
+          // name so screen-reader users hear one summary instead of dozens
+          // of axis labels read in series order.
+          role="img"
+          aria-label={ariaLabel ?? t('a11y.chartFigure', 'Chart: {{title}}', { title })}
+        >
           {loading ? (
             <div className="flex h-full items-center justify-center">
               <Spinner size="md" />

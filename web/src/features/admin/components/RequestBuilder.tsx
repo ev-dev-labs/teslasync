@@ -189,8 +189,9 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
           {t('playground.authHeader', 'Authentication (Optional)')}
         </h4>
         <div className="flex items-center gap-3">
-          <label className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">X-API-Key</label>
+          <label htmlFor="api-key-input" className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">X-API-Key</label>
           <UiInput
+            id="api-key-input"
             value={apiKey}
             onChange={e => setApiKey(e.target.value)}
             placeholder={t('playground.apiKeyPlaceholder', 'Leave empty to use session auth')}

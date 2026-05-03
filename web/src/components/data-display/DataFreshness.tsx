@@ -166,8 +166,19 @@ export function DataFreshness({
       )}
       onClick={handleClick}
       title={title}
-      role={onRefresh ? 'button' : undefined}
-      aria-label={onRefresh ? t('freshness.refresh', 'Refresh') : undefined}
+      role={onRefresh ? 'button' : 'status'}
+      // Phase-45 / Prompt 13 — `aria-live="polite"` so screen readers
+      // announce freshness state changes (e.g. "fetching" → "fresh") on
+      // dashboards/widgets without yanking focus. The `aria-atomic="true"`
+      // attribute groups the dot + icon + relative-time text into one
+      // single utterance instead of three separate ones.
+      aria-live="polite"
+      aria-atomic="true"
+      aria-label={
+        onRefresh
+          ? t('freshness.refresh', 'Refresh')
+          : t('a11y.dataFreshness', 'Data freshness: {{state}}', { state: status })
+      }
     >
       {/* Status dot with pulse */}
       <span className="relative flex h-1.5 w-1.5 shrink-0">

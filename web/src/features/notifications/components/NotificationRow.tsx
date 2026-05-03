@@ -75,10 +75,12 @@ export function NotificationRow({
   return (
     <div
       role="row"
+      tabIndex={0}
       aria-selected={selected}
       className={cn(
         'group relative flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors',
         'border-white/[0.06] hover:bg-white/[0.04]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
         !isRead && 'bg-white/[0.03] border-l-2 border-l-cyan-400/70',
         isRead && 'opacity-90',
       )}
@@ -88,6 +90,14 @@ export function NotificationRow({
         const target = e.target as HTMLElement;
         if (target.closest('button, a, input, label')) return;
         onActivate?.(log);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          const target = e.target as HTMLElement;
+          if (target.closest('button, a, input, label')) return;
+          e.preventDefault();
+          onActivate?.(log);
+        }
       }}
     >
       <input

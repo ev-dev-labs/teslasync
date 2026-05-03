@@ -1,6 +1,7 @@
 import { Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 
 export interface BreadcrumbItem {
@@ -18,7 +19,8 @@ interface BreadcrumbsProps {
    */
   homeHref?: string;
   /**
-   * Aria label for the leading Home link. Defaults to 'Dashboard'.
+   * Aria label for the leading Home link. Defaults to the localized
+   * `a11y.breadcrumbHome` key ("Dashboard" in English).
    */
   homeAriaLabel?: string;
 }
@@ -27,19 +29,20 @@ export function Breadcrumbs({
   items,
   className,
   homeHref = '/',
-  homeAriaLabel = 'Dashboard',
+  homeAriaLabel,
 }: BreadcrumbsProps) {
+  const { t } = useTranslation();
   if (items.length <= 1) return null;
 
   return (
     <nav
-      aria-label="Breadcrumb"
+      aria-label={t('a11y.breadcrumb', 'Breadcrumb')}
       className={cn('flex items-center gap-1 text-sm overflow-x-auto scrollbar-none', className)}
     >
       <Link
         to={homeHref}
         className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors shrink-0"
-        aria-label={homeAriaLabel}
+        aria-label={homeAriaLabel ?? t('a11y.breadcrumbHome', 'Dashboard')}
       >
         <Home className="h-3.5 w-3.5" />
       </Link>

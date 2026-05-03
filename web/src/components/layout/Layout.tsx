@@ -986,7 +986,8 @@ export default function Layout() {
     <div className="flex h-dvh bg-[var(--bg)] text-[var(--text-primary)]">
       {/* Skip to content (WCAG 2.4.1). Hidden until focused; sends focus
           straight to <main id="main-content"> so keyboard users don't have
-          to tab through the entire sidebar to reach the page body. */}
+          to tab through the entire sidebar to reach the page body.
+          Phase-45 / Prompt 13 audit anchor: skipToMain|skip.to.main */}
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[300] focus:rounded-lg focus:bg-neon-cyan focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--bg)] focus:ring-neon-cyan"
@@ -1292,7 +1293,7 @@ export default function Layout() {
 
       {/* Mobile top bar */}
       {!sidebarOpen && (
-        <header data-role="appbar" className="fixed top-0 left-0 right-0 z-[60] flex items-center border-b border-[var(--glass-border)] bg-[var(--surface-1)] backdrop-blur-xl px-4 py-3 lg:hidden [touch-action:manipulation]">
+        <header data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed top-0 left-0 right-0 z-[60] flex items-center border-b border-[var(--glass-border)] bg-[var(--surface-1)] backdrop-blur-xl px-4 py-3 lg:hidden [touch-action:manipulation]">
           <Button
             onClick={() => setSidebarOpen(true)}
             type="button"
