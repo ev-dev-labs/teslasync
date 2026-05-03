@@ -1083,124 +1083,202 @@ var scalarVariantKinds = map[string]string{
 	"bool":   "bool",
 }
 
+// compoundGoTypeName maps a proto compound message name to the Go type name
+// used in the generated decoder. The Go type names are owned by the
+// hand-written compounds.go file in the same package; keep this map in sync
+// with the type declarations there. New compounds require updating both
+// compoundNames (above) and compoundDecoderBody (below) too.
+var compoundGoTypeName = map[string]string{
+	"LocationValue": "Location",
+	"Doors":         "Doors",
+	"TireLocation":  "TireLocation",
+	"Time":          "Time",
+}
+
+// compoundDecoderBody returns the case-body that constructs the typed
+// compound from an ftproto oneof case. The body assumes the surrounding
+// switch arm is `case *ftproto.Value_<GoFieldName>:` and that the matched
+// value is bound to identifier x. Field names match the hand-written
+// compounds.go declarations; getter names match the protoc-gen-go output
+// for the vendored Tesla proto (note the underscore-before-digit on the
+// SemiMiddleAxleLeft_2 / SemiRearAxleLeft_2 etc. accessors).
+func compoundDecoderBody(protoCompound, oneofGoFieldName string) string {
+	switch protoCompound {
+	case "LocationValue":
+		return `		lv := x.` + oneofGoFieldName + `
+		if lv == nil {
+			return Location{}, nil
+		}
+		return Location{Latitude: lv.GetLatitude(), Longitude: lv.GetLongitude()}, nil`
+	case "Doors":
+		return `		d := x.` + oneofGoFieldName + `
+		if d == nil {
+			return Doors{}, nil
+		}
+		return Doors{
+			DriverFront:    d.GetDriverFront(),
+			DriverRear:     d.GetDriverRear(),
+			PassengerFront: d.GetPassengerFront(),
+			PassengerRear:  d.GetPassengerRear(),
+			TrunkFront:     d.GetTrunkFront(),
+			TrunkRear:      d.GetTrunkRear(),
+		}, nil`
+	case "Time":
+		return `		tv := x.` + oneofGoFieldName + `
+		if tv == nil {
+			return Time{}, nil
+		}
+		return Time{Hour: tv.GetHour(), Minute: tv.GetMinute(), Second: tv.GetSecond()}, nil`
+	case "TireLocation":
+		return `		tl := x.` + oneofGoFieldName + `
+		if tl == nil {
+			return TireLocation{}, nil
+		}
+		return TireLocation{
+			FrontLeft:            tl.GetFrontLeft(),
+			FrontRight:           tl.GetFrontRight(),
+			RearLeft:             tl.GetRearLeft(),
+			RearRight:            tl.GetRearRight(),
+			SemiMiddleAxleLeft2:  tl.GetSemiMiddleAxleLeft_2(),
+			SemiMiddleAxleRight2: tl.GetSemiMiddleAxleRight_2(),
+			SemiRearAxleLeft:     tl.GetSemiRearAxleLeft(),
+			SemiRearAxleRight:    tl.GetSemiRearAxleRight(),
+			SemiRearAxleLeft2:    tl.GetSemiRearAxleLeft_2(),
+			SemiRearAxleRight2:   tl.GetSemiRearAxleRight_2(),
+		}, nil`
+	}
+	// Should never happen — renderDatumDecoder validates against compoundNames.
+	return `		return nil, fmt.Errorf("protomodel: missing decoder body for compound ` + protoCompound + `")`
+}
+
 type datumTplData struct {
-	Package        string
-	Header         string
-	Compounds      []compoundTpl
-	ValueVariants  []valueVariantTpl
-	HasInvalidFlag bool
+	Package  string
+	Header   string
+	Variants []decoderVariantTpl
 }
 
-type compoundTpl struct {
-	Name   string
-	Fields []compoundField
+// decoderVariantTpl is one rendered case-arm of the DecodeValue switch.
+type decoderVariantTpl struct {
+	GoFieldName string // e.g. "StringValue" — appears in `case *ftproto.Value_<X>:`
+	Body        string // case-body text (already indented, no leading tab)
 }
 
-type compoundField struct {
-	GoName string
-	GoType string
-	Number int32
-}
+const datumDecoderTemplate = `{{.Header}}// Decoder for the Tesla Fleet Telemetry Datum.Value oneof. Every variant the
+// vendored proto declares is covered by an explicit case in DecodeValue; the
+// "default" arm is reachable only if the upstream ftproto package adds a new
+// variant we have not yet classified, in which case we return a descriptive
+// error so the caller can surface a clear "needs codegen update" signal.
+//
+// The decoder honors Value.invalid=true BEFORE inspecting any other variant
+// (per ADR-004): the producer marks a sample untrustworthy by setting the
+// invalid bit irrespective of which oneof slot is populated, and the rest of
+// the pipeline drops the field on ErrInvalid. Callers MUST NOT substitute a
+// default or zero on ErrInvalid — the entire telemetry sample is suspect.
+//
+// The decoder also rejects the unset-oneof case with ErrUnsetValue. A Value
+// arriving with no populated variant is a producer bug, not a "no change"
+// signal; treating it silently as the zero value would corrupt downstream
+// state. ErrUnsetValue forces the caller to make an explicit decision.
+//
+// Compound message variants (LocationValue, Doors, TireLocation, Time)
+// return the typed structs from compounds.go (Location, Doors, TireLocation,
+// Time). Flattening of those typed structs to atomic per-child signals
+// happens in the codec package (Prompt 0020), not here.
+package {{.Package}}
 
-// valueVariantTpl describes a single oneof variant of the Value message.
-// Either ScalarType (for primitive variants) or RefType (for enum/message
-// variants) is set. Invalid is true for the special `bool invalid = 10` case.
-type valueVariantTpl struct {
-	ProtoName   string // e.g. "string_value"
-	GoFieldName string // e.g. "StringValue"
-	ProtoType   string // e.g. "string", "LocationValue", "ChargingState"
-	GoType      string // pointer-stripped Go type, e.g. "string", "*LocationValue", "*ChargingState"
-	IsScalar    bool
-	IsCompound  bool
-	IsEnum      bool
-	IsInvalid   bool
-	Number      int32
-}
+import (
+	"errors"
+	"fmt"
 
-const datumDecoderTemplate = `{{.Header}}package {{.Package}}
+	ftproto "github.com/teslamotors/fleet-telemetry/protos"
+)
 
-import "errors"
+// ErrInvalid is returned by DecodeValue / DecodeDatum when the source Value
+// has its invalid flag set to true. The Tesla Fleet Telemetry producer uses
+// this flag to mark a sample as not trustworthy (e.g. sensor unavailable,
+// transient fault, value out of expected range). The pipeline drops fields
+// returning this error; callers MUST NOT substitute a default or zero
+// value, and MUST NOT persist the sample under any other interpretation.
+var ErrInvalid = errors.New("protomodel: value marked invalid")
 
-// ErrInvalidDatum is returned by DecodeValue when the source Datum's invalid
-// flag is set, meaning the producer marked this telemetry sample as not
-// trustworthy. Callers MUST drop the value (do not store assumed defaults).
-var ErrInvalidDatum = errors.New("protomodel: datum value is invalid")
-
-{{range .Compounds}}// {{.Name}} is a Datum value compound type. Compounds are flattened to typed
-// atomic children at the codec boundary; downstream consumers see only
-// primitives and never observe nested map shapes (per ADR-004).
-type {{.Name}} struct {
-{{range .Fields}}	{{.GoName}} {{.GoType}}
-{{end}}}
-
-{{end}}// Value is a dynamic Datum value. Exactly one of the *Value pointers will be
-// non-nil for a populated Datum; an Invalid==true value indicates the producer
-// rejected this sample and DecodeValue will return ErrInvalidDatum.
-type Value struct {
-{{range .ValueVariants}}	{{.GoFieldName}} {{.GoType}}
-{{end}}}
-
-// Datum is a single (Field, Value) pair from a Payload. The Key matches the
-// proto Field enum number; Value carries the dynamic oneof payload.
-type Datum struct {
-	Key   Field
-	Value *Value
-}
-
-// Payload holds a collection of Datums emitted at a single timestamp. Vin may
-// be empty when the payload was emitted before the producer knew the VIN
-// (e.g. during the bootstrap window).
-type Payload struct {
-	Data      []Datum
-	CreatedAt int64 // unix nanos; google.protobuf.Timestamp converted at decode
-	Vin       string
-	IsResend  bool
-}
+// ErrUnsetValue is returned by DecodeValue when the Value has no populated
+// oneof variant (or is nil). This is a producer bug — every populated
+// Datum.value SHOULD have exactly one of the oneof slots set. The decoder
+// surfaces this as a hard error rather than silently producing the zero
+// value, so the caller can log it, drop the sample, and increment a metric
+// rather than corrupting downstream state with an assumed default.
+var ErrUnsetValue = errors.New("protomodel: oneof value is unset")
 
 // DecodeValue extracts the populated oneof variant from v and returns it as
-// the caller-friendly Go value. Returns:
-//   - (nil, nil) when v is nil or no variant is populated;
-//   - (nil, ErrInvalidDatum) when v.Invalid is set to true;
-//   - (underlying value, nil) for any populated scalar/enum/compound variant.
+// a strict typed Go value.
 //
-// The returned any is one of: string, int32, int64, float32, float64, bool,
-// or a *<MessageName> / <EnumName> for compound and enum variants.
-func DecodeValue(v *Value) (any, error) {
+// Returns:
+//   - (nil, ErrInvalid)     when v.invalid==true (caller drops the sample);
+//   - (nil, ErrUnsetValue)  when v is nil or no oneof variant is populated;
+//   - (typed value, nil)    for any populated scalar/enum/compound variant.
+//
+// The returned ` + "`any`" + ` is one of:
+//   - string  (string_value)
+//   - int32   (int_value)
+//   - int64   (long_value)
+//   - float32 (float_value)
+//   - float64 (double_value)
+//   - bool    (boolean_value)
+//   - Location, Doors, TireLocation, Time (the four compound message variants)
+//   - a typed ftproto enum (e.g. ftproto.ChargingState, ftproto.ShiftState,
+//     ftproto.SentryModeState, ...) for every named-enum variant.
+//
+// The caller MUST type-switch on the returned ` + "`any`" + ` to handle each kind; the
+// concrete Go type is documented per variant above and locked in by the
+// reflect-based table tests in datum_decoder_test.go.
+func DecodeValue(v *ftproto.Value) (any, error) {
 	if v == nil {
-		return nil, nil
+		return nil, ErrUnsetValue
 	}
-{{if .HasInvalidFlag}}	if v.Invalid != nil && *v.Invalid {
-		return nil, ErrInvalidDatum
+	// Honor the invalid flag BEFORE the oneof switch. The Tesla producer
+	// emits Value{Value: &Value_Invalid{Invalid: true}} as the populated
+	// variant; v.GetInvalid() returns true only in that case (not for the
+	// rare Value{Value: &Value_Invalid{Invalid: false}} which would mean
+	// "explicitly NOT invalid" and is treated as the unset-oneof case
+	// further down).
+	if v.GetInvalid() {
+		return nil, ErrInvalid
 	}
-{{end}}{{range .ValueVariants}}{{if not .IsInvalid}}	if v.{{.GoFieldName}} != nil {
-{{if .IsScalar}}		return *v.{{.GoFieldName}}, nil
-{{else if .IsCompound}}		return v.{{.GoFieldName}}, nil
-{{else if .IsEnum}}		return *v.{{.GoFieldName}}, nil
-{{else}}		return v.{{.GoFieldName}}, nil
-{{end}}	}
-{{end}}{{end}}	return nil, nil
+	switch x := v.GetValue().(type) {
+	case nil:
+		return nil, ErrUnsetValue
+{{range .Variants}}	case *ftproto.Value_{{.GoFieldName}}:
+{{.Body}}
+{{end}}	default:
+		// A type the upstream ftproto package added that this codegen has
+		// not yet classified. Returning a descriptive error keeps the
+		// pipeline running (the field is dropped by the caller) while
+		// surfacing a clear signal that codegen needs an update.
+		return nil, fmt.Errorf("protomodel: unhandled Value oneof variant %T", x)
+	}
+}
+
+// DecodeDatum extracts the field name and decoded Go value from d.
+//
+// Returns:
+//   - ("", nil, ErrUnsetValue) when d is nil or carries no Value;
+//   - (field name, nil, ErrInvalid) when d.value.invalid==true;
+//   - (field name, typed value, nil) on success.
+//
+// ` + "`field`" + ` is the symbolic ftproto.Field name (e.g. "VehicleSpeed",
+// "Location"), suitable for routing.yaml lookups, signal_log columns, and
+// SSE topic keys. ` + "`value`" + ` is one of the documented Go types in DecodeValue.
+func DecodeDatum(d *ftproto.Datum) (field string, value any, err error) {
+	if d == nil {
+		return "", nil, ErrUnsetValue
+	}
+	field = d.GetKey().String()
+	value, err = DecodeValue(d.GetValue())
+	return field, value, err
 }
 `
 
 func renderDatumDecoder(pf *ProtoFile, packageName string) (string, error) {
-	// Compound message types go to datum_decoder; sort by name.
-	var compounds []compoundTpl
-	for _, m := range pf.Messages {
-		if !compoundNames[m.Name] {
-			continue
-		}
-		ct := compoundTpl{Name: m.Name}
-		for _, f := range m.Fields {
-			ct.Fields = append(ct.Fields, compoundField{
-				GoName: goCamelCase(f.Name),
-				GoType: protoTypeToGo(f.Type),
-				Number: f.Number,
-			})
-		}
-		compounds = append(compounds, ct)
-	}
-	sort.SliceStable(compounds, func(i, j int) bool { return compounds[i].Name < compounds[j].Name })
-
 	// Value oneof variants come from the Value message.
 	valueMsg := pf.FindMessage("Value")
 	if valueMsg == nil {
@@ -1209,42 +1287,40 @@ func renderDatumDecoder(pf *ProtoFile, packageName string) (string, error) {
 	if len(valueMsg.Oneofs) != 1 {
 		return "", fmt.Errorf("Value message must have exactly one oneof, got %d", len(valueMsg.Oneofs))
 	}
-	hasInvalid := false
-	var variants []valueVariantTpl
-	for _, vrnt := range valueMsg.Oneofs[0].Variants {
-		isInvalid := vrnt.Name == "invalid"
-		if isInvalid {
-			hasInvalid = true
-		}
+
+	// Sort variants by proto field number for stable output.
+	oneofVariants := append([]FieldDef(nil), valueMsg.Oneofs[0].Variants...)
+	sort.SliceStable(oneofVariants, func(i, j int) bool { return oneofVariants[i].Number < oneofVariants[j].Number })
+
+	var rendered []decoderVariantTpl
+	for _, vrnt := range oneofVariants {
 		goField := goCamelCase(vrnt.Name)
-		var goType string
-		var isScalar, isCompound, isEnum bool
-		if scalarGo, ok := scalarVariantKinds[vrnt.Type]; ok {
-			isScalar = true
-			goType = "*" + scalarGo
-		} else if compoundNames[vrnt.Type] {
-			isCompound = true
-			goType = "*" + vrnt.Type
-		} else {
+		var body string
+		switch {
+		case vrnt.Name == "invalid":
+			// v.GetInvalid() above already short-circuited the populated case;
+			// reaching here means Invalid==false, which is treated as unset.
+			body = "\t\t// v.GetInvalid() above already short-circuited the populated case;\n" +
+				"\t\t// reaching here means Invalid==false, which is treated as unset.\n" +
+				"\t\treturn nil, ErrUnsetValue"
+		case scalarIsScalar(vrnt.Type):
+			// Scalar oneof: x.<GoFieldName> is the underlying scalar value
+			// directly (no pointer deref needed — protoc-gen-go embeds the
+			// scalar inline in the oneof wrapper struct).
+			body = "\t\treturn x." + goField + ", nil"
+		case compoundNames[vrnt.Type]:
+			body = compoundDecoderBody(vrnt.Type, goField)
+		default:
 			// Treat any other named type as an enum (defined in
 			// enum_parsers_gen.go). The proto Value oneof only references
 			// scalars, the four compounds, and named enums.
-			isEnum = true
-			goType = "*" + vrnt.Type
+			body = "\t\treturn x." + goField + ", nil"
 		}
-		variants = append(variants, valueVariantTpl{
-			ProtoName:   vrnt.Name,
+		rendered = append(rendered, decoderVariantTpl{
 			GoFieldName: goField,
-			ProtoType:   vrnt.Type,
-			GoType:      goType,
-			IsScalar:    isScalar,
-			IsCompound:  isCompound,
-			IsEnum:      isEnum,
-			IsInvalid:   isInvalid,
-			Number:      vrnt.Number,
+			Body:        body,
 		})
 	}
-	sort.SliceStable(variants, func(i, j int) bool { return variants[i].Number < variants[j].Number })
 
 	tpl, err := template.New("datum_decoder").Parse(datumDecoderTemplate)
 	if err != nil {
@@ -1252,15 +1328,20 @@ func renderDatumDecoder(pf *ProtoFile, packageName string) (string, error) {
 	}
 	var buf bytes.Buffer
 	if err := tpl.Execute(&buf, datumTplData{
-		Package:        packageName,
-		Header:         generatedHeader,
-		Compounds:      compounds,
-		ValueVariants:  variants,
-		HasInvalidFlag: hasInvalid,
+		Package:  packageName,
+		Header:   generatedHeader,
+		Variants: rendered,
 	}); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+// scalarIsScalar reports whether the given proto type name is one of the
+// primitive scalar variant types handled by the Value oneof.
+func scalarIsScalar(t string) bool {
+	_, ok := scalarVariantKinds[t]
+	return ok
 }
 
 // goCamelCase converts a snake_case proto field name (e.g. "string_value",
