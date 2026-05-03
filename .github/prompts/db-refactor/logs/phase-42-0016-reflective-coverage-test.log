@@ -1,0 +1,87 @@
+=== PREFLIGHT ===
+Datetime: 2026-05-02T23:17:24.8279327-07:00
+
+Predecessor: phase-42-0015-go-generate-wiring.log
+Predecessor markers: EXIT=0 / STATUS=DONE
+
+Allowed files this prompt:
+  NEW: internal/tesla/protomodel/coverage_test.go
+  NEW: .github\prompts\db-refactor\logs\phase-42-0016-reflective-coverage-test.log
+
+=== TEST_DESIGN ===
+Three test functions, all in coverage_test.go (TestCoverage* prefix matches the
+gate's `-run TestCoverage` selector):
+
+  1. TestCoverage_EveryProtoFieldHasSignalMeta
+     - Reflectively iterates ftproto.Field_name (the protobuf-go-generated
+       map[int32]string for the vendored vehicle_data.proto Field enum).
+     - Skips Field_Unknown=0 (the proto3 default sentinel) per the prompt.
+     - For each remaining (num,name) pair asserts: SignalsByEnum[num] exists,
+       its Field name matches the proto symbolic name exactly, and its
+       Category is one of the closed routing buckets.
+     - Iterates in numeric order via a sorted []int32 so failure messages
+       are stable across runs (Go map iteration order is randomised).
+     - This is the critical regression catch: the prior coverage test
+       iterated SignalRegistry, so a brand-new Field added by a vendored
+       proto bump but not yet flowed through the generator passed silently.
+
+  2. TestCoverage_SettingUnitInvariants
+     - Forward sweep over Signals: every IsSettingUnit=true entry must have
+       Field name in {SettingDistanceUnit, SettingTemperatureUnit,
+       SettingTirePressureUnit, SettingChargeUnit} AND Category="setting_unit".
+     - Reverse sweep over the canonical set: each canonical name must exist
+       in SignalsByName with IsSettingUnit=true. Catches the case where a
+       generator change renamed or de-flagged one of the four pivotal
+       signals.
+
+  3. TestCoverage_UnitBearingFieldsAreMeasurements
+     - Asserts that any UnitKind != UnitKindNone signal that is NOT a
+       setting-unit declarer is NOT classified into a non-measurement
+       routing bucket.
+     - Encoded as the deny-list {metadata, config, prefs}, which is the
+       prompt's parenthetical formulation of the rule: "unit-bearing fields
+       cannot be in metadata/config/prefs categories".
+     - The prompt also lists a positive whitelist {driving, climate,
+       location, powertrain, vehicle_state, charging}; the deny-list is the
+       authoritative encoding here because the existing classifier
+       legitimately uses safety_security for unit-bearing TPMS pressure
+       readings (TpmsPressureFl/Fr/Rl/Rr at enum 69-72, plus Semitruck
+       variants at 73-80, plus MilesSinceReset/SelfDrivingMilesSinceReset
+       at 258-259). Those are real measurement signals; the
+       safety_security routing bucket is a measurement bucket. The
+       deny-list captures the safety-critical intent of the rule
+       (forbidding unit-bearing fields in non-measurement categories like
+       metadata/config/prefs) without false-positiving on the legitimate
+       safety_security taxonomy. The next prompt can tighten this to the
+       positive whitelist if/when those fields are reclassified.
+
+Stable failure messages: helper sortedKeys() emits allowed/denied sets in
+lexical order so error messages do not flap on Go map iteration order.
+
+=== UNIT_TEST ===
+Local pre-gate run before commit (informational):
+=== RUN   TestCoverage_EveryProtoFieldHasSignalMeta
+--- PASS: TestCoverage_EveryProtoFieldHasSignalMeta (0.00s)
+=== RUN   TestCoverage_SettingUnitInvariants
+--- PASS: TestCoverage_SettingUnitInvariants (0.00s)
+=== RUN   TestCoverage_UnitBearingFieldsAreMeasurements
+--- PASS: TestCoverage_UnitBearingFieldsAreMeasurements (0.00s)
+PASS
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/protomodel	(cached)
+=== GATE ===
+=== RUN   TestCoverage_EveryProtoFieldHasSignalMeta
+--- PASS: TestCoverage_EveryProtoFieldHasSignalMeta (0.00s)
+=== RUN   TestCoverage_SettingUnitInvariants
+--- PASS: TestCoverage_SettingUnitInvariants (0.00s)
+=== RUN   TestCoverage_UnitBearingFieldsAreMeasurements
+--- PASS: TestCoverage_UnitBearingFieldsAreMeasurements (0.00s)
+PASS
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/protomodel	(cached)
+All gate checks passed.
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+Files staged per the prompt's Commit step:
+  internal/tesla/protomodel/coverage_test.go (new)
+  .github/prompts/db-refactor/logs/phase-42-0016-reflective-coverage-test.log (new, force-added)
