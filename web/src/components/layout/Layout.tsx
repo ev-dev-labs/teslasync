@@ -37,6 +37,7 @@ import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useNotificationListener } from '../../hooks/useNotificationListener'
 import { useTitleBadge } from '../../hooks/useTitleBadge'
 import { useFaviconBadge } from '../../hooks/useFaviconBadge'
+import { useDynamicAppIcon } from '../../hooks/useDynamicAppIcon'
 import { useCriticalAlertFlash } from '../../hooks/useCriticalAlertFlash'
 import { useToast } from '../feedback/Toast'
 import { useUnreadCount } from '@/api/hooks/useNotifications'
@@ -688,6 +689,10 @@ export default function Layout() {
   // Browser tab badging — Phase 40 / Prompt 32. These three hooks
   // share the SSE singleton with `useNotificationListener` above; no
   // additional EventSource connection is opened.
+  // `useDynamicAppIcon` MUST run before `useFaviconBadge` so the badge
+  // composites its unread-count dot over the freshly-themed favicon
+  // rather than the build-time static SVG.
+  useDynamicAppIcon()
   useTitleBadge()
   useFaviconBadge()
   useCriticalAlertFlash()

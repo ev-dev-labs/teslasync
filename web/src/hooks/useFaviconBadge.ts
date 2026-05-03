@@ -38,8 +38,20 @@ export function useFaviconBadge(): void {
 
     // Snapshot original hrefs the first time we see each link so we
     // can restore them when the badge clears.
+    //
+    // Coordination with `useDynamicAppIcon`: that hook tags every
+    // dynamically-mutated `<link rel="icon">` with a `data-base-href`
+    // attribute pointing at the *current* themed favicon data URL. When
+    // present, we treat that as the source of truth for both the snapshot
+    // and the composite source — otherwise the badge would stomp the
+    // dynamic icon back to the build-time SVG every time the unread
+    // count changes.
     for (const link of links) {
-      if (!originalsRef.current.has(link)) {
+      const liveBase = link.dataset.baseHref
+      if (liveBase) {
+        // Always re-snapshot when the dynamic hook has updated the base.
+        originalsRef.current.set(link, liveBase)
+      } else if (!originalsRef.current.has(link)) {
         originalsRef.current.set(link, link.href)
       }
     }

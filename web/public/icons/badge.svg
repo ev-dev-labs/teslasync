@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" width="72" height="72">
+  <!--
+    Android Web Push badge icon.
+    Per the Notification.badge spec, this MUST be a monochrome silhouette
+    on a transparent background. Android takes the alpha channel and
+    re-tints it to the system accent colour; any colour data is discarded.
+    See: https://developer.mozilla.org/en-US/docs/Web/API/Notification/badge
+  -->
+  <path d="M40 8L22 36h12l-6 28 22-32H38z" fill="#ffffff"/>
+</svg>
