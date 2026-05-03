@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { ToastProvider } from './components/feedback/Toast'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
+import { NavigationGuardProvider } from './components/feedback/NavigationGuardProvider'
 import { AchievementUnlockListener } from './components/feedback/AchievementUnlockListener'
 import { QueryBroadcastBridge } from './components/QueryBroadcastBridge'
 import { FormatterPrefsBridge } from './components/FormatterPrefsBridge'
@@ -85,18 +86,26 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             cross-tab settings broadcasts. */}
         <FormatterPrefsBridge />
         <BrowserRouter>
-          <ThemeProvider>
-            <SelectedVehicleProvider>
-              <ToastProvider>
-                <App />
-                <ReloadPrompt />
-                {/* Phase-40 / Prompt 63: celebrate locked → unlocked transitions
-                    with a transient toast + confetti. Mounted alongside the
-                    standard toast stack so the SSE subscription is global. */}
-                <AchievementUnlockListener />
-              </ToastProvider>
-            </SelectedVehicleProvider>
-          </ThemeProvider>
+          {/* Phase-45 / Prompt 16: in-app unsaved-changes guard. Intercepts
+              <GuardedLink> / <GuardedNavLink> clicks and browser back/forward
+              navigation when any registered useNavigationGuard reports a
+              dirty form. Coexists with useDirtyForm's beforeunload listener
+              (tab close / reload / external links). MUST live inside
+              <BrowserRouter> so useNavigate / useLocation resolve. */}
+          <NavigationGuardProvider>
+            <ThemeProvider>
+              <SelectedVehicleProvider>
+                <ToastProvider>
+                  <App />
+                  <ReloadPrompt />
+                  {/* Phase-40 / Prompt 63: celebrate locked → unlocked transitions
+                      with a transient toast + confetti. Mounted alongside the
+                      standard toast stack so the SSE subscription is global. */}
+                  <AchievementUnlockListener />
+                </ToastProvider>
+              </SelectedVehicleProvider>
+            </ThemeProvider>
+          </NavigationGuardProvider>
         </BrowserRouter>
       </QueryClientProvider>
     </ErrorBoundary>

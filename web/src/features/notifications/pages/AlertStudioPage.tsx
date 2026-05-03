@@ -39,6 +39,7 @@ import { usePageTitle } from '@/hooks/usePageTitle'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useDirtyForm } from '@/hooks/useDirtyForm'
 import { useFormDraft } from '@/hooks/useFormDraft'
+import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useUrlString } from '@/hooks/useUrlState'
 import { alertRuleSchema } from '../schemas/alertRule'
 import { ComputedMetricEditor } from '../components/ComputedMetricEditor'
@@ -532,6 +533,11 @@ export default function AlertStudio() {
   )
 
   useDirtyForm(isDirty)
+  // Phase-45 / Prompt 16: in-app navigation guard. Pairs with `useDirtyForm`
+  // above (which only handles tab close / reload) so sidebar clicks, browser
+  // back, and breadcrumb links also surface a "discard or keep editing"
+  // dialog while a new rule is being authored.
+  useNavigationGuard(isDirty, t('forms.unsavedRule', 'You have an unsaved alert rule.'))
 
   const dirtyStrings = useMemo(() => ({
     title: t('forms.unsavedTitle', 'Unsaved changes'),

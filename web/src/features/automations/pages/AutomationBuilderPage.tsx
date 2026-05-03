@@ -24,6 +24,7 @@ import { FormSection } from '@/components/forms';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
+import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import { useConfirm } from '@/hooks/useConfirm';
 import { ConfirmDialog } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -374,6 +375,10 @@ export default function AutomationBuilderPage() {
   // wiring; also exposes localized strings reused by the in-app discard
   // confirm dialog below.
   const dirtyForm = useDirtyForm(dirty);
+  // Phase-45 / Prompt 16: in-app navigation guard. Sidebar clicks, browser
+  // back, breadcrumb links, etc. now surface the same discard prompt as the
+  // explicit Cancel button below.
+  useNavigationGuard(dirty, t('forms.unsavedAutomation', 'You have an unsaved automation.'));
   const { confirm: confirmDiscard, dialogProps: discardDialogProps } = useConfirm();
 
   const isSaving = createMutation.isPending || updateMutation.isPending;

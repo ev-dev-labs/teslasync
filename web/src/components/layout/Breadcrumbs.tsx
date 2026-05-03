@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { Link } from 'react-router-dom';
+import { GuardedLink } from '../feedback/GuardedLink';
 import { ChevronRight, Home } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
@@ -39,13 +39,13 @@ export function Breadcrumbs({
       aria-label={t('a11y.breadcrumb', 'Breadcrumb')}
       className={cn('flex items-center gap-1 text-sm overflow-x-auto scrollbar-none', className)}
     >
-      <Link
+      <GuardedLink
         to={homeHref}
         className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors shrink-0"
         aria-label={homeAriaLabel ?? t('a11y.breadcrumbHome', 'Dashboard')}
       >
         <Home className="h-3.5 w-3.5" />
-      </Link>
+      </GuardedLink>
 
       {items.map((item, i) => {
         const isLast = i === items.length - 1;
@@ -65,7 +65,7 @@ export function Breadcrumbs({
                 {item.label}
               </span>
             ) : (
-              <Link
+              <GuardedLink
                 to={item.href}
                 className={cn(
                   'text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors truncate max-w-[200px]',
@@ -73,7 +73,7 @@ export function Breadcrumbs({
                 )}
               >
                 {item.label}
-              </Link>
+              </GuardedLink>
             )}
             {/* Collapsed indicator on mobile for hidden middle items */}
             {isMiddle && (

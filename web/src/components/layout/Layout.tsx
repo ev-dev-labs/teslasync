@@ -1,4 +1,5 @@
-import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { GuardedNavLink } from '../feedback/GuardedLink'
 import InstallPrompt from '../feedback/InstallPrompt'
 import { OfflineBanner } from '../feedback/OfflineBanner'
 import { NewVersionBanner } from '../feedback/NewVersionBanner'
@@ -454,7 +455,7 @@ function NotificationBell({ className }: { className?: string }) {
     ? t('nav.notificationsUnread', '{{count}} unread notifications', { count })
     : t('nav.notifications', 'Notifications')
   return (
-    <NavLink
+    <GuardedNavLink
       to="/notifications"
       aria-label={label}
       className={`relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${className ?? ''}`}
@@ -468,7 +469,7 @@ function NotificationBell({ className }: { className?: string }) {
           {display}
         </span>
       )}
-    </NavLink>
+    </GuardedNavLink>
   )
 }
 
@@ -925,7 +926,7 @@ export default function Layout() {
     const isInTabBar = BOTTOM_TAB_PATHS.has(to)
     const sectionStyle = SECTION_ICON_STYLES[findNavItemByExactPath(to)?.section.title ?? '']
     return (
-      <NavLink
+      <GuardedNavLink
         key={to}
         to={to}
         onClick={() => setSidebarOpen(false)}
@@ -978,7 +979,7 @@ export default function Layout() {
         {isActive && !compact && (
           <span className="absolute right-3 h-1.5 w-1.5 rounded-full bg-neon-cyan shadow-[0_0_6px_rgba(0,240,255,0.5)]" />
         )}
-      </NavLink>
+      </GuardedNavLink>
     )
   }
 
@@ -1036,9 +1037,9 @@ export default function Layout() {
       >
         {/* Mobile sidebar brand, shown only while the drawer is open */}
         <div className="flex items-center gap-2 border-b border-[var(--glass-border)] px-5 py-4 shrink-0 lg:hidden">
-          <NavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-xl transition-colors" onClick={() => setSidebarOpen(false)}>
+          <GuardedNavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-xl transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
-          </NavLink>
+          </GuardedNavLink>
           {versionLabel && (
             <span className="rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
               {versionLabel}
@@ -1059,14 +1060,14 @@ export default function Layout() {
 
         {/* Logo — desktop sidebar header */}
         <div className="hidden lg:flex items-center gap-2 px-5 py-5 border-b border-[var(--glass-border)] shrink-0">
-          <NavLink to="/" className="flex flex-1 items-center gap-3 hover:bg-[var(--surface-2)] -mx-2 px-2 py-1 rounded-md transition-colors" onClick={() => setSidebarOpen(false)}>
+          <GuardedNavLink to="/" className="flex flex-1 items-center gap-3 hover:bg-[var(--surface-2)] -mx-2 px-2 py-1 rounded-md transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
             {versionLabel && (
               <span className="ml-auto rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
                 {versionLabel}
               </span>
             )}
-          </NavLink>
+          </GuardedNavLink>
           <ThemeQuickSwitcher placement="left" />
           <NotificationBell />
         </div>
