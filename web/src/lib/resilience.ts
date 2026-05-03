@@ -145,6 +145,24 @@ export class ApiError extends Error {
 }
 
 /**
+ * Type guard for {@link ApiError}. Use this in error-display components to
+ * branch on `error.status` (404 / 401 / 5xx / network) rather than raw
+ * `error instanceof Error` checks that lose the HTTP status.
+ *
+ * Survives the `instanceof` cliff that hits when bundlers split the
+ * ApiError class across chunks — the duck-type fallback matches our error
+ * shape while staying narrow enough to avoid false positives.
+ */
+export function isApiError(err: unknown): err is ApiError {
+  if (err instanceof ApiError) return true
+  if (err && typeof err === 'object' && 'name' in err && 'status' in err) {
+    const e = err as { name: unknown; status: unknown }
+    return e.name === 'ApiError' && typeof e.status === 'number'
+  }
+  return false
+}
+
+/**
  * Performs a fetch request with automatic retry (exponential backoff),
  * request deduplication for GETs, and offline detection.
  */

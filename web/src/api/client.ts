@@ -3,9 +3,9 @@
  *
  * Foundation layer — resilient HTTP helper used by every domain module.
  */
-import { resilientFetch, ApiError, getApiBase } from '../lib/resilience'
+import { resilientFetch, ApiError, getApiBase, isApiError } from '../lib/resilience'
 
-export { ApiError, getApiBase }
+export { ApiError, getApiBase, isApiError }
 
 export interface ApiRequestOptions extends RequestInit {
   responseType?: 'json' | 'text'
