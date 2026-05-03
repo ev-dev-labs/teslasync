@@ -3,6 +3,7 @@ import { request } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import { STALE_TIMES } from '@/lib/constants';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import { useOptimisticMutation } from './useOptimisticMutation';
 import type { SavedView, SavedViewCreateInput, SavedViewUpdateInput } from '../types';
 
 /**
@@ -106,17 +107,24 @@ export interface DeleteSavedViewArgs {
  * invalidate the right list cache.
  */
 export function useDeleteSavedView() {
-  const qc = useQueryClient();
   const { success, error } = useMutationToast();
 
-  return useMutation({
-    mutationFn: ({ id }: DeleteSavedViewArgs) =>
+  return useOptimisticMutation<void, DeleteSavedViewArgs, SavedView[]>({
+    mutationFn: ({ id }) =>
       request<void>(`/saved-views/${id}`, { method: 'DELETE' }),
-    onSuccess: (_data, vars) => {
-      invalidateAndBroadcast(qc, { queryKey: savedViewsKeys.list(vars.route) });
+    queryKeys: ({ route }) => [savedViewsKeys.list(route)],
+    updater: (prev, { id }) => prev?.filter((v) => v.id !== id),
+    broadcast: true,
+    onMutate: () => {
+      // The row is gone from the menu the instant the user confirms;
+      // toast still waits for the server so a network error surfaces
+      // alongside the row reappearing.
+    },
+    onSuccess: () => {
       success('toast.savedViews.delete.success', 'View deleted');
     },
-    onError: (e) => error(e, 'toast.savedViews.delete.error', 'Failed to delete view'),
+    onError: (e) =>
+      error(e, 'toast.savedViews.delete.error', 'Failed to delete view'),
   });
 }
 

@@ -4,6 +4,7 @@ import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import { useOptimisticMutation } from './useOptimisticMutation';
 import type {
   Automation,
   AutomationFull,
@@ -55,24 +56,36 @@ export function useAutomationHistory(limit = 20) {
 }
 
 export function useToggleAutomation() {
-  const qc = useQueryClient();
   const { success, error } = useMutationToast();
-  return useMutation({
-    mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) =>
+  return useOptimisticMutation<
+    { id: number; enabled: boolean },
+    { id: number; enabled: boolean },
+    Automation[]
+  >({
+    mutationFn: ({ id, enabled }) =>
       request<{ id: number; enabled: boolean }>(`/automations/${id}/toggle`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled }),
       }),
+    queryKeys: [automationKeys.all],
+    updater: (prev, { id, enabled }) =>
+      prev?.map((a) => (a.id === id ? { ...a, enabled } : a)),
+    broadcast: true,
+    onMutate: () => {
+      // Optimistic flip already applied by the helper. Toast waits for
+      // server confirmation so a failed PATCH doesn't end up reading
+      // "Enabled" while the switch has already snapped back to off.
+    },
     onSuccess: (_data, { enabled }) => {
-      invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
       if (enabled) {
         success('toast.automation.enabled', 'Automation enabled');
       } else {
         success('toast.automation.disabled', 'Automation disabled');
       }
     },
-    onError: (err) => error(err, 'toast.automation.toggle.error', 'Failed to toggle automation'),
+    onError: (err) =>
+      error(err, 'toast.automation.toggle.error', 'Failed to toggle automation'),
   });
 }
 

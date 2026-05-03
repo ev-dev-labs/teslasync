@@ -4,6 +4,7 @@ import { safeArray } from '@/lib/safeArray';
 import { INTERVALS } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import { useOptimisticMutation } from './useOptimisticMutation';
 import type {
   Alert,
   AlertRule,
@@ -112,16 +113,22 @@ export function useAlerts() {
 }
 
 export function useMarkAlertRead() {
-  const qc = useQueryClient();
   const { success, error } = useMutationToast();
-  return useMutation({
-    mutationFn: (id: string) =>
+  return useOptimisticMutation<void, string, Alert[]>({
+    mutationFn: (id) =>
       request<void>(`/alerts/${id}/read`, { method: 'POST' }),
-    onSuccess: () => {
-      invalidateAndBroadcast(qc, { queryKey: notificationKeys.alerts });
-      success('toast.alerts.markRead.success', 'Alert marked as read');
+    queryKeys: [notificationKeys.alerts],
+    updater: (prev, id) =>
+      prev?.map((a) => (String(a.id) === id ? { ...a, is_read: true } : a)),
+    broadcast: true,
+    onMutate: () => {
+      // Row already dimmed by the helper. Toast waits for server ack so a
+      // failed mark-read doesn't mislead the user.
     },
-    onError: (e) => error(e, 'toast.alerts.markRead.error', 'Failed to mark alert as read'),
+    onSuccess: () =>
+      success('toast.alerts.markRead.success', 'Alert marked as read'),
+    onError: (e) =>
+      error(e, 'toast.alerts.markRead.error', 'Failed to mark alert as read'),
   });
 }
 
@@ -214,10 +221,13 @@ export function useDeleteAlertRule() {
 }
 
 export function useToggleAlertRule() {
-  const qc = useQueryClient();
   const { success, error } = useMutationToast();
-  return useMutation({
-    mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) => {
+  return useOptimisticMutation<
+    AlertRule,
+    { id: number; enabled: boolean },
+    AlertRule[]
+  >({
+    mutationFn: ({ id, enabled }) => {
       const payload: AlertRuleUpdate = { enabled };
       return request<AlertRule>(`/alerts/rules/${id}`, {
         method: 'PUT',
@@ -225,14 +235,22 @@ export function useToggleAlertRule() {
         body: JSON.stringify(payload),
       });
     },
+    queryKeys: [notificationKeys.alertRules],
+    updater: (prev, { id, enabled }) =>
+      prev?.map((r) => (r.id === id ? { ...r, enabled } : r)),
+    broadcast: true,
+    onMutate: () => {
+      // Toggle UI already flipped; toast waits for server confirmation
+      // so the announcement matches the persisted state.
+    },
     onSuccess: (_data, { enabled }) => {
-      invalidateAndBroadcast(qc, { queryKey: notificationKeys.alertRules });
       success(
         enabled ? 'toast.alerts.toggleRule.enabled' : 'toast.alerts.toggleRule.disabled',
         enabled ? 'Alert rule enabled' : 'Alert rule disabled',
       );
     },
-    onError: (e) => error(e, 'toast.alerts.toggleRule.error', 'Failed to toggle alert rule'),
+    onError: (e) =>
+      error(e, 'toast.alerts.toggleRule.error', 'Failed to toggle alert rule'),
   });
 }
 
@@ -359,54 +377,118 @@ function invalidateLogsAndUnread(qc: ReturnType<typeof useQueryClient>) {
 export function useMarkNotificationsRead() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
-  return useMutation({
-    mutationFn: (ids: number[]) =>
+  return useOptimisticMutation<
+    { updated: number },
+    number[],
+    NotificationLog[]
+  >({
+    mutationFn: (ids) =>
       request<{ updated: number }>('/notifications/mark-read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids }),
       }),
+    queryKeys: [notificationKeys.logs],
+    updater: (prev, ids) => {
+      if (!prev) return prev;
+      const idSet = new Set(ids);
+      const now = new Date().toISOString();
+      return prev.map((n) =>
+        idSet.has(n.id) && !n.read_at ? { ...n, read_at: now } : n,
+      );
+    },
+    broadcast: true,
+    onMutate: () => {
+      // Rows already de-emphasized by the helper. The unread-count badge
+      // is invalidated separately on settle so it eventually matches.
+    },
     onSuccess: () => {
-      invalidateLogsAndUnread(qc);
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.unreadCount });
       success('toast.notifications.markRead.success', 'Marked as read');
     },
-    onError: (e) => error(e, 'toast.notifications.markRead.error', 'Failed to mark as read'),
+    onError: (e) =>
+      error(e, 'toast.notifications.markRead.error', 'Failed to mark as read'),
+    onSettled: () => {
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.unreadCount });
+    },
   });
 }
 
 export function useMarkNotificationsUnread() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
-  return useMutation({
-    mutationFn: (ids: number[]) =>
+  return useOptimisticMutation<
+    { updated: number },
+    number[],
+    NotificationLog[]
+  >({
+    mutationFn: (ids) =>
       request<{ updated: number }>('/notifications/mark-unread', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids }),
       }),
+    queryKeys: [notificationKeys.logs],
+    updater: (prev, ids) => {
+      if (!prev) return prev;
+      const idSet = new Set(ids);
+      return prev.map((n) =>
+        idSet.has(n.id) && n.read_at ? { ...n, read_at: null } : n,
+      );
+    },
+    broadcast: true,
+    onMutate: () => {
+      // Rows already re-emphasized; unread-count badge reconciles on settle.
+    },
     onSuccess: () => {
-      invalidateLogsAndUnread(qc);
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.unreadCount });
       success('toast.notifications.markUnread.success', 'Marked as unread');
     },
-    onError: (e) => error(e, 'toast.notifications.markUnread.error', 'Failed to mark as unread'),
+    onError: (e) =>
+      error(e, 'toast.notifications.markUnread.error', 'Failed to mark as unread'),
+    onSettled: () => {
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.unreadCount });
+    },
   });
 }
 
 export function useArchiveNotifications() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
-  return useMutation({
-    mutationFn: (ids: number[]) =>
+  return useOptimisticMutation<
+    { updated: number },
+    number[],
+    NotificationLog[]
+  >({
+    mutationFn: (ids) =>
       request<{ updated: number }>('/notifications/archive', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids }),
       }),
+    queryKeys: [notificationKeys.logs],
+    updater: (prev, ids) => {
+      if (!prev) return prev;
+      const idSet = new Set(ids);
+      const now = new Date().toISOString();
+      return prev.map((n) =>
+        idSet.has(n.id) && !n.archived_at ? { ...n, archived_at: now } : n,
+      );
+    },
+    broadcast: true,
+    onMutate: () => {
+      // Rows visually moved to the archive bucket immediately; toast waits
+      // for server ack so a failed archive surfaces clearly.
+    },
     onSuccess: () => {
-      invalidateLogsAndUnread(qc);
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.unreadCount });
       success('toast.notifications.archive.success', 'Archived');
     },
-    onError: (e) => error(e, 'toast.notifications.archive.error', 'Failed to archive'),
+    onError: (e) =>
+      error(e, 'toast.notifications.archive.error', 'Failed to archive'),
+    onSettled: () => {
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.unreadCount });
+    },
   });
 }
 
