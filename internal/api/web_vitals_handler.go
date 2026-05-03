@@ -1,0 +1,243 @@
+package api
+
+import (
+	"encoding/json"
+	"net/http"
+	"regexp"
+	"strings"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/rs/zerolog/log"
+)
+
+// Web Vitals ingest handler (Phase 45 / Prompt 12).
+//
+// Accepts batches of Core Web Vitals samples reported by the React SPA
+// (LCP, INP, CLS, FCP, TTFB) and records them as Prometheus histograms
+// labelled by metric name, browser-assigned rating, and normalised route.
+// This is the measurement half of the engineering-guideline performance
+// budget (FCP < 1.5 s on 4G) — without it those targets are aspirations.
+
+const (
+	// Hard cap on batch size to bound memory + label-cardinality blast
+	// radius from a misbehaving or malicious client.
+	maxWebVitalsBatchSize = 100
+	// Hard cap on the route label length AFTER normalisation. Browsers can
+	// produce arbitrarily deep paths via SPA history; we don't want a
+	// pathological client blowing up our histogram label set.
+	maxRouteLabelLength = 50
+)
+
+type webVitalsBatch struct {
+	Metrics []webVitalsMetric `json:"metrics"`
+}
+
+type webVitalsMetric struct {
+	Name           string  `json:"name"`
+	Value          float64 `json:"value"`
+	ID             string  `json:"id"`
+	Rating         string  `json:"rating"`
+	NavigationType string  `json:"navigationType,omitempty"`
+	Route          string  `json:"route"`
+	TsMs           float64 `json:"ts"`
+}
+
+// allowedVitalNames is the closed set of metric names we accept. Anything
+// else is dropped to bound label cardinality.
+var allowedVitalNames = map[string]struct{}{
+	"LCP":  {},
+	"INP":  {},
+	"CLS":  {},
+	"FCP":  {},
+	"TTFB": {},
+}
+
+// allowedRatings mirrors the strings emitted by the web-vitals JS library.
+// Unknown ratings are normalised to "unknown" so a client that ships a
+// novel rating string can't spawn an unbounded label.
+var allowedRatings = map[string]struct{}{
+	"good":               {},
+	"needs-improvement":  {},
+	"poor":               {},
+}
+
+// webVitalsHistogram is the single Prometheus surface exposed by this
+// handler. Buckets straddle two value scales:
+//
+//   - Time-based metrics (LCP, INP, FCP, TTFB) are reported in milliseconds
+//     and span ~10 ms .. ~10 s.
+//   - CLS is unitless (typical 0 .. 1).
+//
+// One histogram covers both because Prometheus histogram_quantile() is
+// computed per label set; the {name="CLS"} bucket distribution is
+// unaffected by the {name="LCP"} samples.
+var webVitalsHistogram = promauto.NewHistogramVec(
+	prometheus.HistogramOpts{
+		Namespace: "teslasync",
+		Name:      "web_vitals_value",
+		Help:      "Client-reported Web Vitals values (ms for time-based metrics, score for CLS).",
+		Buckets:   []float64{0.05, 0.1, 0.25, 0.5, 1, 2.5, 10, 50, 100, 250, 500, 1000, 2500, 5000, 10000},
+	},
+	[]string{"name", "rating", "route"},
+)
+
+// webVitalsBatchesIngestedTotal lets us alert on traffic loss / spikes.
+var webVitalsBatchesIngestedTotal = promauto.NewCounter(
+	prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "web_vitals_batches_ingested_total",
+		Help:      "Total Web Vitals batches successfully ingested from clients.",
+	},
+)
+
+var webVitalsSamplesIngestedTotal = promauto.NewCounter(
+	prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "web_vitals_samples_ingested_total",
+		Help:      "Total Web Vitals individual samples observed.",
+	},
+)
+
+var webVitalsSamplesRejectedTotal = promauto.NewCounterVec(
+	prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "web_vitals_samples_rejected_total",
+		Help:      "Web Vitals samples dropped before observation, labelled by reason.",
+	},
+	[]string{"reason"},
+)
+
+// WebVitalsHandler ingests browser-side Web Vitals samples.
+type WebVitalsHandler struct{}
+
+// NewWebVitalsHandler constructs a stateless ingest handler.
+func NewWebVitalsHandler() *WebVitalsHandler { return &WebVitalsHandler{} }
+
+// Ingest handles `POST /api/v1/web-vitals`. The endpoint is intentionally
+// public (no auth) — the body carries no PII, requests come from anonymous
+// browser sessions, and rate-limiting at the route layer is the only
+// guard required.
+func (h *WebVitalsHandler) Ingest(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	// Cap the read so a malicious client can't pin the process on JSON
+	// decode of an unbounded body.
+	r.Body = http.MaxBytesReader(w, r.Body, 64*1024)
+
+	var batch webVitalsBatch
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&batch); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid payload")
+		return
+	}
+
+	if len(batch.Metrics) == 0 {
+		writeError(w, http.StatusBadRequest, "empty batch")
+		return
+	}
+	if len(batch.Metrics) > maxWebVitalsBatchSize {
+		writeError(w, http.StatusBadRequest, "batch too large")
+		return
+	}
+
+	accepted := 0
+	for _, m := range batch.Metrics {
+		if _, ok := allowedVitalNames[m.Name]; !ok {
+			webVitalsSamplesRejectedTotal.WithLabelValues("unknown_name").Inc()
+			continue
+		}
+		rating := m.Rating
+		if _, ok := allowedRatings[rating]; !ok {
+			rating = "unknown"
+		}
+		webVitalsHistogram.
+			WithLabelValues(m.Name, rating, normalizeWebVitalsRoute(m.Route)).
+			Observe(m.Value)
+		accepted++
+	}
+
+	webVitalsSamplesIngestedTotal.Add(float64(accepted))
+	webVitalsBatchesIngestedTotal.Inc()
+
+	// Debug-only structured log so noisy histograms don't fill prod logs.
+	log.Debug().
+		Int("count", len(batch.Metrics)).
+		Int("accepted", accepted).
+		Msg("web-vitals batch ingested")
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// idLikeSegment matches segments that should be replaced with `:id` to
+// keep label cardinality bounded:
+//
+//   - Pure integer IDs (drives, charging sessions, vehicles).
+//   - UUID-like 32+ hex strings (with or without dashes).
+//   - Long opaque tokens (>=20 chars, mix of digits + letters).
+var (
+	intSegmentRE  = regexp.MustCompile(`^\d+$`)
+	uuidSegmentRE = regexp.MustCompile(`^[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}$`)
+	hexBlobRE     = regexp.MustCompile(`^[0-9a-fA-F]{20,}$`)
+)
+
+// normalizeWebVitalsRoute strips ID-like path segments so the metric label
+// cardinality stays bounded. /drives/123 → /drives/:id, /vehicles/abc/state →
+// /vehicles/abc/state (kept — short, alphabetic), /charging/uuid → /charging/:id.
+//
+// The result is always lower-cased, stripped of trailing slashes (except
+// for the bare root), and capped at maxRouteLabelLength characters.
+//
+// Distinct from saved_views_handler.normalizeRoute, which validates a
+// router-known route against an allow-list and returns ok=false on
+// mismatch — this one is more permissive because it labels arbitrary
+// pathnames captured from real browsers.
+func normalizeWebVitalsRoute(p string) string {
+	if p == "" {
+		return "/"
+	}
+
+	// Drop fragment + query — clients shouldn't send them, but be defensive.
+	if i := strings.IndexAny(p, "?#"); i >= 0 {
+		p = p[:i]
+	}
+
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+
+	parts := strings.Split(p, "/")
+	for i, part := range parts {
+		switch {
+		case part == "":
+			// Preserve leading "" (from leading "/") and any internal empty
+			// segments — they collapse harmlessly when we Join below.
+		case intSegmentRE.MatchString(part):
+			parts[i] = ":id"
+		case uuidSegmentRE.MatchString(part):
+			parts[i] = ":id"
+		case hexBlobRE.MatchString(part):
+			parts[i] = ":id"
+		default:
+			parts[i] = strings.ToLower(part)
+		}
+	}
+	out := strings.Join(parts, "/")
+
+	// Collapse any double slashes and strip a trailing slash (except root).
+	for strings.Contains(out, "//") {
+		out = strings.ReplaceAll(out, "//", "/")
+	}
+	if len(out) > 1 && strings.HasSuffix(out, "/") {
+		out = strings.TrimRight(out, "/")
+	}
+	if out == "" {
+		out = "/"
+	}
+
+	if len(out) > maxRouteLabelLength {
+		out = out[:maxRouteLabelLength]
+	}
+	return out
+}

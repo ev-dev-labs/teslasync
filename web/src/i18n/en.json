@@ -1787,6 +1787,16 @@
     "endpointCount": "{{count}} endpoints available"
   },
   "admin": {
+    "systemStatus": {
+      "clientPerformance": {
+        "title": "Client Performance",
+        "description": "Web Vitals (LCP, INP, CLS, FCP, TTFB) are collected from real browser sessions and exported as Prometheus histograms (teslasync_web_vitals_value).",
+        "collecting": "Collecting",
+        "metricsList": "LCP · INP · CLS · FCP · TTFB",
+        "viewDashboard": "View dashboard",
+        "noDashboard": "Set VITE_GRAFANA_URL at build time to surface a link to the Web Vitals dashboard."
+      }
+    },
     "security": {
       "col": {
         "time": "Time",

@@ -103,24 +103,32 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>,
 )
 
-// ── Web Vitals reporting (Phase 40 / Prompt 35) ───────────────────────────────
-// Lazy-loaded so it never blocks first paint. In dev we log to the console;
-// production currently no-ops (a future prompt will POST to a backend endpoint).
-// Captures the Core Web Vitals plus FCP/TTFB so we can correlate with the
-// performance budget in copilot-instructions.md (FCP < 1.5s on 4G).
-void import('web-vitals').then(({ onCLS, onINP, onLCP, onFCP, onTTFB }) => {
-  const report = (m: { name: string; value: number; id: string; rating?: string }) => {
-    if (import.meta.env.DEV) {
-      console.debug('[web-vitals]', m.name, Math.round(m.value), m.rating ?? '', m.id)
-    }
-  }
-  onCLS(report)
-  onINP(report)
-  onLCP(report)
-  onFCP(report)
-  onTTFB(report)
-}).catch((err) => {
-  if (import.meta.env.DEV) {
-    console.warn('[web-vitals] failed to load:', err)
-  }
-})
+// ── Web Vitals reporting (Phase 40 / Prompt 35, Phase 45 / Prompt 12) ──────
+// Lazy-loaded so it never blocks first paint. In production, ship metrics to
+// the backend (`POST /api/v1/web-vitals`) where they're aggregated as
+// Prometheus histograms. In dev we log to the console — production reporting
+// would be noisy from HMR reloads and unhelpful before the bundle is final.
+if (import.meta.env.PROD) {
+  void import('./lib/webVitalsReporter')
+    .then(({ startWebVitalsReporter }) => {
+      startWebVitalsReporter()
+    })
+    .catch(() => {
+      // Telemetry must never break the app; swallow load failures silently.
+    })
+} else {
+  void import('web-vitals')
+    .then(({ onCLS, onINP, onLCP, onFCP, onTTFB }) => {
+      const report = (m: { name: string; value: number; id: string; rating?: string }) => {
+        console.debug('[web-vitals]', m.name, Math.round(m.value), m.rating ?? '', m.id)
+      }
+      onCLS(report)
+      onINP(report)
+      onLCP(report)
+      onFCP(report)
+      onTTFB(report)
+    })
+    .catch((err) => {
+      console.warn('[web-vitals] failed to load:', err)
+    })
+}

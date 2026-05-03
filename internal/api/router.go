@@ -321,6 +321,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		httprate.LimitByIP(60, 1*time.Minute),
 	).Get("/api/v1/share/{token}", shareHandler.GetPublicShare)
 
+	// Public: Web Vitals ingest (Phase 45 / Prompt 12). Anonymous browsers
+	// POST batches of LCP/INP/CLS/FCP/TTFB samples here. Mounted outside
+	// the /api/v1 ForwardAuth subrouter so logged-out clients can still
+	// report — the body carries no PII and the handler caps batch size +
+	// label cardinality. Rate-limited per IP to bound abuse.
+	webVitalsHandler := NewWebVitalsHandler()
+	r.With(
+		httprate.LimitByIP(120, 1*time.Minute),
+	).Post("/api/v1/web-vitals", webVitalsHandler.Ingest)
+
+
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
 		// APICallLog middleware: persist every inbound /api/v1 request to
