@@ -527,6 +527,12 @@ export default function DashboardPage() {
       {/* Kiosk Mode — portaled to document.body to escape all app chrome */}
       {isKiosk && createPortal(
         <div
+          // Phase-45 / Prompt 04: NOT migrated to <Modal>.
+          // Rationale: kiosk root is a full-screen mounting point for the
+          // dashboard grid in kiosk mode, not a dialog. It hosts the live
+          // dashboard, not user-dismissable content. New interactive dialogs
+          // MUST use <Modal>.
+          // eslint-disable-next-line no-restricted-syntax
           className="kiosk-root fixed inset-0 z-[9990]"
           style={{
             backgroundColor: `rgba(10, 10, 20, ${kioskConfig.backgroundOpacity ?? 1})`,

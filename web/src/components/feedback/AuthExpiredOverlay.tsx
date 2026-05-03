@@ -26,6 +26,12 @@ export function AuthExpiredOverlay() {
   if (!show) return null;
 
   return (
+    // Phase-45 / Prompt 04: NOT migrated to <Modal>.
+    // Rationale: page-blocking system message that's never dismissable from
+    // inside (only via "Sign In Again" reload). Must remain on top of <Modal>
+    // (z-[60]) so a stale modal can't obscure the auth wall during expiry.
+    // New interactive dialogs MUST use <Modal>.
+    // eslint-disable-next-line no-restricted-syntax
     <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6">
       <GlassPanel className="p-8 max-w-sm text-center space-y-4">
         <Lock className="h-12 w-12 text-neon-amber mx-auto" />

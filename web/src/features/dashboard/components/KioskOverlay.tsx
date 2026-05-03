@@ -55,6 +55,11 @@ export function KioskOverlay({
       {/* Dim overlay — pointer-events-none so it doesn't block interaction */}
       {isDimmed && (
         <div
+          // Phase-45 / Prompt 04: NOT migrated to <Modal>.
+          // Rationale: non-interactive kiosk wallpaper layer (pointer-events-none)
+          // for ambient screen dimming. Not a dialog. New interactive dialogs
+          // MUST use <Modal>.
+          // eslint-disable-next-line no-restricted-syntax
           className="fixed inset-0 z-[9998] bg-black pointer-events-none transition-opacity duration-1000"
           style={{ opacity: 1 - config.dimLevel }}
         />
@@ -62,6 +67,11 @@ export function KioskOverlay({
 
       {/* Cursor hiding — scoped to kiosk root via parent className */}
       {isCursorHidden && (
+        // Phase-45 / Prompt 04: NOT migrated to <Modal>.
+        // Rationale: non-interactive kiosk wallpaper layer (pointer-events-none)
+        // that injects a CSS rule to hide the cursor. Not a dialog. New
+        // interactive dialogs MUST use <Modal>.
+        // eslint-disable-next-line no-restricted-syntax
         <div className="fixed inset-0 z-[9997] pointer-events-none" aria-hidden="true">
           <style>{`.kiosk-root, .kiosk-root * { cursor: none !important; }`}</style>
         </div>

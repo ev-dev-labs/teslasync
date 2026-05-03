@@ -637,6 +637,12 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             data-role="command-palette"
+            // Phase-45 / Prompt 04: NOT migrated to <Modal>.
+            // Rationale: command palette is its own keyboard-driven primitive
+            // with custom search behavior, multi-mode navigation, and a
+            // distinct visual treatment (top-anchored card, not centered
+            // dialog). New interactive dialogs MUST use <Modal>.
+            // eslint-disable-next-line no-restricted-syntax
             className="fixed inset-0 z-[200] bg-slate-950/35 backdrop-blur-sm dark:bg-black/60"
             onClick={close}
           />

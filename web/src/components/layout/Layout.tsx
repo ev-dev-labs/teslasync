@@ -1007,6 +1007,11 @@ export default function Layout() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            // Phase-45 / Prompt 04: NOT migrated to <Modal>.
+            // Rationale: drawer scrim — pure backdrop with no content. Pairs
+            // with the <aside> sidebar (drawer pattern), not a dialog. New
+            // interactive dialogs MUST use <Modal>.
+            // eslint-disable-next-line no-restricted-syntax
             className="fixed inset-0 z-[65] bg-slate-950/35 backdrop-blur-sm dark:bg-black/60 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
