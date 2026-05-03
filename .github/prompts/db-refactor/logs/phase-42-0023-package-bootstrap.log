@@ -212,3 +212,11 @@ ok  	github.com/ev-dev-labs/teslasync/internal/tesla/bootstrap	(cached)
 All gate checks passed.
 EXIT=0
 STATUS=DONE
+=== COMMIT ===
+[refactor/signals-rewrite 500d940c] phase-42(0023): bootstrap package ΓÇö seed unit_history from gui_settings
+ 4 files changed, 1339 insertions(+)
+ create mode 100644 .github/prompts/db-refactor/logs/phase-42-0023-package-bootstrap.log
+ create mode 100644 internal/tesla/bootstrap/bootstrap.go
+ create mode 100644 internal/tesla/bootstrap/bootstrap_test.go
+ create mode 100644 internal/tesla/bootstrap/types.go
+COMMIT_EXIT=0
