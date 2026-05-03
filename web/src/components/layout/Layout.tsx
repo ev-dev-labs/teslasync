@@ -31,6 +31,7 @@ import Logo from '../ui/Logo'
 import { Button, ThemePicker } from '@/components/ui'
 import { Breadcrumbs } from './Breadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
+import { NavSectionHeader } from './sidebar/NavSectionHeader'
 import { request } from '@/api/client'
 import type { Alert, Vehicle, VersionInfo, StaleSessionsResponse } from '@/api/types'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
@@ -1093,7 +1094,7 @@ export default function Layout() {
             >
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
                     {t('nav.currentSection', 'Current')}
                   </p>
                   <p className="mt-1 truncate text-sm font-semibold text-[var(--text-primary)]">
@@ -1126,10 +1127,11 @@ export default function Layout() {
 
           {pinnedNavItems.length > 0 && (
             <div>
-              <p className="mb-1.5 px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                {t('nav.pinned', 'Pinned')}
-              </p>
-              <div className="space-y-0.5">
+              <NavSectionHeader
+                id="nav-pinned-label"
+                label={t('nav.pinned', 'Pinned')}
+              />
+              <div className="space-y-0.5" aria-labelledby="nav-pinned-label">
                 {pinnedNavItems.map(item => (
                   <div key={item.to} className="flex items-center gap-1">
                     <div className="min-w-0 flex-1">
@@ -1153,47 +1155,49 @@ export default function Layout() {
 
           {recentNavItems.length > 0 && (
             <div>
-              <p className="mb-1.5 px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                {t('nav.recentlyUsed', 'Recently Used')}
-              </p>
-              <div className="space-y-0.5">
+              <NavSectionHeader
+                id="nav-recent-label"
+                label={t('nav.recentlyUsed', 'Recently Used')}
+              />
+              <div className="space-y-0.5" aria-labelledby="nav-recent-label">
                 {recentNavItems.map(item => renderNavLink(item, true, 'recent'))}
               </div>
             </div>
           )}
 
-          <div className="space-y-1">
-            <div className="mb-1 flex items-center justify-between gap-2 px-3">
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                {t('nav.sections', 'Sections')}
-              </p>
-              <div className="flex items-center gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-label={t('nav.expandAll', 'Expand all sections')}
-                  title={t('nav.expandAll', 'Expand all sections')}
-                  disabled={expandedSectionCount === visibleNavSections.length}
-                  onClick={expandAllSections}
-                  className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
-                >
-                  <Icons.expandAll className="h-4 w-4" aria-hidden="true" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-label={t('nav.collapseAll', 'Collapse all sections')}
-                  title={t('nav.collapseAll', 'Collapse all sections')}
-                  disabled={expandedSectionCount === 0}
-                  onClick={collapseAllSections}
-                  className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
-                >
-                  <Icons.collapseAll className="h-4 w-4" aria-hidden="true" />
-                </Button>
-              </div>
-            </div>
+          <div className="space-y-1" aria-labelledby="nav-sections-label">
+            <NavSectionHeader
+              id="nav-sections-label"
+              label={t('nav.sections', 'Sections')}
+              action={
+                <div className="flex items-center gap-0.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label={t('nav.expandAll', 'Expand all sections')}
+                    title={t('nav.expandAll', 'Expand all sections')}
+                    disabled={expandedSectionCount === visibleNavSections.length}
+                    onClick={expandAllSections}
+                    className="h-6 w-6 shrink-0 rounded p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
+                  >
+                    <Icons.expandAll className="h-3.5 w-3.5" aria-hidden="true" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label={t('nav.collapseAll', 'Collapse all sections')}
+                    title={t('nav.collapseAll', 'Collapse all sections')}
+                    disabled={expandedSectionCount === 0}
+                    onClick={collapseAllSections}
+                    className="h-6 w-6 shrink-0 rounded p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
+                  >
+                    <Icons.collapseAll className="h-3.5 w-3.5" aria-hidden="true" />
+                  </Button>
+                </div>
+              }
+            />
             {visibleNavSections.map(section => {
               const isExpanded = expandedSections.has(section.title)
               const isActiveSection = section.title === activeSectionTitle
