@@ -4,8 +4,9 @@ import { GlassPanel } from '@/components/ui';
 import {
   ChartTooltip, chartGrid, axisTickSm,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, CHART_COLORS, AREA_DEFAULTS,
+  ResponsiveContainer, AREA_DEFAULTS,
 } from '@/components/charts';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { fmtNumber } from '@/lib/numberFormat';
 
 interface CostPerKwhChartProps {
@@ -14,6 +15,7 @@ interface CostPerKwhChartProps {
 
 export function CostPerKwhChart({ data }: CostPerKwhChartProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
 
   return (
     <GlassPanel className="p-4">
@@ -35,7 +37,7 @@ export function CostPerKwhChart({ data }: CostPerKwhChartProps) {
               {...AREA_DEFAULTS}
               dataKey="costPerKwh"
               name={t('costAnalysis.charts.rateLabel', '$/kWh')}
-              stroke={CHART_COLORS[2]}
+              stroke={palette[2]}
               activeDot={{ r: 4, strokeWidth: 0 }}
             />
           </LineChart>

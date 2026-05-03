@@ -5,8 +5,9 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer,
   renderAnnotationLines,
-  CHART_COLORS, AREA_DEFAULTS, areaGradient,
+  AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import type { MonthlyBucket } from './types';
 
 interface MonthlyCostChartProps {
@@ -16,6 +17,7 @@ interface MonthlyCostChartProps {
 
 export function MonthlyCostChart({ data, vehicleId }: MonthlyCostChartProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
 
   return (
     <ChartContainer
@@ -27,7 +29,7 @@ export function MonthlyCostChart({ data, vehicleId }: MonthlyCostChartProps) {
         data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
-              {areaGradient('costGrad', CHART_COLORS[0])}
+              {areaGradient('costGrad', palette[0])}
               <CartesianGrid {...chartGrid} />
               <XAxis
                 dataKey="month"
@@ -47,7 +49,7 @@ export function MonthlyCostChart({ data, vehicleId }: MonthlyCostChartProps) {
                 {...AREA_DEFAULTS}
                 dataKey="cost"
                 name={t('costAnalysis.charts.cost', 'Cost ($)')}
-                stroke={CHART_COLORS[0]}
+                stroke={palette[0]}
                 fill="url(#costGrad)"
               />
             </AreaChart>

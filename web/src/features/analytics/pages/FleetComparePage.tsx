@@ -13,7 +13,7 @@ import { StatCard } from '@/components/data-display';
 import { EmptyState, Skeleton, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
-  ChartContainer, ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
+  ChartContainer, ChartTooltip, AREA_DEFAULTS,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, BarChart, Bar,
   chartMarginLabeled, axisTick, chartAnimation,
@@ -24,6 +24,7 @@ import { useDrivingStats } from '@/api/hooks/useDriving';
 import { useCostBreakdown, useMonthlyMileage } from '@/api/hooks/useAnalytics';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { Vehicle } from '@/types/vehicle';
@@ -227,6 +228,9 @@ export default function FleetComparePage() {
     convertEfficiency, distanceUnit, speedUnit,
     efficiencyUnit, currencySymbol,
   } = useSettings();
+
+  // Phase-45/23 — reactive chart palette (CB-safe / neon per user pref).
+  const palette = useChartPalette();
 
   // Phase 40 / Prompt 39 — accept ?leftId= and ?rightId= query params so other
   // pages (e.g. VehicleListPage's "Compare vehicles" button) can deep-link
@@ -610,14 +614,14 @@ export default function FleetComparePage() {
                   {...AREA_DEFAULTS}
                   dataKey="distA"
                   name={nameA}
-                  stroke={CHART_COLORS[0]}
+                  stroke={palette[0]}
                   {...chartAnimation}
                 />
                 <Line
                   {...AREA_DEFAULTS}
                   dataKey="distB"
                   name={nameB}
-                  stroke={CHART_COLORS[1]}
+                  stroke={palette[1]}
                   {...chartAnimation}
                 />
               </LineChart>
@@ -648,8 +652,8 @@ export default function FleetComparePage() {
                     )}
                   />
                   <Legend />
-                  <Bar dataKey="drivesA" name={nameA} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} {...chartAnimation} />
-                  <Bar dataKey="drivesB" name={nameB} fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} {...chartAnimation} />
+                  <Bar dataKey="drivesA" name={nameA} fill={palette[0]} radius={[4, 4, 0, 0]} {...chartAnimation} />
+                  <Bar dataKey="drivesB" name={nameB} fill={palette[1]} radius={[4, 4, 0, 0]} {...chartAnimation} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (

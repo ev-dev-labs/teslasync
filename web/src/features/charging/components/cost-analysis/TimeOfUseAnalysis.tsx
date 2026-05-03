@@ -4,8 +4,9 @@ import { GlassPanel } from '@/components/ui';
 import {
   ChartTooltip, chartGrid, axisTickSm,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell, CHART_COLORS,
+  ResponsiveContainer, Cell,
 } from '@/components/charts';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { HourBucket, TouInsights } from './types';
 
@@ -16,6 +17,7 @@ interface TimeOfUseAnalysisProps {
 
 export function TimeOfUseAnalysis({ hourlyData, touInsights }: TimeOfUseAnalysisProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
 
   return (
     <GlassPanel className="p-4">
@@ -52,7 +54,7 @@ export function TimeOfUseAnalysis({ hourlyData, touInsights }: TimeOfUseAnalysis
                       ? '#ef4444'
                       : isOffPeak
                         ? '#10b981'
-                        : CHART_COLORS[0];
+                        : palette[0];
                     return <Cell key={entry.hour} fill={color} />;
                   })}
                 </Bar>

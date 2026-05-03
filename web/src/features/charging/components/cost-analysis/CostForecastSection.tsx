@@ -7,8 +7,8 @@ import {
   ChartTooltip, chartGrid, axisTickSm, AREA_DEFAULTS, areaGradient,
   ComposedChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, Legend,
-  CHART_COLORS,
 } from '@/components/charts';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import type { CostForecastData } from '@/types/charging';
 import { ForecastDetails } from './ForecastDetails';
 
@@ -18,6 +18,7 @@ interface CostForecastSectionProps {
 
 export function CostForecastSection({ forecastData }: CostForecastSectionProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const historicalData = forecastData?.historical ?? [];
   const forecast = forecastData?.forecast ?? [];
   const hasForecast = historicalData.length >= 3 && forecast.length > 0;
@@ -54,14 +55,14 @@ export function CostForecastSection({ forecastData }: CostForecastSectionProps) 
               >
                 <CartesianGrid {...chartGrid} />
                 {areaGradient('forecastBand', '#a855f7', 0.15)}
-                {areaGradient('actualCostFill', CHART_COLORS[0], 0.3)}
+                {areaGradient('actualCostFill', palette[0], 0.3)}
                 <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
                 <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit="$" />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend />
                 <Area {...AREA_DEFAULTS} dataKey="ci_low" stackId="ci" stroke="none" fill="transparent" fillOpacity={0} legendType="none" connectNulls={false} />
                 <Area {...AREA_DEFAULTS} dataKey="ci_band" stackId="ci" stroke="none" fill="url(#forecastBand)" name={t('costAnalysis.forecast.confidence', '95% Confidence')} connectNulls={false} />
-                <Area {...AREA_DEFAULTS} dataKey="actual" stroke={CHART_COLORS[0]} fill="url(#actualCostFill)" name={t('costAnalysis.forecast.actual', 'Actual Cost')} connectNulls={false} />
+                <Area {...AREA_DEFAULTS} dataKey="actual" stroke={palette[0]} fill="url(#actualCostFill)" name={t('costAnalysis.forecast.actual', 'Actual Cost')} connectNulls={false} />
                 <Line {...AREA_DEFAULTS} dataKey="forecast" stroke="#a855f7" strokeDasharray="8 4" name={t('costAnalysis.forecast.projected', 'Projected Cost')} connectNulls={false} />
               </ComposedChart>
             </ResponsiveContainer>

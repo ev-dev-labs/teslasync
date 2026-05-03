@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
   ComposedChart, Line, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  chartGrid, axisTick, axisTickSm, chartAnimation, fmt, useChartPalette,
+  chartGrid, axisTick, axisTickSm, chartAnimation, fmt, useThemeChartPalette,
   areaGradient,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
@@ -63,7 +63,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
   const isWide = size.cols >= 3;
 
   // Phase-40 / Prompt 60 — chart series colors derive from the active theme.
-  const palette = useChartPalette();
+  const palette = useThemeChartPalette();
 
   const chartData = useMemo((): ChartDatum[] => {
     const points = telemetry ?? [];

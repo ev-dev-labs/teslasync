@@ -41,6 +41,7 @@ const defaults: AppSettings = {
   critical_flash_enabled: true,
   ui_density: 'comfortable',
   time_format_default: 'relative',
+  chart_palette: 'cb_safe',
 }
 
 /**

@@ -6,7 +6,6 @@ import {
   ChartTooltip,
   chartGrid,
   axisTickSm,
-  CHART_COLORS,
   AREA_DEFAULTS,
   LineChart,
   Line,
@@ -16,6 +15,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from '@/components/charts';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { isDcSession, avg } from './helpers';
 import type { MonthlySpeed } from './types';
 
@@ -25,6 +25,7 @@ interface SpeedTrendChartProps {
 
 export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
 
   const monthlyTrend = useMemo((): MonthlySpeed[] => {
     if (!sessions.length) return [];
@@ -78,16 +79,16 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
             {...AREA_DEFAULTS}
             dataKey="dcAvgKw"
             name={t('charging.curve.dcAvg', 'DC Avg')}
-            stroke={CHART_COLORS[0]}
-            dot={{ r: 3, fill: CHART_COLORS[0] }}
+            stroke={palette[0]}
+            dot={{ r: 3, fill: palette[0] }}
             unit=" kW"
           />
           <Line
             {...AREA_DEFAULTS}
             dataKey="acAvgKw"
             name={t('charging.curve.acAvg', 'AC Avg')}
-            stroke={CHART_COLORS[1]}
-            dot={{ r: 3, fill: CHART_COLORS[1] }}
+            stroke={palette[1]}
+            dot={{ r: 3, fill: palette[1] }}
             unit=" kW"
           />
         </LineChart>

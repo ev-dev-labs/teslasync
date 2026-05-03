@@ -7,7 +7,6 @@ import {
   ChartTooltip,
   chartGrid,
   axisTickSm,
-  CHART_COLORS,
   LineChart,
   Line,
   XAxis,
@@ -17,6 +16,7 @@ import {
   ResponsiveContainer,
   AREA_DEFAULTS,
 } from '@/components/charts';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { FadeIn } from '@/components/motion';
 import { generateChargingCurve, getChargerLabel } from './helpers';
 
@@ -26,6 +26,7 @@ interface SessionComparisonChartProps {
 
 export default function SessionComparisonChart({ sessions }: SessionComparisonChartProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
 
   const comparisonSessions = useMemo(() => sessions.slice(0, 10), [sessions]);
 
@@ -90,7 +91,7 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
                 {...AREA_DEFAULTS}
                 dataKey={`s${i}`}
                 name={`${formatDateShort(s.start_ts)} (${getChargerLabel(s)})`}
-                stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                stroke={palette[i % palette.length]}
                 strokeWidth={1.5}
                 unit=" kW"
               />
@@ -102,7 +103,7 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
             <div key={s.id} className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
               <span
                 className="inline-block h-2 w-3 rounded-sm"
-                style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
+                style={{ backgroundColor: palette[i % palette.length] }}
               />
               {formatDateShort(s.start_ts)}
             </div>

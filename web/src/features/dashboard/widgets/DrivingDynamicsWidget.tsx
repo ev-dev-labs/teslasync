@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
-import { RadialGauge, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, axisTick, axisTickSm, chartGrid, useChartPalette } from '@/components/charts';
+import { RadialGauge, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, axisTick, axisTickSm, chartGrid, useThemeChartPalette } from '@/components/charts';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useDrivingDynamics, useAccelerationDistribution } from '@/api/hooks/useDriving';
@@ -72,7 +72,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
   const isWide = size.cols >= 3;
 
   // Phase-40 / Prompt 60 — chart colors derive from active theme.
-  const palette = useChartPalette();
+  const palette = useThemeChartPalette();
 
   const maxG = Math.max(
     dynamics?.maxAccelerationG ?? 0,

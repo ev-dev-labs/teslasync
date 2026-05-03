@@ -10,7 +10,7 @@ import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel, Select, Button } from '@/components/ui';
 import { MetricCard, SavedViewMenu, DataFreshnessAuto } from '@/components/data-display';
 import {
-  RadialGauge, ChartTooltip, ChartContainer, CHART_COLORS,
+  RadialGauge, ChartTooltip, ChartContainer,
   chartGrid, axisTickSm,
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -24,6 +24,7 @@ import { useFleetAnalytics, useMileageStats, useStateSummary } from '@/api/hooks
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlString } from '@/hooks/useUrlState';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -93,6 +94,9 @@ export default function StatisticsPage() {
   const { data: vehicles } = useVehicles();
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
+  // Phase-45/23 — reactive chart palette (CB-safe / neon per user pref).
+  const palette = useChartPalette();
+
   /* ── Data hooks ────────────────────────────────────────────────── */
   const statsQuery = useQuery({
     queryKey: ['period-stats', activeId],
@@ -116,9 +120,9 @@ export default function StatisticsPage() {
     return stateSummary.map((e) => ({
       name: e.state,
       value: Math.round((e.totalMin / Math.max(total, 1)) * 100),
-      fill: STATE_COLORS[e.state] ?? CHART_COLORS[5],
+      fill: STATE_COLORS[e.state] ?? palette[5],
     }));
-  }, [stateSummary]);
+  }, [stateSummary, palette]);
 
   const compData = useMemo(() => {
     if (!fleet?.vehicle_comparison) return [];
@@ -261,8 +265,8 @@ export default function StatisticsPage() {
                       <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                       <Tooltip content={<ChartTooltip />} />
                       <Legend />
-                      <Bar dataKey="distance" name={`${t('statistics.distance', 'Distance')} (${distanceUnit})`} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="energy" name={t('statistics.energy', 'Energy (kWh)')} fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="distance" name={`${t('statistics.distance', 'Distance')} (${distanceUnit})`} fill={palette[0]} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="energy" name={t('statistics.energy', 'Energy (kWh)')} fill={palette[1]} radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

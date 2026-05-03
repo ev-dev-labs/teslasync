@@ -242,6 +242,16 @@ export interface AppSettings {
    * tooltip. Defaults to 'relative'. (Phase-45 / 22.)
    */
   time_format_default?: 'relative' | 'absolute'
+  /**
+   * User's preferred chart series palette.
+   *   - 'cb_safe' (default) → Okabe-Ito color-blind-safe palette.
+   *   - 'neon'              → original stylistic neon palette.
+   * Consumed by the reactive `useChartPalette()` hook in
+   * `@/hooks/useChartPalette`. The static `CHART_COLORS` constant
+   * always renders CB-safe regardless of this preference.
+   * (Phase-45 / 23.)
+   */
+  chart_palette?: 'cb_safe' | 'neon'
 }
 
 /** Per-endpoint toggle config for Tesla Fleet API calls. */

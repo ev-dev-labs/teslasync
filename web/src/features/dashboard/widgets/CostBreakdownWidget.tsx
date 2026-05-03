@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PieChart as PieIcon, DollarSign, TrendingDown, Fuel } from 'lucide-react';
 import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, useChartPalette,
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, useThemeChartPalette,
 } from '@/components/charts';
 import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
@@ -75,7 +75,7 @@ export default function CostBreakdownWidget({ vehicleId, size }: WidgetProps) {
   const isCompact = size.cols <= 1;
 
   // Phase-40 / Prompt 60 — series colours from active theme.
-  const palette = useChartPalette();
+  const palette = useThemeChartPalette();
 
   const monthlyEntries = useMemo(() => data?.monthly_breakdown ?? [], [data]);
 

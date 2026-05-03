@@ -9,10 +9,12 @@ import {
   setAchievementCelebrationPrefs,
 } from '@/hooks/useAchievementCelebrationPrefs'
 import { cn } from '@/lib/cn'
-import { Palette, CheckCircle, Rows3, PanelBottom, Trophy, Clock } from 'lucide-react'
+import { Palette, CheckCircle, Rows3, PanelBottom, Trophy, Clock, Eye } from 'lucide-react'
+import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors'
 
 type DensityId = 'compact' | 'comfortable' | 'spacious'
 type TimeFormatId = 'relative' | 'absolute'
+type ChartPaletteId = 'cb_safe' | 'neon'
 
 export function AppearanceSettings() {
   const { t } = useTranslation('settings')
@@ -33,6 +35,13 @@ export function AppearanceSettings() {
   const timeFormat: TimeFormatId =
     (settings?.time_format_default as TimeFormatId | undefined) ?? 'relative'
 
+  // Chart palette default (Phase-45 / Prompt 23). Drives the reactive
+  // `useChartPalette()` hook so consumers re-render with the new colours
+  // when the user toggles between the CB-safe Okabe-Ito default and the
+  // stylistic neon palette.
+  const chartPalette: ChartPaletteId =
+    (settings?.chart_palette as ChartPaletteId | undefined) ?? 'cb_safe'
+
   // Footer status bar prefs (Phase-40 / Prompt 59). Persisted to
   // localStorage rather than the server so toggling is instant and works
   // offline; cross-tab sync is handled inside useStatusBarPrefs.
@@ -52,6 +61,37 @@ export function AppearanceSettings() {
     if (!settings || next === timeFormat) return
     saveSettings.mutate({ ...settings, time_format_default: next })
   }
+
+  function setChartPalette(next: ChartPaletteId) {
+    if (!settings || next === chartPalette) return
+    saveSettings.mutate({ ...settings, chart_palette: next })
+  }
+
+  const chartPaletteChoices: {
+    id: ChartPaletteId
+    label: string
+    help: string
+    swatches: readonly string[]
+  }[] = [
+    {
+      id: 'cb_safe',
+      label: t('theme.chartPalette.cbSafe', 'Color-blind safe'),
+      help: t(
+        'theme.chartPalette.cbSafeHelp',
+        'Okabe-Ito palette — distinguishable for all CVD types.',
+      ),
+      swatches: CHART_COLORS_CB_SAFE,
+    },
+    {
+      id: 'neon',
+      label: t('theme.chartPalette.neon', 'Stylistic neon'),
+      help: t(
+        'theme.chartPalette.neonHelp',
+        'Bright cyan/magenta — best when colour vision is unimpaired.',
+      ),
+      swatches: CHART_COLORS_NEON,
+    },
+  ]
 
   const timeFormatChoices: { id: TimeFormatId; label: string; help: string }[] = [
     { id: 'relative', label: t('theme.timeFormat.relative', 'Relative (2h ago)'), help: t('theme.timeFormat.relativeHelp', 'Best for recent activity feeds') },
@@ -209,6 +249,64 @@ export function AppearanceSettings() {
           </div>
           <p className="mt-2 text-xs text-[var(--text-muted)]">
             {t('theme.timeFormat.help', 'Hover any timestamp to see the alternate format. Override per-surface with the format prop where needed.')}
+          </p>
+        </div>
+
+        {/* Chart palette (Phase-45 / Prompt 23) */}
+        <div data-tour="settings-chart-palette">
+          <div className="flex items-center gap-2 mb-3">
+            <Eye className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              {t('theme.chartPalette.label', 'Chart palette')}
+            </p>
+          </div>
+          <div
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+            role="radiogroup"
+            aria-label={t('theme.chartPalette.label', 'Chart palette')}
+          >
+            {chartPaletteChoices.map(choice => {
+              const active = chartPalette === choice.id
+              return (
+                <Button
+                  key={choice.id}
+                  variant="ghost"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setChartPalette(choice.id)}
+                  disabled={!settings || saveSettings.isPending}
+                  className={cn(
+                    'flex items-start gap-3 rounded-xl border p-3.5 h-auto transition-all duration-normal justify-start text-left',
+                    active
+                      ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
+                      : 'border-[var(--glass-border)] bg-[var(--surface-2)] hover:border-[var(--theme-primary)]/30',
+                  )}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{choice.label}</p>
+                    <p className="text-[11px] text-[var(--text-muted)]">{choice.help}</p>
+                    <div
+                      className="mt-2 flex items-center gap-1"
+                      aria-hidden="true"
+                    >
+                      {choice.swatches.map((hex, i) => (
+                        <span
+                          key={`${choice.id}-${i}`}
+                          className="h-3 w-3 rounded-full border border-[var(--glass-border)]"
+                          style={{ background: hex }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  {active && (
+                    <CheckCircle className="h-4 w-4 ml-auto shrink-0 text-[var(--theme-primary)]" />
+                  )}
+                </Button>
+              )
+            })}
+          </div>
+          <p className="mt-2 text-xs text-[var(--text-muted)]">
+            {t('theme.chartPalette.help', 'Defaults to the Okabe-Ito palette so series remain distinguishable for the ~8% of users with red-green colour vision deficiency.')}
           </p>
         </div>
 

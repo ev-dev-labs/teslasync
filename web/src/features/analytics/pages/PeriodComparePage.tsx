@@ -12,13 +12,14 @@ import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
-  ChartTooltip, CHART_COLORS,
+  ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, chartMarginLabeled, axisTick, chartAnimation,
 } from '@/components/charts';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { useUrlEnum, useUrlString } from '@/hooks/useUrlState';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -74,6 +75,9 @@ export default function PeriodComparePage() {
   const [vehicleId, setVehicleId] = useUrlString('vehicle_id', '');
   const [periodA, setPeriodA] = useUrlEnum<PeriodValue>('period_a', PERIOD_VALUES, '30');
   const [periodB, setPeriodB] = useUrlEnum<PeriodValue>('period_b', PERIOD_VALUES, '90');
+
+  // Phase-45/23 — reactive chart palette (CB-safe / neon per user pref).
+  const palette = useChartPalette();
 
   // Disambiguation banner — defaults to visible, persists dismissal.
   const [bannerVisible, setBannerVisible] = useState<boolean>(() => {
@@ -362,14 +366,14 @@ export default function PeriodComparePage() {
                   <Bar
                     dataKey="A"
                     name={t('compare.periodA', 'Period A')}
-                    fill={CHART_COLORS[0]}
+                    fill={palette[0]}
                     radius={[4, 4, 0, 0]}
                     {...chartAnimation}
                   />
                   <Bar
                     dataKey="B"
                     name={t('compare.periodB', 'Period B')}
-                    fill={CHART_COLORS[1]}
+                    fill={palette[1]}
                     radius={[4, 4, 0, 0]}
                     {...chartAnimation}
                   />

@@ -10,7 +10,7 @@ import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion';
 import {
-  ChartTooltip, CHART_COLORS,
+  ChartTooltip,
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS, areaGradient,
@@ -20,6 +20,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useSettings } from '@/hooks/useSettings';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -60,6 +61,9 @@ export default function MileagePage() {
   usePageTitle(t('mileage.title', 'Mileage'));
 
   const { convertDistance, distanceUnit } = useSettings();
+
+  // Phase-45/23 — reactive chart palette (CB-safe / neon per user pref).
+  const palette = useChartPalette();
 
   // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
   const { vehicleId } = useSelectedVehicle();
@@ -186,7 +190,7 @@ export default function MileagePage() {
           ) : (
             <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={odometerData}>
-                {areaGradient('odoGrad', CHART_COLORS[2])}
+                {areaGradient('odoGrad', palette[2])}
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" />
                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                 <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -194,7 +198,7 @@ export default function MileagePage() {
                 <Area
                   {...AREA_DEFAULTS}
                   dataKey="odometer"
-                  stroke={CHART_COLORS[2]}
+                  stroke={palette[2]}
                   fill="url(#odoGrad)"
                   name={`${t('Odometer')} (${distanceUnit})`}
                 />
@@ -221,7 +225,7 @@ export default function MileagePage() {
                 <Tooltip content={<ChartTooltip />} />
                 <Bar
                   dataKey="distance"
-                  fill={CHART_COLORS[0]}
+                  fill={palette[0]}
                   radius={[4, 4, 0, 0]}
                   name={`${t('Distance')} (${distanceUnit})`}
                 />
