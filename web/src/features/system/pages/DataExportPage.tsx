@@ -769,7 +769,7 @@ function ExportHistoryTable({
       </div>
 
       {!jobs || jobs.length === 0 ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Icons.fileDown className="h-10 w-10" />}
           title={t('dataExport.noExports', 'No Exports Yet')}
           message={t('dataExport.noExportsMessage', 'Create your first export above to get started.')}

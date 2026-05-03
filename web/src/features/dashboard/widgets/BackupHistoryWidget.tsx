@@ -114,7 +114,7 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
         isError={sitesIsError}
         onRefresh={() => refetchSites()}
       >
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<BatteryFull className="h-5 w-5" />}
           message={t('widget.backupHistory.noSite', 'No Tesla Energy site linked')}
           className="py-4"
@@ -136,7 +136,7 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
         onRefresh={handleRefresh}
       >
         {items.length === 0 && !isLoading ? (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<BatteryFull className="h-5 w-5" />}
             message={t('widget.backupHistory.noEvents', 'No backup events in the last 30 days')}
             className="py-4"
@@ -185,7 +185,7 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
       onRefresh={handleRefresh}
     >
       {items.length === 0 && !isLoading ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<BatteryFull className="h-5 w-5" />}
           message={t('widget.backupHistory.noEvents', 'No backup events in the last 30 days')}
           className="py-4"

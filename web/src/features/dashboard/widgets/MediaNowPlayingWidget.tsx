@@ -121,7 +121,7 @@ export default function MediaNowPlayingWidget({ vehicleId, size }: WidgetProps) 
           </div>
         )
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Music className="h-5 w-5" />}
           message={t('widget.noMedia', 'Nothing playing')}
           className="py-4"

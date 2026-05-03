@@ -233,7 +233,7 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
           />
         )
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Users className="h-5 w-5" />}
           message={t('widget.vehicleAccessNoData', 'No access data available')}
           className="py-4"

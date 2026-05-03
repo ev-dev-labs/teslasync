@@ -165,7 +165,7 @@ export default function StatisticsPage() {
       {isLoading ? (
         <StatisticsSkeleton />
       ) : !stats ? (
-        <EmptyState icon={<BarChart3 className="h-10 w-10" />} title={t('statistics.noData', 'No Data')} message={t('statistics.noDataMsg', 'No statistics available for this vehicle.')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<BarChart3 className="h-10 w-10" />} title={t('statistics.noData', 'No Data')} message={t('statistics.noDataMsg', 'No statistics available for this vehicle.')} />
       ) : (
         <>
           {/* ── Period Stats ──────────────────────────────────── */}
@@ -207,7 +207,7 @@ export default function StatisticsPage() {
                   </Grid>
                 </Grid>
               ) : (
-                <EmptyState icon={<Battery className="h-8 w-8" />} message={t('statistics.noBattery', 'No battery health data available')} className="py-8" />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Battery className="h-8 w-8" />} message={t('statistics.noBattery', 'No battery health data available')} className="py-8" />
               )}
             </GlassPanel>
           </FadeIn>
@@ -230,7 +230,7 @@ export default function StatisticsPage() {
                     </ResponsiveContainer>
                   </div>
                 ) : (
-                  <EmptyState icon={<Clock className="h-8 w-8" />} message={t('statistics.noStates', 'No state distribution data')} className="py-8" />
+                  <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Clock className="h-8 w-8" />} message={t('statistics.noStates', 'No state distribution data')} className="py-8" />
                 )}
               </ChartContainer>
 
@@ -247,7 +247,7 @@ export default function StatisticsPage() {
                     <MetricCard label={t('statistics.yearlyProjection', 'Yearly Projection')} value={`${fmtInt(convertDistance(mileage.avgDaily * 365))} ${distanceUnit}`} icon={<TrendingUp className="h-4 w-4" />} color="amber" />
                   </Grid>
                 ) : (
-                  <EmptyState icon={<Car className="h-8 w-8" />} message={t('statistics.noMileage', 'No mileage data available')} className="py-8" />
+                  <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Car className="h-8 w-8" />} message={t('statistics.noMileage', 'No mileage data available')} className="py-8" />
                 )}
               </GlassPanel>
             </div>
@@ -271,7 +271,7 @@ export default function StatisticsPage() {
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <EmptyState icon={<Car className="h-8 w-8" />} message={t('statistics.singleVehicle', 'Add more vehicles to compare')} className="py-8" />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Car className="h-8 w-8" />} message={t('statistics.singleVehicle', 'Add more vehicles to compare')} className="py-8" />
               )}
             </ChartContainer>
           </FadeIn>

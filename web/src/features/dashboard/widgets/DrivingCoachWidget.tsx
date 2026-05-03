@@ -74,7 +74,7 @@ export default function DrivingCoachWidget({ vehicleId, size }: WidgetProps) {
             </Badge>
           )}
           {savingsPct <= 0 && recommendations.length === 0 && (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Lightbulb className="h-5 w-5" />}
               message={t('widget.drivingCoach.noTips', 'No tips available')}
               className="py-2"

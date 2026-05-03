@@ -272,7 +272,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             {chartData.length > 0 ? (
               chart
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-5 w-5" />}
                 message={t('widget.driveTelemetry.noTelemetry', 'No telemetry for this drive')}
                 className="py-4"
@@ -311,7 +311,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
           </div>
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Activity className="h-5 w-5" />}
           message={t('widget.driveTelemetry.empty', 'No recent drives')}
           className="py-4"

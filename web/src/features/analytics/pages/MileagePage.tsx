@@ -186,7 +186,7 @@ export default function MileagePage() {
             {t('Odometer Over Time')}
           </p>
           {odometerData.length === 0 ? (
-            <EmptyState message={t('No Entries')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No Entries')} />
           ) : (
             <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={odometerData}>
@@ -215,7 +215,7 @@ export default function MileagePage() {
             {t('Daily Distance')}
           </p>
           {dailyData.length === 0 ? (
-            <EmptyState message={t('No Entries')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No Entries')} />
           ) : (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={dailyData}>

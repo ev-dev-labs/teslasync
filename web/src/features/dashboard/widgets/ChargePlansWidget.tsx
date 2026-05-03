@@ -202,7 +202,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
             )}
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Clock className="h-5 w-5" />}
             message={t('widget.chargePlans.noPlans', 'No charge plans')}
             className="py-4"
@@ -257,7 +257,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
               />
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Clock className="h-5 w-5" />}
               message={t('widget.chargePlans.noPlans', 'No charge plans')}
               className="py-4"
@@ -280,7 +280,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
           )}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Clock className="h-5 w-5" />}
           message={t('widget.chargePlans.noData', 'No charge plans or rate data')}
           className="py-4"

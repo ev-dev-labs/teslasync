@@ -92,7 +92,7 @@ export function AdvancedSettings() {
         </div>
 
         {silenced.length === 0 ? (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             message={t(
               'advanced.restoreConfirms.empty',
               'No silenced prompts. Tick “Don’t ask again” on a confirmation dialog to silence it.',

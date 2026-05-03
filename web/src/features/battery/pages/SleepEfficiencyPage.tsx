@@ -251,7 +251,7 @@ export default function SleepEfficiencyPage() {
                     </div>
                   </>
                 ) : (
-                  <EmptyState message={t('sleep.noStateData', 'No state distribution data available')} />
+                  <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('sleep.noStateData', 'No state distribution data available')} />
                 )}
               </ChartContainer>
             </FadeIn>
@@ -272,7 +272,7 @@ export default function SleepEfficiencyPage() {
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
-                    <EmptyState message={t('sleep.noSentryData', 'No sentry comparison data available')} />
+                    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('sleep.noSentryData', 'No sentry comparison data available')} />
                   )}
                 </ChartContainer>
 
@@ -327,7 +327,7 @@ export default function SleepEfficiencyPage() {
         </>
       ) : !isLoading ? (
         <GlassPanel className="p-8">
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Moon className="h-10 w-10 text-[var(--text-muted)]" />}
             message={t('sleep.noData', 'No sleep data available. Data will appear after your vehicle records sleep/wake events.')}
           />

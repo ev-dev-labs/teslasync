@@ -378,14 +378,28 @@ export default function AutomationsListPage() {
           </StaggerContainer>
         ) : (
           <GlassPanel className="p-8">
-            <EmptyState
-              icon={<Zap className="h-8 w-8" />}
-              message={
-                items.length === 0
-                  ? t('automations.empty', 'No automations yet. Create a typed automation to get started!')
-                  : t('automations.noMatch', 'No automations match your filters')
-              }
-            />
+            {items.length === 0 ? (
+              <EmptyState
+                icon={<Zap className="h-8 w-8" />}
+                message={t('automations.empty', 'No automations yet. Create a typed automation to get started!')}
+                actionTo={{
+                  label: t('automations.empty.cta', 'Create automation'),
+                  to: '/automations/new',
+                }}
+              />
+            ) : (
+              <EmptyState
+                icon={<Zap className="h-8 w-8" />}
+                message={t('automations.noMatch', 'No automations match your filters')}
+                action={{
+                  label: t('automations.noMatch.cta', 'Reset filters'),
+                  onClick: () => {
+                    setSearch('');
+                    setStatusFilter('all');
+                  },
+                }}
+              />
+            )}
           </GlassPanel>
         )}
       </FadeIn>

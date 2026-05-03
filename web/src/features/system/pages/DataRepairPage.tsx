@@ -257,7 +257,7 @@ export default function DataRepairPage() {
       {/* ── Content ──────────────────────────────────────────────── */}
       <FadeIn>
         {records.length === 0 ? (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<CheckCircle className="h-10 w-10" />}
             title={t('All sessions are complete')}
             message={t(tab === 'charging' ? 'No stale charging sessions found.' : 'No stale drives found.')}

@@ -411,7 +411,7 @@ export default function SignalExplorerPage() {
       {/* ── Content ───────────────────────────────────────────────── */}
       {!hasData && !isLive ? (
         <GlassPanel className="p-4">
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Activity className="h-10 w-10" />}
             title={t('Select signals and click Explore')}
             message={t('Choose up to 5 signals, set a time range, and click Explore — or toggle Live for real-time streaming.')}
@@ -542,7 +542,7 @@ export default function SignalExplorerPage() {
                   />
                 </>
               ) : (
-                <EmptyState
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                   icon={<Activity className="h-8 w-8" />}
                   title={t('No data')}
                   message={t('No signal data found for this time range.')}

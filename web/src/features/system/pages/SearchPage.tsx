@@ -147,7 +147,7 @@ export default function SearchPage() {
       <div className="mt-6">
         {tooShort ? (
           <GlassPanel className="p-6">
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<SearchIcon className="h-8 w-8" />}
               title={t('search.tooShort.title', 'Type at least 2 characters')}
               message={t('search.tooShort.message', 'Search across vehicles, drives, charging sessions, alerts, geofences, automations and more.')}
@@ -163,7 +163,7 @@ export default function SearchPage() {
           </GlassPanel>
         ) : error ? (
           <GlassPanel className="p-6">
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<SearchIcon className="h-8 w-8" />}
               title={t('search.error.title', 'Search failed')}
               message={t('search.error.message', 'The search service did not respond. Try again or refine your query.')}
@@ -180,7 +180,7 @@ export default function SearchPage() {
           </GlassPanel>
         ) : groupedHits.length === 0 ? (
           <GlassPanel className="p-6">
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<SearchIcon className="h-8 w-8" />}
               title={t('search.noResults.title', 'No results')}
               message={t('search.noResults.message', { query: trimmed, defaultValue: `No matches for "${trimmed}". Try fewer characters or open the command palette.` })}

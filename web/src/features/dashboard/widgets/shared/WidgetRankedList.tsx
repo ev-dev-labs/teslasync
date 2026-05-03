@@ -50,7 +50,7 @@ export function WidgetRankedList({
   );
 
   if (visible.length === 0) {
-    return <EmptyState icon={emptyIcon} message={emptyMessage} className="py-8" />;
+    return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={emptyIcon} message={emptyMessage} className="py-8" />;
   }
 
   return (

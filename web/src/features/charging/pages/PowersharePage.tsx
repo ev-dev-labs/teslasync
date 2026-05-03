@@ -156,7 +156,7 @@ export default function PowersharePage() {
               />
             </Grid>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Info className="h-8 w-8" />}
               message={t(
                 'powershare.noData',
@@ -188,7 +188,7 @@ export default function PowersharePage() {
               </span>
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Info className="h-8 w-8" />}
               message={t(
                 'powershare.noStopReason',

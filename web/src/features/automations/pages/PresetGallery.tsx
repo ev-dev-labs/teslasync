@@ -130,7 +130,7 @@ export function PresetGallery({ category }: PresetGalleryProps) {
 
   if (presetList.length === 0) {
     return (
-      <EmptyState
+      <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
         icon={<Clock className="h-8 w-8" />}
         message={t('automations.presets.empty', 'No preset templates available')}
       />

@@ -102,7 +102,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
             )}
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Watch className="h-5 w-5" />}
             message={t('widget.noWatchData', 'No watch data')}
             className="py-4"
@@ -208,7 +208,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
           </div>
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Watch className="h-6 w-6" />}
           message={t('widget.noWatchData', 'No watch data')}
           className="py-4"

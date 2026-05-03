@@ -60,7 +60,7 @@ export function RegionSettings() {
             </div>
           </div>
         ) : (
-          <EmptyState icon={<Info className="h-10 w-10" />} message={t('region.noData', 'No region data yet. Click Refresh to fetch from Tesla.')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Info className="h-10 w-10" />} message={t('region.noData', 'No region data yet. Click Refresh to fetch from Tesla.')} />
         )}
       </GlassPanel>
     </FadeIn>

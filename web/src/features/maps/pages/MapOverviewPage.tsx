@@ -281,7 +281,7 @@ export default function MapOverviewPage() {
               </MapContainer>
             </>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<MapPin className="h-8 w-8" />}
               message={t(
                 'mapOverview.noLocation',
@@ -437,7 +437,7 @@ export default function MapOverviewPage() {
               </div>
             </div>
           ) : (
-            <EmptyState message={t('mapOverview.noLocation', 'No location data available yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('mapOverview.noLocation', 'No location data available yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -503,7 +503,7 @@ export default function MapOverviewPage() {
               pagination
             />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Clock className="h-8 w-8" />}
               message={t(
                 'mapOverview.noHistory',

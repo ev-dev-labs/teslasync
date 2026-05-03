@@ -172,7 +172,7 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     else setReadState(next.read ? 'read' : 'unread');
   }, [setSeverityRaw, setVehicleIdsRaw, setRuleIdsRaw, setSearch, setFrom, setTo, setReadState]);
 
-  const { data: rawRows, isLoading, error } = useNotificationLogs(filters);
+  const { data: rawRows, isLoading, error, refetch } = useNotificationLogs(filters);
   const rows = useMemo<NotificationLog[]>(() => rawRows ?? [], [rawRows]);
 
   const ruleMap = useMemo<Record<number, AlertRule>>(() => {
@@ -419,6 +419,10 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
             icon={<Bell className="h-8 w-8" />}
             title={t('notifications.inbox.error.title', 'Could not load notifications')}
             message={String(error)}
+            action={{
+              label: t('common.retry', 'Retry'),
+              onClick: () => { void refetch(); },
+            }}
           />
         )}
 
@@ -431,6 +435,10 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
             message={archived
               ? t('notifications.inbox.empty.archivedMessage', 'Archived notifications will appear here.')
               : t('notifications.inbox.empty.message', 'When alert rules fire, the resulting notifications appear here.')}
+            actionTo={archived ? undefined : {
+              label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
+              to: '/alert-studio',
+            }}
           />
         )}
 

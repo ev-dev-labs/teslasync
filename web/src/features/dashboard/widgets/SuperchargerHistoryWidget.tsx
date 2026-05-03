@@ -72,7 +72,7 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
             label={t('widget.superchargerHistory.compactLabel', '30-day Supercharger')}
           />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Zap className="h-5 w-5" />}
             message={t('widget.superchargerHistory.noData', 'No Supercharger sessions')}
             className="py-4"
@@ -119,7 +119,7 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
           </div>
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Zap className="h-5 w-5" />}
           message={t('widget.superchargerHistory.noData', 'No Supercharger sessions')}
           className="py-8"

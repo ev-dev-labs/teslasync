@@ -114,7 +114,7 @@ export function ActiveOrdersSection() {
             ))}
           </div>
         ) : (
-          <EmptyState icon={<Info className="h-10 w-10" />} message={
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Info className="h-10 w-10" />} message={
             ordersData?.fetched_at
               ? t('orders.noOrders', 'No active orders found.')
               : t('orders.noData', 'No order data yet. Click Refresh to fetch from Tesla.')

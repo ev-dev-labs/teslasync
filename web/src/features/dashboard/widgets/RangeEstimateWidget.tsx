@@ -38,7 +38,7 @@ export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
             </div>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Gauge className="h-6 w-6" />}
             message={t('widget.noRange', 'No range data')}
             className="py-4"

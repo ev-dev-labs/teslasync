@@ -194,7 +194,7 @@ function StandardView({
 
   if (visible.length === 0) {
     return (
-      <EmptyState
+      <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
         icon={<Download className="h-5 w-5" />}
         message={t('widget.noExportJobs', 'No export jobs')}
         className="py-4"
@@ -298,7 +298,7 @@ export default function ExportStatusWidget({ size }: WidgetProps) {
         sortedJobs.length > 0 ? (
           <CompactView activeCount={activeCount} hasRunning={hasRunning} t={t} />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Download className="h-5 w-5" />}
             message={t('widget.noExportJobs', 'No export jobs')}
             className="py-4"

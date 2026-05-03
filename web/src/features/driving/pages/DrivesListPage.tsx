@@ -453,7 +453,7 @@ export default function DrivesListPage() {
               </div>
             </div>
           ) : (
-            <EmptyState message={t('drives.noStats', 'No driving statistics available yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('drives.noStats', 'No driving statistics available yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -626,7 +626,7 @@ export default function DrivesListPage() {
             </div>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Activity className="h-8 w-8 opacity-20" />}
             message={t('common.noData', 'No data available')}
             className="py-8"
@@ -682,6 +682,16 @@ export default function DrivesListPage() {
           icon={<Route className="h-8 w-8" />}
           title={t('drives.emptyTitle', 'No drives recorded yet')}
           message={t('drives.emptyMessage', 'Drive data will appear here once your vehicle records trips.')}
+          action={{
+            label: t('drives.empty.cta', 'Reset filters'),
+            onClick: () => {
+              setSearch('');
+              setStartDate(defaultStart);
+              setEndDate(defaultEnd);
+              setSortBy('date');
+              setPage(1);
+            },
+          }}
         />
       )}
     </PageContainer>

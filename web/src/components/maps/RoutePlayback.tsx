@@ -303,7 +303,7 @@ export function RoutePlayback({
   if (trail.length === 0) {
     return (
       <GlassPanel className={cn('overflow-hidden', className)}>
-        <EmptyState
+        <EmptyState /* no-action: route playback has no fallback when telemetry has no GPS points */
           icon={<MapPin className="h-8 w-8" />}
           message={
             emptyMessage ??

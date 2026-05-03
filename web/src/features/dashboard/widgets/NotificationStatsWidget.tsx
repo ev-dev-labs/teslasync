@@ -174,7 +174,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
             )}
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Bell className="h-5 w-5" />}
             message={t('widget.notificationStats.noData', 'No notification data')}
             className="py-4"
@@ -214,7 +214,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
           )}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Bell className="h-5 w-5" />}
           message={t('widget.notificationStats.noData', 'No notification data')}
           className="py-4"

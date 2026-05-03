@@ -556,7 +556,7 @@ export default function MaintenancePage() {
         {loadingItems && !items ? (
           <ItemsSkeleton />
         ) : filteredItems.length === 0 ? (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Wrench className="h-12 w-12" />}
             title={t('No maintenance items')}
             message={
@@ -613,7 +613,7 @@ export default function MaintenancePage() {
                 </div>
               </div>
             ) : (
-              <EmptyState message={t('No cost data available yet. Log service records to see cost estimates.')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No cost data available yet. Log service records to see cost estimates.')} />
             )}
           </GlassPanel>
 
@@ -653,7 +653,7 @@ export default function MaintenancePage() {
                 })}
               </div>
             ) : (
-              <EmptyState message={t('No upcoming service projections available.')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No upcoming service projections available.')} />
             )}
           </GlassPanel>
         </div>
@@ -673,7 +673,7 @@ export default function MaintenancePage() {
               ))}
             </div>
           ) : !records?.length ? (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Wrench className="h-10 w-10" />}
               message={t('No service records logged yet.')}
             />

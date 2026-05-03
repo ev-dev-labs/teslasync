@@ -34,7 +34,7 @@ const colsClass: Record<1 | 2 | 3 | 4, string> = {
 
 export function WidgetStatGrid({ stats, compact, cols }: WidgetStatGridProps) {
   if (stats.length === 0) {
-    return <EmptyState message="No stats available" />;
+    return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message="No stats available" />;
   }
 
   const resolvedCols = compact ? 1 : (cols ?? autoCols(stats.length));

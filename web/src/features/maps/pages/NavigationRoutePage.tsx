@@ -604,7 +604,7 @@ export default function NavigationRoutePage() {
                 </span>
               </span>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Navigation className="h-8 w-8 text-[var(--text-muted)]" />}
                 message={t(
                   'nav.noActiveNav',
@@ -754,7 +754,7 @@ export default function NavigationRoutePage() {
               {historyLoading ? (
                 <Skeleton height={260} />
               ) : chartData.length === 0 ? (
-                <EmptyState
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                   icon={<AlertTriangle className="h-8 w-8 text-[var(--text-muted)]" />}
                   message={t(
                     'nav.noHistory',
@@ -855,7 +855,7 @@ export default function NavigationRoutePage() {
                 )}
               </GlassPanel>
             ) : (
-              <EmptyState message={t('navigation.noRoute', 'No active route selected')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('navigation.noRoute', 'No active route selected')} />
             )}
           </FadeIn>
 
@@ -904,7 +904,7 @@ export default function NavigationRoutePage() {
               {historyLoading ? (
                 <Skeleton lines={6} />
               ) : recentDestinations.length === 0 ? (
-                <EmptyState message={t('nav.noDestinations', 'No destination history available.')} />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('nav.noDestinations', 'No destination history available.')} />
               ) : (
                 <DataTable
                   columns={destColumns}
@@ -927,7 +927,7 @@ export default function NavigationRoutePage() {
               {historyLoading ? (
                 <Skeleton height={300} />
               ) : presenceChartData.length === 0 ? (
-                <EmptyState message={t('nav.noPresence', 'No presence history available.')} />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('nav.noPresence', 'No presence history available.')} />
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={presenceChartData} margin={chartMargin}>
@@ -961,7 +961,7 @@ export default function NavigationRoutePage() {
               {historyLoading ? (
                 <Skeleton lines={8} />
               ) : !sortedHistory.length ? (
-                <EmptyState
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                   message={t(
                     'nav.noSnapshots',
                     'No location snapshots recorded yet.',

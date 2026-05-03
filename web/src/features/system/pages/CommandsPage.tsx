@@ -84,7 +84,7 @@ export default function CommandsPage() {
             <MetricCard label={t('Refresh')} value="15s" icon={<Loader2 className="h-4 w-4" />} color="purple" />
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Activity className="h-8 w-8 opacity-20" />}
             message={t('common.noData', 'No data available')}
             className="py-8"
@@ -113,7 +113,7 @@ export default function CommandsPage() {
           ))}
         </StaggerContainer>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Car className="h-8 w-8" />}
           title={t('commands.noVehicles', 'No vehicles found')}
           message={t('commands.connectFleet', 'Connect your Tesla account and sync your fleet to start sending commands.')}

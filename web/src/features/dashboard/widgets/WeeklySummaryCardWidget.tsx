@@ -78,7 +78,7 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
             </span>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<TrendingUp className="h-5 w-5" />}
             message={t('widget.weeklySummary.noData', 'No weekly data')}
             className="py-4"
@@ -150,7 +150,7 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
           )}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<TrendingUp className="h-5 w-5" />}
           message={t('widget.weeklySummary.noData', 'No weekly data')}
           className="py-4"

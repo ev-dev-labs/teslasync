@@ -127,7 +127,7 @@ export function OperationsSection() {
                   emptyMessage={t('No recent notifications')}
                 />
               ) : (
-                <EmptyState
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                   icon={<Activity className="h-8 w-8 opacity-20" />}
                   message={t('common.noData', 'No data available')}
                   className="py-8"
@@ -148,7 +148,7 @@ export function OperationsSection() {
                 emptyMessage={t('No audit entries')}
               />
             ) : (
-              <EmptyState message={t('No audit log entries')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No audit log entries')} />
             )}
           </div>
         </div>

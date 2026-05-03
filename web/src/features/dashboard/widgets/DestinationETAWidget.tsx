@@ -75,7 +75,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={() => refetch()}
     >
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Navigation2 className="h-5 w-5" />}
             message={t('widget.destinationETA.noData', 'No location data')}
             className="py-4"
@@ -130,7 +130,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
         icon={<Navigation2 className="h-3.5 w-3.5 text-cyan-400" />}
         {...shellProps}
       >
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Navigation2 className="h-5 w-5" />}
           message={t('widget.destinationETA.noData', 'No location data')}
           className="py-4"

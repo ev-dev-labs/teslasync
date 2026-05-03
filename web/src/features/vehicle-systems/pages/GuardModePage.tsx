@@ -375,7 +375,7 @@ export default function GuardModePage() {
               />
             ) : (
               <div className="h-full flex items-center justify-center">
-                <EmptyState icon={<MapPin className="h-8 w-8" />} message={t('guard.noLocation', 'No vehicle location available')} />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<MapPin className="h-8 w-8" />} message={t('guard.noLocation', 'No vehicle location available')} />
               </div>
             )}
           </div>
@@ -408,7 +408,7 @@ export default function GuardModePage() {
               ))}
             </div>
           ) : (
-            <EmptyState icon={<Info className="h-8 w-8" />} message={t('guard.noEvents', 'No guard events yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Info className="h-8 w-8" />} message={t('guard.noEvents', 'No guard events yet')} />
           )}
         </GlassPanel>
       </FadeIn>

@@ -116,7 +116,7 @@ export default function SoftwareUpdateHistoryWidget({ vehicleId, size }: WidgetP
             t={t}
           />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Download className="h-5 w-5" />}
             message={t('widget.noUpdates', 'No update history')}
             className="py-4"

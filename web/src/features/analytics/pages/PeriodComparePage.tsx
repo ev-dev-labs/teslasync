@@ -319,7 +319,7 @@ export default function PeriodComparePage() {
         isLoading ? (
           <Skeleton lines={6} />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Calendar className="h-10 w-10" />}
             message={t('compare.empty', 'Select a vehicle and two periods to compare.')}
           />

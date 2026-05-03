@@ -130,7 +130,7 @@ export default function LocationFavoritesWidget({ vehicleId, size }: WidgetProps
           emptyIcon={<MapPin className="h-5 w-5" />}
         />
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<MapPin className="h-5 w-5" />}
           message={t('widget.locationFavorites.noData', 'No favorite locations')}
           className="py-4"

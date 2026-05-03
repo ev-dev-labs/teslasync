@@ -44,7 +44,7 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
         <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
           {t('fsm.stateDiagram', 'State Diagram')}
         </h2>
-        <EmptyState message={t('fsm.selectFsmType', 'Select a specific FSM type to view its state diagram')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.selectFsmType', 'Select a specific FSM type to view its state diagram')} />
       </GlassPanel>
     );
   }

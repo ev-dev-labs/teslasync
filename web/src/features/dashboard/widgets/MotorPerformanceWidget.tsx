@@ -79,7 +79,7 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
               </span>
             </>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Zap className="h-5 w-5" />}
               message={t('widget.motorPerformance.noData', 'No motor data')}
               className="py-2"
@@ -129,7 +129,7 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
           </div>
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Zap className="h-5 w-5" />}
           message={t('widget.motorPerformance.noData', 'No motor data')}
           className="py-4"

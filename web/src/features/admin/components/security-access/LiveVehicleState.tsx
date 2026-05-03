@@ -162,7 +162,7 @@ export function LiveVehicleState({ latest }: LiveVehicleStateProps) {
             ))}
           </div>
         ) : (
-          <EmptyState message={t('admin.security.live.noData', 'No live state data available')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('admin.security.live.noData', 'No live state data available')} />
         )}
       </GlassPanel>
     </FadeIn>

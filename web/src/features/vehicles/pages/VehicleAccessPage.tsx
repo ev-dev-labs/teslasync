@@ -214,7 +214,7 @@ export default function VehicleAccessPage() {
               compact
             />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Users className="h-8 w-8" />}
               message={t('vehicleAccess.drivers.empty', 'No drivers found. Refresh to sync from Tesla.')}
             />
@@ -266,7 +266,7 @@ export default function VehicleAccessPage() {
               compact
             />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Shield className="h-8 w-8" />}
               message={t('vehicleAccess.invitations.empty', 'No invitations yet. Create one to share vehicle access.')}
             />

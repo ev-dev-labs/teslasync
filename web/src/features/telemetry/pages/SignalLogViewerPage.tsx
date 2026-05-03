@@ -270,7 +270,7 @@ export default function SignalLogViewerPage() {
 
       {/* ── Results ───────────────────────────────────────────────── */}
       {!hasQueried ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Database className="h-10 w-10" />}
           title={t('Select signals and click Query')}
           message={t('Choose one or more signals, set a date range, then hit Query to browse signal history.')}
@@ -313,7 +313,7 @@ export default function SignalLogViewerPage() {
                 />
               </>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Database className="h-8 w-8" />}
                 title={t('No data')}
                 message={t('No signal data found for this query.')}

@@ -188,9 +188,19 @@ export default function LocationsPage() {
           {isLoading ? (
             <div className="space-y-3">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
           ) : !locations?.length ? (
-            <EmptyState icon={<MapPin className="h-12 w-12" />} title={t('No locations')} message={t('No visited locations recorded yet')} />
+            <EmptyState
+              icon={<MapPin className="h-12 w-12" />}
+              title={t('No locations')}
+              message={t('No visited locations recorded yet')}
+              actionTo={{ label: t('locations.empty.cta', 'View drives'), to: '/drives' }}
+            />
           ) : !filteredLocations.length ? (
-            <EmptyState icon={<MapPin className="h-12 w-12" />} title={t('No locations')} message={t('No locations match your search')} />
+            <EmptyState
+              icon={<MapPin className="h-12 w-12" />}
+              title={t('No locations')}
+              message={t('No locations match your search')}
+              action={{ label: t('Clear search'), onClick: () => setSearch('') }}
+            />
           ) : (
             <>
               <div className="space-y-2">

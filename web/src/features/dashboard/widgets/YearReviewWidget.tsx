@@ -139,7 +139,7 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
             </span>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Calendar className="h-5 w-5" />}
             message={t('widget.yearReview.noData', 'No year-in-review data')}
             className="py-4"
@@ -165,7 +165,7 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
       {data ? (
         <WidgetStatGrid stats={allStats} cols={isWide ? 4 : 2} />
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Calendar className="h-5 w-5" />}
           message={t('widget.yearReview.noData', 'No year-in-review data')}
           className="py-4"

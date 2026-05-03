@@ -669,7 +669,7 @@ export default function BackupRestorePage() {
             </Button>
           </div>
           {runs.length === 0 && !loadingRuns ? (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Icons.clock className="h-10 w-10 text-[var(--text-muted)]" />}
               title={t('backup.noRuns', 'No backup runs yet')}
               message={t('backup.noRunsMessage', 'Trigger a backup or wait for the scheduled run.')}
@@ -899,7 +899,7 @@ export default function BackupRestorePage() {
                 />
               </div>
             ) : (
-              <EmptyState message={t('backup.noTables', 'No tables found in backup')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('backup.noTables', 'No tables found in backup')} />
             )}
 
             <div className="flex justify-end pt-2">

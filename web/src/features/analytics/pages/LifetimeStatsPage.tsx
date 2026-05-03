@@ -225,7 +225,7 @@ export default function LifetimeStatsPage() {
               />
             </Grid>
           ) : (
-            <EmptyState message={t('lifetime.noData', 'No driving data yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('lifetime.noData', 'No driving data yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -245,7 +245,7 @@ export default function LifetimeStatsPage() {
               co2Kg={stats.co2_offset_kg}
             />
           ) : (
-            <EmptyState message={t('lifetime.noSavingsData', 'Complete some drives to see savings')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('lifetime.noSavingsData', 'Complete some drives to see savings')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -291,7 +291,7 @@ export default function LifetimeStatsPage() {
               </div>
             </Grid>
           ) : (
-            <EmptyState message={t('lifetime.noData', 'No driving data yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('lifetime.noData', 'No driving data yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -325,7 +325,7 @@ export default function LifetimeStatsPage() {
               />
             </Grid>
           ) : (
-            <EmptyState message={t('lifetime.noData', 'No driving data yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('lifetime.noData', 'No driving data yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -366,7 +366,7 @@ export default function LifetimeStatsPage() {
               />
             </Grid>
           ) : (
-            <EmptyState message={t('lifetime.noData', 'No driving data yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('lifetime.noData', 'No driving data yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -410,7 +410,7 @@ export default function LifetimeStatsPage() {
               })}
             </StaggerContainer>
           ) : (
-            <EmptyState message={t('lifetime.noAchievements', 'Start driving to unlock achievements')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('lifetime.noAchievements', 'Start driving to unlock achievements')} />
           )}
         </GlassPanel>
       </FadeIn>

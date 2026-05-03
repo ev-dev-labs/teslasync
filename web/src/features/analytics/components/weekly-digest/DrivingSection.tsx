@@ -55,7 +55,7 @@ export function DrivingSection({ metrics, dailyDistanceData }: DrivingSectionPro
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               message={t('analytics.weeklyDigest.noDailyDistance', 'No driving distance data is available for this week.')}
               className="py-8"
             />
@@ -139,7 +139,7 @@ export function DrivingSection({ metrics, dailyDistanceData }: DrivingSectionPro
               </span>
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               message={t('analytics.weeklyDigest.noTopDrive', 'No top drive is available for this week yet.')}
               className="py-6"
             />

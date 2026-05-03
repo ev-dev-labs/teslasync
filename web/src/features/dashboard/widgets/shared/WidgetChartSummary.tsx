@@ -26,7 +26,7 @@ export function WidgetChartSummary({
   isEmpty,
 }: WidgetChartSummaryProps) {
   if (isEmpty) {
-    return <EmptyState icon={emptyIcon} message={emptyMessage ?? 'No data available'} />;
+    return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={emptyIcon} message={emptyMessage ?? 'No data available'} />;
   }
 
   return (

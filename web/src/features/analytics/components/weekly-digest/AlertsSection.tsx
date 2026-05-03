@@ -33,7 +33,7 @@ export function AlertsSection({ metrics, alertPieData }: AlertsSectionProps) {
         </span>
 
         {metrics.alertTotal === 0 ? (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<AlertTriangle className="h-8 w-8" />}
             message={t(
               'analytics.weeklyDigest.noAlerts',

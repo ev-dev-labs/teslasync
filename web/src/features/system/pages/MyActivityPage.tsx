@@ -93,7 +93,7 @@ export default function MyActivityPage() {
               )}
             />
           ) : unauthenticated ? (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Icons.user className="h-8 w-8" />}
               title={t('activity.myActivity.unauthorized.title', 'Identity required')}
               message={t(

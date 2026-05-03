@@ -139,7 +139,7 @@ export default function VersionInfoWidget({ size }: WidgetProps) {
           </div>
         )
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Info className="h-5 w-5" />}
           message={t('widget.versionInfo.noData', 'No version data available')}
           className="py-4"

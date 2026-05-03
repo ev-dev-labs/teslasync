@@ -172,7 +172,7 @@ export function AutomationActivityFeed({
             ))}
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Activity className="h-8 w-8" />}
             message={t('automations.noHistory', 'No execution history yet')}
           />

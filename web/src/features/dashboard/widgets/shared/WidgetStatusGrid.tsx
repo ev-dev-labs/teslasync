@@ -55,7 +55,7 @@ export function WidgetStatusGrid({
   emptyIcon,
 }: WidgetStatusGridProps) {
   if (cells.length === 0) {
-    return <EmptyState message={emptyMessage} icon={emptyIcon} />;
+    return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyMessage} icon={emptyIcon} />;
   }
 
   const resolvedCols = compact ? 2 : cols;

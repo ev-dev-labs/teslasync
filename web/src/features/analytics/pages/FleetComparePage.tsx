@@ -98,7 +98,7 @@ function VehicleStatusCard({
   if (!vehicle) {
     return (
       <GlassPanel className="p-5">
-        <EmptyState icon={<Car className="h-8 w-8" />} message={t('comparison.selectVehicle', 'Select a vehicle')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Car className="h-8 w-8" />} message={t('comparison.selectVehicle', 'Select a vehicle')} />
       </GlassPanel>
     );
   }
@@ -627,7 +627,7 @@ export default function FleetComparePage() {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState icon={<TrendingUp className="h-8 w-8" />} message={t('comparison.noMonthlyData', 'No monthly data available yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<TrendingUp className="h-8 w-8" />} message={t('comparison.noMonthlyData', 'No monthly data available yet')} />
           )}
         </ChartContainer>
       </FadeIn>
@@ -657,7 +657,7 @@ export default function FleetComparePage() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyState icon={<Route className="h-8 w-8" />} message={t('comparison.noDrivesData', 'No drive data available yet')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Route className="h-8 w-8" />} message={t('comparison.noDrivesData', 'No drive data available yet')} />
             )}
           </ChartContainer>
         </div>

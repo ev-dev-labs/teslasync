@@ -213,7 +213,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             </Badge>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Zap className="h-5 w-5" />}
             message={t('widget.chargingSessionDetail.empty', 'No charge sessions')}
             className="py-4"

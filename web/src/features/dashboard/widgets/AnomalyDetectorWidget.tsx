@@ -121,7 +121,7 @@ export default function AnomalyDetectorWidget({ vehicleId, size }: WidgetProps) 
               </Badge>
             </>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<AlertTriangle className="h-5 w-5" />}
               message={t('widget.anomalyDetector.noAnomalies', 'No anomalies')}
               className="py-2"

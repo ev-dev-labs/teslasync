@@ -124,7 +124,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
             </span>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<DollarSign className="h-5 w-5" />}
             message={t('widget.chargeCost.noData', 'No charge data')}
             className="py-4"
@@ -217,7 +217,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
           )}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<DollarSign className="h-5 w-5" />}
           message={t('widget.chargeCost.noData', 'No charge data')}
           className="py-4"

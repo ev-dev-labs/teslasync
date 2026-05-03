@@ -519,7 +519,7 @@ export default function EnergyPage() {
                         )}
                       </EnergyChartSync>
                     ) : (
-                      <EmptyState
+                      <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                         icon={<Zap className="h-8 w-8" />}
                         message={t('energy.chart.noEnergyData', 'Connect vehicle to see energy data')}
                         className="py-8"
@@ -584,7 +584,7 @@ export default function EnergyPage() {
                       )}
                     </EnergyChartSync>
                   ) : (
-                    <EmptyState
+                    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                       icon={<Activity className="h-8 w-8" />}
                       message={t('energy.chart.noEfficiencyData', 'No efficiency data yet')}
                       className="py-8"
@@ -638,7 +638,7 @@ export default function EnergyPage() {
                     </div>
                   </>
                 ) : (
-                  <EmptyState
+                  <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                     icon={<Activity className="h-8 w-8" />}
                     message={t('common.noData', 'No data available')}
                     className="py-8"
@@ -695,7 +695,7 @@ export default function EnergyPage() {
                     </div>
                   </div>
                 ) : (
-                  <EmptyState
+                  <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                     icon={<Activity className="h-8 w-8" />}
                     message={t('common.noData', 'No data available')}
                     className="py-8"
@@ -720,7 +720,7 @@ export default function EnergyPage() {
                   pagination
                 />
               ) : (
-                <EmptyState
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                   icon={<Activity className="h-8 w-8" />}
                   message={t('energy.sessions.empty', 'No charging sessions recorded')}
                   className="py-8"

@@ -127,7 +127,7 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
             </span>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Zap className="h-5 w-5" />}
             message={t('widget.energyStats.noData', 'No energy data available')}
             className="py-4"
@@ -203,7 +203,7 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
           <WidgetStatGrid stats={stats} cols={isWide ? 3 : 2} />
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Zap className="h-5 w-5" />}
           message={t('widget.energyStats.noData', 'No energy data available')}
           className="py-4"

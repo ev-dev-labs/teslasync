@@ -73,7 +73,7 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
             ) : null}
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Activity className="h-8 w-8" />}
             message={t('driveDetail.noTemperatureData', 'No temperature telemetry is available for this drive.')}
             className="py-6"
@@ -118,7 +118,7 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Activity className="h-8 w-8" />}
               message={t('driveDetail.noChartData', 'No telemetry data available')}
               className="h-full py-0"

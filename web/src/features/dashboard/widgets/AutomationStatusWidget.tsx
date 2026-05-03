@@ -199,7 +199,7 @@ export default function AutomationStatusWidget({ size }: WidgetProps) {
           )}
         </FadeIn>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Workflow className="h-5 w-5" />}
           message={t('widget.noAutomations', 'No automations configured')}
           className="py-4"

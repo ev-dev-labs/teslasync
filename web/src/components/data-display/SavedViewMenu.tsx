@@ -208,6 +208,13 @@ export function SavedViewMenu({
               <div className="py-3">
                 <EmptyState
                   message={t('savedViews.empty', 'No saved views yet')}
+                  action={{
+                    label: t('savedViews.saveCurrent', 'Save current view…'),
+                    onClick: () => {
+                      setOpen(false);
+                      setSaveOpen(true);
+                    },
+                  }}
                 />
               </div>
             ) : (

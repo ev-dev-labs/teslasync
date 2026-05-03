@@ -86,7 +86,7 @@ export default function APIUsageWidget({ size }: WidgetProps) {
             )}
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<BarChart2 className="h-5 w-5" />}
             message={t('widget.apiUsage.noData', 'No API usage data')}
             className="py-4"
@@ -114,7 +114,7 @@ export default function APIUsageWidget({ size }: WidgetProps) {
           <WidgetStatGrid stats={coreStats} cols={isWide ? 4 : 2} />
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<BarChart2 className="h-5 w-5" />}
           message={t('widget.apiUsage.noData', 'No API usage data')}
           className="py-4"

@@ -163,7 +163,7 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
             </span>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Calendar className="h-5 w-5" />}
             message={t('widget.chargingSchedule.noData', 'No schedule data')}
             className="py-4"
@@ -232,7 +232,7 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
           )}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Calendar className="h-5 w-5" />}
           message={t('widget.chargingSchedule.noData', 'No schedule data')}
           className="py-4"

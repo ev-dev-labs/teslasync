@@ -148,7 +148,7 @@ export function SecurityPanel({ securityData, remoteStartEnabled }: SecurityPane
           </div>
         </div>
       ) : (
-        <EmptyState message={t('telemetry.noSecurityData', 'No security data available')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('telemetry.noSecurityData', 'No security data available')} />
       )}
     </GlassPanel>
   )

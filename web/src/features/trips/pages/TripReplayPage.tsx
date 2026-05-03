@@ -336,7 +336,7 @@ export default function TripReplayPage() {
     >
       {positions.length === 0 && !isLoading ? (
         <FadeIn>
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<MapPin className="h-10 w-10" />}
             message={t('replay.noGps', 'No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.')}
           />

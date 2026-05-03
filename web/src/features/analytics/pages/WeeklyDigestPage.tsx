@@ -62,7 +62,7 @@ export default function WeeklyDigestPage() {
       {isLoading ? (
         <DigestSkeleton />
       ) : !hasData ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Calendar className="h-10 w-10" />}
           title={t('analytics.weeklyDigest.noData', 'No Data')}
           message={t(

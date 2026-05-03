@@ -109,7 +109,7 @@ export function DataPipelineSection() {
                 <DataTable columns={exportColumns} data={exportJobs} keyExtractor={(j) => j.id} compact pagination emptyMessage={t('No export jobs')} />
               </>
             ) : (
-              <EmptyState message={t('No export jobs in queue')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No export jobs in queue')} />
             )}
           </div>
         </div>

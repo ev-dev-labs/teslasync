@@ -112,7 +112,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
       onRefresh={() => refetch()}
     >
         {runs.length === 0 && !isLoading ? (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<HardDrive className="h-5 w-5" />}
             message={t('widget.backupMonitor.noData', 'No backup data')}
             className="py-4"
@@ -147,7 +147,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
       {...shellProps}
     >
       {runs.length === 0 && !isLoading ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<HardDrive className="h-5 w-5" />}
           message={t('widget.backupMonitor.noData', 'No backup data')}
           className="py-4"

@@ -153,7 +153,7 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
       {...shellProps}
     >
       {isEmpty ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Crosshair className="h-5 w-5" />}
           message={t('widget.geofence.noFences', 'No geofences configured')}
           className="py-4"

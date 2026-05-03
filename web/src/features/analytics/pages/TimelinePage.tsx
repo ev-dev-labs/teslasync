@@ -366,7 +366,7 @@ export default function TimelinePage() {
           {dayLoading ? (
             <Skeleton height={280} />
           ) : daily.length === 0 ? (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Clock className="h-8 w-8" />}
               message={t('timeline.noDailyData', 'No daily data available yet')}
             />

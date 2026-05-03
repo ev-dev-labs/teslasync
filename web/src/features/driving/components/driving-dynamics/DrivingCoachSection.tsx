@@ -141,7 +141,7 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
                 </div>
               </>
             ) : (
-              <EmptyState message={t('dynamics.coach.noData', 'Drive more to see your style breakdown.')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('dynamics.coach.noData', 'Drive more to see your style breakdown.')} />
             )}
           </GlassPanel>
         </FadeIn>
@@ -179,7 +179,7 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState message={t('dynamics.coach.needWeeks', 'Need at least 2 weeks of data for trend analysis.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('dynamics.coach.needWeeks', 'Need at least 2 weeks of data for trend analysis.')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -243,7 +243,7 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
               ))}
             </div>
           ) : (
-            <EmptyState message={t('dynamics.coach.noRecs', 'Recommendations will appear after more drives.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('dynamics.coach.noRecs', 'Recommendations will appear after more drives.')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -264,7 +264,7 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
               emptyMessage={t('dynamics.coach.noDrives', 'No drives found.')}
             />
           ) : (
-            <EmptyState message={t('dynamics.coach.noDrives', 'Drive data will appear after your first trip.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('dynamics.coach.noDrives', 'Drive data will appear after your first trip.')} />
           )}
         </GlassPanel>
       </FadeIn>

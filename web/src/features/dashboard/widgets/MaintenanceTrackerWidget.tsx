@@ -131,7 +131,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
               </span>
             </>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Wrench className="h-5 w-5" />}
               message={t('widget.maintenance.noData', 'No maintenance data')}
               className="py-2"
@@ -200,7 +200,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           )}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Wrench className="h-5 w-5" />}
           message={t('widget.maintenance.noData', 'No maintenance data')}
           className="py-4"

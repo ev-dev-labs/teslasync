@@ -27,7 +27,7 @@ export function FSMSubFSMPanel({ activeSubs, fsmType }: FSMSubFSMPanelProps) {
         <h2 className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider mb-2">
           {t('fsm.subFSMs', 'Active Sub-FSMs')}
         </h2>
-        <EmptyState message={t('fsm.noSubFSMs', 'No active drive or charge sessions')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noSubFSMs', 'No active drive or charge sessions')} />
       </GlassPanel>
     );
   }

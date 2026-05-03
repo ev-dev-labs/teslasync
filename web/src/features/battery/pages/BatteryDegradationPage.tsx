@@ -490,7 +490,7 @@ export default function BatteryDegradationPage() {
         </FadeIn>
       ) : (
         <FadeIn delay={0.2}>
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Battery className="h-12 w-12" />}
             message={t('battery.degradation.noRange', 'Range data will appear once history is available.')}
           />
@@ -538,7 +538,7 @@ export default function BatteryDegradationPage() {
               })}
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Shield className="h-8 w-8" />}
               message={t('battery.degradation.noRiskData', 'Risk data will appear once charging history is available.')}
             />
@@ -563,7 +563,7 @@ export default function BatteryDegradationPage() {
               ))}
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<AlertTriangle className="h-8 w-8" />}
               message={t('battery.degradation.noRecommendations', 'Recommendations will appear based on your usage patterns.')}
             />
@@ -682,7 +682,7 @@ export default function BatteryDegradationPage() {
               pagination
             />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Activity className="h-8 w-8" />}
               message={t('battery.degradation.noHistory', 'No degradation records found.')}
               className="py-8"

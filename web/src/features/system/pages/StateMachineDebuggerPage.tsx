@@ -474,7 +474,7 @@ export default function StateMachineDebuggerPage() {
               />
             </div>
           ) : (
-            <EmptyState message={t('fsm.noVehicles', 'No vehicles available')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noVehicles', 'No vehicles available')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -540,7 +540,7 @@ export default function StateMachineDebuggerPage() {
               </div>
             </div>
           ) : (
-            <EmptyState message={t('fsm.noState', 'No state data available')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noState', 'No state data available')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -642,7 +642,7 @@ export default function StateMachineDebuggerPage() {
                 </div>
               </div>
             ) : (
-              <EmptyState message={t('fsm.noStats', 'No transition data recorded')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noStats', 'No transition data recorded')} />
             )}
           </ChartContainer>
         </FadeIn>
@@ -661,7 +661,7 @@ export default function StateMachineDebuggerPage() {
                 keyExtractor={(row) => row.to_state}
               />
             ) : (
-              <EmptyState message={t('fsm.noTransitions', 'No transitions recorded')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noTransitions', 'No transitions recorded')} />
             )}
           </GlassPanel>
         </FadeIn>
@@ -736,7 +736,7 @@ export default function StateMachineDebuggerPage() {
               />
             </>
           ) : (
-            <EmptyState message={t('fsm.noTimeline', 'No transitions in selected time range')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noTimeline', 'No transitions in selected time range')} />
           )}
         </GlassPanel>
       </FadeIn>

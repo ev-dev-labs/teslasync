@@ -252,7 +252,7 @@ export default function PowerFlowDashboardPage() {
                 </div>
               </div>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Battery className="h-8 w-8" />}
                 message={t('powerFlow.noBatteryData', 'No battery data — refresh to fetch')}
               />
@@ -294,7 +294,7 @@ export default function PowerFlowDashboardPage() {
                 )}
               </div>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8" />}
                 message={t('powerFlow.noFlowData', 'No power flow data yet')}
               />

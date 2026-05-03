@@ -91,7 +91,7 @@ export default function TeslaAccountPage() {
               </div>
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<User className="h-10 w-10" />}
               message={t('teslaAccount.noProfile', 'No profile data yet. Click "Refresh from Tesla" to sync your account.')}
             />

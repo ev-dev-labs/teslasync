@@ -120,7 +120,7 @@ export function EventTimeline({ timelineEvents }: EventTimelineProps) {
             })}
           </div>
         ) : (
-          <EmptyState message={t('admin.security.timeline.noEvents', 'No state changes detected in the history.')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('admin.security.timeline.noEvents', 'No state changes detected in the history.')} />
         )}
       </GlassPanel>
     </FadeIn>

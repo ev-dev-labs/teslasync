@@ -323,7 +323,7 @@ export default function SharedDrivePage() {
         {/* No map data fallback */}
         {mapPoints.length === 0 && elevationData.length === 0 && speedData.length === 0 && (
           <GlassPanel className="p-8">
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<MapPin className="h-8 w-8" />}
               message={t('share.noMapData', 'Route data is not available for this shared drive.')}
             />

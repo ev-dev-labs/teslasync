@@ -155,7 +155,7 @@ export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
           </div>
         </div>
       ) : (
-        <EmptyState message={t('telemetry.noMotorData', 'No motor data available')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('telemetry.noMotorData', 'No motor data available')} />
       )}
     </GlassPanel>
   )

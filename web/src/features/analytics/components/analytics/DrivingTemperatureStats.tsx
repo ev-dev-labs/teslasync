@@ -66,7 +66,7 @@ export function DrivingTemperatureStats({ data }: { data: FleetAnalytics | undef
           />
         </div>
       ) : (
-        <EmptyState message={t('analytics.driving.noTempStats', 'No temperature stats')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.driving.noTempStats', 'No temperature stats')} />
       )}
     </GlassPanel>
   );

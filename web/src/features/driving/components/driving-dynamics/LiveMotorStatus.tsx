@@ -96,7 +96,7 @@ export default function LiveMotorStatus({ motorLatest, convertTemp, tempUnit }: 
             </div>
           </Grid>
         ) : (
-          <EmptyState message={t('dynamics.noLiveMotor', 'Awaiting live motor data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('dynamics.noLiveMotor', 'Awaiting live motor data')} />
         )}
       </GlassPanel>
     </FadeIn>

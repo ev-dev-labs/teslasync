@@ -47,7 +47,7 @@ export function DrivingTab({ data }: { data: FleetAnalytics | undefined }) {
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <EmptyState message={t('analytics.driving.noSpeed', 'No speed data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.driving.noSpeed', 'No speed data')} />
         )}
       </GlassPanel>
 
@@ -65,7 +65,7 @@ export function DrivingTab({ data }: { data: FleetAnalytics | undefined }) {
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <EmptyState message={t('analytics.driving.noDistDist', 'No distance distribution data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.driving.noDistDist', 'No distance distribution data')} />
         )}
       </GlassPanel>
 
@@ -86,7 +86,7 @@ export function DrivingTab({ data }: { data: FleetAnalytics | undefined }) {
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <EmptyState message={t('analytics.driving.noHourly', 'No hourly data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.driving.noHourly', 'No hourly data')} />
         )}
       </GlassPanel>
 
@@ -112,7 +112,7 @@ export function DrivingTab({ data }: { data: FleetAnalytics | undefined }) {
             </ScatterChart>
           </ResponsiveContainer>
         ) : (
-          <EmptyState message={t('analytics.driving.noTempEff', 'No temperature data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.driving.noTempEff', 'No temperature data')} />
         )}
       </GlassPanel>
 
@@ -136,7 +136,7 @@ export function DrivingTab({ data }: { data: FleetAnalytics | undefined }) {
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <EmptyState message={t('analytics.driving.noDailyTrend', 'No daily trend data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.driving.noDailyTrend', 'No daily trend data')} />
         )}
       </GlassPanel>
 
@@ -154,7 +154,7 @@ export function DrivingTab({ data }: { data: FleetAnalytics | undefined }) {
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <EmptyState message={t('analytics.driving.noDurationData', 'Not enough drive data for distribution chart')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.driving.noDurationData', 'Not enough drive data for distribution chart')} />
         )}
       </GlassPanel>
 
@@ -175,7 +175,7 @@ export function DrivingTab({ data }: { data: FleetAnalytics | undefined }) {
             </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <EmptyState message={t('analytics.driving.noEffTrend', 'No efficiency trend data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.driving.noEffTrend', 'No efficiency trend data')} />
         )}
       </GlassPanel>
 

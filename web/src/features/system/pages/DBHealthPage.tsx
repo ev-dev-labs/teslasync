@@ -362,7 +362,7 @@ export default function DBHealthPage() {
                   )}
                 </div>
               ) : (
-                <EmptyState
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                   message={t(
                     'dbHealth.noMigrationData',
                     'Migration data unavailable',
@@ -419,7 +419,7 @@ export default function DBHealthPage() {
                   </div>
                 </div>
               ) : (
-                <EmptyState
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                   message={t(
                     'dbHealth.noPoolData',
                     'Connection pool data unavailable',

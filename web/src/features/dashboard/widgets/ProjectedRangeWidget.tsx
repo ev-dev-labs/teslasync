@@ -188,7 +188,7 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
           </div>
         )
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Navigation className="h-6 w-6" />}
           message={t('widget.projectedRange.noData', 'No projected range data')}
           className="py-4"

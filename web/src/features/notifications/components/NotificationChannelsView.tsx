@@ -450,7 +450,7 @@ export function NotificationChannelsView() {
 
           {!isLoading && channels.length === 0 && (
             <div className="col-span-full">
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Bell className="h-8 w-8" />}
                 title={t('notifications.channels.empty.title', 'No channels configured')}
                 message={t('notifications.channels.empty.message', 'Add a notification channel to start receiving alerts via Discord, Slack, Telegram, Email, and more.')}

@@ -544,7 +544,7 @@ export default function ChargingDetailPage() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Activity className="h-8 w-8 opacity-20" />}
               message={t('common.noData', 'No data available')}
               className="py-8"
@@ -628,7 +628,7 @@ export default function ChargingDetailPage() {
                 )}
               </ChargingChartSync>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8 opacity-20" />}
                 message={t('common.noData', 'No data available')}
                 className="py-8"
@@ -692,7 +692,7 @@ export default function ChargingDetailPage() {
                 )}
               </ChargingChartSync>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8 opacity-20" />}
                 message={t('common.noData', 'No data available')}
                 className="py-8"
@@ -753,7 +753,7 @@ export default function ChargingDetailPage() {
                 )}
               </ChargingChartSync>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8 opacity-20" />}
                 message={t('common.noData', 'No data available')}
                 className="py-8"

@@ -47,7 +47,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
       onRefresh={() => refetch()}
     >
       {trips.length === 0 ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Navigation className="h-5 w-5" />}
           message={t('widget.noTrips', 'No trips recorded yet')}
         />

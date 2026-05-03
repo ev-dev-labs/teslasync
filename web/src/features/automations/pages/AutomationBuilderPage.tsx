@@ -537,7 +537,7 @@ export default function AutomationBuilderPage() {
         title={t('automations.builder.editTitle', 'Edit Automation')}
         breadcrumbLabels={breadcrumbLabels}
       >
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<AlertTriangle className="h-8 w-8" />}
           message={t('automations.builder.notFound', 'Automation not found')}
         />
@@ -646,7 +646,7 @@ export default function AutomationBuilderPage() {
               </GlassPanel>
             ) : (
               <GlassPanel className="mt-3 p-4">
-                <EmptyState
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                   message={t(
                     'automations.builder.emptyTrigger',
                     'Select a supported trigger type to configure when this automation starts.',

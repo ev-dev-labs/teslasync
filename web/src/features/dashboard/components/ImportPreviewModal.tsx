@@ -361,7 +361,7 @@ function ImportPreview({
           </div>
         </FadeIn>
       ) : (
-        <EmptyState message={t('import.cannotPreview', 'Cannot preview this layout')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('import.cannotPreview', 'Cannot preview this layout')} />
       )}
 
       {/* Actions */}

@@ -120,7 +120,7 @@ export default function SoftwareUpdatesPage() {
           {isLoading ? (
             <div className="space-y-4">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>
           ) : !updates?.length ? (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Smartphone className="h-12 w-12" />}
               title={t('No update history')}
               message={t('No software update history available')}

@@ -222,7 +222,7 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
               </Badge>
             </>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<ShieldCheck className="h-5 w-5" />}
               message={t('widget.warranty.noData', 'No warranty data')}
               className="py-2"
@@ -282,7 +282,7 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
           />
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<ShieldCheck className="h-5 w-5" />}
           message={t('widget.warranty.noData', 'No warranty data')}
           className="py-4"

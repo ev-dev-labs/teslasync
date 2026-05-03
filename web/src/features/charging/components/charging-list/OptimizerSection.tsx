@@ -175,7 +175,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
               ))}
             </div>
           ) : (
-            <EmptyState message={t('charging.optimizer.noRecs', 'Recommendations will appear after more charging sessions.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('charging.optimizer.noRecs', 'Recommendations will appear after more charging sessions.')} />
           )}
         </GlassPanel>
       </FadeIn>

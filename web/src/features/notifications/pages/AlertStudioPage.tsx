@@ -887,7 +887,7 @@ export default function AlertStudio() {
   const renderValueEditor = () => {
     if (!editor.signal_name.trim()) {
       return (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Icons.info className="h-8 w-8 text-[var(--text-muted)]" />}
           title={t('notifications.alertStudio.editor.noSignalTitle', 'Choose a signal')}
           message={t('notifications.alertStudio.editor.noSignalDescription', 'Select a telemetry signal before entering a comparison value.')}
@@ -1081,7 +1081,7 @@ export default function AlertStudio() {
               })}
               {filteredTemplates.length === 0 && (
                 <div className="col-span-full">
-                  <EmptyState
+                  <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                     icon={<Icons.sparkles className="h-8 w-8 text-[var(--text-muted)]" />}
                     title={t('notifications.alertStudio.templates.noMatchesTitle', 'No templates found')}
                     message={t('notifications.alertStudio.templates.noMatches', 'No templates match your search')}
@@ -1127,7 +1127,7 @@ export default function AlertStudio() {
             )}
 
             {!isLoading && rulesList.length > 0 && filteredRules.length === 0 && (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Icons.search className="h-8 w-8 text-[var(--text-muted)]" />}
                 title={t('notifications.alertStudio.rules.noMatchesTitle', 'No matching rules')}
                 message={t('notifications.alertStudio.rules.noMatches', 'No rules match "{{search}}"', { search: ruleSearch })}
@@ -1582,7 +1582,7 @@ export default function AlertStudio() {
                       </div>
                     </div>
                   ) : (
-                    <EmptyState
+                    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                       icon={<Icons.notificationsMuted className="h-8 w-8 text-[var(--text-muted)]" />}
                       title={t('notifications.alertStudio.channels.emptyTitle', 'No external channels configured')}
                       message={t('notifications.alertStudio.channels.emptyDescription', 'Browser toasts and alert history are always enabled. Configure channels from Notifications to fan out alerts.')}

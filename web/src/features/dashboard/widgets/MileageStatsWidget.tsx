@@ -96,7 +96,7 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
             </span>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<TrendingUp className="h-5 w-5" />}
             message={t('widget.mileageStats.noData', 'No mileage data')}
             className="py-4"
@@ -122,7 +122,7 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
       {data ? (
         <WidgetStatGrid stats={stats} cols={2} />
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<TrendingUp className="h-5 w-5" />}
           message={t('widget.mileageStats.noData', 'No mileage data')}
           className="py-4"

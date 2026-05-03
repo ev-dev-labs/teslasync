@@ -81,7 +81,7 @@ export function WidgetFlowDiagram({
   );
 
   if (nodes.length === 0) {
-    return <EmptyState message={emptyMessage} className="py-8" />;
+    return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyMessage} className="py-8" />;
   }
 
   const r = compact ? NODE_RADIUS_COMPACT : NODE_RADIUS;

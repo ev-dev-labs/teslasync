@@ -71,7 +71,7 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
           )}
         </FadeIn>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<MonitorSmartphone className="h-5 w-5" />}
           message={t('widget.noSoftwareData', 'No software data')}
           className="py-4"

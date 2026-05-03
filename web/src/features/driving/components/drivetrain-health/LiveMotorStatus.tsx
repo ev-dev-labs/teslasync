@@ -166,7 +166,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorS
             </div>
           </>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             message={t('drivetrain.noLiveMotor', 'No live motor telemetry yet')}
           />
         )}

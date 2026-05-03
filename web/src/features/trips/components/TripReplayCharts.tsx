@@ -207,7 +207,7 @@ function TimelineChart({
           </AreaChart>
         </ResponsiveContainer>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Activity className="h-6 w-6" />}
           message={t('replay.timeline.noData', 'No telemetry data available')}
         />

@@ -68,7 +68,7 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
             </Link>
           ))
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Route className="h-5 w-5" />}
             message={t('widget.noDrives', 'No recent drives')}
             className="py-4"

@@ -146,7 +146,7 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
           </p>
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Monitor className="h-5 w-5" />}
           message={t('widget.noVehicle', 'No vehicle data')}
           className="py-4"

@@ -167,7 +167,7 @@ export default function AnomalyDashboardPage() {
               })}
             </div>
           ) : (
-            <EmptyState message={t('anomaly.noHealth', 'Health data will appear once telemetry is available.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('anomaly.noHealth', 'Health data will appear once telemetry is available.')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -220,7 +220,7 @@ export default function AnomalyDashboardPage() {
               ))}
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Shield className="h-8 w-8" />}
               message={t('anomaly.noAnomalies', 'No anomalies detected — all systems normal.')}
             />
@@ -244,7 +244,7 @@ export default function AnomalyDashboardPage() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState message={t('anomaly.noFrequency', 'Anomaly frequency data will appear after detection runs.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('anomaly.noFrequency', 'Anomaly frequency data will appear after detection runs.')} />
           )}
         </GlassPanel>
       </FadeIn>

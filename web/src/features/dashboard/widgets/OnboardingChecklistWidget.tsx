@@ -155,7 +155,7 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
 
         {/* Task list */}
         {totalCount === 0 ? (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<CheckCircle2 className="h-5 w-5" />}
             message={t('checklist.empty', 'No setup steps available right now.')}
             className="py-4"

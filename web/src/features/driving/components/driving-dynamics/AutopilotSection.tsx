@@ -88,7 +88,7 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
             />
           </Grid>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             message={t(
               'dynamics.autopilotNoData',
               'No cruise / autopilot telemetry received yet',

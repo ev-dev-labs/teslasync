@@ -67,7 +67,7 @@ export function ForecastDetails({ forecastData }: ForecastDetailsProps) {
               </div>
             </div>
           ) : (
-            <EmptyState message={t('costAnalysis.forecast.noBreakdown', 'Breakdown will appear once charging data is available.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('costAnalysis.forecast.noBreakdown', 'Breakdown will appear once charging data is available.')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -115,7 +115,7 @@ export function ForecastDetails({ forecastData }: ForecastDetailsProps) {
               </div>
             </div>
           ) : (
-            <EmptyState message={t('costAnalysis.forecast.noSavings', 'Savings data will appear once driving history is available.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('costAnalysis.forecast.noSavings', 'Savings data will appear once driving history is available.')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -140,7 +140,7 @@ export function ForecastDetails({ forecastData }: ForecastDetailsProps) {
               ))}
             </div>
           ) : (
-            <EmptyState message={t('costAnalysis.forecast.noInsights', 'Insights will appear as more data is collected.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('costAnalysis.forecast.noInsights', 'Insights will appear as more data is collected.')} />
           )}
         </GlassPanel>
       </FadeIn>

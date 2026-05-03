@@ -198,7 +198,7 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
               )}
             </>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<CreditCard className="h-5 w-5" />}
               message={t('widget.subscriptions.noData', 'No subscriptions')}
               className="py-2"

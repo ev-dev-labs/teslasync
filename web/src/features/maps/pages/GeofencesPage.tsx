@@ -485,7 +485,7 @@ export default function GeofencesPage() {
                 />
               </>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8 opacity-20" />}
                 message={t('common.noData', 'No data available')}
                 className="col-span-full py-8"
@@ -593,9 +593,10 @@ export default function GeofencesPage() {
               icon={<Activity className="h-8 w-8 opacity-20" />}
               message={t('geofences.noMatches', 'No geofences match your search.')}
               className="py-8"
+              action={{ label: t('Clear search'), onClick: () => setSearch('') }}
             />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Activity className="h-8 w-8 opacity-20" />}
               message={t('common.noData', 'No data available')}
               className="py-8"

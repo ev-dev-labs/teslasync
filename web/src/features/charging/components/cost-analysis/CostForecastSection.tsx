@@ -67,7 +67,7 @@ export function CostForecastSection({ forecastData }: CostForecastSectionProps) 
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState message={t('costAnalysis.forecast.needData', 'Need at least 3 months of charging data for cost forecasting.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('costAnalysis.forecast.needData', 'Need at least 3 months of charging data for cost forecasting.')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -91,7 +91,7 @@ export function CostForecastSection({ forecastData }: CostForecastSectionProps) 
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState message={t('costAnalysis.forecast.needTrendData', 'Need at least 2 months of charging data to show the cost per kWh trend.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('costAnalysis.forecast.needTrendData', 'Need at least 2 months of charging data to show the cost per kWh trend.')} />
           )}
         </GlassPanel>
       </FadeIn>

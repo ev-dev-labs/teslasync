@@ -454,7 +454,7 @@ export default function BatteryCellsPage() {
           ) : null
         ) : (
           <GlassPanel className="p-6">
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Grid3x3 className="h-8 w-8" />}
               message={t('No cell readings available.')}
             />
@@ -689,7 +689,7 @@ export default function BatteryCellsPage() {
               pagination
             />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Battery className="h-8 w-8" />}
               message={t('No cell details available.')}
             />
@@ -729,7 +729,7 @@ export default function BatteryCellsPage() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8" />}
                 message={t('battery.cells.chart.noSpreadTrend', 'Not enough history for spread trend')}
                 className="py-8"
@@ -774,7 +774,7 @@ export default function BatteryCellsPage() {
               />
             </Grid>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Thermometer className="h-8 w-8" />}
               message={t('battery.cells.temp.empty', 'No temperature data available')}
               className="py-8"
@@ -808,7 +808,7 @@ export default function BatteryCellsPage() {
               ))}
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Info className="h-8 w-8" />}
               message={t('battery.cells.noInsights', 'Not enough data for recommendations')}
               className="py-8"

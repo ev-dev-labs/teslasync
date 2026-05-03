@@ -269,7 +269,7 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
             </div>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Icons.efficiency className="h-8 w-8 opacity-20" />}
             message={t('common.noData')}
             className="py-8"
@@ -309,7 +309,7 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
               />
             </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Icons.send className="h-8 w-8" />}
             title={t('No notification logs')}
             message={
@@ -826,7 +826,7 @@ export default function AlertsPage() {
             </div>
             </>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Icons.notificationsMuted className="h-8 w-8" />}
               title={t('No alerts')}
               message={

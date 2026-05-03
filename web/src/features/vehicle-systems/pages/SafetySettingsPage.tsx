@@ -541,7 +541,7 @@ export default function SafetySettingsPage() {
 
       {/* Empty state */}
       {!isLoading && !latest && (
-        <EmptyState message={t('No safety data available for this vehicle.')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No safety data available for this vehicle.')} />
       )}
 
       {/* Content */}
@@ -754,7 +754,7 @@ export default function SafetySettingsPage() {
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <EmptyState message={t('No safety state history to chart yet.')} />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No safety state history to chart yet.')} />
               )}
             </GlassPanel>
           </FadeIn>
@@ -766,7 +766,7 @@ export default function SafetySettingsPage() {
                 {t('Safety Settings History')}
               </h2>
               {sortedHistory.length === 0 ? (
-                <EmptyState message={t('No history records found.')} />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No history records found.')} />
               ) : (
                 <DataTable<SafetySnapshot>
                   columns={historyColumns}

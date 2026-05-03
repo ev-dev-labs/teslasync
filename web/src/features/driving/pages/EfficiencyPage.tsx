@@ -254,7 +254,7 @@ export default function EfficiencyPage() {
               </div>
             </div>
           ) : (
-            <EmptyState message={t('efficiency.noStats', 'No efficiency data available yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('efficiency.noStats', 'No efficiency data available yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -293,7 +293,7 @@ export default function EfficiencyPage() {
         </StaggerContainer>
       ) : (
         <GlassPanel className="p-6">
-          <EmptyState message={t('efficiency.noStatCards', 'No driving statistics available yet')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('efficiency.noStatCards', 'No driving statistics available yet')} />
         </GlassPanel>
       )}
 
@@ -434,7 +434,7 @@ export default function EfficiencyPage() {
               ]}
             />
           ) : (
-            <EmptyState message={t('efficiency.noTempData', 'Not enough data for temperature breakdown')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('efficiency.noTempData', 'Not enough data for temperature breakdown')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -467,7 +467,7 @@ export default function EfficiencyPage() {
               </div>
             </>
           ) : (
-            <EmptyState message={t('efficiency.noSummary', 'No efficiency summary available yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('efficiency.noSummary', 'No efficiency summary available yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -508,7 +508,7 @@ export default function EfficiencyPage() {
               </div>
             </>
           ) : (
-            <EmptyState message={t('efficiency.noInsights', 'No energy insights available yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('efficiency.noInsights', 'No energy insights available yet')} />
           )}
         </GlassPanel>
       </FadeIn>

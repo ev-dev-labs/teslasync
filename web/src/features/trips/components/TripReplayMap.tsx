@@ -255,7 +255,7 @@ export function TripReplayMap({
           <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
         </MapContainer>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<MapPin className="h-8 w-8" />}
           message={t(
             'replay.map.noPositions',

@@ -69,7 +69,7 @@ export default function GForcePanel({ vehicleId }: GForcePanelProps) {
             />
           </Grid>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             message={t('dynamics.gForceNoData', 'No G-force telemetry received yet')}
           />
         )}

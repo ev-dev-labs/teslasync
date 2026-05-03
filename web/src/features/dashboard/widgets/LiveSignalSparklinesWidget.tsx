@@ -158,7 +158,7 @@ export default function LiveSignalSparklinesWidget({ vehicleId, config, size }: 
       onRefresh={() => refetchLive()}
     >
       {configuredSignals.length === 0 ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Activity className="h-5 w-5" />}
           message={t('widget.noSignalsAvailable', 'No signals available')}
           className="py-4"

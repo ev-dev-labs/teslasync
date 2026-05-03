@@ -206,7 +206,7 @@ export default function GuardModeWidget({ vehicleId, size }: WidgetProps) {
           />
         )
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Shield className="h-5 w-5" />}
           message={t('widget.noGuardData', 'No guard data')}
           className="py-4"

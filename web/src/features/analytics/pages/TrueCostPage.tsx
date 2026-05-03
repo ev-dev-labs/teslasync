@@ -146,7 +146,7 @@ export default function TrueCostPage() {
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <EmptyState message={t('tco.noMonthlyData', 'No monthly data available yet')} />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('tco.noMonthlyData', 'No monthly data available yet')} />
               )}
             </ChartContainer>
           </FadeIn>
@@ -199,7 +199,7 @@ export default function TrueCostPage() {
                     </ResponsiveContainer>
                   </div>
                 ) : (
-                  <EmptyState message={t('tco.noMonthlyData', 'No monthly data available yet')} />
+                  <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('tco.noMonthlyData', 'No monthly data available yet')} />
                 )}
               </ChartContainer>
             </FadeIn>
@@ -244,7 +244,7 @@ export default function TrueCostPage() {
         </>
       ) : !isLoading ? (
         <GlassPanel className="p-8">
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<DollarSign className="h-10 w-10 text-[var(--text-muted)]" />}
             message={t('tco.noData', 'No data available. Start charging to see your cost analysis.')}
           />

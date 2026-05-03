@@ -431,7 +431,7 @@ export default function TirePressurePage() {
             {loadingHistory ? (
               <Skeleton height={300} className="w-full" />
             ) : chartData.length === 0 ? (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Gauge className="h-8 w-8" />}
                 message={t('No History Data')}
               />
@@ -482,7 +482,7 @@ export default function TirePressurePage() {
             {loadingHistory ? (
               <Skeleton height={200} className="w-full" />
             ) : !history?.length ? (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Clock className="h-8 w-8" />}
                 message={t('No History Data')}
               />

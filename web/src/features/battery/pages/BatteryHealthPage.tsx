@@ -364,7 +364,7 @@ export default function BatteryHealthPage() {
         subtitle={t('battery.subtitle', 'Degradation tracking, prediction, charging habits & longevity insights')}
         error={healthError as Error | null}
       >
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Battery className="h-10 w-10" />}
           message={t('battery.empty', 'No battery health data available yet.')}
         />
@@ -638,7 +638,7 @@ export default function BatteryHealthPage() {
               ))}
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Info className="h-8 w-8" />}
               message={t('battery.insights.empty', 'Not enough data for insights yet')}
               className="py-6"
@@ -677,7 +677,7 @@ export default function BatteryHealthPage() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Activity className="h-8 w-8" />}
               message={t('battery.chart.noTrend', 'Not enough snapshots for trend analysis')}
               className="py-8"
@@ -719,7 +719,7 @@ export default function BatteryHealthPage() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8" />}
                 message={t('battery.chart.noRange', 'No range data yet')}
                 className="py-8"
@@ -778,7 +778,7 @@ export default function BatteryHealthPage() {
               )}
             </>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Zap className="h-8 w-8" />}
               message={t('battery.chart.noSessions', 'No charging session data yet')}
               className="py-8"
@@ -882,7 +882,7 @@ export default function BatteryHealthPage() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Zap className="h-8 w-8" />}
                 message={t('battery.chart.noBreakdown', 'No charging data for breakdown')}
                 className="py-8"
@@ -911,7 +911,7 @@ export default function BatteryHealthPage() {
                 ))}
               </div>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8" />}
                 message={t('battery.stats.empty', 'No charging statistics yet')}
                 className="py-8"

@@ -51,7 +51,7 @@ export default function QuickStatsPage() {
                 </div>
               </div>
             ) : (
-              <EmptyState message={t('quickStats.noVehicle', 'No vehicle found')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('quickStats.noVehicle', 'No vehicle found')} />
             )}
           </GlassPanel>
         </FadeIn>

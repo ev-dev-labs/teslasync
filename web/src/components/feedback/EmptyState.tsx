@@ -1,27 +1,53 @@
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/cn';
+import { Button as CtaButton } from '@/components/ui/Button';
+import { Heading, Text } from '@/components/ui/Typography';
 
 interface EmptyStateProps {
   icon?: React.ReactNode;
   title?: string;
   message: string;
+  /** Imperative action — runs on click (mutates state, opens modal, etc.) */
   action?: { label: string; onClick: () => void };
+  /** Navigation action — preferred when the CTA just goes somewhere. Takes priority over `action`. */
+  actionTo?: { label: string; to: string };
   className?: string;
 }
 
-export function EmptyState({ icon, title, message, action, className }: EmptyStateProps) {
+// Button-equivalent classes for the Link-based actionTo CTA. Mirrors
+// the canonical secondary/sm CTA variant so the visual stays in
+// lock-step with the shared component library.
+const linkButtonClasses = cn(
+  'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+  'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100',
+  'h-8 px-3 text-xs',
+);
+
+export function EmptyState({ icon, title, message, action, actionTo, className }: EmptyStateProps) {
   return (
-    <div className={cn('flex flex-col items-center justify-center py-16 text-center', className)}>
+    <div
+      role="status"
+      className={cn('flex flex-col items-center justify-center py-16 text-center', className)}
+    >
       {icon && <div className="mb-4 text-[var(--text-muted)]">{icon}</div>}
-      {title && <h3 className="mb-1 text-lg font-semibold text-gray-700 dark:text-[var(--text-secondary)]">{title}</h3>}
-      <p className="mb-4 max-w-md text-sm text-[var(--text-muted)]">{message}</p>
-      {action && (
-        <button
-          onClick={action.onClick}
-          className="rounded-md border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800"
-        >
-          {action.label}
-        </button>
+      {title && (
+        <Heading level="panel" className="mb-1">
+          {title}
+        </Heading>
       )}
+      <Text variant="bodySm" as="p" className="mb-4 max-w-md">
+        {message}
+      </Text>
+      {actionTo ? (
+        <Link to={actionTo.to} className={linkButtonClasses}>
+          {actionTo.label}
+        </Link>
+      ) : action ? (
+        <CtaButton onClick={action.onClick} variant="secondary" size="sm">
+          {action.label}
+        </CtaButton>
+      ) : null}
     </div>
   );
 }

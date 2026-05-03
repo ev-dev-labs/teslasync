@@ -411,7 +411,9 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               <Spinner size="md" />
             </div>
           ) : empty ? (
-            <EmptyState message="No data available" />
+            <EmptyState /* no-action: chart cannot meaningfully recover without data — show prose only */
+              message={t('chart.noData', 'No data available')}
+            />
           ) : (
             <SectionErrorBoundary
               name={`chart:${title}`}

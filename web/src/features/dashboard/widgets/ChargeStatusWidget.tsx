@@ -71,7 +71,7 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
             </p>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Zap className="h-5 w-5" />}
             message={t('widget.noChargeData', 'No charge data')}
             className="py-4"

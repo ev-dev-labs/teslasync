@@ -401,7 +401,7 @@ export default function SmartChargePage() {
               </div>
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<History className="h-10 w-10" />}
               message={t('chargePlanner.noHistory', 'No charge plans yet. Optimize a schedule above to get started.')}
             />

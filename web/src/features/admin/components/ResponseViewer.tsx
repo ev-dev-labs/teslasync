@@ -266,7 +266,7 @@ export default function ResponseViewer({ response, loading, history, onReplay }:
         {loading && <Skeleton className="h-48 rounded-lg" />}
 
         {!loading && !response && (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             message={t('playground.noResponse', 'Send a request to see the response')}
           />
         )}

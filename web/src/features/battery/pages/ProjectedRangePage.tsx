@@ -264,7 +264,7 @@ export default function ProjectedRangePage() {
               ))}
             </div>
           ) : (
-            <EmptyState message={t('range.noScenarios', 'Drive more to see personalized scenario projections.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('range.noScenarios', 'Drive more to see personalized scenario projections.')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -309,7 +309,7 @@ export default function ProjectedRangePage() {
               </div>
             </div>
           ) : (
-            <EmptyState message={t('range.noMatrix', 'Efficiency data requires drives in different conditions.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('range.noMatrix', 'Efficiency data requires drives in different conditions.')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -369,7 +369,7 @@ export default function ProjectedRangePage() {
                   </p>
                 </div>
               ) : (
-                <EmptyState message={t('range.noWhatIf', 'Adjust sliders to calculate projected range.')} />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('range.noWhatIf', 'Adjust sliders to calculate projected range.')} />
               )}
             </div>
           </div>

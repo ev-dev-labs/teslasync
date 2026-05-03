@@ -51,7 +51,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
       onRefresh={() => refetchMotor()}
     >
       {!hasData ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Wifi className="h-5 w-5" />}
           message={t('widget.noSignals', 'No live signal data')}
           className="py-4"

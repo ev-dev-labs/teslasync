@@ -249,7 +249,7 @@ export default function RedisSignalViewerPage() {
         <FadeIn>
           <GlassPanel>
             {selectedVehicleId === null ? (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Database className="h-10 w-10" />}
                 message={t('redis.selectPrompt', 'Select a vehicle to view its cached Redis signals')}
               />
@@ -262,7 +262,7 @@ export default function RedisSignalViewerPage() {
                 <Skeleton className="h-8 w-full" />
               </div>
             ) : filteredRows.length === 0 ? (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Search className="h-10 w-10" />}
                 message={
                   rows.length === 0

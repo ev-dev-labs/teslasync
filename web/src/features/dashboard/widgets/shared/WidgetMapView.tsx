@@ -23,7 +23,7 @@ export function WidgetMapView({
   isEmpty = false,
 }: WidgetMapViewProps) {
   if (isEmpty) {
-    return <EmptyState message={emptyMessage} className="py-4" />;
+    return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyMessage} className="py-4" />;
   }
 
   return (

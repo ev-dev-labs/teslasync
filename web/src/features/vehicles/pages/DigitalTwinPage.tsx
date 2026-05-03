@@ -99,7 +99,7 @@ export default function DigitalTwinPage() {
 
       {!vehicle && !vehiclesLoading ? (
         <GlassPanel className="p-8">
-          <EmptyState icon={<Car className="h-8 w-8" />} message={t('digitalTwin.noVehicles', 'No vehicles found. Add a vehicle to see its digital twin.')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Car className="h-8 w-8" />} message={t('digitalTwin.noVehicles', 'No vehicles found. Add a vehicle to see its digital twin.')} />
         </GlassPanel>
       ) : (
         <div className="flex flex-col lg:flex-row gap-6">
@@ -141,7 +141,7 @@ export default function DigitalTwinPage() {
                 {securityData ? (
                   <KVList items={doorItems} columns={2} />
                 ) : (
-                  <EmptyState icon={<Info className="h-6 w-6" />} message={t('digitalTwin.noDoorData', 'No door data available')} />
+                  <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Info className="h-6 w-6" />} message={t('digitalTwin.noDoorData', 'No door data available')} />
                 )}
               </GlassPanel>
             </FadeIn>
@@ -155,7 +155,7 @@ export default function DigitalTwinPage() {
                 {securityData ? (
                   <KVList items={windowItems} columns={2} />
                 ) : (
-                  <EmptyState icon={<Info className="h-6 w-6" />} message={t('digitalTwin.noWindowData', 'No window data available')} />
+                  <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Info className="h-6 w-6" />} message={t('digitalTwin.noWindowData', 'No window data available')} />
                 )}
               </GlassPanel>
             </FadeIn>

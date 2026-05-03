@@ -73,7 +73,7 @@ export default function CostAnalysisPage() {
     return (
       <FadeIn>
         <div className="flex min-h-[60vh] items-center justify-center p-6">
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<DollarSign className="h-12 w-12 text-[var(--text-muted)]" />}
             title={t('costAnalysis.empty.title', 'No Charging Data')}
             message={t(

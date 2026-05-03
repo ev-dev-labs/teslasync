@@ -507,7 +507,7 @@ export default function MediaPlayerPage() {
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<BarChart3 className="h-8 w-8 text-[var(--text-muted)]" />}
                 message={t('No volume data for this period')}
               />
@@ -557,7 +557,7 @@ export default function MediaPlayerPage() {
                 </div>
               </>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Disc3 className="h-8 w-8 text-[var(--text-muted)]" />}
                 message={t('No source data available')}
               />
@@ -589,7 +589,7 @@ export default function MediaPlayerPage() {
               pagination
             />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Music className="h-8 w-8 text-[var(--text-muted)]" />}
               message={t('No playback history for this period')}
             />

@@ -159,7 +159,7 @@ export default function EnergyFlowAnimatedWidget({ vehicleId, size }: WidgetProp
           </div>
         )
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Zap className="h-5 w-5" />}
           message={t('widget.energyFlowAnimated.noData', 'No energy data available')}
           className="py-4"

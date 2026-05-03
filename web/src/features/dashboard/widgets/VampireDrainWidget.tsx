@@ -164,7 +164,7 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
           </div>
         )
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<BatteryWarning className="h-5 w-5" />}
           message={t('widget.vampireDrain.noData', 'No vampire drain data')}
           className="py-4"

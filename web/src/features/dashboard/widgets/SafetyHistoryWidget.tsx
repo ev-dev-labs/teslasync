@@ -228,7 +228,7 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
             t={t}
           />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<AlertOctagon className="h-5 w-5" />}
             message={t('widget.noSafetyEvents', 'No safety events recorded')}
             className="py-4"

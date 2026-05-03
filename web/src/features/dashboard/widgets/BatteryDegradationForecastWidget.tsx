@@ -182,7 +182,7 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
           </div>
         )
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<TrendingDown className="h-5 w-5" />}
           message={t('widget.forecast.noData', 'No degradation forecast data')}
           className="py-4"

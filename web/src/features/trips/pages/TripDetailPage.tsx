@@ -66,7 +66,7 @@ export default function TripDetailPage() {
           </GlassPanel>
         </>
       ) : (
-        <EmptyState message={t('trips.detail.notFound', 'Trip not found')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('trips.detail.notFound', 'Trip not found')} />
       )}
     </PageContainer>
   );

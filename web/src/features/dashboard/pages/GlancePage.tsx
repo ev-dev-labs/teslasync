@@ -119,7 +119,7 @@ export default function GlancePage() {
     >
       {!vehicle ? (
         <GlassPanel className="p-8">
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Battery className="h-8 w-8" />}
             message={t('glance.noVehicle', 'No vehicle found')}
           />

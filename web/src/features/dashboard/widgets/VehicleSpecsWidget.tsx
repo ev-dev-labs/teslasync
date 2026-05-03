@@ -156,7 +156,7 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
           )}
         </FadeIn>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<FileText className="h-5 w-5" />}
           message={t('widget.specs.noData', 'No specs available')}
           className="py-4"

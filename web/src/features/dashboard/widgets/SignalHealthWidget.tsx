@@ -134,7 +134,7 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
       onRefresh={() => refetchStats()}
     >
       {!hasData ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Activity className="h-5 w-5" />}
           message={t('widget.signalHealth.noData', 'No signal health data')}
           className="py-4"

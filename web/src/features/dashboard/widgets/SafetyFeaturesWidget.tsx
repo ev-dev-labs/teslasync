@@ -153,7 +153,7 @@ export default function SafetyFeaturesWidget({ vehicleId, size }: WidgetProps) {
           />
         )
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<ShieldAlert className="h-5 w-5" />}
           message={t('widget.safety.noData', 'No safety data')}
           className="py-4"

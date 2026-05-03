@@ -189,7 +189,7 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
           </div>
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<CircleDot className="h-5 w-5" />}
           message={t('widget.noTireData', 'No tire pressure data')}
           className="py-4"

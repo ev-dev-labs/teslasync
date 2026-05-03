@@ -116,7 +116,7 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
             </span>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Trophy className="h-5 w-5" />}
             message={t('widget.lifetimeStats.noData', 'No lifetime data')}
             className="py-4"
@@ -142,7 +142,7 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
       {data ? (
         <WidgetStatGrid stats={allStats} cols={isWide ? 4 : 2} />
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Trophy className="h-5 w-5" />}
           message={t('widget.lifetimeStats.noData', 'No lifetime data')}
           className="py-4"

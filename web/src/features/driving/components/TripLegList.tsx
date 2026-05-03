@@ -23,7 +23,7 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
         <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
           {t('tripPlanner.legs.title', 'Route Breakdown')}
         </h3>
-        <EmptyState message={t('tripPlanner.legs.empty', 'Plan a trip to see the route breakdown')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('tripPlanner.legs.empty', 'Plan a trip to see the route breakdown')} />
       </GlassPanel>
     );
   }

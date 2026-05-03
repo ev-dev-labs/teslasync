@@ -100,7 +100,7 @@ export function ChargingTab({ data }: { data: FleetAnalytics | undefined }) {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState message={t('analytics.charging.noTypes', 'No charger type data')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.charging.noTypes', 'No charger type data')} />
           )}
         </GlassPanel>
 
@@ -118,7 +118,7 @@ export function ChargingTab({ data }: { data: FleetAnalytics | undefined }) {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState message={t('analytics.charging.noBatDist', 'No battery distribution data')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.charging.noBatDist', 'No battery distribution data')} />
           )}
         </GlassPanel>
       </div>
@@ -140,7 +140,7 @@ export function ChargingTab({ data }: { data: FleetAnalytics | undefined }) {
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <EmptyState message={t('analytics.charging.noHourly', 'No hourly data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.charging.noHourly', 'No hourly data')} />
         )}
       </GlassPanel>
 

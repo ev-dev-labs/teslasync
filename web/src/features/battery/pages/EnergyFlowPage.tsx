@@ -315,7 +315,7 @@ export default function EnergyFlowPage() {
         error={statsError as Error | null}
         actions={actions}
       >
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Zap className="h-10 w-10" />}
           title={t('No Data')}
           message={t('No energy flow data available for this vehicle and time range.')}
@@ -506,7 +506,7 @@ export default function EnergyFlowPage() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState message={t('No daily energy data available.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No daily energy data available.')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -540,7 +540,7 @@ export default function EnergyFlowPage() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyState message={t('No daily distance data available.')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No daily distance data available.')} />
             )}
           </GlassPanel>
 
@@ -570,7 +570,7 @@ export default function EnergyFlowPage() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyState message={t('No efficiency data available.')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No efficiency data available.')} />
             )}
           </GlassPanel>
         </div>
@@ -649,7 +649,7 @@ export default function EnergyFlowPage() {
               pagination
             />
           ) : (
-            <EmptyState message={t('No energy history records available.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No energy history records available.')} />
           )}
         </GlassPanel>
       </FadeIn>

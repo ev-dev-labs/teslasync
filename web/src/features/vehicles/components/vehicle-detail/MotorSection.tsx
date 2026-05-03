@@ -89,7 +89,7 @@ export function MotorSection({ motorData }: MotorSectionProps) {
           />
         </div>
       ) : (
-        <EmptyState message={t('vehicles.detail.noMotorData', 'No motor data available')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('vehicles.detail.noMotorData', 'No motor data available')} />
       )}
     </GlassPanel>
   )

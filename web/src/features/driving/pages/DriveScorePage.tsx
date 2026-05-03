@@ -764,7 +764,7 @@ export default function DriveScorePage() {
 
       {/* -------- Empty guard -------- */}
       {!isLoading && scoredDrives.length === 0 && (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Icons.speed className="h-12 w-12 text-[var(--text-muted)]" />}
           title={t('driveScore.emptyTitle', 'No Scored Drives')}
           message={t(
@@ -1478,7 +1478,7 @@ export default function DriveScorePage() {
               </Grid>
             ) : (
               <GlassPanel className="p-6">
-                <EmptyState message={t('driveScore.noPeriodStats', 'No weekly/monthly averages available yet')} />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('driveScore.noPeriodStats', 'No weekly/monthly averages available yet')} />
               </GlassPanel>
             )}
           </StaggerItem>
@@ -1650,7 +1650,7 @@ export default function DriveScorePage() {
           </StaggerItem>
           </>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Icons.efficiency className="h-8 w-8 opacity-20" />}
             message={t('common.noData', 'No data available')}
             className="py-8"

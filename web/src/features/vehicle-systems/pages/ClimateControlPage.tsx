@@ -1119,7 +1119,7 @@ export default function ClimateControlPage() {
           {historyLoading ? (
             <Skeleton height={300} />
           ) : !history || history.length === 0 ? (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Thermometer className="h-10 w-10 text-[var(--text-muted)]" />}
               message={t('No temperature history available.')}
             />
@@ -1180,7 +1180,7 @@ export default function ClimateControlPage() {
           {historyLoading ? (
             <Skeleton height={300} />
           ) : chronoHistory.length === 0 ? (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Wind className="h-10 w-10 text-[var(--text-muted)]" />}
               message={t('No HVAC history available.')}
             />
@@ -1261,7 +1261,7 @@ export default function ClimateControlPage() {
           {historyLoading ? (
             <Skeleton lines={8} />
           ) : sortedHistory.length === 0 ? (
-            <EmptyState message={t('No history records found.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No history records found.')} />
           ) : (
             <DataTable
               columns={columns}

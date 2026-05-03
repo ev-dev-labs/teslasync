@@ -126,7 +126,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
             </Badge>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Gauge className="h-5 w-5" />}
             message={t('widget.drivingDynamics.noData', 'No dynamics data')}
             className="py-2"
@@ -225,7 +225,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
           )}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Gauge className="h-5 w-5" />}
           message={t('widget.drivingDynamics.noData', 'No dynamics data')}
           className="py-4"

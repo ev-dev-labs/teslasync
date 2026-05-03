@@ -102,7 +102,7 @@ export default function MQTTStatusWidget({ size }: WidgetProps) {
           </div>
         )
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Radio className="h-5 w-5" />}
           message={t('widget.mqtt.noData', 'No MQTT status data')}
           className="py-4"

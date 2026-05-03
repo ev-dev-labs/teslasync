@@ -150,7 +150,7 @@ export default function CostBreakdownWidget({ vehicleId, size }: WidgetProps) {
             animated
           />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<PieIcon className="h-5 w-5" />}
             message={t('widget.costBreakdown.noData', 'No cost data')}
             className="py-4"
@@ -240,7 +240,7 @@ export default function CostBreakdownWidget({ vehicleId, size }: WidgetProps) {
           </div>
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<PieIcon className="h-5 w-5" />}
           message={t('widget.costBreakdown.noData', 'No cost data')}
           className="py-8"

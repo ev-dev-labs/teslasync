@@ -200,7 +200,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
           </div>
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Grid3X3 className="h-5 w-5" />}
           message={t('widget.speedHeatmap.empty', 'No drive data yet')}
           className="py-4"

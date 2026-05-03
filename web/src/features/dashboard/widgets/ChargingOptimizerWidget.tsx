@@ -85,7 +85,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
       onRefresh={() => refetch()}
     >
         {!data ? (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Sparkles className="h-5 w-5" />}
             message={t('widget.chargingOptimizer.noData', 'No optimizer data')}
             className="py-4"
@@ -120,7 +120,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
       {...shellProps}
     >
       {!data ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Sparkles className="h-5 w-5" />}
           message={t('widget.chargingOptimizer.noData', 'No optimizer data')}
           className="py-4"

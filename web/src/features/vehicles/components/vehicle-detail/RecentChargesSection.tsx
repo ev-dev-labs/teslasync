@@ -78,7 +78,7 @@ export function RecentChargesSection({ sessions }: RecentChargesSectionProps) {
           emptyMessage={t('common.noCharges', 'No charging sessions recorded yet')}
         />
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<BatteryCharging className="h-8 w-8" />}
           message={t('common.noCharges', 'No charging sessions recorded yet')}
         />

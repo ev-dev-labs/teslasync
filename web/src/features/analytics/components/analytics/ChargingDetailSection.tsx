@@ -56,7 +56,7 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
             ))}
           </div>
         ) : (
-          <EmptyState message={t('analytics.charging.noBrands', 'No charger brand data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.charging.noBrands', 'No charger brand data')} />
         )}
       </GlassPanel>
 
@@ -79,7 +79,7 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <EmptyState message={t('analytics.charging.noMonthly', 'No monthly data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.charging.noMonthly', 'No monthly data')} />
         )}
       </GlassPanel>
 
@@ -114,7 +114,7 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
             />
           </div>
         ) : (
-          <EmptyState message={t('analytics.charging.noCostStats', 'No cost statistics')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.charging.noCostStats', 'No cost statistics')} />
         )}
       </GlassPanel>
 
@@ -143,7 +143,7 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
             })}
           </div>
         ) : (
-          <EmptyState message={t('analytics.charging.noCostByType', 'No charger type data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.charging.noCostByType', 'No charger type data')} />
         )}
       </GlassPanel>
     </>

@@ -239,7 +239,7 @@ export default function TripListPage() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState icon={<Route className="h-12 w-12" />} message={t('trips.chart.empty', 'No trip data to chart')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Route className="h-12 w-12" />} message={t('trips.chart.empty', 'No trip data to chart')} />
           )}
         </ChartContainer>
       </FadeIn>
@@ -251,7 +251,7 @@ export default function TripListPage() {
             {t('trips.list.heading', 'All Trips')}
           </h3>
           {allTrips.length === 0 ? (
-            <EmptyState icon={<Route className="h-12 w-12" />} message={t('trips.list.empty', 'No trips recorded yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Route className="h-12 w-12" />} message={t('trips.list.empty', 'No trips recorded yet')} />
           ) : (
             <div className="space-y-3">
               {allTrips.map((trip) => (
