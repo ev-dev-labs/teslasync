@@ -525,6 +525,11 @@ export default function TripReplayPage() {
               icon={<Zap className="h-4 w-4" />}
               color="cyan"
               className={cn(cardHighlight(['regen-peak', 'charge-start', 'charge-stop']))}
+              help={{
+                i18nKey: 'help.replay.power',
+                defaultValue:
+                  'Instantaneous battery power at this point on the trip. Negative values indicate regenerative braking (energy flowing back into the pack); positive values indicate motor draw.',
+              }}
             />
             <MetricCard
               label={t('replay.stat.battery', 'Battery')}
@@ -532,6 +537,11 @@ export default function TripReplayPage() {
               icon={<Battery className="h-4 w-4" />}
               color="cyan"
               className={cn(cardHighlight(['low-soc', 'charge-start', 'charge-stop']))}
+              help={{
+                i18nKey: 'help.replay.battery',
+                defaultValue:
+                  "State-of-charge percentage at this point. Drops indicate energy use; rises indicate regen or DC-fast-charging during a drive.",
+              }}
             />
             <MetricCard
               label={t('replay.stat.elevation', 'Elevation')}
@@ -546,6 +556,11 @@ export default function TripReplayPage() {
                 : '—'}
               icon={<Navigation className="h-4 w-4" />}
               color="cyan"
+              help={{
+                i18nKey: 'help.replay.range',
+                defaultValue:
+                  'Estimated rated range remaining at this position based on EPA rated efficiency. Differs from real-world range, which depends on speed, terrain, climate, and load.',
+              }}
             />
             <MetricCard
               label={t('replay.stat.temp', 'Temperature')}

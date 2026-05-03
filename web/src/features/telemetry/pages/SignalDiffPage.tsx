@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { GitCompare, Bell, Pin, PinOff } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, Button, Input, Select, CopyButton, Badge } from '@/components/ui';
+import { GlassPanel, Button, HelpTooltip, Input, Select, CopyButton, Badge } from '@/components/ui';
 import { StatCard, BulkActionsToolbar, SavedViewMenu } from '@/components/data-display';
 import type { BulkAction } from '@/components/data-display/BulkActionsToolbar';
 import { Skeleton } from '@/components/feedback';
@@ -394,14 +394,24 @@ export default function SignalDiffPage() {
               />
             </div>
             <div>
-              <span className="mb-1.5 block text-xs text-cyan-300">
+              <span className="mb-1.5 flex items-center gap-1 text-xs text-cyan-300">
                 {t('signalDiff.windowA', 'Window A')}
+                <HelpTooltip
+                  i18nKey="help.signal.snapshot"
+                  defaultValue="A snapshot is a point-in-time view of every signal value at a single timestamp. Falls back to signal_log within the last 30 days when the live layer doesn't have it."
+                  ariaLabel={t('help.signal.snapshot.aria', { defaultValue: 'More info about signal snapshots' })}
+                />
               </span>
               <Input type="datetime-local" value={atA} onChange={(e) => setAtA(e.target.value)} />
             </div>
             <div>
-              <span className="mb-1.5 block text-xs text-amber-300">
+              <span className="mb-1.5 flex items-center gap-1 text-xs text-amber-300">
                 {t('signalDiff.windowB', 'Window B')}
+                <HelpTooltip
+                  i18nKey="help.signal.diff"
+                  defaultValue="Server-side comparison between two snapshots. Unchanged signals are omitted from the result to reduce noise."
+                  ariaLabel={t('help.signal.diff.aria', { defaultValue: 'More info about signal diffs' })}
+                />
               </span>
               <Input type="datetime-local" value={atB} onChange={(e) => setAtB(e.target.value)} />
             </div>

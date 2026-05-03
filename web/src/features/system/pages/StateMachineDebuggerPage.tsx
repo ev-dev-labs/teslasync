@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, ChevronDown, ChevronRight, Activity, Zap, AlertTriangle } from 'lucide-react';
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Button, DataTable, Select, Pagination, CopyButton } from '@/components/ui';
+import { GlassPanel, Button, DataTable, HelpTooltip, Select, Pagination, CopyButton } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
@@ -440,15 +440,28 @@ export default function StateMachineDebuggerPage() {
                   setServerPage(1);
                 }}
               />
-              <Select
-                label={t('fsm.fsmType', 'FSM Type')}
-                options={fsmTypeOptions}
-                value={fsmType}
-                onChange={(e) => {
-                  setFsmType(e.target.value as FSMType);
-                  setServerPage(1);
-                }}
-              />
+              <div className="space-y-1">
+                <label
+                  htmlFor="fsm-type-select"
+                  className="flex items-center gap-1 text-sm font-medium text-[var(--text-secondary)]"
+                >
+                  {t('fsm.fsmType', 'FSM Type')}
+                  <HelpTooltip
+                    i18nKey="help.fsm.type"
+                    defaultValue="Finite-state machine. Tracks vehicle high-level state (driving, charging, parked, online, asleep, offline) and the transitions between them. Sub-FSMs cover drive, charge, command, and notification lifecycles."
+                    ariaLabel={t('help.fsm.type.aria', { defaultValue: 'More info about FSM types' })}
+                  />
+                </label>
+                <Select
+                  id="fsm-type-select"
+                  options={fsmTypeOptions}
+                  value={fsmType}
+                  onChange={(e) => {
+                    setFsmType(e.target.value as FSMType);
+                    setServerPage(1);
+                  }}
+                />
+              </div>
               <Select
                 label={t('fsm.perPage', 'Per Page')}
                 options={perPageOptions}
@@ -473,8 +486,14 @@ export default function StateMachineDebuggerPage() {
       {/* ──── Section 3: Current Vehicle State ──── */}
       <FadeIn delay={0.1}>
         <GlassPanel className="p-6">
-          <h2 className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-3">
+          <h2 className="flex items-center gap-1 text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-3">
             {t('fsm.vehicleLiveState', 'Vehicle Live State')}
+            <HelpTooltip
+              size="xs"
+              i18nKey="help.fsm.liveState"
+              defaultValue="The current state the FSM resolved to from the most recent telemetry. The FSM stays in a terminal state until external evidence (telemetry or poll) triggers an explicit transition out."
+              ariaLabel={t('help.fsm.liveState.aria', { defaultValue: 'More info about FSM live state' })}
+            />
           </h2>
           {stateLoading ? (
             <Skeleton height={80} />

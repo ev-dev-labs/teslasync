@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DataTable, PinButton, type Column } from '@/components/ui';
+import { DataTable, PinButton, HelpTooltip, type Column } from '@/components/ui';
 import { SourceLayerBadge, type SignalSource } from '@/components/data-display';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -207,6 +207,31 @@ export function SignalDiffTable({
 
   return (
     <div className={cn('w-full', className)}>
+      {/* Legend explaining the technical columns. `Column.header` in the
+          shared `<DataTable>` is `string`-only (cannot embed React nodes),
+          so the per-column tooltips live here above the header row. */}
+      <div className="mb-2 flex flex-wrap items-center gap-3 px-1 text-[11px] text-[var(--text-muted)]">
+        <span className="inline-flex items-center gap-1">
+          <span className="font-mono uppercase tracking-wide">{t('signalDiff.legend.delta', 'Δ')}</span>
+          <HelpTooltip
+            size="xs"
+            i18nKey="help.signal.deltaCol"
+            defaultValue="Numeric difference (and percent change) between Window A and Window B for this signal. 'changed' is shown for non-numeric values that differ."
+            ariaLabel={t('signalDiff.legend.deltaAria', { defaultValue: 'More info about the Δ column' })}
+          />
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="font-mono uppercase tracking-wide">
+            {t('signalDiff.legend.source', 'Src A / Src B')}
+          </span>
+          <HelpTooltip
+            size="xs"
+            i18nKey="help.signal.sourceLayer"
+            defaultValue="The layer that supplied this value: L1 (in-process), L2 (Redis), LOG (TimescaleDB history), or STALE (older than 2 minutes)."
+            ariaLabel={t('signalDiff.legend.sourceAria', { defaultValue: 'More info about the source-layer column' })}
+          />
+        </span>
+      </div>
       <DataTable<SignalDiffRow>
         tableId="signal-diff-table"
         columns={columns}

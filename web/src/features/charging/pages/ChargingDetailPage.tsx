@@ -10,7 +10,7 @@ import { formatDate, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtWithUnit, fmtPercent } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, PrintButton } from '@/components/ui';
+import { GlassPanel, Badge, HelpTooltip, PrintButton } from '@/components/ui';
 import { MetricBar, InlineMetric, AnimatedNumber, StatCard, KVList, LiveIndicator, DateTime } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts';
 import { Skeleton, EmptyState, LiveStaleDataBanner } from '@/components/feedback';
@@ -328,8 +328,14 @@ export default function ChargingDetailPage() {
 
         {/* ── 3. Battery fill meter ──────────────────────────── */}
         <GlassPanel className="p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">
+          <h2 className="flex items-center gap-1.5 text-lg font-semibold mb-4">
             {t('charging.detail.batteryProgress', 'Battery Progress')}
+            <HelpTooltip
+              size="sm"
+              i18nKey="help.charging.socRange"
+              defaultValue="The starting and ending state-of-charge percentages for this session. Wider ranges generally mean longer sessions and more taper."
+              ariaLabel={t('help.charging.socRange.aria', { defaultValue: 'More info about state-of-charge range' })}
+            />
           </h2>
           <div className="space-y-4">
             <MetricBar
@@ -504,13 +510,19 @@ export default function ChargingDetailPage() {
 
         {/* ── 7. Charge curve chart ──────────────────────────── */}
         <GlassPanel className="p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">
+          <h2 className="flex items-center gap-1.5 text-lg font-semibold mb-4">
             {t('charging.detail.chargeCurve', 'Charge Curve')}
             {!hasTelemetry && (
               <span className="text-xs text-muted ml-2">
                 ({t('charging.detail.estimated', 'estimated')})
               </span>
             )}
+            <HelpTooltip
+              size="sm"
+              i18nKey="help.charging.chargeCurve"
+              defaultValue="Power vs SoC curve for the session. Tapering — the gradual drop in power as the battery approaches full — is inherent to lithium chemistry and is not a fault. Sudden drops below the curve indicate derating: the charger or battery is throttling power because of cell or ambient temperature limits."
+              ariaLabel={t('help.charging.chargeCurve.aria', { defaultValue: 'More info about taper and derating' })}
+            />
           </h2>
           {chargeCurve.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>

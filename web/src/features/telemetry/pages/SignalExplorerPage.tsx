@@ -15,6 +15,7 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Pagination } from '@/components/ui/Pagination';
@@ -290,8 +291,14 @@ export default function SignalExplorerPage() {
       <GlassPanel className="p-4 sm:p-5 space-y-4">
         {/* Signal picker */}
         <div>
-          <span className="block text-xs font-medium uppercase tracking-wider mb-2 text-[var(--text-muted)]">
+          <span className="flex items-center gap-1 text-xs font-medium uppercase tracking-wider mb-2 text-[var(--text-muted)]">
             {t('Signals')} ({selectedSignals.length}/5)
+            <HelpTooltip
+              i18nKey="help.signal.layers"
+              defaultValue="TeslaSync exposes three live-state layers: L1 (in-process), L2 (Redis shared), and log (TimescaleDB history)."
+              ariaLabel={t('help.signal.layers.aria', { defaultValue: 'More info about signal layers (L1, L2, log)' })}
+              placement="bottom"
+            />
           </span>
           <div className="flex items-center gap-2 mb-2">
             <Input
@@ -389,6 +396,12 @@ export default function SignalExplorerPage() {
               </span>
             ) : t('Live')}
           </Button>
+          <HelpTooltip
+            i18nKey="help.signal.live"
+            defaultValue="Live mode streams real-time signal values via SSE. Maintains a rolling 5-minute window throttled to 2 Hz updates."
+            ariaLabel={t('help.signal.live.aria', { defaultValue: 'More info about live signal streaming' })}
+            placement="left"
+          />
         </div>
       </GlassPanel>
 

@@ -46,6 +46,41 @@
     },
     "cooldownMin": {
       "body": "Minimum minutes between consecutive alerts from this rule, regardless of how often the underlying signal crosses the threshold."
+    },
+    "signal": {
+      "layers": "TeslaSync exposes three live-state layers: L1 — in-process signal store on the API pod that ingested the telemetry (lowest latency, scope-limited to that pod). L2 — Redis-backed shared cache of latest values, visible to every pod, used for cross-pod live reads and SSE fanout. log — TimescaleDB signal_log history, authoritative for analytics, charts, and point-in-time reconstruction.",
+      "live": "Live mode streams real-time signal values via Server-Sent Events (SSE). The chart maintains a rolling 5-minute window throttled to 2 Hz updates.",
+      "stale": "A signal is marked stale when its last-seen value in Redis is older than 2 minutes — treat with caution; the vehicle may be offline or the pipeline may be backed up.",
+      "snapshot": "A snapshot is a point-in-time view of every signal value at a single timestamp. The diff falls back to signal_log within the last 30 days when the live layer doesn't have it.",
+      "diff": "Server-side comparison between two snapshots. Unchanged signals are omitted from the result to reduce noise.",
+      "sourceLayer": "The layer that supplied this value: L1 (in-process), L2 (Redis), LOG (TimescaleDB history), or STALE (older than 2 minutes).",
+      "deltaCol": "Numeric difference (and percent change) between Window A and Window B for this signal. 'changed' is shown for non-numeric values that differ."
+    },
+    "fsm": {
+      "type": "Finite-state machine. Tracks vehicle high-level state (driving, charging, parked, online, asleep, offline) and the transitions between them. Sub-FSMs cover drive, charge, command, and notification lifecycles.",
+      "liveState": "The current state the FSM resolved to from the most recent telemetry. The FSM stays in a terminal state until external evidence (telemetry or poll) triggers an explicit transition out."
+    },
+    "replay": {
+      "power": "Instantaneous battery power at this point on the trip. Negative values indicate regenerative braking (energy flowing back into the pack); positive values indicate motor draw.",
+      "battery": "State-of-charge percentage at this point. Drops indicate energy use; rises indicate regen or DC-fast-charging during a drive.",
+      "range": "Estimated rated range remaining at this position based on EPA rated efficiency. Differs from real-world range, which depends on speed, terrain, climate, and load."
+    },
+    "battery": {
+      "soh": "State of Health — current usable capacity divided by the original rated capacity, expressed as a percentage. Higher is better; new packs start at 100%.",
+      "capacity": "Estimated current usable energy capacity of the pack in kWh, derived from the SoH and the original rated capacity.",
+      "degradationRate": "Annualised rate of capacity loss based on observed SoH trend. Combines calendar fade (time at temperature/SoC) and cycle fade (kWh throughput).",
+      "totalCycles": "Cumulative full-pack equivalent cycles. One cycle = one full discharge + one full charge worth of energy (partial cycles add up over time).",
+      "avgDoD": "Average Depth of Discharge per cycle — how deeply the pack is typically discharged before being recharged. Shallower cycles cause less wear."
+    },
+    "lifetime": {
+      "avgEfficiency": "Average energy used per unit distance across the whole driving history (Wh/km). Lower is better — temperature, speed, and terrain are the main drivers."
+    },
+    "charging": {
+      "peakPower": "Maximum charging power observed during this session, in kW. DC fast-charging tapers above ~80% SoC; AC charging stays roughly flat.",
+      "avgPower": "Time-averaged charging power across the session. Always lower than peak when the session includes a taper or initial ramp.",
+      "socRange": "The starting and ending state-of-charge percentages for this session. Wider ranges generally mean longer sessions and more taper.",
+      "chargeCurve": "Power vs SoC curve for the session. Tapering — the gradual drop in power as the battery approaches full — is inherent to lithium chemistry and is not a fault. Sudden drops below the curve indicate derating: the charger or battery is throttling power because of cell or ambient temperature limits.",
+      "kwhPerHour": "Average kWh added per hour across the session. Useful for estimating how long a future session will take at the same charger."
     }
   },
   "date": {

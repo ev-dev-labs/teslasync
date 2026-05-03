@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Select } from '@/components/ui';
+import { GlassPanel, HelpTooltip, Select, type HelpTooltipProps } from '@/components/ui';
 import { StatCard, AnimatedNumber, ProgressRing, Currency, DataFreshnessAuto } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -358,6 +358,11 @@ export default function LifetimeStatsPage() {
                 value={stats.avg_efficiency_wh_km > 0
                   ? `${fmtNumber(stats.avg_efficiency_wh_km, 0)} Wh/km`
                   : '—'}
+                help={{
+                  i18nKey: 'help.lifetime.avgEfficiency',
+                  defaultValue:
+                    'Average energy used per unit distance across the whole driving history (Wh/km). Lower is better — temperature, speed, and terrain are the main drivers.',
+                }}
               />
             </Grid>
           ) : (
@@ -494,10 +499,19 @@ function RecordCard({ title, value, date, icon }: {
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
+function MiniStat({ label, value, help }: { label: string; value: string; help?: HelpTooltipProps }) {
   return (
     <div className="rounded-lg bg-white/[0.03] p-3 text-center">
-      <p className="text-xs text-[var(--text-muted)] mb-1">{label}</p>
+      <p className="mb-1 inline-flex items-center gap-1 text-xs text-[var(--text-muted)]">
+        <span>{label}</span>
+        {help && (
+          <HelpTooltip
+            size="xs"
+            {...help}
+            ariaLabel={help.ariaLabel ?? `More info about ${label}`}
+          />
+        )}
+      </p>
       <p className="text-lg font-semibold text-[var(--text-primary)]">{value}</p>
     </div>
   );
