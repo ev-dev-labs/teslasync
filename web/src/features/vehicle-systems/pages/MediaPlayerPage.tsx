@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
+import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { AlertBanner } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
@@ -218,9 +219,7 @@ export default function MediaPlayerPage() {
         header: t('Time'),
         sortable: true,
         render: (row) => (
-          <span className="text-[var(--text-secondary)] text-xs whitespace-nowrap">
-            {formatDateTime(row.created_at)}
-          </span>
+          <TimeStamp value={row.created_at} className="text-[var(--text-secondary)] text-xs whitespace-nowrap" />
         ),
       },
       {

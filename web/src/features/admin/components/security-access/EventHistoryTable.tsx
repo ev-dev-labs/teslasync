@@ -6,7 +6,7 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
-import { formatDateTime } from '@/lib/dateFormat';
+import { TimeStamp } from '@/components/data-display';
 import type { SecurityEvent } from '@/types/admin';
 import { doorClosed, allWindowsClosed, windowSummary } from './helpers';
 
@@ -25,9 +25,7 @@ export function EventHistoryTable({ history, isLoading }: EventHistoryTableProps
         header: t('admin.security.col.time', 'Time'),
         sortable: true,
         render: (row) => (
-          <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">
-            {formatDateTime(row.createdAt)}
-          </span>
+          <TimeStamp value={row.createdAt} className="text-xs text-[var(--text-muted)] whitespace-nowrap" />
         ),
       },
       {

@@ -3,12 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, DataTable, Textarea, type Column } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { MetricCard, TimeStamp } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useToast } from '@/components/feedback/Toast';
-import { formatDateTime, formatDurationMsCompact, formatRelative } from '@/lib/dateFormat';
+import { formatDurationMsCompact, formatRelative } from '@/lib/dateFormat';
 import { formatBytes, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
@@ -435,9 +435,7 @@ export default function BackupRestorePage() {
       header: t('backup.time', 'Time'),
       sortable: true,
       render: (row) => (
-        <span className="text-sm text-[var(--text-secondary)]">
-          {formatDateTime(row.created_at)}
-        </span>
+        <TimeStamp value={row.created_at} className="text-sm text-[var(--text-secondary)]" />
       ),
     },
     {

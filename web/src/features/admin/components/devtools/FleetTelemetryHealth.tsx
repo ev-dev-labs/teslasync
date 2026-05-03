@@ -2,9 +2,9 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, AlertCircle, RefreshCw } from 'lucide-react'
 import { Badge, Button as UiButton, DataTable, type Column } from '@/components/ui'
+import { TimeStamp } from '@/components/data-display'
 import { Skeleton } from '@/components/feedback'
 import { cn } from '@/lib/cn'
-import { formatDateTime } from '@/lib/dateFormat'
 import {
   useFleetTelemetryErrorVINs, useFleetTelemetryErrors,
   useRefreshFleetTelemetryErrorVINs, useRefreshFleetTelemetryErrors,
@@ -48,15 +48,16 @@ export function FleetTelemetryHealth() {
     {
       key: 'first_seen_at',
       header: t('devtools.health.firstSeen', 'First Seen'),
-      render: (r) => <span className="text-xs text-[var(--text-secondary)]">{formatDateTime(r.first_seen_at)}</span>,
+      render: (r) => <TimeStamp value={r.first_seen_at} className="text-xs text-[var(--text-secondary)]" />,
     },
     {
       key: 'last_seen_at',
       header: t('devtools.health.lastSeen', 'Last Seen'),
       render: (r) => (
-        <span className={cn('text-xs', isRecent(r.last_seen_at) ? 'text-rose-300' : 'text-amber-300')}>
-          {formatDateTime(r.last_seen_at)}
-        </span>
+        <TimeStamp
+          value={r.last_seen_at}
+          className={cn('text-xs', isRecent(r.last_seen_at) ? 'text-rose-300' : 'text-amber-300')}
+        />
       ),
     },
   ], [t, selectedVin])
@@ -81,9 +82,10 @@ export function FleetTelemetryHealth() {
       key: 'reported_at',
       header: t('devtools.health.reportedAt', 'Reported At'),
       render: (r) => (
-        <span className={cn('text-xs', r.reported_at && isRecent(r.reported_at) ? 'text-rose-300' : 'text-[var(--text-secondary)]')}>
-          {r.reported_at ? formatDateTime(r.reported_at) : '—'}
-        </span>
+        <TimeStamp
+          value={r.reported_at}
+          className={cn('text-xs', r.reported_at && isRecent(r.reported_at) ? 'text-rose-300' : 'text-[var(--text-secondary)]')}
+        />
       ),
     },
   ], [t])

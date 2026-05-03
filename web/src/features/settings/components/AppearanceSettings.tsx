@@ -9,9 +9,10 @@ import {
   setAchievementCelebrationPrefs,
 } from '@/hooks/useAchievementCelebrationPrefs'
 import { cn } from '@/lib/cn'
-import { Palette, CheckCircle, Rows3, PanelBottom, Trophy } from 'lucide-react'
+import { Palette, CheckCircle, Rows3, PanelBottom, Trophy, Clock } from 'lucide-react'
 
 type DensityId = 'compact' | 'comfortable' | 'spacious'
+type TimeFormatId = 'relative' | 'absolute'
 
 export function AppearanceSettings() {
   const { t } = useTranslation('settings')
@@ -25,6 +26,12 @@ export function AppearanceSettings() {
   const saveSettings = useSaveSettings()
   const density: DensityId =
     (settings?.ui_density as DensityId | undefined) ?? 'comfortable'
+
+  // Time format default (Phase-45 / Prompt 22). Drives `<TimeStamp>`'s
+  // visible body when no explicit `format` prop is set, and the alternate
+  // value always lives in its hover tooltip.
+  const timeFormat: TimeFormatId =
+    (settings?.time_format_default as TimeFormatId | undefined) ?? 'relative'
 
   // Footer status bar prefs (Phase-40 / Prompt 59). Persisted to
   // localStorage rather than the server so toggling is instant and works
@@ -40,6 +47,16 @@ export function AppearanceSettings() {
     if (!settings || next === density) return
     saveSettings.mutate({ ...settings, ui_density: next })
   }
+
+  function setTimeFormat(next: TimeFormatId) {
+    if (!settings || next === timeFormat) return
+    saveSettings.mutate({ ...settings, time_format_default: next })
+  }
+
+  const timeFormatChoices: { id: TimeFormatId; label: string; help: string }[] = [
+    { id: 'relative', label: t('theme.timeFormat.relative', 'Relative (2h ago)'), help: t('theme.timeFormat.relativeHelp', 'Best for recent activity feeds') },
+    { id: 'absolute', label: t('theme.timeFormat.absolute', 'Absolute (Nov 12, 13:42)'), help: t('theme.timeFormat.absoluteHelp', 'Best for trip planning and event correlation') },
+  ]
 
   const densityChoices: { id: DensityId; label: string; help: string }[] = [
     { id: 'compact', label: t('theme.density.compact', 'Compact'), help: t('theme.density.compactHelp', 'Tight rows — fits more on screen') },
@@ -153,6 +170,46 @@ export function AppearanceSettings() {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Time format default (Phase-45 / Prompt 22) */}
+        <div data-tour="settings-time-format">
+          <div className="flex items-center gap-2 mb-3">
+            <Clock className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              {t('theme.timeFormat.label', 'Default time format')}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {timeFormatChoices.map(choice => {
+              const active = timeFormat === choice.id
+              return (
+                <Button
+                  key={choice.id}
+                  variant="ghost"
+                  onClick={() => setTimeFormat(choice.id)}
+                  disabled={!settings || saveSettings.isPending}
+                  className={cn(
+                    'flex items-start gap-3 rounded-xl border p-3.5 h-auto transition-all duration-normal justify-start text-left',
+                    active
+                      ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
+                      : 'border-[var(--glass-border)] bg-[var(--surface-2)] hover:border-[var(--theme-primary)]/30',
+                  )}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{choice.label}</p>
+                    <p className="text-[11px] text-[var(--text-muted)]">{choice.help}</p>
+                  </div>
+                  {active && (
+                    <CheckCircle className="h-4 w-4 ml-auto shrink-0 text-[var(--theme-primary)]" />
+                  )}
+                </Button>
+              )
+            })}
+          </div>
+          <p className="mt-2 text-xs text-[var(--text-muted)]">
+            {t('theme.timeFormat.help', 'Hover any timestamp to see the alternate format. Override per-surface with the format prop where needed.')}
+          </p>
         </div>
 
         {/* Footer status bar (Phase-40 / Prompt 59) */}

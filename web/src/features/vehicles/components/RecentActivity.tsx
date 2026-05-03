@@ -6,8 +6,8 @@ import { IconBox } from '@/components/ui/IconBox'
 import { FadeIn } from '@/components/motion/FadeIn'
 import { InlineMetric } from '@/components/data-display/InlineMetric'
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber'
+import { TimeStamp } from '@/components/data-display'
 import { useSettings } from '@/hooks/useSettings'
-import { formatDateTime } from '@/lib/dateFormat'
 import { fmtInt } from '@/lib/numberFormat'
 import type { Drive, ChargingSession } from '@/api/types'
 
@@ -57,7 +57,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                       />
                     </p>
                     <p className="text-xs text-[var(--text-muted)]">
-                      {formatDateTime(d.start_ts)}
+                      <TimeStamp value={d.start_ts} />
                     </p>
                   </div>
                   <div className="text-right">
@@ -117,7 +117,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                       />
                     </p>
                     <p className="text-xs text-[var(--text-muted)]">
-                      {formatDateTime(s.start_ts)}
+                      <TimeStamp value={s.start_ts} />
                     </p>
                   </div>
                   <div className="text-right">

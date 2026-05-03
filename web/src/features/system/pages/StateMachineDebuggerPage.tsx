@@ -18,12 +18,12 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSignalSnapshot } from '@/api/hooks/useTelemetry';
 import type { VehicleState } from '@/api/types';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { FSMTransition, FSMType } from '@/types/fsm';
 import { HOURS_OPTIONS, FSM_TYPE_OPTIONS } from '@/types/fsm';
 import { StateBadge } from '../components/StateBadge';
+import { TimeStamp } from '@/components/data-display';
 import { FSMStateDiagram } from '../components/FSMStateDiagram';
 import { FSMHealthPanel, computeFlapIds } from '../components/FSMHealthPanel';
 import { FSMTimelineChart } from '../components/FSMTimelineChart';
@@ -217,9 +217,10 @@ export default function StateMachineDebuggerPage() {
         key: 'time',
         header: t('fsm.time', 'Time'),
         render: (row: FSMTransition) => (
-          <span className="text-[var(--text-secondary)] font-mono text-xs whitespace-nowrap">
-            {formatDateTime(row.created_at)}
-          </span>
+          <TimeStamp
+            value={row.created_at}
+            className="text-[var(--text-secondary)] font-mono text-xs whitespace-nowrap"
+          />
         ),
       },
       {
@@ -527,11 +528,15 @@ export default function StateMachineDebuggerPage() {
                 </p>
                 <p>
                   <span className="text-[var(--text-muted)]">{t('fsm.since', 'Since')}:</span>{' '}
-                  <span className="text-[var(--text-primary)] font-medium">
-                    {formatDateTime(currentState.since)}
-                  </span>
+                  <TimeStamp
+                    value={currentState.since}
+                    format="absolute"
+                    className="text-[var(--text-primary)] font-medium"
+                  />
                 </p>
-                <p className="text-[var(--text-muted)]">{formatRelative(currentState.since)}</p>
+                <p className="text-[var(--text-muted)]">
+                  <TimeStamp value={currentState.since} format="relative" />
+                </p>
               </div>
             </div>
           ) : (
@@ -799,8 +804,18 @@ function TransitionDetail({ transition }: { transition: FSMTransition }) {
       )}
       <div className="sm:col-span-2 lg:col-span-4">
         <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.timestamp', 'Timestamp')}</span>
-        <span className="text-[var(--text-primary)] font-mono">{formatDateTime(transition.created_at)}</span>
-        <span className="text-[var(--text-muted)] ml-2">{formatRelative(transition.created_at)}</span>
+        <TimeStamp
+          value={transition.created_at}
+          format="absolute"
+          className="text-[var(--text-primary)] font-mono"
+        />
+        <span className="ml-2">
+          <TimeStamp
+            value={transition.created_at}
+            format="relative"
+            className="text-[var(--text-muted)]"
+          />
+        </span>
       </div>
       {transition.context_snapshot && Object.keys(transition.context_snapshot).length > 0 && (
         <div className="sm:col-span-2 lg:col-span-4">

@@ -40,6 +40,7 @@ const defaults: AppSettings = {
   tab_badge_enabled: true,
   critical_flash_enabled: true,
   ui_density: 'comfortable',
+  time_format_default: 'relative',
 }
 
 /**

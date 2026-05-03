@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
+import { TimeStamp } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -339,9 +340,7 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
       header: t('Time'),
       sortable: true,
       render: (row) => (
-        <span className="text-[var(--text-muted)] whitespace-nowrap text-xs">
-          {formatDateTime(row.created_at)}
-        </span>
+        <TimeStamp value={row.created_at} className="text-[var(--text-muted)] whitespace-nowrap text-xs" />
       ),
     },
     {

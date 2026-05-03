@@ -2,9 +2,10 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PlayCircle, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui';
+import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useAutomationHistory } from '@/api/hooks/useAutomations';
-import { formatDurationMs, formatRelativeTime } from '@/lib/dateFormat';
+import { formatDurationMs } from '@/lib/dateFormat';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed } from './shared';
@@ -50,7 +51,7 @@ function CompactView({
       <span className="text-2xl font-bold text-[var(--text-primary)]">{fmtNumber(successRate, 1)}%</span>
       <span className="text-[10px] text-[var(--text-muted)]">{t('widget.successRate', 'Success Rate')}</span>
       {lastRunTime && (
-        <span className="text-xs text-[var(--text-secondary)]">{formatRelativeTime(lastRunTime)}</span>
+        <TimeStamp value={lastRunTime} className="text-xs text-[var(--text-secondary)]" />
       )}
     </div>
   );

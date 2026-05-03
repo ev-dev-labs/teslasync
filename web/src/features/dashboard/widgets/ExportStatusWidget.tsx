@@ -2,11 +2,10 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download } from 'lucide-react';
 import { Badge } from '@/components/ui';
-import { MetricBar } from '@/components/data-display';
+import { MetricBar, TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useExports } from '@/api/hooks/useExports';
 import { useExportJobs } from '@/api/hooks/useAdmin';
-import { formatRelative } from '@/lib/dateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
@@ -156,8 +155,8 @@ function JobRow({
       </Badge>
 
       {/* Relative time */}
-      <span className="shrink-0 text-[10px] text-[var(--text-muted)] w-14 text-right">
-        {formatRelative(job.createdAt)}
+      <span className="shrink-0 w-14 text-right">
+        <TimeStamp value={job.createdAt} className="text-[10px] text-[var(--text-muted)]" />
       </span>
 
       {/* Download link — wide only */}

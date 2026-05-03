@@ -235,6 +235,13 @@ export interface AppSettings {
    * change. (Phase 40 / 44.)
    */
   ui_density?: 'compact' | 'comfortable' | 'spacious'
+  /**
+   * Default visible format for `<TimeStamp>` when no explicit `format`
+   * prop is set. 'relative' renders "2h ago" with an absolute hover
+   * tooltip; 'absolute' renders "Apr 4, 2:30 AM" with a relative hover
+   * tooltip. Defaults to 'relative'. (Phase-45 / 22.)
+   */
+  time_format_default?: 'relative' | 'absolute'
 }
 
 /** Per-endpoint toggle config for Tesla Fleet API calls. */

@@ -12,12 +12,13 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
+import { TimeStamp } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useToast } from '@/components/feedback/Toast';
-import { formatDateTime, formatDurationMsLong, formatRelative } from '@/lib/dateFormat';
+import { formatDurationMsLong, formatRelative } from '@/lib/dateFormat';
 import { request } from '@/api/client';
 import { useCreateAccountExport } from '@/api/hooks/useExports';
 import { JobProgressDrawer } from '@/components/feedback/JobProgressDrawer';
@@ -707,9 +708,7 @@ function ExportHistoryTable({
         header: t('Time'),
         sortable: true,
         render: (row) => (
-          <span className="text-xs text-[var(--text-muted)]" title={formatDateTime(row.created_at)}>
-            {formatRelative(row.created_at)}
-          </span>
+          <TimeStamp value={row.created_at} className="text-xs text-[var(--text-muted)]" />
         ),
       },
       {

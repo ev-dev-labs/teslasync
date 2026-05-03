@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { Car, Zap } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
+import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { Grid } from '@/components/layout';
-import { formatRelative } from '@/lib/dateFormat';
 import { StateBadge } from './StateBadge';
 import type { ActiveSubFSM } from '@/types/fsm';
 
@@ -63,7 +63,7 @@ export function FSMSubFSMPanel({ activeSubs, fsmType }: FSMSubFSMPanelProps) {
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <StateBadge state={sub.state} fsmType={sub.type === 'drive' ? 'drive_session' : 'charge_session'} />
-                  <span className="text-[10px] text-[var(--text-muted)]">{formatRelative(sub.start_time)}</span>
+                  <TimeStamp value={sub.start_time} className="text-[10px] text-[var(--text-muted)]" />
                 </div>
               </div>
             </div>

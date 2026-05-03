@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/Button';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { LiveIndicator } from '@/components/data-display/LiveIndicator';
+import { TimeStamp } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { AlertBanner } from '@/components/feedback/AlertBanner';
@@ -340,9 +341,7 @@ export default function NavigationRoutePage() {
         header: t('nav.col.time', 'Time'),
         sortable: true,
         render: (row: LocationSnapshot) => (
-          <span className="whitespace-nowrap text-xs font-mono text-[var(--text-muted)]">
-            {formatDateTime(row.created_at)}
-          </span>
+          <TimeStamp value={row.created_at} className="whitespace-nowrap text-xs font-mono text-[var(--text-muted)]" />
         ),
       },
       {

@@ -23,6 +23,7 @@ export {
 } from './DataFreshness';
 export { LiveIndicator, type LiveIndicatorVariant } from './LiveIndicator';
 export { Delta, type DeltaProps } from './Delta';
+export { TimeStamp, type TimeStampProps, type TimeStampFormat } from './TimeStamp';
 export {
   BulkActionsToolbar,
   type BulkAction,

@@ -28,6 +28,7 @@ import { AlertBanner } from '@/components/feedback/AlertBanner';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { MapContainer, Marker, Circle, Popup, Polyline, vehicleIcon } from '@/components/maps';
 import { MapTileLayer, MapInvalidator } from '@/components/maps';
+import { TimeStamp } from '@/components/data-display';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useGeofences } from '@/api/hooks/useLocations';
@@ -186,7 +187,7 @@ export default function GuardModePage() {
           <p className="text-sm">
             {EVENT_LABELS[latestEvent.event_type] ?? latestEvent.event_type}
             {' — '}
-            {formatDateTime(latestEvent.created_at)}
+            <TimeStamp value={latestEvent.created_at} />
           </p>
           {latestEvent.latitude != null && latestEvent.longitude != null && (
             <a
@@ -553,7 +554,7 @@ function EventRow({
           >
             {EVENT_LABELS[event.event_type] ?? event.event_type}
           </Badge>
-          <span className="text-xs text-[var(--text-muted)]">{formatDateTime(event.created_at)}</span>
+          <TimeStamp value={event.created_at} className="text-xs text-[var(--text-muted)]" />
         </div>
 
         {event.latitude != null && event.longitude != null && (

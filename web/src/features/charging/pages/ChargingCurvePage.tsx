@@ -4,9 +4,9 @@ import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime } from '@/lib/dateFormat';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select } from '@/components/ui';
+import { TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import {
   SummaryStatsGrid,
@@ -179,7 +179,7 @@ export default function ChargingCurvePage() {
           />
           {selectedSession && (
             <span className="text-xs text-[var(--text-secondary)]">
-              {formatDateTime(selectedSession.start_ts)}
+              <TimeStamp value={selectedSession.start_ts} />
               {selectedSession.charger_location && ` · ${selectedSession.charger_location}`}
             </span>
           )}

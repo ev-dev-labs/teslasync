@@ -5,9 +5,9 @@ import {
 } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { Badge } from '@/components/ui';
-import { ProgressRing, InlineMetric } from '@/components/data-display';
+import { ProgressRing, InlineMetric, TimeStamp } from '@/components/data-display';
 import { useTranslation } from 'react-i18next';
-import { formatDateTime, formatDurationMinutes } from '@/lib/dateFormat';
+import { formatDurationMinutes } from '@/lib/dateFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
 import { fmtNumber, fmtWithUnit, fmtInt } from '@/lib/numberFormat';
 import type { ChargingSession } from '@/api/types';
@@ -85,9 +85,7 @@ export function ChargingSessionCard({ session, convertDistance, distanceUnit, se
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">
-                {formatDateTime(session.start_ts)}
-              </p>
+              <TimeStamp value={session.start_ts} className="text-sm font-semibold text-[var(--text-primary)]" />
               <Badge
                 variant={cat === 'supercharger' ? 'danger' : cat === 'dc' ? 'warning' : 'success'}
               >

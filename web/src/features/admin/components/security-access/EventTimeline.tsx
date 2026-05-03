@@ -9,9 +9,9 @@ import {
   DoorOpen,
 } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/GlassPanel';
+import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FadeIn } from '@/components/motion/FadeIn';
-import { formatDateTime } from '@/lib/dateFormat';
 import type { TimelineEvent } from './helpers';
 
 /* ------------------------------------------------------------------ */
@@ -111,9 +111,10 @@ export function EventTimeline({ timelineEvents }: EventTimelineProps) {
                     <p className="text-sm font-medium text-gray-200">{title}</p>
                     <p className="text-xs text-[var(--text-muted)]">{subtitle}</p>
                   </div>
-                  <span className="text-[10px] text-[var(--text-muted)] whitespace-nowrap shrink-0">
-                    {formatDateTime(ev.timestamp)}
-                  </span>
+                  <TimeStamp
+                    value={ev.timestamp}
+                    className="text-[10px] text-[var(--text-muted)] whitespace-nowrap shrink-0"
+                  />
                 </div>
               );
             })}

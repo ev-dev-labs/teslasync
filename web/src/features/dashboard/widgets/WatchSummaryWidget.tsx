@@ -2,13 +2,12 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Watch, Lock, Unlock } from 'lucide-react';
 import { RadialGauge } from '@/components/charts';
-import { StatusBadge, AnimatedNumber } from '@/components/data-display';
+import { StatusBadge, AnimatedNumber, TimeStamp } from '@/components/data-display';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useWatchSummary, useWatchComplication } from '@/api/hooks/useWatch';
 import { useSettings } from '@/hooks/useSettings';
 import { kmToMiles } from '@/lib/unitConversion';
-import { formatRelative } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
@@ -202,8 +201,8 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.lastSeen', 'Last Seen')}
               </span>
-              <span className="text-xs text-[var(--text-secondary)] truncate max-w-full">
-                {formatRelative(lastUpdated)}
+              <span className="truncate max-w-full">
+                <TimeStamp value={lastUpdated} className="text-xs text-[var(--text-secondary)]" />
               </span>
             </div>
           </div>

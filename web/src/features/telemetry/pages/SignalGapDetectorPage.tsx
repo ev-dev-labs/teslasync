@@ -4,12 +4,12 @@ import { AlertTriangle, ArrowUpDown, Filter, RefreshCw } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Badge, Button, Input, DataTable, type Column } from '@/components/ui';
-import { StatCard } from '@/components/data-display';
+import { StatCard, TimeStamp } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useSignalGaps } from '@/api/hooks/useTelemetry';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime, formatRelative } from '@/lib/dateFormat';
+import { formatDateTime } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { SignalRow } from '@/types/telemetry';
@@ -241,7 +241,7 @@ export default function SignalGapDetectorPage() {
 
           {dataUpdatedAt > 0 && (
             <p className="mt-3 text-[10px] text-[var(--text-muted)] text-right">
-              {t('signalGap.lastRefreshed', 'Last refreshed')}: {formatRelative(new Date(dataUpdatedAt))}
+              {t('signalGap.lastRefreshed', 'Last refreshed')}: <TimeStamp value={new Date(dataUpdatedAt)} format="relative" />
             </p>
           )}
         </GlassPanel>

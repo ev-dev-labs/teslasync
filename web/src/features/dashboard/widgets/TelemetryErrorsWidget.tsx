@@ -2,10 +2,10 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui';
+import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useFleetTelemetryErrorVINs, useFleetTelemetryErrors } from '@/api/hooks/useTelemetry';
 import { fmtInt } from '@/lib/numberFormat';
-import { formatRelative } from '@/lib/dateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
@@ -156,9 +156,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
                       <span className="text-xs font-medium text-[var(--text-secondary)]">
                         ×{fmtInt(entry.count)}
                       </span>
-                      <span className="text-[10px] text-[var(--text-muted)]">
-                        {formatRelative(entry.last_seen || null)}
-                      </span>
+                      <TimeStamp value={entry.last_seen || null} className="text-[10px] text-[var(--text-muted)]" />
                     </div>
                   </div>
                 );

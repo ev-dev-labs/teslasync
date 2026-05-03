@@ -18,13 +18,13 @@ import {
 
 import { PageContainer } from '@/components/layout'
 import { GlassPanel, Input } from '@/components/ui'
+import { TimeStamp } from '@/components/data-display'
 import { EmptyState, Skeleton } from '@/components/feedback'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useUrlString, useUrlArray } from '@/hooks/useUrlState'
 import { useGlobalSearch, SEARCH_MIN_QUERY_LENGTH } from '@/api/hooks/useSearch'
 import type { SearchHit, SearchHitType } from '@/api/types'
 import { cn } from '@/lib/cn'
-import { formatRelativeTime } from '@/lib/dateFormat'
 
 // All entity types the backend can return — kept in display order so the
 // facet chip rail and grouped results render predictably.
@@ -215,8 +215,8 @@ export default function SearchPage() {
                           )}
                         </span>
                         {hit.when && (
-                          <span className="hidden flex-shrink-0 text-xs text-[var(--text-muted)] sm:inline">
-                            {formatRelativeTime(hit.when)}
+                          <span className="hidden flex-shrink-0 sm:inline">
+                            <TimeStamp value={hit.when} className="text-xs text-[var(--text-muted)]" />
                           </span>
                         )}
                         <ArrowRight className="h-4 w-4 flex-shrink-0 text-[var(--text-muted)]" />

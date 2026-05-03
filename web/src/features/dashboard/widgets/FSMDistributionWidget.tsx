@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { GitBranch } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from '@/components/charts';
 import { Badge } from '@/components/ui';
+import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useFSMStats, useFSMTransitions } from '@/api/hooks/useFSM';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { formatRelative } from '@/lib/dateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
@@ -106,8 +106,8 @@ function TransitionRow({
           {t(`widget.fsmDistribution.state.${to}`, to)}
         </Badge>
       </div>
-      <span className="text-[10px] text-[var(--text-muted)] flex-shrink-0 tabular-nums">
-        {formatRelative(timestamp)}
+      <span className="flex-shrink-0">
+        <TimeStamp value={timestamp} className="text-[10px] text-[var(--text-muted)] tabular-nums" />
       </span>
     </div>
   );

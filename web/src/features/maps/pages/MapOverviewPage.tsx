@@ -8,7 +8,7 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, DataTable, type Column } from '@/components/ui';
-import { MetricCard, LiveIndicator, DataFreshnessAuto } from '@/components/data-display';
+import { MetricCard, LiveIndicator, DataFreshnessAuto, TimeStamp } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner, LiveStaleDataBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
@@ -179,9 +179,7 @@ export default function MapOverviewPage() {
         key: 'time',
         header: t('mapOverview.colTime', 'Time'),
         render: (r) => (
-          <span className="text-xs whitespace-nowrap">
-            {formatDateTime(r.created_at)}
-          </span>
+          <TimeStamp value={r.created_at} className="text-xs whitespace-nowrap" />
         ),
       },
       {

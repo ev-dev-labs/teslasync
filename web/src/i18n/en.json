@@ -5641,6 +5641,14 @@
       "iconOnlyHelp": "Hide labels at all widths. Otherwise the bar auto-collapses on narrow screens.",
       "shownToast": "Status bar shown",
       "hiddenToast": "Status bar hidden"
+    },
+    "timeFormat": {
+      "label": "Default time format",
+      "relative": "Relative (2h ago)",
+      "relativeHelp": "Best for recent activity feeds",
+      "absolute": "Absolute (Nov 12, 13:42)",
+      "absoluteHelp": "Best for trip planning and event correlation",
+      "help": "Hover any timestamp to see the alternate format. Override per-surface with the format prop where needed."
     }
   },
   "featureConfig": {

@@ -13,6 +13,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
 import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
 import { DataFreshnessAuto } from '@/components/data-display';
+import { TimeStamp } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import {
   ChartContainer, ChartTooltip,
@@ -129,9 +130,7 @@ function DriveCard({
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">
-                {formatDateTime(drive.startTs)}
-              </p>
+              <TimeStamp value={drive.startTs} className="text-sm font-semibold text-[var(--text-primary)]" />
               {hasData ? (
                 <Badge variant="info" size="sm">
                   {fmtNumber(convertDistance(actualDistance))} {distanceUnit}
