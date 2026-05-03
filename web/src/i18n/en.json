@@ -538,6 +538,32 @@
     "kiosk": "Kiosk",
     "customize": "Customize",
     "editHint": "Drag widgets to reorder, resize from edges. Click the gear icon for widget settings.",
+    "customizeHint": "You can customize this dashboard. Tap the + to add widgets.",
+    "customizeHintCta": "Add widgets",
+    "catalogue": {
+      "title": "Widget catalogue",
+      "subtitle": "Pick a widget to add to your dashboard. {{added}} of {{total}} widgets are already on your layout.",
+      "add": "Add",
+      "addLabel": "Add {{name}} widget",
+      "category": {
+        "vehicle": "Vehicle",
+        "battery": "Battery & Range",
+        "energy": "Energy",
+        "driving": "Driving",
+        "charging": "Charging",
+        "climate": "Climate",
+        "tires": "Tires",
+        "security": "Security",
+        "commands": "Commands",
+        "media": "Media",
+        "telemetry": "Telemetry",
+        "analytics": "Analytics",
+        "alerts": "Alerts",
+        "automations": "Automations",
+        "system": "System",
+        "maps": "Maps"
+      }
+    },
     "shortcuts": {
       "toggleEdit": "Toggle edit mode",
       "exitEdit": "Exit edit mode",
@@ -1235,6 +1261,11 @@
         "title": "Enable web push notifications",
         "description": "Get alerts in your browser even when TeslaSync is closed.",
         "cta": "Enable"
+      },
+      "customizeDashboard": {
+        "title": "Customize your dashboard",
+        "description": "Add widgets that match how you use TeslaSync.",
+        "cta": "Open"
       }
     }
   },

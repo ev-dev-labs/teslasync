@@ -29,16 +29,39 @@ import { ImportPreviewModal } from '../components/ImportPreviewModal';
 import { DashboardSettingsModal } from '../components/DashboardSettingsModal';
 import { KioskOverlay } from '../components/KioskOverlay';
 import { KioskSettingsModal } from '../components/KioskSettingsModal';
+import { AddWidgetButton } from '../components/AddWidgetButton';
+import { WidgetCatalogueDialog } from '../components/WidgetCatalogueDialog';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
 import { useLayoutKeyboard } from '../hooks/useLayoutKeyboard';
 import { useKioskMode } from '../hooks/useKioskMode';
 import { fromUrlSafeBase64 } from '../hooks/validateImport';
 import { getWidgetDef } from '../widgets/registry';
+import { markCustomizeDashboardCompleted } from '@/features/onboarding/checklist';
 import type { Vehicle, Alert } from '../types';
 import type { WidgetConfig, SavedDashboard } from '../widgets/types';
 import { Icons } from '@/lib/icons';
 
 const THEME_FIRST_RUN_KEY = 'teslasync:themeFirstRunDismissed:v1';
+
+/**
+ * Phase-45 / Prompt 25 — widget ids in the seeded `DEFAULT_DASHBOARD` layout
+ * (see `useDashboardLayout.ts:182`). Used to detect "user hasn't customized
+ * yet" so the soft hint banner can encourage discovery. Kept in sync manually
+ * with the seed so we don't pull state through a re-export cycle.
+ */
+const DEFAULT_WIDGET_IDS = new Set<string>([
+  'onboarding-checklist',
+  'vehicle-hero',
+  'battery-gauge',
+  'climate-status',
+  'recent-drives',
+  'charge-status',
+  'security-status',
+  'quick-nav',
+]);
+
+const CUSTOMIZE_HINT_DISMISSED_KEY = 'teslasync:dashboard:customizeHintDismissed:v1';
+const CUSTOMIZE_HINT_DELAY_MS = 5_000;
 
 /**
  * Phase-40 / Prompt 60 — first-run theme prompt.
@@ -132,6 +155,44 @@ export default function DashboardPage() {
     dashboards, switchDashboard,
   });
   const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
+
+  /* ——— Phase-45 / Prompt 25 — widget-add discovery ——— */
+  const [catalogueOpen, setCatalogueOpen] = useState(false);
+  const [hintDismissed, setHintDismissed] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(CUSTOMIZE_HINT_DISMISSED_KEY) === '1';
+    } catch {
+      return true;
+    }
+  });
+  const [hintReady, setHintReady] = useState(false);
+  const isOnlyDefault =
+    activeDashboard.widgets.length > 0 &&
+    activeDashboard.widgets.every((w) => DEFAULT_WIDGET_IDS.has(w.widgetId));
+  useEffect(() => {
+    if (!isOnlyDefault || hintDismissed || editMode) {
+      setHintReady(false);
+      return undefined;
+    }
+    const id = window.setTimeout(() => setHintReady(true), CUSTOMIZE_HINT_DELAY_MS);
+    return () => window.clearTimeout(id);
+  }, [isOnlyDefault, hintDismissed, editMode]);
+  const dismissHint = () => {
+    setHintDismissed(true);
+    setHintReady(false);
+    try {
+      window.localStorage.setItem(CUSTOMIZE_HINT_DISMISSED_KEY, '1');
+    } catch {
+      /* quota or disabled storage */
+    }
+  };
+  const handleCatalogueAdd = (widgetId: string) => {
+    addWidgets([widgetId]);
+    markCustomizeDashboardCompleted();
+    // Also drop the soft hint immediately so it doesn't re-appear once the
+    // 5s timer wins after the user already engaged.
+    dismissHint();
+  };
 
   /* ——— Kiosk mode ——— */
   const {
@@ -363,6 +424,37 @@ export default function DashboardPage() {
         {/* Live-pipe stale-data warning (only shows after >2 min disconnected) */}
         <LiveStaleDataBanner />
 
+        {/* Phase-45 / Prompt 25 — soft hint that the dashboard is customizable.
+            Shows after CUSTOMIZE_HINT_DELAY_MS for users still on the seeded
+            default layout, and disappears the moment they add a widget or
+            dismiss the banner. */}
+        {hintReady && !editMode && (
+          <AlertBanner
+            variant="info"
+            icon={<Icons.add className="h-4 w-4" />}
+            onClose={dismissHint}
+          >
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="flex-1 min-w-0">
+                {t(
+                  'dashboard.customizeHint',
+                  'You can customize this dashboard. Tap the + to add widgets.',
+                )}
+              </span>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setCatalogueOpen(true);
+                  dismissHint();
+                }}
+              >
+                {t('dashboard.customizeHintCta', 'Add widgets')}
+              </Button>
+            </div>
+          </AlertBanner>
+        )}
+
         {/* Error banner */}
         {anyError && (
           <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>
@@ -525,6 +617,19 @@ export default function DashboardPage() {
           onChangeIcon={(icon) => updateDashboardIcon(showDashSettings, icon)}
         />
       )}
+
+      {/* Phase-45 / Prompt 25 — discoverable add-widget surface. The FAB is
+          hidden in kiosk mode and edit mode; the catalogue is the lightweight
+          alternative to the full WidgetPicker drawer. */}
+      {!isKiosk && (
+        <AddWidgetButton onClick={() => setCatalogueOpen(true)} isEditing={editMode} />
+      )}
+      <WidgetCatalogueDialog
+        open={catalogueOpen}
+        onClose={() => setCatalogueOpen(false)}
+        onAdd={handleCatalogueAdd}
+        activeWidgetIds={activeDashboard.widgets.map((w) => w.widgetId)}
+      />
 
       {/* Kiosk Mode — portaled to document.body to escape all app chrome */}
       {isKiosk && createPortal(

@@ -31,11 +31,14 @@ import {
   CHECKLIST_DISMISSED_KEY,
   CHECKLIST_COMPLETED_AT_KEY,
   CP_DISCOVERED_KEY,
+  CUSTOMIZE_DASHBOARD_KEY,
   CELEBRATION_WINDOW_MS,
   COMMAND_PALETTE_CTA,
   isChecklistDismissed,
   isCommandPaletteDiscovered,
+  isCustomizeDashboardCompleted,
   markCommandPaletteDiscovered,
+  markCustomizeDashboardCompleted,
   restartChecklist,
   setChecklistCompletedAt,
   setChecklistDismissed,
@@ -150,9 +153,9 @@ describe('shouldHideChecklist', () => {
 })
 
 describe('useChecklistTasks', () => {
-  it('returns the default 6 tasks all incomplete on a fresh install', () => {
+  it('returns the default 7 tasks all incomplete on a fresh install', () => {
     const { result } = renderHook(() => useChecklistTasks())
-    expect(result.current.totalCount).toBe(6)
+    expect(result.current.totalCount).toBe(7)
     expect(result.current.completeCount).toBe(0)
     expect(result.current.allComplete).toBe(false)
     expect(result.current.tasks.map((task) => task.id)).toEqual([
@@ -162,6 +165,7 @@ describe('useChecklistTasks', () => {
       'notification-channel',
       'try-command-palette',
       'enable-push',
+      'customize-dashboard',
     ])
     for (const task of result.current.tasks) {
       expect(task.complete).toBe(false)
@@ -204,6 +208,19 @@ describe('useChecklistTasks', () => {
     expect(task?.complete).toBe(true)
   })
 
+  it('marks customize-dashboard complete when the dashboard customization flag is set', () => {
+    // Phase-45 / Prompt 25: flag is flipped by the WidgetCatalogueDialog when
+    // the user adds their first widget; the task ticks over on the next
+    // render of the checklist.
+    expect(isCustomizeDashboardCompleted()).toBe(false)
+    markCustomizeDashboardCompleted()
+    expect(isCustomizeDashboardCompleted()).toBe(true)
+    expect(localStorage.getItem(CUSTOMIZE_DASHBOARD_KEY)).toBe('1')
+    const { result } = renderHook(() => useChecklistTasks())
+    const task = result.current.tasks.find((entry) => entry.id === 'customize-dashboard')
+    expect(task?.complete).toBe(true)
+  })
+
   it('exposes a stable visibleTasks list equal to tasks (no gating yet)', () => {
     const { result } = renderHook(() => useChecklistTasks())
     expect(result.current.visibleTasks).toEqual(result.current.tasks)
@@ -215,6 +232,7 @@ describe('useChecklistTasks', () => {
     mockChannels = [{ id: 1 }]
     mockThemeId = 'tesla-red'
     localStorage.setItem(CP_DISCOVERED_KEY, '1')
+    localStorage.setItem(CUSTOMIZE_DASHBOARD_KEY, '1')
     // Web push needs both `serviceWorker` in navigator and Notification grant.
     Object.defineProperty(window, 'Notification', {
       configurable: true,
