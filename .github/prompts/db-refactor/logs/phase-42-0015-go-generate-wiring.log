@@ -1,35 +1,83 @@
-=== PREFLIGHT ===
-predecessor: phase-42-0014-generate-datum-decoder.log
-EXIT=0
-STATUS=DONE
+phase-42-0015 :: wire go:generate + Makefile target + CI drift gate
+Run timestamp: 2026-05-02T22:31:36.6329367-07:00
+HEAD: bae3541ba3c230cc98401c24bc379cfc8cf6e3d4
+Branch: refactor/signals-rewrite
 
-files present:
-  internal/tesla/protomodel/generate.go -> True
-  Makefile -> True
-  .github/workflows/proto-gen-check.yml -> True
+=== PREFLIGHT ===
+Predecessor log: .github\prompts\db-refactor\logs\phase-42-0014-generate-datum-decoder.log
+Predecessor last EXIT line:   EXIT=0
+Predecessor last STATUS line: STATUS=DONE
+Predecessor verified DONE.
+
+Required-file presence check:
+  internal/tesla/protomodel/generate.go -> exists=True
+  Makefile -> exists=True
+  .github/workflows/proto-gen-check.yml -> exists=True
+
+Note: All three artifact files were already committed in dae5ec369
+("Add proto gen check workflow and gen targets"). This prompt does
+NOT create or modify them; it verifies the drift gate they
+collectively wire up actually fires when generated code is stale.
+
+internal/tesla/protomodel/generate.go contents:
+----8<----
+// Package protomodel hosts the typed model + decoders that bridge Tesla's
+// vendored Fleet Telemetry protobuf (api/proto/tesla/vehicle_data.proto) into
+// the rest of the TeslaSync ingest pipeline.
+//
+// Three files in this package are GENERATED from the vendored proto by
+// cmd/protogen-tesla and MUST NOT be hand-edited:
+//
+//   - signal_metadata_gen.go
+//   - enum_parsers_gen.go
+//   - datum_decoder_gen.go
+//
+// Regenerate with `go generate ./internal/tesla/protomodel/...` (or
+// `make gen-tesla`). CI enforces drift via `make gen-tesla-check`, which is
+// invoked by the proto-gen-check workflow on any PR that touches the proto,
+// the codegen binary, or the generated files.
+package protomodel
+
+//go:generate go run ../../../cmd/protogen-tesla --proto ../../../api/proto/tesla/vehicle_data.proto --out . --package protomodel
+----8<----
+//go:generate directive points at cmd/protogen-tesla -> True
+
+Makefile target check:
+  gen-tesla:       True
+  gen-tesla-check: True
+
+Working tree before drift run:
+  (clean)
 
 === GO_GENERATE_DRY_RUN ===
+Command: go generate -n ./internal/tesla/protomodel/...
 go run ../../../cmd/protogen-tesla --proto ../../../api/proto/tesla/vehicle_data.proto --out .
 go run ../../../cmd/protogen-tesla --proto ../../../api/proto/tesla/vehicle_data.proto --out . --package protomodel
 
-=== GO_GENERATE_RUN ===
+Command: go generate ./internal/tesla/protomodel/...
 protogen-tesla: emitted signal_metadata_gen.go, enum_parsers_gen.go, datum_decoder_gen.go into .
 protogen-tesla: emitted signal_metadata_gen.go, enum_parsers_gen.go, datum_decoder_gen.go into .
+go generate exit code: 0
+
+(Two emit lines are expected: doc.go and generate.go each carry a
+ //go:generate directive. The protogen-tesla binary is byte-stable
+ per cmd/protogen-tesla TestEmitDeterministic, so the duplicate run
+ is harmless. Removing the older directive in doc.go is a future
+ cleanup task and is intentionally outside this prompt's scope.)
 
 === DIFF_CHECK ===
+Command: git diff --name-only -- internal/tesla/protomodel/
 DRIFT detected in:
-internal/tesla/protomodel/datum_decoder_gen.go
+  internal/tesla/protomodel/datum_decoder_gen.go
 
 git --no-pager diff --stat -- internal/tesla/protomodel/:
-warning: in the working copy of 'internal/tesla/protomodel/datum_decoder_gen.go', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'internal/tesla/protomodel/enum_parsers_gen.go', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'internal/tesla/protomodel/signal_metadata_gen.go', LF will be replaced by CRLF the next time Git touches it
  internal/tesla/protomodel/datum_decoder_gen.go | 536 ++++++++++++++-----------
  1 file changed, 293 insertions(+), 243 deletions(-)
 
 === CI_WORKFLOW_LINT ===
 Workflow file: .github/workflows/proto-gen-check.yml
 Workflow content:
+----8<----
 name: proto-gen-check
 
 on:
@@ -53,112 +101,96 @@ jobs:
           go-version: '1.25'
       - name: Verify generated files match proto
         run: make gen-tesla-check
+----8<----
 
-Workflow trigger paths:
-  - 'api/proto/tesla/**'
-  - 'internal/tesla/protomodel/**'
-  - 'cmd/protogen-tesla/**'
+Checks:
+  [OK] name: proto-gen-check
+  [OK] pull_request trigger
+  [OK] paths: api/proto/tesla/**
+  [OK] paths: internal/tesla/protomodel/**
+  [OK] paths: cmd/protogen-tesla/**
+  [OK] actions/checkout@v4
+  [OK] actions/setup-go@v5
+  [OK] go-version: '1.25'
+  [OK] run: make gen-tesla-check
 
-Makefile gen-tesla / gen-tesla-check targets:
-  110: gen-tesla:
-  114: gen-tesla-check: gen-tesla
-
-generate.go directive:
-  //go:generate go run ../../../cmd/protogen-tesla --proto ../../../api/proto/tesla/vehicle_data.proto --out . --package protomodel
+Workflow lint result: OK
 
 === GATE ===
-Predecessor 0014 status: EXIT=0 STATUS=DONE -> OK
-Required files present: generate.go, Makefile, .github/workflows/proto-gen-check.yml -> OK
-//go:generate directive: present in internal/tesla/protomodel/generate.go -> OK
-Makefile gen-tesla-check target: present at line 114 -> OK
+Predecessor 0014 status: EXIT=0 / STATUS=DONE -> OK
+Required files present: generate.go, Makefile, proto-gen-check.yml -> OK
+//go:generate directive present in generate.go -> OK
+Makefile gen-tesla / gen-tesla-check targets present -> OK
+Workflow lint -> OK
+Drift check (post go generate) -> DRIFT
 
-go generate ./internal/tesla/protomodel/... -> ran cleanly (binary exit 0)
-git diff --name-only -- internal/tesla/protomodel/ ->
-  internal/tesla/protomodel/datum_decoder_gen.go
+Allowed-file scope check (uses git diff --name-only; ignores EOL-only smudge artifacts):
+Allowed paths:
+  internal/tesla/protomodel/generate.go
+  Makefile
+  .github/workflows/proto-gen-check.yml
+  .github/prompts/db-refactor/logs/phase-42-0015-go-generate-wiring.log
 
-Generated files differ from committed (drift detected).
-Per Honesty Covenant rule 1 (No red-as-green: EXIT != 0 means STATUS=BLOCKED).
-EXIT=1
-STATUS=BLOCKED
+git diff --name-only:
+  (no content diffs)
 
-=== DIAGNOSIS ===
-The drift gate is doing its job and surfacing a real upstream defect that
-landed in phase-42 prompt 0014 (commit aa46d37f8). The committed file
-internal/tesla/protomodel/datum_decoder_gen.go does NOT match what
-cmd/protogen-tesla/emit.go (committed in phase-42 prompt 0011, commit
-8247353cd) currently emits.
+Scope check result: OK -- only this log file has content changes
 
-Concretely, after running `go generate ./internal/tesla/protomodel/...`
-the regenerated datum_decoder_gen.go diverges from the committed file
-by 293 insertions / 243 deletions, including:
+Gate decision: BLOCKED
+Reasons:
+Drift gate fired: regenerated files diverge from the committed bytes:
+    internal/tesla/protomodel/datum_decoder_gen.go
 
-  Committed (0014):
-    - declares ErrInvalid    = errors.New("protomodel: value marked invalid")
-    - declares ErrUnsetValue = errors.New("protomodel: oneof value is unset")
-    - imports github.com/teslamotors/fleet-telemetry/protos as ftproto
-    - returns the typed compound structs from compounds.go
-      (Doors, Time, TireLocation, Location)
+=== BLOCKED_ANALYSIS ===
 
-  Generator (emit.go renderDatumDecoder, line 1124+):
-    - declares ErrInvalidDatum = errors.New("protomodel: datum value is invalid")
-      (different name, no unset-oneof sentinel)
-    - REDEFINES Doors, Time, TireLocation INLINE in datum_decoder_gen.go,
-      which collides with the same types declared in compounds.go and
-      produces compile errors:
-        datum_decoder_gen.go: Doors / Time / TireLocation redeclared in this block
-        compounds.go: other declaration of Doors / Time / TireLocation
-    - re-declares Datum / Payload / Value structs that compounds.go and
-      datum_decoder_test.go do not expect
+The drift gate fired on internal/tesla/protomodel/datum_decoder_gen.go.
+This is the SAME upstream defect that BLOCKED the prior 0015 attempts
+(commits 9767697b2, 535e99a70, d5273197e). The drift gate this prompt
+is meant to wire up correctly detects that the committed
+internal/tesla/protomodel/datum_decoder_gen.go (from phase-42-0014,
+commit aa46d37f8) does NOT match what cmd/protogen-tesla/emit.go
+(committed in phase-42-0011, commit 8247353cd) currently emits.
 
-The test suite in internal/tesla/protomodel/datum_decoder_test.go was
-also written against the committed shape (ErrInvalid, ErrUnsetValue,
-compounds.go-typed Doors{...}), so accepting the generator's output as
-the new canonical file would simultaneously break compilation AND
-invalidate the test suite that was committed to lock the contract.
+What the regenerated file would do (per the diff captured above):
+  - Drop the doc-comment block that explains the decoder semantics.
+  - Rename ErrInvalid -> ErrInvalidDatum and drop ErrUnsetValue
+    entirely (the emitter silently zero-fills unset oneofs instead of
+    returning a typed error).
+  - Redeclare Doors / LocationValue / Time / TireLocation inline as
+    primitive structs in the GENERATED file, colliding with the typed
+    versions in compounds.go (which 0014 introduced for DoorState,
+    ScheduledChargingStartTime, ScheduledDepartureTime semantics).
+  - Remove the ftproto + fmt imports the new decoder needs.
 
-Resolution requires changes OUTSIDE prompt 0015's allowed file set
-(prompt 0015 may only modify internal/tesla/protomodel/generate.go,
-Makefile, .github/workflows/proto-gen-check.yml, and this log). One of:
+The artifacts this prompt is responsible for installing
+  - internal/tesla/protomodel/generate.go
+  - Makefile (gen-tesla / gen-tesla-check targets)
+  - .github/workflows/proto-gen-check.yml
+are in place (committed in dae5ec369). This run does NOT modify any
+of them. The drift gate is wired up correctly and is doing exactly
+what it was designed to do: surface the real upstream divergence
+between the generator and the generated/test source today.
 
-  (a) reopen prompt 0014: update cmd/protogen-tesla/emit.go so
-      renderDatumDecoder emits the ErrInvalid + ErrUnsetValue +
-      compounds.go-aware shape that the committed file and tests
-      already lock down; OR
-  (b) issue a new corrective phase-42 prompt that re-aligns the
+Resolution requires changes outside this prompt's allowed file set.
+One of:
+  (a) Re-open phase-42-0014 / 0011 and update
+      cmd/protogen-tesla/emit.go's renderDatumDecoder so it emits the
+      ErrInvalid + ErrUnsetValue + compounds.go-aware shape that the
+      committed file and tests already lock down; OR
+  (b) Issue a new corrective phase-42 prompt that re-aligns the
       generator (emit.go), the generated file, the test suite, and
       compounds.go in a single commit.
 
-Per Honesty Covenant rules 1 (No red-as-green), 6 (No delegation /
-no scope expansion), and 8 (No commit on red), this run is recorded
-as BLOCKED. The drift gate itself works correctly -- it caught the
-defect that prompt 0014 introduced. That is the intended behavior of
-the gate this prompt was meant to wire up.
-
-Side observation (not the cause of BLOCKED, informational only):
-internal/tesla/protomodel/doc.go already carries a
-`//go:generate go run ../../../cmd/protogen-tesla --proto ...
---out .` directive at line 23. The new generate.go directive added
-by this prompt is intentionally the canonical anchor and matches the
-prompt requirement, but its presence alongside doc.go's directive
-means `go generate ./internal/tesla/protomodel/...` invokes the
-binary twice (visible in === GO_GENERATE_DRY_RUN === above). The
-generator is byte-stable per cmd/protogen-tesla TestEmitDeterministic,
-so the duplicate run is harmless but wasteful; a future cleanup
-prompt should remove the older directive from doc.go.
-
-This is the same blocking condition reported by the previous attempt
-at this prompt (commit 9767697b2). No upstream fix has landed since
-that attempt, so the outcome is identical and equally BLOCKED. Only
-this log file is committed; the new generate.go and
-proto-gen-check.yml plus the Makefile gen-tesla / gen-tesla-check
-targets remain uncommitted in the working tree so that the next
-attempt can pick them up unchanged once the upstream emit.go vs
-generated-file mismatch is resolved.
+Once the underlying defect is fixed in a follow-up prompt, this
+prompt's gate will pass on a clean rerun without needing to add or
+modify any files in this prompt's allowed-file set.
 
 === COMMIT ===
-Per Honesty Covenant rule 8 (No commit on red), only the log file
-(.github/prompts/db-refactor/logs/phase-42-0015-go-generate-wiring.log)
-is being committed. The other working-tree changes
-(internal/tesla/protomodel/generate.go, Makefile,
-.github/workflows/proto-gen-check.yml) are intentionally left
-uncommitted so the next attempt can pick them up unchanged.
+Per Honesty Covenant rule 8 (No commit on red), only this log file
+is committed. The artifact files (generate.go, Makefile,
+proto-gen-check.yml) were already committed in dae5ec369 and remain
+unchanged on disk. Drifted generated files were restored to HEAD
+after the gate run so the working tree carries only the log update.
+
+EXIT=1
+STATUS=BLOCKED
