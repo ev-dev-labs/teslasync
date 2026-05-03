@@ -11,7 +11,7 @@ function ProgressBar({ elapsed, duration }: { elapsed: number; duration: number 
   return (
     <div className="w-full h-1 rounded-full bg-[var(--surface-2)] overflow-hidden">
       <div
-        className="h-full rounded-full bg-neon-cyan transition-all duration-500"
+        className="h-full rounded-full bg-neon-cyan transition-all duration-slow"
         style={{ width: `${pct}%` }}
       />
     </div>

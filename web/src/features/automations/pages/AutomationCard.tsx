@@ -85,7 +85,7 @@ export function AutomationCard({
     <>
       <GlassPanel
         className={cn(
-          'p-4 transition-all duration-200',
+          'p-4 transition-all duration-normal',
           isFiring && 'ring-2 ring-neon-cyan/50 shadow-lg shadow-neon-cyan/10',
           uiStatus === 'auto-disabled' && 'border-red-500/30',
         )}

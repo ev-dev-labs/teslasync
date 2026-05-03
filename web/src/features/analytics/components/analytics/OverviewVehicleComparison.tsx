@@ -95,7 +95,7 @@ export function OverviewVehicleComparison({ data }: { data: FleetAnalytics | und
                   </div>
                   <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-neon-cyan transition-all duration-500"
+                      className="h-full rounded-full bg-neon-cyan transition-all duration-slow"
                       style={{ width: `${v.pct}%` }}
                     />
                   </div>

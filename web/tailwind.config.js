@@ -143,6 +143,22 @@ export default {
         // Same density-aware row height as a fixed-height utility.
         'd-row': 'var(--density-row-h)',
       },
+      // Phase-45 / Prompt 21 — motion duration tokens.
+      // Backed by --motion-duration-* CSS vars in index.css that collapse to
+      // 0ms under prefers-reduced-motion. Use `duration-fast | duration-normal
+      // | duration-slow` instead of raw `duration-NNN` numeric utilities so
+      // motion timings stay consistent across the app. The audit script
+      // `scripts/auditMotionTokens.mjs` enforces this.
+      transitionDuration: {
+        fast: 'var(--motion-duration-fast)',
+        normal: 'var(--motion-duration-normal)',
+        slow: 'var(--motion-duration-slow)',
+      },
+      transitionTimingFunction: {
+        standard: 'var(--motion-easing-standard)',
+        accelerate: 'var(--motion-easing-accelerate)',
+        decelerate: 'var(--motion-easing-decelerate)',
+      },
     },
   },
   plugins: [],

@@ -111,7 +111,7 @@ export default function YearReviewPage() {
           <div key={i} className="flex-1 h-0.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
             <div
               className={cn(
-                'h-full rounded-full transition-all duration-300',
+                'h-full rounded-full transition-all duration-normal',
                 i < slideIndex ? 'w-full bg-[var(--surface-2)]' : '',
                 i === slideIndex ? 'w-full bg-[var(--surface-2)] animate-pulse' : '',
                 i > slideIndex ? 'w-0' : '',

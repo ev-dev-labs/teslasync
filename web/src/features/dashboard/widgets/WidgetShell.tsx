@@ -114,7 +114,7 @@ export function WidgetShell({
   return (
     <div
       className={cn(
-        'relative h-full flex flex-col transition-shadow duration-500',
+        'relative h-full flex flex-col transition-shadow duration-slow',
         justUpdated && 'shadow-[0_0_12px_rgba(34,197,94,0.15)]',
       )}
     >

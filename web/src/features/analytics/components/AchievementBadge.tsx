@@ -34,7 +34,7 @@ export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeP
   return (
     <div
       className={cn(
-        'relative flex flex-col items-center rounded-xl p-3 transition-all duration-300',
+        'relative flex flex-col items-center rounded-xl p-3 transition-all duration-normal',
         cfg.gap,
         achievement.unlocked
           ? 'bg-yellow-500/[0.08] border border-yellow-500/30'

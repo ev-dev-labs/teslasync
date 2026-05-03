@@ -105,7 +105,7 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
               {/* Bar */}
               <div
                 className={cn(
-                  'w-full rounded-t-sm transition-all duration-200',
+                  'w-full rounded-t-sm transition-all duration-normal',
                   inWindow
                     ? 'bg-cyan-400/70 shadow-[0_0_12px_rgba(34,211,238,0.4)] ring-1 ring-cyan-400/50'
                     : baseColor,

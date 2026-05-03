@@ -209,7 +209,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
         <div className="flex flex-col gap-1">
           <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-700"
+              className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-slow"
               style={{ width: `${progressPercent}%` }}
             />
           </div>

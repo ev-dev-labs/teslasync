@@ -58,7 +58,7 @@ function StackedBar({ segments }: { segments: StateSegment[] }) {
       {segments.map((seg) => (
         <div
           key={seg.state}
-          className="h-full first:rounded-l-full last:rounded-r-full transition-all duration-300"
+          className="h-full first:rounded-l-full last:rounded-r-full transition-all duration-normal"
           style={{ width: `${seg.pct}%`, backgroundColor: stateColor(seg.state) }}
           title={`${seg.state}: ${fmtNumber(seg.pct, 1)}%`}
         />
@@ -90,7 +90,7 @@ function TimelineStripe({
           return (
             <div
               key={`${tr.state}-${i}`}
-              className="h-full transition-all duration-300"
+              className="h-full transition-all duration-normal"
               style={{ width: `${pct}%`, backgroundColor: stateColor(tr.state ?? '') }}
               title={`${tr.state}: ${fmtNumber(tr.durationMin ?? 0, 0)} min`}
             />

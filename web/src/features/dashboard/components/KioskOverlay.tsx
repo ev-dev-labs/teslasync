@@ -60,7 +60,7 @@ export function KioskOverlay({
           // for ambient screen dimming. Not a dialog. New interactive dialogs
           // MUST use <Modal>.
           // eslint-disable-next-line no-restricted-syntax
-          className="fixed inset-0 z-[9998] bg-black pointer-events-none transition-opacity duration-1000"
+          className="fixed inset-0 z-[9998] bg-black pointer-events-none transition-opacity duration-slow"
           style={{ opacity: 1 - config.dimLevel }}
         />
       )}
@@ -108,7 +108,7 @@ export function KioskOverlay({
             <div
               key={i}
               className={cn(
-                'h-1.5 rounded-full transition-all duration-300',
+                'h-1.5 rounded-full transition-all duration-normal',
                 i === currentIndex
                   ? 'w-6 bg-[var(--surface-2)]'
                   : 'w-1.5 bg-[var(--surface-2)]',
@@ -121,7 +121,7 @@ export function KioskOverlay({
       {/* Exit button — fades in on mouse movement, always accessible via touch */}
       <div
         className={cn(
-          'fixed top-3 right-3 z-[9999] transition-opacity duration-500',
+          'fixed top-3 right-3 z-[9999] transition-opacity duration-slow',
           showExit ? 'opacity-100' : 'opacity-0',
         )}
       >

@@ -29,7 +29,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
   const batColor = batteryColor(state?.battery_level ?? 0);
 
   return (
-    <GlassPanel hover glow="cyan" className="p-0 overflow-hidden transition-all duration-300 group">
+    <GlassPanel hover glow="cyan" className="p-0 overflow-hidden transition-all duration-normal group">
       {/* Gradient accent strip */}
       <div className="h-1 bg-gradient-to-r from-cyan-400 via-purple-400 to-green-400 opacity-40 group-hover:opacity-80 transition-opacity" />
 

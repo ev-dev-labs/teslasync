@@ -76,7 +76,7 @@ export function Tooltip({ content, side = 'top', multiline, children }: TooltipP
           'pointer-events-none absolute z-50 rounded-lg px-2.5 py-1.5 text-xs font-medium',
           multiline ? 'whitespace-normal max-w-[260px]' : 'whitespace-nowrap',
           'bg-gray-900 text-gray-100 shadow-lg dark:bg-gray-100 dark:text-gray-900',
-          'opacity-0 scale-95 transition-all duration-150 motion-reduce:transition-none',
+          'opacity-0 scale-95 transition-all duration-fast motion-reduce:transition-none',
           'group-hover/tip:opacity-100 group-hover/tip:scale-100',
           'group-focus-within/tip:opacity-100 group-focus-within/tip:scale-100',
           sideClasses[side],

@@ -58,7 +58,7 @@ export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
               </span>
               <div className="flex-1 h-3 rounded-full bg-white/[0.04] overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all duration-1000"
+                  className="h-full rounded-full transition-all duration-slow"
                   style={{
                     width: `${level}%`,
                     background: `linear-gradient(90deg, ${color}80, ${color})`,

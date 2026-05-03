@@ -207,13 +207,13 @@ export default function GuardModePage() {
           {/* Guard Mode Toggle */}
           <GlassPanel
             className={cn(
-              'p-6 flex flex-col items-center justify-center gap-4 text-center transition-all duration-500',
+              'p-6 flex flex-col items-center justify-center gap-4 text-center transition-all duration-slow',
               isArmed && !isTriggered && 'ring-2 ring-emerald-500/30',
               isTriggered && 'ring-2 ring-red-500/50 animate-pulse',
             )}
           >
             <div className={cn(
-              'w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300',
+              'w-20 h-20 rounded-full flex items-center justify-center transition-all duration-normal',
               isArmed && !isTriggered && 'bg-emerald-500/20 text-emerald-400',
               isTriggered && 'bg-red-500/20 text-red-400',
               !isArmed && 'bg-[var(--surface-2)] text-[var(--text-muted)]',

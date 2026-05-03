@@ -53,7 +53,7 @@ export function ToggleCommandTile({ def, state, onExecute, onRequestDialog, load
   return (
     <GlassPanel
       className={cn(
-        'p-4 flex flex-col items-center gap-2 transition-all duration-300 text-center min-h-[100px] justify-center cursor-pointer relative group',
+        'p-4 flex flex-col items-center gap-2 transition-all duration-normal text-center min-h-[100px] justify-center cursor-pointer relative group',
         isOn ? styles.panel : 'hover:border-[var(--border-subtle)]',
         loading && 'opacity-50',
       )}

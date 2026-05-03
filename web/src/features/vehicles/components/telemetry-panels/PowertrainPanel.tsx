@@ -63,7 +63,7 @@ export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
               {motorData.power_kw != null && (
                 <div
                   className={cn(
-                    'absolute inset-y-0 rounded-full transition-all duration-300',
+                    'absolute inset-y-0 rounded-full transition-all duration-normal',
                     motorData.power_kw >= 0 ? 'bg-green-500/60' : 'bg-red-500/60',
                   )}
                   style={

@@ -219,7 +219,7 @@ function ComparisonBar({
       </div>
       <div className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-500"
+          className="h-full rounded-full transition-all duration-slow"
           style={{
             width: `${rangePct ?? 0}%`,
             backgroundColor: rangePct != null && rangePct >= 80 ? '#10b981' : rangePct != null && rangePct >= 60 ? '#f59e0b' : '#ef4444',

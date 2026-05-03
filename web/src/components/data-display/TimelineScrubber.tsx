@@ -333,7 +333,7 @@ export function TimelineScrubber({
           <div
             className={cn(
               'absolute left-0 top-0 h-full rounded-full bg-[var(--neon)]',
-              !reduce && 'transition-[width] duration-100',
+              !reduce && 'transition-[width] duration-fast',
             )}
             style={{ width: playheadLeft }}
           />
@@ -360,7 +360,7 @@ export function TimelineScrubber({
         <div
           className={cn(
             'pointer-events-none absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-lg shadow-[var(--neon)]/30',
-            !reduce && 'transition-[left] duration-100',
+            !reduce && 'transition-[left] duration-fast',
             isDragging && 'h-4 w-4 ring-2 ring-[var(--neon)]/40',
           )}
           style={{ left: playheadLeft }}

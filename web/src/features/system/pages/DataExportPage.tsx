@@ -155,7 +155,7 @@ function ExportTypeSelector({
             hover
             onClick={() => onChange(et.value)}
             className={cn(
-              'p-4 text-left transition-all duration-200 cursor-pointer border-2 rounded-xl',
+              'p-4 text-left transition-all duration-normal cursor-pointer border-2 rounded-xl',
               active
                 ? 'border-[var(--border-strong)]'
                 : 'border-transparent hover:border-[var(--border-subtle)]',

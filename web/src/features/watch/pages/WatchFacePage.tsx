@@ -174,7 +174,7 @@ function StatusIcon({ icon: Icon, active, color, label, onClick, loading }: Stat
       onClick={onClick}
       disabled={loading}
       className={cn(
-        'h-11 w-11 flex-col rounded-full px-0 py-0 font-normal transition-colors duration-200',
+        'h-11 w-11 flex-col rounded-full px-0 py-0 font-normal transition-colors duration-normal',
         active ? `bg-[var(--surface-2)] ${activeColor}` : 'bg-[var(--surface-2)] text-[var(--text-muted)]',
         onClick && 'active:scale-95',
         loading && 'opacity-50',

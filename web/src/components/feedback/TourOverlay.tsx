@@ -46,7 +46,7 @@ export function TourOverlay({
       <div
         className={cn(
           'absolute inset-0 bg-[var(--surface-overlay)]',
-          reduce ? '' : 'transition-all duration-300',
+          reduce ? '' : 'transition-all duration-normal',
         )}
         style={{
           clipPath: `polygon(
@@ -68,7 +68,7 @@ export function TourOverlay({
         className={cn(
           'absolute rounded-lg border-2 border-[var(--theme-primary)]/40',
           'shadow-[0_0_20px_rgba(var(--theme-primary-rgb),0.2)] pointer-events-none',
-          reduce ? '' : 'transition-all duration-300',
+          reduce ? '' : 'transition-all duration-normal',
         )}
         style={{
           top: spotlight.top,
@@ -83,7 +83,7 @@ export function TourOverlay({
         className={cn(
           'absolute max-w-sm p-4 rounded-xl bg-[var(--bg-secondary)]',
           'border border-[var(--border-subtle)] shadow-2xl backdrop-blur-xl',
-          reduce ? '' : 'animate-in fade-in slide-in-from-bottom-2 duration-200',
+          reduce ? '' : 'animate-in fade-in slide-in-from-bottom-2 duration-normal',
         )}
         style={tooltipStyle}
         role="dialog"

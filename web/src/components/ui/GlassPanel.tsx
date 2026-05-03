@@ -39,7 +39,7 @@ export const GlassPanel = forwardRef<HTMLDivElement, GlassPanelProps>(
       className={cn(
         'bg-[var(--surface-2)] backdrop-blur-sm border border-[var(--border-subtle)] rounded-xl',
         padding ? paddingClasses[padding] : null,
-        hover && 'transition-all duration-300',
+        hover && 'transition-all duration-normal',
         hover && glowClasses[glow],
         className,
       )}

@@ -705,7 +705,7 @@ function OnboardingWorkflow() {
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-glass-border">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-neon-cyan to-neon-green transition-all duration-500"
+            className="h-full rounded-full bg-gradient-to-r from-neon-cyan to-neon-green transition-all duration-slow"
             style={{ width: `${progressPct}%` }}
           />
         </div>

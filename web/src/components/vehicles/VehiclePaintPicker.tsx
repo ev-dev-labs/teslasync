@@ -57,7 +57,7 @@ export function VehiclePaintPicker({
               title={isInferred ? `${label} · ${t('paint.detected', 'Auto-detected')}` : label}
               onClick={() => setPaint(p.id)}
               className={cn(
-                'relative h-7 w-7 rounded-full border-2 transition-all duration-150',
+                'relative h-7 w-7 rounded-full border-2 transition-all duration-fast',
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900',
                 selected
                   ? 'border-white scale-110 shadow-lg shadow-cyan-500/20'

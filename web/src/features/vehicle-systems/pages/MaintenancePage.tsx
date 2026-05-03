@@ -162,7 +162,7 @@ function ProgressBar({ pct }: { pct: number }) {
   return (
     <div className="w-full h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
       <div
-        className={cn('h-full rounded-full transition-all duration-500', progressBarColor(pct))}
+        className={cn('h-full rounded-full transition-all duration-slow', progressBarColor(pct))}
         style={{ width: `${Math.min(pct, 100)}%` }}
       />
     </div>

@@ -132,7 +132,7 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
   return (
     <GlassPanel
       className={cn(
-        'p-4 flex items-start gap-4 transition-all duration-200 group',
+        'p-4 flex items-start gap-4 transition-all duration-normal group',
         !alert.is_read && cn(tokens.border, tokens.bg.replace('/10', '/5')),
       )}
     >

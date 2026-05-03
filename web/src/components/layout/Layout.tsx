@@ -934,7 +934,7 @@ export default function Layout() {
         aria-current={isActive ? 'page' : undefined}
         data-tour={dataTour}
         className={cn(
-          'group relative flex min-h-9 items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-[13px] font-medium transition-all duration-200',
+          'group relative flex min-h-9 items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-[13px] font-medium transition-all duration-normal',
           isInTabBar && 'opacity-50 lg:opacity-100'
         )}
       >
@@ -948,7 +948,7 @@ export default function Layout() {
         )}
         <span
           className={cn(
-            'relative z-10 grid shrink-0 place-items-center border border-white/[0.06] transition-all duration-200',
+            'relative z-10 grid shrink-0 place-items-center border border-white/[0.06] transition-all duration-normal',
             'h-7 w-7 rounded-lg',
             sectionStyle?.surface ?? 'bg-white/[0.035]',
             sectionStyle?.ring && 'ring-1',
@@ -956,7 +956,7 @@ export default function Layout() {
             isActive ? 'bg-white/[0.09] ring-white/20' : 'group-hover:bg-white/[0.07] group-hover:ring-white/15'
           )}
         >
-          <Icon className={cn('h-4 w-4 transition-all duration-200', color, isActive ? 'opacity-100 drop-shadow-[0_0_8px_currentColor]' : 'opacity-75 group-hover:opacity-100')} />
+          <Icon className={cn('h-4 w-4 transition-all duration-normal', color, isActive ? 'opacity-100 drop-shadow-[0_0_8px_currentColor]' : 'opacity-75 group-hover:opacity-100')} />
         </span>
         <span className={cn('relative z-10 min-w-0 truncate transition-colors', isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]')}>
           {navLabel(label)}
@@ -1030,7 +1030,7 @@ export default function Layout() {
         data-role="sidebar"
         data-sidebar-open={sidebarOpen}
         className={cn(
-          'fixed left-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
+          'fixed left-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-normal ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
           'flex flex-col border-r border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl lg:shadow-none',
           sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full'
         )}

@@ -48,7 +48,7 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-200">
+      <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-normal">
         <Car className="h-5 w-5 text-cyan-400 mx-auto mb-2" />
         <p className="text-2xl font-bold text-gray-900 dark:text-white">
           <AnimatedNumber value={vehicles.length} />
@@ -58,7 +58,7 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
         </p>
       </GlassPanel>
 
-      <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-200">
+      <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-normal">
         <Battery className="h-5 w-5 text-green-500 mx-auto mb-2" />
         <p className="text-2xl font-bold text-gray-900 dark:text-white">
           <AnimatedNumber value={Math.round(avgBattery)} suffix="%" />
@@ -68,7 +68,7 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
         </p>
       </GlassPanel>
 
-      <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-200">
+      <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-normal">
         <Gauge className="h-5 w-5 text-purple-400 mx-auto mb-2" />
         <p className="text-2xl font-bold text-gray-900 dark:text-white">
           <AnimatedNumber value={Math.round(convertDistance(totalRange))} />
@@ -78,7 +78,7 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
         </p>
       </GlassPanel>
 
-      <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-200">
+      <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-normal">
         <Zap className="h-5 w-5 text-amber-400 mx-auto mb-2" />
         <p className="text-2xl font-bold text-green-500">
           <AnimatedNumber value={chargingCount} />{' '}

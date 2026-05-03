@@ -625,7 +625,7 @@ export default function BatteryHealthPage() {
               {insights.map((ins, i) => (
                 <GlassPanel
                   key={i}
-                  className={cn('border p-4 transition-all duration-200', insightPanelClass[ins.status])}
+                  className={cn('border p-4 transition-all duration-normal', insightPanelClass[ins.status])}
                 >
                   <div className="flex items-start gap-3">
                     <div className={cn('mt-0.5', insightIconClass[ins.status])}>{ins.icon}</div>

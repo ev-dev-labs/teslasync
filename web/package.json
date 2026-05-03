@@ -15,6 +15,7 @@
     "lint:i18n": "node scripts/lint-i18n-no-template-literals.mjs",
     "lint:light-mode": "node scripts/audit-light-mode-parity.mjs",
     "audit:skeletons": "node scripts/auditSkeletons.mjs",
+    "audit:motion": "node scripts/auditMotionTokens.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

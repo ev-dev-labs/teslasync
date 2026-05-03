@@ -93,7 +93,7 @@ export default function SystemStatusPage() {
                 <div
                   className={cn(
                     'h-20 w-20 rounded-full flex items-center justify-center',
-                    'ring-2 ring-offset-2 ring-offset-transparent transition-shadow duration-700',
+                    'ring-2 ring-offset-2 ring-offset-transparent transition-shadow duration-slow',
                     overallStatus === 'healthy' && 'bg-green-500/20 ring-green-500/40',
                     overallStatus === 'degraded' && 'bg-yellow-500/20 ring-yellow-500/40',
                     overallStatus === 'unhealthy' && 'bg-red-500/20 ring-red-500/40',

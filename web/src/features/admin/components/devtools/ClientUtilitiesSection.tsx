@@ -61,7 +61,7 @@ function useToolList(): ToolEntry[] {
 function ExpandableToolCard({ tool, expanded, onToggle }: { tool: ToolEntry; expanded: boolean; onToggle: () => void }) {
   const Icon = tool.icon
   return (
-    <GlassPanel hover className="overflow-hidden transition-all duration-200">
+    <GlassPanel hover className="overflow-hidden transition-all duration-normal">
       <UiButton
         type="button"
         variant="ghost"
@@ -76,7 +76,7 @@ function ExpandableToolCard({ tool, expanded, onToggle }: { tool: ToolEntry; exp
           <h3 className="text-sm font-semibold text-white">{tool.name}</h3>
           <p className="text-xs text-[var(--text-secondary)]">{tool.desc}</p>
         </div>
-        <ChevronDown className={cn('h-4 w-4 text-[var(--text-muted)] transition-transform duration-200', expanded && 'rotate-180')} />
+        <ChevronDown className={cn('h-4 w-4 text-[var(--text-muted)] transition-transform duration-normal', expanded && 'rotate-180')} />
       </UiButton>
       {expanded && (
         <div className="border-t border-white/[0.04] p-4">

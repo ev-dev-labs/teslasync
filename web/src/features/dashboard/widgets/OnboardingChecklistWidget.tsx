@@ -143,7 +143,7 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
           >
             <div
               className={cn(
-                'h-full rounded-full transition-all duration-500',
+                'h-full rounded-full transition-all duration-slow',
                 allComplete
                   ? 'bg-gradient-to-r from-emerald-400 to-cyan-400'
                   : 'bg-gradient-to-r from-cyan-400 to-indigo-400',

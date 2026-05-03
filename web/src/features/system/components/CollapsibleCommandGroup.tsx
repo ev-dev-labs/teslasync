@@ -58,7 +58,7 @@ export function CollapsibleCommandGroup({
         </span>
         <span className="text-[10px] text-[var(--text-muted)] ml-1">({count})</span>
         <ChevronDown className={cn(
-          'h-3.5 w-3.5 text-[var(--text-muted)] ml-auto transition-transform duration-200',
+          'h-3.5 w-3.5 text-[var(--text-muted)] ml-auto transition-transform duration-normal',
           open && 'rotate-180',
         )} />
       </ControlButton>

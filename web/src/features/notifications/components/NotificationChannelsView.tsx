@@ -370,7 +370,7 @@ export function NotificationChannelsView() {
               <GlassPanel
                 key={ch.id}
                 className={cn(
-                  'p-5 space-y-4 transition-all duration-300',
+                  'p-5 space-y-4 transition-all duration-normal',
                   ch.enabled ? 'ring-1 ring-white/[0.08]' : 'opacity-60',
                 )}
               >

@@ -32,7 +32,7 @@ export function InputCommandTile({ def, onRequestDialog, loading, lastStatus, is
   return (
     <GlassPanel
       className={cn(
-        'p-4 flex flex-col items-center gap-2 transition-all duration-300 text-center min-h-[100px] justify-center cursor-pointer relative group',
+        'p-4 flex flex-col items-center gap-2 transition-all duration-normal text-center min-h-[100px] justify-center cursor-pointer relative group',
         hoverStyles[variant],
         loading && 'opacity-50',
       )}

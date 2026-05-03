@@ -61,7 +61,7 @@ export function AccordionSection({
         )}
         <ChevronDown
           className={cn(
-            'h-4 w-4 text-[var(--text-muted)] transition-transform duration-200',
+            'h-4 w-4 text-[var(--text-muted)] transition-transform duration-normal',
             open && 'rotate-180',
           )}
         />

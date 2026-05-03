@@ -56,7 +56,7 @@ export function CommandSelectDialog({
               disabled={loading}
               onClick={() => onSelect(opt.value)}
               className={cn(
-                'h-auto w-full flex-col items-start gap-0.5 rounded-lg p-3 text-left font-normal transition-all duration-200',
+                'h-auto w-full flex-col items-start gap-0.5 rounded-lg p-3 text-left font-normal transition-all duration-normal',
                 'bg-[var(--surface-2)] border border-[var(--border-subtle)]',
                 'hover:bg-[var(--surface-2)] hover:border-neon-cyan/30',
                 'focus:outline-none focus:ring-2 focus:ring-neon-cyan/30',

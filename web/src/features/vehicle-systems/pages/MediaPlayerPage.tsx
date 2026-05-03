@@ -413,7 +413,7 @@ export default function MediaPlayerPage() {
                   </span>
                   <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-cyan-400 rounded-full transition-all duration-500"
+                      className="h-full bg-cyan-400 rounded-full transition-all duration-slow"
                       style={{ width: `${progressPct}%` }}
                     />
                   </div>

@@ -43,7 +43,7 @@ export function GasPriceSettings() {
                 })
               }}
               className={cn(
-                'flex items-center gap-3 w-full rounded-xl border p-3.5 h-auto transition-all duration-200',
+                'flex items-center gap-3 w-full rounded-xl border p-3.5 h-auto transition-all duration-normal',
                 gasPriceStatus?.enabled
                   ? 'border-neon-green/40 bg-neon-green/5 text-neon-green'
                   : 'border-[var(--glass-border)] bg-[var(--surface-2)] text-[var(--text-muted)]'

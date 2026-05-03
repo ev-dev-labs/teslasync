@@ -237,7 +237,7 @@ export default function PowerFlowDashboardPage() {
                 {soc != null && (
                   <div className="w-full bg-white/[0.06] rounded-full h-3">
                     <div
-                      className="h-3 rounded-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-700"
+                      className="h-3 rounded-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-slow"
                       style={{ width: `${Math.min(soc, 100)}%` }}
                     />
                   </div>

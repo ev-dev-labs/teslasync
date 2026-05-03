@@ -46,7 +46,7 @@ export const RadialGauge = forwardRef<HTMLDivElement, RadialGaugeProps>(
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={offset}
-            className="transition-all duration-500"
+            className="transition-all duration-slow"
           />
         </svg>
 

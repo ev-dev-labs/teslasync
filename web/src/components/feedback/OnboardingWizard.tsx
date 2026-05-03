@@ -112,7 +112,7 @@ export default function OnboardingWizard() {
           {steps.map((_, i) => (
             <div
               key={i}
-              className="h-1.5 rounded-full transition-all duration-300"
+              className="h-1.5 rounded-full transition-all duration-normal"
               style={{
                 width: i === currentStep ? '24px' : '8px',
                 background: i <= currentStep ? COLOR.CYAN : 'rgba(255,255,255,0.1)',

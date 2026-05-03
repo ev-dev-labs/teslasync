@@ -83,7 +83,7 @@ export function AppearanceSettings() {
                   onClick={() => setDensity(choice.id)}
                   disabled={!settings || saveSettings.isPending}
                   className={cn(
-                    'flex items-start gap-3 rounded-xl border p-3.5 h-auto transition-all duration-200 justify-start text-left',
+                    'flex items-start gap-3 rounded-xl border p-3.5 h-auto transition-all duration-normal justify-start text-left',
                     active
                       ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
                       : 'border-[var(--glass-border)] bg-[var(--surface-2)] hover:border-[var(--theme-primary)]/30',

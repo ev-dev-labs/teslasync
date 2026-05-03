@@ -48,7 +48,7 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
                 </div>
                 <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-neon-green transition-all duration-500"
+                    className="h-full rounded-full bg-neon-green transition-all duration-slow"
                     style={{ width: `${b.pct}%` }}
                   />
                 </div>
@@ -131,7 +131,7 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
                   <span className="w-28 text-xs text-right font-medium text-[var(--text-secondary)]">{ct.type}</span>
                   <div className="flex-1 h-3 rounded-full bg-white/[0.06] overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all duration-700"
+                      className="h-full rounded-full transition-all duration-slow"
                       style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
                     />
                   </div>

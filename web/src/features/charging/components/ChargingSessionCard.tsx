@@ -73,7 +73,7 @@ export function ChargingSessionCard({ session, convertDistance, distanceUnit, se
         </label>
       )}
       <Link to={`/charging/${session.id}`} className="flex-1 min-w-0">
-      <GlassPanel hover glow="green" className="p-4 transition-all duration-200 group cursor-pointer">
+      <GlassPanel hover glow="green" className="p-4 transition-all duration-normal group cursor-pointer">
         <div className="flex items-center gap-4">
           <ProgressRing
             value={session.end_battery_pct ?? session.start_battery_pct}

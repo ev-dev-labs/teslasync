@@ -453,7 +453,7 @@ function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
         </div>
         <div className="h-6 rounded-full bg-white/[0.05] overflow-hidden">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-1000"
+            className="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-slow"
             style={{ width: `${evPct}%` }}
           />
         </div>
@@ -465,7 +465,7 @@ function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
         </div>
         <div className="h-6 rounded-full bg-white/[0.05] overflow-hidden">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-red-500 to-orange-400 transition-all duration-1000"
+            className="h-full rounded-full bg-gradient-to-r from-red-500 to-orange-400 transition-all duration-slow"
             style={{ width: `${gasPct}%` }}
           />
         </div>

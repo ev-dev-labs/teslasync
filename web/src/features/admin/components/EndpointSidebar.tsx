@@ -91,7 +91,7 @@ function TagGroup({
       >
         <ChevronDown
           className={cn(
-            'h-3 w-3 text-[var(--text-muted)] transition-transform duration-200',
+            'h-3 w-3 text-[var(--text-muted)] transition-transform duration-normal',
             open && 'rotate-180',
           )}
         />

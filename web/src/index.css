@@ -54,6 +54,21 @@
   --density-pad-y: 0.75rem;
   --density-gap: 0.75rem;
   --density-text: 0.875rem;
+  /*
+   * Motion duration tokens (Phase-45 / Prompt 21).
+   *
+   * Three semantic buckets so transition timings stay consistent across the
+   * app. Tailwind's `duration-fast | duration-normal | duration-slow`
+   * utilities (see tailwind.config.js → transitionDuration) reference these
+   * variables. Components that consume the vars directly get reduced-motion
+   * support for free via the @media override further down in this file.
+   */
+  --motion-duration-fast: 150ms;
+  --motion-duration-normal: 250ms;
+  --motion-duration-slow: 400ms;
+  --motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-easing-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --motion-easing-decelerate: cubic-bezier(0, 0, 0, 1);
 }
 
 /* === DENSITY MODES (Phase 40 / Prompt 44) ============================ */
@@ -878,6 +893,11 @@ select option:checked {
  * Policy: docs/A11Y_GUIDELINES.md.
  */
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-fast: 0ms;
+    --motion-duration-normal: 0ms;
+    --motion-duration-slow: 0ms;
+  }
   *,
   *::before,
   *::after {
