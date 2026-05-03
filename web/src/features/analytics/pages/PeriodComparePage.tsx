@@ -19,6 +19,7 @@ import {
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUrlEnum, useUrlString } from '@/hooks/useUrlState';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
@@ -55,6 +56,9 @@ const PERIOD_DAYS: Record<string, number> = {
   '7': 7, '30': 30, '90': 90, '365': 365, '0': 0,
 };
 
+const PERIOD_VALUES = ['7', '30', '90', '365', '0'] as const;
+type PeriodValue = (typeof PERIOD_VALUES)[number];
+
 // Phase 40 / Prompt 39 — disambiguation banner dismissal is persisted so users
 // who already understand the difference between the two compare pages don't
 // have to dismiss it on every visit. Two separate keys (period|fleet) so each
@@ -67,9 +71,9 @@ export default function PeriodComparePage() {
   const { t } = useTranslation();
   usePageTitle(t('compare.title', 'Period Comparison'));
 
-  const [vehicleId, setVehicleId] = useState('');
-  const [periodA, setPeriodA] = useState('30');
-  const [periodB, setPeriodB] = useState('90');
+  const [vehicleId, setVehicleId] = useUrlString('vehicle_id', '');
+  const [periodA, setPeriodA] = useUrlEnum<PeriodValue>('period_a', PERIOD_VALUES, '30');
+  const [periodB, setPeriodB] = useUrlEnum<PeriodValue>('period_b', PERIOD_VALUES, '90');
 
   // Disambiguation banner — defaults to visible, persists dismissal.
   const [bannerVisible, setBannerVisible] = useState<boolean>(() => {
@@ -294,14 +298,14 @@ export default function PeriodComparePage() {
             label={t('compare.periodA', 'Period A')}
             options={periodOptions}
             value={periodA}
-            onChange={(e) => setPeriodA(e.target.value)}
+            onChange={(e) => setPeriodA(e.target.value as PeriodValue)}
             className="w-44"
           />
           <Select
             label={t('compare.periodB', 'Period B')}
             options={periodOptions}
             value={periodB}
-            onChange={(e) => setPeriodB(e.target.value)}
+            onChange={(e) => setPeriodB(e.target.value as PeriodValue)}
             className="w-44"
           />
         </GlassPanel>

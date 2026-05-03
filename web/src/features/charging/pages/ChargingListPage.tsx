@@ -6,6 +6,7 @@ import { QueryError } from '@/components/feedback';
 import { DateRangeFilter } from '@/components/forms';
 import { SavedViewMenu } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
+import { useUrlBoolean, useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useChargingSessionsPaginated, useChargingOptimizer, useBulkDeleteCharging } from '@/api/hooks/useCharging';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -36,6 +37,10 @@ import {
   type ChargerFilter,
 } from '../components/charging-list';
 
+/* URL state allowed values (stable refs for useUrlEnum). */
+const SORT_KEYS = ['date', 'energy', 'cost', 'duration', 'power'] as const;
+const CHARGER_FILTERS = ['all', 'supercharger', 'dc', 'home'] as const;
+
 export default function ChargingListPage() {
   const { t } = useTranslation();
   usePageTitle(t('charging.list.title', 'Charging Sessions'));
@@ -47,18 +52,20 @@ export default function ChargingListPage() {
   // useSelectedVehicle, so prior alert-context handling is no longer needed.
   const { vehicleId } = useSelectedVehicle();
 
-  const [sortBy, setSortBy] = useState<SortKey>('date');
-  const [sortDesc, setSortDesc] = useState(true);
-  const [chargerFilter, setChargerFilter] = useState<ChargerFilter>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
-  const [startDate, setStartDate] = useState(() => {
+  const [sortBy, setSortBy] = useUrlEnum<SortKey>('sort', SORT_KEYS, 'date');
+  const [sortDesc, setSortDesc] = useUrlBoolean('sort_desc', true);
+  const [chargerFilter, setChargerFilter] = useUrlEnum<ChargerFilter>('charger', CHARGER_FILTERS, 'all');
+  const [searchQuery, setSearchQuery] = useUrlString('q', '');
+  const [page, setPage] = useUrlNumber('page', 1);
+  const [pageSize, setPageSize] = useUrlNumber('size', 50);
+  const defaultStartDate = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 365);
     return d.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  }, []);
+  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [startDate, setStartDate] = useUrlString('from', defaultStartDate);
+  const [endDate, setEndDate] = useUrlString('to', defaultEndDate);
 
   const {
     data: sessions,

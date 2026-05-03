@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -25,6 +25,7 @@ import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
+import { useUrlString } from '@/hooks/useUrlState';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
@@ -57,12 +58,14 @@ export default function StatisticsPage() {
   const { convertDistance, distanceUnit } = useSettings();
   const savedView = useSavedViewUrl();
 
-  const [vehicleId, setVehicleId] = useState('');
-  const [startDate, setStartDate] = useState(() => {
+  const [vehicleId, setVehicleId] = useUrlString('vehicle_id', '');
+  const defaultStart = useMemo(() => {
     const d = new Date(); d.setFullYear(d.getFullYear() - 1);
     return d.toISOString().slice(0, 10);
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  }, []);
+  const defaultEnd = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const [startDate, setStartDate] = useUrlString('from', defaultStart);
+  const [endDate, setEndDate] = useUrlString('to', defaultEnd);
 
   const { data: vehicles } = useVehicles();
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');

@@ -18,6 +18,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePinned, useTogglePin } from '@/api/hooks/usePinned';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
+import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { downloadCSV, objectsToCSV } from '@/lib/csvExport';
 import { cn } from '@/lib/cn';
 import { SignalDiffTable } from '../components/SignalDiffTable';
@@ -171,38 +172,51 @@ export default function SignalDiffPage() {
 
   /* ─── Vehicle picker ─── */
   const { data: vehicles } = useVehicles();
-  const initialVehicleId = useMemo(() => {
-    const fromQs = new URLSearchParams(window.location.search).get('vehicle');
-    if (fromQs) return Number(fromQs);
-    return vehicles?.[0]?.id ?? 0;
-  }, [vehicles]);
-  const [vehicleId, setVehicleId] = useState<number>(initialVehicleId);
+  const [vehicleIdParam, setVehicleIdParam] = useUrlNumber('vehicle', 0);
+  const vehicleId = vehicleIdParam || vehicles?.[0]?.id || 0;
 
   useEffect(() => {
-    // When the vehicles list arrives later, hydrate our default vehicleId.
-    if (!vehicleId && vehicles && vehicles.length > 0) {
-      setVehicleId(vehicles[0].id);
+    // Once the vehicles list arrives, ensure the URL reflects the resolved
+    // default vehicle so saved views can pin to a specific car.
+    if (!vehicleIdParam && vehicles && vehicles.length > 0) {
+      setVehicleIdParam(vehicles[0].id);
     }
-  }, [vehicleId, vehicles]);
+  }, [vehicleIdParam, vehicles, setVehicleIdParam]);
 
   /* ─── Window inputs ─── */
-  const now = new Date();
-  const [atA, setAtA] = useState<string>(() =>
-    toLocalDatetimeInput(new Date(now.getTime() - 3600 * 1000)),
+  const defaultAtA = useMemo(
+    () => toLocalDatetimeInput(new Date(Date.now() - 3600 * 1000)),
+    [],
   );
-  const [atB, setAtB] = useState<string>(() => toLocalDatetimeInput(now));
+  const defaultAtB = useMemo(() => toLocalDatetimeInput(new Date()), []);
+  const [atA, setAtA] = useUrlString('a', defaultAtA);
+  const [atB, setAtB] = useUrlString('b', defaultAtB);
 
-  const applyPreset = useCallback((id: PresetId) => {
-    const preset = PRESETS.find((p) => p.id === id);
-    if (!preset) return;
-    const { atA: a, atB: b } = preset.compute();
-    setAtA(toLocalDatetimeInput(a));
-    setAtB(toLocalDatetimeInput(b));
-  }, []);
+  const applyPreset = useCallback(
+    (id: PresetId) => {
+      const preset = PRESETS.find((p) => p.id === id);
+      if (!preset) return;
+      const { atA: a, atB: b } = preset.compute();
+      setAtA(toLocalDatetimeInput(a));
+      setAtB(toLocalDatetimeInput(b));
+    },
+    [setAtA, setAtB],
+  );
 
   /* ─── Filters ─── */
-  const [signalFilter, setSignalFilter] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [signalFilter, setSignalFilter] = useUrlString('q', '');
+  const [activeCategoryRaw, setActiveCategoryRaw] = useUrlString('cat', '');
+  const activeCategory = activeCategoryRaw || null;
+  const setActiveCategory = useCallback(
+    (next: string | null | ((prev: string | null) => string | null)) => {
+      if (typeof next === 'function') {
+        setActiveCategoryRaw((prev) => next(prev || null) ?? '');
+      } else {
+        setActiveCategoryRaw(next ?? '');
+      }
+    },
+    [setActiveCategoryRaw],
+  );
 
   /* ─── Selection state ─── */
   const [selectedSignals, setSelectedSignals] = useState<string[]>([]);
@@ -255,34 +269,6 @@ export default function SignalDiffPage() {
   }, [allRows, signalFilter, activeCategory]);
 
   const filterActive = signalFilter.trim().length > 0 || activeCategory != null;
-
-  /* ─── Permalink + saved view sync ─── */
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (vehicleId) params.set('vehicle', String(vehicleId));
-    if (atA) params.set('a', atA);
-    if (atB) params.set('b', atB);
-    if (signalFilter) params.set('q', signalFilter);
-    if (activeCategory) params.set('cat', activeCategory);
-    apply(params.toString());
-  }, [vehicleId, atA, atB, signalFilter, activeCategory, apply]);
-
-  const handleApplyView = useCallback(
-    (q: string) => {
-      const params = new URLSearchParams(q);
-      const v = params.get('vehicle');
-      const a = params.get('a');
-      const b = params.get('b');
-      const fq = params.get('q');
-      const cat = params.get('cat');
-      if (v) setVehicleId(Number(v));
-      if (a) setAtA(a);
-      if (b) setAtB(b);
-      setSignalFilter(fq ?? '');
-      setActiveCategory(cat ?? null);
-    },
-    [],
-  );
 
   /* ─── Bulk actions ─── */
   const bulkActions: BulkAction[] = useMemo(
@@ -371,7 +357,7 @@ export default function SignalDiffPage() {
           <SavedViewMenu
             route="/telemetry/signal-diff"
             currentQuery={currentQuery}
-            onApply={handleApplyView}
+            onApply={apply}
           />
           {permalinkUrl ? (
             <CopyButton text={permalinkUrl} label={t('signalDiff.share', 'Share')} size="sm" />
@@ -389,7 +375,7 @@ export default function SignalDiffPage() {
               </span>
               <Select
                 value={String(vehicleId || '')}
-                onChange={(e) => setVehicleId(Number(e.target.value))}
+                onChange={(e) => setVehicleIdParam(Number(e.target.value))}
                 options={vehicleOptions}
               />
             </div>

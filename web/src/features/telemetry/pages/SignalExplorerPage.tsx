@@ -30,6 +30,7 @@ import {
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
+import { useUrlArray, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { CHART_COLORS } from '@/lib/colors';
@@ -65,19 +66,21 @@ export default function SignalExplorerPage() {
 
   // Signal selection
   const { data: availableSignals, error: signalsError } = useSignals(vehicleId);
-  const [selectedSignals, setSelectedSignals] = useState<string[]>([]);
+  const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
   const [signalSearch, setSignalSearch] = useState('');
 
   // DateTime range
-  const [fromStr, setFromStr] = useState(() => toLocalDatetimeStr(new Date(Date.now() - 3600_000)));
-  const [toStr, setToStr] = useState(() => toLocalDatetimeStr(new Date()));
+  const defaultFrom = useMemo(() => toLocalDatetimeStr(new Date(Date.now() - 3600_000)), []);
+  const defaultTo = useMemo(() => toLocalDatetimeStr(new Date()), []);
+  const [fromStr, setFromStr] = useUrlString('from', defaultFrom);
+  const [toStr, setToStr] = useUrlString('to', defaultTo);
 
   // Explore trigger key
   const [exploreKey, setExploreKey] = useState<number | null>(null);
 
   // Pagination
-  const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(25);
+  const [page, setPage] = useUrlNumber('page', 1);
+  const [perPage, setPerPage] = useUrlNumber('size', 25);
 
   // ── Live mode ──
   const [isLive, setIsLive] = useState(false);

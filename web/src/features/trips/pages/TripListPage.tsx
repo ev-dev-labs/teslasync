@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Route, MapPin, Zap, Clock, Calendar, DollarSign, Download } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
@@ -13,6 +13,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
+import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
@@ -33,17 +34,19 @@ export default function TripListPage() {
   const savedView = useSavedViewUrl();
 
   const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const [selectedVehicle, setSelectedVehicle] = useUrlNumber('vehicle_id', 0);
+  const vehicleId = selectedVehicle > 0 ? selectedVehicle : (vehicles?.[0]?.id ?? null);
 
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
-  const [startDate, setStartDate] = useState(() => {
+  const [page, setPage] = useUrlNumber('page', 1);
+  const [pageSize, setPageSize] = useUrlNumber('size', 50);
+  const defaultStart = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 365);
     return d.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  }, []);
+  const defaultEnd = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [startDate, setStartDate] = useUrlString('from', defaultStart);
+  const [endDate, setEndDate] = useUrlString('to', defaultEnd);
 
   const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings();
 

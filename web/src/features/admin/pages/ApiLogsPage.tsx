@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -13,6 +13,7 @@ import { FadeIn } from '@/components/motion';
 import { Spinner, AlertBanner } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { getAPICallLogs, getAPICallLogStats } from '@/api/devtools';
 import type { APICallLog, APICallLogStats } from '@/api/types';
@@ -87,20 +88,23 @@ export default function ApiLogsPage() {
   const { t } = useTranslation();
   usePageTitle(t('apiLogs.title', 'API Logs'));
 
-  const [page, setPage] = useState(0);
-  const [method, setMethod] = useState('');
-  const [status, setStatus] = useState('');
-  const [endpoint, setEndpoint] = useState('');
-  const [service, setService] = useState('');
-  const [startDate, setStartDate] = useState(() => {
+  const defaultStart = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 1);
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-  });
-  const [endDate, setEndDate] = useState(() => {
+  }, []);
+  const defaultEnd = useMemo(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-  });
+  }, []);
+
+  const [page, setPage] = useUrlNumber('page', 0);
+  const [method, setMethod] = useUrlString('method', '');
+  const [status, setStatus] = useUrlString('status', '');
+  const [endpoint, setEndpoint] = useUrlString('endpoint', '');
+  const [service, setService] = useUrlString('service', '');
+  const [startDate, setStartDate] = useUrlString('from', defaultStart);
+  const [endDate, setEndDate] = useUrlString('to', defaultEnd);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const limit = 25;
 

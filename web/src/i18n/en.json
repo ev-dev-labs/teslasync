@@ -323,6 +323,9 @@
     "validationFailed": "Please fix the highlighted fields before saving.",
     "saveError": "Failed to save changes"
   },
+  "filters": {
+    "reset": "Reset filters"
+  },
   "draft": {
     "restored": "Draft restored from {{when}}.",
     "restoredItem": "{{noun}} draft restored from {{when}}.",

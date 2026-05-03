@@ -6,7 +6,7 @@
  * timeline of command executions.
  */
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { PageContainer, Grid } from '@/components/layout';
@@ -17,6 +17,7 @@ import { StatCard, Timeline } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useCommandHistory, type CommandLogEntry } from '@/api/hooks/useCommands';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
@@ -91,6 +92,9 @@ function formatCommandName(cmd: string): string {
 
 const PAGE_SIZE = 25;
 
+const STATUS_FILTERS = ['all', 'success', 'failed'] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function CommandHistoryPage() {
@@ -100,7 +104,7 @@ export default function CommandHistoryPage() {
   // Vehicle selection
   const { data: vehicles } = useVehicles();
   const vehicleList = vehicles ?? [];
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+  const [selectedVehicleId, setSelectedVehicleId] = useUrlString('vehicle_id', '');
   const activeVehicleId =
     selectedVehicleId || (vehicleList.length > 0 ? String(vehicleList[0].id) : undefined);
 
@@ -109,13 +113,13 @@ export default function CommandHistoryPage() {
   const allCommands = commands ?? [];
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useUrlEnum<StatusFilter>('status', STATUS_FILTERS, 'all');
+  const [searchQuery, setSearchQuery] = useUrlString('q', '');
+  const [page, setPage] = useUrlNumber('page', 1);
 
   // Reset page when filters change
   const handleStatusChange = (key: string) => {
-    setStatusFilter(key);
+    setStatusFilter(key as StatusFilter);
     setPage(1);
   };
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {

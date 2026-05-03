@@ -4,7 +4,7 @@
  * Shows stats, bar charts (visits + time), and paginated location list.
  */
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Clock, Hash, Trophy, Navigation, Building2 } from 'lucide-react';
@@ -16,6 +16,7 @@ import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { SearchInput, FilterBar } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
+import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import {
   ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -49,11 +50,11 @@ export default function LocationsPage() {
     queryKey: ['vehicles'],
     queryFn: () => request<Vehicle[]>('/vehicles'),
   });
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
-  const [page, setPage] = useState(1);
+  const [selectedVehicle, setSelectedVehicle] = useUrlNumber('vehicle_id', 0);
+  const vehicleId = selectedVehicle > 0 ? selectedVehicle : (vehicles?.[0]?.id ?? null);
+  const [page, setPage] = useUrlNumber('page', 1);
   const pageSize = 50;
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useUrlString('q', '');
 
   const { data: locations, isLoading, error } = useQuery({
     queryKey: ['visited-locations', vehicleId, page, pageSize],
