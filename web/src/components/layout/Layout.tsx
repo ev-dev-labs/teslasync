@@ -1,6 +1,7 @@
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import InstallPrompt from '../feedback/InstallPrompt'
 import { OfflineBanner } from '../feedback/OfflineBanner'
+import { NewVersionBanner } from '../feedback/NewVersionBanner'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -1365,6 +1366,11 @@ export default function Layout() {
 
       {/* Offline status banner (PWA / mobile) */}
       <OfflineBanner />
+
+      {/* New-version banner (Phase-45 / Prompt 11) — proactive reload nudge
+          when the backend redeploys mid-session, before the next chunk-load
+          failure surfaces as an ErrorBoundary fallback. */}
+      <NewVersionBanner />
 
       {/* Keyboard shortcut overlays */}
       <GlobalShortcuts />

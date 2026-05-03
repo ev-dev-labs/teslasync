@@ -1754,7 +1754,10 @@
     "subtitle": "Fleet API, telemetry, infrastructure & utilities"
   },
   "error": {
-    "loadFailed": "Failed to load data"
+    "loadFailed": "Failed to load data",
+    "chunkLoad": {
+      "body": "A new version was deployed. Click Reload to load the latest assets."
+    }
   },
   "playground": {
     "search": "Search endpoints...",
@@ -5675,7 +5678,12 @@
     "googleMapsHint": "Optional — enables satellite views, Places autocomplete, and enhanced geocoding.",
     "getKeyAt": "Get a key at",
     "save": "Save Settings",
-    "settingsSaved": "Settings saved"
+    "settingsSaved": "Settings saved",
+    "newVersion": {
+      "message": "A new version of TeslaSync is available.",
+      "reload": "Reload",
+      "later": "Later"
+    }
   },
   "browserNotifications": {
     "title": "Browser Notifications",

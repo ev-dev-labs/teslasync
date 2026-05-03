@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react'
 import { AlertTriangle, RefreshCw, Home, WifiOff } from 'lucide-react'
+import i18n from 'i18next'
 import { Button } from '../ui/Button'
 
 interface Props {
@@ -62,17 +63,45 @@ export class ErrorBoundary extends Component<Props, State> {
       retryCount: this.state.retryCount,
     })
 
-    // Auto-reload on chunk load errors (stale deploy)
+    // Phase-45 / Prompt 11 — Stale-chunk recovery.
+    //
+    // A ChunkLoadError almost always means the server has redeployed and the
+    // hashed asset the SPA tried to fetch no longer exists. The default
+    // user-friendly path is the proactive <NewVersionBanner /> mounted in
+    // the global Layout: it polls /system/version and offers an explicit
+    // Reload affordance well before any chunk fails.
+    //
+    // If the boundary has nonetheless caught a chunk error (banner not yet
+    // surfaced, or user dismissed it and then navigated to a stale route)
+    // we still want a safety net so the user is not stuck on the fallback
+    // forever. Wait 5 s — long enough for the banner to render and for the
+    // user to click Reload themselves — then force a hard reload, throttled
+    // to once per 60 s per tab to defeat reload loops on a server that is
+    // actually broken (not just newly deployed).
     if (this.isChunkLoadError(error)) {
       const reloadKey = 'teslasync-chunk-reload'
-      const lastReload = sessionStorage.getItem(reloadKey)
-      const now = Date.now()
-      // Only auto-reload once per 60s to prevent infinite loops
-      if (!lastReload || now - Number(lastReload) > 60_000) {
-        sessionStorage.setItem(reloadKey, String(now))
-        console.warn('[ErrorBoundary] Chunk load error — reloading for new version')
-        window.location.reload()
-        return
+      try {
+        const lastReload = sessionStorage.getItem(reloadKey)
+        const now = Date.now()
+        if (!lastReload || now - Number(lastReload) > 60_000) {
+          sessionStorage.setItem(reloadKey, String(now))
+          window.setTimeout(() => {
+            // Re-check after the grace period — the user may have already
+            // clicked Reload in the banner, retried the boundary, or
+            // navigated to a fresh route, in which case we MUST NOT yank
+            // them back to a hard refresh.
+            if (this.state.hasError) {
+              console.warn(
+                '[ErrorBoundary] Chunk load error not user-resolved within 5 s — forcing reload',
+              )
+              window.location.reload()
+            }
+          }, 5_000)
+        }
+      } catch {
+        // sessionStorage may throw in private mode / Safari quotas — fall
+        // through to the rendered fallback; the banner remains the primary
+        // recovery path.
       }
     }
   }
@@ -145,7 +174,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </h2>
             <p className="text-sm text-[var(--text-secondary)] mb-2">
               {isChunkError
-                ? 'A new version of TeslaSync has been deployed. Click reload to update.'
+                ? i18n.t('error.chunkLoad.body', 'A new version was deployed. Click Reload to load the latest assets.')
                 : isNetworkError
                 ? 'Unable to reach the server. Check your connection and try again.'
                 : this.state.error?.message || 'An unexpected error occurred. Please try again.'}
