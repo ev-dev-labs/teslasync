@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import './leafletGlobal';
 import 'leaflet-draw';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
