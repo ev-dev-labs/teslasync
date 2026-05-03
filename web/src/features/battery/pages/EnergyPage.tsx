@@ -332,7 +332,7 @@ export default function EnergyPage() {
       {/* ── Quick Metrics Strip ─────────────────────────────────── */}
       <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
         {[
-          { label: t('energy.metric.costPerDist', { unit: distanceUnit, defaultValue: `Cost per ${distanceUnit}` }), value: `$${fmtNumber(totalDistance > 0 ? totalCost / convertDistance(totalDistance) : 0)}`, color: 'text-neon-cyan' },
+          { label: t('energy.metric.costPerDist', { unit: distanceUnit, defaultValue: 'Cost per {{unit}}' }), value: `$${fmtNumber(totalDistance > 0 ? totalCost / convertDistance(totalDistance) : 0)}`, color: 'text-neon-cyan' },
           { label: t('energy.metric.costPerKwh', 'Cost per kWh'), value: `$${fmtNumber(costPerKwh ?? 0)}`, color: 'text-neon-green' },
           { label: t('energy.metric.totalDistance', 'Total Distance'), value: `${fmtInt(convertDistance(totalDistance ?? 0))} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
           { label: t('energy.metric.sessions', 'Sessions'), value: `${sessions?.length ?? 0}`, color: 'text-neon-purple' },
@@ -376,7 +376,7 @@ export default function EnergyPage() {
             </div>
             <div className="rounded-lg bg-white/[0.03] ring-1 ring-white/[0.06] p-4">
               <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-                {t('energy.lifetime.periodEnergy', { days: periodDays, defaultValue: `Last ${periodDays} Days` })}
+                {t('energy.lifetime.periodEnergy', { days: periodDays, defaultValue: 'Last {{days}} Days' })}
               </p>
               <p className="text-2xl font-bold text-emerald-300">
                 {fmtNumber(totalEnergy)}
@@ -401,7 +401,7 @@ export default function EnergyPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FadeIn>
               <CostComparisonCard
-                label={t('energy.cost.periodTotal', { days: periodDays, defaultValue: `${periodDays}-Day Total` })}
+                label={t('energy.cost.periodTotal', { days: periodDays, defaultValue: '{{days}}-Day Total' })}
                 evCost={totalCost}
                 gasCost={gasEquivalent}
                 icon={<Fuel className="h-4 w-4" />}
@@ -537,7 +537,7 @@ export default function EnergyPage() {
                             <Area
                               {...AREA_DEFAULTS}
                               dataKey="distance_mi"
-                              name={t('energy.chart.distance', { unit: distanceUnit, defaultValue: `Distance (${distanceUnit})` })}
+                              name={t('energy.chart.distance', { unit: distanceUnit, defaultValue: 'Distance ({{unit}})' })}
                               stroke="#00f0ff"
                               fill="url(#distGrad2)"
                               strokeWidth={1}

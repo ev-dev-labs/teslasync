@@ -371,7 +371,7 @@ export default function BackupRestorePage() {
       header: t('backup.frequency', 'Frequency'),
       render: (row) => (
         <span className="text-sm text-[var(--text-secondary)]">
-          {row.frequency_days === 1 ? t('backup.daily', 'Daily') : t('backup.everyNDays', `Every ${row.frequency_days}d`, { count: row.frequency_days })}
+          {row.frequency_days === 1 ? t('backup.daily', 'Daily') : t('backup.everyNDays', { days: row.frequency_days, defaultValue: 'Every {{days}}d' })}
         </span>
       ),
     },

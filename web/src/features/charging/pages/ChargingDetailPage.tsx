@@ -412,7 +412,7 @@ export default function ChargingDetailPage() {
                 : '—'}
             unit={session.cost != null ? '$' : ''}
             sublabel={session.cost == null && session.energy_added_kwh > 0
-              ? t('charging.detail.atRate', `at ${currencySymbol}${settingsCostPerKwh}/kWh`)
+              ? t('charging.detail.atRate', { currencySymbol, costPerKwh: settingsCostPerKwh, defaultValue: 'at {{currencySymbol}}{{costPerKwh}}/kWh' })
               : undefined}
           />
           <StatCard

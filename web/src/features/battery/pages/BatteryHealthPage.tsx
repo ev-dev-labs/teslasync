@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Link } from 'react-router-dom';
 import {
   Heart, Battery, BatteryFull, Gauge, RefreshCcw, Clock,
@@ -84,7 +85,7 @@ function degradationColor(pct: number): string {
 function buildInsights(
   health: BatteryHealthAnalytics,
   sessions: ChargingSession[] | null,
-  t: (k: string, fb: string) => string,
+  t: TFunction,
 ): InsightItem[] {
   const items: InsightItem[] = [];
 
@@ -92,21 +93,21 @@ function buildInsights(
     items.push({
       icon: <CheckCircle className="h-4 w-4" />,
       title: t('battery.insight.excellentTitle', 'Excellent Health'),
-      description: t('battery.insight.excellentDesc', `Battery health is ${fmtNumber(health.current_soh, 0)}/100 — performing above average.`),
+      description: t('battery.insight.excellentDesc', { soh: fmtNumber(health.current_soh, 0), defaultValue: 'Battery health is {{soh}}/100 — performing above average.' }),
       status: 'good',
     });
   } else if (health.current_soh >= 70) {
     items.push({
       icon: <Info className="h-4 w-4" />,
       title: t('battery.insight.goodTitle', 'Good Health'),
-      description: t('battery.insight.goodDesc', `Battery health is ${fmtNumber(health.current_soh, 0)}/100 — normal degradation for age.`),
+      description: t('battery.insight.goodDesc', { soh: fmtNumber(health.current_soh, 0), defaultValue: 'Battery health is {{soh}}/100 — normal degradation for age.' }),
       status: 'warning',
     });
   } else {
     items.push({
       icon: <AlertTriangle className="h-4 w-4" />,
       title: t('battery.insight.concernTitle', 'Health Concern'),
-      description: t('battery.insight.concernDesc', `Battery health dropped to ${fmtNumber(health.current_soh, 0)}/100 — consider service check.`),
+      description: t('battery.insight.concernDesc', { soh: fmtNumber(health.current_soh, 0), defaultValue: 'Battery health dropped to {{soh}}/100 — consider service check.' }),
       status: 'critical',
     });
   }
@@ -115,7 +116,7 @@ function buildInsights(
     items.push({
       icon: <AlertTriangle className="h-4 w-4" />,
       title: t('battery.insight.highFastChargeTitle', 'High Fast-Charge Usage'),
-      description: t('battery.insight.highFastChargeDesc', `${fmtPercent(health.fast_charge_pct)} of sessions are fast-charging. Mix in slow charging for longevity.`),
+      description: t('battery.insight.highFastChargeDesc', { pct: fmtPercent(health.fast_charge_pct), defaultValue: '{{pct}} of sessions are fast-charging. Mix in slow charging for longevity.' }),
       status: 'warning',
     });
   } else {
@@ -133,7 +134,7 @@ function buildInsights(
       items.push({
         icon: <AlertTriangle className="h-4 w-4" />,
         title: t('battery.insight.deepDischargeTitle', 'Deep Discharges Detected'),
-        description: t('battery.insight.deepDischargeDesc', `${deepDischarges} recent sessions started below 10%. Avoid deep discharges when possible.`),
+        description: t('battery.insight.deepDischargeDesc', { count: deepDischarges, defaultValue: '{{count}} recent sessions started below 10%. Avoid deep discharges when possible.' }),
         status: 'warning',
       });
     }
@@ -145,7 +146,7 @@ function buildInsights(
       items.push({
         icon: <Info className="h-4 w-4" />,
         title: t('battery.insight.highSuperchargerTitle', 'High Supercharger Usage'),
-        description: t('battery.insight.highSuperchargerDesc', `${superchargerCount} Supercharger sessions. Occasional slow charging helps battery health.`),
+        description: t('battery.insight.highSuperchargerDesc', { count: superchargerCount, defaultValue: '{{count}} Supercharger sessions. Occasional slow charging helps battery health.' }),
         status: 'warning',
       });
     }
@@ -155,7 +156,7 @@ function buildInsights(
     items.push({
       icon: <Target className="h-4 w-4" />,
       title: t('battery.insight.lowDegTitle', 'Low Degradation Rate'),
-      description: t('battery.insight.lowDegDesc', `${fmtNumber(health.degradation_rate_yr, 1)}% per year — well below industry average of 3–5%.`),
+      description: t('battery.insight.lowDegDesc', { rate: fmtNumber(health.degradation_rate_yr, 1), defaultValue: '{{rate}}% per year — well below industry average of 3–5%.' }),
       status: 'good',
     });
   }

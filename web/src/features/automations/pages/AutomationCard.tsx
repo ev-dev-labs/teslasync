@@ -273,7 +273,7 @@ export function AutomationCard({
       <ConfirmDialog
         open={confirmDelete}
         title={t('automations.deleteTitle', 'Delete Automation')}
-        message={t('automations.deleteMessage', `Are you sure you want to delete "${a.name}"? This cannot be undone.`)}
+        message={t('automations.deleteMessage', { name: a.name, defaultValue: 'Are you sure you want to delete "{{name}}"? This cannot be undone.' })}
         confirmLabel={t('automations.deleteConfirm', 'Delete')}
         cancelLabel={t('common.cancel', 'Cancel')}
         variant="danger"

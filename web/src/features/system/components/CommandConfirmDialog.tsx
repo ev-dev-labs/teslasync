@@ -93,7 +93,7 @@ export function CommandConfirmDialog({
         {confirmInput && (
           <div className="mb-4">
             <p className="text-xs text-white/40 mb-2">
-              {t('commands.confirm.typeToConfirm', { word: confirmInput, defaultValue: `Type "${confirmInput}" to confirm:` })}
+              {t('commands.confirm.typeToConfirm', { word: confirmInput, defaultValue: 'Type "{{word}}" to confirm:' })}
             </p>
             <Input
               ref={inputRef}

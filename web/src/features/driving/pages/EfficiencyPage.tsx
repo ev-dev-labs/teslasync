@@ -302,7 +302,7 @@ export default function EfficiencyPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <FadeIn>
             <ChartContainer
-              title={t('efficiency.dailyTrend', `Daily Efficiency (${efficiencyUnit})`)}
+              title={t('efficiency.dailyTrend', { unit: efficiencyUnit, defaultValue: 'Daily Efficiency ({{unit}})' })}
               height={240}
               annotations={{ vehicleId, scope: 'efficiency', chartId: 'efficiency-daily-trend' }}
             >

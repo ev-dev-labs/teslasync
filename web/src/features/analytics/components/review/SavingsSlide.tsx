@@ -90,7 +90,7 @@ export function SavingsSlide({ data }: Props) {
         <div className="flex items-center justify-center gap-2 pt-2">
           <DollarSign className="h-4 w-4 text-emerald-400" />
           <span className="text-sm text-emerald-400/80">
-            {t('yearReview.savingsNote', `That's ${Math.round(data.gas_savings / 5)} cups of coffee!`)}
+            {t('yearReview.savingsNote', { cupsOfCoffee: Math.round(data.gas_savings / 5), defaultValue: "That's {{cupsOfCoffee}} cups of coffee!" })}
           </span>
         </div>
       </motion.div>

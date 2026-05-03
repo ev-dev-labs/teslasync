@@ -180,7 +180,7 @@
     "noPresence": "No presence history available.",
     "locationHistory": "Location History",
     "climate": "Climate",
-    "unpinPage": "Unpin ${navLabel(item.label)}",
+    "unpinPage": "Unpin {{page}}",
     "vehicleComparison": "Fleet Comparison"
   },
   "vehiclePicker": {
@@ -716,7 +716,7 @@
       "socRange": "SoC Range",
       "totalCost": "Total Cost",
       "estCost": "Est. Cost",
-      "atRate": "at ${currencySymbol}${settingsCostPerKwh}/kWh",
+      "atRate": "at {{currencySymbol}}{{costPerKwh}}/kWh",
       "perKwh": "Per kWh",
       "fromSettings": "from settings",
       "milesAdded": "Miles Added",
@@ -1906,7 +1906,7 @@
     "provider": "Provider",
     "frequency": "Frequency",
     "daily": "Daily",
-    "everyNDays": "Every ${row.frequency_days}d",
+    "everyNDays": "Every {{days}}d",
     "schedule": "Schedule",
     "lastRun": "Last",
     "nextRun": "Next",
@@ -2203,12 +2203,12 @@
     "dcFast": "DC Fast",
     "acOther": "AC / Other",
     "chargeSessions": "charge sessions",
-    "avgStartSOC": "Average plug-in at ${Math.round(data.avg_charge_start_soc)}% battery",
+    "avgStartSOC": "Average plug-in at {{soc}}% battery",
     "funFacts": "Fun facts about your year",
     "noDriveData": "No drive data for this year",
     "duration": "duration",
     "co2Offset": "CO₂ offset",
-    "treesEquiv": "Like planting ${treesPlanted} trees",
+    "treesEquiv": "Like planting {{count}} trees",
     "more": "more",
     "drivingPatterns": "Your driving patterns",
     "favoriteDay": "Favorite driving day",
@@ -2220,25 +2220,25 @@
     "vsGas": "vs. driving a gas car",
     "gasCost": "Gas would cost",
     "electricCost": "Electric cost",
-    "savingsNote": "That's ${Math.round(data.gas_savings / 5)} cups of coffee!",
+    "savingsNote": "That's {{cupsOfCoffee}} cups of coffee!",
     "longestDrive": "Longest Drive",
     "mostEfficient": "Most Efficient Drive",
     "drives": "drives",
-    "avgPerWeek": "${data.avg_drives_per_week.toFixed(1)} drives per week on average",
-    "distanceComparison": "That's ${(earthLaps * 100).toFixed(1)}% around the Earth!",
+    "avgPerWeek": "{{count}} drives per week on average",
+    "distanceComparison": "That's {{percent}}% around the Earth!",
     "distanceSmall": "Every kilometer counts!",
     "energyUnit": "kWh charged",
-    "energyComparison": "Enough to power a home for ${Math.round(data.total_energy_kwh / 30)} days",
+    "energyComparison": "Enough to power a home for {{days}} days",
     "totalDrives": "Drives",
     "energyKwh": "kWh",
     "charges": "Charges",
     "co2KgSaved": "kg CO₂ saved",
     "title": "Year in Review",
-    "savedSummary": "Saved $${Math.round(data.gas_savings)} vs. gas",
+    "savedSummary": "Saved ${{amount}} vs. gas",
     "screenshot": "📸 Screenshot to share your year!",
-    "pageTitle": "${year} Year in Review",
+    "pageTitle": "{{year}} Year in Review",
     "loading": "Building your year in review...",
-    "noData": "No driving data for ${year}",
+    "noData": "No driving data for {{year}}",
     "noDataHint": "Start driving and charging to build your annual review!",
     "goBack": "Go Back",
     "selectVehicle": "Select vehicle",
@@ -2499,7 +2499,7 @@
     "nextFire": "Next",
     "conflictWith": "Conflict with",
     "deleteTitle": "Delete Automation",
-    "deleteMessage": "Are you sure you want to delete \"${a.name}\"? This cannot be undone.",
+    "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
     "deleteConfirm": "Delete",
     "title": "Automations",
     "importUnknownError": "Unknown error",
@@ -2549,7 +2549,7 @@
       "saving": "Saving",
       "less": "less",
       "projectedAnnual": "Projected Annual",
-      "periodTotal": "${periodDays}-Day Total"
+      "periodTotal": "{{days}}-Day Total"
     },
     "title": "Energy",
     "timeOfDay": {
@@ -2581,14 +2581,14 @@
       "sessions": "Sessions",
       "monthlyEst": "Monthly Est.",
       "yearlyEst": "Yearly Est.",
-      "costPerDist": "Cost per ${distanceUnit}"
+      "costPerDist": "Cost per {{unit}}"
     },
     "lifetime": {
       "title": "Lifetime Metrics",
       "energyUsed": "Lifetime Energy Used",
       "energyUsedDesc": "Total energy consumed since vehicle delivery",
       "periodEnergyDesc": "Energy added during selected date range",
-      "periodEnergy": "Last ${periodDays} Days"
+      "periodEnergy": "Last {{days}} Days"
     },
     "chart": {
       "energyCostDaily": "Energy & Cost Daily",
@@ -2599,7 +2599,7 @@
       "chargingByTime": "Charging by Time of Day",
       "sessions": "Sessions",
       "chargerBreakdown": "Charger Type Breakdown",
-      "distance": "Distance (${distanceUnit})"
+      "distance": "Distance ({{unit}})"
     },
     "tip": {
       "offPeak": "Off-peak charging saves money",
@@ -2661,7 +2661,7 @@
         "goodTemp": "Thermal Balance Good",
         "goodTempDesc": "Module temperatures are consistent. Thermal management system is performing well.",
         "criticalCells": "Critical Cells Detected",
-        "criticalCellsDesc": "${criticalCells} cell(s) show significant deviation. Consider scheduling a service appointment.",
+        "criticalCellsDesc": "{{count}} cell(s) show significant deviation. Consider scheduling a service appointment.",
         "healthy": "All Cells Healthy",
         "healthyDesc": "No critical cells detected. Continue current charging habits for long-term health."
       },
@@ -2727,21 +2727,21 @@
     },
     "insight": {
       "excellentTitle": "Excellent Health",
-      "excellentDesc": "Battery health is ${fmtNumber(health.current_soh, 0)}/100 — performing above average.",
+      "excellentDesc": "Battery health is {{soh}}/100 — performing above average.",
       "goodTitle": "Good Health",
-      "goodDesc": "Battery health is ${fmtNumber(health.current_soh, 0)}/100 — normal degradation for age.",
+      "goodDesc": "Battery health is {{soh}}/100 — normal degradation for age.",
       "concernTitle": "Health Concern",
-      "concernDesc": "Battery health dropped to ${fmtNumber(health.current_soh, 0)}/100 — consider service check.",
+      "concernDesc": "Battery health dropped to {{soh}}/100 — consider service check.",
       "highFastChargeTitle": "High Fast-Charge Usage",
-      "highFastChargeDesc": "${fmtPercent(health.fast_charge_pct)} of sessions are fast-charging. Mix in slow charging for longevity.",
+      "highFastChargeDesc": "{{pct}} of sessions are fast-charging. Mix in slow charging for longevity.",
       "goodHabitsTitle": "Good Charging Habits",
       "goodHabitsDesc": "Most charges are slow/AC — ideal for battery longevity.",
       "deepDischargeTitle": "Deep Discharges Detected",
-      "deepDischargeDesc": "${deepDischarges} recent sessions started below 10%. Avoid deep discharges when possible.",
+      "deepDischargeDesc": "{{count}} recent sessions started below 10%. Avoid deep discharges when possible.",
       "highSuperchargerTitle": "High Supercharger Usage",
-      "highSuperchargerDesc": "${superchargerCount} Supercharger sessions. Occasional slow charging helps battery health.",
+      "highSuperchargerDesc": "{{count}} Supercharger sessions. Occasional slow charging helps battery health.",
       "lowDegTitle": "Low Degradation Rate",
-      "lowDegDesc": "${fmtNumber(health.degradation_rate_yr, 1)}% per year — well below industry average of 3–5%."
+      "lowDegDesc": "{{rate}}% per year — well below industry average of 3–5%."
     },
     "tip": {
       "reduceFast": "Reduce fast charging frequency to slow degradation.",
@@ -2987,7 +2987,7 @@
       "sessions": "sessions",
       "avgPerKwh": "Avg $/kWh",
       "blendedRate": "blended rate",
-      "costPerDist": "Cost Per ${isMiles ? 'Mile' : 'km'}",
+      "costPerDist": "Cost Per {{unit}}",
       "totalEnergy": "Total Energy",
       "gasSavings": "Gas Savings $",
       "savingsPercent": "Savings %",
@@ -4589,10 +4589,10 @@
   "driveDetail": {
     "costSavings": "Cost & Savings",
     "tripCost": "Trip Cost",
-    "atRate": "at ${currencySymbol}${costPerKwh}/kWh",
-    "costPerUnit": "Cost / ${distanceUnit}",
+    "atRate": "at {{currencySymbol}}{{costPerKwh}}/kWh",
+    "costPerUnit": "Cost / {{unit}}",
     "gasCostEquiv": "Gas Cost (equiv)",
-    "atMpg": "at ${settings.gas_efficiency_mpg} MPG",
+    "atMpg": "at {{mpg}} MPG",
     "gasSavings": "vs Gas Savings",
     "savingsPct": "Savings %",
     "title": "Drive Details",
@@ -5104,7 +5104,7 @@
     "costPerKm": "Est. Cost/km",
     "drivesAnalyzed": "Drives Analyzed",
     "noStatCards": "No driving statistics available yet",
-    "dailyTrend": "Daily Efficiency (${efficiencyUnit})",
+    "dailyTrend": "Daily Efficiency ({{unit}})",
     "speedDist": "Efficiency by Speed Range",
     "speedVsEfficiency": "Speed vs Efficiency",
     "speed": "Speed",
@@ -5706,7 +5706,7 @@
     "noVehicles": "No vehicles found",
     "connectFleet": "Connect your Tesla account and sync your fleet to start sending commands.",
     "confirm": {
-      "typeToConfirm": "Type \"${confirmInput}\" to confirm:"
+      "typeToConfirm": "Type \"{{word}}\" to confirm:"
     }
   },
   "fsm": {

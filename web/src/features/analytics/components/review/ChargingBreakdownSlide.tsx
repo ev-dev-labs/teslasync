@@ -48,7 +48,7 @@ export function ChargingBreakdownSlide({ data }: Props) {
         transition={{ delay: 0.4, duration: 0.3 }}
         className="text-white/40 mb-6"
       >
-        {t('yearReview.avgStartSOC', `Average plug-in at ${Math.round(data.avg_charge_start_soc)}% battery`)}
+        {t('yearReview.avgStartSOC', { soc: Math.round(data.avg_charge_start_soc), defaultValue: 'Average plug-in at {{soc}}% battery' })}
       </motion.p>
 
       <motion.div

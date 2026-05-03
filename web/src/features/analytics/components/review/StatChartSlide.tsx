@@ -55,7 +55,7 @@ export function StatChartSlide({ data }: Props) {
         transition={{ delay: 0.5, duration: 0.4 }}
         className="text-white/40 mb-6"
       >
-        {t('yearReview.avgPerWeek', `${data.avg_drives_per_week.toFixed(1)} drives per week on average`)}
+        {t('yearReview.avgPerWeek', { count: data.avg_drives_per_week.toFixed(1), defaultValue: '{{count}} drives per week on average' })}
       </motion.p>
 
       <motion.div

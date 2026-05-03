@@ -56,7 +56,7 @@ export function EnvironmentSlide({ data }: Props) {
         transition={{ delay: 0.8, duration: 0.4 }}
         className="text-white/40 mt-2 mb-8"
       >
-        {t('yearReview.treesEquiv', `Like planting ${treesPlanted} trees`)}
+        {t('yearReview.treesEquiv', { count: treesPlanted, defaultValue: 'Like planting {{count}} trees' })}
       </motion.p>
 
       {/* Tree grid visualization */}

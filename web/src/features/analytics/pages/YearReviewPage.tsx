@@ -18,7 +18,7 @@ export default function YearReviewPage() {
   const navigate = useNavigate();
 
   const year = Number(yearParam) || new Date().getFullYear();
-  usePageTitle(t('yearReview.pageTitle', `${year} Year in Review`));
+  usePageTitle(t('yearReview.pageTitle', { year, defaultValue: '{{year}} Year in Review' }));
 
   // Vehicle selection from URL query param
   const vehicleIdParam = searchParams.get('vehicle_id') ?? '';
@@ -85,7 +85,7 @@ export default function YearReviewPage() {
         <div className="text-center px-8">
           <span className="text-6xl mb-4 block">🚗</span>
           <p className="text-xl text-white/60 mb-2">
-            {t('yearReview.noData', `No driving data for ${year}`)}
+            {t('yearReview.noData', { year, defaultValue: 'No driving data for {{year}}' })}
           </p>
           <p className="text-white/30 mb-6">
             {t('yearReview.noDataHint', 'Start driving and charging to build your annual review!')}

@@ -95,7 +95,7 @@ export function SummarySlide({ data }: Props) {
             className="mt-6 pt-4 border-t border-white/[0.08] text-center"
           >
             <p className="text-sm text-emerald-400/80">
-              💰 {t('yearReview.savedSummary', `Saved $${Math.round(data.gas_savings)} vs. gas`)}
+              💰 {t('yearReview.savedSummary', { amount: Math.round(data.gas_savings), defaultValue: 'Saved ${{amount}} vs. gas' })}
             </p>
           </motion.div>
         )}

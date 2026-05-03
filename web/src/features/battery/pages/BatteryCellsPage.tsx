@@ -306,7 +306,7 @@ export default function BatteryCellsPage() {
       items.push({
         icon: <AlertTriangle className="h-4 w-4" />,
         title: t('battery.cells.insight.criticalCells', 'Critical Cells Detected'),
-        description: t('battery.cells.insight.criticalCellsDesc', `${criticalCells} cell(s) show significant deviation. Consider scheduling a service appointment.`),
+        description: t('battery.cells.insight.criticalCellsDesc', { count: criticalCells, defaultValue: '{{count}} cell(s) show significant deviation. Consider scheduling a service appointment.' }),
         status: 'critical',
       });
     } else {

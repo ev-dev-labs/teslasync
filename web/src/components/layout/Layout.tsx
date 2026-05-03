@@ -1134,7 +1134,7 @@ export default function Layout() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      aria-label={t('nav.unpinPage', { page: navLabel(item.label), defaultValue: `Unpin ${navLabel(item.label)}` })}
+                      aria-label={t('nav.unpinPage', { page: navLabel(item.label), defaultValue: 'Unpin {{page}}' })}
                       onClick={() => unpinNavPath(item.to)}
                       className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-muted)] opacity-80 hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
                     >
