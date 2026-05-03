@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AlertOctagon, AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { severityTokens, type Severity } from '@/lib/tokens';
+import { isSilenced, silence } from '@/lib/confirmSilence';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { Input } from './Input';
@@ -30,6 +32,19 @@ export interface ConfirmDialogProps {
    * fallback containing the required string.
    */
   typedConfirmationLabel?: string;
+  /**
+   * Stable action id that, when set, lets the user opt out of future
+   * prompts via a "Don't ask again" checkbox. The choice is persisted in
+   * `localStorage` (see `lib/confirmSilence.ts`) and short-circuits the
+   * dialog on subsequent calls — `onConfirm` fires immediately and the
+   * dialog never renders.
+   *
+   * **Ignored** for `variant === 'danger'` and any prompt that sets
+   * `requireTypedConfirmation` — destructive actions must always confirm.
+   * Callers may still pass `silenceKey` on those without effect, which
+   * keeps call sites simple when the variant is dynamic.
+   */
+  silenceKey?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -58,19 +73,42 @@ export function ConfirmDialog({
   loading = false,
   requireTypedConfirmation,
   typedConfirmationLabel,
+  silenceKey,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation();
   const sev = variantToSeverity[variant];
   const tokens = severityTokens[sev];
   const Icon = iconComponents[tokens.icon as keyof typeof iconComponents];
   const [typed, setTyped] = useState('');
+  const [dontAskAgain, setDontAskAgain] = useState(false);
 
-  // Reset typed input each time the dialog reopens so a stale value from a
-  // previous invocation can't bypass the typed-confirmation gate.
+  // Silencing is only honored for non-destructive prompts. Danger variant
+  // and typed-confirmation gates always re-prompt regardless of caller.
+  const silenceHonored = Boolean(
+    silenceKey && variant !== 'danger' && !requireTypedConfirmation,
+  );
+
+  // Reset typed input AND the "don't ask again" checkbox each time the
+  // dialog reopens so a stale value from a previous invocation can't
+  // bypass the typed-confirmation gate or pre-tick the silence checkbox.
   useEffect(() => {
-    if (open) setTyped('');
+    if (open) {
+      setTyped('');
+      setDontAskAgain(false);
+    }
   }, [open]);
+
+  // Auto-resolve when the user previously silenced this action: fire the
+  // confirm callback as soon as `open` flips true. The early `return null`
+  // below prevents any flash of the dialog before React commits the parent's
+  // resulting `open=false`.
+  useEffect(() => {
+    if (open && silenceHonored && silenceKey && isSilenced(silenceKey)) {
+      onConfirm();
+    }
+  }, [open, silenceHonored, silenceKey, onConfirm]);
 
   // Escape key triggers cancel (Modal already handles backdrop click via
   // its overlay onClose). Suppressed while loading to prevent dismissing a
@@ -96,8 +134,23 @@ export function ConfirmDialog({
     onCancel();
   }, [loading, onCancel]);
 
+  // Persist the silence choice BEFORE bubbling up to the parent so the
+  // next call sees the updated localStorage value.
+  const handleConfirmClick = useCallback(() => {
+    if (silenceHonored && silenceKey && dontAskAgain) {
+      silence(silenceKey);
+    }
+    onConfirm();
+  }, [silenceHonored, silenceKey, dontAskAgain, onConfirm]);
+
   const inputLabel = typedConfirmationLabel
     ?? (requireTypedConfirmation ? `Type "${requireTypedConfirmation}" to confirm` : '');
+
+  // Suppress the dialog entirely when silenced — the auto-resolve effect
+  // above will fire `onConfirm` on the next tick.
+  if (open && silenceHonored && silenceKey && isSilenced(silenceKey)) {
+    return null;
+  }
 
   return (
     <Modal open={open} onClose={handleModalClose} title={title} size="sm">
@@ -118,6 +171,19 @@ export function ConfirmDialog({
             aria-label={inputLabel}
           />
         )}
+        {silenceHonored && (
+          <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={dontAskAgain}
+              onChange={(e) => setDontAskAgain(e.target.checked)}
+              disabled={loading}
+              className="rounded border-[var(--border-strong)] bg-[var(--surface-2)] text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0"
+              aria-label={t('confirm.silence.checkbox', "Don't ask again for this action")}
+            />
+            <span>{t('confirm.silence.checkbox', "Don't ask again for this action")}</span>
+          </label>
+        )}
         <div className="flex items-center justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onCancel} disabled={loading}>
             {cancelLabel}
@@ -126,7 +192,7 @@ export function ConfirmDialog({
             type="button"
             variant={variant === 'danger' ? 'danger' : 'primary'}
             className={confirmButtonClasses[variant]}
-            onClick={onConfirm}
+            onClick={handleConfirmClick}
             loading={loading}
             disabled={confirmDisabled}
           >

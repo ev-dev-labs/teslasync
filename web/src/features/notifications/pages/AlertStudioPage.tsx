@@ -557,7 +557,8 @@ export default function AlertStudio() {
         message: dirtyStrings.message,
         confirmLabel: dirtyStrings.discardLabel,
         cancelLabel: dirtyStrings.keepEditingLabel,
-        variant: 'danger',
+        variant: 'warning',
+        silenceKey: 'discard-draft',
       })
       if (ok) action()
     },

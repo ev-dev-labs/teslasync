@@ -21,6 +21,7 @@ import {
   GasPriceSettings,
   NotificationSettings,
   AppearanceSettings,
+  AdvancedSettings,
   SettingsSearch,
 } from '../components'
 
@@ -103,6 +104,9 @@ export default function SettingsPage() {
       </section>
       <section id="appearance">
         <AppearanceSettings />
+      </section>
+      <section id="advanced">
+        <AdvancedSettings />
       </section>
 
       {/* Data Export — link */}

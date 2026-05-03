@@ -220,6 +220,7 @@ export function NavigationGuardProvider({ children }: { children: ReactNode }) {
         confirmLabel={t('forms.discard', 'Discard changes')}
         cancelLabel={t('forms.keepEditing', 'Keep editing')}
         variant="warning"
+        silenceKey="unsaved-navigation"
         onConfirm={handleConfirm}
         onCancel={handleCancel}
       />

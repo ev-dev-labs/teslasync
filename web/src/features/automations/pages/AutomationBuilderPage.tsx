@@ -485,6 +485,7 @@ export default function AutomationBuilderPage() {
         variant: 'warning',
         confirmLabel: dirtyForm.discardLabel,
         cancelLabel: dirtyForm.keepEditingLabel,
+        silenceKey: 'discard-draft',
       });
       if (!ok) return;
     }

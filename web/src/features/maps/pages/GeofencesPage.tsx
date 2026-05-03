@@ -302,6 +302,7 @@ export default function GeofencesPage() {
         variant: 'warning',
         confirmLabel: dirtyForm.discardLabel,
         cancelLabel: dirtyForm.keepEditingLabel,
+        silenceKey: 'discard-draft',
       });
       if (!ok) return;
     }

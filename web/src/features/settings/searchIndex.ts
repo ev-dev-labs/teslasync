@@ -311,6 +311,16 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       description: t('search.entries.appearance.celebrations.desc', 'Celebration toasts and sound when an achievement unlocks.'),
       keywords: ['confetti', 'sound', 'achievement', 'unlock'],
     },
+
+    // ── Advanced ────────────────────────────────────────────────────
+    {
+      id: 'advanced.restoreConfirms',
+      href: '/settings#advanced',
+      section: 'advanced',
+      title: t('search.entries.advanced.restoreConfirms.title', 'Restore confirmation prompts'),
+      description: t('search.entries.advanced.restoreConfirms.desc', 'Re-enable “Don’t ask again” prompts you previously silenced.'),
+      keywords: ['confirm', 'dialog', 'silence', 'dont ask', 'reset', 'restore'],
+    },
   ];
 }
 

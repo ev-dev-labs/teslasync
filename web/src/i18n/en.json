@@ -5807,6 +5807,24 @@
       "placeholder": "Search settings…",
       "label": "Search settings",
       "noResults": "No matching settings."
+    },
+    "advanced": {
+      "restoreConfirms": {
+        "title": "Confirmation prompts",
+        "description": "Re-enable “Don’t ask again” prompts you previously silenced.",
+        "empty": "No silenced prompts. Tick “Don’t ask again” on a confirmation dialog to silence it.",
+        "restore": "Restore",
+        "restoreAll": "Restore all",
+        "keys": {
+          "discardDraft": "Discard unsaved draft",
+          "unsavedNavigation": "Leave page with unsaved changes"
+        }
+      }
+    }
+  },
+  "confirm": {
+    "silence": {
+      "checkbox": "Don't ask again for this action"
     }
   },
   "region": {
