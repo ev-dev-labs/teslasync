@@ -19,6 +19,15 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+// Phase-45 / Prompt 19 — `<DataFreshness>` consults useReducedMotion via
+// `useMotionPreference()`. We mock framer-motion's hook so individual tests
+// can drive both motion-allowed and reduced-motion code paths without
+// touching window.matchMedia (framer-motion v12 caches that at module load).
+const reducedMotionMock = vi.fn<() => boolean | null>(() => false)
+vi.mock('framer-motion', () => ({
+  useReducedMotion: () => reducedMotionMock(),
+}))
+
 describe('FRESHNESS_COLORS', () => {
   it('exposes a dot + text color tier for every status', () => {
     expect(FRESHNESS_COLORS.fresh.dot).toBe('bg-emerald-400')
@@ -32,6 +41,7 @@ describe('DataFreshness', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-02T00:00:00Z'))
+    reducedMotionMock.mockReturnValue(false)
   })
   afterEach(() => {
     vi.useRealTimers()
@@ -181,6 +191,85 @@ describe('DataFreshness', () => {
     fireEvent.click(root)
     expect(onRefresh).not.toHaveBeenCalled()
   })
+
+  // ── Phase-45 / Prompt 19 — background-refetch pulse ───────────────
+
+  it('pulses the dot while a background refetch is in flight (isFetching with prior data)', () => {
+    reducedMotionMock.mockReturnValue(false)
+    const { container } = render(
+      <DataFreshness
+        updatedAt={Date.now() - 30_000}
+        isFetching
+        isStale={false}
+        isError={false}
+      />,
+    )
+    // The inner colored dot (sky-400 because status === 'fetching') gets
+    // animate-pulse on top of the existing animate-ping ring.
+    const dot = container.querySelector('span.bg-sky-400.animate-pulse')
+    expect(dot).not.toBeNull()
+    // Sanity-check the data-attribute used by tooling/tests to spot the state.
+    expect(container.querySelector('[data-bg-refetch="true"]')).not.toBeNull()
+  })
+
+  it('does not pulse during the initial fetch (no prior data)', () => {
+    reducedMotionMock.mockReturnValue(false)
+    const { container } = render(
+      <DataFreshness
+        updatedAt={null}
+        isFetching
+        isStale={false}
+        isError={false}
+      />,
+    )
+    // Initial load: ping ring stays, but no pulse on the inner dot.
+    expect(container.querySelector('span.bg-sky-400.animate-pulse')).toBeNull()
+    expect(container.querySelector('[data-bg-refetch="true"]')).toBeNull()
+  })
+
+  it('suppresses the pulse when prefers-reduced-motion is set', () => {
+    reducedMotionMock.mockReturnValue(true)
+    const { container } = render(
+      <DataFreshness
+        updatedAt={Date.now() - 30_000}
+        isFetching
+        isStale={false}
+        isError={false}
+      />,
+    )
+    expect(container.querySelector('span.bg-sky-400.animate-pulse')).toBeNull()
+    // The outer ping ring + spinning icon are also suppressed under reduce.
+    expect(container.querySelector('.animate-ping')).toBeNull()
+    expect(container.querySelector('.animate-spin')).toBeNull()
+  })
+
+  it('falls back to an "Updating…" tooltip when reduced-motion + fetching', () => {
+    reducedMotionMock.mockReturnValue(true)
+    const { container } = render(
+      <DataFreshness
+        updatedAt={Date.now() - 30_000}
+        isFetching
+        isStale={false}
+        isError={false}
+      />,
+    )
+    const root = container.firstElementChild as HTMLElement
+    expect(root.getAttribute('title')).toBe('Updating…')
+  })
+
+  it('keeps the standard "Last updated" tooltip when reduced-motion but not fetching', () => {
+    reducedMotionMock.mockReturnValue(true)
+    const { container } = render(
+      <DataFreshness
+        updatedAt={Date.now() - 30_000}
+        isFetching={false}
+        isStale={false}
+        isError={false}
+      />,
+    )
+    const root = container.firstElementChild as HTMLElement
+    expect(root.getAttribute('title')).toMatch(/^Last updated:/)
+  })
 })
 
 function makeQuery(overrides: Partial<FreshnessQuery> = {}): FreshnessQuery {
@@ -198,6 +287,7 @@ describe('DataFreshnessAuto', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-02T00:00:00Z'))
+    reducedMotionMock.mockReturnValue(false)
   })
   afterEach(() => {
     vi.useRealTimers()

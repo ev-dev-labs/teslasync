@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { PrintButton } from '@/components/ui/PrintButton';
 import { FadeIn } from '@/components/motion';
 import { AlertBanner, LiveStaleDataBanner } from '@/components/feedback';
-import { LiveIndicator } from '@/components/data-display';
+import { LiveIndicator, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -153,10 +153,11 @@ export default function DashboardPage() {
   });
 
   /* ——— Core data queries ——— */
-  const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useQuery({
+  const vehiclesQuery = useQuery({
     queryKey: ['vehicles'],
     queryFn: () => request<Vehicle[]>('/vehicles'),
   });
+  const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = vehiclesQuery;
   const { data: alerts, error: alertsError } = useQuery({
     queryKey: ['alerts'],
     queryFn: () => request<Alert[]>('/alerts?limit=10'),
@@ -341,6 +342,7 @@ export default function DashboardPage() {
         </Link>
       )}
       <LiveIndicator variant="compact" />
+      <DataFreshnessAuto query={vehiclesQuery} />
       {!editMode && (
         <PrintButton label={t('dashboard.printSnapshot', 'Print snapshot')} />
       )}

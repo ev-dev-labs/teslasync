@@ -8,7 +8,7 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, DataTable, type Column } from '@/components/ui';
-import { MetricCard, LiveIndicator } from '@/components/data-display';
+import { MetricCard, LiveIndicator, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner, LiveStaleDataBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
@@ -84,11 +84,12 @@ export default function MapOverviewPage() {
   );
 
   /* ---- queries ---- */
+  const vehiclesQuery = useVehicles();
   const {
     data: vehicles,
     isLoading: vehiclesLoading,
     error: vehiclesError,
-  } = useVehicles();
+  } = vehiclesQuery;
 
   const selectedId = vehicleId != null ? String(vehicleId) : '';
 
@@ -238,7 +239,12 @@ export default function MapOverviewPage() {
       )}
       loading={vehiclesLoading}
       error={vehiclesError as Error | null}
-      actions={<LiveIndicator variant="compact" />}
+      actions={
+        <div className="flex items-center gap-3">
+          <DataFreshnessAuto query={vehiclesQuery} />
+          <LiveIndicator variant="compact" />
+        </div>
+      }
     >
       <LiveStaleDataBanner />
       {anyError && (

@@ -28,6 +28,7 @@ import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
 import { SeverityBadge } from '@/components/data-display/SeverityBadge';
 import { StatusDot } from '@/components/data-display/StatusDot';
 import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
+import { DataFreshnessAuto } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { fmtInt } from '@/lib/numberFormat';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -473,7 +474,8 @@ export default function AlertsPage() {
   const alertsPerPage = 20;
 
   // Queries
-  const { data: alerts, isLoading, error } = useAlerts();
+  const alertsQuery = useAlerts();
+  const { data: alerts, isLoading, error } = alertsQuery;
   const { data: rules } = useAlertRules();
   const markReadMut = useMarkAlertRead();
   const { data: rulePins = [] } = usePinned('alert_rule');
@@ -571,6 +573,7 @@ export default function AlertsPage() {
       copyLink
       actions={
         <div className="flex items-center gap-3">
+          <DataFreshnessAuto query={alertsQuery} />
           {quietActive && <Badge variant="info" size="sm">{t('Quiet hours')}</Badge>}
           {unreadCount > 0 && <Badge variant="info" size="sm">{unreadCount} {t('unread')}</Badge>}
           {criticalCount > 0 && <Badge variant="danger" size="sm">{criticalCount} {t('critical')}</Badge>}

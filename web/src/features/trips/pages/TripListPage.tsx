@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Route, MapPin, Zap, Clock, Calendar, DollarSign, Download } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select, Pagination, Button } from '@/components/ui';
-import { MetricCard, InlineMetric, SavedViewMenu } from '@/components/data-display';
+import { MetricCard, InlineMetric, SavedViewMenu, DataFreshnessAuto } from '@/components/data-display';
 import { ChartContainer, ChartTooltip, ChartGradient, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, axisTickSm, chartGrid, chartAnimation } from '@/components/charts';
 import { DateRangeFilter } from '@/components/forms';
 import { EmptyState, Skeleton } from '@/components/feedback';
@@ -50,13 +50,14 @@ export default function TripListPage() {
 
   const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings();
 
-  const { data: trips, isLoading } = useTrips({
+  const tripsQuery = useTrips({
     vehicle_id: vehicleId ?? undefined,
     limit: pageSize,
     offset: (page - 1) * pageSize,
     start: startDate,
     end: endDate,
   });
+  const { data: trips, isLoading } = tripsQuery;
 
   const allTrips = trips ?? [];
 
@@ -118,11 +119,14 @@ export default function TripListPage() {
       subtitle={t('trips.subtitle', 'Multi-drive trip reports with distance and cost tracking')}
       loading={isLoading}
       actions={
-        <SavedViewMenu
-          route="/trips"
-          currentQuery={savedView.currentQuery}
-          onApply={savedView.apply}
-        />
+        <div className="flex items-center gap-3">
+          <DataFreshnessAuto query={tripsQuery} />
+          <SavedViewMenu
+            route="/trips"
+            currentQuery={savedView.currentQuery}
+            onApply={savedView.apply}
+          />
+        </div>
       }
     >
       {/* Vehicle Selector */}

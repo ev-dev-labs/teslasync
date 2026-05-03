@@ -9,7 +9,7 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, ConfirmDialog, PinButton } from '@/components/ui';
-import { MetricCard, AnimatedNumber } from '@/components/data-display';
+import { MetricCard, AnimatedNumber, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton, EmptyState, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
@@ -62,11 +62,12 @@ export default function VehicleListPage() {
   const { convertDistance, distanceUnit } = useSettings();
 
   /* ── Data ── */
-  const { data: vehicles, isLoading, error } = useQuery({
+  const vehiclesQuery = useQuery({
     queryKey: ['vehicles'],
     queryFn: () => request<Vehicle[]>('/vehicles'),
     staleTime: 30_000,
   });
+  const { data: vehicles, isLoading, error } = vehiclesQuery;
 
   const vehicleList = vehicles ?? [];
   const primaryId = vehicleList[0]?.id;
@@ -178,6 +179,7 @@ export default function VehicleListPage() {
       subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
       actions={
         <div className="flex items-center gap-2">
+          <DataFreshnessAuto query={vehiclesQuery} />
           {vehicleList.length >= 2 && (
             <Button
               variant="outline"

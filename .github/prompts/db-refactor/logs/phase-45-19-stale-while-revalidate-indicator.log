@@ -1,0 +1,25 @@
+=== GATE ===
+=== PREFLIGHT ===
+PROMPT=phase-45/19-stale-while-revalidate-indicator
+BRANCH=ui-refactor/ui-phase45
+HEAD=75271cd0
+=== FILES_EXIST ===
+FILE[web\src\components\data-display\DataFreshness.tsx]=True
+FILE[web\src\components\layout\PageContainer.tsx]=True
+FILE[web\src\components\layout\__tests__\PageContainer.test.tsx]=True
+FILES_EXPECTED=3
+FILES_MISSING=0
+=== TYPESCRIPT ===
+TSC_EXIT=0
+=== LINT ===
+LINT_EXIT=0
+=== FRONTEND_TEST ===
+FRONTEND_TEST_EXIT=0
+=== AUDIT_VIOLATIONS ===
+FRESHNESS_ADOPTERS=22
+PAGECONTAINER_QUERY_PROP_USES=0
+=== GIT_STATUS ===
+UNEXPECTED_STATUS_COUNT=0
+=== STATUS ===
+EXIT=0
+STATUS=DONE

@@ -5,6 +5,7 @@ import { FadeIn } from '@/components/motion';
 import { QueryError } from '@/components/feedback';
 import { DateRangeFilter } from '@/components/forms';
 import { SavedViewMenu } from '@/components/data-display';
+import { DataFreshnessAuto } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBoolean, useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useChargingSessionsPaginated, useChargingOptimizer, useBulkDeleteCharging } from '@/api/hooks/useCharging';
@@ -67,17 +68,18 @@ export default function ChargingListPage() {
   const [startDate, setStartDate] = useUrlString('from', defaultStartDate);
   const [endDate, setEndDate] = useUrlString('to', defaultEndDate);
 
-  const {
-    data: sessions,
-    isLoading,
-    error,
-    refetch,
-  } = useChargingSessionsPaginated(vehicleId, {
+  const chargingQuery = useChargingSessionsPaginated(vehicleId, {
     limit: pageSize,
     offset: (page - 1) * pageSize,
     start: startDate,
     end: endDate,
   });
+  const {
+    data: sessions,
+    isLoading,
+    error,
+    refetch,
+  } = chargingQuery;
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
   const { data: optimizer } = useChargingOptimizer(vehicleIdStr);
 
@@ -139,11 +141,14 @@ export default function ChargingListPage() {
       title={t('charging.list.title', 'Charging Sessions')}
       subtitle={t('charging.list.subtitle', 'Cost analysis, charger breakdown, energy patterns, and performance tracking')}
       actions={
-        <SavedViewMenu
-          route="/charging"
-          currentQuery={savedView.currentQuery}
-          onApply={savedView.apply}
-        />
+        <div className="flex items-center gap-3">
+          <DataFreshnessAuto query={chargingQuery} />
+          <SavedViewMenu
+            route="/charging"
+            currentQuery={savedView.currentQuery}
+            onApply={savedView.apply}
+          />
+        </div>
       }
     >
       <FadeIn>

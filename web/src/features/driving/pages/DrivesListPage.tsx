@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
 import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
 import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
+import { DataFreshnessAuto } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import {
   ChartContainer, ChartTooltip,
@@ -205,7 +206,8 @@ export default function DrivesListPage() {
   /* Data hooks — Phase 40 / Prompt 16: header VehiclePicker is the source of truth */
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-  const { data: drives, isLoading: isDrivesLoading, error: drivesError } = useDrives(vehicleIdStr);
+  const drivesQuery = useDrives(vehicleIdStr);
+  const { data: drives, isLoading: isDrivesLoading, error: drivesError } = drivesQuery;
   const { data: stats } = useDrivingStats(vehicleIdStr);
 
   /* Unit conversion */
@@ -379,12 +381,15 @@ export default function DrivesListPage() {
       error={drivesError as Error | null}
       copyLink
       actions={
-        <div data-tour="drives-saved-views">
-          <SavedViewMenu
-            route="/drives"
-            currentQuery={savedView.currentQuery}
-            onApply={savedView.apply}
-          />
+        <div className="flex items-center gap-3">
+          <DataFreshnessAuto query={drivesQuery} />
+          <div data-tour="drives-saved-views">
+            <SavedViewMenu
+              route="/drives"
+              currentQuery={savedView.currentQuery}
+              onApply={savedView.apply}
+            />
+          </div>
         </div>
       }
     >

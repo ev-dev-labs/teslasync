@@ -7,7 +7,7 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Select, DataTable, type Column } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
@@ -132,7 +132,7 @@ export default function TimelinePage() {
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
   const enabled = activeId !== '';
 
-  const { data: timelineData, isLoading: tlLoading, error: timelineError, refetch } = useQuery({
+  const timelineQuery = useQuery({
     queryKey: ['vehicle-timeline', activeId],
     queryFn: () =>
       request<{ transitions: StateRecord[] }>(
@@ -140,6 +140,7 @@ export default function TimelinePage() {
       ),
     enabled,
   });
+  const { data: timelineData, isLoading: tlLoading, error: timelineError, refetch } = timelineQuery;
 
   const { data: summaryData, isLoading: sumLoading, error: summaryError } = useQuery({
     queryKey: ['vehicle-summary', activeId],
@@ -254,6 +255,7 @@ export default function TimelinePage() {
 
   const actions = (
     <div className="flex items-center gap-3">
+      <DataFreshnessAuto query={timelineQuery} />
       {vehicleOptions.length > 1 && (
         <Select
           options={vehicleOptions}

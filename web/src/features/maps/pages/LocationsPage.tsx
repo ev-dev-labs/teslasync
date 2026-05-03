@@ -11,7 +11,7 @@ import { MapPin, Clock, Hash, Trophy, Navigation, Building2 } from 'lucide-react
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select, Pagination } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { SearchInput, FilterBar } from '@/components/forms';
@@ -56,11 +56,12 @@ export default function LocationsPage() {
   const pageSize = 50;
   const [search, setSearch] = useUrlString('q', '');
 
-  const { data: locations, isLoading, error } = useQuery({
+  const locationsQuery = useQuery({
     queryKey: ['visited-locations', vehicleId, page, pageSize],
     queryFn: () => request<VisitedLocation[]>(`/locations?vehicle_id=${vehicleId}&limit=${pageSize}&offset=${(page - 1) * pageSize}`),
     enabled: vehicleId !== null,
   });
+  const { data: locations, isLoading, error } = locationsQuery;
 
   const locationSearchFields = useMemo(
     () => ['address_name'] as const satisfies ReadonlyArray<keyof VisitedLocation>,
@@ -108,13 +109,16 @@ export default function LocationsPage() {
       loading={isLoading}
       error={error as Error | null}
       actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            value={String(vehicleId ?? '')}
-            onChange={e => setSelectedVehicle(Number(e.target.value))}
-            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
-          />
-        ) : undefined
+        <div className="flex items-center gap-3">
+          <DataFreshnessAuto query={locationsQuery} />
+          {vehicles && vehicles.length > 1 ? (
+            <Select
+              value={String(vehicleId ?? '')}
+              onChange={e => setSelectedVehicle(Number(e.target.value))}
+              options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
+          ) : null}
+        </div>
       }
     >
       {/* ── Summary stats ────────────────────────────────────────── */}
