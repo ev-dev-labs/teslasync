@@ -78,6 +78,8 @@ const LOGS: NotificationLog[] = [
 ];
 
 const markReadMutate = vi.fn();
+const markUnreadMutate = vi.fn();
+const bulkMarkReadMutateAsync = vi.fn(async (_vars: { ids?: number[]; all?: boolean }) => ({ updated: 0 }));
 const archiveMutate = vi.fn();
 const unarchiveMutate = vi.fn();
 const deleteMutate = vi.fn();
@@ -99,7 +101,12 @@ vi.mock('@/api/hooks/useNotifications', async () => {
       error: null,
     }),
     useMarkNotificationsRead: () => ({ mutate: markReadMutate, mutateAsync: vi.fn(async (ids: number[]) => { markReadMutate(ids); }), isPending: false }),
-    useMarkNotificationsUnread: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(async () => {}), isPending: false }),
+    useMarkNotificationsUnread: () => ({ mutate: markUnreadMutate, mutateAsync: vi.fn(async (ids: number[]) => { markUnreadMutate(ids); }), isPending: false }),
+    useBulkMarkRead: () => ({
+      mutate: vi.fn((vars: { ids?: number[]; all?: boolean }) => { void bulkMarkReadMutateAsync(vars); }),
+      mutateAsync: bulkMarkReadMutateAsync,
+      isPending: false,
+    }),
     useArchiveNotifications: () => ({ mutate: archiveMutate, mutateAsync: vi.fn(async (ids: number[]) => { archiveMutate(ids); }), isPending: false }),
     useUnarchiveNotifications: () => ({ mutate: unarchiveMutate, mutateAsync: vi.fn(async (ids: number[]) => { unarchiveMutate(ids); }), isPending: false }),
     useDeleteNotifications: () => ({ mutate: deleteMutate, mutateAsync: vi.fn(async (ids: number[]) => { deleteMutate(ids); }), isPending: false }),
@@ -130,9 +137,12 @@ function renderPage() {
 describe('NotificationsPage', () => {
   beforeEach(() => {
     markReadMutate.mockReset();
+    markUnreadMutate.mockReset();
     archiveMutate.mockReset();
     unarchiveMutate.mockReset();
     deleteMutate.mockReset();
+    bulkMarkReadMutateAsync.mockReset();
+    bulkMarkReadMutateAsync.mockImplementation(async (_vars: { ids?: number[]; all?: boolean }) => ({ updated: 0 }));
     window.localStorage.clear();
   });
 
@@ -190,5 +200,56 @@ describe('NotificationsPage', () => {
     await waitFor(() => expect(archiveMutate).toHaveBeenCalledTimes(1));
     const ids = (archiveMutate.mock.calls[0] as [number[]])[0];
     expect(ids).toContain(100);
+  });
+
+  // ── Phase-45 / 28 — bulk mark-read with undo ─────────────────────────
+
+  it('exposes a "Mark all read" header action when there are unread rows', () => {
+    renderPage();
+    expect(
+      screen.getByRole('button', { name: /Mark all read/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('clicking "Mark all read" calls useBulkMarkRead with all=true', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /Mark all read/i }));
+    await waitFor(() => expect(bulkMarkReadMutateAsync).toHaveBeenCalledTimes(1));
+    expect(bulkMarkReadMutateAsync).toHaveBeenCalledWith({ all: true });
+  });
+
+  it('shows a success toast with an Undo action after "Mark all read"; clicking Undo fires markUnread for the snapshotted ids', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /Mark all read/i }));
+    // Toast appears once the optimistic mutation settles. Look for the
+    // success copy emitted by the page handler.
+    const undoBtn = await screen.findByRole('button', { name: /^Undo$/ });
+    expect(
+      screen.getByText(/All notifications marked as read/i),
+    ).toBeInTheDocument();
+    fireEvent.click(undoBtn);
+    expect(markUnreadMutate).toHaveBeenCalledTimes(1);
+    // The single visible unread row in this fixture is id 100; the page
+    // must snapshot that id and pass it to the reverse mutation so Undo
+    // is bounded (an unbounded "undo all read" would be impossible to
+    // express without re-fetching pre-mutation state).
+    expect(markUnreadMutate).toHaveBeenCalledWith([100]);
+  });
+
+  it('routes the bulk-toolbar "Mark read" through useBulkMarkRead with the selected ids and surfaces an Undo toast', async () => {
+    renderPage();
+    const checkboxes = screen.getAllByRole('checkbox');
+    fireEvent.click(checkboxes[0]);
+    const bulkBar = await screen.findByRole('region', { name: /Bulk actions/i });
+    const markReadBtn = Array.from(bulkBar.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'Mark read',
+    );
+    expect(markReadBtn).toBeTruthy();
+    fireEvent.click(markReadBtn!);
+    await waitFor(() => expect(bulkMarkReadMutateAsync).toHaveBeenCalledTimes(1));
+    expect(bulkMarkReadMutateAsync).toHaveBeenCalledWith({ ids: [100] });
+    const undoBtn = await screen.findByRole('button', { name: /^Undo$/ });
+    fireEvent.click(undoBtn);
+    expect(markUnreadMutate).toHaveBeenCalledWith([100]);
   });
 });

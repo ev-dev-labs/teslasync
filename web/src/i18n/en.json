@@ -490,7 +490,8 @@
     "saving": "Saving…",
     "update": "Update",
     "today": "Today",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "undo": "Undo"
   },
   "units": {
     "km": "km",
@@ -5443,6 +5444,13 @@
       "error": {
         "title": "Could not load notifications"
       }
+    },
+    "bulkRead": {
+      "success": "{{count}} marked as read"
+    },
+    "markAllRead": {
+      "action": "Mark all read",
+      "success": "All notifications marked as read"
     },
     "stats": {
       "sent": "Total Sent",

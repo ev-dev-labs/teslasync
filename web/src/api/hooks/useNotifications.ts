@@ -414,6 +414,64 @@ export function useMarkNotificationsRead() {
   });
 }
 
+/**
+ * Phase-45 / 28 — bulk-mark-read with optional whole-inbox flag.
+ *
+ * Variants accepted (mirrors the relaxed backend contract):
+ *
+ *   { ids: number[] }  → mark exactly those rows as read.
+ *   { all: true }      → mark every currently-unread, non-archived row as read.
+ *
+ * Differs from `useMarkNotificationsRead` in three ways:
+ *   1. Accepts `{ ids?, all? }` — needed so the page can wire one mutation
+ *      to both the bulk-selected toolbar button AND the "Mark all read"
+ *      header action without juggling two separate hooks.
+ *   2. Optimistic updater handles both shapes — when `all=true`, every
+ *      unread row in every cached filtered list flips to read in one pass.
+ *   3. Emits NO success/error toast of its own — the caller (NotificationsPage)
+ *      shows a custom toast with an Undo action that fires the reverse
+ *      mutation. Auto-emitting a generic success toast here would race
+ *      against that custom toast and the Undo control would be confusing.
+ *
+ * Failures still roll the optimistic update back via the helper's snapshot
+ * machinery; the caller is responsible for surfacing the error to the user.
+ */
+export function useBulkMarkRead() {
+  const qc = useQueryClient();
+  return useOptimisticMutation<
+    { updated: number },
+    { ids?: number[]; all?: boolean },
+    NotificationLog[]
+  >({
+    mutationFn: (vars) =>
+      request<{ updated: number }>('/notifications/mark-read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vars),
+      }),
+    queryKeys: [notificationKeys.logs],
+    updater: (prev, vars) => {
+      if (!prev) return prev;
+      const now = new Date().toISOString();
+      if (vars.all) {
+        return prev.map((n) => (n.read_at ? n : { ...n, read_at: now }));
+      }
+      const idSet = new Set(vars.ids ?? []);
+      if (idSet.size === 0) return prev;
+      return prev.map((n) =>
+        idSet.has(n.id) && !n.read_at ? { ...n, read_at: now } : n,
+      );
+    },
+    broadcast: true,
+    onSettled: () => {
+      // Unread-count badge is a sibling cache that the helper doesn't know
+      // about — invalidate it explicitly so the bell badge eventually
+      // converges with the optimistic write applied above.
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.unreadCount });
+    },
+  });
+}
+
 export function useMarkNotificationsUnread() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();

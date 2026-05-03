@@ -19,12 +19,13 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Archive, ArchiveRestore, Bell, MailOpen, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, Bell, MailOpen, Trash2, CheckCheck } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, TabNav } from '@/components/ui';
+import { Button, GlassPanel, TabNav } from '@/components/ui';
 import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
+import { useToast } from '@/components/feedback/Toast';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUrlEnum, useUrlString, useUrlArray } from '@/hooks/useUrlState';
@@ -36,6 +37,7 @@ import {
   useUnarchiveNotifications,
   useMarkNotificationsRead,
   useMarkNotificationsUnread,
+  useBulkMarkRead,
   useDeleteNotifications,
   type NotificationFilters,
 } from '@/api/hooks/useNotifications';
@@ -186,9 +188,11 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
 
   const markReadMut = useMarkNotificationsRead();
   const markUnreadMut = useMarkNotificationsUnread();
+  const bulkMarkReadMut = useBulkMarkRead();
   const archiveMut = useArchiveNotifications();
   const unarchiveMut = useUnarchiveNotifications();
   const deleteMut = useDeleteNotifications();
+  const toast = useToast();
 
   // Auto-mark-read on inbox open (only on the Inbox tab, not Archived).
   const autoMarkedRef = useRef(false);
@@ -221,6 +225,13 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
 
   const grouped = useMemo(() => groupByDay(rows), [rows]);
 
+  // Visible-row unread count drives both the "Mark all read" header
+  // affordance and the (n) suffix on the toast that follows the action.
+  const unreadCount = useMemo(
+    () => rows.reduce((acc, r) => (r.read_at ? acc : acc + 1), 0),
+    [rows],
+  );
+
   const handleBulkArchive = useCallback(async (ids: Array<string | number>) => {
     await archiveMut.mutateAsync(ids.map(Number));
     clearSelection();
@@ -229,10 +240,68 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     await unarchiveMut.mutateAsync(ids.map(Number));
     clearSelection();
   }, [unarchiveMut]);
+  // Bulk mark-read: optimistically flip the selected rows, then surface a
+  // toast with an Undo button that reverses the mutation. If the original
+  // mutation rejects, the optimistic helper rolls back the cache and we
+  // emit the standard error toast — never a phantom "Marked as read" we'd
+  // then have to take back.
   const handleBulkMarkRead = useCallback(async (ids: Array<string | number>) => {
-    await markReadMut.mutateAsync(ids.map(Number));
+    const numericIds = ids.map(Number);
+    try {
+      await bulkMarkReadMut.mutateAsync({ ids: numericIds });
+    } catch (e) {
+      toast.error(
+        t('toast.notifications.markRead.error', 'Failed to mark as read'),
+        e instanceof Error ? e.message : undefined,
+      );
+      return;
+    }
     clearSelection();
-  }, [markReadMut]);
+    toast.toast({
+      type: 'success',
+      title: t('notifications.bulkRead.success', '{{count}} marked as read', {
+        count: numericIds.length,
+      }),
+      // 5s window to undo, matching the prompt's UX contract — long enough
+      // for a "wait, no" reaction, short enough not to clutter the screen.
+      duration: 5000,
+      action: {
+        label: t('common.undo', 'Undo'),
+        onClick: () => { markUnreadMut.mutate(numericIds); },
+      },
+    });
+  }, [bulkMarkReadMut, markUnreadMut, toast, t]);
+  // "Mark all read" header action — hits the all=true backend path so the
+  // server (not the client) decides which rows are affected. Avoids the
+  // 1000-id cap and removes the need to enumerate every cached id.
+  const handleMarkAllRead = useCallback(async () => {
+    if (unreadCount === 0) return;
+    // Snapshot the currently-visible unread ids so Undo can restore exactly
+    // what the user just dismissed (Undo on a server-side "all" mutation
+    // with no client knowledge would be impossible to bound otherwise).
+    const visibleUnreadIds = rows.filter(r => !r.read_at).map(r => r.id);
+    try {
+      await bulkMarkReadMut.mutateAsync({ all: true });
+    } catch (e) {
+      toast.error(
+        t('toast.notifications.markRead.error', 'Failed to mark as read'),
+        e instanceof Error ? e.message : undefined,
+      );
+      return;
+    }
+    clearSelection();
+    toast.toast({
+      type: 'success',
+      title: t('notifications.markAllRead.success', 'All notifications marked as read'),
+      duration: 5000,
+      action: visibleUnreadIds.length > 0
+        ? {
+            label: t('common.undo', 'Undo'),
+            onClick: () => { markUnreadMut.mutate(visibleUnreadIds); },
+          }
+        : undefined,
+    });
+  }, [bulkMarkReadMut, markUnreadMut, toast, t, rows, unreadCount]);
   const handleBulkDelete = useCallback(async (ids: Array<string | number>) => {
     await deleteMut.mutateAsync(ids.map(Number));
     clearSelection();
@@ -309,7 +378,10 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       />
 
       <GlassPanel className="p-3 sm:p-4">
-        {/* Select-all row */}
+        {/* Select-all row + Mark-all-read header action. The header action
+            sits opposite the count so it stays out of the way of the
+            primary checkbox affordance and only reveals itself on the
+            inbox tab when there's something to mark. */}
         <div className="mb-2 flex items-center gap-3 px-1 pb-2 border-b border-white/[0.04]">
           <input
             type="checkbox"
@@ -321,6 +393,19 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           <span className="text-xs text-[var(--text-muted)]">
             {t('notifications.inbox.countLabel', '{{count}} notifications', { count: rows.length })}
           </span>
+          {!archived && unreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleMarkAllRead}
+              disabled={bulkMarkReadMut.isPending}
+              icon={<CheckCheck className="h-3.5 w-3.5" />}
+              className="ml-auto text-xs"
+              aria-label={t('notifications.markAllRead.action', 'Mark all read')}
+            >
+              {t('notifications.markAllRead.action', 'Mark all read')}
+            </Button>
+          )}
         </div>
 
         {isLoading && (

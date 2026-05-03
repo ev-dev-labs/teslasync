@@ -560,6 +560,28 @@ func (r *NotificationRepo) BulkSetRead(ctx context.Context, ids []int64, read bo
 	return ct.RowsAffected(), nil
 }
 
+// BulkSetReadAll marks every currently-unread, non-archived notification log
+// row as read. Powers the "Mark all read" header action so the client doesn't
+// have to enumerate every id it has cached (which could be in the thousands
+// for power users with many alert rules).
+//
+// Only flips rows that are still unread — already-read rows are left
+// untouched, which keeps the row count returned to the client honest and
+// avoids resetting the original read timestamp. Archived rows are skipped
+// because the badge contract excludes archived from "unread" anyway.
+func (r *NotificationRepo) BulkSetReadAll(ctx context.Context) (int64, error) {
+	ct, err := r.db.Pool.Exec(ctx,
+		`UPDATE notification_logs
+		    SET read_at = $1
+		  WHERE read_at IS NULL AND archived_at IS NULL`,
+		time.Now().UTC(),
+	)
+	if err != nil {
+		return 0, fmt.Errorf("bulk set read all: %w", err)
+	}
+	return ct.RowsAffected(), nil
+}
+
 // BulkSetArchived flips archived_at for a list of ids. Same semantics as
 // BulkSetRead. Archiving an unread row also marks it read so it stops
 // counting toward the header badge.
