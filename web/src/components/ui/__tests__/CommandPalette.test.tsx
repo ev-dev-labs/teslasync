@@ -8,6 +8,7 @@ import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { CommandPalette, addRecentCommand, getRecentCommands } from '../CommandPalette'
 import { vehicleKeys } from '@/api/hooks/useVehicles'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { recordCommandUse, _resetFrecency } from '@/lib/commandFrecency'
 import type { Vehicle } from '@/types/vehicle'
 import type { ReactNode } from 'react'
 
@@ -72,11 +73,13 @@ function openPaletteViaEvent() {
 beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
+  _resetFrecency()
 })
 
 afterEach(() => {
   localStorage.clear()
   sessionStorage.clear()
+  _resetFrecency()
 })
 
 // ─── Recent storage ─────────────────────────────────────────────────────────
@@ -216,26 +219,78 @@ describe('CommandPalette search', () => {
   })
 })
 
-// ─── Recent surfacing ───────────────────────────────────────────────────────
+// ─── Most-used surfacing (Phase-45 / Prompt 27) ─────────────────────────────
+//
+// Replaces the previous LRU "Recent" section with a frecency-ranked
+// "Most Used" section. The strict-recency LRU storage (addRecentCommand /
+// getRecentCommands) is still tested above for backward-compat — but the UI
+// no longer renders a "Recent" section.
 
-describe('CommandPalette recent ordering', () => {
-  it('displays the most-recent command first when the palette opens with no query', async () => {
-    addRecentCommand({ kind: 'registry', registryId: 'pref.theme.light' })
+describe('CommandPalette most-used ordering', () => {
+  it('renders a "Most Used" section when frecency data exists and the query is empty', async () => {
+    recordCommandUse('pref.theme.light')
     const Wrapper = makeWrapper(makeVehicles())
     render(<CommandPalette />, { wrapper: Wrapper })
 
     openPaletteViaEvent()
 
-    // The "Recent" section should appear and contain the recent registry entry
     await waitFor(() => {
-      expect(screen.getByText(/Recent/i)).toBeInTheDocument()
+      expect(screen.getByText(/Most Used/i)).toBeInTheDocument()
     })
-    // "Theme: Light" appears in BOTH the Recent section and the Preferences
-    // section. Asserting it shows up at all (not its uniqueness) is enough to
-    // prove recents are surfaced; ordering inside the rendered DOM is verified
-    // via the storage assertion above.
+    // "Theme: Light" appears in BOTH the Most Used section and the original
+    // Preferences section, so we only assert it shows up at all.
     const themeLight = screen.getAllByText(/Theme: Light/)
     expect(themeLight.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('does NOT render a "Most Used" section when no commands have been recorded yet', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+
+    // Wait for the palette to finish mounting (input is the only single-occurrence
+    // landmark — section labels show up in nav-item sublabels too).
+    await screen.findByPlaceholderText(/Search pages/i)
+    expect(screen.queryByText(/Most Used/i)).toBeNull()
+  })
+
+  it('caps the Most Used section at 5 entries and orders by frecency score', async () => {
+    // Six distinct commands with strictly decreasing counts so the lowest-count
+    // entry can never sneak past the recency tiebreak. Counts: 6,5,4,3,2,1.
+    const ids = [
+      'pref.theme.dark',     // count 6 — highest
+      'pref.theme.light',    // count 5
+      'pref.theme.oled',     // count 4
+      'pref.theme.midnight', // count 3
+      'pref.theme.auto',     // count 2 — last winner
+      'pref.themePicker',    // count 1 — must be excluded
+    ]
+    for (let i = 0; i < ids.length; i++) {
+      const target = 6 - i
+      for (let j = 0; j < target; j++) recordCommandUse(ids[i])
+    }
+
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    await screen.findByText(/Most Used/i)
+
+    // The Most Used section sits between its own header and the next section
+    // header ("Preferences" — registry items always lead the static list once
+    // most-used is present). Use textContent to inspect the slice.
+    const allText = document.body.textContent ?? ''
+    const mostUsedIdx = allText.indexOf('Most Used')
+    const prefsIdx = allText.indexOf('Preferences', mostUsedIdx + 1)
+    expect(mostUsedIdx).toBeGreaterThanOrEqual(0)
+    expect(prefsIdx).toBeGreaterThan(mostUsedIdx)
+    const mostUsedBlock = allText.slice(mostUsedIdx, prefsIdx)
+    // The lowest-count command's label must NOT appear in the Most Used block —
+    // it falls outside the top 5.
+    expect(mostUsedBlock).not.toContain('Open theme picker')
+    // And the top entry (Theme: Dark, count 6) MUST appear there.
+    expect(mostUsedBlock).toContain('Theme: Dark')
   })
 })
 

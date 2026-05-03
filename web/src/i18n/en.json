@@ -1341,6 +1341,7 @@
     "shortcut": "Shortcut: {{keys}}",
     "section": {
       "recent": "Recent",
+      "mostUsed": "Most Used",
       "pages": "Pages",
       "vehicles": "Vehicles",
       "preferences": "Preferences",
@@ -1380,10 +1381,12 @@
       "dashboardEdit": "Edit dashboard layout",
       "dashboardSwitch": "Switch dashboard layout…",
       "dashboardAddWidget": "Add widget to dashboard",
-      "dashboardReset": "Reset dashboard to default"
+      "dashboardReset": "Reset dashboard to default",
+      "frecencyReset": "Reset command palette usage history"
     },
     "toast": {
-      "refreshed": "Data refreshed"
+      "refreshed": "Data refreshed",
+      "frecencyReset": "Command palette usage history cleared"
     }
   },
   "search": {
