@@ -29,4 +29,139 @@
 # Per-vehicle or value-conditional filtering MUST live inside the
 # writer, never here.
 
-routes: []
+routes:
+  - field: ACChargingEnergyIn
+    dest: charging_telemetry
+    column: ac_charging_energy_in_wh
+    also_signal_log: true
+  - field: ACChargingPower
+    dest: charging_telemetry
+    column: ac_charging_power_w
+  - field: BMSState
+    dest: signal_log
+  - field: BatteryHeaterOn
+    dest: charging_telemetry
+    column: battery_heater_on
+  - field: BatteryLevel
+    dest: signal_log
+  - field: BmsFullchargecomplete
+    dest: signal_log
+  - field: BrickVoltageMax
+    dest: signal_log
+  - field: BrickVoltageMin
+    dest: signal_log
+  - field: ChargeAmps
+    dest: signal_log
+  - field: ChargeCurrentRequest
+    dest: signal_log
+  - field: ChargeCurrentRequestMax
+    dest: signal_log
+  - field: ChargeEnableRequest
+    dest: signal_log
+  - field: ChargeLimitSoc
+    dest: charging_telemetry
+    column: charge_limit_soc_pct
+    also_signal_log: true
+  - field: ChargePort
+    dest: signal_log
+  - field: ChargePortColdWeatherMode
+    dest: signal_log
+  - field: ChargePortDoorOpen
+    dest: charging_telemetry
+    column: charge_port_door_open
+    also_signal_log: true
+  - field: ChargePortLatch
+    dest: charging_telemetry
+    column: charge_port_latch
+    also_signal_log: true
+  - field: ChargeRateMilePerHour
+    dest: signal_log
+  - field: ChargeState
+    dest: signal_log
+  - field: ChargerPhases
+    dest: charging_telemetry
+    column: charger_phases
+  - field: ChargerVoltage
+    dest: charging_telemetry
+    column: charger_voltage_v
+  - field: ChargingCableType
+    dest: charging_telemetry
+    column: charging_cable_type
+    also_signal_log: true
+  - field: DCChargingEnergyIn
+    dest: charging_telemetry
+    column: dc_charging_energy_in_wh
+    also_signal_log: true
+  - field: DCChargingPower
+    dest: charging_telemetry
+    column: dc_charging_power_w
+  - field: DCDCEnable
+    dest: signal_log
+  - field: DetailedChargeState
+    dest: signal_log
+  - field: EnergyRemaining
+    dest: signal_log
+  - field: EstBatteryRange
+    dest: signal_log
+  - field: EstimatedHoursToChargeTermination
+    dest: signal_log
+  - field: ExpectedEnergyPercentAtTripArrival
+    dest: signal_log
+  - field: FastChargerPresent
+    dest: signal_log
+  - field: FastChargerType
+    dest: charging_telemetry
+    column: fast_charger_type
+    also_signal_log: true
+  - field: IdealBatteryRange
+    dest: signal_log
+  - field: LifetimeEnergyUsed
+    dest: signal_log
+  - field: ModuleTempMax
+    dest: signal_log
+  - field: ModuleTempMin
+    dest: signal_log
+  - field: NotEnoughPowerToHeat
+    dest: signal_log
+  - field: NumBrickVoltageMax
+    dest: signal_log
+  - field: NumBrickVoltageMin
+    dest: signal_log
+  - field: NumModuleTempMax
+    dest: signal_log
+  - field: NumModuleTempMin
+    dest: signal_log
+  - field: PackCurrent
+    dest: signal_log
+  - field: PackVoltage
+    dest: signal_log
+  - field: PowershareHoursLeft
+    dest: signal_log
+  - field: PowershareInstantaneousPowerKW
+    dest: signal_log
+  - field: PowershareStatus
+    dest: signal_log
+  - field: PowershareStopReason
+    dest: signal_log
+  - field: PowershareType
+    dest: signal_log
+  - field: PreconditioningEnabled
+    dest: signal_log
+  - field: RatedRange
+    dest: signal_log
+  - field: ScheduledChargingMode
+    dest: signal_log
+  - field: ScheduledChargingPending
+    dest: signal_log
+  - field: ScheduledChargingStartTime
+    dest: signal_log
+  - field: ScheduledDepartureTime
+    dest: signal_log
+  - field: Soc
+    dest: signal_log
+  - field: SpeedLimitWarning
+    dest: signal_log
+  - field: SuperchargerSessionTripPlanner
+    dest: signal_log
+  - field: TimeToFullCharge
+    dest: signal_log

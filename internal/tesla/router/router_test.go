@@ -9,53 +9,70 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 )
 
-// TestEmptyRoutingIsLoadable verifies the embedded routing.yaml as it
-// ships in this prompt parses cleanly and produces zero entries.
+// TestEmbeddedRoutingIsLoadable verifies the embedded routing.yaml
+// parses cleanly and that LoadMap and Load agree on the entry count.
 //
-// The point of this test is to lock the empty-file contract for
-// per-category prompts 0030-0037: those prompts should be able to
-// add entries one at a time, run their own gates, and trust that
-// the loader was already proven correct against an empty file.
-// Skipping this assertion would let a regression in the parser
-// (e.g. requiring at least one entry) hide until the first category
-// prompt runs.
-func TestEmptyRoutingIsLoadable(t *testing.T) {
+// The original prompt-0025 form of this test asserted len(entries)==0
+// to lock the empty-file contract for the per-category prompts. Now
+// that prompts 0040-0047 incrementally populate the file, the
+// invariant is "the loader succeeds and Load/LoadMap agree" — the
+// reflective coverage test in prompt 0048 enforces the per-category
+// coverage from the protomodel side.
+func TestEmbeddedRoutingIsLoadable(t *testing.T) {
 	entries, err := Load()
 	if err != nil {
 		t.Fatalf("Load returned unexpected error: %v", err)
-	}
-	if got := len(entries); got != 0 {
-		t.Fatalf("Load: expected 0 entries (routing.yaml ships empty in prompt 0025), got %d: %+v", got, entries)
 	}
 
 	m, err := LoadMap()
 	if err != nil {
 		t.Fatalf("LoadMap returned unexpected error: %v", err)
 	}
-	if got := len(m); got != 0 {
-		t.Fatalf("LoadMap: expected empty map, got %d entries", got)
+	if got, want := len(m), len(entries); got != want {
+		t.Fatalf("LoadMap: map has %d entries, Load has %d (loader disagreement)", got, want)
 	}
 }
 
 // TestRouterRejectsUnknownField verifies Route returns ErrNoRoute
 // (wrapped via fmt.Errorf %w) for any Field not present in
-// routing.yaml. Because routing.yaml is empty in this prompt, every
-// Field is unknown, so this test doubles as the lower-bound
-// guarantee: an empty routing.yaml + a non-empty stream means the
-// router fails LOUDLY for every value rather than silently dropping.
+// routing.yaml. The test stands up a Router with a nopWriter for
+// every destination currently referenced by the embedded routing.yaml
+// so that New() succeeds even after per-category prompts (0040-0047)
+// have populated the file, then asserts an unrouted Field still
+// fails LOUDLY.
+//
+// The probe Field is a fixed sentinel that intentionally has no
+// proto counterpart, so this test stays valid as more category
+// prompts land additional routes.
 func TestRouterRejectsUnknownField(t *testing.T) {
-	r, err := New(nil)
+	const sentinelField = "RouterTestUnknownFieldSentinel"
+
+	entries, err := Load()
 	if err != nil {
-		t.Fatalf("New(nil): %v", err)
+		t.Fatalf("Load: %v", err)
 	}
-	err = r.Route(context.Background(), codec.Atomic{Field: "VehicleSpeed"})
+	writers := map[Destination]Writer{}
+	for _, e := range entries {
+		if e.Destination == DestDrop {
+			continue
+		}
+		if _, ok := writers[e.Destination]; !ok {
+			writers[e.Destination] = nopWriter{}
+		}
+	}
+
+	r, err := New(writers)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	err = r.Route(context.Background(), codec.Atomic{Field: sentinelField})
 	if err == nil {
 		t.Fatal("Route: expected error for unknown Field, got nil")
 	}
 	if !errors.Is(err, ErrNoRoute) {
 		t.Fatalf("Route: expected error to wrap ErrNoRoute, got %v", err)
 	}
-	if !strings.Contains(err.Error(), "VehicleSpeed") {
+	if !strings.Contains(err.Error(), sentinelField) {
 		t.Fatalf("Route: expected error to mention offending Field name, got %q", err.Error())
 	}
 }
