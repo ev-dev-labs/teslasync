@@ -29,6 +29,11 @@ export {
   type BulkAction,
   type BulkActionsToolbarProps,
 } from './BulkActionsToolbar';
+// Phase-45 / Prompt 32 — singular-name alias of the same component.
+export {
+  BulkActionToolbar,
+  type BulkActionToolbarProps,
+} from './BulkActionToolbar';
 export {
   SeverityBadge,
   SeverityIcon,

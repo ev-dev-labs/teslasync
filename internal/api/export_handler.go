@@ -24,6 +24,9 @@ type ExportHandler struct {
 	db         *database.DB
 	mqttClient pahomqtt.Client
 	jobRepo    *database.ExportJobRepo
+	// bulkOverride lets tests substitute the bulk store without standing
+	// up a real *database.ExportJobRepo. Always nil in production.
+	bulkOverride exportBulkStore
 }
 
 // NewExportJobHandler creates a handler with MQTT support for async exports.

@@ -91,11 +91,13 @@ const MediaPlayer = lazy(() => import('./features/vehicle-systems/pages/MediaPla
 
 // Automations
 const AutomationsListPage = lazy(() => import('./features/automations/pages/AutomationsListPage'))
+const AutomationListPage = lazy(() => import('./features/automations/pages/AutomationListPage'))
 const AutomationBuilderPage = lazy(() => import('./features/automations/pages/AutomationBuilderPage'))
 
 // Notifications & Alerts
 const Alerts = lazy(() => import('./features/notifications/pages/AlertsPage'))
 const AlertStudio = lazy(() => import('./features/notifications/pages/AlertStudioPage'))
+const AlertRulesPage = lazy(() => import('./features/notifications/pages/AlertRulesPage'))
 const Notifications = lazy(() => import('./features/notifications/pages/NotificationsPage'))
 
 // Telemetry & Signals
@@ -123,6 +125,7 @@ const RedisSignalViewer = lazy(() => import('./features/admin/pages/RedisSignalV
 // System & Ops
 const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
 const DataExport = lazy(() => import('./features/system/pages/DataExportPage'))
+const ExportsPage = lazy(() => import('./features/exports/pages/ExportsPage'))
 const DataRepair = lazy(() => import('./features/system/pages/DataRepairPage'))
 const DBHealthDashboard = lazy(() => import('./features/system/pages/DBHealthPage'))
 const StateMachineDebugger = lazy(() => import('./features/system/pages/StateMachineDebuggerPage'))
@@ -218,10 +221,12 @@ export default function App() {
         <Route path="commands" element={<SafeRoute name="Commands"><Commands /></SafeRoute>} />
         <Route path="command-history" element={<SafeRoute name="CommandHistory"><CommandHistory /></SafeRoute>} />
         <Route path="automations" element={<SafeRoute name="Automations"><AutomationsListPage /></SafeRoute>} />
+        <Route path="automations/list" element={<SafeRoute name="AutomationList"><AutomationListPage /></SafeRoute>} />
         <Route path="automations/new" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
         <Route path="automations/:id/edit" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
         <Route path="alerts" element={<SafeRoute name="Alerts"><Alerts /></SafeRoute>} />
         <Route path="alert-studio" element={<SafeRoute name="AlertStudio"><AlertStudio /></SafeRoute>} />
+        <Route path="alert-rules" element={<SafeRoute name="AlertRules"><AlertRulesPage /></SafeRoute>} />
         <Route path="geofences" element={<SafeRoute name="Geofences"><Geofences /></SafeRoute>} />
         <Route path="settings" element={<SafeRoute name="Settings"><Settings /></SafeRoute>} />
         <Route path="drives/:id" element={<SafeRoute name="DriveDetail"><DriveDetail /></SafeRoute>} />
@@ -277,6 +282,7 @@ export default function App() {
         <Route path="weekly-digest" element={<SafeRoute name="WeeklyDigest"><WeeklyDigest /></SafeRoute>} />
         <Route path="maintenance" element={<SafeRoute name="Maintenance"><Maintenance /></SafeRoute>} />
         <Route path="data-export" element={<SafeRoute name="DataExport"><DataExport /></SafeRoute>} />
+        <Route path="exports" element={<SafeRoute name="Exports"><ExportsPage /></SafeRoute>} />
         <Route path="energy-flow" element={<SafeRoute name="EnergyFlow"><EnergyFlow /></SafeRoute>} />
         <Route path="power-flow" element={<SafeRoute name="PowerFlowDashboard"><PowerFlowDashboard /></SafeRoute>} />
         <Route path="energy-products" element={<SafeRoute name="EnergyProducts"><EnergyProducts /></SafeRoute>} />

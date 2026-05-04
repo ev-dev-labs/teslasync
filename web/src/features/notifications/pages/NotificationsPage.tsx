@@ -17,7 +17,7 @@
  * them as toggles without changing this file's contract.
  */
 
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Archive, ArchiveRestore, Bell, MailOpen, Trash2, CheckCheck } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
@@ -28,6 +28,7 @@ import { Skeleton } from '@/components/feedback/Skeleton';
 import { useToast } from '@/components/feedback/Toast';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
 import { useUrlEnum, useUrlString, useUrlArray } from '@/hooks/useUrlState';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import {
@@ -207,21 +208,27 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     markReadMut.mutate(unread);
   }, [archived, isLoading, rows, markReadMut]);
 
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  // Phase-45 / Prompt 32 — generic bulk-selection helper replaces the
+  // hand-rolled Set<number> state from Phase-45 / 28. The hook owns the
+  // selection; we expose the same `selected`/`toggleSelected`/`clearSelection`
+  // / `selectAllVisible` accessors so the rest of the page (NotificationRow
+  // props, BulkActionsToolbar, header checkbox) stays untouched.
+  const bulkSelection = useBulkSelection<number>();
+  const selected = bulkSelection.selectedIds;
+  const clearSelection = bulkSelection.clear;
+  const toggleSelected = useCallback(
+    (id: number, on: boolean) => bulkSelection.setSelected(id, on),
+    [bulkSelection],
+  );
+  const visibleIds = useMemo(() => rows.map(r => r.id), [rows]);
+  const selectAllVisible = useCallback(
+    () => bulkSelection.selectAll(visibleIds),
+    [bulkSelection, visibleIds],
+  );
+  const allVisibleSelected = bulkSelection.masterState(visibleIds) === 'all';
   // Drop selections when filter changes — selection should never carry over
   // across a different result set.
-  useEffect(() => { setSelected(new Set()); }, [filters]);
-
-  const toggleSelected = (id: number, on: boolean) => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (on) next.add(id); else next.delete(id);
-      return next;
-    });
-  };
-  const clearSelection = () => setSelected(new Set());
-  const selectAllVisible = () => setSelected(new Set(rows.map(r => r.id)));
-  const allVisibleSelected = rows.length > 0 && rows.every(r => selected.has(r.id));
+  useEffect(() => { clearSelection(); }, [filters, clearSelection]);
 
   const grouped = useMemo(() => groupByDay(rows), [rows]);
 

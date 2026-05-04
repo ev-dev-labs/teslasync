@@ -102,11 +102,13 @@ export const LAZY_ROUTE_IMPORTS: Array<{
 
   // Automations
   { name: 'AutomationsListPage', load: () => import('../features/automations/pages/AutomationsListPage') },
+  { name: 'AutomationListPage', load: () => import('../features/automations/pages/AutomationListPage') },
   { name: 'AutomationBuilderPage', load: () => import('../features/automations/pages/AutomationBuilderPage') },
 
   // Notifications
   { name: 'Alerts', load: () => import('../features/notifications/pages/AlertsPage') },
   { name: 'AlertStudio', load: () => import('../features/notifications/pages/AlertStudioPage') },
+  { name: 'AlertRulesPage', load: () => import('../features/notifications/pages/AlertRulesPage') },
   { name: 'Notifications', load: () => import('../features/notifications/pages/NotificationsPage') },
 
   // Telemetry
@@ -134,6 +136,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   // System
   { name: 'SystemStatus', load: () => import('../features/system/pages/SystemStatusPage') },
   { name: 'DataExport', load: () => import('../features/system/pages/DataExportPage') },
+  { name: 'ExportsPage', load: () => import('../features/exports/pages/ExportsPage') },
   { name: 'DataRepair', load: () => import('../features/system/pages/DataRepairPage') },
   { name: 'DBHealthDashboard', load: () => import('../features/system/pages/DBHealthPage') },
   { name: 'StateMachineDebugger', load: () => import('../features/system/pages/StateMachineDebuggerPage') },

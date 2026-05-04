@@ -121,6 +121,44 @@ export function useDeleteAutomation() {
   });
 }
 
+export type AutomationBulkOp = 'enable' | 'disable' | 'delete';
+
+export interface AutomationBulkResult {
+  updated?: number;
+  deleted?: number;
+  failed: { id: number; reason: string }[];
+}
+
+/**
+ * useBulkAutomationsUpdate — POST /automations/bulk
+ * Phase-45 / Prompt 32. Issues an allowlisted bulk op against `ids`,
+ * invalidates the automations list + history, and toasts on outcome.
+ */
+export function useBulkAutomationsUpdate() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (vars: { ids: number[]; op: AutomationBulkOp }) =>
+      request<AutomationBulkResult>('/automations/bulk', {
+        method: 'POST',
+        body: JSON.stringify({ ids: vars.ids, op: vars.op }),
+      }),
+    onSuccess: (_data, vars) => {
+      invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: ['automation-history'] });
+      const key = `toast.automation.bulk.${vars.op}.success`;
+      const fallback = vars.op === 'delete'
+        ? 'Automations deleted'
+        : vars.op === 'enable'
+          ? 'Automations enabled'
+          : 'Automations disabled';
+      success(key, fallback);
+    },
+    onError: (err) =>
+      error(err, 'toast.automation.bulk.error', 'Bulk automation update failed'),
+  });
+}
+
 export function useTestRunAutomation() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();

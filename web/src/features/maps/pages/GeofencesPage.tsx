@@ -15,7 +15,7 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, Tabs, PinButton } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { MetricCard, BulkActionToolbar } from '@/components/data-display';
 import { Skeleton, EmptyState, Spinner, AlertBanner } from '@/components/feedback';
 import { useToast } from '@/components/feedback/Toast';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -23,6 +23,8 @@ import { SearchInput, FilterBar } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
+import { useBulkGeofencesDelete } from '@/api/hooks/useLocations';
 import {
   MapContainer,
   MapTileLayer,
@@ -125,6 +127,13 @@ export default function GeofencesPage() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<number>(0);
   const [locationLoading, setLocationLoading] = useState(false);
   const [search, setSearch] = useState('');
+
+  // Bulk selection (Phase-45 / Prompt 32) — keys off geofence ids; cleared
+  // when filtered list changes so users don't carry stale selections.
+  // The frontend Geofence type carries id as string (legacy) but the
+  // backend bulk endpoint expects int64s — we convert at the call site.
+  const sel = useBulkSelection<string>();
+  const bulkDelete = useBulkGeofencesDelete();
 
   // Dirty when the modal is open AND the form diverges from the initial
   // snapshot taken on open. Closed modal => not dirty so we don't pester the
@@ -508,6 +517,37 @@ export default function GeofencesPage() {
       {/* Geofence List */}
       {!isLoading && (
         <StaggerContainer className="space-y-3">
+          <StaggerItem>
+            <BulkActionToolbar
+              selectedIds={Array.from(sel.selectedIds)}
+              total={sortedGeofences.length}
+              onClear={sel.clear}
+              itemNoun={{
+                one: t('geofences.noun.one', 'geofence'),
+                other: t('geofences.noun.other', 'geofences'),
+              }}
+              actions={[
+                {
+                  id: 'delete',
+                  label: t('geofences.bulk.delete', 'Delete'),
+                  variant: 'danger',
+                  icon: <Trash2 className="h-4 w-4" />,
+                  confirm: {
+                    title: t('geofences.bulk.deleteConfirm.title', 'Delete geofences?'),
+                    description: t(
+                      'geofences.bulk.deleteConfirm.body',
+                      'Selected geofences will be removed permanently. Linked alert rules and automations will continue to reference their old IDs.',
+                    ),
+                    confirmLabel: t('common.delete', 'Delete'),
+                  },
+                  onClick: async (ids) => {
+                    await bulkDelete.mutateAsync(ids.map((i) => Number(i)));
+                    sel.clear();
+                  },
+                },
+              ]}
+            />
+          </StaggerItem>
           {geofences && geofences.length > 0 && (
             <StaggerItem>
               <FilterBar>
@@ -533,6 +573,18 @@ export default function GeofencesPage() {
                   >
                     {/* Left: info */}
                     <div className="flex items-start gap-4">
+                      <label className="flex items-center pt-1.5">
+                        <span className="sr-only">
+                          {t('geofences.selectGeofence', 'Select geofence {{name}}', { name: g.name })}
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={sel.isSelected(g.id)}
+                          onChange={() => sel.toggle(g.id)}
+                          className="h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-transparent"
+                          aria-label={t('geofences.selectGeofence', 'Select geofence {{name}}', { name: g.name })}
+                        />
+                      </label>
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-2)]">
                         <MapPin className="h-5 w-5 text-[var(--text-muted)]" />
                       </div>

@@ -541,6 +541,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/geofences", func(r chi.Router) {
 			r.Get("/", geofenceHandler.List)
 			r.Post("/", geofenceHandler.Create)
+			// Bulk operations (Phase-45 / Prompt 32) — kept ahead of the
+			// {geofenceID} subrouter so chi matches the static path first.
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", geofenceHandler.BulkUpdate)
 			r.Route("/{geofenceID}", func(r chi.Router) {
 				r.Get("/", geofenceHandler.Get)
 				r.Put("/", geofenceHandler.Update)
@@ -654,6 +657,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/automations", func(r chi.Router) {
 			r.Get("/", automationHandler.List)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", automationHandler.Create)
+
+			// Bulk operations (Phase-45 / Prompt 32) — registered before the
+			// {id} subrouter so chi matches the static `/bulk` path first.
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", automationHandler.BulkUpdate)
 
 			// SSE stream for real-time automation events (static route before {id} param)
 			// Protected by ForwardAuthMiddleware on the parent /api/v1 group
@@ -1247,6 +1254,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/", exportJobHandler.SubmitJob)
 			r.Post("/account", exportJobHandler.SubmitAccountJob)
 			r.Post("/import", exportJobHandler.SubmitImportJob)
+			// Bulk operations (Phase-45 / Prompt 32) — registered before
+			// /{jobID} so chi matches the static `/bulk` path first.
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", exportJobHandler.BulkUpdate)
 			r.Get("/", exportJobHandler.ListJobs)
 			r.Get("/{jobID}", exportJobHandler.GetJob)
 			r.Get("/{jobID}/download", exportJobHandler.DownloadJob)
