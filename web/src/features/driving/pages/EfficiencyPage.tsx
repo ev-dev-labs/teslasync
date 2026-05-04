@@ -390,6 +390,7 @@ export default function EfficiencyPage() {
           </h3>
           {tempBuckets.length > 0 ? (
             <DataTable
+              tableId="driving:efficiency-temp-buckets"
               data={tempBuckets}
               keyExtractor={(b) => b.range}
               compact

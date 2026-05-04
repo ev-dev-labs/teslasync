@@ -312,6 +312,7 @@ export default function SleepEfficiencyPage() {
               </h3>
               {recentEvents.length > 0 ? (
                 <DataTable<SleepDrainEvent>
+                  tableId="battery:sleep-drain-events"
                   columns={drainColumns}
                   data={recentEvents}
                   keyExtractor={(event) => event.id}

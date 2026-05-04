@@ -769,6 +769,7 @@ export default function SafetySettingsPage() {
                 <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No history records found.')} />
               ) : (
                 <DataTable<SafetySnapshot>
+                  tableId="vehicle-systems:safety-history"
                   columns={historyColumns}
                   data={sortedHistory}
                   keyExtractor={(row) => row.id ?? 0}

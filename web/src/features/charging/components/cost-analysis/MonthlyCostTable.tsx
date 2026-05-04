@@ -109,6 +109,7 @@ export function MonthlyCostTable({ data }: MonthlyCostTableProps) {
       </h3>
       {sortedData.length > 0 ? (
         <DataTable<MonthlyBucket>
+          tableId="charging:cost-monthly"
           columns={columns}
           data={sortedData}
           keyExtractor={(row) => row.month}

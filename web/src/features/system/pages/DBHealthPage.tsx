@@ -273,6 +273,7 @@ export default function DBHealthPage() {
               </div>
             ) : (
               <DataTable<TableInfo>
+                tableId="system:db-health-tables"
                 columns={tableColumns}
                 data={sortedTables}
                 keyExtractor={(tbl) => tbl.name}

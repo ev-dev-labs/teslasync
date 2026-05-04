@@ -677,6 +677,7 @@ export default function FleetComparePage() {
               <Skeleton lines={8} />
             ) : (
               <DataTable
+                tableId="analytics:fleet-compare"
                 columns={tableColumns}
                 data={comparisonRows}
                 keyExtractor={(r) => r.metric}

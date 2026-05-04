@@ -643,6 +643,7 @@ export default function BackupRestorePage() {
             />
           ) : (
             <DataTable<BackupConfig>
+              tableId="admin:backup-configs"
               columns={configColumns}
               data={configs}
               keyExtractor={(r) => r.id}
@@ -677,6 +678,7 @@ export default function BackupRestorePage() {
           ) : (
             <>
               <DataTable<BackupRun>
+                tableId="admin:backup-runs"
                 columns={runColumns}
                 data={runs}
                 keyExtractor={(r) => r.id}
@@ -891,6 +893,7 @@ export default function BackupRestorePage() {
                   {t('backup.tables', 'Tables')} ({previewData.tables.length})
                 </p>
                 <DataTable<{ name: string; rows: number }>
+                  tableId="admin:backup-preview-tables"
                   columns={previewColumns}
                   data={previewData.tables}
                   keyExtractor={(r) => r.name}

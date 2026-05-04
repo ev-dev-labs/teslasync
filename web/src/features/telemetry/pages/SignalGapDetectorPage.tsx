@@ -223,6 +223,7 @@ export default function SignalGapDetectorPage() {
             </div>
           ) : filtered.length > 0 ? (
             <DataTable<SignalRow>
+              tableId="telemetry:signal-gap"
               columns={gapColumns}
               data={filtered}
               keyExtractor={(signal) => signal.name}

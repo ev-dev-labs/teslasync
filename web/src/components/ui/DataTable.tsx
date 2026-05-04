@@ -103,7 +103,20 @@ interface DataTableProps<T> {
   // ── Phase-40 / Prompt 25 additions ────────────────────────────────────
   /** Stable identifier used to persist column visibility & widths in
    *  localStorage. Required when using `selectable`, `resizable`, or
-   *  the column-visibility menu. */
+   *  the column-visibility menu.
+   *
+   *  As of Phase-46 / Prompt 03 every `<DataTable>` caller under
+   *  `web/src/features/**` MUST set `tableId`. The
+   *  `audit:datatable-tableid` script (chained from `npm run lint`) fails
+   *  the build if a new caller forgets it. Without `tableId`, column
+   *  visibility / widths / sort / page-size silently reset on every
+   *  reload — which is the single biggest "the app forgot what I was
+   *  doing" complaint.
+   *
+   *  Choose a stable, descriptive id of the form `<feature>:<purpose>`
+   *  (e.g. `tableId="drives:list"`, `tableId="admin:audit-logs"`).
+   *  Renaming an existing id orphans every user's persisted layout, so
+   *  treat ids as part of the public contract once shipped. */
   tableId?: string
 
   // SELECTION

@@ -67,6 +67,7 @@ export function RecentDrivesSection({ drives }: RecentDrivesSectionProps) {
       </div>
       {drives && drives.length > 0 ? (
         <DataTable
+          tableId="vehicles:detail-recent-drives"
           columns={driveColumns}
           data={drives}
           keyExtractor={(d) => d.id}

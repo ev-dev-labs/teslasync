@@ -56,7 +56,14 @@ export function TeslaApiRefTool() {
           onChange={(e) => setSearch(e.target.value)}
           icon={<BookOpen className="h-4 w-4" />}
         />
-        <DataTable columns={columns} data={filtered} keyExtractor={(r) => r.path} compact pagination />
+        <DataTable
+          tableId="admin:tesla-api-ref"
+          columns={columns}
+          data={filtered}
+          keyExtractor={(r) => r.path}
+          compact
+          pagination
+        />
       </div>
     </ToolCard>
   )

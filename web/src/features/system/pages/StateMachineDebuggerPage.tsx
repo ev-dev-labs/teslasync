@@ -698,6 +698,7 @@ export default function StateMachineDebuggerPage() {
               <Skeleton height={200} />
             ) : summaryRows.length > 0 ? (
               <DataTable<StatSummaryRow>
+                tableId="system:fsm-summary"
                 columns={summaryColumns}
                 data={summaryRows}
                 keyExtractor={(row) => row.to_state}
@@ -760,6 +761,7 @@ export default function StateMachineDebuggerPage() {
           ) : transitions.length > 0 ? (
             <>
               <DataTable<FSMTransition>
+                tableId="system:fsm-transitions"
                 columns={timelineColumns}
                 data={transitions}
                 keyExtractor={(tr) => String(tr.id)}

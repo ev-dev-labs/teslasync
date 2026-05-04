@@ -283,6 +283,7 @@ export default function MQTTInspectorPage() {
             </div>
           ) : (
             <DataTable<VehicleTelemetry>
+              tableId="telemetry:mqtt-inspector"
               columns={vehicleColumns}
               data={vehicles}
               keyExtractor={(v) => v.vin}

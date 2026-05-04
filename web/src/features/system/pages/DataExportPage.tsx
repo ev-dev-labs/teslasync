@@ -776,6 +776,7 @@ function ExportHistoryTable({
         />
       ) : (
         <DataTable
+          tableId="system:data-export-jobs"
           columns={columns}
           data={jobs}
           keyExtractor={(row) => row.id}

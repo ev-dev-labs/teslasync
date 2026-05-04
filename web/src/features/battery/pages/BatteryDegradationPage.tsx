@@ -672,6 +672,7 @@ export default function BatteryDegradationPage() {
           </div>
           {data?.history && data.history.length > 0 ? (
             <DataTable
+              tableId="battery:degradation-history"
               columns={columns}
               data={data.history}
               keyExtractor={(row: DegradationEntry) =>

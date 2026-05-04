@@ -679,6 +679,7 @@ export default function BatteryCellsPage() {
           </div>
           {sortedCells.length > 0 ? (
             <DataTable
+              tableId="battery:cells"
               columns={columns}
               data={sortedCells}
               keyExtractor={(r) => r.cell_id}

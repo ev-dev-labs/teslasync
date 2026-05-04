@@ -513,6 +513,7 @@ export default function SignalExplorerPage() {
                 </div>
               ) : activeStats && activeStats.length > 0 ? (
                 <DataTable
+                  tableId="telemetry:signal-explorer-stats"
                   columns={[
                     { key: 'signal', header: t('Signal'), render: (s) => <span className="font-mono font-semibold" style={{ color: CHART_COLORS[activeStats.indexOf(s) % CHART_COLORS.length] }}>{s.signal}</span> },
                     { key: 'min', header: t('Min'), render: (s) => <span className="font-mono text-[var(--text-secondary)]">{fmtNumber(s.min)}</span> },
@@ -540,6 +541,7 @@ export default function SignalExplorerPage() {
               ) : paginatedRows.length > 0 ? (
                 <>
                   <DataTable
+                    tableId="telemetry:signal-explorer-data"
                     columns={tableColumns}
                     data={paginatedRows}
                     keyExtractor={(r) => `${r.created_at}-${r.signal}`}

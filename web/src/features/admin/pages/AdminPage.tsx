@@ -283,6 +283,7 @@ export default function AdminPage() {
               </FilterBar>
               {filteredAuditLogs.length > 0 ? (
                 <DataTable
+                  tableId="admin:audit-logs"
                   columns={auditColumns}
                   data={filteredAuditLogs}
                   keyExtractor={(log) => String(log.id)}
@@ -317,6 +318,7 @@ export default function AdminPage() {
           ) : (apiKeys as APIKey[])?.length ? (
             <div className="mt-4">
               <DataTable
+                tableId="admin:api-keys"
                 columns={keyColumns}
                 data={apiKeys as APIKey[]}
                 keyExtractor={(k) => String(k.id)}

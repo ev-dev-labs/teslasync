@@ -112,6 +112,7 @@ export function BackendStatusSection() {
           <div>
             <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Component Health')}</h4>
             <DataTable
+              tableId="system:backend-components"
               columns={componentColumns}
               data={componentRows}
               keyExtractor={(r) => r.name}

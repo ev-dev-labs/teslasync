@@ -318,6 +318,7 @@ export default function RedisSignalViewerPage() {
               )
             ) : (
               <DataTable
+                tableId="admin:redis-signals"
                 data={filteredRows}
                 columns={columns}
                 keyExtractor={(row) => row.name}

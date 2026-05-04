@@ -106,7 +106,15 @@ export function DataPipelineSection() {
                   <StatCard label={t('Completed')} value={completedJobs} icon={<CheckCircle className="h-4 w-4" />} />
                   <StatCard label={t('Failed')} value={failedJobs} icon={<XCircle className="h-4 w-4" />} />
                 </Grid>
-                <DataTable columns={exportColumns} data={exportJobs} keyExtractor={(j) => j.id} compact pagination emptyMessage={t('No export jobs')} />
+                <DataTable
+                  tableId="system:pipeline-export-jobs"
+                  columns={exportColumns}
+                  data={exportJobs}
+                  keyExtractor={(j) => j.id}
+                  compact
+                  pagination
+                  emptyMessage={t('No export jobs')}
+                />
               </>
             ) : (
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No export jobs in queue')} />

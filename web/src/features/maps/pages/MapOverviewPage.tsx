@@ -492,6 +492,7 @@ export default function MapOverviewPage() {
             <Skeleton lines={6} height={16} className="mt-2" />
           ) : history && history.length > 0 ? (
             <DataTable<PositionRecord>
+              tableId="maps:overview-history"
               columns={historyColumns}
               data={history}
               keyExtractor={(r) => r.id}

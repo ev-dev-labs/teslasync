@@ -840,6 +840,7 @@ export default function NavigationRoutePage() {
                 </span>
                 {waypoints.length > 0 ? (
                   <DataTable
+                    tableId="maps:navigation-waypoints"
                     columns={waypointColumns}
                     data={waypoints}
                     keyExtractor={(wp) => `${wp.name}-${wp.distance}`}
@@ -907,6 +908,7 @@ export default function NavigationRoutePage() {
                 <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('nav.noDestinations', 'No destination history available.')} />
               ) : (
                 <DataTable
+                  tableId="maps:navigation-recent-destinations"
                   columns={destColumns}
                   data={recentDestinations}
                   keyExtractor={(row) => `${row.time}-${row.destination}`}
@@ -969,6 +971,7 @@ export default function NavigationRoutePage() {
                 />
               ) : (
                 <DataTable
+                  tableId="maps:navigation-location-history"
                   columns={historyColumns}
                   data={sortedHistory}
                   keyExtractor={(row) => row.id}

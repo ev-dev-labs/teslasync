@@ -389,6 +389,7 @@ export default function PeriodComparePage() {
                 {t('compare.tableTitle', 'Comparison Details')}
               </p>
               <DataTable
+                tableId="analytics:period-compare"
                 columns={columns}
                 data={tableRows}
                 keyExtractor={(r) => r.metric}

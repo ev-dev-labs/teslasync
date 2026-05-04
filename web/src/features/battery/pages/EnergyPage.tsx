@@ -719,6 +719,7 @@ export default function EnergyPage() {
               </h3>
               {sessions && sessions.length > 0 ? (
                 <DataTable
+                  tableId="battery:energy-sessions"
                   columns={sessionColumns}
                   data={sessions.slice(0, 15)}
                   keyExtractor={(s) => s.id}
