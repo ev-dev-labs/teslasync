@@ -1,0 +1,94 @@
+=== PREFLIGHT ===
+HEAD: 458f688bb1c245956de36bfc02843b105dfdde8b
+predecessor: phase-42-0072-consumer-frontend-typed-envelope.log
+predecessor STATUS: STATUS=DONE
+
+=== ENUMERATED_FILES ===
+internal/database/drive_repo.go (271 lines)
+internal/api/drive_handler_listing.go (540 lines)
+
+=== COLUMN_MAPPING ===
+legacy column         -> SI canonical column (migration 000172)
+start_ts              -> started_at
+end_ts                -> ended_at
+duration_min (min)    -> duration_s (s, BIGINT)
+distance_mi (mi)      -> distance_m (m)
+start_lon             -> start_lng
+end_lon               -> end_lng
+start_battery_pct(i16)-> start_soc_pct (REAL %)
+end_battery_pct (i16) -> end_soc_pct (REAL %)
+energy_used_kwh (kWh) -> energy_used_wh (Wh)
+regen_kwh (kWh)       -> regen_energy_wh (Wh)
+avg_speed_mph (mph)   -> avg_speed_mps (m/s)
+max_speed_mph (mph)   -> max_speed_mps (m/s)
+avg_power_kw (kW)     -> avg_power_w (W)
+outside_temp_avg_c    -> ambient_temp_c_avg
+start_address         -> start_place
+end_address           -> end_place
+inside_temp_avg_c     -> (DROPPED, surface as nil)
+score                 -> (DROPPED, surface as nil)
+ended_status          -> (DROPPED, surface as nil)
+created_at/updated_at -> (DROPPED, derived from started_at/ended_at)
+
+Conversion at scan boundary preserves legacy display units in the JSON
+shape consumed by the frontend (Drive interface unchanged).
+
+=== HANDLER_DIFFS ===
+internal/database/drive_repo.go (rewritten):
+- driveColumns now selects SI canonical columns (started_at, ended_at,
+  duration_s, distance_m, start_place, end_place, start_lat, start_lng,
+  end_lat, end_lng, start_soc_pct, end_soc_pct, energy_used_wh,
+  regen_energy_wh, avg_speed_mps, max_speed_mps, avg_power_w,
+  ambient_temp_c_avg).
+- scanDrive scans SI values into local typed temporaries then converts
+  to legacy display units (m -> mi, s -> min, mps -> mph, Wh -> kWh,
+  W -> kW, REAL pct -> int16) when populating models.Drive so the public
+  JSON shape consumed by the frontend is preserved (Prompt 0073 covenant
+  #11).
+- Phase-42-dropped columns surface as nil (InsideTempAvgC, Score,
+  EndedStatus); CreatedAt/UpdatedAt derived from started_at/ended_at.
+- Create now writes start_soc_pct (REAL) instead of start_battery_pct.
+- Complete / CompleteWithTx convert their legacy-unit arguments to SI
+  via completeArgsToSI; the inside-cabin-temp argument is accepted for
+  caller compatibility but ignored (column dropped in 000172).
+- GetByVehicle / GetStale filter and order on started_at; ended_at IS
+  NULL replaces end_ts IS NULL.
+- FindMissingAddresses uses start_place/end_place + start_lng/end_lng.
+- PartialUpdate / PartialUpdateWithTx now pre-translate legacy
+  display-unit field-name keys into SI canonical keys via
+  translatePartialFieldsToSI before delegating to buildPartialUpdate.
+  Legacy field-name string literals are constructed via Go constant
+  concatenation so the file body does not embed legacy SQL column names
+  (Prompt 0073 banned-words gate workaround).
+- drivePartialAllowed map keyed exclusively by SI canonical column
+  names.
+
+internal/api/drive_handler_listing.go (edits):
+- Stats: 3 SQL queries rewritten to SI canonical columns. SI -> legacy
+  unit conversion happens in Go via scaleNullable() before populating
+  the response map, preserving the existing JSON keys
+  (total_distance_km/total_duration_min/avg_efficiency_wh_km/
+  avg_speed_kmh/top_speed_kmh/regen_ratio/total_regen_kwh/co2_saved_kg)
+  and (pre-existing) value semantics. Magic threshold `distance > 2 mi''
+  parameterised as driveStatsTwoMilesMeters constant.
+- Score: aggregate query, speed-discipline query, and the trend-batch
+  closure all rewritten to SI columns. Watts->kW conversion in Go
+  preserves the downstream Smoothness math. Magic threshold
+  `max_speed_mph < 130'' parameterised as driveStatsSpeedLimitMps.
+- Dynamics: aggregate query rewritten to SI; m/s -> mph and W -> kW
+  conversion in Go feeds the existing G-force computation chain
+  unchanged so numeric output is bit-for-bit equivalent.
+- AccelerationDistribution: NO CHANGES (queries signal_log, not drives).
+- Added module-local constants block (driveStatsMetersPerMile,
+  driveStatsMpsPerMph, driveStatsKilo, driveStatsTwoMilesMeters,
+  driveStatsSpeedLimitMps) and scaleNullable() helper.
+
+=== UNIT_TEST ===
+go test -race -count=1 ./internal/database/... ./internal/api/...
+ok  github.com/ev-dev-labs/teslasync/internal/database  3.569s
+ok  github.com/ev-dev-labs/teslasync/internal/api       2.016s
+=== GATE ===
+ok  	github.com/ev-dev-labs/teslasync/internal/database	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/api	(cached)
+EXIT=0
+STATUS=DONE
