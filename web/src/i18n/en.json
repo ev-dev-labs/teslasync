@@ -2107,7 +2107,41 @@
     "booleans": "Booleans",
     "selectPrompt": "Select a vehicle to view its cached Redis signals",
     "noSignals": "No signals cached for this vehicle",
-    "noMatch": "No signals match the current filter"
+    "noMatch": "No signals match the current filter",
+    "diagnostic": {
+      "modeLocal": {
+        "title": "Redis L2 writes are disabled",
+        "body": "LIVE_SIGNAL_STORE_MODE=local means the telemetry pipeline writes only to the in-process L1 store and never mirrors to Redis. This page reads exclusively from Redis, so it cannot show data while local mode is active.",
+        "cta": "See live-state contract docs"
+      },
+      "mirrorBroken": {
+        "title": "L2 mirror is failing",
+        "body": "The in-process L1 store has {{count}} signals for this vehicle but Redis is empty. The async mirror goroutine in HybridLiveSignalStore.UpdateNonBlocking may be timing out or the Redis connection may be saturated. Check pod logs for \"live signal store: Redis mirror failed\"."
+      },
+      "noTelemetry": {
+        "title": "No recent telemetry for this vehicle",
+        "bodyStale": "Last L1 entry was {{date}}. The 7-day Redis TTL has likely expired. Wait for the next telemetry push or warm the cache from the cold-path reader.",
+        "bodyAbsent": "This vehicle has no L1 entries on this pod. Either telemetry has never streamed for it, or this pod restarted before any telemetry arrived."
+      },
+      "empty": {
+        "title": "No signals cached for this vehicle",
+        "body": "Both L1 and L2 are empty. If this vehicle is currently streaming, give the next batch a few seconds to arrive. Otherwise check the telemetry pipeline."
+      },
+      "otherVehicles": "Other vehicles with cached signals",
+      "meta": {
+        "mode": "Live store mode",
+        "key": "Redis key",
+        "l1Count": "L1 signals",
+        "l2Count": "L2 fields (raw)",
+        "l1LastSeen": "L1 last seen",
+        "l2LastSeen": "L2 last seen",
+        "vin": "VIN"
+      }
+    },
+    "headerChip": {
+      "mode": "Mode: {{mode}}",
+      "l1Seen": "L1 last: {{date}}"
+    }
   },
   "lifetime": {
     "unlocked": "✓ Unlocked",

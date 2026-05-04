@@ -272,7 +272,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		st.SetChargeStateReader(stateReader)
 		st.SetDriveStateReader(stateReader)
 	}
-	devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg))
+	devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg), WithSignalStore(opt.SignalStore))
 	if opt.CacheStore != nil {
 		if rdb := opt.CacheStore.Underlying(); rdb != nil {
 			devToolsHandler.redisCache = signal.NewRedisSignalCache(rdb)
@@ -1067,6 +1067,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/recent-alerts", devToolsHandler.RecentAlerts)
 			r.Get("/service-data", devToolsHandler.ServiceData)
 			r.Get("/redis-signals", devToolsHandler.RedisSignals)
+			r.Get("/redis-signals/keys", devToolsHandler.RedisSignalKeys)
 
 			// Raw telemetry signal capture
 			r.Route("/telemetry-capture", func(r chi.Router) {

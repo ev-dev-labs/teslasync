@@ -13,6 +13,7 @@ import { getRedisSignals, type RedisSignalEntry } from '@/api/devtools'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { fmtInt } from '@/lib/numberFormat'
 import { INTERVALS } from '@/lib/constants'
+import { RedisDiagnosticEmptyState } from '../components/RedisDiagnosticEmptyState'
 
 /* ─── signal categorization ─────────────────────────────────────────── */
 
@@ -152,6 +153,8 @@ export default function RedisSignalViewerPage() {
   const columns = useMemo(() => buildColumns(t), [t])
   const { sortKey, sortDir, onSort } = useSortToggle('name', 'asc')
 
+  const meta = signalData?.meta
+
   const vehicleOptions = vehicleList.map((v) => ({
     value: String(v.id),
     label: v.display_name || v.vin || `Vehicle ${v.id}`,
@@ -220,6 +223,34 @@ export default function RedisSignalViewerPage() {
           </GlassPanel>
         </FadeIn>
 
+        {/* Persistent diagnostic chips — visible whenever a vehicle is
+            selected so engineers don't have to clear the table to see
+            mode/VIN/last-seen. */}
+        {selectedVehicleId !== null && meta && (
+          <FadeIn>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <Badge
+                size="sm"
+                variant={meta.live_signal_store_mode === 'hybrid' ? 'success' : 'danger'}
+              >
+                {t('redis.headerChip.mode', 'Mode: {{mode}}', { mode: meta.live_signal_store_mode })}
+              </Badge>
+              {meta.vehicle_vin && (
+                <Badge size="sm" variant="neutral">
+                  <code className="font-mono">{meta.vehicle_vin}</code>
+                </Badge>
+              )}
+              {meta.l1_last_seen_at && (
+                <Badge size="sm" variant="info">
+                  {t('redis.headerChip.l1Seen', 'L1 last: {{date}}', {
+                    date: new Date(meta.l1_last_seen_at).toLocaleTimeString(),
+                  })}
+                </Badge>
+              )}
+            </div>
+          </FadeIn>
+        )}
+
         {/* Stats */}
         {selectedVehicleId !== null && (
           <FadeIn>
@@ -262,14 +293,18 @@ export default function RedisSignalViewerPage() {
                 <Skeleton className="h-8 w-full" />
               </div>
             ) : filteredRows.length === 0 ? (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-                icon={<Search className="h-10 w-10" />}
-                message={
-                  rows.length === 0
-                    ? t('redis.noSignals', 'No signals cached for this vehicle')
-                    : t('redis.noMatch', 'No signals match the current filter')
-                }
-              />
+              rows.length === 0 ? (
+                <RedisDiagnosticEmptyState
+                  vehicleId={selectedVehicleId!}
+                  meta={meta}
+                  onSelectVehicle={setSelectedVehicleId}
+                />
+              ) : (
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+                  icon={<Search className="h-10 w-10" />}
+                  message={t('redis.noMatch', 'No signals match the current filter')}
+                />
+              )
             ) : (
               <DataTable
                 data={filteredRows}
