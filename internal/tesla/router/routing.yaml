@@ -133,6 +133,18 @@ routes:
   - field: DefrostMode
     dest: climate_snapshot
     column: defrost_mode
+  # DestinationLocationLatitude/Longitude are the codec-flattened atomics of
+  # the DestinationLocation compound (proto field 112). They route to
+  # signal_log only — there is no current-state column on positions for
+  # navigation destination coordinates (positions.lat/lng carry the live
+  # vehicle position). The pair is emitted by the codec with a shared
+  # EmittedAt timestamp so any downstream consumer can re-pair them.
+  - field: DestinationLocationLatitude
+    dest: signal_log
+  - field: DestinationLocationLongitude
+    dest: signal_log
+  - field: DestinationName
+    dest: signal_log
   - field: DetailedChargeState
     dest: signal_log
   - field: DriveRail
@@ -161,6 +173,12 @@ routes:
   - field: Gear
     dest: drive_telemetry
     column: gear
+  - field: GpsHeading
+    dest: positions
+    column: heading_deg
+  - field: GpsState
+    dest: positions
+    column: gps_state
   - field: HvacACEnabled
     dest: climate_snapshot
     column: hvac_ac_enabled
@@ -206,9 +224,33 @@ routes:
   - field: LifetimeEnergyUsedDrive
     dest: drive_telemetry
     column: lifetime_energy_used_drive_wh
+  - field: LocatedAtFavorite
+    dest: signal_log
+  - field: LocatedAtHome
+    dest: signal_log
+  - field: LocatedAtWork
+    dest: signal_log
+  # LocationLatitude/Longitude are the codec-flattened atomics of the
+  # Location compound (proto field 21). They form a flatten group: the
+  # codec emits both in the same payload with a shared EmittedAt
+  # timestamp, and the positions writer (added in prompt 0061) buffers
+  # one half until the other arrives so the (lat, lng) pair lands on a
+  # single row. Routing is field-static per ADR-004 #8 — the pair-up
+  # logic lives in the writer, not here. Routing the compound `Location`
+  # itself is forbidden (the codec never emits it past the flatten step).
+  - field: LocationLatitude
+    dest: positions
+    column: lat
+  - field: LocationLongitude
+    dest: positions
+    column: lng
   - field: LongitudinalAcceleration
     dest: drive_telemetry
     column: longitudinal_acceleration_mps2
+  - field: MilesToArrival
+    dest: signal_log
+  - field: MinutesToArrival
+    dest: signal_log
   - field: ModuleTempMax
     dest: signal_log
   - field: ModuleTempMin
@@ -222,6 +264,14 @@ routes:
   - field: NumModuleTempMax
     dest: signal_log
   - field: NumModuleTempMin
+    dest: signal_log
+  # OriginLocationLatitude/Longitude are the codec-flattened atomics of
+  # the OriginLocation compound (proto field 111). Like the
+  # DestinationLocation pair, they route to signal_log only — no
+  # current-state column exists on positions for the trip origin.
+  - field: OriginLocationLatitude
+    dest: signal_log
+  - field: OriginLocationLongitude
     dest: signal_log
   - field: OutsideTemp
     dest: climate_snapshot
@@ -254,6 +304,12 @@ routes:
   - field: RearSeatHeaters
     dest: climate_snapshot
     column: rear_seat_heaters
+  - field: RouteLastUpdated
+    dest: signal_log
+  - field: RouteLine
+    dest: signal_log
+  - field: RouteTrafficMinutesDelay
+    dest: signal_log
   - field: ScheduledChargingMode
     dest: signal_log
   - field: ScheduledChargingPending
