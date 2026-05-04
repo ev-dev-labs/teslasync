@@ -1,0 +1,542 @@
+=== PREFLIGHT ===
+Datetime: 2026-05-04T09:21:47-07:00
+HEAD: 55da7a4913e225c6ba5e00d8ad19f4189cc84e16 (refactor/signals-rewrite)
+Predecessor: phase-42-0072-consumer-frontend-typed-envelope.log
+Predecessor markers (verified by reading the unique '^EXIT=' and
+'^STATUS=' lines emitted by the predecessor's own gate output):
+  EXIT=0
+  STATUS=DONE
+
+Working-tree baseline before gate (git status --porcelain):
+  (clean — phase-42-0072 log restored to HEAD with
+   `git checkout HEAD -- .github/prompts/db-refactor/logs/phase-42-0072-consumer-frontend-typed-envelope.log`
+   per the established Phase-42 log-workflow precedent: predecessor
+   logs may show as dirty because earlier prompts append a post-commit
+   `=== COMMIT ===` block after committing.)
+
+Slot variance: NONE.
+  The prompt prescribes slot 000161 and slot 000161 is in fact free.
+  Existing migrations around the trailing edge:
+    000160_settings_ui_density           (pre-phase-42, occupied)
+    000161  (FREE — used by this prompt)
+    000162_pinned_items                  (pre-phase-42, occupied)
+    000163_audit_logs_actor_metadata     (pre-phase-42, occupied)
+    000164_saved_views                   (pre-phase-42, occupied)
+    000165_push_subscriptions            (pre-phase-42, occupied)
+    000166_chatbot_sessions              (pre-phase-42, occupied)
+    000167_achievement_unlocks           (pre-phase-42, occupied)
+    000168_vehicle_unit_history          (phase-42 0022, occupied)
+    000169_positions_si                  (phase-42 0030, occupied)
+    000170_snapshots_si                  (phase-42 0031, occupied)
+    000171_charging_si                   (phase-42 0032, occupied)
+    000172_drives_si                     (phase-42 0033, occupied)
+    000173_signal_log                    (phase-42 0034, occupied)
+    000174_fsm_live                      (phase-42 0035, occupied)
+    000175_caggs_and_mvs                 (phase-42 0036, occupied)
+
+  Note: the SI migrations 000169-000175 each include a
+  `DROP TABLE IF EXISTS X CASCADE;` at the head for the legacy table
+  they replace, so the legacy versions of `positions`, `climate_snapshots`,
+  `motor_snapshots`, `security_events`, `tire_pressure_snapshots`,
+  `media_snapshots`, `safety_snapshots`, `location_snapshots`,
+  `charge_telemetry_readings`, `charging_telemetry`, `charging_sessions`,
+  `trip_drives`, `trips`, `drives`, `signal_log`, `signal_observations`,
+  `signal_catalog`, `fsm_transitions`, `vehicle_live_state`, and the 9
+  legacy caggs/MVs are already dropped by those head-of-file CASCADE
+  statements during a fresh deploy. This prompt 0078's purpose is to
+  drop the *remainder* of the legacy table set (those NOT recreated by
+  000169-000175) plus to gate the entire purge with a single CASCADE
+  detection point that catches any consumer reference the 0060-0072
+  migration sweep missed.
+
+=== ALL_CONSUMERS_DONE ===
+Verifying consumer-migration logs 0060-0072 STATUS=DONE per covenant
+clause #7:
+
+phase-42-0060-consumer-mqtt.log:                            EXIT=0 / STATUS=DONE
+phase-42-0061-consumer-port-messaging.log:                  EXIT=0 / STATUS=DONE
+phase-42-0062-consumer-signal-store.log:                    EXIT=0 / STATUS=DONE
+phase-42-0063-consumer-signal-pivot.log:                    EXIT=0 / STATUS=DONE
+phase-42-0064-consumer-signal-redis-cache.log:              EXIT=0 / STATUS=DONE
+phase-42-0065-consumer-signal-state-reader.log:             EXIT=0 / STATUS=DONE
+phase-42-0066-consumer-fsm-adapter.log:                     EXIT=0 / STATUS=DONE
+phase-42-0067-consumer-fsm-domain.log:                      EXIT=0 / STATUS=DONE
+phase-42-0068-consumer-api-fleet-telemetry.log:             EXIT=0 / STATUS=DONE
+phase-42-0069-consumer-api-signals.log:                     EXIT=0 / STATUS=DONE
+phase-42-0070-consumer-api-telemetry-handlers.log:          EXIT=0 / STATUS=DONE
+phase-42-0071-consumer-api-sse.log:                         EXIT=0 / STATUS=DONE
+phase-42-0072-consumer-frontend-typed-envelope.log:         EXIT=0 / STATUS=DONE
+
+All 13 predecessor logs are STATUS=DONE. Covenant clause #7 satisfied
+at the LOG level. (However — see ANCHORED_GREP_NO_REFS below — the
+DONE status of the consumer prompts does NOT mean active Go SQL
+references to the legacy tables have actually been purged. Several
+consumer prompts migrated only their narrowly-scoped allowed-files
+sets and explicitly deferred related read-handler / repo migrations
+to follow-on prompts that were never authored.)
+
+=== ANCHORED_GREP_NO_REFS ===
+Gate step #2 — Anchored Go grep across `*.go` (excluding `*_test.go`
+and `internal/database/migrations/`) for direct SQL access to each
+of the 28 dropped table names, using the prompt's exact regex
+`FROM\s+$n\b|INSERT\s+INTO\s+$n\b|UPDATE\s+$n\b|DELETE\s+FROM\s+$n\b`:
+
+PER-TABLE HIT COUNTS:
+  drives                             75 hits
+  charging_sessions                  49 hits
+  trips                              13 hits
+  vehicle_states                     12 hits
+  fsm_transitions                     6 hits
+  positions                           5 hits
+  daily_mileage                       5 hits
+  vampire_drain_events                5 hits
+  signal_catalog                      5 hits
+  visited_locations                   4 hits
+  fleet_telemetry_subscriptions       3 hits
+  signal_observations                 3 hits
+  charging_telemetry                  ?  (dropped/recreated by 000171; some references may remain)
+  signal_history                      0 hits
+  vehicle_live_state                  0 hits
+  battery_snapshots                   0 hits
+  climate_snapshots                   0 hits
+  motor_snapshots                     0 hits
+  media_snapshots                     0 hits
+  tire_pressure_snapshots             0 hits
+  safety_snapshots                    0 hits
+  location_snapshots                  0 hits
+  user_preference_snapshots           0 hits
+  vehicle_config_snapshots            0 hits
+  vehicle_meta_snapshots              0 hits
+  guard_events                        ?  (guard_repo.go references it)
+  vehicle_units                       1 hit
+  security_events                     1 hit
+  TOTAL active Go SQL hits          ~190+
+
+VIOLATIONS BY FILE (44 distinct Go source files outside _test.go still
+contain unmigrated direct SQL against legacy tables):
+  internal/adapter/postgres/queries/charging.go         — charging_sessions
+  internal/adapter/postgres/queries/fsm_history.go      — fsm_transitions
+  internal/adapter/postgres/queries/trip.go             — trips
+  internal/api/battery_degradation_handler.go           — drives, charging_sessions
+  internal/api/battery_handler.go                       — charging_sessions
+  internal/api/charging_heatmap_handler.go              — charging_sessions
+  internal/api/charging_optimizer_handler.go            — charging_sessions
+  internal/api/chatbot_handler_chat.go                  — drives, charging_sessions
+  internal/api/computed_metrics.go                      — drives, charging_sessions
+  internal/api/cost_forecast_handler.go                 — drives, charging_sessions
+  internal/api/drive_handler_listing.go                 — drives
+  internal/api/drivetrain_health_handler.go             — drives
+  internal/api/driving_coach_handler.go                 — drives
+  internal/api/lifetime_handler.go                      — drives, charging_sessions
+  internal/api/period_stats_handler.go                  — drives, charging_sessions
+  internal/api/range_projection_handler.go              — drives, charging_sessions
+  internal/api/regen_handler.go                         — drives
+  internal/api/route_efficiency_handler.go              — drives
+  internal/api/search_handler.go                        — drives, charging_sessions, trips, visited_locations
+  internal/api/sleep_handler.go                         — vampire_drain_events, vehicle_states
+  internal/api/speed_profile_handler.go                 — drives
+  internal/api/tco_handler.go                           — charging_sessions, daily_mileage
+  internal/api/telemetry_handler.go                     — vehicle_units
+  internal/api/telemetry_sessions_flush_backfill.go     — drives, charging_sessions
+  internal/api/temp_impact_handler.go                   — drives, vampire_drain_events
+  internal/api/trip_planner_handler_compute.go          — drives
+  internal/api/weekly_digest_handler.go                 — drives
+  internal/api/year_review_handler.go                   — drives, charging_sessions
+  internal/database/charging_repo.go                    — charging_sessions
+  internal/database/drive_repo.go                       — drives
+  internal/database/fleet_subscription_repo.go          — fleet_telemetry_subscriptions
+  internal/database/fsm_transition_repo.go              — fsm_transitions
+  internal/database/guard_repo.go                       — guard_events
+  internal/database/maintenance.go                      — positions, vehicle_states
+  internal/database/mileage_repo.go                     — daily_mileage
+  internal/database/position_repo.go                    — positions
+  internal/database/security_repo.go                    — security_events
+  internal/database/signal_catalog_repo.go              — signal_catalog
+  internal/database/signal_observation_repo.go          — signal_observations
+  internal/database/trip_repo.go                        — drives, charging_sessions, trips
+  internal/database/vampire_drain_repo.go               — vampire_drain_events
+  internal/database/vehicle_state_repo.go               — vehicle_states
+  internal/database/visited_location_repo.go            — drives, visited_locations
+  internal/polling/predictor.go                         — drives, charging_sessions
+
+REPRESENTATIVE EVIDENCE (first matches per legacy-only table):
+  internal/database/maintenance.go:26:`DELETE FROM positions WHERE ts < $1 AND ctid IN (
+  internal/database/maintenance.go:27:SELECT ctid FROM positions WHERE ts < $1 LIMIT $2
+  internal/database/maintenance.go:127:`SELECT COUNT(*) FROM positions`
+  internal/database/position_repo.go:68:FROM positions
+  internal/database/security_repo.go:74:FROM security_events
+  internal/database/signal_observation_repo.go:30:FROM signal_observations
+  internal/database/signal_observation_repo.go:99:FROM signal_observations
+  internal/database/signal_observation_repo.go:209:DELETE FROM signal_observations WHERE ts < $1
+  internal/database/signal_catalog_repo.go:36:INSERT INTO signal_catalog (...)
+  internal/database/signal_catalog_repo.go:112:FROM signal_catalog
+  internal/api/telemetry_handler.go:536:INSERT INTO vehicle_units (...)
+  internal/adapter/postgres/queries/fsm_history.go:6:INSERT INTO fsm_transitions (...)
+  internal/database/fsm_transition_repo.go:37:INSERT INTO fsm_transitions (...)
+  internal/database/fleet_subscription_repo.go:19:INSERT INTO fleet_telemetry_subscriptions (
+  internal/api/drive_handler_listing.go:58:FROM drives
+  internal/api/chatbot_handler_chat.go:131:`SELECT COUNT(*), COALESCE(SUM(distance_mi), 0) FROM drives WHERE start_ts >= $1`
+  internal/api/computed_metrics.go:304:`SELECT SUM(distance_mi) FROM drives
+  internal/database/charging_repo.go:*:FROM charging_sessions
+  internal/database/trip_repo.go:*:FROM trips / FROM drives / FROM charging_sessions
+  internal/database/vampire_drain_repo.go:*:FROM vampire_drain_events
+  internal/api/sleep_handler.go:*:FROM vampire_drain_events / FROM vehicle_states
+  internal/database/vehicle_state_repo.go:*:FROM vehicle_states
+  internal/database/visited_location_repo.go:*:FROM visited_locations
+  internal/database/mileage_repo.go:*:FROM daily_mileage
+  internal/database/guard_repo.go:*:FROM guard_events
+  internal/polling/predictor.go:*:FROM drives / FROM charging_sessions
+
+=> Gate step #2 FAILS. The DROP CASCADE in 000161 would orphan 44
+   active Go source files and ~190 SQL statements. The "consumer
+   migrations failed to fully migrate" branch of the prompt's
+   error-handling fires here.
+
+=== CROSS_SERVICE_GREP ===
+Gate step #3 — Cross-service `\b<table>\b` grep across helm/, docs/,
+web/src/ for the same 28 names.
+
+TOTAL HITS: 1028 across 28 names × 3 paths.
+
+These are predominantly false positives produced by the over-broad
+regex (the prompt itself acknowledges this branch as "belt and
+suspenders" and concedes the frontend "calls URLs (not SQL)"):
+
+  helm/teslasync/values.yaml:812:
+    "# Days to keep general data (drives, charges, positions, etc.)"
+    -- documentation comment for the retention-days helm value;
+       names a *retention class* in English, NOT a table name.
+
+  docs/api-reference.md:23:
+    "| Drives | `/drives`, `/drives/stats`, `/drives/score`, ...
+    -- API reference table: `drives` here is the URL path segment
+       for the Drives endpoint family, NOT a SQL table name. The
+       /drives endpoint family is preserved by phase-42 (it now
+       reads from the new SI canonical drives table created by
+       000172_drives_si.up.sql).
+
+  docs/api-reference.md:27:
+    "| Maps and location | `/geofences`, `/locations`, `/trips`, ..."
+    -- same shape: URL paths, not table names.
+
+  docs/audits/export-coverage.md:61:
+    "| Positions / GPS |"
+    -- column header in an audit table, English label.
+
+  web/src/** — frontend:
+    Hits include i18n strings ("Drives", "Trips"), navigation labels,
+    feature directory names (web/src/features/drives/, /trips/),
+    React component names (DrivesPage, TripsPage), API hook URLs
+    (`/drives`, `/trips`, `/positions`), and TypeScript interface
+    field names. None of these are SQL.
+
+The cross-service grep is structurally unable to distinguish a SQL
+table name from a URL path segment, an i18n label, a directory name,
+or an English noun. Even if the consumer-migration purge in step #2
+were complete, this gate step would still false-fail on every legacy
+name that happens to also be a common English noun (drives, trips,
+positions) or a still-valid URL path segment.
+
+=> Gate step #3 FAILS — but the failure is dominated by false
+   positives. Even after fixing step #2, this check would need to be
+   narrowed (e.g., scoped to YAML schema/SQL files only, or to
+   explicitly-tagged contexts) before it could be a credible
+   correctness signal.
+
+=== APPLY_TEST_EXISTS ===
+Gate step #7 — `git --no-pager grep -nE 'func\s+TestMigrationApply\s*\('
+                 -- 'internal/database/**/*_test.go'`
+
+Result: NO MATCHES. `TestMigrationApply` does not exist anywhere in
+the repository (`git grep -n 'func TestMigration'` returns only
+`internal/api/telemetry_sessions_recovery_test.go:278:func
+TestRecovery_AllFourCallsMigrated`, which is unrelated).
+
+The predecessor SI-migration prompts 0030-0036 also call
+`go test -race -run TestMigrationApply` in their gates, but their
+gate code is the simpler `go test -run … 2>&1` form, which under Go's
+test harness exits 0 with "no tests to run" when the named test does
+not exist — i.e., the predecessor gates SILENTLY PASS this step.
+The 0030 log explicitly documents this:
+
+    "(Note: TestMigrationApply does not exist anywhere in this
+    repository — a `git grep -n 'func TestMigration'` finds zero
+    matches. The prompt's gate command therefore matches no tests
+    and Go reports 'no tests to run' with exit 0; this is the same
+    behavior the predecessor phase-42 prompts encountered. The
+    substantive verification of the migration ran end-to-end against
+    a live TimescaleDB container instead, captured under === APPLIED
+    === and === HYPERTABLE_VERIFY === above.)"
+
+The 0078 gate is DIFFERENT: it ADDED an explicit pre-existence check
+that hard-fails (EXIT=1, STATUS=BLOCKED) when no `func
+TestMigrationApply` is found. That check fires here.
+
+The 0078 allowed-files list is exactly:
+  - migrations/000161_drop_legacy_telemetry.up.sql
+  - migrations/000161_drop_legacy_telemetry.down.sql
+  - the output log
+
+Test files under `internal/database/**/*_test.go` are NOT in the
+allowed-files list. Per covenant clause #2 ("No scope narrowing —
+run the exact gate command, no subsets") and clause #9 ("No silent
+drift — `git status` outside allowed files means BLOCKED"), I cannot
+author the missing test as part of this prompt.
+
+=> Gate step #7 FAILS unconditionally for any actor working within
+   the 0078 allowed-files scope.
+
+=== TABLE_LIST ===
+The 39 legacy tables (40 with `positions_default`) the prompt
+prescribes for DROP CASCADE in 000161 — preserved here verbatim so a
+follow-up fixer can recompose the migration without re-deriving the
+list from the prompt:
+
+  positions, positions_default,
+  battery_snapshots, climate_snapshots, motor_snapshots,
+  security_events, tire_pressure_snapshots, media_snapshots,
+  safety_snapshots, location_snapshots,
+  user_preference_snapshots, vehicle_config_snapshots, vehicle_meta_snapshots,
+  charging_telemetry, charge_telemetry_readings, drive_telemetry_readings,
+  signal_observations, signal_history, signal_catalog, vehicle_live_state,
+  vehicle_units, fsm_transitions, fleet_telemetry_subscriptions,
+  mv_energy_daily, mv_position_hourly, mv_signal_stats,
+  cagg_battery_daily, cagg_climate_hourly, cagg_signal_hourly,
+  cagg_fleet_stats, cagg_vehicle_daily, cagg_charging_summary,
+  drives, charging_sessions, trips, trip_drives,
+  vampire_drain_events, daily_mileage, visited_locations,
+  vehicle_states, guard_events
+
+(Note: phase-42 SI migrations 000169-000175 already DROP CASCADE
+the following from this list at the head of their own up.sql files,
+so the 000161 DROPs of these names would either no-op (post-000175
+fresh deploy) or do real work (pre-000169 deploy):
+  positions (000169);
+  climate_snapshots, motor_snapshots, security_events,
+  tire_pressure_snapshots, media_snapshots, safety_snapshots,
+  location_snapshots (000170);
+  charge_telemetry_readings, charging_telemetry, charging_sessions
+  (000171);
+  trip_drives, trips, drives (000172);
+  signal_log, signal_observations, signal_catalog (000173);
+  fsm_transitions, vehicle_live_state (000174);
+  cagg_battery_daily, cagg_climate_hourly, cagg_signal_hourly,
+  cagg_fleet_stats, cagg_vehicle_daily, cagg_charging_summary,
+  mv_energy_daily, mv_position_hourly, mv_signal_stats (000175).
+The "legacy-only" residue NOT recreated by 000169-000175 — and so
+genuinely permanently dropped by this prompt — is:
+  battery_snapshots, user_preference_snapshots,
+  vehicle_config_snapshots, vehicle_meta_snapshots,
+  drive_telemetry_readings, signal_history, vehicle_units,
+  fleet_telemetry_subscriptions, vampire_drain_events,
+  daily_mileage, visited_locations, vehicle_states,
+  guard_events.)
+
+=== APPLIED ===
+SKIPPED — gate failed before this step.
+
+The migration files migrations/000161_drop_legacy_telemetry.up.sql
+and .down.sql were INTENTIONALLY NOT AUTHORED, per covenant clause
+#8 ("No commit on red — commit only the log when BLOCKED"). Authoring
+them would either leave them untracked (failing the working-tree
+drift check) or commit a partial deliverable that contradicts the
+BLOCKED status. The intended SQL design is preserved verbatim in the
+INTENDED_MIGRATION_DESIGN section below.
+
+=== POST_DROP_VERIFY ===
+SKIPPED — gate failed before this step.
+
+=== GATE ===
+Gate result: FAIL.
+
+Failed checks (in the order the gate's PowerShell would execute them):
+
+  Check #1 — All consumer logs (0060-0072) STATUS=DONE.
+    PASS at the log-status level. (Substantive caveat: the DONE
+    status reflects only what each consumer prompt's own narrow
+    allowed-files scope migrated; it does NOT certify that every
+    Go SQL reference to a legacy table was purged. See ANCHORED_GREP
+    below.)
+
+  Check #2 — Anchored Go SQL grep (`FROM|INSERT INTO|UPDATE|DELETE
+              FROM` against 28 dropped table names, in *.go but
+              not *_test.go).
+    FAIL. ~190 hits across 44 distinct files. Listed in
+    ANCHORED_GREP_NO_REFS above. The gate's own message for this
+    branch fires: "Active Go code still references dropped tables
+    — consumer migrations incomplete".
+
+  Check #3 — Cross-service `\b<table>\b` grep against helm/, docs/,
+              web/src/.
+    FAIL. 1028 hits, dominated by false positives (URL path segments,
+    English nouns, i18n labels, directory names). Listed in
+    CROSS_SERVICE_GREP above.
+
+  Check #4 — File existence of migrations/000161_*.{up,down}.sql.
+    Would FAIL — files intentionally not authored (see APPLIED
+    above for rationale).
+
+  Check #5 — Up migration content checks (BEGIN, COMMIT, CASCADE,
+              lock_timeout, statement_timeout).
+    SKIPPED — file does not exist.
+
+  Check #6 — Down migration must RAISE EXCEPTION.
+    SKIPPED — file does not exist.
+
+  Check #7 — `func TestMigrationApply` exists in
+              internal/database/**/*_test.go.
+    FAIL. No matches. Test does not exist anywhere in the repository.
+    Cannot be authored within the 0078 allowed-files scope. See
+    APPLY_TEST_EXISTS above.
+
+  Check #8 — `go test -race -run TestMigrationApply
+              ./internal/database/...`.
+    SKIPPED — gate exited at Check #7.
+
+  Check #9 — Working-tree drift (only allowed files modified).
+    Would PASS if reached — only this log is modified.
+
+EXIT=1
+STATUS=BLOCKED
+
+=== BLOCKED_SUMMARY ===
+This prompt is BLOCKED for THREE independent reasons, ANY ONE of
+which would block the gate. Listed by what would unblock each:
+
+  Blocker A (most substantive — Check #2):
+    Active Go code still queries 28 of the 39 legacy tables across
+    44 source files (~190 SQL statements). The consumer-migration
+    sweep (prompts 0060-0072) closed only specific scopes — signal
+    store/cache, FSM core, MQTT subscriber, telemetry write
+    handlers, signal-endpoint reads, SSE, and the frontend
+    typed-envelope — and did NOT migrate the read/aggregation
+    handlers that drive the analytics endpoints (battery
+    degradation, drives listing, regen, route efficiency, sleep,
+    TCO, weekly digest, year review, chatbot, computed metrics,
+    cost forecast, lifetime, period stats, range projection, search,
+    speed profile, temp impact, trip planner) or the repository
+    layer for drives/charging_sessions/trips/positions/security_events/
+    /signal_observations/signal_catalog/vehicle_units/vehicle_states/
+    /vampire_drain_events/daily_mileage/visited_locations/
+    /guard_events/fleet_telemetry_subscriptions/fsm_transitions, or
+    the polling predictor.
+
+    Unblocking work: author intermediate consumer-migration prompts
+    (0073..0077 in the established pattern) that migrate each of
+    these 44 files to read from the new SI canonical schemas
+    (positions/charging_telemetry/drives/signal_log/fsm_transitions/
+    /vehicle_live_state created by migrations 000169-000175) and
+    delete the obsolete repos for the legacy-only tables
+    (battery_snapshots, user_preference_snapshots,
+    vehicle_config_snapshots, vehicle_meta_snapshots,
+    drive_telemetry_readings, signal_history, vehicle_units,
+    fleet_telemetry_subscriptions, vampire_drain_events,
+    daily_mileage, visited_locations, vehicle_states, guard_events).
+    THEN re-run this prompt 0078; Check #2 should reach 0 hits.
+
+  Blocker B (over-broad gate — Check #3):
+    The cross-service grep `\b<table>\b` cannot distinguish SQL
+    table names from URL paths, English nouns, i18n labels, or
+    feature directory names. It will continue to false-fail on
+    `drives`, `trips`, `positions` even after Blocker A is
+    resolved.
+
+    Unblocking work: narrow the regex to SQL/YAML schema contexts
+    (e.g., scope helm/ to k8s manifests + values.yaml schema sections;
+    scope docs/ to schema docs; remove web/src/ from the cross-service
+    sweep entirely since the frontend never speaks SQL). Or replace
+    the grep with a curated exclusion list of known false positives.
+
+  Blocker C (impossible-from-prompt — Check #7):
+    `func TestMigrationApply` does not exist in
+    internal/database/**/*_test.go. The 0078 allowed-files list
+    excludes test files, so the test cannot be authored within the
+    0078 scope. Predecessor prompts 0030-0036 silently passed the
+    same `go test -run TestMigrationApply` invocation only because
+    their gates lacked the explicit pre-existence check that 0078
+    added.
+
+    Unblocking work options:
+      (a) Author a separate prompt that creates the
+          `TestMigrationApply` harness in
+          internal/database/migration_apply_test.go (using the
+          existing `internal/database/migrate.go` and
+          `internal/platform/database/migrate.go` machinery to apply
+          all migrations against a Testcontainers TimescaleDB and
+          assert the post-state); commit it; THEN re-run 0078.
+      (b) Remove the explicit pre-existence check from the 0078
+          gate (revert to the predecessor 0030-0036 pattern) and
+          rely on a substantive `=== APPLIED ===` section running
+          a live `migrate up` against a TimescaleDB container, as
+          0030 documented.
+    Option (a) is cleaner; option (b) preserves consistency with
+    how the predecessor SI migrations actually verified.
+
+=== INTENDED_MIGRATION_DESIGN ===
+Preserved verbatim for the follow-up fixer so the prompt's intended
+SQL is not lost when the migration files are not committed. Drop the
+following into migrations/000161_drop_legacy_telemetry.up.sql once
+Blockers A, B, C above are cleared:
+
+----- migrations/000161_drop_legacy_telemetry.up.sql -----
+BEGIN;
+
+-- Bound the blast radius. If anything is holding a lock on these tables
+-- (e.g., a stray analytics query, an unmigrated worker), fail fast instead
+-- of stalling the deploy and blocking every other writer.
+SET LOCAL lock_timeout      = '30s';
+SET LOCAL statement_timeout = '5min';
+
+DROP TABLE IF EXISTS positions, positions_default,
+  battery_snapshots, climate_snapshots, motor_snapshots,
+  security_events, tire_pressure_snapshots, media_snapshots,
+  safety_snapshots, location_snapshots,
+  user_preference_snapshots, vehicle_config_snapshots, vehicle_meta_snapshots,
+  charging_telemetry, charge_telemetry_readings, drive_telemetry_readings,
+  signal_observations, signal_history, signal_catalog, vehicle_live_state,
+  vehicle_units, fsm_transitions, fleet_telemetry_subscriptions,
+  mv_energy_daily, mv_position_hourly, mv_signal_stats,
+  cagg_battery_daily, cagg_climate_hourly, cagg_signal_hourly,
+  cagg_fleet_stats, cagg_vehicle_daily, cagg_charging_summary,
+  drives, charging_sessions, trips, trip_drives,
+  vampire_drain_events, daily_mileage, visited_locations,
+  vehicle_states, guard_events
+CASCADE;
+
+COMMIT;
+----- end up.sql -----
+
+----- migrations/000161_drop_legacy_telemetry.down.sql -----
+-- Phase-42 dropped these tables in commit <fill in via prompt log marker>.
+-- The new SI-canonical schemas live in migrations 000169-000175 and own
+-- these names going forward. Re-running this down migration will NOT
+-- restore the legacy schemas; we raise loudly so an operator who runs
+-- `migrate down` by mistake gets a wall, not silence.
+DO $$
+BEGIN
+  RAISE EXCEPTION
+    'phase-42 migration 000161 has no rollback by design (ADR-004 #4). '
+    'Restore from a pre-phase-42 backup if you need the legacy schema.';
+END
+$$;
+----- end down.sql -----
+
+Deploy ordering — CRITICAL (preserved from prompt for the runbook
+in 0090): golang-migrate applies one file per transaction.
+Migrations 000161 (this prompt) and 000169-000175 (predecessor SI
+migrations 0030-0036) are SEPARATE files and do NOT share a
+transaction. The deploy MUST apply 000161 through 000175 as a
+single `migrate up` step BEFORE any application pod is rolled. Any
+pod started against a DB at version 000161 (drop done, recreate not
+yet) will crash on first query.
+
+Slot-shift caveat for the runbook: the prompt's natural-language
+description references "migrations 000162-000168" but the actual
+phase-42 SI migration slots are 000168-000175. The slot 000161 is
+free for this drop migration and is NOT in numerical conflict with
+the SI migrations; the runbook ordering "000161 then 000169-000175
+in one `migrate up` step" stands.
+
+EXIT=1
+STATUS=BLOCKED
+--- end of log ---
