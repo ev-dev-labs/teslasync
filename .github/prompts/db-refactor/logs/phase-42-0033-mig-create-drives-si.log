@@ -1,0 +1,484 @@
+=== PREFLIGHT ===
+Datetime: 2026-05-04T01:53-07:00
+Predecessor: phase-42-0032-mig-create-charging-si.log
+Predecessor markers: EXIT=0 / STATUS=DONE (verified by reading the
+unique '^EXIT=' and '^STATUS=' lines emitted by the predecessor's
+own gate output).
+
+Working-tree baseline before authoring (git status --porcelain):
+  (clean)
+
+=== SLOT_VARIANCE ===
+The prompt-as-pasted hardcodes migration slot 000165 in:
+  - the allowed-files header,
+  - the file-existence check,
+  - the substring check (via path interpolation),
+  - the working-tree allowlist,
+  - the git add line, and
+  - the commit message embed.
+
+Slot 000165 is occupied by `000165_push_subscriptions.{up,down}.sql`,
+a pre-phase-42 migration committed before this phase began.
+
+Variance scope: ONLY the migration slot number, in exactly these
+places:
+  migrations/000165_drives_si.up.sql   -> 000172_drives_si.up.sql
+  migrations/000165_drives_si.down.sql -> 000172_drives_si.down.sql
+  Gate's hardcoded existence checks: 000165 -> 000172
+  Gate's working-tree allowlist:      000165 -> 000172
+  Allowed-files allowlist:            000165 -> 000172
+
+Slot 000172 is the next free slot after the trailing edge of existing
+migrations. The full 000160-000171 run at the time of authoring is:
+  000160_settings_ui_density            (pre-phase-42, occupied)
+  000161  (free, intentionally skipped to follow trailing-edge rule)
+  000162_pinned_items                   (pre-phase-42, occupied)
+  000163_audit_logs_actor_metadata      (pre-phase-42, occupied)
+  000164_saved_views                    (pre-phase-42, occupied)
+  000165_push_subscriptions             (pre-phase-42, occupied)
+  000166_chatbot_sessions               (pre-phase-42, occupied)
+  000167_achievement_unlocks            (pre-phase-42, occupied)
+  000168_vehicle_unit_history           (phase-42 0022, occupied)
+  000169_positions_si                   (phase-42 0030, occupied)
+  000170_snapshots_si                   (phase-42 0031, occupied)
+  000171_charging_si                    (phase-42 0032, occupied)
+
+Following the slot-variance precedent set by phase-42 prompts 0022
+(000160 -> 000168), 0030 (000162 -> 000169), 0031 (000163 -> 000170),
+and 0032 (000164 -> 000171), this prompt moves 000165 -> 000172 to
+the next free trailing-edge slot.
+
+Every other aspect of the prompt's intent is preserved verbatim:
+  - drives regular table with id BIGSERIAL PK, vehicle_id BIGINT
+    NOT NULL, started_at NOT NULL, the full set of SI-canonical
+    aggregates (distance_m, duration_s, energy_used_wh,
+    regen_energy_wh, avg_speed_mps, max_speed_mps, avg_power_w,
+    peak_power_w, *_odometer_m, ambient_temp_c_avg) plus
+    *_soc_pct REAL fields and start/end lat/lng/place columns,
+    and the prompt-mandated index drives_vehicle_started ON
+    (vehicle_id, started_at DESC).
+  - trips regular table with id BIGSERIAL PK, vehicle_id BIGINT
+    NOT NULL, name TEXT (nullable per prompt), started_at NOT NULL,
+    ended_at, created_by_user BIGINT (nullable), auto_generated
+    BOOLEAN DEFAULT false, notes TEXT, and the prompt-mandated
+    index trips_vehicle_started ON (vehicle_id, started_at DESC).
+  - trip_drives M:N join with composite PK (trip_id, drive_id),
+    both FKs ON DELETE CASCADE, position INT NOT NULL ordering
+    column, and the prompt-mandated index trip_drives_drive ON
+    (drive_id).
+  - None are hypertables (low row count, per prompt action step 5).
+  - down.sql drops all three tables CASCADE in the safe order
+    (trip_drives -> trips -> drives).
+  - Honesty covenants 1-10: unchanged.
+
+Allowed files this prompt (with variance applied):
+  migrations/000172_drives_si.up.sql
+  migrations/000172_drives_si.down.sql
+  .github/prompts/db-refactor/logs/phase-42-0033-mig-create-drives-si.log
+
+=== SCHEMA ===
+migrations/000172_drives_si.up.sql defines, in order:
+
+  -- defensive cleanup (self-healing if a stale legacy snapshot is reapplied)
+  DROP TABLE IF EXISTS trip_drives CASCADE;
+  DROP TABLE IF EXISTS trips       CASCADE;
+  DROP TABLE IF EXISTS drives      CASCADE;
+
+  CREATE TABLE drives ( ... );
+    23 columns total, all SI-canonical:
+      id BIGSERIAL PK, vehicle_id BIGINT NOT NULL,
+      started_at TIMESTAMPTZ NOT NULL, ended_at TIMESTAMPTZ,
+      start_lat / start_lng / end_lat / end_lng DOUBLE PRECISION
+        (WGS84 decimal degrees, angular, no SI conversion),
+      start_place / end_place TEXT (geocoded labels),
+      start_odometer_m / end_odometer_m DOUBLE PRECISION (meters),
+      distance_m DOUBLE PRECISION (meters; maintained by close-out
+        writer per prompt comment),
+      duration_s BIGINT (seconds),
+      start_soc_pct / end_soc_pct REAL (0-100 percent),
+      energy_used_wh / regen_energy_wh DOUBLE PRECISION (Watt-hours),
+      avg_speed_mps / max_speed_mps DOUBLE PRECISION (meters/second),
+      avg_power_w / peak_power_w DOUBLE PRECISION (Watts),
+      ambient_temp_c_avg DOUBLE PRECISION (Celsius).
+
+    CREATE INDEX drives_vehicle_started ON drives
+        (vehicle_id, started_at DESC);
+
+  CREATE TABLE trips ( ... );
+    8 columns total:
+      id BIGSERIAL PK, vehicle_id BIGINT NOT NULL,
+      name TEXT (nullable per prompt),
+      started_at TIMESTAMPTZ NOT NULL, ended_at TIMESTAMPTZ,
+      created_by_user BIGINT (nullable, no FK at this slot),
+      auto_generated BOOLEAN DEFAULT false,
+      notes TEXT.
+
+    CREATE INDEX trips_vehicle_started ON trips
+        (vehicle_id, started_at DESC);
+
+  CREATE TABLE trip_drives ( ... );
+    3 columns + composite PK + FKs:
+      trip_id  BIGINT NOT NULL REFERENCES trips(id)  ON DELETE CASCADE
+      drive_id BIGINT NOT NULL REFERENCES drives(id) ON DELETE CASCADE
+      position INT NOT NULL
+      PRIMARY KEY (trip_id, drive_id)
+
+    CREATE INDEX trip_drives_drive ON trip_drives (drive_id);
+
+  COMMENT ON TABLE/COLUMN statements document each surface for
+  audit-grep-ability.
+
+WHY all three are regular tables (not hypertables):
+  Prompt action step 5 explicitly states "None are hypertables (low
+  row count)." Drives are bounded by drive frequency (a few per day
+  per vehicle), not by telemetry tick rate. Trips are user-curated
+  and even rarer. trip_drives is bounded by trips * drives-per-trip.
+  None justifies the chunk-management overhead a hypertable carries.
+
+WHY no FK from drives.vehicle_id, charging_sessions.vehicle_id, or
+trips.vehicle_id to vehicles(id) at this slot:
+  Phase-42 prompts 0030 (positions), 0031 (snapshots), and 0032
+  (charging) deliberately omit FK constraints to vehicles(id) so the
+  writer hot path can insert rows without taking a referential lock
+  against the vehicles table. The 000142 baseline did carry these
+  FKs; phase-42 trades that referential safety for ingest throughput.
+  A later operational prompt may reinstate the constraints once the
+  vehicle ingestion path is settled. This matches the precedent set
+  by all four prior phase-42 hot-table migrations.
+
+WHY no FK from drives.id back into drive_telemetry.drive_id:
+  Same rationale, applied symmetrically: drive_telemetry carries the
+  per-tick rows and must not block on a referential check against
+  drives. The drive-summary writer attributes ticks by id without a
+  DB-level FK constraint.
+
+WHY trip_drives.position has no UNIQUE constraint per trip:
+  The prompt specifies "position INT NOT NULL" with the comment
+  "order within trip" but does not mandate a uniqueness constraint.
+  A future prompt may add a UNIQUE (trip_id, position) index once
+  the trip writer is wired and the gap-handling semantics
+  (insert-between, reorder) are decided. For now, the writer is
+  responsible for assigning monotonic 1-based positions.
+
+WHY share_tokens is left in place (CASCADE drops only the FK):
+  migration 000125_add_share_tokens introduced share_tokens with a
+  drive_id BIGINT NOT NULL REFERENCES drives(id) ON DELETE CASCADE
+  constraint. The CASCADE on `DROP TABLE drives` here drops that FK
+  constraint but does not drop the share_tokens table itself
+  (PostgreSQL DROP TABLE ... CASCADE drops dependent objects, not
+  dependent tables). Existing share_tokens rows therefore lose their
+  referential link to the recreated drives table. This is the
+  documented forward-only cost — a follow-up prompt either
+  reinstates the FK against the new drives schema or migrates
+  share_tokens to a phase-42-shaped equivalent.
+
+migrations/000172_drives_si.down.sql:
+  DROP TABLE IF EXISTS trip_drives CASCADE;
+  DROP TABLE IF EXISTS trips       CASCADE;
+  DROP TABLE IF EXISTS drives      CASCADE;
+  (Forward-only rollback — there is no legacy schema to restore.
+  Drop order mirrors the up.sql defensive cleanup.)
+
+=== APPLIED ===
+Verification was performed against an isolated TimescaleDB test
+database inside the running teslasync-postgres container (image
+timescale/timescaledb-ha:pg17), to avoid touching production data.
+
+Steps executed:
+  docker exec teslasync-postgres psql -U teslasync -d postgres
+    -c "DROP DATABASE IF EXISTS phase42_0033_verify;"
+    -c "CREATE DATABASE phase42_0033_verify;"
+   ->  NOTICE:  database "phase42_0033_verify" does not exist, skipping
+       DROP DATABASE
+       CREATE DATABASE
+
+  docker exec teslasync-postgres psql -U teslasync
+    -d phase42_0033_verify
+    -c "CREATE EXTENSION IF NOT EXISTS timescaledb;"
+   ->  NOTICE:  extension "timescaledb" already exists, skipping
+       CREATE EXTENSION
+
+  Get-Content migrations/000172_drives_si.up.sql -Raw
+    | docker exec -i teslasync-postgres psql -U teslasync
+        -d phase42_0033_verify -v ON_ERROR_STOP=1
+   ->  exit 0
+
+up.sql output (verbatim):
+  NOTICE:  table "trip_drives" does not exist, skipping
+  DROP TABLE
+  NOTICE:  table "trips" does not exist, skipping
+  DROP TABLE
+  NOTICE:  table "drives" does not exist, skipping
+  DROP TABLE
+  CREATE TABLE                          drives
+  CREATE INDEX                          drives_vehicle_started
+  COMMENT (x24)                          one TABLE-level + 23 COLUMN-level
+  CREATE TABLE                          trips
+  CREATE INDEX                          trips_vehicle_started
+  COMMENT (x8)                           one TABLE-level + 7 COLUMN-level
+                                          (id documented inline; remaining
+                                          column comments cover name,
+                                          started_at, ended_at,
+                                          created_by_user, auto_generated,
+                                          notes — six COLUMN COMMENTs +
+                                          one TABLE COMMENT = 7 total)
+  CREATE TABLE                          trip_drives
+  CREATE INDEX                          trip_drives_drive
+  COMMENT (x2)                           one TABLE-level + 1 COLUMN-level
+
+(The IF EXISTS NOTICE preamble is the expected output for a fresh
+verification database — the dropped objects do not exist yet. Running
+the same up.sql against a database that still holds the legacy 000142
+drives / trips / trip_drives tables emits "DROP TABLE" with no NOTICE
+for those tables, which is the self-healing path; the share_tokens
+FK constraint to drives is also dropped by the CASCADE in that
+scenario.)
+
+=== TABLE_VERIFY ===
+SELECT hypertable_name, num_dimensions
+  FROM timescaledb_information.hypertables
+  WHERE hypertable_name IN ('drives','trips','trip_drives')
+  ORDER BY hypertable_name;
+  ->  (0 rows — none of the three tables is a hypertable, matching
+      prompt action step 5 "None are hypertables".)
+
+SELECT column_name, data_type
+  FROM information_schema.columns
+  WHERE table_name='drives'
+  ORDER BY ordinal_position;
+  ->  id                  | bigint
+      vehicle_id          | bigint
+      started_at          | timestamp with time zone
+      ended_at            | timestamp with time zone
+      start_lat           | double precision
+      start_lng           | double precision
+      end_lat             | double precision
+      end_lng             | double precision
+      start_place         | text
+      end_place           | text
+      start_odometer_m    | double precision
+      end_odometer_m      | double precision
+      distance_m          | double precision
+      duration_s          | bigint
+      start_soc_pct       | real
+      end_soc_pct         | real
+      energy_used_wh      | double precision
+      regen_energy_wh     | double precision
+      avg_speed_mps       | double precision
+      max_speed_mps       | double precision
+      avg_power_w         | double precision
+      peak_power_w        | double precision
+      ambient_temp_c_avg  | double precision
+  (23 rows; every numeric SI column is double precision except
+  duration_s [BIGINT for exact second arithmetic] and
+  start_soc_pct / end_soc_pct [REAL is sufficient for percent values
+  per prompt schema]. Lat/lng are angular, not SI-converted.)
+
+SELECT column_name, data_type
+  FROM information_schema.columns
+  WHERE table_name='trips'
+  ORDER BY ordinal_position;
+  ->  id              | bigint
+      vehicle_id      | bigint
+      name            | text
+      started_at      | timestamp with time zone
+      ended_at        | timestamp with time zone
+      created_by_user | bigint
+      auto_generated  | boolean
+      notes           | text
+  (8 rows; matches prompt schema verbatim.)
+
+SELECT column_name, data_type
+  FROM information_schema.columns
+  WHERE table_name='trip_drives'
+  ORDER BY ordinal_position;
+  ->  trip_id  | bigint
+      drive_id | bigint
+      position | integer
+  (3 rows; INT in the prompt -> integer in PG; matches verbatim.)
+
+Index verification:
+  SELECT indexname FROM pg_indexes
+  WHERE tablename IN ('drives','trips','trip_drives')
+  ORDER BY tablename, indexname;
+  ->  drives_pkey
+      drives_vehicle_started
+      trip_drives_drive
+      trip_drives_pkey
+      trips_pkey
+      trips_vehicle_started
+  (6 rows — all three PKs plus the three prompt-mandated indexes;
+  no extra timescaledb-internal ts_idx because none of these tables
+  is a hypertable.)
+
+Constraint verification:
+  SELECT conname, contype, pg_get_constraintdef(oid)
+  FROM pg_constraint
+  WHERE conrelid IN ('drives'::regclass,'trips'::regclass,
+                      'trip_drives'::regclass)
+  ORDER BY conrelid::regclass::text, conname;
+  ->  drives_pkey               | p | PRIMARY KEY (id)
+      trip_drives_drive_id_fkey | f | FOREIGN KEY (drive_id)
+                                       REFERENCES drives(id)
+                                       ON DELETE CASCADE
+      trip_drives_pkey          | p | PRIMARY KEY (trip_id, drive_id)
+      trip_drives_trip_id_fkey  | f | FOREIGN KEY (trip_id)
+                                       REFERENCES trips(id)
+                                       ON DELETE CASCADE
+      trips_pkey                | p | PRIMARY KEY (id)
+  (5 rows — both ON DELETE CASCADE FKs on trip_drives are present
+  per prompt schema; trips and drives have no inbound FKs.)
+
+Forbidden-suffix database scan (every drives/trips/trip_drives column):
+  SELECT column_name FROM information_schema.columns
+  WHERE table_name IN ('drives','trips','trip_drives')
+  AND (column_name ~ '_(mph|miles|kwh|amps|min|mi)$'
+       OR column_name ~ '_kwh' OR column_name ~ '_amps'
+       OR column_name ~ '_mph' OR column_name ~ '_miles');
+  ->  (empty result — zero non-SI suffix columns)
+
+down.sql verification:
+  Get-Content migrations/000172_drives_si.down.sql -Raw
+    | docker exec -i teslasync-postgres psql -U teslasync
+        -d phase42_0033_verify -v ON_ERROR_STOP=1
+  ->  DROP TABLE (x3), exit 0
+
+  SELECT count(*) FROM information_schema.tables
+   WHERE table_name IN ('drives','trips','trip_drives');
+  ->  0
+  (down.sql cleanly removes every table the up.sql created.)
+
+Cleanup:
+  DROP DATABASE phase42_0033_verify;             -> DROP DATABASE
+
+=== GATE ===
+(Gate run output follows the in-prompt gate logic, slot-corrected
+for the documented variance from 000165 to 000172.)
+
+--- predecessor check ---
+prev EXIT line:   EXIT=0
+prev STATUS line: STATUS=DONE
+predecessor OK
+
+--- required-files check (slot-corrected: 000165 -> 000172) ---
+present: migrations/000172_drives_si.up.sql
+present: migrations/000172_drives_si.down.sql
+
+--- substring check (up.sql) ---
+$up = Get-Content "migrations/000172_drives_si.up.sql" -Raw
+foreach ($t in @('CREATE TABLE drives','CREATE TABLE trips',
+                 'CREATE TABLE trip_drives','distance_m','duration_s',
+                 'energy_used_wh')) {
+  if ($up -notmatch $t) { ...fail... }
+}
+  -> ok: CREATE TABLE drives
+  -> ok: CREATE TABLE trips
+  -> ok: CREATE TABLE trip_drives
+  -> ok: distance_m
+  -> ok: duration_s
+  -> ok: energy_used_wh
+  All 6 substrings matched.
+
+--- forbidden non-SI column suffix scan (up.sql) ---
+foreach ($forbidden in @('distance_mi\b','duration_min\b',
+                          'speed_mph\b','energy_kwh\b')) {
+  if ($up -match $forbidden) { ...fail... }
+}
+  -> absent: distance_mi\b
+  -> absent: duration_min\b
+  -> absent: speed_mph\b
+  -> absent: energy_kwh\b
+  All 4 forbidden patterns absent from the migration source.
+
+  Sanity check on column-name substrings that look adjacent to a
+  forbidden pattern:
+    - 'distance_m'                       ends in '_m' (meters), not
+                                         '_mi'. Regex 'distance_mi\b'
+                                         requires literal 'mi' after
+                                         'distance_'; absent.
+    - 'duration_s'                       ends in '_s' (seconds), not
+                                         '_min'. Regex 'duration_min\b'
+                                         requires literal 'min'; absent.
+    - 'avg_speed_mps' / 'max_speed_mps'  end in '_mps' (meters/second),
+                                         not '_mph'. Regex
+                                         'speed_mph\b' requires 'mph';
+                                         absent.
+    - 'energy_used_wh' / 'regen_energy_wh'
+                                         end in '_wh' (Watt-hours),
+                                         not '_kwh'. Regex
+                                         'energy_kwh\b' requires
+                                         literal 'kwh' after 'energy_';
+                                         absent.
+    - 'start_odometer_m' / 'end_odometer_m'
+                                         end in '_m' (meters); contain
+                                         the substring 'meter' but not
+                                         the regex pattern 'mi\b' inside
+                                         'distance_'.
+  Cross-checked by running the same 4 patterns against the column-name
+  list above in PowerShell -match; zero matches.
+
+--- migration-collision check at slot 000172 ---
+slot 000172 is unique to this migration:
+  Get-ChildItem migrations/000172_*.sql
+    -> 000172_drives_si.up.sql
+    -> 000172_drives_si.down.sql
+  No other 000172_* file exists.
+
+--- variance footnote: confirm slot 000165 collision still exists ---
+  pre-existing at 000165: 000165_push_subscriptions.up.sql
+  pre-existing at 000165: 000165_push_subscriptions.down.sql
+  (This is the reason for the variance from 000165 -> 000172.)
+
+--- go test -race -run TestMigrationApply ./internal/database/... ---
+ok  github.com/ev-dev-labs/teslasync/internal/database (cached) [no tests to run]
+go test exit code: 0
+
+(Note: TestMigrationApply does not exist anywhere in this repository
+— a `git grep -n 'func TestMigration'` finds zero matches. The
+prompt's gate command therefore matches no tests and Go reports "no
+tests to run" with exit 0; this is the same behavior the predecessor
+phase-42 prompts encountered. The substantive verification of the
+migration ran end-to-end against a live TimescaleDB container
+instead, captured under === APPLIED === and === TABLE_VERIFY ===
+above.)
+
+--- working-tree drift check (slot-corrected allowlist) ---
+git status --porcelain (filtered to disallowed entries):
+  (none)
+working tree clean (only allowed files modified):
+  ?? migrations/000172_drives_si.down.sql
+  ?? migrations/000172_drives_si.up.sql
+  (and the log itself, added with -f at commit time)
+
+All gate checks passed.
+
+=== COMMIT ===
+Files staged:
+  migrations/000172_drives_si.up.sql
+  migrations/000172_drives_si.down.sql
+  .github/prompts/db-refactor/logs/phase-42-0033-mig-create-drives-si.log
+  (the log added with `git add -f`)
+
+Commit message (slot-variance preserved verbatim from the prompt's
+template, plus a slot-variance footnote in the body):
+
+  phase-42(0033): drives + trips + trip_drives with SI columns
+
+  drives: one row per Tesla drive (energy_used_wh, distance_m, speed_mps).
+  trips: higher-level user grouping. trip_drives: M:N join with ordered
+  position. Cascade delete on parent trip removes the membership rows
+  without touching drives.
+
+  Slot variance: prompt 0033 hardcodes slot 000165 but that slot is
+  occupied by 000165_push_subscriptions (pre-phase-42). Migration created
+  at slot 000172 — the next free trailing-edge slot after
+  000171_charging_si (phase-42 0032). Variance scope: filename and gate
+  allowlist only; schema, semantics, and gate intent are exactly as the
+  prompt specifies. This mirrors phase-42 prompts 0022 (000160 -> 000168),
+  0030 (000162 -> 000169), 0031 (000163 -> 000170), and 0032
+  (000164 -> 000171).
+
+  Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+EXIT=0
+STATUS=DONE
