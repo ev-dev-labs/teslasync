@@ -1,0 +1,106 @@
+=== START 2026-05-04 15:14:35 ===
+PROMPT: phase-42/0090-resubscribe-runbook.prompt.md
+PHASE:  phase-42
+SLOT:   57/59
+DEPENDS_ON: phase-42-0082-tombstone-fleet-telemetry-subscriptions.log (DONE)
+
+=== PREFLIGHT ===
+Predecessor 0082 (tombstone fleet_telemetry_subscriptions writers): EXIT=0 STATUS=DONE (commit 85724579)
+Working tree at HEAD 85724579: clean before this prompt.
+Branch: refactor/signals-rewrite
+
+=== BINARY_SCAFFOLDED ===
+File: cmd/resubscribe/main.go (13441 bytes)
+
+Architecture:
+  - Reuses internal/tesla/client_fleet_telemetry.go's SubscribeFleetTelemetry
+    via a 'pusher' interface (covenant: no new HTTP client).
+  - Reuses internal/tesla/config.Builder for canonical SubscriptionFields()
+    + BuildSubscription() (deterministic field list + sha256-stable bytes).
+  - Reuses internal/database.VehicleRepo.GetAll for vehicle list via a
+    'vehicleLister' interface so tests inject without a real DB.
+  - Reuses internal/config.Load for cfg.FleetTelemetry.{Host,Port},
+    cfg.Database, cfg.Tesla.
+
+Operator credential gate (REQUIRED per covenant):
+  if strings.TrimSpace(getenv(operatorTokenEnv)) == "" { ... return 1 }
+  Env var: TESLASYNC_OPERATOR_TOKEN
+  Behavior: refuses to run with an explicit error log line; presence-only,
+  no cryptographic validation.
+
+Audit trail (REQUIRED per covenant):
+  Start line:  event=resubscribe.start, operator, vehicle_count, dry_run, workers, config_sha256
+  End line:    event=resubscribe.end, succeeded, failed, skipped, duration_seconds, exit_code
+  Sink: zerolog INFO -> stdout (and any configured structured sink)
+
+Bounded worker pool:
+  jobs := make(chan *models.Vehicle, rc.workers)
+  for i := 0; i < rc.workers; i++ { go func() { for v := range jobs { ... } }() }
+  Default workers=4, configurable via --workers flag.
+  Per-call ctx, cancel := context.WithTimeout(ctx, perVehicleTimeout)
+
+Flags:
+  --dry-run                log without calling Tesla
+  --vehicle <id>           single-vehicle mode for triage (0 = all)
+  --workers <N>            bounded pool size (default 4)
+  --per-vehicle-timeout    Tesla call timeout (default 60s)
+  --version                print version and exit
+
+Exit semantics:
+  0  => every vehicle succeeded
+  1  => any failure or skip (failed.Load() > 0 || skipped.Load() > 0)
+  2  => flag parse error
+
+Signal handling:
+  ctx wraps signal.NotifyContext(SIGINT, SIGTERM); job dispatch select-cases
+  ctx.Done() so SIGINT increments skipped counter rather than panicking.
+
+=== UNIT_TEST ===
+File: cmd/resubscribe/main_test.go (8382 bytes)
+
+Coverage (9 tests, all passing):
+  TestRunWithDeps_AllSuccess                 happy path, exit=0, calls=N
+  TestRunWithDeps_DryRun                     --dry-run never calls pusher, exit=0
+  TestRunWithDeps_OneFailureNonZero          one HTTP-500 flips exit code to non-zero
+  TestRunWithDeps_TransportErrorNonZero      transport error flips exit code to non-zero
+  TestRunWithDeps_VehicleFilter_Hit          --vehicle <id> matching => 1 call, exit=0
+  TestRunWithDeps_VehicleFilter_Miss         --vehicle <id> not found => 0 calls, exit non-zero
+  TestRunWithDeps_EmptyFleet                 nil vehicles, no filter => 0 calls, exit=0
+  TestRunWithDeps_ListErrorNonZero           DB error => exit non-zero
+  TestFilterVehicles                         all/single/missing/nil-element/sort-by-ID
+  TestDeriveOperator                         USER/USERNAME/whitespace-trim/unknown fallback
+
+  go test ./cmd/resubscribe/... -count=1 :  ok (0.128s)
+
+=== RUNBOOK ===
+File: docs/runbooks/fleet-telemetry-resubscribe.md (10768 bytes)
+
+All 5 LOCKED sections present (verified by Select-String '^## '):
+  ## Required ordering        Bootstrap MUST precede resubscribe (per ADR-004 #9 fail-closed-drop)
+  ## Canary procedure         3-step: --dry-run -> single-vehicle -> verify metrics -> full fleet
+  ## Token & auth             OAuth + TESLASYNC_OPERATOR_TOKEN gate + audit-line spec
+  ## Downtime expectation     ~1-3s per-vehicle gap; phase-42 deploy-as-whole one-way
+  ## Alert thresholds         tesla_unit_drops_no_context_total (PAGE), bootstrap_skipped (WARN), signal_cache_stale (WARN), unit_drift_suspected (PAGE)
+
+Plus supplementary sections: When to run, How to run (env+flags table),
+Verification steps (3 SQL checks), Rollback note (forward-only).
+
+=== GATE ===
+Predecessor check                 : PASS (0082 EXIT=0 STATUS=DONE)
+File presence:
+  cmd/resubscribe/main.go         : PRESENT (13441 bytes)
+  cmd/resubscribe/main_test.go    : PRESENT (8382 bytes)
+  docs/runbooks/fleet-telemetry-resubscribe.md : PRESENT (10768 bytes)
+Required runbook section headers   : ALL 5 PRESENT
+go build ./...                    : EXIT=0
+go vet ./...                      : EXIT=0
+go test ./cmd/resubscribe/... -count=1 : ok
+
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+SHA: d597b0ec
+Files: 4 (3 new + log)
+=== END 2026-05-04 15:14:35 ===
+
