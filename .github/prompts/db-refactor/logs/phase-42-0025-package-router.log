@@ -1,0 +1,34 @@
+=== PREFLIGHT ===
+date: 2026-05-03T22:50:23.0151859-07:00
+git rev-parse HEAD: fda8b227b67fc6627a4c7fc4496470fb415043cf
+git status (preflight):
+?? internal/tesla/router/
+=== DESIGN ===
+Router package skeleton: types.go (Destination + Entry), routing.yaml (empty),
+routing_loader.go (//go:embed + hand-rolled minimal YAML parser + validateEntries),
+router.go (Writer iface + Router + ErrNoRoute + tesla_router_writer_failures_total).
+Hand-rolled YAML parser used to avoid pulling gopkg.in/yaml.v3 into go.mod
+(gate restricts changes to internal/tesla/router/ only). Grammar locked to
+the 4 entry keys (field/dest/column/also_signal_log) the prompt declares.
+=== UNIT_TEST ===
+=== RUN   TestEmptyRoutingIsLoadable
+--- PASS: TestEmptyRoutingIsLoadable (0.00s)
+=== RUN   TestRouterRejectsUnknownField
+--- PASS: TestRouterRejectsUnknownField (0.00s)
+=== RUN   TestLoaderRejectsDuplicateField
+--- PASS: TestLoaderRejectsDuplicateField (0.00s)
+=== RUN   TestLoaderRejectsUnknownDestination
+--- PASS: TestLoaderRejectsUnknownDestination (0.00s)
+=== RUN   TestNewRejectsWriterForUnknownDestination
+--- PASS: TestNewRejectsWriterForUnknownDestination (0.00s)
+PASS
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router	2.198s
+unit_test_exit=0
+=== GATE ===
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router	(cached)
+All gate checks passed.
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
+git rev-parse HEAD: e5bad540f7b8b29c44854b8b4d2957fa3bb3365e
+COMMIT_EXIT=0

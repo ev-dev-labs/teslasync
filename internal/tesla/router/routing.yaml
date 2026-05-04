@@ -1,0 +1,32 @@
+# routing.yaml — single source of truth for codec.Atomic dispatch.
+#
+# This file declares, for every Tesla proto Field that the codec
+# emits, the exactly-one Destination its values flow to. The router
+# loads this file at process start via //go:embed and rejects:
+#   - duplicate `field:` entries (ambiguous routing),
+#   - any `dest:` outside the closed Destination set in types.go.
+#
+# Routing entries are added per category in phase-42 prompts
+# 0030-0037 (charging, driving, climate, location, powertrain,
+# vehicle_state, safety_security, media). The single-route invariant
+# is enforced by the reflective coverage test in prompt 0038, which
+# walks protomodel.Signals and asserts every Field has exactly one
+# entry here.
+#
+# This prompt (0025) ships the file EMPTY so subsequent prompts only
+# have to ADD entries — they never have to modify the loader, the
+# tests, or this header.
+#
+# Schema:
+#   routes:
+#     - field: <CanonicalProtoFieldName>     # required, opaque string
+#       dest:  <destination>                 # required, must be a Destination const
+#       column: <storage_column>             # optional; required only for hot-table dests
+#       also_signal_log: true | false        # optional; default false. Dual-writes the
+#                                            # atomic to signal_log for replay.
+#
+# Routing is field-static and vehicle-agnostic by ADR-004 #8.
+# Per-vehicle or value-conditional filtering MUST live inside the
+# writer, never here.
+
+routes: []
