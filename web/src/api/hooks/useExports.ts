@@ -18,7 +18,7 @@ export const exportKeys = {
 export function useExports() {
   return useQuery({
     queryKey: exportKeys.all,
-    queryFn: () => request<ExportJob[]>('/export/jobs'),
+    queryFn: ({ signal }) => request<ExportJob[]>('/export/jobs', { signal }),
     select: safeArray,
   });
 }
@@ -47,7 +47,7 @@ export function useExportJobs(opts?: { pollWhileActive?: boolean }) {
   const pollWhileActive = opts?.pollWhileActive ?? true;
   return useQuery({
     queryKey: exportKeys.jobs,
-    queryFn: () => request<ExportJobSummary[]>('/export/jobs'),
+    queryFn: ({ signal }) => request<ExportJobSummary[]>('/export/jobs', { signal }),
     select: safeArray,
     refetchInterval: (query) => {
       if (!pollWhileActive) return false;
@@ -62,7 +62,7 @@ export function useExportJobs(opts?: { pollWhileActive?: boolean }) {
 export function useExportJob(id: string | undefined) {
   return useQuery({
     queryKey: id ? exportKeys.job(id) : exportKeys.jobs,
-    queryFn: () => request<ExportJobSummary>(`/export/jobs/${id}`),
+    queryFn: ({ signal }) => request<ExportJobSummary>(`/export/jobs/${id}`, { signal }),
     enabled: !!id,
     refetchInterval: (query) => {
       const data = query.state.data as ExportJobSummary | undefined;
@@ -76,7 +76,7 @@ export function useExportJob(id: string | undefined) {
 export function useExport(id: string) {
   return useQuery({
     queryKey: exportKeys.detail(id),
-    queryFn: () => request<ExportJob>(`/exports/${id}`),
+    queryFn: ({ signal }) => request<ExportJob>(`/exports/${id}`, { signal }),
     enabled: !!id,
   });
 }

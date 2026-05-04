@@ -49,8 +49,8 @@ export const drivingKeys = {
 export function useDrives(vehicleId?: string) {
   return useQuery({
     queryKey: drivingKeys.drives(vehicleId),
-    queryFn: () =>
-      request<Drive[]>(vehicleId ? `/drives?vehicle_id=${vehicleId}` : '/drives'),
+    queryFn: ({ signal }) =>
+      request<Drive[]>(vehicleId ? `/drives?vehicle_id=${vehicleId}` : '/drives', { signal }),
     enabled: !!vehicleId,
     select: safeArray,
   });
@@ -59,7 +59,7 @@ export function useDrives(vehicleId?: string) {
 export function useDrive(id: string) {
   return useQuery({
     queryKey: drivingKeys.drive(id),
-    queryFn: () => request<DriveDetail>(`/drives/${id}`),
+    queryFn: ({ signal }) => request<DriveDetail>(`/drives/${id}`, { signal }),
     enabled: !!id,
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -71,9 +71,9 @@ export function useDrive(id: string) {
 export function useDriveScore(vehicleId?: string) {
   return useQuery({
     queryKey: drivingKeys.score(vehicleId),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<DriveScore>(
-        vehicleId ? `/drives/score?vehicle_id=${vehicleId}` : '/drives/score',
+        vehicleId ? `/drives/score?vehicle_id=${vehicleId}` : '/drives/score', { signal },
       ),
     enabled: !!vehicleId,
     retry: false,
@@ -83,9 +83,9 @@ export function useDriveScore(vehicleId?: string) {
 export function useDrivingStats(vehicleId?: string) {
   return useQuery({
     queryKey: drivingKeys.stats(vehicleId),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<DrivingStats>(
-        vehicleId ? `/drives/stats?vehicle_id=${vehicleId}` : '/drives/stats',
+        vehicleId ? `/drives/stats?vehicle_id=${vehicleId}` : '/drives/stats', { signal },
       ),
     enabled: !!vehicleId,
     retry: false,
@@ -95,9 +95,9 @@ export function useDrivingStats(vehicleId?: string) {
 export function useDrivingDynamics(vehicleId?: string) {
   return useQuery({
     queryKey: drivingKeys.dynamics(vehicleId),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<DrivingDynamicsData>(
-        vehicleId ? `/drives/dynamics?vehicle_id=${vehicleId}` : '/drives/dynamics',
+        vehicleId ? `/drives/dynamics?vehicle_id=${vehicleId}` : '/drives/dynamics', { signal },
       ),
     enabled: !!vehicleId,
     retry: false,
@@ -107,11 +107,11 @@ export function useDrivingDynamics(vehicleId?: string) {
 export function useAccelerationDistribution(vehicleId?: string) {
   return useQuery({
     queryKey: drivingKeys.accelerationDistribution(vehicleId),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<AccelerationDistributionData>(
         vehicleId
           ? `/drives/acceleration-distribution?vehicle_id=${vehicleId}`
-          : '/drives/acceleration-distribution',
+          : '/drives/acceleration-distribution', { signal },
       ),
     enabled: !!vehicleId,
     retry: false,
@@ -121,11 +121,11 @@ export function useAccelerationDistribution(vehicleId?: string) {
 export function useDrivetrainHealth(vehicleId?: string) {
   return useQuery({
     queryKey: drivingKeys.drivetrainHealth(vehicleId),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<DrivetrainHealthData>(
         vehicleId
           ? `/drivetrain/health?vehicle_id=${vehicleId}`
-          : '/drivetrain/health',
+          : '/drivetrain/health', { signal },
       ),
     enabled: !!vehicleId,
     retry: false,
@@ -135,9 +135,9 @@ export function useDrivetrainHealth(vehicleId?: string) {
 export function useSpeedProfile(vehicleId?: string) {
   return useQuery({
     queryKey: drivingKeys.speedProfile(vehicleId),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<SpeedProfileData>(
-        vehicleId ? `/analytics/speed-profile?vehicle_id=${vehicleId}` : '/analytics/speed-profile',
+        vehicleId ? `/analytics/speed-profile?vehicle_id=${vehicleId}` : '/analytics/speed-profile', { signal },
       ),
     enabled: !!vehicleId,
   });
@@ -146,9 +146,9 @@ export function useSpeedProfile(vehicleId?: string) {
 export function useRegenEfficiency(vehicleId?: string) {
   return useQuery({
     queryKey: drivingKeys.regenEfficiency(vehicleId),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<RegenEfficiencyData>(
-        vehicleId ? `/analytics/regen?vehicle_id=${vehicleId}` : '/analytics/regen',
+        vehicleId ? `/analytics/regen?vehicle_id=${vehicleId}` : '/analytics/regen', { signal },
       ),
     enabled: !!vehicleId,
   });
@@ -157,11 +157,11 @@ export function useRegenEfficiency(vehicleId?: string) {
 export function useRouteEfficiency(vehicleId?: string) {
   return useQuery({
     queryKey: drivingKeys.routeEfficiency(vehicleId),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<RouteEfficiencyData>(
         vehicleId
           ? `/analytics/route-efficiency?vehicle_id=${vehicleId}`
-          : '/analytics/route-efficiency',
+          : '/analytics/route-efficiency', { signal },
       ),
     enabled: !!vehicleId,
   });
@@ -170,7 +170,7 @@ export function useRouteEfficiency(vehicleId?: string) {
 export function useDrivePositions(driveId: string) {
   return useQuery({
     queryKey: ['drive-positions', driveId],
-    queryFn: () => request<DrivePosition[]>(`/drives/${driveId}/positions`),
+    queryFn: ({ signal }) => request<DrivePosition[]>(`/drives/${driveId}/positions`, { signal }),
     enabled: !!driveId,
     select: safeArray,
   });
@@ -179,7 +179,7 @@ export function useDrivePositions(driveId: string) {
 export function useDriveTelemetry(driveId: string) {
   return useQuery({
     queryKey: ['drive-telemetry', driveId],
-    queryFn: () => request<DriveTelemetryPoint[]>(`/drives/${driveId}/telemetry`),
+    queryFn: ({ signal }) => request<DriveTelemetryPoint[]>(`/drives/${driveId}/telemetry`, { signal }),
     enabled: !!driveId,
     select: safeArray,
   });
@@ -188,7 +188,7 @@ export function useDriveTelemetry(driveId: string) {
 export function useDrivingCoach(vehicleId?: string, days = 30) {
   return useQuery({
     queryKey: drivingKeys.coach(vehicleId, days),
-    queryFn: () => request<DrivingCoachData>(`/analytics/driving-coach?vehicle_id=${vehicleId}&days=${days}`),
+    queryFn: ({ signal }) => request<DrivingCoachData>(`/analytics/driving-coach?vehicle_id=${vehicleId}&days=${days}`, { signal }),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.SLOW,
   });
@@ -216,7 +216,7 @@ export function usePlanTrip() {
 export function useGeocodeSearch(query: string, enabled = true) {
   return useQuery({
     queryKey: ['geocode-search', query],
-    queryFn: () => request<GeocodeResult[]>(`/geocode/search?q=${encodeURIComponent(query)}&limit=5`),
+    queryFn: ({ signal }) => request<GeocodeResult[]>(`/geocode/search?q=${encodeURIComponent(query)}&limit=5`, { signal }),
     enabled: enabled && query.length >= 3,
     staleTime: STALE_TIMES.SLOW,
     select: safeArray,

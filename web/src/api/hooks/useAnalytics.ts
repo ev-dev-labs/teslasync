@@ -20,7 +20,7 @@ export const analyticsKeys = {
 export function useAnalyticsSummary(days = 30) {
   return useQuery({
     queryKey: analyticsKeys.summary(days),
-    queryFn: () => request<AnalyticsSummary>(`/analytics/fleet?days=${days}`),
+    queryFn: ({ signal }) => request<AnalyticsSummary>(`/analytics/fleet?days=${days}`, { signal }),
   });
 }
 
@@ -29,14 +29,14 @@ export function useFleetAnalytics(days = 30, start?: string) {
   const qs = start ? `start=${start}` : `days=${days}`;
   return useQuery({
     queryKey: analyticsKeys.fleet(days, start),
-    queryFn: () => request<FleetAnalytics>(`/analytics/fleet?${qs}`),
+    queryFn: ({ signal }) => request<FleetAnalytics>(`/analytics/fleet?${qs}`, { signal }),
   });
 }
 
 export function useMileageStats(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.mileage(vehicleId),
-    queryFn: () => request<MileageStats>(`/mileage/stats?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<MileageStats>(`/mileage/stats?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
   });
 }
@@ -44,7 +44,7 @@ export function useMileageStats(vehicleId: string) {
 export function useMonthlyMileage(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.monthlyMileage(vehicleId),
-    queryFn: () => request<MonthlyStat[]>(`/mileage/monthly?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<MonthlyStat[]>(`/mileage/monthly?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
     select: safeArray,
   });
@@ -53,7 +53,7 @@ export function useMonthlyMileage(vehicleId: string) {
 export function useCostBreakdown(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.cost(vehicleId),
-    queryFn: () => request<CostBreakdown>(`/analytics/tco?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<CostBreakdown>(`/analytics/tco?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
   });
 }
@@ -61,7 +61,7 @@ export function useCostBreakdown(vehicleId: string) {
 export function useTimeline(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.timeline(vehicleId),
-    queryFn: () => request<{ transitions: TimelineEvent[] }>(`/vehicle-states/timeline?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<{ transitions: TimelineEvent[] }>(`/vehicle-states/timeline?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
     select: (data) => safeArray(data?.transitions),
   });
@@ -70,7 +70,7 @@ export function useTimeline(vehicleId: string) {
 export function useStateSummary(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.stateSummary(vehicleId),
-    queryFn: () => request<StateSummary[]>(`/vehicle-states/summary?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<StateSummary[]>(`/vehicle-states/summary?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
     select: safeArray,
   });
@@ -79,7 +79,7 @@ export function useStateSummary(vehicleId: string) {
 export function useWeeklyDigest(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.weeklyDigest(vehicleId),
-    queryFn: () => request<WeeklyDigestData>(`/vehicles/${vehicleId}/weekly-digest`),
+    queryFn: ({ signal }) => request<WeeklyDigestData>(`/vehicles/${vehicleId}/weekly-digest`, { signal }),
     enabled: !!vehicleId,
     retry: false,
     staleTime: STALE_TIMES.STATIC,
@@ -150,9 +150,9 @@ export interface LifetimeStats {
 export function useLifetimeStats(vehicleId?: string) {
   return useQuery({
     queryKey: analyticsKeys.lifetime(vehicleId),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<LifetimeStats>(
-        `/analytics/lifetime${vehicleId ? `?vehicle_id=${vehicleId}` : ''}`,
+        `/analytics/lifetime${vehicleId ? `?vehicle_id=${vehicleId}` : ''}`, { signal },
       ),
     staleTime: STALE_TIMES.SLOW,
   });
@@ -163,9 +163,9 @@ export function useLifetimeStats(vehicleId?: string) {
 export function useYearReview(year: number, vehicleId?: string) {
   return useQuery({
     queryKey: ['year-review', year, vehicleId] as const,
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<import('@/api/types').YearReview>(
-        `/analytics/year-review?year=${year}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`,
+        `/analytics/year-review?year=${year}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`, { signal },
       ),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.STATIC,

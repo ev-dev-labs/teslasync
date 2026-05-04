@@ -18,7 +18,7 @@ export const vehicleKeys = {
 export function useVehicles() {
   return useQuery({
     queryKey: vehicleKeys.all,
-    queryFn: () => request<Vehicle[]>('/vehicles'),
+    queryFn: ({ signal }) => request<Vehicle[]>('/vehicles', { signal }),
     staleTime: STALE_TIMES.FAST,
     select: safeArray,
   });
@@ -31,7 +31,7 @@ export function useVehicles() {
 export function useVehicle(id: string) {
   return useQuery({
     queryKey: vehicleKeys.detail(id),
-    queryFn: () => request<Vehicle>(`/vehicles/${id}`),
+    queryFn: ({ signal }) => request<Vehicle>(`/vehicles/${id}`, { signal }),
     enabled: !!id,
   });
 }
@@ -39,9 +39,9 @@ export function useVehicle(id: string) {
 export function useVehicleState(vehicleId: number, options?: { refetchInterval?: number }) {
   return useQuery({
     queryKey: vehicleKeys.state(vehicleId),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const res = await request<any>(`/vehicles/${vehicleId}/state`)
+      const res = await request<any>(`/vehicles/${vehicleId}/state`, { signal })
       if (res.state && typeof res.state === 'object' && 'vehicle_id' in res.state) {
         return { state: res.state as VehicleState, live: res.live ?? false }
       }
@@ -80,7 +80,7 @@ export function useVehicleState(vehicleId: number, options?: { refetchInterval?:
 export function useVehiclePositions(vehicleId: number, limit = 100) {
   return useQuery({
     queryKey: vehicleKeys.positions(vehicleId),
-    queryFn: () => request<import('../types').Position[]>(`/vehicles/${vehicleId}/positions?limit=${limit}`),
+    queryFn: ({ signal }) => request<import('../types').Position[]>(`/vehicles/${vehicleId}/positions?limit=${limit}`, { signal }),
     enabled: vehicleId > 0,
     select: safeArray,
   });
@@ -141,7 +141,7 @@ export function useWakeVehicle() {
 export function useMotorLatest(vehicleId: number, refetchInterval?: number) {
   return useQuery({
     queryKey: ['motor-latest', vehicleId],
-    queryFn: () => request<import('../types').MotorSnapshot | null>(`/motor/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<import('../types').MotorSnapshot | null>(`/motor/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval,
   });
@@ -150,7 +150,7 @@ export function useMotorLatest(vehicleId: number, refetchInterval?: number) {
 export function useMotorHistory(vehicleId: number, limit = 200) {
   return useQuery({
     queryKey: ['motor-history', vehicleId, limit],
-    queryFn: () => request<import('../types').MotorSnapshot[]>(`/motor?vehicle_id=${vehicleId}&limit=${limit}`),
+    queryFn: ({ signal }) => request<import('../types').MotorSnapshot[]>(`/motor?vehicle_id=${vehicleId}&limit=${limit}`, { signal }),
     enabled: vehicleId > 0,
     select: safeArray,
   });
@@ -159,7 +159,7 @@ export function useMotorHistory(vehicleId: number, limit = 200) {
 export function useClimateLatest(vehicleId: number, refetchInterval?: number) {
   return useQuery({
     queryKey: ['climate-latest', vehicleId],
-    queryFn: () => request<import('../types').ClimateSnapshot | null>(`/climate/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<import('../types').ClimateSnapshot | null>(`/climate/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval,
   });
@@ -168,7 +168,7 @@ export function useClimateLatest(vehicleId: number, refetchInterval?: number) {
 export function useSecurityLatest(vehicleId: number, refetchInterval?: number) {
   return useQuery({
     queryKey: ['security-latest', vehicleId],
-    queryFn: () => request<import('../types').SecurityEvent | null>(`/security/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<import('../types').SecurityEvent | null>(`/security/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval,
   });
@@ -177,7 +177,7 @@ export function useSecurityLatest(vehicleId: number, refetchInterval?: number) {
 export function useLatestTirePressure(vehicleId: number, refetchInterval?: number) {
   return useQuery({
     queryKey: ['tire-latest', vehicleId],
-    queryFn: () => request<import('../types').TirePressureSnapshot | null>(`/tire-pressure/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<import('../types').TirePressureSnapshot | null>(`/tire-pressure/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval,
   });
@@ -186,7 +186,7 @@ export function useLatestTirePressure(vehicleId: number, refetchInterval?: numbe
 export function useChargingTelemetryLatest(vehicleId: number, refetchInterval?: number) {
   return useQuery({
     queryKey: ['charging-telemetry-latest', vehicleId],
-    queryFn: () => request<import('../types').ChargingTelemetry | null>(`/charging-telemetry/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<import('../types').ChargingTelemetry | null>(`/charging-telemetry/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval,
   });
@@ -195,7 +195,7 @@ export function useChargingTelemetryLatest(vehicleId: number, refetchInterval?: 
 export function useMediaLatest(vehicleId: number, refetchInterval?: number) {
   return useQuery({
     queryKey: ['media-latest', vehicleId],
-    queryFn: () => request<import('../types').MediaSnapshot | null>(`/media/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<import('../types').MediaSnapshot | null>(`/media/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval,
   });
@@ -204,7 +204,7 @@ export function useMediaLatest(vehicleId: number, refetchInterval?: number) {
 export function useLocationSnapshotLatest(vehicleId: number, refetchInterval?: number) {
   return useQuery({
     queryKey: ['location-latest', vehicleId],
-    queryFn: () => request<import('../types').LocationSnapshot | null>(`/location-snapshots/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<import('../types').LocationSnapshot | null>(`/location-snapshots/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval,
   });
@@ -213,7 +213,7 @@ export function useLocationSnapshotLatest(vehicleId: number, refetchInterval?: n
 export function useVehicleConfigLatest(vehicleId: number, refetchInterval?: number) {
   return useQuery({
     queryKey: ['vehicle-config-latest', vehicleId],
-    queryFn: () => request<import('../types').VehicleConfigSnapshot | null>(`/vehicle-config/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<import('../types').VehicleConfigSnapshot | null>(`/vehicle-config/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval,
   });
@@ -222,7 +222,7 @@ export function useVehicleConfigLatest(vehicleId: number, refetchInterval?: numb
 export function useUserPreferenceLatest(vehicleId: number, refetchInterval?: number) {
   return useQuery({
     queryKey: ['user-pref-latest', vehicleId],
-    queryFn: () => request<import('../types').UserPreferenceSnapshot | null>(`/user-preferences/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<import('../types').UserPreferenceSnapshot | null>(`/user-preferences/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval,
   });
@@ -277,7 +277,7 @@ interface MobileEnabledData {
 export function useVehicleMobileEnabled(vehicleId?: string) {
   return useQuery({
     queryKey: ['vehicle-mobile-enabled', vehicleId],
-    queryFn: () => request<VehicleInfoEnvelope<MobileEnabledData>>(`/vehicles/${vehicleId}/mobile-enabled`),
+    queryFn: ({ signal }) => request<VehicleInfoEnvelope<MobileEnabledData>>(`/vehicles/${vehicleId}/mobile-enabled`, { signal }),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.SLOW,
   });
@@ -299,7 +299,7 @@ export function useRefreshVehicleMobileEnabled(vehicleId?: string) {
 export function useVehicleOptions(vehicleId?: string) {
   return useQuery({
     queryKey: ['vehicle-options', vehicleId],
-    queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/options`),
+    queryFn: ({ signal }) => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/options`, { signal }),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.STATIC,
   });
@@ -321,7 +321,7 @@ export function useRefreshVehicleOptions(vehicleId?: string) {
 export function useVehicleSpecs(vehicleId?: string) {
   return useQuery({
     queryKey: ['vehicle-specs', vehicleId],
-    queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/specs`),
+    queryFn: ({ signal }) => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/specs`, { signal }),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.STATIC,
   });
@@ -345,7 +345,7 @@ export function useRefreshVehicleSpecs(vehicleId?: string) {
 export function useVehicleSubscriptions(vehicleId?: string) {
   return useQuery({
     queryKey: ['vehicle-subscriptions', vehicleId],
-    queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/subscriptions`),
+    queryFn: ({ signal }) => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/subscriptions`, { signal }),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.RARE,
   });
@@ -369,7 +369,7 @@ export function useRefreshVehicleSubscriptions(vehicleId?: string) {
 export function useVehicleUpgrades(vehicleId?: string) {
   return useQuery({
     queryKey: ['vehicle-upgrades', vehicleId],
-    queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/upgrades`),
+    queryFn: ({ signal }) => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/upgrades`, { signal }),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.RARE,
   });
@@ -393,7 +393,7 @@ export function useRefreshVehicleUpgrades(vehicleId?: string) {
 export function useWarrantyDetails() {
   return useQuery({
     queryKey: ['warranty-details'],
-    queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>('/tesla/warranty'),
+    queryFn: ({ signal }) => request<VehicleInfoEnvelope<Record<string, unknown>>>('/tesla/warranty', { signal }),
     staleTime: STALE_TIMES.DAILY,
   });
 }

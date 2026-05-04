@@ -35,7 +35,7 @@ export const chatKeys = {
 export function useChatSessions() {
   return useQuery({
     queryKey: chatKeys.sessions(),
-    queryFn: getChatSessions,
+    queryFn: ({ signal }) => getChatSessions({ signal }),
   });
 }
 
@@ -43,7 +43,7 @@ export function useChatSessions() {
 export function useChatHistory(sessionId: string) {
   return useQuery({
     queryKey: chatKeys.history(sessionId),
-    queryFn: () => getChatHistory(sessionId),
+    queryFn: ({ signal }) => getChatHistory(sessionId, { signal }),
     enabled: !!sessionId,
   });
 }

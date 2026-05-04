@@ -31,7 +31,7 @@ export const adminKeys = {
 export function useApiKeys() {
   return useQuery({
     queryKey: adminKeys.apiKeys,
-    queryFn: () => request<APIKey[]>('/api-keys'),
+    queryFn: ({ signal }) => request<APIKey[]>('/api-keys', { signal }),
     select: safeArray,
   });
 }
@@ -83,7 +83,7 @@ export function useRevokeApiKey() {
 export function useApiLogs(page: number) {
   return useQuery({
     queryKey: adminKeys.apiLogs(page),
-    queryFn: () => request<APICallLog[]>(`/api-logs?page=${page}&limit=25`),
+    queryFn: ({ signal }) => request<APICallLog[]>(`/api-logs?page=${page}&limit=25`, { signal }),
     select: safeArray,
   });
 }
@@ -91,7 +91,7 @@ export function useApiLogs(page: number) {
 export function useApiLogStats() {
   return useQuery({
     queryKey: adminKeys.apiLogStats,
-    queryFn: () => request<APICallLogStats>('/api-logs/stats'),
+    queryFn: ({ signal }) => request<APICallLogStats>('/api-logs/stats', { signal }),
     refetchInterval: INTERVALS.STANDARD,
   });
 }
@@ -99,7 +99,7 @@ export function useApiLogStats() {
 export function useBackupConfigs() {
   return useQuery({
     queryKey: adminKeys.backupConfigs,
-    queryFn: () => request<BackupConfig[]>('/backup/configs'),
+    queryFn: ({ signal }) => request<BackupConfig[]>('/backup/configs', { signal }),
     select: safeArray,
   });
 }
@@ -107,7 +107,7 @@ export function useBackupConfigs() {
 export function useBackupRuns() {
   return useQuery({
     queryKey: adminKeys.backupRuns,
-    queryFn: () => request<BackupRun[]>('/backup/runs'),
+    queryFn: ({ signal }) => request<BackupRun[]>('/backup/runs', { signal }),
     refetchInterval: INTERVALS.FAST,
     select: safeArray,
   });
@@ -116,7 +116,7 @@ export function useBackupRuns() {
 export function useSystemHealth() {
   return useQuery({
     queryKey: adminKeys.systemHealth,
-    queryFn: () => request<SystemHealth>('/system/health'),
+    queryFn: ({ signal }) => request<SystemHealth>('/system/health', { signal }),
     refetchInterval: INTERVALS.STANDARD,
   });
 }
@@ -124,7 +124,7 @@ export function useSystemHealth() {
 export function useAuditLogs() {
   return useQuery({
     queryKey: adminKeys.auditLogs,
-    queryFn: () => request<AuditLogEntry[]>('/system/audit'),
+    queryFn: ({ signal }) => request<AuditLogEntry[]>('/system/audit', { signal }),
     select: safeArray,
   });
 }
@@ -140,7 +140,7 @@ export function useAuditLogs() {
 export function useWebErrorsSummary() {
   return useQuery({
     queryKey: adminKeys.webErrorsSummary,
-    queryFn: () => request<WebErrorsSummary>('/admin/web-errors/summary'),
+    queryFn: ({ signal }) => request<WebErrorsSummary>('/admin/web-errors/summary', { signal }),
     refetchInterval: INTERVALS.STANDARD,
   });
 }
@@ -148,7 +148,7 @@ export function useWebErrorsSummary() {
 export function useSecurityEvents(vehicleId: string) {
   return useQuery({
     queryKey: adminKeys.securityEvents(vehicleId),
-    queryFn: () => request<SecurityEvent[]>(`/security?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<SecurityEvent[]>(`/security?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
     select: safeArray,
   });
@@ -157,7 +157,7 @@ export function useSecurityEvents(vehicleId: string) {
 export function useDBStats() {
   return useQuery({
     queryKey: adminKeys.dbStats,
-    queryFn: () => request<DBStats>('/dev-tools/db-stats'),
+    queryFn: ({ signal }) => request<DBStats>('/dev-tools/db-stats', { signal }),
     refetchInterval: INTERVALS.STANDARD,
   });
 }
@@ -165,7 +165,7 @@ export function useDBStats() {
 export function useMigrations() {
   return useQuery({
     queryKey: adminKeys.migrations,
-    queryFn: () => request<MigrationStatus>('/dev-tools/migration-status'),
+    queryFn: ({ signal }) => request<MigrationStatus>('/dev-tools/migration-status', { signal }),
     refetchInterval: INTERVALS.SLOW,
   });
 }
@@ -173,7 +173,7 @@ export function useMigrations() {
 export function useConnectionPool() {
   return useQuery({
     queryKey: adminKeys.connectionPool,
-    queryFn: () => request<ConnectionPool>('/dev-tools/runtime-info'),
+    queryFn: ({ signal }) => request<ConnectionPool>('/dev-tools/runtime-info', { signal }),
     refetchInterval: INTERVALS.STANDARD,
   });
 }
@@ -181,7 +181,7 @@ export function useConnectionPool() {
 export function useExportJobs() {
   return useQuery({
     queryKey: adminKeys.exportJobs,
-    queryFn: () => request<ExportJob[]>('/export/jobs'),
+    queryFn: ({ signal }) => request<ExportJob[]>('/export/jobs', { signal }),
     select: safeArray,
   });
 }
@@ -207,7 +207,7 @@ export function useCreateExport() {
 export function useVehicleStateMachine(vehicleId: string) {
   return useQuery({
     queryKey: adminKeys.vehicleState(vehicleId),
-    queryFn: () => request<VehicleState>(`/vehicles/${vehicleId}/state`),
+    queryFn: ({ signal }) => request<VehicleState>(`/vehicles/${vehicleId}/state`, { signal }),
     enabled: !!vehicleId,
     refetchInterval: INTERVALS.CRITICAL,
   });
@@ -216,7 +216,7 @@ export function useVehicleStateMachine(vehicleId: string) {
 export function useStateTimeline(vehicleId: string, days = 7) {
   return useQuery({
     queryKey: [...adminKeys.stateTimeline(vehicleId), days],
-    queryFn: () => request<{ transitions: StateTransition[] }>(`/vehicle-states/timeline?vehicle_id=${vehicleId}&days=${days}`),
+    queryFn: ({ signal }) => request<{ transitions: StateTransition[] }>(`/vehicle-states/timeline?vehicle_id=${vehicleId}&days=${days}`, { signal }),
     enabled: !!vehicleId,
     refetchInterval: INTERVALS.FAST,
   });

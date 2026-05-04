@@ -21,8 +21,8 @@ export const commandKeys = {
 export function useCommandHistory(vehicleId: string | undefined) {
   return useQuery({
     queryKey: commandKeys.history(vehicleId),
-    queryFn: () =>
-      request<CommandLogEntry[]>(`/vehicles/${vehicleId}/commands/history?limit=200`),
+    queryFn: ({ signal }) =>
+      request<CommandLogEntry[]>(`/vehicles/${vehicleId}/commands/history?limit=200`, { signal }),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.QUICK,
     select: (data) => data ?? [],
@@ -33,8 +33,8 @@ export function useCommandHistory(vehicleId: string | undefined) {
 export function useCommandLatest(vehicleId: string | undefined) {
   return useQuery({
     queryKey: commandKeys.latest(vehicleId),
-    queryFn: () =>
-      request<CommandLogEntry[]>(`/vehicles/${vehicleId}/commands/latest`),
+    queryFn: ({ signal }) =>
+      request<CommandLogEntry[]>(`/vehicles/${vehicleId}/commands/latest`, { signal }),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.MODERATE,
     select: (data) => data ?? [],

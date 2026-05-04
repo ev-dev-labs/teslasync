@@ -40,7 +40,7 @@ export const automationKeys = {
 export function useAutomations() {
   return useQuery({
     queryKey: automationKeys.all,
-    queryFn: () => request<Automation[]>('/automations'),
+    queryFn: ({ signal }) => request<Automation[]>('/automations', { signal }),
     refetchInterval: INTERVALS.STANDARD,
     select: safeArray,
   });
@@ -49,8 +49,8 @@ export function useAutomations() {
 export function useAutomationHistory(limit = 20) {
   return useQuery({
     queryKey: automationKeys.history(limit),
-    queryFn: () =>
-      request<AutomationHistoryListResponse>(`/automations/history?limit=${limit}`),
+    queryFn: ({ signal }) =>
+      request<AutomationHistoryListResponse>(`/automations/history?limit=${limit}`, { signal }),
     refetchInterval: INTERVALS.STANDARD,
   });
 }
@@ -177,7 +177,7 @@ export function useAutomation(id: number | string | undefined) {
   const numericId = typeof id === 'string' ? Number(id) : id;
   return useQuery({
     queryKey: automationKeys.detail(numericId!),
-    queryFn: () => request<AutomationFull>(`/automations/${id}`),
+    queryFn: ({ signal }) => request<AutomationFull>(`/automations/${id}`, { signal }),
     enabled: numericId != null && !Number.isNaN(numericId) && numericId > 0,
   });
 }
@@ -231,8 +231,8 @@ export function useAutomationPresets(category?: string) {
   const queryParam = category ? `?category=${category}` : '';
   return useQuery({
     queryKey: category ? presetKeys.category(category) : presetKeys.all,
-    queryFn: () =>
-      request<AutomationPresetsResponse>(`/automations/presets${queryParam}`),
+    queryFn: ({ signal }) =>
+      request<AutomationPresetsResponse>(`/automations/presets${queryParam}`, { signal }),
     staleTime: STALE_TIMES.STATIC,
   });
 }
@@ -240,7 +240,7 @@ export function useAutomationPresets(category?: string) {
 export function useAutomationPreset(id: string | undefined) {
   return useQuery({
     queryKey: presetKeys.detail(id!),
-    queryFn: () => request<AutomationPreset>(`/automations/presets/${id}`),
+    queryFn: ({ signal }) => request<AutomationPreset>(`/automations/presets/${id}`, { signal }),
     enabled: !!id,
     staleTime: STALE_TIMES.STATIC,
   });

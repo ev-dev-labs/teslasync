@@ -20,7 +20,7 @@ export const settingsKeys = {
 export function useSettings() {
   return useQuery({
     queryKey: settingsKeys.settings,
-    queryFn: () => request<AppSettings>('/settings'),
+    queryFn: ({ signal }) => request<AppSettings>('/settings', { signal }),
   });
 }
 
@@ -52,7 +52,7 @@ interface AuthStatus {
 export function useAuthStatus() {
   return useQuery({
     queryKey: settingsKeys.authStatus,
-    queryFn: () => request<AuthStatus>('/auth/status'),
+    queryFn: ({ signal }) => request<AuthStatus>('/auth/status', { signal }),
   });
 }
 
@@ -104,7 +104,7 @@ interface Vehicle {
 export function useVehicles() {
   return useQuery({
     queryKey: settingsKeys.vehicles,
-    queryFn: () => request<Vehicle[]>('/vehicles'),
+    queryFn: ({ signal }) => request<Vehicle[]>('/vehicles', { signal }),
     select: safeArray,
   });
 }
@@ -131,7 +131,7 @@ interface UserPreferenceLatest {
 export function useCarPreferences(vehicleId: number | null) {
   return useQuery({
     queryKey: settingsKeys.carPrefs(vehicleId),
-    queryFn: () => request<UserPreferenceLatest>(`/user-preferences/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<UserPreferenceLatest>(`/user-preferences/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId !== null,
   });
 }
@@ -141,7 +141,7 @@ export function useCarPreferences(vehicleId: number | null) {
 export function useGasPriceStatus(enabled = true) {
   return useQuery({
     queryKey: settingsKeys.gasPriceStatus,
-    queryFn: () => request<GasPriceStatus>('/gas-price/status'),
+    queryFn: ({ signal }) => request<GasPriceStatus>('/gas-price/status', { signal }),
     enabled,
     retry: false,
     refetchInterval: enabled ? INTERVALS.STANDARD : false,
@@ -208,7 +208,7 @@ export interface DashboardLayoutsPayload {
 export function useDashboardLayouts() {
   return useQuery({
     queryKey: settingsKeys.dashboardLayouts,
-    queryFn: () => request<DashboardLayoutsPayload>('/settings/dashboard-layouts'),
+    queryFn: ({ signal }) => request<DashboardLayoutsPayload>('/settings/dashboard-layouts', { signal }),
     staleTime: STALE_TIMES.SLOW,
     retry: 1,
   });
@@ -282,7 +282,7 @@ export interface PollingConfig {
 export function usePollingConfig() {
   return useQuery({
     queryKey: ['polling-config'] as const,
-    queryFn: () => request<PollingConfig>('/settings/polling-config'),
+    queryFn: ({ signal }) => request<PollingConfig>('/settings/polling-config', { signal }),
     staleTime: STALE_TIMES.SLOW,
   });
 }
@@ -315,7 +315,7 @@ interface CaptureStats {
 export function useCaptureStats() {
   return useQuery({
     queryKey: ['capture-stats'] as const,
-    queryFn: () => request<CaptureStats>('/dev-tools/telemetry-capture/stats'),
+    queryFn: ({ signal }) => request<CaptureStats>('/dev-tools/telemetry-capture/stats', { signal }),
     staleTime: STALE_TIMES.FAST,
   });
 }
@@ -331,7 +331,7 @@ interface VersionInfo {
 export function useVersionInfo() {
   return useQuery({
     queryKey: ['version'] as const,
-    queryFn: () => request<VersionInfo>('/system/version'),
+    queryFn: ({ signal }) => request<VersionInfo>('/system/version', { signal }),
     staleTime: STALE_TIMES.STANDARD,
   });
 }

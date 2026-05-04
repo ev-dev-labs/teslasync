@@ -18,11 +18,18 @@ import type {
 import type { ChargingSession as ApiChargingSession, ChargeTelemetryReading } from '../types';
 
 /** Fetches paginated charging sessions for a vehicle, optionally filtered by date range. */
-export const getChargingSessions = (vehicleId: number, limit = 50, offset = 0, start?: string, end?: string) => {
+export const getChargingSessions = (
+  vehicleId: number,
+  limit = 50,
+  offset = 0,
+  start?: string,
+  end?: string,
+  opts?: { signal?: AbortSignal | null },
+) => {
   const params = new URLSearchParams({ vehicle_id: String(vehicleId), limit: String(limit), offset: String(offset) })
   if (start) params.set('start', start)
   if (end) params.set('end', end)
-  return request<ApiChargingSession[]>(`/charging?${params}`)
+  return request<ApiChargingSession[]>(`/charging?${params}`, { signal: opts?.signal })
 }
 
 export const chargingKeys = {
@@ -36,8 +43,8 @@ export const chargingKeys = {
 export function useChargingSessions(vehicleId?: string) {
   return useQuery({
     queryKey: vehicleId ? chargingKeys.byVehicle(vehicleId) : chargingKeys.all,
-    queryFn: () => request<ChargingSession[]>(
-      vehicleId ? `/charging-sessions?vehicle_id=${vehicleId}` : '/charging-sessions',
+    queryFn: ({ signal }) => request<ChargingSession[]>(
+      vehicleId ? `/charging-sessions?vehicle_id=${vehicleId}` : '/charging-sessions', { signal },
     ),
     enabled: !!vehicleId,
     select: safeArray,
@@ -47,7 +54,7 @@ export function useChargingSessions(vehicleId?: string) {
 export function useChargingSession(id: string) {
   return useQuery({
     queryKey: chargingKeys.detail(id),
-    queryFn: () => request<ChargingSession>(`/charging/${id}`),
+    queryFn: ({ signal }) => request<ChargingSession>(`/charging/${id}`, { signal }),
     enabled: !!id,
   });
 }
@@ -56,7 +63,7 @@ export function useChargingSession(id: string) {
 export function useChargingSessionDetail(id: number | null) {
   return useQuery({
     queryKey: chargingKeys.detailById(id!),
-    queryFn: () => request<ApiChargingSession>(`/charging/${id}`),
+    queryFn: ({ signal }) => request<ApiChargingSession>(`/charging/${id}`, { signal }),
     enabled: id != null,
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -69,7 +76,7 @@ export function useChargingSessionDetail(id: number | null) {
 export function useChargeTelemetry(sessionId: number | null) {
   return useQuery({
     queryKey: chargingKeys.telemetry(sessionId!),
-    queryFn: () => request<ChargeTelemetryReading[]>(`/charging/${sessionId}/telemetry`),
+    queryFn: ({ signal }) => request<ChargeTelemetryReading[]>(`/charging/${sessionId}/telemetry`, { signal }),
     enabled: sessionId != null,
     select: safeArray,
   });
@@ -86,7 +93,7 @@ export function useChargingSessionsPaginated(
   const { limit = 50, offset = 0, start, end } = options;
   return useQuery({
     queryKey: ['charging', vehicleId, start, end, limit, offset] as const,
-    queryFn: () => getChargingSessions(vehicleId!, limit, offset, start, end),
+    queryFn: ({ signal }) => getChargingSessions(vehicleId!, limit, offset, start, end, { signal }),
     enabled: vehicleId !== null,
     select: safeArray,
   });
@@ -95,7 +102,7 @@ export function useChargingSessionsPaginated(
 export function useCostForecast(vehicleId: string | null, months = 6) {
   return useQuery({
     queryKey: ['cost-forecast', vehicleId, months],
-    queryFn: () => request<CostForecastData>(`/analytics/cost-forecast?vehicle_id=${vehicleId}&months=${months}`),
+    queryFn: ({ signal }) => request<CostForecastData>(`/analytics/cost-forecast?vehicle_id=${vehicleId}&months=${months}`, { signal }),
     enabled: vehicleId !== null,
     staleTime: STALE_TIMES.SLOW,
   });
@@ -104,7 +111,7 @@ export function useCostForecast(vehicleId: string | null, months = 6) {
 export function useChargingOptimizer(vehicleId: string | null) {
   return useQuery({
     queryKey: ['charging-optimizer', vehicleId],
-    queryFn: () => request<ChargingOptimizerData>(`/analytics/charging-optimizer?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<ChargingOptimizerData>(`/analytics/charging-optimizer?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId !== null,
     staleTime: STALE_TIMES.SLOW,
   });
@@ -158,8 +165,8 @@ export const teslaChargingHistoryKeys = {
 export function useTeslaChargingHistory(vin?: string) {
   return useQuery({
     queryKey: vin ? teslaChargingHistoryKeys.byVin(vin) : teslaChargingHistoryKeys.all,
-    queryFn: () => request<TeslaChargingHistoryResponse>(
-      `/tesla/charging/history${vin ? `?vin=${vin}` : ''}`
+    queryFn: ({ signal }) => request<TeslaChargingHistoryResponse>(
+      `/tesla/charging/history${vin ? `?vin=${vin}` : ''}`, { signal }
     ),
     staleTime: STALE_TIMES.SLOW,
   });
@@ -246,8 +253,8 @@ export const teslaChargingSessionKeys = {
 export function useTeslaChargingSessions(vin?: string) {
   return useQuery({
     queryKey: vin ? teslaChargingSessionKeys.byVin(vin) : teslaChargingSessionKeys.all,
-    queryFn: () => request<TeslaChargingSessionResponse>(
-      `/tesla/charging/sessions${vin ? `?vin=${vin}` : ''}`
+    queryFn: ({ signal }) => request<TeslaChargingSessionResponse>(
+      `/tesla/charging/sessions${vin ? `?vin=${vin}` : ''}`, { signal }
     ),
     staleTime: STALE_TIMES.SLOW,
   });
@@ -323,7 +330,7 @@ export function useApplySchedule() {
 export function useChargePlans(vehicleId?: number) {
   return useQuery({
     queryKey: chargePlannerKeys.byVehicle(vehicleId!),
-    queryFn: () => request<ChargePlan[]>(`/charge-planner/history?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<ChargePlan[]>(`/charge-planner/history?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
     select: safeArray,
   });
@@ -333,7 +340,7 @@ export function useChargePlans(vehicleId?: number) {
 export function useRatePlans() {
   return useQuery({
     queryKey: chargePlannerKeys.ratePlans,
-    queryFn: () => request<RatePlanInfo[]>('/charge-planner/rate-plans'),
+    queryFn: ({ signal }) => request<RatePlanInfo[]>('/charge-planner/rate-plans', { signal }),
     staleTime: STALE_TIMES.STATIC,
     select: safeArray,
   });

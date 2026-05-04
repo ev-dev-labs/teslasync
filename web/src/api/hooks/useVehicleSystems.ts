@@ -21,7 +21,7 @@ export const vehicleSystemsKeys = {
 export function useClimate(vehicleId: string) {
   return useQuery({
     queryKey: vehicleSystemsKeys.climate(vehicleId),
-    queryFn: () => request<ClimateState>(`/climate/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<ClimateState>(`/climate/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
     refetchInterval: INTERVALS.STANDARD,
   });
@@ -30,7 +30,7 @@ export function useClimate(vehicleId: string) {
 export function useClimateHistory(vehicleId: string) {
   return useQuery({
     queryKey: vehicleSystemsKeys.climateHistory(vehicleId),
-    queryFn: () => request<ClimateState[]>(`/climate?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<ClimateState[]>(`/climate?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
     select: safeArray,
   });
@@ -39,7 +39,7 @@ export function useClimateHistory(vehicleId: string) {
 export function useTirePressure(vehicleId: string) {
   return useQuery({
     queryKey: vehicleSystemsKeys.tirePressure(vehicleId),
-    queryFn: () => request<TirePressureReading>(`/tire-pressure/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<TirePressureReading>(`/tire-pressure/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
     refetchInterval: INTERVALS.STANDARD,
   });
@@ -48,7 +48,7 @@ export function useTirePressure(vehicleId: string) {
 export function useTirePressureHistory(vehicleId: string) {
   return useQuery({
     queryKey: vehicleSystemsKeys.tirePressureHistory(vehicleId),
-    queryFn: () => request<TirePressureReading[]>(`/tire-pressure?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<TirePressureReading[]>(`/tire-pressure?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
     select: safeArray,
   });
@@ -57,7 +57,7 @@ export function useTirePressureHistory(vehicleId: string) {
 export function useMaintenance() {
   return useQuery({
     queryKey: vehicleSystemsKeys.maintenance,
-    queryFn: () => request<MaintenanceItem[]>('/maintenance'),
+    queryFn: ({ signal }) => request<MaintenanceItem[]>('/maintenance', { signal }),
     retry: false,
     staleTime: STALE_TIMES.STATIC,
     select: safeArray,
@@ -67,7 +67,7 @@ export function useMaintenance() {
 export function useServiceRecords() {
   return useQuery({
     queryKey: vehicleSystemsKeys.serviceRecords,
-    queryFn: () => request<ServiceRecord[]>('/maintenance/records'),
+    queryFn: ({ signal }) => request<ServiceRecord[]>('/maintenance/records', { signal }),
     retry: false,
     staleTime: STALE_TIMES.STATIC,
     select: safeArray,
@@ -77,7 +77,7 @@ export function useServiceRecords() {
 export function useSoftwareUpdates(vehicleId: string) {
   return useQuery({
     queryKey: vehicleSystemsKeys.softwareUpdates(vehicleId),
-    queryFn: () => request<SoftwareUpdate[]>('/software-updates'),
+    queryFn: ({ signal }) => request<SoftwareUpdate[]>('/software-updates', { signal }),
     enabled: !!vehicleId,
     select: safeArray,
   });
@@ -86,7 +86,7 @@ export function useSoftwareUpdates(vehicleId: string) {
 export function useSafety(vehicleId: string) {
   return useQuery({
     queryKey: vehicleSystemsKeys.safety(vehicleId),
-    queryFn: () => request<SafetySnapshot>(`/safety/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<SafetySnapshot>(`/safety/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
     refetchInterval: INTERVALS.STANDARD,
   });
@@ -95,7 +95,7 @@ export function useSafety(vehicleId: string) {
 export function useSafetyHistory(vehicleId: string) {
   return useQuery({
     queryKey: vehicleSystemsKeys.safetyHistory(vehicleId),
-    queryFn: () => request<SafetySnapshot[]>(`/safety?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<SafetySnapshot[]>(`/safety?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
     select: safeArray,
   });
@@ -104,7 +104,7 @@ export function useSafetyHistory(vehicleId: string) {
 export function useMedia(vehicleId: string) {
   return useQuery({
     queryKey: vehicleSystemsKeys.media(vehicleId),
-    queryFn: () => request<MediaSnapshot>(`/media/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<MediaSnapshot>(`/media/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
     refetchInterval: INTERVALS.STANDARD,
   });
@@ -113,7 +113,7 @@ export function useMedia(vehicleId: string) {
 export function useMediaHistory(vehicleId: string) {
   return useQuery({
     queryKey: vehicleSystemsKeys.mediaHistory(vehicleId),
-    queryFn: () => request<MediaSnapshot[]>(`/media?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<MediaSnapshot[]>(`/media?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
     select: safeArray,
   });

@@ -10,6 +10,21 @@ export { ApiError, getApiBase, isApiError }
 export interface ApiRequestOptions extends RequestInit {
   responseType?: 'json' | 'text'
   skipAuthRefresh?: boolean
+  /**
+   * Optional. If provided, the fetch + retry loop honors cancellation:
+   * the underlying fetch is wired to an abort signal that is the merge of
+   * this signal and the internal timeout signal. When this signal is the
+   * one that aborts (i.e. the caller cancels), the rejected promise
+   * carries `name === 'AbortError'`, the retry loop exits immediately,
+   * and the error is NOT classified as an HTTP timeout (408).
+   *
+   * Pass TanStack Query's `queryFn` `{ signal }` here so route changes
+   * cancel in-flight requests instead of decoding into unmounted state.
+   *
+   * Allows `null` to match the underlying `RequestInit.signal` shape so
+   * existing `{ ...options }` spreads keep type-checking.
+   */
+  signal?: AbortSignal | null
 }
 
 function normalizePath(path: string): string {

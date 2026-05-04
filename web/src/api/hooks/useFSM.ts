@@ -17,8 +17,8 @@ export const fsmKeys = {
 export function useFSMStats(entityId: string) {
   return useQuery({
     queryKey: fsmKeys.stats(entityId),
-    queryFn: () =>
-      request<FSMStats>(`/fsm/stats?vehicle_id=${entityId}`),
+    queryFn: ({ signal }) =>
+      request<FSMStats>(`/fsm/stats?vehicle_id=${entityId}`, { signal }),
     enabled: !!entityId,
     refetchInterval: INTERVALS.FAST,
   });
@@ -34,9 +34,9 @@ export function useFSMTransitions(
   const typeParam = fsmType === 'all' ? '' : `&fsm_type=${fsmType}`;
   return useQuery({
     queryKey: fsmKeys.transitions(entityId, fsmType, hours, page, perPage),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<FSMTransitionResponse>(
-        `/fsm/transitions?vehicle_id=${entityId}&hours=${hours}&page=${page}&per_page=${perPage}${typeParam}`,
+        `/fsm/transitions?vehicle_id=${entityId}&hours=${hours}&page=${page}&per_page=${perPage}${typeParam}`, { signal },
       ),
     enabled: !!entityId,
     refetchInterval: INTERVALS.FAST,

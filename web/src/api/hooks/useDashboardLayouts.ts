@@ -56,9 +56,9 @@ export const dashboardLayoutLibraryKeys = {
 export function useNamedDashboardLayouts(vehicleId?: number | null) {
   return useQuery({
     queryKey: dashboardLayoutLibraryKeys.list(vehicleId),
-    queryFn: () => {
+    queryFn: ({ signal }) => {
       const qs = vehicleId != null ? `?vehicle_id=${vehicleId}` : '';
-      return request<NamedDashboardLayout[]>(`/dashboard/layouts${qs}`);
+      return request<NamedDashboardLayout[]>(`/dashboard/layouts${qs}`, { signal });
     },
     staleTime: STALE_TIMES.SLOW,
   });

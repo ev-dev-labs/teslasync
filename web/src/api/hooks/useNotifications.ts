@@ -106,7 +106,7 @@ export const __serializeNotificationFiltersForTest = serializeNotificationFilter
 export function useAlerts() {
   return useQuery({
     queryKey: notificationKeys.alerts,
-    queryFn: () => request<Alert[]>('/alerts'),
+    queryFn: ({ signal }) => request<Alert[]>('/alerts', { signal }),
     refetchInterval: INTERVALS.STANDARD,
     select: safeArray,
   });
@@ -135,7 +135,7 @@ export function useMarkAlertRead() {
 export function useAlertRules() {
   return useQuery({
     queryKey: notificationKeys.alertRules,
-    queryFn: () => request<AlertRule[]>('/alerts/rules'),
+    queryFn: ({ signal }) => request<AlertRule[]>('/alerts/rules', { signal }),
     select: safeArray,
   });
 }
@@ -148,7 +148,7 @@ export function useAlertRules() {
 export function useAlertMetrics() {
   return useQuery({
     queryKey: notificationKeys.alertMetrics,
-    queryFn: () => request<ComputedMetricSummary[]>('/alerts/metrics'),
+    queryFn: ({ signal }) => request<ComputedMetricSummary[]>('/alerts/metrics', { signal }),
     select: safeArray,
     staleTime: INTERVALS.STATIC,
   });
@@ -343,7 +343,7 @@ export function useSnoozeAlertRule() {
 export function useNotificationChannels() {
   return useQuery({
     queryKey: notificationKeys.channels,
-    queryFn: () => request<NotificationChannel[]>('/notifications'),
+    queryFn: ({ signal }) => request<NotificationChannel[]>('/notifications', { signal }),
     select: safeArray,
   });
 }
@@ -355,7 +355,7 @@ export function useNotificationLogs(filters: NotificationFilters = {}) {
   // (the latter is the historical alias used by older widgets).
   return useQuery({
     queryKey: notificationKeys.logsFiltered(filters),
-    queryFn: () => request<NotificationLog[]>(`/notifications/logs${qs ? `?${qs}` : ''}`),
+    queryFn: ({ signal }) => request<NotificationLog[]>(`/notifications/logs${qs ? `?${qs}` : ''}`, { signal }),
     select: safeArray,
   });
 }
@@ -363,7 +363,7 @@ export function useNotificationLogs(filters: NotificationFilters = {}) {
 export function useUnreadCount() {
   return useQuery({
     queryKey: notificationKeys.unreadCount,
-    queryFn: () => request<{ count: number }>('/notifications/unread-count'),
+    queryFn: ({ signal }) => request<{ count: number }>('/notifications/unread-count', { signal }),
     refetchInterval: INTERVALS.STANDARD,
     select: (data) => data?.count ?? 0,
   });
@@ -589,7 +589,7 @@ export function useDeleteNotifications() {
 export function useNotificationStats() {
   return useQuery({
     queryKey: notificationKeys.stats,
-    queryFn: () => request<NotificationStats>('/notifications/stats'),
+    queryFn: ({ signal }) => request<NotificationStats>('/notifications/stats', { signal }),
     refetchInterval: INTERVALS.STANDARD,
   });
 }

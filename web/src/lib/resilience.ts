@@ -150,9 +150,9 @@ interface ResilientOptions extends RequestInit {
   dedupKey?: string       // dedup key for GET requests
 }
 
-async function sleep(ms: number): Promise<void> {
-  return new Promise(r => setTimeout(r, ms))
-}
+// Note: `sleep` was used by the previous resilient retry loop. The Phase-46
+// rewrite uses `abortableSleep` (further down) so retries respond immediately
+// to user navigation. The unused helper is removed to satisfy the lint rule.
 
 /** Custom error class for API responses. Includes the HTTP status code. */
 export class ApiError extends Error {
@@ -391,6 +391,16 @@ export function isUpstreamUnavailableError(err: unknown): err is UpstreamUnavail
 /**
  * Performs a fetch request with automatic retry (exponential backoff),
  * request deduplication for GETs, and offline detection.
+ *
+ * Cancellation: when `options.signal` is provided (e.g. the `signal`
+ * arg from a TanStack Query `queryFn`), the fetch + retry loop honours
+ * abort. A user-side abort is propagated as the original `AbortError`
+ * (NOT converted to a 408 timeout) and the retry loop exits without
+ * additional network work.
+ *
+ * Dedup is automatically skipped when `options.signal` is present —
+ * otherwise one caller aborting would reject the shared promise for
+ * every other caller waiting on the same path.
  */
 export async function resilientFetch<T>(
   path: string,
@@ -404,13 +414,112 @@ export async function resilientFetch<T>(
     ...fetchOpts
   } = options
 
-  // For GET requests, auto-dedup using the path
-  const key = dedupKey || ((!fetchOpts.method || fetchOpts.method === 'GET') ? path : '')
+  // For GET requests, auto-dedup using the path. We must NOT dedup when
+  // the caller passes their own AbortSignal: the cached promise is shared
+  // across callers, so one caller aborting would reject the promise
+  // observed by every other (still-mounted) caller.
+  const canDedup = !fetchOpts.signal
+  const key = canDedup
+    ? (dedupKey || ((!fetchOpts.method || fetchOpts.method === 'GET') ? path : ''))
+    : ''
   if (key) {
     return dedup(key, () => _doFetch<T>(path, fetchOpts, retries, retryDelay, timeout))
   }
 
   return _doFetch<T>(path, fetchOpts, retries, retryDelay, timeout)
+}
+
+/**
+ * Sentinel reason attached when the internal timeout abort fires.
+ * Used by `_doFetch` to distinguish a genuine user cancellation
+ * (where we propagate the AbortError as-is and skip retries) from a
+ * timeout-driven abort (where we surface an HTTP 408 ApiError).
+ *
+ * `AbortSignal.aborted` alone is not enough because the timeout
+ * controller might race with a near-simultaneous user cancellation;
+ * tagging the reason removes that race.
+ */
+const TIMEOUT_ABORT_REASON = Symbol('teslasync:timeout-abort')
+
+/**
+ * Race-safe abort sleep — resolves after `ms` or as soon as `signal`
+ * aborts. Used between retries so a user navigation immediately stops
+ * pending backoff instead of waiting for the next retry tick.
+ */
+function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal?.aborted) {
+      resolve()
+      return
+    }
+    let timer: ReturnType<typeof setTimeout> | null = null
+    let onAbort: (() => void) | null = null
+    const cleanup = () => {
+      if (timer !== null) {
+        clearTimeout(timer)
+        timer = null
+      }
+      if (signal && onAbort) {
+        signal.removeEventListener('abort', onAbort)
+      }
+    }
+    timer = setTimeout(() => {
+      cleanup()
+      resolve()
+    }, ms)
+    if (signal) {
+      onAbort = () => {
+        cleanup()
+        resolve()
+      }
+      signal.addEventListener('abort', onAbort, { once: true })
+    }
+  })
+}
+
+/**
+ * Combine a caller-provided AbortSignal with one or more internal
+ * signals so the underlying fetch is aborted when any of them fires.
+ *
+ * Prefers the native `AbortSignal.any` (Node 22+, all current evergreen
+ * browsers) and falls back to a manual chained controller when the
+ * runtime doesn't provide it. Returned cleanup MUST be called in a
+ * `finally` block to release the chained listeners (the manual fallback
+ * would otherwise keep the user signal pinned for the lifetime of the
+ * tab).
+ */
+function combineSignals(
+  signals: Array<AbortSignal | undefined>,
+): { signal: AbortSignal; cleanup: () => void } {
+  const real = signals.filter((s): s is AbortSignal => Boolean(s))
+  if (real.length === 1) {
+    return { signal: real[0], cleanup: () => {} }
+  }
+
+  const anyFn = (AbortSignal as unknown as { any?: (s: AbortSignal[]) => AbortSignal }).any
+  if (typeof anyFn === 'function') {
+    return { signal: anyFn(real), cleanup: () => {} }
+  }
+
+  const ctrl = new AbortController()
+  const listeners: Array<{ s: AbortSignal; fn: () => void }> = []
+  for (const s of real) {
+    if (s.aborted) {
+      ctrl.abort((s as AbortSignal & { reason?: unknown }).reason)
+      continue
+    }
+    const fn = () => {
+      if (!ctrl.signal.aborted) ctrl.abort((s as AbortSignal & { reason?: unknown }).reason)
+    }
+    s.addEventListener('abort', fn, { once: true })
+    listeners.push({ s, fn })
+  }
+  return {
+    signal: ctrl.signal,
+    cleanup: () => {
+      for (const { s, fn } of listeners) s.removeEventListener('abort', fn)
+    },
+  }
 }
 
 async function _doFetch<T>(
@@ -421,6 +530,14 @@ async function _doFetch<T>(
   timeout: number,
 ): Promise<T> {
   let lastError: Error | null = null
+
+  // Pull the user-provided signal out of the spread so we can merge
+  // it explicitly with the per-attempt timeout signal further down,
+  // rather than letting `...rest` accidentally clobber the timeout.
+  // RequestInit.signal allows `null` for "explicit none"; coerce that
+  // to undefined so the rest of the helper can branch on truthiness.
+  const { signal: rawSignal, ...restOpts } = fetchOpts
+  const userSignal: AbortSignal | undefined = rawSignal ?? undefined
 
   // Phase-45 / Prompt 33 — short-circuit any path whose scope is still
   // inside an active Retry-After window. Without this guard, 60 in-flight
@@ -434,21 +551,30 @@ async function _doFetch<T>(
   }
 
   for (let attempt = 0; attempt <= retries; attempt++) {
+    // Phase-46 / Prompt 02 — if the caller cancelled before this
+    // attempt (e.g. between a 401 refresh + retry, or after an offline
+    // check), bail out without issuing more network work.
+    if (userSignal?.aborted) {
+      throw new DOMException('aborted', 'AbortError')
+    }
+
     if (!navigator.onLine) {
       setStatus('offline')
       throw new ApiError('No network connection', 0)
     }
 
-    try {
-      const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), timeout)
+    const controller = new AbortController()
+    let timer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      controller.abort(TIMEOUT_ABORT_REASON)
+    }, timeout)
+    const merged = combineSignals([userSignal, controller.signal])
 
+    try {
       const res = await fetch(`${getApiBase()}/api/v1${path}`, {
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        ...fetchOpts,
+        ...restOpts,
+        signal: merged.signal,
       })
-      clearTimeout(timer)
 
       // Any server response (even errors) means we're online
       setStatus('online')
@@ -488,8 +614,13 @@ async function _doFetch<T>(
           throw new TeslaAuthExpiredError(apiErr.message || 'Tesla account disconnected')
         }
 
-        // 401 Unauthorized — attempt automatic token refresh and retry once
+        // 401 Unauthorized — attempt automatic token refresh and retry once.
+        // Bail before the refresh round-trip if the caller has already
+        // cancelled — the retry would be wasted bandwidth.
         if (res.status === 401 && attempt === 0) {
+          if (userSignal?.aborted) {
+            throw new DOMException('aborted', 'AbortError')
+          }
           try {
             await refreshTokenOnce()
             continue
@@ -541,9 +672,26 @@ async function _doFetch<T>(
     } catch (err) {
       if (err instanceof ApiError) throw err
 
+      // Phase-46 / Prompt 02 — distinguish user-cancel from internal timeout.
+      // If the caller's signal aborted, propagate the original AbortError
+      // unchanged: no retry, no 408 conversion, no CORS probe — the user
+      // has navigated away or the query was cancelled by TanStack Query.
+      if (userSignal?.aborted) {
+        const aborted = err instanceof Error
+          ? err
+          : new DOMException('aborted', 'AbortError')
+        if (aborted.name !== 'AbortError') {
+          throw new DOMException('aborted', 'AbortError')
+        }
+        throw aborted
+      }
+
       // Network error might be a CORS-blocked auth redirect
-      // (ForwardAuth redirected to external auth domain, browser blocked it)
-      if (err instanceof TypeError) {
+      // (ForwardAuth redirected to external auth domain, browser blocked it).
+      // Skip the probe entirely if the caller has cancelled — the probe
+      // would be wasted work and could trigger the auth-expired flow on a
+      // page the user has already left.
+      if (err instanceof TypeError && !userSignal?.aborted) {
         try {
           const probe = await fetch(`${getApiBase()}/api/v1/system/version`, { method: 'HEAD' })
           if (!probe.ok || (probe.headers.get('content-type') ?? '').includes('text/html')) {
@@ -557,17 +705,39 @@ async function _doFetch<T>(
         }
       }
 
+      // Phase-46 / Prompt 02 — DOMException may not extend Error in
+      // every runtime (notably some jsdom builds), so check the abort
+      // name on the raw thrown value before wrapping it as Error.
+      const errName =
+        err instanceof Error
+          ? err.name
+          : typeof (err as { name?: unknown })?.name === 'string'
+            ? (err as { name: string }).name
+            : ''
+      const isAbort = errName === 'AbortError'
+
       lastError = err instanceof Error ? err : new Error(String(err))
 
-      if (lastError.name === 'AbortError') {
+      if (isAbort) {
+        // Internal timeout — surface as HTTP 408 so the existing UI
+        // continues to render the timeout placeholder.
         lastError = new ApiError('Request timed out', 408)
       }
 
       if (attempt < retries) {
         const delay = retryDelay * Math.pow(2, attempt) * (0.75 + Math.random() * 0.5)
-        await sleep(delay)
+        await abortableSleep(delay, userSignal)
+        if (userSignal?.aborted) {
+          throw new DOMException('aborted', 'AbortError')
+        }
         continue
       }
+    } finally {
+      if (timer) {
+        clearTimeout(timer)
+        timer = null
+      }
+      merged.cleanup()
     }
   }
 

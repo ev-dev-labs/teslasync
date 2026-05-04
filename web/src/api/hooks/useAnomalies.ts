@@ -28,7 +28,7 @@ export interface AnomalyEntry {
 export function useAnomalies(vehicleId: string | null, days = 7) {
   return useQuery({
     queryKey: ['anomalies', vehicleId, days],
-    queryFn: () => request<AnomalyData>(`/analytics/anomalies?vehicle_id=${vehicleId}&days=${days}`),
+    queryFn: ({ signal }) => request<AnomalyData>(`/analytics/anomalies?vehicle_id=${vehicleId}&days=${days}`, { signal }),
     enabled: vehicleId !== null,
     staleTime: STALE_TIMES.SLOW,
   });
