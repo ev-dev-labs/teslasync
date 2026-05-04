@@ -1,0 +1,435 @@
+=== PREFLIGHT ===
+Datetime: 2026-05-04T02:11-07:00
+Predecessor: phase-42-0034-mig-create-signal-log.log
+Predecessor markers: EXIT=0 / STATUS=DONE (verified by reading the
+unique '^EXIT=' and '^STATUS=' lines emitted by the predecessor's own
+gate output; the predecessor file's last two lines are EXIT=0 followed
+by STATUS=DONE, which is what the gate's PowerShell predecessor check
+parses).
+
+Working-tree baseline before authoring (git status --porcelain):
+  (clean)
+
+=== SLOT_VARIANCE ===
+The prompt-as-pasted hardcodes migration slot 000167 in:
+  - the allowed-files header,
+  - the file-existence check,
+  - the substring check (via path interpolation),
+  - the working-tree allowlist,
+  - the git add line, and
+  - the commit message embed.
+
+Slot 000167 is occupied by `000167_achievement_unlocks.{up,down}.sql`,
+a pre-phase-42 migration committed before this phase began.
+
+Variance scope: ONLY the migration slot number, in exactly these
+places:
+  migrations/000167_fsm_live.up.sql   -> 000174_fsm_live.up.sql
+  migrations/000167_fsm_live.down.sql -> 000174_fsm_live.down.sql
+  Gate's hardcoded existence checks: 000167 -> 000174
+  Gate's working-tree allowlist:     000167 -> 000174
+  Allowed-files allowlist:           000167 -> 000174
+
+Slot 000174 is the next free slot after the trailing edge of existing
+migrations. The full 000160-000173 run at the time of authoring is:
+  000160_settings_ui_density            (pre-phase-42, occupied)
+  000161  (free, intentionally skipped to follow trailing-edge rule)
+  000162_pinned_items                   (pre-phase-42, occupied)
+  000163_audit_logs_actor_metadata      (pre-phase-42, occupied)
+  000164_saved_views                    (pre-phase-42, occupied)
+  000165_push_subscriptions             (pre-phase-42, occupied)
+  000166_chatbot_sessions               (pre-phase-42, occupied)
+  000167_achievement_unlocks            (pre-phase-42, occupied)
+  000168_vehicle_unit_history           (phase-42 0022, occupied)
+  000169_positions_si                   (phase-42 0030, occupied)
+  000170_snapshots_si                   (phase-42 0031, occupied)
+  000171_charging_si                    (phase-42 0032, occupied)
+  000172_drives_si                      (phase-42 0033, occupied)
+  000173_signal_log                     (phase-42 0034, occupied)
+
+Following the slot-variance precedent set by phase-42 prompts 0022
+(000160 -> 000168), 0030 (000162 -> 000169), 0031 (000163 -> 000170),
+0032 (000164 -> 000171), 0033 (000165 -> 000172), and 0034
+(000166 -> 000173), this prompt moves 000167 -> 000174 to the next
+free trailing-edge slot.
+
+=== HONESTY_COVENANT ===
+Files modified by this prompt (allowlist with variance applied):
+  migrations/000174_fsm_live.up.sql
+  migrations/000174_fsm_live.down.sql
+  .github/prompts/db-refactor/logs/phase-42-0035-mig-create-fsm-live.log
+
+What this migration does, in plain English:
+  - Defensively drops fsm_transitions and vehicle_live_state if they
+    already exist (idempotent re-apply against test databases that
+    still hold stray legacy objects).
+  - Creates fsm_transitions: append-only state-machine transition log,
+    one row per state change per FSM per vehicle.
+      id          BIGSERIAL PRIMARY KEY
+      vehicle_id  BIGINT NOT NULL
+      ts          TIMESTAMPTZ NOT NULL
+      fsm_name    TEXT NOT NULL  -- 'drive_state' | 'charge_state' | ...
+      from_state  TEXT           -- nullable; first-observed transition
+      to_state    TEXT NOT NULL  -- destination is required
+      trigger     TEXT           -- nullable; field that drove the change
+      details     JSONB          -- nullable; FSM-specific structured ctx
+    Indexes:
+      fsm_transitions_vehicle_ts (vehicle_id, ts DESC)
+      fsm_transitions_fsm_ts     (fsm_name,   ts DESC)
+  - Creates vehicle_live_state: durable mirror of the L2 (Redis) HSET
+    `vehicle:{vehicleID}:signals`, used for restart recovery.
+      vehicle_id      BIGINT PRIMARY KEY
+      updated_at      TIMESTAMPTZ NOT NULL
+      drive_state     TEXT
+      charge_state    TEXT
+      last_lat        DOUBLE PRECISION
+      last_lng        DOUBLE PRECISION
+      last_speed_mps  DOUBLE PRECISION  -- SI: meters per second
+      soc_pct         REAL              -- 0-100
+      odometer_m      DOUBLE PRECISION  -- SI: meters
+      battery_level   INT               -- Tesla 0-100 UI field
+      inside_temp_c   REAL              -- SI: Celsius
+      outside_temp_c  REAL              -- SI: Celsius
+      locked          BOOLEAN
+      sentry_mode     BOOLEAN
+      full_state      JSONB             -- periodic Redis HSET snapshot
+    Single PK index (no secondary indexes — vehicle_id is the only
+    natural query key for this table).
+  - Both tables are intentionally NOT hypertables:
+      vehicle_live_state is keyed by vehicle (one row per vehicle, ever)
+      and would have nothing to chunk on; fsm_transitions has too few
+      rows per vehicle (~1000s/year) to benefit from chunk-based
+      partitioning. They live as plain regular tables.
+  - Applies a TABLE COMMENT and per-column COMMENTs documenting the
+    layered live-state contract on both tables.
+  - down.sql drops both new tables CASCADE (forward-only rollback —
+    no legacy schema to restore).
+  - Honesty covenants 1-10: unchanged.
+
+Allowed files this prompt (with variance applied):
+  migrations/000174_fsm_live.up.sql
+  migrations/000174_fsm_live.down.sql
+  .github/prompts/db-refactor/logs/phase-42-0035-mig-create-fsm-live.log
+
+=== SCHEMA ===
+migrations/000174_fsm_live.up.sql defines, in order:
+
+  -- defensive cleanup
+  DROP TABLE IF EXISTS fsm_transitions    CASCADE;
+  DROP TABLE IF EXISTS vehicle_live_state CASCADE;
+
+  -- fsm_transitions
+  CREATE TABLE fsm_transitions (
+    id         BIGSERIAL PRIMARY KEY,
+    vehicle_id BIGINT NOT NULL,
+    ts         TIMESTAMPTZ NOT NULL,
+    fsm_name   TEXT NOT NULL,
+    from_state TEXT,
+    to_state   TEXT NOT NULL,
+    trigger    TEXT,
+    details    JSONB
+  );
+  CREATE INDEX fsm_transitions_vehicle_ts
+    ON fsm_transitions (vehicle_id, ts DESC);
+  CREATE INDEX fsm_transitions_fsm_ts
+    ON fsm_transitions (fsm_name, ts DESC);
+  COMMENT ON TABLE  fsm_transitions IS '...';
+  COMMENT ON COLUMN fsm_transitions.* IS '...'  (7 column comments)
+
+  -- vehicle_live_state
+  CREATE TABLE vehicle_live_state (
+    vehicle_id BIGINT PRIMARY KEY,
+    updated_at TIMESTAMPTZ NOT NULL,
+    drive_state    TEXT,
+    charge_state   TEXT,
+    last_lat       DOUBLE PRECISION,
+    last_lng       DOUBLE PRECISION,
+    last_speed_mps DOUBLE PRECISION,
+    soc_pct        REAL,
+    odometer_m     DOUBLE PRECISION,
+    battery_level  INT,
+    inside_temp_c  REAL,
+    outside_temp_c REAL,
+    locked         BOOLEAN,
+    sentry_mode    BOOLEAN,
+    full_state     JSONB
+  );
+  COMMENT ON TABLE  vehicle_live_state IS '...';
+  COMMENT ON COLUMN vehicle_live_state.* IS '...'  (15 column comments)
+
+migrations/000174_fsm_live.down.sql is the inverse:
+  DROP TABLE IF EXISTS fsm_transitions    CASCADE;
+  DROP TABLE IF EXISTS vehicle_live_state CASCADE;
+
+Substring checks the gate runs against up.sql (PowerShell -match,
+regex semantics):
+  'CREATE TABLE fsm_transitions'      -> match (line 47)
+  'CREATE TABLE vehicle_live_state'   -> match (line 80)
+  'from_state'                        -> match (column + COMMENT)
+  'to_state'                          -> match (column + COMMENT)
+  'full_state'                        -> match (column + COMMENT)
+  'vehicle_id BIGINT PRIMARY KEY'     -> match (line 81)
+
+The vehicle_live_state column-list inside the prompt's CREATE TABLE
+is intentionally formatted with single-space tokens between
+`vehicle_id`, `BIGINT`, and `PRIMARY KEY` so the gate's bare-string
+regex (single-space tokens) matches without extra-whitespace
+considerations.
+
+=== APPLIED ===
+Verification was performed against an isolated TimescaleDB test
+database inside the running teslasync-postgres container (image
+timescale/timescaledb-ha:pg17), to avoid touching production data.
+
+Steps executed:
+  docker exec teslasync-postgres psql -U teslasync -d postgres
+    -c "DROP DATABASE IF EXISTS phase42_0035_verify;"
+    -c "CREATE DATABASE phase42_0035_verify;"
+   ->  NOTICE: database "phase42_0035_verify" does not exist, skipping
+       DROP DATABASE
+       CREATE DATABASE
+
+  docker exec teslasync-postgres psql -U teslasync
+    -d phase42_0035_verify
+    -c "CREATE EXTENSION IF NOT EXISTS timescaledb;"
+   ->  NOTICE: extension "timescaledb" already exists, skipping
+       CREATE EXTENSION
+
+  Get-Content migrations/000174_fsm_live.up.sql -Raw
+    | docker exec -i teslasync-postgres psql -U teslasync
+        -d phase42_0035_verify -v ON_ERROR_STOP=1
+   ->  exit 0
+
+up.sql output (verbatim, with NOTICEs interleaved):
+  DROP TABLE (x2)
+  NOTICE: table "fsm_transitions"    does not exist, skipping
+  NOTICE: table "vehicle_live_state" does not exist, skipping
+  CREATE TABLE                fsm_transitions
+  CREATE INDEX                fsm_transitions_vehicle_ts
+  CREATE INDEX                fsm_transitions_fsm_ts
+  COMMENT (x8)                one TABLE-level + 7 COLUMN-level
+  CREATE TABLE                vehicle_live_state
+  COMMENT (x16)               one TABLE-level + 15 COLUMN-level
+
+(The IF EXISTS NOTICE preamble is the expected output for a fresh
+verification database — the dropped objects do not exist yet. The
+first batch of CREATE TABLE / CREATE INDEX / COMMENT corresponds to
+fsm_transitions; the second to vehicle_live_state.)
+
+=== TABLE_VERIFY ===
+SELECT column_name, data_type, is_nullable, column_default
+  FROM information_schema.columns
+  WHERE table_name='fsm_transitions'
+  ORDER BY ordinal_position;
+  ->  id          | bigint                   | NO  | nextval('fsm_transitions_id_seq'::regclass)
+      vehicle_id  | bigint                   | NO  | (none)
+      ts          | timestamp with time zone | NO  | (none)
+      fsm_name    | text                     | NO  | (none)
+      from_state  | text                     | YES | (none)
+      to_state    | text                     | NO  | (none)
+      trigger     | text                     | YES | (none)
+      details     | jsonb                    | YES | (none)
+  (8 rows; matches prompt schema verbatim. id is BIGSERIAL — the
+  default sequence is the canonical PostgreSQL representation.)
+
+SELECT column_name, data_type, is_nullable
+  FROM information_schema.columns
+  WHERE table_name='vehicle_live_state'
+  ORDER BY ordinal_position;
+  ->  vehicle_id      | bigint                   | NO
+      updated_at      | timestamp with time zone | NO
+      drive_state     | text                     | YES
+      charge_state    | text                     | YES
+      last_lat        | double precision         | YES
+      last_lng        | double precision         | YES
+      last_speed_mps  | double precision         | YES
+      soc_pct         | real                     | YES
+      odometer_m      | double precision         | YES
+      battery_level   | integer                  | YES
+      inside_temp_c   | real                     | YES
+      outside_temp_c  | real                     | YES
+      locked          | boolean                  | YES
+      sentry_mode     | boolean                  | YES
+      full_state      | jsonb                    | YES
+  (15 rows; matches prompt schema verbatim. The two NOT NULL columns
+  are the PK and the snapshot freshness timestamp; everything else is
+  nullable so a partial snapshot can be UPSERTed.)
+
+SELECT count(*) FROM timescaledb_information.hypertables
+  WHERE hypertable_name IN ('fsm_transitions','vehicle_live_state');
+  ->  0
+  (Both are plain regular tables, NOT hypertables. The prompt
+  requires this: "Neither is a hypertable".)
+
+SELECT indexname FROM pg_indexes
+  WHERE tablename IN ('fsm_transitions','vehicle_live_state')
+  ORDER BY tablename, indexname;
+  ->  fsm_transitions_fsm_ts
+      fsm_transitions_pkey
+      fsm_transitions_vehicle_ts
+      vehicle_live_state_pkey
+  (4 rows — both prompt-mandated indexes on fsm_transitions plus its
+  PK index, plus the single PK index on vehicle_live_state. No extra
+  indexes.)
+
+SELECT conname, contype, pg_get_constraintdef(oid)
+  FROM pg_constraint
+  WHERE conrelid IN ('fsm_transitions'::regclass, 'vehicle_live_state'::regclass)
+  ORDER BY conname;
+  ->  fsm_transitions_pkey    | p | PRIMARY KEY (id)
+      vehicle_live_state_pkey | p | PRIMARY KEY (vehicle_id)
+  (2 rows — surrogate PK on fsm_transitions, natural PK on
+  vehicle_live_state. No FK, no CHECK, matching the prompt schema and
+  the no-FK precedent of phase-42 prompts 0030-0034.)
+
+Append-only smoke test (fsm_transitions):
+  INSERT INTO fsm_transitions (vehicle_id, ts, fsm_name, from_state, to_state, trigger, details)
+    VALUES (1, now(), 'drive_state', NULL, 'driving', 'Gear', '{"before":"P","after":"D"}'::jsonb);
+  INSERT INTO fsm_transitions (vehicle_id, ts, fsm_name, from_state, to_state, trigger, details)
+    VALUES (1, now() + interval '1 sec', 'drive_state', 'driving', 'parked', 'Gear', NULL);
+  INSERT INTO fsm_transitions (vehicle_id, ts, fsm_name, to_state)
+    VALUES (1, now() + interval '2 sec', 'charge_state', 'Charging');
+
+  All three INSERTs returned `INSERT 0 1`.
+
+  SELECT count(*), array_agg(fsm_name||':'||COALESCE(from_state,'<nil>')||'->'||to_state ORDER BY ts)
+    FROM fsm_transitions;
+   -> 3 | {drive_state:<nil>->driving,drive_state:driving->parked,charge_state:<nil>->Charging}
+
+  (Confirms: NULL from_state is accepted on first transition; trigger
+  + details are nullable; the surrogate id PK accepts arbitrarily many
+  rows for the same (vehicle_id, ts) pair — append-only semantics, no
+  unique-collision risk.)
+
+UPSERT smoke test (vehicle_live_state):
+  INSERT INTO vehicle_live_state (vehicle_id, updated_at, drive_state, charge_state,
+      last_lat, last_lng, last_speed_mps, soc_pct, odometer_m, battery_level,
+      inside_temp_c, outside_temp_c, locked, sentry_mode, full_state)
+    VALUES (42, now(), 'driving', 'Disconnected', 37.7749, -122.4194, 26.8224,
+            84.5, 123456.7, 84, 21.5, 18.0, false, false,
+            '{"note":"initial snapshot"}'::jsonb);
+   -> INSERT 0 1
+   -> SELECT shows the row populated with all 15 columns intact,
+      including JSONB full_state = {"note": "initial snapshot"}.
+
+  INSERT INTO vehicle_live_state (vehicle_id, updated_at, drive_state)
+    VALUES (42, now() + interval '1 sec', 'parked')
+    ON CONFLICT (vehicle_id) DO UPDATE
+      SET drive_state = EXCLUDED.drive_state,
+          updated_at  = EXCLUDED.updated_at;
+   -> INSERT 0 1
+   -> SELECT shows vehicle_id=42 with drive_state='parked' (updated)
+      and charge_state='Disconnected' (preserved from the prior row,
+      because the UPSERT only touched the two named columns).
+
+  (Confirms: PK collision on (vehicle_id) drives ON CONFLICT branch as
+  expected; partial UPSERT preserves untouched columns; restart
+  recovery semantics are sound — a thin snapshot does not clobber
+  other live-state fields.)
+
+down.sql verification:
+  Get-Content migrations/000174_fsm_live.down.sql -Raw
+    | docker exec -i teslasync-postgres psql -U teslasync
+        -d phase42_0035_verify -v ON_ERROR_STOP=1
+   -> DROP TABLE (x2), exit 0
+
+  SELECT count(*) FROM information_schema.tables
+   WHERE table_name IN ('fsm_transitions','vehicle_live_state');
+   -> 0
+  (down.sql cleanly removes both tables the up.sql created.)
+
+Cleanup:
+  docker exec teslasync-postgres psql -U teslasync -d postgres
+    -c "DROP DATABASE phase42_0035_verify;"
+   -> DROP DATABASE
+  (Verify database removed; production teslasync database untouched.)
+
+=== GATE ===
+--- predecessor markers (phase-42-0034-mig-create-signal-log.log) ---
+EXIT=0
+STATUS=DONE
+(predecessor verified DONE)
+
+--- file existence ---
+migrations/000174_fsm_live.up.sql      -> present
+migrations/000174_fsm_live.down.sql    -> present
+
+--- substring check on up.sql (PowerShell -match, regex semantics) ---
+'CREATE TABLE fsm_transitions'        -> match
+'CREATE TABLE vehicle_live_state'     -> match
+'from_state'                          -> match (column + COMMENT)
+'to_state'                            -> match (column + COMMENT)
+'full_state'                          -> match (column + COMMENT)
+'vehicle_id BIGINT PRIMARY KEY'       -> match (vehicle_live_state line 81)
+
+(All six substring patterns in the gate's foreach loop matched against
+the raw file content, verified by running the same loop in PowerShell
+against migrations/000174_fsm_live.up.sql before finalizing this log.)
+
+--- migration-collision check at slot 000174 ---
+slot 000174 is unique to this migration:
+  Get-ChildItem migrations/000174_*.sql
+    -> 000174_fsm_live.up.sql
+    -> 000174_fsm_live.down.sql
+  No other 000174_* file exists.
+
+--- variance footnote: confirm slot 000167 collision still exists ---
+  pre-existing at 000167: 000167_achievement_unlocks.up.sql
+  pre-existing at 000167: 000167_achievement_unlocks.down.sql
+  (This is the reason for the variance from 000167 -> 000174.)
+
+--- go test -race -run TestMigrationApply ./internal/database/... ---
+ok  github.com/ev-dev-labs/teslasync/internal/database (cached) [no tests to run]
+go test exit code: 0
+
+(Note: TestMigrationApply does not exist anywhere in this repository
+— a `git grep -n 'func TestMigration'` finds zero matches. The
+prompt's gate command therefore matches no tests and Go reports "no
+tests to run" with exit 0; this is the same behavior the predecessor
+phase-42 prompts encountered. The substantive verification of the
+migration ran end-to-end against a live TimescaleDB container instead,
+captured under === APPLIED === and === TABLE_VERIFY === above.)
+
+--- working-tree drift check (slot-corrected allowlist) ---
+git status --porcelain (filtered to disallowed entries):
+  (none)
+working tree clean (only allowed files modified):
+  ?? migrations/000174_fsm_live.up.sql
+  ?? migrations/000174_fsm_live.down.sql
+  (and the log itself, added with -f at commit time)
+
+All gate checks passed.
+
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+Files staged:
+  migrations/000174_fsm_live.up.sql
+  migrations/000174_fsm_live.down.sql
+  .github/prompts/db-refactor/logs/phase-42-0035-mig-create-fsm-live.log
+  (the log added with `git add -f`)
+
+Commit message (slot-variance preserved verbatim from the prompt's
+template, plus a slot-variance footnote in the body):
+
+  phase-42(0035): fsm_transitions + vehicle_live_state
+
+  fsm_transitions: append-only state-machine log per FSM per vehicle.
+  vehicle_live_state: durable mirror of L2 (Redis) live state for
+  restart recovery. Both are non-hypertable (low cardinality).
+
+  Slot variance: prompt 0035 hardcodes slot 000167 but that slot is
+  occupied by 000167_achievement_unlocks (pre-phase-42). Migration
+  created at slot 000174 — the next free trailing-edge slot after
+  000173_signal_log (phase-42 0034). Variance scope: filename and gate
+  allowlist only; schema, semantics, and gate intent are exactly as
+  the prompt specifies. This mirrors phase-42 prompts 0022
+  (000160 -> 000168), 0030 (000162 -> 000169), 0031 (000163 -> 000170),
+  0032 (000164 -> 000171), 0033 (000165 -> 000172), and 0034
+  (000166 -> 000173).
+
+  Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+EXIT=0
+STATUS=DONE
