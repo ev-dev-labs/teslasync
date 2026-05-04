@@ -1,0 +1,24 @@
+=== PREFLIGHT ===
+Predecessor: EXIT=0 / STATUS=DONE
+=== PIPELINE_DESIGN ===
+normalize package: ONE entry (Pipeline.Process). Decode -> stable-sort SettingUnit-first -> per-atomic dispatch (observeSettingUnit OR toSI+router.Route). ErrPayloadDrop sentinel only for codec.Decode failures; per-atomic failures logged + counted via tesla_normalize_values_processed_total{field,outcome}. Ordering invariant locked by TestSettingUnitProcessedFirstInSamePayload; single-pipeline invariant locked by TestSinglePipelineInvariant (AST scan). Routable interface (subset of *router.Router) for test substitutability.
+=== INVARIANT_TEST ===
+OK: internal/tesla/normalize/normalize.go
+OK: internal/tesla/normalize/normalize_test.go
+OK: internal/tesla/normalize/pipeline.go
+OK: internal/tesla/normalize/setting_unit_observer.go
+test present: TestPipelineHappyPath
+test present: TestSettingUnitProcessedFirstInSamePayload
+test present: TestSinglePipelineInvariant
+sort + IsSettingUnit references found
+Pipeline public methods: Process
+single-pipeline invariant: only Process is public
+=== UNIT_TEST ===
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/normalize	2.216s
+=== GATE ===
+go test -race PASSED
+--- git status --porcelain ---
+(clean)
+All gate checks passed.
+EXIT=0
+STATUS=DONE
