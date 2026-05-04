@@ -30,8 +30,6 @@ type APIKey struct {
 
 // ChargeTelemetryReading has moved to charging.go.
 
-// FleetTelemetrySubscription has moved to telemetry.go.
-
 // ChargingSession is defined in charging.go to mirror the post-migration
 // `charging_sessions` schema (migrations/000142_baseline_typed.up.sql).
 
