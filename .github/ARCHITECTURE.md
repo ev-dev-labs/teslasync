@@ -444,6 +444,139 @@ RULES:
 └─────────────────────────┴──────────────────────────────────────┘
 ```
 
+## ADR-003: Go Quality Conventions
+
+**Status:** Accepted, supersedes ad-hoc style guides.
+
+**Context.**
+A Go-only audit (85 HIGH + 417 MEDIUM findings across 495 batches) found
+recurring quality drift across the backend — missing context timeouts on
+Tesla calls, unrecovered goroutines, swallowed errors, missing pagination,
+response-shape unit mislabels, magic numbers, and snapshot-table reads for
+live current state. Each class is individually small but recurs because
+nothing in the project blocks it from re-entering. The conventions below
+are the codification of those findings, derived directly from the audit
+table `phase41_findings` (in the session-store SQLite) and the per-package
+SQL exports under `files/raw-audits/`.
+
+**Decision (Conventions, all enforced via per-prompt gates and CI):**
+
+1. **Context propagation.** Every exported function that performs I/O
+   accepts `ctx context.Context` as its first parameter.
+   `context.Background()` and `context.TODO()` are forbidden outside
+   `main`, `init`, and `_test.go`. Re-entry from goroutines must use
+   `context.WithoutCancel(ctx)` to preserve trace IDs without inheriting
+   cancellation.
+
+2. **External call timeouts.** Every Tesla Fleet API call, every external
+   HTTP call, and every long-running DB call wraps the inherited context
+   in `context.WithTimeout`. Default timeouts: Tesla=30s, geocoding=10s,
+   Mosquitto reconnect=5s, signal_log Timeline=15s.
+
+3. **Goroutine safety.** Every `go func()` either uses
+   `resilience.SafeGo` (a deferred `recover()` that logs and increments a
+   metric) or is documented as "panic-safe by construction" with a
+   one-line comment.
+
+4. **Resource lifecycle.** `rows.Close()`, `body.Close()`,
+   `tx.Rollback()`, `ticker.Stop()`, file `Close()`, etc. are deferred
+   immediately after acquisition. Manual `Unlock` is forbidden — use
+   `defer mu.Unlock()`.
+
+5. **Error handling.** `http.Error(...)` is forbidden in handlers — use
+   the project `writeError(w, status, msg)` helper. Swallowed errors via
+   `_ = ...` are forbidden except where explicitly documented (e.g.
+   `defer tx.Rollback()` after a successful Commit).
+
+6. **Error wrap context.** Return paths use
+   `fmt.Errorf("operation context: %w", err)`, never bare `return err`.
+   The wrap context names the operation and the relevant identifier
+   (e.g., `vehicle %d`).
+
+7. **SQL safety.** All queries use parameterized placeholders (`$1`,
+   `$2`). String interpolation of values into queries is forbidden.
+   `signal_log` queries MUST include a time bound (lower AND upper).
+   List endpoints MUST include a `LIMIT` cap (default 200, configurable
+   up to 1000).
+
+8. **Pagination.** Every list endpoint accepts `limit` and `offset`
+   query parameters and enforces a maximum `limit`. The `pagination(r)`
+   helper returns `(limit, offset)` — both MUST be wired through to the
+   underlying repo call.
+
+9. **Input validation.** `chi.URLParam` → `strconv.ParseInt(...)` MUST
+   be followed by an `if id <= 0` bounds check. Date ranges from query
+   string are validated against RFC3339 / `2006-01-02` formats before
+   forwarding to upstream APIs.
+
+10. **Response shape.** All JSON field names are `snake_case` and end in
+    a unit suffix when the value is a measurement (e.g., `distance_mi`,
+    `speed_kph`, `outside_temp_c`). Renaming an existing column without
+    conversion is a CORRECTNESS BUG (e.g.,
+    `AVG(distance_mi) AS avg_distance_km` is NEVER permitted).
+
+11. **Logging.** All logging goes through zerolog with structured fields.
+    `fmt.Print*` and `log.Print*` from the standard `log` library are
+    forbidden in non-test code. Log levels: `Error` (operation failed),
+    `Warn` (degraded), `Info` (significant business events), `Debug`
+    (development diagnostics).
+
+12. **Long handlers.** Functions over 150 LOC must be decomposed unless
+    the body is a single switch/state-machine over a finite enumeration.
+    Decomposition follows Single Responsibility (validate / compute /
+    persist / respond helpers).
+
+13. **Magic numbers.** Magic numbers, hardcoded URLs, and ad-hoc
+    thresholds are extracted as named `const` blocks at the top of the
+    file. Tariffs, capacities, and per-region values are sourced from
+    the settings table or environment variables.
+
+14. **Layering.** Snapshot tables (`positions`, `security_events`,
+    `climate_snapshots`, etc.) are NEVER read for live current state —
+    use `signal.Store` (L1) → Redis (L2) → `signal_log` (durable). Per
+    ADR-002.
+
+15. **Dead code.** Exported symbols without callers are removed (or
+    marked `// Deprecated: ...` with a removal date).
+
+**Enforcement model.**
+
+- **Per-prompt gate:** every phase-41 remediation prompt runs
+  `go build ./...` + `go test ./<pkg>/...` + drift check. Anchored greps
+  assert the convention is now applied where applicable.
+- **CI gate (post-phase-41):** golangci-lint v2 config additions for the
+  rules above (configured in a follow-up phase, not this one).
+- **ADR review:** any future change that violates a convention requires
+  an ADR superseding ADR-003 in the same PR.
+
+**Rejected alternatives.**
+
+- **Single mega-prompt.** Rejected: too coarse for revertibility;
+  impossible to gate; impossible to assign to different agents.
+- **Per-package prompts.** Rejected for HIGH findings: a single
+  mega-package prompt would obscure individual fixes and make the gate
+  non-anchorable.
+- **Lint-only enforcement.** Rejected for the unit-mislabel class:
+  linters cannot detect that `AVG(distance_mi) AS avg_distance_km` has
+  the wrong units — only domain-aware human review (or per-prompt
+  anchored greps) can.
+
+**Consequences.**
+
+- The phase-41 prompt slate (299 prompts) is the precedent for the
+  conventions. Future audits follow the same pattern (audit → SQL →
+  prompts → ADR).
+- Each new bug class found in production is documented as an addition to
+  ADR-003 with a remediation phase reference.
+- `internal/resilience.SafeGo` becomes a project-required helper for
+  goroutines.
+
+**References:**
+
+- phase-41 prompt directory: `.github/prompts/db-refactor/phase-41/`
+- phase-41 audit findings table: `phase41_findings` (in the session-store
+  SQLite, exported into `files/raw-audits/`)
+
 ## ADR-004: Tesla Fleet Telemetry Pipeline (codegen + dynamic units + single pipeline)
 
 **Status:** Accepted (phase-42).

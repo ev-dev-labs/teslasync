@@ -1,0 +1,37 @@
+=== PREFLIGHT ===
+Predecessor: .github/prompts/db-refactor/logs/phase-41-0000-survey-and-scope.log
+Predecessor STATUS=DONE EXIT=0 verified.
+Allowed files: .github/ARCHITECTURE.md, .github/prompts/db-refactor/logs/phase-41-0001-adr-003-go-quality.log
+
+Document structure observed:
+  Line 9   ## ADR-001: Unified Signal Log (Single Source of Truth)
+  Line 37  ## ADR-002: Change Feed vs State Separation  (ends at line 446)
+  Line 447 ## ADR-004: Tesla Fleet Telemetry Pipeline
+  Note: a pre-existing "### ADR-003: Error Handling (No Silent Swallowing)" sub-section
+        exists at line 341 inside the ADR-002 envelope. It is sub-heading level (###),
+        not the top-level (##) heading this prompt requires. Pre-existing numbering
+        inconsistency is out-of-scope; the new top-level "## ADR-003: Go Quality
+        Conventions" will be inserted between line 446 and line 447.
+
+=== CHANGES ===
+Append new top-level section "## ADR-003: Go Quality Conventions" before "## ADR-004"
+in .github/ARCHITECTURE.md. Body: Status, Context, Decision (15 conventions), Enforcement
+model, Rejected alternatives, Consequences, References — per prompt action steps.
+
+=== GATE ===
+CONVENTION_WRITEERROR=True
+CONVENTION_LAYERING=True
+CONVENTION_FMT_ERRORF=True
+CONVENTION_SAFEGO=True
+CONVENTION_ZEROLOG=True
+REJECTED_ALTS=True
+ADR_002_PRESENT=True
+CONVENTION_PAGINATION=True
+STATUS_LINE=True
+CONVENTION_UNIT_SUFFIX=True
+ADR_HEADING=True
+CONVENTION_TIMEOUTS=True
+UNEXPECTED_STATUS_COUNT=0
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
