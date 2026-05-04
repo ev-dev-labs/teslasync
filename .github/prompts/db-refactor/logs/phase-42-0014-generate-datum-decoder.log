@@ -1,0 +1,46 @@
+=== PREFLIGHT ===
+predecessor=phase-42-0013-generate-enum-parsers.log
+EXIT=0
+STATUS=DONE
+host=Windows core.autocrlf=input
+=== RUN_CODEGEN ===
+command: go run ./cmd/protogen-tesla --proto cmd/protogen-tesla/testdata/sample.proto --out cmd/protogen-tesla/testdata/golden --package protomodel
+protogen-tesla: emitted signal_metadata_gen.go, enum_parsers_gen.go, datum_decoder_gen.go into cmd/protogen-tesla/testdata/golden
+testdata_codegen_exit=0
+command: go run ./cmd/protogen-tesla --proto api/proto/tesla/vehicle_data.proto --out internal/tesla/protomodel --only datum_decoder
+protogen-tesla: emitted datum_decoder_gen.go into internal/tesla/protomodel
+production_codegen_exit=0
+=== INVALID_HONORED ===
+PASS: GetInvalid() check before oneof switch
+=== UNIT_TEST ===
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/protomodel	(cached)
+ok  	github.com/ev-dev-labs/teslasync/cmd/protogen-tesla	0.596s
+unit_test_exit=0
+=== GATE ===
+PASS: predecessor 0013 DONE
+PASS: present internal/tesla/protomodel/datum_decoder_gen.go
+PASS: present internal/tesla/protomodel/datum_decoder_test.go
+PASS: present internal/tesla/protomodel/compounds.go
+PASS: generated header present
+PASS: symbol ErrInvalid
+PASS: symbol ErrUnsetValue
+PASS: symbol func DecodeValue
+PASS: symbol func DecodeDatum
+PASS: invalid honored before oneof switch
+PASS: no panic in generated decoder
+Running gate tests...
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/protomodel	(cached)
+ok  	github.com/ev-dev-labs/teslasync/cmd/protogen-tesla	(cached)
+gate_tests_exit=0
+Running drift check via go generate...
+protogen-tesla: emitted signal_metadata_gen.go, enum_parsers_gen.go, datum_decoder_gen.go into .
+protogen-tesla: emitted signal_metadata_gen.go, enum_parsers_gen.go, datum_decoder_gen.go into .
+go_generate_exit=0
+PASS: no drift after go generate
+PASS: scope clean
+git status:
+  (clean)
+All gate checks passed.
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
