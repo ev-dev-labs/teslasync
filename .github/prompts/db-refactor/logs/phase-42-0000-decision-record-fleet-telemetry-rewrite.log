@@ -1,0 +1,206 @@
+=== PREFLIGHT ===
+prompt: phase-42/0000 - Tesla Fleet Telemetry Pipeline Rewrite Decision Record
+severity: Gate
+atomic: yes
+delegation: FORBIDDEN
+predecessor: none (phase-42 is independent of phase-41 by design)
+allowed files: only this log file (.github/prompts/db-refactor/logs/phase-42-0000-decision-record-fleet-telemetry-rewrite.log)
+working tree: clean (only the log file is touched)
+audit source: C:/Users/AtulM/.copilot/session-state/a3a0b97f-7487-4358-985b-2e8bede27d1f/files/fleet-telemetry-audit/report.md
+goal: lock the 10 architectural decisions that govern phase-42; this is a reasoning gate, no source code is changed.
+
+=== AUDIT_EVIDENCE ===
+Source: files/fleet-telemetry-audit/report.md (16 HIGH / 22 MED / 18 LOW across 241 actionable Tesla proto fields)
+
+Headline numbers (from report Summary):
+- Tesla Field enum entries: 260 total
+- Actionable fields (excluding Deprecated_*, Experimental_*, Unknown): 241
+- In SignalRegistry: 230 / 241  -> 11 silently missing
+- In HotCatalog (typed columns): 7
+- In KnownColdSignals (signal_observations): 223
+- Have NormalizeFleetUnits parser: 27
+- Have Flatten() handler: 4
+- Transformer stubs (passthrough): 16 / 16  -> 100% of "transformers" are no-ops
+
+HIGH findings (16) - data corruption / silent loss:
+
+1) missing-from-signal-registry (11)
+   All 11 Semitruck-specific Tesla proto fields are absent from SignalRegistry:
+     - SemitruckPassengerSeatFoldPosition (proto id 97)  -> Climate
+     - SemitruckTpmsPressureRe1L0 (proto id 73)          -> Service
+     - SemitruckTpmsPressureRe1L1 (proto id 74)          -> Service
+     - SemitruckTpmsPressureRe1R0 (proto id 75)          -> Service
+     - SemitruckTpmsPressureRe1R1 (proto id 76)          -> Service
+     - SemitruckTpmsPressureRe2L0 (proto id 77)          -> Service
+     - SemitruckTpmsPressureRe2L1 (proto id 78)          -> Service
+     - SemitruckTpmsPressureRe2R0 (proto id 79)          -> Service
+     - SemitruckTpmsPressureRe2R1 (proto id 80)          -> Service
+     - SemitruckTractorParkBrakeStatus (proto id 104)    -> Service
+     - SemitruckTrailerParkBrakeStatus (proto id 105)    -> Service
+   Without a registry entry, IsCompoundSignal/IsEnumSignal/GetSignalType fall through, the field is silently unrouted, and the existing "coverage test" (which iterates the hand-curated registry) passes.
+
+2) stub-transformer-wired (1)
+   - VehicleSpeed (proto id 4, Driving): HotCatalog routes VehicleSpeed through transformer ConvertMphToMps, currently
+     `var ConvertMphToMps Transformer = passthrough` in internal/telemetry/transformers_stub.go.
+     The raw Tesla mph value is written into typed column positions.speed_mps (claims m/s) with no conversion.
+     Live customer data is unit-corrupted at rest.
+
+3) compound-not-flattened (3)
+   - DestinationLocation (proto id 112, TypeLocation)
+   - OriginLocation     (proto id 111, TypeLocation)
+   - RouteLine          (proto id 108, TypeRoute)
+   None of these are handled by Flatten() or NormalizeFleetUnits. They arrive as nested map[string]any and are
+   either JSON-marshaled blindly into a string column or break downstream consumers expecting a scalar.
+
+4) unit-handling (1)
+   - VehicleSpeed: Tesla emits in mph; speed_mps stores m/s; SettingDistanceUnit / SettingTemperatureUnit /
+     SettingTirePressureUnit are received but never consulted to drive conversion.
+
+MEDIUM findings (22) - notable: 16 missing-enum-parser entries, 3 additional stub-transformer-wired
+(SentryMode/TonneauPosition/TonneauTentMode) write raw Tesla enum strings like "SentryModeStateArmed" into
+typed enum columns. 1 missing entry from registry (Climate). 2 missing flatteners.
+
+Bottom line:
+- 16/16 transformer stubs are passthroughs -> 100% of typed-column transforms are no-ops.
+- positions.speed_mps silently stores mph (off by 2.237x).
+- security_events enum columns store raw "SentryModeStateArmed" / etc. instead of normalized values.
+- 11 Semitruck fields are silently unrouted.
+- Compound Location/Route fields are JSON-blob'd into scalar columns.
+- The hand-curated registry vs proto drift cannot be detected by the existing tests.
+
+The defects are architectural (dual pipelines, hand-curated registry, stub-transformer dispatch),
+not isolated bugs. A patch-by-patch fix touches every file in internal/telemetry/ and internal/enums/
+and STILL leaves the dual-pipeline architecture intact.
+
+=== DECISIONS ===
+Restated verbatim from prompt 0000 (the source of truth for phase-42):
+
+| # | Decision | Choice |
+|---|---|---|
+| 1 | Approach | Full rewrite via prompt-runner. Same machinery as phase-41. |
+| 2 | Source of truth for signal metadata | Vendored Tesla `vehicle_data.proto` + `go generate`. Hand-curated `SignalRegistry`, `KnownColdSignals`, `HotCatalog`, `signal_alias.go`, and `parse_*.go` are DELETED. Adding a Tesla field = re-vendor proto + re-run codegen + add a routing entry. |
+| 3 | Compound types (DoorState, Location, TireLocation, Time, Doors) | Always flatten at ingest. DoorState -> 6 bool atomics, Location -> Lat+Lng, TireLocation -> 10 bool atomics. No nested maps cross the ingest boundary. |
+| 4 | Backfill of historical data | None. Start fresh on deploy. |
+| 5 | Resubscribe at deploy | All vehicles. Fresh Fleet Telemetry config sent on deploy day; Tesla's process-startup snapshot reseeds all subscribed signals. |
+| 6 | Legacy code | Delete, no shims. Forward-only. No deprecated wrappers, no parallel old/new paths. |
+| 7 | Legacy tables | 38 tables drop with `CASCADE`. Enumerated in Prompt 0078. All current data is suspect (broken pipeline wrote it). |
+| 8 | Pipeline shape | Single pipeline, every value visited exactly once. `bytes -> typed Datum -> flatten -> lookup activeUnit at T -> ToSI -> atomic typed values -> router -> write`. Coverage test in Prompt 0048 asserts every Field has exactly one route. |
+| 9 | Wire-format units | DYNAMIC per vehicle display preference. When a user toggles their dashboard from Miles to km (e.g., crossing into Canada), `VehicleSpeed/Odometer/TPMS/InsideTemp` start emitting in the new unit. Tesla's developer documentation claims fixed units but is known to have errors and omissions; the proto contract - `Setting*Unit` fields are streamable Field entries, not static config - is the source of truth. The cost asymmetry settles it: Design F-when-D-true silently corrupts cross-border drivers' speed/odometer/temp/pressure forever; Design D-when-F-true costs ~1 table + ~200 LOC of correct-but-unused code. |
+| 9a | Mechanism | `vehicle_unit_history(vehicle_id, unit_kind, unit_value, effective_from TIMESTAMPTZ, source)` records every `Setting*Unit` change. Every unit-bearing field at time T does a point-in-time lookup before `ToSI`. |
+| 9b | `ToSI` signature | `ToSI(field, rawValue, activeUnit) (float64, error)` - 3-arg pure function. activeUnit comes from the lookup. |
+| 9c | Required ingest signals | All 4 `Setting*Unit` fields subscribed at `interval_seconds=1`. Treated as critical - losing one means N hours of corrupted unit-bearing data. |
+| 9d | Bootstrap | `internal/tesla/client_vehicle_data.go` REST snapshot on first connect seeds `vehicle_unit_history` from `gui_settings`. Belt-and-suspenders alongside Tesla's process-startup telemetry snapshot. |
+| 9e | Missing-context behavior | If a unit-bearing field arrives with no unit context (both bootstraps missed), drop value + log warning + emit metric. Never silent corruption. |
+| 9f | Storage | Canonical SI everywhere (m/s, m, Pa, degC). Single conversion site at ingest. |
+| 10 | Frontend Settings page Unit selectors | App-display-only. Independent of vehicle pref + ingestion. SI -> app display happens in `web/src/lib/units/`. |
+
+=== REASONING ===
+Why this is a rewrite, not a patch
+----------------------------------
+The audit shows 16 HIGH findings rooted in three architectural defects, not 16 isolated bugs:
+  (a) Two parallel transform pipelines (NormalizeFleetUnits switch in internal/telemetry/normalize.go vs.
+      HotCatalog.Transformer field in internal/telemetry/hot_catalog*.go) running on the same value with
+      different outputs based on which path the dispatcher picks.
+  (b) Two parallel compound expanders (Flatten() in internal/telemetry/flatten.go vs. SignalRegistry switch
+      in normalize.go that JSON-marshals compound types into strings). Same field, different shape downstream
+      depending on call site.
+  (c) Hand-curated SignalRegistry / KnownColdSignals / HotCatalog / signal_alias.go / parse_*.go that drift
+      from Tesla's vehicle_data.proto. The existing coverage test iterates the hand-curated set, so
+      missing-from-registry fields pass silently. internal/telemetry/transformers_stub.go ships 16/16
+      transformers as passthrough stubs (positions.speed_mps stores mph; security_events enum columns store
+      raw "SentryModeStateArmed").
+
+Patching would touch every file in internal/telemetry/ and internal/enums/ AND still leave the
+dual-pipeline architecture intact. The architectural problem is that there are two pipelines at all -
+no patch fixes that. The fix has to be a single-pipeline rewrite where every value is visited exactly once.
+
+Phase-42 is INDEPENDENT of phase-41
+-----------------------------------
+Phase-41 audits Go-quality across the backend (style, patterns, discipline). Phase-42 deletes the
+telemetry pipeline implementation and rebuilds it. The phases have ~20% overlap (phase-41 may patch files
+in internal/telemetry/ that phase-42 deletes). That overlap is intentional, not a conflict:
+  - Phase-41 work that lands first is harmless: phase-42 deletes those files anyway.
+  - Phase-42 work that lands first is harmless: phase-41 will find the post-rewrite files clean.
+  - The phases can run in either order. Prompt 0000 has no predecessor.
+
+The 9 + 1 decisions are LOCKED
+------------------------------
+Implementation prompts (0001..0079) cite this prompt as the source of truth. Disagreement at
+implementation time = revisit this record, not silent override. The architecture record itself lands in
+ADR-004 (Prompt 0001) and the agent-instructions file `.github/instructions/tesla-pipeline.instructions.md`
+(Prompt 0002). After those two prompts land, those documents become the canonical reference; until they do,
+this log is authoritative.
+
+The decisions in plain language and why each one matters
+--------------------------------------------------------
+- Decision 1 (full rewrite via prompt-runner): same atomic-prompt + log-driven gate machinery proven by
+  phase-41. Each prompt is independently verifiable; each leaves a log; CI re-runs gates.
+- Decision 2 (codegen from vendored proto): hand-curated registries demonstrably drift (11 missing
+  Semitruck fields prove this). Adding a Tesla field becomes a mechanical re-vendor + go generate; the
+  reflective coverage test in Prompt 0048 then enforces "every Field has exactly one route".
+- Decision 3 (always flatten compound types at ingest): no nested map[string]any crosses the ingest
+  boundary. DoorState becomes 6 bool atomics; Location becomes Lat+Lng; TireLocation becomes 10 bool
+  atomics. Downstream consumers see only typed scalars.
+- Decision 4 (no backfill of historical data): the broken pipeline wrote everything we have. mph is
+  saved in m/s columns; raw enum strings in typed enum columns. There is no rescuing it; we start fresh.
+- Decision 5 (resubscribe all vehicles on deploy): Tesla's process-startup snapshot reseeds every
+  subscribed signal. Combined with the REST gui_settings bootstrap, this guarantees every vehicle has a
+  current Setting*Unit row in vehicle_unit_history before the first unit-bearing field arrives.
+- Decision 6 (delete legacy code, no shims): forward-only. No deprecated wrappers, no parallel old/new
+  paths. The single-pipeline invariant cannot survive a parallel old path running alongside it.
+- Decision 7 (38 legacy tables drop CASCADE in Prompt 0078): safe because (a) all current data is
+  suspect and not worth saving (Decision 4), AND (b) consumer migration prompts (0060..0071) MUST land
+  before 0078 so no live code references the dropped tables. The CASCADE is the safety net for any
+  view/index/foreign-key we missed.
+- Decision 8 (single pipeline, every value visited exactly once): the entire architectural correction.
+  bytes -> typed Datum -> flatten -> lookup activeUnit at T -> ToSI -> atomic typed values -> router ->
+  write. The reflective coverage test in Prompt 0048 asserts every Field has exactly one route, so a
+  new proto field cannot silently fall off the pipeline.
+- Decision 9 (DYNAMIC wire-format units via vehicle_unit_history + per-emission lookup):
+    - The proto contract is the source of truth. Setting*Unit fields are streamable Field entries, not
+      static config. Tesla's developer docs claim fixed units, but the docs are demonstrably incomplete.
+    - Cost asymmetry settles the choice: Design F-when-D-true silently corrupts cross-border drivers'
+      speed/odometer/temp/pressure forever; Design D-when-F-true costs ~1 table + ~200 LOC of
+      correct-but-unused code.
+    - Mechanism: vehicle_unit_history(vehicle_id, unit_kind, unit_value, effective_from TIMESTAMPTZ,
+      source) records every Setting*Unit change. Every unit-bearing field at time T does a point-in-time
+      lookup before ToSI.
+    - ToSI(field, rawValue, activeUnit) (float64, error) - 3-arg pure function. activeUnit comes from
+      the lookup. No globals, no implicit per-vehicle state inside ToSI.
+    - All 4 Setting*Unit fields are subscribed at interval_seconds=1 because losing one means N hours
+      of corrupted unit-bearing data.
+    - Bootstrap from internal/tesla/client_vehicle_data.go REST snapshot seeds vehicle_unit_history
+      from gui_settings on first connect. Belt-and-suspenders alongside Tesla's process-startup
+      telemetry snapshot.
+    - Missing-context behavior: drop value + log warning + emit metric. Never silent corruption.
+    - Storage: canonical SI everywhere (m/s, m, Pa, degC). Single conversion site at ingest.
+- Decision 10 (frontend Settings unit selectors are app-display-only): the app's user preference is
+  independent of the vehicle's display preference and of ingestion. SI -> app display conversion lives
+  in web/src/lib/units/. Backend stores SI; frontend renders in the user's chosen unit.
+
+Single-pipeline invariant: enforced, not asked nicely
+-----------------------------------------------------
+Prompt 0048 contains a reflective coverage test that walks every Field in the generated proto enum and
+asserts it has exactly one route through the new pipeline. A new Tesla proto field cannot become a
+silent unrouted signal; the test fails the build. This is the structural protection that the
+hand-curated registry never had.
+
+Sequencing safety
+-----------------
+Prompts 0001..0047 build the new pipeline. Prompts 0048..0059 add the coverage test, validators,
+and observability. Prompts 0060..0071 migrate every consumer from the old data sources to the new
+ones. Only after consumers are migrated does Prompt 0078 DROP the 38 legacy tables with CASCADE,
+and Prompt 0079 deletes the legacy internal/telemetry/ directory. The CASCADE is the last line of
+defense for anything missed; the consumer migrations are the primary safety mechanism.
+
+Forward-only, no shims
+----------------------
+There is no deprecated wrapper, no feature flag, no old/new flag-flip mode. The new pipeline either
+works on deploy day for every vehicle (resubscribe = Tesla snapshot reseeds Setting*Unit + REST
+bootstrap fills in any holes), or it doesn't ship.
+
+=== GATE ===
+=== GATE ===
+All gate checks passed.
+EXIT=0
+STATUS=DONE
