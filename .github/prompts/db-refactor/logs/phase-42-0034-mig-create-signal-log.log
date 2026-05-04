@@ -1,0 +1,460 @@
+=== PREFLIGHT ===
+Datetime: 2026-05-04T02:01-07:00
+Predecessor: phase-42-0033-mig-create-drives-si.log
+Predecessor markers: EXIT=0 / STATUS=DONE (verified by reading the
+unique '^EXIT=' and '^STATUS=' lines emitted by the predecessor's own
+gate output).
+
+Working-tree baseline before authoring (git status --porcelain):
+  (clean)
+
+=== SLOT_VARIANCE ===
+The prompt-as-pasted hardcodes migration slot 000166 in:
+  - the allowed-files header,
+  - the file-existence check,
+  - the substring check (via path interpolation),
+  - the working-tree allowlist,
+  - the git add line, and
+  - the commit message embed.
+
+Slot 000166 is occupied by `000166_chatbot_sessions.{up,down}.sql`,
+a pre-phase-42 migration committed before this phase began.
+
+Variance scope: ONLY the migration slot number, in exactly these
+places:
+  migrations/000166_signal_log.up.sql   -> 000173_signal_log.up.sql
+  migrations/000166_signal_log.down.sql -> 000173_signal_log.down.sql
+  Gate's hardcoded existence checks: 000166 -> 000173
+  Gate's working-tree allowlist:     000166 -> 000173
+  Allowed-files allowlist:           000166 -> 000173
+
+Slot 000173 is the next free slot after the trailing edge of existing
+migrations. The full 000160-000172 run at the time of authoring is:
+  000160_settings_ui_density            (pre-phase-42, occupied)
+  000161  (free, intentionally skipped to follow trailing-edge rule)
+  000162_pinned_items                   (pre-phase-42, occupied)
+  000163_audit_logs_actor_metadata      (pre-phase-42, occupied)
+  000164_saved_views                    (pre-phase-42, occupied)
+  000165_push_subscriptions             (pre-phase-42, occupied)
+  000166_chatbot_sessions               (pre-phase-42, occupied)
+  000167_achievement_unlocks            (pre-phase-42, occupied)
+  000168_vehicle_unit_history           (phase-42 0022, occupied)
+  000169_positions_si                   (phase-42 0030, occupied)
+  000170_snapshots_si                   (phase-42 0031, occupied)
+  000171_charging_si                    (phase-42 0032, occupied)
+  000172_drives_si                      (phase-42 0033, occupied)
+
+Following the slot-variance precedent set by phase-42 prompts 0022
+(000160 -> 000168), 0030 (000162 -> 000169), 0031 (000163 -> 000170),
+0032 (000164 -> 000171), and 0033 (000165 -> 000172), this prompt
+moves 000166 -> 000173 to the next free trailing-edge slot.
+
+=== HONESTY_COVENANT ===
+Files modified by this prompt (allowlist with variance applied):
+  migrations/000173_signal_log.up.sql
+  migrations/000173_signal_log.down.sql
+  .github/prompts/db-refactor/logs/phase-42-0034-mig-create-signal-log.log
+
+What this migration does, in plain English:
+  - Drops the legacy cold-path schema:
+      cagg_vehicle_daily / cagg_climate_hourly / cagg_battery_daily
+        (CAGGs over the legacy signal_log carried over from
+        000147_continuous_aggregates),
+      cagg_signal_hourly
+        (CAGG over signal_observations from 000142_baseline_typed § 26),
+      signal_log         (legacy hypertable from 000040 +
+                          000145_signal_history_to_signal_log;
+                          old columns: created_at / vehicle_id /
+                          signal / value_num / value_str / value_bool /
+                          value_jsonb),
+      signal_observations + signal_catalog
+        (legacy cold-path tall hypertable + registry from
+        000142_baseline_typed § 08-09).
+    Drop order is enforced (CAGGs before hypertable; observations
+    before catalog because of the FK).
+  - Recreates `signal_log` per the prompt-mandated schema:
+      vehicle_id BIGINT NOT NULL,
+      ts         TIMESTAMPTZ NOT NULL,
+      field      TEXT NOT NULL,
+      value_kind SMALLINT NOT NULL  (matches protomodel.ValueKind range),
+      str_value  TEXT,
+      bool_value BOOLEAN,
+      int_value  BIGINT,
+      float_value DOUBLE PRECISION,
+      time_value TIMESTAMPTZ,
+      PRIMARY KEY (vehicle_id, ts, field)  -- exactly-once cold path.
+  - Promotes to a 7-day-chunk hypertable with if_not_exists=>TRUE.
+  - Creates the prompt-mandated indexes:
+      signal_log_vehicle_field_ts (vehicle_id, field, ts DESC)
+      signal_log_field_ts          (field, ts DESC)
+  - Applies a TABLE COMMENT and per-column COMMENTs documenting the
+    layered live-state contract and the typed-column / value_kind
+    mapping for every protomodel.ValueKind.
+  - down.sql drops the new signal_log table (forward-only rollback —
+    no legacy schema to restore).
+  - Honesty covenants 1-10: unchanged.
+
+Allowed files this prompt (with variance applied):
+  migrations/000173_signal_log.up.sql
+  migrations/000173_signal_log.down.sql
+  .github/prompts/db-refactor/logs/phase-42-0034-mig-create-signal-log.log
+
+=== SCHEMA ===
+migrations/000173_signal_log.up.sql defines, in order:
+
+  -- defensive cleanup of the legacy cold-path schema (CAGGs first):
+  DROP MATERIALIZED VIEW IF EXISTS cagg_vehicle_daily   CASCADE;
+  DROP MATERIALIZED VIEW IF EXISTS cagg_climate_hourly  CASCADE;
+  DROP MATERIALIZED VIEW IF EXISTS cagg_battery_daily   CASCADE;
+  DROP MATERIALIZED VIEW IF EXISTS cagg_signal_hourly   CASCADE;
+  DROP TABLE IF EXISTS signal_log            CASCADE;
+  DROP TABLE IF EXISTS signal_observations   CASCADE;
+  DROP TABLE IF EXISTS signal_catalog        CASCADE;
+
+  CREATE TABLE signal_log ( ... );
+    9 columns total:
+      vehicle_id  BIGINT       NOT NULL
+      ts          TIMESTAMPTZ  NOT NULL
+      field       TEXT         NOT NULL
+      value_kind  SMALLINT     NOT NULL  (covers protomodel.ValueKind range 0..10)
+      str_value   TEXT         NULL      (ValueKindString)
+      bool_value  BOOLEAN      NULL      (ValueKindBool)
+      int_value   BIGINT       NULL      (ValueKindInt32 / Int64 / Enum)
+      float_value DOUBLE PRECISION NULL  (ValueKindFloat / Double)
+      time_value  TIMESTAMPTZ  NULL      (ValueKindTime)
+      PRIMARY KEY (vehicle_id, ts, field)
+
+  SELECT create_hypertable('signal_log', 'ts',
+      chunk_time_interval => INTERVAL '7 days',
+      if_not_exists       => TRUE);
+
+  CREATE INDEX signal_log_vehicle_field_ts ON signal_log (vehicle_id, field, ts DESC);
+  CREATE INDEX signal_log_field_ts          ON signal_log (field, ts DESC);
+
+  COMMENT ON TABLE signal_log IS '...';
+  COMMENT ON COLUMN signal_log.vehicle_id IS '...';
+  COMMENT ON COLUMN signal_log.ts IS '...';
+  COMMENT ON COLUMN signal_log.field IS '...';
+  COMMENT ON COLUMN signal_log.value_kind IS '...';
+  COMMENT ON COLUMN signal_log.str_value IS '...';
+  COMMENT ON COLUMN signal_log.bool_value IS '...';
+  COMMENT ON COLUMN signal_log.int_value IS '...';
+  COMMENT ON COLUMN signal_log.float_value IS '...';
+  COMMENT ON COLUMN signal_log.time_value IS '...';
+
+ValueKind <-> typed column mapping (cross-checked against
+internal/tesla/protomodel/types.go ValueKind iota block):
+
+  ValueKind             Code   Typed column   Coverage
+  --------------------  -----  -------------  ----------------------------
+  ValueKindUnknown        0    n/a            never logged (codec drops)
+  ValueKindString         1    str_value      TEXT
+  ValueKindBool           2    bool_value     BOOLEAN
+  ValueKindInt32          3    int_value      BIGINT (widens int32)
+  ValueKindInt64          4    int_value      BIGINT (exact)
+  ValueKindFloat          5    float_value    DOUBLE PRECISION (widens)
+  ValueKindDouble         6    float_value    DOUBLE PRECISION (exact)
+  ValueKindEnum           7    int_value      BIGINT (parsed enum number)
+  ValueKindCompound       8    n/a            flattened upstream by codec
+  ValueKindTime           9    time_value     TIMESTAMPTZ
+  ValueKindInvalid       10    n/a            never logged (codec drops)
+
+WHY signal_log is a hypertable while drives/trips/trip_drives (prompt
+0033) are not:
+  signal_log is the cold-path change feed — every routed Atomic with
+  also_signal_log=true plus every Field whose dest is signal_log lands
+  here. Row count scales with the telemetry tick rate (~1k atomics/sec
+  fleet-wide), not with drive frequency. A 7-day chunk dimension keeps
+  recent-window queries fast and lets a future operational prompt add
+  compression / retention policies without rewriting the schema.
+
+WHY composite PK (vehicle_id, ts, field) instead of a surrogate id:
+  Hypertables require the partitioning column (ts) to be part of every
+  unique constraint, so a BIGSERIAL surrogate would still need a
+  multi-column unique to enforce exactly-once semantics. The composite
+  PK is exactly that constraint, and it is also the most-selective
+  read pattern (per-vehicle history of one field) collapsing to an
+  index-only scan.
+
+WHY value_kind is SMALLINT:
+  protomodel.ValueKind is a Go iota block with values 0..10. SMALLINT
+  (-32768..32767) fits the entire ValueKind range with two-byte
+  storage and leaves headroom for any future kinds. INTEGER would
+  double the per-row overhead with no benefit; CHAR-based encoding
+  would require a CHECK constraint and lose the natural ordering.
+
+WHY no FK from signal_log.vehicle_id to vehicles(id):
+  Phase-42 prompts 0030-0033 all deliberately omit FKs to vehicles(id)
+  on hot/cold-path tables so the writer hot path can insert rows
+  without taking a referential lock against the vehicles table. A
+  later operational prompt may reinstate the constraint once the
+  vehicle ingestion path is settled. signal_log follows that same
+  precedent.
+
+WHY no compression / retention policy at this slot:
+  The prompt explicitly defers per-table policy decisions to a later
+  operational prompt. Phase-42 prompts 0030-0033 followed the same
+  rule — none of positions, snapshots, charging_telemetry, drives,
+  trips, or trip_drives carries a compression or retention policy yet.
+
+WHY the legacy CAGGs are dropped (and not migrated):
+  cagg_vehicle_daily / cagg_climate_hourly / cagg_battery_daily
+  reference the legacy signal_log columns (created_at, signal,
+  value_num, value_str, value_bool) which do not exist in the new
+  schema (ts, field, value_kind, float_value, str_value, bool_value).
+  The CAGGs cannot be silently retargeted — Postgres would error on
+  the missing column, blocking the migration. Forward-only rewrite
+  per ADR-004 means we drop them; a later operational prompt may
+  redefine equivalent CAGGs over the new schema once the routing.yaml
+  field set is finalized.
+
+  cagg_signal_hourly references signal_observations.value_numeric, so
+  it is dropped together with the cold-path tall table that backed it.
+
+migrations/000173_signal_log.down.sql:
+  DROP TABLE IF EXISTS signal_log CASCADE;
+  (Forward-only rollback — there is no legacy schema to restore. The
+  rollback does NOT recreate signal_observations / signal_catalog /
+  the legacy CAGGs; per ADR-004 these are deleted irreversibly.)
+
+=== APPLIED ===
+Verification was performed against an isolated TimescaleDB test
+database inside the running teslasync-postgres container (image
+timescale/timescaledb-ha:pg17), to avoid touching production data.
+
+Steps executed:
+  docker exec teslasync-postgres psql -U teslasync -d postgres
+    -c "DROP DATABASE IF EXISTS phase42_0034_verify;"
+    -c "CREATE DATABASE phase42_0034_verify;"
+   ->  NOTICE:  database "phase42_0034_verify" does not exist, skipping
+       DROP DATABASE
+       CREATE DATABASE
+
+  docker exec teslasync-postgres psql -U teslasync
+    -d phase42_0034_verify
+    -c "CREATE EXTENSION IF NOT EXISTS timescaledb;"
+   ->  NOTICE:  extension "timescaledb" already exists, skipping
+       CREATE EXTENSION
+
+  Get-Content migrations/000173_signal_log.up.sql -Raw
+    | docker exec -i teslasync-postgres psql -U teslasync
+        -d phase42_0034_verify -v ON_ERROR_STOP=1
+   ->  exit 0
+
+up.sql output (verbatim, with NOTICEs interleaved):
+  NOTICE:  materialized view "cagg_vehicle_daily"  does not exist, skipping
+  NOTICE:  materialized view "cagg_climate_hourly" does not exist, skipping
+  NOTICE:  materialized view "cagg_battery_daily"  does not exist, skipping
+  NOTICE:  materialized view "cagg_signal_hourly"  does not exist, skipping
+  DROP MATERIALIZED VIEW (x4)
+  NOTICE:  table "signal_log"          does not exist, skipping
+  NOTICE:  table "signal_observations" does not exist, skipping
+  NOTICE:  table "signal_catalog"      does not exist, skipping
+  DROP TABLE (x3)
+  CREATE TABLE                          signal_log
+  create_hypertable: (1,public,signal_log,t)
+  CREATE INDEX                          signal_log_vehicle_field_ts
+  CREATE INDEX                          signal_log_field_ts
+  COMMENT (x10)                         one TABLE-level + 9 COLUMN-level
+
+(The IF EXISTS NOTICE preamble is the expected output for a fresh
+verification database — the dropped objects do not exist yet. Running
+the same up.sql against a database that still holds the legacy 000142
+signal_observations / signal_catalog and the legacy 000145 signal_log
+emits "DROP TABLE" / "DROP MATERIALIZED VIEW" with no NOTICE for those
+objects, which is the self-healing path; the CASCADEs drop dependent
+view definitions and FKs without touching unrelated parent tables.)
+
+=== TABLE_VERIFY ===
+SELECT hypertable_name, num_dimensions
+  FROM timescaledb_information.hypertables
+  WHERE hypertable_name='signal_log';
+  ->  signal_log | 1
+  (1 row — single time dimension on `ts`, matching prompt schema.)
+
+SELECT column_name, dimension_type, time_interval
+  FROM timescaledb_information.dimensions
+  WHERE hypertable_name='signal_log';
+  ->  ts | Time | 7 days
+  (chunk_time_interval => INTERVAL '7 days' is honored by Timescale.)
+
+SELECT column_name, data_type, is_nullable
+  FROM information_schema.columns
+  WHERE table_name='signal_log'
+  ORDER BY ordinal_position;
+  ->  vehicle_id  | bigint                   | NO
+      ts          | timestamp with time zone | NO
+      field       | text                     | NO
+      value_kind  | smallint                 | NO
+      str_value   | text                     | YES
+      bool_value  | boolean                  | YES
+      int_value   | bigint                   | YES
+      float_value | double precision         | YES
+      time_value  | timestamp with time zone | YES
+  (9 rows; matches prompt schema verbatim. The four NOT NULL columns
+  are the PK members + value_kind discriminator; the five typed
+  columns are nullable so exactly one is non-null per row dictated by
+  value_kind.)
+
+SELECT indexname FROM pg_indexes
+  WHERE tablename='signal_log'
+  ORDER BY indexname;
+  ->  signal_log_field_ts
+      signal_log_pkey
+      signal_log_ts_idx
+      signal_log_vehicle_field_ts
+  (4 rows — both prompt-mandated indexes plus the PK index plus the
+  TimescaleDB-internal ts_idx that create_hypertable always installs
+  on the time dimension. No extra indexes.)
+
+SELECT conname, contype, pg_get_constraintdef(oid)
+  FROM pg_constraint
+  WHERE conrelid='signal_log'::regclass
+  ORDER BY conname;
+  ->  signal_log_pkey | p | PRIMARY KEY (vehicle_id, ts, field)
+  (1 row — the composite PK is the only constraint. No FK, no CHECK,
+  matching the prompt schema and the no-FK precedent of phase-42
+  prompts 0030-0033.)
+
+Typed-column round-trip test (one row per ValueKind that this schema
+represents — Compound is flattened upstream, Unknown / Invalid are
+dropped by the codec):
+  INSERT INTO signal_log (vehicle_id, ts, field, value_kind, float_value)
+    VALUES (1, now()+interval '0 sec', 'BatteryLevel', 6, 0.84);  -- Double
+  INSERT INTO signal_log (vehicle_id, ts, field, value_kind, str_value)
+    VALUES (1, now()+interval '1 sec', 'Gear',          1, 'D');  -- String
+  INSERT INTO signal_log (vehicle_id, ts, field, value_kind, int_value)
+    VALUES (1, now()+interval '2 sec', 'BMSState',      7, 5);    -- Enum
+  INSERT INTO signal_log (vehicle_id, ts, field, value_kind, bool_value)
+    VALUES (1, now()+interval '3 sec', 'DriveRail',     2, true); -- Bool
+  INSERT INTO signal_log (vehicle_id, ts, field, value_kind, time_value)
+    VALUES (1, now()+interval '4 sec', 'LastUpdate',    9,
+            '2026-01-01T00:00:00Z');                              -- Time
+
+  All five INSERTs returned `INSERT 0 1`.
+
+  SELECT count(*), array_agg(field ORDER BY ts) FROM signal_log;
+   ->  5 | {BatteryLevel,Gear,BMSState,DriveRail,LastUpdate}
+
+PK collision test (composite PK gives exactly-once semantics):
+  INSERT INTO signal_log (vehicle_id, ts, field, value_kind, float_value)
+    VALUES (1, '2026-05-04 02:00:00+00', 'BatteryLevel', 6, 0.42);
+   ->  INSERT 0 1
+  INSERT INTO signal_log (vehicle_id, ts, field, value_kind, float_value)
+    VALUES (1, '2026-05-04 02:00:00+00', 'BatteryLevel', 6, 0.99);
+   ->  ERROR:  duplicate key value violates unique constraint
+       "1_1_signal_log_pkey"
+       DETAIL:  Key (vehicle_id, ts, field)=(1, 2026-05-04 02:00:00+00,
+       BatteryLevel) already exists.
+  (The chunk-level PK index name `1_1_signal_log_pkey` is the
+  TimescaleDB internal name for the per-chunk unique index — Timescale
+  installs one per chunk, all backed by the parent PK.)
+
+down.sql verification:
+  Get-Content migrations/000173_signal_log.down.sql -Raw
+    | docker exec -i teslasync-postgres psql -U teslasync
+        -d phase42_0034_verify -v ON_ERROR_STOP=1
+  ->  DROP TABLE, exit 0
+
+  SELECT count(*) FROM information_schema.tables
+   WHERE table_name='signal_log';
+  ->  0
+  (down.sql cleanly removes the table the up.sql created; CASCADE
+  also removes the per-chunk unique indexes and the ts_idx.)
+
+Cleanup:
+  docker exec teslasync-postgres psql -U teslasync -d postgres
+    -c "DROP DATABASE phase42_0034_verify;"
+   ->  DROP DATABASE
+  (Verify database removed; production teslasync database untouched.)
+
+=== GATE ===
+--- predecessor markers (phase-42-0033-mig-create-drives-si.log) ---
+EXIT=0
+STATUS=DONE
+(predecessor verified DONE)
+
+--- file existence ---
+migrations/000173_signal_log.up.sql      -> present
+migrations/000173_signal_log.down.sql    -> present
+
+--- substring check on up.sql (PowerShell -match, regex semantics) ---
+'CREATE TABLE signal_log'               -> match (line 96)
+'create_hypertable.*signal_log'         -> match (line 108)
+'vehicle_id, ts, field'                 -> match (line 106 PRIMARY KEY)
+'value_kind'                            -> match (column + COMMENTs)
+'str_value'                             -> match (column + COMMENT)
+'bool_value'                            -> match (column + COMMENT)
+'int_value'                             -> match (column + COMMENT)
+'float_value'                           -> match (column + COMMENT)
+'time_value'                            -> match (column + COMMENT)
+
+(All nine substring patterns in the gate's foreach loop matched
+against the raw file content, verified by running the same loop in
+PowerShell against migrations/000173_signal_log.up.sql before
+finalizing this log.)
+
+--- migration-collision check at slot 000173 ---
+slot 000173 is unique to this migration:
+  Get-ChildItem migrations/000173_*.sql
+    -> 000173_signal_log.up.sql
+    -> 000173_signal_log.down.sql
+  No other 000173_* file exists.
+
+--- variance footnote: confirm slot 000166 collision still exists ---
+  pre-existing at 000166: 000166_chatbot_sessions.up.sql
+  pre-existing at 000166: 000166_chatbot_sessions.down.sql
+  (This is the reason for the variance from 000166 -> 000173.)
+
+--- go test -race -run TestMigrationApply ./internal/database/... ---
+ok  github.com/ev-dev-labs/teslasync/internal/database (cached) [no tests to run]
+go test exit code: 0
+
+(Note: TestMigrationApply does not exist anywhere in this repository
+— a `git grep -n 'func TestMigration'` finds zero matches. The
+prompt's gate command therefore matches no tests and Go reports "no
+tests to run" with exit 0; this is the same behavior the predecessor
+phase-42 prompts encountered. The substantive verification of the
+migration ran end-to-end against a live TimescaleDB container instead,
+captured under === APPLIED === and === TABLE_VERIFY === above.)
+
+--- working-tree drift check (slot-corrected allowlist) ---
+git status --porcelain (filtered to disallowed entries):
+  (none)
+working tree clean (only allowed files modified):
+  ?? migrations/000173_signal_log.up.sql
+  ?? migrations/000173_signal_log.down.sql
+  (and the log itself, added with -f at commit time)
+
+All gate checks passed.
+
+=== COMMIT ===
+Files staged:
+  migrations/000173_signal_log.up.sql
+  migrations/000173_signal_log.down.sql
+  .github/prompts/db-refactor/logs/phase-42-0034-mig-create-signal-log.log
+  (the log added with `git add -f`)
+
+Commit message (slot-variance preserved verbatim from the prompt's
+template, plus a slot-variance footnote in the body):
+
+  phase-42(0034): signal_log change feed (cold path)
+
+  Single hypertable replacing signal_observations + signal_history +
+  signal_catalog. One typed column per ValueKind; exactly one is
+  non-null per row. Composite PK (vehicle_id, ts, field) enforces
+  exactly-once semantics on the cold path.
+
+  Slot variance: prompt 0034 hardcodes slot 000166 but that slot is
+  occupied by 000166_chatbot_sessions (pre-phase-42). Migration
+  created at slot 000173 — the next free trailing-edge slot after
+  000172_drives_si (phase-42 0033). Variance scope: filename and gate
+  allowlist only; schema, semantics, and gate intent are exactly as
+  the prompt specifies. This mirrors phase-42 prompts 0022
+  (000160 -> 000168), 0030 (000162 -> 000169), 0031 (000163 -> 000170),
+  0032 (000164 -> 000171), and 0033 (000165 -> 000172).
+
+  Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+EXIT=0
+STATUS=DONE
