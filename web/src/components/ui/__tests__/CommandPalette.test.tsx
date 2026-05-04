@@ -217,6 +217,39 @@ describe('CommandPalette search', () => {
 
     expect(await screen.findByText(/Refresh data/)).toBeInTheDocument()
   })
+
+  // Regression for the post phase-40/45 scoring bug where each keyword was
+  // re-scored as if it were the label, giving keyword startsWith the same
+  // score as label startsWith. That made "State Machine" (matches keyword
+  // "debugger" → "d") tie with "Drives" (matches label "Drives" → "d") and
+  // sort ahead of it via frecency / insertion order. After the fix the only
+  // way a keyword can outscore a label is if no label match exists.
+  it('ranks the "Drives" page above keyword-only matches (e.g. "debugger") for query "d"', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'd' } })
+
+    // Each palette row renders the label inside a <span class="font-medium truncate">.
+    // Find that label span by exact text and walk up to its button to compare DOM
+    // order. Sort key = score DESC, so DOM order = score order.
+    const drivesLabel = await screen.findByText('Drives', { selector: 'span.font-medium' })
+    const drivesButton = drivesLabel.closest('button')
+    expect(drivesButton).not.toBeNull()
+
+    const stateMachineLabels = screen.queryAllByText('State Machine', { selector: 'span.font-medium' })
+    if (stateMachineLabels.length > 0) {
+      const stateMachineButton = stateMachineLabels[0].closest('button')
+      expect(stateMachineButton).not.toBeNull()
+      // compareDocumentPosition: bit 4 = following. So drives BEFORE stateMachine
+      // means drivesButton.compareDocumentPosition(stateMachineButton) has bit 4 set.
+      const pos = drivesButton!.compareDocumentPosition(stateMachineButton!)
+      // eslint-disable-next-line no-bitwise
+      expect(pos & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    }
+  })
 })
 
 // ─── Most-used surfacing (Phase-45 / Prompt 27) ─────────────────────────────

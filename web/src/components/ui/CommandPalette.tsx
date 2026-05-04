@@ -488,12 +488,16 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
         // the static items inside groupedItems while remaining in their
         // own per-type sections.
         if (cmd.type === 'search-hit') return { cmd, score: 9999, frecency: 0 }
-        const haystack = [cmd.label, ...(cmd.keywords ?? [])]
-        let best = 0
-        for (let i = 0; i < haystack.length; i++) {
-          const s = scoreCommand(query, haystack[i], i === 0 ? cmd.keywords : undefined)
-          if (s > best) best = s
-        }
+        // Score the label once, with keywords passed in. scoreCommand already
+        // handles label tiers (1000/501+/200+/150) AND keyword tiers (100/50)
+        // AND label-subsequence (25) in the right order. Iterating over each
+        // keyword as if it were the label inflated keyword matches to label
+        // tiers — e.g. a keyword "debugger" matched query "d" via label
+        // startsWith → 501, tying with the real "Drives" label and pushing
+        // unrelated items (State Machine, Theme: Dark) ahead of true label
+        // matches. See commandRegistry.test.ts "label prefix outranks
+        // keyword prefix".
+        let best = scoreCommand(query, cmd.label, cmd.keywords)
         // Sublabel/section as a lighter substring fallback
         if (best === 0) {
           const q = query.toLowerCase()

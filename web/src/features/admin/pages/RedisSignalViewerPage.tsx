@@ -58,11 +58,22 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
     {
       key: 'value',
       header: t('redis.value', 'Value'),
-      render: (row) => (
-        <span className="font-mono text-sm text-[var(--neon-cyan)]">
-          {typeof row.value === 'boolean' ? String(row.value) : String(row.value)}
-        </span>
-      ),
+      render: (row) => {
+        // Per-type toned-down syntax-highlight colors (phase-40/02 forbids
+        // neon for tabular body text). Mirrors common dev-console conventions:
+        //   number  → cyan-300, string → amber-300, boolean → purple-300.
+        const colorClass =
+          typeof row.value === 'number'
+            ? 'text-cyan-300'
+            : typeof row.value === 'boolean'
+              ? 'text-purple-300'
+              : 'text-amber-300';
+        return (
+          <span className={`font-mono text-sm ${colorClass}`}>
+            {String(row.value)}
+          </span>
+        );
+      },
     },
     {
       key: 'type',

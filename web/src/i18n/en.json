@@ -1990,7 +1990,7 @@
     "clear": "Clear",
     "allServices": "All Services",
     "serviceFilterAria": "Filter by service",
-    "serviceCount": "{{count}} services tracked",
+    "serviceCount": "{{tracked}} with data · {{known}} known",
     "allMethods": "All Methods",
     "allStatus": "All Status",
     "filterEndpoint": "Filter by endpoint...",

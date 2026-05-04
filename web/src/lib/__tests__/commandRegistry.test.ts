@@ -37,6 +37,24 @@ describe('scoreCommand', () => {
     expect(scoreCommand('BATTERY', 'battery health')).toBeGreaterThan(0)
     expect(scoreCommand('battery', 'BATTERY HEALTH')).toBeGreaterThan(0)
   })
+
+  // Regression: prior to the fix, CommandPalette iterated over [label, ...keywords]
+  // and re-called scoreCommand on each keyword as if it were a label. That
+  // gave a keyword like "debugger" matching query "d" the full label-startsWith
+  // score (501), tying with the actual "Drives" label and pushing unrelated
+  // items (State Machine, Theme: Dark) above true label matches. The function
+  // itself is correct — keyword matches get capped at 100. This test pins the
+  // contract so the caller-side regression cannot recur.
+  it('ranks label startsWith higher than keyword startsWith for the same query', () => {
+    const labelMatch = scoreCommand('d', 'Drives', ['drive history', 'sessions'])
+    const keywordMatch = scoreCommand('d', 'State Machine', ['state machine', 'debugger', 'fsm'])
+    expect(labelMatch).toBeGreaterThan(keywordMatch)
+  })
+
+  it('caps keyword startsWith at 100 (well below label startsWith tier)', () => {
+    const keywordOnly = scoreCommand('fsm', 'State Machine', ['state machine', 'debugger', 'fsm'])
+    expect(keywordOnly).toBe(100)
+  })
 })
 
 describe('commandRegistry', () => {

@@ -12,49 +12,50 @@ interface DeriveOpts {
   labelFor: (svc: string) => string;
   /** i18n-translated "All Services" label. */
   allLabel: string;
+  /**
+   * Static catalog of services the frontend knows the backend can write
+   * (the keys of SERVICE_CONFIG). Always present in the dropdown even when
+   * they have zero rows in `byService`, so a fresh install or a quiet
+   * service (github-releases, eia, tesla-auth, etc.) is still filterable.
+   * Sort with count = 0 → lands at the bottom alphabetically.
+   * Optional and defaults to []; pass it to opt in to the union behaviour.
+   */
+  knownServices?: readonly string[];
 }
 
 /**
- * Builds the Service-filter dropdown option list directly from
- * `stats.by_service`. This is the same source of truth the "By Service:"
- * chip row already uses, so the dropdown is guaranteed to stay in sync
- * with the data — new service tags written by Go code appear
- * automatically without any frontend follow-up.
+ * Builds the Service-filter dropdown option list as the union of:
+ *   1. The static catalog (`knownServices` — keys of SERVICE_CONFIG), so
+ *      services that haven't fired yet are still filterable.
+ *   2. Live `stats.by_service` keys, so newly-introduced backend tags
+ *      appear automatically without any frontend follow-up.
+ *   3. The currently-selected `activeService`, so the `<Select>` always
+ *      reflects its own value even if the backend hasn't written it yet.
  *
- * Sorting: count DESC (most-used first), with stable secondary sort by
- * label ASC for deterministic output across renders.
+ * Sorting: alphabetical by label (case-insensitive locale compare). The
+ * chip row above the filters already surfaces counts, so the dropdown's
+ * only job is fast scanning — alphabetical beats the previous count-desc
+ * order which left users with a two-tiered "ranked head + alpha tail"
+ * list that's hard to scan as the catalog grows.
  *
- * Resilience: when `activeService` is set but absent from `byService`
- * (e.g. the user selected a service that has zero rows in the last
- * 24 h stats window), the active value is appended at the end so the
- * `<Select>` doesn't show a blank value and the user can clear the
- * filter via the option itself.
- *
- * The returned array always starts with the "All Services" option.
+ * The returned array always starts with the "All Services" option, which
+ * stays pinned regardless of label sort.
  */
 export function deriveServiceOptions(opts: DeriveOpts): ServiceSelectOption[] {
-  const { byService, activeService, labelFor, allLabel } = opts;
+  const { byService, activeService, labelFor, allLabel, knownServices } = opts;
   const head: ServiceSelectOption = { value: '', label: allLabel };
 
-  const entries = Object.entries(byService ?? {}).map(
-    ([value, count]): [ServiceSelectOption, number] => [
-      { value, label: labelFor(value) },
-      count,
-    ],
+  const values = new Set<string>();
+  for (const svc of knownServices ?? []) values.add(svc);
+  for (const svc of Object.keys(byService ?? {})) values.add(svc);
+  if (activeService) values.add(activeService);
+
+  const tail: ServiceSelectOption[] = Array.from(values, (value) => ({
+    value,
+    label: labelFor(value),
+  })).sort((a, b) =>
+    a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }),
   );
-
-  entries.sort((a, b) => {
-    if (b[1] !== a[1]) return b[1] - a[1];
-    return a[0].label.localeCompare(b[0].label);
-  });
-
-  const tail = entries.map(([opt]) => opt);
-
-  // Retain a selected-but-absent value so the Select can render its
-  // current state instead of falling back to a blank.
-  if (activeService && !tail.some((o) => o.value === activeService)) {
-    tail.push({ value: activeService, label: labelFor(activeService) });
-  }
 
   return [head, ...tail];
 }

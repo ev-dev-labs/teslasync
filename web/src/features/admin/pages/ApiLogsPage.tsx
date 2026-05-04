@@ -13,7 +13,7 @@ import { FadeIn } from '@/components/motion';
 import { Spinner, AlertBanner } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
+import { useUrlNumber, useUrlString, useUrlBatch } from '@/hooks/useUrlState';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { getAPICallLogs, getAPICallLogStats } from '@/api/devtools';
 import type { APICallLog, APICallLogStats } from '@/api/types';
@@ -34,15 +34,22 @@ const METHOD_VARIANTS: Record<string, LogBadgeVariant> = {
 };
 
 const SERVICE_CONFIG: Record<string, { label: string; variant: LogBadgeVariant }> = {
-  'teslasync-api':    { label: 'TeslaSync API',    variant: 'info'    },
-  'tesla-api':        { label: 'Tesla API',        variant: 'info'    },
-  'tesla-auth':       { label: 'Tesla Auth',       variant: 'info'    },
-  'geocoder-google':  { label: 'Geocoder (Google)', variant: 'warning' },
-  'github-releases':  { label: 'GitHub Releases',  variant: 'neutral' },
-  'notify-generic':   { label: 'Notifications',    variant: 'neutral' },
-  'system-dns-check': { label: 'DNS Health Check', variant: 'neutral' },
-  'eia':              { label: 'EIA',              variant: 'neutral' },
+  'teslasync-api':      { label: 'TeslaSync API',      variant: 'info'    },
+  'tesla-api':          { label: 'Tesla API',          variant: 'info'    },
+  'tesla-auth':         { label: 'Tesla Auth',         variant: 'info'    },
+  'geocoder-google':    { label: 'Geocoder (Google)',  variant: 'warning' },
+  'geocoder-nominatim': { label: 'Geocoder (Nominatim)', variant: 'warning' },
+  'geocoder-azure':     { label: 'Geocoder (Azure)',   variant: 'warning' },
+  'geocoder-search':    { label: 'Geocoder (Search)',  variant: 'warning' },
+  'github-releases':    { label: 'GitHub Releases',    variant: 'neutral' },
+  'notify-generic':     { label: 'Notifications',      variant: 'neutral' },
+  'system-dns-check':   { label: 'DNS Health Check',   variant: 'neutral' },
+  'eia':                { label: 'EIA',                variant: 'neutral' },
 };
+
+/** Static catalog of services the frontend knows the backend can write.
+ *  Stable identity → safe to pass to deriveServiceOptions / useMemo deps. */
+const KNOWN_SERVICES = Object.freeze(Object.keys(SERVICE_CONFIG));
 
 function statusBadgeVariant(code: number | null): LogBadgeVariant {
   if (!code) return 'neutral';
@@ -101,14 +108,30 @@ export default function ApiLogsPage() {
   }, []);
 
   const [page, setPage] = useUrlNumber('page', 0);
-  const [method, setMethod] = useUrlString('method', '');
-  const [status, setStatus] = useUrlString('status', '');
-  const [endpoint, setEndpoint] = useUrlString('endpoint', '');
-  const [service, setService] = useUrlString('service', '');
-  const [startDate, setStartDate] = useUrlString('from', defaultStart);
-  const [endDate, setEndDate] = useUrlString('to', defaultEnd);
+  const [method] = useUrlString('method', '');
+  const [status] = useUrlString('status', '');
+  const [endpoint] = useUrlString('endpoint', '');
+  const [service] = useUrlString('service', '');
+  const [startDate] = useUrlString('from', defaultStart);
+  const [endDate] = useUrlString('to', defaultEnd);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const limit = 25;
+
+  // Multi-key URL writer — react-router-dom v6's setSearchParams uses a
+  // ref that doesn't refresh between two synchronous calls, so chaining
+  // setFilter(...) + setPage(0) silently drops the first write. Every
+  // filter change (method, status, endpoint, service, from, to, etc.)
+  // resets `page` AND writes its own key, so all of them MUST go through
+  // useUrlBatch. See useUrlState.ts §useUrlBatch JSDoc.
+  const setUrl = useUrlBatch();
+
+  type FilterKey = 'method' | 'status' | 'endpoint' | 'service' | 'from' | 'to';
+  const setFilter = useCallback(
+    (key: FilterKey, value: string) => {
+      setUrl({ [key]: value, page: '' });
+    },
+    [setUrl],
+  );
 
   const { data: stats, error: statsError } = useQuery<APICallLogStats>({
     queryKey: ['api-log-stats'],
@@ -143,8 +166,21 @@ export default function ApiLogsPage() {
   const hasFilters = !!(method || status || endpoint || service || startDate || endDate);
 
   const clearFilters = useCallback(() => {
-    setMethod(''); setStatus(''); setEndpoint(''); setService(''); setStartDate(''); setEndDate(''); setPage(0);
-  }, []);
+    setUrl({
+      method: '',
+      status: '',
+      endpoint: '',
+      service: '',
+      from: '',
+      to: '',
+      page: '',
+    });
+  }, [setUrl]);
+
+  const selectService = useCallback(
+    (svc: string) => setFilter('service', svc),
+    [setFilter],
+  );
 
   const serviceOptions = useMemo(
     () =>
@@ -153,9 +189,12 @@ export default function ApiLogsPage() {
         activeService: service,
         labelFor: (svc) => serviceBadgeConfig(svc).label,
         allLabel: t('apiLogs.allServices', 'All Services'),
+        knownServices: KNOWN_SERVICES,
       }),
     [stats?.by_service, service, t],
   );
+
+  const trackedCount = stats?.by_service ? Object.keys(stats.by_service).length : 0;
 
   const handleExport = useCallback(() => {
     const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
@@ -215,7 +254,7 @@ export default function ApiLogsPage() {
                   key={svc}
                   type="button"
                   variant="ghost"
-                  onClick={() => { setService(svc); setPage(0); }}
+                  onClick={() => selectService(svc)}
                   className="!h-auto cursor-pointer gap-1.5 border-0 !bg-transparent !p-0"
                 >
                   <Badge variant={config.variant} size="sm">{config.label}</Badge>
@@ -245,21 +284,22 @@ export default function ApiLogsPage() {
             <div>
               <UiSelect
                 value={service}
-                onChange={(e) => { setService(e.target.value); setPage(0); }}
+                onChange={(e) => selectService(e.target.value)}
                 options={serviceOptions}
                 aria-label={t('apiLogs.serviceFilterAria', 'Filter by service')}
               />
               {stats?.by_service && (
                 <p className="mt-1 text-[10px] text-[var(--text-muted)]">
-                  {t('apiLogs.serviceCount', '{{count}} services tracked', {
-                    count: Object.keys(stats.by_service).length,
+                  {t('apiLogs.serviceCount', '{{tracked}} with data · {{known}} known', {
+                    tracked: trackedCount,
+                    known: KNOWN_SERVICES.length,
                   })}
                 </p>
               )}
             </div>
             <UiSelect
               value={method}
-              onChange={(e) => { setMethod(e.target.value); setPage(0); }}
+              onChange={(e) => setFilter('method', e.target.value)}
               options={[
                 { value: '', label: t('apiLogs.allMethods', 'All Methods') },
                 { value: 'GET', label: 'GET' },
@@ -270,7 +310,7 @@ export default function ApiLogsPage() {
             />
             <UiSelect
               value={status}
-              onChange={(e) => { setStatus(e.target.value); setPage(0); }}
+              onChange={(e) => setFilter('status', e.target.value)}
               options={[
                 { value: '', label: t('apiLogs.allStatus', 'All Status') },
                 { value: '2xx', label: '2xx Success' },
@@ -285,20 +325,20 @@ export default function ApiLogsPage() {
                 type="text"
                 placeholder={t('apiLogs.filterEndpoint', 'Filter by endpoint...')}
                 value={endpoint}
-                onChange={(e) => { setEndpoint(e.target.value); setPage(0); }}
+                onChange={(e) => setFilter('endpoint', e.target.value)}
                 className="pl-8"
               />
             </div>
             <UiInput
               type="datetime-local"
               value={startDate}
-              onChange={(e) => { setStartDate(e.target.value); setPage(0); }}
+              onChange={(e) => setFilter('from', e.target.value)}
               placeholder={t('apiLogs.startDate', 'Start date')}
             />
             <UiInput
               type="datetime-local"
               value={endDate}
-              onChange={(e) => { setEndDate(e.target.value); setPage(0); }}
+              onChange={(e) => setFilter('to', e.target.value)}
               placeholder={t('apiLogs.endDate', 'End date')}
             />
           </div>
