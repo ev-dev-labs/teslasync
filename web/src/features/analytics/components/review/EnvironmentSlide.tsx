@@ -32,7 +32,7 @@ export function EnvironmentSlide({ data }: Props) {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.4 }}
-        className="text-lg text-white/50 uppercase tracking-wider mb-4"
+        className="text-lg text-[var(--text-secondary)] uppercase tracking-wider mb-4"
       >
         {t('yearReview.co2Offset', 'CO₂ offset')}
       </motion.p>
@@ -54,9 +54,9 @@ export function EnvironmentSlide({ data }: Props) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.8, duration: 0.4 }}
-        className="text-white/40 mt-2 mb-8"
+        className="text-[var(--text-muted)] mt-2 mb-8"
       >
-        {t('yearReview.treesEquiv', `Like planting ${treesPlanted} trees`)}
+        {t('yearReview.treesEquiv', { count: treesPlanted, defaultValue: 'Like planting {{count}} trees' })}
       </motion.p>
 
       {/* Tree grid visualization */}
@@ -78,7 +78,7 @@ export function EnvironmentSlide({ data }: Props) {
           </motion.span>
         ))}
         {treesPlanted > 30 && (
-          <span className="text-white/40 text-sm self-end ml-1">
+          <span className="text-[var(--text-muted)] text-sm self-end ml-1">
             +{treesPlanted - 30} {t('yearReview.more', 'more')}
           </span>
         )}

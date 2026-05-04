@@ -36,8 +36,8 @@ export function ByteSizeConverterTool() {
         {conversions && (
           <div className="grid grid-cols-5 gap-2">
             {conversions.map((c) => (
-              <div key={c.unit} className={cn('rounded px-2 py-1.5 text-center', c.unit === unit ? 'bg-neon-cyan/10 ring-1 ring-neon-cyan/30' : 'bg-black/20')}>
-                <p className="text-xs text-white/50">{c.unit}</p>
+              <div key={c.unit} className={cn('rounded px-2 py-1.5 text-center', c.unit === unit ? 'bg-neon-cyan/10 ring-1 ring-neon-cyan/30' : 'bg-[var(--surface-overlay)]')}>
+                <p className="text-xs text-[var(--text-secondary)]">{c.unit}</p>
                 <p className="text-sm font-mono text-white">{c.value}</p>
               </div>
             ))}

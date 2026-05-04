@@ -272,7 +272,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		st.SetChargeStateReader(stateReader)
 		st.SetDriveStateReader(stateReader)
 	}
-	devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg))
+	devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg), WithSignalStore(opt.SignalStore))
 	if opt.CacheStore != nil {
 		if rdb := opt.CacheStore.Underlying(); rdb != nil {
 			devToolsHandler.redisCache = signal.NewRedisSignalCache(rdb)
@@ -320,6 +320,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.With(
 		httprate.LimitByIP(60, 1*time.Minute),
 	).Get("/api/v1/share/{token}", shareHandler.GetPublicShare)
+
+	// Public: Web Vitals ingest (Phase 45 / Prompt 12). Anonymous browsers
+	// POST batches of LCP/INP/CLS/FCP/TTFB samples here. Mounted outside
+	// the /api/v1 ForwardAuth subrouter so logged-out clients can still
+	// report — the body carries no PII and the handler caps batch size +
+	// label cardinality. Rate-limited per IP to bound abuse.
+	webVitalsHandler := NewWebVitalsHandler()
+	r.With(
+		httprate.LimitByIP(120, 1*time.Minute),
+	).Post("/api/v1/web-vitals", webVitalsHandler.Ingest)
+
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
@@ -530,6 +541,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/geofences", func(r chi.Router) {
 			r.Get("/", geofenceHandler.List)
 			r.Post("/", geofenceHandler.Create)
+			// Bulk operations (Phase-45 / Prompt 32) — kept ahead of the
+			// {geofenceID} subrouter so chi matches the static path first.
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", geofenceHandler.BulkUpdate)
 			r.Route("/{geofenceID}", func(r chi.Router) {
 				r.Get("/", geofenceHandler.Get)
 				r.Put("/", geofenceHandler.Update)
@@ -643,6 +657,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/automations", func(r chi.Router) {
 			r.Get("/", automationHandler.List)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", automationHandler.Create)
+
+			// Bulk operations (Phase-45 / Prompt 32) — registered before the
+			// {id} subrouter so chi matches the static `/bulk` path first.
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", automationHandler.BulkUpdate)
 
 			// SSE stream for real-time automation events (static route before {id} param)
 			// Protected by ForwardAuthMiddleware on the parent /api/v1 group
@@ -1049,6 +1067,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/recent-alerts", devToolsHandler.RecentAlerts)
 			r.Get("/service-data", devToolsHandler.ServiceData)
 			r.Get("/redis-signals", devToolsHandler.RedisSignals)
+			r.Get("/redis-signals/keys", devToolsHandler.RedisSignalKeys)
 
 			// Raw telemetry signal capture
 			r.Route("/telemetry-capture", func(r chi.Router) {
@@ -1236,6 +1255,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/", exportJobHandler.SubmitJob)
 			r.Post("/account", exportJobHandler.SubmitAccountJob)
 			r.Post("/import", exportJobHandler.SubmitImportJob)
+			// Bulk operations (Phase-45 / Prompt 32) — registered before
+			// /{jobID} so chi matches the static `/bulk` path first.
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", exportJobHandler.BulkUpdate)
 			r.Get("/", exportJobHandler.ListJobs)
 			r.Get("/{jobID}", exportJobHandler.GetJob)
 			r.Get("/{jobID}/download", exportJobHandler.DownloadJob)

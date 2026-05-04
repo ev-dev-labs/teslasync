@@ -141,13 +141,13 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
             {/* Left column: FL / RL values */}
             <div className="flex flex-col justify-between h-full py-2 text-right min-w-[50px]">
               <div>
-                <p className="text-[10px] text-white/40 uppercase">{t('widget.tireFL', 'FL')}</p>
+                <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('widget.tireFL', 'FL')}</p>
                 <p className={`text-sm font-bold ${STATUS_COLORS[tires[0].status].text}`}>
                   {fmtPressure(tires[0].value)}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-white/40 uppercase">{t('widget.tireRL', 'RL')}</p>
+                <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('widget.tireRL', 'RL')}</p>
                 <p className={`text-sm font-bold ${STATUS_COLORS[tires[2].status].text}`}>
                   {fmtPressure(tires[2].value)}
                 </p>
@@ -162,13 +162,13 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
             {/* Right column: FR / RR values */}
             <div className="flex flex-col justify-between h-full py-2 text-left min-w-[50px]">
               <div>
-                <p className="text-[10px] text-white/40 uppercase">{t('widget.tireFR', 'FR')}</p>
+                <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('widget.tireFR', 'FR')}</p>
                 <p className={`text-sm font-bold ${STATUS_COLORS[tires[1].status].text}`}>
                   {fmtPressure(tires[1].value)}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-white/40 uppercase">{t('widget.tireRR', 'RR')}</p>
+                <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('widget.tireRR', 'RR')}</p>
                 <p className={`text-sm font-bold ${STATUS_COLORS[tires[3].status].text}`}>
                   {fmtPressure(tires[3].value)}
                 </p>
@@ -183,13 +183,13 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
                 ? t('widget.tireAllNormal', 'All Normal')
                 : t('widget.tireWarning', 'Check Pressure')}
             </Badge>
-            <span className="text-[10px] text-white/30">
+            <span className="text-[10px] text-[var(--text-muted)]">
               {pressureUnit} · {formatTimestamp(latestReading, t)}
             </span>
           </div>
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<CircleDot className="h-5 w-5" />}
           message={t('widget.noTireData', 'No tire pressure data')}
           className="py-4"

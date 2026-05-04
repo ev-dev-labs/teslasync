@@ -10,8 +10,8 @@ import type { WidgetProps } from './types';
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs text-white/50">{label}</span>
-      <span className="text-sm font-bold text-white/90">{value}</span>
+      <span className="text-xs text-[var(--text-secondary)]">{label}</span>
+      <span className="text-sm font-bold text-[var(--text-primary)]">{value}</span>
     </div>
   );
 }
@@ -72,7 +72,7 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
           </div>
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Thermometer className="h-5 w-5" />}
           message={t('widget.noClimate', 'No climate data')}
           className="py-4"

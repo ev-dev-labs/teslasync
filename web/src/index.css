@@ -13,9 +13,11 @@
   --tesla-red: #e31937;
   /* Mode-aware vars — overridden by ThemeProvider */
   --bg: #0a0a0f;
+  --bg-app: #0a0a0f;
   --surface-1: #0f1019;
   --surface-2: #151621;
   --surface-3: #1a1b2e;
+  --surface-overlay: rgba(0, 0, 0, 0.6);
   --glass-bg: rgba(255, 255, 255, 0.04);
   --glass-border: rgba(255, 255, 255, 0.12);
   --text-primary: #ffffff;
@@ -29,6 +31,7 @@
   --surface-elevated: rgba(255, 255, 255, 0.04);
   --border-subtle: rgba(255, 255, 255, 0.06);
   --border-default: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.2);
   /* Dynamic color theme vars — overridden by ThemeProvider */
   --theme-primary: #00f0ff;
   --theme-primary-rgb: 0, 240, 255;
@@ -51,6 +54,21 @@
   --density-pad-y: 0.75rem;
   --density-gap: 0.75rem;
   --density-text: 0.875rem;
+  /*
+   * Motion duration tokens (Phase-45 / Prompt 21).
+   *
+   * Three semantic buckets so transition timings stay consistent across the
+   * app. Tailwind's `duration-fast | duration-normal | duration-slow`
+   * utilities (see tailwind.config.js → transitionDuration) reference these
+   * variables. Components that consume the vars directly get reduced-motion
+   * support for free via the @media override further down in this file.
+   */
+  --motion-duration-fast: 150ms;
+  --motion-duration-normal: 250ms;
+  --motion-duration-slow: 400ms;
+  --motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-easing-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --motion-easing-decelerate: cubic-bezier(0, 0, 0, 1);
 }
 
 /* === DENSITY MODES (Phase 40 / Prompt 44) ============================ */
@@ -348,6 +366,9 @@ select option:checked {
   --surface-elevated: rgba(255, 255, 255, 0.95);
   --border-subtle: rgba(0, 0, 0, 0.06);
   --border-default: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.2);
+  --surface-overlay: rgba(15, 23, 42, 0.5);
+  --bg-app: #f8fafc;
 }
 
 /* Override white text → dark in light mode */
@@ -872,6 +893,11 @@ select option:checked {
  * Policy: docs/A11Y_GUIDELINES.md.
  */
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-fast: 0ms;
+    --motion-duration-normal: 0ms;
+    --motion-duration-slow: 0ms;
+  }
   *,
   *::before,
   *::after {
@@ -897,14 +923,17 @@ select option:checked {
 @media print {
   :root {
     --bg: #ffffff;
+    --bg-app: #ffffff;
     --surface-1: #ffffff;
     --surface-2: #ffffff;
     --surface-3: #ffffff;
     --surface-elevated: #ffffff;
+    --surface-overlay: rgba(0, 0, 0, 0.4);
     --glass-bg: #ffffff;
     --glass-border: #cccccc;
     --border-subtle: #dddddd;
     --border-default: #cccccc;
+    --border-strong: #888888;
     --text-primary: #000000;
     --text-secondary: #222222;
     --text-muted: #555555;

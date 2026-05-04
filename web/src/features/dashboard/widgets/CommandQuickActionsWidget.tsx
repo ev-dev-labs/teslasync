@@ -96,7 +96,7 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
                   <Icon className={`h-4 w-4 ${cmd.color}`} />
                 )}
                 {!isCompact && (
-                  <span className="text-[10px] text-white/60 truncate w-full text-center">
+                  <span className="text-[10px] text-[var(--text-secondary)] truncate w-full text-center">
                     {t(cmd.labelKey, cmd.labelFallback)}
                   </span>
                 )}
@@ -105,7 +105,7 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
           })}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Zap className="h-5 w-5" />}
           message={t('widget.quickActions.noVehicle', 'No vehicle selected')}
           className="py-4"

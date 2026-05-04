@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
 import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
 import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
+import { DataFreshnessAuto } from '@/components/data-display';
+import { TimeStamp } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import {
   ChartContainer, ChartTooltip,
@@ -29,7 +31,7 @@ import { DateRangeFilter } from '@/components/forms/DateRangeFilter';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { FilterBar } from '@/components/forms/FilterBar';
 import { useFilteredList } from '@/hooks/useFilteredList';
-import { useUrlEnum, useUrlString, useUrlNumber } from '@/hooks/useUrlState';
+import { useUrlBatch, useUrlEnum, useUrlString, useUrlNumber } from '@/hooks/useUrlState';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
@@ -110,7 +112,7 @@ function DriveCard({
         <label className="flex items-center pl-2">
           <input
             type="checkbox"
-            className="h-4 w-4 cursor-pointer rounded border-white/20 bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
+            className="h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
             checked={!!selected}
             onChange={e => onToggleSelect?.(drive.id, e.target.checked)}
             aria-label={t('drives.selectDrive', 'Select drive on {{date}}', { date: formatDateTime(drive.startTs) })}
@@ -118,7 +120,7 @@ function DriveCard({
         </label>
       )}
       <Link to={`/drives/${drive.id}`} className="flex-1 min-w-0">
-      <GlassPanel hover glow="cyan" className="p-4 transition-all duration-200 group cursor-pointer">
+      <GlassPanel hover glow="cyan" className="p-4 transition-all duration-normal group cursor-pointer">
         <div className="flex items-center gap-4">
           {/* Efficiency score badge */}
           <div className="flex flex-col items-center shrink-0 w-12">
@@ -128,9 +130,7 @@ function DriveCard({
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">
-                {formatDateTime(drive.startTs)}
-              </p>
+              <TimeStamp value={drive.startTs} className="text-sm font-semibold text-[var(--text-primary)]" />
               {hasData ? (
                 <Badge variant="info" size="sm">
                   {fmtNumber(convertDistance(actualDistance))} {distanceUnit}
@@ -205,7 +205,8 @@ export default function DrivesListPage() {
   /* Data hooks — Phase 40 / Prompt 16: header VehiclePicker is the source of truth */
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-  const { data: drives, isLoading: isDrivesLoading, error: drivesError } = useDrives(vehicleIdStr);
+  const drivesQuery = useDrives(vehicleIdStr);
+  const { data: drives, isLoading: isDrivesLoading, error: drivesError } = drivesQuery;
   const { data: stats } = useDrivingStats(vehicleIdStr);
 
   /* Unit conversion */
@@ -232,6 +233,7 @@ export default function DrivesListPage() {
   const defaultEnd = useMemo(() => new Date().toISOString().split('T')[0], []);
   const [startDate, setStartDate] = useUrlString('from', defaultStart);
   const [endDate, setEndDate] = useUrlString('to', defaultEnd);
+  const setRangeBatch = useUrlBatch();
 
   /* ---- Client-side date filter ---- */
   const dateFilteredDrives = useMemo(() => {
@@ -379,12 +381,15 @@ export default function DrivesListPage() {
       error={drivesError as Error | null}
       copyLink
       actions={
-        <div data-tour="drives-saved-views">
-          <SavedViewMenu
-            route="/drives"
-            currentQuery={savedView.currentQuery}
-            onApply={savedView.apply}
-          />
+        <div className="flex items-center gap-3">
+          <DataFreshnessAuto query={drivesQuery} />
+          <div data-tour="drives-saved-views">
+            <SavedViewMenu
+              route="/drives"
+              currentQuery={savedView.currentQuery}
+              onApply={savedView.apply}
+            />
+          </div>
         </div>
       }
     >
@@ -402,6 +407,7 @@ export default function DrivesListPage() {
             endDate={endDate}
             onStartDateChange={setStartDate}
             onEndDateChange={setEndDate}
+            onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
             onApply={() => setPage(1)}
           />
         </FilterBar>
@@ -449,7 +455,7 @@ export default function DrivesListPage() {
               </div>
             </div>
           ) : (
-            <EmptyState message={t('drives.noStats', 'No driving statistics available yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('drives.noStats', 'No driving statistics available yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -606,7 +612,7 @@ export default function DrivesListPage() {
                       : t('drives.sortEfficiency', 'Efficiency')}
                 </Button>
               ))}
-              <span className="mx-1 h-4 w-px bg-white/10" />
+              <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" />
               <a
                 href={`/api/v1/export/drives?format=csv${startDate ? `&start=${startDate}` : ''}${endDate ? `&end=${endDate}` : ''}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`}
                 download="teslasync-drives.csv"
@@ -622,7 +628,7 @@ export default function DrivesListPage() {
             </div>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Activity className="h-8 w-8 opacity-20" />}
             message={t('common.noData', 'No data available')}
             className="py-8"
@@ -678,6 +684,16 @@ export default function DrivesListPage() {
           icon={<Route className="h-8 w-8" />}
           title={t('drives.emptyTitle', 'No drives recorded yet')}
           message={t('drives.emptyMessage', 'Drive data will appear here once your vehicle records trips.')}
+          action={{
+            label: t('drives.empty.cta', 'Reset filters'),
+            onClick: () => {
+              setSearch('');
+              setStartDate(defaultStart);
+              setEndDate(defaultEnd);
+              setSortBy('date');
+              setPage(1);
+            },
+          }}
         />
       )}
     </PageContainer>

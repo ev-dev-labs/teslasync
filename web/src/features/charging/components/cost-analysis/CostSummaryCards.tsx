@@ -45,7 +45,7 @@ export function CostSummaryCards({
         <StaggerItem>
           <StatBox
             icon={<Car className="h-5 w-5 text-blue-400" />}
-            label={t('costAnalysis.stats.costPerDist', `Cost Per ${isMiles ? 'Mile' : 'km'}`)}
+            label={t('costAnalysis.stats.costPerDist', { unit: isMiles ? 'Mile' : 'km', defaultValue: 'Cost Per {{unit}}' })}
             value={`$${fmtNumber(coreStats?.costPerDist ?? 0, 3)}`}
             sub={`per ${distanceUnit}`}
           />

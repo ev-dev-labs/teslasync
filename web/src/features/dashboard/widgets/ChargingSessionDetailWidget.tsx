@@ -205,7 +205,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             <span className="text-2xl font-bold text-emerald-300">
               {fmtNumber(detail.energy_added_kwh ?? 0, 1)}
             </span>
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               {t('widget.chargingSessionDetail.unitKwh', 'kWh added')}
             </span>
             <Badge variant={charger.variant} size="sm">
@@ -213,7 +213,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             </Badge>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Zap className="h-5 w-5" />}
             message={t('widget.chargingSessionDetail.empty', 'No charge sessions')}
             className="py-4"

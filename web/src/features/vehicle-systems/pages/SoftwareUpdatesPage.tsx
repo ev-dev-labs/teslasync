@@ -44,7 +44,7 @@ const STATUS_CONFIG: Record<string, { color: string; bg: string; icon: typeof Ch
   installing: { color: 'text-neon-cyan', bg: 'bg-neon-cyan/10', icon: Download, badgeVariant: 'info', label: 'Installing' },
   downloading: { color: 'text-neon-cyan', bg: 'bg-neon-cyan/10', icon: Download, badgeVariant: 'info', label: 'Downloading' },
   available: { color: 'text-neon-amber', bg: 'bg-neon-amber/10', icon: ArrowUpCircle, badgeVariant: 'warning', label: 'Available' },
-  scheduled: { color: 'text-[var(--text-muted)]', bg: 'bg-white/5', icon: Clock, badgeVariant: 'neutral', label: 'Scheduled' },
+  scheduled: { color: 'text-[var(--text-muted)]', bg: 'bg-[var(--surface-2)]', icon: Clock, badgeVariant: 'neutral', label: 'Scheduled' },
 };
 
 function getStatus(status: string) {
@@ -120,7 +120,7 @@ export default function SoftwareUpdatesPage() {
           {isLoading ? (
             <div className="space-y-4">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>
           ) : !updates?.length ? (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Smartphone className="h-12 w-12" />}
               title={t('No update history')}
               message={t('No software update history available')}
@@ -128,7 +128,7 @@ export default function SoftwareUpdatesPage() {
           ) : (
             <>
               <div className="relative">
-                <div className="absolute left-6 top-0 bottom-0 w-px bg-white/10" />
+                <div className="absolute left-6 top-0 bottom-0 w-px bg-[var(--surface-2)]" />
                 <div className="space-y-4">
                   {updates.map(u => {
                     const s = getStatus(u.status);
@@ -139,7 +139,7 @@ export default function SoftwareUpdatesPage() {
                         <div className={cn('absolute left-3.5 top-3 h-5 w-5 rounded-full flex items-center justify-center ring-4 ring-[var(--bg)]', s.bg)}>
                           <Icon className={cn('h-3 w-3', s.color)} />
                         </div>
-                        <GlassPanel className="p-4 hover:border-white/10 transition-colors">
+                        <GlassPanel className="p-4 hover:border-[var(--border-subtle)] transition-colors">
                           <div className="flex items-start justify-between gap-4">
                             <div>
                               <div className="flex items-center gap-2 mb-1 flex-wrap">

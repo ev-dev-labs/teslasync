@@ -85,7 +85,7 @@ export function AutomationCard({
     <>
       <GlassPanel
         className={cn(
-          'p-4 transition-all duration-200',
+          'p-4 transition-all duration-normal',
           isFiring && 'ring-2 ring-neon-cyan/50 shadow-lg shadow-neon-cyan/10',
           uiStatus === 'auto-disabled' && 'border-red-500/30',
         )}
@@ -94,7 +94,7 @@ export function AutomationCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h3 className="truncate text-base font-semibold text-white/90">{a.name}</h3>
+              <h3 className="truncate text-base font-semibold text-[var(--text-primary)]">{a.name}</h3>
               <Badge variant={status.variant}>{t(`automations.status.${uiStatus}`, status.label)}</Badge>
               {isFiring && (
                 <span className="flex items-center gap-1 text-xs text-cyan-300 animate-pulse">
@@ -104,7 +104,7 @@ export function AutomationCard({
               )}
             </div>
             {a.description && (
-              <p className="mt-0.5 truncate text-sm text-white/50">{a.description}</p>
+              <p className="mt-0.5 truncate text-sm text-[var(--text-secondary)]">{a.description}</p>
             )}
           </div>
 
@@ -131,11 +131,11 @@ export function AutomationCard({
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-white/10 bg-gray-900 py-1 shadow-xl">
+                  <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-[var(--border-subtle)] bg-gray-900 py-1 shadow-xl">
                     <UiButton
                       type="button"
                       variant="ghost"
-                      className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-white/80 hover:!bg-white/5"
+                      className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-[var(--text-primary)] hover:!bg-[var(--surface-2)]"
                       onClick={() => { onTestRun(a.id); setMenuOpen(false); }}
                     >
                       <Play className="h-3.5 w-3.5" />
@@ -145,7 +145,7 @@ export function AutomationCard({
                       <UiButton
                         type="button"
                         variant="ghost"
-                        className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-cyan-300 hover:!bg-white/5"
+                        className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-cyan-300 hover:!bg-[var(--surface-2)]"
                         onClick={() => { onReEnable(a.id); setMenuOpen(false); }}
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
@@ -155,7 +155,7 @@ export function AutomationCard({
                     <UiButton
                       type="button"
                       variant="ghost"
-                      className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-white/80 hover:!bg-white/5"
+                      className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-[var(--text-primary)] hover:!bg-[var(--surface-2)]"
                       onClick={() => { setMenuOpen(false); }}
                     >
                       <Copy className="h-3.5 w-3.5" />
@@ -164,7 +164,7 @@ export function AutomationCard({
                     <UiButton
                       type="button"
                       variant="ghost"
-                      className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-white/80 hover:!bg-white/5"
+                      className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-[var(--text-primary)] hover:!bg-[var(--surface-2)]"
                       onClick={() => { setMenuOpen(false); }}
                     >
                       <Download className="h-3.5 w-3.5" />
@@ -187,7 +187,7 @@ export function AutomationCard({
         </div>
 
         {/* Vehicle row */}
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/60">
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
           {vehicleName && (
             <span className="flex items-center gap-1">
               <Car className="h-3 w-3" />
@@ -195,14 +195,14 @@ export function AutomationCard({
             </span>
           )}
           {!vehicleName && (
-            <span className="text-white/50">
+            <span className="text-[var(--text-secondary)]">
               {t('automations.allVehicles', 'All vehicles')}
             </span>
           )}
         </div>
 
         {/* Stats row */}
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-white/50">
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[var(--text-secondary)]">
           <span className="flex items-center gap-1">
             {a.last_triggered_at ? (
               <>
@@ -216,11 +216,11 @@ export function AutomationCard({
               </>
             )}
           </span>
-          <span className="text-white/30">·</span>
+          <span className="text-[var(--text-muted)]">·</span>
           <span>{t('automations.runs', 'Runs')}: {a.execution_count}</span>
           {a.failure_count > 0 && (
             <>
-              <span className="text-white/30">·</span>
+              <span className="text-[var(--text-muted)]">·</span>
               <span className="flex items-center gap-1 text-red-400">
                 <XCircle className="h-3 w-3" />
                 {t('automations.fails', 'Fails')}: {a.failure_count}
@@ -229,7 +229,7 @@ export function AutomationCard({
           )}
           {a.next_fire_time && (
             <>
-              <span className="text-white/30">·</span>
+              <span className="text-[var(--text-muted)]">·</span>
               <span className="text-neon-cyan/70">
                 {t('automations.nextFire', 'Next')}: {formatDateTime(a.next_fire_time)}
               </span>
@@ -273,7 +273,7 @@ export function AutomationCard({
       <ConfirmDialog
         open={confirmDelete}
         title={t('automations.deleteTitle', 'Delete Automation')}
-        message={t('automations.deleteMessage', `Are you sure you want to delete "${a.name}"? This cannot be undone.`)}
+        message={t('automations.deleteMessage', { name: a.name, defaultValue: 'Are you sure you want to delete "{{name}}"? This cannot be undone.' })}
         confirmLabel={t('automations.deleteConfirm', 'Delete')}
         cancelLabel={t('common.cancel', 'Cancel')}
         variant="danger"

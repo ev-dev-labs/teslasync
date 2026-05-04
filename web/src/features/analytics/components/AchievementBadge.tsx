@@ -34,7 +34,7 @@ export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeP
   return (
     <div
       className={cn(
-        'relative flex flex-col items-center rounded-xl p-3 transition-all duration-300',
+        'relative flex flex-col items-center rounded-xl p-3 transition-all duration-normal',
         cfg.gap,
         achievement.unlocked
           ? 'bg-yellow-500/[0.08] border border-yellow-500/30'
@@ -71,14 +71,14 @@ export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeP
         className={cn(
           'font-semibold text-center leading-tight',
           cfg.textSize,
-          achievement.unlocked ? 'text-yellow-400' : 'text-white/50',
+          achievement.unlocked ? 'text-yellow-400' : 'text-[var(--text-secondary)]',
         )}
       >
         {achievement.name}
       </span>
 
       {/* Description */}
-      <span className="text-xs text-white/40 text-center leading-tight">
+      <span className="text-xs text-[var(--text-muted)] text-center leading-tight">
         {achievement.description}
       </span>
 
@@ -88,7 +88,7 @@ export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeP
           {t('lifetime.unlocked', '✓ Unlocked')}
         </span>
       ) : (
-        <span className="text-xs text-white/30 tabular-nums">
+        <span className="text-xs text-[var(--text-muted)] tabular-nums">
           {pct}%
         </span>
       )}

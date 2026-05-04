@@ -48,10 +48,10 @@ export function AddressInput({ value, onChange, onSelect, placeholder, label }: 
   return (
     <div ref={containerRef} className="relative">
       {label && (
-        <label className="block text-xs font-medium text-white/60 mb-1">{label}</label>
+        <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">{label}</label>
       )}
       <div className="relative">
-        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
         <ControlInput
           value={value}
           onChange={(e) => {
@@ -69,17 +69,17 @@ export function AddressInput({ value, onChange, onSelect, placeholder, label }: 
         )}
       </div>
       {isOpen && suggestions.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full rounded-lg border border-white/10 bg-gray-900/95 backdrop-blur-xl shadow-xl max-h-60 overflow-y-auto">
+        <div className="absolute z-50 mt-1 w-full rounded-lg border border-[var(--border-subtle)] bg-gray-900/95 backdrop-blur-xl shadow-xl max-h-60 overflow-y-auto">
           {suggestions.map((result, idx) => (
             <ControlButton
               key={`${result.lat}-${result.lng}-${idx}`}
               type="button"
               variant="ghost"
               size="sm"
-              className="h-auto w-full items-start justify-start gap-2 rounded-none px-3 py-2 text-left text-sm font-normal text-white/80 hover:bg-white/5"
+              className="h-auto w-full items-start justify-start gap-2 rounded-none px-3 py-2 text-left text-sm font-normal text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
               onClick={() => handleSelect(result)}
             >
-              <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-white/40" />
+              <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-[var(--text-muted)]" />
               <span className="line-clamp-2">{result.display_name}</span>
             </ControlButton>
           ))}

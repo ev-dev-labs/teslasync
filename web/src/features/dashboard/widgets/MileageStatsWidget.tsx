@@ -89,14 +89,14 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
             <AnimatedNumber
               value={convertDistance(dailyAvgMi)}
-              className="text-2xl font-bold text-white/90"
+              className="text-2xl font-bold text-[var(--text-primary)]"
             />
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               {distanceUnit}/{t('widget.mileageStats.day', 'day')}
             </span>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<TrendingUp className="h-5 w-5" />}
             message={t('widget.mileageStats.noData', 'No mileage data')}
             className="py-4"
@@ -122,7 +122,7 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
       {data ? (
         <WidgetStatGrid stats={stats} cols={2} />
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<TrendingUp className="h-5 w-5" />}
           message={t('widget.mileageStats.noData', 'No mileage data')}
           className="py-4"

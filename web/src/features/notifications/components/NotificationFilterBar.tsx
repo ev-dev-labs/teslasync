@@ -106,7 +106,7 @@ export function NotificationFilterBar({
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
                   active
                     ? cn(opt.bg, opt.text, 'border-transparent ring-1', opt.ring)
-                    : 'border-white/10 text-[var(--text-secondary)] hover:bg-white/[0.06]',
+                    : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-white/[0.06]',
                 )}
               >
                 <Icon className="h-3 w-3" aria-hidden="true" />

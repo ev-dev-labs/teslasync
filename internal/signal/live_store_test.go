@@ -639,6 +639,14 @@ func (f failingRedisSignalClient) HGet(ctx context.Context, key string, field st
 	return redis.NewStringResult("", f.err)
 }
 
+func (f failingRedisSignalClient) HLen(ctx context.Context, key string) *redis.IntCmd {
+	return redis.NewIntResult(0, f.err)
+}
+
+func (f failingRedisSignalClient) Scan(ctx context.Context, cursor uint64, match string, count int64) *redis.ScanCmd {
+	return redis.NewScanCmdResult(nil, 0, f.err)
+}
+
 func (f failingRedisSignalClient) Publish(ctx context.Context, channel string, message interface{}) *redis.IntCmd {
 	return redis.NewIntResult(0, f.err)
 }

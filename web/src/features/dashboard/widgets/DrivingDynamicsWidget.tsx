@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
-import { RadialGauge, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, axisTick, axisTickSm, chartGrid, useChartPalette } from '@/components/charts';
+import { RadialGauge, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, axisTick, axisTickSm, chartGrid, useThemeChartPalette } from '@/components/charts';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useDrivingDynamics, useAccelerationDistribution } from '@/api/hooks/useDriving';
@@ -72,7 +72,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
   const isWide = size.cols >= 3;
 
   // Phase-40 / Prompt 60 — chart colors derive from active theme.
-  const palette = useChartPalette();
+  const palette = useThemeChartPalette();
 
   const maxG = Math.max(
     dynamics?.maxAccelerationG ?? 0,
@@ -110,10 +110,10 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
       >
         {dynamics ? (
           <div className="h-full flex flex-col items-center justify-center gap-2">
-            <span className="text-3xl font-bold text-white/90">
+            <span className="text-3xl font-bold text-[var(--text-primary)]">
               {fmtNumber(maxG, 2)}
             </span>
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               {t('widget.drivingDynamics.maxG', 'Max g')}
             </span>
             <Badge
@@ -126,7 +126,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
             </Badge>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Gauge className="h-5 w-5" />}
             message={t('widget.drivingDynamics.noData', 'No dynamics data')}
             className="py-2"
@@ -161,7 +161,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
                 color={gaugeColor(dynamics.avgAccelerationG ?? 0)}
                 size={80}
               />
-              <span className="text-[10px] text-white/40">
+              <span className="text-[10px] text-[var(--text-muted)]">
                 {t('widget.drivingDynamics.accel', 'Accel')}
               </span>
             </div>
@@ -173,7 +173,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
                 color={gaugeColor(dynamics.avgBrakingG ?? 0)}
                 size={80}
               />
-              <span className="text-[10px] text-white/40">
+              <span className="text-[10px] text-[var(--text-muted)]">
                 {t('widget.drivingDynamics.brake', 'Brake')}
               </span>
             </div>
@@ -185,7 +185,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
                 color={gaugeColor(dynamics.maxCorneringG ?? 0)}
                 size={80}
               />
-              <span className="text-[10px] text-white/40">
+              <span className="text-[10px] text-[var(--text-muted)]">
                 {t('widget.drivingDynamics.lateral', 'Lateral')}
               </span>
             </div>
@@ -206,7 +206,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
           {/* Wide: acceleration distribution histogram */}
           {isWide && histogramData.length > 0 && (
             <div className="flex-1 min-h-0">
-              <p className="text-[10px] text-white/40 mb-1">
+              <p className="text-[10px] text-[var(--text-muted)] mb-1">
                 {t('widget.drivingDynamics.distribution', 'G-Force Distribution')}
               </p>
               <ResponsiveContainer width="100%" height="100%">
@@ -225,7 +225,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
           )}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Gauge className="h-5 w-5" />}
           message={t('widget.drivingDynamics.noData', 'No dynamics data')}
           className="py-4"

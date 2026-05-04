@@ -32,7 +32,7 @@ export function WindowStatusDetail({ latest }: WindowStatusDetailProps) {
               key={win.key}
               className={cn('p-4 border', windowColor(state))}
             >
-              <p className="text-xs text-gray-400 mb-1">{t(win.i18nKey, win.fallback)}</p>
+              <p className="text-xs text-[var(--text-muted)] mb-1">{t(win.i18nKey, win.fallback)}</p>
               <p className={cn('text-xl font-bold', windowTextClass(state))}>
                 {t(`admin.security.windowState.${(state ?? '').toLowerCase()}`, state)}
               </p>

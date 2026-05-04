@@ -72,6 +72,18 @@ func writeErrorCode(w http.ResponseWriter, status int, msg, code string) {
 	})
 }
 
+// writeTeslaTokenExpired writes the canonical 401 response that the
+// frontend translates into a {@link TeslaAuthExpiredError} and surfaces
+// via the <TeslaReauthBanner> recovery UI (Phase-45 / Prompt 30).
+//
+// Use this from any handler whose underlying call returned
+// {@link tesla.ErrUnauthorized} — i.e. the user's third-party Tesla
+// refresh token has expired and the backend can no longer act on their
+// behalf without a fresh OAuth grant.
+func writeTeslaTokenExpired(w http.ResponseWriter) {
+	writeErrorCode(w, http.StatusUnauthorized, "Tesla account disconnected", ErrCodeTeslaTokenExpired)
+}
+
 // writeAppError writes a structured error response using the centralized error catalog
 // and automatically records the error in the global error tracker and Prometheus.
 func writeAppError(w http.ResponseWriter, r *http.Request, appErr *AppError) {

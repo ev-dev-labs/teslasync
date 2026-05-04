@@ -24,6 +24,7 @@ import { FormSection } from '@/components/forms';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
+import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import { useConfirm } from '@/hooks/useConfirm';
 import { ConfirmDialog } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -374,6 +375,10 @@ export default function AutomationBuilderPage() {
   // wiring; also exposes localized strings reused by the in-app discard
   // confirm dialog below.
   const dirtyForm = useDirtyForm(dirty);
+  // Phase-45 / Prompt 16: in-app navigation guard. Sidebar clicks, browser
+  // back, breadcrumb links, etc. now surface the same discard prompt as the
+  // explicit Cancel button below.
+  useNavigationGuard(dirty, t('forms.unsavedAutomation', 'You have an unsaved automation.'));
   const { confirm: confirmDiscard, dialogProps: discardDialogProps } = useConfirm();
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
@@ -480,6 +485,7 @@ export default function AutomationBuilderPage() {
         variant: 'warning',
         confirmLabel: dirtyForm.discardLabel,
         cancelLabel: dirtyForm.keepEditingLabel,
+        silenceKey: 'discard-draft',
       });
       if (!ok) return;
     }
@@ -531,7 +537,7 @@ export default function AutomationBuilderPage() {
         title={t('automations.builder.editTitle', 'Edit Automation')}
         breadcrumbLabels={breadcrumbLabels}
       >
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<AlertTriangle className="h-8 w-8" />}
           message={t('automations.builder.notFound', 'Automation not found')}
         />
@@ -562,7 +568,7 @@ export default function AutomationBuilderPage() {
           variant="ghost"
           size="sm"
           onClick={handleBackToList}
-          className="self-start text-white/50 hover:text-white/80"
+          className="self-start text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           icon={<ArrowLeft className="h-4 w-4" />}
         >
           {t('automations.builder.backToList', 'Back to Automations')}
@@ -640,7 +646,7 @@ export default function AutomationBuilderPage() {
               </GlassPanel>
             ) : (
               <GlassPanel className="mt-3 p-4">
-                <EmptyState
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                   message={t(
                     'automations.builder.emptyTrigger',
                     'Select a supported trigger type to configure when this automation starts.',
@@ -746,7 +752,7 @@ export default function AutomationBuilderPage() {
         {!isEdit && (
           <FadeIn delay={0.3}>
             <GlassPanel className="p-4 text-center">
-              <p className="text-sm text-white/50">
+              <p className="text-sm text-[var(--text-secondary)]">
                 {t(
                   'automations.builder.presetHint',
                    'Not sure where to start? Browse typed automation templates.',

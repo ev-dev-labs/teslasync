@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import { useConfirm } from '../useConfirm'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
@@ -38,6 +38,14 @@ function Harness({ optionsBuilder = defaultOptions, onResult, forceLoading }: Ha
 function openDialog() {
   fireEvent.click(screen.getByText('open'))
 }
+
+beforeEach(() => {
+  localStorage.clear()
+})
+
+afterEach(() => {
+  localStorage.clear()
+})
 
 describe('useConfirm', () => {
   it('renders nothing until confirm() is called', () => {
@@ -189,5 +197,78 @@ describe('useConfirm', () => {
     // Dialog stays open and the promise has not resolved.
     expect(screen.queryByRole('dialog')).not.toBeNull()
     expect(resolved).toBeUndefined()
+  })
+
+  it('short-circuits to true when silenceKey is already silenced', async () => {
+    localStorage.setItem('teslasync:confirm-silence:v1', JSON.stringify(['discard-draft']))
+    let resolved: boolean | undefined
+    render(
+      <Harness
+        onResult={(ok) => { resolved = ok }}
+        optionsBuilder={() => ({
+          title: 'Discard draft?',
+          message: 'You have unsaved changes.',
+          variant: 'warning',
+          confirmLabel: 'Discard',
+          cancelLabel: 'Keep editing',
+          silenceKey: 'discard-draft',
+        })}
+      />,
+    )
+
+    await act(async () => {
+      openDialog()
+    })
+
+    expect(resolved).toBe(true)
+    // Dialog must NOT mount when the action is silenced.
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('does NOT short-circuit silenceKey on a danger variant', async () => {
+    localStorage.setItem('teslasync:confirm-silence:v1', JSON.stringify(['delete-vehicle']))
+    let resolved: boolean | undefined
+    render(
+      <Harness
+        onResult={(ok) => { resolved = ok }}
+        optionsBuilder={() => ({
+          title: 'Delete vehicle?',
+          message: 'This is destructive.',
+          variant: 'danger',
+          confirmLabel: 'Delete',
+          cancelLabel: 'Cancel',
+          silenceKey: 'delete-vehicle',
+        })}
+      />,
+    )
+
+    openDialog()
+
+    expect(resolved).toBeUndefined()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('does NOT short-circuit silenceKey when requireTypedConfirmation is set', async () => {
+    localStorage.setItem('teslasync:confirm-silence:v1', JSON.stringify(['reset-everything']))
+    let resolved: boolean | undefined
+    render(
+      <Harness
+        onResult={(ok) => { resolved = ok }}
+        optionsBuilder={() => ({
+          title: 'Reset everything?',
+          message: 'Type to confirm.',
+          variant: 'warning',
+          confirmLabel: 'Reset',
+          cancelLabel: 'Cancel',
+          requireTypedConfirmation: 'reset',
+          silenceKey: 'reset-everything',
+        })}
+      />,
+    )
+
+    openDialog()
+
+    expect(resolved).toBeUndefined()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 })

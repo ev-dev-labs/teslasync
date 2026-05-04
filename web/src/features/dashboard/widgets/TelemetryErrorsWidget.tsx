@@ -2,10 +2,10 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui';
+import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useFleetTelemetryErrorVINs, useFleetTelemetryErrors } from '@/api/hooks/useTelemetry';
 import { fmtInt } from '@/lib/numberFormat';
-import { formatRelative } from '@/lib/dateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
@@ -90,7 +90,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
       onRefresh={() => refetchVINs()}
     >
       {!hasData ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<AlertCircle className="h-5 w-5" />}
           message={t('widget.telemetryErrors.noData', 'No telemetry error data')}
           className="py-4"
@@ -98,10 +98,10 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
       ) : isCompact ? (
         /* ── Compact layout (1×2) ── */
         <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
-          <span className="text-lg font-bold text-white/90">
+          <span className="text-lg font-bold text-[var(--text-primary)]">
             {fmtInt(activeVINCount)}
           </span>
-          <span className="text-[10px] text-white/50">
+          <span className="text-[10px] text-[var(--text-secondary)]">
             {t('widget.telemetryErrors.errorVINs', 'error VINs')}
           </span>
           <Badge variant={statusBadge} className="text-xs min-h-[28px]">
@@ -113,7 +113,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
         <div className="flex flex-col gap-2 h-full">
           {/* Header stats */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-white/50">
+            <span className="text-xs text-[var(--text-secondary)]">
               {t('widget.telemetryErrors.activeVINs', '{{count}} VINs with errors', { count: activeVINCount })}
             </span>
             <Badge variant={statusBadge} className="text-[10px]">
@@ -124,7 +124,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
           {/* Error feed */}
           <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
             {aggregated.length === 0 ? (
-              <p className="text-xs text-white/40 text-center py-4">
+              <p className="text-xs text-[var(--text-muted)] text-center py-4">
                 {t('widget.telemetryErrors.noErrors', 'No errors recorded')}
               </p>
             ) : (
@@ -139,7 +139,7 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-mono text-white/70 truncate max-w-[120px]">
+                        <span className="text-xs font-mono text-[var(--text-secondary)] truncate max-w-[120px]">
                           {entry.vin}
                         </span>
                         {isRecent && (
@@ -148,17 +148,15 @@ export default function TelemetryErrorsWidget({ size }: WidgetProps) {
                           </Badge>
                         )}
                       </div>
-                      <span className="text-[10px] text-white/40 truncate block">
+                      <span className="text-[10px] text-[var(--text-muted)] truncate block">
                         {entry.error_code}
                       </span>
                     </div>
                     <div className="flex flex-col items-end shrink-0">
-                      <span className="text-xs font-medium text-white/70">
+                      <span className="text-xs font-medium text-[var(--text-secondary)]">
                         ×{fmtInt(entry.count)}
                       </span>
-                      <span className="text-[10px] text-white/40">
-                        {formatRelative(entry.last_seen || null)}
-                      </span>
+                      <TimeStamp value={entry.last_seen || null} className="text-[10px] text-[var(--text-muted)]" />
                     </div>
                   </div>
                 );

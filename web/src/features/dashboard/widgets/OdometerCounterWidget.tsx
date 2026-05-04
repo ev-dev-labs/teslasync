@@ -63,7 +63,7 @@ export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) 
           />
         )
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Gauge className="h-6 w-6" />}
           message={t('widget.odometer.noData', 'No odometer data')}
           className="py-4"
@@ -79,7 +79,7 @@ function CompactView({ odometer, unit }: { odometer: number; unit: string }) {
       <p className="text-2xl font-bold text-cyan-300 tabular-nums">
         <AnimatedNumber value={odometer} decimals={0} />
       </p>
-      <p className="text-[10px] text-white/40 uppercase tracking-wider">{unit}</p>
+      <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{unit}</p>
     </div>
   );
 }
@@ -101,7 +101,7 @@ function ExpandedView({
     <div className="h-full flex flex-col justify-center gap-3">
       {/* Primary odometer reading */}
       <div className="text-center">
-        <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1">
+        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">
           {t('widget.odometer.total', 'Total Odometer')}
         </p>
         <p className="text-3xl font-bold text-cyan-300 tabular-nums">

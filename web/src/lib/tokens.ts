@@ -110,6 +110,53 @@ export const transitions = {
   slow: { duration: animationDuration.slow, ease: 'easeOut' as const },
 } as const
 
+// ── Motion tokens (Phase-45 / Prompt 21) ────────────────────────────────────
+//
+// One source of truth for transition durations and easings used across the
+// app. Three semantic buckets so motion timings can't drift between
+// components:
+//   - fast   (150ms): hover, focus, micro-feedback
+//   - normal (250ms): entrance, exit, panel transitions
+//   - slow   (400ms): page transitions, large layout shifts
+//
+// Tailwind exposes the same buckets as `duration-fast | duration-normal |
+// duration-slow` (see tailwind.config.js → transitionDuration), backed by the
+// `--motion-duration-*` CSS variables in index.css. The CSS variables
+// collapse to 0ms under `prefers-reduced-motion: reduce`, so every consumer
+// of the tokens automatically respects the user's OS-level motion
+// preference — no per-component branching required.
+//
+// `auditMotionTokens.mjs` flags any raw `duration-NNN` Tailwind class
+// outside this token system. Use the new utilities, not raw numbers.
+
+export const motion = {
+  duration: {
+    fast: '150ms',
+    normal: '250ms',
+    slow: '400ms',
+  },
+  easing: {
+    standard: 'cubic-bezier(0.2, 0, 0, 1)',
+    accelerate: 'cubic-bezier(0.3, 0, 1, 1)',
+    decelerate: 'cubic-bezier(0, 0, 0, 1)',
+  },
+  /**
+   * Tailwind class shortcuts mapped to the same buckets. Prefer the
+   * semantic utility names (`duration-fast`, `duration-normal`,
+   * `duration-slow`) directly in className strings — this map exists for
+   * JS code that needs to reference the buckets programmatically without
+   * hard-coding raw `duration-NNN` strings inline.
+   */
+  twDuration: {
+    fast: 'duration-fast',
+    normal: 'duration-normal',
+    slow: 'duration-slow',
+  } as const,
+} as const
+
+export type MotionDuration = keyof typeof motion.duration
+export type MotionEasing = keyof typeof motion.easing
+
 // ── Typography tokens ──
 //
 // One source of truth for every text size / weight / color / role used in the app.

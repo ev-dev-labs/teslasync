@@ -88,8 +88,16 @@ self.addEventListener('push', (event: PushEvent) => {
   const title = data.title ?? 'TeslaSync'
   const options: NotificationOptions = {
     body: data.body ?? '',
+    // `icon` is the large coloured app icon on the right of the notification.
     icon: data.icon ?? '/icons/icon-192.png',
-    badge: data.badge ?? '/icons/icon-192.png',
+    // `badge` is the small monochrome status-bar icon on Android. The OS
+    // discards colour data and re-tints the alpha channel, so this MUST
+    // be a white silhouette on a transparent background. Passing the full
+    // colour app icon causes Chrome to render the icon on BOTH sides of
+    // the notification (status-bar AND large icon slot), producing the
+    // "duplicate icon" bug.
+    // See: https://developer.mozilla.org/en-US/docs/Web/API/Notification/badge
+    badge: data.badge ?? '/icons/badge-72.png',
     tag: data.tag,
     data: { url: data.url ?? '/notifications' },
     // Critical alerts persist on screen until tapped; info / warn use

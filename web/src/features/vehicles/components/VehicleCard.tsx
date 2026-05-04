@@ -29,7 +29,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
   const batColor = batteryColor(state?.battery_level ?? 0);
 
   return (
-    <GlassPanel hover glow="cyan" className="p-0 overflow-hidden transition-all duration-300 group">
+    <GlassPanel hover glow="cyan" className="p-0 overflow-hidden transition-all duration-normal group">
       {/* Gradient accent strip */}
       <div className="h-1 bg-gradient-to-r from-cyan-400 via-purple-400 to-green-400 opacity-40 group-hover:opacity-80 transition-opacity" />
 
@@ -60,7 +60,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
               </Link>
               <StatusBadge status={status} />
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            <p className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] mb-3">
               {vehicle.model} {vehicle.trim_badging} ·{' '}
               <span className="font-mono">{vehicle.vin}</span>
             </p>
@@ -80,7 +80,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
                     <p className="text-sm font-bold text-gray-900 dark:text-white">
                       {state.battery_level}%
                     </p>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                    <p className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                       {fmtNumber(convertDistance(state.rated_range))} {distanceUnit}
                     </p>
                   </div>
@@ -90,7 +90,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
                     {fmtNumber(convertTemp(state.inside_temp))} {tempUnit}
                   </p>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                  <p className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                     {t('card.interior', 'Interior')}
                   </p>
                 </div>
@@ -99,7 +99,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
                     {fmtInt(convertDistance(state.odometer))}
                   </p>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                  <p className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                     {distanceUnit}
                   </p>
                 </div>
@@ -109,7 +109,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
                     <p className="text-sm font-medium text-green-500">
                       {state.charger_power} kW
                     </p>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                    <p className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                       {t('card.charging', 'Charging')}
                     </p>
                   </div>
@@ -127,7 +127,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
           <div className="flex flex-col items-center gap-1 shrink-0">
             <Link
               to={`/vehicles/${vehicle.id}`}
-              className="rounded-lg p-2 text-gray-400 hover:bg-cyan-400/10 hover:text-cyan-400 transition-all"
+              className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-cyan-400/10 hover:text-cyan-400 transition-all"
               title={t('card.viewDetails', 'View details')}
             >
               <ExternalLink className="h-4 w-4" />
@@ -136,7 +136,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
               variant="ghost"
               size="sm"
               onClick={() => onDelete(vehicle)}
-              className="rounded-lg p-2 text-gray-400 hover:bg-red-500/10 hover:text-red-500"
+              className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-red-500/10 hover:text-red-500"
               title={t('card.removeVehicle', 'Remove vehicle')}
             >
               <Trash2 className="h-4 w-4" />

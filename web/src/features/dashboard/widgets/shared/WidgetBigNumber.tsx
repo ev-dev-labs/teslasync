@@ -40,16 +40,16 @@ export function WidgetBigNumber({
             <span className={cn('text-3xl font-bold tabular-nums', valueColor)}>{value}</span>
           )
         ) : (
-          <span className="text-3xl font-bold text-white/30">{nullDisplay}</span>
+          <span className="text-3xl font-bold text-[var(--text-muted)]">{nullDisplay}</span>
         )}
-        {unit && <span className="text-lg text-white/50">{unit}</span>}
+        {unit && <span className="text-lg text-[var(--text-secondary)]">{unit}</span>}
       </div>
 
       {label && (
-        <span className="text-[10px] text-white/40 uppercase tracking-wider">{label}</span>
+        <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{label}</span>
       )}
 
-      {subtitle && <span className="text-xs text-white/50">{subtitle}</span>}
+      {subtitle && <span className="text-xs text-[var(--text-secondary)]">{subtitle}</span>}
 
       {badge && (
         <Badge variant={badgeVariantMap[badge.variant]} size="sm">

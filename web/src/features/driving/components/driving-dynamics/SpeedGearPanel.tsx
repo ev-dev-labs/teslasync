@@ -13,8 +13,8 @@ function shiftColor(shift: string | null | undefined): string {
     case 'D': return 'text-emerald-400';
     case 'R': return 'text-red-400';
     case 'N': return 'text-yellow-400';
-    case 'P': return 'text-gray-400';
-    default: return 'text-white/50';
+    case 'P': return 'text-[var(--text-muted)]';
+    default: return 'text-[var(--text-secondary)]';
   }
 }
 
@@ -50,7 +50,7 @@ export default function SpeedGearPanel({ motorLatest, filteredDrives, convertSpe
   return (
     <FadeIn delay={0.15}>
       <GlassPanel className="p-6">
-        <h2 className="mb-4 text-lg font-semibold text-white/90">
+        <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
           {t('dynamics.speedGear', 'Speed & Gear')}
         </h2>
         <Grid cols={{ default: 2, md: 4 }} gap={6}>
@@ -63,25 +63,25 @@ export default function SpeedGearPanel({ motorLatest, filteredDrives, convertSpe
             </Badge>
           </div>
           <div className="flex flex-col items-center gap-1">
-            <span className="text-xs text-white/50">{t('dynamics.power', 'Motor Power')}</span>
+            <span className="text-xs text-[var(--text-secondary)]">{t('dynamics.power', 'Motor Power')}</span>
             <span className="text-2xl font-semibold text-white">
               {motorLatest?.power_kw != null ? fmtNumber(motorLatest.power_kw) : '—'}
             </span>
-            <span className="text-xs text-white/40">kW</span>
+            <span className="text-xs text-[var(--text-muted)]">kW</span>
           </div>
           <div className="flex flex-col items-center gap-1">
-            <span className="text-xs text-white/50">{t('dynamics.avgDriveSpeed', 'Avg Drive Speed')}</span>
+            <span className="text-xs text-[var(--text-secondary)]">{t('dynamics.avgDriveSpeed', 'Avg Drive Speed')}</span>
             <span className="text-2xl font-semibold text-white">
               {avgDriveSpeed != null ? fmtNumber(convertSpeed(avgDriveSpeed), 0) : '—'}
             </span>
-            <span className="text-xs text-white/40">{speedUnit}</span>
+            <span className="text-xs text-[var(--text-muted)]">{speedUnit}</span>
           </div>
           <div className="flex flex-col items-center gap-1">
-            <span className="text-xs text-white/50">{t('dynamics.topDriveSpeed', 'Top Drive Speed')}</span>
+            <span className="text-xs text-[var(--text-secondary)]">{t('dynamics.topDriveSpeed', 'Top Drive Speed')}</span>
             <span className="text-2xl font-semibold text-white">
               {topDriveSpeed != null ? fmtNumber(convertSpeed(topDriveSpeed), 0) : '—'}
             </span>
-            <span className="text-xs text-white/40">{speedUnit}</span>
+            <span className="text-xs text-[var(--text-muted)]">{speedUnit}</span>
           </div>
         </Grid>
       </GlassPanel>

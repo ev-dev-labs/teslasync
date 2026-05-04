@@ -131,7 +131,7 @@ export function DataTableColumnsMenu({
                       checked={checked}
                       disabled={disabled}
                       onChange={() => toggle(col.key)}
-                      className="rounded border-white/20 bg-white/5 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0"
+                      className="rounded border-[var(--border-strong)] bg-[var(--surface-2)] text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0"
                     />
                     <span className="truncate">{col.header || col.key}</span>
                   </label>

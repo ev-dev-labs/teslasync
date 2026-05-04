@@ -48,7 +48,7 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
                 </div>
                 <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-neon-green transition-all duration-500"
+                    className="h-full rounded-full bg-neon-green transition-all duration-slow"
                     style={{ width: `${b.pct}%` }}
                   />
                 </div>
@@ -56,7 +56,7 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
             ))}
           </div>
         ) : (
-          <EmptyState message={t('analytics.charging.noBrands', 'No charger brand data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.charging.noBrands', 'No charger brand data')} />
         )}
       </GlassPanel>
 
@@ -79,7 +79,7 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <EmptyState message={t('analytics.charging.noMonthly', 'No monthly data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.charging.noMonthly', 'No monthly data')} />
         )}
       </GlassPanel>
 
@@ -114,7 +114,7 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
             />
           </div>
         ) : (
-          <EmptyState message={t('analytics.charging.noCostStats', 'No cost statistics')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.charging.noCostStats', 'No cost statistics')} />
         )}
       </GlassPanel>
 
@@ -128,14 +128,14 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
               const pct = totalSessions > 0 ? (safe(ct.count) / totalSessions) * 100 : 0;
               return (
                 <div key={i} className="flex items-center gap-3">
-                  <span className="w-28 text-xs text-right font-medium text-white/60">{ct.type}</span>
+                  <span className="w-28 text-xs text-right font-medium text-[var(--text-secondary)]">{ct.type}</span>
                   <div className="flex-1 h-3 rounded-full bg-white/[0.06] overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all duration-700"
+                      className="h-full rounded-full transition-all duration-slow"
                       style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
                     />
                   </div>
-                  <span className="w-20 text-xs font-mono text-right text-white/80">
+                  <span className="w-20 text-xs font-mono text-right text-[var(--text-primary)]">
                     {safe(ct.count)} ({fmtInt(pct)}%)
                   </span>
                 </div>
@@ -143,7 +143,7 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
             })}
           </div>
         ) : (
-          <EmptyState message={t('analytics.charging.noCostByType', 'No charger type data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.charging.noCostByType', 'No charger type data')} />
         )}
       </GlassPanel>
     </>

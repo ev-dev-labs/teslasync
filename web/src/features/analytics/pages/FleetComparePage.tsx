@@ -13,7 +13,7 @@ import { StatCard } from '@/components/data-display';
 import { EmptyState, Skeleton, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
-  ChartContainer, ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
+  ChartContainer, ChartTooltip, AREA_DEFAULTS,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, BarChart, Bar,
   chartMarginLabeled, axisTick, chartAnimation,
@@ -24,6 +24,7 @@ import { useDrivingStats } from '@/api/hooks/useDriving';
 import { useCostBreakdown, useMonthlyMileage } from '@/api/hooks/useAnalytics';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { Vehicle } from '@/types/vehicle';
@@ -97,7 +98,7 @@ function VehicleStatusCard({
   if (!vehicle) {
     return (
       <GlassPanel className="p-5">
-        <EmptyState icon={<Car className="h-8 w-8" />} message={t('comparison.selectVehicle', 'Select a vehicle')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Car className="h-8 w-8" />} message={t('comparison.selectVehicle', 'Select a vehicle')} />
       </GlassPanel>
     );
   }
@@ -115,7 +116,7 @@ function VehicleStatusCard({
           'flex h-10 w-10 items-center justify-center rounded-xl',
           isOnline ? 'bg-neon-green/10 ring-1 ring-neon-green/20' : 'bg-white/[0.04] ring-1 ring-white/[0.06]',
         )}>
-          <Car className={cn('h-5 w-5', isOnline ? 'text-neon-green' : 'text-white/40')} />
+          <Car className={cn('h-5 w-5', isOnline ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-base font-semibold text-[var(--text-primary)]">
@@ -227,6 +228,9 @@ export default function FleetComparePage() {
     convertEfficiency, distanceUnit, speedUnit,
     efficiencyUnit, currencySymbol,
   } = useSettings();
+
+  // Phase-45/23 — reactive chart palette (CB-safe / neon per user pref).
+  const palette = useChartPalette();
 
   // Phase 40 / Prompt 39 — accept ?leftId= and ?rightId= query params so other
   // pages (e.g. VehicleListPage's "Compare vehicles" button) can deep-link
@@ -610,20 +614,20 @@ export default function FleetComparePage() {
                   {...AREA_DEFAULTS}
                   dataKey="distA"
                   name={nameA}
-                  stroke={CHART_COLORS[0]}
+                  stroke={palette[0]}
                   {...chartAnimation}
                 />
                 <Line
                   {...AREA_DEFAULTS}
                   dataKey="distB"
                   name={nameB}
-                  stroke={CHART_COLORS[1]}
+                  stroke={palette[1]}
                   {...chartAnimation}
                 />
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState icon={<TrendingUp className="h-8 w-8" />} message={t('comparison.noMonthlyData', 'No monthly data available yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<TrendingUp className="h-8 w-8" />} message={t('comparison.noMonthlyData', 'No monthly data available yet')} />
           )}
         </ChartContainer>
       </FadeIn>
@@ -648,12 +652,12 @@ export default function FleetComparePage() {
                     )}
                   />
                   <Legend />
-                  <Bar dataKey="drivesA" name={nameA} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} {...chartAnimation} />
-                  <Bar dataKey="drivesB" name={nameB} fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} {...chartAnimation} />
+                  <Bar dataKey="drivesA" name={nameA} fill={palette[0]} radius={[4, 4, 0, 0]} {...chartAnimation} />
+                  <Bar dataKey="drivesB" name={nameB} fill={palette[1]} radius={[4, 4, 0, 0]} {...chartAnimation} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyState icon={<Route className="h-8 w-8" />} message={t('comparison.noDrivesData', 'No drive data available yet')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Route className="h-8 w-8" />} message={t('comparison.noDrivesData', 'No drive data available yet')} />
             )}
           </ChartContainer>
         </div>

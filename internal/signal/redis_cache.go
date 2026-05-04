@@ -31,6 +31,8 @@ type redisSignalClient interface {
 	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
 	HGetAll(ctx context.Context, key string) *redis.MapStringStringCmd
 	HGet(ctx context.Context, key string, field string) *redis.StringCmd
+	HLen(ctx context.Context, key string) *redis.IntCmd
+	Scan(ctx context.Context, cursor uint64, match string, count int64) *redis.ScanCmd
 	Publish(ctx context.Context, channel string, message interface{}) *redis.IntCmd
 	Subscribe(ctx context.Context, channels ...string) *redis.PubSub
 }
@@ -277,6 +279,79 @@ func (c *RedisSignalCache) GetSignalValue(ctx context.Context, vehicleID int64, 
 		return nil, fmt.Errorf("decode redis signal %s %s: %w", key, name, err)
 	}
 	return value, nil
+}
+
+// RawFieldCount returns the size of the HSET BEFORE decoding. Used by
+// diagnostic surfaces that need to distinguish "no fields stored" from
+// "fields stored but undecodable". Returns 0 with no error when the key
+// does not exist (HLEN returns 0 for missing keys per Redis semantics).
+func (c *RedisSignalCache) RawFieldCount(ctx context.Context, vehicleID int64) (int, error) {
+	key := fmt.Sprintf("vehicle:%d:signals", vehicleID)
+	n, err := c.rdb.HLen(ctx, key).Result()
+	if err != nil {
+		return 0, fmt.Errorf("redis HLEN %s: %w", key, err)
+	}
+	return int(n), nil
+}
+
+// ScanVehicleKeys uses cursor-based SCAN to enumerate vehicle:*:signals
+// keys. Bounded by limit; returns the slice of int64 vehicleIDs parsed
+// from key names. Skips keys that don't match the vehicle:{int64}:signals
+// shape. This is intentionally NOT KEYS, which would block the server.
+func (c *RedisSignalCache) ScanVehicleKeys(ctx context.Context, limit int) ([]int64, error) {
+	if limit <= 0 || limit > 1000 {
+		limit = 1000
+	}
+	const pattern = "vehicle:*:signals"
+	var (
+		cursor uint64
+		seen   = make(map[int64]struct{}, 16)
+		out    = make([]int64, 0, 16)
+	)
+	for {
+		batch, next, err := c.rdb.Scan(ctx, cursor, pattern, 100).Result()
+		if err != nil {
+			return nil, fmt.Errorf("redis SCAN %s: %w", pattern, err)
+		}
+		for _, k := range batch {
+			id, ok := parseVehicleSignalsKey(k)
+			if !ok {
+				continue
+			}
+			if _, dup := seen[id]; dup {
+				continue
+			}
+			seen[id] = struct{}{}
+			out = append(out, id)
+			if len(out) >= limit {
+				return out, nil
+			}
+		}
+		if next == 0 {
+			break
+		}
+		cursor = next
+	}
+	return out, nil
+}
+
+// parseVehicleSignalsKey extracts the int64 vehicleID from a
+// "vehicle:{id}:signals" key. Returns (0, false) for malformed keys.
+func parseVehicleSignalsKey(key string) (int64, bool) {
+	const prefix = "vehicle:"
+	const suffix = ":signals"
+	if !strings.HasPrefix(key, prefix) || !strings.HasSuffix(key, suffix) {
+		return 0, false
+	}
+	mid := strings.TrimSuffix(strings.TrimPrefix(key, prefix), suffix)
+	if mid == "" {
+		return 0, false
+	}
+	id, err := strconv.ParseInt(mid, 10, 64)
+	if err != nil || id <= 0 {
+		return 0, false
+	}
+	return id, true
 }
 
 // decodeSignalValue reverses encodeSignalValue: tries float64 first, then

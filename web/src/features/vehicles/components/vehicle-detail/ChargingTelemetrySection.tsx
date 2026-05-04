@@ -102,7 +102,7 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
           />
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Zap className="h-8 w-8" />}
           message={t('vehicles.detail.noChargingTelemetry', 'No charging telemetry available')}
         />

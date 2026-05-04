@@ -27,7 +27,7 @@ export function BatteryTab({ data }: { data: FleetAnalytics | undefined }) {
     return (
       <FadeIn className="mt-4">
         <GlassPanel className="p-6">
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             message={t('analytics.battery.noData', 'No battery trend data available')}
             icon={<Battery className="h-10 w-10" />}
           />

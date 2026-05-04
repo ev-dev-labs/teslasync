@@ -62,7 +62,7 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
   );
 
   const noData = (
-    <EmptyState
+    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
       icon={<Activity className="h-5 w-5" />}
       message={t('dynamics.awaitingData', 'Awaiting motor telemetry data...')}
     />

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
+import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { AlertBanner } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
@@ -218,9 +219,7 @@ export default function MediaPlayerPage() {
         header: t('Time'),
         sortable: true,
         render: (row) => (
-          <span className="text-[var(--text-secondary)] text-xs whitespace-nowrap">
-            {formatDateTime(row.created_at)}
-          </span>
+          <TimeStamp value={row.created_at} className="text-[var(--text-secondary)] text-xs whitespace-nowrap" />
         ),
       },
       {
@@ -413,7 +412,7 @@ export default function MediaPlayerPage() {
                   </span>
                   <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-cyan-400 rounded-full transition-all duration-500"
+                      className="h-full bg-cyan-400 rounded-full transition-all duration-slow"
                       style={{ width: `${progressPct}%` }}
                     />
                   </div>
@@ -508,7 +507,7 @@ export default function MediaPlayerPage() {
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<BarChart3 className="h-8 w-8 text-[var(--text-muted)]" />}
                 message={t('No volume data for this period')}
               />
@@ -558,7 +557,7 @@ export default function MediaPlayerPage() {
                 </div>
               </>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Disc3 className="h-8 w-8 text-[var(--text-muted)]" />}
                 message={t('No source data available')}
               />
@@ -590,7 +589,7 @@ export default function MediaPlayerPage() {
               pagination
             />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Music className="h-8 w-8 text-[var(--text-muted)]" />}
               message={t('No playback history for this period')}
             />

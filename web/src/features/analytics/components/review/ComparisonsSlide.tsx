@@ -16,7 +16,7 @@ export function ComparisonsSlide({ comparisons }: Props) {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1, duration: 0.4 }}
-        className="text-xl text-white/50 mb-6"
+        className="text-xl text-[var(--text-secondary)] mb-6"
       >
         {t('yearReview.funFacts', 'Fun facts about your year')}
       </motion.p>
@@ -31,8 +31,8 @@ export function ComparisonsSlide({ comparisons }: Props) {
             className="bg-white/[0.05] rounded-xl p-4 border border-white/[0.08] text-center"
           >
             <span className="text-3xl block mb-2">{item.emoji}</span>
-            <p className="text-sm font-medium text-white/80 mb-1">{item.label}</p>
-            <p className="text-xs text-white/50">{item.value}</p>
+            <p className="text-sm font-medium text-[var(--text-primary)] mb-1">{item.label}</p>
+            <p className="text-xs text-[var(--text-secondary)]">{item.value}</p>
           </motion.div>
         ))}
       </div>

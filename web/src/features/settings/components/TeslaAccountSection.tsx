@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   useAuthStatus, useAuthURL, useRefreshAuth,
@@ -9,9 +10,12 @@ import { useToast } from '@/components/feedback/Toast'
 import { useConfirm } from '@/hooks/useConfirm'
 import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/dateFormat'
+import { notifyTeslaAuthRecovered } from '@/lib/teslaAuthRecovery'
 import {
-  Shield, ExternalLink, RefreshCw, Car, CheckCircle, XCircle,
+  Shield, ExternalLink, RefreshCw, Car, CheckCircle, XCircle, AlertTriangle,
 } from 'lucide-react'
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
 export function TeslaAccountSection() {
   const { t } = useTranslation('settings')
@@ -22,6 +26,39 @@ export function TeslaAccountSection() {
   const disconnectMut = useDisconnectAuth()
   const syncMut = useSyncVehicles()
   const { confirm: confirmDisconnect, dialogProps: disconnectDialogProps } = useConfirm()
+
+  // Phase-45 / Prompt 30 — local "disconnected" pill driven by the same
+  // CustomEvents the <TeslaReauthBanner> uses, so a user landing on this
+  // page directly sees the same status without having to wait for a
+  // failed call.
+  const [pillDisconnected, setPillDisconnected] = useState(false)
+  useEffect(() => {
+    const onExpired = () => setPillDisconnected(true)
+    const onRecovered = () => setPillDisconnected(false)
+    document.addEventListener('teslasync:tesla-auth-expired', onExpired)
+    document.addEventListener('teslasync:tesla-auth-recovered', onRecovered)
+    return () => {
+      document.removeEventListener('teslasync:tesla-auth-expired', onExpired)
+      document.removeEventListener('teslasync:tesla-auth-recovered', onRecovered)
+    }
+  }, [])
+
+  // Phase-45 / Prompt 30 — fire `teslasync:tesla-auth-recovered` when the
+  // auth-status query flips from `authenticated: false` (or unknown) to
+  // `authenticated: true`. This is the canonical moment a queued
+  // mutation can be safely replayed and the banner can hide. We track
+  // the previous value via a ref so the effect only fires on the
+  // edge, not on every poll.
+  const prevAuthRef = useRef<boolean | null>(null)
+  useEffect(() => {
+    if (!auth) return
+    const wasAuthed = prevAuthRef.current
+    const isAuthed = !!auth.authenticated
+    if (wasAuthed === false && isAuthed) {
+      notifyTeslaAuthRecovered()
+    }
+    prevAuthRef.current = isAuthed
+  }, [auth])
 
   function handleLogin() {
     authUrlMut.mutate(undefined, {
@@ -44,6 +81,19 @@ export function TeslaAccountSection() {
     })
   }
 
+  // Compute soft-warning state — token expires within 7 days but is still
+  // technically valid. Surfaces a "Expires in Nd" pill before the silent-
+  // failure cliff hits.
+  const expiringSoon = (() => {
+    if (!auth?.authenticated || !auth.expires_at) return null
+    const expiresAt = new Date(auth.expires_at).getTime()
+    if (Number.isNaN(expiresAt)) return null
+    const remaining = expiresAt - Date.now()
+    if (remaining <= 0 || remaining > SEVEN_DAYS_MS) return null
+    const days = Math.max(1, Math.ceil(remaining / (24 * 60 * 60 * 1000)))
+    return days
+  })()
+
   return (
     <FadeIn>
       <GlassPanel className="p-6 space-y-5">
@@ -57,14 +107,25 @@ export function TeslaAccountSection() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/5">
-          {auth?.authenticated ? (
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-[var(--border-subtle)]">
+          {auth?.authenticated && !pillDisconnected ? (
             <>
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neon-green/10">
                 <CheckCircle className="h-4 w-4 text-neon-green" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-emerald-300">{t('tesla.connected', 'Connected')}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-medium text-emerald-300">{t('tesla.connected', 'Connected')}</p>
+                  {expiringSoon !== null && (
+                    <span
+                      data-testid="tesla-expiring-soon-pill"
+                      className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300"
+                    >
+                      <AlertTriangle className="h-3 w-3" aria-hidden />
+                      {t('tesla.expiringSoon', 'Expires in {{days}}d', { days: expiringSoon })}
+                    </span>
+                  )}
+                </div>
                 {auth.expires_at && (
                   <p className="text-[11px] text-[var(--text-muted)]">
                     {t('tesla.tokenExpires', 'Token expires')} {formatDateTime(auth.expires_at)}
@@ -77,7 +138,18 @@ export function TeslaAccountSection() {
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neon-red/10">
                 <XCircle className="h-4 w-4 text-neon-red" />
               </div>
-              <p className="text-sm text-rose-300 font-medium">{t('tesla.notConnected', 'Not connected')}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-rose-300 font-medium">
+                  {pillDisconnected
+                    ? t('tesla.disconnected', 'Disconnected')
+                    : t('tesla.notConnected', 'Not connected')}
+                </p>
+                {pillDisconnected && (
+                  <p className="text-[11px] text-[var(--text-muted)]">
+                    {t('tesla.reauth.body', 'Reconnect to resume live data and commands.')}
+                  </p>
+                )}
+              </div>
             </>
           )}
         </div>

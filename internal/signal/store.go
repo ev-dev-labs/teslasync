@@ -230,3 +230,27 @@ func (s *Store) VehicleIDs() []int64 {
 	metrics.SignalStoreEntries.Set(float64(total))
 	return ids
 }
+
+// LastSeenAt returns the newest Timestamp across all signals for a
+// vehicle, or the zero time when the vehicle has no L1 entries. This is
+// the L1-side complement of computing max(value.Timestamp) over a Redis
+// HGETALL — useful for diagnostic surfaces that distinguish "L1 has
+// fresh data" from "L1 has stale-or-empty data".
+func (s *Store) LastSeenAt(vehicleID int64) time.Time {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	signals, ok := s.vehicles[vehicleID]
+	if !ok {
+		return time.Time{}
+	}
+	var newest time.Time
+	for _, v := range signals {
+		if v == nil {
+			continue
+		}
+		if v.Timestamp.After(newest) {
+			newest = v.Timestamp
+		}
+	}
+	return newest
+}

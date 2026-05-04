@@ -32,15 +32,15 @@ export function CodeBlock({ language, text, children, className }: CodeBlockProp
   return (
     <div
       className={cn(
-        'relative rounded-lg border border-white/10 bg-black/40 my-2 overflow-hidden',
+        'relative rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-overlay)] my-2 overflow-hidden',
         className,
       )}
     >
-      <div className="flex items-center justify-between border-b border-white/5 px-3 py-1.5 text-[11px] uppercase tracking-wider text-white/50">
+      <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-3 py-1.5 text-[11px] uppercase tracking-wider text-[var(--text-secondary)]">
         <span className="font-mono">{langLabel}</span>
         <CopyButton text={text} iconOnly variant="ghost" size="sm" />
       </div>
-      <pre className="overflow-x-auto p-3 text-xs leading-relaxed text-white/90 font-mono">
+      <pre className="overflow-x-auto p-3 text-xs leading-relaxed text-[var(--text-primary)] font-mono">
         <code>{children ?? text}</code>
       </pre>
     </div>

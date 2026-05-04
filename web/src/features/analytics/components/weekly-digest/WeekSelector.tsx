@@ -28,7 +28,7 @@ export function WeekSelector({
         {t('analytics.weeklyDigest.prevWeek', 'Previous')}
       </Button>
       <span className="flex items-center gap-2 text-sm font-semibold text-white">
-        <Calendar className="h-4 w-4 text-white/50" />
+        <Calendar className="h-4 w-4 text-[var(--text-secondary)]" />
         {weekLabel}
         {isCurrentWeek && (
           <Badge variant="info" size="sm">

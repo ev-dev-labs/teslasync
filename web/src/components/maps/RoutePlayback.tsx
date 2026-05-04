@@ -303,7 +303,7 @@ export function RoutePlayback({
   if (trail.length === 0) {
     return (
       <GlassPanel className={cn('overflow-hidden', className)}>
-        <EmptyState
+        <EmptyState /* no-action: route playback has no fallback when telemetry has no GPS points */
           icon={<MapPin className="h-8 w-8" />}
           message={
             emptyMessage ??
@@ -379,13 +379,13 @@ export function RoutePlayback({
 
         {/* Inline metric chip — top-right. */}
         {cp && (
-          <div className="pointer-events-none absolute right-2 top-2 z-[1000] flex items-center gap-2 rounded-lg border border-white/10 bg-black/70 px-3 py-1.5 text-[11px] font-mono text-white/90 backdrop-blur-md shadow-lg">
+          <div className="pointer-events-none absolute right-2 top-2 z-[1000] flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-3 py-1.5 text-[11px] font-mono text-[var(--text-primary)] backdrop-blur-md shadow-lg">
             <Flag className="h-3 w-3 text-cyan-300" />
             <span>
               {currentIndex + 1}/{points.length}
             </span>
             {cp.speed != null && (
-              <span className="text-white/60">{fmtNumber(cp.speed, 1)} km/h</span>
+              <span className="text-[var(--text-secondary)]">{fmtNumber(cp.speed, 1)} km/h</span>
             )}
             {cp.soc != null && (
               <span className="text-emerald-300">{fmtNumber(cp.soc, 0)}%</span>
@@ -395,7 +395,7 @@ export function RoutePlayback({
       </div>
 
       {showControls && (
-        <div className="border-t border-white/[0.06] bg-black/20 p-3">
+        <div className="border-t border-white/[0.06] bg-[var(--surface-overlay)] p-3">
           <PlaybackControls
             isPlaying={isPlaying}
             speed={speed}

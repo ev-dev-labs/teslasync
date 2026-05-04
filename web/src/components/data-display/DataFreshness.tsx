@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { cn } from '@/lib/cn';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 
 /**
  * `<DataFreshness>` — query-result-driven freshness chip.
@@ -117,6 +118,7 @@ export function DataFreshness({
   compact = false,
 }: DataFreshnessProps) {
   const { t } = useTranslation();
+  const { reduce } = useMotionPreference();
   const [, setTick] = useState(0);
 
   // Re-render every second to keep relative time accurate
@@ -137,6 +139,13 @@ export function DataFreshness({
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
 
+  // Phase-45 / Prompt 19 — distinguish background refetch (data on screen,
+  // refetching in flight) from initial load (no data yet). The dot pulses
+  // gently during background refetch so users notice an update is coming
+  // without yanking the eye to the chip the way the existing ping ring does.
+  const isBackgroundRefetch = isFetching && updatedAt != null;
+  const showPulse = isBackgroundRefetch && !reduce;
+
   const relativeTime =
     updatedAt && !isFetching
       ? formatRelativeTime(updatedAt, t)
@@ -150,11 +159,17 @@ export function DataFreshness({
     if (onRefresh && !isFetching) onRefresh();
   }, [onRefresh, isFetching]);
 
-  const title = updatedAt
-    ? t('freshness.lastUpdated', 'Last updated: {{time}}', {
-        time: new Date(updatedAt).toLocaleTimeString(),
-      })
-    : t('freshness.neverUpdated', 'Never updated');
+  // Phase-45 / Prompt 19 — when the user has reduced-motion enabled we
+  // suppress the dot pulse but still need to communicate the in-flight
+  // refetch. Surface the state via the tooltip so screen-readers + hover
+  // users see "Updating…" while the data lands.
+  const title = isFetching && reduce
+    ? t('freshness.updatingTooltip', 'Updating…')
+    : updatedAt
+      ? t('freshness.lastUpdated', 'Last updated: {{time}}', {
+          time: new Date(updatedAt).toLocaleTimeString(),
+        })
+      : t('freshness.neverUpdated', 'Never updated');
 
   return (
     <span
@@ -162,16 +177,28 @@ export function DataFreshness({
         'inline-flex items-center text-[10px] leading-none transition-colors',
         compact ? 'gap-0.5' : 'gap-1',
         cfg.color,
-        onRefresh && !isFetching && 'cursor-pointer hover:text-white/60',
+        onRefresh && !isFetching && 'cursor-pointer hover:text-[var(--text-secondary)]',
       )}
       onClick={handleClick}
       title={title}
-      role={onRefresh ? 'button' : undefined}
-      aria-label={onRefresh ? t('freshness.refresh', 'Refresh') : undefined}
+      role={onRefresh ? 'button' : 'status'}
+      // Phase-45 / Prompt 13 — `aria-live="polite"` so screen readers
+      // announce freshness state changes (e.g. "fetching" → "fresh") on
+      // dashboards/widgets without yanking focus. The `aria-atomic="true"`
+      // attribute groups the dot + icon + relative-time text into one
+      // single utterance instead of three separate ones.
+      aria-live="polite"
+      aria-atomic="true"
+      aria-label={
+        onRefresh
+          ? t('freshness.refresh', 'Refresh')
+          : t('a11y.dataFreshness', 'Data freshness: {{state}}', { state: status })
+      }
+      data-bg-refetch={isBackgroundRefetch ? 'true' : undefined}
     >
       {/* Status dot with pulse */}
       <span className="relative flex h-1.5 w-1.5 shrink-0">
-        {status === 'fetching' && (
+        {status === 'fetching' && !reduce && (
           <span
             className={cn(
               'absolute inset-0 rounded-full animate-ping opacity-40',
@@ -179,13 +206,19 @@ export function DataFreshness({
             )}
           />
         )}
-        <span className={cn('relative rounded-full h-1.5 w-1.5', cfg.dotColor)} />
+        <span
+          className={cn(
+            'relative rounded-full h-1.5 w-1.5',
+            cfg.dotColor,
+            showPulse && 'animate-pulse',
+          )}
+        />
       </span>
 
       <Icon
         className={cn(
           compact ? 'h-2 w-2' : 'h-2.5 w-2.5',
-          status === 'fetching' && 'animate-spin',
+          status === 'fetching' && !reduce && 'animate-spin',
         )}
       />
       {!compact && <span>{relativeTime}</span>}

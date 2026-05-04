@@ -1,0 +1,35 @@
+=== GATE ===
+=== PREFLIGHT ===
+PROMPT=phase-45/30-tesla-auth-recovery-banner
+BRANCH=ui-refactor/ui-phase45
+HEAD=49faa13f
+=== FILES_EXIST ===
+FILE[web\src\lib\resilience.ts]=True
+FILE[web\src\lib\teslaAuthRecovery.ts]=True
+FILE[web\src\lib\__tests__\teslaAuthRecovery.test.ts]=True
+FILE[web\src\components\feedback\TeslaReauthBanner.tsx]=True
+FILE[web\src\components\feedback\__tests__\TeslaReauthBanner.test.tsx]=True
+FILE[web\src\components\layout\Layout.tsx]=True
+FILE[web\src\features\settings\components\TeslaAccountSection.tsx]=True
+FILE[internal\api\errors.go]=True
+FILES_EXPECTED=8
+FILES_MISSING=0
+=== TYPESCRIPT ===
+TSC_EXIT=0
+=== GO_BUILD ===
+GO_BUILD_EXIT=0
+=== GO_TEST ===
+ok  	github.com/ev-dev-labs/teslasync/internal/api	0.173s
+GO_TEST_EXIT=0
+=== LINT ===
+LINT_EXIT=0
+=== FRONTEND_TEST ===
+FRONTEND_TEST_EXIT=0
+=== AUDIT_VIOLATIONS ===
+BANNER_MOUNTED=True
+ERR_CODE_EXISTS=True
+=== GIT_STATUS ===
+UNEXPECTED_STATUS_COUNT=0
+=== STATUS ===
+EXIT=0
+STATUS=DONE

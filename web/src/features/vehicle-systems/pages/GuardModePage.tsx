@@ -28,6 +28,7 @@ import { AlertBanner } from '@/components/feedback/AlertBanner';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { MapContainer, Marker, Circle, Popup, Polyline, vehicleIcon } from '@/components/maps';
 import { MapTileLayer, MapInvalidator } from '@/components/maps';
+import { TimeStamp } from '@/components/data-display';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useGeofences } from '@/api/hooks/useLocations';
@@ -186,7 +187,7 @@ export default function GuardModePage() {
           <p className="text-sm">
             {EVENT_LABELS[latestEvent.event_type] ?? latestEvent.event_type}
             {' — '}
-            {formatDateTime(latestEvent.created_at)}
+            <TimeStamp value={latestEvent.created_at} />
           </p>
           {latestEvent.latitude != null && latestEvent.longitude != null && (
             <a
@@ -207,16 +208,16 @@ export default function GuardModePage() {
           {/* Guard Mode Toggle */}
           <GlassPanel
             className={cn(
-              'p-6 flex flex-col items-center justify-center gap-4 text-center transition-all duration-500',
+              'p-6 flex flex-col items-center justify-center gap-4 text-center transition-all duration-slow',
               isArmed && !isTriggered && 'ring-2 ring-emerald-500/30',
               isTriggered && 'ring-2 ring-red-500/50 animate-pulse',
             )}
           >
             <div className={cn(
-              'w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300',
+              'w-20 h-20 rounded-full flex items-center justify-center transition-all duration-normal',
               isArmed && !isTriggered && 'bg-emerald-500/20 text-emerald-400',
               isTriggered && 'bg-red-500/20 text-red-400',
-              !isArmed && 'bg-white/5 text-[var(--text-muted)]',
+              !isArmed && 'bg-[var(--surface-2)] text-[var(--text-muted)]',
             )}>
               {isTriggered ? (
                 <ShieldAlert className="h-10 w-10" />
@@ -374,7 +375,7 @@ export default function GuardModePage() {
               />
             ) : (
               <div className="h-full flex items-center justify-center">
-                <EmptyState icon={<MapPin className="h-8 w-8" />} message={t('guard.noLocation', 'No vehicle location available')} />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<MapPin className="h-8 w-8" />} message={t('guard.noLocation', 'No vehicle location available')} />
               </div>
             )}
           </div>
@@ -407,7 +408,7 @@ export default function GuardModePage() {
               ))}
             </div>
           ) : (
-            <EmptyState icon={<Info className="h-8 w-8" />} message={t('guard.noEvents', 'No guard events yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Info className="h-8 w-8" />} message={t('guard.noEvents', 'No guard events yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -527,7 +528,7 @@ function EventRow({
       className={cn(
         'flex items-start gap-3 p-3 rounded-lg border transition-colors',
         event.acknowledged
-          ? 'border-white/5 bg-white/[0.01]'
+          ? 'border-[var(--border-subtle)] bg-white/[0.01]'
           : 'border-red-500/20 bg-red-500/[0.03]',
       )}
     >
@@ -553,7 +554,7 @@ function EventRow({
           >
             {EVENT_LABELS[event.event_type] ?? event.event_type}
           </Badge>
-          <span className="text-xs text-[var(--text-muted)]">{formatDateTime(event.created_at)}</span>
+          <TimeStamp value={event.created_at} className="text-xs text-[var(--text-muted)]" />
         </div>
 
         {event.latitude != null && event.longitude != null && (

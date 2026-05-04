@@ -5,7 +5,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { PageContainer } from '@/components/layout'
 import { GlassPanel } from '@/components/ui'
 import { LiveIndicator } from '@/components/data-display'
-import { Skeleton, LiveStaleDataBanner, SectionErrorBoundary } from '@/components/feedback'
+import { Skeleton, LiveStaleDataBanner, SectionErrorBoundary, StatGridSkeleton, ChartBlockSkeleton, PageHeaderSkeleton } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -41,6 +41,35 @@ import {
   VehicleConfigSection,
   QuickLinksSection,
 } from '../components/vehicle-detail'
+
+/* ─── Loading skeleton (Phase-45 / Prompt 18) ─────────────────────── */
+
+/**
+ * Mirrors the VehicleDetailPage layout while the vehicle record loads:
+ * page header → battery & range panel → live state indicators →
+ * 4-card quick-stats grid → motor/climate/security/tire panels →
+ * battery-range chart → recent drives + charges tables → quick links.
+ */
+function VehicleDetailSkeleton() {
+  return (
+    <div className="space-y-6" data-testid="vehicle-detail-skeleton">
+      <PageHeaderSkeleton />
+      <Skeleton className="h-40 rounded-xl" />
+      <StatGridSkeleton cards={4} />
+      <StatGridSkeleton cards={4} />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Skeleton className="h-44 rounded-xl" />
+        <Skeleton className="h-44 rounded-xl" />
+      </div>
+      <ChartBlockSkeleton height={320} />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Skeleton className="h-56 rounded-xl" />
+        <Skeleton className="h-56 rounded-xl" />
+      </div>
+      <StatGridSkeleton cards={6} className="md:grid-cols-3 lg:grid-cols-6" />
+    </div>
+  )
+}
 
 export default function VehicleDetailPage() {
   const { t } = useTranslation()
@@ -134,12 +163,16 @@ export default function VehicleDetailPage() {
   const state = stateData?.state
   const status: VehicleStatus = vehicle ? deriveStatus(state) : 'offline'
 
+  /* ─── Loading short-circuit (Phase-45 / Prompt 18) ─────────── */
+  if (vehicleLoading) {
+    return <VehicleDetailSkeleton />
+  }
+
   /* ─── Render ─── */
 
   return (
     <PageContainer
       title={vehicle?.display_name ?? t('vehicles.detail.title', 'Vehicle Detail')}
-      loading={vehicleLoading}
       error={vehicleError as Error | null}
       breadcrumbLabels={{
         '/vehicles/:id': vehicle?.display_name ?? `Vehicle #${id}`,

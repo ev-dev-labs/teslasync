@@ -1,6 +1,7 @@
 import { Fragment } from 'react';
-import { Link } from 'react-router-dom';
+import { GuardedLink } from '../feedback/GuardedLink';
 import { ChevronRight, Home } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 
 export interface BreadcrumbItem {
@@ -18,7 +19,8 @@ interface BreadcrumbsProps {
    */
   homeHref?: string;
   /**
-   * Aria label for the leading Home link. Defaults to 'Dashboard'.
+   * Aria label for the leading Home link. Defaults to the localized
+   * `a11y.breadcrumbHome` key ("Dashboard" in English).
    */
   homeAriaLabel?: string;
 }
@@ -27,22 +29,23 @@ export function Breadcrumbs({
   items,
   className,
   homeHref = '/',
-  homeAriaLabel = 'Dashboard',
+  homeAriaLabel,
 }: BreadcrumbsProps) {
+  const { t } = useTranslation();
   if (items.length <= 1) return null;
 
   return (
     <nav
-      aria-label="Breadcrumb"
+      aria-label={t('a11y.breadcrumb', 'Breadcrumb')}
       className={cn('flex items-center gap-1 text-sm overflow-x-auto scrollbar-none', className)}
     >
-      <Link
+      <GuardedLink
         to={homeHref}
-        className="text-white/30 hover:text-white/60 transition-colors shrink-0"
-        aria-label={homeAriaLabel}
+        className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors shrink-0"
+        aria-label={homeAriaLabel ?? t('a11y.breadcrumbHome', 'Dashboard')}
       >
         <Home className="h-3.5 w-3.5" />
-      </Link>
+      </GuardedLink>
 
       {items.map((item, i) => {
         const isLast = i === items.length - 1;
@@ -50,31 +53,31 @@ export function Breadcrumbs({
 
         return (
           <Fragment key={i}>
-            <ChevronRight className="h-3 w-3 text-white/15 shrink-0" />
+            <ChevronRight className="h-3 w-3 text-[var(--text-muted)] shrink-0" />
             {isLast || !item.href ? (
               <span
                 className={cn(
                   'truncate max-w-[200px]',
-                  isLast ? 'text-white/70 font-medium' : 'text-white/40',
+                  isLast ? 'text-[var(--text-secondary)] font-medium' : 'text-[var(--text-muted)]',
                   isMiddle && 'hidden sm:inline',
                 )}
               >
                 {item.label}
               </span>
             ) : (
-              <Link
+              <GuardedLink
                 to={item.href}
                 className={cn(
-                  'text-white/40 hover:text-white/70 transition-colors truncate max-w-[200px]',
+                  'text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors truncate max-w-[200px]',
                   isMiddle && 'hidden sm:inline',
                 )}
               >
                 {item.label}
-              </Link>
+              </GuardedLink>
             )}
             {/* Collapsed indicator on mobile for hidden middle items */}
             {isMiddle && (
-              <span className="text-white/20 sm:hidden" aria-hidden="true">…</span>
+              <span className="text-[var(--text-muted)] sm:hidden" aria-hidden="true">…</span>
             )}
           </Fragment>
         );

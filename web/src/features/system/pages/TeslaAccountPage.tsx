@@ -31,7 +31,7 @@ export default function TeslaAccountPage() {
       {/* Sync bar */}
       <FadeIn>
         <div className="flex items-center justify-between mb-6">
-          <p className="text-sm text-white/50">
+          <p className="text-sm text-[var(--text-secondary)]">
             {fetchedAt
               ? t('teslaAccount.lastSynced', 'Last synced: {{time}}', { time: formatRelative(fetchedAt) })
               : t('teslaAccount.neverSynced', 'Never synced — click Refresh to fetch from Tesla')}
@@ -50,7 +50,7 @@ export default function TeslaAccountPage() {
       {/* Profile card */}
       <FadeIn delay={0.05}>
         <GlassPanel className="p-6">
-          <h2 className="text-lg font-semibold text-white/90 mb-4">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
             {t('teslaAccount.profile', 'Profile')}
           </h2>
           {profile ? (
@@ -61,11 +61,11 @@ export default function TeslaAccountPage() {
                   <img
                     src={profile.profile_image_url}
                     alt={t('teslaAccount.avatar', 'Profile picture')}
-                    className="h-20 w-20 rounded-full border-2 border-white/10 object-cover"
+                    className="h-20 w-20 rounded-full border-2 border-[var(--border-subtle)] object-cover"
                   />
                 ) : (
-                  <div className="h-20 w-20 rounded-full border-2 border-white/10 bg-white/[0.04] flex items-center justify-center">
-                    <ImageOff className="h-8 w-8 text-white/30" />
+                  <div className="h-20 w-20 rounded-full border-2 border-[var(--border-subtle)] bg-white/[0.04] flex items-center justify-center">
+                    <ImageOff className="h-8 w-8 text-[var(--text-muted)]" />
                   </div>
                 )}
               </div>
@@ -91,7 +91,7 @@ export default function TeslaAccountPage() {
               </div>
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<User className="h-10 w-10" />}
               message={t('teslaAccount.noProfile', 'No profile data yet. Click "Refresh from Tesla" to sync your account.')}
             />

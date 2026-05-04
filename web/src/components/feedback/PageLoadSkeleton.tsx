@@ -26,23 +26,23 @@ export function PageLoadSkeleton({ panels = 3, className }: PageLoadSkeletonProp
       {/* Header bar — matches PageContainer title + subtitle */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="min-w-0 space-y-2">
-          <div className="h-7 w-48 rounded bg-white/10" />
-          <div className="h-3 w-72 rounded bg-white/5" />
+          <div className="h-7 w-48 rounded bg-[var(--surface-2)]" />
+          <div className="h-3 w-72 rounded bg-[var(--surface-2)]" />
         </div>
-        <div className="h-9 w-32 rounded bg-white/5" />
+        <div className="h-9 w-32 rounded bg-[var(--surface-2)]" />
       </div>
 
       {/* Body panels */}
       {Array.from({ length: panels }).map((_, i) => (
         <GlassPanel key={i} className="p-6">
           <div className="space-y-4">
-            <div className="h-5 w-40 rounded bg-white/10" />
+            <div className="h-5 w-40 rounded bg-[var(--surface-2)]" />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="h-20 rounded bg-white/5" />
-              <div className="h-20 rounded bg-white/5" />
-              <div className="h-20 rounded bg-white/5" />
+              <div className="h-20 rounded bg-[var(--surface-2)]" />
+              <div className="h-20 rounded bg-[var(--surface-2)]" />
+              <div className="h-20 rounded bg-[var(--surface-2)]" />
             </div>
-            <div className="h-32 rounded bg-white/5" />
+            <div className="h-32 rounded bg-[var(--surface-2)]" />
           </div>
         </GlassPanel>
       ))}

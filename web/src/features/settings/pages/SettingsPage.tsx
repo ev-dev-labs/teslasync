@@ -21,6 +21,8 @@ import {
   GasPriceSettings,
   NotificationSettings,
   AppearanceSettings,
+  AdvancedSettings,
+  SettingsSearch,
 } from '../components'
 
 export default function SettingsPage() {
@@ -51,17 +53,25 @@ export default function SettingsPage() {
       subtitle={t('subtitle', 'Configure TeslaSync preferences and Tesla account connection')}
       loading={isLoading}
     >
+      <SettingsSearch className="mb-2" />
+
       <section id="tesla-account">
         <TeslaAccountSection />
       </section>
-      <FeatureToggles />
-      <RegionSettings />
-      <ActiveOrdersSection />
+      <section id="features">
+        <FeatureToggles />
+      </section>
+      <section id="region">
+        <RegionSettings />
+      </section>
+      <section id="orders">
+        <ActiveOrdersSection />
+      </section>
 
       {/* Fleet API Settings — link */}
       <FadeIn delay={0.05}>
         <a href="/fleet-api" className="block">
-          <GlassPanel className="p-5 flex items-center gap-4 hover:border-white/10 transition-colors cursor-pointer group">
+          <GlassPanel className="p-5 flex items-center gap-4 hover:border-[var(--border-subtle)] transition-colors cursor-pointer group">
             <div className={cn(
               'flex h-10 w-10 items-center justify-center rounded-xl ring-1',
               settings?.api_suspended
@@ -83,19 +93,26 @@ export default function SettingsPage() {
         </a>
       </FadeIn>
 
-      <GeneralSettings />
-      <GasPriceSettings />
+      <section id="general">
+        <GeneralSettings />
+      </section>
+      <section id="gas-price">
+        <GasPriceSettings />
+      </section>
       <section id="notifications">
         <NotificationSettings />
       </section>
       <section id="appearance">
         <AppearanceSettings />
       </section>
+      <section id="advanced">
+        <AdvancedSettings />
+      </section>
 
       {/* Data Export — link */}
       <FadeIn delay={0.18}>
         <a href="/data-export" className="block">
-          <GlassPanel className="p-5 flex items-center gap-4 hover:border-white/10 transition-colors cursor-pointer group">
+          <GlassPanel className="p-5 flex items-center gap-4 hover:border-[var(--border-subtle)] transition-colors cursor-pointer group">
             <IconBox color="green">
               <Download className="h-5 w-5" />
             </IconBox>

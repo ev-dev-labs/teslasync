@@ -237,7 +237,7 @@ export default function PowerFlowDashboardPage() {
                 {soc != null && (
                   <div className="w-full bg-white/[0.06] rounded-full h-3">
                     <div
-                      className="h-3 rounded-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-700"
+                      className="h-3 rounded-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-slow"
                       style={{ width: `${Math.min(soc, 100)}%` }}
                     />
                   </div>
@@ -252,7 +252,7 @@ export default function PowerFlowDashboardPage() {
                 </div>
               </div>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Battery className="h-8 w-8" />}
                 message={t('powerFlow.noBatteryData', 'No battery data — refresh to fetch')}
               />
@@ -294,7 +294,7 @@ export default function PowerFlowDashboardPage() {
                 )}
               </div>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8" />}
                 message={t('powerFlow.noFlowData', 'No power flow data yet')}
               />

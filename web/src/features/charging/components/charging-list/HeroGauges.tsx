@@ -31,7 +31,7 @@ export function HeroGauges({ stats }: HeroGaugesProps) {
           </div>
         </div>
       ) : (
-        <EmptyState message={t('charging.noStats', 'No charging statistics available yet')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('charging.noStats', 'No charging statistics available yet')} />
       )}
     </GlassPanel>
   );

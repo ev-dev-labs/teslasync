@@ -108,7 +108,7 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
     <button
       type="button"
       onClick={dismiss}
-      className="rounded-md p-1 text-white/40 hover:bg-white/[0.06] hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40 transition-colors"
+      className="rounded-md p-1 text-[var(--text-muted)] hover:bg-white/[0.06] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40 transition-colors"
       aria-label={t('checklist.dismiss', 'Dismiss')}
       title={t('checklist.dismiss', 'Dismiss')}
     >
@@ -122,13 +122,13 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
         {/* Progress header */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-medium text-white/80">
+            <span className="font-medium text-[var(--text-primary)]">
               {t('checklist.progress', '{{done}}/{{total}} complete', {
                 done: completeCount,
                 total: totalCount,
               })}
             </span>
-            <span className="text-white/40 tabular-nums">{progressPct}%</span>
+            <span className="text-[var(--text-muted)] tabular-nums">{progressPct}%</span>
           </div>
           <div
             className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden"
@@ -143,7 +143,7 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
           >
             <div
               className={cn(
-                'h-full rounded-full transition-all duration-500',
+                'h-full rounded-full transition-all duration-slow',
                 allComplete
                   ? 'bg-gradient-to-r from-emerald-400 to-cyan-400'
                   : 'bg-gradient-to-r from-cyan-400 to-indigo-400',
@@ -155,7 +155,7 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
 
         {/* Task list */}
         {totalCount === 0 ? (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<CheckCircle2 className="h-5 w-5" />}
             message={t('checklist.empty', 'No setup steps available right now.')}
             className="py-4"
@@ -171,7 +171,7 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
                     'flex items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 transition-colors',
                     task.complete
                       ? 'opacity-60'
-                      : 'hover:border-white/10 hover:bg-white/[0.04]',
+                      : 'hover:border-[var(--border-subtle)] hover:bg-white/[0.04]',
                   )}
                   data-testid={`checklist-task-${task.id}`}
                   data-complete={task.complete ? 'true' : 'false'}
@@ -180,22 +180,22 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
                     {task.complete ? (
                       <CheckCircle2 className="h-4 w-4 text-emerald-300" />
                     ) : (
-                      <Circle className="h-4 w-4 text-white/30" />
+                      <Circle className="h-4 w-4 text-[var(--text-muted)]" />
                     )}
                   </span>
-                  <span className="flex-shrink-0 hidden sm:inline-flex h-7 w-7 items-center justify-center rounded-md bg-white/[0.04] text-white/60">
+                  <span className="flex-shrink-0 hidden sm:inline-flex h-7 w-7 items-center justify-center rounded-md bg-white/[0.04] text-[var(--text-secondary)]">
                     <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                   </span>
                   <div className="flex-1 min-w-0">
                     <p
                       className={cn(
                         'text-sm font-medium truncate',
-                        task.complete ? 'text-white/60 line-through' : 'text-white/90',
+                        task.complete ? 'text-[var(--text-secondary)] line-through' : 'text-[var(--text-primary)]',
                       )}
                     >
                       {t(task.titleKey, task.titleFallback)}
                     </p>
-                    <p className="text-xs text-white/50 truncate">
+                    <p className="text-xs text-[var(--text-secondary)] truncate">
                       {t(task.descriptionKey, task.descriptionFallback)}
                     </p>
                   </div>
@@ -229,7 +229,7 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
               variant="ghost"
               size="sm"
               onClick={dismiss}
-              className="flex-shrink-0 text-white/70 hover:text-white"
+              className="flex-shrink-0 text-[var(--text-secondary)] hover:text-white"
               icon={<RotateCcw className="h-3.5 w-3.5" />}
             >
               {t('checklist.dismiss', 'Dismiss')}

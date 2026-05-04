@@ -213,7 +213,7 @@ export default function APIKeysPage() {
           ))}
         </StaggerContainer>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Key className="h-10 w-10" />}
           title={t('No API keys')}
           message={t('Create an API key to enable programmatic access to TeslaSync data and controls.')}

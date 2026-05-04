@@ -105,7 +105,7 @@ export function SessionListSection({
 
   if (!sessions || sessions.length === 0) {
     return (
-      <EmptyState
+      <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
         icon={<BatteryCharging className="h-8 w-8" />}
         title={t('charging.list.empty', 'No charging sessions yet')}
         message={t('charging.list.emptyDescription', 'Charging data will appear here once your vehicle records a session.')}
@@ -216,7 +216,7 @@ export function SessionListSection({
 
       {/* Session cards */}
       {filteredSessions.length === 0 ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<BatteryCharging className="h-8 w-8" />}
           title={t('charging.list.noMatches', 'No sessions match your filters')}
           message={t('charging.list.noMatchesDescription', 'Try clearing the search or charger filter to see more sessions.')}

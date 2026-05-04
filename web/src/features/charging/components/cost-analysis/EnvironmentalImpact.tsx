@@ -24,7 +24,7 @@ export function EnvironmentalImpact({ coreStats }: EnvironmentalImpactProps) {
               <p className="text-2xl font-bold text-green-400">
                 {fmtNumber(coreStats.co2SavedKg, 1)}
               </p>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
                 {t('costAnalysis.environment.kgCo2', 'kg CO₂ saved')}
               </p>
             </div>
@@ -32,16 +32,16 @@ export function EnvironmentalImpact({ coreStats }: EnvironmentalImpactProps) {
               <p className="text-2xl font-bold text-green-400">
                 {fmtNumber(coreStats.treeEquiv, 1)}
               </p>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
                 {t('costAnalysis.environment.treeEquiv', 'tree-years equivalent')}
               </p>
             </div>
           </div>
-          <div className="rounded-lg bg-white/5 p-3">
+          <div className="rounded-lg bg-[var(--surface-2)] p-3">
             <div className="flex items-start gap-3">
               <Trees className="mt-0.5 h-5 w-5 shrink-0 text-green-400" />
               <div>
-                <p className="text-sm text-gray-300">
+                <p className="text-sm text-[var(--text-secondary)]">
                   {t(
                     'costAnalysis.environment.desc',
                     'By driving electric instead of a gas car, you have avoided the equivalent of',
@@ -67,7 +67,7 @@ export function EnvironmentalImpact({ coreStats }: EnvironmentalImpactProps) {
               <p className="text-lg font-semibold text-white">
                 {fmtNumber(coreStats.gallonsEquiv, 1)}
               </p>
-              <p className="text-[10px] text-gray-500">
+              <p className="text-[10px] text-[var(--text-muted)]">
                 {t('costAnalysis.environment.gallons', 'gallons avoided')}
               </p>
             </div>
@@ -75,7 +75,7 @@ export function EnvironmentalImpact({ coreStats }: EnvironmentalImpactProps) {
               <p className="text-lg font-semibold text-white">
                 {fmtNumber(coreStats.co2SavedKg / 1000, 2)}
               </p>
-              <p className="text-[10px] text-gray-500">
+              <p className="text-[10px] text-[var(--text-muted)]">
                 {t('costAnalysis.environment.metricTons', 'metric tons CO₂')}
               </p>
             </div>
@@ -83,14 +83,14 @@ export function EnvironmentalImpact({ coreStats }: EnvironmentalImpactProps) {
               <p className="text-lg font-semibold text-white">
                 {fmtNumber(coreStats.savings, 0)}
               </p>
-              <p className="text-[10px] text-gray-500">
+              <p className="text-[10px] text-[var(--text-muted)]">
                 {t('costAnalysis.environment.dollarsSaved', '$ saved total')}
               </p>
             </div>
           </div>
         </div>
       ) : (
-        <div className="flex h-32 items-center justify-center text-sm text-gray-500">
+        <div className="flex h-32 items-center justify-center text-sm text-[var(--text-muted)]">
           {t('costAnalysis.environment.noData', 'No data')}
         </div>
       )}

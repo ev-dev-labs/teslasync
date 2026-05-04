@@ -9,10 +9,10 @@ export function MetricBar({ value, max, color, label, sublabel }: {
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs font-medium text-gray-300">{label}</span>
+        <span className="text-xs font-medium text-[var(--text-secondary)]">{label}</span>
         <span className="text-xs font-mono" style={{ color }}>{sublabel || fmtNumber(value)}</span>
       </div>
-      <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+      <div className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
         <motion.div
           className="h-full rounded-full"
           initial={{ width: 0 }}

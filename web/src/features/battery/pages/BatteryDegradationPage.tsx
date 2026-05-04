@@ -227,18 +227,33 @@ export default function BatteryDegradationPage() {
             value={`${fmtNumber(data?.current_soh ?? 0)}%`}
             icon={<Battery className="h-4 w-4" />}
             color="green"
+            help={{
+              i18nKey: 'help.battery.soh',
+              defaultValue:
+                'State of Health — current usable capacity divided by the original rated capacity, expressed as a percentage. Higher is better; new packs start at 100%.',
+            }}
           />
           <MetricCard
             label={t('Estimated Capacity')}
             value={`${fmtNumber(data?.estimated_capacity ?? 0)} kWh`}
             icon={<Zap className="h-4 w-4" />}
             color="cyan"
+            help={{
+              i18nKey: 'help.battery.capacity',
+              defaultValue:
+                'Estimated current usable energy capacity of the pack in kWh, derived from the SoH and the original rated capacity.',
+            }}
           />
           <MetricCard
             label={t('Degradation Rate')}
             value={`${fmtNumber(data?.degradation_rate_yr ?? 0)}%/yr`}
             icon={<TrendingDown className="h-4 w-4" />}
             color="purple"
+            help={{
+              i18nKey: 'help.battery.degradationRate',
+              defaultValue:
+                'Annualised rate of capacity loss based on observed SoH trend. Combines calendar fade (time at temperature/SoC) and cycle fade (kWh throughput).',
+            }}
           />
           <MetricCard
             label={t('Battery Age')}
@@ -289,7 +304,7 @@ export default function BatteryDegradationPage() {
             {degradation?.prediction?.has_enough_data ? (
               <div className="space-y-4">
                 <div className="rounded-xl p-4 bg-neon-purple/[0.08] border border-neon-purple/15">
-                  <p className="text-sm text-white/70">
+                  <p className="text-sm text-[var(--text-secondary)]">
                     {t('battery.degradation.predictionDesc', 'At current rate, battery reaches')}{' '}
                     <span className="font-bold text-amber-300">80%</span>{' '}
                     {t('battery.degradation.inApprox', 'in approximately')}{' '}
@@ -306,6 +321,11 @@ export default function BatteryDegradationPage() {
                     label={t('battery.degradation.rate', 'Degradation Rate')}
                     value={`${fmtNumber(Math.abs(degradation.prediction.slope_per_year))}%/yr`}
                     color="red"
+                    help={{
+                      i18nKey: 'help.battery.degradationRate',
+                      defaultValue:
+                        'Annualised rate of capacity loss based on observed SoH trend. Combines calendar fade (time at temperature/SoC) and cycle fade (kWh throughput).',
+                    }}
                   />
                   <MetricCard
                     label={t('battery.degradation.stress', 'Stress Level')}
@@ -321,18 +341,28 @@ export default function BatteryDegradationPage() {
                     label={t('battery.degradation.totalCycles', 'Total Cycles')}
                     value={fmtNumber(data?.total_cycles ?? degradation.current_cycles ?? 0)}
                     color="cyan"
+                    help={{
+                      i18nKey: 'help.battery.totalCycles',
+                      defaultValue:
+                        'Cumulative full-pack equivalent cycles. One cycle = one full discharge + one full charge worth of energy (partial cycles add up over time).',
+                    }}
                   />
                   <MetricCard
                     label={t('battery.degradation.avgDoD', 'Avg Depth of Discharge')}
                     value={`${fmtNumber(data?.avg_depth_of_discharge ?? 0)}%`}
                     color="purple"
+                    help={{
+                      i18nKey: 'help.battery.avgDoD',
+                      defaultValue:
+                        'Average Depth of Discharge per cycle — how deeply the pack is typically discharged before being recharged. Shallower cycles cause less wear.',
+                    }}
                   />
                 </div>
               </div>
             ) : (
               <div className="rounded-xl p-4 bg-white/[0.02] text-center">
                 <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-neon-amber/50" />
-                <p className="text-sm text-white/50">
+                <p className="text-sm text-[var(--text-secondary)]">
                   {t('battery.degradation.needMore', 'Need more data points to generate prediction (minimum 3 snapshots required)')}
                 </p>
               </div>
@@ -460,7 +490,7 @@ export default function BatteryDegradationPage() {
         </FadeIn>
       ) : (
         <FadeIn delay={0.2}>
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Battery className="h-12 w-12" />}
             message={t('battery.degradation.noRange', 'Range data will appear once history is available.')}
           />
@@ -502,13 +532,13 @@ export default function BatteryDegradationPage() {
                         {rf.score}
                       </span>
                     </div>
-                    <p className="text-[10px] text-white/50">{rf.detail}</p>
+                    <p className="text-[10px] text-[var(--text-secondary)]">{rf.detail}</p>
                   </GlassPanel>
                 );
               })}
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Shield className="h-8 w-8" />}
               message={t('battery.degradation.noRiskData', 'Risk data will appear once charging history is available.')}
             />
@@ -528,12 +558,12 @@ export default function BatteryDegradationPage() {
               {(degradation?.recommendations ?? []).map((rec, i) => (
                 <div key={i} className="flex items-start gap-3 rounded-xl p-3 bg-neon-amber/[0.05] border border-neon-amber/10">
                   <Zap className="h-4 w-4 mt-0.5 shrink-0 text-neon-amber" />
-                  <p className="text-sm text-white/80">{rec}</p>
+                  <p className="text-sm text-[var(--text-primary)]">{rec}</p>
                 </div>
               ))}
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<AlertTriangle className="h-8 w-8" />}
               message={t('battery.degradation.noRecommendations', 'Recommendations will appear based on your usage patterns.')}
             />
@@ -652,7 +682,7 @@ export default function BatteryDegradationPage() {
               pagination
             />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Activity className="h-8 w-8" />}
               message={t('battery.degradation.noHistory', 'No degradation records found.')}
               className="py-8"

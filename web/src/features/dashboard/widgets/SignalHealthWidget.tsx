@@ -103,7 +103,7 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
       ? 'text-amber-400'
       : healthLevel === 'red'
         ? 'text-red-400'
-        : 'text-white/40';
+        : 'text-[var(--text-muted)]';
 
   const healthBadgeVariant = healthLevel === 'green'
     ? 'success' as const
@@ -134,7 +134,7 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
       onRefresh={() => refetchStats()}
     >
       {!hasData ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Activity className="h-5 w-5" />}
           message={t('widget.signalHealth.noData', 'No signal health data')}
           className="py-4"
@@ -145,10 +145,10 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
           <Badge variant={healthBadgeVariant} className="text-xs">
             {analysis.activeCount}/{analysis.activeCount + analysis.staleCount}
           </Badge>
-          <span className="text-lg font-bold text-white/90">
+          <span className="text-lg font-bold text-[var(--text-primary)]">
             {fmtInt(analysis.totalSignals)}
           </span>
-          <span className="text-[10px] text-white/50">
+          <span className="text-[10px] text-[var(--text-secondary)]">
             {t('widget.signalHealth.signals', 'signals')}
           </span>
           {analysis.freshnessAge != null && (
@@ -180,13 +180,13 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
             <StatCard
               label={t('widget.signalHealth.freshness', 'Freshness')}
               value={formatAge(analysis.freshnessAge)}
-              icon={<Clock className="h-3.5 w-3.5 text-white/50" />}
+              icon={<Clock className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
             />
           </div>
 
           {/* Health badge */}
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-wider text-white/40">
+            <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
               {t('widget.signalHealth.status', 'Status')}
             </span>
             <Badge variant={healthBadgeVariant} className="text-[10px]">
@@ -203,16 +203,16 @@ export default function SignalHealthWidget({ vehicleId, size }: WidgetProps) {
           {/* Wide view: stale signal list */}
           {isWide && analysis.gapSignals.length > 0 && (
             <div className="mt-auto pt-2 border-t border-white/[0.06] flex-1 min-h-0 overflow-y-auto">
-              <h4 className="text-[10px] font-semibold uppercase text-white/40 mb-1.5">
+              <h4 className="text-[10px] font-semibold uppercase text-[var(--text-muted)] mb-1.5">
                 {t('widget.signalHealth.staleSignals', 'Stale / Gap Signals')}
               </h4>
               <div className="space-y-1">
                 {analysis.gapSignals.slice(0, isCompact ? 3 : 15).map((sig) => (
                   <div key={sig.name} className="flex items-center justify-between min-h-[28px]">
-                    <span className="text-xs text-white/70 truncate max-w-[45%]">
+                    <span className="text-xs text-[var(--text-secondary)] truncate max-w-[45%]">
                       {sig.name}
                     </span>
-                    <span className="text-[10px] text-white/40 truncate">
+                    <span className="text-[10px] text-[var(--text-muted)] truncate">
                       {sig.lastSeen ? formatRelative(sig.lastSeen) : '—'}
                     </span>
                   </div>

@@ -62,7 +62,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
               </h2>
               <StatusBadge status={toStatus(vehicleState?.state ?? vehicle.state ?? 'offline')} />
             </div>
-            <p className="text-xs font-mono text-gray-500 dark:text-gray-400">
+            <p className="text-xs font-mono text-[var(--text-muted)] dark:text-[var(--text-muted)]">
               {vehicle.vin}
             </p>
           </div>
@@ -138,7 +138,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
         )}
 
         {/* Action buttons */}
-        <div className="flex items-center gap-3 pt-2 border-t border-white/10">
+        <div className="flex items-center gap-3 pt-2 border-t border-[var(--border-subtle)]">
           <Link
             to={`/vehicles/${vehicle.id}`}
             className={cn(
@@ -152,7 +152,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
             to={`/vehicles/${vehicle.id}/commands`}
             className={cn(
               'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-              'bg-white/5 text-gray-300 hover:bg-white/10',
+              'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)]',
             )}
           >
             {t('vehicleHero.action.commands', 'Commands')}
@@ -161,7 +161,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
             to={`/vehicles/${vehicle.id}/map`}
             className={cn(
               'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-              'bg-white/5 text-gray-300 hover:bg-white/10',
+              'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)]',
             )}
           >
             {t('vehicleHero.action.liveMap', 'Live Map')}

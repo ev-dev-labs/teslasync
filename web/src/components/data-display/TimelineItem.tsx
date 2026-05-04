@@ -15,7 +15,7 @@ export function TimelineItem({ icon, title, subtitle, time, color, isLast, href 
         >
           {icon}
         </div>
-        {!isLast && <div className="w-px flex-1 bg-white/5 mt-1" />}
+        {!isLast && <div className="w-px flex-1 bg-[var(--surface-2)] mt-1" />}
       </div>
       <div className="pb-4 min-w-0 flex-1">
         <p className="text-sm font-medium text-[var(--text-primary)] truncate">{title}</p>

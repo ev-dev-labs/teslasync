@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next'
 import type { ModeId, ThemeId } from '@/components/ui/ThemeProvider'
 import { Icons, type LucideIcon } from '@/lib/icons'
 import { TOUR_OPEN_LAUNCHER_EVENT } from '@/lib/tourRegistry'
+import { _resetFrecency } from '@/lib/commandFrecency'
 
 export type { LucideIcon }
 
@@ -407,6 +408,22 @@ export const commandRegistry: CommandDefinition[] = [
       window.setTimeout(() => {
         window.dispatchEvent(new CustomEvent('dashboard:reset'))
       }, 50)
+    },
+  },
+
+  // ── Privacy / housekeeping (Phase-45 / Prompt 27) ─────────────────────────
+  // Lets users on shared devices clear the per-command usage counts that drive
+  // the palette's "Most Used" section. Pure local action — no server round-trip.
+  {
+    id: 'action.frecency.reset',
+    labelKey: 'palette.cmd.frecencyReset',
+    labelFallback: 'Reset command palette usage history',
+    icon: Icons.undo,
+    section: 'actions',
+    keywords: ['reset', 'clear', 'frecency', 'usage', 'history', 'palette', 'privacy', 'most used'],
+    perform: (ctx) => {
+      _resetFrecency()
+      ctx.toast.success(ctx.t('palette.toast.frecencyReset', 'Command palette usage history cleared'))
     },
   },
 ]

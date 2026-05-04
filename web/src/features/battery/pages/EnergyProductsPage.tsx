@@ -234,7 +234,7 @@ function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: b
         </div>
       ) : (
         <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] p-4">
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Info className="h-5 w-5" />}
             message={t(
               'energy.siteInfo.empty',
@@ -403,7 +403,7 @@ export default function EnergyProductsPage() {
           </StaggerContainer>
         ) : (
           <GlassPanel className="p-6">
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Zap className="h-8 w-8" />}
               message={t(
                 'energy.products.empty',

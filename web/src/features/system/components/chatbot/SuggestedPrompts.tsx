@@ -55,27 +55,26 @@ export function SuggestedPrompts({ onPick }: SuggestedPromptsProps) {
   const suggestions = getChatSuggestions();
 
   return (
-    <div
-      className="flex flex-wrap gap-2 justify-center max-w-2xl mx-auto"
-      role="list"
+    <ul
+      className="flex flex-wrap gap-2 justify-center max-w-2xl mx-auto list-none p-0 m-0"
       aria-label={t('chatbot.aria.suggestions', 'Suggested prompts')}
     >
       {suggestions.map((s) => {
         const text = t(s.i18nKey, s.defaultValue);
         return (
-          <Button
-            key={s.i18nKey}
-            variant="ghost"
-            size="sm"
-            role="listitem"
-            onClick={() => onPick(text)}
-            icon={<Sparkles className="h-3.5 w-3.5" />}
-            className="rounded-full border border-white/10 hover:border-purple-500/30 hover:text-purple-300"
-          >
-            {text}
-          </Button>
+          <li key={s.i18nKey}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onPick(text)}
+              icon={<Sparkles className="h-3.5 w-3.5" />}
+              className="rounded-full border border-[var(--border-subtle)] hover:border-purple-500/30 hover:text-purple-300"
+            >
+              {text}
+            </Button>
+          </li>
         );
       })}
-    </div>
+    </ul>
   );
 }

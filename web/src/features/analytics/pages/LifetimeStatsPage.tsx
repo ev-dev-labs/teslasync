@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Select } from '@/components/ui';
+import { GlassPanel, HelpTooltip, Select, type HelpTooltipProps } from '@/components/ui';
 import { StatCard, AnimatedNumber, ProgressRing, Currency, DataFreshnessAuto } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -225,7 +225,7 @@ export default function LifetimeStatsPage() {
               />
             </Grid>
           ) : (
-            <EmptyState message={t('lifetime.noData', 'No driving data yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('lifetime.noData', 'No driving data yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -245,7 +245,7 @@ export default function LifetimeStatsPage() {
               co2Kg={stats.co2_offset_kg}
             />
           ) : (
-            <EmptyState message={t('lifetime.noSavingsData', 'Complete some drives to see savings')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('lifetime.noSavingsData', 'Complete some drives to see savings')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -291,7 +291,7 @@ export default function LifetimeStatsPage() {
               </div>
             </Grid>
           ) : (
-            <EmptyState message={t('lifetime.noData', 'No driving data yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('lifetime.noData', 'No driving data yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -325,7 +325,7 @@ export default function LifetimeStatsPage() {
               />
             </Grid>
           ) : (
-            <EmptyState message={t('lifetime.noData', 'No driving data yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('lifetime.noData', 'No driving data yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -358,10 +358,15 @@ export default function LifetimeStatsPage() {
                 value={stats.avg_efficiency_wh_km > 0
                   ? `${fmtNumber(stats.avg_efficiency_wh_km, 0)} Wh/km`
                   : '—'}
+                help={{
+                  i18nKey: 'help.lifetime.avgEfficiency',
+                  defaultValue:
+                    'Average energy used per unit distance across the whole driving history (Wh/km). Lower is better — temperature, speed, and terrain are the main drivers.',
+                }}
               />
             </Grid>
           ) : (
-            <EmptyState message={t('lifetime.noData', 'No driving data yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('lifetime.noData', 'No driving data yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -405,7 +410,7 @@ export default function LifetimeStatsPage() {
               })}
             </StaggerContainer>
           ) : (
-            <EmptyState message={t('lifetime.noAchievements', 'Start driving to unlock achievements')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('lifetime.noAchievements', 'Start driving to unlock achievements')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -448,7 +453,7 @@ function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
         </div>
         <div className="h-6 rounded-full bg-white/[0.05] overflow-hidden">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-1000"
+            className="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-slow"
             style={{ width: `${evPct}%` }}
           />
         </div>
@@ -460,7 +465,7 @@ function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
         </div>
         <div className="h-6 rounded-full bg-white/[0.05] overflow-hidden">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-red-500 to-orange-400 transition-all duration-1000"
+            className="h-full rounded-full bg-gradient-to-r from-red-500 to-orange-400 transition-all duration-slow"
             style={{ width: `${gasPct}%` }}
           />
         </div>
@@ -494,10 +499,19 @@ function RecordCard({ title, value, date, icon }: {
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
+function MiniStat({ label, value, help }: { label: string; value: string; help?: HelpTooltipProps }) {
   return (
     <div className="rounded-lg bg-white/[0.03] p-3 text-center">
-      <p className="text-xs text-[var(--text-muted)] mb-1">{label}</p>
+      <p className="mb-1 inline-flex items-center gap-1 text-xs text-[var(--text-muted)]">
+        <span>{label}</span>
+        {help && (
+          <HelpTooltip
+            size="xs"
+            {...help}
+            ariaLabel={help.ariaLabel ?? `More info about ${label}`}
+          />
+        )}
+      </p>
       <p className="text-lg font-semibold text-[var(--text-primary)]">{value}</p>
     </div>
   );

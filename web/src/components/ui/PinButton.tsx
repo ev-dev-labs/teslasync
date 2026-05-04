@@ -88,7 +88,7 @@ export function PinButton({
           showLabel ? 'px-2' : SIZE_CLASS[size],
           isPinned
             ? 'text-amber-300 hover:text-amber-200 hover:bg-amber-500/10'
-            : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/5',
+            : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]',
           className,
         )}
       >

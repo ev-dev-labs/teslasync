@@ -51,7 +51,7 @@ export function SecurityPanel({ securityData, remoteStartEnabled }: SecurityPane
                       ? t('common.locked', 'Locked')
                       : t('common.unlocked', 'Unlocked')}
                   </p>
-                  <p className="text-[10px] text-white/40">
+                  <p className="text-[10px] text-[var(--text-muted)]">
                     {t('telemetry.lockStatus', 'Vehicle lock status')}
                   </p>
                 </div>
@@ -148,7 +148,7 @@ export function SecurityPanel({ securityData, remoteStartEnabled }: SecurityPane
           </div>
         </div>
       ) : (
-        <EmptyState message={t('telemetry.noSecurityData', 'No security data available')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('telemetry.noSecurityData', 'No security data available')} />
       )}
     </GlassPanel>
   )

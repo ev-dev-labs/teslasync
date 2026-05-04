@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DollarSign } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
@@ -12,6 +12,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
+import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
 import { DEFAULT_GAS_PRICE, DEFAULT_MPG, DEFAULT_ELECTRICITY_RATE } from '../components/cost-analysis/constants';
 import { useCostAnalysisData } from '../components/cost-analysis/useCostAnalysisData';
 import {
@@ -38,14 +39,15 @@ export default function CostAnalysisPage() {
   const { vehicleId } = useSelectedVehicle();
 
   // ── Filters ──────────────────────────────────────────────────────────
-  const [startDate, setStartDate] = useState(() => {
+  const defaultStartDate = useMemo(() => {
     const d = new Date();
     d.setFullYear(d.getFullYear() - 1);
     return d.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(
-    () => new Date().toISOString().split('T')[0],
-  );
+  }, []);
+  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [startDate, setStartDate] = useUrlString('from', defaultStartDate);
+  const [endDate, setEndDate] = useUrlString('to', defaultEndDate);
+  const setRangeBatch = useUrlBatch();
 
   // ── Gas calculator inputs ────────────────────────────────────────────
   const [gasPrice, setGasPrice] = useState(DEFAULT_GAS_PRICE);
@@ -73,8 +75,8 @@ export default function CostAnalysisPage() {
     return (
       <FadeIn>
         <div className="flex min-h-[60vh] items-center justify-center p-6">
-          <EmptyState
-            icon={<DollarSign className="h-12 w-12 text-gray-500" />}
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+            icon={<DollarSign className="h-12 w-12 text-[var(--text-muted)]" />}
             title={t('costAnalysis.empty.title', 'No Charging Data')}
             message={t(
               'costAnalysis.empty.message',
@@ -98,6 +100,7 @@ export default function CostAnalysisPage() {
               endDate={endDate}
               onStartDateChange={setStartDate}
               onEndDateChange={setEndDate}
+              onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
               presets
             />
             <SavedViewMenu

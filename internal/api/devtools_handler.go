@@ -39,7 +39,9 @@ type DevToolsHandler struct {
 	cfg          *config.Config
 	fleetSubRepo *database.FleetSubscriptionRepo
 	settingsRepo *database.SettingsRepo
+	vehicleRepo  *database.VehicleRepo
 	redisCache   *signal.RedisSignalCache
+	signalStore  *signal.Store
 }
 
 // DevToolsOption is a functional option for configuring DevToolsHandler.
@@ -65,6 +67,13 @@ func WithRedisSignalCache(rc *signal.RedisSignalCache) DevToolsOption {
 	return func(h *DevToolsHandler) { h.redisCache = rc }
 }
 
+// WithSignalStore adds the in-process L1 signal store. Used by the
+// redis-signals diagnostic endpoint to compare L1 vs L2 state and
+// surface "L1 has data but L2 mirror failed" hints.
+func WithSignalStore(s *signal.Store) DevToolsOption {
+	return func(h *DevToolsHandler) { h.signalStore = s }
+}
+
 // NewDevToolsHandler creates a new developer tools handler.
 // Accepts optional functional options for backward compatibility.
 func NewDevToolsHandler(tc *tesla.Client, opts ...DevToolsOption) *DevToolsHandler {
@@ -75,6 +84,7 @@ func NewDevToolsHandler(tc *tesla.Client, opts ...DevToolsOption) *DevToolsHandl
 	if h.db != nil {
 		h.fleetSubRepo = database.NewFleetSubscriptionRepo(h.db)
 		h.settingsRepo = database.NewSettingsRepo(h.db)
+		h.vehicleRepo = database.NewVehicleRepo(h.db)
 	}
 	return h
 }
@@ -1045,7 +1055,25 @@ func errStringOrDefault(err error, def string) string {
 	return def
 }
 
-// RedisSignals returns all cached signal values from Redis for a vehicle.
+// redisSignalsMeta is the diagnostic block returned alongside RedisSignals.
+// Each field maps to one of the five empty-state root causes the viewer
+// page needs to distinguish (mode-local, mirror-failed, TTL-expired,
+// never-streamed, VIN-mismatch). See phase-45/37 prompt.
+type redisSignalsMeta struct {
+	LiveSignalStoreMode string     `json:"live_signal_store_mode"`
+	RedisKey            string     `json:"redis_key"`
+	RedisFieldCount     int        `json:"redis_field_count"`
+	L1SignalCount       int        `json:"l1_signal_count"`
+	L1LastSeenAt        *time.Time `json:"l1_last_seen_at,omitempty"`
+	L2LastSeenAt        *time.Time `json:"l2_last_seen_at,omitempty"`
+	VehicleVIN          string     `json:"vehicle_vin,omitempty"`
+}
+
+// RedisSignals returns all cached signal values from Redis for a vehicle,
+// alongside a diagnostic meta block (mode, raw HSET size, L1 size,
+// L1/L2 last-seen, VIN) so the viewer page can render structured empty
+// states instead of a generic "no signals cached" message.
+//
 // GET /api/v1/dev-tools/redis-signals?vehicle_id=X
 func (h *DevToolsHandler) RedisSignals(w http.ResponseWriter, r *http.Request) {
 	if h.redisCache == nil {
@@ -1059,24 +1087,68 @@ func (h *DevToolsHandler) RedisSignals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	vehicleID, err := strconv.ParseInt(vidStr, 10, 64)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be a valid integer")
+	if err != nil || vehicleID <= 0 {
+		writeError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
 		return
 	}
 
-	signals, err := h.redisCache.GetAll(r.Context(), vehicleID)
+	ctx := r.Context()
+
+	// L2: HGETALL + decode (existing path).
+	signals, err := h.redisCache.GetAll(ctx, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("redis signal cache: GetAll failed")
 		writeError(w, http.StatusServiceUnavailable, "Redis is unreachable")
 		return
 	}
 
-	// Build typed signal response
+	// L2: timestamped values for l2_last_seen_at; bypass on decode error
+	// so meta degrades gracefully (the user-visible signals payload still
+	// returns).
+	var l2LastSeen *time.Time
+	if values, vErr := h.redisCache.GetAllValues(ctx, vehicleID); vErr == nil {
+		if t := newestRedisSignalTime(values); !t.IsZero() {
+			tCopy := t
+			l2LastSeen = &tCopy
+		}
+	}
+
+	// L2: raw HSET size (HLEN) — distinguishes "Redis empty" from
+	// "Redis has fields the decoder couldn't parse".
+	rawCount, _ := h.redisCache.RawFieldCount(ctx, vehicleID)
+
+	// L1: in-process Store snapshot. signalStore may be nil in builds
+	// that don't wire it (zero values for the diagnostic).
+	var (
+		l1Count    int
+		l1LastSeen *time.Time
+	)
+	if h.signalStore != nil {
+		all := h.signalStore.GetAll(vehicleID)
+		l1Count = len(all)
+		if t := h.signalStore.LastSeenAt(vehicleID); !t.IsZero() {
+			tCopy := t
+			l1LastSeen = &tCopy
+		}
+	}
+
+	// VIN lookup — degrades to "" on missing repo or missing vehicle.
+	var vin string
+	if h.vehicleRepo != nil {
+		if veh, vErr := h.vehicleRepo.GetByID(ctx, vehicleID); vErr == nil && veh != nil {
+			vin = veh.VIN
+		}
+	}
+
+	mode := "hybrid"
+	if h.cfg != nil && h.cfg.FleetTelemetry.LiveSignalStoreMode != "" {
+		mode = h.cfg.FleetTelemetry.LiveSignalStoreMode
+	}
+
 	type signalEntry struct {
 		Value interface{} `json:"value"`
 		Type  string      `json:"type"`
 	}
-
 	result := make(map[string]signalEntry, len(signals))
 	for name, val := range signals {
 		var sType string
@@ -1095,5 +1167,82 @@ func (h *DevToolsHandler) RedisSignals(w http.ResponseWriter, r *http.Request) {
 		"vehicle_id":   vehicleID,
 		"signal_count": len(result),
 		"signals":      result,
+		"meta": redisSignalsMeta{
+			LiveSignalStoreMode: mode,
+			RedisKey:            fmt.Sprintf("vehicle:%d:signals", vehicleID),
+			RedisFieldCount:     rawCount,
+			L1SignalCount:       l1Count,
+			L1LastSeenAt:        l1LastSeen,
+			L2LastSeenAt:        l2LastSeen,
+			VehicleVIN:          vin,
+		},
+	})
+}
+
+// newestRedisSignalTime returns the maximum non-zero Timestamp across
+// the Redis L2 envelope values map, or the zero time when every value
+// is legacy (zero Timestamp) or the map is empty.
+func newestRedisSignalTime(values map[string]*signal.Value) time.Time {
+	var newest time.Time
+	for _, v := range values {
+		if v == nil {
+			continue
+		}
+		if v.Timestamp.After(newest) {
+			newest = v.Timestamp
+		}
+	}
+	return newest
+}
+
+// RedisSignalKeys returns the list of vehicleIDs that have a populated
+// Redis HSET, paired with their raw field counts and (when available)
+// VIN + display_name. Used by the Redis Signal Viewer's empty-state
+// diagnostic to surface "other vehicles have data" hints when the
+// selected vehicle's HSET is empty.
+//
+// GET /api/v1/dev-tools/redis-signals/keys?limit=50
+func (h *DevToolsHandler) RedisSignalKeys(w http.ResponseWriter, r *http.Request) {
+	if h.redisCache == nil {
+		writeError(w, http.StatusServiceUnavailable, "Redis signal cache is not available")
+		return
+	}
+
+	limit := 50
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 && parsed <= 1000 {
+			limit = parsed
+		}
+	}
+
+	ids, err := h.redisCache.ScanVehicleKeys(r.Context(), limit)
+	if err != nil {
+		log.Error().Err(err).Msg("redis signal cache: ScanVehicleKeys failed")
+		writeError(w, http.StatusServiceUnavailable, "Redis is unreachable")
+		return
+	}
+
+	type keyEntry struct {
+		VehicleID   int64  `json:"vehicle_id"`
+		FieldCount  int    `json:"field_count"`
+		VehicleVIN  string `json:"vehicle_vin,omitempty"`
+		DisplayName string `json:"display_name,omitempty"`
+	}
+	out := make([]keyEntry, 0, len(ids))
+	for _, id := range ids {
+		fc, _ := h.redisCache.RawFieldCount(r.Context(), id)
+		entry := keyEntry{VehicleID: id, FieldCount: fc}
+		if h.vehicleRepo != nil {
+			if veh, vErr := h.vehicleRepo.GetByID(r.Context(), id); vErr == nil && veh != nil {
+				entry.VehicleVIN = veh.VIN
+				entry.DisplayName = veh.DisplayName
+			}
+		}
+		out = append(out, entry)
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"keys":  out,
+		"total": len(out),
 	})
 }

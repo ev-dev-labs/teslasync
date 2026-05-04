@@ -41,15 +41,11 @@ function makeTransition(overrides: Partial<FSMTransition>): FSMTransition {
 describe('StateTimeline', () => {
   it('shows the empty placeholder when no transitions are in the window', () => {
     const anchor = new Date('2025-01-15T12:00:00Z');
+    // The page now pre-windows transitions before passing them in;
+    // an empty array represents "nothing inside the window".
     render(
       <StateTimeline
-        transitions={[
-          makeTransition({
-            id: 99,
-            // 2 hours before anchor — outside the 10-minute default window
-            created_at: '2025-01-15T10:00:00Z',
-          }),
-        ]}
+        transitions={[]}
         fsmType="vehicle"
         anchor={anchor}
         windowMinutes={10}

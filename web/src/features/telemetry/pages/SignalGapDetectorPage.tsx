@@ -4,12 +4,12 @@ import { AlertTriangle, ArrowUpDown, Filter, RefreshCw } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Badge, Button, Input, DataTable, type Column } from '@/components/ui';
-import { StatCard } from '@/components/data-display';
+import { StatCard, TimeStamp } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useSignalGaps } from '@/api/hooks/useTelemetry';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime, formatRelative } from '@/lib/dateFormat';
+import { formatDateTime } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { SignalRow } from '@/types/telemetry';
@@ -184,7 +184,7 @@ export default function SignalGapDetectorPage() {
                     'border',
                     filterMode === mode
                       ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
-                      : 'text-[var(--text-muted)] border-white/10 hover:text-[var(--text-primary)]',
+                      : 'text-[var(--text-muted)] border-[var(--border-subtle)] hover:text-[var(--text-primary)]',
                   )}
                 >
                   {mode === 'all' ? t('signalGap.all', 'All') : mode === 'stale' ? t('signalGap.staleOnly', 'Stale Only') : t('signalGap.activeOnly', 'Active Only')}
@@ -203,7 +203,7 @@ export default function SignalGapDetectorPage() {
                     'border',
                     sortMode === mode
                       ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                      : 'text-[var(--text-muted)] border-white/10 hover:text-[var(--text-primary)]',
+                      : 'text-[var(--text-muted)] border-[var(--border-subtle)] hover:text-[var(--text-primary)]',
                   )}
                 >
                   {mode === 'staleness' ? t('signalGap.mostStale', 'Most Stale') : mode === 'alpha' ? t('signalGap.az', 'A-Z') : t('signalGap.category', 'Category')}
@@ -228,7 +228,7 @@ export default function SignalGapDetectorPage() {
               keyExtractor={(signal) => signal.name}
               compact
               pagination
-              className="max-h-[65vh] overflow-auto border border-white/5"
+              className="max-h-[65vh] overflow-auto border border-[var(--border-subtle)]"
               emptyMessage={t('signalGap.noMatch', 'No signals match current filters')}
             />
           ) : (
@@ -241,7 +241,7 @@ export default function SignalGapDetectorPage() {
 
           {dataUpdatedAt > 0 && (
             <p className="mt-3 text-[10px] text-[var(--text-muted)] text-right">
-              {t('signalGap.lastRefreshed', 'Last refreshed')}: {formatRelative(new Date(dataUpdatedAt))}
+              {t('signalGap.lastRefreshed', 'Last refreshed')}: <TimeStamp value={new Date(dataUpdatedAt)} format="relative" />
             </p>
           )}
         </GlassPanel>

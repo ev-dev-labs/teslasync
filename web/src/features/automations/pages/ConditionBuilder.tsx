@@ -374,7 +374,7 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
             className="w-44"
           />
           <div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="text-sm font-medium text-gray-700 dark:text-[var(--text-secondary)]">
               {t('automations.builder.days', 'Days')}
             </span>
             <div className="mt-1 flex gap-1">
@@ -390,7 +390,7 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
                     className={`!h-9 !w-9 !rounded !p-0 text-xs font-medium ${
                       active
                         ? '!bg-[var(--accent)]/20 text-[var(--accent)] ring-1 ring-[var(--accent)]/50'
-                        : '!bg-white/[0.03] text-white/40 hover:!bg-white/[0.06]'
+                        : '!bg-white/[0.03] text-[var(--text-muted)] hover:!bg-white/[0.06]'
                     }`}
                     onClick={() => {
                       const days = active

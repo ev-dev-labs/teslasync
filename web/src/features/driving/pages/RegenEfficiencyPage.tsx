@@ -275,7 +275,7 @@ export default function RegenEfficiencyPage() {
                     <span className="text-right">{t('regen.ratioCol', 'Ratio')}</span>
                   </div>
                   {regenDrives.map((rd) => (
-                    <div key={rd.id} className="grid grid-cols-4 gap-2 text-xs py-2 px-2 border-t border-white/5">
+                    <div key={rd.id} className="grid grid-cols-4 gap-2 text-xs py-2 px-2 border-t border-[var(--border-subtle)]">
                       <span className="text-[var(--text-secondary)]">{rd.date}</span>
                       <span className="font-mono text-[var(--text-primary)]">{rd.distance}</span>
                       <span className="font-mono text-cyan-400">{rd.maxRegen}</span>
@@ -296,7 +296,7 @@ export default function RegenEfficiencyPage() {
           </FadeIn>
         </>
       ) : (
-        <EmptyState message={t('regen.noData', 'No regen efficiency data available yet')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('regen.noData', 'No regen efficiency data available yet')} />
       )}
     </PageContainer>
   );

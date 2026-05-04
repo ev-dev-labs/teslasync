@@ -20,7 +20,7 @@ export function ToolCard({ icon: Icon, color, title, description, children }: To
         </div>
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-white">{title}</h3>
-          <p className="text-xs text-white/50">{description}</p>
+          <p className="text-xs text-[var(--text-secondary)]">{description}</p>
         </div>
       </div>
       {children}

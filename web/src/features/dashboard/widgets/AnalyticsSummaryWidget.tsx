@@ -101,12 +101,12 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
               suffix={` ${distanceUnit}`}
               className="text-3xl font-bold text-cyan-400"
             />
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               {t('widget.analyticsSummary.totalDistance', 'Total Distance')}
             </span>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<BarChart3 className="h-5 w-5" />}
             message={t('widget.analyticsSummary.noData', 'No analytics data')}
             className="py-4"
@@ -143,7 +143,7 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
           )}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<BarChart3 className="h-5 w-5" />}
           message={t('widget.analyticsSummary.noData', 'No analytics data')}
           className="py-8"

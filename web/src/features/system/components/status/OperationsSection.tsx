@@ -54,11 +54,11 @@ export function OperationsSection() {
     },
     {
       key: 'title', header: t('Title'),
-      render: (row) => <span className="text-white/90 truncate max-w-[200px] block">{row.title}</span>,
+      render: (row) => <span className="text-[var(--text-primary)] truncate max-w-[200px] block">{row.title}</span>,
     },
     {
       key: 'message', header: t('Message'),
-      render: (row) => <span className="text-xs text-white/40 truncate max-w-[250px] block">{row.message}</span>,
+      render: (row) => <span className="text-xs text-[var(--text-muted)] truncate max-w-[250px] block">{row.message}</span>,
     },
     { key: 'created_at', header: t('Time'), render: (row) => formatDateTime(row.created_at) },
   ];
@@ -69,7 +69,7 @@ export function OperationsSection() {
     { key: 'resource', header: t('Resource'), render: (row) => <span className="font-mono text-xs">{row.resource}</span> },
     {
       key: 'details', header: t('Details'),
-      render: (row) => <span className="text-xs text-white/40 truncate max-w-[250px] block">{row.details}</span>,
+      render: (row) => <span className="text-xs text-[var(--text-muted)] truncate max-w-[250px] block">{row.details}</span>,
     },
   ];
 
@@ -98,7 +98,7 @@ export function OperationsSection() {
         <div className="space-y-6">
           {notifStats && (
             <div>
-              <h4 className="text-sm font-semibold text-white/90 mb-3">{t('Notification Delivery')}</h4>
+              <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Notification Delivery')}</h4>
               <Grid cols={{ default: 2, md: 4 }} gap={3} className="mb-4">
                 <MetricCard label={t('Total Sent')} value={fmtInt(notifStats.total_sent)} icon={<Send className="h-4 w-4" />} color="cyan" />
                 <MetricCard label={t('Failed')} value={fmtInt(notifStats.failed)} icon={<XCircle className="h-4 w-4" />} color="red" />
@@ -127,7 +127,7 @@ export function OperationsSection() {
                   emptyMessage={t('No recent notifications')}
                 />
               ) : (
-                <EmptyState
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                   icon={<Activity className="h-8 w-8 opacity-20" />}
                   message={t('common.noData', 'No data available')}
                   className="py-8"
@@ -137,7 +137,7 @@ export function OperationsSection() {
           )}
 
           <div>
-            <h4 className="text-sm font-semibold text-white/90 mb-3">{t('Audit Log')}</h4>
+            <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Audit Log')}</h4>
             {auditLogs && auditLogs.length > 0 ? (
               <DataTable
                 columns={auditColumns}
@@ -148,7 +148,7 @@ export function OperationsSection() {
                 emptyMessage={t('No audit entries')}
               />
             ) : (
-              <EmptyState message={t('No audit log entries')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No audit log entries')} />
             )}
           </div>
         </div>

@@ -110,8 +110,12 @@ export function useDriveDetailData(id: string) {
     const maxSpd = drive.maxSpeedMph != null ? convertSpeed(drive.maxSpeedMph) : 0;
     const avgSpd = drive.avgSpeedMph != null ? convertSpeed(drive.avgSpeedMph) : 0;
     const minSpd = 0; // speedMin removed from API; compute from telemetry if available
-    const powerMax = drive.avgPowerKw ?? 0; // powerMax removed; use avgPowerKw as approx
-    const powerMin = 0; // powerMin removed from API
+    // Compute power max (drive) and min (regen) from per-row chart data.
+    // Backend derives power = pack_voltage * pack_current / 1000 per row;
+    // sign is preserved (positive = drive, negative = regen).
+    const powerValues = chartData.map((d) => d.power).filter((p) => p !== 0);
+    const powerMax = powerValues.length > 0 ? Math.max(...powerValues) : (drive.avgPowerKw ?? 0);
+    const powerMin = powerValues.length > 0 ? Math.min(...powerValues) : 0;
     const avgPower = drive.avgPowerKw != null
       ? drive.avgPowerKw
       : (chartData.length > 0

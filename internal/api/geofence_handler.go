@@ -28,11 +28,15 @@ func validateGeofence(g *models.Geofence) error {
 
 // GeofenceHandler handles geofence CRUD.
 type GeofenceHandler struct {
+	db           *database.DB
 	geofenceRepo *database.GeofenceRepo
+	// bulkOverride lets tests substitute the bulk store without standing
+	// up a real *database.GeofenceRepo. Always nil in production.
+	bulkOverride geofenceBulkStore
 }
 
 func NewGeofenceHandler(db *database.DB) *GeofenceHandler {
-	return &GeofenceHandler{geofenceRepo: database.NewGeofenceRepo(db)}
+	return &GeofenceHandler{db: db, geofenceRepo: database.NewGeofenceRepo(db)}
 }
 
 func (h *GeofenceHandler) List(w http.ResponseWriter, r *http.Request) {

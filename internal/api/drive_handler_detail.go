@@ -49,20 +49,50 @@ func NewDriveDetail(db *database.DB, state signal.StateReader) *driveDetailHandl
 // driveTelemetryFieldMappings projects the signal_log change feed into the
 // legacy DriveTelemetryReading JSON shape. Field names match the legacy
 // JSON tags so the wire contract is unchanged.
+//
+// NOTE: per-row "power" is NOT mapped from a Tesla signal — Fleet Telemetry
+// does not emit PackPower. Power is computed from PackVoltage × PackCurrent
+// by derivePowerKw() AFTER projection. See enrichLiveDrive (same formula).
 var driveTelemetryFieldMappings = []signal.FieldMapping{
 	{Signal: "VehicleSpeed", Field: "speed"},
 	{Signal: "PackCurrent", Field: "pack_current"},
 	{Signal: "PackVoltage", Field: "pack_voltage"},
 	{Signal: "BatteryLevel", Field: "battery_level"},
+	{Signal: "Soc", Field: "soc"},
+	{Signal: "Odometer", Field: "odometer"},
+	{Signal: "IdealBatteryRange", Field: "ideal_range"},
+	{Signal: "RatedRange", Field: "rated_range"},
+	{Signal: "EstBatteryRange", Field: "est_range"},
 	{Signal: "Elevation", Field: "elevation"},
 	{Signal: "InsideTemp", Field: "inside_temp"},
 	{Signal: "OutsideTemp", Field: "outside_temp"},
+	{Signal: "HvacLeftTemperatureRequest", Field: "driver_temp"},
+	{Signal: "HvacRightTemperatureRequest", Field: "passenger_temp"},
+	{Signal: "HvacFanStatus", Field: "fan_status"},
 	{Signal: "TpmsPressureFl", Field: "tire_pressure_fl"},
 	{Signal: "TpmsPressureFr", Field: "tire_pressure_fr"},
 	{Signal: "TpmsPressureRl", Field: "tire_pressure_rl"},
 	{Signal: "TpmsPressureRr", Field: "tire_pressure_rr"},
 	{Signal: "Latitude", Field: "latitude"},
 	{Signal: "Longitude", Field: "longitude"},
+}
+
+// derivePowerKw populates a "power" field on each telemetry row by
+// computing PackVoltage × PackCurrent / 1000.0 (kW). Rows without both
+// pack_voltage and pack_current are left untouched. Sign is preserved so
+// downstream chart consumers can distinguish drive (+) from regen (−).
+//
+// This mirrors the formula used by enrichLiveDrive() for live drive
+// AvgPowerKw and by signalPowerKW() in telemetry_sessions_signal_helpers.go
+// — Tesla Fleet Telemetry does not emit a per-row PackPower signal.
+func derivePowerKw(rows []map[string]interface{}) {
+	for _, row := range rows {
+		v, vOk := toFloatOk(row["pack_voltage"])
+		c, cOk := toFloatOk(row["pack_current"])
+		if vOk && cOk {
+			row["power"] = safeFloat(v * c / 1000.0)
+		}
+	}
 }
 
 // drivePositionFieldMappings projects the signal_log change feed into the
@@ -159,6 +189,10 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 			delete(row, "ts")
 		}
 	}
+	// Derive per-row power (kW) from PackVoltage × PackCurrent. Tesla Fleet
+	// Telemetry does not emit a PackPower signal, so the Power Profile chart
+	// would render a flat line at 0 without this step.
+	derivePowerKw(telemetry)
 
 	// Positions: chart mode (empty CollapseBy).
 	positionRows, err := h.state.Timeline(ctx,
@@ -402,5 +436,7 @@ func (h *driveDetailHandler) TelemetryReadings(w http.ResponseWriter, r *http.Re
 			delete(row, "ts")
 		}
 	}
+	// Derive per-row power (kW) — see derivePowerKw doc comment for rationale.
+	derivePowerKw(rows)
 	writeJSON(w, http.StatusOK, rows)
 }

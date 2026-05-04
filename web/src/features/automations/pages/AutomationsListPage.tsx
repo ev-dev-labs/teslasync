@@ -288,7 +288,7 @@ export default function AutomationsListPage() {
           <StatCard
             label={t('automations.stats.disabled', 'Disabled')}
             value={stats.disabled}
-            icon={<Pause className="h-4 w-4 text-white/50" />}
+            icon={<Pause className="h-4 w-4 text-[var(--text-secondary)]" />}
           />
           <StatCard
             label={t('automations.stats.autoDisabled', 'Auto-Disabled')}
@@ -344,10 +344,10 @@ export default function AutomationsListPage() {
       <FadeIn delay={0.045}>
         <GlassPanel className="p-5">
           <details className="group">
-            <summary className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-white/90 select-none">
+            <summary className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-[var(--text-primary)] select-none">
               <Sparkles className="h-4 w-4 text-cyan-400" />
               {t('automations.presets.title', 'Quick Start Templates')}
-              <span className="text-xs font-normal text-white/40 ml-1">
+              <span className="text-xs font-normal text-[var(--text-muted)] ml-1">
                 {t('automations.presets.hint', 'One-click install')}
               </span>
             </summary>
@@ -378,14 +378,28 @@ export default function AutomationsListPage() {
           </StaggerContainer>
         ) : (
           <GlassPanel className="p-8">
-            <EmptyState
-              icon={<Zap className="h-8 w-8" />}
-              message={
-                items.length === 0
-                  ? t('automations.empty', 'No automations yet. Create a typed automation to get started!')
-                  : t('automations.noMatch', 'No automations match your filters')
-              }
-            />
+            {items.length === 0 ? (
+              <EmptyState
+                icon={<Zap className="h-8 w-8" />}
+                message={t('automations.empty', 'No automations yet. Create a typed automation to get started!')}
+                actionTo={{
+                  label: t('automations.empty.cta', 'Create automation'),
+                  to: '/automations/new',
+                }}
+              />
+            ) : (
+              <EmptyState
+                icon={<Zap className="h-8 w-8" />}
+                message={t('automations.noMatch', 'No automations match your filters')}
+                action={{
+                  label: t('automations.noMatch.cta', 'Reset filters'),
+                  onClick: () => {
+                    setSearch('');
+                    setStatusFilter('all');
+                  },
+                }}
+              />
+            )}
           </GlassPanel>
         )}
       </FadeIn>

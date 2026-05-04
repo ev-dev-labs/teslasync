@@ -232,7 +232,7 @@ function ChannelFormModal({ channel, onClose, onSaved }: {
                         key={ct.value}
                         className={cn(
                           'flex flex-col items-center gap-1.5 p-3 text-xs font-medium cursor-pointer transition-all',
-                          kind === ct.value ? 'border-neon-cyan/40 bg-neon-cyan/10' : 'hover:bg-white/10',
+                          kind === ct.value ? 'border-neon-cyan/40 bg-neon-cyan/10' : 'hover:bg-[var(--surface-2)]',
                         )}
                         onClick={() => { setKind(ct.value); setConfig({}); setTestResult(null); }}
                       >
@@ -370,7 +370,7 @@ export function NotificationChannelsView() {
               <GlassPanel
                 key={ch.id}
                 className={cn(
-                  'p-5 space-y-4 transition-all duration-300',
+                  'p-5 space-y-4 transition-all duration-normal',
                   ch.enabled ? 'ring-1 ring-white/[0.08]' : 'opacity-60',
                 )}
               >
@@ -409,7 +409,7 @@ export function NotificationChannelsView() {
                   ))}
                 </div>
 
-                <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                <div className="flex items-center gap-2 pt-2 border-t border-[var(--border-subtle)]">
                   <Button
                     variant="primary"
                     size="sm"
@@ -450,7 +450,7 @@ export function NotificationChannelsView() {
 
           {!isLoading && channels.length === 0 && (
             <div className="col-span-full">
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Bell className="h-8 w-8" />}
                 title={t('notifications.channels.empty.title', 'No channels configured')}
                 message={t('notifications.channels.empty.message', 'Add a notification channel to start receiving alerts via Discord, Slack, Telegram, Email, and more.')}

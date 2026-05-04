@@ -337,7 +337,7 @@ export default function ChatbotPage() {
               <div className="flex flex-col items-center justify-center h-full space-y-6 py-12">
                 <div className="relative">
                   <div className="absolute inset-0 rounded-full bg-purple-500/10 blur-xl scale-150" />
-                  <div className="relative rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-6 border border-white/5">
+                  <div className="relative rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-6 border border-[var(--border-subtle)]">
                     <Bot className="h-12 w-12 text-purple-300" aria-hidden="true" />
                   </div>
                 </div>

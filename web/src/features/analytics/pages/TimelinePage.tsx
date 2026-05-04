@@ -7,7 +7,7 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Select, DataTable, type Column } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
@@ -132,7 +132,7 @@ export default function TimelinePage() {
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
   const enabled = activeId !== '';
 
-  const { data: timelineData, isLoading: tlLoading, error: timelineError, refetch } = useQuery({
+  const timelineQuery = useQuery({
     queryKey: ['vehicle-timeline', activeId],
     queryFn: () =>
       request<{ transitions: StateRecord[] }>(
@@ -140,6 +140,7 @@ export default function TimelinePage() {
       ),
     enabled,
   });
+  const { data: timelineData, isLoading: tlLoading, error: timelineError, refetch } = timelineQuery;
 
   const { data: summaryData, isLoading: sumLoading, error: summaryError } = useQuery({
     queryKey: ['vehicle-summary', activeId],
@@ -254,6 +255,7 @@ export default function TimelinePage() {
 
   const actions = (
     <div className="flex items-center gap-3">
+      <DataFreshnessAuto query={timelineQuery} />
       {vehicleOptions.length > 1 && (
         <Select
           options={vehicleOptions}
@@ -312,7 +314,7 @@ export default function TimelinePage() {
       {/* State timeline bar */}
       <FadeIn delay={0.1}>
         <GlassPanel className="mb-6 p-4">
-          <p className="mb-3 text-sm font-semibold text-white/90">
+          <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
             {t('timeline.stateTimeline', 'State Timeline')}
           </p>
           {stateRecords.length === 0 ? (
@@ -346,7 +348,7 @@ export default function TimelinePage() {
                   className="inline-block h-2.5 w-2.5 rounded-full"
                   style={{ backgroundColor: color }}
                 />
-                <span className="text-xs capitalize text-white/50">
+                <span className="text-xs capitalize text-[var(--text-secondary)]">
                   {state}
                 </span>
               </div>
@@ -358,13 +360,13 @@ export default function TimelinePage() {
       {/* Daily breakdown stacked chart */}
       <FadeIn delay={0.2}>
         <GlassPanel className="mb-6 p-4">
-          <p className="mb-3 text-sm font-semibold text-white/90">
+          <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
             {t('timeline.dailyBreakdown', 'Daily Breakdown')}
           </p>
           {dayLoading ? (
             <Skeleton height={280} />
           ) : daily.length === 0 ? (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Clock className="h-8 w-8" />}
               message={t('timeline.noDailyData', 'No daily data available yet')}
             />
@@ -396,7 +398,7 @@ export default function TimelinePage() {
       {/* State transitions table */}
       <FadeIn delay={0.3}>
         <GlassPanel className="p-4">
-          <p className="mb-3 text-sm font-semibold text-white/90">
+          <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
             {t('timeline.stateTransitions', 'State Transitions')}
           </p>
           <DataTable

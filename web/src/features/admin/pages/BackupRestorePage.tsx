@@ -3,12 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, DataTable, Textarea, type Column } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { MetricCard, TimeStamp } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useToast } from '@/components/feedback/Toast';
-import { formatDateTime, formatDurationMsCompact, formatRelative } from '@/lib/dateFormat';
+import { formatDurationMsCompact, formatRelative } from '@/lib/dateFormat';
 import { formatBytes, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
@@ -371,7 +371,7 @@ export default function BackupRestorePage() {
       header: t('backup.frequency', 'Frequency'),
       render: (row) => (
         <span className="text-sm text-[var(--text-secondary)]">
-          {row.frequency_days === 1 ? t('backup.daily', 'Daily') : t('backup.everyNDays', `Every ${row.frequency_days}d`, { count: row.frequency_days })}
+          {row.frequency_days === 1 ? t('backup.daily', 'Daily') : t('backup.everyNDays', { days: row.frequency_days, defaultValue: 'Every {{days}}d' })}
         </span>
       ),
     },
@@ -435,9 +435,7 @@ export default function BackupRestorePage() {
       header: t('backup.time', 'Time'),
       sortable: true,
       render: (row) => (
-        <span className="text-sm text-[var(--text-secondary)]">
-          {formatDateTime(row.created_at)}
-        </span>
+        <TimeStamp value={row.created_at} className="text-sm text-[var(--text-secondary)]" />
       ),
     },
     {
@@ -671,7 +669,7 @@ export default function BackupRestorePage() {
             </Button>
           </div>
           {runs.length === 0 && !loadingRuns ? (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Icons.clock className="h-10 w-10 text-[var(--text-muted)]" />}
               title={t('backup.noRuns', 'No backup runs yet')}
               message={t('backup.noRunsMessage', 'Trigger a backup or wait for the scheduled run.')}
@@ -771,7 +769,7 @@ export default function BackupRestorePage() {
           </div>
 
           {/* dynamic provider fields */}
-          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-4">
+          <div className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-4">
             <p className="mb-3 text-sm font-medium text-[var(--text-secondary)]">
               {t('backup.providerSettings', 'Provider Settings')}
             </p>
@@ -871,7 +869,7 @@ export default function BackupRestorePage() {
 
             {/* Metadata */}
             {previewData.metadata && Object.keys(previewData.metadata).length > 0 && (
-              <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+              <div className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-3">
                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                   {t('backup.metadata', 'Backup Metadata')}
                 </p>
@@ -901,7 +899,7 @@ export default function BackupRestorePage() {
                 />
               </div>
             ) : (
-              <EmptyState message={t('backup.noTables', 'No tables found in backup')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('backup.noTables', 'No tables found in backup')} />
             )}
 
             <div className="flex justify-end pt-2">

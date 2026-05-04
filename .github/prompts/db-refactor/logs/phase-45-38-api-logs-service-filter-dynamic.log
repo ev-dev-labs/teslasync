@@ -1,0 +1,84 @@
+=== GATE ===
+=== PREFLIGHT ===
+PROMPT=phase-45/38-api-logs-service-filter-dynamic
+BRANCH=phase-45/32-bulk-actions-framework
+HEAD=b2864d55
+=== ANCHORS ===
+ANCHOR[helper]=True
+ANCHOR[i18n]=True
+ANCHOR[helperTest]=True
+ANCHOR[page]=True
+=== TYPECHECK ===
+TYPECHECK_EXIT=0
+=== I18N ===
+I18N["serviceFilterAria":]=True
+I18N["serviceCount":]=True
+I18N_MISSING_COUNT=0
+=== LINT ===
+
+> teslasync-web@2.0.0 lint
+> eslint . --report-unused-disable-directives --max-warnings 0 && npm run lint:i18n && npm run lint:light-mode && npm run audit:empty-state && npm run audit:tooltip-text
+
+
+> teslasync-web@2.0.0 lint:i18n
+> node scripts/lint-i18n-no-template-literals.mjs
+
+[i18n-lint] OK ΓÇö no template literals in src/i18n/*.json
+
+> teslasync-web@2.0.0 lint:light-mode
+> node scripts/audit-light-mode-parity.mjs
+
+
+Total violations: 0
+
+Allowed drift (LIGHT_MODE_ALLOWED_DRIFT): 0
+
+OK ΓÇö light-mode CSS-var parity holds.
+
+> teslasync-web@2.0.0 audit:empty-state
+> node scripts/audit-empty-state-cta.mjs
+
+OK ΓÇö every <EmptyState> in src\features has a CTA or // no-action: exemption
+
+> teslasync-web@2.0.0 audit:tooltip-text
+> node scripts/audit-tooltip-text-color.mjs
+
+OK ΓÇö no tooltip content overrides intrinsic text colour
+LINT_EXIT=0
+=== FRONTEND_TEST ===
+
+> teslasync-web@2.0.0 test
+> vitest run --run src/features/admin
+
+6:51:07 PM [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+6:51:07 PM [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+Both esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored. The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+
+[1m[46m RUN [49m[22m [36mv4.1.2 [39m[90mD:/repos/teslasync/web[39m
+
+ [32mΓ£ô[39m src/features/admin/lib/__tests__/serviceOptions.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+[90mstdout[2m | src/features/admin/components/__tests__/RedisDiagnosticEmptyState.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/features/admin/components/__tests__/RedisDiagnosticEmptyState.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 259[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m16 passed[39m[22m[90m (16)[39m
+[2m   Start at [22m 18:51:07
+[2m   Duration [22m 4.30s[2m (transform 1.51s, setup 231ms, import 2.28s, tests 279ms, environment 2.38s)[22m
+
+FRONTEND_TEST_EXIT=0
+=== AUDIT_VIOLATIONS ===
+DEAD_OPTIONS_LEAKED=0
+HELPER_WIRED=True
+MISSING_LIVE_ENTRIES=0
+HELPER_EXPORTED=True
+=== GIT_STATUS ===
+A  web/src/features/admin/lib/__tests__/serviceOptions.test.ts
+A  web/src/features/admin/lib/serviceOptions.ts
+M  web/src/features/admin/pages/ApiLogsPage.tsx
+M  web/src/i18n/en.json
+UNEXPECTED_STATUS_COUNT=0
+=== STATUS ===
+EXIT=0
+STATUS=DONE

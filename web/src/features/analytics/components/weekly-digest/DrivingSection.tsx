@@ -32,7 +32,7 @@ export function DrivingSection({ metrics, dailyDistanceData }: DrivingSectionPro
 
         {/* Daily Distance BarChart */}
         <GlassPanel className="p-4">
-          <span className="mb-3 block text-sm font-medium text-white/70">
+          <span className="mb-3 block text-sm font-medium text-[var(--text-secondary)]">
             {t('analytics.weeklyDigest.dailyDistance', 'Daily Distance (km)')}
           </span>
           {dailyDistanceData.length > 0 ? (
@@ -55,7 +55,7 @@ export function DrivingSection({ metrics, dailyDistanceData }: DrivingSectionPro
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               message={t('analytics.weeklyDigest.noDailyDistance', 'No driving distance data is available for this week.')}
               className="py-8"
             />
@@ -105,7 +105,7 @@ export function DrivingSection({ metrics, dailyDistanceData }: DrivingSectionPro
               </Badge>
               <span className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <span className="flex flex-col">
-                  <span className="text-xs text-white/50">
+                  <span className="text-xs text-[var(--text-secondary)]">
                     {t('analytics.weeklyDigest.date', 'Date')}
                   </span>
                   <span className="text-sm font-semibold text-white">
@@ -113,7 +113,7 @@ export function DrivingSection({ metrics, dailyDistanceData }: DrivingSectionPro
                   </span>
                 </span>
                 <span className="flex flex-col">
-                  <span className="text-xs text-white/50">
+                  <span className="text-xs text-[var(--text-secondary)]">
                     {t('analytics.weeklyDigest.distance', 'Distance')}
                   </span>
                   <span className="text-sm font-semibold text-white">
@@ -121,7 +121,7 @@ export function DrivingSection({ metrics, dailyDistanceData }: DrivingSectionPro
                   </span>
                 </span>
                 <span className="flex flex-col">
-                  <span className="text-xs text-white/50">
+                  <span className="text-xs text-[var(--text-secondary)]">
                     {t('analytics.weeklyDigest.duration', 'Duration')}
                   </span>
                   <span className="text-sm font-semibold text-white">
@@ -129,7 +129,7 @@ export function DrivingSection({ metrics, dailyDistanceData }: DrivingSectionPro
                   </span>
                 </span>
                 <span className="flex flex-col">
-                  <span className="text-xs text-white/50">
+                  <span className="text-xs text-[var(--text-secondary)]">
                     {t('analytics.weeklyDigest.efficiency', 'Efficiency')}
                   </span>
                   <span className="text-sm font-semibold text-white">
@@ -139,7 +139,7 @@ export function DrivingSection({ metrics, dailyDistanceData }: DrivingSectionPro
               </span>
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               message={t('analytics.weeklyDigest.noTopDrive', 'No top drive is available for this week yet.')}
               className="py-6"
             />

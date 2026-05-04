@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AppSettings } from '@/api/types'
 import {
@@ -9,6 +9,7 @@ import { Skeleton, DraftRecoveryBanner } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { useFormDraft } from '@/hooks/useFormDraft'
+import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { parseSettingEnum, isSettingMiles, isSettingFahrenheit, isSettingPSI, isSettingBar } from '@/lib/parseSettingEnum'
 import { SettingField } from './SettingField'
 import {
@@ -77,6 +78,22 @@ export function GeneralSettings() {
     },
   })
   const [saved, setSaved] = useState(false)
+
+  // Phase-45 / Prompt 16: in-app navigation guard. The settings form has no
+  // explicit isDirty flag — diff the in-progress draft against the persisted
+  // server snapshot so sidebar clicks / browser back surface a discard
+  // dialog while the user has un-applied changes. Falls back to "no diff
+  // possible" until settings load.
+  const isDirty = useMemo(() => {
+    if (!settings) return false
+    if (settingsMut.isPending) return false
+    try {
+      return JSON.stringify(form) !== JSON.stringify(settings)
+    } catch {
+      return false
+    }
+  }, [form, settings, settingsMut.isPending])
+  useNavigationGuard(isDirty, t('forms.unsavedSettings', 'You have unsaved settings.'))
 
   const [formInited, setFormInited] = useState(false)
   if (settings && !formInited) {

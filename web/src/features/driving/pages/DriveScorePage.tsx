@@ -764,7 +764,7 @@ export default function DriveScorePage() {
 
       {/* -------- Empty guard -------- */}
       {!isLoading && scoredDrives.length === 0 && (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Icons.speed className="h-12 w-12 text-[var(--text-muted)]" />}
           title={t('driveScore.emptyTitle', 'No Scored Drives')}
           message={t(
@@ -1115,7 +1115,7 @@ export default function DriveScorePage() {
                   {relevantTips.map((tip, idx) => (
                     <div
                       key={idx}
-                      className="flex items-start gap-3 rounded-lg bg-white/5 p-3"
+                      className="flex items-start gap-3 rounded-lg bg-[var(--surface-2)] p-3"
                     >
                       <Icons.lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-yellow-400" />
                       <span className="text-sm text-[var(--text-primary)]">{tip.key}</span>
@@ -1228,7 +1228,7 @@ export default function DriveScorePage() {
               <div className="overflow-x-auto">
                 <div className="min-w-[800px]">
                   {/* Table header */}
-                  <div className="grid grid-cols-8 gap-2 border-b border-white/10 px-4 pb-2">
+                  <div className="grid grid-cols-8 gap-2 border-b border-[var(--border-subtle)] px-4 pb-2">
                     <SortHeader
                       field="date"
                       label={t('driveScore.colDate', 'Date')}
@@ -1269,7 +1269,7 @@ export default function DriveScorePage() {
                   {paginatedDrives.map(({ drive, score: ds }) => (
                     <div
                       key={drive.id}
-                      className="grid grid-cols-8 gap-2 border-b border-white/5 px-4 py-3 hover:bg-white/5 transition-colors"
+                      className="grid grid-cols-8 gap-2 border-b border-[var(--border-subtle)] px-4 py-3 hover:bg-[var(--surface-2)] transition-colors"
                     >
                       {/* Date */}
                       <span className="text-sm text-[var(--text-primary)] truncate">
@@ -1478,7 +1478,7 @@ export default function DriveScorePage() {
               </Grid>
             ) : (
               <GlassPanel className="p-6">
-                <EmptyState message={t('driveScore.noPeriodStats', 'No weekly/monthly averages available yet')} />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('driveScore.noPeriodStats', 'No weekly/monthly averages available yet')} />
               </GlassPanel>
             )}
           </StaggerItem>
@@ -1497,7 +1497,7 @@ export default function DriveScorePage() {
                       'flex flex-col items-center rounded-xl border p-4 text-center transition-all',
                       ach.unlocked
                         ? 'border-yellow-500/30 bg-yellow-500/5'
-                        : 'border-white/5 bg-white/[0.02] opacity-40',
+                        : 'border-[var(--border-subtle)] bg-white/[0.02] opacity-40',
                     )}
                   >
                     <div
@@ -1505,7 +1505,7 @@ export default function DriveScorePage() {
                         'mb-2 flex h-10 w-10 items-center justify-center rounded-full',
                         ach.unlocked
                           ? 'bg-yellow-500/20 text-yellow-400'
-                          : 'bg-white/5 text-[var(--text-muted)]',
+                          : 'bg-[var(--surface-2)] text-[var(--text-muted)]',
                       )}
                     >
                       {ach.icon}
@@ -1650,7 +1650,7 @@ export default function DriveScorePage() {
           </StaggerItem>
           </>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Icons.efficiency className="h-8 w-8 opacity-20" />}
             message={t('common.noData', 'No data available')}
             className="py-8"

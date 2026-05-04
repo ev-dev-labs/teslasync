@@ -44,7 +44,7 @@ export default function GForcePanel({ vehicleId }: GForcePanelProps) {
   return (
     <FadeIn delay={0.05}>
       <GlassPanel className="p-6">
-        <h2 className="mb-4 text-lg font-semibold text-white/90">
+        <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
           {t('dynamics.gForce', 'Acceleration G-Force')}
         </h2>
         {hasAny ? (
@@ -69,7 +69,7 @@ export default function GForcePanel({ vehicleId }: GForcePanelProps) {
             />
           </Grid>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             message={t('dynamics.gForceNoData', 'No G-force telemetry received yet')}
           />
         )}

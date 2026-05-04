@@ -59,10 +59,10 @@ function PresetCard({ preset }: { preset: AutomationPreset }) {
           <Icon className="h-5 w-5 text-cyan-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-white/90 truncate">
+          <h3 className="text-sm font-semibold text-[var(--text-primary)] truncate">
             {preset.name}
           </h3>
-          <p className="text-xs text-white/50 mt-0.5">
+          <p className="text-xs text-[var(--text-secondary)] mt-0.5">
             {triggerLabel
               ? t(triggerLabel.key, triggerLabel.fallback)
               : t('automations.builder.noTrigger', 'No trigger configured')}
@@ -75,7 +75,7 @@ function PresetCard({ preset }: { preset: AutomationPreset }) {
         </Badge>
       </div>
 
-      <p className="text-xs text-white/60 leading-relaxed line-clamp-2">
+      <p className="text-xs text-[var(--text-secondary)] leading-relaxed line-clamp-2">
         {preset.description}
       </p>
 
@@ -130,7 +130,7 @@ export function PresetGallery({ category }: PresetGalleryProps) {
 
   if (presetList.length === 0) {
     return (
-      <EmptyState
+      <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
         icon={<Clock className="h-8 w-8" />}
         message={t('automations.presets.empty', 'No preset templates available')}
       />

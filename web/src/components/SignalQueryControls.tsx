@@ -8,7 +8,8 @@ import { useTranslation } from 'react-i18next'
 import { request } from '@/api/client'
 import { GlassPanel, Badge, Button, Input, DataTable, type Column } from './ui'
 import { fmtInt } from '../lib/numberFormat'
-import { TIME_RANGE_PRESETS } from '../lib/constants'
+import { TIME_RANGE_PRESETS, matchTimeRangePreset } from '../lib/constants'
+import { cn } from '../lib/cn'
 import { Search, X, Play, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 
 
@@ -70,7 +71,7 @@ export const TYPE_BADGE_COLOR: Record<string, 'cyan' | 'green' | 'amber' | 'neut
 // Body cells in a 100s-of-rows table — readability wins over saturation.
 // Use toned-down 300-shades; light-mode CSS overrides invert them on white.
 export const TYPE_VALUE_COLOR: Record<string, string> = {
-  num: 'text-cyan-300', str: 'text-emerald-300', bool: 'text-amber-300', null: 'text-white/40',
+  num: 'text-cyan-300', str: 'text-emerald-300', bool: 'text-amber-300', null: 'text-[var(--text-muted)]',
 }
 
 export const PAGE_SIZES = [25, 50, 100]
@@ -184,6 +185,7 @@ interface DateTimeRangeProps {
 
 export function DateTimeRangeControls({ fromStr, toStr, onFromChange, onToChange, onPreset }: DateTimeRangeProps) {
   const { t } = useTranslation()
+  const activePresetHours = matchTimeRangePreset(fromStr, toStr)
   const inputClass = "w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-mono text-[var(--text-primary)] outline-none focus:border-neon-cyan/40"
 
   return (
@@ -199,15 +201,25 @@ export function DateTimeRangeControls({ fromStr, toStr, onFromChange, onToChange
       <div className="space-y-1.5">
         <label className="metric-label">{t('signalQuery.quickRange', 'Quick Range')}</label>
         <div className="flex items-center gap-1">
-          {TIME_RANGE_PRESETS.map(tp => (
-            <button
-              key={tp.label}
-              onClick={() => onPreset(tp.hours)}
-              className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-neon-cyan/30 transition-colors"
-            >
-              {tp.label}
-            </button>
-          ))}
+          {TIME_RANGE_PRESETS.map(tp => {
+            const active = activePresetHours === tp.hours
+            return (
+              <button
+                key={tp.label}
+                onClick={() => onPreset(tp.hours)}
+                aria-pressed={active}
+                aria-label={t('signalQuery.preset.aria', '{{label}} time range', { label: tp.label })}
+                className={cn(
+                  "rounded-lg border px-3 py-2 text-xs transition-colors",
+                  active
+                    ? "border-neon-cyan/40 bg-neon-cyan/10 text-[var(--text-primary)]"
+                    : "border-white/[0.08] bg-white/[0.03] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-neon-cyan/30",
+                )}
+              >
+                {tp.label}
+              </button>
+            )
+          })}
         </div>
       </div>
     </div>
@@ -276,19 +288,19 @@ export function SignalDataTable({ rows, page, totalPages, total, perPage, onPage
       key: 'index',
       header: '#',
       render: (row) => row._rowNum,
-      className: 'text-white/40 font-mono',
+      className: 'text-[var(--text-muted)] font-mono',
     },
     {
       key: 'created_at',
       header: 'Timestamp',
       render: (row) => formatTimestampMs(row.created_at),
-      className: 'font-mono text-white/60',
+      className: 'font-mono text-[var(--text-secondary)]',
     },
     {
       key: 'signal',
       header: 'Signal',
       render: (row) => row.signal,
-      className: 'font-mono text-white/90',
+      className: 'font-mono text-[var(--text-primary)]',
     },
     {
       key: 'value',
@@ -322,11 +334,11 @@ export function SignalDataTable({ rows, page, totalPages, total, perPage, onPage
       {/* Server-side pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.06]">
-          <span className="text-[10px] text-white/40">{fmtInt(total)} records</span>
+          <span className="text-[10px] text-[var(--text-muted)]">{fmtInt(total)} records</span>
           <div className="flex items-center gap-1">
             <button onClick={() => onPageChange(1)} disabled={page <= 1} className="p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronsLeft className="h-3.5 w-3.5" /></button>
             <button onClick={() => onPageChange(page - 1)} disabled={page <= 1} className="p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronLeft className="h-3.5 w-3.5" /></button>
-            <span className="px-2 text-xs text-white/60">Page {page} of {totalPages}</span>
+            <span className="px-2 text-xs text-[var(--text-secondary)]">Page {page} of {totalPages}</span>
             <button onClick={() => onPageChange(page + 1)} disabled={page >= totalPages} className="p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronRight className="h-3.5 w-3.5" /></button>
             <button onClick={() => onPageChange(totalPages)} disabled={page >= totalPages} className="p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronsRight className="h-3.5 w-3.5" /></button>
           </div>

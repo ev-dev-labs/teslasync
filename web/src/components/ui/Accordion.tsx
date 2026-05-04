@@ -25,7 +25,7 @@ export function Accordion({ title, children, defaultOpen = false, icon, badge, c
         {icon && <div className="text-[var(--text-muted)]">{icon}</div>}
         <span className="flex-1 text-sm font-medium text-[var(--text-primary)]">{title}</span>
         {badge}
-        <ChevronDown className={cn('h-4 w-4 text-[var(--text-muted)] transition-transform duration-200', open && 'rotate-180')} />
+        <ChevronDown className={cn('h-4 w-4 text-[var(--text-muted)] transition-transform duration-normal', open && 'rotate-180')} />
       </button>
       <AnimatePresence initial={false}>
         {open && (

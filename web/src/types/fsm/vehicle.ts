@@ -24,7 +24,7 @@ export const VEHICLE_STATE_ENTRIES: Record<VehicleState, StateEntry> = {
   parked:   { variant: 'info',    overrides: { badgeDot: 'bg-cyan-500', bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' } },
   updating: { variant: 'info',    overrides: { badgeDot: 'bg-indigo-500', bg: 'bg-indigo-500/10', text: 'text-indigo-400', dot: 'bg-indigo-400' } },
   asleep:   { variant: 'neutral', overrides: { badgeDot: 'bg-purple-500' } },
-  offline:  { variant: 'danger',  overrides: { bg: 'bg-gray-600/10', text: 'text-gray-500', dot: 'bg-gray-500' } },
+  offline:  { variant: 'danger',  overrides: { bg: 'bg-gray-600/10', text: 'text-[var(--text-muted)]', dot: 'bg-gray-500' } },
 }
 
 /**

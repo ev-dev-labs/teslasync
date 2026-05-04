@@ -132,14 +132,14 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
             <AnimatedNumber
               value={displayDistance}
-              className="text-2xl font-bold text-white/90"
+              className="text-2xl font-bold text-[var(--text-primary)]"
             />
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               {distanceUnit} {t('widget.yearReview.inYear', 'in {year}').replace('{year}', String(currentYear))}
             </span>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Calendar className="h-5 w-5" />}
             message={t('widget.yearReview.noData', 'No year-in-review data')}
             className="py-4"
@@ -165,7 +165,7 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
       {data ? (
         <WidgetStatGrid stats={allStats} cols={isWide ? 4 : 2} />
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Calendar className="h-5 w-5" />}
           message={t('widget.yearReview.noData', 'No year-in-review data')}
           className="py-4"

@@ -2,9 +2,10 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PlayCircle, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui';
+import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useAutomationHistory } from '@/api/hooks/useAutomations';
-import { formatDurationMs, formatRelativeTime } from '@/lib/dateFormat';
+import { formatDurationMs } from '@/lib/dateFormat';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed } from './shared';
@@ -47,10 +48,10 @@ function CompactView({
 }) {
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1">
-      <span className="text-2xl font-bold text-white/90">{fmtNumber(successRate, 1)}%</span>
-      <span className="text-[10px] text-white/40">{t('widget.successRate', 'Success Rate')}</span>
+      <span className="text-2xl font-bold text-[var(--text-primary)]">{fmtNumber(successRate, 1)}%</span>
+      <span className="text-[10px] text-[var(--text-muted)]">{t('widget.successRate', 'Success Rate')}</span>
       {lastRunTime && (
-        <span className="text-xs text-white/50">{formatRelativeTime(lastRunTime)}</span>
+        <TimeStamp value={lastRunTime} className="text-xs text-[var(--text-secondary)]" />
       )}
     </div>
   );
@@ -115,7 +116,7 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
             t={t}
           />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<PlayCircle className="h-5 w-5" />}
             message={t('widget.noAutomationRuns', 'No automation runs yet')}
             className="py-4"
@@ -129,7 +130,7 @@ export default function AutomationHistoryWidget({ size }: WidgetProps) {
               {fmtNumber(successRate, 1)}% {t('widget.successRate', 'Success Rate')}
             </Badge>
             {summary && (
-              <span className="text-[10px] text-white/40">
+              <span className="text-[10px] text-[var(--text-muted)]">
                 {fmtInt(summary.total_executions)} {t('widget.totalRuns', 'runs')}
               </span>
             )}

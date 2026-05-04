@@ -106,7 +106,7 @@ export function SessionList({
               {t('common.loading', 'Loading…')}
             </p>
           ) : sessions.length === 0 ? (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<MessageSquare className="h-6 w-6" />}
               message={t('chatbot.noSessions', 'No conversations yet')}
               className="py-8"

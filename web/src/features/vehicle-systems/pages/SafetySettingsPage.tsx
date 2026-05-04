@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
+import { TimeStamp } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -146,12 +147,12 @@ function SignalCard({
       ? 'text-green-400'
       : positive === false
         ? 'text-red-400'
-        : 'text-white/70';
+        : 'text-[var(--text-secondary)]';
   return (
     <GlassPanel className="p-4 flex flex-col items-center gap-2 text-center">
       <span className={color}>{icon}</span>
       <span className={cn('text-sm font-bold', color)}>{value}</span>
-      <span className="text-[10px] uppercase tracking-wider text-white/40">
+      <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
         {label}
       </span>
     </GlassPanel>
@@ -179,13 +180,13 @@ function SafetyCard({
         <div
           className={cn(
             'rounded-lg p-2',
-            enabled ? 'bg-neon-green/10' : 'bg-white/5',
+            enabled ? 'bg-neon-green/10' : 'bg-[var(--surface-2)]',
           )}
         >
           <span
             className={cn(
               'block h-5 w-5 rounded-md',
-              enabled ? 'bg-neon-green/40' : 'bg-white/10',
+              enabled ? 'bg-neon-green/40' : 'bg-[var(--surface-2)]',
             )}
           />
         </div>
@@ -200,7 +201,7 @@ function SafetyCard({
         <span
           className={cn(
             'h-2 w-2 rounded-full shrink-0',
-            enabled ? 'bg-neon-green' : 'bg-white/20',
+            enabled ? 'bg-neon-green' : 'bg-[var(--surface-2)]',
           )}
         />
       </div>
@@ -339,9 +340,7 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
       header: t('Time'),
       sortable: true,
       render: (row) => (
-        <span className="text-[var(--text-muted)] whitespace-nowrap text-xs">
-          {formatDateTime(row.created_at)}
-        </span>
+        <TimeStamp value={row.created_at} className="text-[var(--text-muted)] whitespace-nowrap text-xs" />
       ),
     },
     {
@@ -542,7 +541,7 @@ export default function SafetySettingsPage() {
 
       {/* Empty state */}
       {!isLoading && !latest && (
-        <EmptyState message={t('No safety data available for this vehicle.')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No safety data available for this vehicle.')} />
       )}
 
       {/* Content */}
@@ -598,7 +597,7 @@ export default function SafetySettingsPage() {
           {/* ---- Live Safety Signals ---- */}
           <FadeIn delay={0.05}>
             <GlassPanel className="p-5">
-              <p className="mb-4 text-sm font-semibold text-white/90">
+              <p className="mb-4 text-sm font-semibold text-[var(--text-primary)]">
                 {t('safety.liveSignals', 'Live Safety Signals')}
               </p>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -657,7 +656,7 @@ export default function SafetySettingsPage() {
           {/* ---- Driving Statistics ---- */}
           <FadeIn delay={0.1}>
             <GlassPanel className="p-5">
-              <p className="mb-4 text-sm font-semibold text-white/90">
+              <p className="mb-4 text-sm font-semibold text-[var(--text-primary)]">
                 {t('safety.drivingStats', 'Driving Statistics')}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -755,7 +754,7 @@ export default function SafetySettingsPage() {
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <EmptyState message={t('No safety state history to chart yet.')} />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No safety state history to chart yet.')} />
               )}
             </GlassPanel>
           </FadeIn>
@@ -767,7 +766,7 @@ export default function SafetySettingsPage() {
                 {t('Safety Settings History')}
               </h2>
               {sortedHistory.length === 0 ? (
-                <EmptyState message={t('No history records found.')} />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No history records found.')} />
               ) : (
                 <DataTable<SafetySnapshot>
                   columns={historyColumns}

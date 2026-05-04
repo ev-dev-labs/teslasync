@@ -46,7 +46,7 @@ function arrowColor(value: number, override?: string): string {
   if (override) return override;
   if (value > 0) return 'text-emerald-400';
   if (value < 0) return 'text-red-400';
-  return 'text-white/30';
+  return 'text-[var(--text-muted)]';
 }
 
 function strokeForValue(value: number, maxValue: number): number {
@@ -81,7 +81,7 @@ export function WidgetFlowDiagram({
   );
 
   if (nodes.length === 0) {
-    return <EmptyState message={emptyMessage} className="py-8" />;
+    return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyMessage} className="py-8" />;
   }
 
   const r = compact ? NODE_RADIUS_COMPACT : NODE_RADIUS;
@@ -172,7 +172,7 @@ export function WidgetFlowDiagram({
             >
               <div className="flex h-full w-full flex-col items-center justify-center">
                 {node.icon && (
-                  <span className={cn('text-white/80', compact ? 'text-[5px]' : 'text-[6px]')}>
+                  <span className={cn('text-[var(--text-primary)]', compact ? 'text-[5px]' : 'text-[6px]')}>
                     {node.icon}
                   </span>
                 )}
@@ -180,7 +180,7 @@ export function WidgetFlowDiagram({
                   value={node.value}
                   decimals={1}
                   className={cn(
-                    'font-semibold text-white/90',
+                    'font-semibold text-[var(--text-primary)]',
                     compact ? 'text-[4px]' : 'text-[5px]',
                   )}
                 />

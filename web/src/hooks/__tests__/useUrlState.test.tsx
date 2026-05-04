@@ -1,9 +1,10 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, fireEvent, render, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import {
   useUrlArray,
+  useUrlBatch,
   useUrlBoolean,
   useUrlEnum,
   useUrlNumber,
@@ -182,5 +183,123 @@ describe('useUrlArray', () => {
     });
     act(() => result.current[1](['x', 'y']));
     expect(result.current[0]).toEqual(['x', 'y']);
+  });
+});
+
+describe('useUrlBatch', () => {
+  it('writes multiple keys atomically in one navigation', () => {
+    function Probe() {
+      const [from] = useUrlString('from', '');
+      const [to] = useUrlString('to', '');
+      const setBatch = useUrlBatch();
+      return (
+        <>
+          <button onClick={() => setBatch({ from: 'A', to: 'B' })}>set</button>
+          <span data-testid="from">{from}</span>
+          <span data-testid="to">{to}</span>
+        </>
+      );
+    }
+    const { getByText, getByTestId } = render(
+      <MemoryRouter initialEntries={['/']}>
+        <Probe />
+      </MemoryRouter>,
+    );
+    fireEvent.click(getByText('set'));
+    expect(getByTestId('from').textContent).toBe('A');
+    expect(getByTestId('to').textContent).toBe('B');
+  });
+
+  it('null deletes the key', () => {
+    function Probe() {
+      const [from] = useUrlString('from', '');
+      const [to] = useUrlString('to', '');
+      const setBatch = useUrlBatch();
+      return (
+        <>
+          <button onClick={() => setBatch({ from: null, to: 'kept' })}>clear</button>
+          <span data-testid="from">{from}</span>
+          <span data-testid="to">{to}</span>
+        </>
+      );
+    }
+    const { getByText, getByTestId } = render(
+      <MemoryRouter initialEntries={['/?from=oldA&to=oldB']}>
+        <Probe />
+      </MemoryRouter>,
+    );
+    expect(getByTestId('from').textContent).toBe('oldA');
+    fireEvent.click(getByText('clear'));
+    expect(getByTestId('from').textContent).toBe('');
+    expect(getByTestId('to').textContent).toBe('kept');
+  });
+
+  it('undefined deletes the key', () => {
+    function Probe() {
+      const [from] = useUrlString('from', '');
+      const setBatch = useUrlBatch();
+      return (
+        <>
+          <button onClick={() => setBatch({ from: undefined })}>clear</button>
+          <span data-testid="from">{from}</span>
+        </>
+      );
+    }
+    const { getByText, getByTestId } = render(
+      <MemoryRouter initialEntries={['/?from=keep']}>
+        <Probe />
+      </MemoryRouter>,
+    );
+    expect(getByTestId('from').textContent).toBe('keep');
+    fireEvent.click(getByText('clear'));
+    expect(getByTestId('from').textContent).toBe('');
+  });
+
+  it('empty string deletes the key (matches useUrlString default semantics)', () => {
+    function Probe() {
+      const [from] = useUrlString('from', '');
+      const setBatch = useUrlBatch();
+      return (
+        <>
+          <button onClick={() => setBatch({ from: '' })}>clear</button>
+          <span data-testid="from">{from}</span>
+        </>
+      );
+    }
+    const { getByText, getByTestId } = render(
+      <MemoryRouter initialEntries={['/?from=initial']}>
+        <Probe />
+      </MemoryRouter>,
+    );
+    expect(getByTestId('from').textContent).toBe('initial');
+    fireEvent.click(getByText('clear'));
+    expect(getByTestId('from').textContent).toBe('');
+  });
+
+  it('REGRESSION: two same-tick useUrlString setters lose the first write', () => {
+    // This test documents the structural bug useUrlBatch fixes. If this
+    // test starts FAILING, react-router-dom batching may have changed —
+    // re-evaluate whether useUrlBatch is still necessary.
+    function Probe() {
+      const [from, setFrom] = useUrlString('from', '');
+      const [to, setTo] = useUrlString('to', '');
+      return (
+        <>
+          <button onClick={() => { setFrom('A'); setTo('B'); }}>race</button>
+          <span data-testid="from">{from}</span>
+          <span data-testid="to">{to}</span>
+        </>
+      );
+    }
+    const { getByText, getByTestId } = render(
+      <MemoryRouter initialEntries={['/']}>
+        <Probe />
+      </MemoryRouter>,
+    );
+    fireEvent.click(getByText('race'));
+    // Only `to` survives. `from` is empty because the first setter's
+    // navigation was wiped by the second `replace`-mode navigation.
+    expect(getByTestId('from').textContent).toBe('');
+    expect(getByTestId('to').textContent).toBe('B');
   });
 });

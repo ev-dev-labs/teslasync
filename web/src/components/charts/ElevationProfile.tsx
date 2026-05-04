@@ -77,7 +77,9 @@ export function ElevationProfile({
         height={height}
         className={className}
       >
-        <EmptyState message={t('replay.elevation.noData', 'No elevation data available')} />
+        <EmptyState /* no-action: chart cannot meaningfully recover without data — show prose only */
+          message={t('replay.elevation.noData', 'No elevation data available')}
+        />
       </ChartContainer>
     );
   }

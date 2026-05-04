@@ -39,7 +39,7 @@ export function DriveStatCards({ drive, stats }: DriveStatCardsProps) {
           <StaggerItem><IconStatCard icon={DollarSign} color="#10b981" value={formatEnergyCost(stats.energyWh / 1000)} label={t('driveDetail.tripCost', 'Trip Cost')} /></StaggerItem>
         )}
         {stats.energyWh > 0 && drive.distanceMi > 0 && (
-          <StaggerItem><IconStatCard icon={TrendingDown} color="#06b6d4" value={`${currencySymbol}${(costPerDistanceUnit(stats.energyWh / 1000, drive.distanceMi) ?? 0).toFixed(3)}`} label={t('driveDetail.costPerUnit', `Cost / ${distanceUnit}`)} /></StaggerItem>
+          <StaggerItem><IconStatCard icon={TrendingDown} color="#06b6d4" value={`${currencySymbol}${(costPerDistanceUnit(stats.energyWh / 1000, drive.distanceMi) ?? 0).toFixed(3)}`} label={t('driveDetail.costPerUnit', { unit: distanceUnit, defaultValue: 'Cost / {{unit}}' })} /></StaggerItem>
         )}
       </StaggerContainer>
 

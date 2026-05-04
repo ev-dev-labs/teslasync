@@ -57,7 +57,7 @@ export function ServiceHealthSection() {
       ) : error ? (
         <QueryError error={error as Error} onRetry={() => refetch()} />
       ) : !data ? (
-        <EmptyState message={t('No telemetry data available')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No telemetry data available')} />
       ) : (
         <div className="space-y-4">
           <Grid cols={{ default: 2, md: 4 }} gap={3}>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, TrendingUp, Thermometer, Fuel, Gauge } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -24,6 +24,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
+import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { Drive } from '@/types/driving';
@@ -67,11 +68,14 @@ export default function EfficiencyPage() {
     distanceUnit, speedUnit, tempUnit, efficiencyUnit, isFahrenheit,
   } = useSettings();
 
-  const [startDate, setStartDate] = useState(() => {
+  const defaultStartDate = useMemo(() => {
     const d = new Date(); d.setDate(d.getDate() - 30);
     return d.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  }, []);
+  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [startDate, setStartDate] = useUrlString('from', defaultStartDate);
+  const [endDate, setEndDate] = useUrlString('to', defaultEndDate);
+  const setRangeBatch = useUrlBatch();
 
   /* ---- Filtered drives ---- */
   const filteredDrives = useMemo(() => {
@@ -214,6 +218,7 @@ export default function EfficiencyPage() {
         <DateRangeFilter
           startDate={startDate} endDate={endDate}
           onStartDateChange={setStartDate} onEndDateChange={setEndDate}
+          onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
         />
       </FadeIn>
 
@@ -254,7 +259,7 @@ export default function EfficiencyPage() {
               </div>
             </div>
           ) : (
-            <EmptyState message={t('efficiency.noStats', 'No efficiency data available yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('efficiency.noStats', 'No efficiency data available yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -293,7 +298,7 @@ export default function EfficiencyPage() {
         </StaggerContainer>
       ) : (
         <GlassPanel className="p-6">
-          <EmptyState message={t('efficiency.noStatCards', 'No driving statistics available yet')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('efficiency.noStatCards', 'No driving statistics available yet')} />
         </GlassPanel>
       )}
 
@@ -302,7 +307,7 @@ export default function EfficiencyPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <FadeIn>
             <ChartContainer
-              title={t('efficiency.dailyTrend', `Daily Efficiency (${efficiencyUnit})`)}
+              title={t('efficiency.dailyTrend', { unit: efficiencyUnit, defaultValue: 'Daily Efficiency ({{unit}})' })}
               height={240}
               annotations={{ vehicleId, scope: 'efficiency', chartId: 'efficiency-daily-trend' }}
             >
@@ -434,7 +439,7 @@ export default function EfficiencyPage() {
               ]}
             />
           ) : (
-            <EmptyState message={t('efficiency.noTempData', 'Not enough data for temperature breakdown')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('efficiency.noTempData', 'Not enough data for temperature breakdown')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -467,7 +472,7 @@ export default function EfficiencyPage() {
               </div>
             </>
           ) : (
-            <EmptyState message={t('efficiency.noSummary', 'No efficiency summary available yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('efficiency.noSummary', 'No efficiency summary available yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -508,7 +513,7 @@ export default function EfficiencyPage() {
               </div>
             </>
           ) : (
-            <EmptyState message={t('efficiency.noInsights', 'No energy insights available yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('efficiency.noInsights', 'No energy insights available yet')} />
           )}
         </GlassPanel>
       </FadeIn>

@@ -50,7 +50,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
                 { label: t('charging.optimizer.commonDay', 'Most common'), value: optimizer.current_schedule.most_common_day },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between text-xs">
-                  <span className="text-white/50">{item.label}</span>
+                  <span className="text-[var(--text-secondary)]">{item.label}</span>
                   <span className="font-semibold text-white">{item.value}</span>
                 </div>
               ))}
@@ -71,7 +71,7 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
               }
               size={150}
             />
-            <p className="mt-2 text-xs text-white/50">
+            <p className="mt-2 text-xs text-[var(--text-secondary)]">
               {optimizer.battery_health_score >= 75
                 ? t('charging.optimizer.scoreGood', 'Your habits are battery-friendly')
                 : optimizer.battery_health_score >= 50
@@ -90,15 +90,15 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
             </h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-white/50">{t('charging.optimizer.peakRate', 'Peak rate')}</span>
+                <span className="text-[var(--text-secondary)]">{t('charging.optimizer.peakRate', 'Peak rate')}</span>
                 <span className="font-semibold text-red-400">${fmtNumber(optimizer.cost_analysis.peak_cost_per_kwh, 3)}/kWh</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-white/50">{t('charging.optimizer.offpeakRate', 'Off-peak rate')}</span>
+                <span className="text-[var(--text-secondary)]">{t('charging.optimizer.offpeakRate', 'Off-peak rate')}</span>
                 <span className="font-semibold text-emerald-300">${fmtNumber(optimizer.cost_analysis.offpeak_cost_per_kwh, 3)}/kWh</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-white/50">{t('charging.optimizer.peakSessions', 'Sessions during peak')}</span>
+                <span className="text-[var(--text-secondary)]">{t('charging.optimizer.peakSessions', 'Sessions during peak')}</span>
                 <span className={cn('font-semibold',
                   optimizer.cost_analysis.sessions_during_peak_pct > 30 ? 'text-red-400' : 'text-emerald-300',
                 )}>
@@ -107,12 +107,12 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
               </div>
               <div className="mt-2 pt-2 border-t border-white/[0.06]">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-white/50">{t('charging.optimizer.peakHours', 'Peak hours')}</span>
-                  <span className="text-white/70 tabular-nums">{(optimizer.cost_analysis.peak_hours ?? []).map((h) => `${h}:00`).join(', ') || '—'}</span>
+                  <span className="text-[var(--text-secondary)]">{t('charging.optimizer.peakHours', 'Peak hours')}</span>
+                  <span className="text-[var(--text-secondary)] tabular-nums">{(optimizer.cost_analysis.peak_hours ?? []).map((h) => `${h}:00`).join(', ') || '—'}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
-                  <span className="text-white/50">{t('charging.optimizer.offpeakHours', 'Off-peak hours')}</span>
-                  <span className="text-white/70 tabular-nums">{(optimizer.cost_analysis.offpeak_hours ?? []).map((h) => `${h}:00`).join(', ') || '—'}</span>
+                  <span className="text-[var(--text-secondary)]">{t('charging.optimizer.offpeakHours', 'Off-peak hours')}</span>
+                  <span className="text-[var(--text-secondary)] tabular-nums">{(optimizer.cost_analysis.offpeak_hours ?? []).map((h) => `${h}:00`).join(', ') || '—'}</span>
                 </div>
               </div>
             </div>
@@ -169,13 +169,13 @@ export function OptimizerSection({ optimizer }: OptimizerSectionProps) {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-white/60">{rec.detail}</p>
+                    <p className="text-xs text-[var(--text-secondary)]">{rec.detail}</p>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <EmptyState message={t('charging.optimizer.noRecs', 'Recommendations will appear after more charging sessions.')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('charging.optimizer.noRecs', 'Recommendations will appear after more charging sessions.')} />
           )}
         </GlassPanel>
       </FadeIn>

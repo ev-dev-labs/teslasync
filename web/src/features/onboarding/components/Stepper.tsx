@@ -57,19 +57,19 @@ function stateOf(steps: OnboardingStep[], index: number): 'done' | 'current' | '
 const indicatorClasses = {
   done: 'bg-emerald-500/20 border-emerald-400/50 text-emerald-300',
   current: 'bg-cyan-500/20 border-cyan-400/50 text-cyan-300',
-  pending: 'bg-white/5 border-white/10 text-white/40',
+  pending: 'bg-[var(--surface-2)] border-[var(--border-subtle)] text-[var(--text-muted)]',
 } as const;
 
 const titleClasses = {
-  done: 'text-white/90',
+  done: 'text-[var(--text-primary)]',
   current: 'text-white',
-  pending: 'text-white/50',
+  pending: 'text-[var(--text-secondary)]',
 } as const;
 
 const descriptionClasses = {
-  done: 'text-white/50',
-  current: 'text-white/70',
-  pending: 'text-white/40',
+  done: 'text-[var(--text-secondary)]',
+  current: 'text-[var(--text-secondary)]',
+  pending: 'text-[var(--text-muted)]',
 } as const;
 
 export function Stepper({ steps, renderCta }: StepperProps) {
@@ -105,7 +105,7 @@ export function Stepper({ steps, renderCta }: StepperProps) {
                   aria-hidden="true"
                   className={cn(
                     'mt-1 w-px flex-1 min-h-[28px]',
-                    state === 'done' ? 'bg-emerald-400/40' : 'bg-white/10',
+                    state === 'done' ? 'bg-emerald-400/40' : 'bg-[var(--surface-2)]',
                   )}
                 />
               )}

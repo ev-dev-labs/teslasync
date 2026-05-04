@@ -18,7 +18,7 @@ export function DriveHighlightSlide({ drive, label, emoji }: Props) {
     return (
       <div className="flex flex-col items-center justify-center h-full px-8 text-center">
         <span className="text-6xl mb-4">{emoji}</span>
-        <p className="text-xl text-white/50">{t('yearReview.noDriveData', 'No drive data for this year')}</p>
+        <p className="text-xl text-[var(--text-secondary)]">{t('yearReview.noDriveData', 'No drive data for this year')}</p>
       </div>
     );
   }
@@ -42,7 +42,7 @@ export function DriveHighlightSlide({ drive, label, emoji }: Props) {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.4 }}
-        className="text-lg text-white/50 uppercase tracking-wider mb-3"
+        className="text-lg text-[var(--text-secondary)] uppercase tracking-wider mb-3"
       >
         {label}
       </motion.p>
@@ -54,10 +54,10 @@ export function DriveHighlightSlide({ drive, label, emoji }: Props) {
         className="bg-white/[0.05] backdrop-blur-sm rounded-2xl p-6 max-w-sm w-full border border-white/[0.08]"
       >
         {/* Route */}
-        <div className="flex items-center gap-2 text-white/70 mb-4 text-sm">
-          <MapPin className="h-4 w-4 shrink-0 text-white/40" />
+        <div className="flex items-center gap-2 text-[var(--text-secondary)] mb-4 text-sm">
+          <MapPin className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
           <span className="truncate">{drive.start_address || '—'}</span>
-          <ArrowRight className="h-3 w-3 shrink-0 text-white/30" />
+          <ArrowRight className="h-3 w-3 shrink-0 text-[var(--text-muted)]" />
           <span className="truncate">{drive.end_address || '—'}</span>
         </div>
 
@@ -67,28 +67,28 @@ export function DriveHighlightSlide({ drive, label, emoji }: Props) {
             <p className="text-2xl font-bold text-white">
               {Math.round(convertDistance(drive.distance_km))}
             </p>
-            <p className="text-xs text-white/40">{distanceUnit}</p>
+            <p className="text-xs text-[var(--text-muted)]">{distanceUnit}</p>
           </div>
           <div>
             <div className="flex items-center justify-center gap-1">
-              <Clock className="h-3 w-3 text-white/40" />
+              <Clock className="h-3 w-3 text-[var(--text-muted)]" />
               <p className="text-2xl font-bold text-white">{durationStr}</p>
             </div>
-            <p className="text-xs text-white/40">{t('yearReview.duration', 'duration')}</p>
+            <p className="text-xs text-[var(--text-muted)]">{t('yearReview.duration', 'duration')}</p>
           </div>
           <div>
             <div className="flex items-center justify-center gap-1">
-              <Zap className="h-3 w-3 text-white/40" />
+              <Zap className="h-3 w-3 text-[var(--text-muted)]" />
               <p className="text-2xl font-bold text-white">
                 {drive.efficiency_wh_km > 0 ? Math.round(drive.efficiency_wh_km) : '—'}
               </p>
             </div>
-            <p className="text-xs text-white/40">Wh/km</p>
+            <p className="text-xs text-[var(--text-muted)]">Wh/km</p>
           </div>
         </div>
 
         {/* Date */}
-        <p className="text-xs text-white/30 mt-4">{drive.date}</p>
+        <p className="text-xs text-[var(--text-muted)] mt-4">{drive.date}</p>
       </motion.div>
     </div>
   );

@@ -15,6 +15,7 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Pagination } from '@/components/ui/Pagination';
@@ -29,11 +30,12 @@ import {
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
+import { useUrlArray, useUrlBatch, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { CHART_COLORS } from '@/lib/colors';
 import { toLocalDatetimeStr } from '@/lib/dateFormat';
-import { TIME_RANGE_PRESETS } from '@/lib/constants';
+import { TIME_RANGE_PRESETS, matchTimeRangePreset } from '@/lib/constants';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { Activity, BarChart3, Search, Clock, AlertCircle, Radio } from 'lucide-react';
@@ -64,19 +66,22 @@ export default function SignalExplorerPage() {
 
   // Signal selection
   const { data: availableSignals, error: signalsError } = useSignals(vehicleId);
-  const [selectedSignals, setSelectedSignals] = useState<string[]>([]);
+  const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
   const [signalSearch, setSignalSearch] = useState('');
 
   // DateTime range
-  const [fromStr, setFromStr] = useState(() => toLocalDatetimeStr(new Date(Date.now() - 3600_000)));
-  const [toStr, setToStr] = useState(() => toLocalDatetimeStr(new Date()));
+  const defaultFrom = useMemo(() => toLocalDatetimeStr(new Date(Date.now() - 3600_000)), []);
+  const defaultTo = useMemo(() => toLocalDatetimeStr(new Date()), []);
+  const [fromStr, setFromStr] = useUrlString('from', defaultFrom);
+  const [toStr, setToStr] = useUrlString('to', defaultTo);
+  const setRangeBatch = useUrlBatch();
 
   // Explore trigger key
   const [exploreKey, setExploreKey] = useState<number | null>(null);
 
   // Pagination
-  const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(25);
+  const [page, setPage] = useUrlNumber('page', 1);
+  const [perPage, setPerPage] = useUrlNumber('size', 25);
 
   // ── Live mode ──
   const [isLive, setIsLive] = useState(false);
@@ -157,9 +162,13 @@ export default function SignalExplorerPage() {
 
   const applyPreset = useCallback((hours: number) => {
     const end = new Date();
-    setFromStr(toLocalDatetimeStr(new Date(end.getTime() - hours * 3600_000)));
-    setToStr(toLocalDatetimeStr(end));
-  }, []);
+    setRangeBatch({
+      from: toLocalDatetimeStr(new Date(end.getTime() - hours * 3600_000)),
+      to: toLocalDatetimeStr(end),
+    });
+  }, [setRangeBatch]);
+
+  const activePresetHours = matchTimeRangePreset(fromStr, toStr);
 
   const canExplore = selectedSignals.length > 0 && fromStr && toStr;
 
@@ -290,8 +299,14 @@ export default function SignalExplorerPage() {
       <GlassPanel className="p-4 sm:p-5 space-y-4">
         {/* Signal picker */}
         <div>
-          <span className="block text-xs font-medium uppercase tracking-wider mb-2 text-[var(--text-muted)]">
+          <span className="flex items-center gap-1 text-xs font-medium uppercase tracking-wider mb-2 text-[var(--text-muted)]">
             {t('Signals')} ({selectedSignals.length}/5)
+            <HelpTooltip
+              i18nKey="help.signal.layers"
+              defaultValue="TeslaSync exposes three live-state layers: L1 (in-process), L2 (Redis shared), and log (TimescaleDB history)."
+              ariaLabel={t('help.signal.layers.aria', { defaultValue: 'More info about signal layers (L1, L2, log)' })}
+              placement="bottom"
+            />
           </span>
           <div className="flex items-center gap-2 mb-2">
             <Input
@@ -341,7 +356,14 @@ export default function SignalExplorerPage() {
           </span>
           <div className="flex flex-wrap gap-2 mb-2">
             {TIME_RANGE_PRESETS.map(p => (
-              <Button key={p.label} size="sm" variant="ghost" onClick={() => applyPreset(p.hours)}>
+              <Button
+                key={p.label}
+                size="sm"
+                variant={activePresetHours === p.hours ? 'primary' : 'ghost'}
+                aria-pressed={activePresetHours === p.hours}
+                aria-label={t('signalQuery.preset.aria', '{{label}} time range', { label: p.label })}
+                onClick={() => applyPreset(p.hours)}
+              >
                 {p.label}
               </Button>
             ))}
@@ -389,13 +411,19 @@ export default function SignalExplorerPage() {
               </span>
             ) : t('Live')}
           </Button>
+          <HelpTooltip
+            i18nKey="help.signal.live"
+            defaultValue="Live mode streams real-time signal values via SSE. Maintains a rolling 5-minute window throttled to 2 Hz updates."
+            ariaLabel={t('help.signal.live.aria', { defaultValue: 'More info about live signal streaming' })}
+            placement="left"
+          />
         </div>
       </GlassPanel>
 
       {/* ── Content ───────────────────────────────────────────────── */}
       {!hasData && !isLive ? (
         <GlassPanel className="p-4">
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Activity className="h-10 w-10" />}
             title={t('Select signals and click Explore')}
             message={t('Choose up to 5 signals, set a time range, and click Explore — or toggle Live for real-time streaming.')}
@@ -526,7 +554,7 @@ export default function SignalExplorerPage() {
                   />
                 </>
               ) : (
-                <EmptyState
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                   icon={<Activity className="h-8 w-8" />}
                   title={t('No data')}
                   message={t('No signal data found for this time range.')}

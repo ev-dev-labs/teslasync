@@ -122,7 +122,7 @@ export function WidgetSettingsModal({
             type="button"
             variant="ghost"
             onClick={onClose}
-            className="h-auto rounded-lg px-4 py-2 text-sm text-white/60 hover:text-white/80 hover:bg-white/5 transition-colors"
+            className="h-auto rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-colors"
           >
             {t('common.cancel', 'Cancel')}
           </UiButton>

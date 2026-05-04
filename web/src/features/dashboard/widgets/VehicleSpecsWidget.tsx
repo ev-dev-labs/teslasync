@@ -156,7 +156,7 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
           )}
         </FadeIn>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<FileText className="h-5 w-5" />}
           message={t('widget.specs.noData', 'No specs available')}
           className="py-4"
@@ -182,10 +182,10 @@ function CompactView({
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1.5 px-2">
       <FileText className="h-5 w-5 text-neon-cyan" />
-      <span className="text-sm font-bold text-white/90 truncate max-w-full text-center">
+      <span className="text-sm font-bold text-[var(--text-primary)] truncate max-w-full text-center">
         {model}
       </span>
-      <span className="text-xs text-white/50 truncate max-w-full text-center">
+      <span className="text-xs text-[var(--text-secondary)] truncate max-w-full text-center">
         {t('widget.specs.trim', 'Trim')}: {trim}
       </span>
     </div>

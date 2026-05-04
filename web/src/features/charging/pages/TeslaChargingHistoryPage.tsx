@@ -91,7 +91,7 @@ export default function TeslaChargingHistoryPage() {
       key: 'date',
       header: t('tesla_charging.col.date', 'Date'),
       render: (row) => (
-        <span className="text-sm text-white/90">{formatDateTime(row.charge_start_datetime)}</span>
+        <span className="text-sm text-[var(--text-primary)]">{formatDateTime(row.charge_start_datetime)}</span>
       ),
       sortable: true,
       visibleOnMobile: true,
@@ -101,8 +101,8 @@ export default function TeslaChargingHistoryPage() {
       header: t('tesla_charging.col.location', 'Location'),
       render: (row) => (
         <div className="flex items-center gap-1.5">
-          <MapPin className="h-3.5 w-3.5 text-white/40 shrink-0" />
-          <span className="text-sm text-white/80 truncate max-w-[200px]">
+          <MapPin className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" />
+          <span className="text-sm text-[var(--text-primary)] truncate max-w-[200px]">
             {row.site_location_name || '—'}
           </span>
         </div>
@@ -113,7 +113,7 @@ export default function TeslaChargingHistoryPage() {
       key: 'duration',
       header: t('tesla_charging.col.duration', 'Duration'),
       render: (row) => (
-        <span className="text-sm text-white/80">
+        <span className="text-sm text-[var(--text-primary)]">
           {formatDurationMinutes(durationMinutes(row.charge_start_datetime, row.charge_stop_datetime))}
         </span>
       ),
@@ -146,7 +146,7 @@ export default function TeslaChargingHistoryPage() {
       key: 'rate',
       header: t('tesla_charging.col.rate', 'Rate'),
       render: (row) => (
-        <span className="text-sm text-white/70">
+        <span className="text-sm text-[var(--text-secondary)]">
           {row.rate_base != null
             ? `${fmtNumber(row.rate_base, 3)}/${row.pricing_type ?? 'kWh'}`
             : '—'}
@@ -171,7 +171,7 @@ export default function TeslaChargingHistoryPage() {
               <span className="text-xs">{t('charging.invoice', 'Invoice')}</span>
             </a>
           ) : (
-            <span className="text-white/30">—</span>
+            <span className="text-[var(--text-muted)]">—</span>
           )}
         </span>
       ),
@@ -290,7 +290,7 @@ export default function TeslaChargingHistoryPage() {
                 : t('tesla_charging.refresh', 'Refresh from Tesla')}
             </Button>
             {response && entries.length > 0 && (
-              <span className="ml-auto text-xs text-white/40">
+              <span className="ml-auto text-xs text-[var(--text-muted)]">
                 {t('tesla_charging.lastSync', 'Last synced')}: {formatDateTime(entries[0]?.fetched_at)}
               </span>
             )}
@@ -367,7 +367,7 @@ export default function TeslaChargingHistoryPage() {
       {/* Data table */}
       <FadeIn delay={0.15}>
         <GlassPanel className="p-4">
-          <h3 className="text-lg font-semibold text-white/90 mb-4">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
             {t('tesla_charging.sessions', 'Charging Sessions')}
           </h3>
           {entries.length > 0 ? (

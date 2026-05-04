@@ -4,8 +4,9 @@ import { GlassPanel } from '@/components/ui';
 import {
   ChartTooltip, chartGrid, axisTickSm,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell, CHART_COLORS,
+  ResponsiveContainer, Cell,
 } from '@/components/charts';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { HourBucket, TouInsights } from './types';
 
@@ -16,6 +17,7 @@ interface TimeOfUseAnalysisProps {
 
 export function TimeOfUseAnalysis({ hourlyData, touInsights }: TimeOfUseAnalysisProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
 
   return (
     <GlassPanel className="p-4">
@@ -52,14 +54,14 @@ export function TimeOfUseAnalysis({ hourlyData, touInsights }: TimeOfUseAnalysis
                       ? '#ef4444'
                       : isOffPeak
                         ? '#10b981'
-                        : CHART_COLORS[0];
+                        : palette[0];
                     return <Cell key={entry.hour} fill={color} />;
                   })}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex h-[260px] items-center justify-center text-sm text-gray-500">
+            <div className="flex h-[260px] items-center justify-center text-sm text-[var(--text-muted)]">
               {t('costAnalysis.charts.noData', 'Not enough data')}
             </div>
           )}
@@ -68,7 +70,7 @@ export function TimeOfUseAnalysis({ hourlyData, touInsights }: TimeOfUseAnalysis
           <div className="mt-2 flex justify-center gap-6">
             <div className="flex items-center gap-1.5">
               <div className="h-3 w-3 rounded-full bg-red-500" />
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-[var(--text-muted)]">
                 {t('costAnalysis.tou.peak', 'Peak (2–7 PM)')}
               </span>
             </div>
@@ -76,13 +78,13 @@ export function TimeOfUseAnalysis({ hourlyData, touInsights }: TimeOfUseAnalysis
               <div
                 className="h-3 w-3 rounded-full bg-[#00f0ff]"
               />
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-[var(--text-muted)]">
                 {t('costAnalysis.tou.midPeak', 'Mid-peak')}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="h-3 w-3 rounded-full bg-green-500" />
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-[var(--text-muted)]">
                 {t('costAnalysis.tou.offPeak', 'Off-peak (10 PM–6 AM)')}
               </span>
             </div>
@@ -91,63 +93,63 @@ export function TimeOfUseAnalysis({ hourlyData, touInsights }: TimeOfUseAnalysis
 
         {/* ToU insights */}
         <div className="space-y-3">
-          <h4 className="text-xs font-medium uppercase tracking-wider text-gray-400">
+          <h4 className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
             {t('costAnalysis.tou.insights', 'Insights')}
           </h4>
           {touInsights ? (
             <>
               <GlassPanel className="p-3">
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-[var(--text-muted)]">
                   {t('costAnalysis.tou.cheapestHour', 'Cheapest Hour')}
                 </p>
                 <p className="mt-1 text-lg font-semibold text-green-400">
                   {touInsights.cheapest.label}
                 </p>
-                <p className="text-[10px] text-gray-500">
+                <p className="text-[10px] text-[var(--text-muted)]">
                   {t('costAnalysis.tou.avgCost', 'avg')} $
                   {fmtNumber(touInsights.cheapest.avgCost, 3)}{' '}
                   {t('costAnalysis.tou.perSession', '/ session')}
                 </p>
               </GlassPanel>
               <GlassPanel className="p-3">
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-[var(--text-muted)]">
                   {t('costAnalysis.tou.priciestHour', 'Priciest Hour')}
                 </p>
                 <p className="mt-1 text-lg font-semibold text-red-400">
                   {touInsights.priciest.label}
                 </p>
-                <p className="text-[10px] text-gray-500">
+                <p className="text-[10px] text-[var(--text-muted)]">
                   {t('costAnalysis.tou.avgCost', 'avg')} $
                   {fmtNumber(touInsights.priciest.avgCost, 3)}{' '}
                   {t('costAnalysis.tou.perSession', '/ session')}
                 </p>
               </GlassPanel>
               <GlassPanel className="p-3">
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-[var(--text-muted)]">
                   {t('costAnalysis.tou.busiestHour', 'Busiest Hour')}
                 </p>
                 <p className="mt-1 text-lg font-semibold text-cyan-400">
                   {touInsights.busiest.label}
                 </p>
-                <p className="text-[10px] text-gray-500">
+                <p className="text-[10px] text-[var(--text-muted)]">
                   {fmtInt(touInsights.busiest.sessions)}{' '}
                   {t('costAnalysis.tou.sessions', 'sessions')}
                 </p>
               </GlassPanel>
               <GlassPanel className="p-3">
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-[var(--text-muted)]">
                   {t('costAnalysis.tou.offPeakRatio', 'Off-Peak Charging')}
                 </p>
                 <p className="mt-1 text-lg font-semibold text-emerald-400">
                   {fmtNumber(touInsights.offPeakPct, 1)}%
                 </p>
-                <p className="text-[10px] text-gray-500">
+                <p className="text-[10px] text-[var(--text-muted)]">
                   {t('costAnalysis.tou.offPeakDesc', 'of sessions between 10 PM–6 AM')}
                 </p>
               </GlassPanel>
             </>
           ) : (
-            <div className="flex h-32 items-center justify-center text-sm text-gray-500">
+            <div className="flex h-32 items-center justify-center text-sm text-[var(--text-muted)]">
               {t('costAnalysis.tou.noInsights', 'No insights available')}
             </div>
           )}

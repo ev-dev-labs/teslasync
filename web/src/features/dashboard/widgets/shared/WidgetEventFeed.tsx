@@ -62,7 +62,7 @@ export function WidgetEventFeed({
 
   if (sorted.length === 0) {
     return (
-      <EmptyState
+      <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
         icon={emptyIcon}
         message={emptyMessage ?? t('widget.noEvents', 'No events yet')}
         className="py-4"

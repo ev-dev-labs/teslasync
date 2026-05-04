@@ -37,7 +37,7 @@ export function SavingsCalculator({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Inputs */}
         <div className="space-y-3">
-          <h4 className="text-xs font-medium uppercase tracking-wider text-gray-400">
+          <h4 className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
             {t('costAnalysis.calculator.inputs', 'Your Assumptions')}
           </h4>
           <Input
@@ -77,59 +77,59 @@ export function SavingsCalculator({
 
         {/* Side-by-side comparison */}
         <div className="space-y-3 lg:col-span-2">
-          <h4 className="text-xs font-medium uppercase tracking-wider text-gray-400">
+          <h4 className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
             {t('costAnalysis.calculator.comparison', 'Comparison')}
           </h4>
           {gasComparison ? (
             <div className="grid grid-cols-2 gap-3">
               <GlassPanel className="p-3">
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-[var(--text-muted)]">
                   {t('costAnalysis.calculator.gasCost', 'Gas Cost (equivalent)')}
                 </p>
                 <p className="mt-1 text-xl font-bold text-red-400">
                   ${fmtNumber(gasComparison.gasCost, 2)}
                 </p>
-                <p className="mt-0.5 text-[10px] text-gray-500">
+                <p className="mt-0.5 text-[10px] text-[var(--text-muted)]">
                   ${fmtNumber(gasComparison.costPerMileGas, 3)}/{distanceUnit}
                 </p>
               </GlassPanel>
               <GlassPanel className="p-3">
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-[var(--text-muted)]">
                   {t('costAnalysis.calculator.evCost', 'EV Cost (actual)')}
                 </p>
                 <p className="mt-1 text-xl font-bold text-cyan-400">
                   ${fmtNumber(gasComparison.actualCost, 2)}
                 </p>
-                <p className="mt-0.5 text-[10px] text-gray-500">
+                <p className="mt-0.5 text-[10px] text-[var(--text-muted)]">
                   ${fmtNumber(gasComparison.costPerMileEV, 3)}/{distanceUnit}
                 </p>
               </GlassPanel>
               <GlassPanel glow="green" className="p-3">
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-[var(--text-muted)]">
                   {t('costAnalysis.calculator.totalSavings', 'Total Savings')}
                 </p>
                 <p className="mt-1 text-xl font-bold text-green-400">
                   ${fmtNumber(gasComparison.savings, 2)}
                 </p>
-                <p className="mt-0.5 text-[10px] text-gray-500">
+                <p className="mt-0.5 text-[10px] text-[var(--text-muted)]">
                   {t('costAnalysis.calculator.overPeriod', 'over selected period')}
                 </p>
               </GlassPanel>
               <GlassPanel className="p-3">
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-[var(--text-muted)]">
                   {t('costAnalysis.calculator.monthlySavings', 'Monthly Savings')}
                 </p>
                 <p className="mt-1 text-xl font-bold text-green-300">
                   ${fmtNumber(gasComparison.monthlySavings, 2)}
                 </p>
-                <p className="mt-0.5 text-[10px] text-gray-500">
+                <p className="mt-0.5 text-[10px] text-[var(--text-muted)]">
                   ~${fmtNumber(gasComparison.yearlySavings, 0)}{' '}
                   {t('costAnalysis.calculator.perYear', '/ year')}
                 </p>
               </GlassPanel>
             </div>
           ) : (
-            <div className="flex h-32 items-center justify-center text-sm text-gray-500">
+            <div className="flex h-32 items-center justify-center text-sm text-[var(--text-muted)]">
               {t('costAnalysis.calculator.noData', 'Not enough data for comparison')}
             </div>
           )}

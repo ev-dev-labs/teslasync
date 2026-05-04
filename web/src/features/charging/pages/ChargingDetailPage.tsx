@@ -10,10 +10,10 @@ import { formatDate, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtWithUnit, fmtPercent } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, PrintButton } from '@/components/ui';
+import { GlassPanel, Badge, HelpTooltip, PrintButton } from '@/components/ui';
 import { MetricBar, InlineMetric, AnimatedNumber, StatCard, KVList, LiveIndicator, DateTime } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts';
-import { Skeleton, EmptyState, LiveStaleDataBanner } from '@/components/feedback';
+import { Skeleton, EmptyState, LiveStaleDataBanner, PageHeaderSkeleton, StatGridSkeleton, ChartBlockSkeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -58,29 +58,23 @@ function synthesizeCurve(session: ChargingSession): { soc: number; power: number
   return points;
 }
 
-/* ─── loading skeleton ─────────────────────────────────────────── */
+/* ─── loading skeleton (Phase-45 / Prompt 18) ──────────────────── */
 
+/**
+ * Mirrors the ChargingDetailPage layout while session telemetry loads:
+ * page header → 5 hero stat cards → cost ribbon → 8 secondary stats →
+ * 2 charts (charge curve + power profile). Migrated to the shared
+ * *Skeleton building blocks for consistency.
+ */
 function LoadingSkeleton() {
   return (
-    <div className="space-y-8 animate-pulse">
-      <div className="flex items-center gap-3">
-        <Skeleton className="h-8 w-8 rounded-full" />
-        <Skeleton className="h-6 w-48" />
-        <Skeleton className="h-5 w-16 rounded-full" />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-36 rounded-xl" />
-        ))}
-      </div>
+    <div className="space-y-8" data-testid="charging-detail-skeleton">
+      <PageHeaderSkeleton />
+      <StatGridSkeleton cards={5} className="sm:grid-cols-2 md:grid-cols-5" />
       <Skeleton className="h-24 rounded-xl" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 rounded-xl" />
-        ))}
-      </div>
-      <Skeleton className="h-64 rounded-xl" />
-      <Skeleton className="h-72 rounded-xl" />
+      <StatGridSkeleton cards={8} className="sm:grid-cols-2 lg:grid-cols-4" />
+      <ChartBlockSkeleton height={256} />
+      <ChartBlockSkeleton height={288} />
     </div>
   );
 }
@@ -328,8 +322,14 @@ export default function ChargingDetailPage() {
 
         {/* ── 3. Battery fill meter ──────────────────────────── */}
         <GlassPanel className="p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">
+          <h2 className="flex items-center gap-1.5 text-lg font-semibold mb-4">
             {t('charging.detail.batteryProgress', 'Battery Progress')}
+            <HelpTooltip
+              size="sm"
+              i18nKey="help.charging.socRange"
+              defaultValue="The starting and ending state-of-charge percentages for this session. Wider ranges generally mean longer sessions and more taper."
+              ariaLabel={t('help.charging.socRange.aria', { defaultValue: 'More info about state-of-charge range' })}
+            />
           </h2>
           <div className="space-y-4">
             <MetricBar
@@ -412,7 +412,7 @@ export default function ChargingDetailPage() {
                 : '—'}
             unit={session.cost != null ? '$' : ''}
             sublabel={session.cost == null && session.energy_added_kwh > 0
-              ? t('charging.detail.atRate', `at ${currencySymbol}${settingsCostPerKwh}/kWh`)
+              ? t('charging.detail.atRate', { currencySymbol, costPerKwh: settingsCostPerKwh, defaultValue: 'at {{currencySymbol}}{{costPerKwh}}/kWh' })
               : undefined}
           />
           <StatCard
@@ -498,19 +498,25 @@ export default function ChargingDetailPage() {
             <h2 className="text-lg font-semibold mb-4">
               {t('charging.detail.location', 'Location')}
             </h2>
-            <p className="text-sm text-white/80">{session.charger_location}</p>
+            <p className="text-sm text-[var(--text-primary)]">{session.charger_location}</p>
           </GlassPanel>
         )}
 
         {/* ── 7. Charge curve chart ──────────────────────────── */}
         <GlassPanel className="p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">
+          <h2 className="flex items-center gap-1.5 text-lg font-semibold mb-4">
             {t('charging.detail.chargeCurve', 'Charge Curve')}
             {!hasTelemetry && (
               <span className="text-xs text-muted ml-2">
                 ({t('charging.detail.estimated', 'estimated')})
               </span>
             )}
+            <HelpTooltip
+              size="sm"
+              i18nKey="help.charging.chargeCurve"
+              defaultValue="Power vs SoC curve for the session. Tapering — the gradual drop in power as the battery approaches full — is inherent to lithium chemistry and is not a fault. Sudden drops below the curve indicate derating: the charger or battery is throttling power because of cell or ambient temperature limits."
+              ariaLabel={t('help.charging.chargeCurve.aria', { defaultValue: 'More info about taper and derating' })}
+            />
           </h2>
           {chargeCurve.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
@@ -538,7 +544,7 @@ export default function ChargingDetailPage() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Activity className="h-8 w-8 opacity-20" />}
               message={t('common.noData', 'No data available')}
               className="py-8"
@@ -622,7 +628,7 @@ export default function ChargingDetailPage() {
                 )}
               </ChargingChartSync>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8 opacity-20" />}
                 message={t('common.noData', 'No data available')}
                 className="py-8"
@@ -686,7 +692,7 @@ export default function ChargingDetailPage() {
                 )}
               </ChargingChartSync>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8 opacity-20" />}
                 message={t('common.noData', 'No data available')}
                 className="py-8"
@@ -747,7 +753,7 @@ export default function ChargingDetailPage() {
                 )}
               </ChargingChartSync>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8 opacity-20" />}
                 message={t('common.noData', 'No data available')}
                 className="py-8"

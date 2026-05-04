@@ -75,7 +75,7 @@ export function RecentDrivesSection({ drives }: RecentDrivesSectionProps) {
           emptyMessage={t('common.noDrives', 'No drives recorded yet')}
         />
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Route className="h-8 w-8" />}
           message={t('common.noDrives', 'No drives recorded yet')}
         />

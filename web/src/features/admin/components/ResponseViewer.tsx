@@ -127,13 +127,13 @@ function SnippetPanel({ method, url, body }: { method: string; url: string; body
         variant="ghost"
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
-        className="!h-auto !px-0 !py-0 text-[11px] text-white/40 hover:!bg-transparent hover:text-white/60"
+        className="!h-auto !px-0 !py-0 text-[11px] text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
       >
         <ChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
         {t('playground.codeSnippet', 'Code Snippet')}
       </UiButton>
       {open && (
-        <div className="mt-2 rounded-lg border border-white/[0.06] bg-black/30 overflow-hidden">
+        <div className="mt-2 rounded-lg border border-white/[0.06] bg-[var(--surface-overlay)] overflow-hidden">
           <div className="flex items-center gap-1 p-2 border-b border-white/[0.04]">
             {formats.map(f => (
               <UiButton
@@ -145,8 +145,8 @@ function SnippetPanel({ method, url, body }: { method: string; url: string; body
                 className={cn(
                   '!h-auto !px-2 !py-0.5 text-[10px] font-medium',
                   format === f.value
-                    ? '!bg-white/10 text-white/80'
-                    : 'text-white/40 hover:!bg-transparent hover:text-white/60',
+                    ? '!bg-[var(--surface-2)] text-[var(--text-primary)]'
+                    : 'text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]',
                 )}
               >
                 {f.label}
@@ -162,7 +162,7 @@ function SnippetPanel({ method, url, body }: { method: string; url: string; body
               className="!text-[10px] !px-2 !py-0.5 !h-auto"
             />
           </div>
-          <pre className="p-3 text-[11px] font-mono text-white/60 overflow-x-auto whitespace-pre">
+          <pre className="p-3 text-[11px] font-mono text-[var(--text-secondary)] overflow-x-auto whitespace-pre">
             {snippet}
           </pre>
         </div>
@@ -187,16 +187,16 @@ function ResponseHeaders({ headers }: { headers: Record<string, string> }) {
         variant="ghost"
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
-        className="!h-auto !px-0 !py-0 text-[11px] text-white/40 hover:!bg-transparent hover:text-white/60"
+        className="!h-auto !px-0 !py-0 text-[11px] text-[var(--text-muted)] hover:!bg-transparent hover:text-[var(--text-secondary)]"
       >
         <ChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
         {t('playground.responseHeaders', 'Response Headers')} ({entries.length})
       </UiButton>
       {open && (
-        <div className="mt-1 rounded-lg border border-white/[0.04] bg-black/20 p-2 text-[10px] font-mono text-white/40 space-y-0.5 max-h-40 overflow-y-auto">
+        <div className="mt-1 rounded-lg border border-white/[0.04] bg-[var(--surface-overlay)] p-2 text-[10px] font-mono text-[var(--text-muted)] space-y-0.5 max-h-40 overflow-y-auto">
           {entries.map(([k, v]) => (
             <div key={k}>
-              <span className="text-white/50">{k}:</span> {v}
+              <span className="text-[var(--text-secondary)]">{k}:</span> {v}
             </div>
           ))}
         </div>
@@ -214,7 +214,7 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
 
   return (
     <GlassPanel className="p-3">
-      <h4 className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">
+      <h4 className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">
         {t('playground.history', 'Recent Requests')}
       </h4>
       <div className="flex gap-1.5 overflow-x-auto pb-1">
@@ -238,11 +238,11 @@ function RequestHistory({ history, onReplay }: { history: HistoryEntry[]; onRepl
             >
               {h.method}
             </span>
-            <span className="text-white/40 max-w-[120px] truncate">{h.path}</span>
+            <span className="text-[var(--text-muted)] max-w-[120px] truncate">{h.path}</span>
             <span className={cn('font-bold', statusColor(h.status))}>
               {h.status}
             </span>
-            <span className="text-white/25">{h.duration}ms</span>
+            <span className="text-[var(--text-muted)]">{h.duration}ms</span>
           </UiButton>
         ))}
       </div>
@@ -259,14 +259,14 @@ export default function ResponseViewer({ response, loading, history, onReplay }:
     <div className="space-y-3">
       {/* Response */}
       <GlassPanel className="p-4">
-        <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">
+        <h4 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
           {t('playground.response', 'Response')}
         </h4>
 
         {loading && <Skeleton className="h-48 rounded-lg" />}
 
         {!loading && !response && (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             message={t('playground.noResponse', 'Send a request to see the response')}
           />
         )}
@@ -281,13 +281,13 @@ export default function ResponseViewer({ response, loading, history, onReplay }:
               <span className={cn('font-mono text-sm font-bold', statusColor(response.status))}>
                 {response.status} {response.statusText}
               </span>
-              <span className="text-xs text-white/40">
+              <span className="text-xs text-[var(--text-muted)]">
                 {response.duration}ms · {formatBytes(response.size)}
               </span>
             </div>
 
             {/* Body */}
-            <pre className="text-xs font-mono text-white/70 overflow-auto max-h-[500px] bg-black/30 rounded-lg p-3 border border-white/[0.04]">
+            <pre className="text-xs font-mono text-[var(--text-secondary)] overflow-auto max-h-[500px] bg-[var(--surface-overlay)] rounded-lg p-3 border border-white/[0.04]">
               {(response.contentType ?? '').includes('json') && typeof response.body !== 'string'
                 ? JSON.stringify(response.body, null, 2)
                 : response.bodyText}

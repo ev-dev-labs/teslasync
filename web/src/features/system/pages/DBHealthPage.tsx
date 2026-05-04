@@ -6,7 +6,7 @@ import {
 import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel, Button, DataTable } from '@/components/ui';
 import type { Column } from '@/components/ui';
-import { StatCard } from '@/components/data-display';
+import { StatCard, TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import {
@@ -15,7 +15,6 @@ import {
 } from '@/components/charts';
 import { useDBStats, useMigrations, useConnectionPool } from '@/api/hooks/useAdmin';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { TableInfo } from '@/types/admin';
@@ -148,9 +147,7 @@ export default function DBHealthPage() {
         key: 'vacuum',
         header: t('dbHealth.table.lastVacuum', 'Last Vacuum'),
         render: (tbl: TableInfo) => (
-          <span className="text-[var(--text-muted)] whitespace-nowrap">
-            {tbl.lastVacuum ? formatDateTime(tbl.lastVacuum) : '—'}
-          </span>
+          <TimeStamp value={tbl.lastVacuum ?? null} className="text-[var(--text-muted)] whitespace-nowrap" />
         ),
         className: 'text-right',
       },
@@ -351,9 +348,10 @@ export default function DBHealthPage() {
                                 v{m.version} {m.name}
                               </span>
                               {m.appliedAt && (
-                                <span className="text-[var(--text-muted)] shrink-0 text-[10px]">
-                                  {formatDateTime(m.appliedAt)}
-                                </span>
+                                <TimeStamp
+                                  value={m.appliedAt}
+                                  className="text-[var(--text-muted)] shrink-0 text-[10px]"
+                                />
                               )}
                             </div>
                           ))}
@@ -364,7 +362,7 @@ export default function DBHealthPage() {
                   )}
                 </div>
               ) : (
-                <EmptyState
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                   message={t(
                     'dbHealth.noMigrationData',
                     'Migration data unavailable',
@@ -409,7 +407,7 @@ export default function DBHealthPage() {
                       <span>{t('dbHealth.poolUsage', 'Pool Usage')}</span>
                       <span>{fmtInt(poolUsage)}%</span>
                     </div>
-                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-2 bg-[var(--surface-2)] rounded-full overflow-hidden">
                       <div
                         className={cn(
                           'h-full rounded-full transition-all',
@@ -421,7 +419,7 @@ export default function DBHealthPage() {
                   </div>
                 </div>
               ) : (
-                <EmptyState
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                   message={t(
                     'dbHealth.noPoolData',
                     'Connection pool data unavailable',

@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react'
-import { createPortal } from 'react-dom'
-import { X, Search, Zap, Battery, Gauge, Shield, Thermometer, Radio, Settings, Wrench, ChevronDown, CheckCircle } from 'lucide-react'
+import { Search, Zap, Battery, Gauge, Shield, Thermometer, Radio, Settings, Wrench, ChevronDown, CheckCircle } from 'lucide-react'
 import clsx from 'clsx'
-import { Input, Select } from '.'
+import { Input, Modal, Select } from '.'
 
 const INTERVAL_OPTIONS = [
   { value: 0, label: '500ms', color: 'text-neon-cyan', desc: 'Real-time' },
@@ -172,165 +171,159 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
     onClose()
   }
 
-  if (!open) return null
+  // Phase-45 / Prompt 04: migrated from a hand-rolled full-viewport overlay
+  // to the shared <Modal>, which enforces viewport-bound sizing
+  // (max-h-[90vh] desktop / max-h-[100dvh] mobile) so the dialog never escapes
+  // the screen. Master controls + footer are positioned `sticky` so they remain
+  // visible while the signal list scrolls.
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Fleet Telemetry Signal Configuration"
+      size="full"
+    >
+      <p className="-mt-1 mb-3 text-xs text-[var(--text-muted)]">
+        {selectedCount} / {totalCount} signals selected
+      </p>
 
-  return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4" onClick={onClose}
-      onKeyDown={e => { if (e.key === 'Escape') onClose() }}>
-      <div className="bg-[var(--bg)] border border-[var(--border)] rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
-          <div>
-            <h2 className="text-lg font-bold flex items-center gap-2">
-              <Zap className="h-5 w-5 text-neon-cyan" />
-              Fleet Telemetry Signal Configuration
-            </h2>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5">{selectedCount} / {totalCount} signals selected</p>
-          </div>
-          <button onClick={onClose} aria-label="Close" className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-            <X className="h-5 w-5" />
+      {/* Master Controls — sticky to top of Modal scroll container */}
+      <div className="sticky top-0 z-10 -mx-4 -mt-3 space-y-3 border-b border-[var(--border)] bg-[var(--surface)] px-4 py-3 sm:-mx-6 sm:px-6">
+        {/* Presets */}
+        <div className="flex flex-wrap gap-2">
+          {PRESETS.map(p => (
+            <button key={p.name} onClick={() => applyPreset(p)} title={p.desc}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.03] border border-white/[0.08] hover:border-neon-cyan/30 hover:bg-neon-cyan/5 transition-colors">
+              {p.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Master Toggle + Master Interval */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <button onClick={() => toggleAll(!allSelected)}
+            className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
+              allSelected ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'bg-white/[0.03] border-white/[0.08] text-[var(--text-secondary)]'
+            )}>
+            <div className={clsx('h-3 w-3 rounded border flex items-center justify-center', allSelected ? 'bg-neon-cyan border-neon-cyan' : 'border-[var(--border-strong)]')}>
+              {allSelected && <CheckCircle className="h-2 w-2 text-black" />}
+            </div>
+            {allSelected ? 'Deselect All' : 'Select All'}
           </button>
-        </div>
 
-        {/* Master Controls */}
-        <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface)] space-y-3">
-          {/* Presets */}
-          <div className="flex flex-wrap gap-2">
-            {PRESETS.map(p => (
-              <button key={p.name} onClick={() => applyPreset(p)} title={p.desc}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.03] border border-white/[0.08] hover:border-neon-cyan/30 hover:bg-neon-cyan/5 transition-colors">
-                {p.name}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Master Interval:</span>
+            <Select value={String(masterInterval)} onChange={e => setMasterIntervalAll(Number(e.target.value))}
+              className="px-2 py-1 text-xs"
+              options={INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: `${o.label} (${o.desc})` }))}
+            />
           </div>
 
-          {/* Master Toggle + Master Interval */}
-          <div className="flex items-center gap-4 flex-wrap">
-            <button onClick={() => toggleAll(!allSelected)}
-              className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
-                allSelected ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'bg-white/[0.03] border-white/[0.08] text-[var(--text-secondary)]'
-              )}>
-              <div className={clsx('h-3 w-3 rounded border flex items-center justify-center', allSelected ? 'bg-neon-cyan border-neon-cyan' : 'border-white/20')}>
-                {allSelected && <CheckCircle className="h-2 w-2 text-black" />}
-              </div>
-              {allSelected ? 'Deselect All' : 'Select All'}
-            </button>
-
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Master Interval:</span>
-              <Select value={String(masterInterval)} onChange={e => setMasterIntervalAll(Number(e.target.value))}
-                className="px-2 py-1 text-xs"
-                options={INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: `${o.label} (${o.desc})` }))}
-              />
-            </div>
-
-            <div className="relative ml-auto flex-1 max-w-xs">
-              <Input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search signals..."
-                icon={<Search className="h-3.5 w-3.5" />}
-                className="w-full text-xs"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Signal List */}
-        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2">
-          {Array.from(grouped.entries()).map(([category, catSignals]) => {
-            const expanded = expandedCats.has(category)
-            const allCatSelected = catSignals.every(s => s.selected)
-            const someCatSelected = catSignals.some(s => s.selected)
-            const CatIcon = CATEGORY_ICONS[category] || Zap
-
-            return (
-              <div key={category} className="border border-white/[0.06] rounded-xl overflow-hidden">
-                {/* Category Header */}
-                <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.02] cursor-pointer" onClick={() => {
-                  setExpandedCats(prev => {
-                    const next = new Set(prev)
-                    if (next.has(category)) {
-                      next.delete(category)
-                    } else {
-                      next.add(category)
-                    }
-                    return next
-                  })
-                }}>
-                  <ChevronDown className={clsx('h-3.5 w-3.5 text-[var(--text-muted)] transition-transform', !expanded && '-rotate-90')} />
-                  <button onClick={e => { e.stopPropagation(); toggleCategory(category) }}
-                    className={clsx('h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
-                      allCatSelected ? 'bg-neon-cyan border-neon-cyan' : someCatSelected ? 'bg-neon-cyan/40 border-neon-cyan/60' : 'border-white/20'
-                    )}>
-                    {allCatSelected && <CheckCircle className="h-2.5 w-2.5 text-black" />}
-                  </button>
-                  <CatIcon className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">{category}</span>
-                  <span className="text-[10px] text-[var(--text-muted)]">({catSignals.filter(s => s.selected).length}/{catSignals.length})</span>
-                  <div className="ml-auto flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                    <Select value="" onChange={e => { if (e.target.value) setCategoryInterval(category, Number(e.target.value)); e.target.value = '' }}
-                      className="bg-transparent border border-white/[0.08] rounded px-1.5 py-0.5 text-[10px] text-[var(--text-muted)]"
-                      options={[
-                        { value: '', label: 'Set all...' },
-                        ...INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: o.label })),
-                      ]}
-                    />
-                  </div>
-                </div>
-
-                {/* Signal Rows */}
-                {expanded && (
-                  <div className="divide-y divide-white/[0.03]">
-                    {catSignals.map(sig => {
-                      const intervalOpt = INTERVAL_OPTIONS.find(o => o.value === sig.interval) || INTERVAL_OPTIONS[3]
-                      return (
-                        <div key={sig.name} className={clsx(
-                          'flex items-center gap-2 px-4 py-1.5 transition-colors',
-                          sig.selected ? 'bg-white/[0.01]' : 'opacity-40'
-                        )}>
-                          <button onClick={() => updateSignal(sig.name, { selected: !sig.selected })}
-                            className={clsx('h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
-                              sig.selected ? 'bg-neon-cyan border-neon-cyan' : 'border-white/20'
-                            )}>
-                            {sig.selected && <CheckCircle className="h-2.5 w-2.5 text-black" />}
-                          </button>
-                          <span className="text-xs font-mono flex-1 truncate">{sig.name}</span>
-                          <Select value={String(sig.interval)}
-                            onChange={e => updateSignal(sig.name, { interval: Number(e.target.value) })}
-                            className={clsx(
-                              'border border-white/[0.1] rounded px-2 py-0.5 text-xs min-w-[80px]',
-                              intervalOpt.color
-                            )}
-                            options={INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: o.label }))}
-                          />
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Footer */}
-        <div className="px-5 py-3 border-t border-[var(--border)] bg-[var(--surface)] flex items-center justify-between">
-          <div className="text-xs text-[var(--text-muted)]">
-            {selectedCount} signals selected
-            {selectedCount > 0 && ` • ${signals.filter(s => s.selected && s.interval === 0).length} at 500ms`}
-            {selectedCount > 0 && ` • ${signals.filter(s => s.selected && s.interval === 10).length} at 10s`}
-          </div>
-          <div className="flex gap-2">
-            <button onClick={onClose} className="px-4 py-2 rounded-lg text-xs font-medium border border-white/[0.1] hover:bg-white/[0.05] transition-colors">
-              Cancel
-            </button>
-            <button onClick={handleSubmit} disabled={selectedCount === 0}
-              className="px-4 py-2 rounded-lg text-xs font-medium bg-neon-cyan text-black hover:bg-neon-cyan/80 disabled:opacity-40 transition-colors flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5" />
-              Subscribe {selectedCount} Signals
-            </button>
+          <div className="relative ml-auto flex-1 max-w-xs">
+            <Input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search signals..."
+              icon={<Search className="h-3.5 w-3.5" />}
+              className="w-full text-xs"
+            />
           </div>
         </div>
       </div>
-    </div>,
-    document.body
+
+      {/* Signal List */}
+      <div className="space-y-2 py-3">
+        {Array.from(grouped.entries()).map(([category, catSignals]) => {
+          const expanded = expandedCats.has(category)
+          const allCatSelected = catSignals.every(s => s.selected)
+          const someCatSelected = catSignals.some(s => s.selected)
+          const CatIcon = CATEGORY_ICONS[category] || Zap
+
+          return (
+            <div key={category} className="border border-white/[0.06] rounded-xl overflow-hidden">
+              {/* Category Header */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.02] cursor-pointer" onClick={() => {
+                setExpandedCats(prev => {
+                  const next = new Set(prev)
+                  if (next.has(category)) {
+                    next.delete(category)
+                  } else {
+                    next.add(category)
+                  }
+                  return next
+                })
+              }}>
+                <ChevronDown className={clsx('h-3.5 w-3.5 text-[var(--text-muted)] transition-transform', !expanded && '-rotate-90')} />
+                <button onClick={e => { e.stopPropagation(); toggleCategory(category) }}
+                  className={clsx('h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
+                    allCatSelected ? 'bg-neon-cyan border-neon-cyan' : someCatSelected ? 'bg-neon-cyan/40 border-neon-cyan/60' : 'border-[var(--border-strong)]'
+                  )}>
+                  {allCatSelected && <CheckCircle className="h-2.5 w-2.5 text-black" />}
+                </button>
+                <CatIcon className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">{category}</span>
+                <span className="text-[10px] text-[var(--text-muted)]">({catSignals.filter(s => s.selected).length}/{catSignals.length})</span>
+                <div className="ml-auto flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                  <Select value="" onChange={e => { if (e.target.value) setCategoryInterval(category, Number(e.target.value)); e.target.value = '' }}
+                    className="bg-transparent border border-white/[0.08] rounded px-1.5 py-0.5 text-[10px] text-[var(--text-muted)]"
+                    options={[
+                      { value: '', label: 'Set all...' },
+                      ...INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: o.label })),
+                    ]}
+                  />
+                </div>
+              </div>
+
+              {/* Signal Rows */}
+              {expanded && (
+                <div className="divide-y divide-white/[0.03]">
+                  {catSignals.map(sig => {
+                    const intervalOpt = INTERVAL_OPTIONS.find(o => o.value === sig.interval) || INTERVAL_OPTIONS[3]
+                    return (
+                      <div key={sig.name} className={clsx(
+                        'flex items-center gap-2 px-4 py-1.5 transition-colors',
+                        sig.selected ? 'bg-white/[0.01]' : 'opacity-40'
+                      )}>
+                        <button onClick={() => updateSignal(sig.name, { selected: !sig.selected })}
+                          className={clsx('h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
+                            sig.selected ? 'bg-neon-cyan border-neon-cyan' : 'border-[var(--border-strong)]'
+                          )}>
+                          {sig.selected && <CheckCircle className="h-2.5 w-2.5 text-black" />}
+                        </button>
+                        <span className="text-xs font-mono flex-1 truncate">{sig.name}</span>
+                        <Select value={String(sig.interval)}
+                          onChange={e => updateSignal(sig.name, { interval: Number(e.target.value) })}
+                          className={clsx(
+                            'border border-white/[0.1] rounded px-2 py-0.5 text-xs min-w-[80px]',
+                            intervalOpt.color
+                          )}
+                          options={INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: o.label }))}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Footer — sticky to bottom of Modal scroll container */}
+      <div className="sticky bottom-0 z-10 -mx-4 -mb-4 flex items-center justify-between border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 sm:-mx-6 sm:-mb-6 sm:px-6">
+        <div className="text-xs text-[var(--text-muted)]">
+          {selectedCount} signals selected
+          {selectedCount > 0 && ` • ${signals.filter(s => s.selected && s.interval === 0).length} at 500ms`}
+          {selectedCount > 0 && ` • ${signals.filter(s => s.selected && s.interval === 10).length} at 10s`}
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg text-xs font-medium border border-white/[0.1] hover:bg-white/[0.05] transition-colors">
+            Cancel
+          </button>
+          <button onClick={handleSubmit} disabled={selectedCount === 0}
+            className="px-4 py-2 rounded-lg text-xs font-medium bg-neon-cyan text-black hover:bg-neon-cyan/80 disabled:opacity-40 transition-colors flex items-center gap-1.5">
+            <Zap className="h-3.5 w-3.5" />
+            Subscribe {selectedCount} Signals
+          </button>
+        </div>
+      </div>
+    </Modal>
   )
 }

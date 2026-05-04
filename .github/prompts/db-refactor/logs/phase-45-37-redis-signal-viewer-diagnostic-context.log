@@ -1,0 +1,104 @@
+===== PHASE-45/37 GATE LOG =====
+Started: 2026-05-03T18:43:27.9773112-07:00
+
+===== ANCHORS =====
+router WithSignalStore:
+router redis-signals/keys:
+			r.Get("/redis-signals/keys", devToolsHandler.RedisSignalKeys)
+handler symbols:
+devtools_handler.go
+page imports diagnostic:
+import { RedisDiagnosticEmptyState } from '../components/RedisDiagnosticEmptyState'
+                <RedisDiagnosticEmptyState
+i18n keys:
+    "diagnostic": {
+    "headerChip": {
+  "Diagnostics": "Diagnostics",
+
+===== GO_BUILD =====
+BUILD OK
+
+===== GO_TEST =====
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/api	(cached)
+GO TEST OK
+
+===== TYPECHECK =====
+TYPECHECK OK
+
+===== LINT =====
+
+> teslasync-web@2.0.0 lint
+> eslint . --report-unused-disable-directives --max-warnings 0 && npm run lint:i18n && npm run lint:light-mode && npm run audit:empty-state && npm run audit:tooltip-text
+
+
+> teslasync-web@2.0.0 lint:i18n
+> node scripts/lint-i18n-no-template-literals.mjs
+
+[i18n-lint] OK ΓÇö no template literals in src/i18n/*.json
+
+> teslasync-web@2.0.0 lint:light-mode
+> node scripts/audit-light-mode-parity.mjs
+
+
+Total violations: 0
+
+Allowed drift (LIGHT_MODE_ALLOWED_DRIFT): 0
+
+OK ΓÇö light-mode CSS-var parity holds.
+
+> teslasync-web@2.0.0 audit:empty-state
+> node scripts/audit-empty-state-cta.mjs
+
+OK ΓÇö every <EmptyState> in src\features has a CTA or // no-action: exemption
+
+> teslasync-web@2.0.0 audit:tooltip-text
+> node scripts/audit-tooltip-text-color.mjs
+
+OK ΓÇö no tooltip content overrides intrinsic text colour
+LINT OK
+
+===== FRONTEND_TEST =====
+
+> teslasync-web@2.0.0 test
+> vitest run --run src/features/admin
+
+6:44:53 PM [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+6:44:53 PM [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+Both esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored. The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+
+[1m[46m RUN [49m[22m [36mv4.1.2 [39m[90mD:/repos/teslasync/web[39m
+
+[90mstdout[2m | src/features/admin/components/__tests__/RedisDiagnosticEmptyState.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/features/admin/components/__tests__/RedisDiagnosticEmptyState.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 269[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m9 passed[39m[22m[90m (9)[39m
+[2m   Start at [22m 18:44:53
+[2m   Duration [22m 3.98s[2m (transform 1.49s, setup 105ms, import 2.29s, tests 269ms, environment 1.10s)[22m
+
+FRONTEND TEST OK
+
+===== GIT_STATUS =====
+ M go.mod
+ M go.sum
+ M internal/api/devtools_handler.go
+ M internal/api/router.go
+ M internal/signal/live_store_test.go
+ M internal/signal/redis_cache.go
+ M internal/signal/redis_cache_test.go
+ M internal/signal/store.go
+ M internal/signal/store_test.go
+ M web/src/api/devtools.ts
+ M web/src/features/admin/pages/RedisSignalViewerPage.tsx
+ M web/src/i18n/en.json
+?? internal/api/devtools_handler_test.go
+?? web/src/features/admin/components/RedisDiagnosticEmptyState.tsx
+?? web/src/features/admin/components/__tests__/
+
+===== STATUS =====
+EXIT=0
+STATUS=DONE
+Finished: 2026-05-03T18:45:04.3529836-07:00

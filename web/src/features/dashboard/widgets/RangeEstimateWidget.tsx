@@ -21,7 +21,7 @@ export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
         {state ? (
           <div className="space-y-3">
             <div>
-              <p className="text-[10px] text-white/40 uppercase tracking-wider">
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.ratedRange', 'Rated Range')}
               </p>
               <p className="text-xl font-bold text-cyan-300">
@@ -29,16 +29,16 @@ export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
               </p>
             </div>
             <div>
-              <p className="text-[10px] text-white/40 uppercase tracking-wider">
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.idealRange', 'Ideal Range')}
               </p>
-              <p className="text-lg font-semibold text-white/90">
+              <p className="text-lg font-semibold text-[var(--text-primary)]">
                 {fmtNumber(convertDistance(state.ideal_range), 0)} {distanceUnit}
               </p>
             </div>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Gauge className="h-6 w-6" />}
             message={t('widget.noRange', 'No range data')}
             className="py-4"

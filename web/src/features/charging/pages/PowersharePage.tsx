@@ -118,7 +118,7 @@ export default function PowersharePage() {
           <div className="flex items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-2">
               <Zap className="h-5 w-5 text-amber-400" />
-              <h2 className="text-lg font-semibold text-white/90">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                 {t('powershare.statusSection', 'Powershare Status')}
               </h2>
             </div>
@@ -156,7 +156,7 @@ export default function PowersharePage() {
               />
             </Grid>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Info className="h-8 w-8" />}
               message={t(
                 'powershare.noData',
@@ -172,7 +172,7 @@ export default function PowersharePage() {
         <GlassPanel className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <AlertCircle className="h-5 w-5 text-rose-400" />
-            <h2 className="text-lg font-semibold text-white/90">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">
               {t('powershare.stopReasonSection', 'Stop Reason')}
             </h2>
           </div>
@@ -180,7 +180,7 @@ export default function PowersharePage() {
           {stopReason ? (
             <div className="flex items-center gap-3">
               <Badge variant={stopReasonVariant(stopReason)}>{stopReason}</Badge>
-              <span className="text-sm text-white/60">
+              <span className="text-sm text-[var(--text-secondary)]">
                 {t(
                   'powershare.stopReasonHelp',
                   'Last recorded reason Powershare was halted.',
@@ -188,7 +188,7 @@ export default function PowersharePage() {
               </span>
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Info className="h-8 w-8" />}
               message={t(
                 'powershare.noStopReason',

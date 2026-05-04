@@ -67,7 +67,7 @@ function CompactView({
         {enabled ? (
           <ShieldCheck className="h-4 w-4 flex-shrink-0 text-neon-green" />
         ) : (
-          <ShieldOff className="h-4 w-4 flex-shrink-0 text-white/30" />
+          <ShieldOff className="h-4 w-4 flex-shrink-0 text-[var(--text-muted)]" />
         )}
         <Badge variant={enabled ? 'success' : 'neutral'}>
           {enabled ? t('widget.guardArmed', 'Armed') : t('widget.guardDisarmed', 'Disarmed')}
@@ -105,13 +105,13 @@ function StandardView({
           {enabled ? (
             <ShieldCheck className="h-5 w-5 flex-shrink-0 text-neon-green" />
           ) : (
-            <ShieldOff className="h-5 w-5 flex-shrink-0 text-white/30" />
+            <ShieldOff className="h-5 w-5 flex-shrink-0 text-[var(--text-muted)]" />
           )}
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-white/90 truncate">
+            <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
               {enabled ? t('widget.guardArmed', 'Armed') : t('widget.guardDisarmed', 'Disarmed')}
             </p>
-            <p className="text-xs text-white/40 truncate">
+            <p className="text-xs text-[var(--text-muted)] truncate">
               {t('widget.guardSensitivity', 'Sensitivity')}: {sensitivity ?? '—'}
               {autoPanic ? ` · ${t('widget.guardAutoPanic', 'Auto-panic')}` : ''}
             </p>
@@ -206,7 +206,7 @@ export default function GuardModeWidget({ vehicleId, size }: WidgetProps) {
           />
         )
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Shield className="h-5 w-5" />}
           message={t('widget.noGuardData', 'No guard data')}
           className="py-4"

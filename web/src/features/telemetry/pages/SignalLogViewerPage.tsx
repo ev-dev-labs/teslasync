@@ -21,14 +21,14 @@ import { getErrorMessage } from '@/lib/errorMessage';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useUrlArray, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
+import { useUrlArray, useUrlBatch, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { CHART_COLORS } from '@/lib/colors';
 import { toLocalDatetimeStr } from '@/lib/dateFormat';
 import { formatValue, type SignalLogEntry } from '@/components/SignalQueryControls';
 import type { SignalHistoryResp } from '@/api/types';
-import { TIME_RANGE_PRESETS } from '@/lib/constants';
+import { TIME_RANGE_PRESETS, matchTimeRangePreset } from '@/lib/constants';
 import { cn } from '@/lib/cn';
 import { Database, Search, Clock, Activity, Filter, AlertCircle } from 'lucide-react';
 
@@ -63,6 +63,7 @@ export default function SignalLogViewerPage() {
   const defaultTo = useMemo(() => toLocalDatetimeStr(new Date()), []);
   const [fromStr, setFromStr] = useUrlString('from', defaultFrom);
   const [toStr, setToStr] = useUrlString('to', defaultTo);
+  const setRangeBatch = useUrlBatch();
 
   // Pagination
   const [perPage, setPerPage] = useUrlNumber('size', 50);
@@ -73,9 +74,13 @@ export default function SignalLogViewerPage() {
 
   const applyPreset = useCallback((hours: number) => {
     const end = new Date();
-    setFromStr(toLocalDatetimeStr(new Date(end.getTime() - hours * 3600_000)));
-    setToStr(toLocalDatetimeStr(end));
-  }, []);
+    setRangeBatch({
+      from: toLocalDatetimeStr(new Date(end.getTime() - hours * 3600_000)),
+      to: toLocalDatetimeStr(end),
+    });
+  }, [setRangeBatch]);
+
+  const activePresetHours = matchTimeRangePreset(fromStr, toStr);
 
   const canQuery = selectedSignals.length > 0 && fromStr && toStr;
 
@@ -226,7 +231,14 @@ export default function SignalLogViewerPage() {
           </span>
           <div className="flex flex-wrap gap-2 mb-2">
             {TIME_RANGE_PRESETS.map(p => (
-              <Button key={p.label} size="sm" variant="ghost" onClick={() => applyPreset(p.hours)}>
+              <Button
+                key={p.label}
+                size="sm"
+                variant={activePresetHours === p.hours ? 'primary' : 'ghost'}
+                aria-pressed={activePresetHours === p.hours}
+                aria-label={t('signalQuery.preset.aria', '{{label}} time range', { label: p.label })}
+                onClick={() => applyPreset(p.hours)}
+              >
                 {p.label}
               </Button>
             ))}
@@ -270,7 +282,7 @@ export default function SignalLogViewerPage() {
 
       {/* ── Results ───────────────────────────────────────────────── */}
       {!hasQueried ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Database className="h-10 w-10" />}
           title={t('Select signals and click Query')}
           message={t('Choose one or more signals, set a date range, then hit Query to browse signal history.')}
@@ -313,7 +325,7 @@ export default function SignalLogViewerPage() {
                 />
               </>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Database className="h-8 w-8" />}
                 title={t('No data')}
                 message={t('No signal data found for this query.')}

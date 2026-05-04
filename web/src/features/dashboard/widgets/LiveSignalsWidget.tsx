@@ -18,8 +18,8 @@ import type { WidgetProps } from './types';
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-[10px] text-white/50">{label}</span>
-      <span className="text-xs font-bold text-white/90 truncate max-w-[100px]">
+      <span className="text-[10px] text-[var(--text-secondary)]">{label}</span>
+      <span className="text-xs font-bold text-[var(--text-primary)] truncate max-w-[100px]">
         {value}
       </span>
     </div>
@@ -51,7 +51,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
       onRefresh={() => refetchMotor()}
     >
       {!hasData ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Wifi className="h-5 w-5" />}
           message={t('widget.noSignals', 'No live signal data')}
           className="py-4"
@@ -60,7 +60,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
         <div className="grid grid-cols-2 gap-4 h-full overflow-y-auto">
           {/* Drivetrain */}
           <div className="space-y-1.5">
-            <h4 className="text-[10px] font-semibold uppercase text-white/40 flex items-center gap-1">
+            <h4 className="text-[10px] font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
               <Cog className="h-3 w-3 text-purple-300" /> {t('widget.motor', 'Motor')}
             </h4>
             {motor ? (
@@ -86,7 +86,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
 
           {/* Climate */}
           <div className="space-y-1.5">
-            <h4 className="text-[10px] font-semibold uppercase text-white/40 flex items-center gap-1">
+            <h4 className="text-[10px] font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
               <Thermometer className="h-3 w-3 text-cyan-300" /> {t('widget.climate', 'Climate')}
             </h4>
             {climate ? (
@@ -119,7 +119,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
 
           {/* Tires */}
           <div className="space-y-1.5">
-            <h4 className="text-[10px] font-semibold uppercase text-white/40 flex items-center gap-1">
+            <h4 className="text-[10px] font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
               <CircleDot className="h-3 w-3 text-cyan-300" /> {t('widget.tires', 'Tires')}
             </h4>
             {tires ? (
@@ -164,13 +164,13 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
 
           {/* Security summary */}
           <div className="space-y-1.5">
-            <h4 className="text-[10px] font-semibold uppercase text-white/40 flex items-center gap-1">
+            <h4 className="text-[10px] font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
               🛡️ {t('widget.security', 'Security')}
             </h4>
             {security ? (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-white/50">
+                  <span className="text-[10px] text-[var(--text-secondary)]">
                     {t('widget.lock', 'Lock')}
                   </span>
                   <Badge variant={security.locked ? 'success' : 'danger'}>
@@ -178,7 +178,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-white/50">
+                  <span className="text-[10px] text-[var(--text-secondary)]">
                     {t('widget.sentry', 'Sentry')}
                   </span>
                   <Badge variant={security.sentry_mode ? 'success' : 'neutral'}>

@@ -76,7 +76,7 @@ export function LiveIndicator({ variant = 'pill', className }: LiveIndicatorProp
       icon: WifiOff,
       text: 'text-[var(--text-muted)]',
       bg: 'bg-white/[0.03]',
-      dot: 'bg-white/20',
+      dot: 'bg-[var(--surface-2)]',
       label: t('live.unknown', 'Unknown'),
     },
   }

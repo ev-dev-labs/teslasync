@@ -23,11 +23,17 @@ export {
 } from './DataFreshness';
 export { LiveIndicator, type LiveIndicatorVariant } from './LiveIndicator';
 export { Delta, type DeltaProps } from './Delta';
+export { TimeStamp, type TimeStampProps, type TimeStampFormat } from './TimeStamp';
 export {
   BulkActionsToolbar,
   type BulkAction,
   type BulkActionsToolbarProps,
 } from './BulkActionsToolbar';
+// Phase-45 / Prompt 32 — singular-name alias of the same component.
+export {
+  BulkActionToolbar,
+  type BulkActionToolbarProps,
+} from './BulkActionToolbar';
 export {
   SeverityBadge,
   SeverityIcon,

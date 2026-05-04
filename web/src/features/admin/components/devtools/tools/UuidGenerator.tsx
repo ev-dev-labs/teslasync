@@ -23,7 +23,7 @@ export function UuidGeneratorTool() {
         {uuids.length > 0 && (
           <div className="space-y-1">
             {uuids.map((u, i) => (
-              <div key={`${u}-${i}`} className="flex items-center gap-2 rounded bg-black/20 px-3 py-1.5">
+              <div key={`${u}-${i}`} className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1.5">
                 <code className="flex-1 text-xs font-mono text-purple-300">{u}</code>
                 <CopyButton text={u} />
               </div>

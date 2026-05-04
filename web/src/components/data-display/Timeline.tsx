@@ -28,7 +28,7 @@ export function Timeline({ items, className }: TimelineProps) {
           <span
             className={cn(
               'absolute left-0 top-1 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 bg-white dark:bg-gray-900',
-              item.color ? undefined : 'border-gray-300 text-gray-400 dark:border-gray-600',
+              item.color ? undefined : 'border-gray-300 text-[var(--text-muted)] dark:border-gray-600',
             )}
             style={item.color ? { borderColor: item.color, color: item.color } : undefined}
           >
@@ -46,12 +46,12 @@ export function Timeline({ items, className }: TimelineProps) {
               <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 {item.title}
               </span>
-              <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">
+              <span className="shrink-0 text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                 {item.time}
               </span>
             </div>
             {item.subtitle && (
-              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{item.subtitle}</p>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">{item.subtitle}</p>
             )}
           </div>
         </div>

@@ -121,6 +121,55 @@ func (f *fakeRedisSignalClient) HGet(ctx context.Context, key string, field stri
 	return redis.NewStringResult(value, nil)
 }
 
+func (f *fakeRedisSignalClient) HLen(ctx context.Context, key string) *redis.IntCmd {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	hash, ok := f.hashes[key]
+	if !ok {
+		return redis.NewIntResult(0, nil)
+	}
+	return redis.NewIntResult(int64(len(hash)), nil)
+}
+
+func (f *fakeRedisSignalClient) Scan(ctx context.Context, cursor uint64, match string, count int64) *redis.ScanCmd {
+	// Naive but deterministic: collect every matching key, return in
+	// one shot with cursor=0. Sufficient for tests that don't care about
+	// real pagination — the caller's loop handles cursor=0 → done.
+	f.mu.RLock()
+	keys := make([]string, 0, len(f.hashes))
+	for k := range f.hashes {
+		if matchesGlob(k, match) {
+			keys = append(keys, k)
+		}
+	}
+	f.mu.RUnlock()
+	return redis.NewScanCmdResult(keys, 0, nil)
+}
+
+// matchesGlob is a minimal glob matcher for the SCAN MATCH patterns used
+// in tests: only `*` wildcards are supported.
+func matchesGlob(s, pattern string) bool {
+	parts := strings.Split(pattern, "*")
+	if len(parts) == 1 {
+		return s == pattern
+	}
+	if !strings.HasPrefix(s, parts[0]) {
+		return false
+	}
+	if !strings.HasSuffix(s, parts[len(parts)-1]) {
+		return false
+	}
+	cursor := len(parts[0])
+	for i := 1; i < len(parts)-1; i++ {
+		idx := strings.Index(s[cursor:], parts[i])
+		if idx < 0 {
+			return false
+		}
+		cursor += idx + len(parts[i])
+	}
+	return true
+}
+
 func (f *fakeRedisSignalClient) Publish(ctx context.Context, channel string, message interface{}) *redis.IntCmd {
 	return redis.NewIntResult(0, nil)
 }
@@ -347,4 +396,130 @@ func assertString(t *testing.T, got interface{}, want string) {
 	if value != want {
 		t.Fatalf("value = %q, want %q", value, want)
 	}
+}
+
+
+func TestParseVehicleSignalsKey(t *testing.T) {
+tests := []struct {
+name    string
+key     string
+wantID  int64
+wantOK  bool
+}{
+{name: "valid id 1", key: "vehicle:1:signals", wantID: 1, wantOK: true},
+{name: "valid id 42", key: "vehicle:42:signals", wantID: 42, wantOK: true},
+{name: "valid large id", key: "vehicle:9223372036854775807:signals", wantID: 9223372036854775807, wantOK: true},
+{name: "missing prefix", key: "veh:1:signals", wantOK: false},
+{name: "missing suffix", key: "vehicle:1:signal", wantOK: false},
+{name: "non-numeric id", key: "vehicle:abc:signals", wantOK: false},
+{name: "empty id", key: "vehicle::signals", wantOK: false},
+{name: "negative id", key: "vehicle:-3:signals", wantOK: false},
+{name: "zero id", key: "vehicle:0:signals", wantOK: false},
+{name: "empty string", key: "", wantOK: false},
+{name: "wrong prefix entirely", key: "other:1:signals", wantOK: false},
+}
+for _, tc := range tests {
+t.Run(tc.name, func(t *testing.T) {
+id, ok := parseVehicleSignalsKey(tc.key)
+if ok != tc.wantOK {
+t.Fatalf("parseVehicleSignalsKey(%q) ok = %v, want %v", tc.key, ok, tc.wantOK)
+}
+if ok && id != tc.wantID {
+t.Fatalf("parseVehicleSignalsKey(%q) id = %d, want %d", tc.key, id, tc.wantID)
+}
+})
+}
+}
+
+func TestRawFieldCount_EmptyKey(t *testing.T) {
+ctx := context.Background()
+redisClient := newFakeRedisSignalClient()
+cache := &RedisSignalCache{rdb: redisClient}
+
+n, err := cache.RawFieldCount(ctx, 99)
+if err != nil {
+t.Fatalf("RawFieldCount() error = %v, want nil", err)
+}
+if n != 0 {
+t.Fatalf("RawFieldCount() = %d, want 0 for missing key", n)
+}
+}
+
+func TestRawFieldCount_PopulatedKey(t *testing.T) {
+ctx := context.Background()
+redisClient := newFakeRedisSignalClient()
+cache := &RedisSignalCache{rdb: redisClient}
+
+if err := cache.Update(ctx, 7, map[string]interface{}{
+"BatteryLevel": 72.0,
+"VehicleSpeed": 0.0,
+"Locked":       true,
+}); err != nil {
+t.Fatalf("Update() error = %v", err)
+}
+n, err := cache.RawFieldCount(ctx, 7)
+if err != nil {
+t.Fatalf("RawFieldCount() error = %v, want nil", err)
+}
+if n != 3 {
+t.Fatalf("RawFieldCount() = %d, want 3", n)
+}
+}
+
+func TestScanVehicleKeys_FiltersMalformedKeys(t *testing.T) {
+ctx := context.Background()
+redisClient := newFakeRedisSignalClient()
+cache := &RedisSignalCache{rdb: redisClient}
+
+// Seed Redis with a deliberate mix of well-formed and malformed keys.
+redisClient.hashes["vehicle:1:signals"] = map[string]string{"a": "1"}
+redisClient.hashes["vehicle:7:signals"] = map[string]string{"b": "2"}
+redisClient.hashes["vehicle:abc:signals"] = map[string]string{"c": "3"}
+redisClient.hashes["vehicle::signals"] = map[string]string{"d": "4"}
+redisClient.hashes["other:1:signals"] = map[string]string{"e": "5"}
+
+got, err := cache.ScanVehicleKeys(ctx, 50)
+if err != nil {
+t.Fatalf("ScanVehicleKeys() error = %v", err)
+}
+
+// Sort by id since map iteration is non-deterministic in the fake client.
+wantSet := map[int64]bool{1: true, 7: true}
+if len(got) != len(wantSet) {
+t.Fatalf("ScanVehicleKeys() returned %d ids, want %d (got=%v)", len(got), len(wantSet), got)
+}
+for _, id := range got {
+if !wantSet[id] {
+t.Fatalf("ScanVehicleKeys() returned unexpected id %d (got=%v)", id, got)
+}
+delete(wantSet, id)
+}
+if len(wantSet) != 0 {
+t.Fatalf("ScanVehicleKeys() missing expected ids %v", wantSet)
+}
+// "other:*" must NOT be matched by the SCAN MATCH "vehicle:*:signals".
+for _, id := range got {
+if id <= 0 {
+t.Fatalf("ScanVehicleKeys() returned non-positive id %d", id)
+}
+}
+}
+
+func TestScanVehicleKeys_RespectsLimit(t *testing.T) {
+ctx := context.Background()
+redisClient := newFakeRedisSignalClient()
+cache := &RedisSignalCache{rdb: redisClient}
+
+for i := int64(1); i <= 50; i++ {
+key := fmt.Sprintf("vehicle:%d:signals", i)
+redisClient.hashes[key] = map[string]string{"x": "1"}
+}
+
+got, err := cache.ScanVehicleKeys(ctx, 10)
+if err != nil {
+t.Fatalf("ScanVehicleKeys() error = %v", err)
+}
+if len(got) != 10 {
+t.Fatalf("ScanVehicleKeys(limit=10) returned %d ids, want 10", len(got))
+}
 }

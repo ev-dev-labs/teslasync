@@ -115,7 +115,7 @@ export default function DriveAnalyticsSection({
       {/* Header + date filter */}
       <FadeIn delay={0.45}>
         <div className="mt-2 mb-2">
-          <h2 className="text-lg font-semibold text-white/80">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
             {t('dynamics.driveAnalytics', 'Drive Analytics')}
           </h2>
         </div>

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Link } from 'react-router-dom';
 import {
   Heart, Battery, BatteryFull, Gauge, RefreshCcw, Clock,
@@ -18,7 +19,7 @@ import {
   AREA_DEFAULTS, TimeMarker,
 } from '@/components/charts';
 import { MetricCard, MetricBar, LiveIndicator } from '@/components/data-display';
-import { Skeleton, EmptyState, LiveStaleDataBanner, SectionErrorBoundary } from '@/components/feedback';
+import { Skeleton, EmptyState, LiveStaleDataBanner, SectionErrorBoundary, StatGridSkeleton, ChartBlockSkeleton, PageHeaderSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
@@ -84,7 +85,7 @@ function degradationColor(pct: number): string {
 function buildInsights(
   health: BatteryHealthAnalytics,
   sessions: ChargingSession[] | null,
-  t: (k: string, fb: string) => string,
+  t: TFunction,
 ): InsightItem[] {
   const items: InsightItem[] = [];
 
@@ -92,21 +93,21 @@ function buildInsights(
     items.push({
       icon: <CheckCircle className="h-4 w-4" />,
       title: t('battery.insight.excellentTitle', 'Excellent Health'),
-      description: t('battery.insight.excellentDesc', `Battery health is ${fmtNumber(health.current_soh, 0)}/100 — performing above average.`),
+      description: t('battery.insight.excellentDesc', { soh: fmtNumber(health.current_soh, 0), defaultValue: 'Battery health is {{soh}}/100 — performing above average.' }),
       status: 'good',
     });
   } else if (health.current_soh >= 70) {
     items.push({
       icon: <Info className="h-4 w-4" />,
       title: t('battery.insight.goodTitle', 'Good Health'),
-      description: t('battery.insight.goodDesc', `Battery health is ${fmtNumber(health.current_soh, 0)}/100 — normal degradation for age.`),
+      description: t('battery.insight.goodDesc', { soh: fmtNumber(health.current_soh, 0), defaultValue: 'Battery health is {{soh}}/100 — normal degradation for age.' }),
       status: 'warning',
     });
   } else {
     items.push({
       icon: <AlertTriangle className="h-4 w-4" />,
       title: t('battery.insight.concernTitle', 'Health Concern'),
-      description: t('battery.insight.concernDesc', `Battery health dropped to ${fmtNumber(health.current_soh, 0)}/100 — consider service check.`),
+      description: t('battery.insight.concernDesc', { soh: fmtNumber(health.current_soh, 0), defaultValue: 'Battery health dropped to {{soh}}/100 — consider service check.' }),
       status: 'critical',
     });
   }
@@ -115,7 +116,7 @@ function buildInsights(
     items.push({
       icon: <AlertTriangle className="h-4 w-4" />,
       title: t('battery.insight.highFastChargeTitle', 'High Fast-Charge Usage'),
-      description: t('battery.insight.highFastChargeDesc', `${fmtPercent(health.fast_charge_pct)} of sessions are fast-charging. Mix in slow charging for longevity.`),
+      description: t('battery.insight.highFastChargeDesc', { pct: fmtPercent(health.fast_charge_pct), defaultValue: '{{pct}} of sessions are fast-charging. Mix in slow charging for longevity.' }),
       status: 'warning',
     });
   } else {
@@ -133,7 +134,7 @@ function buildInsights(
       items.push({
         icon: <AlertTriangle className="h-4 w-4" />,
         title: t('battery.insight.deepDischargeTitle', 'Deep Discharges Detected'),
-        description: t('battery.insight.deepDischargeDesc', `${deepDischarges} recent sessions started below 10%. Avoid deep discharges when possible.`),
+        description: t('battery.insight.deepDischargeDesc', { count: deepDischarges, defaultValue: '{{count}} recent sessions started below 10%. Avoid deep discharges when possible.' }),
         status: 'warning',
       });
     }
@@ -145,7 +146,7 @@ function buildInsights(
       items.push({
         icon: <Info className="h-4 w-4" />,
         title: t('battery.insight.highSuperchargerTitle', 'High Supercharger Usage'),
-        description: t('battery.insight.highSuperchargerDesc', `${superchargerCount} Supercharger sessions. Occasional slow charging helps battery health.`),
+        description: t('battery.insight.highSuperchargerDesc', { count: superchargerCount, defaultValue: '{{count}} Supercharger sessions. Occasional slow charging helps battery health.' }),
         status: 'warning',
       });
     }
@@ -155,7 +156,7 @@ function buildInsights(
     items.push({
       icon: <Target className="h-4 w-4" />,
       title: t('battery.insight.lowDegTitle', 'Low Degradation Rate'),
-      description: t('battery.insight.lowDegDesc', `${fmtNumber(health.degradation_rate_yr, 1)}% per year — well below industry average of 3–5%.`),
+      description: t('battery.insight.lowDegDesc', { rate: fmtNumber(health.degradation_rate_yr, 1), defaultValue: '{{rate}}% per year — well below industry average of 3–5%.' }),
       status: 'good',
     });
   }
@@ -189,6 +190,30 @@ const QUICK_LINKS: { to: string; labelKey: string; fallback: string }[] = [
   { to: '/vampire-drain', labelKey: 'battery.links.vampireDrain', fallback: 'Vampire Drain' },
   { to: '/sleep-efficiency', labelKey: 'battery.links.sleepEfficiency', fallback: 'Sleep Efficiency' },
 ];
+
+/* ── Loading skeleton ────────────────────────────────────────────── */
+
+/**
+ * Mirrors the BatteryHealthPage layout while data loads:
+ * page header → 6 hero metric cards → degradation prediction chart →
+ * insights panel → recommendations panel → charging habits chart →
+ * quick-links row. Phase-45 / Prompt 18.
+ */
+function BatteryHealthSkeleton() {
+  return (
+    <div className="space-y-6" data-testid="battery-health-skeleton">
+      <PageHeaderSkeleton />
+      <StatGridSkeleton cards={6} className="md:grid-cols-3 lg:grid-cols-6" />
+      <ChartBlockSkeleton height={360} />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Skeleton className="h-56 rounded-xl" />
+        <Skeleton className="h-56 rounded-xl" />
+      </div>
+      <ChartBlockSkeleton height={300} />
+      <StatGridSkeleton cards={6} className="md:grid-cols-3 lg:grid-cols-6" />
+    </div>
+  );
+}
 
 /* ── Page ─────────────────────────────────────────────────────────── */
 
@@ -328,18 +353,7 @@ export default function BatteryHealthPage() {
 
   /* ── Loading ───────────────────────────────────────────────────── */
   if (healthLoading) {
-    return (
-      <PageContainer
-        title={t('battery.title', 'Battery Health')}
-        subtitle={t('battery.subtitle', 'Degradation tracking, prediction, charging habits & longevity insights')}
-      >
-        <Grid cols={{ default: 2, lg: 3 }} gap={4}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} height={100} />
-          ))}
-        </Grid>
-      </PageContainer>
-    );
+    return <BatteryHealthSkeleton />;
   }
 
   /* ── Empty / error ─────────────────────────────────────────────── */
@@ -350,7 +364,7 @@ export default function BatteryHealthPage() {
         subtitle={t('battery.subtitle', 'Degradation tracking, prediction, charging habits & longevity insights')}
         error={healthError as Error | null}
       >
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Battery className="h-10 w-10" />}
           message={t('battery.empty', 'No battery health data available yet.')}
         />
@@ -611,7 +625,7 @@ export default function BatteryHealthPage() {
               {insights.map((ins, i) => (
                 <GlassPanel
                   key={i}
-                  className={cn('border p-4 transition-all duration-200', insightPanelClass[ins.status])}
+                  className={cn('border p-4 transition-all duration-normal', insightPanelClass[ins.status])}
                 >
                   <div className="flex items-start gap-3">
                     <div className={cn('mt-0.5', insightIconClass[ins.status])}>{ins.icon}</div>
@@ -624,7 +638,7 @@ export default function BatteryHealthPage() {
               ))}
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Info className="h-8 w-8" />}
               message={t('battery.insights.empty', 'Not enough data for insights yet')}
               className="py-6"
@@ -663,7 +677,7 @@ export default function BatteryHealthPage() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Activity className="h-8 w-8" />}
               message={t('battery.chart.noTrend', 'Not enough snapshots for trend analysis')}
               className="py-8"
@@ -705,7 +719,7 @@ export default function BatteryHealthPage() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8" />}
                 message={t('battery.chart.noRange', 'No range data yet')}
                 className="py-8"
@@ -764,7 +778,7 @@ export default function BatteryHealthPage() {
               )}
             </>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Zap className="h-8 w-8" />}
               message={t('battery.chart.noSessions', 'No charging session data yet')}
               className="py-8"
@@ -868,7 +882,7 @@ export default function BatteryHealthPage() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Zap className="h-8 w-8" />}
                 message={t('battery.chart.noBreakdown', 'No charging data for breakdown')}
                 className="py-8"
@@ -890,14 +904,14 @@ export default function BatteryHealthPage() {
                   { label: t('battery.stats.totalEnergy', 'Total Energy Added'), value: `${fmtNumber(energyBreakdown.totalEnergy, 1)} kWh` },
                   { label: t('battery.stats.cycles', 'Charge Cycles'), value: String(health.total_cycles) },
                 ].map((row) => (
-                  <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5">
+                  <div key={row.label} className="flex justify-between items-center py-2 border-b border-[var(--border-subtle)]">
                     <span className="text-xs text-[var(--text-secondary)]">{row.label}</span>
                     <span className="text-sm font-semibold text-[var(--text-primary)]">{row.value}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8" />}
                 message={t('battery.stats.empty', 'No charging statistics yet')}
                 className="py-8"

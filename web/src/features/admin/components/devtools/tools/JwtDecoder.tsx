@@ -31,7 +31,7 @@ export function JwtDecoderTool() {
     <ToolCard icon={KeyRound} color="purple" title={t('Jwt Decoder')} description={t('Jwt Decoder Desc')}>
       <div className="space-y-3">
         <div>
-          <span className="mb-1 block text-xs font-medium text-white/70">{t('Jwt Input')}</span>
+          <span className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">{t('Jwt Input')}</span>
           <Textarea
             rows={3}
             placeholder="eyJhbGciOiJSUzI1NiIs..."

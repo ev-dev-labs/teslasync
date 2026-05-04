@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/Button';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { LiveIndicator } from '@/components/data-display/LiveIndicator';
+import { TimeStamp } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { AlertBanner } from '@/components/feedback/AlertBanner';
@@ -134,7 +135,7 @@ function LocationStatusCard({ icon, label, value, active }: LocationStatusCardPr
           'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
           active
             ? 'bg-emerald-500/20 text-emerald-400'
-            : 'bg-gray-500/20 text-gray-400',
+            : 'bg-gray-500/20 text-[var(--text-muted)]',
         )}
       >
         {icon}
@@ -324,10 +325,10 @@ export default function NavigationRoutePage() {
   /* ---- destination table columns ---- */
   const destColumns: Column<typeof recentDestinations[number]>[] = useMemo(
     () => [
-      { key: 'time', header: t('nav.col.time', 'Time'), render: (row) => <span className="text-xs text-gray-400 whitespace-nowrap">{row.time}</span> },
-      { key: 'destination', header: t('nav.col.destination', 'Destination'), render: (row) => <span className="text-sm text-white/80">{row.destination}</span> },
-      { key: 'distance', header: t('nav.col.distance', 'Distance'), render: (row) => <span className="text-xs text-gray-400">{fmtNumber(convertDistance(row.distance), 1)} {distanceUnit}</span> },
-      { key: 'eta', header: t('nav.col.eta', 'ETA'), render: (row) => <span className="text-xs text-gray-400">{fmtNumber(row.eta, 0)} min</span> },
+      { key: 'time', header: t('nav.col.time', 'Time'), render: (row) => <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">{row.time}</span> },
+      { key: 'destination', header: t('nav.col.destination', 'Destination'), render: (row) => <span className="text-sm text-[var(--text-primary)]">{row.destination}</span> },
+      { key: 'distance', header: t('nav.col.distance', 'Distance'), render: (row) => <span className="text-xs text-[var(--text-muted)]">{fmtNumber(convertDistance(row.distance), 1)} {distanceUnit}</span> },
+      { key: 'eta', header: t('nav.col.eta', 'ETA'), render: (row) => <span className="text-xs text-[var(--text-muted)]">{fmtNumber(row.eta, 0)} min</span> },
     ],
     [t, convertDistance, distanceUnit],
   );
@@ -340,9 +341,7 @@ export default function NavigationRoutePage() {
         header: t('nav.col.time', 'Time'),
         sortable: true,
         render: (row: LocationSnapshot) => (
-          <span className="whitespace-nowrap text-xs font-mono text-[var(--text-muted)]">
-            {formatDateTime(row.created_at)}
-          </span>
+          <TimeStamp value={row.created_at} className="whitespace-nowrap text-xs font-mono text-[var(--text-muted)]" />
         ),
       },
       {
@@ -605,8 +604,8 @@ export default function NavigationRoutePage() {
                 </span>
               </span>
             ) : (
-              <EmptyState
-                icon={<Navigation className="h-8 w-8 text-gray-400" />}
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+                icon={<Navigation className="h-8 w-8 text-[var(--text-muted)]" />}
                 message={t(
                   'nav.noActiveNav',
                   'No active navigation. Start a route in your vehicle to see details here.',
@@ -755,8 +754,8 @@ export default function NavigationRoutePage() {
               {historyLoading ? (
                 <Skeleton height={260} />
               ) : chartData.length === 0 ? (
-                <EmptyState
-                  icon={<AlertTriangle className="h-8 w-8 text-gray-400" />}
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+                  icon={<AlertTriangle className="h-8 w-8 text-[var(--text-muted)]" />}
                   message={t(
                     'nav.noHistory',
                     'No location history available for this vehicle.',
@@ -856,7 +855,7 @@ export default function NavigationRoutePage() {
                 )}
               </GlassPanel>
             ) : (
-              <EmptyState message={t('navigation.noRoute', 'No active route selected')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('navigation.noRoute', 'No active route selected')} />
             )}
           </FadeIn>
 
@@ -884,7 +883,7 @@ export default function NavigationRoutePage() {
                     >
                       {latest?.route_traffic_delay_min ?? 0}
                     </span>
-                    <span className="text-sm text-white/40">{t('nav.min', 'min')}</span>
+                    <span className="text-sm text-[var(--text-muted)]">{t('nav.min', 'min')}</span>
                   </div>
                   <TrafficDelayBadge
                     minutes={latest?.route_traffic_delay_min ?? 0}
@@ -905,7 +904,7 @@ export default function NavigationRoutePage() {
               {historyLoading ? (
                 <Skeleton lines={6} />
               ) : recentDestinations.length === 0 ? (
-                <EmptyState message={t('nav.noDestinations', 'No destination history available.')} />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('nav.noDestinations', 'No destination history available.')} />
               ) : (
                 <DataTable
                   columns={destColumns}
@@ -928,7 +927,7 @@ export default function NavigationRoutePage() {
               {historyLoading ? (
                 <Skeleton height={300} />
               ) : presenceChartData.length === 0 ? (
-                <EmptyState message={t('nav.noPresence', 'No presence history available.')} />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('nav.noPresence', 'No presence history available.')} />
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={presenceChartData} margin={chartMargin}>
@@ -962,7 +961,7 @@ export default function NavigationRoutePage() {
               {historyLoading ? (
                 <Skeleton lines={8} />
               ) : !sortedHistory.length ? (
-                <EmptyState
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                   message={t(
                     'nav.noSnapshots',
                     'No location snapshots recorded yet.',

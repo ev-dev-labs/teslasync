@@ -39,6 +39,7 @@ import { usePageTitle } from '@/hooks/usePageTitle'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useDirtyForm } from '@/hooks/useDirtyForm'
 import { useFormDraft } from '@/hooks/useFormDraft'
+import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useUrlString } from '@/hooks/useUrlState'
 import { alertRuleSchema } from '../schemas/alertRule'
 import { ComputedMetricEditor } from '../components/ComputedMetricEditor'
@@ -532,6 +533,11 @@ export default function AlertStudio() {
   )
 
   useDirtyForm(isDirty)
+  // Phase-45 / Prompt 16: in-app navigation guard. Pairs with `useDirtyForm`
+  // above (which only handles tab close / reload) so sidebar clicks, browser
+  // back, and breadcrumb links also surface a "discard or keep editing"
+  // dialog while a new rule is being authored.
+  useNavigationGuard(isDirty, t('forms.unsavedRule', 'You have an unsaved alert rule.'))
 
   const dirtyStrings = useMemo(() => ({
     title: t('forms.unsavedTitle', 'Unsaved changes'),
@@ -551,7 +557,8 @@ export default function AlertStudio() {
         message: dirtyStrings.message,
         confirmLabel: dirtyStrings.discardLabel,
         cancelLabel: dirtyStrings.keepEditingLabel,
-        variant: 'danger',
+        variant: 'warning',
+        silenceKey: 'discard-draft',
       })
       if (ok) action()
     },
@@ -880,7 +887,7 @@ export default function AlertStudio() {
   const renderValueEditor = () => {
     if (!editor.signal_name.trim()) {
       return (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Icons.info className="h-8 w-8 text-[var(--text-muted)]" />}
           title={t('notifications.alertStudio.editor.noSignalTitle', 'Choose a signal')}
           message={t('notifications.alertStudio.editor.noSignalDescription', 'Select a telemetry signal before entering a comparison value.')}
@@ -1074,7 +1081,7 @@ export default function AlertStudio() {
               })}
               {filteredTemplates.length === 0 && (
                 <div className="col-span-full">
-                  <EmptyState
+                  <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                     icon={<Icons.sparkles className="h-8 w-8 text-[var(--text-muted)]" />}
                     title={t('notifications.alertStudio.templates.noMatchesTitle', 'No templates found')}
                     message={t('notifications.alertStudio.templates.noMatches', 'No templates match your search')}
@@ -1120,7 +1127,7 @@ export default function AlertStudio() {
             )}
 
             {!isLoading && rulesList.length > 0 && filteredRules.length === 0 && (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Icons.search className="h-8 w-8 text-[var(--text-muted)]" />}
                 title={t('notifications.alertStudio.rules.noMatchesTitle', 'No matching rules')}
                 message={t('notifications.alertStudio.rules.noMatches', 'No rules match "{{search}}"', { search: ruleSearch })}
@@ -1150,13 +1157,13 @@ export default function AlertStudio() {
                     key={rule.id}
                     className={cn(
                       'group p-3 transition-all',
-                      active ? 'border-neon-cyan/30 bg-neon-cyan/5' : 'hover:border-white/10',
+                      active ? 'border-neon-cyan/30 bg-neon-cyan/5' : 'hover:border-[var(--border-subtle)]',
                     )}
                   >
                     <div className="flex items-start gap-2">
                       <input
                         type="checkbox"
-                        className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded border-white/20 bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
+                        className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded border-[var(--border-strong)] bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
                         checked={checked}
                         onClick={e => e.stopPropagation()}
                         onChange={e => toggleBulkSelected(rule.id, e.target.checked)}
@@ -1331,13 +1338,13 @@ export default function AlertStudio() {
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
                   {t('notifications.alertStudio.editor.kindLabel', 'Rule type')}
                 </label>
-                <div className="inline-flex rounded-lg border border-white/10 overflow-hidden">
+                <div className="inline-flex rounded-lg border border-[var(--border-subtle)] overflow-hidden">
                   <button
                     type="button"
                     className={cn(
                       'px-3 py-1.5 text-xs font-medium transition-colors',
                       editor.kind === 'signal'
-                        ? 'bg-white/10 text-[var(--text-primary)]'
+                        ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'
                         : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
                     )}
                     onClick={() => setEditor(s => ({ ...s, kind: 'signal' }))}
@@ -1347,9 +1354,9 @@ export default function AlertStudio() {
                   <button
                     type="button"
                     className={cn(
-                      'px-3 py-1.5 text-xs font-medium transition-colors border-l border-white/10',
+                      'px-3 py-1.5 text-xs font-medium transition-colors border-l border-[var(--border-subtle)]',
                       editor.kind === 'computed_metric'
-                        ? 'bg-white/10 text-[var(--text-primary)]'
+                        ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'
                         : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
                     )}
                     onClick={() => setEditor(s => ({ ...s, kind: 'computed_metric' }))}
@@ -1525,13 +1532,13 @@ export default function AlertStudio() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-xs">
                   <span className="w-2 h-2 rounded-full bg-neon-green" />
-                  <span className="text-white/90">
+                  <span className="text-[var(--text-primary)]">
                     {t('notifications.alertStudio.channels.browserToast', 'Browser toast notification (real-time via SSE)')}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <span className="w-2 h-2 rounded-full bg-neon-green" />
-                  <span className="text-white/90">
+                  <span className="text-[var(--text-primary)]">
                     {t('notifications.alertStudio.channels.alertHistory', 'Alert history (saved to database)')}
                   </span>
                 </div>
@@ -1563,7 +1570,7 @@ export default function AlertStudio() {
                                 'h-auto rounded-lg border px-3 py-1.5 text-xs transition-colors',
                                 isSelected
                                   ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
-                                  : 'bg-white/5 border-white/10 text-[var(--text-muted)] hover:border-white/20',
+                                  : 'bg-[var(--surface-2)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:border-[var(--border-strong)]',
                               )}
                               onClick={() => handleToggleTestChannel(ch.id)}
                             >
@@ -1575,7 +1582,7 @@ export default function AlertStudio() {
                       </div>
                     </div>
                   ) : (
-                    <EmptyState
+                    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                       icon={<Icons.notificationsMuted className="h-8 w-8 text-[var(--text-muted)]" />}
                       title={t('notifications.alertStudio.channels.emptyTitle', 'No external channels configured')}
                       message={t('notifications.alertStudio.channels.emptyDescription', 'Browser toasts and alert history are always enabled. Configure channels from Notifications to fan out alerts.')}
@@ -1585,7 +1592,7 @@ export default function AlertStudio() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+            <div className="flex items-center gap-2 pt-2 border-t border-[var(--border-subtle)]">
               <UiButton
                 variant="primary"
                 size="sm"

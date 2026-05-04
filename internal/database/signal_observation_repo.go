@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -14,6 +15,37 @@ import (
 // signal_observations tall table (ADR-002 hot/cold split).
 type SignalObservationRepo struct {
 	db *DB
+}
+
+// buildObservationQuery composes the SELECT for ListByVehicle / ListByName.
+// signalName == "" omits the signal_name predicate. from.IsZero() omits the
+// lower time bound. to.IsZero() omits the upper time bound. ORDER BY is
+// always ts DESC (newest first) so callers reading data[0] get the latest
+// observation. The returned args slice is positional and matches the $N
+// placeholders in the query string.
+func buildObservationQuery(vehicleID int64, signalName string, from, to time.Time, limit int) (string, []any) {
+	args := []any{vehicleID}
+	var b strings.Builder
+	b.WriteString(`SELECT vehicle_id, ts, signal_name, value_numeric, value_text, value_bool, source
+		FROM signal_observations
+		WHERE vehicle_id = $1`)
+
+	if signalName != "" {
+		args = append(args, signalName)
+		fmt.Fprintf(&b, ` AND signal_name = $%d`, len(args))
+	}
+	if !from.IsZero() {
+		args = append(args, from)
+		fmt.Fprintf(&b, ` AND ts >= $%d`, len(args))
+	}
+	if !to.IsZero() {
+		args = append(args, to)
+		fmt.Fprintf(&b, ` AND ts <= $%d`, len(args))
+	}
+
+	args = append(args, limit)
+	fmt.Fprintf(&b, ` ORDER BY ts DESC LIMIT $%d`, len(args))
+	return b.String(), args
 }
 
 // NewSignalObservationRepo constructs a SignalObservationRepo bound to db.
@@ -88,17 +120,21 @@ func (r *SignalObservationRepo) GetLatest(ctx context.Context, vehicleID int64, 
 	return &o, nil
 }
 
-// ListByVehicle returns signal observations for a vehicle within the inclusive
-// time window [from, to], ordered by ts ASC and capped by limit.
+// ListByVehicle returns signal observations for a vehicle, ordered most
+// recent first (ts DESC) and capped by limit. Time bounds [from, to] are
+// applied only when non-zero; passing time.Time{} for either bound omits
+// that side of the predicate so callers can request "the latest N
+// observations regardless of age" (used by the cold-signal panels on
+// /driving-dynamics, the SignalLogWidget event feed, etc.).
+//
+// DESC ordering matches the frontend `latestNumeric()` helper which reads
+// `data[0]` as "most recent". Switching from ASC to DESC also exploits
+// the (vehicle_id, signal_name, ts DESC) compression order so the
+// hypertable can satisfy LIMIT-bounded scans without an extra sort.
 func (r *SignalObservationRepo) ListByVehicle(ctx context.Context, vehicleID int64, from, to time.Time, limit int) ([]models.SignalObservation, error) {
-	const query = `
-		SELECT vehicle_id, ts, signal_name, value_numeric, value_text, value_bool, source
-		FROM signal_observations
-		WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3
-		ORDER BY ts ASC
-		LIMIT $4`
+	query, args := buildObservationQuery(vehicleID, "", from, to, limit)
 
-	rows, err := r.db.Pool.Query(ctx, query, vehicleID, from, to, limit)
+	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("signal-observations-repo-list-by-vehicle: %w", err)
 	}
@@ -127,18 +163,18 @@ func (r *SignalObservationRepo) ListByVehicle(ctx context.Context, vehicleID int
 }
 
 // ListByName returns signal observations for a vehicle filtered by signal
-// name within the inclusive time window [from, to], ordered by ts ASC and
-// capped by limit. signal_name is the FK into signal_catalog.name (ADR-009),
-// so an explicit join is unnecessary for filtering.
+// name, ordered most recent first (ts DESC) and capped by limit. Time bounds
+// [from, to] are applied only when non-zero; passing time.Time{} for either
+// bound omits that side of the predicate. signal_name is the FK into
+// signal_catalog.name (ADR-009), so an explicit join is unnecessary for
+// filtering.
+//
+// The (vehicle_id, signal_name, ts DESC) idx_signal_obs_vehicle_signal_ts
+// index serves this query in index-only fashion for any limit.
 func (r *SignalObservationRepo) ListByName(ctx context.Context, vehicleID int64, name string, from, to time.Time, limit int) ([]models.SignalObservation, error) {
-	const query = `
-		SELECT vehicle_id, ts, signal_name, value_numeric, value_text, value_bool, source
-		FROM signal_observations
-		WHERE vehicle_id = $1 AND signal_name = $2 AND ts BETWEEN $3 AND $4
-		ORDER BY ts ASC
-		LIMIT $5`
+	query, args := buildObservationQuery(vehicleID, name, from, to, limit)
 
-	rows, err := r.db.Pool.Query(ctx, query, vehicleID, name, from, to, limit)
+	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("signal-observations-repo-list-by-name: %w", err)
 	}

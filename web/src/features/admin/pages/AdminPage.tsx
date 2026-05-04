@@ -164,7 +164,7 @@ export default function AdminPage() {
             <span className="text-xs text-[var(--text-muted)] mb-4 block mt-2">{t('Configured via environment variables')}</span>
             <div className="space-y-3">
               {pollingConfig.map(({ label, value, desc }) => (
-                <div key={label} className="flex items-center justify-between py-2 border-b border-white/5">
+                <div key={label} className="flex items-center justify-between py-2 border-b border-[var(--border-subtle)]">
                   <div>
                     <span className="text-sm text-[var(--text-primary)]">{label}</span>
                     <span className="ml-2 text-xs font-mono text-[var(--text-muted)]">{desc}</span>
@@ -191,11 +191,11 @@ export default function AdminPage() {
               </div>
             ) : typedHealth ? (
               <div className="mt-4">
-                <div className="mb-4 flex items-center justify-between py-2 border-b border-white/5">
+                <div className="mb-4 flex items-center justify-between py-2 border-b border-[var(--border-subtle)]">
                   <span className="text-sm text-[var(--text-muted)]">{t('Total Size')}</span>
                   <span className="text-sm font-mono text-[var(--text-primary)]">{dbSize}</span>
                 </div>
-                <div className="mb-2 flex items-center justify-between py-2 border-b border-white/5">
+                <div className="mb-2 flex items-center justify-between py-2 border-b border-[var(--border-subtle)]">
                   <span className="text-sm text-[var(--text-muted)]">{t('Tables')}</span>
                   <span className="text-sm font-mono text-[var(--text-primary)]">{tableCount}</span>
                 </div>

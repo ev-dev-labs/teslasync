@@ -75,7 +75,7 @@ export default function ReloadPrompt() {
     <div
       role="alert"
       aria-live="polite"
-      className="fixed bottom-4 right-4 z-[9999] animate-in slide-in-from-bottom-4 fade-in duration-300"
+      className="fixed bottom-4 right-4 z-[9999] animate-in slide-in-from-bottom-4 fade-in duration-normal"
     >
       <GlassPanel className="!p-4 flex items-center gap-3 border border-neon-cyan/30 shadow-lg shadow-neon-cyan/10 max-w-sm">
         <div className="rounded-lg bg-neon-cyan/10 p-2">

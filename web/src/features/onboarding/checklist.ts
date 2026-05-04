@@ -20,7 +20,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Car, Palette, BellRing, Send, Command, BellPlus } from 'lucide-react'
+import { Car, Palette, BellRing, Send, Command, BellPlus, LayoutGrid } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import { useVehicles } from '@/api/hooks/useVehicles'
@@ -32,6 +32,14 @@ import { useTheme } from '@/components/ui/ThemeProvider'
 export const CP_DISCOVERED_KEY = 'teslasync:cp-discovered'
 export const CHECKLIST_DISMISSED_KEY = 'teslasync:checklist:dismissed'
 export const CHECKLIST_COMPLETED_AT_KEY = 'teslasync:checklist:completed-at'
+/**
+ * Phase-45 / Prompt 25 — flips to '1' once the user adds their first widget
+ * via the dashboard widget catalogue. Drives the `customize-dashboard`
+ * checklist task. Stored client-side because there's no backend signal that
+ * differentiates "user added a widget" from "user accepted the seeded
+ * default layout".
+ */
+export const CUSTOMIZE_DASHBOARD_KEY = 'teslasync:checklist:customizeDashboard'
 
 /** Custom event emitted when checklist-related localStorage flags change so
  * the widget can re-read state from other tabs / from the command palette. */
@@ -78,6 +86,23 @@ export function markCommandPaletteDiscovered(): void {
 
 export function isCommandPaletteDiscovered(): boolean {
   return safeRead(CP_DISCOVERED_KEY) === '1'
+}
+
+/* ─── Customize-dashboard discovery instrumentation ─────────────────────── */
+
+/**
+ * Record that the user has added at least one widget through the dashboard
+ * widget catalogue. Idempotent — only writes the first time.
+ *
+ * Phase-45 / Prompt 25.
+ */
+export function markCustomizeDashboardCompleted(): void {
+  if (safeRead(CUSTOMIZE_DASHBOARD_KEY)) return
+  safeWrite(CUSTOMIZE_DASHBOARD_KEY, '1')
+}
+
+export function isCustomizeDashboardCompleted(): boolean {
+  return safeRead(CUSTOMIZE_DASHBOARD_KEY) === '1'
 }
 
 /* ─── Dismiss / restart helpers ─────────────────────────────────────────── */
@@ -178,7 +203,8 @@ export function useChecklistFlagVersion(): number {
         e.key === null ||
         e.key === CP_DISCOVERED_KEY ||
         e.key === CHECKLIST_DISMISSED_KEY ||
-        e.key === CHECKLIST_COMPLETED_AT_KEY
+        e.key === CHECKLIST_COMPLETED_AT_KEY ||
+        e.key === CUSTOMIZE_DASHBOARD_KEY
       ) {
         bump()
       }
@@ -232,6 +258,7 @@ export function useChecklistTasks(): ChecklistState {
   const dismissed = useMemo(() => isChecklistDismissed(), [flagVersion])
   const completedAt = useMemo(() => getChecklistCompletedAt(), [flagVersion])
   const pushGranted = useMemo(() => isWebPushGranted(), [flagVersion])
+  const customizeDashboard = useMemo(() => isCustomizeDashboardCompleted(), [flagVersion])
 
   const tasks = useMemo<ChecklistTask[]>(() => {
     return [
@@ -307,8 +334,25 @@ export function useChecklistTasks(): ChecklistState {
         complete: pushGranted,
         icon: BellPlus,
       },
+      {
+        // Phase-45 / Prompt 25 — surface dashboard widget customization.
+        // Completes when the user adds their first widget through the
+        // catalogue dialog (which calls `markCustomizeDashboardCompleted`).
+        // CTA links to the dashboard so the user can immediately spot the
+        // floating + button.
+        id: 'customize-dashboard',
+        titleKey: 'checklist.tasks.customizeDashboard.title',
+        titleFallback: 'Customize your dashboard',
+        descriptionKey: 'checklist.tasks.customizeDashboard.description',
+        descriptionFallback: 'Add widgets that match how you use TeslaSync.',
+        ctaKey: 'checklist.tasks.customizeDashboard.cta',
+        ctaFallback: 'Open',
+        ctaTo: '/dashboard',
+        complete: customizeDashboard,
+        icon: LayoutGrid,
+      },
     ]
-  }, [vehicles, alertRules, channels, themeId, cpDiscovered, pushGranted])
+  }, [vehicles, alertRules, channels, themeId, cpDiscovered, pushGranted, customizeDashboard])
 
   // Currently every task is always shown — `show()` predicates would gate
   // here. We keep the split so the widget can iterate `visibleTasks` and the

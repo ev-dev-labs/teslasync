@@ -58,7 +58,7 @@ function StackedBar({ segments }: { segments: StateSegment[] }) {
       {segments.map((seg) => (
         <div
           key={seg.state}
-          className="h-full first:rounded-l-full last:rounded-r-full transition-all duration-300"
+          className="h-full first:rounded-l-full last:rounded-r-full transition-all duration-normal"
           style={{ width: `${seg.pct}%`, backgroundColor: stateColor(seg.state) }}
           title={`${seg.state}: ${fmtNumber(seg.pct, 1)}%`}
         />
@@ -80,7 +80,7 @@ function TimelineStripe({
 
   return (
     <div className="space-y-1.5">
-      <span className="text-[10px] uppercase tracking-wider text-white/40">
+      <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
         {t('widget.stateTimeline.timeline', '24h Timeline')}
       </span>
       <div className="flex h-4 w-full rounded overflow-hidden">
@@ -90,7 +90,7 @@ function TimelineStripe({
           return (
             <div
               key={`${tr.state}-${i}`}
-              className="h-full transition-all duration-300"
+              className="h-full transition-all duration-normal"
               style={{ width: `${pct}%`, backgroundColor: stateColor(tr.state ?? '') }}
               title={`${tr.state}: ${fmtNumber(tr.durationMin ?? 0, 0)} min`}
             />
@@ -116,12 +116,12 @@ function StateRow({
           className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0"
           style={{ backgroundColor: stateColor(seg.state) }}
         />
-        <span className="text-xs text-white/80 capitalize truncate">
+        <span className="text-xs text-[var(--text-primary)] capitalize truncate">
           {t(`widget.stateTimeline.state.${seg.state}`, seg.state)}
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-xs text-white/60">{fmtDuration(seg.totalMin, t)}</span>
+        <span className="text-xs text-[var(--text-secondary)]">{fmtDuration(seg.totalMin, t)}</span>
         <Badge variant="neutral" className="text-[10px] tabular-nums">
           {fmtNumber(seg.pct, 1)}%
         </Badge>
@@ -194,10 +194,10 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
                     className="inline-block h-2 w-2 rounded-full flex-shrink-0"
                     style={{ backgroundColor: stateColor(seg.state) }}
                   />
-                  <span className="text-[10px] text-white/60 capitalize truncate">
+                  <span className="text-[10px] text-[var(--text-secondary)] capitalize truncate">
                     {t(`widget.stateTimeline.state.${seg.state}`, seg.state)}
                   </span>
-                  <span className="text-[10px] text-white/40 tabular-nums">
+                  <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
                     {fmtInt(seg.pct)}%
                   </span>
                 </div>
@@ -218,7 +218,7 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
           )}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Clock className="h-5 w-5" />}
           message={t('widget.stateTimeline.noData', 'No state data available')}
           className="py-4"

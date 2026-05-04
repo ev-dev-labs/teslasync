@@ -25,7 +25,7 @@ export function ReferenceLinksSection() {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium text-white">{t(link.title)}</p>
-                <p className="mt-0.5 truncate text-xs text-white/40">{link.url}</p>
+                <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{link.url}</p>
               </div>
             </a>
           </GlassPanel>

@@ -628,7 +628,7 @@ export function DataTable<T>({
                   : t('table.selection.selectRow', 'Select row')
               }
               className={cn(
-                'border-white/20 bg-white/5 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0',
+                'border-[var(--border-strong)] bg-[var(--surface-2)] text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0',
                 selectable === 'single' ? '' : 'rounded',
               )}
             />
@@ -784,7 +784,7 @@ export function DataTable<T>({
                           ? t('table.selection.deselectAll', 'Deselect all rows')
                           : t('table.selection.selectAll', 'Select all rows')
                       }
-                      className="rounded border-white/20 bg-white/5 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0"
+                      className="rounded border-[var(--border-strong)] bg-[var(--surface-2)] text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0"
                     />
                   ) : null}
                 </th>

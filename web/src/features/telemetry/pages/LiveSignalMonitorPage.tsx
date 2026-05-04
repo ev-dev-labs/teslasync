@@ -256,7 +256,7 @@ export default function LiveSignalMonitorPage() {
             </div>
           </div>
 
-          <div ref={tableRef} className="overflow-auto max-h-[65vh] rounded-lg border border-white/5">
+          <div ref={tableRef} className="overflow-auto max-h-[65vh] rounded-lg border border-[var(--border-subtle)]">
             <DataTable<SignalEntry>
               columns={signalColumns}
               data={filteredEntries}

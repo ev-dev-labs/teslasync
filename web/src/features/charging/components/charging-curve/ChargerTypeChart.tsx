@@ -103,7 +103,7 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
         {chargerTypeStats.map((ct) => (
           <div
             key={ct.label}
-            className="flex items-center justify-between text-xs text-white/60"
+            className="flex items-center justify-between text-xs text-[var(--text-secondary)]"
           >
             <div className="flex items-center gap-1.5">
               <span

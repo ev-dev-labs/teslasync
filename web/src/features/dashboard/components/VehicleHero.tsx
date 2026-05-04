@@ -51,7 +51,7 @@ export function VehicleHero({
             timestamp={lastFetchedAt ? new Date(lastFetchedAt).toISOString() : vehicle.updated_at}
           />
         </div>
-        <p className="text-sm text-white/50">
+        <p className="text-sm text-[var(--text-secondary)]">
           {vehicle.model} {vehicle.trim_badging} · <span className="font-mono">{vehicle.vin}</span>
         </p>
 
@@ -98,22 +98,22 @@ export function VehicleHero({
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center text-xs">
                   <div>
-                    <p className="text-white/50">{t('hero.chargePower', 'Power')}</p>
+                    <p className="text-[var(--text-secondary)]">{t('hero.chargePower', 'Power')}</p>
                     <p className="text-sm font-bold text-emerald-300">{fmtNumber(state.charger_power)} kW</p>
                   </div>
                   <div>
-                    <p className="text-white/50">{t('hero.chargeRate', 'Rate')}</p>
+                    <p className="text-[var(--text-secondary)]">{t('hero.chargeRate', 'Rate')}</p>
                     <p className="text-sm font-bold text-white">
                       {fmtInt(convertDistance(state.charge_rate ?? 0))} {distanceUnit}/h
                     </p>
                   </div>
                   <div>
-                    <p className="text-white/50">{t('hero.timeToFull', 'Time to Full')}</p>
+                    <p className="text-[var(--text-secondary)]">{t('hero.timeToFull', 'Time to Full')}</p>
                     <p className="text-sm font-bold text-white">
                       {state.time_to_full_charge > 0 ? `${fmtNumber(state.time_to_full_charge, 1)}h` : '—'}
                     </p>
                     {state.time_to_full_charge > 0 && (
-                      <p className="text-[10px] text-white/50">
+                      <p className="text-[10px] text-[var(--text-secondary)]">
                         {t('hero.doneAt', 'Done')} ~{new Date(Date.now() + state.time_to_full_charge * 3_600_000)
                           .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
@@ -135,7 +135,7 @@ export function VehicleHero({
                 >
                   <item.icon className="h-4 w-4 shrink-0" style={{ color: item.color }} />
                   <div className="min-w-0">
-                    <p className="text-[10px] text-white/50 uppercase tracking-wider">{item.label}</p>
+                    <p className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider">{item.label}</p>
                     <p className="text-sm font-semibold text-white truncate">{item.value}</p>
                   </div>
                 </div>
@@ -169,7 +169,7 @@ export function VehicleHero({
         ) : (
           <GlassPanel className="mt-6 p-4 text-center">
             <Skeleton className="h-8 mx-auto" />
-            <p className="text-sm text-white/40 mt-2">
+            <p className="text-sm text-[var(--text-muted)] mt-2">
               {t('hero.asleep', 'Vehicle asleep — wake to see live data')}
             </p>
             <Link to="/commands">

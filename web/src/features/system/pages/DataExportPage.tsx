@@ -12,12 +12,13 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
+import { TimeStamp } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useToast } from '@/components/feedback/Toast';
-import { formatDateTime, formatDurationMsLong, formatRelative } from '@/lib/dateFormat';
+import { formatDurationMsLong, formatRelative } from '@/lib/dateFormat';
 import { request } from '@/api/client';
 import { useCreateAccountExport } from '@/api/hooks/useExports';
 import { JobProgressDrawer } from '@/components/feedback/JobProgressDrawer';
@@ -155,10 +156,10 @@ function ExportTypeSelector({
             hover
             onClick={() => onChange(et.value)}
             className={cn(
-              'p-4 text-left transition-all duration-200 cursor-pointer border-2 rounded-xl',
+              'p-4 text-left transition-all duration-normal cursor-pointer border-2 rounded-xl',
               active
-                ? 'border-white/30'
-                : 'border-transparent hover:border-white/10',
+                ? 'border-[var(--border-strong)]'
+                : 'border-transparent hover:border-[var(--border-subtle)]',
             )}
             style={active ? { borderColor: `var(--neon-${et.color})` } : undefined}
           >
@@ -166,7 +167,7 @@ function ExportTypeSelector({
               <div
                 className={cn(
                   'p-1.5 rounded-lg',
-                  active ? 'bg-white/10' : 'bg-white/5',
+                  active ? 'bg-[var(--surface-2)]' : 'bg-[var(--surface-2)]',
                 )}
                 style={active ? { background: `color-mix(in srgb, var(--neon-${et.color}) 15%, transparent)` } : undefined}
               >
@@ -297,7 +298,7 @@ function FormatInfoCards() {
         <p className="text-xs text-[var(--text-muted)] mb-3">
           {t('dataExport.csvDesc', 'Comma-separated values, compatible with Excel and Google Sheets')}
         </p>
-        <div className="rounded-lg bg-black/20 p-3 font-mono text-[11px] text-[var(--text-muted)]">
+        <div className="rounded-lg bg-[var(--surface-overlay)] p-3 font-mono text-[11px] text-[var(--text-muted)]">
           <p>date,distance_km,efficiency</p>
           <p>2025-01-15,45.2,152</p>
           <p>2025-01-16,32.8,148</p>
@@ -314,7 +315,7 @@ function FormatInfoCards() {
         <p className="text-xs text-[var(--text-muted)] mb-3">
           {t('dataExport.jsonDesc', 'Structured JSON format for programmatic access')}
         </p>
-        <div className="rounded-lg bg-black/20 p-3 font-mono text-[11px] text-[var(--text-muted)]">
+        <div className="rounded-lg bg-[var(--surface-overlay)] p-3 font-mono text-[11px] text-[var(--text-muted)]">
           <p>{`[{ "date": "2025-01-15",`}</p>
           <p>{`   "distance_km": 45.2,`}</p>
           <p>{`   "efficiency": 152 }]`}</p>
@@ -707,9 +708,7 @@ function ExportHistoryTable({
         header: t('Time'),
         sortable: true,
         render: (row) => (
-          <span className="text-xs text-[var(--text-muted)]" title={formatDateTime(row.created_at)}>
-            {formatRelative(row.created_at)}
-          </span>
+          <TimeStamp value={row.created_at} className="text-xs text-[var(--text-muted)]" />
         ),
       },
       {
@@ -753,7 +752,7 @@ function ExportHistoryTable({
 
   return (
     <GlassPanel className="p-0 overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-semibold text-[var(--text-primary)]">
             {t('dataExport.exportHistory', 'Export History')}
@@ -770,7 +769,7 @@ function ExportHistoryTable({
       </div>
 
       {!jobs || jobs.length === 0 ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Icons.fileDown className="h-10 w-10" />}
           title={t('dataExport.noExports', 'No Exports Yet')}
           message={t('dataExport.noExportsMessage', 'Create your first export above to get started.')}

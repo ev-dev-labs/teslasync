@@ -10,6 +10,24 @@ interface DateRangeFilterProps {
   endDate: string
   onStartDateChange: (date: string) => void
   onEndDateChange: (date: string) => void
+  /**
+   * Optional atomic-update callback. When provided, preset chip clicks
+   * call this instead of `onStartDateChange` + `onEndDateChange`. Use
+   * with `useUrlBatch()` to avoid the same-tick URL setter race.
+   *
+   * ```ts
+   *   const setBatch = useUrlBatch();
+   *   <DateRangeFilter
+   *     startDate={start}
+   *     endDate={end}
+   *     onStartDateChange={(v) => setBatch({ from: v })}
+   *     onEndDateChange={(v) => setBatch({ to: v })}
+   *     onRangeChange={(r) => setBatch({ from: r.start, to: r.end })}
+   *     onApply={() => setPage(1)}
+   *   />
+   * ```
+   */
+  onRangeChange?: (range: { start: string; end: string }) => void
   onApply?: () => void
   /** When false, hides the preset chip row. Defaults to true. */
   presets?: boolean
@@ -29,6 +47,7 @@ export function DateRangeFilter({
   endDate,
   onStartDateChange,
   onEndDateChange,
+  onRangeChange,
   onApply,
   presets = true,
   presetIds = DEFAULT_PRESET_IDS,
@@ -41,8 +60,12 @@ export function DateRangeFilter({
   )
 
   const handlePreset = (selection: DatePresetSelection) => {
-    onStartDateChange(selection.start)
-    onEndDateChange(selection.end)
+    if (onRangeChange) {
+      onRangeChange({ start: selection.start, end: selection.end })
+    } else {
+      onStartDateChange(selection.start)
+      onEndDateChange(selection.end)
+    }
     onApply?.()
   }
 

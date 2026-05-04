@@ -56,9 +56,9 @@ export default function MQTTStatusWidget({ size }: WidgetProps) {
           /* ── Compact layout (1×2) ── */
           <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
             <StatusBadge status={connected ? 'online' : 'offline'} size="sm" />
-            <span className="text-lg font-bold text-white/90 truncate">
+            <span className="text-lg font-bold text-[var(--text-primary)] truncate">
               {fmtNumber(stats.messagesPerSec, 1)}
-              <span className="text-xs font-normal text-white/50 ml-1">
+              <span className="text-xs font-normal text-[var(--text-secondary)] ml-1">
                 {t('widget.mqtt.msgSec', 'msg/s')}
               </span>
             </span>
@@ -68,7 +68,7 @@ export default function MQTTStatusWidget({ size }: WidgetProps) {
           <div className="flex flex-col gap-3 h-full">
             {/* Connection status row */}
             <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-wider text-white/40">
+              <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
                 {t('widget.mqtt.status', 'Status')}
               </span>
               <StatusBadge status={connected ? 'online' : 'offline'} size="sm" />
@@ -88,21 +88,21 @@ export default function MQTTStatusWidget({ size }: WidgetProps) {
 
             {/* Last message & broker */}
             <div className="mt-auto pt-2 border-t border-white/[0.06] space-y-1.5">
-              <div className="flex items-center justify-between text-[10px] text-white/40">
+              <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
                 <span>{t('widget.mqtt.lastMessage', 'Last Message')}</span>
-                <span className="text-white/60 truncate ml-2">
+                <span className="text-[var(--text-secondary)] truncate ml-2">
                   {stats.lastMessage ? formatRelative(stats.lastMessage) : '—'}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-[10px] text-white/40">
+              <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
                 <span>{t('widget.mqtt.broker', 'Broker')}</span>
-                <span className="text-white/60 truncate ml-2">{broker}</span>
+                <span className="text-[var(--text-secondary)] truncate ml-2">{broker}</span>
               </div>
             </div>
           </div>
         )
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Radio className="h-5 w-5" />}
           message={t('widget.mqtt.noData', 'No MQTT status data')}
           className="py-4"

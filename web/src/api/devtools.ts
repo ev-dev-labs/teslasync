@@ -35,14 +35,40 @@ export interface RedisSignalEntry {
   type: 'number' | 'string' | 'boolean'
 }
 
+export interface RedisSignalsMeta {
+  live_signal_store_mode: 'hybrid' | 'local'
+  redis_key: string
+  redis_field_count: number
+  l1_signal_count: number
+  l1_last_seen_at: string | null
+  l2_last_seen_at: string | null
+  vehicle_vin: string
+}
+
 export interface RedisSignalsResponse {
   vehicle_id: number
   signal_count: number
   signals: Record<string, RedisSignalEntry>
+  meta?: RedisSignalsMeta
+}
+
+export interface RedisSignalKeyEntry {
+  vehicle_id: number
+  field_count: number
+  vehicle_vin?: string
+  display_name?: string
+}
+
+export interface RedisSignalKeysResponse {
+  keys: RedisSignalKeyEntry[]
+  total: number
 }
 
 export const getRedisSignals = (vehicleId: number) =>
   request<RedisSignalsResponse>(`/dev-tools/redis-signals?vehicle_id=${vehicleId}`)
+
+export const getRedisSignalKeys = (limit = 50) =>
+  request<RedisSignalKeysResponse>(`/dev-tools/redis-signals/keys?limit=${limit}`)
 
 // === Fleet Telemetry ===
 export const getTelemetryStatus = () =>

@@ -14,7 +14,7 @@ import {
   ChartTimeRangeProvider, useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { Skeleton, QueryError, EmptyState } from '@/components/feedback';
+import { Skeleton, QueryError, EmptyState, ChartBlockSkeleton, StatGridSkeleton, PageHeaderSkeleton } from '@/components/feedback';
 import { Currency, SavedViewMenu } from '@/components/data-display';
 import { DateRangeFilter } from '@/components/forms';
 
@@ -24,6 +24,7 @@ import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
+import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
@@ -98,6 +99,34 @@ function EnergyChartSync({
   return <>{children({ sync, syncedX })}</>;
 }
 
+/* ── Loading skeleton ────────────────────────────────────────────── */
+
+/**
+ * Mirrors the EnergyPage layout while data loads:
+ * page header → 4 hero radial gauges → 6-card metric strip →
+ * lifetime metrics panel → 2 cost-comparison cards → 2 chart panels.
+ * Phase-45 / Prompt 18.
+ */
+function EnergyPageSkeleton() {
+  return (
+    <div className="space-y-6" data-testid="energy-page-skeleton">
+      <PageHeaderSkeleton />
+      <Skeleton className="h-44 sm:h-56 rounded-xl" />
+      <StatGridSkeleton cards={6} className="sm:grid-cols-4 lg:grid-cols-6" />
+      <Skeleton className="h-40 rounded-xl" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Skeleton className="h-32 rounded-xl" />
+        <Skeleton className="h-32 rounded-xl" />
+      </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <ChartBlockSkeleton height={280} />
+        <ChartBlockSkeleton height={280} />
+      </div>
+      <ChartBlockSkeleton height={320} />
+    </div>
+  );
+}
+
 export default function EnergyPage() {
   const { t } = useTranslation();
   usePageTitle(t('energy.title', 'Energy'));
@@ -110,12 +139,15 @@ export default function EnergyPage() {
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
 
   /* ── Date range ───────────────────────────────────────────────── */
-  const [startDate, setStartDate] = useState(() => {
+  const defaultStartDate = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
     return d.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  }, []);
+  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [startDate, setStartDate] = useUrlString('from', defaultStartDate);
+  const [endDate, setEndDate] = useUrlString('to', defaultEndDate);
+  const setRangeBatch = useUrlBatch();
 
   /* ── Data fetching ────────────────────────────────────────────── */
   const {
@@ -260,12 +292,16 @@ export default function EnergyPage() {
     },
   ], [t]);
 
+  /* ── Loading short-circuit (Phase-45 / Prompt 18) ─────────────── */
+  if (isLoading) {
+    return <EnergyPageSkeleton />;
+  }
+
   /* ── Render ───────────────────────────────────────────────────── */
   return (
     <PageContainer
       title={t('energy.pageTitle', 'Energy Intelligence')}
       subtitle={t('energy.pageSubtitle', 'Deep cost analytics, efficiency trends, savings projections, and consumption patterns')}
-      loading={isLoading}
       error={statsError as Error | null}
       actions={
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -282,6 +318,7 @@ export default function EnergyPage() {
             endDate={endDate}
             onStartDateChange={setStartDate}
             onEndDateChange={setEndDate}
+            onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
           />
           <SavedViewMenu
             route="/energy"
@@ -332,7 +369,7 @@ export default function EnergyPage() {
       {/* ── Quick Metrics Strip ─────────────────────────────────── */}
       <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
         {[
-          { label: t('energy.metric.costPerDist', { unit: distanceUnit, defaultValue: `Cost per ${distanceUnit}` }), value: `$${fmtNumber(totalDistance > 0 ? totalCost / convertDistance(totalDistance) : 0)}`, color: 'text-neon-cyan' },
+          { label: t('energy.metric.costPerDist', { unit: distanceUnit, defaultValue: 'Cost per {{unit}}' }), value: `$${fmtNumber(totalDistance > 0 ? totalCost / convertDistance(totalDistance) : 0)}`, color: 'text-neon-cyan' },
           { label: t('energy.metric.costPerKwh', 'Cost per kWh'), value: `$${fmtNumber(costPerKwh ?? 0)}`, color: 'text-neon-green' },
           { label: t('energy.metric.totalDistance', 'Total Distance'), value: `${fmtInt(convertDistance(totalDistance ?? 0))} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
           { label: t('energy.metric.sessions', 'Sessions'), value: `${sessions?.length ?? 0}`, color: 'text-neon-purple' },
@@ -376,7 +413,7 @@ export default function EnergyPage() {
             </div>
             <div className="rounded-lg bg-white/[0.03] ring-1 ring-white/[0.06] p-4">
               <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-                {t('energy.lifetime.periodEnergy', { days: periodDays, defaultValue: `Last ${periodDays} Days` })}
+                {t('energy.lifetime.periodEnergy', { days: periodDays, defaultValue: 'Last {{days}} Days' })}
               </p>
               <p className="text-2xl font-bold text-emerald-300">
                 {fmtNumber(totalEnergy)}
@@ -390,39 +427,32 @@ export default function EnergyPage() {
         </GlassPanel>
       </FadeIn>
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Skeleton className="h-56 sm:h-80" />
-          <Skeleton className="h-56 sm:h-80" />
-        </div>
-      ) : (
-        <>
-          {/* ── Cost vs Gas Savings ───────────────────────────────── */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FadeIn>
-              <CostComparisonCard
-                label={t('energy.cost.periodTotal', { days: periodDays, defaultValue: `${periodDays}-Day Total` })}
-                evCost={totalCost}
-                gasCost={gasEquivalent}
-                icon={<Fuel className="h-4 w-4" />}
-              />
-            </FadeIn>
-            <FadeIn delay={0.05}>
-              <CostComparisonCard
-                label={t('energy.cost.projectedAnnual', 'Projected Annual')}
-                evCost={yearlyProjectedCost}
-                gasCost={(gasEquivalent / periodDays) * 365}
-                icon={<Leaf className="h-4 w-4" />}
-              />
-            </FadeIn>
-          </div>
+      {/* ── Cost vs Gas Savings ───────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FadeIn>
+          <CostComparisonCard
+            label={t('energy.cost.periodTotal', { days: periodDays, defaultValue: '{{days}}-Day Total' })}
+            evCost={totalCost}
+            gasCost={gasEquivalent}
+            icon={<Fuel className="h-4 w-4" />}
+          />
+        </FadeIn>
+        <FadeIn delay={0.05}>
+          <CostComparisonCard
+            label={t('energy.cost.projectedAnnual', 'Projected Annual')}
+            evCost={yearlyProjectedCost}
+            gasCost={(gasEquivalent / periodDays) * 365}
+            icon={<Leaf className="h-4 w-4" />}
+          />
+        </FadeIn>
+      </div>
 
-          {/* ── Charts Row 1: Energy & Cost Daily + Efficiency ────
-              Phase 40 / Prompt 62: both panels share the same `daily_breakdown`
-              dataset (matching `date` axis), so they're wrapped in a single
-              `<ChartTimeRangeProvider>` to mirror hover cursors and draw a
-              persistent reference line on both at the last hovered date. */}
-          <ChartTimeRangeProvider syncId="energy.daily">
+      {/* ── Charts Row 1: Energy & Cost Daily + Efficiency ────
+          Phase 40 / Prompt 62: both panels share the same `daily_breakdown`
+          dataset (matching `date` axis), so they're wrapped in a single
+          `<ChartTimeRangeProvider>` to mirror hover cursors and draw a
+          persistent reference line on both at the last hovered date. */}
+      <ChartTimeRangeProvider syncId="energy.daily">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <FadeIn delay={0.1}>
               <ChartContainer
@@ -494,7 +524,7 @@ export default function EnergyPage() {
                         )}
                       </EnergyChartSync>
                     ) : (
-                      <EmptyState
+                      <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                         icon={<Zap className="h-8 w-8" />}
                         message={t('energy.chart.noEnergyData', 'Connect vehicle to see energy data')}
                         className="py-8"
@@ -537,7 +567,7 @@ export default function EnergyPage() {
                             <Area
                               {...AREA_DEFAULTS}
                               dataKey="distance_mi"
-                              name={t('energy.chart.distance', { unit: distanceUnit, defaultValue: `Distance (${distanceUnit})` })}
+                              name={t('energy.chart.distance', { unit: distanceUnit, defaultValue: 'Distance ({{unit}})' })}
                               stroke="#00f0ff"
                               fill="url(#distGrad2)"
                               strokeWidth={1}
@@ -559,7 +589,7 @@ export default function EnergyPage() {
                       )}
                     </EnergyChartSync>
                   ) : (
-                    <EmptyState
+                    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                       icon={<Activity className="h-8 w-8" />}
                       message={t('energy.chart.noEfficiencyData', 'No efficiency data yet')}
                       className="py-8"
@@ -613,7 +643,7 @@ export default function EnergyPage() {
                     </div>
                   </>
                 ) : (
-                  <EmptyState
+                  <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                     icon={<Activity className="h-8 w-8" />}
                     message={t('common.noData', 'No data available')}
                     className="py-8"
@@ -670,7 +700,7 @@ export default function EnergyPage() {
                     </div>
                   </div>
                 ) : (
-                  <EmptyState
+                  <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                     icon={<Activity className="h-8 w-8" />}
                     message={t('common.noData', 'No data available')}
                     className="py-8"
@@ -695,7 +725,7 @@ export default function EnergyPage() {
                   pagination
                 />
               ) : (
-                <EmptyState
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                   icon={<Activity className="h-8 w-8" />}
                   message={t('energy.sessions.empty', 'No charging sessions recorded')}
                   className="py-8"
@@ -703,8 +733,6 @@ export default function EnergyPage() {
               )}
             </GlassPanel>
           </FadeIn>
-        </>
-      )}
     </PageContainer>
   );
 }

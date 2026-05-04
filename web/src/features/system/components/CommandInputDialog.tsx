@@ -153,18 +153,18 @@ export function CommandInputDialog({
       open={open}
       onClose={onClose}
       size="sm"
-      className="bg-gray-900/95 dark:bg-gray-900/95 backdrop-blur-xl border border-white/10"
+      className="bg-gray-900/95 dark:bg-gray-900/95 backdrop-blur-xl border border-[var(--border-subtle)]"
     >
       <div onKeyDown={handleKeyDown}>
         <div className="flex items-center gap-3 mb-5">
-          <div className="rounded-xl p-2.5 bg-white/5 text-white/60">
+          <div className="rounded-xl p-2.5 bg-[var(--surface-2)] text-[var(--text-secondary)]">
             <Icon className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-white/90">
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">
               {t(def.labelKey, def.labelFallback)}
             </h2>
-            <p className="text-xs text-white/40">
+            <p className="text-xs text-[var(--text-muted)]">
               {t(ic.promptKey, ic.promptFallback)}
             </p>
           </div>
@@ -185,7 +185,7 @@ export function CommandInputDialog({
                 onBlur={() => handleBlur(field.name)}
                 error={touched[field.name] ? (errors[field.name] ?? undefined) : undefined}
                 autoComplete="off"
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/20"
+                className="bg-[var(--surface-2)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)]"
               />
             ))
           ) : (
@@ -200,7 +200,7 @@ export function CommandInputDialog({
               onBlur={() => handleBlur(ic.paramName)}
               error={touched[ic.paramName] ? (errors[ic.paramName] ?? undefined) : undefined}
               autoComplete="off"
-              className="bg-white/5 border-white/10 text-white placeholder:text-white/20"
+              className="bg-[var(--surface-2)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)]"
             />
           )}
 
@@ -210,7 +210,7 @@ export function CommandInputDialog({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="text-white/50 hover:text-white/80 hover:bg-white/5"
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
             >
               {t('common.cancel', 'Cancel')}
             </Button>

@@ -6,7 +6,7 @@
  * timeline of command executions.
  */
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { PageContainer, Grid } from '@/components/layout';
@@ -17,6 +17,7 @@ import { StatCard, Timeline } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useCommandHistory, type CommandLogEntry } from '@/api/hooks/useCommands';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
@@ -91,6 +92,9 @@ function formatCommandName(cmd: string): string {
 
 const PAGE_SIZE = 25;
 
+const STATUS_FILTERS = ['all', 'success', 'failed'] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function CommandHistoryPage() {
@@ -100,7 +104,7 @@ export default function CommandHistoryPage() {
   // Vehicle selection
   const { data: vehicles } = useVehicles();
   const vehicleList = vehicles ?? [];
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+  const [selectedVehicleId, setSelectedVehicleId] = useUrlString('vehicle_id', '');
   const activeVehicleId =
     selectedVehicleId || (vehicleList.length > 0 ? String(vehicleList[0].id) : undefined);
 
@@ -109,13 +113,13 @@ export default function CommandHistoryPage() {
   const allCommands = commands ?? [];
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useUrlEnum<StatusFilter>('status', STATUS_FILTERS, 'all');
+  const [searchQuery, setSearchQuery] = useUrlString('q', '');
+  const [page, setPage] = useUrlNumber('page', 1);
 
   // Reset page when filters change
   const handleStatusChange = (key: string) => {
-    setStatusFilter(key);
+    setStatusFilter(key as StatusFilter);
     setPage(1);
   };
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -216,7 +220,7 @@ export default function CommandHistoryPage() {
       actions={
         <Link
           to="/commands"
-          className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/80 transition-colors"
+          className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
         >
           <Gamepad2 className="h-3.5 w-3.5" />
           {t('commandHistory.backToCommands', 'Commands')}
@@ -268,7 +272,7 @@ export default function CommandHistoryPage() {
                   value={activeVehicleId ?? ''}
                   onChange={handleVehicleChange}
                   aria-label={t('commandHistory.selectVehicle', 'Select vehicle')}
-                  className="min-w-[140px] rounded-lg border-0 bg-white/[0.04] px-3 py-1.5 text-xs text-gray-300 ring-1 ring-white/[0.08] dark:bg-white/[0.04]"
+                  className="min-w-[140px] rounded-lg border-0 bg-white/[0.04] px-3 py-1.5 text-xs text-[var(--text-secondary)] ring-1 ring-white/[0.08] dark:bg-white/[0.04]"
                 />
               )}
 
@@ -284,8 +288,8 @@ export default function CommandHistoryPage() {
                 onChange={handleSearchChange}
                 placeholder={t('commandHistory.searchPlaceholder', 'Search commands…')}
                 aria-label={t('commandHistory.searchCommands', 'Search commands')}
-                icon={<Search className="h-3.5 w-3.5 text-white/30" />}
-                className="h-auto w-full rounded-lg border-0 bg-white/[0.04] py-1.5 pl-8 pr-3 text-xs text-gray-300 ring-1 ring-white/[0.08] placeholder:text-white/20 dark:bg-white/[0.04]"
+                icon={<Search className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
+                className="h-auto w-full rounded-lg border-0 bg-white/[0.04] py-1.5 pl-8 pr-3 text-xs text-[var(--text-secondary)] ring-1 ring-white/[0.08] placeholder:text-[var(--text-muted)] dark:bg-white/[0.04]"
               />
             </div>
           </div>
@@ -296,11 +300,11 @@ export default function CommandHistoryPage() {
       <FadeIn delay={0.1}>
         <GlassPanel className="p-6">
           <div className="mb-4 flex items-center gap-2">
-            <History className="h-4 w-4 text-white/50" />
-            <h2 className="text-sm font-semibold text-white/90">
+            <History className="h-4 w-4 text-[var(--text-secondary)]" />
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">
               {t('commandHistory.timelineTitle', 'Command Timeline')}
             </h2>
-            <span className="ml-auto text-xs text-white/30">
+            <span className="ml-auto text-xs text-[var(--text-muted)]">
               {t('commandHistory.showing', '{{count}} commands', {
                 count: filtered.length,
               })}
@@ -312,7 +316,7 @@ export default function CommandHistoryPage() {
               <Timeline items={timelineItems} />
             </StaggerContainer>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<History className="h-5 w-5" />}
               message={
                 searchQuery || statusFilter !== 'all'

@@ -60,7 +60,7 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           aria-labelledby={label ? labelId : undefined}
           onClick={() => onChange(!checked)}
           className={cn(
-            'relative inline-flex shrink-0 rounded-full transition-colors duration-200',
+            'relative inline-flex shrink-0 rounded-full transition-colors duration-normal',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
             trackSize[size],
             checked
@@ -70,7 +70,7 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
         >
           <span
             className={cn(
-              'pointer-events-none inline-block rounded-full bg-white shadow-sm transition-transform duration-200',
+              'pointer-events-none inline-block rounded-full bg-white shadow-sm transition-transform duration-normal',
               thumbSize[size],
               'translate-y-[3px] translate-x-[3px]',
               checked && thumbTranslate[size],
@@ -79,7 +79,7 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           />
         </button>
         {label && (
-          <span id={labelId} className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span id={labelId} className="text-sm font-medium text-gray-700 dark:text-[var(--text-secondary)]">
             {label}
           </span>
         )}

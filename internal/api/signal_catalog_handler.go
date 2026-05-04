@@ -96,8 +96,16 @@ func (h *SignalCatalogHandler) ListCatalog(w http.ResponseWriter, r *http.Reques
 // Query params:
 //   - vehicle_id (required): int64
 //   - signal_name (optional): when set, narrows to one signal name
-//   - since / until (optional, RFC3339): time window (default: last 24h)
+//   - since / until (optional, RFC3339): time window. When omitted the
+//     corresponding bound is unconstrained, so callers asking for `limit=1`
+//     get the most recent observation regardless of age — required for the
+//     cold-signal panels (G-force / pedals / cruise) on /driving-dynamics
+//     where signals only emit while driving and may be hours-to-days old.
+//     Invalid RFC3339 values produce 400 instead of being silently ignored.
 //   - limit (optional): cap, 1..1000, default 100
+//
+// Results are ordered most recent first (ts DESC) — the frontend
+// `latestNumeric()` helper reads `data[0]` as the latest reading.
 //
 // Used by SignalLogWidget, SignalCatalogWidget, PowersharePage, and the
 // driving-dynamics components.
@@ -118,18 +126,22 @@ func (h *SignalCatalogHandler) ListObservations(w http.ResponseWriter, r *http.R
 		limit = 1000
 	}
 
-	now := time.Now().UTC()
-	since := now.Add(-24 * time.Hour)
-	until := now
+	var since, until time.Time
 	if s := q.Get("since"); s != "" {
-		if t, err := time.Parse(time.RFC3339, s); err == nil {
-			since = t
+		t, err := time.Parse(time.RFC3339, s)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "since must be RFC3339")
+			return
 		}
+		since = t
 	}
 	if u := q.Get("until"); u != "" {
-		if t, err := time.Parse(time.RFC3339, u); err == nil {
-			until = t
+		t, err := time.Parse(time.RFC3339, u)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "until must be RFC3339")
+			return
 		}
+		until = t
 	}
 
 	signalName := q.Get("signal_name")

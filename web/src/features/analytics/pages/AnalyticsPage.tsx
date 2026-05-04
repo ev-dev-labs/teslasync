@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Car, Zap, BarChart3, Battery } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { Button, TabNav } from '@/components/ui';
+import { DataFreshnessAuto } from '@/components/data-display';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
@@ -21,7 +22,8 @@ export default function AnalyticsPage() {
   const daysNum = days === 'all' ? 30 : Number(days);
   const startParam = days === 'all' ? '2015-01-01' : undefined;
 
-  const { data, isLoading, error } = useFleetAnalytics(daysNum, startParam);
+  const fleetQuery = useFleetAnalytics(daysNum, startParam);
+  const { data, isLoading, error } = fleetQuery;
 
   const tabs = useMemo(
     () => [
@@ -34,17 +36,20 @@ export default function AnalyticsPage() {
   );
 
   const headerActions = (
-    <div className="flex items-center gap-1">
-      {TIME_RANGES.map((r) => (
-        <Button
-          key={r.value}
-          variant={days === r.value ? 'primary' : 'ghost'}
-          size="sm"
-          onClick={() => setDays(r.value)}
-        >
-          {r.label}
-        </Button>
-      ))}
+    <div className="flex items-center gap-3">
+      <DataFreshnessAuto query={fleetQuery} />
+      <div className="flex items-center gap-1">
+        {TIME_RANGES.map((r) => (
+          <Button
+            key={r.value}
+            variant={days === r.value ? 'primary' : 'ghost'}
+            size="sm"
+            onClick={() => setDays(r.value)}
+          >
+            {r.label}
+          </Button>
+        ))}
+      </div>
     </div>
   );
 
