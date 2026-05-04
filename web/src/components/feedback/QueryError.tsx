@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { AlertCircle, FileQuestion, Lock, Server, WifiOff } from 'lucide-react'
+import { AlertCircle, Clock, FileQuestion, Lock, Server, WifiOff } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { isApiError } from '@/api/client'
+import { isTransientWaiting } from '@/lib/errorClassification'
 import { ErrorState } from './_ErrorState'
 
 interface QueryErrorProps {
@@ -67,6 +68,26 @@ export function QueryError({ error, onRetry, resourceName, listHref }: QueryErro
   }, [error, online, onRetry, status])
 
   if (!error) return null
+
+  // Phase-45 / Prompt 33 — transient waiting (rate-limited, upstream
+  // breaker open). The global <RateLimitBanner> already shows a
+  // countdown so we render a calm "waiting" placeholder here instead
+  // of a loud "request failed" panel — the two would otherwise compete
+  // for the user's attention. No CTA: the banner owns Retry.
+  if (isTransientWaiting(error)) {
+    return (
+      <ErrorState
+        Icon={Clock}
+        role="status"
+        ariaLive="polite"
+        title={t('error.waiting.title', 'Waiting for upstream')}
+        message={t(
+          'error.waiting.message',
+          "We're pausing requests briefly. Data will refresh automatically.",
+        )}
+      />
+    )
+  }
 
   // 404 — record was deleted or URL is wrong.
   if (status === 404) {

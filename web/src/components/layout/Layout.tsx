@@ -4,6 +4,7 @@ import InstallPrompt from '../feedback/InstallPrompt'
 import { OfflineBanner } from '../feedback/OfflineBanner'
 import { NewVersionBanner } from '../feedback/NewVersionBanner'
 import { TeslaReauthBanner } from '../feedback/TeslaReauthBanner'
+import { RateLimitBanner } from '../feedback/RateLimitBanner'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -1369,6 +1370,14 @@ export default function Layout() {
 
       {/* Offline status banner (PWA / mobile) */}
       <OfflineBanner />
+
+      {/* Rate-limit / circuit-breaker banner (Phase-45 / Prompt 33) —
+          most-transient surface, sits on top so the user sees the
+          countdown before any of the slower-cycling banners. Stack
+          order from top to bottom: rate-limit → tesla-reauth →
+          new-version. Each banner is ≤ 48 px tall so the stack stays
+          under 144 px even when all three fire simultaneously. */}
+      <RateLimitBanner />
 
       {/* New-version banner (Phase-45 / Prompt 11) — proactive reload nudge
           when the backend redeploys mid-session, before the next chunk-load

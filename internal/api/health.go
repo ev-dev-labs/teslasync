@@ -69,14 +69,58 @@ func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
 	}
 }
 
+// teslaBreakerTimeout mirrors gobreaker.Settings.Timeout from
+// tesla.NewClient — i.e. how long the breaker stays open before it tries
+// a half-open probe. Held here as a constant so /system/status can
+// surface an accurate breaker_reset_at without modifying the tesla
+// client. Keep in sync with internal/tesla/client.go (Phase-45 / Prompt 33).
+const teslaBreakerTimeout = 60 * time.Second
+
+// teslaBreakerObserver tracks the last open transition time of the Tesla
+// circuit breaker so /system/status can compute an accurate
+// breaker_reset_at without instrumenting the (vendored) gobreaker
+// package. Embedded in the SystemStatusHandler closure so its lifetime
+// matches the HTTP handler's.
+type teslaBreakerObserver struct {
+	mu        sync.Mutex
+	lastState string
+	openedAt  time.Time
+}
+
+// observe records the current state and returns the timestamp at which
+// the breaker is expected to enter half-open and start probing the
+// upstream again. Returns the zero time when the breaker is not open.
+//
+// timeout is the gobreaker.Settings.Timeout value — kept as a parameter
+// so callers control the value (and tests can use a short window).
+func (o *teslaBreakerObserver) observe(state string, now time.Time, timeout time.Duration) time.Time {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if state != o.lastState {
+		if state == gobreaker.StateOpen.String() {
+			o.openedAt = now
+		}
+		o.lastState = state
+	}
+	if state == gobreaker.StateOpen.String() && !o.openedAt.IsZero() {
+		return o.openedAt.Add(timeout)
+	}
+	return time.Time{}
+}
+
 // SystemStatusHandler returns detailed system health for the frontend resilience dashboard.
 func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Client, health *resilience.HealthMonitor, cfg *config.Config) http.HandlerFunc {
 	var (
-		cacheMu   sync.Mutex
-		cached    map[string]interface{}
-		cachedAt  time.Time
-		cacheTTL  = 10 * time.Second
+		cacheMu  sync.Mutex
+		cached   map[string]interface{}
+		cachedAt time.Time
+		cacheTTL = 10 * time.Second
 	)
+
+	// Tracks the Tesla circuit breaker's last open transition so the
+	// /system/status response can advertise breaker_reset_at to the SPA.
+	// Phase-45 / Prompt 33.
+	var teslaBreakerObs teslaBreakerObserver
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Serve cached result if fresh
@@ -144,14 +188,26 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 			LastError   string `json:"last_error,omitempty"`
 		}
 
+		// Phase-45 / Prompt 33 — surface breaker state + reset window
+		// inside tesla_api so the SPA's <RateLimitBanner> can show an
+		// accurate countdown without polling a separate endpoint. The
+		// existing top-level `circuit_breaker` block is kept for
+		// backwards compatibility with consumers that already read it.
+		breakerResetAt := teslaBreakerObs.observe(cbState, time.Now(), teslaBreakerTimeout)
+		teslaInfo := map[string]interface{}{
+			"status":  teslaStatus,
+			"breaker": cbState,
+		}
+		if !breakerResetAt.IsZero() {
+			teslaInfo["breaker_reset_at"] = breakerResetAt.UTC().Format(time.RFC3339)
+		}
+
 		result := map[string]interface{}{
 			"overall": overall.String(),
 			"database": componentInfo{
 				Status: dbStatus,
 			},
-			"tesla_api": componentInfo{
-				Status: teslaStatus,
-			},
+			"tesla_api": teslaInfo,
 			"mqtt": componentInfo{
 				Status: mqttStatus,
 			},

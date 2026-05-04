@@ -1830,6 +1830,10 @@
       "offlineDetail": "We'll retry automatically when your connection returns.",
       "retryWhenOnline": "Retry when online"
     },
+    "waiting": {
+      "title": "Waiting for upstream",
+      "message": "We're pausing requests briefly. Data will refresh automatically."
+    },
     "chunkLoad": {
       "body": "A new version was deployed. Click Reload to load the latest assets."
     }
@@ -5858,6 +5862,13 @@
       "body": "Reconnect to resume live data and commands.",
       "cta": "Reconnect"
     }
+  },
+  "ratelimit": {
+    "banner": "Too many requests — pausing for {{n}}s",
+    "retry": "Retry now"
+  },
+  "upstream": {
+    "banner": "Tesla upstream unavailable — retry in {{n}}s"
   },
   "commands": {
     "search": {

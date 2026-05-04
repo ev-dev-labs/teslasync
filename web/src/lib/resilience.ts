@@ -196,6 +196,122 @@ export class TeslaAuthExpiredError extends ApiError {
   }
 }
 
+// --- Phase-45 / Prompt 33 — Rate-limit / circuit-breaker UX ---
+//
+// When the backend (or its upstream — Tesla Fleet API) returns 429 or
+// 503 with a Retry-After header, the SPA needs to (a) tell the user
+// what's happening with a calm countdown banner, (b) stop hammering
+// the rate-limited endpoint with retries that will all be rejected,
+// and (c) hand the user a "Retry now" button once the cooldown
+// expires. The error types and module-level cache below power that
+// behaviour; the banner UI lives in components/feedback/RateLimitBanner.
+
+const DEFAULT_RETRY_AFTER_SEC = 60
+
+/**
+ * Thrown when an HTTP 429 is received. The SPA recognises this error
+ * type to (a) show the <RateLimitBanner> countdown instead of a generic
+ * "request failed" toast, and (b) short-circuit subsequent requests for
+ * the same scope until the Retry-After window elapses.
+ */
+export class RateLimitError extends ApiError {
+  retryAfterSec: number
+  scope: string
+
+  constructor(message: string, retryAfterSec: number, scope: string) {
+    super(message, 429, 'RATE_LIMITED')
+    this.name = 'RateLimitError'
+    this.retryAfterSec = retryAfterSec
+    this.scope = scope
+  }
+}
+
+/**
+ * Thrown when an upstream circuit breaker is open — the backend returns
+ * 503 with `code === 'UPSTREAM_BREAKER_OPEN'` to signal that further
+ * calls to the upstream will be fast-failed until the breaker probes
+ * with a half-open call.
+ *
+ * Mapped to the same calm waiting placeholder as {@link RateLimitError}
+ * via {@link isTransientWaiting} — both are "wait and try again", not
+ * "the user did something wrong".
+ */
+export class UpstreamUnavailableError extends ApiError {
+  retryAfterSec: number
+  upstream: string
+
+  constructor(message: string, retryAfterSec: number, upstream: string) {
+    super(message, 503, 'UPSTREAM_BREAKER_OPEN')
+    this.name = 'UpstreamUnavailableError'
+    this.retryAfterSec = retryAfterSec
+    this.upstream = upstream
+  }
+}
+
+/**
+ * Returns the first segment of an API path (e.g. "/vehicles/123/state"
+ * → "/vehicles"). The rate-limit cooldown is keyed on this scope so
+ * one 429 from `/vehicles/...` short-circuits all in-flight and queued
+ * requests under `/vehicles/...` — finer per-resource granularity is
+ * out of scope for this prompt.
+ */
+export function pathScope(path: string): string {
+  const trimmed = path.startsWith('/') ? path.slice(1) : path
+  const idx = trimmed.indexOf('/')
+  const head = idx === -1 ? trimmed : trimmed.slice(0, idx)
+  // Strip query string from the segment (e.g. "vehicles?limit=10" → "vehicles").
+  const q = head.indexOf('?')
+  return '/' + (q === -1 ? head : head.slice(0, q))
+}
+
+const _rateLimited = new Map<string, number>()
+
+function markRateLimited(scope: string, retryAfterSec: number): void {
+  const safe = retryAfterSec > 0 ? retryAfterSec : DEFAULT_RETRY_AFTER_SEC
+  _rateLimited.set(scope, Date.now() + safe * 1000)
+}
+
+function isRateLimited(path: string): { yes: boolean; retryAfterSec: number; scope: string } {
+  const scope = pathScope(path)
+  const exp = _rateLimited.get(scope)
+  if (!exp) return { yes: false, retryAfterSec: 0, scope }
+  if (Date.now() >= exp) {
+    _rateLimited.delete(scope)
+    return { yes: false, retryAfterSec: 0, scope }
+  }
+  return { yes: true, retryAfterSec: Math.ceil((exp - Date.now()) / 1000), scope }
+}
+
+/**
+ * Test/dev hook — clear the in-process rate-limit short-circuit cache.
+ * Exported with an underscore to signal it is NOT part of the public
+ * API; tests reset state between runs by calling this.
+ */
+export function _resetRateLimitCache(): void {
+  _rateLimited.clear()
+}
+
+function dispatchRateLimitedEvent(scope: string, retryAfterSec: number): void {
+  if (typeof document === 'undefined') return
+  document.dispatchEvent(
+    new CustomEvent('teslasync:rate-limited', { detail: { scope, retryAfterSec } }),
+  )
+}
+
+function dispatchUpstreamDownEvent(upstream: string, retryAfterSec: number): void {
+  if (typeof document === 'undefined') return
+  document.dispatchEvent(
+    new CustomEvent('teslasync:upstream-down', { detail: { upstream, retryAfterSec } }),
+  )
+}
+
+function parseRetryAfterHeader(value: string | null): number {
+  if (!value) return DEFAULT_RETRY_AFTER_SEC
+  const n = parseInt(value, 10)
+  if (Number.isNaN(n) || n <= 0) return DEFAULT_RETRY_AFTER_SEC
+  return n
+}
+
 /**
  * Type guard for {@link ApiError}. Use this in error-display components to
  * branch on `error.status` (404 / 401 / 5xx / network) rather than raw
@@ -209,7 +325,13 @@ export function isApiError(err: unknown): err is ApiError {
   if (err instanceof ApiError) return true
   if (err && typeof err === 'object' && 'name' in err && 'status' in err) {
     const e = err as { name: unknown; status: unknown }
-    return (e.name === 'ApiError' || e.name === 'TeslaAuthExpiredError') && typeof e.status === 'number'
+    return (
+      (e.name === 'ApiError' ||
+        e.name === 'TeslaAuthExpiredError' ||
+        e.name === 'RateLimitError' ||
+        e.name === 'UpstreamUnavailableError') &&
+      typeof e.status === 'number'
+    )
   }
   return false
 }
@@ -225,6 +347,43 @@ export function isTeslaAuthExpiredError(err: unknown): err is TeslaAuthExpiredEr
   if (err && typeof err === 'object' && 'name' in err && 'code' in err) {
     const e = err as { name: unknown; code: unknown }
     return e.name === 'TeslaAuthExpiredError' && e.code === 'TESLA_TOKEN_EXPIRED'
+  }
+  return false
+}
+
+/**
+ * Type guard for {@link RateLimitError}. Bundle-split safe via the
+ * same duck-type fallback as {@link isApiError}.
+ */
+export function isRateLimitError(err: unknown): err is RateLimitError {
+  if (err instanceof RateLimitError) return true
+  if (err && typeof err === 'object' && 'name' in err && 'status' in err && 'retryAfterSec' in err) {
+    const e = err as { name: unknown; status: unknown; retryAfterSec: unknown }
+    return e.name === 'RateLimitError' && e.status === 429 && typeof e.retryAfterSec === 'number'
+  }
+  return false
+}
+
+/**
+ * Type guard for {@link UpstreamUnavailableError}. Bundle-split safe
+ * via the same duck-type fallback as {@link isApiError}.
+ */
+export function isUpstreamUnavailableError(err: unknown): err is UpstreamUnavailableError {
+  if (err instanceof UpstreamUnavailableError) return true
+  if (
+    err &&
+    typeof err === 'object' &&
+    'name' in err &&
+    'status' in err &&
+    'retryAfterSec' in err &&
+    'upstream' in err
+  ) {
+    const e = err as { name: unknown; status: unknown; retryAfterSec: unknown }
+    return (
+      e.name === 'UpstreamUnavailableError' &&
+      e.status === 503 &&
+      typeof e.retryAfterSec === 'number'
+    )
   }
   return false
 }
@@ -262,6 +421,17 @@ async function _doFetch<T>(
   timeout: number,
 ): Promise<T> {
   let lastError: Error | null = null
+
+  // Phase-45 / Prompt 33 — short-circuit any path whose scope is still
+  // inside an active Retry-After window. Without this guard, 60 in-flight
+  // queries to /vehicles would each independently hit the network during
+  // the cooldown and each surface their own "request failed" toast. We
+  // throw the cached RateLimitError so callers (banner, QueryError) see
+  // the same shape they'd see from a fresh 429.
+  const limited = isRateLimited(path)
+  if (limited.yes) {
+    throw new RateLimitError('Rate limited (cached)', limited.retryAfterSec, limited.scope)
+  }
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     if (!navigator.onLine) {
@@ -329,10 +499,38 @@ async function _doFetch<T>(
           }
         }
 
-        // 429 Rate Limited — wait and retry
-        if (res.status === 429 && attempt < retries) {
-          await sleep(2000 * (attempt + 1))
-          continue
+        // Phase-45 / Prompt 33 — 429 Rate Limited.
+        // Read Retry-After (defaults to 60s when missing/invalid), mark
+        // the path's scope as cooling down, dispatch the banner event,
+        // and throw a typed RateLimitError. The previous behaviour
+        // (silent 2s backoff retry then generic ApiError) hammered the
+        // upstream and gave the user no visibility — both fixed here.
+        if (res.status === 429) {
+          const retryAfterSec = parseRetryAfterHeader(res.headers.get('Retry-After'))
+          const scope = pathScope(path)
+          markRateLimited(scope, retryAfterSec)
+          dispatchRateLimitedEvent(scope, retryAfterSec)
+          throw new RateLimitError(
+            apiErr.message || 'Rate limited',
+            retryAfterSec,
+            scope,
+          )
+        }
+
+        // Phase-45 / Prompt 33 — 503 with UPSTREAM_BREAKER_OPEN.
+        // The Tesla upstream breaker has tripped; further calls would
+        // be fast-failed. Dispatch the upstream-down banner event and
+        // throw a typed UpstreamUnavailableError so the calm waiting
+        // placeholder is rendered instead of a generic server-error.
+        if (res.status === 503 && errCode === 'UPSTREAM_BREAKER_OPEN') {
+          const retryAfterSec = parseRetryAfterHeader(res.headers.get('Retry-After'))
+          const upstream = typeof err.upstream === 'string' ? err.upstream : 'tesla'
+          dispatchUpstreamDownEvent(upstream, retryAfterSec)
+          throw new UpstreamUnavailableError(
+            apiErr.message || 'Upstream temporarily unavailable',
+            retryAfterSec,
+            upstream,
+          )
         }
 
         throw apiErr
@@ -381,7 +579,18 @@ async function _doFetch<T>(
 export interface SystemStatus {
   overall: string
   database: { status: string; consecutive_failures?: number }
-  tesla_api: { status: string }
+  /**
+   * Phase-45 / Prompt 33 — `breaker` and `breaker_reset_at` are exposed
+   * by the backend so the SPA can show an accurate breaker-open banner
+   * with a real countdown rather than re-deriving the reset window
+   * client-side. `breaker_reset_at` is RFC3339 and only present while
+   * the breaker is in the "open" state.
+   */
+  tesla_api: {
+    status: string
+    breaker?: 'open' | 'half-open' | 'closed' | string
+    breaker_reset_at?: string
+  }
   mqtt?: { status: string; consecutive_failures?: number; last_error?: string }
   worker?: { status: string; consecutive_failures?: number }
 }
