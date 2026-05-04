@@ -362,3 +362,78 @@ func TestDriveDetail_Get_EmbeddedPositions_AliasFields(t *testing.T) {
 		t.Errorf("positions[0] missing `speed` (aliased from speed_mph); row=%v", row)
 	}
 }
+
+// TestDriveDetail_Telemetry_DerivesPowerKw locks in that the per-row
+// telemetry response includes a derived `power` field computed as
+// PackVoltage × PackCurrent / 1000 (kW). Tesla Fleet Telemetry does not
+// emit a PackPower signal, so without this derivation the Power Profile
+// chart renders a flat line at 0 even on drives with valid voltage and
+// current samples. Sign is preserved (positive = drive, negative = regen)
+// so the chart can distinguish power flow direction.
+func TestDriveDetail_Telemetry_DerivesPowerKw(t *testing.T) {
+	t0 := time.Date(2026, 4, 30, 10, 0, 0, 0, time.UTC)
+	t1 := t0.Add(2 * time.Minute)
+	fake := &fakeStateReader{
+		timelineFn: func(_ context.Context, _ int64, _ []signal.FieldMapping, _, _ time.Time, _ signal.TimelineOptions) ([]signal.TimelineRow, error) {
+			return []signal.TimelineRow{
+				// Drive: 400V × 10A = 4 kW
+				{Timestamp: t0, Fields: map[string]signal.SignalValue{"pack_voltage": 400.0, "pack_current": 10.0}},
+				// Regen: 400V × −20A = −8 kW (sign preserved)
+				{Timestamp: t0.Add(1 * time.Minute), Fields: map[string]signal.SignalValue{"pack_voltage": 400.0, "pack_current": -20.0}},
+				// Missing current — power should NOT be set on this row
+				{Timestamp: t0.Add(2 * time.Minute), Fields: map[string]signal.SignalValue{"pack_voltage": 400.0}},
+			}, nil
+		},
+	}
+	drives := &fakeDriveByIDFetcher{drive: completedDrive(7, 42, t0, t1)}
+	h := &driveDetailHandler{state: fake, drives: drives}
+
+	rec := httptest.NewRecorder()
+	h.TelemetryReadings(rec, newDriveDetailRequest(t, "7", ""))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var got []map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode: %v; body=%s", err, rec.Body.String())
+	}
+	if len(got) != 3 {
+		t.Fatalf("response row count = %d, want 3", len(got))
+	}
+	if p, ok := got[0]["power"].(float64); !ok || p != 4.0 {
+		t.Errorf("row[0] power = %#v, want 4.0 (400V × 10A / 1000)", got[0]["power"])
+	}
+	if p, ok := got[1]["power"].(float64); !ok || p != -8.0 {
+		t.Errorf("row[1] power = %#v, want -8.0 (400V × -20A / 1000, sign preserved for regen)", got[1]["power"])
+	}
+	if _, has := got[2]["power"]; has {
+		t.Errorf("row[2] should NOT have power (pack_current missing); row=%v", got[2])
+	}
+}
+
+// TestDriveDetail_Telemetry_FieldMappingsCoverPageFields locks in that the
+// telemetry projection includes every signal the frontend Drive Detail
+// page reads via its chartData mapper (useDriveDetailData.ts). Without
+// these mappings the Odometer From→To, Range Start→End, fan/climate, and
+// driver/passenger temperature panels render blank even though the drive
+// has valid telemetry.
+func TestDriveDetail_Telemetry_FieldMappingsCoverPageFields(t *testing.T) {
+	required := []string{
+		"speed", "pack_current", "pack_voltage", "battery_level",
+		"soc", "odometer", "ideal_range", "rated_range", "est_range",
+		"elevation", "inside_temp", "outside_temp",
+		"driver_temp", "passenger_temp", "fan_status",
+		"tire_pressure_fl", "tire_pressure_fr", "tire_pressure_rl", "tire_pressure_rr",
+		"latitude", "longitude",
+	}
+	have := make(map[string]bool, len(driveTelemetryFieldMappings))
+	for _, m := range driveTelemetryFieldMappings {
+		have[m.Field] = true
+	}
+	for _, f := range required {
+		if !have[f] {
+			t.Errorf("driveTelemetryFieldMappings missing required field %q (frontend reads this); current mappings=%v", f, driveTelemetryFieldMappings)
+		}
+	}
+}

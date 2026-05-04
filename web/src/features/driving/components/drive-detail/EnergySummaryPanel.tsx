@@ -14,7 +14,7 @@ interface EnergySummaryPanelProps {
 
 export function EnergySummaryPanel({ drive, stats }: EnergySummaryPanelProps) {
   const { t } = useTranslation();
-  const { convertEfficiency, efficiencyUnit } = useSettings();
+  const { convertEfficiency, efficiencyUnit, distanceUnit } = useSettings();
 
   return (
     <FadeIn>
@@ -48,7 +48,11 @@ export function EnergySummaryPanel({ drive, stats }: EnergySummaryPanelProps) {
           </div>
           <div>
             <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.rangeUsed', 'Range Used')}</p>
-            <p className="text-lg font-bold text-green-400">—</p>
+            <p className="text-lg font-bold text-green-400">
+              {stats.startRange != null && stats.endRange != null
+                ? fmtWithUnit(stats.startRange - stats.endRange, distanceUnit)
+                : '—'}
+            </p>
           </div>
         </div>
       </GlassPanel>
