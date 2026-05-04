@@ -1,0 +1,90 @@
+=== INPUT ===
+blocked_prompt: phase-42/0080-tombstone-internal-telemetry.prompt.md
+artifact_log: D:\repos\teslasync\.github\prompts\db-refactor\logs\phase-42-0080-tombstone-internal-telemetry.log
+attempt: 2
+snapshot_head: 2d5c33e4cba53952541d6d51d2aef626c674c95f
+snapshot_file: C:\Users\AtulM\AppData\Local\Temp\teslasync-fixer-snapshots\20260504-134441-52352\phase-42-0080-tombstone-internal-telemetry.prompt.md-attempt2.json
+==================== COPILOT SESSION (start) ====================
+RunID         : 2026-05-04_13-44-41
+Source        : fixer
+Prompt        : phase-42/0080-tombstone-internal-telemetry
+Attempt       : 2
+Started       : 2026-05-04T14:05:58.7584045-07:00
+CLI version   : 1.0.41
+PowerShell    : 7.6.1
+OS            : Microsoft Windows 10.0.26200
+Repo HEAD     : 2d5c33e4 (refactor/signals-rewrite)
+Working dir   : D:\repos\teslasync
+Model         : (default)
+Args          : --yolo --autopilot -s
+Stdin bytes   : 11990
+Timeout       : 20 min
+=================================================================
+
+=== DIAGNOSIS ===
+Prompt 0080's caller-scan correctly refuses to delete internal/telemetry/
+because internal/api/telemetry_handler_ingest.go (uses telemetry.{CanonicalizeMap,
+NamedValue, Atomic, Flatten, NormalizeFleetUnits, LookupHot, FromMap,
+WriteIntoMap} on lines 95, 168-174, 379-383, 496, 509-514, 731-779, 798-800)
+and internal/api/telemetry_handler_integration_test.go (telemetry.NamedValue
+on lines 153-156) still import the legacy package. Phase-42 prompts 0060-0072
+migrated the FSM, signal store, redis cache, MQTT consumer, SSE channel and
+frontend envelope, but the HTTP/MQTT JSON ingest handler in internal/api/ that
+turns posted signal maps into hot-table writes was never moved off the legacy
+telemetry surface onto (*tesla/normalize.Pipeline).Process. Fixer attempt 1
+(commit fba36396) correctly diagnosed this and added 0079a to the 0080
+depends-on line, but committed only METADATA in its fixer log on the assumption
+that the runner would scaffold the precursor .prompt.md from
+$script:PrecursorTemplate. The runner defines that template literal at
+run-prompts.ps1:418-514 but never invokes it -- there is no scaffolding
+function. The runner's post-flight (G17/G28/G29) and RETRY logic at line 1411
+instead expect the fixer itself to commit the precursor file with
+template-conforming structure. Result for attempt 1: the precursor was never
+created and 0080 re-blocked unchanged. Attempt 2 reconciles this by interpolating
+the runner's verbatim PrecursorTemplate (covenant + gate logic unchanged) with
+the same metadata documented below and committing the resulting 0079a prompt
+file. The 0080 prompt body, covenant block and gate script remain byte-identical.
+
+=== PLAN ===
+action: ADD_PRECURSOR
+precursor_id: 0079a
+precursor_phase: phase-42
+precursor_title: Consumer migration -- api telemetry handler ingest
+precursor_description: Migrate internal/api/telemetry_handler_ingest.go and internal/api/telemetry_handler_integration_test.go off the legacy internal/telemetry surface (CanonicalizeMap/NamedValue/Atomic/Flatten/NormalizeFleetUnits/LookupHot/FromMap/WriteIntoMap) onto (*tesla/normalize.Pipeline).Process plus internal/tesla/codec and internal/tesla/router so prompt 0080 can delete internal/telemetry/.
+precursor_problem: |
+  internal/api/telemetry_handler_ingest.go and internal/api/telemetry_handler_integration_test.go
+  are the only remaining importers of internal/telemetry. They build
+  []telemetry.NamedValue, call telemetry.NormalizeFleetUnits / telemetry.Flatten /
+  telemetry.CanonicalizeMap / telemetry.LookupHot / telemetry.FromMap /
+  telemetry.WriteIntoMap to bucket atomics into hot tables. Per ADR-004 #6
+  (forward-only, no shims) and the architecture rule that all new ingest paths
+  route through (*tesla/normalize.Pipeline).Process, this code must be rewritten
+  on top of internal/tesla/normalize, internal/tesla/codec, and internal/tesla/router.
+  Until that migration lands, prompt 0080 cannot delete internal/telemetry/ and
+  the phase-42 forward-only invariant is violated.
+precursor_action_steps:
+  - Verify Phase 42 Prompt 0078 (mig-drop-legacy) is DONE.
+  - Replace the package import "github.com/ev-dev-labs/teslasync/internal/telemetry" in both target files with the appropriate "github.com/ev-dev-labs/teslasync/internal/tesla/normalize", ".../tesla/codec", and/or ".../tesla/router" imports.
+  - Rewrite the JSON ingest path so posted signal maps are converted to []codec.Atomic (or marshalled to bytes and fed into Pipeline.Process) and dispatched through (*tesla/normalize.Pipeline).Process instead of bucketAtomics + buildHotRow + telemetry.LookupHot, preserving the public TelemetryHandler.ProcessBatch and HTTP handler signatures.
+  - Replace the remaining telemetry.NormalizeFleetUnits / telemetry.Flatten / telemetry.CanonicalizeMap / telemetry.FromMap / telemetry.WriteIntoMap call sites with the equivalent normalize/codec/router-package calls.
+  - Update internal/api/telemetry_handler_integration_test.go's fixtureBatch.NamedValues helper to produce the new atomic/payload type (or to feed bytes into Pipeline.Process); keep the //go:build integration tag and behavioral assertions unchanged.
+  - Verify go build ./... and go vet ./... succeed.
+  - Verify git --no-pager grep -nE for an internal/telemetry import outside internal/telemetry/ returns zero matches so prompt 0080's caller-scan can pass on its next run.
+precursor_allowed_files:
+  - internal/api/telemetry_handler_ingest.go
+  - internal/api/telemetry_handler_integration_test.go
+precursor_depends_on: phase-42-0078-mig-drop-legacy.log
+
+=== CHANGES ===
+ ...-0080-tombstone-internal-telemetry-attempt2.log |  84 +++++++++++++++
+ .../phase-42-0080-tombstone-internal-telemetry.log |  22 ++++
+ ...sumer-api-telemetry-handler-ingest.prompt.md    | 110 +++++++++++++++++++
+ 3 files changed, 216 insertions(+)
+
+=== COMMIT ===
+sha: <pending>
+trailer: Fixer-Spawned-By: phase-42-0080-tombstone-internal-telemetry
+trailer: Fix-Attempt: 2
+
+EXIT=0
+STATUS=DONE

@@ -43,3 +43,25 @@ Notes
 
 EXIT=1
 STATUS=BLOCKED
+
+=== FIXER_NOTE ===
+attempt: 2
+fixer: claude-opus-4.7-xhigh
+
+Attempt 1 (commit fba36396) added 0079a to the depends-on line and provided
+METADATA in the fixer log following the charter's "METADATA only" prescription,
+trusting the runner to scaffold 0079a from its hardened template. The runner
+defines $script:PrecursorTemplate (run-prompts.ps1:418-514) but contains no
+scaffolding function that interpolates it from fixer-log metadata; the runner's
+post-flight gates (G17, G28, G29) and RETRY logic at line 1411 instead expect
+the fixer itself to commit a precursor .prompt.md whose content matches the
+template structure. Result for attempt 1: the precursor file was never created,
+so prompt 0080 re-blocked on the same caller-scan as attempt 0.
+
+Attempt 2 reconciles the charter prose with what the runner enforces by
+authoring 0079a from the runner's verbatim PrecursorTemplate (covenant block
+unchanged, gate block unchanged, only placeholder substitutions filled in with
+the metadata documented in the corresponding fixer log). The 0080 prompt body,
+covenant, and gate script remain byte-identical to attempt 1 (the depends-on
+line already lists 0079a). No source code is modified by this fixer commit;
+the actual handler migration is delegated to the 0079a prompt run.
