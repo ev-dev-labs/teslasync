@@ -540,3 +540,51 @@ in one `migrate up` step" stands.
 EXIT=1
 STATUS=BLOCKED
 --- end of log ---
+
+=== FIXER_NOTE ===
+Fixer attempt #1 ran 2026-05-04 and refused per charter.
+
+Three independent blockers prevent any safe single-precursor fix:
+
+  A) ~190 active Go SQL refs to dropped tables across 44 files
+     (independently verified: `git grep -nE 'FROM\s+drives\b' --
+     '*.go' ':!*_test.go'` returns hits in
+     internal/api/battery_degradation_handler.go,
+     internal/api/chatbot_handler_chat.go, and many more).
+     Requires multiple new consumer-migration prompts (0073..0077)
+     in the established granular phase-42 pattern.
+
+  B) Cross-service grep `\b<table>\b` in Check #3 over helm/, docs/,
+     web/src/ has a structural false-positive problem (1028 hits,
+     dominated by URL paths, English nouns, i18n labels, directory
+     names). Requires a gate-script edit (forbidden to fixer) to
+     drop web/src/ and narrow helm/ + docs/ to schema contexts.
+
+  C) `func TestMigrationApply` does not exist anywhere in the
+     repo and the 0078 allowed-files list excludes test files.
+     Solvable in isolation by either a precursor that authors the
+     harness OR a gate-script edit to drop the explicit
+     pre-existence check (the latter is forbidden).
+
+Adding a precursor for C alone leaves A and B intact. A piecewise
+iterative fixer path on A is unsafe without column-mapping detail
+the fixer cannot encode in metadata-only action_steps. B is
+structurally outside the fixer's authority.
+
+Charter cited: "Refusing is always safe. Guessing is not."
+
+Falling through to a human. See
+.github/prompts/db-refactor/logs/fixer-phase-42-0078-migration-drop-legacy-tables-attempt1.log
+for the full DIAGNOSIS / PLAN.
+
+Recommended human work order:
+  1. Author Prompts 0073..0077 to migrate the 44 analytics +
+     repo-layer files identified in ANCHORED_GREP_NO_REFS above.
+  2. Narrow Check #3 cross-service grep (drop web/src/, scope
+     helm/ + docs/ to schema contexts, or curate exclusion list).
+  3. Author TestMigrationApply in
+     internal/database/migration_apply_test.go (preferred) OR
+     drop Check #7 pre-existence guard (matches predecessor
+     0030-0036 pattern).
+  4. Re-run Prompt 0078.
+=== END FIXER_NOTE ===
