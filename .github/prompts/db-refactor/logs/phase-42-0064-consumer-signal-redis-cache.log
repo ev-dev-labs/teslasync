@@ -1,0 +1,345 @@
+=== PREFLIGHT ===
+timestamp=2026-05-04T05:00:33.9230355-07:00
+branch=refactor/signals-rewrite
+head=3e3e6e2309e340278c05b297330f7df94bfa7b55
+
+# Predecessor: phase-42-0063-consumer-signal-pivot.log
+predecessor.exit=EXIT=0
+predecessor.status=STATUS=DONE
+
+=== SERIALIZATION ===
+# Phase-42 typed envelope JSON shape:
+#   {"kind": <protomodel.ValueKind int>, "v": <typed JSON value>, "ts": <unix nanos>}
+#
+# Encoder uses metadata-first kind inference:
+#   1. Look up protomodel.SignalsByName[field].ValueKind
+#   2. Fall back to runtime type switch on the Go value
+#
+# Decoder switches on Kind to unmarshal V into the right Go type:
+#   ValueKindString/Enum -> string
+#   ValueKindBool        -> bool
+#   ValueKindInt32       -> int32
+#   ValueKindInt64       -> int64
+#   ValueKindFloat       -> float32
+#   ValueKindDouble      -> float64
+#   ValueKindTime        -> time.Time
+#   ValueKindCompound    -> generic interface{} (map/slice)
+#   ValueKindUnknown/0   -> generic interface{} (untyped)
+#
+# Backward-compat reads:
+#   1. Typed envelope (kind+v+ts present)
+#   2. Pre-phase-42 envelope (encoding+value+timestamp)
+#   3. Legacy scalar (number / "true" / "false" / JSON / string)
+#
+# Stale-cache contract (NEW Fresh-only API):
+#   * default staleAfter = LiveSignalFreshnessThreshold (2m)
+#   * GetSignalValueFresh(ctx, vehicleID, name) (*Value, error)
+#       returns (advisoryValue, ErrStale) for stale or legacy zero-Timestamp entries
+#       increments tesla_signal_cache_stale_total{vehicle_id, field}
+#   * Existing GetSignalValue/GetAllValues unchanged: silently return values to
+#     preserve the immutable live_store_test.go contract that requires merged
+#     map preservation of stale L2 envelopes (TestHybridLiveSignalStoreGetAll
+#     ReturnsStaleL2EnvelopesWithTimestampPreserved).
+#
+# Constructor:
+#   NewRedisSignalCache(rdb, opts ...RedisSignalCacheOption) *RedisSignalCache
+#   WithStaleAfter(d time.Duration) RedisSignalCacheOption
+#
+# Direct-struct construction (&RedisSignalCache{rdb: x}) yields
+# staleAfter = 0, which DISABLES freshness checks and preserves the
+# pass-through behaviour the existing live_store_test.go relies on.
+
+=== UNIT_TEST ===
+# go test -race ./internal/signal/...
+=== RUN   TestHybridLiveSignalStoreL1OnlyOperationWithNilRedis
+--- PASS: TestHybridLiveSignalStoreL1OnlyOperationWithNilRedis (0.00s)
+=== RUN   TestHybridLiveSignalStoreUpdateWritesL1AndL2
+--- PASS: TestHybridLiveSignalStoreUpdateWritesL1AndL2 (0.00s)
+=== RUN   TestHybridLiveSignalStoreUpdateNonBlockingWritesL1AndAttemptsL2
+--- PASS: TestHybridLiveSignalStoreUpdateNonBlockingWritesL1AndAttemptsL2 (0.01s)
+=== RUN   TestHybridLiveSignalStoreLocalModeDoesNotUseRedisBackedReadsOrWrites
+--- PASS: TestHybridLiveSignalStoreLocalModeDoesNotUseRedisBackedReadsOrWrites (0.00s)
+=== RUN   TestHybridLiveSignalStoreModeSwitchDisablesRedisBackedDistributedReads
+--- PASS: TestHybridLiveSignalStoreModeSwitchDisablesRedisBackedDistributedReads (0.00s)
+=== RUN   TestHybridLiveSignalStoreDistributedReadsPreferRedisWhenAvailable
+--- PASS: TestHybridLiveSignalStoreDistributedReadsPreferRedisWhenAvailable (0.00s)
+=== RUN   TestHybridLiveSignalStoreRedisFailureDoesNotCorruptL1State
+{"level":"warn","error":"redis unavailable","vehicle_id":13,"time":"2026-05-04T05:18:09-07:00","message":"redis signal cache: HSET failed"}
+--- PASS: TestHybridLiveSignalStoreRedisFailureDoesNotCorruptL1State (0.00s)
+=== RUN   TestHybridLiveSignalStoreUpdateNonBlockingRedisFailureStillUpdatesL1
+--- PASS: TestHybridLiveSignalStoreUpdateNonBlockingRedisFailureStillUpdatesL1 (0.00s)
+=== RUN   TestHybridLiveSignalStoreRejectsInvalidInputs
+--- PASS: TestHybridLiveSignalStoreRejectsInvalidInputs (0.00s)
+{"level":"warn","error":"redis unavailable","vehicle_id":14,"time":"2026-05-04T05:18:09-07:00","message":"redis signal cache: HSET failed"}
+=== RUN   TestHybridLiveSignalStoreWarmHydratesL1FromRedis
+{"level":"warn","error":"redis unavailable","vehicle_id":14,"time":"2026-05-04T05:18:09-07:00","message":"live signal store: Redis mirror failed"}
+--- PASS: TestHybridLiveSignalStoreWarmHydratesL1FromRedis (0.00s)
+=== RUN   TestHybridLiveSignalStoreWarmRestampsLegacyScalarsToEnvelopes
+--- PASS: TestHybridLiveSignalStoreWarmRestampsLegacyScalarsToEnvelopes (0.00s)
+=== RUN   TestHybridLiveSignalStoreWarmDoesNotOverwriteFreshEnvelopes
+--- PASS: TestHybridLiveSignalStoreWarmDoesNotOverwriteFreshEnvelopes (0.00s)
+=== RUN   TestHybridLiveSignalStoreWarmIsIdempotentOnSecondCall
+--- PASS: TestHybridLiveSignalStoreWarmIsIdempotentOnSecondCall (0.00s)
+=== RUN   TestHybridLiveSignalStoreWarmRestampPartialFailureDoesNotCorrupt
+{"level":"warn","error":"restamp HSet sentinel failure","vehicle_id":44,"time":"2026-05-04T05:18:09-07:00","message":"redis signal cache: restamp HSET failed"}
+--- PASS: TestHybridLiveSignalStoreWarmRestampPartialFailureDoesNotCorrupt (0.00s)
+=== RUN   TestHybridLiveSignalStoreWarmHydratesL1AfterRestamp
+--- PASS: TestHybridLiveSignalStoreWarmHydratesL1AfterRestamp (0.00s)
+=== RUN   TestHybridLiveSignalStoreWarmRestampRefreshesKeyTTL
+--- PASS: TestHybridLiveSignalStoreWarmRestampRefreshesKeyTTL (0.00s)
+=== RUN   TestNewLiveSignalStoreUsesRuntimeModeString
+--- PASS: TestNewLiveSignalStoreUsesRuntimeModeString (0.00s)
+=== RUN   TestHybridLiveSignalStoreGetAllReturnsL2OnlyAndL1OnlySignalsTogether
+--- PASS: TestHybridLiveSignalStoreGetAllReturnsL2OnlyAndL1OnlySignalsTogether (0.00s)
+=== RUN   TestHybridLiveSignalStoreGetAllReturnsLegacyScalarL2Values
+--- PASS: TestHybridLiveSignalStoreGetAllReturnsLegacyScalarL2Values (0.00s)
+=== RUN   TestHybridLiveSignalStoreGetAllReturnsStaleL2EnvelopesWithTimestampPreserved
+--- PASS: TestHybridLiveSignalStoreGetAllReturnsStaleL2EnvelopesWithTimestampPreserved (0.00s)
+=== RUN   TestHybridLiveSignalStoreGetAllMergesL1AndL2WithNewerTimestampWinning
+--- PASS: TestHybridLiveSignalStoreGetAllMergesL1AndL2WithNewerTimestampWinning (0.00s)
+=== RUN   TestHybridLiveSignalStoreGetSignalAppliesSameMergeRuleAsGetAll
+=== RUN   TestHybridLiveSignalStoreGetSignalAppliesSameMergeRuleAsGetAll/L2_newer_wins
+=== RUN   TestHybridLiveSignalStoreGetSignalAppliesSameMergeRuleAsGetAll/L1_newer_wins
+=== RUN   TestHybridLiveSignalStoreGetSignalAppliesSameMergeRuleAsGetAll/L2_stale_envelope_returned_not_dropped
+=== RUN   TestHybridLiveSignalStoreGetSignalAppliesSameMergeRuleAsGetAll/L2_legacy_scalar_returned_not_dropped
+=== RUN   TestHybridLiveSignalStoreGetSignalAppliesSameMergeRuleAsGetAll/L1_only
+--- PASS: TestHybridLiveSignalStoreGetSignalAppliesSameMergeRuleAsGetAll (0.00s)
+    --- PASS: TestHybridLiveSignalStoreGetSignalAppliesSameMergeRuleAsGetAll/L2_newer_wins (0.00s)
+    --- PASS: TestHybridLiveSignalStoreGetSignalAppliesSameMergeRuleAsGetAll/L1_newer_wins (0.00s)
+    --- PASS: TestHybridLiveSignalStoreGetSignalAppliesSameMergeRuleAsGetAll/L2_stale_envelope_returned_not_dropped (0.00s)
+    --- PASS: TestHybridLiveSignalStoreGetSignalAppliesSameMergeRuleAsGetAll/L2_legacy_scalar_returned_not_dropped (0.00s)
+    --- PASS: TestHybridLiveSignalStoreGetSignalAppliesSameMergeRuleAsGetAll/L1_only (0.00s)
+=== RUN   TestHybridLiveSignalStoreGetAllLocalModeUnchangedAndNeverReadsRedis
+--- PASS: TestHybridLiveSignalStoreGetAllLocalModeUnchangedAndNeverReadsRedis (0.00s)
+=== RUN   TestHybridLiveSignalStoreDistributedReadsSurfaceRedisErrors
+--- PASS: TestHybridLiveSignalStoreDistributedReadsSurfaceRedisErrors (0.00s)
+=== RUN   TestForwardFold_EmptySeedEmptyEvents
+--- PASS: TestForwardFold_EmptySeedEmptyEvents (0.00s)
+=== RUN   TestForwardFold_EmptySeedSingleEvent
+--- PASS: TestForwardFold_EmptySeedSingleEvent (0.00s)
+=== RUN   TestForwardFold_NonEmptySeedNoEvents
+--- PASS: TestForwardFold_NonEmptySeedNoEvents (0.00s)
+=== RUN   TestForwardFold_MergesSameTimestampEvents
+--- PASS: TestForwardFold_MergesSameTimestampEvents (0.00s)
+=== RUN   TestForwardFold_CarriesForwardAcrossEvents
+--- PASS: TestForwardFold_CarriesForwardAcrossEvents (0.00s)
+=== RUN   TestForwardFold_DropsLeadingAllNilRows
+--- PASS: TestForwardFold_DropsLeadingAllNilRows (0.00s)
+=== RUN   TestForwardFold_KeepsTrailingAllNilRowsAfterFirstNonNil
+--- PASS: TestForwardFold_KeepsTrailingAllNilRowsAfterFirstNonNil (0.00s)
+=== RUN   TestForwardFold_PreservesTypedPrimitives_Phase42
+--- PASS: TestForwardFold_PreservesTypedPrimitives_Phase42 (0.00s)
+=== RUN   TestCollapseTimeline_EmptyCollapseFieldsReturnsUnchanged
+--- PASS: TestCollapseTimeline_EmptyCollapseFieldsReturnsUnchanged (0.00s)
+=== RUN   TestCollapseTimeline_DropsConsecutiveDuplicates
+--- PASS: TestCollapseTimeline_DropsConsecutiveDuplicates (0.00s)
+=== RUN   TestCollapseTimeline_TreatsNilEqualToNil
+--- PASS: TestCollapseTimeline_TreatsNilEqualToNil (0.00s)
+=== RUN   TestCollapseTimeline_KeepsFirstAlways
+--- PASS: TestCollapseTimeline_KeepsFirstAlways (0.00s)
+=== RUN   TestRedisSignalCacheTimestampedValuesRoundTrip
+--- PASS: TestRedisSignalCacheTimestampedValuesRoundTrip (0.00s)
+=== RUN   TestRedisSignalCacheLegacyScalarValuesDecodeWithUnknownFreshness
+--- PASS: TestRedisSignalCacheLegacyScalarValuesDecodeWithUnknownFreshness (0.00s)
+=== RUN   TestRedisSignalCacheMalformedJSONSurfacesForTimestampAwareReads
+--- PASS: TestRedisSignalCacheMalformedJSONSurfacesForTimestampAwareReads (0.00s)
+=== RUN   TestLiveSignalFreshnessThresholdDistinguishesStaleAndLegacyValues
+--- PASS: TestLiveSignalFreshnessThresholdDistinguishesStaleAndLegacyValues (0.00s)
+=== RUN   TestRedisSignalCacheGetAllRemainsRawCompatibleWithTimestampedValues
+--- PASS: TestRedisSignalCacheGetAllRemainsRawCompatibleWithTimestampedValues (0.00s)
+=== RUN   TestParseVehicleSignalsKey
+=== RUN   TestParseVehicleSignalsKey/valid_id_1
+=== RUN   TestParseVehicleSignalsKey/valid_id_42
+=== RUN   TestParseVehicleSignalsKey/valid_large_id
+=== RUN   TestParseVehicleSignalsKey/missing_prefix
+=== RUN   TestParseVehicleSignalsKey/missing_suffix
+=== RUN   TestParseVehicleSignalsKey/non-numeric_id
+=== RUN   TestParseVehicleSignalsKey/empty_id
+=== RUN   TestParseVehicleSignalsKey/negative_id
+=== RUN   TestParseVehicleSignalsKey/zero_id
+=== RUN   TestParseVehicleSignalsKey/empty_string
+=== RUN   TestParseVehicleSignalsKey/wrong_prefix_entirely
+--- PASS: TestParseVehicleSignalsKey (0.00s)
+    --- PASS: TestParseVehicleSignalsKey/valid_id_1 (0.00s)
+    --- PASS: TestParseVehicleSignalsKey/valid_id_42 (0.00s)
+    --- PASS: TestParseVehicleSignalsKey/valid_large_id (0.00s)
+    --- PASS: TestParseVehicleSignalsKey/missing_prefix (0.00s)
+    --- PASS: TestParseVehicleSignalsKey/missing_suffix (0.00s)
+    --- PASS: TestParseVehicleSignalsKey/non-numeric_id (0.00s)
+    --- PASS: TestParseVehicleSignalsKey/empty_id (0.00s)
+    --- PASS: TestParseVehicleSignalsKey/negative_id (0.00s)
+    --- PASS: TestParseVehicleSignalsKey/zero_id (0.00s)
+    --- PASS: TestParseVehicleSignalsKey/empty_string (0.00s)
+    --- PASS: TestParseVehicleSignalsKey/wrong_prefix_entirely (0.00s)
+=== RUN   TestRawFieldCount_EmptyKey
+--- PASS: TestRawFieldCount_EmptyKey (0.00s)
+=== RUN   TestRawFieldCount_PopulatedKey
+--- PASS: TestRawFieldCount_PopulatedKey (0.00s)
+=== RUN   TestScanVehicleKeys_FiltersMalformedKeys
+--- PASS: TestScanVehicleKeys_FiltersMalformedKeys (0.00s)
+=== RUN   TestScanVehicleKeys_RespectsLimit
+--- PASS: TestScanVehicleKeys_RespectsLimit (0.00s)
+=== RUN   TestRedisSignalCacheTypedEnvelopeRoundTripPerKind
+=== RUN   TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/string
+=== RUN   TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/bool
+=== RUN   TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/int32
+=== RUN   TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/int64
+=== RUN   TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/float32
+=== RUN   TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/float64
+=== RUN   TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/enum_(string_disambiguated_by_metadata)
+=== RUN   TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/time
+=== RUN   TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/compound_(map)
+--- PASS: TestRedisSignalCacheTypedEnvelopeRoundTripPerKind (0.00s)
+    --- PASS: TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/string (0.00s)
+    --- PASS: TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/bool (0.00s)
+    --- PASS: TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/int32 (0.00s)
+    --- PASS: TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/int64 (0.00s)
+    --- PASS: TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/float32 (0.00s)
+    --- PASS: TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/float64 (0.00s)
+    --- PASS: TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/enum_(string_disambiguated_by_metadata) (0.00s)
+    --- PASS: TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/time (0.00s)
+    --- PASS: TestRedisSignalCacheTypedEnvelopeRoundTripPerKind/compound_(map) (0.00s)
+=== RUN   TestGetSignalValueFreshReturnsErrStaleAndAdvisoryValue
+--- PASS: TestGetSignalValueFreshReturnsErrStaleAndAdvisoryValue (0.00s)
+=== RUN   TestGetSignalValueFreshTreatsLegacyZeroTimestampAsStale
+--- PASS: TestGetSignalValueFreshTreatsLegacyZeroTimestampAsStale (0.00s)
+=== RUN   TestGetSignalValueFreshReturnsFreshValueWithoutError
+--- PASS: TestGetSignalValueFreshReturnsFreshValueWithoutError (0.00s)
+=== RUN   TestGetSignalValueFreshReturnsNilForMissingKey
+--- PASS: TestGetSignalValueFreshReturnsNilForMissingKey (0.00s)
+=== RUN   TestGetSignalValueFreshDisabledWhenStaleAfterIsZero
+--- PASS: TestGetSignalValueFreshDisabledWhenStaleAfterIsZero (0.00s)
+=== RUN   TestRedisSignalCacheKeyAndChannelInvariance
+=== RUN   TestRedisSignalCacheKeyAndChannelInvariance/HSET_key_shape_preserved
+=== RUN   TestRedisSignalCacheKeyAndChannelInvariance/Pub/Sub_channel_name_preserved
+--- PASS: TestRedisSignalCacheKeyAndChannelInvariance (0.00s)
+    --- PASS: TestRedisSignalCacheKeyAndChannelInvariance/HSET_key_shape_preserved (0.00s)
+    --- PASS: TestRedisSignalCacheKeyAndChannelInvariance/Pub/Sub_channel_name_preserved (0.00s)
+=== RUN   TestRedisSignalCacheTypedEnvelopeMiniredisRoundTrip
+--- PASS: TestRedisSignalCacheTypedEnvelopeMiniredisRoundTrip (0.01s)
+=== RUN   TestRedisSignalCacheStaleMiniredisRejection
+--- PASS: TestRedisSignalCacheStaleMiniredisRejection (0.01s)
+=== RUN   TestNewRedisSignalCacheDefaultsStaleAfterTo2Minutes
+--- PASS: TestNewRedisSignalCacheDefaultsStaleAfterTo2Minutes (0.00s)
+=== RUN   TestWithStaleAfterOverride
+--- PASS: TestWithStaleAfterOverride (0.00s)
+=== RUN   TestUnpackLocationCompounds_FlattensWhenPresent
+--- PASS: TestUnpackLocationCompounds_FlattensWhenPresent (0.00s)
+=== RUN   TestUnpackLocationCompounds_NoOpWhenAbsent
+--- PASS: TestUnpackLocationCompounds_NoOpWhenAbsent (0.00s)
+=== RUN   TestUnpackLocationCompounds_NoOpWhenWrongType
+--- PASS: TestUnpackLocationCompounds_NoOpWhenWrongType (0.00s)
+=== RUN   TestNewLogStateReader_SatisfiesInterface
+--- PASS: TestNewLogStateReader_SatisfiesInterface (0.00s)
+=== RUN   TestLogStateReader_State_PropagatesContextCancel
+--- PASS: TestLogStateReader_State_PropagatesContextCancel (0.00s)
+=== RUN   TestLogStateReader_State_BuildsMapFromRows
+--- PASS: TestLogStateReader_State_BuildsMapFromRows (0.00s)
+=== RUN   TestLogStateReader_State_FlattensLocation
+--- PASS: TestLogStateReader_State_FlattensLocation (0.00s)
+=== RUN   TestLogStateReader_State_RejectsZeroAt
+--- PASS: TestLogStateReader_State_RejectsZeroAt (0.00s)
+=== RUN   TestLogStateReader_State_LogsSlowQuery
+--- PASS: TestLogStateReader_State_LogsSlowQuery (0.60s)
+=== RUN   TestLogStateReader_State_LogsErrorBeforeReturn
+--- PASS: TestLogStateReader_State_LogsErrorBeforeReturn (0.00s)
+=== RUN   TestLogStateReader_SignalAt_ReturnsValueWhenFound
+--- PASS: TestLogStateReader_SignalAt_ReturnsValueWhenFound (0.00s)
+=== RUN   TestLogStateReader_SignalAt_ReturnsNilNilWhenNotFound
+--- PASS: TestLogStateReader_SignalAt_ReturnsNilNilWhenNotFound (0.00s)
+=== RUN   TestLogStateReader_SignalAt_PropagatesContextCancel
+--- PASS: TestLogStateReader_SignalAt_PropagatesContextCancel (0.00s)
+=== RUN   TestLogStateReader_SignalAt_PropagatesScanError
+--- PASS: TestLogStateReader_SignalAt_PropagatesScanError (0.00s)
+=== RUN   TestLogStateReader_SignalAt_RejectsZeroAt
+--- PASS: TestLogStateReader_SignalAt_RejectsZeroAt (0.00s)
+=== RUN   TestLogStateReader_SignalAt_RejectsEmptySignal
+--- PASS: TestLogStateReader_SignalAt_RejectsEmptySignal (0.00s)
+=== RUN   TestLogStateReader_Timeline_ChartMode_EmptyMappings
+--- PASS: TestLogStateReader_Timeline_ChartMode_EmptyMappings (0.00s)
+=== RUN   TestLogStateReader_Timeline_ChartMode_SeedOnly_NoEvents
+--- PASS: TestLogStateReader_Timeline_ChartMode_SeedOnly_NoEvents (0.00s)
+=== RUN   TestLogStateReader_Timeline_ChartMode_SingleEvent
+--- PASS: TestLogStateReader_Timeline_ChartMode_SingleEvent (0.00s)
+=== RUN   TestLogStateReader_Timeline_ChartMode_CarryForward
+--- PASS: TestLogStateReader_Timeline_ChartMode_CarryForward (0.00s)
+=== RUN   TestLogStateReader_Timeline_ChartMode_MergeSameTimestamp
+--- PASS: TestLogStateReader_Timeline_ChartMode_MergeSameTimestamp (0.00s)
+=== RUN   TestLogStateReader_Timeline_ChartMode_DropsLeadingNilRows
+--- PASS: TestLogStateReader_Timeline_ChartMode_DropsLeadingNilRows (0.00s)
+=== RUN   TestLogStateReader_Timeline_ChartMode_PropagatesContextCancel
+--- PASS: TestLogStateReader_Timeline_ChartMode_PropagatesContextCancel (0.00s)
+=== RUN   TestLogStateReader_Timeline_ChartMode_NoNPlusOne
+--- PASS: TestLogStateReader_Timeline_ChartMode_NoNPlusOne (0.00s)
+=== RUN   TestLogStateReader_Timeline_ChartMode_RejectsZeroFrom
+--- PASS: TestLogStateReader_Timeline_ChartMode_RejectsZeroFrom (0.00s)
+=== RUN   TestLogStateReader_Timeline_ChartMode_RejectsZeroTo
+--- PASS: TestLogStateReader_Timeline_ChartMode_RejectsZeroTo (0.00s)
+=== RUN   TestLogStateReader_Timeline_ChartMode_RejectsInvertedRange
+--- PASS: TestLogStateReader_Timeline_ChartMode_RejectsInvertedRange (0.00s)
+=== RUN   TestLogStateReader_Timeline_ChartMode_RejectsExcessiveWindow
+--- PASS: TestLogStateReader_Timeline_ChartMode_RejectsExcessiveWindow (0.00s)
+=== RUN   TestLogStateReader_Timeline_CollapseMode_DropsConsecutiveDuplicates
+--- PASS: TestLogStateReader_Timeline_CollapseMode_DropsConsecutiveDuplicates (0.00s)
+=== RUN   TestLogStateReader_Timeline_CollapseMode_KeepsFirstAlways
+--- PASS: TestLogStateReader_Timeline_CollapseMode_KeepsFirstAlways (0.00s)
+=== RUN   TestLogStateReader_Timeline_CollapseMode_RejectsUnknownCollapseField
+--- PASS: TestLogStateReader_Timeline_CollapseMode_RejectsUnknownCollapseField (0.00s)
+=== RUN   TestLogStateReader_Timeline_CollapseMode_PreservesNonCollapsedFields
+--- PASS: TestLogStateReader_Timeline_CollapseMode_PreservesNonCollapsedFields (0.00s)
+=== RUN   TestLogStateReader_Timeline_CollapseMode_NoNPlusOne
+--- PASS: TestLogStateReader_Timeline_CollapseMode_NoNPlusOne (0.00s)
+=== RUN   TestStateReader_InterfaceCompiles
+--- PASS: TestStateReader_InterfaceCompiles (0.00s)
+=== RUN   TestTimelineRow_MarshalJSON_FlattensToFlatShape
+--- PASS: TestTimelineRow_MarshalJSON_FlattensToFlatShape (0.00s)
+=== RUN   TestTimelineRow_MarshalJSON_TimestampWins
+--- PASS: TestTimelineRow_MarshalJSON_TimestampWins (0.00s)
+=== RUN   TestSmoke_Store_UpdateGet
+--- PASS: TestSmoke_Store_UpdateGet (0.00s)
+=== RUN   TestSmoke_Store_NilIgnored
+--- PASS: TestSmoke_Store_NilIgnored (0.00s)
+=== RUN   TestSmoke_Store_InvalidMarkerSkipped
+--- PASS: TestSmoke_Store_InvalidMarkerSkipped (0.00s)
+=== RUN   TestSmoke_Store_GetAll_Snapshot
+--- PASS: TestSmoke_Store_GetAll_Snapshot (0.00s)
+=== RUN   TestSmoke_Store_UnknownVehicle
+--- PASS: TestSmoke_Store_UnknownVehicle (0.00s)
+=== RUN   TestLastSeenAt_EmptyVehicle
+--- PASS: TestLastSeenAt_EmptyVehicle (0.00s)
+=== RUN   TestLastSeenAt_ReturnsNewest
+--- PASS: TestLastSeenAt_ReturnsNewest (0.00s)
+=== RUN   TestSet_TypedPrimitives
+--- PASS: TestSet_TypedPrimitives (0.00s)
+=== RUN   TestSet_NilAndInvalidMarkerSkipped
+--- PASS: TestSet_NilAndInvalidMarkerSkipped (0.00s)
+=== RUN   TestGetFloat_ValueKindMismatchOnDeclaredField
+{"level":"warn","vehicle_id":1,"field":"Locked","value_kind":"ValueKindBool","time":"2026-05-04T05:18:10-07:00","message":"signal store: GetFloat called on non-numeric ValueKind"}
+--- PASS: TestGetFloat_ValueKindMismatchOnDeclaredField (0.00s)
+=== RUN   TestGetString_ValueKindMismatchOnEnum
+{"level":"warn","vehicle_id":1,"field":"Gear","value_kind":"ValueKindEnum","time":"2026-05-04T05:18:10-07:00","message":"signal store: GetString called on non-string ValueKind"}
+--- PASS: TestGetString_ValueKindMismatchOnEnum (0.00s)
+=== RUN   TestGetBool_ValueKindMismatchOnDeclaredField
+{"level":"warn","vehicle_id":1,"field":"BatteryLevel","value_kind":"ValueKindFloat","time":"2026-05-04T05:18:10-07:00","message":"signal store: GetBool called on non-bool ValueKind"}
+--- PASS: TestGetBool_ValueKindMismatchOnDeclaredField (0.00s)
+=== RUN   TestGetTime_TypedAndMismatch
+{"level":"warn","vehicle_id":1,"field":"BatteryLevel","value_kind":"ValueKindFloat","time":"2026-05-04T05:18:10-07:00","message":"signal store: GetTime called on non-time ValueKind"}
+--- PASS: TestGetTime_TypedAndMismatch (0.00s)
+=== RUN   TestGetFloat_AcceptsAllNumericValueKinds
+--- PASS: TestGetFloat_AcceptsAllNumericValueKinds (0.00s)
+=== RUN   TestSet_UpdatesLastSeenMetric
+--- PASS: TestSet_UpdatesLastSeenMetric (0.00s)
+=== RUN   TestNoSignalLogStateReadMethods
+--- PASS: TestNoSignalLogStateReadMethods (0.04s)
+=== RUN   TestHandlersDoNotCallDeletedSymbols
+--- PASS: TestHandlersDoNotCallDeletedSymbols (0.03s)
+=== RUN   TestNoSnapshotTableCurrentStateReads
+--- PASS: TestNoSnapshotTableCurrentStateReads (4.07s)
+=== RUN   ExampleParseLiveSignalStoreMode
+--- PASS: ExampleParseLiveSignalStoreMode (0.01s)
+PASS
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	5.925s
+=== GATE ===
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	(cached)
+EXIT=0
+STATUS=DONE
