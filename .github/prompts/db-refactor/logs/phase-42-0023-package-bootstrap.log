@@ -1,0 +1,44 @@
+=== PREFLIGHT ===
+predecessor: phase-42-0022-package-unit-history.log
+All gate checks passed.
+EXIT=0
+STATUS=DONE
+--- end of log ---
+
+=== DESIGN ===
+internal/tesla/client_vehicle_data.go provides Client.GetVehicleData(ctx, vin, endpoints...) -> *VehicleDataResponse.
+However, internal/tesla.VehicleDataResponse currently exposes no gui_settings struct; the bootstrap
+package therefore depends on a narrow VehicleDataClient interface (FetchGuiSettings(ctx, vehicleID))
+implemented by an adapter in a later wiring prompt. This package owns:
+  - GuiSettings DTO (DistanceUnits, TemperatureUnits, TirePressureUnits, ChargeRateUnits, Now)
+  - resolveUnit() mapping table for all four kinds (KindDistance/Temperature/Pressure/Charge)
+  - Sentinel errors: ErrTransient, ErrUnauthorized, ErrBadGuiSettings
+  - Bootstrapper.Seed(ctx, vehicleID): retry [1s, 5s] -> 3 attempts max, idempotent unithistory.Repo.Record
+  - tesla_bootstrap_skipped_total{vehicle_id, reason} counter on retry exhaustion
+  - effective_from = max(GuiSettings.Now, fetchedAt) - 1s buffer (UTC normalised)
+
+=== UNIT_TEST ===
+go test -race ./internal/tesla/bootstrap/...
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/bootstrap	(cached)
+test exit: 0
+
+=== GATE ===
+predecessor exit:   EXIT=0
+predecessor status: STATUS=DONE
+required file present: internal/tesla/bootstrap/bootstrap.go
+required file present: internal/tesla/bootstrap/bootstrap_test.go
+required file present: internal/tesla/bootstrap/types.go
+bootstrap.go does not duplicate REST plumbing (no http.NewRequest/Get/Post and no /api/1/vehicles/ literal)
+bootstrap.go references: KindDistance
+bootstrap.go references: KindTemperature
+bootstrap.go references: KindPressure
+bootstrap.go references: KindCharge
+bootstrap.go references: SourceRESTBootstrap
+bootstrap.go references: tesla_bootstrap_skipped_total
+--- go test -race ---
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/bootstrap	(cached)
+go test exit code: 0
+--- working-tree drift check ---
+All gate checks passed.
+EXIT=0
+STATUS=DONE
