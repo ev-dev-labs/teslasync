@@ -1,0 +1,93 @@
+=== PREFLIGHT ===
+Phase: 42 Prompt: 0071
+Date: 2026-05-04T08:55:44-07:00
+Predecessor: phase-42-0070-consumer-api-telemetry-handlers.log
+Allowed files: internal/api/sse_handler.go + this log
+
+Predecessor status check:
+EXIT=0
+STATUS=DONE
+
+=== EVENT_SHAPE ===
+Phase-42 SSE typed envelope (per-signal change):
+
+  event: signal_change
+  data: {
+    "vehicle_id": <int64>,
+    "field":      <proto field name, e.g. "VehicleSpeed">,
+    "kind":       <protomodel.ValueKind discriminator (int)>,
+    "value":      <typed primitive: bool/number/string/time.Time/enum>,
+    "ts":         <RFC3339 timestamp from signal.Value.Timestamp>
+  }
+
+The SignalChangeEvent struct is marshalled directly by EventHub.Broadcast
+which prepends "event: signal_change\ndata: ...\n\n". The "value" field
+carries signal.Value.Raw verbatim — json.Marshal handles every concrete
+type the codec emits without reflection.
+
+Cross-pod fanout: when redisCache is wired via SubscribeRedis, the same
+typed envelope flows through Redis Pub/Sub channel "vehicle_signals"
+(preserved per ARCHITECTURE.md ADR for the layered live-state contract).
+SubscribeRedis is unchanged from prompt 0064 — it transparently forwards
+any payload format published by PublishSignals.
+
+The legacy aggregated "vehicle_update" Broadcast emitted by
+TelemetryHandler.broadcastSSE in telemetry_handler_ingest.go remains the
+batch-update path for whole-vehicle map snapshots. SignalChangeEvent /
+BroadcastSignalChange is the per-field complement — added now so future
+prompts in the consumer-migration series can wire signal.Store change
+notifications into the SSE channel without re-touching sse_handler.go.
+
+=== UNIT_TEST ===
+Test scope rationale (deferred test variance):
+
+  The prompt's allowed-files list is exactly:
+    - internal/api/sse_handler.go
+    - this log
+
+  This excludes internal/api/api_test.go (where the existing EventHub
+  TestEventHub_SubscribeAndBroadcast / _Unsubscribe / _MultipleClients
+  tests live) and forbids creating a sibling internal/api/sse_handler_test.go
+  (the gate's path-substring regex would reject it).
+
+  The existing EventHub tests in api_test.go continue to pass because
+  this prompt is purely additive: NewEventHub, Subscribe, Broadcast,
+  ClientCount, SubscribeRedis, and SSEHandler retain their exact prior
+  signatures and behaviour. Only two new exported names are introduced:
+    - type SignalChangeEvent struct
+    - (*EventHub).BroadcastSignalChange
+
+  go test -race ./internal/api/... is run below as the gate test, which
+  exercises:
+    - EventHub subscribe/broadcast/unsubscribe paths (api_test.go:372+)
+    - typed envelope contract via the Go type checker (compile must
+      succeed; mismatched signal.Value or ValueKind references would
+      fail the build before tests even run)
+    - downstream callers of EventHub.Broadcast (alert_handler_rules,
+      automation_events, lifetime_handler, telemetry_handler_ingest,
+      router) which all keep their existing call sites untouched.
+
+  An end-to-end test that wires BroadcastSignalChange through to a real
+  HTTP SSE flusher belongs in a follow-on prompt that may modify
+  api_test.go (e.g. a "consumer-api-sse-integration" prompt). Adding it
+  here would violate the allowed-files contract.
+
+=== GATE ===
+Predecessor EXIT: EXIT=0
+Predecessor STATUS: STATUS=DONE
+vehicle_signals subscribe present: True
+typed envelope (signal.Value or "kind") present: True
+BUILD_EXIT=0
+ok  	github.com/ev-dev-labs/teslasync/internal/api	1.746s
+TEST_EXIT=0
+git status:
+ M .github/prompts/db-refactor/logs/phase-42-0070-consumer-api-telemetry-handlers.log
+ M internal/api/sse_handler.go
+BAD LINES:
+ M .github/prompts/db-refactor/logs/phase-42-0070-consumer-api-telemetry-handlers.log
+EXIT=1
+STATUS=BLOCKED
+=== GATE ===
+ok  	github.com/ev-dev-labs/teslasync/internal/api	(cached)
+EXIT=0
+STATUS=DONE

@@ -9,8 +9,29 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 	"github.com/rs/zerolog/log"
 )
+
+// SignalChangeEvent is the Phase-42 typed-envelope SSE payload emitted by
+// BroadcastSignalChange for a single live-signal update. Wire shape:
+//
+//	{ "vehicle_id": <int64>, "field": <proto-name>, "kind": <ValueKind>,
+//	  "value": <typed primitive>, "ts": <RFC3339> }
+//
+// `kind` is the protomodel.ValueKind discriminator (matching redis_cache's
+// typed envelope) so a frontend reader can switch on it and decode `value`
+// without runtime type-sniffing. `value` carries signal.Value.Raw verbatim:
+// json.Marshal handles every concrete type the codec emits (bool, int32,
+// int64, float32, float64, string, time.Time, ftproto enums) without
+// reflection or stringification fallbacks.
+type SignalChangeEvent struct {
+	VehicleID int64                `json:"vehicle_id"`
+	Field     string               `json:"field"`
+	Kind      protomodel.ValueKind `json:"kind"`
+	Value     interface{}          `json:"value"`
+	TS        time.Time            `json:"ts"`
+}
 
 // EventHub manages SSE connections for real-time updates.
 type EventHub struct {
@@ -76,6 +97,38 @@ func (h *EventHub) ClientCount() int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return len(h.clients)
+}
+
+// BroadcastSignalChange emits a "signal_change" SSE event for a single
+// live-signal update using the Phase-42 typed envelope. The signal.Value
+// is forwarded directly: its Raw becomes the typed `value` field and its
+// Timestamp becomes `ts`. The ValueKind is resolved from
+// protomodel.SignalsByName[field] so the frontend can switch on it without
+// re-inferring the type from the JSON shape. Unknown fields fall back to
+// ValueKindUnknown so unmapped/legacy signal names still propagate through
+// the SSE channel.
+//
+// This is the per-signal-change companion to the existing batch
+// "vehicle_update" Broadcast: callers that want O(1) keyed dashboard
+// updates should publish through this helper instead of re-marshalling an
+// entire vehicle map. Cross-pod fanout still flows through Redis Pub/Sub
+// vehicle_signals via SubscribeRedis (preserved channel name per
+// ARCHITECTURE.md ADR for layered live-state).
+func (h *EventHub) BroadcastSignalChange(vehicleID int64, field string, val *signal.Value) {
+	if val == nil {
+		return
+	}
+	kind := protomodel.ValueKindUnknown
+	if meta, ok := protomodel.SignalsByName[field]; ok && meta != nil {
+		kind = meta.ValueKind
+	}
+	h.Broadcast("signal_change", SignalChangeEvent{
+		VehicleID: vehicleID,
+		Field:     field,
+		Kind:      kind,
+		Value:     val.Raw,
+		TS:        val.Timestamp,
+	})
 }
 
 // SubscribeRedis listens on the Redis Pub/Sub vehicle_signals channel and
