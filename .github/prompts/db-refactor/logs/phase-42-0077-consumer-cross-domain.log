@@ -1,0 +1,377 @@
+=== PREFLIGHT ===
+Datetime: 2026-05-04T11:45:41-07:00
+HEAD: fea5c8874ff3245705dc6ba7524799946e8eb014 (refactor/signals-rewrite)
+HEAD subject: phase-42(0076): positions/trips/maintenance use SI columns; visited_locations derived from positions
+Predecessor: phase-42-0076-consumer-positions-trips.log
+Predecessor markers (last unique '^EXIT=' / '^STATUS=' lines):
+  EXIT=0
+  STATUS=DONE
+
+Working-tree baseline before gate (git status --porcelain):
+  (clean — predecessor 0076 log file matches HEAD)
+
+Slot variance: N/A (no migration in this prompt).
+
+=== ENUMERATED_FILES ===
+Allowed-files set per prompt header (file: bytes):
+  internal/api/tco_handler.go                              7692
+  internal/api/lifetime_handler.go                        18969
+  internal/api/period_stats_handler.go                     2818
+  internal/api/weekly_digest_handler.go                    2348
+  internal/api/year_review_handler.go                     14857
+  internal/api/chatbot_handler_chat.go                    14565
+  internal/api/telemetry_sessions_flush_backfill.go        3893
+  internal/api/sleep_handler.go                            8990
+  internal/api/telemetry_sessions_charge_tracking.go      28032
+  internal/database/vampire_drain_repo.go (DELETE)         2873
+  internal/database/mileage_repo.go      (DELETE)          3715
+  internal/database/vehicle_state_repo.go (DELETE)         5650
+  internal/database/guard_repo.go        (DELETE-conditional) 4270
+  internal/api/router.go                  (route-deletes only)
+  .github/prompts/db-refactor/logs/phase-42-0077-consumer-cross-domain.log
+
+=== STRATEGY_TABLE ===
+The intended per-file strategy is exactly the prompt's strategy table:
+
+  tco_handler.go            : (a) drives + charging_sessions column rename;
+                                  daily_mileage rewritten to
+                                  `SELECT date_trunc('day', started_at),
+                                          SUM(distance_m) FROM drives GROUP BY 1`.
+  lifetime_handler.go       : (a) drives + charging_sessions column rename only.
+  period_stats_handler.go   : (a) drives + charging_sessions column rename only.
+  weekly_digest_handler.go  : (a) drives + charging_sessions column rename only.
+  year_review_handler.go    : (a) drives + charging_sessions column rename only.
+  chatbot_handler_chat.go   : (a) drives + charging_sessions + signal_log
+                                  column rename (signal_log already typed per
+                                  0065 — only column refs change here).
+  telemetry_sessions_flush_backfill.go
+                            : (a) drives + charging_sessions column rename
+                                  + ensure fsm_transitions writes use 000174
+                                  schema.
+  telemetry_sessions_charge_tracking.go
+                            : (a/b) DELETE the legacy
+                                  `FROM charge_telemetry_readings` MAX-rollup
+                                  block (lines 358-387). Backfill is already
+                                  redundant with the StateReader path at
+                                  L425+, so deletion preserves behavior.
+  sleep_handler.go          : (a/b) Rewrite vampire-drain + vehicle_states
+                                  reads against `fsm_transitions WHERE
+                                  fsm_name='vehicle_state' AND to_state='Sleeping'`
+                                  for sleep detection. Drop sentry-vs-vampire
+                                  drain comparison (no SI replacement).
+  vampire_drain_repo.go     : git rm — table dropped, no SI replacement.
+                                  Salvage nothing into sleep_handler.
+  mileage_repo.go           : git rm — `daily_mileage` derivation moves to
+                                  the tco_handler call site as a drives
+                                  SUM(distance_m) GROUP BY 1.
+  vehicle_state_repo.go     : git rm — `vehicle_states` replaced by
+                                  vehicle_live_state (000174); reads now go
+                                  through signal.Store / Redis L2 per ADR-004.
+  guard_repo.go             : git rm if no callers; otherwise rewrite to
+                                  `fsm_transitions WHERE fsm_name='guard'`.
+                                  (Audit below: guard_repo HAS callers in
+                                  guard_handler.go, which is OUT OF SCOPE.)
+  router.go                 : remove only the routes pointing at deleted
+                                  handlers (vampire_drain, mileage,
+                                  vehicle_state).
+
+The strategy table is internally consistent and is what we want. The
+problem is not the strategy — it is that the prompt's GATE forbids the
+edits the strategy requires. See === BLOCKED_DIAGNOSIS === below.
+
+=== BLOCKED_DIAGNOSIS ===
+Three independent gate-design defects make this prompt impossible to
+mark STATUS=DONE without violating either (a) the gate's allowedRegex
+file scope or (b) the gate's bannedTables SQL grep. All three were
+discovered during the pre-execution scan; no edits were performed.
+
+────────────────────────────────────────────────────────────────────────
+DEFECT 1 — bannedTables SQL grep flags references in 22 unallowed files
+────────────────────────────────────────────────────────────────────────
+The gate runs
+
+    git --no-pager grep -nE "(FROM|INTO|UPDATE|JOIN)\s+$t\b"
+        -- '*.go' ':!*_test.go'
+
+for each $t in the bannedTables list. The ALLOWED-FILES regex covers
+exactly the 13 files listed above. The full pre-execution census of
+banned-table SQL refs against the same regex shows 22 hits in files
+that the gate's allowedRegex DOES NOT permit modifying (NOT a typo —
+the gate forbids editing them, but also requires the SQL to be gone):
+
+  vampire_drain_events  (5 total: 5 in allowed, 1 in unallowed)
+    - internal/api/temp_impact_handler.go:130   (UNALLOWED)
+
+  signal_observations   (3 total: 0 in allowed, 3 in unallowed)
+    - internal/database/signal_observation_repo.go:30   (UNALLOWED)
+    - internal/database/signal_observation_repo.go:99   (UNALLOWED)
+    - internal/database/signal_observation_repo.go:209  (UNALLOWED)
+
+  signal_catalog        (5 total: 0 in allowed, 5 in unallowed)
+    - internal/database/signal_catalog_repo.go:36       (UNALLOWED)
+    - internal/database/signal_catalog_repo.go:76       (UNALLOWED)
+    - internal/database/signal_catalog_repo.go:112      (UNALLOWED)
+    - internal/database/signal_catalog_repo.go:152      (UNALLOWED)
+    - internal/database/signal_catalog_repo.go:170      (UNALLOWED)
+
+  vehicle_units         (1 total: 0 in allowed, 1 in unallowed)
+    - internal/api/telemetry_handler.go:536             (UNALLOWED)
+
+  cagg_battery_daily    (3 total: 0 in allowed, 3 in unallowed)
+    - internal/api/analytics_handler_queries.go:268     (UNALLOWED)
+    - internal/api/battery_handler.go:152               (UNALLOWED)
+    - internal/export/analytics.go:220                  (UNALLOWED)
+
+  cagg_signal_hourly    (1 total: 0 in allowed, 1 in unallowed)
+    - internal/database/signal_history_writer.go:191    (UNALLOWED)
+
+  cagg_fleet_stats      (3 total: 0 in allowed, 3 in unallowed)
+    - internal/api/regen_handler.go:174                 (UNALLOWED)
+    - internal/database/energy_repo.go:101              (UNALLOWED)
+    - internal/database/energy_repo.go:131              (UNALLOWED)
+
+  security_events       (1 total: 0 in allowed, 1 in unallowed)
+    - internal/database/security_repo.go:74             (UNALLOWED)
+
+  trip_drives           (4 total: 0 in allowed, 4 in unallowed) — see DEFECT 3
+    - internal/database/trip_repo.go:62                 (UNALLOWED)
+    - internal/database/trip_repo.go:167                (UNALLOWED)
+    - internal/database/trip_repo.go:349                (UNALLOWED)
+    - internal/database/trip_repo.go:353                (UNALLOWED)
+
+Even after performing every edit the strategy table allows, the
+banned-tables grep would still report 22 unfixable hits and the gate
+would exit BLOCKED.
+
+────────────────────────────────────────────────────────────────────────
+DEFECT 2 — repo deletions break 9 unallowed callers (build would fail)
+────────────────────────────────────────────────────────────────────────
+The gate's mandatory-deletion check requires `git rm` on
+internal/database/{vampire_drain_repo,mileage_repo,vehicle_state_repo}.go.
+Those types have callers OUTSIDE the prompt's allowed-files set:
+
+  database.VampireDrainRepo / NewVampireDrainRepo  (call sites):
+    - internal/api/vampire_drain_handler.go:13,17    (UNALLOWED)
+
+  database.MileageRepo / NewMileageRepo  (call sites):
+    - internal/api/mileage_handler.go:13,17          (UNALLOWED)
+    - internal/api/telemetry_handler.go:30           (UNALLOWED)
+    - internal/api/telemetry_handler_wiring.go:34    (UNALLOWED)
+    - internal/database/doc.go:6                     (comment, UNALLOWED)
+
+  database.VehicleStateRepo / NewVehicleStateRepo  (call sites):
+    - internal/api/fsm_handler.go:25,36,61           (UNALLOWED)
+    - internal/api/telemetry_handler.go:29           (UNALLOWED)
+    - internal/api/telemetry_handler_wiring.go:33,60 (UNALLOWED)
+    - internal/api/vehicle_state_handler.go:13,17    (UNALLOWED)
+    - internal/port/repository/vehicle.go:20,21      (UNALLOWED — port iface)
+    - internal/service/vehicle_service.go:39,51,83   (UNALLOWED)
+
+  database.GuardRepo / NewGuardRepo  (call sites):
+    - internal/api/guard_handler.go:17,26            (UNALLOWED)
+
+The `go build ./...` step in the gate would fail at the first compile
+error because the deleted symbols are still referenced in 9 unallowed
+files plus the port interface and service layer.
+
+The prompt's own router.go scope ("only the routes pointing at deleted
+handlers/repos") cannot fix this, because the broken references live in
+handler/service/port files that are NOT routes and are NOT in the
+allowed-files regex.
+
+────────────────────────────────────────────────────────────────────────
+DEFECT 3 — `trip_drives` is a valid post-phase-42 SI table, not legacy
+────────────────────────────────────────────────────────────────────────
+The bannedTables list inside this prompt's gate includes `trip_drives`,
+but `trip_drives` is RECREATED as a first-class SI table by 000172:
+
+  migrations/000172_drives_si.up.sql:81  DROP TABLE IF EXISTS trip_drives CASCADE;
+  migrations/000172_drives_si.up.sql:217 CREATE TABLE trip_drives (
+  migrations/000172_drives_si.up.sql:218   trip_id  BIGINT NOT NULL REFERENCES trips(id)  ON DELETE CASCADE,
+  migrations/000172_drives_si.up.sql:219   drive_id BIGINT NOT NULL REFERENCES drives(id) ON DELETE CASCADE,
+  migrations/000172_drives_si.up.sql:220   position INT    NOT NULL,
+  migrations/000172_drives_si.up.sql:222   PRIMARY KEY (trip_id, drive_id)
+  migrations/000172_drives_si.up.sql:223 );
+
+Phase-42 prompt 0076 (HEAD fea5c887, STATUS=DONE) explicitly added
+`SELECT/INSERT/JOIN trip_drives` in trip_repo.go to expose the SI
+schema's user-curated trip composition (M:N join with `position` for
+ordering, totals derived from drives via JOIN — see
+phase-42-0076-consumer-positions-trips.log § STRATEGY_DECISION
+"trips/drives column eliminations").
+
+`trip_drives` belongs in the SAME category as the post-SI `drives`,
+`charging_sessions`, `positions`, `trips`, and `signal_log` tables —
+all of which are recreated by 000169-000175 and are in active use by
+post-phase-42 code. None of those other recreated tables are in the
+bannedTables list. Including `trip_drives` is a copy-paste defect in
+the gate.
+
+The fix is in the gate, not the consumer code: `trip_drives` should be
+removed from the bannedTables array in this prompt's gate. The
+trip_repo.go references are correct under ADR-004 #4 and must be
+preserved.
+
+────────────────────────────────────────────────────────────────────────
+SUMMARY: gate-vs-spec contradiction
+────────────────────────────────────────────────────────────────────────
+The prompt's spec text correctly identifies the work that needs to
+happen (rewrite cross-domain analytics + delete the four orphan-table
+repos + remove deleted-handler routes from router.go). The strategy
+table is sound. The deletion list is sound.
+
+The defect is in the gate's two narrowing controls:
+
+  (i) allowedRegex limits modifications to 13 files. To zero out the
+      bannedTables grep (the gate's stated success condition) we must
+      modify ~17 additional unallowed files — either to delete handler
+      files for the orphan-only features (vampire_drain_handler.go,
+      mileage_handler.go, vehicle_state_handler.go), or to rewrite
+      retained-feature handlers/repos that still query dropped tables
+      (temp_impact_handler.go, signal_observation_repo.go,
+      signal_catalog_repo.go, telemetry_handler.go, battery_handler.go,
+      analytics_handler_queries.go, export/analytics.go,
+      signal_history_writer.go, regen_handler.go, energy_repo.go,
+      security_repo.go, fsm_handler.go, telemetry_handler_wiring.go,
+      vehicle_service.go, port/repository/vehicle.go, guard_handler.go),
+      AND drop the route wiring for guard_handler if guard becomes
+      orphan-only.
+
+  (ii) bannedTables incorrectly includes `trip_drives`, a valid
+       post-phase-42 SI table created by 000172. Even with no other
+       changes, the existing trip_repo.go references from STATUS=DONE
+       prompt 0076 trip the check (4 hits).
+
+This pattern matches the phase-42-0078-mig-drop-legacy.log § BLOCKED_SUMMARY:
+the consumer-migration prompts (0060-0072 + 0073-0076) each migrate
+narrow allowed-files slices and explicitly defer related read-handler /
+repo migrations to follow-on prompts that were never fully authored —
+0077 was supposed to be that follow-on, but its allowed-files list is
+~17 files short of the actual surface area required.
+
+=== HANDLER_DIFFS ===
+(none — no edits were performed; STATUS=BLOCKED determined at scan time)
+
+=== DELETED_FILES ===
+(none — no deletions were performed; STATUS=BLOCKED determined at scan time)
+
+=== ROUTER_DIFFS ===
+(none — no edits were performed; STATUS=BLOCKED determined at scan time)
+
+=== UNIT_TEST ===
+(skipped — STATUS=BLOCKED determined at scan time, before any code changes)
+
+=== GATE ===
+Pre-execution gate evaluation (no changes applied; counts taken from a
+clean working tree at HEAD fea5c887):
+
+  [step  1] Predecessor 0076 status check                 PASS
+  [step  2] bannedTables SQL grep (production code)       FAIL
+              45 total hits across 13 banned tables, of which
+              22 hits live in 17 files OUTSIDE the allowedRegex.
+              Achievable lower bound under the prompt's allowed-files
+              cap = 22 hits, exceeding the gate's required ceiling
+              of 0 hits.
+  [step  3] Mandatory-deletion check on three repo files  N/A
+              (would PASS only if step 4 also passes; deletions
+              themselves are blocked by step 4's compile failures)
+  [step  4] Banned-column refs in cross-domain handlers   ACHIEVABLE
+              (would PASS post-rewrite — all 8 listed cross-files are
+              in the allowed-files set; no ambient blockers)
+  [step  5] go build ./...                                FAIL
+              Required deletions break 9 unallowed callers across
+              fsm_handler.go, guard_handler.go, mileage_handler.go,
+              vampire_drain_handler.go, vehicle_state_handler.go,
+              telemetry_handler.go, telemetry_handler_wiring.go,
+              service/vehicle_service.go, port/repository/vehicle.go.
+              Cannot be fixed within allowed-files.
+  [step  6] go vet ./...                                  N/A (gated by step 5)
+  [step  7] go test -race ./internal/...                  N/A (gated by step 5)
+  [step  8] git status --porcelain allowedRegex check     FAIL
+              Any path that fixes step 2 / step 5 requires modifying
+              files outside the allowedRegex — the deletions of
+              vampire_drain_handler.go etc. would themselves appear
+              in `git status` as `D internal/api/...` paths that do
+              not match the regex (the regex's API alternation list
+              does not include 'vampire_drain', 'mileage',
+              'vehicle_state', 'fsm', 'guard', 'telemetry_handler',
+              or 'telemetry_handler_wiring').
+
+There is no execution ordering that simultaneously satisfies steps
+2/5 (which demand broader edits) and step 8 (which forbids them). The
+gate is internally inconsistent.
+
+EXIT=1
+STATUS=BLOCKED
+
+=== COMMIT ===
+(no commit — STATUS=BLOCKED. This log file is the sole artifact and
+will be force-added per the established Phase-42 workflow precedent
+.gitignore:89:/.github/prompts → `git add -f` for log files.)
+
+────────────────────────────────────────────────────────────────────────
+RECOMMENDED PROMPT REVISION (for the next prompt-author iteration)
+────────────────────────────────────────────────────────────────────────
+The minimum allowed-files expansion needed to make this prompt
+executable is:
+
+  ADD to allowed-files:
+    internal/api/temp_impact_handler.go            (rewrite or delete)
+    internal/api/vampire_drain_handler.go          (DELETE)
+    internal/api/mileage_handler.go                (DELETE)
+    internal/api/vehicle_state_handler.go          (DELETE)
+    internal/api/fsm_handler.go                    (modify — drop stateRepo half)
+    internal/api/guard_handler.go                  (DELETE if orphan, else modify)
+    internal/api/telemetry_handler.go              (drop stateRepo+mileageRepo fields)
+    internal/api/telemetry_handler_wiring.go      (drop New*Repo constructor calls)
+    internal/api/battery_handler.go                (rewrite cagg_battery_daily query)
+    internal/api/analytics_handler_queries.go      (rewrite cagg_battery_daily query)
+    internal/api/regen_handler.go                  (rewrite cagg_fleet_stats query)
+    internal/export/analytics.go                   (rewrite cagg_battery_daily query)
+    internal/database/signal_observation_repo.go   (DELETE — signal_log replaces)
+    internal/database/signal_catalog_repo.go       (DELETE — protomodel.Signals replaces)
+    internal/database/signal_history_writer.go     (drop cagg_signal_hourly query)
+    internal/database/energy_repo.go               (rewrite cagg_fleet_stats queries)
+    internal/database/security_repo.go             (rewrite security_events query — likely DELETE)
+    internal/service/vehicle_service.go            (drop stateRepo)
+    internal/port/repository/vehicle.go            (drop VehicleStateRepository iface)
+    internal/models/vehicle.go                     (drop VampireDrainEvent, DailyMileage types)
+
+  And FIX in the gate's bannedTables array:
+    REMOVE 'trip_drives'  — trip_drives is the post-SI 000172 table,
+                            not a legacy table.
+
+  Optionally also FIX in the bannedTables array:
+    Consider whether 'visited_locations' should remain — it is dropped
+    by 0076 (visited_locations table was already gone in post-baseline
+    schema; 0076 made deriveFromDrives the sole code path) so the entry
+    is effectively a no-op safety net but harmless.
+
+After the above expansion, the strategy table in this prompt is
+correct and the work can be completed in a single atomic commit.
+
+=== GATE_REPLAY ===
+Re-running prompt's gate steps verbatim to attach machine-output evidence below.
+predecessor 0076 last EXIT line:   EXIT=0
+predecessor 0076 last STATUS line: STATUS=DONE
+--- bannedTables grep evidence ---
+  vampire_drain_events : 5 hits
+  daily_mileage : 5 hits
+  vehicle_states : 10 hits
+  guard_events : 3 hits
+  visited_locations : 0 hits
+  signal_observations : 3 hits
+  signal_catalog : 5 hits
+  vehicle_units : 1 hits
+  cagg_battery_daily : 3 hits
+  cagg_signal_hourly : 1 hits
+  cagg_fleet_stats : 3 hits
+  security_events : 1 hits
+  charge_telemetry_readings : 1 hits
+  trip_drives : 4 hits
+
+TOTAL_BANNED_TABLE_HITS=45  (gate requires 0)
+
+--- final EXIT/STATUS markers (these are the ones the gate-runner consumes) ---
+EXIT=1
+STATUS=BLOCKED
