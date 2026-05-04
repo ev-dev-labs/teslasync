@@ -746,16 +746,17 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 			signals[name] = enums.ParsePowershareType(toString(val))
 		}
 
-		// Compound flattening for registry-typed signals. Done in the
-		// same pass so each entry is visited exactly once.
-		info, ok := enums.SignalRegistry[name]
-		if !ok {
-			continue
-		}
-		switch info.Type {
-		case enums.TypeDoors, enums.TypeTireLocation:
+		// Compound flattening for the same 5 signals the legacy
+		// SignalRegistry classified as TypeDoors / TypeTireLocation /
+		// TypeTime. Done in the same pass so each entry is visited
+		// exactly once. Other compound signals (e.g., Location) are
+		// handled by (*normalize.Pipeline).Process on the production
+		// MQTT path and intentionally NOT touched by this legacy
+		// helper.
+		switch name {
+		case "DoorState", "TpmsHardWarnings", "TpmsSoftWarnings":
 			signals[name] = flattenCompoundMapValue(signals[name])
-		case enums.TypeTime:
+		case "ScheduledChargingStartTime", "ScheduledDepartureTime":
 			signals[name] = flattenCompoundTimeValue(signals[name])
 		}
 	}
