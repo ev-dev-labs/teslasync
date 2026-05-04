@@ -51,7 +51,7 @@ import (
 // VehicleDataClient is the narrow surface Bootstrapper needs from
 // internal/tesla.Client. It is an interface so the test suite can
 // substitute a recording fake without spinning up an HTTP server, and
-// so the production wiring (a separate prompt — phase-42-0030+) can
+// so the production wiring (a separate prompt — phase-42-0060+) can
 // adapt internal/tesla.Client without re-touching this package.
 //
 // The interface is intentionally NOT *tesla.Client even though the
