@@ -1,250 +1,229 @@
 === PREFLIGHT ===
-Datetime: 2026-05-04T12:51:27-07:00
-HEAD: 8add9a7fa94c99cf7c13884e8d9519c7704cd65b (refactor/signals-rewrite)
+Datetime: 2026-05-04T13:17-07:00
+HEAD: 43137a8213b77a14202433a7c1483423f6adf069 (refactor/signals-rewrite)
+HEAD-message: phase-42(0078): BLOCKED -- DROP CASCADE 38 legacy telemetry tables
 Predecessor: phase-42-0077-consumer-cross-domain.log
 
-This is the SECOND attempt at prompt 0078. The first attempt was
-committed BLOCKED at 071a015f (with a follow-up diagnosis appended at
-458f688b). Since then, prompts 0073-0077 were authored and merged:
+This is the THIRD attempt at prompt 0078. Prior commits:
 
-  73fdc6a  phase-42(0073): drives core (drive_repo SI columns)
-  c797e7e  phase-42(0074): 8 drive analytics handlers use SI drives
-  14ca1be  phase-42(0075): charging core + analytics use SI charging
-  fea5c88  phase-42(0076): positions/trips/maintenance SI; visited_locations derived
-  06c33929 phase-42(0077): BLOCKED -- cross-domain + orphan-table cleanup
-  8add9a7  phase-42(0077): cross-domain SI columns + cagg renames + orphan-table cleanup
+  071a015f  phase-42(0078): BLOCKED -- first attempt (190 hits / 44 files,
+            no consumer-migration sweep had been authored yet)
+  43137a82  phase-42(0078): BLOCKED -- second attempt (153 hits / 38 files,
+            after 0073-0077 narrowed consumer surface; HEAD of this run)
 
-The 0073-0077 sweep narrowed the violation count from the previous
-attempt's ~190 hits across 44 files down to 153 hits across 38 files
-(see === ANCHORED_GREP_NO_REFS === below). It did NOT eliminate the
-references entirely, and -- as the previous BLOCKED log already
-diagnosed -- the gate's anchored regex cannot in principle distinguish
-references to *legacy* dropped tables from references to *recreated*
-SI-canonical tables that share the same name. That structural flaw
-remains the dominant reason this prompt is still BLOCKED.
+The current revision of the prompt at
+  .github/prompts/db-refactor/phase-42/0078-migration-drop-legacy-tables.prompt.md
+addresses the three independent blockers diagnosed by the second attempt:
 
-Slot variance: NONE. The prompt prescribes slot 000161 and slot 000161
-is in fact free. Existing migrations around the trailing edge:
-  000160_settings_ui_density           (pre-phase-42, occupied)
-  000161  (FREE -- target slot for this prompt)
-  000162_pinned_items                  (pre-phase-42, occupied)
-  000163_audit_logs_actor_metadata     (pre-phase-42, occupied)
-  000164_saved_views                   (pre-phase-42, occupied)
-  000165_push_subscriptions            (pre-phase-42, occupied)
-  000166_chatbot_sessions              (pre-phase-42, occupied)
-  000167_achievement_unlocks           (pre-phase-42, occupied)
-  000168_vehicle_unit_history          (phase-42 0022, occupied)
-  000169_positions_si                  (phase-42 0030, occupied)
-  000170_snapshots_si                  (phase-42 0031, occupied)
-  000171_charging_si                   (phase-42 0032, occupied)
-  000172_drives_si                     (phase-42 0033, occupied)
-  000173_signal_log                    (phase-42 0034, occupied)
-  000174_fsm_live                      (phase-42 0035, occupied)
-  000175_caggs_and_mvs                 (phase-42 0036, occupied)
+  A. Anchored grep was over-broad (banned 28 names including 11 that
+     migrations 000169-000175 immediately RECREATE under SI columns).
+     The current revision narrows the banned list to the 17 truly-dropped
+     tables (see === TABLE_LIST === below). PASSES.
+
+  B. Cross-service grep with `\b<table>\b` against helm/, docs/, web/src/
+     produced 1028 false positives (English nouns, URL paths, i18n labels,
+     React component names). The current revision REMOVES that check.
+     PASSES.
+
+  C. `func TestMigrationApply` was asserted to pre-exist but never did.
+     The current revision REMOVES the apply-test assertion (Postgres-backed
+     harness is out of scope; structural validity verified by regex checks
+     on the SQL files; actual migrate-up runs at deploy per runbook 0090).
+     PASSES.
+
+The current revision also adds a Step 2 ("Delete the last surviving
+fleet_telemetry_subscriptions consumer") that deletes
+internal/database/fleet_subscription_repo.go and edits
+internal/api/devtools_handler.go + internal/models/telemetry.go +
+internal/models/models.go to remove the model struct and the audit-trail
+block. That Step 2 was attempted in this run and BUILDS CLEAN
+(go build ./... and go vet ./... both pass with the cleanup applied).
+See === CONSUMERS_DELETED === for transcripts captured before reverting.
+
+NEW BLOCKER -- not previously diagnosed: the gate's residualRefs check
+(step #2 of the gate) fires on three pre-existing comment lines in two
+files that were ADDED by predecessor prompt 0068 and that are NOT in
+this prompt's allowed-files list:
+
+  internal/api/fleet_telemetry_handler.go:24
+    // fleet_telemetry_subscriptions table query with package-derived state
+  internal/api/fleet_telemetry_handler.go:43
+    // fleet_telemetry_subscriptions table query (phase-42 ADR-004 #2).
+  internal/api/fleet_telemetry_error_handler.go:257
+    // fleet_telemetry_subscriptions-derived health indicator with this
+
+These are pure comments that DOCUMENT WHY the new code (FleetTelemetryHandler
+and FleetTelemetryErrorHandler from prompt 0068) deliberately does NOT query
+the legacy fleet_telemetry_subscriptions table. They are correct, useful
+documentation of the post-0068 design. They are not active SQL.
+
+The gate's residualRefs grep
+  git --no-pager grep -nE 'fleet_telemetry_subscriptions|FleetSubscriptionRepo|NewFleetSubscriptionRepo' -- '*.go' ':!*_test.go' ':!internal/database/migrations/'
+is unanchored: it has no \b boundaries, no comment-stripping (Go has no
+shell equivalent of "code-only grep"), and no per-file allowlist. It
+matches the literal string anywhere in any .go file outside *_test.go
+and outside internal/database/migrations/. The three pre-existing comment
+lines therefore satisfy the gate's "consumer cleanup incomplete" branch
+even though no SQL accesses the table.
 
 Working-tree baseline before gate (git status --porcelain):
-  ` D .github/prompts/db-refactor/logs/phase-42-0078-mig-drop-legacy.log`
-  (the first BLOCKED attempt's log was tracked by HEAD; this run
-  rewrites it. No other working-tree changes.)
+  ` M .github/prompts/db-refactor/logs/phase-42-0078-mig-drop-legacy.log`
+  (this run rewrites the second attempt's BLOCKED log; no other working-tree
+  changes -- consumer-cleanup edits and migration files were authored,
+  exercised against the gate, then reverted per covenant clause #8
+  "No commit on red -- commit only the log when BLOCKED")
+
+Slot variance: NONE. Slot 000161 is free (000160_settings_ui_density,
+000162_pinned_items occupy the neighbours). The migration files were
+composed exactly as the prompt prescribes (see
+=== INTENDED_MIGRATION_DESIGN === below) and authored on disk for the
+duration of the gate run, then deleted as part of the working-tree
+revert.
 
 === ALL_CONSUMERS_DONE ===
-Verifying consumer-migration logs 0060-0071 STATUS=DONE per covenant
-clause #7 (the gate command literally enumerates `0060..0071`):
+Verified per gate step #1. All required predecessor consumer-migration
+logs are STATUS=DONE / EXIT=0:
 
-  phase-42-0060-consumer-mqtt.log:                   EXIT=0 / STATUS=DONE
-  phase-42-0061-consumer-port-messaging.log:         EXIT=0 / STATUS=DONE
-  phase-42-0062-consumer-signal-store.log:           EXIT=0 / STATUS=DONE
-  phase-42-0063-consumer-signal-pivot.log:           EXIT=0 / STATUS=DONE
-  phase-42-0064-consumer-signal-redis-cache.log:     EXIT=0 / STATUS=DONE
-  phase-42-0065-consumer-signal-state-reader.log:    EXIT=0 / STATUS=DONE
-  phase-42-0066-consumer-fsm-adapter.log:            EXIT=0 / STATUS=DONE
-  phase-42-0067-consumer-fsm-domain.log:             EXIT=0 / STATUS=DONE
-  phase-42-0068-consumer-api-fleet-telemetry.log:    EXIT=0 / STATUS=DONE
-  phase-42-0069-consumer-api-signals.log:            EXIT=0 / STATUS=DONE
-  phase-42-0070-consumer-api-telemetry-handlers.log: EXIT=0 / STATUS=DONE
-  phase-42-0071-consumer-api-sse.log:                EXIT=0 / STATUS=DONE
+  0060 : True   (phase-42-0060-consumer-mqtt.log)
+  0061 : True   (phase-42-0061-consumer-port-messaging.log)
+  0062 : True   (phase-42-0062-consumer-signal-store.log)
+  0063 : True   (phase-42-0063-consumer-signal-pivot.log)
+  0064 : True   (phase-42-0064-consumer-signal-redis-cache.log)
+  0065 : True   (phase-42-0065-consumer-signal-state-reader.log)
+  0066 : True   (phase-42-0066-consumer-fsm-adapter.log)
+  0067 : True   (phase-42-0067-consumer-fsm-domain.log)
+  0068 : True   (phase-42-0068-consumer-api-fleet-telemetry.log)
+  0069 : True   (phase-42-0069-consumer-api-signals.log)
+  0070 : True   (phase-42-0070-consumer-api-telemetry-handlers.log)
+  0071 : True   (phase-42-0071-consumer-api-sse.log)
+  0073 : True   (phase-42-0073-consumer-drives-core.log)
+  0074 : True   (phase-42-0074-consumer-drives-analytics.log)
+  0075 : True   (phase-42-0075-consumer-charging.log)
+  0076 : True   (phase-42-0076-consumer-positions-trips.log)
+  0077 : True   (phase-42-0077-consumer-cross-domain.log)
 
-All 12 predecessor logs in the gate's enumerated range are
-STATUS=DONE. Covenant clause #7 satisfied at the LOG level.
+Gate step #1 PASSES.
 
-For completeness, the post-0072 follow-on consumer prompts (which
-are NOT in the 0078 gate's enumerated range but ARE prerequisites of
-the actual purge) are also DONE:
-  phase-42-0072-consumer-frontend-typed-envelope.log: EXIT=0 / STATUS=DONE
-  phase-42-0073-consumer-drives-core.log:             EXIT=0 / STATUS=DONE
-  phase-42-0074-consumer-drives-analytics.log:        EXIT=0 / STATUS=DONE
-  phase-42-0075-consumer-charging.log:                EXIT=0 / STATUS=DONE
-  phase-42-0076-consumer-positions-trips.log:         EXIT=0 / STATUS=DONE
-  phase-42-0077-consumer-cross-domain.log:            EXIT=0 / STATUS=DONE
+=== CONSUMERS_DELETED ===
+Step 2 of the prompt was executed against a working tree at HEAD 43137a82.
+The following four file operations were applied:
+
+  D  internal/database/fleet_subscription_repo.go            (DELETE)
+  M  internal/models/telemetry.go                            (drop FleetTelemetrySubscription struct)
+  M  internal/models/models.go                               (drop "moved to telemetry.go" comment)
+  M  internal/api/devtools_handler.go                        (drop fleetSubRepo field, constructor
+                                                              line, audit-trail block, models import)
+
+Build + vet transcripts captured during the gate run:
+
+  PS> go build ./...
+  EXITCODE=0   (clean -- no compile errors after consumer cleanup)
+
+  PS> go vet ./...
+  EXITCODE=0   (clean -- no vet errors; in particular, the `models`
+               import in devtools_handler.go was correctly dropped along
+               with the audit block, so no unused-import error)
+
+These edits demonstrate that Step 2 is mechanically complete and does NOT
+break the build. They have been REVERTED in this commit per covenant
+clause #8 because the gate downstream of step 2 fails (see === GATE ===
+below) and the covenant requires "commit only the log when BLOCKED".
+
+The follow-up fixer prompt should re-apply this exact Step 2 cleanup
+verbatim -- it is correct work that simply cannot ship as part of THIS
+prompt's commit.
 
 === ANCHORED_GREP_NO_REFS ===
-Gate step #2 -- Anchored Go grep across `*.go` (excluding `*_test.go`
-and `internal/database/migrations/`) for direct SQL access to each
-of the 28 dropped table names, using the prompt's exact regex
-`FROM\s+$n\b|INSERT\s+INTO\s+$n\b|UPDATE\s+$n\b|DELETE\s+FROM\s+$n\b`:
+Gate step #6 (banned-table anchored grep) was exercised against the
+working tree WITH Step 2's consumer cleanup applied. Result: ZERO hits
+across all 17 banned-table names.
 
-PER-TABLE HIT COUNTS (current HEAD 8add9a7f):
-  drives                            78 hits   (RECREATED by 000172)
-  charging_sessions                 48 hits   (RECREATED by 000171)
-  trips                             11 hits   (RECREATED by 000172)
-  fsm_transitions                    8 hits   (RECREATED by 000174)
-  positions                          5 hits   (RECREATED by 000169)
-  fleet_telemetry_subscriptions      3 hits   (TRULY DROPPED -- no recreate)
-  TOTAL                            153 hits across 38 files
+Banned-name list (the 17 truly-dropped tables, exactly matching the gate
+revision in the prompt -- recreated tables like `positions`, `drives`,
+`charging_sessions`, `trips`, `cagg_battery_daily`, etc. are EXCLUDED by
+design because migrations 000168-000175 recreate them under the same
+name with new SI columns):
 
-PER-FILE BREAKDOWN (sorted by hit count, all 38 files):
-  internal/api/computed_metrics.go                           11 (drives,charging_sessions)
-  internal/database/drive_repo.go                            10 (drives)
-  internal/api/year_review_handler.go                        10 (drives,charging_sessions)
-  internal/api/chatbot_handler_chat.go                       10 (drives,charging_sessions)
-  internal/database/charging_repo.go                          9 (charging_sessions)
-  internal/api/range_projection_handler.go                    8 (drives,charging_sessions)
-  internal/api/lifetime_handler.go                            8 (drives,charging_sessions)
-  internal/api/drive_handler_listing.go                       8 (drives)
-  internal/database/trip_repo.go                              8 (drives,trips)
-  internal/adapter/postgres/queries/charging.go               5 (charging_sessions)
-  internal/api/battery_degradation_handler.go                 5 (drives,charging_sessions)
-  internal/adapter/postgres/queries/trip.go                   5 (trips)
-  internal/database/maintenance.go                            4 (positions)
-  internal/api/search_handler.go                              4 (drives,charging_sessions,trips)
-  internal/adapter/postgres/queries/fsm_history.go            3 (fsm_transitions)
-  internal/api/speed_profile_handler.go                       3 (drives)
-  internal/database/fsm_transition_repo.go                    3 (fsm_transitions)
-  internal/api/temp_impact_handler.go                         3 (drives)
-  internal/api/charging_heatmap_handler.go                    3 (charging_sessions)
-  internal/api/tco_handler.go                                 3 (drives,charging_sessions)
-  internal/api/cost_forecast_handler.go                       3 (drives,charging_sessions)
-  internal/database/fleet_subscription_repo.go                3 (fleet_telemetry_subscriptions)
-  internal/api/trip_planner_handler_compute.go                2 (drives)
-  internal/polling/predictor.go                               2 (drives,charging_sessions)
-  internal/api/route_efficiency_handler.go                    2 (drives)
-  internal/api/period_stats_handler.go                        2 (drives,charging_sessions)
-  internal/api/router.go                                      2 (drives)
-  internal/api/telemetry_sessions_flush_backfill.go           2 (drives,charging_sessions)
-  internal/api/regen_handler.go                               2 (drives)
-  internal/api/charging_optimizer_handler.go                  2 (charging_sessions)
-  internal/api/driving_coach_handler.go                       1 (drives)
-  internal/api/battery_handler.go                             1 (charging_sessions)
-  internal/api/drivetrain_health_handler.go                   1 (drives)
-  internal/database/position_repo.go                          1 (positions)
-  internal/database/visited_location_repo.go                  1 (drives)
-  internal/api/sleep_handler.go                               1 (fsm_transitions)
-  internal/api/weekly_digest_handler.go                       1 (drives)
-  internal/service/vehicle_service.go                         1 (fsm_transitions)
+  positions_default
+  battery_snapshots
+  user_preference_snapshots
+  vehicle_config_snapshots
+  vehicle_meta_snapshots
+  charge_telemetry_readings
+  drive_telemetry_readings
+  signal_observations
+  signal_history
+  signal_catalog
+  vehicle_units
+  fleet_telemetry_subscriptions
+  vampire_drain_events
+  daily_mileage
+  visited_locations
+  vehicle_states
+  guard_events
 
-=> Gate step #2 FAILS: 153 violation lines, exit 1.
+Per-name SQL-context grep result (run during the gate exercise):
+  positions_default                : 0 hits
+  battery_snapshots                : 0 hits
+  user_preference_snapshots        : 0 hits
+  vehicle_config_snapshots         : 0 hits
+  vehicle_meta_snapshots           : 0 hits
+  charge_telemetry_readings        : 0 hits
+  drive_telemetry_readings         : 0 hits
+  signal_observations              : 0 hits
+  signal_history                   : 0 hits
+  signal_catalog                   : 0 hits
+  vehicle_units                    : 0 hits
+  fleet_telemetry_subscriptions    : 0 hits  (the 3 ex-fleet_subscription_repo.go
+                                              SQL refs were removed by Step 2)
+  vampire_drain_events             : 0 hits
+  daily_mileage                    : 0 hits
+  visited_locations                : 0 hits
+  vehicle_states                   : 0 hits
+  guard_events                     : 0 hits
 
-=== STRUCTURAL_GATE_FLAW ===
-The gate is structurally over-strict: 150 of the 153 hits are to
-tables that are DROPPED by 000161 and IMMEDIATELY RECREATED with
-SI-canonical schemas by the very next migrations (000169-000175).
-Verified by inspecting `migrations/0001[6-7][0-9]_*.up.sql`:
-
-  000169_positions_si.up.sql:26 :  DROP TABLE IF EXISTS positions CASCADE;
-  000169_positions_si.up.sql:28 :  CREATE TABLE positions (
-  000170_snapshots_si.up.sql:47 :  DROP TABLE IF EXISTS climate_snapshots        CASCADE;
-  000170_snapshots_si.up.sql:53 :  DROP TABLE IF EXISTS location_snapshots       CASCADE;
-  000170_snapshots_si.up.sql:61 :  CREATE TABLE climate_snapshots (
-  000170_snapshots_si.up.sql:343:  CREATE TABLE location_snapshots (
-  000171_charging_si.up.sql:67 :  DROP TABLE IF EXISTS charging_telemetry CASCADE;
-  000171_charging_si.up.sql:68 :  DROP TABLE IF EXISTS charging_sessions  CASCADE;
-  000171_charging_si.up.sql:81 :  CREATE TABLE charging_telemetry (
-  000171_charging_si.up.sql:158:  CREATE TABLE charging_sessions (
-  000172_drives_si.up.sql:81  :  DROP TABLE IF EXISTS trip_drives CASCADE;
-  000172_drives_si.up.sql:82  :  DROP TABLE IF EXISTS trips       CASCADE;
-  000172_drives_si.up.sql:83  :  DROP TABLE IF EXISTS drives      CASCADE;
-  000172_drives_si.up.sql:93  :  CREATE TABLE drives (
-  000172_drives_si.up.sql:177 :  CREATE TABLE trips (
-  000172_drives_si.up.sql:217 :  CREATE TABLE trip_drives (
-  000174_fsm_live.up.sql:42   :  DROP TABLE IF EXISTS fsm_transitions    CASCADE;
-  000174_fsm_live.up.sql:43   :  DROP TABLE IF EXISTS vehicle_live_state CASCADE;
-  000174_fsm_live.up.sql:53   :  CREATE TABLE fsm_transitions (
-  000174_fsm_live.up.sql:94   :  CREATE TABLE vehicle_live_state (
-
-So in the post-migration schema, every grep-flagged table EXCEPT
-`fleet_telemetry_subscriptions` is alive and well, with the new SI
-columns the consumer prompts 0073-0077 already migrated to. A pod
-booting against the post-0175 schema would NOT crash on these
-queries -- the references are valid.
-
-A NARROWED grep restricted to the truly-dropped (and not recreated)
-set yields only the genuine residual violation:
-
-  fleet_telemetry_subscriptions  3 hits
-    internal/database/fleet_subscription_repo.go:19: INSERT INTO fleet_telemetry_subscriptions (
-    internal/database/fleet_subscription_repo.go:35: FROM fleet_telemetry_subscriptions WHERE vin = $1
-    internal/database/fleet_subscription_repo.go:53: FROM fleet_telemetry_subscriptions
-
-  Caller path: internal/api/devtools_handler.go:40,85,810
-    devtools_handler instantiates database.NewFleetSubscriptionRepo
-    and persists tesla.FleetTelemetrySubscription rows. After 000161
-    drops the table, every Create / GetLatestByVIN / List call from
-    the devtools route would fail at runtime.
-
-  None of the listed and DONE consumer-migration prompts (0060-0077)
-  cover devtools_handler.go or fleet_subscription_repo.go. Neither
-  the 0078 prompt nor any predecessor authorizes those files in its
-  allowed-files list.
-
-The gate as written cannot pass even on a fully consistent code base
-where the only surviving references are to recreated tables. To pass
-honestly the gate would have to be amended to either (a) restrict the
-grep to the tables in the drop list that are NOT subsequently
-recreated by 000169-000175, or (b) accept that direct SQL references
-to common-named recreated tables are valid and verify them against
-the post-0175 column set instead. Per covenant #2 ("No scope
-narrowing -- run the exact gate command, no subsets"), this prompt
-cannot make either change unilaterally.
-
-=== APPLY_TEST_EXISTS ===
-Gate step #7 -- `git --no-pager grep -nE 'func\s+TestMigrationApply\s*\('
-                  -- 'internal/database/**/*_test.go'`
-
-Result: NO MATCHES. `TestMigrationApply` does not exist anywhere in
-the repository.
-
-  > git grep -n 'func TestMigration' internal/
-  (no output)
-
-The schema-test file `internal/database/schema_test.go` defines
-`TestRepoColumnsMatchSchema`, which connects to a live Postgres and
-asserts column-name presence on a curated whitelist. It does NOT
-apply migrations end-to-end and is not the test the prompt expects.
-
-The 0078 allowed-files list:
-  - migrations/000161_drop_legacy_telemetry.up.sql
-  - migrations/000161_drop_legacy_telemetry.down.sql
-  - the output log
-
-does NOT include any `internal/database/**/*_test.go` path, so this
-prompt cannot author the missing test. The previous BLOCKED log
-(committed 071a015f) raised the same blocker; it remains unresolved.
-
-=== POST_DROP_VERIFY ===
-Not run -- this prompt is BLOCKED on gate steps #2 (anchored grep)
-and #7 (TestMigrationApply pre-existence). Per covenant clause #1
-("EXIT != 0 means STATUS=BLOCKED, no exceptions"), the gate halts
-at the first failing step and no migration is applied to any test
-database.
+Gate step #6 PASSES once Step 2 is applied. (It cannot pass in this
+commit because Step 2 has been reverted -- but the next attempt at this
+prompt, after re-applying Step 2, will see this check pass.)
 
 === TABLE_LIST ===
-Not emitted -- the migration files were authored locally to verify
-the gate against the prescribed 39-table drop list, then DELETED
-before the BLOCKED commit per covenant clause #8 ("No commit on red
--- commit only the log when BLOCKED"). The intended drop list is
-preserved verbatim under === INTENDED_MIGRATION_DESIGN === below.
+The 38 tables that 000161 drops (exactly as written in the prompt's
+intended SQL, preserved verbatim under === INTENDED_MIGRATION_DESIGN ===):
 
-=== APPLIED ===
-Not run -- BLOCKED at gate step #2.
+  Recreated by 000168-000175 (gate-excluded from banned grep):
+    positions, climate_snapshots, motor_snapshots, security_events,
+    tire_pressure_snapshots, media_snapshots, safety_snapshots,
+    location_snapshots, charging_telemetry, vehicle_live_state,
+    fsm_transitions, drives, charging_sessions, trips, trip_drives,
+    mv_energy_daily, mv_position_hourly, mv_signal_stats,
+    cagg_battery_daily, cagg_climate_hourly, cagg_signal_hourly,
+    cagg_fleet_stats, cagg_vehicle_daily, cagg_charging_summary
+
+  Truly dropped (banned by anchored grep, see === ANCHORED_GREP_NO_REFS ===):
+    positions_default, battery_snapshots, user_preference_snapshots,
+    vehicle_config_snapshots, vehicle_meta_snapshots,
+    charge_telemetry_readings, drive_telemetry_readings,
+    signal_observations, signal_history, signal_catalog, vehicle_units,
+    fleet_telemetry_subscriptions, vampire_drain_events, daily_mileage,
+    visited_locations, vehicle_states, guard_events
+
+Total: 38 tables.
 
 === INTENDED_MIGRATION_DESIGN ===
-Preserved verbatim so the follow-up fixer can recompose the
-migration without re-deriving the table list.
+Preserved verbatim so the follow-up fixer can recompose the migration
+without re-deriving the table list. These files were authored on disk
+during the gate exercise and then deleted as part of the working-tree
+revert.
 
 migrations/000161_drop_legacy_telemetry.up.sql:
   BEGIN;
+
+  -- Bound the blast radius. If anything is holding a lock on these tables
+  -- (e.g., a stray analytics query, an unmigrated worker), fail fast instead
+  -- of stalling the deploy and blocking every other writer.
   SET LOCAL lock_timeout      = '30s';
   SET LOCAL statement_timeout = '5min';
+
   DROP TABLE IF EXISTS positions, positions_default,
     battery_snapshots, climate_snapshots, motor_snapshots,
     security_events, tire_pressure_snapshots, media_snapshots,
@@ -260,9 +239,15 @@ migrations/000161_drop_legacy_telemetry.up.sql:
     vampire_drain_events, daily_mileage, visited_locations,
     vehicle_states, guard_events
   CASCADE;
+
   COMMIT;
 
 migrations/000161_drop_legacy_telemetry.down.sql:
+  -- Phase-42 dropped these tables in commit <fill in via prompt log marker>.
+  -- The new SI-canonical schemas live in migrations 000162-000168 and own
+  -- these names going forward. Re-running this down migration will NOT
+  -- restore the legacy schemas; we raise loudly so an operator who runs
+  -- `migrate down` by mistake gets a wall, not silence.
   DO $$
   BEGIN
     RAISE EXCEPTION
@@ -271,48 +256,140 @@ migrations/000161_drop_legacy_telemetry.down.sql:
   END
   $$;
 
-=== BLOCKED_SUMMARY ===
-Three independent blockers, none of which this prompt can fix
-within its allowed-files list:
+Both files passed the structural-regex gate (BEGIN, COMMIT, CASCADE,
+lock_timeout, statement_timeout in up; RAISE EXCEPTION in down).
 
-A. ANCHORED GREP (gate step #2) returns 153 violation lines across
-   38 source files. 150 of the 153 are references to tables that the
-   prompt drops AND that 000169-000175 immediately recreate with new
-   SI columns -- in other words, false positives produced by a regex
-   that cannot distinguish "dropped legacy" from "dropped + recreated".
-   The remaining 3 hits (`fleet_telemetry_subscriptions` in
-   `internal/database/fleet_subscription_repo.go`, called from
-   `internal/api/devtools_handler.go`) are genuine; that table is
-   truly dropped and not recreated, and no consumer-migration prompt
-   covers the devtools/repo files where those references live.
+=== APPLIED ===
+NOT EXERCISED. Per the prompt's revised step 6, migration apply is
+performed at deploy time by the runbook in Prompt 0090, not by this
+gate. The structural regex checks above are the ground truth at gate
+time.
 
-B. CROSS-SERVICE GREP (gate step #3) is structurally unable to
-   distinguish a SQL table name from a URL path segment ("/drives"),
-   an English noun ("drives" in docs prose), an i18n label, a feature
-   directory name (`web/src/features/drives/`), a React component
-   (`DrivesPage`), or a TypeScript field. The previous BLOCKED log
-   measured this at 1028 hits and concluded the check would need to
-   be narrowed to be a credible correctness signal. (Not exercised
-   in this run because step #2 fails first.)
+=== POST_DROP_VERIFY ===
+NOT EXERCISED. Same reason as === APPLIED === -- the gate does not
+apply migrations.
 
-C. APPLY-TEST PRE-EXISTENCE (gate step #7) hard-fails because
-   `func TestMigrationApply` does not exist anywhere in the repo, and
-   the 0078 allowed-files list excludes test files so the test cannot
-   be authored within this prompt's scope.
+=== GATE ===
+Gate run with all consumer-cleanup edits applied AND both migration
+files on disk. The transcript is the literal output the gate produced
+on this run, captured immediately before the working-tree revert:
 
-A FIXER PROMPT IS REQUIRED that:
-  1. Authors `func TestMigrationApply` under
-     internal/database/**/*_test.go and adds that path to its
-     allowed-files list.
-  2. Either narrows the gate's anchored grep to the truly-dropped
-     subset, or replaces it with an "no references survive AND the
-     post-migration schema column-set matches expected" check.
-  3. Migrates `internal/database/fleet_subscription_repo.go` and
-     `internal/api/devtools_handler.go` off
-     `fleet_telemetry_subscriptions` (delete the repo + endpoint
-     entirely if devtools doesn't need persistence; or migrate to a
-     replacement table if it does).
-  4. Either narrows or removes the cross-service `\b` grep.
+  === GATE ===
+  Residual fleet_telemetry_subscriptions consumers remain -- step 2 incomplete:
+  internal/api/fleet_telemetry_error_handler.go:257:// fleet_telemetry_subscriptions-derived health indicator with this
+  internal/api/fleet_telemetry_handler.go:24:// fleet_telemetry_subscriptions table query with package-derived state
+  internal/api/fleet_telemetry_handler.go:43:// fleet_telemetry_subscriptions table query (phase-42 ADR-004 #2).
+  EXIT=1
+  STATUS=BLOCKED
+
+The three lines that trip the gate are PURE COMMENTS in files that
+predecessor prompt 0068 added to document why the new
+FleetTelemetryHandler / FleetTelemetryErrorHandler deliberately do NOT
+query the legacy table. They contain no SQL and no Go references to
+the dropped repo or the dropped struct -- only the literal string
+"fleet_telemetry_subscriptions" inside a `//` comment.
+
+The gate's residualRefs check at gate step #2 is unanchored:
+
+  git --no-pager grep -nE 'fleet_telemetry_subscriptions|FleetSubscriptionRepo|NewFleetSubscriptionRepo' \
+      -- '*.go' ':!*_test.go' ':!internal/database/migrations/'
+
+It has no word boundaries, no comment stripping, and no per-file
+allowlist beyond the test-file and migration-directory excludes. It
+therefore cannot distinguish:
+  (a) a SQL fragment like `INSERT INTO fleet_telemetry_subscriptions ...`
+      (which IS what the gate is meant to catch and which Step 2 of this
+      prompt successfully removes), from
+  (b) a Go comment like `// fleet_telemetry_subscriptions table query ...`
+      (which is documentation of WHY the new code does not query the
+      legacy table, and which is correct work product from prompt 0068).
+
+This is a STRUCTURAL CONTRADICTION inside the prompt as written:
+
+  - The allowed-files whitelist (gate's git status check, lines toward
+    the bottom of the gate) restricts edits to the six files listed in
+    the prompt's "Allowed files to change" section. Neither
+    fleet_telemetry_handler.go nor fleet_telemetry_error_handler.go is
+    in that list.
+
+  - The residualRefs check (gate step #2, before the git status check)
+    matches the literal string in those two files' comments and exits
+    with BLOCKED before the git status check runs.
+
+  - Therefore: editing those files to remove the literal string would
+    cause the git status check to BLOCK with "unrelated drift", and NOT
+    editing them causes the residualRefs check to BLOCK with "consumer
+    cleanup incomplete". There is no path through the gate within the
+    allowed-files list as currently scoped.
+
+Per Honesty Covenant clause #1 ("No red-as-green") and clause #2 ("No
+scope narrowing - run the exact gate command, no subsets"), this is
+BLOCKED. The gate as written cannot pass without either:
+
+  - expanding the prompt's allowed-files list to include the two
+    fleet_telemetry_*_handler.go files so the comments can be
+    rewritten, OR
+
+  - tightening the gate's residualRefs check so it ignores comment
+    lines (e.g., `git grep -nE '^[^/]*\bfleet_telemetry_subscriptions\b'`
+    or, more robustly, narrowing to SQL-context tokens like
+    `INSERT INTO|FROM|UPDATE|DELETE FROM|JOIN` + the table name --
+    the same pattern gate step #6 already uses for the banned-table
+    list).
+
+A FIXER PROMPT IS REQUIRED that does ONE of:
+
+  Option F1 -- minimum scope expansion (RECOMMENDED):
+    Add internal/api/fleet_telemetry_handler.go and
+    internal/api/fleet_telemetry_error_handler.go to the allowed-files
+    list, and add an explicit Step 2b that rewrites the three comment
+    lines to NOT contain the literal string "fleet_telemetry_subscriptions".
+    Suggested rewordings (lossless):
+      :24  // legacy fleet-telemetry subscriptions table query with package-derived state
+      :43  // legacy fleet-telemetry subscriptions table query (phase-42 ADR-004 #2).
+      :257 // legacy fleet-telemetry-subscriptions-derived health indicator with this
+
+  Option F2 -- gate hardening:
+    Replace the residualRefs check (gate step #2) with the same
+    SQL-context regex that gate step #6 uses for the banned-table list:
+      git --no-pager grep -nE \
+        "FROM\s+fleet_telemetry_subscriptions\b|INSERT\s+INTO\s+fleet_telemetry_subscriptions\b|UPDATE\s+fleet_telemetry_subscriptions\b|DELETE\s+FROM\s+fleet_telemetry_subscriptions\b|JOIN\s+fleet_telemetry_subscriptions\b" \
+        -- '*.go' ':!*_test.go' ':!internal/database/migrations/'
+    This would let the gate distinguish active SQL from documentation.
+    The allowed-files list can stay exactly as-is.
+
+  Option F3 -- combined:
+    F1 + F2. Belt and suspenders. The comments get cleaned up AND the
+    gate becomes structurally robust against future commenters who
+    legitimately need to mention the dropped table by name.
+
+Either F1 or F2 alone would unblock this prompt. F2 is the more
+durable fix because it makes the gate's residualRefs check
+consistent with its own banned-table check (which already correctly
+ignores comments).
+
+NOTE on the migration files: the SQL design in
+=== INTENDED_MIGRATION_DESIGN === has been validated against the
+prompt's structural regex checks (BEGIN, COMMIT, CASCADE,
+lock_timeout, statement_timeout in up; RAISE EXCEPTION in down) AND
+against the recreated-table list from migrations 000168-000175. The
+fixer prompt should adopt it verbatim.
+
+=== COMMIT ===
+Per Honesty Covenant clause #8 ("No commit on red -- commit only the
+log when BLOCKED"), the working tree was reverted before the commit:
+
+  - migrations/000161_drop_legacy_telemetry.up.sql      DELETED (untracked)
+  - migrations/000161_drop_legacy_telemetry.down.sql    DELETED (untracked)
+  - internal/database/fleet_subscription_repo.go        RESTORED from HEAD
+  - internal/models/telemetry.go                        RESTORED from HEAD
+  - internal/models/models.go                           RESTORED from HEAD
+  - internal/api/devtools_handler.go                    RESTORED from HEAD
+
+Final working-tree state before commit:
+   M .github/prompts/db-refactor/logs/phase-42-0078-mig-drop-legacy.log
+
+Only the log will be committed.
 
 EXIT=1
 STATUS=BLOCKED
