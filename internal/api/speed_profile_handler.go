@@ -17,10 +17,15 @@ func NewSpeedProfileHandler(db *database.DB) *SpeedProfileHandler {
 	return &SpeedProfileHandler{db: db}
 }
 
+// speedBucket fields are SI-canonical per phase-42 migration 000172
+// (avg_power averaged in Watts at the SQL boundary). The frontend SpeedBucket
+// type currently reads the legacy kilowatt key; consumers will migrate to
+// avg_power_w in a follow-up frontend prompt — the typed widget falls back
+// to 0 in the interim, which is the documented graceful-degradation path.
 type speedBucket struct {
 	SpeedBucket string  `json:"speed_bucket"`
 	Readings    int     `json:"readings"`
-	AvgPowerKW  float64 `json:"avg_power_kw"`
+	AvgPowerW   float64 `json:"avg_power_w"`
 }
 
 type efficiencyCategory struct {
@@ -30,10 +35,13 @@ type efficiencyCategory struct {
 	BatteryPer100km float64 `json:"battery_pct_per_100km"`
 }
 
+// efficiencyPoint emits avg_speed_mps (SI) — frontend EfficiencyPoint already
+// reads `speed_avg`, so the legacy backend mph tag never matched and the
+// rename cleanly aligns naming with the SI source.
 type efficiencyPoint struct {
-	SpeedAvg   float64 `json:"avg_speed_mph"`
-	Distance   float64 `json:"distance"`
-	Efficiency float64 `json:"efficiency"`
+	SpeedAvgMps float64 `json:"avg_speed_mps"`
+	Distance    float64 `json:"distance"`
+	Efficiency  float64 `json:"efficiency"`
 }
 
 func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -50,25 +58,28 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Speed distribution from drives (avg_speed_mph + avg_power_kw)
+	// Phase-42 SI canonical drives. Speed buckets are expressed in mps
+	// (1 mph = 0.44704 mps) so the bucket boundary literals 6.7056, 13.4112,
+	// 20.1168, 26.8224, 33.528 correspond to 15/30/45/60/75 mph. avg_power
+	// is averaged in Watts.
 	distRows, err := h.db.Pool.Query(ctx, `
 		SELECT
 		  CASE
-		    WHEN avg_speed_mph < 15 THEN '0-15'
-		    WHEN avg_speed_mph < 30 THEN '15-30'
-		    WHEN avg_speed_mph < 45 THEN '30-45'
-		    WHEN avg_speed_mph < 60 THEN '45-60'
-		    WHEN avg_speed_mph < 75 THEN '60-75'
+		    WHEN avg_speed_mps < 6.7056  THEN '0-15'
+		    WHEN avg_speed_mps < 13.4112 THEN '15-30'
+		    WHEN avg_speed_mps < 20.1168 THEN '30-45'
+		    WHEN avg_speed_mps < 26.8224 THEN '45-60'
+		    WHEN avg_speed_mps < 33.528  THEN '60-75'
 		    ELSE '75+'
 		  END AS speed_bucket,
 		  COUNT(*) AS readings,
-		  AVG(avg_power_kw) AS avg_power_kw
+		  AVG(avg_power_w) AS avg_power_w
 		FROM drives
 		WHERE vehicle_id = $1
-		  AND avg_speed_mph IS NOT NULL AND avg_speed_mph > 0
-		  AND start_ts > NOW() - INTERVAL '30 days'
+		  AND avg_speed_mps IS NOT NULL AND avg_speed_mps > 0
+		  AND started_at > NOW() - INTERVAL '30 days'
 		GROUP BY speed_bucket
-		ORDER BY MIN(avg_speed_mph)`, vehicleID)
+		ORDER BY MIN(avg_speed_mps)`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("speed profile: failed to query distribution")
 		writeError(w, http.StatusInternalServerError, "failed to query speed distribution")
@@ -79,14 +90,14 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	var distribution []speedBucket
 	for distRows.Next() {
 		var b speedBucket
-		var avgPower *float64
-		if err := distRows.Scan(&b.SpeedBucket, &b.Readings, &avgPower); err != nil {
+		var avgPowerW *float64
+		if err := distRows.Scan(&b.SpeedBucket, &b.Readings, &avgPowerW); err != nil {
 			log.Error().Err(err).Msg("speed profile: scan distribution row")
 			writeError(w, http.StatusInternalServerError, "failed to scan speed distribution")
 			return
 		}
-		if avgPower != nil {
-			b.AvgPowerKW = math.Round(*avgPower*100) / 100
+		if avgPowerW != nil {
+			b.AvgPowerW = math.Round(*avgPowerW*100) / 100
 		}
 		distribution = append(distribution, b)
 	}
@@ -96,22 +107,28 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Efficiency by speed category
+	// Phase-42 SI: avg_speed_mps thresholds for City/Suburban/Highway/HighSpeed
+	// (30/60/90 mph -> 13.4112 / 26.8224 / 40.2336 mps). avg_speed reported
+	// in km/h via distance_m / duration_s * 3.6 (preserves the previous
+	// "speed in metric" semantics returned by the legacy
+	// distance/duration formula at the response level).
 	catRows, err := h.db.Pool.Query(ctx, `
 		SELECT
 		  CASE
-		    WHEN avg_speed_mph < 30 THEN 'City (<30)'
-		    WHEN avg_speed_mph < 60 THEN 'Suburban (30-60)'
-		    WHEN avg_speed_mph < 90 THEN 'Highway (60-90)'
+		    WHEN avg_speed_mps < 13.4112 THEN 'City (<30)'
+		    WHEN avg_speed_mps < 26.8224 THEN 'Suburban (30-60)'
+		    WHEN avg_speed_mps < 40.2336 THEN 'Highway (60-90)'
 		    ELSE 'High Speed (90+)'
 		  END AS category,
 		  COUNT(*) AS drive_count,
-		  AVG(distance_mi / NULLIF(duration_min,0) * 60) AS avg_speed,
-		  AVG(CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END) AS battery_pct_per_100km
+		  AVG(distance_m / NULLIF(duration_s, 0) * 3.6) AS avg_speed_kmh,
+		  AVG(CASE WHEN distance_m > 0
+		           THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
+		           ELSE 0 END) AS battery_pct_per_100km
 		FROM drives
-		WHERE vehicle_id = $1 AND distance_mi > 1 AND duration_min > 1
-		  AND start_ts > NOW() - interval '90 days'
-		GROUP BY category`, vehicleID)
+		WHERE vehicle_id = $1 AND distance_m > $3 AND duration_s > 60
+		  AND started_at > NOW() - interval '90 days'
+		GROUP BY category`, vehicleID, driveStatsMetersPerMile, driveStatsMetersPerMile)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("speed profile: failed to query efficiency categories")
 		writeError(w, http.StatusInternalServerError, "failed to query efficiency categories")
@@ -142,14 +159,18 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Optimal speed data points
+	// Phase-42 SI: scan distance in meters, return distance in miles to keep
+	// the legacy `distance` semantics; avg_speed_mps emitted directly.
 	ptRows, err := h.db.Pool.Query(ctx, `
-		SELECT avg_speed_mph, distance_mi,
-		  CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END AS efficiency
+		SELECT avg_speed_mps,
+		  distance_m / $2 AS distance_mi_calc,
+		  CASE WHEN distance_m > 0
+		       THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
+		       ELSE 0 END AS efficiency
 		FROM drives
-		WHERE vehicle_id = $1 AND distance_mi > 5 AND duration_min > 5
-		  AND avg_speed_mph IS NOT NULL
-		ORDER BY start_ts DESC LIMIT 100`, vehicleID)
+		WHERE vehicle_id = $1 AND distance_m > $3 AND duration_s > 300
+		  AND avg_speed_mps IS NOT NULL
+		ORDER BY started_at DESC LIMIT 100`, vehicleID, driveStatsMetersPerMile, 5*driveStatsMetersPerMile)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("speed profile: failed to query efficiency points")
 		writeError(w, http.StatusInternalServerError, "failed to query efficiency points")
@@ -160,12 +181,12 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	var points []efficiencyPoint
 	for ptRows.Next() {
 		var p efficiencyPoint
-		if err := ptRows.Scan(&p.SpeedAvg, &p.Distance, &p.Efficiency); err != nil {
+		if err := ptRows.Scan(&p.SpeedAvgMps, &p.Distance, &p.Efficiency); err != nil {
 			log.Error().Err(err).Msg("speed profile: scan efficiency point")
 			writeError(w, http.StatusInternalServerError, "failed to scan efficiency points")
 			return
 		}
-		p.SpeedAvg = math.Round(p.SpeedAvg*10) / 10
+		p.SpeedAvgMps = math.Round(p.SpeedAvgMps*100) / 100
 		p.Distance = math.Round(p.Distance*100) / 100
 		p.Efficiency = math.Round(p.Efficiency*100) / 100
 		points = append(points, p)

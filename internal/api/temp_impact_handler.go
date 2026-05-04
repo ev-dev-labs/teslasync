@@ -54,25 +54,31 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Efficiency by temperature bucket
+	// Phase-42 SI canonical drives (migration 000172): ambient_temp_c_avg
+	// (Celsius), distance_m (meters), duration_s (seconds),
+	// start_soc_pct/end_soc_pct (REAL). avg_distance_km computed in SQL,
+	// avg_duration_min computed by dividing duration_s by 60. The
+	// `> 2 miles` filter becomes `distance_m > 3218.688`.
 	effRows, err := h.db.Pool.Query(ctx, `
 		SELECT
 		  CASE
-		    WHEN outside_temp_avg_c < 0 THEN 'Below 0°C'
-		    WHEN outside_temp_avg_c < 10 THEN '0-10°C'
-		    WHEN outside_temp_avg_c < 20 THEN '10-20°C'
-		    WHEN outside_temp_avg_c < 30 THEN '20-30°C'
+		    WHEN ambient_temp_c_avg < 0 THEN 'Below 0°C'
+		    WHEN ambient_temp_c_avg < 10 THEN '0-10°C'
+		    WHEN ambient_temp_c_avg < 20 THEN '10-20°C'
+		    WHEN ambient_temp_c_avg < 30 THEN '20-30°C'
 		    ELSE 'Above 30°C'
 		  END as temp_bucket,
 		  COUNT(*) as drive_count,
-		  AVG(distance_mi) as avg_distance_km,
-		  AVG(duration_min) as avg_duration_min,
-		  AVG(CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END) as avg_battery_pct_per_100km,
-		  AVG(outside_temp_avg_c) as avg_temp
+		  AVG(distance_m / 1000.0) as avg_distance_km,
+		  AVG(duration_s / 60.0) as avg_duration_min,
+		  AVG(CASE WHEN distance_m > 0
+		           THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
+		           ELSE 0 END) as avg_battery_pct_per_100km,
+		  AVG(ambient_temp_c_avg) as avg_temp
 		FROM drives
-		WHERE vehicle_id = $1 AND distance_mi > 2 AND outside_temp_avg_c IS NOT NULL
+		WHERE vehicle_id = $1 AND distance_m > $3 AND ambient_temp_c_avg IS NOT NULL
 		GROUP BY temp_bucket
-		ORDER BY MIN(outside_temp_avg_c)`, vehicleID)
+		ORDER BY MIN(ambient_temp_c_avg)`, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("temp impact: failed to query efficiency buckets")
 		writeError(w, http.StatusInternalServerError, "failed to query temperature efficiency")
@@ -152,18 +158,21 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Monthly temperature + efficiency trend
+	// Phase-42 SI canonical drives. Distance returned in km via SQL division
+	// to keep the legacy `total_distance` semantics (km).
 	trendRows, err := h.db.Pool.Query(ctx, `
-		SELECT DATE_TRUNC('month', start_ts) as month,
-		       AVG(outside_temp_avg_c) as avg_temp,
-		       AVG(CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END) as avg_efficiency,
+		SELECT DATE_TRUNC('month', started_at) as month,
+		       AVG(ambient_temp_c_avg) as avg_temp,
+		       AVG(CASE WHEN distance_m > 0
+		                THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
+		                ELSE 0 END) as avg_efficiency,
 		       COUNT(*) as drive_count,
-		       SUM(distance_mi) as total_distance
+		       SUM(distance_m / 1000.0) as total_distance
 		FROM drives
-		WHERE vehicle_id = $1 AND distance_mi > 2 AND outside_temp_avg_c IS NOT NULL
-		  AND start_ts > NOW() - interval '12 months'
+		WHERE vehicle_id = $1 AND distance_m > $3 AND ambient_temp_c_avg IS NOT NULL
+		  AND started_at > NOW() - interval '12 months'
 		GROUP BY month
-		ORDER BY month`, vehicleID)
+		ORDER BY month`, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("temp impact: failed to query monthly trend")
 		writeError(w, http.StatusInternalServerError, "failed to query monthly trend")
@@ -220,15 +229,18 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 		DriveDate      string  `json:"drive_date"`
 	}
 
+	// Phase-42 SI canonical drives. distance_km computed in SQL.
 	pointRows, err := h.db.Pool.Query(ctx, `
-		SELECT outside_temp_avg_c,
-		       CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 * 0.75 ELSE 0 END as efficiency_wh_km,
-		       distance_mi,
-		       start_ts::date
+		SELECT ambient_temp_c_avg,
+		       CASE WHEN distance_m > 0
+		            THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100 * 0.75
+		            ELSE 0 END as efficiency_wh_km,
+		       distance_m / 1000.0 as distance_km,
+		       started_at::date
 		FROM drives
-		WHERE vehicle_id = $1 AND distance_mi > 2 AND outside_temp_avg_c IS NOT NULL
-		ORDER BY start_ts DESC
-		LIMIT 500`, vehicleID)
+		WHERE vehicle_id = $1 AND distance_m > $3 AND ambient_temp_c_avg IS NOT NULL
+		ORDER BY started_at DESC
+		LIMIT 500`, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters)
 	if err != nil {
 		log.Error().Err(err).Msg("temp impact: failed to query drive points")
 	}

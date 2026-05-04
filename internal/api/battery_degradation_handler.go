@@ -98,25 +98,33 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 
 	var habits chargingHabits
 	if h.db != nil {
+		// Phase-42 SI charging_sessions (migration 000171): peak_power_w
+		// (Watts; >50000W == DC fast charging), total_energy_added_wh
+		// (Watt-hours), start_soc_pct/end_soc_pct (DOUBLE PRECISION).
+		// Convert energy back to kWh at the response boundary so the
+		// JSON key avg_energy_per_session keeps its kilowatt-hour
+		// semantics for the frontend.
+		var avgEnergyWh float64
 		err = h.db.Pool.QueryRow(ctx, `
 			SELECT
-				COUNT(*) FILTER (WHERE charger_power_kw_max > 50),
-				COUNT(*) FILTER (WHERE charger_power_kw_max <= 50 OR charger_power_kw_max IS NULL),
-				COUNT(*) FILTER (WHERE start_battery_pct < 10),
-				COUNT(*) FILTER (WHERE end_battery_pct > 95),
-				COUNT(*) FILTER (WHERE end_battery_pct > 90),
-				COALESCE(AVG(energy_added_kwh), 0),
+				COUNT(*) FILTER (WHERE peak_power_w > 50000),
+				COUNT(*) FILTER (WHERE peak_power_w <= 50000 OR peak_power_w IS NULL),
+				COUNT(*) FILTER (WHERE start_soc_pct < 10),
+				COUNT(*) FILTER (WHERE end_soc_pct > 95),
+				COUNT(*) FILTER (WHERE end_soc_pct > 90),
+				COALESCE(AVG(total_energy_added_wh), 0),
 				COUNT(*)
 			FROM charging_sessions
 			WHERE vehicle_id = $1`, vehicleID).Scan(
 			&habits.FastChargeCount, &habits.SlowChargeCount,
 			&habits.DeepDischargeCount, &habits.ChargeToFullCount,
-			&habits.HighSocCount, &habits.AvgEnergyPerSession,
+			&habits.HighSocCount, &avgEnergyWh,
 			&habits.TotalCount)
 		if err != nil {
 			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get charging habits")
 			// Non-fatal
 		}
+		habits.AvgEnergyPerSession = avgEnergyWh / 1000.0
 	}
 	habits.AvgEnergyPerSession = math.Round(habits.AvgEnergyPerSession*10) / 10
 
@@ -172,12 +180,12 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		if rng != nil {
 			currentRange = *rng
 		}
-		// Cycle count from charge sessions
+		// Cycle count from charge sessions (Phase-42 SI: start_soc_pct/end_soc_pct).
 		if h.db != nil {
 			var delta *float64
 			_ = h.db.Pool.QueryRow(ctx,
-				`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0)) 
-				 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
+				`SELECT SUM(GREATEST(end_soc_pct - start_soc_pct, 0))
+				 FROM charging_sessions WHERE vehicle_id = $1 AND end_soc_pct > start_soc_pct`,
 				vehicleID).Scan(&delta)
 			if delta != nil {
 				currentCycles = int(*delta / 100)
@@ -378,8 +386,8 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		if h.db != nil {
 			var delta *float64
 			_ = h.db.Pool.QueryRow(ctx,
-				`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0))
-				 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
+				`SELECT SUM(GREATEST(end_soc_pct - start_soc_pct, 0))
+				 FROM charging_sessions WHERE vehicle_id = $1 AND end_soc_pct > start_soc_pct`,
 				vehicleID).Scan(&delta)
 			if delta != nil {
 				latestCycles = int(*delta / 100)
@@ -396,15 +404,17 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	// Charging habit stats
+	// Charging habit stats. Phase-42 SI charging_sessions schema (000171):
+	// peak_power_w (Watts; 50000W == 50kW DC fast threshold), start_soc_pct
+	// and end_soc_pct (DOUBLE PRECISION).
 	var fastCount, slowCount, deepDischarge, fullCharge int
 	if h.db != nil {
 		_ = h.db.Pool.QueryRow(ctx, `
 			SELECT
-				COUNT(*) FILTER (WHERE charger_power_kw_max > 50),
-				COUNT(*) FILTER (WHERE charger_power_kw_max <= 50 OR charger_power_kw_max IS NULL),
-				COUNT(*) FILTER (WHERE start_battery_pct < 10),
-				COUNT(*) FILTER (WHERE end_battery_pct > 95)
+				COUNT(*) FILTER (WHERE peak_power_w > 50000),
+				COUNT(*) FILTER (WHERE peak_power_w <= 50000 OR peak_power_w IS NULL),
+				COUNT(*) FILTER (WHERE start_soc_pct < 10),
+				COUNT(*) FILTER (WHERE end_soc_pct > 95)
 			FROM charging_sessions
 			WHERE vehicle_id = $1`, vehicleID).Scan(&fastCount, &slowCount, &deepDischarge, &fullCharge)
 	}
@@ -450,12 +460,12 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		degradationRate = (100 - latestSOH) / (float64(ageMonths) / 12)
 	}
 
-	// Avg depth of discharge
+	// Avg depth of discharge — Phase-42 SI drives (000172): start_soc_pct/end_soc_pct.
 	var avgDoD *float64
 	if h.db != nil {
 		_ = h.db.Pool.QueryRow(ctx,
-			`SELECT AVG(GREATEST(start_battery_pct - end_battery_pct, 0))
-			 FROM drives WHERE vehicle_id = $1 AND start_battery_pct > end_battery_pct`,
+			`SELECT AVG(GREATEST(start_soc_pct - end_soc_pct, 0))
+			 FROM drives WHERE vehicle_id = $1 AND start_soc_pct > end_soc_pct`,
 			vehicleID).Scan(&avgDoD)
 	}
 	dod := 0.0

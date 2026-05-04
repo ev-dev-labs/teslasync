@@ -109,17 +109,28 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 	since := time.Now().AddDate(0, 0, -days)
 
+	// Phase-42 SI canonical drives (migration 000172). Distance/speed/power
+	// are converted from SI back to legacy display units (mi/mph/kW) at the
+	// SQL boundary so the downstream coaching math (thresholds expressed in
+	// mph/kW/mi/°C) remains untouched per the covenant.
 	rows, err := h.db.Pool.Query(ctx, `
-		SELECT id, start_ts, distance_mi,
-		       COALESCE(max_speed_mph, 0), COALESCE(avg_speed_mph, 0),
-		       COALESCE(avg_power_kw, 0), NULL::double precision,
-		       COALESCE(start_battery_pct, 0), COALESCE(end_battery_pct, 0),
-		       COALESCE(outside_temp_avg_c, 20)
+		SELECT id, started_at,
+		       distance_m / $3 AS distance_mi_calc,
+		       COALESCE(max_speed_mps, 0) / $4 AS max_speed_mph_calc,
+		       COALESCE(avg_speed_mps, 0) / $4 AS avg_speed_mph_calc,
+		       COALESCE(avg_power_w, 0) / 1000.0 AS avg_power_kw_calc,
+		       NULL::double precision,
+		       COALESCE(start_soc_pct, 0)::float8,
+		       COALESCE(end_soc_pct, 0)::float8,
+		       COALESCE(ambient_temp_c_avg, 20)
 		FROM drives
 		WHERE vehicle_id = $1
-		  AND start_ts >= $2
-		  AND distance_mi > 0.5
-		ORDER BY start_ts DESC`, vehicleID, since)
+		  AND started_at >= $2
+		  AND distance_m > $5
+		ORDER BY started_at DESC`,
+		vehicleID, since,
+		driveStatsMetersPerMile, driveStatsMpsPerMph,
+		0.5*driveStatsMetersPerMile)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("driving-coach: query failed")
 		writeError(w, http.StatusInternalServerError, "failed to get driving data")
