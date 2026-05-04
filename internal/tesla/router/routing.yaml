@@ -46,6 +46,12 @@ routes:
     dest: signal_log
   - field: BmsFullchargecomplete
     dest: signal_log
+  - field: BrakePedal
+    dest: drive_telemetry
+    column: brake_pedal
+  - field: BrakePedalPos
+    dest: drive_telemetry
+    column: brake_pedal_pos_pct
   - field: BrickVoltageMax
     dest: signal_log
   - field: BrickVoltageMin
@@ -88,6 +94,9 @@ routes:
     dest: charging_telemetry
     column: charging_cable_type
     also_signal_log: true
+  - field: CruiseSetSpeed
+    dest: drive_telemetry
+    column: cruise_set_speed_mps
   - field: DCChargingEnergyIn
     dest: charging_telemetry
     column: dc_charging_energy_in_wh
@@ -99,6 +108,9 @@ routes:
     dest: signal_log
   - field: DetailedChargeState
     dest: signal_log
+  - field: DriveRail
+    dest: drive_telemetry
+    column: drive_rail
   - field: EnergyRemaining
     dest: signal_log
   - field: EstBatteryRange
@@ -113,10 +125,25 @@ routes:
     dest: charging_telemetry
     column: fast_charger_type
     also_signal_log: true
+  - field: Gear
+    dest: drive_telemetry
+    column: gear
   - field: IdealBatteryRange
     dest: signal_log
+  - field: LateralAcceleration
+    dest: drive_telemetry
+    column: lateral_acceleration_mps2
+  - field: LifetimeEnergyGainedRegen
+    dest: drive_telemetry
+    column: lifetime_energy_gained_regen_wh
   - field: LifetimeEnergyUsed
     dest: signal_log
+  - field: LifetimeEnergyUsedDrive
+    dest: drive_telemetry
+    column: lifetime_energy_used_drive_wh
+  - field: LongitudinalAcceleration
+    dest: drive_telemetry
+    column: longitudinal_acceleration_mps2
   - field: ModuleTempMax
     dest: signal_log
   - field: ModuleTempMin
@@ -135,6 +162,9 @@ routes:
     dest: signal_log
   - field: PackVoltage
     dest: signal_log
+  - field: PedalPosition
+    dest: drive_telemetry
+    column: pedal_position_pct
   - field: PowershareHoursLeft
     dest: signal_log
   - field: PowershareInstantaneousPowerKW
@@ -165,3 +195,6 @@ routes:
     dest: signal_log
   - field: TimeToFullCharge
     dest: signal_log
+  - field: VehicleSpeed
+    dest: drive_telemetry
+    column: speed_mps
