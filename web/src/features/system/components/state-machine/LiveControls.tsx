@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Button, Select } from '@/components/ui';
+import { Button, Select, Tooltip } from '@/components/ui';
 import { Caption } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
@@ -12,6 +12,13 @@ import { cn } from '@/lib/cn';
  *   - the current buffer-window choice
  *   - the index into the transition buffer (for stepping)
  *   - whether step-prev / step-next are valid right now
+ *
+ * Phase 45 / Prompt 35 — the toolbar's right-hand counter now distinguishes
+ * the *Window* dropdown's slice from the underlying 24 h fetch:
+ *   "{{n}} in window · {{N}} in 24 h"
+ * with a hover Tooltip that explains the scope difference. The legacy
+ * single-scope `bufferCount` prop is preserved as a deprecated fallback
+ * for one Phase so external callers don't break mid-migration.
  */
 export interface LiveControlsProps {
   isLive: boolean;
@@ -23,7 +30,16 @@ export interface LiveControlsProps {
   windowMinutes: number;
   onWindowChange: (minutes: number) => void;
   onClearBuffer: () => void;
-  /** Number of transitions currently buffered — surfaced in the toolbar. */
+  /** Number of transitions inside the active Window dropdown slice. */
+  windowCount?: number;
+  /** Total transitions fetched (typically the last 24 h). */
+  totalCount?: number;
+  /**
+   * @deprecated Use `windowCount` + `totalCount`. Kept for one Phase as a
+   * fallback so external callers don't break mid-migration; if both new
+   * props are absent, this scalar drives both counts (preserving the old
+   * "{{n}} buffered" copy).
+   */
   bufferCount?: number;
   className?: string;
 }
@@ -45,10 +61,30 @@ export function LiveControls({
   windowMinutes,
   onWindowChange,
   onClearBuffer,
-  bufferCount = 0,
+  windowCount,
+  totalCount,
+  bufferCount,
   className,
 }: LiveControlsProps) {
   const { t } = useTranslation();
+
+  const inWindow = windowCount ?? bufferCount ?? 0;
+  const total = totalCount ?? bufferCount ?? 0;
+  const outside = Math.max(0, total - inWindow);
+  const dual = totalCount != null || windowCount != null;
+
+  const counterLabel = dual && outside > 0
+    ? t('debugger.controls.bufferedDual', '{{inWindow}} in window · {{total}} in 24 h', {
+        inWindow,
+        total,
+      })
+    : t('debugger.controls.buffered', '{{n}} buffered', { n: inWindow });
+
+  const tooltipLabel = t(
+    'debugger.controls.bufferedTooltip',
+    'Counts inside the {{minutes}}-minute Window dropdown. {{outside}} more transitions fetched in the last 24 h.',
+    { minutes: windowMinutes, outside },
+  );
 
   return (
     <div
@@ -111,9 +147,13 @@ export function LiveControls({
       <Button size="sm" variant="ghost" onClick={onClearBuffer}>
         {t('debugger.controls.clear', 'Clear buffer')}
       </Button>
-      <Caption className="ml-auto">
-        {t('debugger.controls.buffered', '{{n}} buffered', { n: bufferCount })}
-      </Caption>
+      <div className="ml-auto">
+        <Tooltip content={tooltipLabel}>
+          <Caption className="cursor-help" data-testid="live-controls-counter">
+            {counterLabel}
+          </Caption>
+        </Tooltip>
+      </div>
     </div>
   );
 }

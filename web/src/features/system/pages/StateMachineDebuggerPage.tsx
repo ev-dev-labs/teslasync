@@ -31,6 +31,10 @@ import { FSMSubFSMPanel } from '../components/FSMSubFSMPanel';
 import { StateTimeline } from '../components/state-machine/StateTimeline';
 import { LiveControls } from '../components/state-machine/LiveControls';
 import { SnapshotInspector } from '../components/state-machine/SnapshotInspector';
+import {
+  windowTransitions,
+  nextWiderPreset,
+} from '../components/state-machine/windowTransitions';
 
 /* ─── Vehicle state styling (for live state hero) ─── */
 const vehicleStateStyle: Record<string, { bg: string; text: string; dot: string }> = {
@@ -334,6 +338,36 @@ export default function StateMachineDebuggerPage() {
     return sortedByTime.filter((tr) => new Date(tr.created_at) >= bufferClearedAt);
   }, [sortedByTime, bufferClearedAt]);
 
+  /* Phase 45 / Prompt 35 — single source of truth for windowing. The page,
+   * toolbar counter, timeline ticks, and inspector empty-state all derive
+   * their view of "what's in/outside the active window" from this one call,
+   * so the toolbar can never disagree with the timeline again. */
+  const windowed = useMemo(
+    () => windowTransitions(visibleTransitions, windowMinutes),
+    [visibleTransitions, windowMinutes],
+  );
+
+  const widerPreset = useMemo(() => {
+    if (windowed.inWindow.length > 0) return null;
+    if (!windowed.lastTransition) return null;
+    return nextWiderPreset(
+      new Date(windowed.lastTransition.created_at).getTime(),
+      windowed.anchor,
+      windowMinutes,
+    );
+  }, [windowed, windowMinutes]);
+
+  const handleWidenWindow = useCallback(() => {
+    if (widerPreset != null) setWindowMinutes(widerPreset);
+  }, [widerPreset]);
+
+  const handleJumpToLast = useCallback(() => {
+    const last = windowed.lastTransition;
+    if (!last) return;
+    setIsLive(false);
+    setSelectedId(last.id);
+  }, [windowed.lastTransition]);
+
   const handleStepPrev = useCallback(() => {
     if (sortedByTime.length === 0) return;
     setIsLive(false);
@@ -567,11 +601,12 @@ export default function StateMachineDebuggerPage() {
             windowMinutes={windowMinutes}
             onWindowChange={setWindowMinutes}
             onClearBuffer={handleClearBuffer}
-            bufferCount={visibleTransitions.length}
+            windowCount={windowed.inWindow.length}
+            totalCount={visibleTransitions.length}
           />
           </div>
           <StateTimeline
-            transitions={visibleTransitions}
+            transitions={windowed.inWindow}
             fsmType={fsmType === 'all' ? 'vehicle' : fsmType}
             selectedId={selectedId}
             onSelect={(tr) => {
@@ -579,6 +614,10 @@ export default function StateMachineDebuggerPage() {
               setIsLive(false);
             }}
             windowMinutes={windowMinutes}
+            lastTransition={windowed.lastTransition}
+            widerPreset={widerPreset}
+            onWidenWindow={handleWidenWindow}
+            onJumpToLast={handleJumpToLast}
           />
           <div data-tour="debugger-source-badges">
           <SnapshotInspector
@@ -587,6 +626,9 @@ export default function StateMachineDebuggerPage() {
             snapshot={selectedSnapshot ?? null}
             previousSnapshot={previousSnapshot ?? null}
             loading={snapshotFetching}
+            lastTransition={windowed.lastTransition}
+            inWindowCount={windowed.inWindow.length}
+            onJumpToLast={handleJumpToLast}
           />
           </div>
         </GlassPanel>

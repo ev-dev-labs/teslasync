@@ -6283,10 +6283,18 @@
   },
   "debugger": {
     "share": "Share permalink",
+    "window": {
+      "minutes": "{{n}} min",
+      "hours": "{{n}} h",
+      "day": "24 h"
+    },
     "timeline": {
       "empty": "No transitions in window",
       "windowLabel": "Window: {{minutes}} min",
-      "tickAria": "{{from}} to {{to}}"
+      "tickAria": "{{from}} to {{to}}",
+      "lastSeen": "Last transition {{rel}}",
+      "widenTo": "Widen window to {{label}}",
+      "jumpToLast": "Jump to last transition"
     },
     "controls": {
       "live": "Live",
@@ -6295,7 +6303,9 @@
       "stepNext": "Step to next transition",
       "window": "Window",
       "clear": "Clear buffer",
-      "buffered": "{{n}} buffered"
+      "buffered": "{{n}} buffered",
+      "bufferedDual": "{{inWindow}} in window · {{total}} in 24 h",
+      "bufferedTooltip": "Counts inside the {{minutes}}-minute Window dropdown. {{outside}} more transitions fetched in the last 24 h."
     },
     "inspector": {
       "title": "Transition snapshot",
@@ -6307,6 +6317,8 @@
       "diffMode": "Diff vs previous",
       "noSignals": "No signals captured for this transition",
       "empty": "Select a transition to inspect its snapshot",
+      "emptyOutsideWindow": "Nothing in the current window. Last transition {{rel}}.",
+      "jumpToLast": "Jump to last transition",
       "loading": "Loading…",
       "copy": "Copy snapshot"
     }
