@@ -7,11 +7,24 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+
+	// Side-effect import: registers the
+	// tesla_normalize_unit_context_missing_total counter against
+	// prometheus.DefaultRegisterer at package init time so
+	// MissingUnitDrops below sees the metric family on every API
+	// process — including binaries that do not yet wire
+	// normalize.Pipeline as the live ingest path. Phase-42 wiring
+	// prompts will eventually plumb the Pipeline into the API
+	// binary; until then this import keeps the diagnostics endpoint
+	// returning a real (zero-valued) family rather than 404-equivalent
+	// "metric not registered".
+	_ "github.com/ev-dev-labs/teslasync/internal/tesla/normalize"
 )
 
 // FleetTelemetryErrorHandler serves partner-level fleet telemetry error data.
@@ -218,4 +231,61 @@ func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *htt
 
 	log.Info().Int("upserted", inserted).Int("total", len(stored)).Msg("fleet telemetry errors refresh complete")
 	writeJSON(w, http.StatusOK, stored)
+}
+
+// missingUnitDropsResponse describes the
+// tesla_normalize_unit_context_missing_total counter snapshot served by
+// the Settings/Diagnostics "missing-unit drops" indicator.
+//
+// Total is the running sum across every Field label since the API
+// process started; ByField is the per-Field breakdown (empty when no
+// drops have been recorded). The counter is monotonic, so a non-zero
+// Total combined with a flat slope on subsequent polls is a healthy
+// "old drift, now resolved" signal — the frontend renders both Total
+// and a recent-rate window over polled samples.
+type missingUnitDropsResponse struct {
+	Total   float64            `json:"total"`
+	ByField map[string]float64 `json:"by_field"`
+}
+
+// MissingUnitDrops returns the running count of normalize-pipeline drops
+// caused by an empty vehicle_unit_history at the atomic's EmittedAt.
+// Sourced from the tesla_normalize_unit_context_missing_total counter
+// registered by internal/tesla/normalize.Pipeline.
+//
+// Phase-42 prompt 0068 replaces the legacy
+// fleet_telemetry_subscriptions-derived health indicator with this
+// metric-derived one (per ADR-004 #2: live pipeline metrics, not
+// snapshot tables, are the source of truth for ingest health).
+//
+// GET /api/v1/tesla/fleet-telemetry/missing-unit-drops
+func (h *FleetTelemetryErrorHandler) MissingUnitDrops(w http.ResponseWriter, r *http.Request) {
+	families, err := prometheus.DefaultGatherer.Gather()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to gather prometheus metrics for missing-unit drops")
+		writeError(w, http.StatusInternalServerError, "failed to gather metrics")
+		return
+	}
+	out := missingUnitDropsResponse{ByField: map[string]float64{}}
+	const wanted = "tesla_normalize_unit_context_missing_total"
+	for _, mf := range families {
+		if mf.GetName() != wanted {
+			continue
+		}
+		for _, m := range mf.GetMetric() {
+			counter := m.GetCounter()
+			if counter == nil {
+				continue
+			}
+			v := counter.GetValue()
+			out.Total += v
+			for _, lp := range m.GetLabel() {
+				if lp.GetName() == "field" {
+					out.ByField[lp.GetValue()] += v
+					break
+				}
+			}
+		}
+	}
+	writeJSON(w, http.StatusOK, out)
 }
