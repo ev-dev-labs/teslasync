@@ -271,19 +271,26 @@ func estimateChargeTime(startSOC, endSOC, capacityKWh, maxPowerKW float64) float
 }
 
 // vehicleEfficiency returns the distance-weighted average Wh/km for the vehicle.
+//
+// Phase-42 (Prompt 0076): rewritten against the SI canonical drives schema
+// (migration 000172). distance_m and energy_used_wh are native units; the
+// /1000 division is folded out and the result is naturally Wh/km because
+// SUM(energy_used_wh) / SUM(distance_m) gives Wh/m, which we then * 1000.
+// start_battery_pct / end_battery_pct are renamed to start_soc_pct /
+// end_soc_pct on the SI schema.
 func (h *TripPlannerHandler) vehicleEfficiency(ctx context.Context, vehicleID int64) float64 {
 	var eff *float64
 	_ = h.db.Pool.QueryRow(ctx, `
 		SELECT CASE
-			WHEN SUM(distance_mi) > 0 THEN
-				SUM(COALESCE(energy_used_kwh, 0)) * 1000.0
-				/ (SUM(distance_mi) * 1.60934)
+			WHEN SUM(distance_m) > 0 THEN
+				SUM(COALESCE(energy_used_wh, 0)) * 1000.0
+				/ SUM(distance_m)
 			END
 		FROM drives
-		WHERE vehicle_id = $1 AND distance_mi > 1
-		  AND energy_used_kwh > 0
-		  AND start_battery_pct > end_battery_pct
-		  AND start_ts > NOW() - INTERVAL '90 days'`, vehicleID).Scan(&eff)
+		WHERE vehicle_id = $1 AND distance_m > 1609
+		  AND energy_used_wh > 0
+		  AND start_soc_pct > end_soc_pct
+		  AND started_at > NOW() - INTERVAL '90 days'`, vehicleID).Scan(&eff)
 
 	if eff != nil && *eff > 50 && *eff < 500 {
 		return *eff
@@ -325,12 +332,16 @@ func (h *TripPlannerHandler) batteryCapacity(ctx context.Context, vehicleID int6
 }
 
 // estimateWeatherImpact returns a weather adjustment factor based on recent driving data.
+//
+// Phase-42 (Prompt 0076): renamed outside_temp_avg_c → ambient_temp_c_avg
+// (the canonical SI name on the drives schema after migration 000172) and
+// start_ts → started_at.
 func (h *TripPlannerHandler) estimateWeatherImpact(ctx context.Context, vehicleID int64) tripWeatherImpact {
 	var avgTempC *float64
 	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT AVG(outside_temp_avg_c) FROM drives
-		WHERE vehicle_id = $1 AND outside_temp_avg_c IS NOT NULL
-		  AND start_ts > NOW() - INTERVAL '7 days'`, vehicleID).Scan(&avgTempC)
+		SELECT AVG(ambient_temp_c_avg) FROM drives
+		WHERE vehicle_id = $1 AND ambient_temp_c_avg IS NOT NULL
+		  AND started_at > NOW() - INTERVAL '7 days'`, vehicleID).Scan(&avgTempC)
 
 	if avgTempC == nil {
 		return tripWeatherImpact{

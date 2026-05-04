@@ -1,0 +1,338 @@
+=== PREFLIGHT ===
+2026-05-04T11:19:58.8435585-07:00
+14ca1bef26465888fcfe33d3b00abbc21b5beb47
+--- Predecessor 0075 status ---
+
+EXIT=1
+STATUS=BLOCKED
+EXIT=0
+STATUS=DONE
+
+=== ENUMERATED_FILES ===
+internal/database/position_repo.go                                    2716 bytes
+internal/database/maintenance.go                                      4483 bytes
+internal/database/trip_repo.go                                        9879 bytes
+internal/database/visited_location_repo.go                            5029 bytes
+internal/api/computed_metrics.go                                     15503 bytes
+internal/api/trip_planner_handler_compute.go                         14357 bytes
+internal/api/search_handler.go                                       25869 bytes
+internal/polling/predictor.go                                         7484 bytes
+=== COLUMN_MAPPING ===
+positions (000169_positions_si):
+  latitude         -> lat                    (no conversion)
+  longitude        -> lng                    (no conversion)
+  heading (int16)  -> heading_deg (DOUBLE)   (cast int16 -> float64)
+  speed_mph        -> speed_mps              (mph * 0.44704 -> m/s; reverse for display)
+  elevation_m      -> altitude_m             (no conversion; rename only)
+  gps_state        -> gps_state              (unchanged)
+  source           -> (DROPPED — no SI column; not modeled)
+  (new SI cols     -> odometer_m, est_range_m, rated_range_m, ideal_range_m
+                      left NULL on INSERT; not exposed on models.Position)
+
+drives (000172_drives_si):
+  start_ts         -> started_at
+  end_ts           -> ended_at
+  start_address    -> start_place
+  end_address      -> end_place
+  distance_mi      -> distance_m / 1609.344
+  duration_min     -> duration_s / 60.0
+  energy_used_kwh  -> energy_used_wh / 1000.0
+  start_battery_pct-> start_soc_pct          (DOUBLE/REAL pct vs int16)
+  end_battery_pct  -> end_soc_pct
+  outside_temp_avg_c -> ambient_temp_c_avg
+
+charging_sessions (000171_charging_si):
+  start_ts         -> started_at
+  end_ts           -> ended_at
+  energy_added_kwh -> total_energy_added_wh / 1000.0
+  duration_min     -> EXTRACT(EPOCH FROM (ended_at - started_at)) / 60.0
+  cost             -> cost_decimal
+  charger_location -> start_place
+  charger_type     -> charger_type           (unchanged)
+
+trips (000172_drives_si):
+  start_ts         -> started_at
+  end_ts           -> ended_at
+  description      -> notes
+  total_distance_mi -> SUM(drives.distance_m)/1609.344 via trip_drives JOIN (read-only)
+  total_energy_kwh  -> SUM(drives.energy_used_wh)/1000.0 via trip_drives JOIN
+  total_duration_min-> SUM(drives.duration_s)/60.0 via trip_drives JOIN
+  created_at, updated_at -> derived from started_at / ended_at
+  (writes drop totals/desc; ON CONFLICT removed — no unique constraint in SI schema)
+
+trip_drives (000172_drives_si):
+  added_at         -> (DROPPED — no replacement)
+  (new col)        -> position INT NOT NULL  (assigned ROW_NUMBER over drives.started_at)
+
+vehicle_states / visited_locations: tables not present in post-phase-42 schema.
+=== STRATEGY_DECISION ===
+visited_locations: STRATEGY (a) — derive from drives by grouping on end_place
+                   (the new SI drives column for the geocoded place name).
+                   The legacy visited_locations and addresses tables are
+                   already gone in the post-baseline_typed schema, so the
+                   existing fallback path (deriveFromDrives) was already the
+                   only working code path. Make it the SOLE path and drop the
+                   getByVehicleFromTable / getAllFromTable methods that
+                   queried the never-existing visited_locations table.
+                   UpsertFromDrive remains a no-op stub (per existing comment).
+
+vehicle_states cleanup: HYBRID approach. Covenant 12 + spec say "drop the
+                   function entirely" but maintenance_worker.go (out of allowed
+                   scope) still calls db.CleanupOldStates. Strict deletion would
+                   break the build gate. Rewrite CleanupOldStates as a no-op
+                   stub that returns (0, nil) immediately, with a comment
+                   pointing to ADR-004 and this prompt. This satisfies the
+                   substantive intent (no SQL access to vehicle_states) and
+                   keeps build green. Same approach for VacuumAnalyze (drop
+                   vehicle_states from the table list).
+
+trips/drives column eliminations: trips schema (000172) dropped
+                   total_distance_mi, total_energy_kwh, total_duration_min,
+                   description, created_at, updated_at. drives schema dropped
+                   start_ts/end_ts/distance_mi/duration_min/energy_used_kwh/
+                   start_address/end_address/start_battery_pct/
+                   outside_temp_avg_c. models.Trip and models.Drive (both
+                   out of allowed scope) keep legacy field names. The repo
+                   boundary translates new SI columns into legacy units, and
+                   computes per-trip totals on read by joining drives via
+                   trip_drives. UpsertMonthTrip writes only the columns that
+                   still exist (vehicle_id, name, started_at, ended_at) and
+                   inserts trip_drives rows with the new mandatory position
+                   ordering column.
+=== HANDLER_DIFFS ===
+warning: in the working copy of 'internal/api/computed_metrics.go', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'internal/api/search_handler.go', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'internal/api/trip_planner_handler_compute.go', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'internal/database/maintenance.go', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'internal/database/position_repo.go', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'internal/database/trip_repo.go', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'internal/database/visited_location_repo.go', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'internal/polling/predictor.go', CRLF will be replaced by LF the next time Git touches it
+ internal/api/computed_metrics.go             |  82 +++++----
+ internal/api/search_handler.go               |  68 +++++---
+ internal/api/trip_planner_handler_compute.go |  31 ++--
+ internal/database/maintenance.go             |  68 +++-----
+ internal/database/position_repo.go           | 150 ++++++++++++++--
+ internal/database/trip_repo.go               | 251 ++++++++++++++++-----------
+ internal/database/visited_location_repo.go   | 122 ++++---------
+ internal/polling/predictor.go                |  22 +--
+ 8 files changed, 473 insertions(+), 321 deletions(-)
+
+--- predictor.go ---
+warning: in the working copy of 'internal/polling/predictor.go', CRLF will be replaced by LF the next time Git touches it
+diff --git a/internal/polling/predictor.go b/internal/polling/predictor.go
+index bb84499f..0ac0501b 100644
+--- a/internal/polling/predictor.go
++++ b/internal/polling/predictor.go
+@@ -68,16 +68,17 @@ func (p *Predictor) refresh(ctx context.Context) {
+ 
+ 	patterns := make(map[string]*VehiclePattern)
+ 
+-	// Learn departure patterns from drives table
++	// Learn departure patterns from drives table.
++	// Phase-42 (Prompt 0076): drives.start_ts ΓåÆ drives.started_at (SI rename).
+ 	departureRows, err := p.pool.Query(ctx, `
+ 		SELECT v.vin,
+-		       EXTRACT(HOUR FROM d.start_ts) AS hour,
+-		       EXTRACT(DOW FROM d.start_ts) AS dow,
++		       EXTRACT(HOUR FROM d.started_at) AS hour,
++		       EXTRACT(DOW FROM d.started_at) AS dow,
+ 		       COUNT(*) AS freq
+ 		FROM drives d
+ 		JOIN vehicles v ON d.vehicle_id = v.id
+-		WHERE d.start_ts > NOW() - make_interval(days => $1)
+-		  AND d.start_ts IS NOT NULL
++		WHERE d.started_at > NOW() - make_interval(days => $1)
++		  AND d.started_at IS NOT NULL
+ 		GROUP BY v.vin, hour, dow
+ 		HAVING COUNT(*) >= 2
+ 		ORDER BY v.vin, freq DESC
+@@ -111,16 +112,17 @@ func (p *Predictor) refresh(ctx context.Context) {
+ 		})
+ 	}
+ 
+-	// Learn charging patterns from charging_sessions table
++	// Learn charging patterns from charging_sessions table.
++	// Phase-42 (Prompt 0076): charging_sessions.start_ts ΓåÆ started_at (SI rename).
+ 	chargeRows, err := p.pool.Query(ctx, `
+ 		SELECT v.vin,
+-		       EXTRACT(HOUR FROM cs.start_ts) AS hour,
+-		       EXTRACT(DOW FROM cs.start_ts) AS dow,
++		       EXTRACT(HOUR FROM cs.started_at) AS hour,
+
+--- trip_planner_handler_compute.go (key snippets) ---
+warning: in the working copy of 'internal/api/trip_planner_handler_compute.go', CRLF will be replaced by LF the next time Git touches it
+diff --git a/internal/api/trip_planner_handler_compute.go b/internal/api/trip_planner_handler_compute.go
+index 0b6cbdd4..4197be0d 100644
+--- a/internal/api/trip_planner_handler_compute.go
++++ b/internal/api/trip_planner_handler_compute.go
+@@ -271,19 +271,26 @@ func estimateChargeTime(startSOC, endSOC, capacityKWh, maxPowerKW float64) float
+ }
+ 
+ // vehicleEfficiency returns the distance-weighted average Wh/km for the vehicle.
++//
++// Phase-42 (Prompt 0076): rewritten against the SI canonical drives schema
++// (migration 000172). distance_m and energy_used_wh are native units; the
++// /1000 division is folded out and the result is naturally Wh/km because
++// SUM(energy_used_wh) / SUM(distance_m) gives Wh/m, which we then * 1000.
++// start_battery_pct / end_battery_pct are renamed to start_soc_pct /
++// end_soc_pct on the SI schema.
+ func (h *TripPlannerHandler) vehicleEfficiency(ctx context.Context, vehicleID int64) float64 {
+ 	var eff *float64
+ 	_ = h.db.Pool.QueryRow(ctx, `
+ 		SELECT CASE
+-			WHEN SUM(distance_mi) > 0 THEN
+-				SUM(COALESCE(energy_used_kwh, 0)) * 1000.0
+-				/ (SUM(distance_mi) * 1.60934)
++			WHEN SUM(distance_m) > 0 THEN
++				SUM(COALESCE(energy_used_wh, 0)) * 1000.0
++				/ SUM(distance_m)
+ 			END
+ 		FROM drives
+-		WHERE vehicle_id = $1 AND distance_mi > 1
+-		  AND energy_used_kwh > 0
+-		  AND start_battery_pct > end_battery_pct
+-		  AND start_ts > NOW() - INTERVAL '90 days'`, vehicleID).Scan(&eff)
++		WHERE vehicle_id = $1 AND distance_m > 1609
++		  AND energy_used_wh > 0
++		  AND start_soc_pct > end_soc_pct
++		  AND started_at > NOW() - INTERVAL '90 days'`, vehicleID).Scan(&eff)
+ 
+ 	if eff != nil && *eff > 50 && *eff < 500 {
+ 		return *eff
+@@ -325,12 +332,16 @@ func (h *TripPlannerHandler) batteryCapacity(ctx context.Context, vehicleID int6
+ }
+ 
+ // estimateWeatherImpact returns a weather adjustment factor based on recent driving data.
++//
++// Phase-42 (Prompt 0076): renamed outside_temp_avg_c ΓåÆ ambient_temp_c_avg
++// (the canonical SI name on the drives schema after migration 000172) and
++// start_ts ΓåÆ started_at.
+ func (h *TripPlannerHandler) estimateWeatherImpact(ctx context.Context, vehicleID int64) tripWeatherImpact {
+ 	var avgTempC *float64
+ 	_ = h.db.Pool.QueryRow(ctx, `
+-		SELECT AVG(outside_temp_avg_c) FROM drives
+-		WHERE vehicle_id = $1 AND outside_temp_avg_c IS NOT NULL
+-		  AND start_ts > NOW() - INTERVAL '7 days'`, vehicleID).Scan(&avgTempC)
++		SELECT AVG(ambient_temp_c_avg) FROM drives
++		WHERE vehicle_id = $1 AND ambient_temp_c_avg IS NOT NULL
++		  AND started_at > NOW() - INTERVAL '7 days'`, vehicleID).Scan(&avgTempC)
+ 
+ 	if avgTempC == nil {
+ 		return tripWeatherImpact{
+=== UNIT_TEST ===
+go test -race ./internal/... PASSED (60 ok lines, 0 FAIL)
+=== GATE ===
+Predecessor 0075 OK (EXIT=0 / STATUS=DONE)
+Banned-token check passed
+Dropped-table check passed
+position_repo SI token check passed
+go build ./... ...
+go build OK
+go test -race ./internal/... ...
+ok  	github.com/ev-dev-labs/teslasync/internal/adapter/gasprices	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/geocoding	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/mqtt	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/postgres	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/postgres/queries	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/redis	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/storage	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/adapter/tesla	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/api	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/chargingsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/exportsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/notificationsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/tripsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/automation	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/action	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/condition	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/automation/presets	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/automation/safety	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/automation/trigger	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/backup	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/cache	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/config	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/crypto	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/database	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/charging	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/export	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/fsm	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/notification	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/trip	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/user	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/vehicle	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/enums	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/events	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/export	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/automation	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/charge	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/command	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/drive	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/notification	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/telemetry	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/geocoding	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/handler/dto	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/handler/middleware	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/handler/v1	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/metrics	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/models	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/mqtt	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/notification	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/buildinfo	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/platform/cache	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/config	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/platform/database	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/httputil	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/platform/telemetry	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/polling	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/port/external	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/port/messaging	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/port/repository	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/resilience	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/service	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/telemetry	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/bootstrap	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/codec	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/config	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/normalize	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/protomodel	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/unit_history	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/units	(cached)
+?   	github.com/ev-dev-labs/teslasync/internal/tracing	[no test files]
+?   	github.com/ev-dev-labs/teslasync/internal/units	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/webpush	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/worker	(cached)
+go test OK
+AllowedRegex: ^(internal/database/(position_repo|maintenance|trip_repo|visited_location_repo)\.go|internal/api/(computed_metrics|trip_planner_handler_compute|search_handler)\.go|internal/polling/predictor\.go|\.github\\prompts\\db-refactor\\logs\\phase-42-0076-consumer-positions-trips\.log)$
+ M .github/prompts/db-refactor/logs/phase-42-0075-consumer-charging.log
+ M internal/api/computed_metrics.go
+ M internal/api/search_handler.go
+ M internal/api/trip_planner_handler_compute.go
+ M internal/database/maintenance.go
+ M internal/database/position_repo.go
+ M internal/database/trip_repo.go
+ M internal/database/visited_location_repo.go
+ M internal/polling/predictor.go
+BAD lines:
+ M .github/prompts/db-refactor/logs/phase-42-0075-consumer-charging.log
+EXIT=1
+STATUS=BLOCKED
+--- RE-RUN ALLOWED-FILES CHECK after restoring 0075 log ---
+ M internal/api/computed_metrics.go
+ M internal/api/search_handler.go
+ M internal/api/trip_planner_handler_compute.go
+ M internal/database/maintenance.go
+ M internal/database/position_repo.go
+ M internal/database/trip_repo.go
+ M internal/database/visited_location_repo.go
+ M internal/polling/predictor.go
+Allowed-files check passed (only 8 allowed source files dirty; log file gitignored)
+EXIT=0
+STATUS=DONE

@@ -384,19 +384,23 @@ func (p *pgSearcher) SearchVehicles(ctx context.Context, q string, idHint int64,
 }
 
 func (p *pgSearcher) SearchDrives(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
+	// Phase-42 (Prompt 0076): SI canonical drives schema (migration 000172).
+	// start_address/end_address → start_place/end_place. start_ts → started_at.
+	// distance_mi → distance_m / 1609.344 (display still in miles).
 	const sql = `
-		SELECT id, vehicle_id, start_ts,
-		       COALESCE(start_address, ''), COALESCE(end_address, ''), distance_mi,
+		SELECT id, vehicle_id, started_at,
+		       COALESCE(start_place, ''), COALESCE(end_place, ''),
+		       COALESCE(distance_m, 0) / 1609.344 AS distance_mi,
 		       (CASE WHEN id = $4 THEN 1.0 ELSE 0.0 END
-		        + CASE WHEN COALESCE(start_address,'') ILIKE $2
-		                 OR COALESCE(end_address,'')   ILIKE $2 THEN 0.5
-		               WHEN COALESCE(start_address,'') ILIKE $1
-		                 OR COALESCE(end_address,'')   ILIKE $1 THEN 0.2 ELSE 0.0 END) AS rank
+		        + CASE WHEN COALESCE(start_place,'') ILIKE $2
+		                 OR COALESCE(end_place,'')   ILIKE $2 THEN 0.5
+		               WHEN COALESCE(start_place,'') ILIKE $1
+		                 OR COALESCE(end_place,'')   ILIKE $1 THEN 0.2 ELSE 0.0 END) AS rank
 		FROM drives
 		WHERE id = $4
-		   OR COALESCE(start_address, '') ILIKE $1
-		   OR COALESCE(end_address, '')   ILIKE $1
-		ORDER BY rank DESC, start_ts DESC
+		   OR COALESCE(start_place, '') ILIKE $1
+		   OR COALESCE(end_place, '')   ILIKE $1
+		ORDER BY rank DESC, started_at DESC
 		LIMIT $3`
 	args := []any{likePattern(q), prefixPattern(q), limit, idHint}
 	now := time.Now().UTC()
@@ -427,14 +431,16 @@ func (p *pgSearcher) SearchDrives(ctx context.Context, q string, idHint int64, l
 }
 
 func (p *pgSearcher) SearchCharging(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
+	// Phase-42 (Prompt 0076): SI canonical charging_sessions schema
+	// (migration 000171). charger_location → start_place. start_ts → started_at.
 	const sql = `
-		SELECT id, vehicle_id, start_ts, COALESCE(charger_location, ''), COALESCE(charger_type, ''),
+		SELECT id, vehicle_id, started_at, COALESCE(start_place, ''), COALESCE(charger_type, ''),
 		       (CASE WHEN id = $4 THEN 1.0 ELSE 0.0 END
-		        + CASE WHEN COALESCE(charger_location,'') ILIKE $2 THEN 0.5
-		               WHEN COALESCE(charger_location,'') ILIKE $1 THEN 0.2 ELSE 0.0 END) AS rank
+		        + CASE WHEN COALESCE(start_place,'') ILIKE $2 THEN 0.5
+		               WHEN COALESCE(start_place,'') ILIKE $1 THEN 0.2 ELSE 0.0 END) AS rank
 		FROM charging_sessions
-		WHERE id = $4 OR COALESCE(charger_location, '') ILIKE $1
-		ORDER BY rank DESC, start_ts DESC
+		WHERE id = $4 OR COALESCE(start_place, '') ILIKE $1
+		ORDER BY rank DESC, started_at DESC
 		LIMIT $3`
 	args := []any{likePattern(q), prefixPattern(q), limit, idHint}
 	now := time.Now().UTC()
@@ -620,15 +626,23 @@ func (p *pgSearcher) SearchAutomations(ctx context.Context, q string, idHint int
 }
 
 func (p *pgSearcher) SearchLocations(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
+	// Phase-42 (Prompt 0076 covenant #11): the visited_locations and addresses
+	// tables are dropped without a recreate. Locations are now derived from
+	// drives by grouping on end_place. Synthetic IDs come from MIN(id) so a
+	// /locations?id=N URL still resolves to a real underlying drive row.
 	const sql = `
-		SELECT vl.id, COALESCE(a.display_name, ''), vl.visit_count, vl.last_visited,
-		       (CASE WHEN vl.id = $4 THEN 1.0 ELSE 0.0 END
-		        + CASE WHEN COALESCE(a.display_name,'') ILIKE $2 THEN 0.5
-		               WHEN COALESCE(a.display_name,'') ILIKE $1 THEN 0.2 ELSE 0.0 END) AS rank
-		FROM visited_locations vl
-		LEFT JOIN addresses a ON a.id = vl.address_id
-		WHERE vl.id = $4 OR COALESCE(a.display_name, '') ILIKE $1
-		ORDER BY rank DESC, vl.visit_count DESC
+		SELECT MIN(id) AS id,
+		       end_place AS display_name,
+		       COUNT(*) AS visit_count,
+		       MAX(ended_at) AS last_visited,
+		       (CASE WHEN MIN(id) = $4 THEN 1.0 ELSE 0.0 END
+		        + CASE WHEN end_place ILIKE $2 THEN 0.5
+		               WHEN end_place ILIKE $1 THEN 0.2 ELSE 0.0 END) AS rank
+		FROM drives
+		WHERE end_place IS NOT NULL AND end_place != ''
+		  AND (id = $4 OR end_place ILIKE $1)
+		GROUP BY end_place
+		ORDER BY rank DESC, visit_count DESC
 		LIMIT $3`
 	args := []any{likePattern(q), prefixPattern(q), limit, idHint}
 	now := time.Now().UTC()
@@ -667,14 +681,16 @@ func (p *pgSearcher) SearchLocations(ctx context.Context, q string, idHint int64
 }
 
 func (p *pgSearcher) SearchTrips(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
+	// Phase-42 (Prompt 0076): trips description column was renamed to notes
+	// (migration 000172). start_ts → started_at.
 	const sql = `
-		SELECT id, name, COALESCE(description, ''), start_ts,
+		SELECT id, name, COALESCE(notes, ''), started_at,
 		       (CASE WHEN id = $4 THEN 1.0 ELSE 0.0 END
 		        + CASE WHEN name ILIKE $2 THEN 0.5
-		               WHEN name ILIKE $1 OR COALESCE(description,'') ILIKE $1 THEN 0.2 ELSE 0.0 END) AS rank
+		               WHEN name ILIKE $1 OR COALESCE(notes,'') ILIKE $1 THEN 0.2 ELSE 0.0 END) AS rank
 		FROM trips
-		WHERE id = $4 OR name ILIKE $1 OR COALESCE(description, '') ILIKE $1
-		ORDER BY rank DESC, start_ts DESC
+		WHERE id = $4 OR name ILIKE $1 OR COALESCE(notes, '') ILIKE $1
+		ORDER BY rank DESC, started_at DESC
 		LIMIT $3`
 	args := []any{likePattern(q), prefixPattern(q), limit, idHint}
 	now := time.Now().UTC()

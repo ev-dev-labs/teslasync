@@ -280,14 +280,30 @@ func PreviousWindowBounds(window string, now time.Time) (start, end time.Time, e
 
 // ─── compute helpers ──────────────────────────────────────────────────────
 
-// chargingCost = SUM(cost) over charging_sessions whose start_ts falls in the
-// window. Sessions that started in-window contribute their final cost (or 0 if
-// still active). Currency unit is whatever the user has configured per session.
+// Phase-42 (Prompt 0076): all aggregates below were rewritten to read from the
+// SI canonical drives + charging_sessions schemas (migrations 000171 / 000172).
+// Conversions to legacy display units (mi, kWh, minutes) happen inside the
+// SQL so the public metric values returned to the alerting subsystem stay
+// numerically identical to the pre-migration registry.
+//
+// Column mapping summary:
+//   drives:            distance_mi       → distance_m / 1609.344
+//                      energy_used_kwh   → energy_used_wh / 1000.0
+//                      duration_min      → duration_s / 60.0
+//                      start_ts          → started_at
+//   charging_sessions: cost              → cost_decimal::float8
+//                      energy_added_kwh  → total_energy_added_wh / 1000.0
+//                      duration_min      → derived from started_at / ended_at
+//                      start_ts          → started_at
+
+// chargingCost = SUM(cost_decimal) over charging_sessions whose started_at
+// falls in the window. Sessions still in progress contribute 0. Currency
+// unit is whatever the user has configured per session.
 func chargingCost(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
 	var sum *float64
 	err := db.Pool.QueryRow(ctx,
-		`SELECT SUM(cost) FROM charging_sessions
-		 WHERE vehicle_id = $1 AND start_ts >= $2 AND start_ts < $3`,
+		`SELECT SUM(cost_decimal::float8) FROM charging_sessions
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
 		vehicleID, start, end).Scan(&sum)
 	if err != nil {
 		return 0, fmt.Errorf("charging_cost: %w", err)
@@ -301,8 +317,8 @@ func chargingCost(ctx context.Context, db *database.DB, vehicleID int64, start, 
 func distanceDriven(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
 	var sum *float64
 	err := db.Pool.QueryRow(ctx,
-		`SELECT SUM(distance_mi) FROM drives
-		 WHERE vehicle_id = $1 AND start_ts >= $2 AND start_ts < $3`,
+		`SELECT SUM(distance_m) / 1609.344 FROM drives
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
 		vehicleID, start, end).Scan(&sum)
 	if err != nil {
 		return 0, fmt.Errorf("distance: %w", err)
@@ -316,8 +332,8 @@ func distanceDriven(ctx context.Context, db *database.DB, vehicleID int64, start
 func energyConsumed(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
 	var sum *float64
 	err := db.Pool.QueryRow(ctx,
-		`SELECT SUM(energy_used_kwh) FROM drives
-		 WHERE vehicle_id = $1 AND start_ts >= $2 AND start_ts < $3`,
+		`SELECT SUM(energy_used_wh) / 1000.0 FROM drives
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
 		vehicleID, start, end).Scan(&sum)
 	if err != nil {
 		return 0, fmt.Errorf("energy_consumed: %w", err)
@@ -331,8 +347,8 @@ func energyConsumed(ctx context.Context, db *database.DB, vehicleID int64, start
 func energyCharged(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
 	var sum *float64
 	err := db.Pool.QueryRow(ctx,
-		`SELECT SUM(energy_added_kwh) FROM charging_sessions
-		 WHERE vehicle_id = $1 AND start_ts >= $2 AND start_ts < $3`,
+		`SELECT SUM(total_energy_added_wh) / 1000.0 FROM charging_sessions
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
 		vehicleID, start, end).Scan(&sum)
 	if err != nil {
 		return 0, fmt.Errorf("energy_charged: %w", err)
@@ -343,36 +359,44 @@ func energyCharged(ctx context.Context, db *database.DB, vehicleID int64, start,
 	return *sum, nil
 }
 
-// avgEfficiency in Wh/mi = sum(energy_used_kwh) * 1000 / sum(distance_mi).
+// avgEfficiency in Wh/mi = sum(energy_used_wh) / sum(distance_m) * 1609.344.
 // Returns 0 when distance is 0 to avoid spurious "0 Wh/mi" alerts.
 func avgEfficiency(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
-	var energyKwh, distMi *float64
+	var energyWh, distM *float64
 	err := db.Pool.QueryRow(ctx,
-		`SELECT SUM(energy_used_kwh), SUM(distance_mi) FROM drives
-		 WHERE vehicle_id = $1 AND start_ts >= $2 AND start_ts < $3`,
-		vehicleID, start, end).Scan(&energyKwh, &distMi)
+		`SELECT SUM(energy_used_wh), SUM(distance_m) FROM drives
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
+		vehicleID, start, end).Scan(&energyWh, &distM)
 	if err != nil {
 		return 0, fmt.Errorf("avg_efficiency: %w", err)
 	}
-	if energyKwh == nil || distMi == nil || *distMi <= 0 {
+	if energyWh == nil || distM == nil || *distM <= 0 {
 		return 0, nil
 	}
-	return (*energyKwh * 1000.0) / *distMi, nil
+	// Wh per meter * meters-per-mile = Wh per mile.
+	return (*energyWh * 1609.344) / *distM, nil
 }
 
 // idleTime in hours = window length - SUM(drive duration) - SUM(charging duration).
 // Approximation; doesn't account for sessions overlapping the window boundary.
+//
+// Drive duration is read directly from drives.duration_s. Charging duration is
+// derived from (ended_at - started_at) because the legacy duration column is
+// dropped in the SI schema; sessions still in progress (ended_at IS NULL)
+// contribute 0 minutes.
 func idleTime(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
 	var driveMin, chargeMin *float64
 	if err := db.Pool.QueryRow(ctx,
-		`SELECT SUM(duration_min) FROM drives
-		 WHERE vehicle_id = $1 AND start_ts >= $2 AND start_ts < $3`,
+		`SELECT SUM(duration_s) / 60.0 FROM drives
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
 		vehicleID, start, end).Scan(&driveMin); err != nil {
 		return 0, fmt.Errorf("idle_time drives: %w", err)
 	}
 	if err := db.Pool.QueryRow(ctx,
-		`SELECT SUM(duration_min) FROM charging_sessions
-		 WHERE vehicle_id = $1 AND start_ts >= $2 AND start_ts < $3`,
+		`SELECT SUM(EXTRACT(EPOCH FROM (ended_at - started_at)) / 60.0)
+		   FROM charging_sessions
+		  WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3
+		    AND ended_at IS NOT NULL`,
 		vehicleID, start, end).Scan(&chargeMin); err != nil {
 		return 0, fmt.Errorf("idle_time charging: %w", err)
 	}
@@ -395,7 +419,7 @@ func driveCount(ctx context.Context, db *database.DB, vehicleID int64, start, en
 	var count int64
 	err := db.Pool.QueryRow(ctx,
 		`SELECT COUNT(*) FROM drives
-		 WHERE vehicle_id = $1 AND start_ts >= $2 AND start_ts < $3`,
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
 		vehicleID, start, end).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("drive_count: %w", err)
@@ -407,7 +431,7 @@ func superchargerSessions(ctx context.Context, db *database.DB, vehicleID int64,
 	var count int64
 	err := db.Pool.QueryRow(ctx,
 		`SELECT COUNT(*) FROM charging_sessions
-		 WHERE vehicle_id = $1 AND start_ts >= $2 AND start_ts < $3
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3
 		   AND charger_type = 'Supercharger'`,
 		vehicleID, start, end).Scan(&count)
 	if err != nil {
@@ -416,20 +440,20 @@ func superchargerSessions(ctx context.Context, db *database.DB, vehicleID int64,
 	return float64(count), nil
 }
 
-// costPerMile = SUM(charging_sessions.cost) / SUM(drives.distance_mi).
+// costPerMile = SUM(charging_sessions.cost_decimal) / SUM(drives.distance_m / 1609.344).
 // Uses driven miles (not range gained) as the denominator so the metric reflects
 // real-world consumption. Returns 0 when no driving distance was recorded.
 func costPerMile(ctx context.Context, db *database.DB, vehicleID int64, start, end time.Time) (float64, error) {
 	var cost, dist *float64
 	if err := db.Pool.QueryRow(ctx,
-		`SELECT SUM(cost) FROM charging_sessions
-		 WHERE vehicle_id = $1 AND start_ts >= $2 AND start_ts < $3`,
+		`SELECT SUM(cost_decimal::float8) FROM charging_sessions
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
 		vehicleID, start, end).Scan(&cost); err != nil {
 		return 0, fmt.Errorf("cost_per_mile cost: %w", err)
 	}
 	if err := db.Pool.QueryRow(ctx,
-		`SELECT SUM(distance_mi) FROM drives
-		 WHERE vehicle_id = $1 AND start_ts >= $2 AND start_ts < $3`,
+		`SELECT SUM(distance_m) / 1609.344 FROM drives
+		 WHERE vehicle_id = $1 AND started_at >= $2 AND started_at < $3`,
 		vehicleID, start, end).Scan(&dist); err != nil {
 		return 0, fmt.Errorf("cost_per_mile distance: %w", err)
 	}
