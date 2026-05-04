@@ -1,0 +1,33 @@
+=== PREFLIGHT ===
+ M .github/prompts/db-refactor/logs/phase-42-0000-decision-record-fleet-telemetry-rewrite.log
+---
+predecessor 0065:
+EXIT=0
+STATUS=DONE
+=== ADAPTER_DESIGN ===
+SignalAdapter centralizes typed signal.Store -> FSM-friendly primitive translation in one file.
+Methods: NewSignalAdapter, Last, Gear, Speed, IsCharging, IsDriving, Locked, SoC, Position.
+Gear/charge state go through fmt.Stringer (codec emits ftproto.* enums) and short-suffix normalization.
+Numerics delegate to Store.GetFloat/GetBool which already enforce ValueKind.
+All non-happy paths log at debug only and return zero/false to keep guards branch-free.
+=== UNIT_TEST ===
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/automation	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/charge	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/command	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/drive	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/notification	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/telemetry	(cached)
+=== GATE ===
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/automation	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/charge	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/command	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/drive	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/notification	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/fsm/telemetry	(cached)
+=== GIT_STATUS ===
+?? internal/fsm/signal_adapter.go
+?? internal/fsm/signal_adapter_test.go
+EXIT=0
+STATUS=DONE
