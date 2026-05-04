@@ -54,6 +54,13 @@ export interface UrlStateSetOptions {
   push?: boolean;
 }
 
+/**
+ * Setter for a single URL-mirrored value. Safe in isolation, but DO NOT
+ * call ≥ 2 of these setters in the same synchronous handler — under
+ * react-router-dom v6 the second `navigate(replace)` will discard the
+ * first because both callbacks read the SAME `searchParamsRef` snapshot.
+ * Use {@link useUrlBatch} for multi-key updates.
+ */
 export type UrlStateSetter<T> = (
   value: T | ((prev: T) => T),
   options?: UrlStateSetOptions,
@@ -214,4 +221,71 @@ export function useUrlArray(
     parse: (raw) => (raw === '' ? [] : raw.split(delimiter)),
     serialize: (v) => v.join(delimiter),
   });
+}
+
+/* ------------------------------------------------------------------ */
+/*  Atomic multi-key updates                                           */
+/* ------------------------------------------------------------------ */
+
+export type UrlBatchUpdate = Record<string, string | null | undefined>;
+
+export interface UrlBatchSetOptions {
+  /** Use `pushState` (adds a history entry). Defaults to `replaceState`. */
+  push?: boolean;
+}
+
+/**
+ * useUrlBatch — atomically write multiple URL params in a single
+ * `setSearchParams` call.
+ *
+ * Why: react-router-dom v6's `useSearchParams` setter reads from a ref
+ * that is only refreshed on the NEXT render. Two synchronous setter
+ * calls within the same tick both see the SAME `prev` snapshot, and the
+ * second `navigate(..., { replace: true })` discards the first.
+ *
+ * ```ts
+ * // ❌ Race — only `to` survives:
+ * setFromStr('2025-01-15');
+ * setToStr('2025-01-22');
+ *
+ * // ✅ Atomic — both keys land in one navigation:
+ * setBatch({ from: '2025-01-15', to: '2025-01-22' });
+ * ```
+ *
+ * Deletion semantics:
+ *   - value = `null` or `undefined` → delete the key
+ *   - value = `''` (empty string) → delete the key (matches existing
+ *     `useUrlString` semantics where empty == default)
+ *   - value = non-empty string → set the key
+ *
+ * The single-key `useUrlString / useUrlBoolean / useUrlNumber / useUrlEnum
+ * / useUrlArray` setters are still safe in isolation — they're only
+ * unsafe when MULTIPLE setters fire in the same synchronous handler.
+ * Use this hook whenever you change ≥ 2 URL keys from one user action.
+ */
+export function useUrlBatch(): (
+  updates: UrlBatchUpdate,
+  options?: UrlBatchSetOptions,
+) => void {
+  const [, setParams] = useSearchParams();
+
+  return useCallback(
+    (updates, options) => {
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          for (const [key, value] of Object.entries(updates)) {
+            if (value == null || value === '') {
+              next.delete(key);
+            } else {
+              next.set(key, value);
+            }
+          }
+          return next;
+        },
+        { replace: !options?.push },
+      );
+    },
+    [setParams],
+  );
 }

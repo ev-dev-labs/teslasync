@@ -145,6 +145,32 @@ export const TIME_RANGE_PRESETS = [
   { label: '30d', hours: 720 },
 ] as const
 
+/**
+ * Match a (from, to) datetime-local string pair to a TIME_RANGE_PRESETS
+ * entry. Returns the matched preset's `hours` value, or `null` if the
+ * range doesn't match any preset within the tolerance.
+ *
+ * Tolerance is ±60 seconds because the user's click and our `Date.now()`
+ * read are not simultaneous; the resulting (now - hours) anchor drifts
+ * a few hundred ms from the chip's nominal range.
+ */
+export function matchTimeRangePreset(
+  fromStr: string,
+  toStr: string,
+  toleranceMs: number = 60_000,
+): number | null {
+  if (!fromStr || !toStr) return null
+  const fromMs = new Date(fromStr).getTime()
+  const toMs = new Date(toStr).getTime()
+  if (!Number.isFinite(fromMs) || !Number.isFinite(toMs)) return null
+  const spanMs = toMs - fromMs
+  for (const p of TIME_RANGE_PRESETS) {
+    const presetMs = p.hours * 3600_000
+    if (Math.abs(spanMs - presetMs) <= toleranceMs) return p.hours
+  }
+  return null
+}
+
 /** Days-back options for analytics filters */
 export const DAYS_OPTIONS: { value: string; label: string }[] = [
   { value: '7', label: '7 days' },

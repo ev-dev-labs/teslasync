@@ -29,7 +29,7 @@ import { useToast } from '@/components/feedback/Toast';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
-import { useUrlEnum, useUrlString, useUrlArray } from '@/hooks/useUrlState';
+import { useUrlEnum, useUrlString, useUrlArray, useUrlBatch } from '@/hooks/useUrlState';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import {
   useAlertRules,
@@ -124,13 +124,14 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   // ── URL-backed filter state (Phase 40 / Prompt 33) ─────────────────────
   // Severity, vehicle, search, and read-state live in the URL so a filtered
   // view can be shared / reloaded / linked from outside.
-  const [severityRaw, setSeverityRaw] = useUrlArray('severity');
-  const [vehicleIdsRaw, setVehicleIdsRaw] = useUrlArray('vehicle_id');
-  const [ruleIdsRaw, setRuleIdsRaw] = useUrlArray('rule_id');
-  const [search, setSearch] = useUrlString('q', '');
-  const [readState, setReadState] = useUrlEnum<ReadValue>('read', READ_VALUES, 'all');
-  const [from, setFrom] = useUrlString('from', '');
-  const [to, setTo] = useUrlString('to', '');
+  const [severityRaw] = useUrlArray('severity');
+  const [vehicleIdsRaw] = useUrlArray('vehicle_id');
+  const [ruleIdsRaw] = useUrlArray('rule_id');
+  const [search] = useUrlString('q', '');
+  const [readState] = useUrlEnum<ReadValue>('read', READ_VALUES, 'all');
+  const [from] = useUrlString('from', '');
+  const [to] = useUrlString('to', '');
+  const setFiltersBatch = useUrlBatch();
 
   // Sanitize unknown severity values so a hand-edited URL can't corrupt the
   // request payload.
@@ -162,16 +163,22 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
 
   const handleFiltersChange = useCallback((next: NotificationFilters) => {
     // Bridge the existing controlled-component contract back into the
-    // discrete URL params so the FilterBar UI stays untouched.
-    setSeverityRaw(next.severity ?? []);
-    setVehicleIdsRaw((next.vehicle_id ?? []).map(String));
-    setRuleIdsRaw((next.rule_id ?? []).map(String));
-    setSearch(next.q ?? '');
-    setFrom(next.from ?? '');
-    setTo(next.to ?? '');
-    if (next.read === undefined) setReadState('all');
-    else setReadState(next.read ? 'read' : 'unread');
-  }, [setSeverityRaw, setVehicleIdsRaw, setRuleIdsRaw, setSearch, setFrom, setTo, setReadState]);
+    // discrete URL params so the FilterBar UI stays untouched. All seven
+    // keys are written atomically via useUrlBatch — without this, the
+    // react-router-dom v6 setSearchParams race would discard 6 of 7
+    // updates whenever a saved view applied multi-key filters.
+    const readValue =
+      next.read === undefined ? null : next.read ? 'read' : 'unread';
+    setFiltersBatch({
+      severity: (next.severity ?? []).join(',') || null,
+      vehicle_id: (next.vehicle_id ?? []).map(String).join(',') || null,
+      rule_id: (next.rule_id ?? []).map(String).join(',') || null,
+      q: next.q ?? null,
+      from: next.from ?? null,
+      to: next.to ?? null,
+      read: readValue,
+    });
+  }, [setFiltersBatch]);
 
   const { data: rawRows, isLoading, error, refetch } = useNotificationLogs(filters);
   const rows = useMemo<NotificationLog[]>(() => rawRows ?? [], [rawRows]);

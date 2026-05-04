@@ -26,7 +26,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
-import { useUrlString } from '@/hooks/useUrlState';
+import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
@@ -90,6 +90,7 @@ export default function StatisticsPage() {
   const defaultEnd = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [startDate, setStartDate] = useUrlString('from', defaultStart);
   const [endDate, setEndDate] = useUrlString('to', defaultEnd);
+  const setRangeBatch = useUrlBatch();
 
   const { data: vehicles } = useVehicles();
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
@@ -149,7 +150,7 @@ export default function StatisticsPage() {
           {vehicleOptions.length > 1 && (
             <Select value={activeId} onChange={(e) => setVehicleId(e.target.value)} options={vehicleOptions} />
           )}
-          <DateRangeFilter startDate={startDate} endDate={endDate} onStartDateChange={setStartDate} onEndDateChange={setEndDate} />
+          <DateRangeFilter startDate={startDate} endDate={endDate} onStartDateChange={setStartDate} onEndDateChange={setEndDate} onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })} />
           <Button size="sm" onClick={() => { void refetch(); }}>
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>

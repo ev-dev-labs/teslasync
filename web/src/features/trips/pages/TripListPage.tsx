@@ -13,7 +13,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
-import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
+import { useUrlBatch, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
@@ -47,6 +47,7 @@ export default function TripListPage() {
   const defaultEnd = useMemo(() => new Date().toISOString().split('T')[0], []);
   const [startDate, setStartDate] = useUrlString('from', defaultStart);
   const [endDate, setEndDate] = useUrlString('to', defaultEnd);
+  const setRangeBatch = useUrlBatch();
 
   const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings();
 
@@ -151,6 +152,7 @@ export default function TripListPage() {
           endDate={endDate}
           onStartDateChange={setStartDate}
           onEndDateChange={setEndDate}
+          onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
           onApply={() => setPage(1)}
         />
       </FadeIn>

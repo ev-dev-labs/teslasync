@@ -7,7 +7,7 @@ import { DateRangeFilter } from '@/components/forms';
 import { SavedViewMenu } from '@/components/data-display';
 import { DataFreshnessAuto } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
-import { useUrlBoolean, useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
+import { useUrlBatch, useUrlBoolean, useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useChargingSessionsPaginated, useChargingOptimizer, useBulkDeleteCharging } from '@/api/hooks/useCharging';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -67,6 +67,7 @@ export default function ChargingListPage() {
   const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
   const [startDate, setStartDate] = useUrlString('from', defaultStartDate);
   const [endDate, setEndDate] = useUrlString('to', defaultEndDate);
+  const setRangeBatch = useUrlBatch();
 
   const chargingQuery = useChargingSessionsPaginated(vehicleId, {
     limit: pageSize,
@@ -158,6 +159,7 @@ export default function ChargingListPage() {
             endDate={endDate}
             onStartDateChange={setStartDate}
             onEndDateChange={setEndDate}
+            onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
             onApply={() => setPage(1)}
           />
         </div>

@@ -31,7 +31,7 @@ import { DateRangeFilter } from '@/components/forms/DateRangeFilter';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { FilterBar } from '@/components/forms/FilterBar';
 import { useFilteredList } from '@/hooks/useFilteredList';
-import { useUrlEnum, useUrlString, useUrlNumber } from '@/hooks/useUrlState';
+import { useUrlBatch, useUrlEnum, useUrlString, useUrlNumber } from '@/hooks/useUrlState';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
@@ -233,6 +233,7 @@ export default function DrivesListPage() {
   const defaultEnd = useMemo(() => new Date().toISOString().split('T')[0], []);
   const [startDate, setStartDate] = useUrlString('from', defaultStart);
   const [endDate, setEndDate] = useUrlString('to', defaultEnd);
+  const setRangeBatch = useUrlBatch();
 
   /* ---- Client-side date filter ---- */
   const dateFilteredDrives = useMemo(() => {
@@ -406,6 +407,7 @@ export default function DrivesListPage() {
             endDate={endDate}
             onStartDateChange={setStartDate}
             onEndDateChange={setEndDate}
+            onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
             onApply={() => setPage(1)}
           />
         </FilterBar>

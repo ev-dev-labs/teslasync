@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, TrendingUp, Thermometer, Fuel, Gauge } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -24,6 +24,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
+import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { Drive } from '@/types/driving';
@@ -67,11 +68,14 @@ export default function EfficiencyPage() {
     distanceUnit, speedUnit, tempUnit, efficiencyUnit, isFahrenheit,
   } = useSettings();
 
-  const [startDate, setStartDate] = useState(() => {
+  const defaultStartDate = useMemo(() => {
     const d = new Date(); d.setDate(d.getDate() - 30);
     return d.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  }, []);
+  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [startDate, setStartDate] = useUrlString('from', defaultStartDate);
+  const [endDate, setEndDate] = useUrlString('to', defaultEndDate);
+  const setRangeBatch = useUrlBatch();
 
   /* ---- Filtered drives ---- */
   const filteredDrives = useMemo(() => {
@@ -214,6 +218,7 @@ export default function EfficiencyPage() {
         <DateRangeFilter
           startDate={startDate} endDate={endDate}
           onStartDateChange={setStartDate} onEndDateChange={setEndDate}
+          onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
         />
       </FadeIn>
 

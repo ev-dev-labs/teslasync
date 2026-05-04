@@ -6962,7 +6962,10 @@
     "to": "To",
     "quickRange": "Quick Range",
     "query": "Query",
-    "rows": "Rows"
+    "rows": "Rows",
+    "preset": {
+      "aria": "{{label}} time range"
+    }
   },
   "vehicleHero": {
     "gauge": {

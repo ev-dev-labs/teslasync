@@ -23,7 +23,7 @@ import { DateRangeFilter } from '@/components/forms/DateRangeFilter';
 import { RecentActivityFeed } from '@/components/data-display/RecentActivityFeed';
 import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useUrlString } from '@/hooks/useUrlState';
+import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
 import { ApiError } from '@/lib/resilience';
 import { useMyRecentActivity } from '@/api/hooks/useUser';
 
@@ -51,6 +51,7 @@ export default function MyActivityPage() {
 
   const [start, setStart] = useUrlString('start', defaults.start);
   const [end, setEnd] = useUrlString('end', defaults.end);
+  const setRangeBatch = useUrlBatch();
 
   const { data, isLoading, error, refetch } = useMyRecentActivity({
     start,
@@ -80,6 +81,7 @@ export default function MyActivityPage() {
               endDate={end}
               onStartDateChange={(value) => setStart(value)}
               onEndDateChange={(value) => setEnd(value)}
+              onRangeChange={(r) => setRangeBatch({ start: r.start, end: r.end })}
             />
           </div>
 

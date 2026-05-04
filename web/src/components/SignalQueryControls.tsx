@@ -8,7 +8,8 @@ import { useTranslation } from 'react-i18next'
 import { request } from '@/api/client'
 import { GlassPanel, Badge, Button, Input, DataTable, type Column } from './ui'
 import { fmtInt } from '../lib/numberFormat'
-import { TIME_RANGE_PRESETS } from '../lib/constants'
+import { TIME_RANGE_PRESETS, matchTimeRangePreset } from '../lib/constants'
+import { cn } from '../lib/cn'
 import { Search, X, Play, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 
 
@@ -184,6 +185,7 @@ interface DateTimeRangeProps {
 
 export function DateTimeRangeControls({ fromStr, toStr, onFromChange, onToChange, onPreset }: DateTimeRangeProps) {
   const { t } = useTranslation()
+  const activePresetHours = matchTimeRangePreset(fromStr, toStr)
   const inputClass = "w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-mono text-[var(--text-primary)] outline-none focus:border-neon-cyan/40"
 
   return (
@@ -199,15 +201,25 @@ export function DateTimeRangeControls({ fromStr, toStr, onFromChange, onToChange
       <div className="space-y-1.5">
         <label className="metric-label">{t('signalQuery.quickRange', 'Quick Range')}</label>
         <div className="flex items-center gap-1">
-          {TIME_RANGE_PRESETS.map(tp => (
-            <button
-              key={tp.label}
-              onClick={() => onPreset(tp.hours)}
-              className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-neon-cyan/30 transition-colors"
-            >
-              {tp.label}
-            </button>
-          ))}
+          {TIME_RANGE_PRESETS.map(tp => {
+            const active = activePresetHours === tp.hours
+            return (
+              <button
+                key={tp.label}
+                onClick={() => onPreset(tp.hours)}
+                aria-pressed={active}
+                aria-label={t('signalQuery.preset.aria', '{{label}} time range', { label: tp.label })}
+                className={cn(
+                  "rounded-lg border px-3 py-2 text-xs transition-colors",
+                  active
+                    ? "border-neon-cyan/40 bg-neon-cyan/10 text-[var(--text-primary)]"
+                    : "border-white/[0.08] bg-white/[0.03] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-neon-cyan/30",
+                )}
+              >
+                {tp.label}
+              </button>
+            )
+          })}
         </div>
       </div>
     </div>

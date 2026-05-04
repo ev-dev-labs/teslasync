@@ -24,6 +24,7 @@ import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
+import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
@@ -138,12 +139,15 @@ export default function EnergyPage() {
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
 
   /* ── Date range ───────────────────────────────────────────────── */
-  const [startDate, setStartDate] = useState(() => {
+  const defaultStartDate = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
     return d.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  }, []);
+  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [startDate, setStartDate] = useUrlString('from', defaultStartDate);
+  const [endDate, setEndDate] = useUrlString('to', defaultEndDate);
+  const setRangeBatch = useUrlBatch();
 
   /* ── Data fetching ────────────────────────────────────────────── */
   const {
@@ -314,6 +318,7 @@ export default function EnergyPage() {
             endDate={endDate}
             onStartDateChange={setStartDate}
             onEndDateChange={setEndDate}
+            onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
           />
           <SavedViewMenu
             route="/energy"

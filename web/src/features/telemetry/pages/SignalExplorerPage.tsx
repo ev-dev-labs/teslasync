@@ -30,12 +30,12 @@ import {
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
-import { useUrlArray, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
+import { useUrlArray, useUrlBatch, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { CHART_COLORS } from '@/lib/colors';
 import { toLocalDatetimeStr } from '@/lib/dateFormat';
-import { TIME_RANGE_PRESETS } from '@/lib/constants';
+import { TIME_RANGE_PRESETS, matchTimeRangePreset } from '@/lib/constants';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { Activity, BarChart3, Search, Clock, AlertCircle, Radio } from 'lucide-react';
@@ -74,6 +74,7 @@ export default function SignalExplorerPage() {
   const defaultTo = useMemo(() => toLocalDatetimeStr(new Date()), []);
   const [fromStr, setFromStr] = useUrlString('from', defaultFrom);
   const [toStr, setToStr] = useUrlString('to', defaultTo);
+  const setRangeBatch = useUrlBatch();
 
   // Explore trigger key
   const [exploreKey, setExploreKey] = useState<number | null>(null);
@@ -161,9 +162,13 @@ export default function SignalExplorerPage() {
 
   const applyPreset = useCallback((hours: number) => {
     const end = new Date();
-    setFromStr(toLocalDatetimeStr(new Date(end.getTime() - hours * 3600_000)));
-    setToStr(toLocalDatetimeStr(end));
-  }, []);
+    setRangeBatch({
+      from: toLocalDatetimeStr(new Date(end.getTime() - hours * 3600_000)),
+      to: toLocalDatetimeStr(end),
+    });
+  }, [setRangeBatch]);
+
+  const activePresetHours = matchTimeRangePreset(fromStr, toStr);
 
   const canExplore = selectedSignals.length > 0 && fromStr && toStr;
 
@@ -351,7 +356,14 @@ export default function SignalExplorerPage() {
           </span>
           <div className="flex flex-wrap gap-2 mb-2">
             {TIME_RANGE_PRESETS.map(p => (
-              <Button key={p.label} size="sm" variant="ghost" onClick={() => applyPreset(p.hours)}>
+              <Button
+                key={p.label}
+                size="sm"
+                variant={activePresetHours === p.hours ? 'primary' : 'ghost'}
+                aria-pressed={activePresetHours === p.hours}
+                aria-label={t('signalQuery.preset.aria', '{{label}} time range', { label: p.label })}
+                onClick={() => applyPreset(p.hours)}
+              >
                 {p.label}
               </Button>
             ))}
