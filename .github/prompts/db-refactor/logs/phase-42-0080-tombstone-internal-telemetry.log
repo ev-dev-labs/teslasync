@@ -68,3 +68,30 @@ internal/api/telemetry_handler_ingest.go:15:	"github.com/ev-dev-labs/teslasync/i
 internal/api/telemetry_handler_integration_test.go:20:	"github.com/ev-dev-labs/teslasync/internal/telemetry"
 EXIT=1
 STATUS=BLOCKED
+
+
+=== FIXER_NOTE ===
+attempt: 1
+fixer-action: ADD_PRECURSOR
+root-cause: |
+  The 0080 caller scan found two surviving importers of internal/telemetry
+  (internal/api/telemetry_handler_ingest.go and
+  internal/api/telemetry_handler_integration_test.go). Phase-42 prompts
+  0060-0072 migrated the FSM, signal store, redis cache, MQTT consumer,
+  SSE channel and frontend envelope, but never migrated the HTTP/MQTT
+  ingest handler off the legacy CanonicalizeMap / NamedValue / Atomic /
+  Flatten / NormalizeFleetUnits / LookupHot / FromMap / WriteIntoMap
+  surface. Per ADR-004 #6 (forward-only, no shims) and the architecture
+  rule that all new ingest paths route through (*normalize.Pipeline).Process,
+  these consumers must be rewritten before internal/telemetry/ can be
+  deleted.
+remediation: |
+  Spawning precursor 0079a (consumer-api-telemetry-handler-ingest) to
+  migrate the two surviving consumers off internal/telemetry, then 0080
+  can re-run and the caller scan will pass cleanly.
+prompt-edits:
+  - file: .github/prompts/db-refactor/phase-42/0080-tombstone-internal-telemetry.prompt.md
+    change: added phase-42-0079a-consumer-api-telemetry-handler-ingest.log to Depends-on metadata
+no-source-edits: true
+no-gate-script-edits: true
+no-covenant-edits: true
