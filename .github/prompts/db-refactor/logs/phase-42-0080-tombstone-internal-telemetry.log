@@ -1,0 +1,70 @@
+=== PREFLIGHT ===
+HEAD=ebc4cc85
+Predecessor 0078:
+EXIT=0
+STATUS=DONE
+Predecessor 0071:
+EXIT=0
+STATUS=DONE
+Files in internal/telemetry/ before delete:
+internal\telemetry\flatten_doors_test.go
+internal\telemetry\flatten_e2e_test.go
+internal\telemetry\flatten_location_test.go
+internal\telemetry\flatten_time_test.go
+internal\telemetry\flatten.go
+internal\telemetry\hot_catalog_coverage_test.go
+internal\telemetry\hot_catalog_positions.go
+internal\telemetry\hot_catalog_security.go
+internal\telemetry\hot_catalog_test.go
+internal\telemetry\hot_catalog.go
+internal\telemetry\normalize_test.go
+internal\telemetry\normalize.go
+internal\telemetry\signal_alias.go
+internal\telemetry\transformers_stub.go
+internal\telemetry\testdata\sample_batch.json
+=== CALLERS_BEFORE_DELETE ===
+internal/api/telemetry_handler_ingest.go:15:	"github.com/ev-dev-labs/teslasync/internal/telemetry"
+internal/api/telemetry_handler_integration_test.go:20:	"github.com/ev-dev-labs/teslasync/internal/telemetry"
+
+FAIL: callers still import internal/telemetry; consumer-migration prompt is missing.
+Per Action Step 2, refusing to delete.
+Detailed callsite usage:
+internal/api/telemetry_handler_ingest.go:95:	telemetry.CanonicalizeMap(signals)
+internal/api/telemetry_handler_ingest.go:168:		named := make([]telemetry.NamedValue, 0, len(signals))
+internal/api/telemetry_handler_ingest.go:170:			named = append(named, telemetry.NamedValue{Name: k, Value: v})
+internal/api/telemetry_handler_ingest.go:172:		atomics := make([]telemetry.Atomic, 0, len(named)*2)
+internal/api/telemetry_handler_ingest.go:174:			flat, ferr := telemetry.Flatten(nv.Name, nv.Value)
+internal/api/telemetry_handler_ingest.go:375:	// batch via telemetry.NormalizeFleetUnits, then merge into a map
+internal/api/telemetry_handler_ingest.go:379:	ordered := make([]telemetry.NamedValue, 0, len(payload.Signals))
+internal/api/telemetry_handler_ingest.go:381:		ordered = append(ordered, telemetry.NamedValue{Name: sig.Name, Value: sig.Value})
+internal/api/telemetry_handler_ingest.go:383:	ordered = telemetry.NormalizeFleetUnits(ordered)
+internal/api/telemetry_handler_ingest.go:490:// ordered batch of telemetry.NamedValue (decoded in Tesla emission order)
+internal/api/telemetry_handler_ingest.go:496:func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded []telemetry.NamedValue) error {
+internal/api/telemetry_handler_ingest.go:509:	normalized := telemetry.NormalizeFleetUnits(decoded)
+internal/api/telemetry_handler_ingest.go:511:	atomics := make([]telemetry.Atomic, 0, len(normalized)*2)
+internal/api/telemetry_handler_ingest.go:514:		flat, err := telemetry.Flatten(nv.Name, nv.Value)
+internal/api/telemetry_handler_ingest.go:731:func (h *TelemetryHandler) buildHotRow(table string, atomics []telemetry.Atomic, demoteCold *[]telemetry.Atomic) map[string]any {
+internal/api/telemetry_handler_ingest.go:734:		hot := telemetry.LookupHot(a.Name)
+internal/api/telemetry_handler_ingest.go:762:	HotByTable map[string][]telemetry.Atomic
+internal/api/telemetry_handler_ingest.go:763:	Cold       []telemetry.Atomic
+internal/api/telemetry_handler_ingest.go:767:// bucketAtomics walks atomics and routes each one via telemetry.LookupHot.
+internal/api/telemetry_handler_ingest.go:771:func bucketAtomics(atomics []telemetry.Atomic) bucketResult {
+internal/api/telemetry_handler_ingest.go:773:		HotByTable: map[string][]telemetry.Atomic{},
+internal/api/telemetry_handler_ingest.go:774:		Cold:       make([]telemetry.Atomic, 0),
+internal/api/telemetry_handler_ingest.go:779:		hot := telemetry.LookupHot(a.Name)
+internal/api/telemetry_handler_ingest.go:789:// normalizeFleetSignals adapts the slice-based telemetry.NormalizeFleetUnits
+internal/api/telemetry_handler_ingest.go:795:// telemetry.NormalizeFleetUnits directly with an ordered batch decoded
+internal/api/telemetry_handler_ingest.go:798:	nvs := telemetry.FromMap(signals)
+internal/api/telemetry_handler_ingest.go:799:	nvs = telemetry.NormalizeFleetUnits(nvs)
+internal/api/telemetry_handler_ingest.go:800:	telemetry.WriteIntoMap(nvs, signals)
+internal/api/telemetry_handler_integration_test.go:153:func (b fixtureBatch) NamedValues() []telemetry.NamedValue {
+internal/api/telemetry_handler_integration_test.go:154:	out := make([]telemetry.NamedValue, 0, len(b.Signals))
+internal/api/telemetry_handler_integration_test.go:156:		out = append(out, telemetry.NamedValue{Name: s.Name, Value: s.Value})
+=== DELETED_FILES ===
+(none — delete was not performed because callers remain)
+=== GATE ===
+Refusing to delete: callers still import internal/telemetry
+internal/api/telemetry_handler_ingest.go:15:	"github.com/ev-dev-labs/teslasync/internal/telemetry"
+internal/api/telemetry_handler_integration_test.go:20:	"github.com/ev-dev-labs/teslasync/internal/telemetry"
+EXIT=1
+STATUS=BLOCKED
