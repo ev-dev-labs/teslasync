@@ -17,6 +17,7 @@ import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { getAPICallLogs, getAPICallLogStats } from '@/api/devtools';
 import type { APICallLog, APICallLogStats } from '@/api/types';
+import { deriveServiceOptions } from '../lib/serviceOptions';
 
 /* ------------------------------------------------------------------ */
 /*  Local helpers                                                      */
@@ -33,13 +34,14 @@ const METHOD_VARIANTS: Record<string, LogBadgeVariant> = {
 };
 
 const SERVICE_CONFIG: Record<string, { label: string; variant: LogBadgeVariant }> = {
-  'teslasync-api':   { label: 'TeslaSync API',   variant: 'info' },
-  'tesla-api':       { label: 'Tesla API',       variant: 'info' },
-  'fleet-telemetry': { label: 'Fleet Telemetry', variant: 'success' },
-  'geocoding':       { label: 'Geocoding',       variant: 'warning' },
-  'webhook':         { label: 'Webhook',         variant: 'neutral' },
-  'ntfy':            { label: 'Ntfy',            variant: 'neutral' },
-  'eia':             { label: 'EIA',             variant: 'neutral' },
+  'teslasync-api':    { label: 'TeslaSync API',    variant: 'info'    },
+  'tesla-api':        { label: 'Tesla API',        variant: 'info'    },
+  'tesla-auth':       { label: 'Tesla Auth',       variant: 'info'    },
+  'geocoder-google':  { label: 'Geocoder (Google)', variant: 'warning' },
+  'github-releases':  { label: 'GitHub Releases',  variant: 'neutral' },
+  'notify-generic':   { label: 'Notifications',    variant: 'neutral' },
+  'system-dns-check': { label: 'DNS Health Check', variant: 'neutral' },
+  'eia':              { label: 'EIA',              variant: 'neutral' },
 };
 
 function statusBadgeVariant(code: number | null): LogBadgeVariant {
@@ -144,6 +146,17 @@ export default function ApiLogsPage() {
     setMethod(''); setStatus(''); setEndpoint(''); setService(''); setStartDate(''); setEndDate(''); setPage(0);
   }, []);
 
+  const serviceOptions = useMemo(
+    () =>
+      deriveServiceOptions({
+        byService: stats?.by_service,
+        activeService: service,
+        labelFor: (svc) => serviceBadgeConfig(svc).label,
+        allLabel: t('apiLogs.allServices', 'All Services'),
+      }),
+    [stats?.by_service, service, t],
+  );
+
   const handleExport = useCallback(() => {
     const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -229,20 +242,21 @@ export default function ApiLogsPage() {
             )}
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
-            <UiSelect
-              value={service}
-              onChange={(e) => { setService(e.target.value); setPage(0); }}
-              options={[
-                { value: '', label: t('apiLogs.allServices', 'All Services') },
-                { value: 'teslasync-api', label: 'TeslaSync API' },
-                { value: 'tesla-api', label: 'Tesla API' },
-                { value: 'fleet-telemetry', label: 'Fleet Telemetry' },
-                { value: 'geocoding', label: 'Geocoding' },
-                { value: 'webhook', label: 'Webhook' },
-                { value: 'ntfy', label: 'Ntfy' },
-                { value: 'eia', label: 'EIA' },
-              ]}
-            />
+            <div>
+              <UiSelect
+                value={service}
+                onChange={(e) => { setService(e.target.value); setPage(0); }}
+                options={serviceOptions}
+                aria-label={t('apiLogs.serviceFilterAria', 'Filter by service')}
+              />
+              {stats?.by_service && (
+                <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                  {t('apiLogs.serviceCount', '{{count}} services tracked', {
+                    count: Object.keys(stats.by_service).length,
+                  })}
+                </p>
+              )}
+            </div>
             <UiSelect
               value={method}
               onChange={(e) => { setMethod(e.target.value); setPage(0); }}

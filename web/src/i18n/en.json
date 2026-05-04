@@ -1989,6 +1989,8 @@
     "filters": "Filters",
     "clear": "Clear",
     "allServices": "All Services",
+    "serviceFilterAria": "Filter by service",
+    "serviceCount": "{{count}} services tracked",
     "allMethods": "All Methods",
     "allStatus": "All Status",
     "filterEndpoint": "Filter by endpoint...",
