@@ -47,7 +47,7 @@ export function OverviewTab({ data }: { data: FleetAnalytics | undefined }) {
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <EmptyState message={t('analytics.overview.noVehicles', 'No vehicle data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.overview.noVehicles', 'No vehicle data')} />
         )}
       </GlassPanel>
 
@@ -70,7 +70,7 @@ export function OverviewTab({ data }: { data: FleetAnalytics | undefined }) {
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <EmptyState message={t('analytics.overview.noDow', 'No day-of-week data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.overview.noDow', 'No day-of-week data')} />
         )}
       </GlassPanel>
 
@@ -92,7 +92,7 @@ export function OverviewTab({ data }: { data: FleetAnalytics | undefined }) {
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <EmptyState message={t('analytics.overview.noMonthly', 'No monthly data')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.overview.noMonthly', 'No monthly data')} />
         )}
       </GlassPanel>
 

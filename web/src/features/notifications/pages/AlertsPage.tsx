@@ -28,6 +28,7 @@ import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
 import { SeverityBadge } from '@/components/data-display/SeverityBadge';
 import { StatusDot } from '@/components/data-display/StatusDot';
 import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
+import { DataFreshnessAuto } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { fmtInt } from '@/lib/numberFormat';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -131,7 +132,7 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
   return (
     <GlassPanel
       className={cn(
-        'p-4 flex items-start gap-4 transition-all duration-200 group',
+        'p-4 flex items-start gap-4 transition-all duration-normal group',
         !alert.is_read && cn(tokens.border, tokens.bg.replace('/10', '/5')),
       )}
     >
@@ -268,7 +269,7 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
             </div>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Icons.efficiency className="h-8 w-8 opacity-20" />}
             message={t('common.noData')}
             className="py-8"
@@ -308,7 +309,7 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
               />
             </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Icons.send className="h-8 w-8" />}
             title={t('No notification logs')}
             message={
@@ -473,7 +474,8 @@ export default function AlertsPage() {
   const alertsPerPage = 20;
 
   // Queries
-  const { data: alerts, isLoading, error } = useAlerts();
+  const alertsQuery = useAlerts();
+  const { data: alerts, isLoading, error } = alertsQuery;
   const { data: rules } = useAlertRules();
   const markReadMut = useMarkAlertRead();
   const { data: rulePins = [] } = usePinned('alert_rule');
@@ -571,6 +573,7 @@ export default function AlertsPage() {
       copyLink
       actions={
         <div className="flex items-center gap-3">
+          <DataFreshnessAuto query={alertsQuery} />
           {quietActive && <Badge variant="info" size="sm">{t('Quiet hours')}</Badge>}
           {unreadCount > 0 && <Badge variant="info" size="sm">{unreadCount} {t('unread')}</Badge>}
           {criticalCount > 0 && <Badge variant="danger" size="sm">{criticalCount} {t('critical')}</Badge>}
@@ -823,7 +826,7 @@ export default function AlertsPage() {
             </div>
             </>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Icons.notificationsMuted className="h-8 w-8" />}
               title={t('No alerts')}
               message={

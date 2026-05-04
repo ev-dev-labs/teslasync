@@ -70,6 +70,12 @@ export type BroadcastMessage =
   | { type: 'formDraft.committed'; draftKey: string }
   // ── TanStack Query ───────────────────────────────────────────────────────
   | { type: 'queryInvalidate'; keys: ReadonlyArray<ReadonlyArray<unknown>> }
+  // ── Settings / preferences (Phase-45 / Prompt 06) ────────────────────────
+  // Umbrella event for any AppSettings mutation (units, locale, decimals,
+  // theme, currency, etc). `keys` is a hint for debug/tracing — subscribers
+  // MUST re-read from `useSettings()` rather than trust the payload to be
+  // exhaustive.
+  | { type: 'settings.changed'; keys?: ReadonlyArray<string> }
 
 /** Internal envelope wrapper added on send and stripped on receive. */
 interface Envelope {

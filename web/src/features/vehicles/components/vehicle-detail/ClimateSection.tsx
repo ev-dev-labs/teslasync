@@ -100,7 +100,7 @@ export function ClimateSection({ climateData }: ClimateSectionProps) {
           />
         </div>
       ) : (
-        <EmptyState message={t('vehicles.detail.noClimateData', 'No climate data available')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('vehicles.detail.noClimateData', 'No climate data available')} />
       )}
     </GlassPanel>
   )

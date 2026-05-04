@@ -4,6 +4,7 @@ import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import { useOptimisticMutation } from './useOptimisticMutation';
 import type {
   Automation,
   AutomationFull,
@@ -55,24 +56,36 @@ export function useAutomationHistory(limit = 20) {
 }
 
 export function useToggleAutomation() {
-  const qc = useQueryClient();
   const { success, error } = useMutationToast();
-  return useMutation({
-    mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) =>
+  return useOptimisticMutation<
+    { id: number; enabled: boolean },
+    { id: number; enabled: boolean },
+    Automation[]
+  >({
+    mutationFn: ({ id, enabled }) =>
       request<{ id: number; enabled: boolean }>(`/automations/${id}/toggle`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled }),
       }),
+    queryKeys: [automationKeys.all],
+    updater: (prev, { id, enabled }) =>
+      prev?.map((a) => (a.id === id ? { ...a, enabled } : a)),
+    broadcast: true,
+    onMutate: () => {
+      // Optimistic flip already applied by the helper. Toast waits for
+      // server confirmation so a failed PATCH doesn't end up reading
+      // "Enabled" while the switch has already snapped back to off.
+    },
     onSuccess: (_data, { enabled }) => {
-      invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
       if (enabled) {
         success('toast.automation.enabled', 'Automation enabled');
       } else {
         success('toast.automation.disabled', 'Automation disabled');
       }
     },
-    onError: (err) => error(err, 'toast.automation.toggle.error', 'Failed to toggle automation'),
+    onError: (err) =>
+      error(err, 'toast.automation.toggle.error', 'Failed to toggle automation'),
   });
 }
 
@@ -105,6 +118,44 @@ export function useDeleteAutomation() {
       success('toast.automation.delete.success', 'Automation deleted');
     },
     onError: (err) => error(err, 'toast.automation.delete.error', 'Failed to delete automation'),
+  });
+}
+
+export type AutomationBulkOp = 'enable' | 'disable' | 'delete';
+
+export interface AutomationBulkResult {
+  updated?: number;
+  deleted?: number;
+  failed: { id: number; reason: string }[];
+}
+
+/**
+ * useBulkAutomationsUpdate — POST /automations/bulk
+ * Phase-45 / Prompt 32. Issues an allowlisted bulk op against `ids`,
+ * invalidates the automations list + history, and toasts on outcome.
+ */
+export function useBulkAutomationsUpdate() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (vars: { ids: number[]; op: AutomationBulkOp }) =>
+      request<AutomationBulkResult>('/automations/bulk', {
+        method: 'POST',
+        body: JSON.stringify({ ids: vars.ids, op: vars.op }),
+      }),
+    onSuccess: (_data, vars) => {
+      invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: ['automation-history'] });
+      const key = `toast.automation.bulk.${vars.op}.success`;
+      const fallback = vars.op === 'delete'
+        ? 'Automations deleted'
+        : vars.op === 'enable'
+          ? 'Automations enabled'
+          : 'Automations disabled';
+      success(key, fallback);
+    },
+    onError: (err) =>
+      error(err, 'toast.automation.bulk.error', 'Bulk automation update failed'),
   });
 }
 

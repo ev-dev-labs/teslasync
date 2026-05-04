@@ -137,12 +137,12 @@ export function LayoutSwitcher({
         aria-expanded={open}
         aria-label={t('layout.switcherLabel', 'Switch dashboard layout')}
         className={cn(
-          'flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5',
+          'flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-white/[0.03] px-3 py-1.5',
           'text-sm font-medium text-[var(--text-primary)] transition-colors',
-          'hover:border-white/20 hover:bg-white/[0.06]',
+          'hover:border-[var(--border-strong)] hover:bg-white/[0.06]',
         )}
       >
-        <span className="text-xs uppercase tracking-wider text-white/40">
+        <span className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
           {t('layout.label', 'Layout')}
         </span>
         <span className="max-w-[10rem] truncate">{activeName}</span>
@@ -157,7 +157,7 @@ export function LayoutSwitcher({
             {pinnedLabel}
           </Badge>
         )}
-        <ChevronDown className="h-3.5 w-3.5 text-white/40" aria-hidden="true" />
+        <ChevronDown className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
       </button>
 
       <div className="hidden items-center gap-1 sm:flex">
@@ -191,13 +191,13 @@ export function LayoutSwitcher({
           role="menu"
           aria-label={t('layout.menuLabel', 'Saved layouts')}
           className={cn(
-            'absolute left-0 top-full z-50 mt-1 min-w-[16rem] rounded-xl border border-white/10',
+            'absolute left-0 top-full z-50 mt-1 min-w-[16rem] rounded-xl border border-[var(--border-subtle)]',
             'bg-[var(--surface-elevated,#15151a)] p-1.5 shadow-xl',
           )}
         >
           <div className="max-h-72 overflow-y-auto">
             {visible.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-white/40">
+              <p className="px-3 py-2 text-xs text-[var(--text-muted)]">
                 {t('layout.noneVisible', 'No layouts available for this vehicle.')}
               </p>
             ) : (
@@ -217,7 +217,7 @@ export function LayoutSwitcher({
                       'flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-sm',
                       isActive
                         ? 'bg-[var(--theme-primary)]/15 text-[var(--theme-primary)]'
-                        : 'text-[var(--text-primary)] hover:bg-white/5',
+                        : 'text-[var(--text-primary)] hover:bg-[var(--surface-2)]',
                     )}
                   >
                     <span className="flex min-w-0 items-center gap-2">
@@ -228,7 +228,7 @@ export function LayoutSwitcher({
                         </Badge>
                       )}
                       {d.vehicleId != null && (
-                        <Pin className="h-3 w-3 text-white/40" aria-hidden="true" />
+                        <Pin className="h-3 w-3 text-[var(--text-muted)]" aria-hidden="true" />
                       )}
                     </span>
                     {isActive && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
@@ -244,9 +244,9 @@ export function LayoutSwitcher({
             type="button"
             role="menuitem"
             onClick={handleSaveAs}
-            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-white/5"
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
           >
-            <Plus className="h-3.5 w-3.5 text-white/40" aria-hidden="true" />
+            <Plus className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
             {t('layout.newFromCurrent', 'New layout from current')}
           </button>
 
@@ -258,10 +258,10 @@ export function LayoutSwitcher({
               disabled={active.vehicleId == null && vehicleId == null}
               className={cn(
                 'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-[var(--text-primary)]',
-                'hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent',
+                'hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent',
               )}
             >
-              <Pin className="h-3.5 w-3.5 text-white/40" aria-hidden="true" />
+              <Pin className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
               {active.vehicleId != null
                 ? t('layout.unpin', 'Unpin from vehicle')
                 : t('layout.pin', 'Pin to current vehicle')}
@@ -280,7 +280,7 @@ export function LayoutSwitcher({
 
           <div className="my-1 h-px bg-white/[0.06]" />
 
-          <p className="flex items-center gap-2 px-2 py-1 text-[10px] uppercase tracking-wider text-white/30">
+          <p className="flex items-center gap-2 px-2 py-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
             <MoreHorizontal className="h-3 w-3" aria-hidden="true" />
             {t('layout.menuFooter', 'Manage layouts in the tab strip below')}
           </p>

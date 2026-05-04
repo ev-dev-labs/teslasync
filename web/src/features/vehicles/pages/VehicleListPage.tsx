@@ -9,8 +9,8 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, ConfirmDialog, PinButton } from '@/components/ui';
-import { MetricCard, AnimatedNumber } from '@/components/data-display';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { MetricCard, AnimatedNumber, DataFreshnessAuto } from '@/components/data-display';
+import { Skeleton, EmptyState, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -27,6 +27,31 @@ import { deriveVehicleStatus, statusVariant } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
 
+/* ── Loading skeleton (Phase-45 / Prompt 18) ─────────────── */
+
+/**
+ * Mirrors the VehicleListPage layout while the fleet list loads:
+ * 4 fleet-summary stat cards → fleet hero panel → 3 vehicle row cards.
+ * Renders inside a real `<PageContainer>` so the title bar shows up
+ * immediately and CLS stays at zero when the real list arrives.
+ */
+function VehicleListSkeleton() {
+  const { t } = useTranslation();
+  return (
+    <PageContainer title={t('nav.vehicles', 'Fleet')}>
+      <div className="space-y-6" data-testid="vehicle-list-skeleton">
+        <StatGridSkeleton cards={4} />
+        <Skeleton className="h-36 rounded-xl" />
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    </PageContainer>
+  );
+}
+
 /* ── Page ────────────────────────────────────────────────── */
 
 export default function VehicleListPage() {
@@ -37,11 +62,12 @@ export default function VehicleListPage() {
   const { convertDistance, distanceUnit } = useSettings();
 
   /* ── Data ── */
-  const { data: vehicles, isLoading, error } = useQuery({
+  const vehiclesQuery = useQuery({
     queryKey: ['vehicles'],
     queryFn: () => request<Vehicle[]>('/vehicles'),
     staleTime: 30_000,
   });
+  const { data: vehicles, isLoading, error } = vehiclesQuery;
 
   const vehicleList = vehicles ?? [];
   const primaryId = vehicleList[0]?.id;
@@ -127,21 +153,7 @@ export default function VehicleListPage() {
 
   /* ── Loading skeleton ── */
   if (isLoading) {
-    return (
-      <PageContainer title={t('nav.vehicles', 'Fleet')}>
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} height={96} />
-            ))}
-          </div>
-          <Skeleton height={140} />
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} height={112} />
-          ))}
-        </div>
-      </PageContainer>
-    );
+    return <VehicleListSkeleton />;
   }
 
   /* ── Error state ── */
@@ -167,6 +179,7 @@ export default function VehicleListPage() {
       subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
       actions={
         <div className="flex items-center gap-2">
+          <DataFreshnessAuto query={vehiclesQuery} />
           {vehicleList.length >= 2 && (
             <Button
               variant="outline"
@@ -282,7 +295,7 @@ export default function VehicleListPage() {
                         </span>
                         <div className="flex-1 h-3 rounded-full bg-white/[0.04] overflow-hidden">
                           <div
-                            className="h-full rounded-full transition-all duration-1000"
+                            className="h-full rounded-full transition-all duration-slow"
                             style={{
                               width: `${level}%`,
                               background: `linear-gradient(90deg, ${color}80, ${color})`,
@@ -301,7 +314,7 @@ export default function VehicleListPage() {
                   })}
                 </div>
               ) : (
-                <EmptyState
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                   icon={<Activity className="h-8 w-8 opacity-20" />}
                   message={t('common.noData', 'No data available')}
                   className="py-8"
@@ -360,7 +373,7 @@ export default function VehicleListPage() {
                             <div className="flex items-center gap-2">
                               <div className="w-20 h-2 rounded-full bg-white/[0.06] overflow-hidden">
                                 <div
-                                  className="h-full rounded-full transition-all duration-700"
+                                  className="h-full rounded-full transition-all duration-slow"
                                   style={{
                                     width: `${level}%`,
                                     background: `linear-gradient(90deg, ${color}80, ${color})`,

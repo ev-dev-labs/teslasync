@@ -120,9 +120,13 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
     if (typeof document === 'undefined') return null;
 
     const overlay = (
+      // Phase-45 / Prompt 04: NOT migrated to <Modal> — this IS the shared
+      // <Modal> source of truth. All other interactive dialogs MUST use this
+      // component instead of hand-rolling full-viewport overlays.
+      // eslint-disable-next-line no-restricted-syntax
       <div className="fixed inset-0 z-[60] overflow-y-auto">
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 bg-[var(--surface-overlay)] backdrop-blur-sm"
           onClick={onClose}
           aria-hidden="true"
         />

@@ -75,8 +75,8 @@ export default function APIUsageWidget({ size }: WidgetProps) {
       >
         {data ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
-            <span className="text-2xl font-bold text-white/90">{fmtInt(totalCalls)}</span>
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <span className="text-2xl font-bold text-[var(--text-primary)]">{fmtInt(totalCalls)}</span>
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               {t('widget.apiUsage.calls24h', 'Calls (24h)')}
             </span>
             {errorRate > 5 && (
@@ -86,7 +86,7 @@ export default function APIUsageWidget({ size }: WidgetProps) {
             )}
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<BarChart2 className="h-5 w-5" />}
             message={t('widget.apiUsage.noData', 'No API usage data')}
             className="py-4"
@@ -114,7 +114,7 @@ export default function APIUsageWidget({ size }: WidgetProps) {
           <WidgetStatGrid stats={coreStats} cols={isWide ? 4 : 2} />
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<BarChart2 className="h-5 w-5" />}
           message={t('widget.apiUsage.noData', 'No API usage data')}
           className="py-4"

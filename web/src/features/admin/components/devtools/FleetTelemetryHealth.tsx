@@ -2,9 +2,9 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, AlertCircle, RefreshCw } from 'lucide-react'
 import { Badge, Button as UiButton, DataTable, type Column } from '@/components/ui'
+import { TimeStamp } from '@/components/data-display'
 import { Skeleton } from '@/components/feedback'
 import { cn } from '@/lib/cn'
-import { formatDateTime } from '@/lib/dateFormat'
 import {
   useFleetTelemetryErrorVINs, useFleetTelemetryErrors,
   useRefreshFleetTelemetryErrorVINs, useRefreshFleetTelemetryErrors,
@@ -48,15 +48,16 @@ export function FleetTelemetryHealth() {
     {
       key: 'first_seen_at',
       header: t('devtools.health.firstSeen', 'First Seen'),
-      render: (r) => <span className="text-xs text-white/60">{formatDateTime(r.first_seen_at)}</span>,
+      render: (r) => <TimeStamp value={r.first_seen_at} className="text-xs text-[var(--text-secondary)]" />,
     },
     {
       key: 'last_seen_at',
       header: t('devtools.health.lastSeen', 'Last Seen'),
       render: (r) => (
-        <span className={cn('text-xs', isRecent(r.last_seen_at) ? 'text-rose-300' : 'text-amber-300')}>
-          {formatDateTime(r.last_seen_at)}
-        </span>
+        <TimeStamp
+          value={r.last_seen_at}
+          className={cn('text-xs', isRecent(r.last_seen_at) ? 'text-rose-300' : 'text-amber-300')}
+        />
       ),
     },
   ], [t, selectedVin])
@@ -65,25 +66,26 @@ export function FleetTelemetryHealth() {
     {
       key: 'vin',
       header: t('devtools.health.vin', 'VIN'),
-      render: (r) => <span className="text-xs font-mono text-white/80">{r.vin}</span>,
+      render: (r) => <span className="text-xs font-mono text-[var(--text-primary)]">{r.vin}</span>,
     },
     {
       key: 'error_code',
       header: t('devtools.health.errorCode', 'Error Code'),
-      render: (r) => r.error_code ? <Badge variant="danger" size="sm">{r.error_code}</Badge> : <span className="text-xs text-white/40">—</span>,
+      render: (r) => r.error_code ? <Badge variant="danger" size="sm">{r.error_code}</Badge> : <span className="text-xs text-[var(--text-muted)]">—</span>,
     },
     {
       key: 'error_message',
       header: t('devtools.health.message', 'Message'),
-      render: (r) => <span className="text-xs text-white/70">{r.error_message ?? '—'}</span>,
+      render: (r) => <span className="text-xs text-[var(--text-secondary)]">{r.error_message ?? '—'}</span>,
     },
     {
       key: 'reported_at',
       header: t('devtools.health.reportedAt', 'Reported At'),
       render: (r) => (
-        <span className={cn('text-xs', r.reported_at && isRecent(r.reported_at) ? 'text-rose-300' : 'text-white/60')}>
-          {r.reported_at ? formatDateTime(r.reported_at) : '—'}
-        </span>
+        <TimeStamp
+          value={r.reported_at}
+          className={cn('text-xs', r.reported_at && isRecent(r.reported_at) ? 'text-rose-300' : 'text-[var(--text-secondary)]')}
+        />
       ),
     },
   ], [t])
@@ -109,7 +111,7 @@ export function FleetTelemetryHealth() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="ml-1 !h-auto !min-h-0 !px-1 !py-0 text-white/60 hover:!bg-transparent hover:text-white"
+                  className="ml-1 !h-auto !min-h-0 !px-1 !py-0 text-[var(--text-secondary)] hover:!bg-transparent hover:text-white"
                   onClick={() => setSelectedVin('')}
                   aria-label={t('devtools.health.clearVinFilter', 'Clear VIN filter')}
                 >
@@ -133,7 +135,7 @@ export function FleetTelemetryHealth() {
           ) : vinList.length > 0 ? (
             <DataTable columns={vinColumns} data={vinList} keyExtractor={(r) => r.vin} compact />
           ) : (
-            <p className="py-4 text-center text-sm text-white/40">
+            <p className="py-4 text-center text-sm text-[var(--text-muted)]">
               {t('devtools.health.noErrorVins', 'No vehicles with telemetry errors')}
             </p>
           )}
@@ -165,7 +167,7 @@ export function FleetTelemetryHealth() {
           ) : errorList.length > 0 ? (
             <DataTable columns={errorColumns} data={errorList} keyExtractor={(r) => String(r.id)} compact pagination />
           ) : (
-            <p className="py-4 text-center text-sm text-white/40">
+            <p className="py-4 text-center text-sm text-[var(--text-muted)]">
               {t('devtools.health.noErrors', 'No fleet telemetry errors recorded')}
             </p>
           )}

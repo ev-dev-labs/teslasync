@@ -4,18 +4,19 @@
  * Shows stats, bar charts (visits + time), and paginated location list.
  */
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Clock, Hash, Trophy, Navigation, Building2 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select, Pagination } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { SearchInput, FilterBar } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
+import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import {
   ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -49,17 +50,18 @@ export default function LocationsPage() {
     queryKey: ['vehicles'],
     queryFn: () => request<Vehicle[]>('/vehicles'),
   });
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
-  const [page, setPage] = useState(1);
+  const [selectedVehicle, setSelectedVehicle] = useUrlNumber('vehicle_id', 0);
+  const vehicleId = selectedVehicle > 0 ? selectedVehicle : (vehicles?.[0]?.id ?? null);
+  const [page, setPage] = useUrlNumber('page', 1);
   const pageSize = 50;
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useUrlString('q', '');
 
-  const { data: locations, isLoading, error } = useQuery({
+  const locationsQuery = useQuery({
     queryKey: ['visited-locations', vehicleId, page, pageSize],
     queryFn: () => request<VisitedLocation[]>(`/locations?vehicle_id=${vehicleId}&limit=${pageSize}&offset=${(page - 1) * pageSize}`),
     enabled: vehicleId !== null,
   });
+  const { data: locations, isLoading, error } = locationsQuery;
 
   const locationSearchFields = useMemo(
     () => ['address_name'] as const satisfies ReadonlyArray<keyof VisitedLocation>,
@@ -107,13 +109,16 @@ export default function LocationsPage() {
       loading={isLoading}
       error={error as Error | null}
       actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            value={String(vehicleId ?? '')}
-            onChange={e => setSelectedVehicle(Number(e.target.value))}
-            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
-          />
-        ) : undefined
+        <div className="flex items-center gap-3">
+          <DataFreshnessAuto query={locationsQuery} />
+          {vehicles && vehicles.length > 1 ? (
+            <Select
+              value={String(vehicleId ?? '')}
+              onChange={e => setSelectedVehicle(Number(e.target.value))}
+              options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
+          ) : null}
+        </div>
       }
     >
       {/* ── Summary stats ────────────────────────────────────────── */}
@@ -183,17 +188,27 @@ export default function LocationsPage() {
           {isLoading ? (
             <div className="space-y-3">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
           ) : !locations?.length ? (
-            <EmptyState icon={<MapPin className="h-12 w-12" />} title={t('No locations')} message={t('No visited locations recorded yet')} />
+            <EmptyState
+              icon={<MapPin className="h-12 w-12" />}
+              title={t('No locations')}
+              message={t('No visited locations recorded yet')}
+              actionTo={{ label: t('locations.empty.cta', 'View drives'), to: '/drives' }}
+            />
           ) : !filteredLocations.length ? (
-            <EmptyState icon={<MapPin className="h-12 w-12" />} title={t('No locations')} message={t('No locations match your search')} />
+            <EmptyState
+              icon={<MapPin className="h-12 w-12" />}
+              title={t('No locations')}
+              message={t('No locations match your search')}
+              action={{ label: t('Clear search'), onClick: () => setSearch('') }}
+            />
           ) : (
             <>
               <div className="space-y-2">
                 {filteredLocations.map((loc, i) => (
-                  <GlassPanel key={loc.id} className="p-4 flex items-center gap-4 hover:border-white/10 transition-colors">
+                  <GlassPanel key={loc.id} className="p-4 flex items-center gap-4 hover:border-[var(--border-subtle)] transition-colors">
                     <div className={cn(
                       'h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0',
-                      i === 0 ? 'bg-neon-amber/20 text-neon-amber' : i < 3 ? 'bg-neon-cyan/10 text-neon-cyan' : 'bg-white/5 text-[var(--text-muted)]',
+                      i === 0 ? 'bg-neon-amber/20 text-neon-amber' : i < 3 ? 'bg-neon-cyan/10 text-neon-cyan' : 'bg-[var(--surface-2)] text-[var(--text-muted)]',
                     )}>
                       #{i + 1}
                     </div>

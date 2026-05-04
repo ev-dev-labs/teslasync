@@ -10,7 +10,7 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  CheckCircle, XCircle, AlertTriangle, RefreshCw, Package,
+  CheckCircle, XCircle, AlertTriangle, RefreshCw, Package, Activity, ExternalLink,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
@@ -93,7 +93,7 @@ export default function SystemStatusPage() {
                 <div
                   className={cn(
                     'h-20 w-20 rounded-full flex items-center justify-center',
-                    'ring-2 ring-offset-2 ring-offset-transparent transition-shadow duration-700',
+                    'ring-2 ring-offset-2 ring-offset-transparent transition-shadow duration-slow',
                     overallStatus === 'healthy' && 'bg-green-500/20 ring-green-500/40',
                     overallStatus === 'degraded' && 'bg-yellow-500/20 ring-yellow-500/40',
                     overallStatus === 'unhealthy' && 'bg-red-500/20 ring-red-500/40',
@@ -135,7 +135,7 @@ export default function SystemStatusPage() {
                 </Grid>
 
                 {version && (
-                  <div className="flex flex-wrap gap-4 text-xs text-white/40">
+                  <div className="flex flex-wrap gap-4 text-xs text-[var(--text-muted)]">
                     <span>{t('Chart')}: {version.chart_version}</span>
                     <span>{t('Go')}: {version.go_version}</span>
                     <span>{t('Uptime')}: {formatUptime(version.uptime_seconds)}</span>
@@ -155,8 +155,75 @@ export default function SystemStatusPage() {
           <StaggerItem><DataPipelineSection /></StaggerItem>
           <StaggerItem><OperationsSection /></StaggerItem>
           <StaggerItem><DiagnosticsSection /></StaggerItem>
+          <StaggerItem><ClientPerformancePanel /></StaggerItem>
         </StaggerContainer>
       </div>
     </PageContainer>
+  );
+}
+
+// ── Client Performance (Phase 45 / Prompt 12) ───────────────────────────────
+// Surfaces the fact that real-world Web Vitals are now collected and points
+// engineers at the Grafana dashboard for the per-route p75 view. The in-app
+// chart is deliberately deferred to a follow-up — Prometheus is the canonical
+// metrics store and we don't want to duplicate query logic here.
+function ClientPerformancePanel() {
+  const { t } = useTranslation();
+  const grafanaUrl =
+    (import.meta.env.VITE_GRAFANA_URL as string | undefined) ?? '';
+
+  return (
+    <GlassPanel className="p-5">
+      <div className="flex items-start gap-3">
+        <div className="text-cyan-400 shrink-0 mt-0.5">
+          <Activity className="h-5 w-5" />
+        </div>
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="text-sm font-semibold text-[var(--text-primary)]">
+            {t('admin.systemStatus.clientPerformance.title', 'Client Performance')}
+          </div>
+          <div className="text-xs text-[var(--text-muted)]">
+            {t(
+              'admin.systemStatus.clientPerformance.description',
+              'Web Vitals (LCP, INP, CLS, FCP, TTFB) are collected from real browser sessions and exported as Prometheus histograms (teslasync_web_vitals_value).',
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Badge variant="success" size="sm" dot>
+              {t('admin.systemStatus.clientPerformance.collecting', 'Collecting')}
+            </Badge>
+            <span className="text-xs text-[var(--text-muted)]">
+              {t(
+                'admin.systemStatus.clientPerformance.metricsList',
+                'LCP · INP · CLS · FCP · TTFB',
+              )}
+            </span>
+          </div>
+          {grafanaUrl ? (
+            <div className="pt-2">
+              <a
+                href={grafanaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-cyan-300 hover:text-cyan-200 transition-colors"
+              >
+                {t(
+                  'admin.systemStatus.clientPerformance.viewDashboard',
+                  'View dashboard',
+                )}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          ) : (
+            <div className="pt-2 text-xs text-[var(--text-muted)]">
+              {t(
+                'admin.systemStatus.clientPerformance.noDashboard',
+                'Set VITE_GRAFANA_URL at build time to surface a link to the Web Vitals dashboard.',
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </GlassPanel>
   );
 }

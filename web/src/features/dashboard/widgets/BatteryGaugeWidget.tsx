@@ -48,7 +48,7 @@ export default function BatteryGaugeWidget({ vehicleId, size }: WidgetProps) {
           )}
         </WidgetGaugeHero>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Battery className="h-6 w-6" />}
           message={t('widget.noBattery', 'No battery data')}
           className="py-4"

@@ -13,7 +13,7 @@ const tierColors: Record<string, string> = {
   SUPER_OFF_PEAK: 'bg-emerald-500/50',
   MID_PEAK: 'bg-amber-500/40',
   ON_PEAK: 'bg-red-500/40',
-  unknown: 'bg-white/10',
+  unknown: 'bg-[var(--surface-2)]',
 };
 
 const tierTextColors: Record<string, string> = {
@@ -21,7 +21,7 @@ const tierTextColors: Record<string, string> = {
   SUPER_OFF_PEAK: 'text-emerald-300',
   MID_PEAK: 'text-amber-400',
   ON_PEAK: 'text-red-400',
-  unknown: 'text-white/40',
+  unknown: 'text-[var(--text-muted)]',
 };
 
 function formatHour(h: number): string {
@@ -50,7 +50,7 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
 
   if (rates.length === 0) {
     return (
-      <div className="text-center text-white/40 py-8">
+      <div className="text-center text-[var(--text-muted)] py-8">
         {t('chargePlanner.noRateData', 'No rate data available')}
       </div>
     );
@@ -59,7 +59,7 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
   return (
     <div className="space-y-3">
       {/* Legend */}
-      <div className="flex flex-wrap gap-4 text-xs text-white/60">
+      <div className="flex flex-wrap gap-4 text-xs text-[var(--text-secondary)]">
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-sm bg-emerald-500/40" />
           {t('chargePlanner.offPeak', 'Off-Peak')}
@@ -94,9 +94,9 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
             >
               {/* Tooltip on hover */}
               <div className="absolute bottom-full mb-1 hidden group-hover:block z-10">
-                <div className="bg-black/90 rounded px-2 py-1 text-xs whitespace-nowrap border border-white/10">
-                  <div className="text-white/90 font-medium">{formatHour(rate.hour)}</div>
-                  <div className={cn(tierTextColors[rate.tier] ?? 'text-white/60')}>
+                <div className="bg-[var(--surface-overlay)] rounded px-2 py-1 text-xs whitespace-nowrap border border-[var(--border-subtle)]">
+                  <div className="text-[var(--text-primary)] font-medium">{formatHour(rate.hour)}</div>
+                  <div className={cn(tierTextColors[rate.tier] ?? 'text-[var(--text-secondary)]')}>
                     {rate.rate_cents.toFixed(1)}¢/kWh
                   </div>
                 </div>
@@ -105,7 +105,7 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
               {/* Bar */}
               <div
                 className={cn(
-                  'w-full rounded-t-sm transition-all duration-200',
+                  'w-full rounded-t-sm transition-all duration-normal',
                   inWindow
                     ? 'bg-cyan-400/70 shadow-[0_0_12px_rgba(34,211,238,0.4)] ring-1 ring-cyan-400/50'
                     : baseColor,
@@ -118,7 +118,7 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
       </div>
 
       {/* Hour labels */}
-      <div className="flex gap-0.5 text-[10px] text-white/40">
+      <div className="flex gap-0.5 text-[10px] text-[var(--text-muted)]">
         {rates.map((rate) => (
           <div key={rate.hour} className="flex-1 text-center">
             {rate.hour % 3 === 0 ? formatHour(rate.hour) : ''}

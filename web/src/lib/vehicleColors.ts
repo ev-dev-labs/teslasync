@@ -254,7 +254,7 @@ export const FALLBACK_PAINT: PaintPalette = PAINT_PALETTES['pearl-white'];
  */
 export function inferPaintFromTesla(code: string | null | undefined): PaintPalette {
   if (!code) return FALLBACK_PAINT;
-  const normalized = code.toLowerCase().replace(/[\s_\-]/g, '');
+  const normalized = code.toLowerCase().replace(/[\s_-]/g, '');
   // Tesla emits these variants: "PearlWhite", "PearlWhiteMultiCoat",
   // "PearlWhiteMulticoat", "MidnightSilver", "MidnightSilverMetallic",
   // "DeepBlue", "DeepBlueMetallic", "SolidBlack", "Black", "RedMulticoat",

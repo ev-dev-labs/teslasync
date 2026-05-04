@@ -75,7 +75,7 @@ export function OverviewVehicleComparison({ data }: { data: FleetAnalytics | und
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState message={t('analytics.overview.noVehicles', 'No vehicle data')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.overview.noVehicles', 'No vehicle data')} />
           )}
         </GlassPanel>
 
@@ -95,7 +95,7 @@ export function OverviewVehicleComparison({ data }: { data: FleetAnalytics | und
                   </div>
                   <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-neon-cyan transition-all duration-500"
+                      className="h-full rounded-full bg-neon-cyan transition-all duration-slow"
                       style={{ width: `${v.pct}%` }}
                     />
                   </div>
@@ -103,7 +103,7 @@ export function OverviewVehicleComparison({ data }: { data: FleetAnalytics | und
               ))}
             </div>
           ) : (
-            <EmptyState message={t('analytics.overview.noEfficiency', 'No efficiency data')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.overview.noEfficiency', 'No efficiency data')} />
           )}
         </GlassPanel>
       </div>
@@ -132,7 +132,7 @@ export function OverviewVehicleComparison({ data }: { data: FleetAnalytics | und
               </RadarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState message={t('analytics.overview.noComparison', 'Need 2+ vehicles for comparison')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.overview.noComparison', 'Need 2+ vehicles for comparison')} />
           )}
         </GlassPanel>
 
@@ -151,7 +151,7 @@ export function OverviewVehicleComparison({ data }: { data: FleetAnalytics | und
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState message={t('analytics.overview.noVehicles', 'No vehicle data')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('analytics.overview.noVehicles', 'No vehicle data')} />
           )}
         </GlassPanel>
       </div>

@@ -32,6 +32,10 @@ type fakeInboxStore struct {
 	bulkReadResult int64
 	bulkReadErr    error
 
+	bulkReadAllCalls  int
+	bulkReadAllResult int64
+	bulkReadAllErr    error
+
 	bulkArchivedCalls []struct {
 		ids      []int64
 		archived bool
@@ -68,6 +72,14 @@ func (f *fakeInboxStore) BulkSetRead(_ context.Context, ids []int64, read bool) 
 		return 0, f.bulkReadErr
 	}
 	return f.bulkReadResult, nil
+}
+
+func (f *fakeInboxStore) BulkSetReadAll(_ context.Context) (int64, error) {
+	f.bulkReadAllCalls++
+	if f.bulkReadAllErr != nil {
+		return 0, f.bulkReadAllErr
+	}
+	return f.bulkReadAllResult, nil
 }
 
 func (f *fakeInboxStore) BulkSetArchived(_ context.Context, ids []int64, archived bool) (int64, error) {
@@ -491,5 +503,115 @@ func TestUnreadCountStoreError(t *testing.T) {
 	h.UnreadCount(rr, req)
 	if rr.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", rr.Code)
+	}
+}
+
+// --- Phase-45 / 28 — bulk mark-all-read ---
+
+// markBody is a small helper that marshals the relaxed mark-read body shape
+// (`{ids?, all?}`) used by the all-flag tests below.
+func markBody(t *testing.T, payload map[string]any) *bytes.Reader {
+	t.Helper()
+	b, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	return bytes.NewReader(b)
+}
+
+// TestNotificationsBulkMarkAll exercises the all=true branch of MarkRead.
+// It must not call BulkSetRead (which would require an id list); instead
+// the handler delegates to BulkSetReadAll, which the repo implements with
+// a `WHERE read_at IS NULL AND archived_at IS NULL` predicate so already-
+// read and archived rows are skipped.
+func TestNotificationsBulkMarkAll(t *testing.T) {
+	store := &fakeInboxStore{bulkReadAllResult: 42}
+	h := newTestHandler(store)
+	req := httptest.NewRequest(http.MethodPost, "/notifications/mark-read", markBody(t, map[string]any{"all": true}))
+	rr := httptest.NewRecorder()
+	h.MarkRead(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rr.Code, rr.Body.String())
+	}
+	if store.bulkReadAllCalls != 1 {
+		t.Fatalf("expected one BulkSetReadAll call, got %d", store.bulkReadAllCalls)
+	}
+	if len(store.bulkReadCalls) != 0 {
+		t.Fatalf("expected zero BulkSetRead calls when all=true, got %+v", store.bulkReadCalls)
+	}
+	var out map[string]int64
+	if err := json.Unmarshal(rr.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if out["updated"] != 42 {
+		t.Fatalf("updated = %d, want 42", out["updated"])
+	}
+}
+
+// TestNotificationsBulkMarkAllRejectsBothIDsAndAll guards against ambiguous
+// requests — the relaxed decoder must refuse `{ids:[…], all:true}` so
+// neither the per-id nor whole-inbox path silently wins.
+func TestNotificationsBulkMarkAllRejectsBothIDsAndAll(t *testing.T) {
+	store := &fakeInboxStore{}
+	h := newTestHandler(store)
+	req := httptest.NewRequest(http.MethodPost, "/notifications/mark-read", markBody(t, map[string]any{
+		"ids": []int64{1, 2},
+		"all": true,
+	}))
+	rr := httptest.NewRecorder()
+	h.MarkRead(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	if store.bulkReadAllCalls != 0 || len(store.bulkReadCalls) != 0 {
+		t.Fatalf("expected no repo calls on bad request, got readAll=%d read=%+v",
+			store.bulkReadAllCalls, store.bulkReadCalls)
+	}
+}
+
+// TestNotificationsBulkMarkAllPropagatesStoreError surfaces a 500 when the
+// repo errors so the frontend can roll back the optimistic update.
+func TestNotificationsBulkMarkAllPropagatesStoreError(t *testing.T) {
+	store := &fakeInboxStore{bulkReadAllErr: errors.New("db down")}
+	h := newTestHandler(store)
+	req := httptest.NewRequest(http.MethodPost, "/notifications/mark-read", markBody(t, map[string]any{"all": true}))
+	rr := httptest.NewRecorder()
+	h.MarkRead(rr, req)
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d", rr.Code)
+	}
+}
+
+// TestNotificationsBulkMarkAllRequiresEitherIDsOrAll documents the
+// always-on contract: an empty body (no ids, no all) is a 400, never a
+// no-op success.
+func TestNotificationsBulkMarkAllRequiresEitherIDsOrAll(t *testing.T) {
+	h := newTestHandler(&fakeInboxStore{})
+	req := httptest.NewRequest(http.MethodPost, "/notifications/mark-read", markBody(t, map[string]any{}))
+	rr := httptest.NewRecorder()
+	h.MarkRead(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rr.Code)
+	}
+}
+
+// TestNotificationsBulkMarkAllStillSupportsIDsPath ensures the ids-array
+// path through the relaxed decoder still wires through to BulkSetRead.
+// Acts as a safety net in case a future refactor accidentally changes the
+// dispatch logic.
+func TestNotificationsBulkMarkAllStillSupportsIDsPath(t *testing.T) {
+	store := &fakeInboxStore{bulkReadResult: 2}
+	h := newTestHandler(store)
+	req := httptest.NewRequest(http.MethodPost, "/notifications/mark-read", markBody(t, map[string]any{"ids": []int64{7, 9}}))
+	rr := httptest.NewRecorder()
+	h.MarkRead(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rr.Code, rr.Body.String())
+	}
+	if store.bulkReadAllCalls != 0 {
+		t.Fatalf("expected zero BulkSetReadAll calls when ids present, got %d", store.bulkReadAllCalls)
+	}
+	if len(store.bulkReadCalls) != 1 || !store.bulkReadCalls[0].read {
+		t.Fatalf("expected one BulkSetRead(read=true) call, got %+v", store.bulkReadCalls)
 	}
 }

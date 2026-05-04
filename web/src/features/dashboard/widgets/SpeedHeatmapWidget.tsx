@@ -126,10 +126,10 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
     return (
       <WidgetShell loading={isLoading} error={error ? String(error) : null} updatedAt={dataUpdatedAt} isFetching={isFetching} isStale={isStale} isError={isError} onRefresh={() => refetch()}>
         <div className="h-full flex flex-col items-center justify-center gap-0.5">
-          <span className="text-2xl font-bold text-white/90">
+          <span className="text-2xl font-bold text-[var(--text-primary)]">
             {maxSpeed > 0 ? fmtNumber(maxSpeed, 0) : '—'}
           </span>
-          <span className="text-[10px] text-white/40 uppercase tracking-wider">
+          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
             {t('widget.speedHeatmap.peak', 'Peak')} {speedUnit}
           </span>
         </div>
@@ -156,11 +156,11 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
         <div className="h-full w-full flex flex-col min-h-0 px-3 pb-2">
           {/* Summary */}
           <div className="flex items-center gap-3 pb-1 flex-shrink-0">
-            <span className="text-xs text-white/50">
+            <span className="text-xs text-[var(--text-secondary)]">
               {t('widget.speedHeatmap.drives', '{{count}} drives', { count: totalDrives })}
             </span>
-            <span className="text-xs text-white/30">·</span>
-            <span className="text-xs text-white/50">
+            <span className="text-xs text-[var(--text-muted)]">·</span>
+            <span className="text-xs text-[var(--text-secondary)]">
               {t('widget.speedHeatmap.peakSpeed', 'Peak avg {{speed}} {{unit}}', {
                 speed: fmtNumber(maxSpeed, 0),
                 unit: speedUnit,
@@ -182,7 +182,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
 
           {/* Legend */}
           <div className="flex items-center justify-between pt-1 flex-shrink-0">
-            <span className="text-[10px] text-white/30">
+            <span className="text-[10px] text-[var(--text-muted)]">
               {t('widget.speedHeatmap.slow', 'Slow')}
             </span>
             <div className="flex gap-px">
@@ -194,13 +194,13 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
                 />
               ))}
             </div>
-            <span className="text-[10px] text-white/30">
+            <span className="text-[10px] text-[var(--text-muted)]">
               {t('widget.speedHeatmap.fast', 'Fast')}
             </span>
           </div>
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Grid3X3 className="h-5 w-5" />}
           message={t('widget.speedHeatmap.empty', 'No drive data yet')}
           className="py-4"

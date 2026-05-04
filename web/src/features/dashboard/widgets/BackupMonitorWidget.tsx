@@ -112,7 +112,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
       onRefresh={() => refetch()}
     >
         {runs.length === 0 && !isLoading ? (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<HardDrive className="h-5 w-5" />}
             message={t('widget.backupMonitor.noData', 'No backup data')}
             className="py-4"
@@ -126,10 +126,10 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
               )}
             />
             <div className="min-w-0">
-              <p className="text-sm font-medium text-white/90 truncate">
+              <p className="text-sm font-medium text-[var(--text-primary)] truncate">
                 {fmtRelativeTime(latestRun?.completedAt ?? latestRun?.createdAt ?? null)}
               </p>
-              <p className="text-[10px] text-white/40 truncate">
+              <p className="text-[10px] text-[var(--text-muted)] truncate">
                 {t('widget.backupMonitor.lastBackup', 'Last backup')}
               </p>
             </div>
@@ -147,7 +147,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
       {...shellProps}
     >
       {runs.length === 0 && !isLoading ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<HardDrive className="h-5 w-5" />}
           message={t('widget.backupMonitor.noData', 'No backup data')}
           className="py-4"
@@ -174,7 +174,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
                 latestStatus === 'failed' && 'bg-red-500/10',
               )}
             >
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
                 {t('widget.backupMonitor.status', 'Status')}
               </p>
               <Badge variant={statusVariant(latestRun?.status ?? 'failed')}>
@@ -186,7 +186,7 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
           {/* Wide layout: last 5 backup runs */}
           {isWide && (
             <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
                 {t('widget.backupMonitor.recentRuns', 'Recent Runs')}
               </p>
               {sortedRuns.slice(0, 5).map((run) => (
@@ -202,10 +202,10 @@ export default function BackupMonitorWidget({ size }: WidgetProps) {
                       )}
                     />
                     <div className="min-w-0">
-                      <p className="text-xs text-white/80 truncate">
+                      <p className="text-xs text-[var(--text-primary)] truncate">
                         {fmtShortTime(run.completedAt ?? run.createdAt)}
                       </p>
-                      <p className="text-[10px] text-white/40 truncate">
+                      <p className="text-[10px] text-[var(--text-muted)] truncate">
                         {fmtBytes(run.fileSize ?? 0)}
                         {run.durationMs != null ? ` · ${run.durationMs}ms` : ''}
                       </p>

@@ -33,8 +33,8 @@ export function VinDecoderTool() {
         {decoded && (
           <div className="grid gap-2 sm:grid-cols-2">
             {Object.entries(decoded).map(([k, v]) => (
-              <div key={k} className="rounded bg-black/20 px-3 py-2">
-                <span className="text-xs text-white/50">{t(`devtools.utils.vin_${k}`)}</span>
+              <div key={k} className="rounded bg-[var(--surface-overlay)] px-3 py-2">
+                <span className="text-xs text-[var(--text-secondary)]">{t(`devtools.utils.vin_${k}`)}</span>
                 <p className="text-sm font-medium text-white">{v}</p>
               </div>
             ))}

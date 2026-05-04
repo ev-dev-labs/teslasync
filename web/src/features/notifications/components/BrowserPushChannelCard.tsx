@@ -85,10 +85,10 @@ export function BrowserPushChannelCard({ className }: BrowserPushChannelCardProp
               <BellRing className="h-5 w-5 text-cyan-300" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-white/90">
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">
                 {t('webpush.title', 'Browser push')}
               </h3>
-              <p className="text-xs text-white/60 mt-0.5">
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                 {t(
                   'webpush.subtitle',
                   'Get OS-level notifications even when TeslaSync is closed.',
@@ -126,7 +126,7 @@ export function BrowserPushChannelCard({ className }: BrowserPushChannelCardProp
                 {t('webpush.enable', 'Enable on this device')}
               </Button>
             )}
-            <p className="text-xs text-white/50">
+            <p className="text-xs text-[var(--text-secondary)]">
               {t(
                 'webpush.iosNote',
                 'iOS Safari requires version 16.4 or later, and you must add TeslaSync to your Home Screen.',
@@ -136,8 +136,8 @@ export function BrowserPushChannelCard({ className }: BrowserPushChannelCardProp
         )}
 
         {rows.length > 0 && (
-          <div className="space-y-2 pt-2 border-t border-white/5">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-white/60">
+          <div className="space-y-2 pt-2 border-t border-[var(--border-subtle)]">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
               {t('webpush.devices.title', 'Registered devices')}
             </h4>
             <ul className="space-y-2">
@@ -155,9 +155,9 @@ export function BrowserPushChannelCard({ className }: BrowserPushChannelCardProp
                     className="flex items-start justify-between gap-3 rounded-lg bg-white/[0.02] p-2.5 ring-1 ring-white/5"
                   >
                     <div className="flex items-start gap-2 min-w-0">
-                      <Smartphone className="h-4 w-4 text-white/60 mt-0.5 flex-shrink-0" />
+                      <Smartphone className="h-4 w-4 text-[var(--text-secondary)] mt-0.5 flex-shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-xs text-white/90 truncate" title={ua}>
+                        <p className="text-xs text-[var(--text-primary)] truncate" title={ua}>
                           {ua}
                           {isThisDevice && (
                             <span className="ml-2 text-cyan-300">
@@ -165,7 +165,7 @@ export function BrowserPushChannelCard({ className }: BrowserPushChannelCardProp
                             </span>
                           )}
                         </p>
-                        <p className="text-[11px] text-white/50 mt-0.5">{last}</p>
+                        <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">{last}</p>
                       </div>
                     </div>
                     <Button

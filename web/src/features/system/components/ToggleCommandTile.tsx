@@ -53,8 +53,8 @@ export function ToggleCommandTile({ def, state, onExecute, onRequestDialog, load
   return (
     <GlassPanel
       className={cn(
-        'p-4 flex flex-col items-center gap-2 transition-all duration-300 text-center min-h-[100px] justify-center cursor-pointer relative group',
-        isOn ? styles.panel : 'hover:border-white/10',
+        'p-4 flex flex-col items-center gap-2 transition-all duration-normal text-center min-h-[100px] justify-center cursor-pointer relative group',
+        isOn ? styles.panel : 'hover:border-[var(--border-subtle)]',
         loading && 'opacity-50',
       )}
       onClick={handleClick}
@@ -66,20 +66,20 @@ export function ToggleCommandTile({ def, state, onExecute, onRequestDialog, load
         onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
         className={cn(
           'absolute left-1.5 top-1.5 h-auto rounded p-0.5 transition-opacity hover:bg-transparent',
-          isFavorite ? 'opacity-100 text-amber-300' : 'opacity-0 group-hover:opacity-50 text-white/30',
+          isFavorite ? 'opacity-100 text-amber-300' : 'opacity-0 group-hover:opacity-50 text-[var(--text-muted)]',
         )}
         aria-label={t('commands.toggleFavorite', 'Toggle favorite')}
       >
         <Star className={cn('h-3 w-3', isFavorite && 'fill-current')} />
       </ControlButton>
 
-      <div className={cn('absolute top-2 right-2 h-2 w-2 rounded-full', isOn ? styles.dot : 'bg-white/10')} />
+      <div className={cn('absolute top-2 right-2 h-2 w-2 rounded-full', isOn ? styles.dot : 'bg-[var(--surface-2)]')} />
 
-      <div className={cn('rounded-xl p-2.5 transition-colors', isOn ? styles.icon : 'bg-white/5 text-white/40')}>
+      <div className={cn('rounded-xl p-2.5 transition-colors', isOn ? styles.icon : 'bg-[var(--surface-2)] text-[var(--text-muted)]')}>
         {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Icon className="h-5 w-5" />}
       </div>
-      <span className="text-xs font-medium text-white/90">{t(def.labelKey, def.labelFallback)}</span>
-      <span className={cn('text-[10px] font-medium', isOn ? styles.text : 'text-white/40')}>
+      <span className="text-xs font-medium text-[var(--text-primary)]">{t(def.labelKey, def.labelFallback)}</span>
+      <span className={cn('text-[10px] font-medium', isOn ? styles.text : 'text-[var(--text-muted)]')}>
         {isOn ? t('commands.on', 'ON') : t('commands.off', 'OFF')}
       </span>
       {lastStatus && (

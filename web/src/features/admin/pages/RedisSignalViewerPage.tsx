@@ -13,6 +13,7 @@ import { getRedisSignals, type RedisSignalEntry } from '@/api/devtools'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { fmtInt } from '@/lib/numberFormat'
 import { INTERVALS } from '@/lib/constants'
+import { RedisDiagnosticEmptyState } from '../components/RedisDiagnosticEmptyState'
 
 /* ─── signal categorization ─────────────────────────────────────────── */
 
@@ -52,16 +53,27 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
       key: 'name',
       header: t('redis.signalName', 'Signal Name'),
       sortable: true,
-      render: (row) => <span className="font-mono text-sm text-white/90">{row.name}</span>,
+      render: (row) => <span className="font-mono text-sm text-[var(--text-primary)]">{row.name}</span>,
     },
     {
       key: 'value',
       header: t('redis.value', 'Value'),
-      render: (row) => (
-        <span className="font-mono text-sm text-[var(--neon-cyan)]">
-          {typeof row.value === 'boolean' ? String(row.value) : String(row.value)}
-        </span>
-      ),
+      render: (row) => {
+        // Per-type toned-down syntax-highlight colors (phase-40/02 forbids
+        // neon for tabular body text). Mirrors common dev-console conventions:
+        //   number  → cyan-300, string → amber-300, boolean → purple-300.
+        const colorClass =
+          typeof row.value === 'number'
+            ? 'text-cyan-300'
+            : typeof row.value === 'boolean'
+              ? 'text-purple-300'
+              : 'text-amber-300';
+        return (
+          <span className={`font-mono text-sm ${colorClass}`}>
+            {String(row.value)}
+          </span>
+        );
+      },
     },
     {
       key: 'type',
@@ -152,6 +164,8 @@ export default function RedisSignalViewerPage() {
   const columns = useMemo(() => buildColumns(t), [t])
   const { sortKey, sortDir, onSort } = useSortToggle('name', 'asc')
 
+  const meta = signalData?.meta
+
   const vehicleOptions = vehicleList.map((v) => ({
     value: String(v.id),
     label: v.display_name || v.vin || `Vehicle ${v.id}`,
@@ -179,7 +193,7 @@ export default function RedisSignalViewerPage() {
               </div>
 
               <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
                 <UiInput
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -203,7 +217,7 @@ export default function RedisSignalViewerPage() {
 
               <div className="flex items-center gap-2">
                 <Toggle checked={autoRefresh} onChange={setAutoRefresh} />
-                <span className="text-sm text-white/60">{t('redis.autoRefresh', 'Auto-refresh')}</span>
+                <span className="text-sm text-[var(--text-secondary)]">{t('redis.autoRefresh', 'Auto-refresh')}</span>
               </div>
 
               <UiButton
@@ -211,7 +225,7 @@ export default function RedisSignalViewerPage() {
                 variant="secondary"
                 onClick={() => refetch()}
                 disabled={selectedVehicleId === null || isFetching}
-                className="gap-1.5 !rounded-lg !bg-white/[0.06] !px-3 !py-2 text-sm text-white/80 hover:!bg-white/10 disabled:opacity-40"
+                className="gap-1.5 !rounded-lg !bg-white/[0.06] !px-3 !py-2 text-sm text-[var(--text-primary)] hover:!bg-[var(--surface-2)] disabled:opacity-40"
               >
                 <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
                 {t('redis.refresh', 'Refresh')}
@@ -219,6 +233,34 @@ export default function RedisSignalViewerPage() {
             </div>
           </GlassPanel>
         </FadeIn>
+
+        {/* Persistent diagnostic chips — visible whenever a vehicle is
+            selected so engineers don't have to clear the table to see
+            mode/VIN/last-seen. */}
+        {selectedVehicleId !== null && meta && (
+          <FadeIn>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <Badge
+                size="sm"
+                variant={meta.live_signal_store_mode === 'hybrid' ? 'success' : 'danger'}
+              >
+                {t('redis.headerChip.mode', 'Mode: {{mode}}', { mode: meta.live_signal_store_mode })}
+              </Badge>
+              {meta.vehicle_vin && (
+                <Badge size="sm" variant="neutral">
+                  <code className="font-mono">{meta.vehicle_vin}</code>
+                </Badge>
+              )}
+              {meta.l1_last_seen_at && (
+                <Badge size="sm" variant="info">
+                  {t('redis.headerChip.l1Seen', 'L1 last: {{date}}', {
+                    date: new Date(meta.l1_last_seen_at).toLocaleTimeString(),
+                  })}
+                </Badge>
+              )}
+            </div>
+          </FadeIn>
+        )}
 
         {/* Stats */}
         {selectedVehicleId !== null && (
@@ -249,7 +291,7 @@ export default function RedisSignalViewerPage() {
         <FadeIn>
           <GlassPanel>
             {selectedVehicleId === null ? (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Database className="h-10 w-10" />}
                 message={t('redis.selectPrompt', 'Select a vehicle to view its cached Redis signals')}
               />
@@ -262,14 +304,18 @@ export default function RedisSignalViewerPage() {
                 <Skeleton className="h-8 w-full" />
               </div>
             ) : filteredRows.length === 0 ? (
-              <EmptyState
-                icon={<Search className="h-10 w-10" />}
-                message={
-                  rows.length === 0
-                    ? t('redis.noSignals', 'No signals cached for this vehicle')
-                    : t('redis.noMatch', 'No signals match the current filter')
-                }
-              />
+              rows.length === 0 ? (
+                <RedisDiagnosticEmptyState
+                  vehicleId={selectedVehicleId!}
+                  meta={meta}
+                  onSelectVehicle={setSelectedVehicleId}
+                />
+              ) : (
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+                  icon={<Search className="h-10 w-10" />}
+                  message={t('redis.noMatch', 'No signals match the current filter')}
+                />
+              )
             ) : (
               <DataTable
                 data={filteredRows}

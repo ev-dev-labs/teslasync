@@ -46,6 +46,41 @@
     },
     "cooldownMin": {
       "body": "Minimum minutes between consecutive alerts from this rule, regardless of how often the underlying signal crosses the threshold."
+    },
+    "signal": {
+      "layers": "TeslaSync exposes three live-state layers: L1 — in-process signal store on the API pod that ingested the telemetry (lowest latency, scope-limited to that pod). L2 — Redis-backed shared cache of latest values, visible to every pod, used for cross-pod live reads and SSE fanout. log — TimescaleDB signal_log history, authoritative for analytics, charts, and point-in-time reconstruction.",
+      "live": "Live mode streams real-time signal values via Server-Sent Events (SSE). The chart maintains a rolling 5-minute window throttled to 2 Hz updates.",
+      "stale": "A signal is marked stale when its last-seen value in Redis is older than 2 minutes — treat with caution; the vehicle may be offline or the pipeline may be backed up.",
+      "snapshot": "A snapshot is a point-in-time view of every signal value at a single timestamp. The diff falls back to signal_log within the last 30 days when the live layer doesn't have it.",
+      "diff": "Server-side comparison between two snapshots. Unchanged signals are omitted from the result to reduce noise.",
+      "sourceLayer": "The layer that supplied this value: L1 (in-process), L2 (Redis), LOG (TimescaleDB history), or STALE (older than 2 minutes).",
+      "deltaCol": "Numeric difference (and percent change) between Window A and Window B for this signal. 'changed' is shown for non-numeric values that differ."
+    },
+    "fsm": {
+      "type": "Finite-state machine. Tracks vehicle high-level state (driving, charging, parked, online, asleep, offline) and the transitions between them. Sub-FSMs cover drive, charge, command, and notification lifecycles.",
+      "liveState": "The current state the FSM resolved to from the most recent telemetry. The FSM stays in a terminal state until external evidence (telemetry or poll) triggers an explicit transition out."
+    },
+    "replay": {
+      "power": "Instantaneous battery power at this point on the trip. Negative values indicate regenerative braking (energy flowing back into the pack); positive values indicate motor draw.",
+      "battery": "State-of-charge percentage at this point. Drops indicate energy use; rises indicate regen or DC-fast-charging during a drive.",
+      "range": "Estimated rated range remaining at this position based on EPA rated efficiency. Differs from real-world range, which depends on speed, terrain, climate, and load."
+    },
+    "battery": {
+      "soh": "State of Health — current usable capacity divided by the original rated capacity, expressed as a percentage. Higher is better; new packs start at 100%.",
+      "capacity": "Estimated current usable energy capacity of the pack in kWh, derived from the SoH and the original rated capacity.",
+      "degradationRate": "Annualised rate of capacity loss based on observed SoH trend. Combines calendar fade (time at temperature/SoC) and cycle fade (kWh throughput).",
+      "totalCycles": "Cumulative full-pack equivalent cycles. One cycle = one full discharge + one full charge worth of energy (partial cycles add up over time).",
+      "avgDoD": "Average Depth of Discharge per cycle — how deeply the pack is typically discharged before being recharged. Shallower cycles cause less wear."
+    },
+    "lifetime": {
+      "avgEfficiency": "Average energy used per unit distance across the whole driving history (Wh/km). Lower is better — temperature, speed, and terrain are the main drivers."
+    },
+    "charging": {
+      "peakPower": "Maximum charging power observed during this session, in kW. DC fast-charging tapers above ~80% SoC; AC charging stays roughly flat.",
+      "avgPower": "Time-averaged charging power across the session. Always lower than peak when the session includes a taper or initial ramp.",
+      "socRange": "The starting and ending state-of-charge percentages for this session. Wider ranges generally mean longer sessions and more taper.",
+      "chargeCurve": "Power vs SoC curve for the session. Tapering — the gradual drop in power as the battery approaches full — is inherent to lithium chemistry and is not a fault. Sudden drops below the curve indicate derating: the charger or battery is throttling power because of cell or ambient temperature limits.",
+      "kwhPerHour": "Average kWh added per hour across the session. Useful for estimating how long a future session will take at the same charger."
     }
   },
   "date": {
@@ -180,7 +215,7 @@
     "noPresence": "No presence history available.",
     "locationHistory": "Location History",
     "climate": "Climate",
-    "unpinPage": "Unpin ${navLabel(item.label)}",
+    "unpinPage": "Unpin {{page}}",
     "vehicleComparison": "Fleet Comparison"
   },
   "vehiclePicker": {
@@ -276,6 +311,9 @@
   "forms": {
     "unsavedTitle": "Unsaved changes",
     "unsavedWarning": "You have unsaved changes. Discard them?",
+    "unsavedRule": "You have an unsaved alert rule.",
+    "unsavedAutomation": "You have an unsaved automation.",
+    "unsavedSettings": "You have unsaved settings.",
     "discard": "Discard changes",
     "keepEditing": "Keep editing",
     "restoreDraftTitle": "Restore draft?",
@@ -284,6 +322,9 @@
     "discardDraft": "Start over",
     "validationFailed": "Please fix the highlighted fields before saving.",
     "saveError": "Failed to save changes"
+  },
+  "filters": {
+    "reset": "Reset filters"
   },
   "draft": {
     "restored": "Draft restored from {{when}}.",
@@ -449,7 +490,9 @@
     "saving": "Saving…",
     "update": "Update",
     "today": "Today",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "undo": "Undo",
+    "dismiss": "Dismiss"
   },
   "units": {
     "km": "km",
@@ -497,6 +540,32 @@
     "kiosk": "Kiosk",
     "customize": "Customize",
     "editHint": "Drag widgets to reorder, resize from edges. Click the gear icon for widget settings.",
+    "customizeHint": "You can customize this dashboard. Tap the + to add widgets.",
+    "customizeHintCta": "Add widgets",
+    "catalogue": {
+      "title": "Widget catalogue",
+      "subtitle": "Pick a widget to add to your dashboard. {{added}} of {{total}} widgets are already on your layout.",
+      "add": "Add",
+      "addLabel": "Add {{name}} widget",
+      "category": {
+        "vehicle": "Vehicle",
+        "battery": "Battery & Range",
+        "energy": "Energy",
+        "driving": "Driving",
+        "charging": "Charging",
+        "climate": "Climate",
+        "tires": "Tires",
+        "security": "Security",
+        "commands": "Commands",
+        "media": "Media",
+        "telemetry": "Telemetry",
+        "analytics": "Analytics",
+        "alerts": "Alerts",
+        "automations": "Automations",
+        "system": "System",
+        "maps": "Maps"
+      }
+    },
     "shortcuts": {
       "toggleEdit": "Toggle edit mode",
       "exitEdit": "Exit edit mode",
@@ -716,7 +785,7 @@
       "socRange": "SoC Range",
       "totalCost": "Total Cost",
       "estCost": "Est. Cost",
-      "atRate": "at ${currencySymbol}${settingsCostPerKwh}/kWh",
+      "atRate": "at {{currencySymbol}}{{costPerKwh}}/kWh",
       "perKwh": "Per kWh",
       "fromSettings": "from settings",
       "milesAdded": "Miles Added",
@@ -1194,6 +1263,11 @@
         "title": "Enable web push notifications",
         "description": "Get alerts in your browser even when TeslaSync is closed.",
         "cta": "Enable"
+      },
+      "customizeDashboard": {
+        "title": "Customize your dashboard",
+        "description": "Add widgets that match how you use TeslaSync.",
+        "cta": "Open"
       }
     }
   },
@@ -1269,6 +1343,7 @@
     "shortcut": "Shortcut: {{keys}}",
     "section": {
       "recent": "Recent",
+      "mostUsed": "Most Used",
       "pages": "Pages",
       "vehicles": "Vehicles",
       "preferences": "Preferences",
@@ -1308,10 +1383,12 @@
       "dashboardEdit": "Edit dashboard layout",
       "dashboardSwitch": "Switch dashboard layout…",
       "dashboardAddWidget": "Add widget to dashboard",
-      "dashboardReset": "Reset dashboard to default"
+      "dashboardReset": "Reset dashboard to default",
+      "frecencyReset": "Reset command palette usage history"
     },
     "toast": {
-      "refreshed": "Data refreshed"
+      "refreshed": "Data refreshed",
+      "frecencyReset": "Command palette usage history cleared"
     }
   },
   "search": {
@@ -1358,10 +1435,20 @@
   "a11y": {
     "skipToMain": "Skip to main content",
     "primaryNav": "Primary",
+    "primaryHeader": "Site header",
+    "footerStatus": "Status bar",
+    "breadcrumb": "Breadcrumb",
+    "breadcrumbHome": "Dashboard",
     "pagination": "Pagination",
     "closeDialog": "Close dialog",
     "dismissNotification": "Dismiss notification",
-    "loading": "Loading"
+    "loading": "Loading",
+    "toggleDensity": "Toggle density",
+    "toggleSidebar": "Toggle sidebar",
+    "openCommandPalette": "Open command palette",
+    "openSettings": "Open settings",
+    "dataFreshness": "Data freshness: {{state}}",
+    "chartFigure": "Chart: {{title}}"
   },
   "table": {
     "selection": {
@@ -1719,7 +1806,37 @@
     "subtitle": "Fleet API, telemetry, infrastructure & utilities"
   },
   "error": {
-    "loadFailed": "Failed to load data"
+    "loadFailed": "Failed to load data",
+    "retry": "Retry",
+    "notFound": {
+      "title": "{{thing}} not found",
+      "thingDefault": "Resource",
+      "message": "It may have been deleted or the link is wrong.",
+      "cta": "Back to list"
+    },
+    "unauthorized": {
+      "title": "Sign in required",
+      "message": "Your session has expired. Please sign in again.",
+      "cta": "Sign in"
+    },
+    "serverError": {
+      "title": "Server error",
+      "message": "Something went wrong on our end. Please try again."
+    },
+    "network": {
+      "title": "Can't reach server",
+      "message": "Check your internet connection and try again.",
+      "offlineTitle": "You're offline",
+      "offlineDetail": "We'll retry automatically when your connection returns.",
+      "retryWhenOnline": "Retry when online"
+    },
+    "waiting": {
+      "title": "Waiting for upstream",
+      "message": "We're pausing requests briefly. Data will refresh automatically."
+    },
+    "chunkLoad": {
+      "body": "A new version was deployed. Click Reload to load the latest assets."
+    }
   },
   "playground": {
     "search": "Search endpoints...",
@@ -1749,6 +1866,16 @@
     "endpointCount": "{{count}} endpoints available"
   },
   "admin": {
+    "systemStatus": {
+      "clientPerformance": {
+        "title": "Client Performance",
+        "description": "Web Vitals (LCP, INP, CLS, FCP, TTFB) are collected from real browser sessions and exported as Prometheus histograms (teslasync_web_vitals_value).",
+        "collecting": "Collecting",
+        "metricsList": "LCP · INP · CLS · FCP · TTFB",
+        "viewDashboard": "View dashboard",
+        "noDashboard": "Set VITE_GRAFANA_URL at build time to surface a link to the Web Vitals dashboard."
+      }
+    },
     "security": {
       "col": {
         "time": "Time",
@@ -1763,6 +1890,7 @@
       "off": "Off",
       "eventHistory": "Security Event History",
       "timeline": {
+        "title": "Security Event Timeline",
         "lock": {
           "positive": "Vehicle Locked",
           "negative": "Vehicle Unlocked",
@@ -1862,6 +1990,8 @@
     "filters": "Filters",
     "clear": "Clear",
     "allServices": "All Services",
+    "serviceFilterAria": "Filter by service",
+    "serviceCount": "{{tracked}} with data · {{known}} known",
     "allMethods": "All Methods",
     "allStatus": "All Status",
     "filterEndpoint": "Filter by endpoint...",
@@ -1906,7 +2036,7 @@
     "provider": "Provider",
     "frequency": "Frequency",
     "daily": "Daily",
-    "everyNDays": "Every ${row.frequency_days}d",
+    "everyNDays": "Every {{days}}d",
     "schedule": "Schedule",
     "lastRun": "Last",
     "nextRun": "Next",
@@ -1980,7 +2110,41 @@
     "booleans": "Booleans",
     "selectPrompt": "Select a vehicle to view its cached Redis signals",
     "noSignals": "No signals cached for this vehicle",
-    "noMatch": "No signals match the current filter"
+    "noMatch": "No signals match the current filter",
+    "diagnostic": {
+      "modeLocal": {
+        "title": "Redis L2 writes are disabled",
+        "body": "LIVE_SIGNAL_STORE_MODE=local means the telemetry pipeline writes only to the in-process L1 store and never mirrors to Redis. This page reads exclusively from Redis, so it cannot show data while local mode is active.",
+        "cta": "See live-state contract docs"
+      },
+      "mirrorBroken": {
+        "title": "L2 mirror is failing",
+        "body": "The in-process L1 store has {{count}} signals for this vehicle but Redis is empty. The async mirror goroutine in HybridLiveSignalStore.UpdateNonBlocking may be timing out or the Redis connection may be saturated. Check pod logs for \"live signal store: Redis mirror failed\"."
+      },
+      "noTelemetry": {
+        "title": "No recent telemetry for this vehicle",
+        "bodyStale": "Last L1 entry was {{date}}. The 7-day Redis TTL has likely expired. Wait for the next telemetry push or warm the cache from the cold-path reader.",
+        "bodyAbsent": "This vehicle has no L1 entries on this pod. Either telemetry has never streamed for it, or this pod restarted before any telemetry arrived."
+      },
+      "empty": {
+        "title": "No signals cached for this vehicle",
+        "body": "Both L1 and L2 are empty. If this vehicle is currently streaming, give the next batch a few seconds to arrive. Otherwise check the telemetry pipeline."
+      },
+      "otherVehicles": "Other vehicles with cached signals",
+      "meta": {
+        "mode": "Live store mode",
+        "key": "Redis key",
+        "l1Count": "L1 signals",
+        "l2Count": "L2 fields (raw)",
+        "l1LastSeen": "L1 last seen",
+        "l2LastSeen": "L2 last seen",
+        "vin": "VIN"
+      }
+    },
+    "headerChip": {
+      "mode": "Mode: {{mode}}",
+      "l1Seen": "L1 last: {{date}}"
+    }
   },
   "lifetime": {
     "unlocked": "✓ Unlocked",
@@ -2203,12 +2367,12 @@
     "dcFast": "DC Fast",
     "acOther": "AC / Other",
     "chargeSessions": "charge sessions",
-    "avgStartSOC": "Average plug-in at ${Math.round(data.avg_charge_start_soc)}% battery",
+    "avgStartSOC": "Average plug-in at {{soc}}% battery",
     "funFacts": "Fun facts about your year",
     "noDriveData": "No drive data for this year",
     "duration": "duration",
     "co2Offset": "CO₂ offset",
-    "treesEquiv": "Like planting ${treesPlanted} trees",
+    "treesEquiv": "Like planting {{count}} trees",
     "more": "more",
     "drivingPatterns": "Your driving patterns",
     "favoriteDay": "Favorite driving day",
@@ -2220,25 +2384,25 @@
     "vsGas": "vs. driving a gas car",
     "gasCost": "Gas would cost",
     "electricCost": "Electric cost",
-    "savingsNote": "That's ${Math.round(data.gas_savings / 5)} cups of coffee!",
+    "savingsNote": "That's {{cupsOfCoffee}} cups of coffee!",
     "longestDrive": "Longest Drive",
     "mostEfficient": "Most Efficient Drive",
     "drives": "drives",
-    "avgPerWeek": "${data.avg_drives_per_week.toFixed(1)} drives per week on average",
-    "distanceComparison": "That's ${(earthLaps * 100).toFixed(1)}% around the Earth!",
+    "avgPerWeek": "{{count}} drives per week on average",
+    "distanceComparison": "That's {{percent}}% around the Earth!",
     "distanceSmall": "Every kilometer counts!",
     "energyUnit": "kWh charged",
-    "energyComparison": "Enough to power a home for ${Math.round(data.total_energy_kwh / 30)} days",
+    "energyComparison": "Enough to power a home for {{days}} days",
     "totalDrives": "Drives",
     "energyKwh": "kWh",
     "charges": "Charges",
     "co2KgSaved": "kg CO₂ saved",
     "title": "Year in Review",
-    "savedSummary": "Saved $${Math.round(data.gas_savings)} vs. gas",
+    "savedSummary": "Saved ${{amount}} vs. gas",
     "screenshot": "📸 Screenshot to share your year!",
-    "pageTitle": "${year} Year in Review",
+    "pageTitle": "{{year}} Year in Review",
     "loading": "Building your year in review...",
-    "noData": "No driving data for ${year}",
+    "noData": "No driving data for {{year}}",
     "noDataHint": "Start driving and charging to build your annual review!",
     "goBack": "Go Back",
     "selectVehicle": "Select vehicle",
@@ -2499,7 +2663,7 @@
     "nextFire": "Next",
     "conflictWith": "Conflict with",
     "deleteTitle": "Delete Automation",
-    "deleteMessage": "Are you sure you want to delete \"${a.name}\"? This cannot be undone.",
+    "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
     "deleteConfirm": "Delete",
     "title": "Automations",
     "importUnknownError": "Unknown error",
@@ -2549,7 +2713,7 @@
       "saving": "Saving",
       "less": "less",
       "projectedAnnual": "Projected Annual",
-      "periodTotal": "${periodDays}-Day Total"
+      "periodTotal": "{{days}}-Day Total"
     },
     "title": "Energy",
     "timeOfDay": {
@@ -2581,14 +2745,14 @@
       "sessions": "Sessions",
       "monthlyEst": "Monthly Est.",
       "yearlyEst": "Yearly Est.",
-      "costPerDist": "Cost per ${distanceUnit}"
+      "costPerDist": "Cost per {{unit}}"
     },
     "lifetime": {
       "title": "Lifetime Metrics",
       "energyUsed": "Lifetime Energy Used",
       "energyUsedDesc": "Total energy consumed since vehicle delivery",
       "periodEnergyDesc": "Energy added during selected date range",
-      "periodEnergy": "Last ${periodDays} Days"
+      "periodEnergy": "Last {{days}} Days"
     },
     "chart": {
       "energyCostDaily": "Energy & Cost Daily",
@@ -2599,7 +2763,7 @@
       "chargingByTime": "Charging by Time of Day",
       "sessions": "Sessions",
       "chargerBreakdown": "Charger Type Breakdown",
-      "distance": "Distance (${distanceUnit})"
+      "distance": "Distance ({{unit}})"
     },
     "tip": {
       "offPeak": "Off-peak charging saves money",
@@ -2661,7 +2825,7 @@
         "goodTemp": "Thermal Balance Good",
         "goodTempDesc": "Module temperatures are consistent. Thermal management system is performing well.",
         "criticalCells": "Critical Cells Detected",
-        "criticalCellsDesc": "${criticalCells} cell(s) show significant deviation. Consider scheduling a service appointment.",
+        "criticalCellsDesc": "{{count}} cell(s) show significant deviation. Consider scheduling a service appointment.",
         "healthy": "All Cells Healthy",
         "healthyDesc": "No critical cells detected. Continue current charging habits for long-term health."
       },
@@ -2727,21 +2891,21 @@
     },
     "insight": {
       "excellentTitle": "Excellent Health",
-      "excellentDesc": "Battery health is ${fmtNumber(health.current_soh, 0)}/100 — performing above average.",
+      "excellentDesc": "Battery health is {{soh}}/100 — performing above average.",
       "goodTitle": "Good Health",
-      "goodDesc": "Battery health is ${fmtNumber(health.current_soh, 0)}/100 — normal degradation for age.",
+      "goodDesc": "Battery health is {{soh}}/100 — normal degradation for age.",
       "concernTitle": "Health Concern",
-      "concernDesc": "Battery health dropped to ${fmtNumber(health.current_soh, 0)}/100 — consider service check.",
+      "concernDesc": "Battery health dropped to {{soh}}/100 — consider service check.",
       "highFastChargeTitle": "High Fast-Charge Usage",
-      "highFastChargeDesc": "${fmtPercent(health.fast_charge_pct)} of sessions are fast-charging. Mix in slow charging for longevity.",
+      "highFastChargeDesc": "{{pct}} of sessions are fast-charging. Mix in slow charging for longevity.",
       "goodHabitsTitle": "Good Charging Habits",
       "goodHabitsDesc": "Most charges are slow/AC — ideal for battery longevity.",
       "deepDischargeTitle": "Deep Discharges Detected",
-      "deepDischargeDesc": "${deepDischarges} recent sessions started below 10%. Avoid deep discharges when possible.",
+      "deepDischargeDesc": "{{count}} recent sessions started below 10%. Avoid deep discharges when possible.",
       "highSuperchargerTitle": "High Supercharger Usage",
-      "highSuperchargerDesc": "${superchargerCount} Supercharger sessions. Occasional slow charging helps battery health.",
+      "highSuperchargerDesc": "{{count}} Supercharger sessions. Occasional slow charging helps battery health.",
       "lowDegTitle": "Low Degradation Rate",
-      "lowDegDesc": "${fmtNumber(health.degradation_rate_yr, 1)}% per year — well below industry average of 3–5%."
+      "lowDegDesc": "{{rate}}% per year — well below industry average of 3–5%."
     },
     "tip": {
       "reduceFast": "Reduce fast charging frequency to slow degradation.",
@@ -2987,7 +3151,7 @@
       "sessions": "sessions",
       "avgPerKwh": "Avg $/kWh",
       "blendedRate": "blended rate",
-      "costPerDist": "Cost Per ${isMiles ? 'Mile' : 'km'}",
+      "costPerDist": "Cost Per {{unit}}",
       "totalEnergy": "Total Energy",
       "gasSavings": "Gas Savings $",
       "savingsPercent": "Savings %",
@@ -3413,10 +3577,12 @@
       "subtitle": "Recent actions you have taken in TeslaSync.",
       "empty": "No recent activity in this window.",
       "disabled": {
-        "title": "Activity feed disabled"
+        "title": "Activity feed disabled",
+        "description": "Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure AUTH_FORWARD_HEADER."
       },
       "unauthorized": {
-        "title": "Identity required"
+        "title": "Identity required",
+        "description": "Your request did not include an identity header. Sign in through your identity provider and try again."
       },
       "error": {
         "title": "Could not load activity"
@@ -3675,6 +3841,7 @@
       "saved": "Saved {{amount}} vs gas"
     },
     "chargeHistory": {
+      "title": "Charge History",
       "total": "Total",
       "avg": "Avg"
     },
@@ -4589,10 +4756,10 @@
   "driveDetail": {
     "costSavings": "Cost & Savings",
     "tripCost": "Trip Cost",
-    "atRate": "at ${currencySymbol}${costPerKwh}/kWh",
-    "costPerUnit": "Cost / ${distanceUnit}",
+    "atRate": "at {{currencySymbol}}{{costPerKwh}}/kWh",
+    "costPerUnit": "Cost / {{unit}}",
     "gasCostEquiv": "Gas Cost (equiv)",
-    "atMpg": "at ${settings.gas_efficiency_mpg} MPG",
+    "atMpg": "at {{mpg}} MPG",
     "gasSavings": "vs Gas Savings",
     "savingsPct": "Savings %",
     "title": "Drive Details",
@@ -5104,7 +5271,7 @@
     "costPerKm": "Est. Cost/km",
     "drivesAnalyzed": "Drives Analyzed",
     "noStatCards": "No driving statistics available yet",
-    "dailyTrend": "Daily Efficiency (${efficiencyUnit})",
+    "dailyTrend": "Daily Efficiency ({{unit}})",
     "speedDist": "Efficiency by Speed Range",
     "speedVsEfficiency": "Speed vs Efficiency",
     "speed": "Speed",
@@ -5322,6 +5489,13 @@
       "error": {
         "title": "Could not load notifications"
       }
+    },
+    "bulkRead": {
+      "success": "{{count}} marked as read"
+    },
+    "markAllRead": {
+      "action": "Mark all read",
+      "success": "All notifications marked as read"
     },
     "stats": {
       "sent": "Total Sent",
@@ -5554,6 +5728,14 @@
       "iconOnlyHelp": "Hide labels at all widths. Otherwise the bar auto-collapses on narrow screens.",
       "shownToast": "Status bar shown",
       "hiddenToast": "Status bar hidden"
+    },
+    "timeFormat": {
+      "label": "Default time format",
+      "relative": "Relative (2h ago)",
+      "relativeHelp": "Best for recent activity feeds",
+      "absolute": "Absolute (Nov 12, 13:42)",
+      "absoluteHelp": "Best for trip planning and event correlation",
+      "help": "Hover any timestamp to see the alternate format. Override per-surface with the format prop where needed."
     }
   },
   "featureConfig": {
@@ -5640,7 +5822,12 @@
     "googleMapsHint": "Optional — enables satellite views, Places autocomplete, and enhanced geocoding.",
     "getKeyAt": "Get a key at",
     "save": "Save Settings",
-    "settingsSaved": "Settings saved"
+    "settingsSaved": "Settings saved",
+    "newVersion": {
+      "message": "A new version of TeslaSync is available.",
+      "reload": "Reload",
+      "later": "Later"
+    }
   },
   "browserNotifications": {
     "title": "Browser Notifications",
@@ -5660,6 +5847,29 @@
       "badge": "Show unread count in browser tab",
       "flash": "Flash tab title on critical alerts",
       "hint": "Adds a \"(N)\" prefix and favicon dot when there are unread notifications. Critical alerts briefly flash \"(!) ALERT\" when the tab is in the background."
+    },
+    "search": {
+      "placeholder": "Search settings…",
+      "label": "Search settings",
+      "noResults": "No matching settings."
+    },
+    "advanced": {
+      "restoreConfirms": {
+        "title": "Confirmation prompts",
+        "description": "Re-enable “Don’t ask again” prompts you previously silenced.",
+        "empty": "No silenced prompts. Tick “Don’t ask again” on a confirmation dialog to silence it.",
+        "restore": "Restore",
+        "restoreAll": "Restore all",
+        "keys": {
+          "discardDraft": "Discard unsaved draft",
+          "unsavedNavigation": "Leave page with unsaved changes"
+        }
+      }
+    }
+  },
+  "confirm": {
+    "silence": {
+      "checkbox": "Don't ask again for this action"
     }
   },
   "region": {
@@ -5678,13 +5888,27 @@
     "title": "Tesla Account",
     "subtitle": "Connect your Tesla account to sync vehicles and data",
     "connected": "Connected",
+    "disconnected": "Disconnected",
     "tokenExpires": "Token expires",
+    "expiringSoon": "Expires in {{days}}d",
     "notConnected": "Not connected",
     "connect": "Connect Tesla Account",
     "refreshToken": "Refresh Token",
     "syncVehicles": "Sync Vehicles",
     "reauthorize": "Re-authorize",
-    "synced": "Synced {{count}} vehicle(s)."
+    "synced": "Synced {{count}} vehicle(s).",
+    "reauth": {
+      "title": "Tesla account disconnected",
+      "body": "Reconnect to resume live data and commands.",
+      "cta": "Reconnect"
+    }
+  },
+  "ratelimit": {
+    "banner": "Too many requests — pausing for {{n}}s",
+    "retry": "Retry now"
+  },
+  "upstream": {
+    "banner": "Tesla upstream unavailable — retry in {{n}}s"
   },
   "commands": {
     "search": {
@@ -5706,7 +5930,7 @@
     "noVehicles": "No vehicles found",
     "connectFleet": "Connect your Tesla account and sync your fleet to start sending commands.",
     "confirm": {
-      "typeToConfirm": "Type \"${confirmInput}\" to confirm:"
+      "typeToConfirm": "Type \"{{word}}\" to confirm:"
     }
   },
   "fsm": {
@@ -6099,10 +6323,18 @@
   },
   "debugger": {
     "share": "Share permalink",
+    "window": {
+      "minutes": "{{n}} min",
+      "hours": "{{n}} h",
+      "day": "24 h"
+    },
     "timeline": {
       "empty": "No transitions in window",
       "windowLabel": "Window: {{minutes}} min",
-      "tickAria": "{{from}} to {{to}}"
+      "tickAria": "{{from}} to {{to}}",
+      "lastSeen": "Last transition {{rel}}",
+      "widenTo": "Widen window to {{label}}",
+      "jumpToLast": "Jump to last transition"
     },
     "controls": {
       "live": "Live",
@@ -6111,7 +6343,9 @@
       "stepNext": "Step to next transition",
       "window": "Window",
       "clear": "Clear buffer",
-      "buffered": "{{n}} buffered"
+      "buffered": "{{n}} buffered",
+      "bufferedDual": "{{inWindow}} in window · {{total}} in 24 h",
+      "bufferedTooltip": "Counts inside the {{minutes}}-minute Window dropdown. {{outside}} more transitions fetched in the last 24 h."
     },
     "inspector": {
       "title": "Transition snapshot",
@@ -6123,6 +6357,8 @@
       "diffMode": "Diff vs previous",
       "noSignals": "No signals captured for this transition",
       "empty": "Select a transition to inspect its snapshot",
+      "emptyOutsideWindow": "Nothing in the current window. Last transition {{rel}}.",
+      "jumpToLast": "Jump to last transition",
       "loading": "Loading…",
       "copy": "Copy snapshot"
     }
@@ -6766,7 +7002,10 @@
     "to": "To",
     "quickRange": "Quick Range",
     "query": "Query",
-    "rows": "Rows"
+    "rows": "Rows",
+    "preset": {
+      "aria": "{{label}} time range"
+    }
   },
   "vehicleHero": {
     "gauge": {

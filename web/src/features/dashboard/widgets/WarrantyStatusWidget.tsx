@@ -207,10 +207,10 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
           {warrantyData ? (
             <>
               <ShieldCheck className="h-4 w-4 text-emerald-400" />
-              <span className="text-2xl font-bold text-white/90">
+              <span className="text-2xl font-bold text-[var(--text-primary)]">
                 {daysRemaining != null ? fmtInt(Math.max(daysRemaining, 0)) : '—'}
               </span>
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.warranty.daysLeft', 'days left')}
               </span>
               <Badge
@@ -222,7 +222,7 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
               </Badge>
             </>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<ShieldCheck className="h-5 w-5" />}
               message={t('widget.warranty.noData', 'No warranty data')}
               className="py-2"
@@ -282,7 +282,7 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
           />
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<ShieldCheck className="h-5 w-5" />}
           message={t('widget.warranty.noData', 'No warranty data')}
           className="py-4"

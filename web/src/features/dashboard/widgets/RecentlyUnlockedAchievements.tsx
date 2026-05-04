@@ -61,7 +61,7 @@ export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: 
   if (!prefs.showOnDashboard) {
     return (
       <WidgetShell title={title} icon={icon} updatedAt={dataUpdatedAt}>
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Trophy className="h-5 w-5" />}
           message={t(
             'widget.recentlyUnlocked.disabled',
@@ -101,7 +101,7 @@ export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: 
           ))}
         </ul>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Trophy className="h-5 w-5" />}
           message={t(
             'achievements.noneYet',

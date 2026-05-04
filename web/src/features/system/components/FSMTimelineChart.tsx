@@ -91,7 +91,7 @@ export function FSMTimelineChart({ transitions, hours }: FSMTimelineChartProps) 
           </AreaChart>
         </ResponsiveContainer>
       ) : (
-        <EmptyState message={t('fsm.noTimelineData', 'No transition data for timeline')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noTimelineData', 'No transition data for timeline')} />
       )}
     </ChartContainer>
   );

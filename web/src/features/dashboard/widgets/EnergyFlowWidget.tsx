@@ -110,7 +110,7 @@ export default function EnergyFlowWidget({ vehicleId }: WidgetProps) {
           emptyMessage={t('widget.noEnergyData', 'No energy data available')}
         />
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Activity className="h-5 w-5" />}
           message={t('widget.noEnergyData', 'No energy data available')}
           className="py-4"

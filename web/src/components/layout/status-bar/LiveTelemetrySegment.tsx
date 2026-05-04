@@ -70,7 +70,7 @@ export function LiveTelemetrySegment({ iconOnly = false }: LiveTelemetrySegmentP
     unknown: {
       icon: WifiOff,
       text: 'text-[var(--text-muted)]',
-      dot: 'bg-white/20',
+      dot: 'bg-[var(--surface-2)]',
       short: t('statusBar.live.unknown', 'Idle'),
     },
   };

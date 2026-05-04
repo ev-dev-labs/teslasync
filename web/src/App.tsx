@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { Navigate, Routes, Route, useNavigate } from 'react-router-dom'
+import { Navigate, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import { ScrollRestoration } from './components/layout/ScrollRestoration'
 import { PageLoadSkeleton } from './components/feedback/PageLoadSkeleton'
@@ -51,7 +51,7 @@ const SleepEfficiency = lazy(() => import('./features/battery/pages/SleepEfficie
 // Driving & Performance
 const Drives = lazy(() => import('./features/driving/pages/DrivesListPage'))
 const DriveDetail = lazy(() => import('./features/driving/pages/DriveDetailPage'))
-const TripReplay = lazy(() => import('./features/driving/pages/TripReplayPage'))
+const TripReplay = lazy(() => import('./features/trips/pages/TripReplayPage'))
 const DriveScore = lazy(() => import('./features/driving/pages/DriveScorePage'))
 const DrivingDynamics = lazy(() => import('./features/driving/pages/DrivingDynamicsPage'))
 const DrivetrainHealth = lazy(() => import('./features/driving/pages/DrivetrainHealthPage'))
@@ -91,11 +91,13 @@ const MediaPlayer = lazy(() => import('./features/vehicle-systems/pages/MediaPla
 
 // Automations
 const AutomationsListPage = lazy(() => import('./features/automations/pages/AutomationsListPage'))
+const AutomationListPage = lazy(() => import('./features/automations/pages/AutomationListPage'))
 const AutomationBuilderPage = lazy(() => import('./features/automations/pages/AutomationBuilderPage'))
 
 // Notifications & Alerts
 const Alerts = lazy(() => import('./features/notifications/pages/AlertsPage'))
 const AlertStudio = lazy(() => import('./features/notifications/pages/AlertStudioPage'))
+const AlertRulesPage = lazy(() => import('./features/notifications/pages/AlertRulesPage'))
 const Notifications = lazy(() => import('./features/notifications/pages/NotificationsPage'))
 
 // Telemetry & Signals
@@ -123,6 +125,7 @@ const RedisSignalViewer = lazy(() => import('./features/admin/pages/RedisSignalV
 // System & Ops
 const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
 const DataExport = lazy(() => import('./features/system/pages/DataExportPage'))
+const ExportsPage = lazy(() => import('./features/exports/pages/ExportsPage'))
 const DataRepair = lazy(() => import('./features/system/pages/DataRepairPage'))
 const DBHealthDashboard = lazy(() => import('./features/system/pages/DBHealthPage'))
 const StateMachineDebugger = lazy(() => import('./features/system/pages/StateMachineDebuggerPage'))
@@ -159,8 +162,13 @@ const WatchFace = lazy(() => import('./features/watch/pages/WatchFacePage'))
  *  doesn't reflow when the lazy chunk arrives — important for our CLS budget.
  *  See web/lighthouserc.json for the active assertions (Phase 40 / Prompt 35). */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
+  const { pathname } = useLocation()
+  // key={pathname} guarantees a fresh ErrorBoundary instance on every navigation,
+  // so a crash on the previous route can never persist into the next one.
+  // resetKey is also passed for defense-in-depth against any code path that
+  // would otherwise reuse the boundary instance across path changes.
   return (
-    <ErrorBoundary name={name}>
+    <ErrorBoundary key={pathname} name={name} resetKey={pathname}>
       <Suspense fallback={<PageLoadSkeleton />}>{children}</Suspense>
     </ErrorBoundary>
   )
@@ -213,10 +221,12 @@ export default function App() {
         <Route path="commands" element={<SafeRoute name="Commands"><Commands /></SafeRoute>} />
         <Route path="command-history" element={<SafeRoute name="CommandHistory"><CommandHistory /></SafeRoute>} />
         <Route path="automations" element={<SafeRoute name="Automations"><AutomationsListPage /></SafeRoute>} />
+        <Route path="automations/list" element={<SafeRoute name="AutomationList"><AutomationListPage /></SafeRoute>} />
         <Route path="automations/new" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
         <Route path="automations/:id/edit" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
         <Route path="alerts" element={<SafeRoute name="Alerts"><Alerts /></SafeRoute>} />
         <Route path="alert-studio" element={<SafeRoute name="AlertStudio"><AlertStudio /></SafeRoute>} />
+        <Route path="alert-rules" element={<SafeRoute name="AlertRules"><AlertRulesPage /></SafeRoute>} />
         <Route path="geofences" element={<SafeRoute name="Geofences"><Geofences /></SafeRoute>} />
         <Route path="settings" element={<SafeRoute name="Settings"><Settings /></SafeRoute>} />
         <Route path="drives/:id" element={<SafeRoute name="DriveDetail"><DriveDetail /></SafeRoute>} />
@@ -272,6 +282,7 @@ export default function App() {
         <Route path="weekly-digest" element={<SafeRoute name="WeeklyDigest"><WeeklyDigest /></SafeRoute>} />
         <Route path="maintenance" element={<SafeRoute name="Maintenance"><Maintenance /></SafeRoute>} />
         <Route path="data-export" element={<SafeRoute name="DataExport"><DataExport /></SafeRoute>} />
+        <Route path="exports" element={<SafeRoute name="Exports"><ExportsPage /></SafeRoute>} />
         <Route path="energy-flow" element={<SafeRoute name="EnergyFlow"><EnergyFlow /></SafeRoute>} />
         <Route path="power-flow" element={<SafeRoute name="PowerFlowDashboard"><PowerFlowDashboard /></SafeRoute>} />
         <Route path="energy-products" element={<SafeRoute name="EnergyProducts"><EnergyProducts /></SafeRoute>} />

@@ -130,12 +130,12 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
             <span className="text-lg font-bold text-emerald-300">
               {fmtNumber(power, 1)} kW
             </span>
-            <span className="text-[10px] text-white/40">
+            <span className="text-[10px] text-[var(--text-muted)]">
               {fmtNumber(voltage, 0)}V · {fmtNumber(current, 0)}A
             </span>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Plug className="h-5 w-5" />}
             message={t('widget.chargingTelemetry.notCharging', 'Not currently charging')}
             className="py-4"
@@ -183,7 +183,7 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
           )}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Plug className="h-5 w-5" />}
           message={t('widget.chargingTelemetry.notCharging', 'Not currently charging')}
           className="py-4"

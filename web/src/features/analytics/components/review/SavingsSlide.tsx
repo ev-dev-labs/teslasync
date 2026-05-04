@@ -28,7 +28,7 @@ export function SavingsSlide({ data }: Props) {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.4 }}
-        className="text-lg text-white/50 uppercase tracking-wider mb-4"
+        className="text-lg text-[var(--text-secondary)] uppercase tracking-wider mb-4"
       >
         {t('yearReview.youSaved', 'You saved')}
       </motion.p>
@@ -50,7 +50,7 @@ export function SavingsSlide({ data }: Props) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.8, duration: 0.4 }}
-        className="text-white/40 mt-2 mb-8"
+        className="text-[var(--text-muted)] mt-2 mb-8"
       >
         {t('yearReview.vsGas', 'vs. driving a gas car')}
       </motion.p>
@@ -65,7 +65,7 @@ export function SavingsSlide({ data }: Props) {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Fuel className="h-4 w-4 text-red-400/70" />
-            <span className="text-sm text-white/50">{t('yearReview.gasCost', 'Gas would cost')}</span>
+            <span className="text-sm text-[var(--text-secondary)]">{t('yearReview.gasCost', 'Gas would cost')}</span>
             <span className="ml-auto text-sm font-medium text-red-400">${Math.round(gasCostEquiv)}</span>
           </div>
           <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
@@ -76,7 +76,7 @@ export function SavingsSlide({ data }: Props) {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Zap className="h-4 w-4 text-emerald-400/70" />
-            <span className="text-sm text-white/50">{t('yearReview.electricCost', 'Electric cost')}</span>
+            <span className="text-sm text-[var(--text-secondary)]">{t('yearReview.electricCost', 'Electric cost')}</span>
             <span className="ml-auto text-sm font-medium text-emerald-400">${Math.round(data.total_charging_cost)}</span>
           </div>
           <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
@@ -90,7 +90,7 @@ export function SavingsSlide({ data }: Props) {
         <div className="flex items-center justify-center gap-2 pt-2">
           <DollarSign className="h-4 w-4 text-emerald-400" />
           <span className="text-sm text-emerald-400/80">
-            {t('yearReview.savingsNote', `That's ${Math.round(data.gas_savings / 5)} cups of coffee!`)}
+            {t('yearReview.savingsNote', { cupsOfCoffee: Math.round(data.gas_savings / 5), defaultValue: "That's {{cupsOfCoffee}} cups of coffee!" })}
           </span>
         </div>
       </motion.div>

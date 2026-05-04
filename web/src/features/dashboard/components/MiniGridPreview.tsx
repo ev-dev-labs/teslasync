@@ -44,7 +44,7 @@ export function MiniGridPreview({ dashboard, className }: MiniGridPreviewProps) 
               padding: '2px',
             }}
           >
-            {Icon && <Icon className="h-3 w-3 text-white/20" />}
+            {Icon && <Icon className="h-3 w-3 text-[var(--text-muted)]" />}
           </div>
         );
       })}

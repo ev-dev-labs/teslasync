@@ -36,7 +36,7 @@ export function HttpStatusTool() {
         ),
       },
       { key: 'text', header: t('Status Text'), render: (r) => <span className="text-sm font-medium text-white">{r.text}</span> },
-      { key: 'desc', header: t('Status Desc'), render: (r) => <span className="text-xs text-white/60">{r.desc}</span> },
+      { key: 'desc', header: t('Status Desc'), render: (r) => <span className="text-xs text-[var(--text-secondary)]">{r.desc}</span> },
     ],
     [t],
   )

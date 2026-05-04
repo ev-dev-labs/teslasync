@@ -50,7 +50,7 @@ export function WidgetRankedList({
   );
 
   if (visible.length === 0) {
-    return <EmptyState icon={emptyIcon} message={emptyMessage} className="py-8" />;
+    return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={emptyIcon} message={emptyMessage} className="py-8" />;
   }
 
   return (
@@ -62,7 +62,7 @@ export function WidgetRankedList({
           return (
             <li
               key={item.id}
-              className="relative min-h-[44px] rounded-lg px-3 py-2 transition-colors hover:bg-white/5"
+              className="relative min-h-[44px] rounded-lg px-3 py-2 transition-colors hover:bg-[var(--surface-2)]"
             >
               {/* Background bar */}
               {!hideBars && (
@@ -78,12 +78,12 @@ export function WidgetRankedList({
               {/* Row content */}
               <div className="relative flex items-center gap-3">
                 {/* Rank number */}
-                <span className="w-5 shrink-0 text-right text-xs font-medium text-white/40">
+                <span className="w-5 shrink-0 text-right text-xs font-medium text-[var(--text-muted)]">
                   {index + 1}
                 </span>
 
                 {/* Label */}
-                <span className="min-w-0 flex-1 truncate text-sm text-white/80">
+                <span className="min-w-0 flex-1 truncate text-sm text-[var(--text-primary)]">
                   {item.label}
                 </span>
 
@@ -98,7 +98,7 @@ export function WidgetRankedList({
                 )}
 
                 {/* Value */}
-                <span className="shrink-0 text-sm font-semibold tabular-nums text-white/90">
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-[var(--text-primary)]">
                   {item.formattedValue}
                 </span>
               </div>

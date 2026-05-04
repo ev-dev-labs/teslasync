@@ -64,7 +64,7 @@ export function windowTextClass(state: WindowState): string {
     case 'Open':
       return 'text-red-400';
     default:
-      return 'text-gray-400';
+      return 'text-[var(--text-muted)]';
   }
 }
 

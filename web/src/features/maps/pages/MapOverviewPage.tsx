@@ -8,7 +8,7 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, DataTable, type Column } from '@/components/ui';
-import { MetricCard, LiveIndicator } from '@/components/data-display';
+import { MetricCard, LiveIndicator, DataFreshnessAuto, TimeStamp } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner, LiveStaleDataBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
@@ -84,11 +84,12 @@ export default function MapOverviewPage() {
   );
 
   /* ---- queries ---- */
+  const vehiclesQuery = useVehicles();
   const {
     data: vehicles,
     isLoading: vehiclesLoading,
     error: vehiclesError,
-  } = useVehicles();
+  } = vehiclesQuery;
 
   const selectedId = vehicleId != null ? String(vehicleId) : '';
 
@@ -178,9 +179,7 @@ export default function MapOverviewPage() {
         key: 'time',
         header: t('mapOverview.colTime', 'Time'),
         render: (r) => (
-          <span className="text-xs whitespace-nowrap">
-            {formatDateTime(r.created_at)}
-          </span>
+          <TimeStamp value={r.created_at} className="text-xs whitespace-nowrap" />
         ),
       },
       {
@@ -238,7 +237,12 @@ export default function MapOverviewPage() {
       )}
       loading={vehiclesLoading}
       error={vehiclesError as Error | null}
-      actions={<LiveIndicator variant="compact" />}
+      actions={
+        <div className="flex items-center gap-3">
+          <DataFreshnessAuto query={vehiclesQuery} />
+          <LiveIndicator variant="compact" />
+        </div>
+      }
     >
       <LiveStaleDataBanner />
       {anyError && (
@@ -277,7 +281,7 @@ export default function MapOverviewPage() {
               </MapContainer>
             </>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<MapPin className="h-8 w-8" />}
               message={t(
                 'mapOverview.noLocation',
@@ -355,7 +359,7 @@ export default function MapOverviewPage() {
                 <Home
                   className={cn(
                     'h-5 w-5',
-                    (locationDetails?.located_at_home ?? locationDetails?.locatedAtHome) ? 'text-emerald-400' : 'text-gray-500',
+                    (locationDetails?.located_at_home ?? locationDetails?.locatedAtHome) ? 'text-emerald-400' : 'text-[var(--text-muted)]',
                   )}
                 />
                 <span className="flex-1 text-sm text-[var(--text-secondary)]">
@@ -379,7 +383,7 @@ export default function MapOverviewPage() {
                 <Briefcase
                   className={cn(
                     'h-5 w-5',
-                    (locationDetails?.located_at_work ?? locationDetails?.locatedAtWork) ? 'text-emerald-400' : 'text-gray-500',
+                    (locationDetails?.located_at_work ?? locationDetails?.locatedAtWork) ? 'text-emerald-400' : 'text-[var(--text-muted)]',
                   )}
                 />
                 <span className="flex-1 text-sm text-[var(--text-secondary)]">
@@ -403,7 +407,7 @@ export default function MapOverviewPage() {
                 <Link2
                   className={cn(
                     'h-5 w-5',
-                    locationDetails?.homelink_nearby ? 'text-cyan-400' : 'text-gray-500',
+                    locationDetails?.homelink_nearby ? 'text-cyan-400' : 'text-[var(--text-muted)]',
                   )}
                 />
                 <span className="flex-1 text-sm text-[var(--text-secondary)]">
@@ -433,7 +437,7 @@ export default function MapOverviewPage() {
               </div>
             </div>
           ) : (
-            <EmptyState message={t('mapOverview.noLocation', 'No location data available yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('mapOverview.noLocation', 'No location data available yet')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -499,7 +503,7 @@ export default function MapOverviewPage() {
               pagination
             />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Clock className="h-8 w-8" />}
               message={t(
                 'mapOverview.noHistory',

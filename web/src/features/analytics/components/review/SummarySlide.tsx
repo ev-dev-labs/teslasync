@@ -58,11 +58,11 @@ export function SummarySlide({ data }: Props) {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-white">{data.year}</h2>
-            <p className="text-sm text-white/50">{t('yearReview.title', 'Year in Review')}</p>
+            <p className="text-sm text-[var(--text-secondary)]">{t('yearReview.title', 'Year in Review')}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm font-medium text-white/80">{data.vehicle.display_name}</p>
-            <p className="text-xs text-white/40">{data.vehicle.model}</p>
+            <p className="text-sm font-medium text-[var(--text-primary)]">{data.vehicle.display_name}</p>
+            <p className="text-xs text-[var(--text-muted)]">{data.vehicle.model}</p>
           </div>
         </div>
 
@@ -75,14 +75,14 @@ export function SummarySlide({ data }: Props) {
               transition={{ delay: 0.3 + i * 0.1, duration: 0.4 }}
               className="flex items-center gap-3"
             >
-              <stat.icon className="h-5 w-5 text-white/40 shrink-0" />
+              <stat.icon className="h-5 w-5 text-[var(--text-muted)] shrink-0" />
               <AnimatedNumber
                 value={stat.value}
                 duration={1}
                 decimals={stat.decimals}
                 className="text-xl font-bold text-white min-w-[4rem] text-left"
               />
-              <span className="text-sm text-white/50">{stat.label}</span>
+              <span className="text-sm text-[var(--text-secondary)]">{stat.label}</span>
             </motion.div>
           ))}
         </div>
@@ -95,19 +95,19 @@ export function SummarySlide({ data }: Props) {
             className="mt-6 pt-4 border-t border-white/[0.08] text-center"
           >
             <p className="text-sm text-emerald-400/80">
-              💰 {t('yearReview.savedSummary', `Saved $${Math.round(data.gas_savings)} vs. gas`)}
+              💰 {t('yearReview.savedSummary', { amount: Math.round(data.gas_savings), defaultValue: 'Saved ${{amount}} vs. gas' })}
             </p>
           </motion.div>
         )}
 
-        <p className="text-[10px] text-white/20 mt-4">TeslaSync • Year in Review</p>
+        <p className="text-[10px] text-[var(--text-muted)] mt-4">TeslaSync • Year in Review</p>
       </motion.div>
 
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.2, duration: 0.4 }}
-        className="text-sm text-white/30 mt-6"
+        className="text-sm text-[var(--text-muted)] mt-6"
       >
         {t('yearReview.screenshot', '📸 Screenshot to share your year!')}
       </motion.p>

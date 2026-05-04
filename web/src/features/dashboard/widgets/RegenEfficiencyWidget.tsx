@@ -78,7 +78,7 @@ export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) 
           {data ? (
             <WidgetGaugeHero gauge={gaugeConfig} compact />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<RotateCcw className="h-5 w-5" />}
               message={t('widget.regenEfficiency.noData', 'No regen data')}
               className="py-2"
@@ -103,7 +103,7 @@ export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) 
       {data ? (
         <WidgetGaugeHero gauge={gaugeConfig} stats={stats} />
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<RotateCcw className="h-5 w-5" />}
           message={t('widget.regenEfficiency.noData', 'No regen data')}
           className="py-4"

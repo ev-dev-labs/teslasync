@@ -42,7 +42,7 @@ function CompactView({
     <div className="flex items-center justify-between gap-2 min-h-[44px]">
       <div className="flex items-center gap-2 min-w-0">
         <Download className="h-4 w-4 flex-shrink-0 text-neon-cyan" />
-        <span className="text-sm text-white/90 truncate">{latestVersion}</span>
+        <span className="text-sm text-[var(--text-primary)] truncate">{latestVersion}</span>
       </div>
       <Badge variant={variant}>
         {latestStatus === 'installed'
@@ -116,7 +116,7 @@ export default function SoftwareUpdateHistoryWidget({ vehicleId, size }: WidgetP
             t={t}
           />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Download className="h-5 w-5" />}
             message={t('widget.noUpdates', 'No update history')}
             className="py-4"

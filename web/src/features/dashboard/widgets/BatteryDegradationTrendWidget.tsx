@@ -4,7 +4,7 @@ import { TrendingDown } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer,
   Tooltip, CartesianGrid, ReferenceLine,
-  chartGrid, axisTickSm, useChartPalette,
+  chartGrid, axisTickSm, useThemeChartPalette,
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
@@ -42,7 +42,7 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
   const totalCycles = data?.current_cycles ?? null;
 
   // Phase-40 / Prompt 60 — series colour from active theme.
-  const palette = useChartPalette();
+  const palette = useThemeChartPalette();
 
   const stats = useMemo<ChartSummaryStat[]>(() => {
     const items: ChartSummaryStat[] = [];
@@ -88,7 +88,7 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
     </ResponsiveContainer>
   ) : (
     <div className="flex h-full items-center justify-center">
-      <p className="text-xs text-white/30">
+      <p className="text-xs text-[var(--text-muted)]">
         {t('widget.needMoreData', 'More data needed for trend')}
       </p>
     </div>

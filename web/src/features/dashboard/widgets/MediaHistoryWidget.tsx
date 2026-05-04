@@ -32,7 +32,7 @@ function CompactView({
     <div className="flex items-center gap-2 min-h-[44px]">
       <Music className="h-4 w-4 flex-shrink-0 text-neon-cyan" />
       <div className="min-w-0 flex-1">
-        <p className="text-sm text-white/90 truncate">
+        <p className="text-sm text-[var(--text-primary)] truncate">
           {title !== '—'
             ? `${title} — ${artist}`
             : t('widget.noMediaPlayed', 'No tracks played')}
@@ -105,7 +105,7 @@ export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
             t={t}
           />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<ListMusic className="h-5 w-5" />}
             message={t('widget.noMediaPlayed', 'No tracks played')}
             className="py-4"

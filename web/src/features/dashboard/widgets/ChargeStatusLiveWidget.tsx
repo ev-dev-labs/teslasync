@@ -94,7 +94,7 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
           />
         )
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Zap className="h-5 w-5" />}
           message={t('widget.noChargeData', 'No charge data')}
           className="py-4"
@@ -110,7 +110,7 @@ function CompactChargingView({ power, batteryLevel }: { power: number; batteryLe
     <div className="h-full flex flex-col items-center justify-center gap-1">
       <BatteryCharging className="h-5 w-5 text-neon-green animate-pulse" />
       <AnimatedNumber value={power} decimals={1} suffix=" kW" className="text-lg font-bold text-neon-green" />
-      <span className="text-[10px] text-white/40">{batteryLevel}%</span>
+      <span className="text-[10px] text-[var(--text-muted)]">{batteryLevel}%</span>
     </div>
   );
 }
@@ -119,9 +119,9 @@ function CompactChargingView({ power, batteryLevel }: { power: number; batteryLe
 function CompactIdleView({ batteryLevel, t }: { batteryLevel: number; t: (k: string, f: string) => string }) {
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1">
-      <Plug className="h-5 w-5 text-white/30" />
-      <span className="text-lg font-bold text-white/90">{batteryLevel}%</span>
-      <span className="text-[10px] text-white/40">{t('widget.notCharging', 'Not Charging')}</span>
+      <Plug className="h-5 w-5 text-[var(--text-muted)]" />
+      <span className="text-lg font-bold text-[var(--text-primary)]">{batteryLevel}%</span>
+      <span className="text-[10px] text-[var(--text-muted)]">{t('widget.notCharging', 'Not Charging')}</span>
     </div>
   );
 }
@@ -157,7 +157,7 @@ function FullChargingView({ metrics, isTall, convertDistance, distanceUnit, form
             {t('widget.charging', 'Charging')}
           </Badge>
         </div>
-        <span className="text-xs text-white/50">{batteryLevel}%</span>
+        <span className="text-xs text-[var(--text-secondary)]">{batteryLevel}%</span>
       </div>
 
       {/* Primary metric: power */}
@@ -173,22 +173,22 @@ function FullChargingView({ metrics, isTall, convertDistance, distanceUnit, form
       {/* Secondary metrics grid */}
       <div className="grid grid-cols-2 gap-2">
         <MetricCell
-          icon={<Gauge className="h-3 w-3 text-white/40" />}
+          icon={<Gauge className="h-3 w-3 text-[var(--text-muted)]" />}
           label={t('widget.voltage', 'Voltage')}
           value={voltage != null ? `${fmtNumber(voltage, 0)} V` : '—'}
         />
         <MetricCell
-          icon={<Zap className="h-3 w-3 text-white/40" />}
+          icon={<Zap className="h-3 w-3 text-[var(--text-muted)]" />}
           label={t('widget.amps', 'Current')}
           value={amps != null ? `${fmtNumber(amps, 0)} A` : '—'}
         />
         <MetricCell
-          icon={<Timer className="h-3 w-3 text-white/40" />}
+          icon={<Timer className="h-3 w-3 text-[var(--text-muted)]" />}
           label={t('widget.timeRemaining', 'Time Left')}
           value={formatTime(timeToFull)}
         />
         <MetricCell
-          icon={<Zap className="h-3 w-3 text-white/40" />}
+          icon={<Zap className="h-3 w-3 text-[var(--text-muted)]" />}
           label={t('widget.energyAdded', 'Added')}
           value={`${fmtNumber(energyAdded, 1)} kWh`}
         />
@@ -198,12 +198,12 @@ function FullChargingView({ metrics, isTall, convertDistance, distanceUnit, form
       {isTall && (
         <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/[0.06]">
           <MetricCell
-            icon={<Gauge className="h-3 w-3 text-white/40" />}
+            icon={<Gauge className="h-3 w-3 text-[var(--text-muted)]" />}
             label={t('widget.chargeRate', 'Rate')}
             value={`${fmtNumber(convertDistance(chargeRate), 0)} ${distanceUnit}/h`}
           />
           <MetricCell
-            icon={<BatteryCharging className="h-3 w-3 text-white/40" />}
+            icon={<BatteryCharging className="h-3 w-3 text-[var(--text-muted)]" />}
             label={t('widget.batteryLevel', 'Battery')}
             value={`${batteryLevel}%`}
           />
@@ -227,21 +227,21 @@ interface IdleViewProps {
 function IdleView({ metrics, latestSession, t }: IdleViewProps) {
   return (
     <div className="h-full flex flex-col items-center justify-center gap-3">
-      <Plug className="h-6 w-6 text-white/30" />
+      <Plug className="h-6 w-6 text-[var(--text-muted)]" />
       <div className="text-center">
-        <p className="text-sm font-medium text-white/90">
+        <p className="text-sm font-medium text-[var(--text-primary)]">
           {t('widget.notCharging', 'Not Charging')}
         </p>
-        <p className="text-xs text-white/40 mt-0.5">
+        <p className="text-xs text-[var(--text-muted)] mt-0.5">
           {metrics.batteryLevel}%
         </p>
       </div>
       {latestSession && (
         <div className="text-center p-2 rounded-lg bg-white/[0.03] border border-white/[0.06] w-full">
-          <p className="text-[10px] text-white/40 mb-0.5">
+          <p className="text-[10px] text-[var(--text-muted)] mb-0.5">
             {t('widget.lastSession', 'Last Session')}
           </p>
-          <p className="text-xs font-medium text-white/70">
+          <p className="text-xs font-medium text-[var(--text-secondary)]">
             +{fmtNumber(latestSession.energy_added_kwh, 1)} kWh
           </p>
         </div>
@@ -256,8 +256,8 @@ function MetricCell({ icon, label, value }: { icon: React.ReactNode; label: stri
     <div className="flex items-start gap-1.5 min-w-0">
       <span className="mt-0.5 shrink-0">{icon}</span>
       <div className="min-w-0">
-        <p className="text-[10px] text-white/40 truncate">{label}</p>
-        <p className="text-sm font-semibold text-white/90 truncate">{value}</p>
+        <p className="text-[10px] text-[var(--text-muted)] truncate">{label}</p>
+        <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{value}</p>
       </div>
     </div>
   );

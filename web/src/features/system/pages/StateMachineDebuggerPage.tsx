@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, ChevronDown, ChevronRight, Activity, Zap, AlertTriangle } from 'lucide-react';
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Button, DataTable, Select, Pagination, CopyButton } from '@/components/ui';
+import { GlassPanel, Button, DataTable, HelpTooltip, Select, Pagination, CopyButton } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
@@ -18,12 +18,12 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSignalSnapshot } from '@/api/hooks/useTelemetry';
 import type { VehicleState } from '@/api/types';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { FSMTransition, FSMType } from '@/types/fsm';
 import { HOURS_OPTIONS, FSM_TYPE_OPTIONS } from '@/types/fsm';
 import { StateBadge } from '../components/StateBadge';
+import { TimeStamp } from '@/components/data-display';
 import { FSMStateDiagram } from '../components/FSMStateDiagram';
 import { FSMHealthPanel, computeFlapIds } from '../components/FSMHealthPanel';
 import { FSMTimelineChart } from '../components/FSMTimelineChart';
@@ -31,6 +31,10 @@ import { FSMSubFSMPanel } from '../components/FSMSubFSMPanel';
 import { StateTimeline } from '../components/state-machine/StateTimeline';
 import { LiveControls } from '../components/state-machine/LiveControls';
 import { SnapshotInspector } from '../components/state-machine/SnapshotInspector';
+import {
+  windowTransitions,
+  nextWiderPreset,
+} from '../components/state-machine/windowTransitions';
 
 /* ─── Vehicle state styling (for live state hero) ─── */
 const vehicleStateStyle: Record<string, { bg: string; text: string; dot: string }> = {
@@ -217,9 +221,10 @@ export default function StateMachineDebuggerPage() {
         key: 'time',
         header: t('fsm.time', 'Time'),
         render: (row: FSMTransition) => (
-          <span className="text-[var(--text-secondary)] font-mono text-xs whitespace-nowrap">
-            {formatDateTime(row.created_at)}
-          </span>
+          <TimeStamp
+            value={row.created_at}
+            className="text-[var(--text-secondary)] font-mono text-xs whitespace-nowrap"
+          />
         ),
       },
       {
@@ -333,6 +338,36 @@ export default function StateMachineDebuggerPage() {
     return sortedByTime.filter((tr) => new Date(tr.created_at) >= bufferClearedAt);
   }, [sortedByTime, bufferClearedAt]);
 
+  /* Phase 45 / Prompt 35 — single source of truth for windowing. The page,
+   * toolbar counter, timeline ticks, and inspector empty-state all derive
+   * their view of "what's in/outside the active window" from this one call,
+   * so the toolbar can never disagree with the timeline again. */
+  const windowed = useMemo(
+    () => windowTransitions(visibleTransitions, windowMinutes),
+    [visibleTransitions, windowMinutes],
+  );
+
+  const widerPreset = useMemo(() => {
+    if (windowed.inWindow.length > 0) return null;
+    if (!windowed.lastTransition) return null;
+    return nextWiderPreset(
+      new Date(windowed.lastTransition.created_at).getTime(),
+      windowed.anchor,
+      windowMinutes,
+    );
+  }, [windowed, windowMinutes]);
+
+  const handleWidenWindow = useCallback(() => {
+    if (widerPreset != null) setWindowMinutes(widerPreset);
+  }, [widerPreset]);
+
+  const handleJumpToLast = useCallback(() => {
+    const last = windowed.lastTransition;
+    if (!last) return;
+    setIsLive(false);
+    setSelectedId(last.id);
+  }, [windowed.lastTransition]);
+
   const handleStepPrev = useCallback(() => {
     if (sortedByTime.length === 0) return;
     setIsLive(false);
@@ -440,15 +475,28 @@ export default function StateMachineDebuggerPage() {
                   setServerPage(1);
                 }}
               />
-              <Select
-                label={t('fsm.fsmType', 'FSM Type')}
-                options={fsmTypeOptions}
-                value={fsmType}
-                onChange={(e) => {
-                  setFsmType(e.target.value as FSMType);
-                  setServerPage(1);
-                }}
-              />
+              <div className="space-y-1">
+                <label
+                  htmlFor="fsm-type-select"
+                  className="flex items-center gap-1 text-sm font-medium text-[var(--text-secondary)]"
+                >
+                  {t('fsm.fsmType', 'FSM Type')}
+                  <HelpTooltip
+                    i18nKey="help.fsm.type"
+                    defaultValue="Finite-state machine. Tracks vehicle high-level state (driving, charging, parked, online, asleep, offline) and the transitions between them. Sub-FSMs cover drive, charge, command, and notification lifecycles."
+                    ariaLabel={t('help.fsm.type.aria', { defaultValue: 'More info about FSM types' })}
+                  />
+                </label>
+                <Select
+                  id="fsm-type-select"
+                  options={fsmTypeOptions}
+                  value={fsmType}
+                  onChange={(e) => {
+                    setFsmType(e.target.value as FSMType);
+                    setServerPage(1);
+                  }}
+                />
+              </div>
               <Select
                 label={t('fsm.perPage', 'Per Page')}
                 options={perPageOptions}
@@ -460,7 +508,7 @@ export default function StateMachineDebuggerPage() {
               />
             </div>
           ) : (
-            <EmptyState message={t('fsm.noVehicles', 'No vehicles available')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noVehicles', 'No vehicles available')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -473,8 +521,14 @@ export default function StateMachineDebuggerPage() {
       {/* ──── Section 3: Current Vehicle State ──── */}
       <FadeIn delay={0.1}>
         <GlassPanel className="p-6">
-          <h2 className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-3">
+          <h2 className="flex items-center gap-1 text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-3">
             {t('fsm.vehicleLiveState', 'Vehicle Live State')}
+            <HelpTooltip
+              size="xs"
+              i18nKey="help.fsm.liveState"
+              defaultValue="The current state the FSM resolved to from the most recent telemetry. The FSM stays in a terminal state until external evidence (telemetry or poll) triggers an explicit transition out."
+              ariaLabel={t('help.fsm.liveState.aria', { defaultValue: 'More info about FSM live state' })}
+            />
           </h2>
           {stateLoading ? (
             <Skeleton height={80} />
@@ -508,15 +562,19 @@ export default function StateMachineDebuggerPage() {
                 </p>
                 <p>
                   <span className="text-[var(--text-muted)]">{t('fsm.since', 'Since')}:</span>{' '}
-                  <span className="text-[var(--text-primary)] font-medium">
-                    {formatDateTime(currentState.since)}
-                  </span>
+                  <TimeStamp
+                    value={currentState.since}
+                    format="absolute"
+                    className="text-[var(--text-primary)] font-medium"
+                  />
                 </p>
-                <p className="text-[var(--text-muted)]">{formatRelative(currentState.since)}</p>
+                <p className="text-[var(--text-muted)]">
+                  <TimeStamp value={currentState.since} format="relative" />
+                </p>
               </div>
             </div>
           ) : (
-            <EmptyState message={t('fsm.noState', 'No state data available')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noState', 'No state data available')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -543,11 +601,12 @@ export default function StateMachineDebuggerPage() {
             windowMinutes={windowMinutes}
             onWindowChange={setWindowMinutes}
             onClearBuffer={handleClearBuffer}
-            bufferCount={visibleTransitions.length}
+            windowCount={windowed.inWindow.length}
+            totalCount={visibleTransitions.length}
           />
           </div>
           <StateTimeline
-            transitions={visibleTransitions}
+            transitions={windowed.inWindow}
             fsmType={fsmType === 'all' ? 'vehicle' : fsmType}
             selectedId={selectedId}
             onSelect={(tr) => {
@@ -555,6 +614,10 @@ export default function StateMachineDebuggerPage() {
               setIsLive(false);
             }}
             windowMinutes={windowMinutes}
+            lastTransition={windowed.lastTransition}
+            widerPreset={widerPreset}
+            onWidenWindow={handleWidenWindow}
+            onJumpToLast={handleJumpToLast}
           />
           <div data-tour="debugger-source-badges">
           <SnapshotInspector
@@ -563,6 +626,9 @@ export default function StateMachineDebuggerPage() {
             snapshot={selectedSnapshot ?? null}
             previousSnapshot={previousSnapshot ?? null}
             loading={snapshotFetching}
+            lastTransition={windowed.lastTransition}
+            inWindowCount={windowed.inWindow.length}
+            onJumpToLast={handleJumpToLast}
           />
           </div>
         </GlassPanel>
@@ -618,7 +684,7 @@ export default function StateMachineDebuggerPage() {
                 </div>
               </div>
             ) : (
-              <EmptyState message={t('fsm.noStats', 'No transition data recorded')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noStats', 'No transition data recorded')} />
             )}
           </ChartContainer>
         </FadeIn>
@@ -637,7 +703,7 @@ export default function StateMachineDebuggerPage() {
                 keyExtractor={(row) => row.to_state}
               />
             ) : (
-              <EmptyState message={t('fsm.noTransitions', 'No transitions recorded')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noTransitions', 'No transitions recorded')} />
             )}
           </GlassPanel>
         </FadeIn>
@@ -712,7 +778,7 @@ export default function StateMachineDebuggerPage() {
               />
             </>
           ) : (
-            <EmptyState message={t('fsm.noTimeline', 'No transitions in selected time range')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noTimeline', 'No transitions in selected time range')} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -780,8 +846,18 @@ function TransitionDetail({ transition }: { transition: FSMTransition }) {
       )}
       <div className="sm:col-span-2 lg:col-span-4">
         <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.timestamp', 'Timestamp')}</span>
-        <span className="text-[var(--text-primary)] font-mono">{formatDateTime(transition.created_at)}</span>
-        <span className="text-[var(--text-muted)] ml-2">{formatRelative(transition.created_at)}</span>
+        <TimeStamp
+          value={transition.created_at}
+          format="absolute"
+          className="text-[var(--text-primary)] font-mono"
+        />
+        <span className="ml-2">
+          <TimeStamp
+            value={transition.created_at}
+            format="relative"
+            className="text-[var(--text-muted)]"
+          />
+        </span>
       </div>
       {transition.context_snapshot && Object.keys(transition.context_snapshot).length > 0 && (
         <div className="sm:col-span-2 lg:col-span-4">

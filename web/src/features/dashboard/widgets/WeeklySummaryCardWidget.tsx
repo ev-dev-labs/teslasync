@@ -70,15 +70,15 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
       <WidgetShell loading={isLoading} error={error ? String(error) : null} updatedAt={dataUpdatedAt} isFetching={isFetching} isStale={isStale} isError={isError} onRefresh={() => refetch()}>
         {metrics ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5">
-            <span className="text-2xl font-bold text-white/90">
+            <span className="text-2xl font-bold text-[var(--text-primary)]">
               {fmtNumber(metrics.distance, 0)}
             </span>
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               {distanceUnit} {t('widget.weeklySummary.thisWeek', 'this week')}
             </span>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<TrendingUp className="h-5 w-5" />}
             message={t('widget.weeklySummary.noData', 'No weekly data')}
             className="py-4"
@@ -137,7 +137,7 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
           </div>
 
           {!isWide && !isTall && (
-            <div className="flex items-center justify-between text-[10px] text-white/40 px-1">
+            <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] px-1">
               <InlineMetric
                 icon={<DollarSign className="h-3 w-3" />}
                 value={formatCurrency(metrics.cost)}
@@ -150,7 +150,7 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
           )}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<TrendingUp className="h-5 w-5" />}
           message={t('widget.weeklySummary.noData', 'No weekly data')}
           className="py-4"

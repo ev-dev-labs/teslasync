@@ -97,7 +97,7 @@ export function ThemePicker({
                 variant="ghost"
                 onClick={() => handleMode(m.id as ModeId, m.name)}
                 className={cn(
-                  'flex items-center gap-3 rounded-xl border p-3.5 h-auto transition-all duration-200 justify-start',
+                  'flex items-center gap-3 rounded-xl border p-3.5 h-auto transition-all duration-normal justify-start',
                   modeId === m.id
                     ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
                     : 'border-[var(--glass-border)] bg-[var(--surface-2)] hover:border-[var(--theme-primary)]/30',
@@ -145,7 +145,7 @@ export function ThemePicker({
               variant="ghost"
               onClick={() => handleTheme(thm.id as ThemeId, thm.name)}
               className={cn(
-                'group relative rounded-xl border p-4 text-left h-auto transition-all duration-200 justify-start items-start flex-col',
+                'group relative rounded-xl border p-4 text-left h-auto transition-all duration-normal justify-start items-start flex-col',
                 themeId === thm.id
                   ? 'bg-[var(--surface-3)]'
                   : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]',
@@ -177,7 +177,7 @@ export function ThemePicker({
                 toast.info(`${t('theme.theme', 'Theme')}: ${t('theme.custom', 'Custom')}`)
               }}
               className={cn(
-                'group relative rounded-xl border p-4 text-left h-auto transition-all duration-200 justify-start items-start flex-col',
+                'group relative rounded-xl border p-4 text-left h-auto transition-all duration-normal justify-start items-start flex-col',
                 themeId === 'custom'
                   ? 'bg-[var(--surface-3)]'
                   : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]',

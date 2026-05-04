@@ -23,7 +23,7 @@ export function statusTextClass(status: string): string {
     case 'unhealthy': case 'offline': case 'error': case 'down': case 'failed':
       return 'text-red-400';
     default:
-      return 'text-gray-400';
+      return 'text-[var(--text-muted)]';
   }
 }
 

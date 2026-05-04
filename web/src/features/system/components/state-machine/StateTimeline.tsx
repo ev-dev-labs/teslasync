@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { cn } from '@/lib/cn';
 import { getStateColor } from '@/types/fsm';
 import type { FSMTransition } from '@/types/fsm';
-import { Tooltip } from '@/components/ui';
+import { Tooltip, Button } from '@/components/ui';
+import { formatRelative } from '@/lib/dateFormat';
 
 /**
  * Phase 40 / Prompt 58 — horizontal mini-timeline of FSM transitions.
@@ -12,9 +14,17 @@ import { Tooltip } from '@/components/ui';
  * timestamp, colored by destination state via the shared FSM theme. Clicking a
  * tick selects that transition in the inspector. The component is purely
  * presentational — the page owns the buffer/window and the selected id.
+ *
+ * Phase 45 / Prompt 35 — the component is no longer responsible for
+ * windowing transitions. Callers pre-window via `windowTransitions()` so
+ * the page-level "buffered" counter and the timeline view share a single
+ * source of truth. When the page hands us an empty array AND a
+ * `lastTransition` exists outside the active window, we surface an
+ * actionable "widen window / jump to last" hint instead of just "No
+ * transitions in window".
  */
 export interface StateTimelineProps {
-  /** Transitions to render. Order doesn't matter — the component sorts. */
+  /** Pre-windowed transitions to render. Order doesn't matter — the component sorts. */
   transitions: FSMTransition[];
   /** FSM type for state-color resolution. */
   fsmType: string;
@@ -22,11 +32,29 @@ export interface StateTimelineProps {
   selectedId?: number | null;
   /** Selection callback — receives the transition row. */
   onSelect?: (transition: FSMTransition) => void;
-  /** Window length in minutes — defaults to 10. */
+  /** Window length in minutes — defaults to 10. Only used for the axis labels. */
   windowMinutes?: number;
   /** Optional fixed end-time anchor; defaults to "now" (live). */
   anchor?: Date;
+  /**
+   * Most recent transition (in or outside the window). Used to render an
+   * actionable hint in the empty state — when the window is empty but the
+   * user has data outside it, we point at it instead of going silent.
+   */
+  lastTransition?: FSMTransition | null;
+  /** Smallest dropdown preset (in minutes) that would include `lastTransition`. */
+  widerPreset?: number | null;
+  /** Snap the toolbar Window dropdown to `widerPreset`. */
+  onWidenWindow?: () => void;
+  /** Switch to Freeze mode and select `lastTransition`. */
+  onJumpToLast?: () => void;
   className?: string;
+}
+
+function presetLabel(min: number, t: TFunction): string {
+  if (min < 60) return t('debugger.window.minutes', '{{n}} min', { n: min });
+  if (min < 1440) return t('debugger.window.hours', '{{n}} h', { n: Math.round(min / 60) });
+  return t('debugger.window.day', '24 h');
 }
 
 export function StateTimeline({
@@ -36,6 +64,10 @@ export function StateTimeline({
   onSelect,
   windowMinutes = 10,
   anchor,
+  lastTransition,
+  widerPreset,
+  onWidenWindow,
+  onJumpToLast,
   className,
 }: StateTimelineProps) {
   const { t } = useTranslation();
@@ -44,15 +76,11 @@ export function StateTimeline({
     const endTs = (anchor ?? new Date()).getTime();
     const startTs = endTs - windowMinutes * 60_000;
     const span = endTs - startTs || 1;
-    const visible = transitions.filter((tr) => {
-      const ts = new Date(tr.created_at).getTime();
-      return ts >= startTs && ts <= endTs;
-    });
-    visible.sort(
+    const sorted = [...transitions].sort(
       (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
     return {
-      ticks: visible.map((tr) => ({
+      ticks: sorted.map((tr) => ({
         tr,
         leftPct: ((new Date(tr.created_at).getTime() - startTs) / span) * 100,
       })),
@@ -62,15 +90,57 @@ export function StateTimeline({
   }, [transitions, anchor, windowMinutes]);
 
   if (ticks.length === 0) {
+    const hasHint = Boolean(lastTransition);
+    const showWiden = widerPreset != null && onWidenWindow != null;
+    const showJump = lastTransition != null && onJumpToLast != null;
     return (
       <div
         data-testid="state-timeline-empty"
         className={cn(
-          'rounded-lg border border-white/5 bg-white/[0.02] px-4 py-3 text-xs text-[var(--text-muted)]',
+          'rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3 text-xs text-[var(--text-muted)]',
+          'flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between',
           className,
         )}
       >
-        {t('debugger.timeline.empty', 'No transitions in window')}
+        <div>
+          {t('debugger.timeline.empty', 'No transitions in window')}
+          {hasHint ? (
+            <>
+              {' · '}
+              <span className="text-[var(--text-secondary)]">
+                {t('debugger.timeline.lastSeen', 'Last transition {{rel}}', {
+                  rel: formatRelative(lastTransition!.created_at),
+                })}
+              </span>
+            </>
+          ) : null}
+        </div>
+        {hasHint && (showWiden || showJump) ? (
+          <div className="flex items-center gap-2">
+            {showWiden ? (
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={onWidenWindow}
+                data-testid="state-timeline-widen"
+              >
+                {t('debugger.timeline.widenTo', 'Widen window to {{label}}', {
+                  label: presetLabel(widerPreset!, t),
+                })}
+              </Button>
+            ) : null}
+            {showJump ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onJumpToLast}
+                data-testid="state-timeline-jump"
+              >
+                {t('debugger.timeline.jumpToLast', 'Jump to last transition')}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -78,7 +148,7 @@ export function StateTimeline({
   return (
     <div
       data-testid="state-timeline"
-      className={cn('rounded-lg border border-white/5 bg-white/[0.02] px-4 py-3', className)}
+      className={cn('rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3', className)}
     >
       <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
         <span>{start.toLocaleTimeString()}</span>
@@ -88,7 +158,7 @@ export function StateTimeline({
         <span>{end.toLocaleTimeString()}</span>
       </div>
       <div className="relative h-10">
-        <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-white/10" />
+        <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-[var(--surface-2)]" />
         {ticks.map(({ tr, leftPct }) => {
           const color = getStateColor(fsmType, tr.to_state);
           const isSelected = selectedId != null && tr.id === selectedId;
@@ -106,7 +176,7 @@ export function StateTimeline({
                 className={cn(
                   'absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-all',
                   isSelected
-                    ? 'h-4 w-4 border-white/80 ring-2 ring-white/30'
+                    ? 'h-4 w-4 border-[var(--border-strong)] ring-2 ring-white/30'
                     : 'h-2.5 w-2.5 border-transparent hover:h-3.5 hover:w-3.5',
                   color.dot,
                 )}

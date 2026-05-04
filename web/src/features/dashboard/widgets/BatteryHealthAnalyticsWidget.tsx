@@ -98,7 +98,7 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
           {hasData ? (
             <WidgetGaugeHero gauge={gaugeConfig} compact />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<HeartPulse className="h-5 w-5" />}
               message={t('widget.batteryHealthAnalytics.noData', 'No battery health data')}
               className="py-2"
@@ -118,7 +118,7 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
       {hasData ? (
         <WidgetGaugeHero gauge={gaugeConfig} stats={stats} />
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<HeartPulse className="h-5 w-5" />}
           message={t('widget.batteryHealthAnalytics.noData', 'No battery health data')}
           className="py-4"

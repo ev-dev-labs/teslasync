@@ -18,7 +18,7 @@ export default function YearReviewPage() {
   const navigate = useNavigate();
 
   const year = Number(yearParam) || new Date().getFullYear();
-  usePageTitle(t('yearReview.pageTitle', `${year} Year in Review`));
+  usePageTitle(t('yearReview.pageTitle', { year, defaultValue: '{{year}} Year in Review' }));
 
   // Vehicle selection from URL query param
   const vehicleIdParam = searchParams.get('vehicle_id') ?? '';
@@ -71,8 +71,8 @@ export default function YearReviewPage() {
     return (
       <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
         <div className="text-center">
-          <Spinner className="h-8 w-8 text-white/60 mx-auto mb-4" />
-          <p className="text-white/40">{t('yearReview.loading', 'Building your year in review...')}</p>
+          <Spinner className="h-8 w-8 text-[var(--text-secondary)] mx-auto mb-4" />
+          <p className="text-[var(--text-muted)]">{t('yearReview.loading', 'Building your year in review...')}</p>
         </div>
       </div>
     );
@@ -84,17 +84,17 @@ export default function YearReviewPage() {
       <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
         <div className="text-center px-8">
           <span className="text-6xl mb-4 block">🚗</span>
-          <p className="text-xl text-white/60 mb-2">
-            {t('yearReview.noData', `No driving data for ${year}`)}
+          <p className="text-xl text-[var(--text-secondary)] mb-2">
+            {t('yearReview.noData', { year, defaultValue: 'No driving data for {{year}}' })}
           </p>
-          <p className="text-white/30 mb-6">
+          <p className="text-[var(--text-muted)] mb-6">
             {t('yearReview.noDataHint', 'Start driving and charging to build your annual review!')}
           </p>
           <ControlButton
             type="button"
             variant="ghost"
             onClick={() => navigate(-1)}
-            className="h-auto rounded-lg bg-white/10 px-6 py-2 text-white/70 hover:bg-white/20"
+            className="h-auto rounded-lg bg-[var(--surface-2)] px-6 py-2 text-[var(--text-secondary)] hover:bg-[var(--surface-2)]"
           >
             {t('yearReview.goBack', 'Go Back')}
           </ControlButton>
@@ -108,12 +108,12 @@ export default function YearReviewPage() {
       {/* Progress bar */}
       <div className="absolute top-0 left-0 right-0 flex gap-0.5 px-4 pt-3 z-20">
         {slides.map((_, i) => (
-          <div key={i} className="flex-1 h-0.5 rounded-full bg-white/20 overflow-hidden">
+          <div key={i} className="flex-1 h-0.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
             <div
               className={cn(
-                'h-full rounded-full transition-all duration-300',
-                i < slideIndex ? 'w-full bg-white/80' : '',
-                i === slideIndex ? 'w-full bg-white/80 animate-pulse' : '',
+                'h-full rounded-full transition-all duration-normal',
+                i < slideIndex ? 'w-full bg-[var(--surface-2)]' : '',
+                i === slideIndex ? 'w-full bg-[var(--surface-2)] animate-pulse' : '',
                 i > slideIndex ? 'w-0' : '',
               )}
             />
@@ -132,7 +132,7 @@ export default function YearReviewPage() {
               setSearchParams({ vehicle_id: e.target.value }, { replace: true });
               setSlideIndex(0);
             }}
-            className="cursor-pointer appearance-none rounded-lg border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white/70 backdrop-blur-sm dark:bg-white/10"
+            className="cursor-pointer appearance-none rounded-lg border-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-1.5 text-sm text-[var(--text-secondary)] backdrop-blur-sm dark:bg-[var(--surface-2)]"
           />
         </div>
       )}
@@ -158,10 +158,10 @@ export default function YearReviewPage() {
           variant="ghost"
           size="sm"
           onClick={goPrev}
-          className="absolute left-4 top-1/2 z-20 hidden h-auto -translate-y-1/2 rounded-full bg-white/5 p-2 hover:bg-white/10 md:inline-flex"
+          className="absolute left-4 top-1/2 z-20 hidden h-auto -translate-y-1/2 rounded-full bg-[var(--surface-2)] p-2 hover:bg-[var(--surface-2)] md:inline-flex"
           aria-label={t('yearReview.prev', 'Previous')}
         >
-          <ChevronLeft className="h-5 w-5 text-white/40" />
+          <ChevronLeft className="h-5 w-5 text-[var(--text-muted)]" />
         </ControlButton>
       )}
       {slideIndex < slides.length - 1 && (
@@ -170,10 +170,10 @@ export default function YearReviewPage() {
           variant="ghost"
           size="sm"
           onClick={goNext}
-          className="absolute right-14 top-1/2 z-20 hidden h-auto -translate-y-1/2 rounded-full bg-white/5 p-2 hover:bg-white/10 md:inline-flex"
+          className="absolute right-14 top-1/2 z-20 hidden h-auto -translate-y-1/2 rounded-full bg-[var(--surface-2)] p-2 hover:bg-[var(--surface-2)] md:inline-flex"
           aria-label={t('yearReview.next', 'Next')}
         >
-          <ChevronRight className="h-5 w-5 text-white/40" />
+          <ChevronRight className="h-5 w-5 text-[var(--text-muted)]" />
         </ControlButton>
       )}
 
@@ -183,14 +183,14 @@ export default function YearReviewPage() {
         variant="ghost"
         size="sm"
         onClick={() => navigate(-1)}
-        className="absolute right-4 top-3 z-20 h-auto rounded-full bg-white/5 p-2 hover:bg-white/10"
+        className="absolute right-4 top-3 z-20 h-auto rounded-full bg-[var(--surface-2)] p-2 hover:bg-[var(--surface-2)]"
         aria-label={t('yearReview.close', 'Close')}
       >
-        <X className="h-5 w-5 text-white/60" />
+        <X className="h-5 w-5 text-[var(--text-secondary)]" />
       </ControlButton>
 
       {/* Slide counter */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 text-xs text-white/30">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 text-xs text-[var(--text-muted)]">
         {slideIndex + 1} / {slides.length}
       </div>
     </div>

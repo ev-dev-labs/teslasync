@@ -2,13 +2,12 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Watch, Lock, Unlock } from 'lucide-react';
 import { RadialGauge } from '@/components/charts';
-import { StatusBadge, AnimatedNumber } from '@/components/data-display';
+import { StatusBadge, AnimatedNumber, TimeStamp } from '@/components/data-display';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useWatchSummary, useWatchComplication } from '@/api/hooks/useWatch';
 import { useSettings } from '@/hooks/useSettings';
 import { kmToMiles } from '@/lib/unitConversion';
-import { formatRelative } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
@@ -92,7 +91,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
             </div>
             {state && <StatusBadge status={state} size="sm" />}
             {displayRange != null && (
-              <span className="text-xs text-white/60 tabular-nums">
+              <span className="text-xs text-[var(--text-secondary)] tabular-nums">
                 {fmtNumber(displayRange, 0)} {distanceUnit}
               </span>
             )}
@@ -103,7 +102,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
             )}
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Watch className="h-5 w-5" />}
             message={t('widget.noWatchData', 'No watch data')}
             className="py-4"
@@ -117,7 +116,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.watchSummary', 'Watch Summary')}
-      icon={<Watch className="h-3.5 w-3.5 text-white/40" />}
+      icon={<Watch className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
       loading={isLoading}
       updatedAt={summaryUpdatedAt}
       isFetching={summaryFetching}
@@ -145,23 +144,23 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
           {/* Detail grid: 2 columns */}
           <div className="grid grid-cols-2 gap-2">
             {/* Range */}
-            <div className="flex flex-col items-center gap-0.5 rounded-lg bg-white/5 p-2 min-h-[44px] justify-center">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <div className="flex flex-col items-center gap-0.5 rounded-lg bg-[var(--surface-2)] p-2 min-h-[44px] justify-center">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.range', 'Range')}
               </span>
               {displayRange != null ? (
-                <span className="text-sm font-semibold text-white/90 tabular-nums">
-                  <AnimatedNumber value={displayRange} className="text-sm font-semibold text-white/90" />
-                  <span className="text-xs text-white/50 ml-0.5">{distanceUnit}</span>
+                <span className="text-sm font-semibold text-[var(--text-primary)] tabular-nums">
+                  <AnimatedNumber value={displayRange} className="text-sm font-semibold text-[var(--text-primary)]" />
+                  <span className="text-xs text-[var(--text-secondary)] ml-0.5">{distanceUnit}</span>
                 </span>
               ) : (
-                <span className="text-sm text-white/30">—</span>
+                <span className="text-sm text-[var(--text-muted)]">—</span>
               )}
             </div>
 
             {/* Lock status */}
-            <div className="flex flex-col items-center gap-0.5 rounded-lg bg-white/5 p-2 min-h-[44px] justify-center">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <div className="flex flex-col items-center gap-0.5 rounded-lg bg-[var(--surface-2)] p-2 min-h-[44px] justify-center">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.lockStatus', 'Lock')}
               </span>
               {isLocked != null ? (
@@ -178,38 +177,38 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
                   </Badge>
                 </div>
               ) : (
-                <span className="text-sm text-white/30">—</span>
+                <span className="text-sm text-[var(--text-muted)]">—</span>
               )}
             </div>
 
             {/* Cabin temp */}
-            <div className="flex flex-col items-center gap-0.5 rounded-lg bg-white/5 p-2 min-h-[44px] justify-center">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <div className="flex flex-col items-center gap-0.5 rounded-lg bg-[var(--surface-2)] p-2 min-h-[44px] justify-center">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.cabinTemp', 'Cabin')}
               </span>
               {displayTemp != null ? (
-                <span className="text-sm font-semibold text-white/90 tabular-nums">
-                  <AnimatedNumber value={displayTemp} className="text-sm font-semibold text-white/90" />
-                  <span className="text-xs text-white/50 ml-0.5">{tempUnit}</span>
+                <span className="text-sm font-semibold text-[var(--text-primary)] tabular-nums">
+                  <AnimatedNumber value={displayTemp} className="text-sm font-semibold text-[var(--text-primary)]" />
+                  <span className="text-xs text-[var(--text-secondary)] ml-0.5">{tempUnit}</span>
                 </span>
               ) : (
-                <span className="text-sm text-white/30">—</span>
+                <span className="text-sm text-[var(--text-muted)]">—</span>
               )}
             </div>
 
             {/* Last updated */}
-            <div className="flex flex-col items-center gap-0.5 rounded-lg bg-white/5 p-2 min-h-[44px] justify-center">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <div className="flex flex-col items-center gap-0.5 rounded-lg bg-[var(--surface-2)] p-2 min-h-[44px] justify-center">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.lastSeen', 'Last Seen')}
               </span>
-              <span className="text-xs text-white/60 truncate max-w-full">
-                {formatRelative(lastUpdated)}
+              <span className="truncate max-w-full">
+                <TimeStamp value={lastUpdated} className="text-xs text-[var(--text-secondary)]" />
               </span>
             </div>
           </div>
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Watch className="h-6 w-6" />}
           message={t('widget.noWatchData', 'No watch data')}
           className="py-4"

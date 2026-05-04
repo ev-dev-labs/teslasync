@@ -93,7 +93,7 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
           )}
         </WidgetGaugeHero>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Gauge className="h-5 w-5" />}
           message={t('widget.driveScoreGauge.noData', 'No score yet')}
           className="py-4"

@@ -292,7 +292,7 @@ export default function SpeedProfilePage() {
           )}
         </>
       ) : (
-        <EmptyState message={t('speedProfile.noData', 'No speed profile data available yet')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('speedProfile.noData', 'No speed profile data available yet')} />
       )}
     </PageContainer>
   );

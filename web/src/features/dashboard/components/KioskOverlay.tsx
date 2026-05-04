@@ -55,13 +55,23 @@ export function KioskOverlay({
       {/* Dim overlay — pointer-events-none so it doesn't block interaction */}
       {isDimmed && (
         <div
-          className="fixed inset-0 z-[9998] bg-black pointer-events-none transition-opacity duration-1000"
+          // Phase-45 / Prompt 04: NOT migrated to <Modal>.
+          // Rationale: non-interactive kiosk wallpaper layer (pointer-events-none)
+          // for ambient screen dimming. Not a dialog. New interactive dialogs
+          // MUST use <Modal>.
+          // eslint-disable-next-line no-restricted-syntax
+          className="fixed inset-0 z-[9998] bg-black pointer-events-none transition-opacity duration-slow"
           style={{ opacity: 1 - config.dimLevel }}
         />
       )}
 
       {/* Cursor hiding — scoped to kiosk root via parent className */}
       {isCursorHidden && (
+        // Phase-45 / Prompt 04: NOT migrated to <Modal>.
+        // Rationale: non-interactive kiosk wallpaper layer (pointer-events-none)
+        // that injects a CSS rule to hide the cursor. Not a dialog. New
+        // interactive dialogs MUST use <Modal>.
+        // eslint-disable-next-line no-restricted-syntax
         <div className="fixed inset-0 z-[9997] pointer-events-none" aria-hidden="true">
           <style>{`.kiosk-root, .kiosk-root * { cursor: none !important; }`}</style>
         </div>
@@ -78,10 +88,10 @@ export function KioskOverlay({
             config.clockPosition === 'bottom-right' && 'bottom-4 right-4',
           )}
         >
-          <div className="text-2xl text-white/20 tabular-nums">
+          <div className="text-2xl text-[var(--text-muted)] tabular-nums">
             {now.toLocaleTimeString()}
           </div>
-          <div className="text-xs text-white/15">
+          <div className="text-xs text-[var(--text-muted)]">
             {now.toLocaleDateString(undefined, {
               weekday: 'short',
               month: 'short',
@@ -98,10 +108,10 @@ export function KioskOverlay({
             <div
               key={i}
               className={cn(
-                'h-1.5 rounded-full transition-all duration-300',
+                'h-1.5 rounded-full transition-all duration-normal',
                 i === currentIndex
-                  ? 'w-6 bg-white/40'
-                  : 'w-1.5 bg-white/15',
+                  ? 'w-6 bg-[var(--surface-2)]'
+                  : 'w-1.5 bg-[var(--surface-2)]',
               )}
             />
           ))}
@@ -111,7 +121,7 @@ export function KioskOverlay({
       {/* Exit button — fades in on mouse movement, always accessible via touch */}
       <div
         className={cn(
-          'fixed top-3 right-3 z-[9999] transition-opacity duration-500',
+          'fixed top-3 right-3 z-[9999] transition-opacity duration-slow',
           showExit ? 'opacity-100' : 'opacity-0',
         )}
       >
@@ -120,8 +130,8 @@ export function KioskOverlay({
           variant="ghost"
           size="sm"
           onClick={onExit}
-          className="h-auto px-3 py-2 rounded-lg bg-black/60 backdrop-blur-sm
-            text-white/50 text-xs hover:text-white/90 hover:bg-black/80 transition-colors
+          className="h-auto px-3 py-2 rounded-lg bg-[var(--surface-overlay)] backdrop-blur-sm
+            text-[var(--text-secondary)] text-xs hover:text-[var(--text-primary)] hover:bg-[var(--surface-overlay)] transition-colors
             focus:ring-white/20 focus:ring-offset-0"
           aria-label={t('kiosk.exit', 'Exit kiosk mode')}
         >

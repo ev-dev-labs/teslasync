@@ -69,7 +69,7 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.chargeHistory', 'Charge History')}
+      title={t('widget.chargeHistory.title', 'Charge History')}
       icon={<BarChart3 className="h-3.5 w-3.5 text-neon-green" />}
       loading={isLoading}
       updatedAt={dataUpdatedAt}

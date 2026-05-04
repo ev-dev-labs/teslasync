@@ -71,7 +71,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
           </span>
         </div>
 
-        <div className="border-t border-white/5" />
+        <div className="border-t border-[var(--border-subtle)]" />
 
         {/* Driver & Keys */}
         <div className="flex items-center justify-between">
@@ -96,7 +96,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
           </span>
         </div>
 
-        <div className="border-t border-white/5" />
+        <div className="border-t border-[var(--border-subtle)]" />
 
         {/* Access Modes */}
         <div className="flex items-center justify-between">

@@ -1,6 +1,4 @@
-import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router-dom'
 import {
   Globe, Radio, Server, Wrench, BookOpen,
 } from 'lucide-react'
@@ -8,6 +6,7 @@ import { PageContainer } from '@/components/layout'
 import { TabNav } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useUrlEnum } from '@/hooks/useUrlState'
 
 import {
   FleetApiSection,
@@ -30,29 +29,8 @@ const TABS = [
   { key: 'reference', label: 'Reference', icon: <BookOpen className="h-4 w-4" /> },
 ]
 
-const VALID_TABS = new Set(TABS.map((t) => t.key))
-
-/* ─── hook: URL search-param tab ──────────────────────────────────────── */
-
-function useTabParam(): [string, (tab: string) => void] {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const raw = searchParams.get(TAB_KEY) ?? ''
-  const tab = VALID_TABS.has(raw) ? raw : DEFAULT_TAB
-
-  const setTab = useCallback(
-    (next: string) => {
-      setSearchParams((prev) => {
-        const p = new URLSearchParams(prev)
-        if (next === DEFAULT_TAB) p.delete(TAB_KEY)
-        else p.set(TAB_KEY, next)
-        return p
-      }, { replace: true })
-    },
-    [setSearchParams],
-  )
-
-  return [tab, setTab]
-}
+const TAB_KEYS = ['fleet-api', 'telemetry', 'infrastructure', 'utilities', 'reference'] as const
+type TabKey = (typeof TAB_KEYS)[number]
 
 /* ═══════════════════════════════════════════════════════════════════════
    Main DevTools Page — thin shell with tabbed layout
@@ -62,7 +40,7 @@ export default function DevToolsPage() {
   const { t } = useTranslation()
   usePageTitle(t('devtools.title', 'Developer Tools'))
 
-  const [tab, setTab] = useTabParam()
+  const [tab, setTab] = useUrlEnum<TabKey>(TAB_KEY, TAB_KEYS, DEFAULT_TAB)
 
   return (
     <PageContainer
@@ -70,7 +48,7 @@ export default function DevToolsPage() {
       subtitle={t('devtools.subtitle', 'Fleet API, telemetry, infrastructure & utilities')}
     >
       <div className="space-y-6">
-        <TabNav tabs={TABS} active={tab} onChange={setTab} />
+        <TabNav tabs={TABS} active={tab} onChange={(k) => setTab(k as TabKey)} />
 
         <FadeIn key={tab}>
           {tab === 'fleet-api' && <FleetApiSection />}

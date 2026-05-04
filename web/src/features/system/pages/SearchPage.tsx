@@ -18,13 +18,13 @@ import {
 
 import { PageContainer } from '@/components/layout'
 import { GlassPanel, Input } from '@/components/ui'
+import { TimeStamp } from '@/components/data-display'
 import { EmptyState, Skeleton } from '@/components/feedback'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useUrlString, useUrlArray } from '@/hooks/useUrlState'
 import { useGlobalSearch, SEARCH_MIN_QUERY_LENGTH } from '@/api/hooks/useSearch'
 import type { SearchHit, SearchHitType } from '@/api/types'
 import { cn } from '@/lib/cn'
-import { formatRelativeTime } from '@/lib/dateFormat'
 
 // All entity types the backend can return — kept in display order so the
 // facet chip rail and grouped results render predictably.
@@ -147,7 +147,7 @@ export default function SearchPage() {
       <div className="mt-6">
         {tooShort ? (
           <GlassPanel className="p-6">
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<SearchIcon className="h-8 w-8" />}
               title={t('search.tooShort.title', 'Type at least 2 characters')}
               message={t('search.tooShort.message', 'Search across vehicles, drives, charging sessions, alerts, geofences, automations and more.')}
@@ -163,7 +163,7 @@ export default function SearchPage() {
           </GlassPanel>
         ) : error ? (
           <GlassPanel className="p-6">
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<SearchIcon className="h-8 w-8" />}
               title={t('search.error.title', 'Search failed')}
               message={t('search.error.message', 'The search service did not respond. Try again or refine your query.')}
@@ -180,7 +180,7 @@ export default function SearchPage() {
           </GlassPanel>
         ) : groupedHits.length === 0 ? (
           <GlassPanel className="p-6">
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<SearchIcon className="h-8 w-8" />}
               title={t('search.noResults.title', 'No results')}
               message={t('search.noResults.message', { query: trimmed, defaultValue: `No matches for "${trimmed}". Try fewer characters or open the command palette.` })}
@@ -215,8 +215,8 @@ export default function SearchPage() {
                           )}
                         </span>
                         {hit.when && (
-                          <span className="hidden flex-shrink-0 text-xs text-[var(--text-muted)] sm:inline">
-                            {formatRelativeTime(hit.when)}
+                          <span className="hidden flex-shrink-0 sm:inline">
+                            <TimeStamp value={hit.when} className="text-xs text-[var(--text-muted)]" />
                           </span>
                         )}
                         <ArrowRight className="h-4 w-4 flex-shrink-0 text-[var(--text-muted)]" />

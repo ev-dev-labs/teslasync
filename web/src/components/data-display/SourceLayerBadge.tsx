@@ -45,7 +45,7 @@ const STYLE: Record<string, { tint: string; label: string; descKey: string; desc
     descFallback: 'Read from Redis cross-pod cache (legacy entry; freshness unknown).',
   },
   log: {
-    tint: 'bg-white/10 text-white/70 border border-white/15',
+    tint: 'bg-[var(--surface-2)] text-[var(--text-secondary)] border border-[var(--border-strong)]',
     label: 'LOG',
     descKey: 'sourceLayer.log.desc',
     descFallback: 'Replayed from signal_log (durable history).',
@@ -57,7 +57,7 @@ const STYLE: Record<string, { tint: string; label: string; descKey: string; desc
     descFallback: 'Redis-backed value older than the 2-minute freshness window.',
   },
   unknown: {
-    tint: 'bg-white/5 text-white/50 border border-white/10',
+    tint: 'bg-[var(--surface-2)] text-[var(--text-secondary)] border border-[var(--border-subtle)]',
     label: '—',
     descKey: 'sourceLayer.unknown.desc',
     descFallback: 'Source layer unknown.',

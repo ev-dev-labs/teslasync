@@ -12,7 +12,8 @@ manifest) and `web/index.html` (favicon, apple-touch-icon).
 | `icon-maskable-192.png` | 192×192 | Adaptive (Android) launcher icon — must include ~10% safe-zone padding | manifest `icons[]` (maskable) |
 | `icon-maskable-512.png` | 512×512 | Adaptive (Android) splash icon — same padding rule | manifest `icons[]` (maskable) |
 | `apple-touch-icon.png` | 180×180 | iOS home-screen icon | `<link rel="apple-touch-icon">` in `web/index.html` |
-| `icon-192.svg` / `icon-512.svg` | — | Vector source for regenerating PNGs | (regen only) |
+| `badge-72.png` | 72×72 | Android Web Push status-bar badge — **must be a monochrome (white) silhouette on a transparent background**, alpha-only; Android re-tints it to the system accent. Using a coloured icon here makes Chrome render the icon on both sides of the notification (duplicate-icon bug). | `web/src/sw/sw.ts` `showNotification({ badge })` |
+| `icon-192.svg` / `icon-512.svg` / `badge.svg` | — | Vector source for regenerating PNGs | (regen only) |
 | `logo.svg` / `logo-original.png` | — | Marketing/in-app logo asset | various components |
 
 ## Maskable icons
@@ -44,6 +45,14 @@ If you change the SVG sources, regenerate the PNGs at the listed sizes (any
 SVG-to-PNG tool works — ImageMagick, `sharp`, `svgexport`, Figma export). For
 the maskable variants, ensure the artwork is centered with the 10% safe-zone
 padding applied before export.
+
+`badge-72.png` is generated from `badge.svg` via `sharp`. To regenerate after
+editing the SVG:
+
+```bash
+cd web
+node -e "require('sharp')('public/icons/badge.svg').resize(72,72).png().toFile('public/icons/badge-72.png')"
+```
 
 ## Verification
 

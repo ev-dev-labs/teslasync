@@ -121,7 +121,7 @@ export function DriveScore({ drive }: { drive: DriveLike }) {
                 <span className="text-[var(--text-secondary)]">{item.label}</span>
                 <span style={{ color: item.color }} className="font-medium">{item.value}/{item.max}</span>
               </div>
-              <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+              <div className="h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
                 <motion.div
                   className="h-full rounded-full"
                   initial={{ width: 0 }}

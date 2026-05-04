@@ -49,10 +49,10 @@ export function AccordionSection({
       >
         <div className="text-cyan-400 shrink-0">{icon}</div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-white/90">
+          <div className="text-sm font-semibold text-[var(--text-primary)]">
             {title}
           </div>
-          <div className="text-xs text-white/40 mt-0.5">
+          <div className="text-xs text-[var(--text-muted)] mt-0.5">
             {description}
           </div>
         </div>
@@ -61,7 +61,7 @@ export function AccordionSection({
         )}
         <ChevronDown
           className={cn(
-            'h-4 w-4 text-white/40 transition-transform duration-200',
+            'h-4 w-4 text-[var(--text-muted)] transition-transform duration-normal',
             open && 'rotate-180',
           )}
         />

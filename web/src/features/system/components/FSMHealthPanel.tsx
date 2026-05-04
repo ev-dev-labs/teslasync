@@ -119,7 +119,7 @@ export function FSMHealthPanel({ transitions }: FSMHealthPanelProps) {
 
   return (
     <GlassPanel className="p-4">
-      <h2 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3">
+      <h2 className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider mb-3">
         {t('fsm.health.title', 'FSM Health')}
       </h2>
       <Grid cols={{ default: 1, md: alerts.length }} gap={3}>
@@ -138,7 +138,7 @@ export function FSMHealthPanel({ transitions }: FSMHealthPanelProps) {
                 <span className={`text-xs font-medium ${textColor}`}>
                   {alert.type === 'flap' ? t('fsm.health.flapTitle', 'State Flapping') : alert.type === 'stuck' ? t('fsm.health.stuckTitle', 'Stuck Sessions') : t('fsm.health.recoveryTitle', 'Pod Recoveries')}
                 </span>
-                <p className="text-xs text-white/50 mt-0.5">{alert.message}</p>
+                <p className="text-xs text-[var(--text-secondary)] mt-0.5">{alert.message}</p>
               </div>
               <span className={`ml-auto text-lg font-bold ${textColor}`}>{fmtInt(alert.count)}</span>
             </div>

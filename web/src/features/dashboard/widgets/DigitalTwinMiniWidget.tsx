@@ -48,7 +48,7 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
       actions={
         <Link
           to="/digital-twin"
-          className="text-[10px] text-white/30 hover:text-cyan-300 transition-colors flex items-center gap-0.5"
+          className="text-[10px] text-[var(--text-muted)] hover:text-cyan-300 transition-colors flex items-center gap-0.5"
         >
           {t('widget.open', 'Open')} <ArrowUpRight className="h-3 w-3" />
         </Link>
@@ -92,7 +92,7 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
           ) : null}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Monitor className="h-5 w-5" />}
           message={t('widget.noVehicle', 'No vehicle data')}
           className="py-4"

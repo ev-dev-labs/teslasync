@@ -59,7 +59,7 @@ export function TirePressureSection({ tireData }: TirePressureSectionProps) {
           ))}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<CircleDot className="h-8 w-8" />}
           message={t('vehicles.detail.noTireData', 'No tire pressure data available')}
         />

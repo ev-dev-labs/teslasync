@@ -1,0 +1,25 @@
+=== GATE ===
+=== PREFLIGHT ===
+PROMPT=phase-45/22-time-format-relative-absolute-toggle
+BRANCH=ui-refactor/ui-phase45
+HEAD=962c65af
+=== FILES_EXIST ===
+FILE[web\src\hooks\useTimeFormatPreference.ts]=True
+FILE[web\src\components\data-display\TimeStamp.tsx]=True
+FILE[web\src\components\data-display\__tests__\TimeStamp.test.tsx]=True
+FILE[web\src\features\settings\components\AppearanceSettings.tsx]=True
+FILES_EXPECTED=4
+FILES_MISSING=0
+=== TYPESCRIPT ===
+TSC_EXIT=0
+=== LINT ===
+LINT_EXIT=0
+=== FRONTEND_TEST ===
+FRONTEND_TEST_EXIT=0
+=== AUDIT_VIOLATIONS ===
+TIMESTAMP_ADOPTERS=26
+=== GIT_STATUS ===
+UNEXPECTED_STATUS_COUNT=0
+=== STATUS ===
+EXIT=0
+STATUS=DONE

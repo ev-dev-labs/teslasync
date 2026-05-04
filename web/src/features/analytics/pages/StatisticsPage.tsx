@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -10,12 +10,12 @@ import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel, Select, Button } from '@/components/ui';
 import { MetricCard, SavedViewMenu, DataFreshnessAuto } from '@/components/data-display';
 import {
-  RadialGauge, ChartTooltip, ChartContainer, CHART_COLORS,
+  RadialGauge, ChartTooltip, ChartContainer,
   chartGrid, axisTickSm,
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, ChartBlockSkeleton, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { DateRangeFilter } from '@/components/forms';
 
@@ -24,7 +24,9 @@ import { useFleetAnalytics, useMileageStats, useStateSummary } from '@/api/hooks
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
+import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
@@ -49,6 +51,29 @@ const STATE_COLORS: Record<string, string> = {
   idle: '#a855f7',
 };
 
+/* ── Loading skeleton ────────────────────────────────────────────── */
+
+/**
+ * Mirrors the StatisticsPage layout while data loads:
+ * 5 period-stat cards → 3 averages → 1 battery-health panel →
+ * 2 side-by-side panels (state + mileage) → 1 vehicle-comparison chart.
+ * Phase-45 / Prompt 18.
+ */
+function StatisticsSkeleton() {
+  return (
+    <div className="space-y-6" data-testid="statistics-skeleton">
+      <StatGridSkeleton cards={5} className="sm:grid-cols-3 lg:grid-cols-5" />
+      <StatGridSkeleton cards={3} className="grid-cols-1 sm:grid-cols-3 md:grid-cols-3" />
+      <Skeleton className="h-56 rounded-xl" />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <ChartBlockSkeleton height={280} />
+        <Skeleton className="h-72 rounded-xl" />
+      </div>
+      <ChartBlockSkeleton height={320} />
+    </div>
+  );
+}
+
 /* ── Page ─────────────────────────────────────────────────────────── */
 
 export default function StatisticsPage() {
@@ -57,15 +82,21 @@ export default function StatisticsPage() {
   const { convertDistance, distanceUnit } = useSettings();
   const savedView = useSavedViewUrl();
 
-  const [vehicleId, setVehicleId] = useState('');
-  const [startDate, setStartDate] = useState(() => {
+  const [vehicleId, setVehicleId] = useUrlString('vehicle_id', '');
+  const defaultStart = useMemo(() => {
     const d = new Date(); d.setFullYear(d.getFullYear() - 1);
     return d.toISOString().slice(0, 10);
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  }, []);
+  const defaultEnd = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const [startDate, setStartDate] = useUrlString('from', defaultStart);
+  const [endDate, setEndDate] = useUrlString('to', defaultEnd);
+  const setRangeBatch = useUrlBatch();
 
   const { data: vehicles } = useVehicles();
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
+
+  // Phase-45/23 — reactive chart palette (CB-safe / neon per user pref).
+  const palette = useChartPalette();
 
   /* ── Data hooks ────────────────────────────────────────────────── */
   const statsQuery = useQuery({
@@ -90,9 +121,9 @@ export default function StatisticsPage() {
     return stateSummary.map((e) => ({
       name: e.state,
       value: Math.round((e.totalMin / Math.max(total, 1)) * 100),
-      fill: STATE_COLORS[e.state] ?? CHART_COLORS[5],
+      fill: STATE_COLORS[e.state] ?? palette[5],
     }));
-  }, [stateSummary]);
+  }, [stateSummary, palette]);
 
   const compData = useMemo(() => {
     if (!fleet?.vehicle_comparison) return [];
@@ -119,7 +150,7 @@ export default function StatisticsPage() {
           {vehicleOptions.length > 1 && (
             <Select value={activeId} onChange={(e) => setVehicleId(e.target.value)} options={vehicleOptions} />
           )}
-          <DateRangeFilter startDate={startDate} endDate={endDate} onStartDateChange={setStartDate} onEndDateChange={setEndDate} />
+          <DateRangeFilter startDate={startDate} endDate={endDate} onStartDateChange={setStartDate} onEndDateChange={setEndDate} onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })} />
           <Button size="sm" onClick={() => { void refetch(); }}>
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>
@@ -133,11 +164,9 @@ export default function StatisticsPage() {
       }
     >
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} height={96} rounded />)}
-        </div>
+        <StatisticsSkeleton />
       ) : !stats ? (
-        <EmptyState icon={<BarChart3 className="h-10 w-10" />} title={t('statistics.noData', 'No Data')} message={t('statistics.noDataMsg', 'No statistics available for this vehicle.')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<BarChart3 className="h-10 w-10" />} title={t('statistics.noData', 'No Data')} message={t('statistics.noDataMsg', 'No statistics available for this vehicle.')} />
       ) : (
         <>
           {/* ── Period Stats ──────────────────────────────────── */}
@@ -163,7 +192,7 @@ export default function StatisticsPage() {
           {/* ── Battery Health ────────────────────────────────── */}
           <FadeIn delay={0.1}>
             <GlassPanel className="p-6">
-              <h2 className="mb-4 text-lg font-semibold text-white/90">
+              <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
                 {t('statistics.batteryHealth', 'Battery Health')}
               </h2>
               {batteryHealth ? (
@@ -179,7 +208,7 @@ export default function StatisticsPage() {
                   </Grid>
                 </Grid>
               ) : (
-                <EmptyState icon={<Battery className="h-8 w-8" />} message={t('statistics.noBattery', 'No battery health data available')} className="py-8" />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Battery className="h-8 w-8" />} message={t('statistics.noBattery', 'No battery health data available')} className="py-8" />
               )}
             </GlassPanel>
           </FadeIn>
@@ -202,13 +231,13 @@ export default function StatisticsPage() {
                     </ResponsiveContainer>
                   </div>
                 ) : (
-                  <EmptyState icon={<Clock className="h-8 w-8" />} message={t('statistics.noStates', 'No state distribution data')} className="py-8" />
+                  <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Clock className="h-8 w-8" />} message={t('statistics.noStates', 'No state distribution data')} className="py-8" />
                 )}
               </ChartContainer>
 
               {/* Mileage Summary */}
               <GlassPanel className="p-6">
-                <h2 className="mb-4 text-lg font-semibold text-white/90">
+                <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
                   {t('statistics.mileage', 'Mileage Summary')}
                 </h2>
                 {mileage ? (
@@ -219,7 +248,7 @@ export default function StatisticsPage() {
                     <MetricCard label={t('statistics.yearlyProjection', 'Yearly Projection')} value={`${fmtInt(convertDistance(mileage.avgDaily * 365))} ${distanceUnit}`} icon={<TrendingUp className="h-4 w-4" />} color="amber" />
                   </Grid>
                 ) : (
-                  <EmptyState icon={<Car className="h-8 w-8" />} message={t('statistics.noMileage', 'No mileage data available')} className="py-8" />
+                  <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Car className="h-8 w-8" />} message={t('statistics.noMileage', 'No mileage data available')} className="py-8" />
                 )}
               </GlassPanel>
             </div>
@@ -237,13 +266,13 @@ export default function StatisticsPage() {
                       <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                       <Tooltip content={<ChartTooltip />} />
                       <Legend />
-                      <Bar dataKey="distance" name={`${t('statistics.distance', 'Distance')} (${distanceUnit})`} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="energy" name={t('statistics.energy', 'Energy (kWh)')} fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="distance" name={`${t('statistics.distance', 'Distance')} (${distanceUnit})`} fill={palette[0]} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="energy" name={t('statistics.energy', 'Energy (kWh)')} fill={palette[1]} radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <EmptyState icon={<Car className="h-8 w-8" />} message={t('statistics.singleVehicle', 'Add more vehicles to compare')} className="py-8" />
+                <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Car className="h-8 w-8" />} message={t('statistics.singleVehicle', 'Add more vehicles to compare')} className="py-8" />
               )}
             </ChartContainer>
           </FadeIn>

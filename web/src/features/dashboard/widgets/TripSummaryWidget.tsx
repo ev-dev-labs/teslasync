@@ -47,7 +47,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
       onRefresh={() => refetch()}
     >
       {trips.length === 0 ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Navigation className="h-5 w-5" />}
           message={t('widget.noTrips', 'No trips recorded yet')}
         />
@@ -60,13 +60,13 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
                 <Badge className="text-[10px]">
                   {t('widget.lastTrip', 'Last Trip')}
                 </Badge>
-                <span className="text-[10px] text-white/40">
+                <span className="text-[10px] text-[var(--text-muted)]">
                   {formatDate(lastTrip.start_date)}
                 </span>
               </div>
 
               {/* Start → End */}
-              <p className="text-xs text-white/70 truncate mb-2">
+              <p className="text-xs text-[var(--text-secondary)] truncate mb-2">
                 {lastTrip.name ?? t('widget.tripUnnamed', 'Unnamed trip')}
               </p>
 
@@ -99,7 +99,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
           {/* Recent trips list */}
           {recentTrips.length > 1 && (
             <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
-              <h4 className="text-[10px] font-medium text-white/30 uppercase tracking-wider">
+              <h4 className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.recentTrips', 'Recent Trips')}
               </h4>
               {recentTrips.slice(1).map((trip) => (
@@ -108,19 +108,19 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
                   className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] transition-colors min-h-[44px]"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-white/70 truncate">
+                    <p className="text-xs text-[var(--text-secondary)] truncate">
                       {trip.name ?? t('widget.tripUnnamed', 'Unnamed trip')}
                     </p>
-                    <p className="text-[10px] text-white/40">
+                    <p className="text-[10px] text-[var(--text-muted)]">
                       {formatDate(trip.start_date)}
                     </p>
                   </div>
                   {!isCompact && (
                     <div className="flex items-center gap-3 flex-shrink-0 ml-2">
-                      <span className="text-xs text-white/60 tabular-nums">
+                      <span className="text-xs text-[var(--text-secondary)] tabular-nums">
                         {fmtNumber(displayDist(trip.total_distance_km ?? 0), 1)} {distanceUnit}
                       </span>
-                      <span className="text-[10px] text-white/40 tabular-nums">
+                      <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
                         {formatDurationRange(trip.start_date, trip.end_date)}
                       </span>
                       <Badge className="text-[10px]">
@@ -129,7 +129,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
                     </div>
                   )}
                   {isCompact && (
-                    <span className="text-xs text-white/60 tabular-nums flex-shrink-0 ml-2">
+                    <span className="text-xs text-[var(--text-secondary)] tabular-nums flex-shrink-0 ml-2">
                       {fmtNumber(displayDist(trip.total_distance_km ?? 0), 1)} {distanceUnit}
                     </span>
                   )}

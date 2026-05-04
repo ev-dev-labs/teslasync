@@ -87,10 +87,10 @@ export default function SystemHealthWidget({ size }: WidgetProps) {
           /* ── Compact layout (1×2) ── */
           <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
             <StatusBadge status={overallBadgeStatus(overallStatus)} size="sm" />
-            <span className="text-sm font-semibold text-white/90 truncate">
+            <span className="text-sm font-semibold text-[var(--text-primary)] truncate">
               {overallLabel(overallStatus, t)}
             </span>
-            <span className="text-xs text-white/50">
+            <span className="text-xs text-[var(--text-secondary)]">
               {healthyCount}/{services.length} {t('widget.systemHealth.services', 'services')}
             </span>
           </div>
@@ -102,7 +102,7 @@ export default function SystemHealthWidget({ size }: WidgetProps) {
               {services.map((svc) => (
                 <div key={svc.key} className="flex items-center gap-2 min-h-[44px]">
                   <StatusDot status={svc.status} />
-                  <span className="text-xs text-white/70 truncate">{svc.label}</span>
+                  <span className="text-xs text-[var(--text-secondary)] truncate">{svc.label}</span>
                 </div>
               ))}
             </div>
@@ -129,7 +129,7 @@ export default function SystemHealthWidget({ size }: WidgetProps) {
           </div>
         )
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Server className="h-5 w-5" />}
           message={t('widget.systemHealth.noData', 'No system health data')}
           className="py-4"

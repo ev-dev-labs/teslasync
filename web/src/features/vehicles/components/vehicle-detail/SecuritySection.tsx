@@ -50,7 +50,7 @@ export function SecuritySection({ securityData, state }: SecuritySectionProps) {
           />
         </div>
       ) : (
-        <EmptyState message={t('vehicles.detail.noSecurityData', 'No security data available')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('vehicles.detail.noSecurityData', 'No security data available')} />
       )}
     </GlassPanel>
   )

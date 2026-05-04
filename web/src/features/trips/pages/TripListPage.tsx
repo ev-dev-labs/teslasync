@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Route, MapPin, Zap, Clock, Calendar, DollarSign, Download } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select, Pagination, Button } from '@/components/ui';
-import { MetricCard, InlineMetric, SavedViewMenu } from '@/components/data-display';
+import { MetricCard, InlineMetric, SavedViewMenu, DataFreshnessAuto } from '@/components/data-display';
 import { ChartContainer, ChartTooltip, ChartGradient, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, axisTickSm, chartGrid, chartAnimation } from '@/components/charts';
 import { DateRangeFilter } from '@/components/forms';
 import { EmptyState, Skeleton } from '@/components/feedback';
@@ -13,6 +13,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
+import { useUrlBatch, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
@@ -33,27 +34,31 @@ export default function TripListPage() {
   const savedView = useSavedViewUrl();
 
   const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const [selectedVehicle, setSelectedVehicle] = useUrlNumber('vehicle_id', 0);
+  const vehicleId = selectedVehicle > 0 ? selectedVehicle : (vehicles?.[0]?.id ?? null);
 
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
-  const [startDate, setStartDate] = useState(() => {
+  const [page, setPage] = useUrlNumber('page', 1);
+  const [pageSize, setPageSize] = useUrlNumber('size', 50);
+  const defaultStart = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 365);
     return d.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  }, []);
+  const defaultEnd = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [startDate, setStartDate] = useUrlString('from', defaultStart);
+  const [endDate, setEndDate] = useUrlString('to', defaultEnd);
+  const setRangeBatch = useUrlBatch();
 
   const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings();
 
-  const { data: trips, isLoading } = useTrips({
+  const tripsQuery = useTrips({
     vehicle_id: vehicleId ?? undefined,
     limit: pageSize,
     offset: (page - 1) * pageSize,
     start: startDate,
     end: endDate,
   });
+  const { data: trips, isLoading } = tripsQuery;
 
   const allTrips = trips ?? [];
 
@@ -115,11 +120,14 @@ export default function TripListPage() {
       subtitle={t('trips.subtitle', 'Multi-drive trip reports with distance and cost tracking')}
       loading={isLoading}
       actions={
-        <SavedViewMenu
-          route="/trips"
-          currentQuery={savedView.currentQuery}
-          onApply={savedView.apply}
-        />
+        <div className="flex items-center gap-3">
+          <DataFreshnessAuto query={tripsQuery} />
+          <SavedViewMenu
+            route="/trips"
+            currentQuery={savedView.currentQuery}
+            onApply={savedView.apply}
+          />
+        </div>
       }
     >
       {/* Vehicle Selector */}
@@ -144,6 +152,7 @@ export default function TripListPage() {
           endDate={endDate}
           onStartDateChange={setStartDate}
           onEndDateChange={setEndDate}
+          onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
           onApply={() => setPage(1)}
         />
       </FadeIn>
@@ -232,7 +241,7 @@ export default function TripListPage() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState icon={<Route className="h-12 w-12" />} message={t('trips.chart.empty', 'No trip data to chart')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Route className="h-12 w-12" />} message={t('trips.chart.empty', 'No trip data to chart')} />
           )}
         </ChartContainer>
       </FadeIn>
@@ -240,11 +249,11 @@ export default function TripListPage() {
       {/* Trip List */}
       <FadeIn delay={0.15}>
         <GlassPanel className="p-4 sm:p-6">
-          <h3 className="text-sm font-semibold text-white/90 mb-4">
+          <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
             {t('trips.list.heading', 'All Trips')}
           </h3>
           {allTrips.length === 0 ? (
-            <EmptyState icon={<Route className="h-12 w-12" />} message={t('trips.list.empty', 'No trips recorded yet')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Route className="h-12 w-12" />} message={t('trips.list.empty', 'No trips recorded yet')} />
           ) : (
             <div className="space-y-3">
               {allTrips.map((trip) => (
@@ -303,17 +312,17 @@ function TripRow({ trip, convertDistance, convertEfficiency, distanceUnit, effic
           <Route className="h-5 w-5 text-cyan-400" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-white/90">
+          <p className="text-sm font-semibold text-[var(--text-primary)]">
             {trip.name ?? `${t('trips.row.trip', 'Trip')} #${trip.id}`}
           </p>
           <div className="flex items-center gap-3 mt-0.5">
             <InlineMetric icon={<Calendar />} value={formatDate(trip.start_date)} />
             <InlineMetric icon={<Clock />} value={formatDuration(trip.start_date, trip.end_date ?? null)} />
-            <span className="text-[11px] text-white/40">
+            <span className="text-[11px] text-[var(--text-muted)]">
               {t('trips.row.drives', '{{count}} drives', { count: trip.drive_count })}
             </span>
             {trip.charge_count > 0 && (
-              <span className="text-[11px] text-white/40">
+              <span className="text-[11px] text-[var(--text-muted)]">
                 {t('trips.row.charges', '{{count}} charges', { count: trip.charge_count })}
               </span>
             )}
@@ -323,10 +332,10 @@ function TripRow({ trip, convertDistance, convertEfficiency, distanceUnit, effic
 
       <div className="flex items-center gap-4 sm:gap-6 text-right w-full sm:w-auto justify-end">
         <div>
-          <p className="text-sm font-bold text-white/90">
+          <p className="text-sm font-bold text-[var(--text-primary)]">
             {fmtInt(convertDistance(trip.total_distance_km))} {distanceUnit}
           </p>
-          <p className="text-[10px] text-white/40">
+          <p className="text-[10px] text-[var(--text-muted)]">
             {t('trips.row.drives', '{{count}} drives', { count: trip.drive_count })}
           </p>
         </div>
@@ -334,7 +343,7 @@ function TripRow({ trip, convertDistance, convertEfficiency, distanceUnit, effic
           <p className="text-sm font-bold text-amber-400">
             {fmtNumber(trip.total_energy_kwh)} kWh
           </p>
-          <p className="text-[10px] text-white/40">
+          <p className="text-[10px] text-[var(--text-muted)]">
             {trip.total_distance_km > 0
               ? `${fmtInt(convertEfficiency(whPerKm))} ${efficiencyUnit}`
               : `0 ${efficiencyUnit}`}
@@ -345,7 +354,7 @@ function TripRow({ trip, convertDistance, convertEfficiency, distanceUnit, effic
             <p className="text-sm font-bold text-emerald-400">
               ${fmtNumber(trip.total_cost)}
             </p>
-            <p className="text-[10px] text-white/40">{t('trips.row.cost', 'cost')}</p>
+            <p className="text-[10px] text-[var(--text-muted)]">{t('trips.row.cost', 'cost')}</p>
           </div>
         )}
       </div>

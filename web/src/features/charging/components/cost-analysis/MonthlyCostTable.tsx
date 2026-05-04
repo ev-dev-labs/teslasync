@@ -119,7 +119,7 @@ export function MonthlyCostTable({ data }: MonthlyCostTableProps) {
           pagination
         />
       ) : (
-        <div className="flex h-32 items-center justify-center text-sm text-gray-500">
+        <div className="flex h-32 items-center justify-center text-sm text-[var(--text-muted)]">
           {t('costAnalysis.table.noData', 'No monthly data available')}
         </div>
       )}

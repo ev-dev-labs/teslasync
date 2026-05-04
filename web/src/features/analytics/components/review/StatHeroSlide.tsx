@@ -1,6 +1,7 @@
 import { AnimatedNumber } from '@/components/data-display';
 import { motion } from '@/components/motion';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useSettings } from '@/hooks/useSettings';
 import type { YearReview } from '@/api/types';
 
@@ -43,7 +44,7 @@ export function StatHeroSlide({ data, field }: Props) {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.6, duration: 0.4 }}
-        className="text-xl md:text-2xl text-white/60 mt-3"
+        className="text-xl md:text-2xl text-[var(--text-secondary)] mt-3"
       >
         {config.unit}
       </motion.p>
@@ -52,7 +53,7 @@ export function StatHeroSlide({ data, field }: Props) {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.9, duration: 0.4 }}
-        className="text-lg text-white/40 mt-6 max-w-md"
+        className="text-lg text-[var(--text-muted)] mt-6 max-w-md"
       >
         {config.comparison}
       </motion.p>
@@ -63,7 +64,7 @@ export function StatHeroSlide({ data, field }: Props) {
 function getStatConfig(
   data: YearReview,
   field: string,
-  t: (key: string, fallback: string) => string,
+  t: TFunction,
   convertDistance: (km: number) => number,
   distanceUnit: string,
 ) {
@@ -77,7 +78,7 @@ function getStatConfig(
         decimals: 0,
         unit: distanceUnit,
         comparison: earthLaps >= 0.01
-          ? t('yearReview.distanceComparison', `That's ${(earthLaps * 100).toFixed(1)}% around the Earth!`)
+          ? t('yearReview.distanceComparison', { percent: (earthLaps * 100).toFixed(1), defaultValue: "That's {{percent}}% around the Earth!" })
           : t('yearReview.distanceSmall', 'Every kilometer counts!'),
       };
     }
@@ -87,7 +88,7 @@ function getStatConfig(
         value: data.total_energy_kwh,
         decimals: 0,
         unit: t('yearReview.energyUnit', 'kWh charged'),
-        comparison: t('yearReview.energyComparison', `Enough to power a home for ${Math.round(data.total_energy_kwh / 30)} days`),
+        comparison: t('yearReview.energyComparison', { days: Math.round(data.total_energy_kwh / 30), defaultValue: 'Enough to power a home for {{days}} days' }),
       };
     default:
       return {

@@ -49,7 +49,7 @@ export function ChargerSpecsPanel({ specs }: ChargerSpecsPanelProps) {
           />
         </div>
       ) : (
-        <EmptyState message={t('charging.specs.noData', 'No charger specification data available yet')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('charging.specs.noData', 'No charger specification data available yet')} />
       )}
     </GlassPanel>
   );
@@ -67,7 +67,7 @@ function SpecColumn({ icon, label, items, emptyMsg, showAvgPower }: SpecColumnPr
   if (items.length === 0) {
     return (
       <div>
-        <EmptyState message={emptyMsg} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyMsg} />
       </div>
     );
   }

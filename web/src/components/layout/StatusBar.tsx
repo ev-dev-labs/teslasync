@@ -54,7 +54,13 @@ export function StatusBar({ compact = false, className }: StatusBarProps) {
   const iconOnly = compact || prefs.iconOnly || isNarrow;
 
   return (
-    <div
+    // Phase-45 / Prompt 13 — `<footer>` exposes a `contentinfo` landmark so
+    // screen-reader landmark navigation (e.g. JAWS Insert+F7) lists the
+    // status bar alongside <header>/<aside>/<main>. The `role="status"`
+    // override + `aria-live="polite"` still announce live updates
+    // (connection drops, vehicle changes) without losing the landmark
+    // affordance because role overrides are permitted by ARIA 1.2.
+    <footer
       role="status"
       aria-live="polite"
       data-role="status-bar"
@@ -91,7 +97,7 @@ export function StatusBar({ compact = false, className }: StatusBarProps) {
         <Divider />
         <VersionSegment iconOnly={iconOnly} />
       </div>
-    </div>
+    </footer>
   );
 }
 

@@ -56,7 +56,7 @@ export function ChargerTypeBreakdown({ data, totalCost }: ChargerTypeBreakdownPr
                     className="h-3 w-3 rounded-full"
                     style={{ backgroundColor: entry.color }}
                   />
-                  <span className="text-xs text-gray-400">{entry.name}</span>
+                  <span className="text-xs text-[var(--text-muted)]">{entry.name}</span>
                 </div>
               ))}
             </div>
@@ -65,15 +65,15 @@ export function ChargerTypeBreakdown({ data, totalCost }: ChargerTypeBreakdownPr
               return (
                 <div key={entry.name} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-gray-300">
+                    <span className="font-medium text-[var(--text-secondary)]">
                       {entry.name}
                     </span>
-                    <span className="text-gray-400">
+                    <span className="text-[var(--text-muted)]">
                       ${fmtNumber(entry.cost, 2)} · {fmtInt(entry.sessions)}{' '}
                       {t('costAnalysis.chargerType.sessions', 'sessions')}
                     </span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                  <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]">
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
@@ -82,7 +82,7 @@ export function ChargerTypeBreakdown({ data, totalCost }: ChargerTypeBreakdownPr
                       }}
                     />
                   </div>
-                  <div className="flex justify-between text-[10px] text-gray-500">
+                  <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
                     <span>
                       {fmtWithUnit(entry.energy, 'kWh', 1)}
                     </span>
@@ -99,7 +99,7 @@ export function ChargerTypeBreakdown({ data, totalCost }: ChargerTypeBreakdownPr
           </div>
         </div>
       ) : (
-        <div className="flex h-[200px] items-center justify-center text-sm text-gray-500">
+        <div className="flex h-[200px] items-center justify-center text-sm text-[var(--text-muted)]">
           {t('costAnalysis.charts.noData', 'Not enough data')}
         </div>
       )}

@@ -34,16 +34,33 @@ import { useMotionPreference } from '@/hooks/useMotionPreference'
 type ToastType = 'success' | 'error' | 'info' | 'warning'
 
 /**
- * Optional action link rendered in the toast body. Currently used by alert
- * toasts (Phase 40 / Prompt 14) to add a "View" link that drills through to
- * the relevant context page (e.g. /battery?vehicle_id=12&t=...&signal=...).
+ * Optional action rendered in the toast body.
+ *
+ * Two flavours, discriminated by which field is set:
+ *
+ *  - Navigation action: `{ label, to }` renders a React Router `<Link>`.
+ *    Used by alert toasts (Phase 40 / Prompt 14) for "View" links into the
+ *    relevant context page (e.g. /battery?vehicle_id=12&t=...&signal=...).
+ *
+ *  - Callback action: `{ label, onClick }` renders a `<button>` that fires
+ *    the supplied handler then dismisses the toast. Used by undoable bulk
+ *    operations (Phase 45 / Prompt 28) where clicking "Undo" must run
+ *    arbitrary mutation code rather than navigate.
+ *
+ * Exactly one of `to` / `onClick` should be supplied; if both are present
+ * the navigation form wins so existing call-sites stay intact.
  */
 export interface ToastAction {
-  /** Visible link label, e.g. "View". */
+  /** Visible label, e.g. "View" or "Undo". */
   label: string
   /** React Router target. Use a string (path + query) — same shape as
-   *  `<Link to=>`. Avoid external URLs here. */
-  to: string
+   *  `<Link to=>`. Avoid external URLs here. Mutually exclusive with
+   *  `onClick`. */
+  to?: string
+  /** Callback invoked when the action is clicked. The toast auto-dismisses
+   *  after firing so the caller doesn't need to do that manually. Mutually
+   *  exclusive with `to`. */
+  onClick?: () => void
 }
 
 interface Toast {
@@ -168,16 +185,32 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                     <p className="text-sm font-semibold text-[var(--text-primary)]">{t.title}</p>
                     {t.message && <p className="mt-0.5 text-xs text-[var(--text-secondary)] line-clamp-2">{t.message}</p>}
                     {t.action && (
-                      <Link
-                        to={t.action.to}
-                        onClick={() => dismiss(t.id)}
-                        className={clsx(
-                          'mt-2 inline-flex items-center gap-1 text-xs font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded',
-                          s.icon,
-                        )}
-                      >
-                        {t.action.label} →
-                      </Link>
+                      t.action.to ? (
+                        <Link
+                          to={t.action.to}
+                          onClick={() => dismiss(t.id)}
+                          className={clsx(
+                            'mt-2 inline-flex items-center gap-1 text-xs font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded',
+                            s.icon,
+                          )}
+                        >
+                          {t.action.label} →
+                        </Link>
+                      ) : t.action.onClick ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            t.action!.onClick!()
+                            dismiss(t.id)
+                          }}
+                          className={clsx(
+                            'mt-2 inline-flex items-center gap-1 text-xs font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded',
+                            s.icon,
+                          )}
+                        >
+                          {t.action.label}
+                        </button>
+                      ) : null
                     )}
                   </div>
                   <button

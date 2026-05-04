@@ -133,7 +133,7 @@ export function ChatMessageItem({
           'rounded-2xl px-4 py-3 text-sm leading-relaxed border min-w-0',
           isUser
             ? 'max-w-[90%] sm:max-w-[70%] bg-cyan-500/10 border-cyan-500/20'
-            : 'max-w-[90%] sm:max-w-[80%] bg-white/5 border-white/10',
+            : 'max-w-[90%] sm:max-w-[80%] bg-[var(--surface-2)] border-[var(--border-subtle)]',
         )}
         data-print-card
       >
@@ -168,9 +168,9 @@ export function ChatMessageItem({
             </div>
           </div>
         ) : isUser ? (
-          <p className="whitespace-pre-wrap text-white/95 break-words">{visibleText}</p>
+          <p className="whitespace-pre-wrap text-[var(--text-primary)] break-words">{visibleText}</p>
         ) : (
-          <div className="text-white/90 break-words">
+          <div className="text-[var(--text-primary)] break-words">
             <MarkdownRenderer>{visibleText}</MarkdownRenderer>
             {message.isStreaming && (
               <span
@@ -182,7 +182,7 @@ export function ChatMessageItem({
         )}
 
         {showTimestamp && (
-          <p className="text-[10px] mt-2 text-white/40">{formatTime(message.created_at)}</p>
+          <p className="text-[10px] mt-2 text-[var(--text-muted)]">{formatTime(message.created_at)}</p>
         )}
 
         {showActions && (

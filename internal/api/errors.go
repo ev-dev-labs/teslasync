@@ -2,6 +2,16 @@ package api
 
 import "net/http"
 
+// Machine-readable error codes that are exposed in JSON error bodies and
+// consumed by the frontend to drive recovery flows.
+//
+// Phase-45 / Prompt 30 — TESLA_TOKEN_EXPIRED is the distinct signal the
+// SPA uses to surface the <TeslaReauthBanner> recovery UI; it MUST NOT
+// be conflated with the generic Authentik-session 401 path.
+const (
+	ErrCodeTeslaTokenExpired = "TESLA_TOKEN_EXPIRED"
+)
+
 // Error categories for grouping and filtering.
 const (
 	ErrCatAuth       = "authentication"

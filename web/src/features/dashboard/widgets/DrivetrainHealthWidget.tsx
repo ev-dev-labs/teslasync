@@ -110,7 +110,7 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
           {hasData ? (
             <WidgetGaugeHero gauge={gaugeConfig} compact />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Cog className="h-5 w-5" />}
               message={t('widget.drivetrainHealth.noData', 'No drivetrain data')}
               className="py-2"
@@ -130,7 +130,7 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
       {hasData ? (
         <WidgetGaugeHero gauge={gaugeConfig} stats={stats} />
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Cog className="h-5 w-5" />}
           message={t('widget.drivetrainHealth.noData', 'No drivetrain data')}
           className="py-4"

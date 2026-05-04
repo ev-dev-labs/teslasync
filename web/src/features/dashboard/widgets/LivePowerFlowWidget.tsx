@@ -185,7 +185,7 @@ export default function LivePowerFlowWidget({ size }: WidgetProps) {
         isError={sitesIsError}
         onRefresh={() => refetchSites()}
       >
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           message={t('widget.livePowerFlow.noSite', 'No Tesla Energy site linked')}
           className="py-8"
         />

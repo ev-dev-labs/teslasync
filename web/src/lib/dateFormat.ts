@@ -12,7 +12,19 @@
  * identical. When `tz` is supplied the timestamp is rendered in that
  * zone via `Intl.DateTimeFormat`, which is what `<DateTime in="vehicle">`
  * relies on to render drive/charge times in the car's local time.
+ *
+ * Formatter contract (Phase-45 / Prompt 03):
+ * Every formatter in this file accepts `null | undefined` and any garbage
+ * numeric input (a non-finite number such as NaN, Infinity, -Infinity, a
+ * negative duration, or a non-number masquerading via a cast) and returns
+ * the universal "—" placeholder rather than throwing or producing strings
+ * like "NaN:NaN" or "Invalid Date". Callers should NOT pre-guard.
  */
+
+import { isFiniteNumber } from './numberFormat'
+
+/** Universal placeholder returned by every formatter for unrenderable input. */
+const FALLBACK = '—'
 
 /** Optional locale + timezone overrides for the shared formatters. */
 export interface FormatOptions {
@@ -104,15 +116,16 @@ export function formatRelativeTime(iso: string | Date | null | undefined, opts?:
   return d.toLocaleDateString(intlLocale(opts), intlOpts({ month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }, opts))
 }
 
-/** Millisecond duration for short activity entries: "250ms", "1.5s", or "—" for nullish values. */
+/** Millisecond duration for short activity entries: "250ms", "1.5s", or "—" for nullish/non-finite values. */
 export function formatDurationMs(ms: number | null | undefined): string {
-  if (ms == null) return '—'
+  if (!isFiniteNumber(ms)) return FALLBACK
   if (ms < 1000) return `${ms}ms`
   return `${(ms / 1000).toFixed(1)}s`
 }
 
 /** Millisecond duration with decimal minute rollover: "250ms", "1.5s", "2.5m". */
-export function formatDurationMsCompact(ms: number): string {
+export function formatDurationMsCompact(ms: number | null | undefined): string {
+  if (!isFiniteNumber(ms)) return FALLBACK
   if (ms < 1000) return `${ms}ms`
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`
   return `${(ms / 60_000).toFixed(1)}m`
@@ -120,7 +133,7 @@ export function formatDurationMsCompact(ms: number): string {
 
 /** Millisecond duration with minute/second output for longer jobs: "1m 05s". */
 export function formatDurationMsLong(ms: number | null | undefined): string {
-  if (!ms) return '—'
+  if (!isFiniteNumber(ms) || ms <= 0) return FALLBACK
   if (ms < 1000) return `${ms}ms`
   const sec = ms / 1000
   if (sec < 60) return `${sec.toFixed(1)}s`
@@ -129,7 +142,8 @@ export function formatDurationMsLong(ms: number | null | undefined): string {
 }
 
 /** Seconds represented as rounded minutes/hours: "5m", "2h 10m", or "2h". */
-export function formatDurationSecondsAsMinutes(seconds: number): string {
+export function formatDurationSecondsAsMinutes(seconds: number | null | undefined): string {
+  if (!isFiniteNumber(seconds) || seconds < 0) return FALLBACK
   const h = Math.floor(seconds / 3600)
   const m = (seconds % 3600) / 60
   if (h === 0) return `${formatRoundedInt(m)}m`
@@ -137,7 +151,11 @@ export function formatDurationSecondsAsMinutes(seconds: number): string {
 }
 
 /** Minute duration with rounded minute remainder: "5m" or "2h 05m". */
-export function formatDurationMinutes(minutes: number, options: { subMinuteLabel?: string } = {}): string {
+export function formatDurationMinutes(
+  minutes: number | null | undefined,
+  options: { subMinuteLabel?: string } = {},
+): string {
+  if (!isFiniteNumber(minutes) || minutes < 0) return FALLBACK
   if (options.subMinuteLabel && minutes < 1) return options.subMinuteLabel
   const h = Math.floor(minutes / 60)
   const m = formatRoundedInt(minutes % 60)
@@ -145,15 +163,22 @@ export function formatDurationMinutes(minutes: number, options: { subMinuteLabel
 }
 
 /** Duration between two timestamps, rounded to whole minutes. */
-export function formatDurationRange(start: string | Date, end: string | Date | null | undefined): string {
-  if (!end) return '—'
-  const ms = new Date(end).getTime() - new Date(start).getTime()
-  if (ms <= 0) return '—'
+export function formatDurationRange(
+  start: string | Date | null | undefined,
+  end: string | Date | null | undefined,
+): string {
+  if (!start || !end) return FALLBACK
+  const s = new Date(start).getTime()
+  const e = new Date(end).getTime()
+  if (!Number.isFinite(s) || !Number.isFinite(e)) return FALLBACK
+  const ms = e - s
+  if (ms <= 0) return FALLBACK
   return formatDurationMinutes(Math.round(ms / 60_000))
 }
 
-/** Media/player clock duration: "3:07". */
-export function formatDurationClock(ms: number): string {
+/** Media/player clock duration: "3:07". Returns "—" for nullish, non-finite, or negative durations. */
+export function formatDurationClock(ms: number | null | undefined): string {
+  if (!isFiniteNumber(ms) || ms < 0) return FALLBACK
   const totalSec = Math.floor(ms / 1000)
   const m = Math.floor(totalSec / 60)
   const s = totalSec % 60

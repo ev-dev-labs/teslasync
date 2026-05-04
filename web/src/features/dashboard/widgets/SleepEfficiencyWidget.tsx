@@ -84,7 +84,7 @@ export default function SleepEfficiencyWidget({ vehicleId, size }: WidgetProps) 
       {hasData ? (
         <WidgetGaugeHero gauge={gauge} stats={stats} compact={isCompact} />
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Moon className="h-5 w-5" />}
           message={t('widget.sleepEfficiency.noData', 'No sleep efficiency data')}
           className="py-4"

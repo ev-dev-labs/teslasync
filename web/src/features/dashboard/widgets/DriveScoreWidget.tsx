@@ -43,7 +43,7 @@ export default function DriveScoreWidget({ size }: WidgetProps) {
       {analytics ? (
         <WidgetGaugeHero gauge={gauge} stats={stats} compact={isCompact} />
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<TrendingUp className="h-5 w-5" />}
           message={t('widget.noScore', 'No data yet')}
           className="py-4"

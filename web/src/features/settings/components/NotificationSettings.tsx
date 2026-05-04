@@ -40,7 +40,7 @@ export function NotificationSettings() {
         </div>
 
         {!notificationsSupported ? (
-          <p className="text-xs text-white/40">
+          <p className="text-xs text-[var(--text-muted)]">
             {t('browserNotifications.unsupported', 'Browser notifications are not supported in this browser.')}
           </p>
         ) : (
@@ -61,7 +61,7 @@ export function NotificationSettings() {
                 </Badge>
               )}
               {permission === 'denied' && (
-                <span className="text-xs text-white/40">
+                <span className="text-xs text-[var(--text-muted)]">
                   {t('browserNotifications.blocked', 'Notifications are blocked. Enable in your browser settings.')}
                 </span>
               )}

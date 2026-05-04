@@ -233,7 +233,7 @@ export default function RouteEfficiencyPage() {
               </div>
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Activity className="h-8 w-8 opacity-20" />}
               message={t('common.noData', 'No data available')}
               className="py-8"

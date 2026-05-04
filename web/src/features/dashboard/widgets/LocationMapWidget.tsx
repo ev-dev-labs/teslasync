@@ -52,19 +52,19 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
         {hasCoords && !isCompact && (
           <div className="absolute bottom-2 left-2 z-[1000] flex flex-col gap-1">
             {!isLive && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/70 text-[10px] text-amber-400 backdrop-blur-sm">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] text-[10px] text-amber-400 backdrop-blur-sm">
                 <MapPin className="h-2.5 w-2.5" />
                 {t('widget.locationMap.lastKnown', 'Last known position')}
               </span>
             )}
             {isExpanded && heading != null && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/70 text-[10px] text-white/70 backdrop-blur-sm">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] text-[10px] text-[var(--text-secondary)] backdrop-blur-sm">
                 <Navigation className="h-2.5 w-2.5" />
                 {t('widget.locationMap.heading', 'Heading')}: {Math.round(heading)}°
               </span>
             )}
             {isExpanded && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/70 text-[10px] text-white/50 backdrop-blur-sm">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] text-[10px] text-[var(--text-secondary)] backdrop-blur-sm">
                 {lat.toFixed(4)}, {lng.toFixed(4)}
               </span>
             )}

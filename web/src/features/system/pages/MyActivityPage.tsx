@@ -23,7 +23,7 @@ import { DateRangeFilter } from '@/components/forms/DateRangeFilter';
 import { RecentActivityFeed } from '@/components/data-display/RecentActivityFeed';
 import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useUrlString } from '@/hooks/useUrlState';
+import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
 import { ApiError } from '@/lib/resilience';
 import { useMyRecentActivity } from '@/api/hooks/useUser';
 
@@ -51,6 +51,7 @@ export default function MyActivityPage() {
 
   const [start, setStart] = useUrlString('start', defaults.start);
   const [end, setEnd] = useUrlString('end', defaults.end);
+  const setRangeBatch = useUrlBatch();
 
   const { data, isLoading, error, refetch } = useMyRecentActivity({
     start,
@@ -80,6 +81,7 @@ export default function MyActivityPage() {
               endDate={end}
               onStartDateChange={(value) => setStart(value)}
               onEndDateChange={(value) => setEnd(value)}
+              onRangeChange={(r) => setRangeBatch({ start: r.start, end: r.end })}
             />
           </div>
 
@@ -88,16 +90,16 @@ export default function MyActivityPage() {
               icon={<Icons.securityCheck className="h-8 w-8" />}
               title={t('activity.myActivity.disabled.title', 'Activity feed disabled')}
               message={t(
-                'activity.myActivity.disabled',
+                'activity.myActivity.disabled.description',
                 'Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure AUTH_FORWARD_HEADER.',
               )}
             />
           ) : unauthenticated ? (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Icons.user className="h-8 w-8" />}
               title={t('activity.myActivity.unauthorized.title', 'Identity required')}
               message={t(
-                'activity.myActivity.unauthorized',
+                'activity.myActivity.unauthorized.description',
                 'Your request did not include an identity header. Sign in through your identity provider and try again.',
               )}
             />

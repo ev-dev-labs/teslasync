@@ -30,6 +30,14 @@ type AutomationHandler struct {
 	auditor        *automation.Auditor       // optional, enables audit trail
 	presetRegistry *presets.Registry         // built-in preset templates
 	mqttPublisher  AutomationMQTTPublisher   // optional, notifies worker on config changes
+
+	// bulkRepo is the typed concrete repo used by the bulk endpoint
+	// (Phase-45 / Prompt 32). Always populated by NewAutomationHandler in
+	// production wiring.
+	bulkRepo automationBulkStore
+	// bulkOverride lets tests substitute the bulk store without standing
+	// up a real *database.AutomationRepo. Always nil in production.
+	bulkOverride automationBulkStore
 }
 
 type automationRepository interface {
@@ -74,12 +82,14 @@ func WithAutomationMQTTPublisher(p AutomationMQTTPublisher) AutomationHandlerOpt
 
 // NewAutomationHandler creates an AutomationHandler backed by the given database.
 func NewAutomationHandler(db *database.DB, opts ...AutomationHandlerOption) *AutomationHandler {
+	repo := database.NewAutomationRepo(db)
 	h := &AutomationHandler{
 		db:             db,
-		repo:           database.NewAutomationRepo(db),
+		repo:           repo,
 		historyRepo:    database.NewAutomationHistoryRepo(db),
 		fsmTransRepo:   database.NewFSMTransitionRepo(db),
 		presetRegistry: presets.NewRegistry(),
+		bulkRepo:       repo,
 	}
 	for _, opt := range opts {
 		opt(h)

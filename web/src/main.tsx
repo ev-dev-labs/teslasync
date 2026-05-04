@@ -4,8 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { ToastProvider } from './components/feedback/Toast'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
+import { NavigationGuardProvider } from './components/feedback/NavigationGuardProvider'
 import { AchievementUnlockListener } from './components/feedback/AchievementUnlockListener'
 import { QueryBroadcastBridge } from './components/QueryBroadcastBridge'
+import { FormatterPrefsBridge } from './components/FormatterPrefsBridge'
 import { ThemeProvider } from './components/ui/ThemeProvider'
 import ReloadPrompt from './components/feedback/ReloadPrompt'
 import { SelectedVehicleProvider } from './store/selectedVehicle'
@@ -78,43 +80,64 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             messages into this tab's QueryClient. Mounted directly under
             QueryClientProvider so useQueryClient() resolves. */}
         <QueryBroadcastBridge />
+        {/* Phase-45 / Prompt 06: keep module-level formatter globals
+            (numberFormat locale + precision) in sync with the persisted
+            settings even on pages that never call useSettings() and after
+            cross-tab settings broadcasts. */}
+        <FormatterPrefsBridge />
         <BrowserRouter>
-          <ThemeProvider>
-            <SelectedVehicleProvider>
-              <ToastProvider>
-                <App />
-                <ReloadPrompt />
-                {/* Phase-40 / Prompt 63: celebrate locked → unlocked transitions
-                    with a transient toast + confetti. Mounted alongside the
-                    standard toast stack so the SSE subscription is global. */}
-                <AchievementUnlockListener />
-              </ToastProvider>
-            </SelectedVehicleProvider>
-          </ThemeProvider>
+          {/* Phase-45 / Prompt 16: in-app unsaved-changes guard. Intercepts
+              <GuardedLink> / <GuardedNavLink> clicks and browser back/forward
+              navigation when any registered useNavigationGuard reports a
+              dirty form. Coexists with useDirtyForm's beforeunload listener
+              (tab close / reload / external links). MUST live inside
+              <BrowserRouter> so useNavigate / useLocation resolve. */}
+          <NavigationGuardProvider>
+            <ThemeProvider>
+              <SelectedVehicleProvider>
+                <ToastProvider>
+                  <App />
+                  <ReloadPrompt />
+                  {/* Phase-40 / Prompt 63: celebrate locked → unlocked transitions
+                      with a transient toast + confetti. Mounted alongside the
+                      standard toast stack so the SSE subscription is global. */}
+                  <AchievementUnlockListener />
+                </ToastProvider>
+              </SelectedVehicleProvider>
+            </ThemeProvider>
+          </NavigationGuardProvider>
         </BrowserRouter>
       </QueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>,
 )
 
-// ── Web Vitals reporting (Phase 40 / Prompt 35) ───────────────────────────────
-// Lazy-loaded so it never blocks first paint. In dev we log to the console;
-// production currently no-ops (a future prompt will POST to a backend endpoint).
-// Captures the Core Web Vitals plus FCP/TTFB so we can correlate with the
-// performance budget in copilot-instructions.md (FCP < 1.5s on 4G).
-void import('web-vitals').then(({ onCLS, onINP, onLCP, onFCP, onTTFB }) => {
-  const report = (m: { name: string; value: number; id: string; rating?: string }) => {
-    if (import.meta.env.DEV) {
-      console.debug('[web-vitals]', m.name, Math.round(m.value), m.rating ?? '', m.id)
-    }
-  }
-  onCLS(report)
-  onINP(report)
-  onLCP(report)
-  onFCP(report)
-  onTTFB(report)
-}).catch((err) => {
-  if (import.meta.env.DEV) {
-    console.warn('[web-vitals] failed to load:', err)
-  }
-})
+// ── Web Vitals reporting (Phase 40 / Prompt 35, Phase 45 / Prompt 12) ──────
+// Lazy-loaded so it never blocks first paint. In production, ship metrics to
+// the backend (`POST /api/v1/web-vitals`) where they're aggregated as
+// Prometheus histograms. In dev we log to the console — production reporting
+// would be noisy from HMR reloads and unhelpful before the bundle is final.
+if (import.meta.env.PROD) {
+  void import('./lib/webVitalsReporter')
+    .then(({ startWebVitalsReporter }) => {
+      startWebVitalsReporter()
+    })
+    .catch(() => {
+      // Telemetry must never break the app; swallow load failures silently.
+    })
+} else {
+  void import('web-vitals')
+    .then(({ onCLS, onINP, onLCP, onFCP, onTTFB }) => {
+      const report = (m: { name: string; value: number; id: string; rating?: string }) => {
+        console.debug('[web-vitals]', m.name, Math.round(m.value), m.rating ?? '', m.id)
+      }
+      onCLS(report)
+      onINP(report)
+      onLCP(report)
+      onFCP(report)
+      onTTFB(report)
+    })
+    .catch((err) => {
+      console.warn('[web-vitals] failed to load:', err)
+    })
+}

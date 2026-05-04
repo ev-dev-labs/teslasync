@@ -155,15 +155,15 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
       >
         {hasScheduleData ? (
           <div className="h-full flex flex-col items-center justify-center gap-1">
-            <span className="text-2xl font-bold text-white/90">
+            <span className="text-2xl font-bold text-[var(--text-primary)]">
               {schedule.chargeLimit != null ? `${schedule.chargeLimit}%` : '—'}
             </span>
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               {t('widget.chargingSchedule.limit', 'Charge Limit')}
             </span>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Calendar className="h-5 w-5" />}
             message={t('widget.chargingSchedule.noData', 'No schedule data')}
             className="py-4"
@@ -202,7 +202,7 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
           {timelineItems.length > 0 ? (
             <Timeline items={timelineItems} className="text-sm" />
           ) : (
-            <div className="text-xs text-white/40">
+            <div className="text-xs text-[var(--text-muted)]">
               {t('widget.chargingSchedule.noTimes', 'No scheduled times set')}
             </div>
           )}
@@ -211,18 +211,18 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
           {isTall && state && (
             <div className="mt-auto pt-2 border-t border-white/[0.06] grid grid-cols-2 gap-2">
               <div>
-                <p className="text-[10px] text-white/40">
+                <p className="text-[10px] text-[var(--text-muted)]">
                   {t('widget.chargingSchedule.currentLevel', 'Current Level')}
                 </p>
-                <p className="text-sm font-semibold text-white/90">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
                   {state.battery_level ?? 0}%
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-white/40">
+                <p className="text-[10px] text-[var(--text-muted)]">
                   {t('widget.chargingSchedule.status', 'Status')}
                 </p>
-                <p className="text-sm font-semibold text-white/90">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
                   {state.is_charging
                     ? t('widget.charging', 'Charging')
                     : t('widget.notCharging', 'Not Charging')}
@@ -232,7 +232,7 @@ export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps)
           )}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Calendar className="h-5 w-5" />}
           message={t('widget.chargingSchedule.noData', 'No schedule data')}
           className="py-4"

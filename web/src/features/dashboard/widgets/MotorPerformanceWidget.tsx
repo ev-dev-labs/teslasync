@@ -67,19 +67,19 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
         <div className="h-full flex flex-col items-center justify-center gap-1 min-h-[44px]">
           {hasData ? (
             <>
-              <span className="text-[10px] uppercase tracking-wider text-white/40">
+              <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
                 {t('widget.motorPerformance.gear', 'Gear')}
               </span>
-              <span className="text-lg font-bold text-white/90">{gear}</span>
-              <span className="text-[10px] uppercase tracking-wider text-white/40 mt-1">
+              <span className="text-lg font-bold text-[var(--text-primary)]">{gear}</span>
+              <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mt-1">
                 {t('widget.motorPerformance.torque', 'Torque')}
               </span>
-              <span className="text-sm font-semibold text-white/80">
+              <span className="text-sm font-semibold text-[var(--text-primary)]">
                 {fmtInt(torque)} {t('widget.motorPerformance.nm', 'Nm')}
               </span>
             </>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Zap className="h-5 w-5" />}
               message={t('widget.motorPerformance.noData', 'No motor data')}
               className="py-2"
@@ -129,7 +129,7 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
           </div>
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Zap className="h-5 w-5" />}
           message={t('widget.motorPerformance.noData', 'No motor data')}
           className="py-4"

@@ -125,7 +125,7 @@ export function BulkActionsToolbar({
         role="region"
         aria-label={t('bulk.toolbarLabel', 'Bulk actions for selected items')}
       >
-        <div className="flex items-center gap-2 text-sm text-white/90">
+        <div className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
           <span
             className="inline-flex items-center justify-center rounded-full bg-blue-500/15 px-2 py-0.5 font-semibold text-blue-200"
             aria-live="polite"
@@ -133,12 +133,12 @@ export function BulkActionsToolbar({
             {countLabel}
           </span>
           {itemNoun && (
-            <span className="text-white/60">
+            <span className="text-[var(--text-secondary)]">
               {noun}
               {typeof total === 'number' && (
                 <>
                   {' '}
-                  <span className="text-white/40">
+                  <span className="text-[var(--text-muted)]">
                     {t('bulk.ofTotal', { total, defaultValue: 'of {{total}}' })}
                   </span>
                 </>

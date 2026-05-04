@@ -16,6 +16,7 @@ import { COMMANDS, type CommandDef } from '@/features/system/commands'
 import { useCommandRegistry, type ResolvedCommand } from '@/hooks/useCommandRegistry'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import { scoreCommand } from '@/lib/commandRegistry'
+import { recordCommandUse, getAllCommandScores } from '@/lib/commandFrecency'
 import { useGlobalSearch } from '@/api/hooks/useSearch'
 import type { SearchHitType } from '@/api/types'
 import { markCommandPaletteDiscovered } from '@/features/onboarding/checklist'
@@ -85,11 +86,17 @@ const PALETTE_COMMAND_CONFIGS: PaletteCommandConfig[] = [
 // Phase 40 / Prompt 19: persisted across reloads via localStorage so power users
 // see their workflow patterns surface to the top of the palette. Tracks every
 // command type (vehicle, registry/action, navigation), not only vehicle
-// commands. Stored capped at 10; UI surfaces top 5.
+// commands. Stored capped at 10.
+//
+// Phase-45 / Prompt 27: the empty-query "Most Used" section is now sourced
+// from `commandFrecency` instead of this LRU list. The LRU helpers below stay
+// exported for tests + as a backward-compatible storage primitive — every
+// recorded action still writes to BOTH localStorage keys so a future feature
+// can reuse the strict-recency view without re-instrumenting every callsite.
 
 const RECENT_KEY = 'teslasync.recentCommands'
 const RECENT_MAX_STORED = 10
-const RECENT_MAX_DISPLAY = 5
+const MOST_USED_MAX_DISPLAY = 5
 
 export interface RecentCommandEntry {
   /** Discriminator — `vehicle` runs a vehicle command, `registry` invokes a static
@@ -209,7 +216,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
   const { data: vehicles } = useVehicles()
   const vehicleList = vehicles ?? []
   const commandMutation = useVehicleCommand()
-  const { commands: registryCommands, getById: getRegistryById } = useCommandRegistry()
+  const { commands: registryCommands } = useCommandRegistry()
   const { vehicleId: activeVehicleId, setVehicleId } = useSelectedVehicle()
 
   // Command def lookup (stable — COMMANDS is a module-level constant)
@@ -234,6 +241,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
 
   const go = useCallback((path: string) => {
     addRecentCommand({ kind: 'nav', path })
+    recordCommandUse(path)
     bumpRecent()
     navigate(path)
     close()
@@ -242,6 +250,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
   const executeCommand = useCallback((command: string, vehicleId: number) => {
     commandMutation.mutate({ vehicleId, command })
     addRecentCommand({ kind: 'vehicle', command, vehicleId })
+    recordCommandUse(`cmd-${command}`)
     bumpRecent()
     close()
   }, [commandMutation, close, bumpRecent])
@@ -260,12 +269,14 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
   const switchActiveVehicle = useCallback((id: number) => {
     setVehicleId(id)
     addRecentCommand({ kind: 'registry', registryId: `switch-vehicle-${id}` })
+    recordCommandUse(`switch-vehicle-${id}`)
     bumpRecent()
     close()
   }, [setVehicleId, close, bumpRecent])
 
   const runRegistryCommand = useCallback((cmd: ResolvedCommand) => {
     addRecentCommand({ kind: 'registry', registryId: cmd.id })
+    recordCommandUse(cmd.id)
     bumpRecent()
     void cmd.invoke()
     close()
@@ -359,80 +370,44 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
     }),
   [registryCommands, t, runRegistryCommand])
 
-  const recentItems: PaletteItem[] = useMemo(() => {
+  // ── Most-used items (Phase-45 / Prompt 27) ────────────────────────────────
+  //
+  // Empty-query view: surface a user's frecency-ranked top commands at the
+  // top of the palette. Replaces the strict-LRU "Recent" section so a user
+  // who runs "Open Drives" three times a day sees it first even after a
+  // single one-off "Open Settings" click. Falls back to nothing (just the
+  // categorized list) when no commands have been recorded yet — a fresh
+  // install gets the original alphabetical-by-section experience.
+  //
+  // We pull from the static catalog (registry / nav / vehicle-switch /
+  // command) rather than re-deriving keys from the frecency store, because
+  // the store only knows ids — we need labels, icons, and actions to render.
+  // Unmatched ids (e.g. removed nav entries from a previous version) are
+  // silently dropped.
+  const mostUsedItems: PaletteItem[] = useMemo(() => {
     if (query.trim()) return []
-    // Read recents — recentVersion exists solely to invalidate this memo after
-    // addRecentCommand mutates localStorage so the "Recent" section refreshes
-    // without us needing a storage event listener.
     void recentVersion
-    const recent = getRecentCommands().slice(0, RECENT_MAX_DISPLAY)
-    return recent.flatMap<PaletteItem>(r => {
-      if (r.kind === 'vehicle' && r.command && r.vehicleId != null) {
-        const cfg = PALETTE_COMMAND_CONFIGS.find(c => c.command === r.command)
-        if (!cfg) return []
-        const def = commandDefMap.get(cfg.defId)
-        if (!def) return []
-        const vehicle = vehicleList.find(v => v.id === r.vehicleId)
-        if (!vehicle) return []
-        return [{
-          id: `recent-vehicle-${r.command}-${r.vehicleId}`,
-          label: t(cfg.labelKey, cfg.labelFallback),
-          section: t('palette.section.recent', 'Recent'),
-          icon: getIconForConfig(cfg, def),
-          type: 'command',
-          sublabel: `→ ${vehicle.display_name || vehicle.vin}`,
-          action: () => executeCommand(r.command!, r.vehicleId!),
-        }]
-      }
-      if (r.kind === 'registry' && r.registryId) {
-        // Vehicle-switch entries are dynamic — not in the registry — so handle
-        // them explicitly before falling back to the registry lookup.
-        if (r.registryId.startsWith('switch-vehicle-')) {
-          const vid = Number(r.registryId.slice('switch-vehicle-'.length))
-          const vehicle = vehicleList.find(v => v.id === vid)
-          if (!vehicle) return []
-          return [{
-            id: `recent-${r.registryId}`,
-            label: t('palette.cmd.switchVehicle', { name: vehicle.display_name || vehicle.vin, defaultValue: `Switch to ${vehicle.display_name || vehicle.vin}` }),
-            section: t('palette.section.recent', 'Recent'),
-            icon: <ArrowRightLeft className="h-4 w-4" />,
-            type: 'vehicle-switch',
-            sublabel: `${vehicle.model ?? ''} · ${vehicle.state ?? 'unknown'}`.trim(),
-            action: () => switchActiveVehicle(vid),
-          }]
-        }
-        const reg = getRegistryById(r.registryId)
-        if (!reg) return []
-        const Icon = reg.icon
-        return [{
-          id: `recent-${r.registryId}`,
-          label: reg.label,
-          section: t('palette.section.recent', 'Recent'),
-          icon: <Icon className="h-4 w-4" />,
-          type: 'registry',
-          shortcut: reg.shortcut,
-          action: () => runRegistryCommand(reg),
-        }]
-      }
-      if (r.kind === 'nav' && r.path) {
-        // Find the nav entry to recover its label and icon
-        for (const section of navSections) {
-          const item = section.items.find(i => i.to === r.path)
-          if (!item) continue
-          return [{
-            id: `recent-nav-${r.path}`,
-            label: item.label,
-            section: t('palette.section.recent', 'Recent'),
-            icon: <item.icon className="h-4 w-4" />,
-            type: 'navigate',
-            sublabel: section.title,
-            action: () => go(r.path!),
-          }]
-        }
-      }
-      return []
-    })
-  }, [query, recentVersion, commandDefMap, vehicleList, t, executeCommand, getRegistryById, runRegistryCommand, switchActiveVehicle, go])
+    const candidates: PaletteItem[] = [
+      ...registryItems,
+      ...vehicleSwitchItems,
+      ...navItems,
+      ...commandItems,
+    ]
+    const scores = getAllCommandScores()
+    const ranked = candidates
+      .map(item => ({ item, score: scores[item.id] ?? 0 }))
+      .filter(s => s.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, MOST_USED_MAX_DISPLAY)
+    const sectionLabel = t('palette.section.mostUsed', 'Most Used')
+    return ranked.map(({ item }): PaletteItem => ({
+      ...item,
+      // Re-key so React doesn't see the same id twice (the underlying item
+      // also appears in its own native section below).
+      id: `most-used-${item.id}`,
+      section: sectionLabel,
+    }))
+  }, [query, recentVersion, registryItems, vehicleSwitchItems, navItems, commandItems, t])
 
   // ── Vehicle selector items ────────────────────────────────────────────────
 
@@ -492,12 +467,17 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
   // PALETTE_COMMAND_CONFIGS items stay at the bottom (long list).
 
   const allItems = useMemo(
-    () => [...searchResultItems, ...recentItems, ...registryItems, ...vehicleSwitchItems, ...navItems, ...commandItems],
-    [searchResultItems, recentItems, registryItems, vehicleSwitchItems, navItems, commandItems],
+    () => [...searchResultItems, ...mostUsedItems, ...registryItems, ...vehicleSwitchItems, ...navItems, ...commandItems],
+    [searchResultItems, mostUsedItems, registryItems, vehicleSwitchItems, navItems, commandItems],
   )
 
   const filtered = useMemo(() => {
     if (!query.trim()) return allItems
+    // Frecency snapshot used as a tiebreaker — among items with identical
+    // match scores, the more frecent one ranks higher. We read once per
+    // query change, not per item, to avoid N localStorage hits.
+    void recentVersion
+    const frecencyScores = getAllCommandScores()
     // Score every item with the same fuzzy matcher used for registry commands
     // so "btr" matches "Battery Health" via subsequence, not just substring.
     const scored = allItems
@@ -507,25 +487,34 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
         // entity. Pinning them at a high pseudo-score keeps Results above
         // the static items inside groupedItems while remaining in their
         // own per-type sections.
-        if (cmd.type === 'search-hit') return { cmd, score: 9999 }
-        const haystack = [cmd.label, ...(cmd.keywords ?? [])]
-        let best = 0
-        for (let i = 0; i < haystack.length; i++) {
-          const s = scoreCommand(query, haystack[i], i === 0 ? cmd.keywords : undefined)
-          if (s > best) best = s
-        }
+        if (cmd.type === 'search-hit') return { cmd, score: 9999, frecency: 0 }
+        // Score the label once, with keywords passed in. scoreCommand already
+        // handles label tiers (1000/501+/200+/150) AND keyword tiers (100/50)
+        // AND label-subsequence (25) in the right order. Iterating over each
+        // keyword as if it were the label inflated keyword matches to label
+        // tiers — e.g. a keyword "debugger" matched query "d" via label
+        // startsWith → 501, tying with the real "Drives" label and pushing
+        // unrelated items (State Machine, Theme: Dark) ahead of true label
+        // matches. See commandRegistry.test.ts "label prefix outranks
+        // keyword prefix".
+        let best = scoreCommand(query, cmd.label, cmd.keywords)
         // Sublabel/section as a lighter substring fallback
         if (best === 0) {
           const q = query.toLowerCase()
           if ((cmd.sublabel ?? '').toLowerCase().includes(q)) best = 10
           else if (cmd.section.toLowerCase().includes(q)) best = 5
         }
-        return { cmd, score: best }
+        // Most-used items carry a `most-used-`-prefixed id; look up the
+        // underlying id for frecency so duplicate display variants stay in
+        // sync with their canonical entries.
+        const lookupId = cmd.id.startsWith('most-used-') ? cmd.id.slice('most-used-'.length) : cmd.id
+        const frecency = frecencyScores[lookupId] ?? 0
+        return { cmd, score: best, frecency }
       })
       .filter(s => s.score > 0)
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => (b.score - a.score) || (b.frecency - a.frecency))
     return scored.map(s => s.cmd)
-  }, [allItems, query])
+  }, [allItems, query, recentVersion])
 
   const displayItems = mode === 'vehicle-select' ? vehicleItems : filtered
 
@@ -637,7 +626,13 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             data-role="command-palette"
-            className="fixed inset-0 z-[200] bg-slate-950/35 backdrop-blur-sm dark:bg-black/60"
+            // Phase-45 / Prompt 04: NOT migrated to <Modal>.
+            // Rationale: command palette is its own keyboard-driven primitive
+            // with custom search behavior, multi-mode navigation, and a
+            // distinct visual treatment (top-anchored card, not centered
+            // dialog). New interactive dialogs MUST use <Modal>.
+            // eslint-disable-next-line no-restricted-syntax
+            className="fixed inset-0 z-[200] bg-[var(--bg-app)] backdrop-blur-sm dark:bg-[var(--surface-overlay)]"
             onClick={close}
           />
           <motion.div

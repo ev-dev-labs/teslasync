@@ -114,7 +114,7 @@ export function TripPlannerMap({ origin, destination, legs, chargeStops }: TripP
                 <Popup>
                   <div className="text-sm">
                     <p className="font-medium">{stop.name}</p>
-                    <p className="text-gray-500">
+                    <p className="text-[var(--text-muted)]">
                       {Math.round(stop.charge_from_soc)}% → {Math.round(stop.charge_to_soc)}%
                       ({Math.round(stop.charge_duration_min)} min)
                     </p>
@@ -126,7 +126,7 @@ export function TripPlannerMap({ origin, destination, legs, chargeStops }: TripP
         </div>
       ) : (
         <div className="h-[400px] flex items-center justify-center">
-          <EmptyState message={t('tripPlanner.map.empty', 'Enter origin and destination to see the route')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('tripPlanner.map.empty', 'Enter origin and destination to see the route')} />
         </div>
       )}
     </GlassPanel>

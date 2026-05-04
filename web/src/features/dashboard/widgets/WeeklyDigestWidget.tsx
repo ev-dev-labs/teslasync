@@ -106,7 +106,7 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
       {metrics.length > 0 ? (
         <WidgetComparisonCard metrics={metrics} compact={isCompact} />
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<CalendarDays className="h-5 w-5" />}
           message={t('widget.weeklyDigest.noData', 'No weekly data yet')}
           className="py-4"

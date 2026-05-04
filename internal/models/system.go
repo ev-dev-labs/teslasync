@@ -367,6 +367,20 @@ type Settings struct {
 	// "comfortable" so existing users see no visual change.
 	// (Phase 40 / 44.)
 	UIDensity string `json:"ui_density"`
+	// TimeFormatDefault selects the default rendering of <TimeStamp>
+	// when no explicit `format` prop is set. One of "relative"
+	// (e.g. "2h ago", best for activity feeds) or "absolute"
+	// (e.g. "Nov 12, 13:42", best for trip planning + event
+	// correlation). The alternate format is always shown on hover.
+	// Defaults to "relative". (Phase 45 / 22.)
+	TimeFormatDefault string `json:"time_format_default"`
+	// ChartPalette selects the colour ramp used by multi-series
+	// charts. One of "cb_safe" (Okabe-Ito, distinguishable for all
+	// CVD types — the default) or "neon" (bright cyan/magenta legacy
+	// palette). Drives the reactive `useChartPalette()` hook so
+	// consumers re-render with the new colours when the user toggles.
+	// (Phase 45 / 23.)
+	ChartPalette string `json:"chart_palette"`
 }
 
 // Embedding mirrors the post-migration `embeddings` schema (pgvector-backed).

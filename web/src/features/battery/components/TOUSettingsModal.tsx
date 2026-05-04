@@ -220,7 +220,7 @@ export function TOUSettingsModal({ open, onClose, siteId }: TOUSettingsModalProp
   return (
     <Modal open={open} onClose={handleClose} title={t('energy.tou.title', 'Update Rate Plan')} size="lg">
       <div className="space-y-4">
-        <p className="text-sm text-white/60">
+        <p className="text-sm text-[var(--text-secondary)]">
           {t(
             'energy.tou.description',
             'Configure your utility rate plan so the Powerwall can optimize charging and discharging based on electricity pricing.',
@@ -240,10 +240,10 @@ export function TOUSettingsModal({ open, onClose, siteId }: TOUSettingsModalProp
             />
             {selectedPreset && (
               <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
-                <p className="text-xs text-white/50 mb-1">
+                <p className="text-xs text-[var(--text-secondary)] mb-1">
                   {t('energy.tou.previewLabel', 'Preview')}
                 </p>
-                <pre className="text-xs text-white/70 overflow-auto max-h-48">
+                <pre className="text-xs text-[var(--text-secondary)] overflow-auto max-h-48">
                   {JSON.stringify(PRESETS.find((p) => p.id === selectedPreset)?.settings, null, 2)}
                 </pre>
               </div>
@@ -259,7 +259,7 @@ export function TOUSettingsModal({ open, onClose, siteId }: TOUSettingsModalProp
               rows={12}
               className="font-mono text-xs"
             />
-            <p className="text-xs text-white/40 flex items-center gap-1">
+            <p className="text-xs text-[var(--text-muted)] flex items-center gap-1">
               <FileJson className="h-3 w-3" />
               {t(
                 'energy.tou.customHint',

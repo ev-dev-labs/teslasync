@@ -116,15 +116,15 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
       >
         {hasData ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5">
-            <span className="text-2xl font-bold text-white/90">
+            <span className="text-2xl font-bold text-[var(--text-primary)]">
               {formatCurrency(metrics.totalCost, 0)}
             </span>
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               {t('widget.chargeCost.monthly', '30-day cost')}
             </span>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<DollarSign className="h-5 w-5" />}
             message={t('widget.chargeCost.noData', 'No charge data')}
             className="py-4"
@@ -200,7 +200,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
           )}
 
           {!isTall && (
-            <div className="flex items-center justify-between text-[10px] text-white/40 px-1">
+            <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] px-1">
               <span>
                 {metrics.costPerDistance != null
                   ? `${currencySymbol}${fmtNumber(metrics.costPerDistance, 3)}/${distanceUnit}`
@@ -217,7 +217,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
           )}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<DollarSign className="h-5 w-5" />}
           message={t('widget.chargeCost.noData', 'No charge data')}
           className="py-4"

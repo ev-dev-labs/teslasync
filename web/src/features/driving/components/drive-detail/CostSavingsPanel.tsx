@@ -33,11 +33,11 @@ export function CostSavingsPanel({ drive, stats }: CostSavingsPanelProps) {
           <div>
             <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.tripCost', 'Trip Cost')}</p>
             <p className="text-lg font-bold text-green-400">{formatEnergyCost(stats.energyWh / 1000)}</p>
-            <p className="text-[9px] text-[var(--text-muted)]">{t('driveDetail.atRate', `at ${currencySymbol}${costPerKwh}/kWh`)}</p>
+            <p className="text-[9px] text-[var(--text-muted)]">{t('driveDetail.atRate', { currencySymbol, costPerKwh, defaultValue: 'at {{currencySymbol}}{{costPerKwh}}/kWh' })}</p>
           </div>
           {drive.distanceMi > 0 && (
             <div>
-              <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.costPerUnit', `Cost / ${distanceUnit}`)}</p>
+              <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.costPerUnit', { unit: distanceUnit, defaultValue: 'Cost / {{unit}}' })}</p>
               <p className="text-lg font-bold text-cyan-400">
                 {formatCurrency(costPerDistanceUnit(stats.energyWh / 1000, drive.distanceMi) ?? 0, 3)}
               </p>
@@ -48,7 +48,7 @@ export function CostSavingsPanel({ drive, stats }: CostSavingsPanelProps) {
               <div>
                 <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.gasCostEquiv', 'Gas Cost (equiv)')}</p>
                 <p className="text-lg font-bold text-red-400">{formatCurrency(gasCost!)}</p>
-                <p className="text-[9px] text-[var(--text-muted)]">{t('driveDetail.atMpg', `at ${settings.gas_efficiency_mpg} MPG`)}</p>
+                <p className="text-[9px] text-[var(--text-muted)]">{t('driveDetail.atMpg', { mpg: settings.gas_efficiency_mpg, defaultValue: 'at {{mpg}} MPG' })}</p>
               </div>
               <div>
                 <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.gasSavings', 'vs Gas Savings')}</p>

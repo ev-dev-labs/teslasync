@@ -57,7 +57,7 @@ function VehicleActivity({ vin, status }: { vin: string; status: VehiclePollingS
   const color = activityColor(status.activity)
 
   return (
-    <div className="border border-white/5 rounded-lg p-3 space-y-2">
+    <div className="border border-[var(--border-subtle)] rounded-lg p-3 space-y-2">
       <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)} className="!w-full !justify-between !rounded-lg !px-0 !py-0">
         <div className="flex items-center gap-2">
           <motion.div
@@ -67,12 +67,12 @@ function VehicleActivity({ vin, status }: { vin: string; status: VehiclePollingS
           >
             {activityIcon(status.activity)}
           </motion.div>
-          <span className="text-sm font-mono text-white/80">{vin.slice(-8)}</span>
+          <span className="text-sm font-mono text-[var(--text-primary)]">{vin.slice(-8)}</span>
           <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: color + '20', color }}>
             {status.activity} ┬╖ {profileLabel(status.profile)}
           </span>
         </div>
-        <div className="flex items-center gap-3 text-xs text-white/50">
+        <div className="flex items-center gap-3 text-xs text-[var(--text-secondary)]">
           <span className="flex items-center gap-1">
             <Clock size={12} />
             Next: {formatTimeUntil(status.next_poll_after)}
@@ -82,13 +82,13 @@ function VehicleActivity({ vin, status }: { vin: string; status: VehiclePollingS
       </Button>
 
       {expanded && status.last_decision && (
-        <div className="ml-6 space-y-1 text-xs text-white/60 border-t border-white/5 pt-2">
+        <div className="ml-6 space-y-1 text-xs text-[var(--text-secondary)] border-t border-[var(--border-subtle)] pt-2">
           <div>Interval: {formatDuration(status.last_decision.next_interval_ms)}</div>
           <div>Consecutive idle: {status.consec_idle}</div>
           <div>Battery: {status.battery_level}%</div>
           {status.last_decision.reasons.map((r, i) => (
             <div key={i} className="flex items-center gap-1">
-              <span className="text-white/30">ΓåÆ</span> {r}
+              <span className="text-[var(--text-muted)]">ΓåÆ</span> {r}
             </div>
           ))}
           {status.last_decision.prediction && (
@@ -117,29 +117,29 @@ function SavingsCard({ savings }: { savings: CostSnapshot }) {
         <div className="text-2xl font-bold text-emerald-400">
           <AnimatedNumber value={savings.savings_percent} decimals={1} />%
         </div>
-        <div className="text-xs text-white/50">{t('polling.pollsSaved', 'Polls Saved')}</div>
+        <div className="text-xs text-[var(--text-secondary)]">{t('polling.pollsSaved', 'Polls Saved')}</div>
       </div>
       <div className="text-center">
         <div className="text-2xl font-bold text-emerald-400">
           $<AnimatedNumber value={savings.estimated_savings} decimals={2} />
         </div>
-        <div className="text-xs text-white/50">{t('polling.savedAmount', '$ Saved')}</div>
+        <div className="text-xs text-[var(--text-secondary)]">{t('polling.savedAmount', '$ Saved')}</div>
       </div>
       <div className="text-center">
-        <div className="text-2xl font-bold text-white/80">
+        <div className="text-2xl font-bold text-[var(--text-primary)]">
           <AnimatedNumber value={savings.polls_made} decimals={0} />
         </div>
-        <div className="text-xs text-white/50">{t('polling.pollsMade', 'Polls Made')}</div>
+        <div className="text-xs text-[var(--text-secondary)]">{t('polling.pollsMade', 'Polls Made')}</div>
       </div>
       <div className="text-center">
-        <div className="text-2xl font-bold text-white/80">
+        <div className="text-2xl font-bold text-[var(--text-primary)]">
           $<AnimatedNumber value={savings.remaining_credit} decimals={2} />
         </div>
-        <div className="text-xs text-white/50">{t('polling.creditLeft', 'Credit Left')}</div>
+        <div className="text-xs text-[var(--text-secondary)]">{t('polling.creditLeft', 'Credit Left')}</div>
       </div>
 
       {total > 0 && (
-        <div className="col-span-full flex gap-1 h-2 rounded-full overflow-hidden bg-white/5">
+        <div className="col-span-full flex gap-1 h-2 rounded-full overflow-hidden bg-[var(--surface-2)]">
           {(breakdown.fleet_telemetry || 0) > 0 && (
             <div
               className="bg-blue-500 rounded-full"
@@ -171,7 +171,7 @@ function SavingsCard({ savings }: { savings: CostSnapshot }) {
         </div>
       )}
       {total > 0 && (
-        <div className="col-span-full flex gap-4 justify-center text-[10px] text-white/40">
+        <div className="col-span-full flex gap-4 justify-center text-[10px] text-[var(--text-muted)]">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" />{t('polling.fleetTelemetry', 'Fleet Telemetry')}</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />{t('polling.idleDetection', 'Idle Detection')}</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500" />{t('polling.prediction', 'Prediction')}</span>
@@ -215,7 +215,7 @@ export default function PollingEnginePanel() {
 
       {vehicles.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-white/60 flex items-center gap-1">
+          <h4 className="text-sm font-medium text-[var(--text-secondary)] flex items-center gap-1">
             <Gauge size={14} /> Vehicle Activity
           </h4>
           {vehicles.map(([vin, vs]) => (
@@ -225,7 +225,7 @@ export default function PollingEnginePanel() {
       )}
 
       {vehicles.length === 0 && (
-        <div className="text-center text-sm text-white/40 py-4">
+        <div className="text-center text-sm text-[var(--text-muted)] py-4">
           No vehicles tracked yet. Polling engine will activate on first poll.
         </div>
       )}

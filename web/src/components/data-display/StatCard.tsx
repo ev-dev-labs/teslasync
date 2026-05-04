@@ -35,7 +35,7 @@ export function StatCard({ label, value, unit, icon, trend, sublabel, loading, c
       </div>
       {trend && (
         <div className={cn('flex items-center gap-1 text-xs',
-          trend.positive ? 'text-green-600' : trend.direction === 'flat' ? 'text-gray-500' : 'text-red-600',
+          trend.positive ? 'text-green-600' : trend.direction === 'flat' ? 'text-[var(--text-muted)]' : 'text-red-600',
         )}>
           <span>{trend.direction === 'up' ? '↑' : trend.direction === 'down' ? '↓' : '—'}</span>
           <span>{trend.value}</span>

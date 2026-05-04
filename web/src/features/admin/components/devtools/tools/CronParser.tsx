@@ -40,18 +40,18 @@ export function CronParserTool() {
           ))}
         </div>
         {description && (
-          <div className="rounded bg-black/20 px-3 py-2">
-            <span className="text-xs text-white/50">{t('Description')}</span>
+          <div className="rounded bg-[var(--surface-overlay)] px-3 py-2">
+            <span className="text-xs text-[var(--text-secondary)]">{t('Description')}</span>
             <p className="text-sm text-emerald-300">{description}</p>
           </div>
         )}
         {nextRuns.length > 0 && (
           <div className="space-y-1">
-            <span className="text-xs text-white/50">{t('Next Runs')}</span>
+            <span className="text-xs text-[var(--text-secondary)]">{t('Next Runs')}</span>
             {nextRuns.map((d, i) => (
-              <div key={i} className="flex items-center gap-2 rounded bg-black/20 px-3 py-1">
+              <div key={i} className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1">
                 <Badge variant="info" size="sm">{i + 1}</Badge>
-                <span className="text-xs font-mono text-white/70">{formatDateTime(d)}</span>
+                <span className="text-xs font-mono text-[var(--text-secondary)]">{formatDateTime(d)}</span>
               </div>
             ))}
           </div>

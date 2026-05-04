@@ -105,7 +105,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       header: t('widget.notificationStats.channel', 'Channel'),
       className: 'max-w-[120px]',
       render: (log) => (
-        <span className="block truncate text-white/70">
+        <span className="block truncate text-[var(--text-secondary)]">
           {log.title ?? '—'}
         </span>
       ),
@@ -115,7 +115,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       header: t('widget.notificationStats.type', 'Type'),
       className: 'max-w-[100px]',
       render: (log) => (
-        <span className="block truncate text-white/50">
+        <span className="block truncate text-[var(--text-secondary)]">
           {log.message ?? '—'}
         </span>
       ),
@@ -137,7 +137,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       header: t('widget.notificationStats.time', 'Time'),
       className: 'text-right whitespace-nowrap',
       render: (log) => (
-        <span className="text-white/40">
+        <span className="text-[var(--text-muted)]">
           {formatLogTime(log.created_at)}
         </span>
       ),
@@ -163,8 +163,8 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       >
         {stats ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
-            <span className="text-2xl font-bold text-white/90">{fmtNumber(deliveryRate, 1)}%</span>
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+            <span className="text-2xl font-bold text-[var(--text-primary)]">{fmtNumber(deliveryRate, 1)}%</span>
+            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               {t('widget.notificationStats.deliveryRate', 'Delivery Rate')}
             </span>
             {failed > 0 && (
@@ -174,7 +174,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
             )}
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Bell className="h-5 w-5" />}
             message={t('widget.notificationStats.noData', 'No notification data')}
             className="py-4"
@@ -214,7 +214,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
           )}
         </div>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Bell className="h-5 w-5" />}
           message={t('widget.notificationStats.noData', 'No notification data')}
           className="py-4"

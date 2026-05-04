@@ -52,6 +52,14 @@ export interface TogglePinInput {
  * Pin or unpin a single item. The `pin` flag chooses between POST (create)
  * and DELETE (by id, looked up from the cache). The mutation invalidates
  * every `pinned[type]` query so dependent surfaces re-render in pin order.
+ *
+ * NOTE: Not migrated to `useOptimisticMutation` — the unpin path needs to
+ * read the existing pinned-row id from the cache to build the DELETE URL,
+ * and an optimistic removal would drop the row from the cache before the
+ * mutationFn could look it up. Keep this on the explicit useMutation path
+ * until either (a) the backend learns to delete-by-(type,item_id) so we
+ * skip the lookup, or (b) the helper grows a `beforeMutate` hook that
+ * fires ahead of the optimistic write.
  */
 export function useTogglePin(type: PinnedItemType) {
   const qc = useQueryClient();

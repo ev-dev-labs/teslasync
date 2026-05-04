@@ -45,6 +45,7 @@ type notificationInboxStore interface {
 	GetLogsFiltered(ctx context.Context, f database.NotificationLogFilters) ([]*models.NotificationLog, error)
 	GetUnreadCount(ctx context.Context) (int64, error)
 	BulkSetRead(ctx context.Context, ids []int64, read bool) (int64, error)
+	BulkSetReadAll(ctx context.Context) (int64, error)
 	BulkSetArchived(ctx context.Context, ids []int64, archived bool) (int64, error)
 	BulkDelete(ctx context.Context, ids []int64) (int64, error)
 }
@@ -434,8 +435,13 @@ func parseBoolish(s string) (bool, error) {
 }
 
 // bulkIDsRequest is the shared body shape for bulk mutation endpoints.
+//
+// `All` is honoured only by the mark-read endpoint (see decodeMarkReadBody).
+// When set to `true`, the handler delegates to the repo's whole-inbox path
+// instead of requiring an id list.
 type bulkIDsRequest struct {
 	IDs []int64 `json:"ids"`
+	All bool    `json:"all"`
 }
 
 func decodeBulkIDs(r *http.Request) ([]int64, error) {
@@ -452,16 +458,60 @@ func decodeBulkIDs(r *http.Request) ([]int64, error) {
 	return body.IDs, nil
 }
 
+// decodeMarkReadBody is the relaxed decoder used by MarkRead. The body must
+// supply EITHER a non-empty `ids` array OR `all: true` — supplying both is
+// rejected so the caller can't accidentally mask one path with the other.
+//
+// When `all` is true, the returned id slice is nil and the handler is expected
+// to call the BulkSetReadAll path. Otherwise the same validation as
+// `decodeBulkIDs` applies (non-empty, ≤1000).
+func decodeMarkReadBody(r *http.Request) (ids []int64, all bool, err error) {
+	var body bulkIDsRequest
+	if decErr := json.NewDecoder(r.Body).Decode(&body); decErr != nil {
+		return nil, false, fmt.Errorf("invalid request body: %w", decErr)
+	}
+	if body.All && len(body.IDs) > 0 {
+		return nil, false, fmt.Errorf("cannot specify both ids and all=true")
+	}
+	if body.All {
+		return nil, true, nil
+	}
+	if len(body.IDs) == 0 {
+		return nil, false, fmt.Errorf("ids must be non-empty (or pass all=true)")
+	}
+	if len(body.IDs) > 1000 {
+		return nil, false, fmt.Errorf("ids exceeds 1000 cap")
+	}
+	return body.IDs, false, nil
+}
+
 // MarkRead flips read_at to NOW() for each id in the request body.
+//
+// Body shapes accepted:
+//
+//	{"ids":[1,2,3]}  → mark exactly those rows as read.
+//	{"all":true}     → mark every non-archived, currently-unread row as read.
+//
+// Phase-45 / 28 added the all-flag to power the "Mark all read" header
+// action without forcing the client to enumerate every visible id (which
+// could exceed the 1000-id cap on busy inboxes).
 func (h *NotificationHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
-	ids, err := decodeBulkIDs(r)
+	ids, all, err := decodeMarkReadBody(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	updated, err := h.inbox.BulkSetRead(r.Context(), ids, true)
-	if err != nil {
-		log.Error().Err(err).Msg("bulk mark read")
+	var (
+		updated int64
+		opErr   error
+	)
+	if all {
+		updated, opErr = h.inbox.BulkSetReadAll(r.Context())
+	} else {
+		updated, opErr = h.inbox.BulkSetRead(r.Context(), ids, true)
+	}
+	if opErr != nil {
+		log.Error().Err(opErr).Bool("all", all).Msg("bulk mark read")
 		writeError(w, http.StatusInternalServerError, "failed to mark notifications read")
 		return
 	}

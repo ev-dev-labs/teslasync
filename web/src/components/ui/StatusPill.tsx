@@ -14,7 +14,7 @@ export const StatusPill = forwardRef<HTMLSpanElement, StatusPillProps>(
       ref={ref}
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
-        'bg-white/5 text-gray-200 dark:text-gray-200',
+        'bg-[var(--surface-2)] text-gray-200 dark:text-gray-200',
         className,
       )}
       {...props}

@@ -85,7 +85,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
       onRefresh={() => refetch()}
     >
         {!data ? (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Sparkles className="h-5 w-5" />}
             message={t('widget.chargingOptimizer.noData', 'No optimizer data')}
             className="py-4"
@@ -94,11 +94,11 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
           <div className="flex h-full flex-col items-center justify-center gap-2 min-h-[44px]">
             <div className="flex items-center gap-1.5">
               <Clock className="h-4 w-4 text-emerald-400" />
-              <span className="text-lg font-bold text-white/90">
+              <span className="text-lg font-bold text-[var(--text-primary)]">
                 {formatHour(optimalStartHour)}
               </span>
             </div>
-            <span className="text-xs text-white/50">
+            <span className="text-xs text-[var(--text-secondary)]">
               {t('widget.chargingOptimizer.targetSocShort', 'SOC {{pct}}%', { pct: fmtInt(targetSoc) })}
             </span>
             {monthlySavings > 0 && (
@@ -120,7 +120,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
       {...shellProps}
     >
       {!data ? (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Sparkles className="h-5 w-5" />}
           message={t('widget.chargingOptimizer.noData', 'No optimizer data')}
           className="py-4"
@@ -131,28 +131,28 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
           <div className="grid grid-cols-3 gap-2">
             <div className="flex flex-col items-center gap-1 rounded-lg bg-white/[0.03] p-2 min-h-[44px]">
               <Clock className="h-4 w-4 text-emerald-400" />
-              <span className="text-sm font-semibold text-white/90">
+              <span className="text-sm font-semibold text-[var(--text-primary)]">
                 {formatHour(optimalStartHour)}
               </span>
-              <span className="text-[10px] text-white/40 truncate">
+              <span className="text-[10px] text-[var(--text-muted)] truncate">
                 {t('widget.chargingOptimizer.optimalStart', 'Optimal start')}
               </span>
             </div>
             <div className="flex flex-col items-center gap-1 rounded-lg bg-white/[0.03] p-2 min-h-[44px]">
               <BatteryCharging className="h-4 w-4 text-blue-400" />
-              <span className="text-sm font-semibold text-white/90">
+              <span className="text-sm font-semibold text-[var(--text-primary)]">
                 {fmtInt(targetSoc)}%
               </span>
-              <span className="text-[10px] text-white/40 truncate">
+              <span className="text-[10px] text-[var(--text-muted)] truncate">
                 {t('widget.chargingOptimizer.targetSoc', 'Target SOC')}
               </span>
             </div>
             <div className="flex flex-col items-center gap-1 rounded-lg bg-white/[0.03] p-2 min-h-[44px]">
               <DollarSign className="h-4 w-4 text-amber-400" />
-              <span className="text-sm font-semibold text-white/90">
+              <span className="text-sm font-semibold text-[var(--text-primary)]">
                 ${fmtNumber(monthlySavings, 0)}
               </span>
-              <span className="text-[10px] text-white/40 truncate">
+              <span className="text-[10px] text-[var(--text-muted)] truncate">
                 {t('widget.chargingOptimizer.savingsLabel', 'Savings/mo')}
               </span>
             </div>
@@ -160,7 +160,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
 
           {/* Schedule match badge */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-white/50">
+            <span className="text-xs text-[var(--text-secondary)]">
               {t('widget.chargingOptimizer.peakUsage', 'Peak charging: {{pct}}%', { pct: fmtInt(peakPct) })}
             </span>
             <Badge variant={scheduleMatchesOptimal ? 'success' : 'warning'} size="sm">
@@ -173,7 +173,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
           {/* Wide mode: 24h timeline bar */}
           {isWide && (
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
                 {t('widget.chargingOptimizer.rateTimeline', '24h Rate Timeline')}
               </span>
               <div className="flex h-6 rounded-md overflow-hidden border border-white/[0.06]">
@@ -201,7 +201,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
                   );
                 })}
               </div>
-              <div className="flex justify-between text-[10px] text-white/30">
+              <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
                 <span>12 AM</span>
                 <span>6 AM</span>
                 <span>12 PM</span>

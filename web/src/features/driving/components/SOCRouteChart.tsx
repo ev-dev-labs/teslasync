@@ -54,7 +54,7 @@ export function SOCRouteChart({ socCurve, chargeStops, minArrivalSOC }: SOCRoute
   if (chartData.length === 0) {
     return (
       <ChartContainer title={t('tripPlanner.socChart.title', 'Battery Along Route')} height={300}>
-        <EmptyState message={t('tripPlanner.socChart.empty', 'Plan a trip to see the SOC curve')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('tripPlanner.socChart.empty', 'Plan a trip to see the SOC curve')} />
       </ChartContainer>
     );
   }

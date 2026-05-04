@@ -121,7 +121,7 @@ function ClimatePanel({ data, convertTemp, tempUnit }: {
             </div>
             <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-500"
+                className="h-full rounded-full transition-all duration-slow"
                 style={{
                   width: `${((data.hvac_fan_speed ?? 0) / 6) * 100}%`,
                   background: 'linear-gradient(90deg, #00f0ff, #a855f7)',
@@ -308,7 +308,7 @@ function MediaPanel({ data }: { data: MediaData | undefined }) {
             </div>
             <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-500"
+                className="h-full rounded-full transition-all duration-slow"
                 style={{
                   width: `${data.audio_volume != null && data.audio_volume_max ? (data.audio_volume / data.audio_volume_max) * 100 : 0}%`,
                   background: 'linear-gradient(90deg, #a855f7, #00f0ff)',

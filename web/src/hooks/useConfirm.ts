@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { ConfirmDialogProps } from '@/components/ui/ConfirmDialog';
+import { isSilenced } from '@/lib/confirmSilence';
 
 /**
  * Options accepted by `confirm(opts)`. Mirrors the visual props of
@@ -14,6 +15,18 @@ export interface ConfirmOptions {
   variant?: 'danger' | 'warning';
   requireTypedConfirmation?: string;
   typedConfirmationLabel?: string;
+  /**
+   * When set + non-destructive (variant !== 'danger', no typed gate), the
+   * dialog renders a "Don't ask again" checkbox. Once the user opts in,
+   * future `confirm()` calls with the same key short-circuit to `true`
+   * without ever opening the modal — see `lib/confirmSilence.ts`.
+   *
+   * Provided values are still passed through for `danger`/typed prompts
+   * but ignored — `<ConfirmDialog>` itself enforces the safety gate, so
+   * call sites can use a stable `silenceKey` even when the variant is
+   * dynamic.
+   */
+  silenceKey?: string;
 }
 
 interface InternalState extends ConfirmOptions {
@@ -50,6 +63,17 @@ export function useConfirm() {
   const [state, setState] = useState<InternalState | null>(null);
 
   const confirm = useCallback((opts: ConfirmOptions): Promise<boolean> => {
+    // Short-circuit silenced low-stakes prompts BEFORE mounting the dialog.
+    // Mirror `<ConfirmDialog>`'s safety gate: never silence destructive or
+    // typed-confirmation flows even if the caller passes a `silenceKey`.
+    if (
+      opts.silenceKey
+      && opts.variant !== 'danger'
+      && !opts.requireTypedConfirmation
+      && isSilenced(opts.silenceKey)
+    ) {
+      return Promise.resolve(true);
+    }
     return new Promise((resolve) => {
       setState((prev) => {
         // If a previous dialog is somehow still open (rapid double-trigger),
@@ -84,6 +108,7 @@ export function useConfirm() {
         variant: state.variant,
         requireTypedConfirmation: state.requireTypedConfirmation,
         typedConfirmationLabel: state.typedConfirmationLabel,
+        silenceKey: state.silenceKey,
         onConfirm: handleConfirm,
         onCancel: handleCancel,
       }

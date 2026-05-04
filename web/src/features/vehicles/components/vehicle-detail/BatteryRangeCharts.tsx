@@ -123,7 +123,7 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
             </ResponsiveContainer>
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Route className="h-8 w-8" />}
             message={t('vehicles.detail.noDriveData', 'No drive data for chart')}
           />

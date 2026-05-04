@@ -64,7 +64,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorS
                 <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
                   {t('drivetrain.source', 'Source')}
                 </p>
-                <p className="text-lg font-bold text-white/80">
+                <p className="text-lg font-bold text-[var(--text-primary)]">
                   {motorLatest.source ?? '—'}
                 </p>
               </div>
@@ -166,7 +166,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorS
             </div>
           </>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             message={t('drivetrain.noLiveMotor', 'No live motor telemetry yet')}
           />
         )}

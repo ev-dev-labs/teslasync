@@ -114,7 +114,7 @@ export function WidgetShell({
   return (
     <div
       className={cn(
-        'relative h-full flex flex-col transition-shadow duration-500',
+        'relative h-full flex flex-col transition-shadow duration-slow',
         justUpdated && 'shadow-[0_0_12px_rgba(34,197,94,0.15)]',
       )}
     >
@@ -122,7 +122,7 @@ export function WidgetShell({
         <div className="flex-shrink-0 flex items-center justify-between px-4 pt-3 pb-1">
           <div className="flex items-center gap-1.5">
             {icon}
-            <h3 className="text-[11px] font-medium text-white/40 uppercase tracking-wider">{title}</h3>
+            <h3 className="text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-wider">{title}</h3>
             {help && (
               <HelpTooltip
                 size="xs"

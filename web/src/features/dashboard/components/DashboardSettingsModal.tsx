@@ -35,8 +35,8 @@ function EmojiPicker({
           onClick={() => onSelect(emoji)}
           className={cn(
             'h-8 w-8 rounded-md p-0 text-lg',
-            'hover:bg-white/10 transition-colors',
-            selected === emoji && 'bg-white/10 ring-1 ring-[var(--theme-primary)]',
+            'hover:bg-[var(--surface-2)] transition-colors',
+            selected === emoji && 'bg-[var(--surface-2)] ring-1 ring-[var(--theme-primary)]',
           )}
           aria-label={emoji}
         >
@@ -126,7 +126,7 @@ export function DashboardSettingsModal({
       <div className="space-y-6">
         {/* Identity — Name & Icon */}
         <div>
-          <h3 className="text-sm font-medium text-gray-300 mb-3">
+          <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-3">
             {t('dashSettings.identity', 'Identity')}
           </h3>
           <div className="space-y-3">
@@ -137,7 +137,7 @@ export function DashboardSettingsModal({
               label={t('dashSettings.nameLabel', 'Name')}
             />
             <div>
-              <p className="text-xs text-gray-400 mb-2">
+              <p className="text-xs text-[var(--text-muted)] mb-2">
                 {t('dashSettings.iconLabel', 'Icon')}
               </p>
               <EmojiPicker selected={icon} onSelect={setIcon} />
@@ -147,10 +147,10 @@ export function DashboardSettingsModal({
 
         {/* Vehicle filter */}
         <div>
-          <h3 className="text-sm font-medium text-gray-300 mb-1">
+          <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-1">
             {t('dashSettings.vehicleFilter', 'Vehicle Filter')}
           </h3>
-          <p className="text-xs text-gray-500 mb-3">
+          <p className="text-xs text-[var(--text-muted)] mb-3">
             {t(
               'dashSettings.vehicleFilterDesc',
               'Show data for a specific vehicle in all widgets. Widget-level filters take precedence.',
@@ -170,7 +170,7 @@ export function DashboardSettingsModal({
 
         {/* Refresh interval */}
         <div>
-          <h3 className="text-sm font-medium text-gray-300 mb-3">
+          <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-3">
             {t('dashSettings.refresh', 'Auto-Refresh')}
           </h3>
           <UiSelect
@@ -187,7 +187,7 @@ export function DashboardSettingsModal({
 
         {/* Display options */}
         <div>
-          <h3 className="text-sm font-medium text-gray-300 mb-3">
+          <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-3">
             {t('dashSettings.display', 'Display')}
           </h3>
           <div className="space-y-3">
@@ -205,7 +205,7 @@ export function DashboardSettingsModal({
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 justify-end pt-2 border-t border-white/5">
+        <div className="flex gap-2 justify-end pt-2 border-t border-[var(--border-subtle)]">
           <UiButton variant="ghost" onClick={onClose}>
             {t('common.cancel', 'Cancel')}
           </UiButton>

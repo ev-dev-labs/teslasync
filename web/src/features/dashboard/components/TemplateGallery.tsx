@@ -42,15 +42,15 @@ function TemplateDetail({
         <MiniGridPreview dashboard={template} className="h-48" />
 
         <div>
-          <h3 className="text-lg font-semibold text-white/90">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)]">
             {t(`templates.${template.id}.name`, template.name)}
           </h3>
           {desc && (
-            <p className="text-sm text-white/50 mt-1">
+            <p className="text-sm text-[var(--text-secondary)] mt-1">
               {t(desc.key, desc.fallback)}
             </p>
           )}
-          <p className="text-xs text-white/30 mt-1">
+          <p className="text-xs text-[var(--text-muted)] mt-1">
             {t('templates.widgetCount', '{{count}} widgets', { count: template.widgets.length })}
           </p>
         </div>
@@ -63,10 +63,10 @@ function TemplateDetail({
             return (
               <div
                 key={w.id}
-                className="flex items-center gap-2 text-sm text-white/60 rounded-lg
+                className="flex items-center gap-2 text-sm text-[var(--text-secondary)] rounded-lg
                   bg-white/[0.02] border border-white/[0.04] px-3 py-2"
               >
-                <Icon className="h-3.5 w-3.5 text-white/30 shrink-0" />
+                <Icon className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" />
                 <span className="truncate">{def.name}</span>
               </div>
             );
@@ -137,7 +137,7 @@ function TemplateCard({
       {/* Info */}
       <div className="p-3 space-y-2">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-white/90">
+          <h4 className="text-sm font-semibold text-[var(--text-primary)]">
             {t(`templates.${template.id}.name`, template.name)}
           </h4>
           <Badge variant="neutral">
@@ -146,7 +146,7 @@ function TemplateCard({
         </div>
 
         {desc && (
-          <p className="text-xs text-white/40 line-clamp-2">
+          <p className="text-xs text-[var(--text-muted)] line-clamp-2">
             {t(desc.key, desc.fallback)}
           </p>
         )}
@@ -159,7 +159,7 @@ function TemplateCard({
               className="rounded p-1 bg-white/[0.04]"
               title={category}
             >
-              <Icon className="h-3 w-3 text-white/25" />
+              <Icon className="h-3 w-3 text-[var(--text-muted)]" />
             </div>
           ))}
         </div>
@@ -235,13 +235,13 @@ export function TemplateGallery({ open, onClose, onApply }: TemplateGalleryProps
             >
               <div className="flex items-center gap-3">
                 <div className="rounded-lg p-2.5 bg-white/[0.04]">
-                  <LayoutGrid className="h-5 w-5 text-white/30" />
+                  <LayoutGrid className="h-5 w-5 text-[var(--text-muted)]" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-white/90">
+                  <h4 className="text-sm font-semibold text-[var(--text-primary)]">
                     {t('templates.blank', 'Blank Dashboard')}
                   </h4>
-                  <p className="text-xs text-white/40 mt-0.5">
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
                     {t('templates.blank.desc', 'Start from scratch and add widgets manually')}
                   </p>
                 </div>

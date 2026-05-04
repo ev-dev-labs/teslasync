@@ -28,7 +28,7 @@ export function StatusBadge({ status, size = 'md', className }: StatusBadgeProps
       )}
     >
       <span className={cn('inline-block rounded-full', s.dot, dotColor)} />
-      <span className="capitalize text-gray-700 dark:text-gray-300">{status}</span>
+      <span className="capitalize text-gray-700 dark:text-[var(--text-secondary)]">{status}</span>
     </span>
   );
 }

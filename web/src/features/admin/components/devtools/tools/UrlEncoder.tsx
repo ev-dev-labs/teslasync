@@ -26,13 +26,13 @@ export function UrlEncoderTool() {
           <Button variant={mode === 'decode' ? 'primary' : 'ghost'} size="sm" onClick={() => setMode('decode')}>{t('Decode')}</Button>
         </div>
         <div>
-          <span className="mb-1 block text-xs font-medium text-white/70">{t('Input Label')}</span>
+          <span className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">{t('Input Label')}</span>
           <Textarea rows={2} value={inputVal} onChange={(e) => setInputVal(e.target.value)} placeholder={mode === 'encode' ? 'hello world&foo=bar' : 'hello%20world%26foo%3Dbar'} />
         </div>
         {output && (
-          <div className="rounded bg-black/20 p-3">
+          <div className="rounded bg-[var(--surface-overlay)] p-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-white/50">{t('Output Label')}</span>
+              <span className="text-xs text-[var(--text-secondary)]">{t('Output Label')}</span>
               <CopyButton text={output} />
             </div>
             <pre className="mt-1 whitespace-pre-wrap break-all text-sm font-mono text-cyan-300">{output}</pre>

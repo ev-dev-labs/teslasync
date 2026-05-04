@@ -46,9 +46,9 @@ export function ChargingBreakdownSlide({ data }: Props) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4, duration: 0.3 }}
-        className="text-white/40 mb-6"
+        className="text-[var(--text-muted)] mb-6"
       >
-        {t('yearReview.avgStartSOC', `Average plug-in at ${Math.round(data.avg_charge_start_soc)}% battery`)}
+        {t('yearReview.avgStartSOC', { soc: Math.round(data.avg_charge_start_soc), defaultValue: 'Average plug-in at {{soc}}% battery' })}
       </motion.p>
 
       <motion.div
@@ -86,7 +86,7 @@ export function ChargingBreakdownSlide({ data }: Props) {
         {chartData.map((item, i) => (
           <div key={item.name} className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-            <span className="text-sm text-white/60">
+            <span className="text-sm text-[var(--text-secondary)]">
               {item.name} ({Math.round(item.value)}%)
             </span>
           </div>

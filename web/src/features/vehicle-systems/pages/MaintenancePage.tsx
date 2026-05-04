@@ -151,7 +151,7 @@ function categoryBgClass(category: string): string {
     green: 'bg-neon-green/10 text-neon-green',
     amber: 'bg-neon-amber/10 text-neon-amber',
     purple: 'bg-neon-purple/10 text-neon-purple',
-    neutral: 'bg-white/10 text-[var(--text-secondary)]',
+    neutral: 'bg-[var(--surface-2)] text-[var(--text-secondary)]',
   };
   return map[color] ?? map.neutral;
 }
@@ -160,9 +160,9 @@ function categoryBgClass(category: string): string {
 
 function ProgressBar({ pct }: { pct: number }) {
   return (
-    <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+    <div className="w-full h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
       <div
-        className={cn('h-full rounded-full transition-all duration-500', progressBarColor(pct))}
+        className={cn('h-full rounded-full transition-all duration-slow', progressBarColor(pct))}
         style={{ width: `${Math.min(pct, 100)}%` }}
       />
     </div>
@@ -556,7 +556,7 @@ export default function MaintenancePage() {
         {loadingItems && !items ? (
           <ItemsSkeleton />
         ) : filteredItems.length === 0 ? (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Wrench className="h-12 w-12" />}
             title={t('No maintenance items')}
             message={
@@ -613,7 +613,7 @@ export default function MaintenancePage() {
                 </div>
               </div>
             ) : (
-              <EmptyState message={t('No cost data available yet. Log service records to see cost estimates.')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No cost data available yet. Log service records to see cost estimates.')} />
             )}
           </GlassPanel>
 
@@ -633,16 +633,16 @@ export default function MaintenancePage() {
                     <div key={p.name} className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2 min-w-0">
                         <Wrench className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
-                        <span className="truncate text-white/60">{p.name}</span>
+                        <span className="truncate text-[var(--text-secondary)]">{p.name}</span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {p.milesRemaining != null && (
-                          <span className="text-xs text-white/40">
+                          <span className="text-xs text-[var(--text-muted)]">
                             {fmtNumber(p.milesRemaining, 0)} mi
                           </span>
                         )}
                         {p.dueDate && (
-                          <span className="text-xs text-white/40">{p.dueDate}</span>
+                          <span className="text-xs text-[var(--text-muted)]">{p.dueDate}</span>
                         )}
                         <Badge variant={badge.variant} size="sm">
                           {t(badge.label)}
@@ -653,7 +653,7 @@ export default function MaintenancePage() {
                 })}
               </div>
             ) : (
-              <EmptyState message={t('No upcoming service projections available.')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No upcoming service projections available.')} />
             )}
           </GlassPanel>
         </div>
@@ -673,7 +673,7 @@ export default function MaintenancePage() {
               ))}
             </div>
           ) : !records?.length ? (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Wrench className="h-10 w-10" />}
               message={t('No service records logged yet.')}
             />

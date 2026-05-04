@@ -50,7 +50,7 @@ export function CardHeader({ title, subtitle, action }: CardHeaderProps) {
     <div className="mb-4 flex items-center justify-between">
       <div>
         <h3 className="text-base font-semibold">{title}</h3>
-        {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>}
+        {subtitle && <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">{subtitle}</p>}
       </div>
       {action}
     </div>

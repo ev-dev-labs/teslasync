@@ -71,7 +71,7 @@ export default function SoftwareUpdateStatusWidget({ vehicleId, size }: WidgetPr
           )}
         </FadeIn>
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<MonitorSmartphone className="h-5 w-5" />}
           message={t('widget.noSoftwareData', 'No software data')}
           className="py-4"
@@ -94,7 +94,7 @@ function CompactView({
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1.5">
       <MonitorSmartphone className="h-5 w-5 text-neon-cyan" />
-      <span className="text-xs font-bold text-white/90 truncate max-w-full px-1">
+      <span className="text-xs font-bold text-[var(--text-primary)] truncate max-w-full px-1">
         {version || '—'}
       </span>
       <StatusBadgeSmall status={updateStatus} t={t} />
@@ -129,8 +129,8 @@ function FullView({
       {/* Current version row */}
       <div className="flex items-center justify-between gap-2 min-w-0">
         <div className="min-w-0">
-          <p className="text-[10px] text-white/40">{t('widget.currentVersion', 'Current Version')}</p>
-          <p className="text-sm font-bold text-white/90 truncate">{version || '—'}</p>
+          <p className="text-[10px] text-[var(--text-muted)]">{t('widget.currentVersion', 'Current Version')}</p>
+          <p className="text-sm font-bold text-[var(--text-primary)] truncate">{version || '—'}</p>
         </div>
         <StatusBadgeSmall status={updateStatus} t={t} />
       </div>
@@ -141,7 +141,7 @@ function FullView({
           {/* Target version */}
           <div className="flex items-center gap-1.5">
             <Download className="h-3 w-3 text-neon-cyan shrink-0" />
-            <span className="text-[10px] text-white/40">
+            <span className="text-[10px] text-[var(--text-muted)]">
               {t('widget.updateAvailable', 'Update')}:
             </span>
             <span className="text-xs font-semibold text-cyan-300 truncate">
@@ -179,7 +179,7 @@ function FullView({
 
           {/* Expected duration — shown in tall layout when relevant */}
           {isTall && expectedDuration != null && expectedDuration > 0 && (
-            <div className="flex items-center gap-1.5 text-xs text-white/40 pt-0.5 border-t border-white/[0.06]">
+            <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] pt-0.5 border-t border-white/[0.06]">
               <Clock className="h-3 w-3 shrink-0" />
               <span>
                 {t('widget.estimatedTime', 'Est. time')}: ~{expectedDuration}{' '}
@@ -190,7 +190,7 @@ function FullView({
 
           {/* Scheduled start — shown when available */}
           {isTall && scheduledStart && (
-            <div className="flex items-center gap-1.5 text-xs text-white/40 pt-0.5 border-t border-white/[0.06]">
+            <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] pt-0.5 border-t border-white/[0.06]">
               <Clock className="h-3 w-3 shrink-0" />
               <span>
                 {t('widget.scheduledStart', 'Scheduled')}: {scheduledStart}

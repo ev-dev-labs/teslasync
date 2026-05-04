@@ -43,7 +43,7 @@ function CtxItem({
         'h-auto w-full justify-start rounded-none px-3 py-1.5 text-xs transition-colors',
         danger
           ? 'text-red-400 hover:bg-red-500/10'
-          : 'text-white/70 hover:bg-white/10',
+          : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)]',
         disabled && 'opacity-30 cursor-not-allowed',
       )}
     >
@@ -188,8 +188,8 @@ export function LayoutManager({
                     if (e.key === 'Enter') confirmRename();
                     if (e.key === 'Escape') setEditingId(null);
                   }}
-                  className="h-auto w-28 rounded-lg border-white/20 bg-white/10 px-2 py-1
-                    text-xs text-white/90 focus:border-[var(--theme-primary)]/40
+                  className="h-auto w-28 rounded-lg border-[var(--border-strong)] bg-[var(--surface-2)] px-2 py-1
+                    text-xs text-[var(--text-primary)] focus:border-[var(--theme-primary)]/40
                     focus:ring-0 focus:ring-offset-0"
                 />
                 <UiButton
@@ -207,7 +207,7 @@ export function LayoutManager({
                   variant="ghost"
                   size="sm"
                   onClick={() => setEditingId(null)}
-                  className="h-auto rounded p-1 text-white/40 hover:bg-white/10"
+                  className="h-auto rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-2)]"
                   aria-label={t('dashboard.cancelRename', 'Cancel rename')}
                 >
                   <X className="h-3 w-3" />
@@ -227,7 +227,7 @@ export function LayoutManager({
                   'whitespace-nowrap transition-all select-none cursor-pointer',
                   d.id === activeId
                     ? 'bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] border border-[var(--theme-primary)]/20'
-                    : 'bg-white/5 text-white/50 hover:bg-white/10',
+                    : 'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)]',
                   dragIndex === i && 'opacity-50',
                   dragOverIndex === i && dragIndex !== i &&
                     'border-l-2 border-[var(--theme-primary)]',
@@ -236,7 +236,7 @@ export function LayoutManager({
                 <span className="text-sm leading-none">{d.icon ?? '📊'}</span>
                 <span className="truncate max-w-[120px]">{d.name}</span>
                 {d.isDefault && (
-                  <span className="text-[9px] text-white/30">
+                  <span className="text-[9px] text-[var(--text-muted)]">
                     {t('dashboard.default', 'default')}
                   </span>
                 )}
@@ -258,8 +258,8 @@ export function LayoutManager({
                 if (e.key === 'Escape') setIsCreating(false);
               }}
               placeholder={t('dashboard.newName', 'Layout name...')}
-              className="h-auto w-28 rounded-lg border-white/20 bg-white/10 px-2 py-1
-                text-xs text-white/90 placeholder:text-white/30
+              className="h-auto w-28 rounded-lg border-[var(--border-strong)] bg-[var(--surface-2)] px-2 py-1
+                text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)]
                 focus:border-[var(--theme-primary)]/40 focus:ring-0 focus:ring-offset-0"
             />
             <UiButton
@@ -277,7 +277,7 @@ export function LayoutManager({
               variant="ghost"
               size="sm"
               onClick={() => setIsCreating(false)}
-              className="h-auto rounded p-1 text-white/40 hover:bg-white/10"
+              className="h-auto rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-2)]"
               aria-label={t('dashboard.cancelCreate', 'Cancel create')}
             >
               <X className="h-3 w-3" />
@@ -289,9 +289,9 @@ export function LayoutManager({
             variant="ghost"
             size="sm"
             onClick={startCreate}
-            className="h-auto shrink-0 rounded-lg border border-dashed border-white/10 px-3 py-1.5
-              text-xs text-white/30
-              hover:border-white/20 hover:text-white/50 transition-colors shrink-0"
+            className="h-auto shrink-0 rounded-lg border border-dashed border-[var(--border-subtle)] px-3 py-1.5
+              text-xs text-[var(--text-muted)]
+              hover:border-[var(--border-strong)] hover:text-[var(--text-secondary)] transition-colors shrink-0"
           >
             <Plus className="h-3 w-3 inline mr-1" />
             {t('dashboard.newLayout', 'New Layout')}
@@ -303,7 +303,7 @@ export function LayoutManager({
       {ctxMenu && ctxDash && (
         <div
           ref={ctxRef}
-          className="fixed z-50 bg-[var(--bg-secondary)] border border-white/10
+          className="fixed z-50 bg-[var(--bg-secondary)] border border-[var(--border-subtle)]
             rounded-lg shadow-xl py-1 min-w-[160px]"
           style={{ top: ctxMenu.y, left: ctxMenu.x }}
         >
@@ -322,7 +322,7 @@ export function LayoutManager({
             label={t('dashboard.settings', 'Settings')}
             onClick={() => { onOpenSettings(ctxMenu.dashId); setCtxMenu(null); }}
           />
-          <div className="my-1 border-t border-white/5" />
+          <div className="my-1 border-t border-[var(--border-subtle)]" />
           <CtxItem
             icon={Trash2}
             label={t('dashboard.delete', 'Delete')}

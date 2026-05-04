@@ -306,7 +306,7 @@ export default function BatteryCellsPage() {
       items.push({
         icon: <AlertTriangle className="h-4 w-4" />,
         title: t('battery.cells.insight.criticalCells', 'Critical Cells Detected'),
-        description: t('battery.cells.insight.criticalCellsDesc', `${criticalCells} cell(s) show significant deviation. Consider scheduling a service appointment.`),
+        description: t('battery.cells.insight.criticalCellsDesc', { count: criticalCells, defaultValue: '{{count}} cell(s) show significant deviation. Consider scheduling a service appointment.' }),
         status: 'critical',
       });
     } else {
@@ -454,7 +454,7 @@ export default function BatteryCellsPage() {
           ) : null
         ) : (
           <GlassPanel className="p-6">
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Grid3x3 className="h-8 w-8" />}
               message={t('No cell readings available.')}
             />
@@ -689,7 +689,7 @@ export default function BatteryCellsPage() {
               pagination
             />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Battery className="h-8 w-8" />}
               message={t('No cell details available.')}
             />
@@ -729,7 +729,7 @@ export default function BatteryCellsPage() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
                 icon={<Activity className="h-8 w-8" />}
                 message={t('battery.cells.chart.noSpreadTrend', 'Not enough history for spread trend')}
                 className="py-8"
@@ -774,7 +774,7 @@ export default function BatteryCellsPage() {
               />
             </Grid>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Thermometer className="h-8 w-8" />}
               message={t('battery.cells.temp.empty', 'No temperature data available')}
               className="py-8"
@@ -795,7 +795,7 @@ export default function BatteryCellsPage() {
               {insights.map((ins, i) => (
                 <GlassPanel
                   key={i}
-                  className={cn('border p-4 transition-all duration-200', insightPanelClass[ins.status])}
+                  className={cn('border p-4 transition-all duration-normal', insightPanelClass[ins.status])}
                 >
                   <div className="flex items-start gap-3">
                     <div className={cn('mt-0.5', insightIconClass[ins.status])}>{ins.icon}</div>
@@ -808,7 +808,7 @@ export default function BatteryCellsPage() {
               ))}
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Info className="h-8 w-8" />}
               message={t('battery.cells.noInsights', 'Not enough data for recommendations')}
               className="py-8"

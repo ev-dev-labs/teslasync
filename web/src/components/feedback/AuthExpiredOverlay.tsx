@@ -26,13 +26,19 @@ export function AuthExpiredOverlay() {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6">
+    // Phase-45 / Prompt 04: NOT migrated to <Modal>.
+    // Rationale: page-blocking system message that's never dismissable from
+    // inside (only via "Sign In Again" reload). Must remain on top of <Modal>
+    // (z-[60]) so a stale modal can't obscure the auth wall during expiry.
+    // New interactive dialogs MUST use <Modal>.
+    // eslint-disable-next-line no-restricted-syntax
+    <div className="fixed inset-0 z-[9999] bg-[var(--surface-overlay)] backdrop-blur-xl flex items-center justify-center p-6">
       <GlassPanel className="p-8 max-w-sm text-center space-y-4">
         <Lock className="h-12 w-12 text-neon-amber mx-auto" />
-        <h2 className="text-lg font-semibold text-white/90">
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">
           {t('auth.expired.title', 'Session Expired')}
         </h2>
-        <p className="text-sm text-white/60">
+        <p className="text-sm text-[var(--text-secondary)]">
           {t('auth.expired.message', 'Your authentication session has expired. Please sign in again to continue.')}
         </p>
         <Button

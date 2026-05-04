@@ -44,11 +44,11 @@ export const ProgressRing = forwardRef<HTMLDivElement, ProgressRingProps>(
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={offset}
-            className="transition-all duration-500"
+            className="transition-all duration-slow"
           />
         </svg>
         {label && (
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
+          <span className="text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)]">{label}</span>
         )}
       </div>
     );

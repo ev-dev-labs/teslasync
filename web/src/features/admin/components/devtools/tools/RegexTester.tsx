@@ -47,7 +47,7 @@ export function RegexTesterTool() {
           <Select label={t('Flags')} options={flagOptions} value={flags} onChange={(e) => setFlags(e.target.value)} />
         </div>
         <div>
-          <span className="mb-1 block text-xs font-medium text-white/70">{t('Test String')}</span>
+          <span className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">{t('Test String')}</span>
           <Textarea rows={3} value={testStr} onChange={(e) => setTestStr(e.target.value)} placeholder={t('Test String Placeholder')} />
         </div>
         <div className="flex items-center gap-2">
@@ -58,10 +58,10 @@ export function RegexTesterTool() {
         {matches.length > 0 && (
           <div className="space-y-1">
             {matches.map((m, i) => (
-              <div key={i} className="flex items-center gap-2 rounded bg-black/20 px-3 py-1">
+              <div key={i} className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1">
                 <Badge variant="info" size="sm">{i + 1}</Badge>
                 <code className="text-xs font-mono text-rose-300">{m.match}</code>
-                <span className="text-xs text-white/40">{t('At Index')} {m.index}</span>
+                <span className="text-xs text-[var(--text-muted)]">{t('At Index')} {m.index}</span>
               </div>
             ))}
           </div>

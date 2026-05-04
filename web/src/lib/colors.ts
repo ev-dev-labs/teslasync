@@ -4,19 +4,64 @@
  * Single source of truth for chart palettes, charger-type colors,
  * status indicators, and battery-health colors used across the app.
  *
- * Phase-40 / Prompt 60 — chart palette is now theme-aware:
- *   - `useChartPalette()` derives the series colors from the active theme
+ * Phase-40 / Prompt 60 — chart palette is theme-aware:
+ *   - `useThemeChartPalette()` derives the series colors from the active theme
  *   - `buildChartPalette(theme, mode)` is the pure builder for non-React contexts
- *   - The legacy `CHART_COLORS` static export is preserved for backward
- *     compatibility with consumers that haven't migrated yet (it uses the
- *     neon-cyan defaults). Status / battery / semantic colors are intentionally
- *     NOT theme-derived — "good = green" must stay green even in tesla-red.
+ *
+ * Phase-45 / Prompt 23 — color-blind-safe default palette:
+ *   - `CHART_COLORS_CB_SAFE` (Okabe-Ito) is the new default for `CHART_COLORS`.
+ *   - `CHART_COLORS_NEON` retains the original neon palette for the stylistic
+ *     dashboard surfaces, exposed via the user `chart_palette` Settings pref.
+ *   - The reactive `useChartPalette()` (in `@/hooks/useChartPalette`) returns
+ *     the user-preferred palette as `readonly string[]` so any chart can opt
+ *     in to live re-rendering when the user toggles palettes in Settings.
+ *   - Status / battery / semantic colors are intentionally NOT theme- or
+ *     pref-derived — "good = green" must stay green even in tesla-red.
  */
 
 import { useTheme, type ColorTheme, type ModeTheme } from '@/components/ui/ThemeProvider'
 
-/** Neon theme palette for charts and data visualizations (legacy static export). */
-export const CHART_COLORS = ['#00f0ff', '#10b981', '#a855f7', '#f59e0b', '#4f46e5', '#ef4444', '#ec4899', '#14b8a6'] as const
+/**
+ * Color-blind-safe Okabe-Ito palette (Wong, Nature Methods 2011).
+ * Adjacent entries are distinguishable by all three common CVD types
+ * (deuteranopia, protanopia, tritanopia). The trailing dark grey replaces
+ * pure black so the palette reads on dark surfaces.
+ */
+export const CHART_COLORS_CB_SAFE = [
+  '#0072B2', // blue
+  '#E69F00', // orange
+  '#009E73', // bluish green
+  '#F0E442', // yellow
+  '#56B4E9', // sky blue
+  '#D55E00', // vermillion
+  '#CC79A7', // reddish purple
+  '#4B4B4B', // neutral grey (replaces pure black for dark-theme legibility)
+] as const
+
+/**
+ * Original neon palette retained as an opt-in for the stylistic dashboard.
+ * Selectable via the `chart_palette` Settings preference. New code should
+ * prefer the CB-safe default unless the surface is intentionally stylistic.
+ */
+export const CHART_COLORS_NEON = [
+  '#00f0ff', // neon cyan
+  '#10b981', // emerald green
+  '#a855f7', // purple
+  '#f59e0b', // amber
+  '#4f46e5', // indigo
+  '#ef4444', // red
+  '#ec4899', // pink
+  '#14b8a6', // teal
+] as const
+
+/**
+ * Default static chart palette. Phase-45/23 swapped this from the neon palette
+ * to the CB-safe Okabe-Ito palette so every consumer that imports the bare
+ * `CHART_COLORS` constant gets a CVD-safe default automatically. Consumers
+ * that should react to the user's `chart_palette` preference should switch to
+ * `useChartPalette()` in `@/hooks/useChartPalette`.
+ */
+export const CHART_COLORS = CHART_COLORS_CB_SAFE
 
 /** Charger type colors (includes both internal keys and display-name keys) */
 export const CHARGER_COLORS: Record<string, string> = {
@@ -273,11 +318,15 @@ export function buildChartPalette(theme: ColorTheme, mode: ModeTheme): ChartPale
 }
 
 /**
- * React hook returning the chart palette for the active theme. Re-derives the
- * palette whenever the user switches themes, so any chart that consumes this
- * hook re-renders with the new colours automatically.
+ * React hook returning the *theme-derived* chart palette object for the active
+ * theme. Re-derives the palette whenever the user switches themes, so any
+ * chart that consumes this hook re-renders with the new colours automatically.
+ *
+ * NOTE (Phase-45/23): renamed from `useChartPalette` to `useThemeChartPalette`
+ * to free the simpler `useChartPalette` name for the new user-pref-driven hook
+ * at `@/hooks/useChartPalette` that returns `readonly string[]`.
  */
-export function useChartPalette(): ChartPalette {
+export function useThemeChartPalette(): ChartPalette {
   const { theme, mode } = useTheme()
   return buildChartPalette(theme, mode)
 }

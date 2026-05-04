@@ -2,11 +2,10 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download } from 'lucide-react';
 import { Badge } from '@/components/ui';
-import { MetricBar } from '@/components/data-display';
+import { MetricBar, TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useExports } from '@/api/hooks/useExports';
 import { useExportJobs } from '@/api/hooks/useAdmin';
-import { formatRelative } from '@/lib/dateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
@@ -134,9 +133,9 @@ function JobRow({
   const format = (job.format ?? '').toUpperCase() || '—';
 
   return (
-    <div className="flex items-center gap-2 min-h-[44px] px-1 py-1.5 border-b border-white/5 last:border-b-0">
+    <div className="flex items-center gap-2 min-h-[44px] px-1 py-1.5 border-b border-[var(--border-subtle)] last:border-b-0">
       {/* Filename */}
-      <span className="flex-1 min-w-0 truncate text-xs text-white/80">
+      <span className="flex-1 min-w-0 truncate text-xs text-[var(--text-primary)]">
         {truncateFilename(job.filePath, 28)}
       </span>
 
@@ -146,7 +145,7 @@ function JobRow({
       </Badge>
 
       {/* File size */}
-      <span className="shrink-0 text-xs tabular-nums text-white/50 w-16 text-right">
+      <span className="shrink-0 text-xs tabular-nums text-[var(--text-secondary)] w-16 text-right">
         {fmtBytes(job.fileSize ?? 0)}
       </span>
 
@@ -156,8 +155,8 @@ function JobRow({
       </Badge>
 
       {/* Relative time */}
-      <span className="shrink-0 text-[10px] text-white/40 w-14 text-right">
-        {formatRelative(job.createdAt)}
+      <span className="shrink-0 w-14 text-right">
+        <TimeStamp value={job.createdAt} className="text-[10px] text-[var(--text-muted)]" />
       </span>
 
       {/* Download link — wide only */}
@@ -195,7 +194,7 @@ function StandardView({
 
   if (visible.length === 0) {
     return (
-      <EmptyState
+      <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
         icon={<Download className="h-5 w-5" />}
         message={t('widget.noExportJobs', 'No export jobs')}
         className="py-4"
@@ -299,7 +298,7 @@ export default function ExportStatusWidget({ size }: WidgetProps) {
         sortedJobs.length > 0 ? (
           <CompactView activeCount={activeCount} hasRunning={hasRunning} t={t} />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Download className="h-5 w-5" />}
             message={t('widget.noExportJobs', 'No export jobs')}
             className="py-4"

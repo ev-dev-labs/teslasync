@@ -19,7 +19,7 @@ const DOT_COLOR: Record<FreshnessStatus, string> = {
   fresh: 'bg-neon-green',
   stale: 'bg-neon-amber',
   offline: 'bg-neon-red',
-  unknown: 'bg-white/20',
+  unknown: 'bg-[var(--surface-2)]',
 };
 
 const DOT_SIZE: Record<string, string> = {
@@ -97,7 +97,7 @@ export function FreshnessIndicator({
         )}
       />
       {showLabel && (
-        <span className={cn('text-white/40', LABEL_SIZE[size])}>{label}</span>
+        <span className={cn('text-[var(--text-muted)]', LABEL_SIZE[size])}>{label}</span>
       )}
     </span>
   );

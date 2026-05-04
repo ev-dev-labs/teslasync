@@ -24,7 +24,7 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
           {/* Hour labels */}
           <div className="flex gap-0.5 ml-12 mb-1">
             {Array.from({ length: 24 }, (_, i) => (
-              <div key={i} className="flex-1 text-center text-[8px] text-white/30">
+              <div key={i} className="flex-1 text-center text-[8px] text-[var(--text-muted)]">
                 {i % 3 === 0 ? `${i}` : ''}
               </div>
             ))}
@@ -32,7 +32,7 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
           {/* Grid rows */}
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((dayLabel, dayIdx) => (
             <div key={dayIdx} className="flex items-center gap-0.5 mb-0.5">
-              <span className="w-10 text-right text-[10px] text-white/40 mr-1">{dayLabel}</span>
+              <span className="w-10 text-right text-[10px] text-[var(--text-muted)] mr-1">{dayLabel}</span>
               {Array.from({ length: 24 }, (_, hourIdx) => {
                 const entry = heatmap.find((e) => e.day === dayIdx && e.hour === hourIdx);
                 const sessions = entry?.sessions ?? 0;
@@ -54,7 +54,7 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
             </div>
           ))}
           {/* Legend */}
-          <div className="flex items-center justify-end gap-2 mt-2 text-[10px] text-white/40">
+          <div className="flex items-center justify-end gap-2 mt-2 text-[10px] text-[var(--text-muted)]">
             <span>{t('charging.optimizer.cheap', 'Cheap')}</span>
             <div className="flex gap-0.5">
               {[0.15, 0.3, 0.5, 0.7, 0.9].map((o, i) => (

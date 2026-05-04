@@ -155,13 +155,13 @@ export default function DoorWindowStatusWidget({ vehicleId, size }: WidgetProps)
         ) : (
           <div className={isTall ? 'space-y-4' : 'space-y-2'}>
             <div>
-              <h4 className="text-[10px] font-medium text-white/30 uppercase tracking-wider mb-1.5">
+              <h4 className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                 {t('widget.doorWindow.doors', 'Doors')}
               </h4>
               <WidgetStatusGrid cells={doorCells} cols={2} />
             </div>
             <div>
-              <h4 className="text-[10px] font-medium text-white/30 uppercase tracking-wider mb-1.5">
+              <h4 className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                 {t('widget.doorWindow.windows', 'Windows')}
               </h4>
               <WidgetStatusGrid cells={windowCells} cols={2} />

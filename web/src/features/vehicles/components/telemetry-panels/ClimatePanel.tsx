@@ -153,7 +153,7 @@ export function ClimatePanel({ climateData }: ClimatePanelProps) {
           </div>
         </div>
       ) : (
-        <EmptyState message={t('telemetry.noClimateData', 'No climate data available')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('telemetry.noClimateData', 'No climate data available')} />
       )}
     </GlassPanel>
   )

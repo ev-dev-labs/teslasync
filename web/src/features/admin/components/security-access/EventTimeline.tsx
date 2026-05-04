@@ -9,9 +9,9 @@ import {
   DoorOpen,
 } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/GlassPanel';
+import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FadeIn } from '@/components/motion/FadeIn';
-import { formatDateTime } from '@/lib/dateFormat';
 import type { TimelineEvent } from './helpers';
 
 /* ------------------------------------------------------------------ */
@@ -84,7 +84,7 @@ export function EventTimeline({ timelineEvents }: EventTimelineProps) {
     <FadeIn delay={0.35}>
       <GlassPanel className="p-4">
         <h2 className="text-lg font-semibold text-gray-200 mb-4">
-          {t('admin.security.timeline', 'Security Event Timeline')}
+          {t('admin.security.timeline.title', 'Security Event Timeline')}
         </h2>
         {timelineEvents.length > 0 ? (
           <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
@@ -102,24 +102,25 @@ export function EventTimeline({ timelineEvents }: EventTimelineProps) {
                         ? 'bg-green-500/20 text-green-400'
                         : ev.variant === 'negative'
                           ? 'bg-red-500/20 text-red-400'
-                          : 'bg-gray-500/20 text-gray-400',
+                          : 'bg-gray-500/20 text-[var(--text-muted)]',
                     )}
                   >
                     {timelineIcon(ev)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-200">{title}</p>
-                    <p className="text-xs text-gray-500">{subtitle}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{subtitle}</p>
                   </div>
-                  <span className="text-[10px] text-gray-500 whitespace-nowrap shrink-0">
-                    {formatDateTime(ev.timestamp)}
-                  </span>
+                  <TimeStamp
+                    value={ev.timestamp}
+                    className="text-[10px] text-[var(--text-muted)] whitespace-nowrap shrink-0"
+                  />
                 </div>
               );
             })}
           </div>
         ) : (
-          <EmptyState message={t('admin.security.timeline.noEvents', 'No state changes detected in the history.')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('admin.security.timeline.noEvents', 'No state changes detected in the history.')} />
         )}
       </GlassPanel>
     </FadeIn>

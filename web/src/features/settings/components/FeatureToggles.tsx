@@ -68,7 +68,7 @@ export function FeatureToggles() {
         {featureEntries.length > 0 ? (
           <div className="overflow-x-auto">
             <div className="grid grid-cols-[1fr_auto_2fr] gap-x-4 text-sm">
-              <div className="contents border-b border-white/5 text-left">
+              <div className="contents border-b border-[var(--border-subtle)] text-left">
                 <div className="pb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.feature', 'Feature')}</div>
                 <div className="pb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.status', 'Status')}</div>
                 <div className="pb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.details', 'Details')}</div>
@@ -87,7 +87,7 @@ export function FeatureToggles() {
             </div>
           </div>
         ) : (
-          <EmptyState icon={<Info className="h-10 w-10" />} message={t('featureConfig.noData', 'No feature config data yet. Click Refresh to fetch from Tesla.')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Info className="h-10 w-10" />} message={t('featureConfig.noData', 'No feature config data yet. Click Refresh to fetch from Tesla.')} />
         )}
       </GlassPanel>
     </FadeIn>

@@ -251,28 +251,28 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
       <div className="flex items-center justify-between mb-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <span className="text-lg font-semibold text-white/90">{name}</span>
+            <span className="text-lg font-semibold text-[var(--text-primary)]">{name}</span>
             <Badge variant={isAsleep ? 'neutral' : 'success'} size="sm">{vehicle.state}</Badge>
             <FreshnessIndicator timestamp={vehicle.updated_at} />
           </div>
-          <span className="text-xs text-white/40">{vehicle.model} · {vehicle.vin}</span>
+          <span className="text-xs text-[var(--text-muted)]">{vehicle.model} · {vehicle.vin}</span>
         </div>
         {state && (
           <div className="flex items-center gap-4 text-xs">
             <span className="flex items-center gap-1">
-              <Battery className="h-3.5 w-3.5 text-white/40" />
+              <Battery className="h-3.5 w-3.5 text-[var(--text-muted)]" />
               <span className={cn('font-semibold', (state.battery_level ?? 0) > 50 ? 'text-emerald-300' : 'text-amber-300')}>
                 {state.battery_level}%
               </span>
             </span>
             <span className="flex items-center gap-1">
-              <Wifi className="h-3.5 w-3.5 text-white/40" />
-              <span className="text-white/60">{fmtNumber(convertDistance(state.rated_range), 0)} {distanceUnit}</span>
+              <Wifi className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+              <span className="text-[var(--text-secondary)]">{fmtNumber(convertDistance(state.rated_range), 0)} {distanceUnit}</span>
             </span>
             {state.inside_temp != null && (
               <span className="flex items-center gap-1">
-                <Thermometer className="h-3.5 w-3.5 text-white/40" />
-                <span className="text-white/60">{fmtNumber(convertTemp(state.inside_temp), 0)}{tempUnit}</span>
+                <Thermometer className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                <span className="text-[var(--text-secondary)]">{fmtNumber(convertTemp(state.inside_temp), 0)}{tempUnit}</span>
               </span>
             )}
           </div>
@@ -332,7 +332,7 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
               {filteredCommands.map(cmd => renderTile(cmd))}
             </div>
           ) : (
-            <div className="text-center py-8 text-white/30 text-sm">
+            <div className="text-center py-8 text-[var(--text-muted)] text-sm">
               {t('commands.search.noResults', 'No commands match your search')}
             </div>
           )

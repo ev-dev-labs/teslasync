@@ -5,9 +5,9 @@ import {
 } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { Badge } from '@/components/ui';
-import { ProgressRing, InlineMetric } from '@/components/data-display';
+import { ProgressRing, InlineMetric, TimeStamp } from '@/components/data-display';
 import { useTranslation } from 'react-i18next';
-import { formatDateTime, formatDurationMinutes } from '@/lib/dateFormat';
+import { formatDurationMinutes } from '@/lib/dateFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
 import { fmtNumber, fmtWithUnit, fmtInt } from '@/lib/numberFormat';
 import type { ChargingSession } from '@/api/types';
@@ -65,7 +65,7 @@ export function ChargingSessionCard({ session, convertDistance, distanceUnit, se
         <label className="flex items-center pl-2">
           <input
             type="checkbox"
-            className="h-4 w-4 cursor-pointer rounded border-white/20 bg-white/[0.04] text-emerald-500 focus:ring-2 focus:ring-emerald-500"
+            className="h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-white/[0.04] text-emerald-500 focus:ring-2 focus:ring-emerald-500"
             checked={!!selected}
             onChange={e => onToggleSelect?.(session.id, e.target.checked)}
             aria-label={t('selectSession', 'Select charging session')}
@@ -73,7 +73,7 @@ export function ChargingSessionCard({ session, convertDistance, distanceUnit, se
         </label>
       )}
       <Link to={`/charging/${session.id}`} className="flex-1 min-w-0">
-      <GlassPanel hover glow="green" className="p-4 transition-all duration-200 group cursor-pointer">
+      <GlassPanel hover glow="green" className="p-4 transition-all duration-normal group cursor-pointer">
         <div className="flex items-center gap-4">
           <ProgressRing
             value={session.end_battery_pct ?? session.start_battery_pct}
@@ -85,9 +85,7 @@ export function ChargingSessionCard({ session, convertDistance, distanceUnit, se
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">
-                {formatDateTime(session.start_ts)}
-              </p>
+              <TimeStamp value={session.start_ts} className="text-sm font-semibold text-[var(--text-primary)]" />
               <Badge
                 variant={cat === 'supercharger' ? 'danger' : cat === 'dc' ? 'warning' : 'success'}
               >

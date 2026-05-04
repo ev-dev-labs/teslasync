@@ -42,12 +42,12 @@ function ExpiredShareView() {
     <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
       <div className="text-center space-y-4 max-w-md px-4">
         <div className="w-16 h-16 mx-auto rounded-full bg-white/[0.03] flex items-center justify-center">
-          <MapPin className="h-8 w-8 text-white/30" />
+          <MapPin className="h-8 w-8 text-[var(--text-muted)]" />
         </div>
-        <h1 className="text-xl font-bold text-white/90">
+        <h1 className="text-xl font-bold text-[var(--text-primary)]">
           {t('share.expired.title', 'Share Link Unavailable')}
         </h1>
-        <p className="text-white/50 text-sm">
+        <p className="text-[var(--text-secondary)] text-sm">
           {t('share.expired.description', 'This shared drive link has expired or been revoked.')}
         </p>
         <a
@@ -129,10 +129,10 @@ export default function SharedDrivePage() {
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
       {/* Header */}
-      <header className="p-4 border-b border-white/5">
+      <header className="p-4 border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-2">
           <Logo />
-          <span className="text-white/30 text-sm">
+          <span className="text-[var(--text-muted)] text-sm">
             {t('share.header', 'Shared Drive Report')}
           </span>
         </div>
@@ -177,11 +177,11 @@ export default function SharedDrivePage() {
         {/* Title */}
         <FadeIn>
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold text-white/90">{data.title}</h1>
+            <h1 className="text-2xl font-bold text-[var(--text-primary)]">{data.title}</h1>
             {data.description && (
-              <p className="text-white/50">{data.description}</p>
+              <p className="text-[var(--text-secondary)]">{data.description}</p>
             )}
-            <div className="flex items-center gap-3 text-sm text-white/40 mt-2">
+            <div className="flex items-center gap-3 text-sm text-[var(--text-muted)] mt-2">
               <span>{drive.date}</span>
               {drive.start_address && drive.end_address && (
                 <span>{drive.start_address} → {drive.end_address}</span>
@@ -249,10 +249,10 @@ export default function SharedDrivePage() {
                 <Zap className="h-4 w-4 text-[var(--theme-primary)]" />
               </div>
               <div>
-                <p className="text-sm font-medium text-white/80">
+                <p className="text-sm font-medium text-[var(--text-primary)]">
                   Tesla {data.vehicle.model}
                 </p>
-                <p className="text-xs text-white/40">{data.vehicle.color}</p>
+                <p className="text-xs text-[var(--text-muted)]">{data.vehicle.color}</p>
               </div>
             </GlassPanel>
           </FadeIn>
@@ -323,7 +323,7 @@ export default function SharedDrivePage() {
         {/* No map data fallback */}
         {mapPoints.length === 0 && elevationData.length === 0 && speedData.length === 0 && (
           <GlassPanel className="p-8">
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<MapPin className="h-8 w-8" />}
               message={t('share.noMapData', 'Route data is not available for this shared drive.')}
             />
@@ -332,7 +332,7 @@ export default function SharedDrivePage() {
 
         {/* Footer */}
         <FadeIn delay={0.25}>
-          <div className="mt-8 pt-4 border-t border-white/5 text-center text-white/20 text-xs space-y-1">
+          <div className="mt-8 pt-4 border-t border-[var(--border-subtle)] text-center text-[var(--text-muted)] text-xs space-y-1">
             <p>{t('share.footer', 'Shared via TeslaSync — Self-hosted Tesla Fleet Intelligence')}</p>
             <a
               href="https://github.com/ev-dev-labs/teslasync"

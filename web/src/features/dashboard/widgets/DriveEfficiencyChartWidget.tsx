@@ -5,7 +5,7 @@ import { TrendingUp } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer,
   Tooltip, ReferenceLine,
-  chartGrid, axisTick, axisTickSm, chartAnimation, fmt, useChartPalette,
+  chartGrid, axisTick, axisTickSm, chartAnimation, fmt, useThemeChartPalette,
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
@@ -159,7 +159,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
   const tick = isWide ? axisTick : axisTickSm;
 
   // Phase-40 / Prompt 60 — series colour follows the active theme.
-  const palette = useChartPalette();
+  const palette = useThemeChartPalette();
 
   const stats = useMemo<ChartSummaryStat[]>(() => {
     const items: ChartSummaryStat[] = [
@@ -237,7 +237,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
             className="inline-block h-2 w-2 rounded-full"
             style={{ background: palette.series[0] }}
           />
-          <span className="text-[10px] text-white/50">
+          <span className="text-[10px] text-[var(--text-secondary)]">
             {t('widget.driveEfficiencyChart.daily', 'Daily')}
           </span>
         </div>
@@ -246,7 +246,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
             className="inline-block h-2 w-2 rounded-full"
             style={{ background: '#f59e0b' }}
           />
-          <span className="text-[10px] text-white/50">
+          <span className="text-[10px] text-[var(--text-secondary)]">
             {t('widget.driveEfficiencyChart.rolling', '7-day avg')}
           </span>
         </div>

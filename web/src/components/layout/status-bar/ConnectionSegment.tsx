@@ -34,7 +34,7 @@ export function ConnectionSegment({ iconOnly = false }: ConnectionSegmentProps) 
     ok: { icon: Activity, text: 'text-emerald-300', dot: 'bg-emerald-400', short: t('statusBar.connection.short', 'API') },
     degraded: { icon: AlertTriangle, text: 'text-amber-300', dot: 'bg-amber-400', short: t('statusBar.connection.short', 'API') },
     offline: { icon: CircleSlash, text: 'text-rose-300', dot: 'bg-rose-400', short: t('statusBar.connection.short', 'API') },
-    unknown: { icon: HelpCircle, text: 'text-[var(--text-muted)]', dot: 'bg-white/20', short: t('statusBar.connection.short', 'API') },
+    unknown: { icon: HelpCircle, text: 'text-[var(--text-muted)]', dot: 'bg-[var(--surface-2)]', short: t('statusBar.connection.short', 'API') },
   };
   const v = cfg[status];
   const Icon = v.icon;

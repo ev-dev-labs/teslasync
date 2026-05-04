@@ -139,7 +139,7 @@ export default function SafetyFeaturesWidget({ vehicleId, size }: WidgetProps) {
             <span className="text-3xl font-bold text-emerald-300">
               {fmtInt(activeCount)}
             </span>
-            <span className="text-xs text-white/50">
+            <span className="text-xs text-[var(--text-secondary)]">
               {t('widget.safety.activeFeatures', 'Active Features')}
             </span>
           </div>
@@ -153,7 +153,7 @@ export default function SafetyFeaturesWidget({ vehicleId, size }: WidgetProps) {
           />
         )
       ) : (
-        <EmptyState
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<ShieldAlert className="h-5 w-5" />}
           message={t('widget.safety.noData', 'No safety data')}
           className="py-4"

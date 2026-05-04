@@ -152,7 +152,7 @@ export default function DrivetrainHealthPage() {
           <DetailCards health={health} peakPower={peakPower} avgPowerMax={avgPowerMax} minRegenPower={minRegenPower} stats={stats} />
         </>
       ) : (
-        <EmptyState message={t('drivetrain.noData', 'No drivetrain health data available yet')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('drivetrain.noData', 'No drivetrain health data available yet')} />
       )}
     </PageContainer>
   );

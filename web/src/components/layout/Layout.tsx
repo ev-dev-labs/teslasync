@@ -1,6 +1,10 @@
-import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { GuardedNavLink } from '../feedback/GuardedLink'
 import InstallPrompt from '../feedback/InstallPrompt'
 import { OfflineBanner } from '../feedback/OfflineBanner'
+import { NewVersionBanner } from '../feedback/NewVersionBanner'
+import { TeslaReauthBanner } from '../feedback/TeslaReauthBanner'
+import { RateLimitBanner } from '../feedback/RateLimitBanner'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -31,12 +35,14 @@ import Logo from '../ui/Logo'
 import { Button, ThemePicker } from '@/components/ui'
 import { Breadcrumbs } from './Breadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
+import { NavSectionHeader } from './sidebar/NavSectionHeader'
 import { request } from '@/api/client'
 import type { Alert, Vehicle, VersionInfo, StaleSessionsResponse } from '@/api/types'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useNotificationListener } from '../../hooks/useNotificationListener'
 import { useTitleBadge } from '../../hooks/useTitleBadge'
 import { useFaviconBadge } from '../../hooks/useFaviconBadge'
+import { useDynamicAppIcon } from '../../hooks/useDynamicAppIcon'
 import { useCriticalAlertFlash } from '../../hooks/useCriticalAlertFlash'
 import { useToast } from '../feedback/Toast'
 import { useUnreadCount } from '@/api/hooks/useNotifications'
@@ -198,7 +204,7 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
   Diagnostics: { accent: 'text-neon-cyan', surface: 'bg-cyan-400/10', ring: 'ring-cyan-400/20', dot: 'bg-neon-cyan' },
   Infrastructure: { accent: 'text-emerald-300', surface: 'bg-emerald-400/10', ring: 'ring-emerald-400/20', dot: 'bg-emerald-400' },
   Developer: { accent: 'text-orange-300', surface: 'bg-orange-400/10', ring: 'ring-orange-400/20', dot: 'bg-orange-400' },
-  'Project Info': { accent: 'text-white/60', surface: 'bg-white/5', ring: 'ring-white/10', dot: 'bg-white/40' },
+  'Project Info': { accent: 'text-[var(--text-secondary)]', surface: 'bg-[var(--surface-2)]', ring: 'ring-white/10', dot: 'bg-[var(--surface-2)]' },
 }
 
 // NOTE: The legacy `SSEStatusDot` component lived here and rendered a bare
@@ -404,7 +410,7 @@ export const navSections = [
     title: 'Project Info',
     items: [
       { to: '/roadmap', icon: Icons.signpost, label: 'Roadmap', color: 'text-violet-400' },
-      { to: '/changelog', icon: Icons.fileText, label: 'Changelog', color: 'text-white/50' },
+      { to: '/changelog', icon: Icons.fileText, label: 'Changelog', color: 'text-[var(--text-secondary)]' },
     ],
   },
 ]
@@ -451,7 +457,7 @@ function NotificationBell({ className }: { className?: string }) {
     ? t('nav.notificationsUnread', '{{count}} unread notifications', { count })
     : t('nav.notifications', 'Notifications')
   return (
-    <NavLink
+    <GuardedNavLink
       to="/notifications"
       aria-label={label}
       className={`relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${className ?? ''}`}
@@ -465,7 +471,7 @@ function NotificationBell({ className }: { className?: string }) {
           {display}
         </span>
       )}
-    </NavLink>
+    </GuardedNavLink>
   )
 }
 
@@ -688,6 +694,10 @@ export default function Layout() {
   // Browser tab badging — Phase 40 / Prompt 32. These three hooks
   // share the SSE singleton with `useNotificationListener` above; no
   // additional EventSource connection is opened.
+  // `useDynamicAppIcon` MUST run before `useFaviconBadge` so the badge
+  // composites its unread-count dot over the freshly-themed favicon
+  // rather than the build-time static SVG.
+  useDynamicAppIcon()
   useTitleBadge()
   useFaviconBadge()
   useCriticalAlertFlash()
@@ -918,7 +928,7 @@ export default function Layout() {
     const isInTabBar = BOTTOM_TAB_PATHS.has(to)
     const sectionStyle = SECTION_ICON_STYLES[findNavItemByExactPath(to)?.section.title ?? '']
     return (
-      <NavLink
+      <GuardedNavLink
         key={to}
         to={to}
         onClick={() => setSidebarOpen(false)}
@@ -926,7 +936,7 @@ export default function Layout() {
         aria-current={isActive ? 'page' : undefined}
         data-tour={dataTour}
         className={cn(
-          'group relative flex min-h-9 items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-[13px] font-medium transition-all duration-200',
+          'group relative flex min-h-9 items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-[13px] font-medium transition-all duration-normal',
           isInTabBar && 'opacity-50 lg:opacity-100'
         )}
       >
@@ -940,7 +950,7 @@ export default function Layout() {
         )}
         <span
           className={cn(
-            'relative z-10 grid shrink-0 place-items-center border border-white/[0.06] transition-all duration-200',
+            'relative z-10 grid shrink-0 place-items-center border border-white/[0.06] transition-all duration-normal',
             'h-7 w-7 rounded-lg',
             sectionStyle?.surface ?? 'bg-white/[0.035]',
             sectionStyle?.ring && 'ring-1',
@@ -948,7 +958,7 @@ export default function Layout() {
             isActive ? 'bg-white/[0.09] ring-white/20' : 'group-hover:bg-white/[0.07] group-hover:ring-white/15'
           )}
         >
-          <Icon className={cn('h-4 w-4 transition-all duration-200', color, isActive ? 'opacity-100 drop-shadow-[0_0_8px_currentColor]' : 'opacity-75 group-hover:opacity-100')} />
+          <Icon className={cn('h-4 w-4 transition-all duration-normal', color, isActive ? 'opacity-100 drop-shadow-[0_0_8px_currentColor]' : 'opacity-75 group-hover:opacity-100')} />
         </span>
         <span className={cn('relative z-10 min-w-0 truncate transition-colors', isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]')}>
           {navLabel(label)}
@@ -971,7 +981,7 @@ export default function Layout() {
         {isActive && !compact && (
           <span className="absolute right-3 h-1.5 w-1.5 rounded-full bg-neon-cyan shadow-[0_0_6px_rgba(0,240,255,0.5)]" />
         )}
-      </NavLink>
+      </GuardedNavLink>
     )
   }
 
@@ -979,7 +989,8 @@ export default function Layout() {
     <div className="flex h-dvh bg-[var(--bg)] text-[var(--text-primary)]">
       {/* Skip to content (WCAG 2.4.1). Hidden until focused; sends focus
           straight to <main id="main-content"> so keyboard users don't have
-          to tab through the entire sidebar to reach the page body. */}
+          to tab through the entire sidebar to reach the page body.
+          Phase-45 / Prompt 13 audit anchor: skipToMain|skip.to.main */}
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[300] focus:rounded-lg focus:bg-neon-cyan focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--bg)] focus:ring-neon-cyan"
@@ -1002,7 +1013,12 @@ export default function Layout() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[65] bg-slate-950/35 backdrop-blur-sm dark:bg-black/60 lg:hidden"
+            // Phase-45 / Prompt 04: NOT migrated to <Modal>.
+            // Rationale: drawer scrim — pure backdrop with no content. Pairs
+            // with the <aside> sidebar (drawer pattern), not a dialog. New
+            // interactive dialogs MUST use <Modal>.
+            // eslint-disable-next-line no-restricted-syntax
+            className="fixed inset-0 z-[65] bg-[var(--bg-app)] backdrop-blur-sm dark:bg-[var(--surface-overlay)] lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -1016,16 +1032,16 @@ export default function Layout() {
         data-role="sidebar"
         data-sidebar-open={sidebarOpen}
         className={cn(
-          'fixed left-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
+          'fixed left-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-normal ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
           'flex flex-col border-r border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl lg:shadow-none',
           sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full'
         )}
       >
         {/* Mobile sidebar brand, shown only while the drawer is open */}
         <div className="flex items-center gap-2 border-b border-[var(--glass-border)] px-5 py-4 shrink-0 lg:hidden">
-          <NavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-xl transition-colors" onClick={() => setSidebarOpen(false)}>
+          <GuardedNavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-xl transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
-          </NavLink>
+          </GuardedNavLink>
           {versionLabel && (
             <span className="rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
               {versionLabel}
@@ -1046,14 +1062,14 @@ export default function Layout() {
 
         {/* Logo — desktop sidebar header */}
         <div className="hidden lg:flex items-center gap-2 px-5 py-5 border-b border-[var(--glass-border)] shrink-0">
-          <NavLink to="/" className="flex flex-1 items-center gap-3 hover:bg-[var(--surface-2)] -mx-2 px-2 py-1 rounded-md transition-colors" onClick={() => setSidebarOpen(false)}>
+          <GuardedNavLink to="/" className="flex flex-1 items-center gap-3 hover:bg-[var(--surface-2)] -mx-2 px-2 py-1 rounded-md transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
             {versionLabel && (
               <span className="ml-auto rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
                 {versionLabel}
               </span>
             )}
-          </NavLink>
+          </GuardedNavLink>
           <ThemeQuickSwitcher placement="left" />
           <NotificationBell />
         </div>
@@ -1083,7 +1099,7 @@ export default function Layout() {
             >
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
                     {t('nav.currentSection', 'Current')}
                   </p>
                   <p className="mt-1 truncate text-sm font-semibold text-[var(--text-primary)]">
@@ -1116,10 +1132,11 @@ export default function Layout() {
 
           {pinnedNavItems.length > 0 && (
             <div>
-              <p className="mb-1.5 px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                {t('nav.pinned', 'Pinned')}
-              </p>
-              <div className="space-y-0.5">
+              <NavSectionHeader
+                id="nav-pinned-label"
+                label={t('nav.pinned', 'Pinned')}
+              />
+              <div className="space-y-0.5" aria-labelledby="nav-pinned-label">
                 {pinnedNavItems.map(item => (
                   <div key={item.to} className="flex items-center gap-1">
                     <div className="min-w-0 flex-1">
@@ -1129,7 +1146,7 @@ export default function Layout() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      aria-label={t('nav.unpinPage', { page: navLabel(item.label), defaultValue: `Unpin ${navLabel(item.label)}` })}
+                      aria-label={t('nav.unpinPage', { page: navLabel(item.label), defaultValue: 'Unpin {{page}}' })}
                       onClick={() => unpinNavPath(item.to)}
                       className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-muted)] opacity-80 hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
                     >
@@ -1143,47 +1160,49 @@ export default function Layout() {
 
           {recentNavItems.length > 0 && (
             <div>
-              <p className="mb-1.5 px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                {t('nav.recentlyUsed', 'Recently Used')}
-              </p>
-              <div className="space-y-0.5">
+              <NavSectionHeader
+                id="nav-recent-label"
+                label={t('nav.recentlyUsed', 'Recently Used')}
+              />
+              <div className="space-y-0.5" aria-labelledby="nav-recent-label">
                 {recentNavItems.map(item => renderNavLink(item, true, 'recent'))}
               </div>
             </div>
           )}
 
-          <div className="space-y-1">
-            <div className="mb-1 flex items-center justify-between gap-2 px-3">
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                {t('nav.sections', 'Sections')}
-              </p>
-              <div className="flex items-center gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-label={t('nav.expandAll', 'Expand all sections')}
-                  title={t('nav.expandAll', 'Expand all sections')}
-                  disabled={expandedSectionCount === visibleNavSections.length}
-                  onClick={expandAllSections}
-                  className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
-                >
-                  <Icons.expandAll className="h-4 w-4" aria-hidden="true" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-label={t('nav.collapseAll', 'Collapse all sections')}
-                  title={t('nav.collapseAll', 'Collapse all sections')}
-                  disabled={expandedSectionCount === 0}
-                  onClick={collapseAllSections}
-                  className="h-7 w-7 shrink-0 rounded-lg p-0 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
-                >
-                  <Icons.collapseAll className="h-4 w-4" aria-hidden="true" />
-                </Button>
-              </div>
-            </div>
+          <div className="space-y-1" aria-labelledby="nav-sections-label">
+            <NavSectionHeader
+              id="nav-sections-label"
+              label={t('nav.sections', 'Sections')}
+              action={
+                <div className="flex items-center gap-0.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label={t('nav.expandAll', 'Expand all sections')}
+                    title={t('nav.expandAll', 'Expand all sections')}
+                    disabled={expandedSectionCount === visibleNavSections.length}
+                    onClick={expandAllSections}
+                    className="h-6 w-6 shrink-0 rounded p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
+                  >
+                    <Icons.expandAll className="h-3.5 w-3.5" aria-hidden="true" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label={t('nav.collapseAll', 'Collapse all sections')}
+                    title={t('nav.collapseAll', 'Collapse all sections')}
+                    disabled={expandedSectionCount === 0}
+                    onClick={collapseAllSections}
+                    className="h-6 w-6 shrink-0 rounded p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-40"
+                  >
+                    <Icons.collapseAll className="h-3.5 w-3.5" aria-hidden="true" />
+                  </Button>
+                </div>
+              }
+            />
             {visibleNavSections.map(section => {
               const isExpanded = expandedSections.has(section.title)
               const isActiveSection = section.title === activeSectionTitle
@@ -1277,7 +1296,7 @@ export default function Layout() {
 
       {/* Mobile top bar */}
       {!sidebarOpen && (
-        <header data-role="appbar" className="fixed top-0 left-0 right-0 z-[60] flex items-center border-b border-[var(--glass-border)] bg-[var(--surface-1)] backdrop-blur-xl px-4 py-3 lg:hidden [touch-action:manipulation]">
+        <header data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed top-0 left-0 right-0 z-[60] flex items-center border-b border-[var(--glass-border)] bg-[var(--surface-1)] backdrop-blur-xl px-4 py-3 lg:hidden [touch-action:manipulation]">
           <Button
             onClick={() => setSidebarOpen(true)}
             type="button"
@@ -1351,6 +1370,24 @@ export default function Layout() {
 
       {/* Offline status banner (PWA / mobile) */}
       <OfflineBanner />
+
+      {/* Rate-limit / circuit-breaker banner (Phase-45 / Prompt 33) —
+          most-transient surface, sits on top so the user sees the
+          countdown before any of the slower-cycling banners. Stack
+          order from top to bottom: rate-limit → tesla-reauth →
+          new-version. Each banner is ≤ 48 px tall so the stack stays
+          under 144 px even when all three fire simultaneously. */}
+      <RateLimitBanner />
+
+      {/* New-version banner (Phase-45 / Prompt 11) — proactive reload nudge
+          when the backend redeploys mid-session, before the next chunk-load
+          failure surfaces as an ErrorBoundary fallback. */}
+      <NewVersionBanner />
+
+      {/* Tesla third-party token expiry banner (Phase-45 / Prompt 30) —
+          sticky top-of-page recovery surface for the partial-failure case
+          where Tesla-backed calls 401 but non-Tesla data still loads. */}
+      <TeslaReauthBanner />
 
       {/* Keyboard shortcut overlays */}
       <GlobalShortcuts />

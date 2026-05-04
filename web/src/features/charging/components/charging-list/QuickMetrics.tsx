@@ -50,7 +50,7 @@ export function QuickMetrics({ stats }: QuickMetricsProps) {
           </div>
         </div>
       ) : (
-        <EmptyState message={t('charging.noMetrics', 'No charging metrics available yet')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('charging.noMetrics', 'No charging metrics available yet')} />
       )}
     </GlassPanel>
   );

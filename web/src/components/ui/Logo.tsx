@@ -28,7 +28,7 @@ export default function Logo({ size = 32, showWordmark = false, className = '' }
         <path d="M112 30L62 108h34L78 170l58-82h-34z" fill="currentColor" />
       </svg>
       {showWordmark && (
-        <span className="font-bold text-sm tracking-tight text-white/90">
+        <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">
           TeslaSync
         </span>
       )}

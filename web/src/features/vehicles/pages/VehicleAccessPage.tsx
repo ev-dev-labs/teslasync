@@ -69,7 +69,7 @@ export default function VehicleAccessPage() {
       key: 'name',
       header: t('vehicleAccess.drivers.name', 'Name'),
       render: (row) => (
-        <span className="text-white/90 font-medium">
+        <span className="text-[var(--text-primary)] font-medium">
           {row.driver_name ?? '—'}
         </span>
       ),
@@ -78,7 +78,7 @@ export default function VehicleAccessPage() {
       key: 'email',
       header: t('vehicleAccess.drivers.email', 'Email'),
       render: (row) => (
-        <span className="text-white/60">
+        <span className="text-[var(--text-secondary)]">
           {row.driver_email ?? '—'}
         </span>
       ),
@@ -89,7 +89,7 @@ export default function VehicleAccessPage() {
       render: (row) => row.role ? (
         <Badge variant="info">{row.role}</Badge>
       ) : (
-        <span className="text-white/40">—</span>
+        <span className="text-[var(--text-muted)]">—</span>
       ),
     },
     {
@@ -124,14 +124,14 @@ export default function VehicleAccessPage() {
       key: 'createdBy',
       header: t('vehicleAccess.invitations.createdBy', 'Created By'),
       render: (row) => (
-        <span className="text-white/60">{row.created_by ?? '—'}</span>
+        <span className="text-[var(--text-secondary)]">{row.created_by ?? '—'}</span>
       ),
     },
     {
       key: 'expires',
       header: t('vehicleAccess.invitations.expires', 'Expires'),
       render: (row) => (
-        <span className="text-white/60">
+        <span className="text-[var(--text-secondary)]">
           {row.expires_at ? new Date(row.expires_at).toLocaleString() : '—'}
         </span>
       ),
@@ -150,7 +150,7 @@ export default function VehicleAccessPage() {
           className="text-cyan-400 hover:text-cyan-300"
         />
       ) : (
-        <span className="text-white/40">—</span>
+        <span className="text-[var(--text-muted)]">—</span>
       ),
       className: 'w-12',
     },
@@ -187,7 +187,7 @@ export default function VehicleAccessPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-cyan-400" />
-              <h2 className="text-lg font-semibold text-white/90">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                 {t('vehicleAccess.drivers.title', 'Drivers')}
               </h2>
               {driversList.length > 0 && (
@@ -214,7 +214,7 @@ export default function VehicleAccessPage() {
               compact
             />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Users className="h-8 w-8" />}
               message={t('vehicleAccess.drivers.empty', 'No drivers found. Refresh to sync from Tesla.')}
             />
@@ -228,7 +228,7 @@ export default function VehicleAccessPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Mail className="h-5 w-5 text-cyan-400" />
-              <h2 className="text-lg font-semibold text-white/90">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                 {t('vehicleAccess.invitations.title', 'Share Invitations')}
               </h2>
               {invitationsList.length > 0 && (
@@ -266,7 +266,7 @@ export default function VehicleAccessPage() {
               compact
             />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<Shield className="h-8 w-8" />}
               message={t('vehicleAccess.invitations.empty', 'No invitations yet. Create one to share vehicle access.')}
             />
