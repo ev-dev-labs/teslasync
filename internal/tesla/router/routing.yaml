@@ -147,6 +147,115 @@ routes:
     dest: signal_log
   - field: DetailedChargeState
     dest: signal_log
+  # Powertrain Drive-Inverter atomics (Category=="powertrain" in
+  # protomodel.Signals). Every powertrain field maps to a motor_snapshots
+  # SI column from migrations/000170_snapshots_si.up.sql lines 125-166.
+  # Per-corner suffix convention: F=front, R=rear (single-motor or shared),
+  # REL=rear-left, RER=rear-right (Plaid tri-motor / Cybertruck quad-motor).
+  # Temperatures are UnitKindTemperature and pass through normalize.toSI;
+  # axle speeds are UnitKindNone (RPM is the field-natural unit).
+  - field: DiAxleSpeedF
+    dest: motor_snapshot
+    column: front_axle_speed_rpm
+  - field: DiAxleSpeedR
+    dest: motor_snapshot
+    column: rear_axle_speed_rpm
+  - field: DiAxleSpeedREL
+    dest: motor_snapshot
+    column: rear_left_axle_speed_rpm
+  - field: DiAxleSpeedRER
+    dest: motor_snapshot
+    column: rear_right_axle_speed_rpm
+  - field: DiHeatsinkTF
+    dest: motor_snapshot
+    column: front_heatsink_c
+  - field: DiHeatsinkTR
+    dest: motor_snapshot
+    column: rear_heatsink_c
+  - field: DiHeatsinkTREL
+    dest: motor_snapshot
+    column: rear_left_heatsink_c
+  - field: DiHeatsinkTRER
+    dest: motor_snapshot
+    column: rear_right_heatsink_c
+  - field: DiInverterTF
+    dest: motor_snapshot
+    column: front_inverter_c
+  - field: DiInverterTR
+    dest: motor_snapshot
+    column: rear_inverter_c
+  - field: DiInverterTREL
+    dest: motor_snapshot
+    column: rear_left_inverter_c
+  - field: DiInverterTRER
+    dest: motor_snapshot
+    column: rear_right_inverter_c
+  - field: DiMotorCurrentF
+    dest: motor_snapshot
+    column: front_motor_current_a
+  - field: DiMotorCurrentR
+    dest: motor_snapshot
+    column: rear_motor_current_a
+  - field: DiMotorCurrentREL
+    dest: motor_snapshot
+    column: rear_left_motor_current_a
+  - field: DiMotorCurrentRER
+    dest: motor_snapshot
+    column: rear_right_motor_current_a
+  - field: DiSlaveTorqueCmd
+    dest: motor_snapshot
+    column: torque_command_nm
+  - field: DiStateF
+    dest: motor_snapshot
+    column: front_state
+  - field: DiStateR
+    dest: motor_snapshot
+    column: rear_state
+  - field: DiStateREL
+    dest: motor_snapshot
+    column: rear_left_state
+  - field: DiStateRER
+    dest: motor_snapshot
+    column: rear_right_state
+  - field: DiStatorTempF
+    dest: motor_snapshot
+    column: front_stator_c
+  - field: DiStatorTempR
+    dest: motor_snapshot
+    column: rear_stator_c
+  - field: DiStatorTempREL
+    dest: motor_snapshot
+    column: rear_left_stator_c
+  - field: DiStatorTempRER
+    dest: motor_snapshot
+    column: rear_right_stator_c
+  - field: DiTorqueActualF
+    dest: motor_snapshot
+    column: front_torque_nm
+  - field: DiTorqueActualR
+    dest: motor_snapshot
+    column: rear_torque_nm
+  - field: DiTorqueActualREL
+    dest: motor_snapshot
+    column: rear_left_torque_nm
+  - field: DiTorqueActualRER
+    dest: motor_snapshot
+    column: rear_right_torque_nm
+  - field: DiTorquemotor
+    dest: motor_snapshot
+    column: torque_motor_nm
+  - field: DiVBatF
+    dest: motor_snapshot
+    column: front_vbat_v
+  - field: DiVBatR
+    dest: motor_snapshot
+    column: rear_vbat_v
+  - field: DiVBatREL
+    dest: motor_snapshot
+    column: rear_left_vbat_v
+  - field: DiVBatRER
+    dest: motor_snapshot
+    column: rear_right_vbat_v
   - field: DriveRail
     dest: drive_telemetry
     column: drive_rail
@@ -207,12 +316,24 @@ routes:
   - field: HvacSteeringWheelHeatLevel
     dest: climate_snapshot
     column: hvac_steering_wheel_heat_level
+  # Hvil is the high-voltage interlock loop status (powertrain category,
+  # proto 33, Enum HvilStatus). Routes to motor_snapshots.hvil_state which
+  # the writer fills via the protomodel HvilStatus enum parser.
+  - field: Hvil
+    dest: motor_snapshot
+    column: hvil_state
   - field: IdealBatteryRange
     dest: signal_log
   - field: InsideTemp
     dest: climate_snapshot
     column: inside_temp_c
     also_signal_log: true
+  # IsolationResistance is the high-voltage isolation resistance
+  # measurement (powertrain category, proto 11). Routes to
+  # motor_snapshots.isolation_resistance_ohm (Ohms, SI).
+  - field: IsolationResistance
+    dest: motor_snapshot
+    column: isolation_resistance_ohm
   - field: LateralAcceleration
     dest: drive_telemetry
     column: lateral_acceleration_mps2
