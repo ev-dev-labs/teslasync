@@ -621,6 +621,18 @@ func main() {
 			Msg("gas price worker started")
 	}
 
+	// Unit-drift validator — nightly cross-check that VehicleSpeed,
+	// Odometer, and Inside/OutsideTemp arrived in canonical SI per
+	// ADR-004 #9. Read-only; emits tesla_unit_drift_suspected_total
+	// and tesla_unit_history_canary_total. See
+	// docs/runbooks/fleet-telemetry-resubscribe.md for triage.
+	driftVehicleRepo := database.NewVehicleRepo(db)
+	driftValidator := worker.NewUnitDriftValidator(db, driftVehicleRepo)
+	resilience.SafeGoLoop(ctx, "unit-drift-validator", func(loopCtx context.Context) {
+		driftValidator.Start(loopCtx, worker.Options{})
+	})
+	log.Info().Msg("unit-drift validator started")
+
 	// Periodic component health checker — sends notifications on state changes
 	notifRepo := database.NewNotificationRepo(db)
 	prevHealthState := make(map[string]resilience.ComponentStatus)
