@@ -96,6 +96,16 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "ui_density must be 'compact', 'comfortable', or 'spacious'")
 		return
 	}
+	validTimeFormat := map[string]bool{"relative": true, "absolute": true}
+	if s.TimeFormatDefault != "" && !validTimeFormat[s.TimeFormatDefault] {
+		writeError(w, http.StatusBadRequest, "time_format_default must be 'relative' or 'absolute'")
+		return
+	}
+	validChartPalette := map[string]bool{"cb_safe": true, "neon": true}
+	if s.ChartPalette != "" && !validChartPalette[s.ChartPalette] {
+		writeError(w, http.StatusBadRequest, "chart_palette must be 'cb_safe' or 'neon'")
+		return
+	}
 
 	// Record gas price change in history if price or unit changed
 	if s.GasPricePerUnit > 0 {

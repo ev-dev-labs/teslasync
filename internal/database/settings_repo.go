@@ -65,6 +65,8 @@ func settingsDefaults() *models.Settings {
 		TabBadgeEnabled:      true,
 		CriticalFlashEnabled: true,
 		UIDensity:            "comfortable",
+		TimeFormatDefault:    "relative",
+		ChartPalette:         "cb_safe",
 	}
 }
 
@@ -209,6 +211,14 @@ func applySettingsRow(s *models.Settings, key, _ string, vText *string, vNum *fl
 		if vText != nil {
 			s.UIDensity = *vText
 		}
+	case "time_format_default":
+		if vText != nil {
+			s.TimeFormatDefault = *vText
+		}
+	case "chart_palette":
+		if vText != nil {
+			s.ChartPalette = *vText
+		}
 	}
 }
 
@@ -282,6 +292,8 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *models.Settings) error {
 		{"tz_display_default", s.TzDisplayDefault},
 		{"timezone_user", s.TimezoneUser},
 		{"ui_density", s.UIDensity},
+		{"time_format_default", s.TimeFormatDefault},
+		{"chart_palette", s.ChartPalette},
 	}
 	numRows := []rowNum{
 		{"base_cost_per_kwh", s.BaseCostPerKWh},
