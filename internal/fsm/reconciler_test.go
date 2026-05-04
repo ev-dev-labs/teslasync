@@ -8,9 +8,10 @@ import (
 )
 
 func TestDeriveExpectedState(t *testing.T) {
-	// signalTime is the approximate timestamp stored by signal.Store.Update.
-	// We call Update just before tests, so this is effectively time.Now().
-	// Freshness is controlled by the `now` parameter passed to DeriveExpectedState.
+	// signalTime is the approximate timestamp stored by the signal
+	// store's Update path. We call Update just before tests, so this
+	// is effectively time.Now(). Freshness is controlled by the `now`
+	// parameter passed to DeriveExpectedState.
 	fresh := time.Now()                                    // "now" for fresh signals
 	stale := time.Now().Add(3 * time.Minute)               // "now" that makes signals 3 min old → stale
 	slightlyStale := time.Now().Add(SignalFreshnessThreshold) // exactly at threshold boundary
@@ -152,12 +153,22 @@ func TestDeriveExpectedState(t *testing.T) {
 			wantReason: "charge state active (no gear)",
 		},
 		{
-			name:       "DetailedChargeState=Enable → Charging medium",
+			// Phase-42: the SignalAdapter recognises only the canonical
+			// proto enum suffixes ("Charging", "Starting") for the
+			// DetailedChargeState / ChargeState fields. The legacy
+			// "Enable" string emitted by older code paths is no longer
+			// in the typed enum (DetailedChargeStateValue ∈ {Unknown,
+			// Disconnected, NoPower, Starting, Charging, Complete,
+			// Stopped}) and is therefore treated as "not charging" —
+			// with no Gear, no ChargeAmps, and no VehicleSpeed signal,
+			// the reconciler returns ConfidenceNone even though the
+			// freshness gate did pass.
+			name:       "DetailedChargeState=Enable (legacy) → ConfidenceNone",
 			signals:    map[string]interface{}{"DetailedChargeState": "Enable"},
 			now:        fresh,
-			wantState:  Charging,
-			wantConf:   ConfidenceMedium,
-			wantReason: "charge state active (no gear)",
+			wantState:  "",
+			wantConf:   ConfidenceNone,
+			wantReason: "insufficient signals",
 		},
 		{
 			name:       "ChargeState=Starting → Charging medium",
@@ -255,4 +266,220 @@ func TestConfidence_String(t *testing.T) {
 			t.Errorf("Confidence(%d).String() = %q, want %q", tt.c, got, tt.want)
 		}
 	}
+}
+
+// fakeReconcileSource is a hand-rolled implementation of
+// reconcileSignalSource used by the seam tests below. Each field can
+// be configured independently with a value + timestamp + presence
+// flag so a test can exercise the freshness / priority ladder
+// without standing up a real signal store and without depending on
+// the typed-coercion behaviour of *SignalAdapter.
+//
+// The concrete method shapes intentionally mirror reconcileSignalSource
+// exactly — when the interface gains a new method, this fake MUST be
+// extended to keep the seam test honest.
+type fakeReconcileSource struct {
+	last       map[string]signal.Value
+	gear       string
+	gearOk     bool
+	speed      float64
+	speedOk    bool
+	charging   bool
+	chargingOk bool
+}
+
+func (f *fakeReconcileSource) Last(_ int64, field string) (signal.Value, bool) {
+	v, ok := f.last[field]
+	return v, ok
+}
+
+func (f *fakeReconcileSource) Gear(_ int64) (string, bool) { return f.gear, f.gearOk }
+
+func (f *fakeReconcileSource) Speed(_ int64) (float64, bool) { return f.speed, f.speedOk }
+
+func (f *fakeReconcileSource) IsCharging(_ int64) (bool, bool) {
+	return f.charging, f.chargingOk
+}
+
+// TestDeriveExpectedState_SeamFakeSource exercises the
+// adapter-driven core (deriveExpectedState) via a hand-rolled fake
+// reconcileSignalSource, without any signal store dependency. This
+// is the interface seam introduced in phase-42 prompt 0067.
+func TestDeriveExpectedState_SeamFakeSource(t *testing.T) {
+	now := time.Date(2026, 5, 4, 12, 0, 0, 0, time.UTC)
+	fresh := now.Add(-30 * time.Second)
+	stale := now.Add(-10 * time.Minute)
+
+	tests := []struct {
+		name      string
+		src       *fakeReconcileSource
+		wantState State
+		wantConf  Confidence
+		wantReas  string
+	}{
+		{
+			name:      "no fields → ConfidenceNone",
+			src:       &fakeReconcileSource{last: map[string]signal.Value{}},
+			wantState: "",
+			wantConf:  ConfidenceNone,
+			wantReas:  "insufficient signals",
+		},
+		{
+			name: "all fields stale → ConfidenceNone",
+			src: &fakeReconcileSource{
+				last: map[string]signal.Value{
+					"Gear":         {Raw: "D", Timestamp: stale},
+					"VehicleSpeed": {Raw: 65.0, Timestamp: stale},
+				},
+				gear:    "D",
+				gearOk:  true,
+				speed:   65.0,
+				speedOk: true,
+			},
+			wantState: "",
+			wantConf:  ConfidenceNone,
+			wantReas:  "insufficient signals",
+		},
+		{
+			name: "fresh Gear=D → Driving high",
+			src: &fakeReconcileSource{
+				last:   map[string]signal.Value{"Gear": {Raw: "D", Timestamp: fresh}},
+				gear:   "D",
+				gearOk: true,
+			},
+			wantState: Driving,
+			wantConf:  ConfidenceHigh,
+			wantReas:  "Gear=D",
+		},
+		{
+			name: "fresh Gear=P + IsCharging true → Charging high",
+			src: &fakeReconcileSource{
+				last: map[string]signal.Value{
+					"Gear":        {Raw: "P", Timestamp: fresh},
+					"ChargeState": {Raw: "Charging", Timestamp: fresh},
+				},
+				gear:       "P",
+				gearOk:     true,
+				charging:   true,
+				chargingOk: true,
+			},
+			wantState: Charging,
+			wantConf:  ConfidenceHigh,
+			wantReas:  "Gear=P + charging",
+		},
+		{
+			name: "fresh Gear=P + no charge → Parked high",
+			src: &fakeReconcileSource{
+				last:   map[string]signal.Value{"Gear": {Raw: "P", Timestamp: fresh}},
+				gear:   "P",
+				gearOk: true,
+			},
+			wantState: Parked,
+			wantConf:  ConfidenceHigh,
+			wantReas:  "Gear=P + not charging",
+		},
+		{
+			name: "no Gear + IsCharging true → Charging medium",
+			src: &fakeReconcileSource{
+				last: map[string]signal.Value{
+					"DetailedChargeState": {Raw: "Charging", Timestamp: fresh},
+				},
+				charging:   true,
+				chargingOk: true,
+			},
+			wantState: Charging,
+			wantConf:  ConfidenceMedium,
+			wantReas:  "charge state active (no gear)",
+		},
+		{
+			name: "no Gear + ChargeAmps>1.0 fallback → Charging medium",
+			src: &fakeReconcileSource{
+				last: map[string]signal.Value{
+					"ChargeAmps": {Raw: 32.0, Timestamp: fresh},
+				},
+			},
+			wantState: Charging,
+			wantConf:  ConfidenceMedium,
+			wantReas:  "charge state active (no gear)",
+		},
+		{
+			name: "no Gear + ChargeAmps=1.0 (at threshold) → ConfidenceNone",
+			src: &fakeReconcileSource{
+				last: map[string]signal.Value{
+					"ChargeAmps": {Raw: 1.0, Timestamp: fresh},
+				},
+			},
+			wantState: "",
+			wantConf:  ConfidenceNone,
+			wantReas:  "insufficient signals",
+		},
+		{
+			name: "no Gear + Speed>1.0 → Driving low",
+			src: &fakeReconcileSource{
+				last: map[string]signal.Value{
+					"VehicleSpeed": {Raw: 65.0, Timestamp: fresh},
+				},
+				speed:   65.0,
+				speedOk: true,
+			},
+			wantState: Driving,
+			wantConf:  ConfidenceLow,
+			wantReas:  "speed > 1.0 (no gear)",
+		},
+		{
+			name: "no Gear + Speed=0.5 (below threshold) → ConfidenceNone",
+			src: &fakeReconcileSource{
+				last: map[string]signal.Value{
+					"VehicleSpeed": {Raw: 0.5, Timestamp: fresh},
+				},
+				speed:   0.5,
+				speedOk: true,
+			},
+			wantState: "",
+			wantConf:  ConfidenceNone,
+			wantReas:  "insufficient signals",
+		},
+		{
+			name: "Gear lookup returns ok=false → falls through priorities",
+			src: &fakeReconcileSource{
+				// Field present (so isFresh succeeds) but Gear() returns
+				// ok=false (e.g. ValueKind mismatch in the real adapter).
+				last: map[string]signal.Value{
+					"Gear":         {Raw: 0, Timestamp: fresh},
+					"VehicleSpeed": {Raw: 65.0, Timestamp: fresh},
+				},
+				gear:    "",
+				gearOk:  false,
+				speed:   65.0,
+				speedOk: true,
+			},
+			wantState: Driving,
+			wantConf:  ConfidenceLow,
+			wantReas:  "speed > 1.0 (no gear)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := deriveExpectedState(99, tt.src, now)
+			if got.ExpectedState != tt.wantState {
+				t.Errorf("ExpectedState = %q, want %q", got.ExpectedState, tt.wantState)
+			}
+			if got.Confidence != tt.wantConf {
+				t.Errorf("Confidence = %v, want %v", got.Confidence, tt.wantConf)
+			}
+			if got.Reason != tt.wantReas {
+				t.Errorf("Reason = %q, want %q", got.Reason, tt.wantReas)
+			}
+		})
+	}
+}
+
+// TestSignalAdapterSatisfiesReconcileSignalSource is a compile-time
+// guarantee that *SignalAdapter (the production implementation) is
+// always assignable to the seam interface. If the adapter loses any
+// of the methods listed in reconcileSignalSource, this test fails
+// to compile rather than at runtime.
+func TestSignalAdapterSatisfiesReconcileSignalSource(t *testing.T) {
+	var _ reconcileSignalSource = (*SignalAdapter)(nil)
 }

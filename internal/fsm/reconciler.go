@@ -44,28 +44,52 @@ type ReconcileResult struct {
 // Signals older than this are ignored for reconciliation.
 const SignalFreshnessThreshold = 2 * time.Minute
 
-// DeriveExpectedState examines current signal values and determines what FSM
-// state the vehicle should be in. Returns ConfidenceNone if signals are too
-// stale or insufficient to make a determination.
+// reconcileSignalSource is the narrow set of typed accessors the
+// reconciler needs. *SignalAdapter satisfies it; tests can pass a
+// fake to drive deriveExpectedState directly without standing up a
+// real backing store.
 //
-// Only Driving, Charging, and Parked are returned as expected states.
-// Online, Asleep, and Offline are "absence of evidence" states that the
-// reconciler cannot safely assert.
+// The interface deliberately mirrors only the methods used by
+// deriveExpectedState — adding methods here is a contract change and
+// MUST be reflected in the adapter and any test fakes.
+type reconcileSignalSource interface {
+	Last(vehicleID int64, field string) (signal.Value, bool)
+	Gear(vehicleID int64) (string, bool)
+	Speed(vehicleID int64) (float64, bool)
+	IsCharging(vehicleID int64) (bool, bool)
+}
+
+// reconcileFields lists the canonical proto field names the
+// reconciler considers when deriving expected state. Order is not
+// significant — the freshest timestamp across the set drives the
+// staleness gate, then per-field freshness drives the priority
+// ladder.
+var reconcileFields = [...]string{
+	"Gear",
+	"DetailedChargeState",
+	"ChargeState",
+	"ChargeAmps",
+	"VehicleSpeed",
+}
+
+// deriveExpectedState is the adapter-driven core of the reconciler.
+// It is unexported because the public entry point lives in
+// signal_adapter_compat.go (DeriveExpectedState) — that wrapper
+// constructs a *SignalAdapter for callers that still hold a raw
+// signal store and dispatches here.
 //
-// This is a pure function with no side effects. It does NOT mutate the FSM.
-func DeriveExpectedState(vehicleID int64, store *signal.Store, now time.Time) ReconcileResult {
+// Pure function — no side effects. Returns ConfidenceNone when
+// signals are too stale or insufficient to make a determination.
+//
+// Only Driving, Charging, and Parked are returned as expected
+// states. Online, Asleep, and Offline are "absence of evidence"
+// states that the reconciler cannot safely assert.
+func deriveExpectedState(vehicleID int64, src reconcileSignalSource, now time.Time) ReconcileResult {
 	result := ReconcileResult{Confidence: ConfidenceNone, Reason: "insufficient signals"}
 
-	gear := store.Get(vehicleID, "Gear")
-	dcs := store.Get(vehicleID, "DetailedChargeState")
-	cs := store.Get(vehicleID, "ChargeState")
-	amps := store.Get(vehicleID, "ChargeAmps")
-	speed := store.Get(vehicleID, "VehicleSpeed")
-
-	// Find freshest signal across all key signals.
 	freshest := time.Time{}
-	for _, v := range []*signal.Value{gear, dcs, cs, amps, speed} {
-		if v != nil && v.Timestamp.After(freshest) {
+	for _, f := range reconcileFields {
+		if v, ok := src.Last(vehicleID, f); ok && v.Timestamp.After(freshest) {
 			freshest = v.Timestamp
 		}
 	}
@@ -76,50 +100,63 @@ func DeriveExpectedState(vehicleID int64, store *signal.Store, now time.Time) Re
 	}
 	result.FreshestAt = freshest
 
-	// Determine charging status: DetailedChargeState > ChargeState > ChargeAmps
+	isFresh := func(field string) bool {
+		v, ok := src.Last(vehicleID, field)
+		return ok && now.Sub(v.Timestamp) <= SignalFreshnessThreshold
+	}
+
+	// Determine charging status: DetailedChargeState / ChargeState
+	// are handled by the adapter (which strips proto enum prefixes
+	// and recognises only the symbolic Charging/Starting suffixes).
+	// ChargeAmps is a pure-numeric fallback for vehicles where the
+	// charge-state enum is not yet known but draw is observable.
 	charging := false
-	if dcs != nil && isFresh(dcs, now) {
-		charging = isChargingState(toString(dcs.Raw))
+	if isFresh("DetailedChargeState") || isFresh("ChargeState") {
+		if active, ok := src.IsCharging(vehicleID); ok {
+			charging = active
+		}
 	}
-	if !charging && cs != nil && isFresh(cs, now) {
-		charging = isChargingState(toString(cs.Raw))
-	}
-	if !charging && amps != nil && isFresh(amps, now) {
-		if f, ok := toFloat(amps.Raw); ok && f > 1.0 {
-			charging = true
+	if !charging && isFresh("ChargeAmps") {
+		if v, ok := src.Last(vehicleID, "ChargeAmps"); ok {
+			if f, fOk := toFloat(v.Raw); fOk && f > 1.0 {
+				charging = true
+			}
 		}
 	}
 
-	// Priority 1: Gear signal (highest confidence)
-	if gear != nil && isFresh(gear, now) {
-		gearStr := toString(gear.Raw)
-		switch gearStr {
-		case "D", "R":
-			return ReconcileResult{
-				ExpectedState: Driving,
-				Confidence:    ConfidenceHigh,
-				FreshestAt:    freshest,
-				Reason:        "Gear=" + gearStr,
-			}
-		case "P":
-			if charging {
+	// Priority 1: Gear signal (highest confidence).
+	// SignalAdapter.Gear normalises proto enum names to short
+	// suffixes ("P", "R", "N", "D"); see signal_adapter.go.
+	if isFresh("Gear") {
+		if gear, ok := src.Gear(vehicleID); ok {
+			switch gear {
+			case "D", "R":
 				return ReconcileResult{
-					ExpectedState: Charging,
+					ExpectedState: Driving,
 					Confidence:    ConfidenceHigh,
 					FreshestAt:    freshest,
-					Reason:        "Gear=P + charging",
+					Reason:        "Gear=" + gear,
 				}
-			}
-			return ReconcileResult{
-				ExpectedState: Parked,
-				Confidence:    ConfidenceHigh,
-				FreshestAt:    freshest,
-				Reason:        "Gear=P + not charging",
+			case "P":
+				if charging {
+					return ReconcileResult{
+						ExpectedState: Charging,
+						Confidence:    ConfidenceHigh,
+						FreshestAt:    freshest,
+						Reason:        "Gear=P + charging",
+					}
+				}
+				return ReconcileResult{
+					ExpectedState: Parked,
+					Confidence:    ConfidenceHigh,
+					FreshestAt:    freshest,
+					Reason:        "Gear=P + not charging",
+				}
 			}
 		}
 	}
 
-	// Priority 2: Charge state without gear (medium confidence)
+	// Priority 2: Charge state without gear (medium confidence).
 	if charging {
 		return ReconcileResult{
 			ExpectedState: Charging,
@@ -129,9 +166,10 @@ func DeriveExpectedState(vehicleID int64, store *signal.Store, now time.Time) Re
 		}
 	}
 
-	// Priority 3: Speed without gear (low confidence, REST API polling vehicles)
-	if speed != nil && isFresh(speed, now) {
-		if f, ok := toFloat(speed.Raw); ok && f > 1.0 {
+	// Priority 3: Speed without gear (low confidence — REST API
+	// polling vehicles that never receive Gear signals).
+	if isFresh("VehicleSpeed") {
+		if speed, ok := src.Speed(vehicleID); ok && speed > 1.0 {
 			return ReconcileResult{
 				ExpectedState: Driving,
 				Confidence:    ConfidenceLow,
@@ -142,9 +180,4 @@ func DeriveExpectedState(vehicleID int64, store *signal.Store, now time.Time) Re
 	}
 
 	return result
-}
-
-// isFresh returns true if a signal value is within the freshness threshold.
-func isFresh(v *signal.Value, now time.Time) bool {
-	return v != nil && now.Sub(v.Timestamp) <= SignalFreshnessThreshold
 }
