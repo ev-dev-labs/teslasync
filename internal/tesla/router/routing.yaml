@@ -82,6 +82,13 @@ routes:
   - field: CabinOverheatProtectionTemperatureLimit
     dest: climate_snapshot
     column: cabin_overheat_protection_temperature_limit_c
+  # CarType is the static vehicle-model identity enum (config,
+  # CarTypeValue: Model3 / ModelY / Cybertruck / Semi / ...). It is
+  # essentially constant for a given VIN, so signal_log carries the
+  # change feed and downstream readers fetch the most recent value
+  # back from there. No hot column exists.
+  - field: CarType
+    dest: signal_log
   # CenterDisplay is the head-unit display state (vehicle_state, enum
   # DisplayState). No hot column exists; the value is a low-cardinality
   # ordinal that tracks Off/Standby/Drive/Charge/etc. — signal_log gives
@@ -167,6 +174,18 @@ routes:
   - field: DefrostMode
     dest: climate_snapshot
     column: defrost_mode
+  # Tesla proto sentinel Fields (metadata). Deprecated_{1..3} are
+  # placeholder slots the upstream proto reserves for fields it has
+  # retired but cannot remove without renumbering. The codec emits
+  # them when they appear on the wire so the router can account for
+  # them; routing to DestDrop is the declarative "discard this Field"
+  # decision and prevents them from polluting signal_log.
+  - field: Deprecated_1
+    dest: drop
+  - field: Deprecated_2
+    dest: drop
+  - field: Deprecated_3
+    dest: drop
   # DestinationLocationLatitude/Longitude are the codec-flattened atomics of
   # the DestinationLocation compound (proto field 112). They route to
   # signal_log only — there is no current-state column on positions for
@@ -325,6 +344,13 @@ routes:
   - field: DriverSeatOccupied
     dest: climate_snapshot
     column: driver_seat_occupied
+  # EfficiencyPackage is the powertrain efficiency-tier label (config,
+  # ValueKindString) distinguishing Standard / Long Range / Plaid /
+  # Performance variants beyond CarType. Static per-VIN configuration
+  # with no hot column; the change feed in signal_log lets fleet-stats
+  # consumers distinguish trims when grouping by VIN.
+  - field: EfficiencyPackage
+    dest: signal_log
   # EmergencyLaneDepartureAvoidance is the bool "ELDA" toggle
   # (safety_security). Configuration-shaped flag, no hot column —
   # signal_log carries the change feed.
@@ -336,7 +362,54 @@ routes:
     dest: signal_log
   - field: EstimatedHoursToChargeTermination
     dest: signal_log
+  # EuropeVehicle is the regional-build flag (config, bool)
+  # distinguishing ECE-spec vehicles from US/CN. Downstream consumers
+  # use it for unit defaults and regulator-gated features. Static
+  # per-VIN configuration; signal_log carries the change feed.
+  - field: EuropeVehicle
+    dest: signal_log
   - field: ExpectedEnergyPercentAtTripArrival
+    dest: signal_log
+  # Tesla proto sentinel Fields (metadata). Experimental_{1..15} are
+  # reserved slots the upstream proto exposes for fields under active
+  # development; values flowing through them are unstable and have no
+  # downstream consumer. Routing to DestDrop is the declarative
+  # "discard this Field" decision until upstream stabilises naming.
+  - field: Experimental_1
+    dest: drop
+  - field: Experimental_10
+    dest: drop
+  - field: Experimental_11
+    dest: drop
+  - field: Experimental_12
+    dest: drop
+  - field: Experimental_13
+    dest: drop
+  - field: Experimental_14
+    dest: drop
+  - field: Experimental_15
+    dest: drop
+  - field: Experimental_2
+    dest: drop
+  - field: Experimental_3
+    dest: drop
+  - field: Experimental_4
+    dest: drop
+  - field: Experimental_5
+    dest: drop
+  - field: Experimental_6
+    dest: drop
+  - field: Experimental_7
+    dest: drop
+  - field: Experimental_8
+    dest: drop
+  - field: Experimental_9
+    dest: drop
+  # ExteriorColor is the paint-color label (config, ValueKindString).
+  # Static per-VIN configuration; identity-shaped so signal_log
+  # carries the change feed and downstream readers fetch the most
+  # recent value back from there. No hot column exists.
+  - field: ExteriorColor
     dest: signal_log
   - field: FastChargerPresent
     dest: signal_log
@@ -478,6 +551,48 @@ routes:
   - field: LongitudinalAcceleration
     dest: drive_telemetry
     column: longitudinal_acceleration_mps2
+  # Media-snapshot atomics (media). The infotainment now-playing UI
+  # reads back the latest media_snapshots row; every Media* field
+  # carries a hot column on media_snapshots from
+  # migrations/000170_snapshots_si.up.sql lines 268-302. Volumes are
+  # stored as integer percent (volume_pct / volume_max /
+  # volume_increment) — the head unit reports the fraction-of-max
+  # already pre-scaled. Durations and elapsed positions are seconds
+  # (SI). UnitKind is None for every Media* atomic, so normalize.toSI
+  # is a pass-through.
+  - field: MediaAudioVolume
+    dest: media_snapshot
+    column: volume_pct
+  - field: MediaAudioVolumeIncrement
+    dest: media_snapshot
+    column: volume_increment
+  - field: MediaAudioVolumeMax
+    dest: media_snapshot
+    column: volume_max
+  - field: MediaNowPlayingAlbum
+    dest: media_snapshot
+    column: album
+  - field: MediaNowPlayingArtist
+    dest: media_snapshot
+    column: artist
+  - field: MediaNowPlayingDuration
+    dest: media_snapshot
+    column: duration_s
+  - field: MediaNowPlayingElapsed
+    dest: media_snapshot
+    column: elapsed_s
+  - field: MediaNowPlayingStation
+    dest: media_snapshot
+    column: station
+  - field: MediaNowPlayingTitle
+    dest: media_snapshot
+    column: track_name
+  - field: MediaPlaybackSource
+    dest: media_snapshot
+    column: source
+  - field: MediaPlaybackStatus
+    dest: media_snapshot
+    column: play_status
   # MilesSinceReset is the lifetime distance counter for the user-
   # resettable trip meter (safety_security, UnitKindDistance). The
   # protomodel codegen tags this field UnitKindDistance so
@@ -512,6 +627,13 @@ routes:
   # contract — that mirror is writer-internal and is NOT a separate
   # routing destination.
   - field: Odometer
+    dest: signal_log
+  # OffroadLightbarPresent is the static-config bool (config) for the
+  # off-road light bar accessory on Cybertruck variants. Identity-
+  # shaped per-VIN configuration; no hot column. The change feed in
+  # signal_log lets feature-gating UI know whether to surface the
+  # lightbar controls.
+  - field: OffroadLightbarPresent
     dest: signal_log
   # OriginLocationLatitude/Longitude are the codec-flattened atomics of
   # the OriginLocation compound (proto field 111). Like the
@@ -563,9 +685,32 @@ routes:
   # routing rationale.
   - field: RdWindow
     dest: signal_log
+  # RearDefrostEnabled and RearDisplayHvacEnabled (metadata). These
+  # are placeholder/legacy fields the protomodel codegen flags as
+  # Category=metadata (NOT climate) — they have no hot column on
+  # climate_snapshots and are not referenced by any downstream
+  # consumer at this proto vintage. Routed to DestDrop pending an
+  # upstream review; if/when the proto promotes them, they would
+  # move to dest=climate_snapshot with the appropriate column.
+  - field: RearDefrostEnabled
+    dest: drop
+  - field: RearDisplayHvacEnabled
+    dest: drop
   - field: RearSeatHeaters
     dest: climate_snapshot
     column: rear_seat_heaters
+  # Static config (config). RemoteStartEnabled, RightHandDrive, and
+  # RoofColor are identity-shaped per-VIN configuration:
+  # RightHandDrive is essentially immutable, RemoteStartEnabled is a
+  # per-vehicle feature flag, and RoofColor is paint trim. Each
+  # carries the change feed in signal_log; downstream readers fetch
+  # the most recent value back from there. No hot column exists.
+  - field: RemoteStartEnabled
+    dest: signal_log
+  - field: RightHandDrive
+    dest: signal_log
+  - field: RoofColor
+    dest: signal_log
   - field: RouteLastUpdated
     dest: signal_log
   - field: RouteLine
@@ -661,6 +806,35 @@ routes:
   - field: ServiceMode
     dest: safety_snapshot
     column: service_mode
+  # Setting24HourTime is the user dashboard preference (prefs, bool)
+  # for 24h vs 12h clock display. UI-shaped preference with no hot
+  # column; the dashboard reads the most recent value from signal_log
+  # when rendering timestamp displays.
+  - field: Setting24HourTime
+    dest: signal_log
+  # Setting{Charge,Distance,Temperature,TirePressure}Unit
+  # (setting_unit, IsSettingUnit=true). normalize.observeSettingUnit
+  # short-circuits the toSI + router.Route path for these four
+  # atomics: Pipeline.processOne checks meta.IsSettingUnit first and
+  # writes to vehicle_unit_history via unithistory.Repo.Record so
+  # subsequent unit-bearing values look up the correct active unit at
+  # write time. The router is NOT consulted for these fields at
+  # runtime (processOne returns before reaching router.Route).
+  #
+  # The YAML entry exists for accounting and discoverability: it
+  # keeps the 0048 reflective coverage test green (every
+  # protomodel.Signals atomic must have exactly one routing entry)
+  # and documents the dual write-path explicitly. Per ADR-004 #8 the
+  # actual write target is unit_history; a Setting*Unit entry with
+  # any other dest would mask the observer contract.
+  - field: SettingChargeUnit
+    dest: unit_history
+  - field: SettingDistanceUnit
+    dest: unit_history
+  - field: SettingTemperatureUnit
+    dest: unit_history
+  - field: SettingTirePressureUnit
+    dest: unit_history
   - field: Soc
     dest: signal_log
   # SoftwareUpdate* atomics (vehicle_state). Update-progress UI feeds
@@ -681,6 +855,13 @@ routes:
   - field: SpeedLimitMode
     dest: signal_log
   - field: SpeedLimitWarning
+    dest: signal_log
+  # SunroofInstalled is the static-config enum (config,
+  # SunroofInstalledState) tracking presence/installed-state of the
+  # panoramic glass roof option. Identity-shaped per-VIN
+  # configuration; no hot column. The change feed in signal_log lets
+  # feature-gating UI decide whether to surface roof-controls.
+  - field: SunroofInstalled
     dest: signal_log
   - field: SuperchargerSessionTripPlanner
     dest: signal_log
@@ -792,6 +973,21 @@ routes:
     dest: signal_log
   - field: TpmsSoftWarningsSemiRearAxleRight2
     dest: signal_log
+  # Trim is the trim-level label (config, ValueKindString) — Long
+  # Range / Performance / Plaid / Cybertruck Foundation / etc. Static
+  # per-VIN configuration; identity-shaped so signal_log carries the
+  # change feed and downstream readers fetch the most recent value
+  # back from there. No hot column exists.
+  - field: Trim
+    dest: signal_log
+  # Unknown is the Tesla proto sentinel Field (metadata) used as the
+  # zero/default value of the upstream Field enum. Atomics with
+  # Field="Unknown" indicate the codec saw a wire value the current
+  # generated proto cannot name; routing to DestDrop is the
+  # declarative "discard this Field" decision and ensures these
+  # do not pollute signal_log.
+  - field: Unknown
+    dest: drop
   # ValetModeEnabled is the per-trip restricted-driver flag
   # (vehicle_state, bool). Routes to security_event because every
   # transition is a security-relevant event; the writer diffs
@@ -799,9 +995,24 @@ routes:
   # transition into the security_events hypertable.
   - field: ValetModeEnabled
     dest: security_event
+  # VehicleName is the user-set vehicle nickname (config,
+  # ValueKindString). Identity-shaped UI configuration with no hot
+  # column; signal_log carries the change feed and the dashboard
+  # reads the most recent value back from there.
+  - field: VehicleName
+    dest: signal_log
   - field: VehicleSpeed
     dest: drive_telemetry
     column: speed_mps
+  # Static config (config). Version is the firmware-build label;
+  # WheelType is the wheel/tire SKU. Both are identity-shaped per-VIN
+  # configuration with no hot column — signal_log carries the change
+  # feed. Firmware-version readers and tire-rolling-radius lookups
+  # fetch the most recent value back from there.
+  - field: Version
+    dest: signal_log
+  - field: WheelType
+    dest: signal_log
   - field: WiperHeatEnabled
     dest: climate_snapshot
     column: wiper_heat_enabled

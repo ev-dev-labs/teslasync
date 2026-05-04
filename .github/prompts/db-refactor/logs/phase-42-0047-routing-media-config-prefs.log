@@ -1,0 +1,473 @@
+=== PREFLIGHT ===
+prompt: 0047 routing-media-config-prefs
+branch: refactor/signals-rewrite
+head: 311043b6b4ec2f94035f0fec7cc9398646f84337
+
+=== predecessor ===
+predecessor: phase-42-0046-routing-safety-security.log EXIT=0 / STATUS=DONE
+
+=== CATEGORY_FIELDS ===
+media ATOMIC fields (sorted, ASCII alphabetical):
+  MediaAudioVolume                                   unit=UnitKindNone       vk=ValueKindFloat   enum= isSetUnit=false
+  MediaAudioVolumeIncrement                          unit=UnitKindNone       vk=ValueKindFloat   enum= isSetUnit=false
+  MediaAudioVolumeMax                                unit=UnitKindNone       vk=ValueKindFloat   enum= isSetUnit=false
+  MediaNowPlayingAlbum                               unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  MediaNowPlayingArtist                              unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  MediaNowPlayingDuration                            unit=UnitKindNone       vk=ValueKindFloat   enum= isSetUnit=false
+  MediaNowPlayingElapsed                             unit=UnitKindNone       vk=ValueKindFloat   enum= isSetUnit=false
+  MediaNowPlayingStation                             unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  MediaNowPlayingTitle                               unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  MediaPlaybackSource                                unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  MediaPlaybackStatus                                unit=UnitKindNone       vk=ValueKindEnum    enum=MediaStatus isSetUnit=false
+TOTAL media atomic=11 compound=0
+
+config ATOMIC fields (sorted, ASCII alphabetical):
+  CarType                                            unit=UnitKindNone       vk=ValueKindEnum    enum=CarTypeValue isSetUnit=false
+  EfficiencyPackage                                  unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  EuropeVehicle                                      unit=UnitKindNone       vk=ValueKindBool    enum= isSetUnit=false
+  ExteriorColor                                      unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  OffroadLightbarPresent                             unit=UnitKindNone       vk=ValueKindBool    enum= isSetUnit=false
+  RemoteStartEnabled                                 unit=UnitKindNone       vk=ValueKindBool    enum= isSetUnit=false
+  RightHandDrive                                     unit=UnitKindNone       vk=ValueKindBool    enum= isSetUnit=false
+  RoofColor                                          unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  SunroofInstalled                                   unit=UnitKindNone       vk=ValueKindEnum    enum=SunroofInstalledState isSetUnit=false
+  Trim                                               unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  VehicleName                                        unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Version                                            unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  WheelType                                          unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+TOTAL config atomic=13 compound=0
+
+prefs ATOMIC fields (sorted, ASCII alphabetical):
+  Setting24HourTime                                  unit=UnitKindNone       vk=ValueKindBool    enum= isSetUnit=false
+TOTAL prefs atomic=1 compound=0
+
+setting_unit ATOMIC fields (sorted, ASCII alphabetical):
+  SettingChargeUnit                                  unit=UnitKindCharge     vk=ValueKindEnum    enum=ChargeUnitPreference isSetUnit=true
+  SettingDistanceUnit                                unit=UnitKindDistance   vk=ValueKindEnum    enum=DistanceUnit isSetUnit=true
+  SettingTemperatureUnit                             unit=UnitKindTemperature vk=ValueKindEnum    enum=TemperatureUnit isSetUnit=true
+  SettingTirePressureUnit                            unit=UnitKindPressure   vk=ValueKindEnum    enum=PressureUnit isSetUnit=true
+TOTAL setting_unit atomic=4 compound=0
+
+metadata ATOMIC fields (sorted, ASCII alphabetical):
+  Deprecated_1                                       unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Deprecated_2                                       unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Deprecated_3                                       unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Experimental_1                                     unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Experimental_10                                    unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Experimental_11                                    unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Experimental_12                                    unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Experimental_13                                    unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Experimental_14                                    unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Experimental_15                                    unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Experimental_2                                     unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Experimental_3                                     unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Experimental_4                                     unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Experimental_5                                     unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Experimental_6                                     unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Experimental_7                                     unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Experimental_8                                     unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  Experimental_9                                     unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+  RearDefrostEnabled                                 unit=UnitKindNone       vk=ValueKindBool    enum= isSetUnit=false
+  RearDisplayHvacEnabled                             unit=UnitKindNone       vk=ValueKindBool    enum= isSetUnit=false
+  Unknown                                            unit=UnitKindNone       vk=ValueKindString  enum= isSetUnit=false
+TOTAL metadata atomic=21 compound=0
+
+GRAND TOTAL atomic=50 compound=0
+
+Discussion:
+The 5 remaining categories carry 50 atomic fields total. The
+routing decisions land them on 4 destinations:
+
+* media (11) -> media_snapshot. Every Media* atomic has a hot
+  column on media_snapshots from migrations/000170_snapshots_si.up.sql
+  lines 268-302. MediaAudioVolume{,Increment,Max} -> volume_pct /
+  volume_increment / volume_max. MediaNowPlaying{Album,Artist,
+  Duration,Elapsed,Station,Title} -> album / artist / duration_s /
+  elapsed_s / station / track_name. MediaPlayback{Source,Status}
+  -> source / play_status. Durations and elapsed positions are
+  seconds (SI); volumes are integer percent (the head unit reports
+  the fraction-of-max already pre-scaled). UnitKind is None for
+  every Media* field, so normalize.toSI is a pass-through.
+
+* config (13) -> signal_log. CarType, EfficiencyPackage,
+  EuropeVehicle, ExteriorColor, OffroadLightbarPresent,
+  RemoteStartEnabled, RightHandDrive, RoofColor, SunroofInstalled,
+  Trim, VehicleName, Version, WheelType. Every config field is
+  identity-shaped per-VIN configuration that rarely transitions in
+  the lifetime of a vehicle. signal_log is the change feed and the
+  dashboard / fleet-stats consumers read the most recent value
+  back from there. No hot column exists for any of them.
+
+* prefs (1) -> signal_log. Setting24HourTime is the user dashboard
+  preference for 24h vs 12h clock display. UI-shaped preference
+  with no hot column; signal_log carries the change feed.
+
+* setting_unit (4) -> unit_history. SettingChargeUnit,
+  SettingDistanceUnit, SettingTemperatureUnit,
+  SettingTirePressureUnit (all IsSettingUnit=true). Per ADR-004 #8,
+  normalize.observeSettingUnit short-circuits the toSI + router.Route
+  path for these atomics: pipeline.processOne checks meta.IsSettingUnit
+  first and writes to vehicle_unit_history via unithistory.Repo.Record
+  before it would otherwise dispatch. The router is NOT consulted
+  for these fields at runtime.
+
+  The YAML entry exists for accounting + discoverability: it keeps
+  the 0048 reflective coverage test green (every protomodel.Signals
+  atomic must have exactly one routing entry) and documents the
+  observer write-path explicitly to readers. The dest is
+  unit_history (not signal_log or drop) so the YAML does not lie
+  about where the values land.
+
+* metadata (21) -> drop. Deprecated_{1..3}, Experimental_{1..15},
+  RearDefrostEnabled, RearDisplayHvacEnabled, Unknown. The codegen
+  classifies these as metadata because they are sentinel slots in
+  the upstream Tesla proto: Deprecated_* are reserved retired-field
+  placeholders, Experimental_* are upstream-development reserved
+  slots whose schema is not yet stable, RearDefrostEnabled and
+  RearDisplayHvacEnabled are placeholder/legacy fields the protomodel
+  flags as metadata (not climate) and which have no downstream
+  consumer, and Unknown is the zero-value sentinel emitted when the
+  codec sees a wire value the current generated proto cannot name.
+  DestDrop is the declarative discard decision and ensures these
+  do not pollute signal_log.
+
+Notes on the prompt's example list:
+  * "Vin" is NOT a member of pm.Signals at this proto vintage.
+    The codegen does not emit a Vin SignalMeta; the VIN flows on
+    the Payload header (codec.Payload.Vin), not as a wire Field.
+  * "EmittedAt-like fields, payload-level frame markers" are
+    likewise consumed by the codec / pipeline header (Payload.CreatedAt,
+    Payload.Vin) and never reach the router as atomics. The metadata
+    category in pm.Signals is the Deprecated_* / Experimental_* /
+    Unknown sentinel set described above.
+  * MediaTrack* / MediaSource / MediaArtist / MediaAlbumName /
+    MediaPlayStatus / MediaVolume in the prompt are aspirational
+    naming; the actual pm.Signals Media* fields use the
+    MediaAudioVolume{,Max,Increment} / MediaNowPlaying{Title,
+    Artist,Album,Station,Duration,Elapsed} / MediaPlayback{Source,
+    Status} naming. The routing entries below use the actual names.
+  * GuiCharge* prefs do not exist in pm.Signals at this proto
+    vintage. The single member of the prefs category is
+    Setting24HourTime.
+
+No classifier ambiguity:
+  * pm.Signals shows ZERO media / config / prefs / setting_unit /
+    metadata fields that overlap any prior routed category. The
+    routing.yaml loader's duplicate-field validator
+    (TestLoaderRejectsDuplicateField) provides structural
+    enforcement; no duplicates were introduced by this prompt.
+
+=== YAML_DIFF ===
+diff --git a/internal/tesla/router/routing.yaml b/internal/tesla/router/routing.yaml
+index c9ce843b..d729209e 100644
+--- a/internal/tesla/router/routing.yaml
++++ b/internal/tesla/router/routing.yaml
+@@ -82,6 +82,13 @@ routes:
+   - field: CabinOverheatProtectionTemperatureLimit
+     dest: climate_snapshot
+     column: cabin_overheat_protection_temperature_limit_c
++  # CarType is the static vehicle-model identity enum (config,
++  # CarTypeValue: Model3 / ModelY / Cybertruck / Semi / ...). It is
++  # essentially constant for a given VIN, so signal_log carries the
++  # change feed and downstream readers fetch the most recent value
++  # back from there. No hot column exists.
++  - field: CarType
++    dest: signal_log
+   # CenterDisplay is the head-unit display state (vehicle_state, enum
+   # DisplayState). No hot column exists; the value is a low-cardinality
+   # ordinal that tracks Off/Standby/Drive/Charge/etc. ΓÇö signal_log gives
+@@ -167,6 +174,18 @@ routes:
+   - field: DefrostMode
+     dest: climate_snapshot
+     column: defrost_mode
++  # Tesla proto sentinel Fields (metadata). Deprecated_{1..3} are
++  # placeholder slots the upstream proto reserves for fields it has
++  # retired but cannot remove without renumbering. The codec emits
++  # them when they appear on the wire so the router can account for
++  # them; routing to DestDrop is the declarative "discard this Field"
++  # decision and prevents them from polluting signal_log.
++  - field: Deprecated_1
++    dest: drop
++  - field: Deprecated_2
++    dest: drop
++  - field: Deprecated_3
++    dest: drop
+   # DestinationLocationLatitude/Longitude are the codec-flattened atomics of
+   # the DestinationLocation compound (proto field 112). They route to
+   # signal_log only ΓÇö there is no current-state column on positions for
+@@ -325,6 +344,13 @@ routes:
+   - field: DriverSeatOccupied
+     dest: climate_snapshot
+     column: driver_seat_occupied
++  # EfficiencyPackage is the powertrain efficiency-tier label (config,
++  # ValueKindString) distinguishing Standard / Long Range / Plaid /
++  # Performance variants beyond CarType. Static per-VIN configuration
++  # with no hot column; the change feed in signal_log lets fleet-stats
++  # consumers distinguish trims when grouping by VIN.
++  - field: EfficiencyPackage
++    dest: signal_log
+   # EmergencyLaneDepartureAvoidance is the bool "ELDA" toggle
+   # (safety_security). Configuration-shaped flag, no hot column ΓÇö
+   # signal_log carries the change feed.
+@@ -336,8 +362,55 @@ routes:
+     dest: signal_log
+   - field: EstimatedHoursToChargeTermination
+     dest: signal_log
++  # EuropeVehicle is the regional-build flag (config, bool)
++  # distinguishing ECE-spec vehicles from US/CN. Downstream consumers
++  # use it for unit defaults and regulator-gated features. Static
++  # per-VIN configuration; signal_log carries the change feed.
++  - field: EuropeVehicle
++    dest: signal_log
+   - field: ExpectedEnergyPercentAtTripArrival
+     dest: signal_log
++  # Tesla proto sentinel Fields (metadata). Experimental_{1..15} are
++  # reserved slots the upstream proto exposes for fields under active
++  # development; values flowing through them are unstable and have no
++  # downstream consumer. Routing to DestDrop is the declarative
++  # "discard this Field" decision until upstream stabilises naming.
++  - field: Experimental_1
++    dest: drop
++  - field: Experimental_10
++    dest: drop
++  - field: Experimental_11
++    dest: drop
++  - field: Experimental_12
++    dest: drop
++  - field: Experimental_13
++    dest: drop
++  - field: Experimental_14
++    dest: drop
++  - field: Experimental_15
++    dest: drop
++  - field: Experimental_2
++    dest: drop
++  - field: Experimental_3
++    dest: drop
++  - field: Experimental_4
++    dest: drop
++  - field: Experimental_5
++    dest: drop
++  - field: Experimental_6
++    dest: drop
++  - field: Experimental_7
++    dest: drop
++  - field: Experimental_8
++    dest: drop
++  - field: Experimental_9
++    dest: drop
++  # ExteriorColor is the paint-color label (config, ValueKindString).
++  # Static per-VIN configuration; identity-shaped so signal_log
++  # carries the change feed and downstream readers fetch the most
++  # recent value back from there. No hot column exists.
++  - field: ExteriorColor
++    dest: signal_log
+   - field: FastChargerPresent
+     dest: signal_log
+   - field: FastChargerType
+@@ -478,6 +551,48 @@ routes:
+   - field: LongitudinalAcceleration
+     dest: drive_telemetry
+     column: longitudinal_acceleration_mps2
++  # Media-snapshot atomics (media). The infotainment now-playing UI
++  # reads back the latest media_snapshots row; every Media* field
++  # carries a hot column on media_snapshots from
++  # migrations/000170_snapshots_si.up.sql lines 268-302. Volumes are
++  # stored as integer percent (volume_pct / volume_max /
++  # volume_increment) ΓÇö the head unit reports the fraction-of-max
++  # already pre-scaled. Durations and elapsed positions are seconds
++  # (SI). UnitKind is None for every Media* atomic, so normalize.toSI
++  # is a pass-through.
++  - field: MediaAudioVolume
++    dest: media_snapshot
++    column: volume_pct
++  - field: MediaAudioVolumeIncrement
++    dest: media_snapshot
++    column: volume_increment
++  - field: MediaAudioVolumeMax
++    dest: media_snapshot
++    column: volume_max
++  - field: MediaNowPlayingAlbum
++    dest: media_snapshot
++    column: album
++  - field: MediaNowPlayingArtist
++    dest: media_snapshot
++    column: artist
++  - field: MediaNowPlayingDuration
++    dest: media_snapshot
++    column: duration_s
++  - field: MediaNowPlayingElapsed
++    dest: media_snapshot
++    column: elapsed_s
++  - field: MediaNowPlayingStation
++    dest: media_snapshot
++    column: station
++  - field: MediaNowPlayingTitle
++    dest: media_snapshot
++    column: track_name
++  - field: MediaPlaybackSource
++    dest: media_snapshot
++    column: source
++  - field: MediaPlaybackStatus
++    dest: media_snapshot
++    column: play_status
+   # MilesSinceReset is the lifetime distance counter for the user-
+   # resettable trip meter (safety_security, UnitKindDistance). The
+   # protomodel codegen tags this field UnitKindDistance so
+@@ -513,6 +628,13 @@ routes:
+   # routing destination.
+   - field: Odometer
+     dest: signal_log
++  # OffroadLightbarPresent is the static-config bool (config) for the
++  # off-road light bar accessory on Cybertruck variants. Identity-
++  # shaped per-VIN configuration; no hot column. The change feed in
++  # signal_log lets feature-gating UI know whether to surface the
++  # lightbar controls.
++  - field: OffroadLightbarPresent
++    dest: signal_log
+   # OriginLocationLatitude/Longitude are the codec-flattened atomics of
+   # the OriginLocation compound (proto field 111). Like the
+   # DestinationLocation pair, they route to signal_log only ΓÇö no
+@@ -563,9 +685,32 @@ routes:
+   # routing rationale.
+   - field: RdWindow
+     dest: signal_log
++  # RearDefrostEnabled and RearDisplayHvacEnabled (metadata). These
++  # are placeholder/legacy fields the protomodel codegen flags as
++  # Category=metadata (NOT climate) ΓÇö they have no hot column on
++  # climate_snapshots and are not referenced by any downstream
++  # consumer at this proto vintage. Routed to DestDrop pending an
++  # upstream review; if/when the proto promotes them, they would
++  # move to dest=climate_snapshot with the appropriate column.
++  - field: RearDefrostEnabled
++    dest: drop
++  - field: RearDisplayHvacEnabled
++    dest: drop
+   - field: RearSeatHeaters
+     dest: climate_snapshot
+     column: rear_seat_heaters
++  # Static config (config). RemoteStartEnabled, RightHandDrive, and
++  # RoofColor are identity-shaped per-VIN configuration:
++  # RightHandDrive is essentially immutable, RemoteStartEnabled is a
++  # per-vehicle feature flag, and RoofColor is paint trim. Each
++  # carries the change feed in signal_log; downstream readers fetch
++  # the most recent value back from there. No hot column exists.
++  - field: RemoteStartEnabled
++    dest: signal_log
++  - field: RightHandDrive
++    dest: signal_log
++  - field: RoofColor
++    dest: signal_log
+   - field: RouteLastUpdated
+     dest: signal_log
+   - field: RouteLine
+@@ -661,6 +806,35 @@ routes:
+   - field: ServiceMode
+     dest: safety_snapshot
+     column: service_mode
++  # Setting24HourTime is the user dashboard preference (prefs, bool)
++  # for 24h vs 12h clock display. UI-shaped preference with no hot
++  # column; the dashboard reads the most recent value from signal_log
++  # when rendering timestamp displays.
++  - field: Setting24HourTime
++    dest: signal_log
++  # Setting{Charge,Distance,Temperature,TirePressure}Unit
++  # (setting_unit, IsSettingUnit=true). normalize.observeSettingUnit
++  # short-circuits the toSI + router.Route path for these four
++  # atomics: Pipeline.processOne checks meta.IsSettingUnit first and
++  # writes to vehicle_unit_history via unithistory.Repo.Record so
++  # subsequent unit-bearing values look up the correct active unit at
++  # write time. The router is NOT consulted for these fields at
++  # runtime (processOne returns before reaching router.Route).
++  #
++  # The YAML entry exists for accounting and discoverability: it
++  # keeps the 0048 reflective coverage test green (every
++  # protomodel.Signals atomic must have exactly one routing entry)
++  # and documents the dual write-path explicitly. Per ADR-004 #8 the
++  # actual write target is unit_history; a Setting*Unit entry with
++  # any other dest would mask the observer contract.
++  - field: SettingChargeUnit
++    dest: unit_history
++  - field: SettingDistanceUnit
++    dest: unit_history
++  - field: SettingTemperatureUnit
++    dest: unit_history
++  - field: SettingTirePressureUnit
++    dest: unit_history
+   - field: Soc
+     dest: signal_log
+   # SoftwareUpdate* atomics (vehicle_state). Update-progress UI feeds
+@@ -682,6 +856,13 @@ routes:
+     dest: signal_log
+   - field: SpeedLimitWarning
+     dest: signal_log
++  # SunroofInstalled is the static-config enum (config,
++  # SunroofInstalledState) tracking presence/installed-state of the
++  # panoramic glass roof option. Identity-shaped per-VIN
++  # configuration; no hot column. The change feed in signal_log lets
++  # feature-gating UI decide whether to surface roof-controls.
++  - field: SunroofInstalled
++    dest: signal_log
+   - field: SuperchargerSessionTripPlanner
+     dest: signal_log
+   - field: TimeToFullCharge
+@@ -792,6 +973,21 @@ routes:
+     dest: signal_log
+   - field: TpmsSoftWarningsSemiRearAxleRight2
+     dest: signal_log
++  # Trim is the trim-level label (config, ValueKindString) ΓÇö Long
++  # Range / Performance / Plaid / Cybertruck Foundation / etc. Static
++  # per-VIN configuration; identity-shaped so signal_log carries the
++  # change feed and downstream readers fetch the most recent value
++  # back from there. No hot column exists.
++  - field: Trim
++    dest: signal_log
++  # Unknown is the Tesla proto sentinel Field (metadata) used as the
++  # zero/default value of the upstream Field enum. Atomics with
++  # Field="Unknown" indicate the codec saw a wire value the current
++  # generated proto cannot name; routing to DestDrop is the
++  # declarative "discard this Field" decision and ensures these
++  # do not pollute signal_log.
++  - field: Unknown
++    dest: drop
+   # ValetModeEnabled is the per-trip restricted-driver flag
+   # (vehicle_state, bool). Routes to security_event because every
+   # transition is a security-relevant event; the writer diffs
+@@ -799,9 +995,24 @@ routes:
+   # transition into the security_events hypertable.
+   - field: ValetModeEnabled
+     dest: security_event
++  # VehicleName is the user-set vehicle nickname (config,
++  # ValueKindString). Identity-shaped UI configuration with no hot
++  # column; signal_log carries the change feed and the dashboard
++  # reads the most recent value back from there.
++  - field: VehicleName
++    dest: signal_log
+   - field: VehicleSpeed
+     dest: drive_telemetry
+     column: speed_mps
++  # Static config (config). Version is the firmware-build label;
++  # WheelType is the wheel/tire SKU. Both are identity-shaped per-VIN
++  # configuration with no hot column ΓÇö signal_log carries the change
++  # feed. Firmware-version readers and tire-rolling-radius lookups
++  # fetch the most recent value back from there.
++  - field: Version
++    dest: signal_log
++  - field: WheelType
++    dest: signal_log
+   - field: WiperHeatEnabled
+     dest: climate_snapshot
+     column: wiper_heat_enabled
+
+=== UNIT_TEST ===
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router	2.185s
+=== GATE ===
+OK
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router	(cached)
+
+git status --porcelain (allowed: routing.yaml + this log only)
+ M internal/tesla/router/routing.yaml
+working tree clean (only allowed files dirty)
+
+EXIT=0
+STATUS=DONE
