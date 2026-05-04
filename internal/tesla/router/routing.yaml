@@ -43,12 +43,26 @@ routes:
   - field: AutoSeatClimateRight
     dest: climate_snapshot
     column: auto_seat_climate_right
+  # Driver-assist toggles (safety_security). Low-cardinality bool/enum
+  # configuration state; signal_log carries the change feed and the
+  # driver-assist UI reads the latest value from there. No hot column
+  # in safety_snapshots — the snapshot table tracks service / wiper /
+  # crash flags, not the per-feature ADAS toggles.
+  - field: AutomaticBlindSpotCamera
+    dest: signal_log
+  - field: AutomaticEmergencyBrakingOff
+    dest: signal_log
   - field: BMSState
     dest: signal_log
   - field: BatteryHeaterOn
     dest: charging_telemetry
     column: battery_heater_on
   - field: BatteryLevel
+    dest: signal_log
+  # BlindSpotCollisionWarningChime is the audible-alert toggle for the
+  # blind-spot collision warning system (safety_security, bool). Same
+  # rationale as the other ADAS toggles — signal_log change feed only.
+  - field: BlindSpotCollisionWarningChime
     dest: signal_log
   - field: BmsFullchargecomplete
     dest: signal_log
@@ -121,6 +135,13 @@ routes:
   - field: ClimateSeatCoolingFrontRight
     dest: climate_snapshot
     column: climate_seat_cooling_front_right
+  # CruiseFollowDistance is the FollowDistance enum the driver picks
+  # for adaptive cruise (safety_security). Distinct from CruiseSetSpeed
+  # (drive_telemetry, the active speed setpoint) — this is the
+  # following-gap setting and has no hot column. The driver-assist UI
+  # reads the latest value from signal_log.
+  - field: CruiseFollowDistance
+    dest: signal_log
   - field: CruiseSetSpeed
     dest: drive_telemetry
     column: cruise_set_speed_mps
@@ -304,6 +325,11 @@ routes:
   - field: DriverSeatOccupied
     dest: climate_snapshot
     column: driver_seat_occupied
+  # EmergencyLaneDepartureAvoidance is the bool "ELDA" toggle
+  # (safety_security). Configuration-shaped flag, no hot column —
+  # signal_log carries the change feed.
+  - field: EmergencyLaneDepartureAvoidance
+    dest: signal_log
   - field: EnergyRemaining
     dest: signal_log
   - field: EstBatteryRange
@@ -323,6 +349,11 @@ routes:
   # column exists for window state; the change feed in signal_log
   # is sufficient for the cabin-state timeline.
   - field: FdWindow
+    dest: signal_log
+  # ForwardCollisionWarning is the FCW sensitivity enum
+  # (safety_security, ForwardCollisionSensitivity). Driver-assist
+  # toggle — signal_log change feed, no hot column.
+  - field: ForwardCollisionWarning
     dest: signal_log
   - field: FpWindow
     dest: signal_log
@@ -392,6 +423,11 @@ routes:
   - field: IsolationResistance
     dest: motor_snapshot
     column: isolation_resistance_ohm
+  # LaneDepartureAvoidance is the LaneAssistLevel enum
+  # (safety_security). Driver-assist toggle — signal_log change feed,
+  # no hot column.
+  - field: LaneDepartureAvoidance
+    dest: signal_log
   - field: LateralAcceleration
     dest: drive_telemetry
     column: lateral_acceleration_mps2
@@ -432,9 +468,24 @@ routes:
   - field: LocationLongitude
     dest: positions
     column: lng
+  # Locked is the door-lock state (safety_security, bool). Routes to
+  # security_event because every lock/unlock transition is a discrete
+  # security-relevant event; the writer diffs against the previous
+  # observation and emits one row per transition into the
+  # security_events hypertable.
+  - field: Locked
+    dest: security_event
   - field: LongitudinalAcceleration
     dest: drive_telemetry
     column: longitudinal_acceleration_mps2
+  # MilesSinceReset is the lifetime distance counter for the user-
+  # resettable trip meter (safety_security, UnitKindDistance). The
+  # protomodel codegen tags this field UnitKindDistance so
+  # normalize.toSI converts to meters via the vehicle_unit_history
+  # layer; the SI value lands in signal_log. Despite the legacy
+  # "Miles" name the wire value is in the active SettingDistanceUnit.
+  - field: MilesSinceReset
+    dest: signal_log
   - field: MilesToArrival
     dest: signal_log
   - field: MinutesToArrival
@@ -488,6 +539,11 @@ routes:
   - field: PedalPosition
     dest: drive_telemetry
     column: pedal_position_pct
+  # PinToDriveEnabled is the PIN-to-drive feature toggle
+  # (safety_security, bool). Configuration-shaped flag, no hot column
+  # — signal_log carries the change feed.
+  - field: PinToDriveEnabled
+    dest: signal_log
   - field: PowershareHoursLeft
     dest: signal_log
   - field: PowershareInstantaneousPowerKW
@@ -547,7 +603,48 @@ routes:
   - field: SeatVentEnabled
     dest: climate_snapshot
     column: seat_vent_enabled
+  # SelfDrivingMilesSinceReset is the lifetime distance counter for
+  # the user-resettable FSD-engaged trip meter (safety_security,
+  # UnitKindDistance). Same routing rationale as MilesSinceReset —
+  # normalize.toSI converts to meters via the vehicle_unit_history
+  # layer and the SI value lands in signal_log.
+  - field: SelfDrivingMilesSinceReset
+    dest: signal_log
   - field: SemitruckPassengerSeatFoldPosition
+    dest: signal_log
+  # Semitruck per-position TPMS pressures (safety_security,
+  # UnitKindPressure, ValueKindString). The Re1L0/Re1L1/Re1R0/Re1R1
+  # naming maps to "rear axle 1, left/right, inner/outer" and
+  # Re2L0/Re2L1/Re2R0/Re2R1 to "rear axle 2, left/right, inner/outer"
+  # for the dual-rear-axle Semi tractor. tire_pressure_snapshots
+  # models only the four passenger-car corners; the Semi six-axle
+  # layout has no hot column and lands in signal_log. The values are
+  # string-typed on the wire (the Semi producer encodes the pressure
+  # as a serialized string rather than a float), so units conversion
+  # does not apply — the raw string is preserved in signal_log.
+  - field: SemitruckTpmsPressureRe1L0
+    dest: signal_log
+  - field: SemitruckTpmsPressureRe1L1
+    dest: signal_log
+  - field: SemitruckTpmsPressureRe1R0
+    dest: signal_log
+  - field: SemitruckTpmsPressureRe1R1
+    dest: signal_log
+  - field: SemitruckTpmsPressureRe2L0
+    dest: signal_log
+  - field: SemitruckTpmsPressureRe2L1
+    dest: signal_log
+  - field: SemitruckTpmsPressureRe2R0
+    dest: signal_log
+  - field: SemitruckTpmsPressureRe2R1
+    dest: signal_log
+  # Semitruck park-brake status (safety_security, ValueKindString).
+  # Tractor and trailer brake states are tokens (e.g. "applied",
+  # "released"); no hot column for the Semi-specific brake split, so
+  # both land in signal_log.
+  - field: SemitruckTractorParkBrakeStatus
+    dest: signal_log
+  - field: SemitruckTrailerParkBrakeStatus
     dest: signal_log
   # SentryMode is the security-armed state (vehicle_state, enum
   # SentryModeState). Routes to security_event because every
@@ -598,6 +695,102 @@ routes:
   - field: TonneauPosition
     dest: signal_log
   - field: TonneauTentMode
+    dest: signal_log
+  # TpmsHardWarnings flatten atomics (safety_security). The codec
+  # parses the proto Value_TireLocationValue carried by TpmsHardWarnings
+  # (Field=224, IsCompound=true) via flattenTireLocation in
+  # internal/tesla/codec/flatten.go and expands it into 10 boolean
+  # atomics: the four passenger-car corners (Front/Rear × Left/Right)
+  # plus six Semi-truck positions (SemiMiddleAxleLeft2/Right2 and
+  # SemiRearAxleLeft/Left2/Right/Right2). The "_2" suffix preserves
+  # the upstream proto's Get*_2 accessor naming for the second-axle
+  # tires on dual-rear-axle Semis.
+  #
+  # Routing rule: per-corner hard-warning bools route to signal_log
+  # for the change feed. tire_pressure_snapshots.hard_warnings is a
+  # single TEXT token aggregating the per-corner bits; the snapshot
+  # writer reads the per-corner change stream from signal_log to
+  # populate the per-corner *_status columns and the rolled-up
+  # hard_warnings token, rather than the router dispatching directly
+  # to the snapshot table for each corner.
+  - field: TpmsHardWarningsFrontLeft
+    dest: signal_log
+  - field: TpmsHardWarningsFrontRight
+    dest: signal_log
+  - field: TpmsHardWarningsRearLeft
+    dest: signal_log
+  - field: TpmsHardWarningsRearRight
+    dest: signal_log
+  - field: TpmsHardWarningsSemiMiddleAxleLeft2
+    dest: signal_log
+  - field: TpmsHardWarningsSemiMiddleAxleRight2
+    dest: signal_log
+  - field: TpmsHardWarningsSemiRearAxleLeft
+    dest: signal_log
+  - field: TpmsHardWarningsSemiRearAxleLeft2
+    dest: signal_log
+  - field: TpmsHardWarningsSemiRearAxleRight
+    dest: signal_log
+  - field: TpmsHardWarningsSemiRearAxleRight2
+    dest: signal_log
+  # TpmsLastSeenPressureTime{Fl,Fr,Rl,Rr} (safety_security, ValueKindFloat,
+  # UnitKindNone). The wire value is a unix epoch in seconds; the
+  # tire_pressure_snapshots writer converts to TIMESTAMPTZ when
+  # populating the per-corner *_last_seen_at columns. UnitKindNone so
+  # normalize.toSI is a pass-through — the writer owns the
+  # epoch→timestamp conversion.
+  - field: TpmsLastSeenPressureTimeFl
+    dest: tire_pressure_snapshot
+    column: front_left_last_seen_at
+  - field: TpmsLastSeenPressureTimeFr
+    dest: tire_pressure_snapshot
+    column: front_right_last_seen_at
+  - field: TpmsLastSeenPressureTimeRl
+    dest: tire_pressure_snapshot
+    column: rear_left_last_seen_at
+  - field: TpmsLastSeenPressureTimeRr
+    dest: tire_pressure_snapshot
+    column: rear_right_last_seen_at
+  # TpmsPressure{Fl,Fr,Rl,Rr} (safety_security, UnitKindPressure).
+  # normalize.toSI converts the wire value (psi or bar depending on
+  # SettingPressureUnit) to Pascals via units.ToSI; the SI value
+  # lands in tire_pressure_snapshots.{front,rear}_{left,right}_pa.
+  - field: TpmsPressureFl
+    dest: tire_pressure_snapshot
+    column: front_left_pa
+  - field: TpmsPressureFr
+    dest: tire_pressure_snapshot
+    column: front_right_pa
+  - field: TpmsPressureRl
+    dest: tire_pressure_snapshot
+    column: rear_left_pa
+  - field: TpmsPressureRr
+    dest: tire_pressure_snapshot
+    column: rear_right_pa
+  # TpmsSoftWarnings flatten atomics (safety_security). Mirrors
+  # TpmsHardWarnings in shape (10 booleans across the four passenger-
+  # car corners and six Semi positions); same routing rationale —
+  # signal_log change feed, with the snapshot writer aggregating to
+  # the soft_warnings TEXT and per-corner *_status columns.
+  - field: TpmsSoftWarningsFrontLeft
+    dest: signal_log
+  - field: TpmsSoftWarningsFrontRight
+    dest: signal_log
+  - field: TpmsSoftWarningsRearLeft
+    dest: signal_log
+  - field: TpmsSoftWarningsRearRight
+    dest: signal_log
+  - field: TpmsSoftWarningsSemiMiddleAxleLeft2
+    dest: signal_log
+  - field: TpmsSoftWarningsSemiMiddleAxleRight2
+    dest: signal_log
+  - field: TpmsSoftWarningsSemiRearAxleLeft
+    dest: signal_log
+  - field: TpmsSoftWarningsSemiRearAxleLeft2
+    dest: signal_log
+  - field: TpmsSoftWarningsSemiRearAxleRight
+    dest: signal_log
+  - field: TpmsSoftWarningsSemiRearAxleRight2
     dest: signal_log
   # ValetModeEnabled is the per-trip restricted-driver flag
   # (vehicle_state, bool). Routes to security_event because every
