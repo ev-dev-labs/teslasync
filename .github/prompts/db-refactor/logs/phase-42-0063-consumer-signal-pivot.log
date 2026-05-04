@@ -1,0 +1,63 @@
+=== PREFLIGHT ===
+timestamp=2026-05-04T04:49:47.8244966-07:00
+branch=refactor/signals-rewrite
+head=9174ae6bfe458e22e4212bdbf80b0d151dfaa1c7
+
+# Predecessor: phase-42-0062-consumer-signal-store.log
+predecessor.exit=EXIT=0
+predecessor.status=STATUS=DONE
+
+
+=== REMOVED ===
+# pivot.go was authored typed-clean in phase-39 (commit f7f7ecebe) — it
+# never contained string-parse fallbacks (strconv.ParseFloat, parseEnum)
+# nor compound-flatten logic for DoorState / Location / TireLocation /
+# Time. Those responsibilities have always lived in:
+#   - state_reader_log.go::unpackLocationCompounds (historical Location
+#     JSONB blob expansion at the SQL boundary — NOT in pivot's allowed-
+#     files scope)
+#   - redis_cache.go (cache-side string coercion — NOT in pivot's
+#     allowed-files scope)
+# Therefore prompt 0063's "delete X / Y / Z" steps are no-ops at the
+# code level. Doc-only updates were applied to make the post-phase-42
+# typed-primitive contract explicit:
+#   - pivot.go package doc: added a paragraph stating values are typed
+#     primitives (float64/float32, int32/int64, bool, string, time.Time)
+#     emitted by the codec, that pivot does NO string parsing and NO
+#     compound flattening, and that historical Location compound
+#     expansion is the responsibility of state_reader_log.go (not this
+#     file). Cross-references ADR-004 §2.
+#   - rawEvent.Signal doc: clarified that codec emits already-flattened
+#     atomic names (LocationLatitude, DoorStateDriverFront,
+#     TpmsHardWarningsFrontLeft) — pivot does not split or rejoin.
+#   - rawEvent.Value doc: enumerated typed primitive kinds (float64,
+#     float32, int32, int64, bool, string, time.Time, plus JSON-decoded
+#     slices/maps for the few wire-structured signals) and reaffirmed
+#     forwardFold treats Value as opaque (any).
+#
+# pivot_test.go: existing tests already used typed inputs end-to-end
+# (float64 65.0 / 80.0, string "D" / "x" / "y", nil). No parse-error
+# tests existed (none asserted strconv.ParseFloat error paths) so there
+# was nothing to delete. ONE additive test was appended,
+# TestForwardFold_PreservesTypedPrimitives_Phase42, which flows a
+# heterogeneous mix of float64, float32, int32, int64, bool, string,
+# and time.Time atomics through forwardFold and asserts identity is
+# preserved per primitive kind via type-asserted equality. This locks
+# the type-agnostic contract into the test surface so a future change
+# that re-introduces value coercion (e.g. forcing everything to float64)
+# would break the test.
+
+=== UNIT_TEST ===
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	5.612s
+=== GATE ===
+ok  	github.com/ev-dev-labs/teslasync/internal/signal	(cached)
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+A  .github/prompts/db-refactor/logs/phase-42-0063-consumer-signal-pivot.log
+M  internal/signal/pivot.go
+M  internal/signal/pivot_test.go
+[refactor/signals-rewrite 9eb2fcb0] phase-42(0063): pivot consumes typed values; flatten removed
+ 3 files changed, 139 insertions(+), 4 deletions(-)
+ create mode 100644 .github/prompts/db-refactor/logs/phase-42-0063-consumer-signal-pivot.log
