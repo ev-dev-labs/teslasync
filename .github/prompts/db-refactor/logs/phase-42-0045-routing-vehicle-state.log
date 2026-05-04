@@ -1,0 +1,356 @@
+=== PREFLIGHT ===
+prompt: 0045 routing-vehicle-state
+branch: refactor/signals-rewrite
+head: 2f814877356f0d0be367d0bf3361bff8b7e467bb
+
+=== predecessor ===
+predecessor: phase-42-0044-routing-powertrain.log EXIT=0 / STATUS=DONE
+
+=== CATEGORY_FIELDS ===
+vehicle_state ATOMIC fields (sorted, ASCII alphabetical):
+  CenterDisplay                                      unit=UnitKindNone       vk=ValueKindEnum   enum=DisplayState
+  CurrentLimitMph                                    unit=UnitKindDistance   vk=ValueKindFloat  enum=
+  FdWindow                                           unit=UnitKindNone       vk=ValueKindEnum   enum=WindowState
+  FpWindow                                           unit=UnitKindNone       vk=ValueKindEnum   enum=WindowState
+  GuestModeEnabled                                   unit=UnitKindNone       vk=ValueKindBool   enum=
+  GuestModeMobileAccessState                         unit=UnitKindNone       vk=ValueKindEnum   enum=GuestModeMobileAccess
+  HomelinkDeviceCount                                unit=UnitKindNone       vk=ValueKindFloat  enum=
+  HomelinkNearby                                     unit=UnitKindNone       vk=ValueKindBool   enum=
+  LightsHazardsActive                                unit=UnitKindNone       vk=ValueKindBool   enum=
+  LightsHighBeams                                    unit=UnitKindNone       vk=ValueKindBool   enum=
+  LightsTurnSignal                                   unit=UnitKindNone       vk=ValueKindEnum   enum=TurnSignalState
+  Odometer                                           unit=UnitKindDistance   vk=ValueKindFloat  enum=
+  PairedPhoneKeyAndKeyFobQty                         unit=UnitKindNone       vk=ValueKindFloat  enum=
+  RdWindow                                           unit=UnitKindNone       vk=ValueKindEnum   enum=WindowState
+  RpWindow                                           unit=UnitKindNone       vk=ValueKindEnum   enum=WindowState
+  SentryMode                                         unit=UnitKindNone       vk=ValueKindEnum   enum=SentryModeState
+  ServiceMode                                        unit=UnitKindNone       vk=ValueKindBool   enum=
+  SoftwareUpdateDownloadPercentComplete              unit=UnitKindNone       vk=ValueKindFloat  enum=
+  SoftwareUpdateExpectedDurationMinutes              unit=UnitKindNone       vk=ValueKindFloat  enum=
+  SoftwareUpdateInstallationPercentComplete          unit=UnitKindNone       vk=ValueKindFloat  enum=
+  SoftwareUpdateScheduledStartTime                   unit=UnitKindNone       vk=ValueKindString enum=
+  SoftwareUpdateVersion                              unit=UnitKindNone       vk=ValueKindString enum=
+  SpeedLimitMode                                     unit=UnitKindNone       vk=ValueKindBool   enum=
+  TonneauOpenPercent                                 unit=UnitKindNone       vk=ValueKindFloat  enum=
+  TonneauPosition                                    unit=UnitKindNone       vk=ValueKindEnum   enum=TonneauPositionState
+  TonneauTentMode                                    unit=UnitKindNone       vk=ValueKindEnum   enum=TonneauTentModeState
+  ValetModeEnabled                                   unit=UnitKindNone       vk=ValueKindBool   enum=
+vehicle_state COMPOUND fields (codec flattens these into atomics; never dispatched):
+  DoorState                                          unit=UnitKindNone       vk=ValueKindCompound enum=
+TOTAL atomic=27 compound=1
+
+Discussion:
+The Vehicle State category has 27 atomic fields and 1 compound (DoorState).
+The compound is never dispatched — internal/tesla/codec/flatten.go's
+flattenDoorStateJSON expands it into 6 boolean atomics at codec time:
+DoorStateDriverFront, DoorStateDriverRear, DoorStatePassengerFront,
+DoorStatePassengerRear, DoorStateFrontTrunk, DoorStateRearTrunk.
+
+The DoorState JSON wire shape uses FrontTrunk/RearTrunk (NOT TrunkFront/
+TrunkRear, which is the proto Doors message naming used by flattenDoors).
+The codec preserves the producer's field names verbatim — the divergence
+is real (it is the upstream's design) and obscuring it would silently
+corrupt provenance for any operator inspecting signal_log. This routing
+prompt therefore registers the codec-emitted names verbatim, not aliased
+left/right names.
+
+Routing decisions:
+  * 25 of 27 atomics route to signal_log (low-cardinality state with
+    no hot column: window state, light state, software update progress,
+    homelink, guest mode, tonneau, current speed-limit setting, odometer,
+    paired phone count, software version, etc.).
+  * SentryMode + ValetModeEnabled route to security_event — every
+    transition is a discrete security-relevant event; the writer diffs
+    against the previous observation and emits one row per transition.
+  * ServiceMode routes to safety_snapshot.service_mode (continuous-value
+    flag, see migrations/000170_snapshots_si.up.sql:312).
+  * 6 DoorState flatten atomics route to signal_log per the prompt's
+    routing rule (low-cardinality change-feed analytics; transitions
+    surface on the security timeline through the security_events writer
+    reading from signal_log, not via direct router dispatch).
+
+No classifier ambiguity:
+  * pm.Signals shows ZERO vehicle_state fields that overlap any prior
+    routed category. Soc (mentioned defensively in the prompt) is in
+    Category=charging and was routed by prompt 0040; it is NOT in the
+    vehicle_state pm.Signals slice. ServiceMode is uniquely in
+    vehicle_state (safety_security category does not include it).
+  * The routing.yaml loader's duplicate-field validator
+    (TestLoaderRejectsDuplicateField) provides structural enforcement;
+    no duplicates were introduced by this prompt.
+
+=== YAML_DIFF ===
+diff --git a/internal/tesla/router/routing.yaml b/internal/tesla/router/routing.yaml
+index 33228ce6..aa0d9918 100644
+--- a/internal/tesla/router/routing.yaml
++++ b/internal/tesla/router/routing.yaml
+@@ -68,6 +68,12 @@ routes:
+   - field: CabinOverheatProtectionTemperatureLimit
+     dest: climate_snapshot
+     column: cabin_overheat_protection_temperature_limit_c
++  # CenterDisplay is the head-unit display state (vehicle_state, enum
++  # DisplayState). No hot column exists; the value is a low-cardinality
++  # ordinal that tracks Off/Standby/Drive/Charge/etc. ΓÇö signal_log gives
++  # the change feed for the timeline UI.
++  - field: CenterDisplay
++    dest: signal_log
+   - field: ChargeAmps
+     dest: signal_log
+   - field: ChargeCurrentRequest
+@@ -118,6 +124,13 @@ routes:
+   - field: CruiseSetSpeed
+     dest: drive_telemetry
+     column: cruise_set_speed_mps
++  # CurrentLimitMph is the active speed-limit-mode threshold. The
++  # protomodel codegen tags this field UnitKindDistance (the wire value
++  # is in the active SettingDistanceUnit, not always mph despite the
++  # legacy name); normalize.toSI converts to meters via the
++  # vehicle_unit_history layer and the SI value lands in signal_log.
++  - field: CurrentLimitMph
++    dest: signal_log
+   - field: DCChargingEnergyIn
+     dest: charging_telemetry
+     column: dc_charging_energy_in_wh
+@@ -256,6 +269,32 @@ routes:
+   - field: DiVBatRER
+     dest: motor_snapshot
+     column: rear_right_vbat_v
++  # DoorState flatten atomics. The codec parses the JSON-shaped
++  # string_value emitted for the DoorState compound (proto field 58,
++  # vehicle_state) via flattenDoorStateJSON in
++  # internal/tesla/codec/flatten.go and expands it into 6 boolean
++  # atomics: driver/passenger ├ù front/rear, plus front/rear trunk.
++  # Note the JSON wire shape uses FrontTrunk/RearTrunk (the codec
++  # preserves the producer's field names verbatim ΓÇö see the comment
++  # in flatten.go), which is why these atomics differ from the proto
++  # Doors message's TrunkFront/TrunkRear naming.
++  #
++  # Routing rule: door states route to signal_log for the change-feed
++  # analytics. Door open/close transitions surface on the security
++  # timeline through the security_events writer, which reads from
++  # signal_log rather than the router dispatching here directly.
++  - field: DoorStateDriverFront
++    dest: signal_log
++  - field: DoorStateDriverRear
++    dest: signal_log
++  - field: DoorStateFrontTrunk
++    dest: signal_log
++  - field: DoorStatePassengerFront
++    dest: signal_log
++  - field: DoorStatePassengerRear
++    dest: signal_log
++  - field: DoorStateRearTrunk
++    dest: signal_log
+   - field: DriveRail
+     dest: drive_telemetry
+     column: drive_rail
+@@ -279,6 +318,14 @@ routes:
+     dest: charging_telemetry
+     column: fast_charger_type
+     also_signal_log: true
++  # Window-position atomics (vehicle_state, enum WindowState). Front-
++  # driver, front-passenger, rear-driver, rear-passenger. No hot
++  # column exists for window state; the change feed in signal_log
++  # is sufficient for the cabin-state timeline.
++  - field: FdWindow
++    dest: signal_log
++  - field: FpWindow
++    dest: signal_log
+   - field: Gear
+     dest: drive_telemetry
+     column: gear
+@@ -288,6 +335,17 @@ routes:
+   - field: GpsState
+     dest: positions
+     column: gps_state
++  # GuestMode + Homelink atomics (vehicle_state). Low-cardinality
++  # ordinal/boolean state with no hot column ΓÇö change feed in
++  # signal_log drives the access-control and "near home" UI.
++  - field: GuestModeEnabled
++    dest: signal_log
++  - field: GuestModeMobileAccessState
++    dest: signal_log
++  - field: HomelinkDeviceCount
++    dest: signal_log
++  - field: HomelinkNearby
++    dest: signal_log
+   - field: HvacACEnabled
+     dest: climate_snapshot
+     column: hvac_ac_enabled
+@@ -345,6 +403,15 @@ routes:
+   - field: LifetimeEnergyUsedDrive
+     dest: drive_telemetry
+     column: lifetime_energy_used_drive_wh
++  # Exterior-light atomics (vehicle_state). Low-cardinality bool/enum
++  # state; signal_log drives the lights-on timeline and is the source
++  # for the security-event writer's hazard/turn-signal correlation.
++  - field: LightsHazardsActive
++    dest: signal_log
++  - field: LightsHighBeams
++    dest: signal_log
++  - field: LightsTurnSignal
++    dest: signal_log
+   - field: LocatedAtFavorite
+     dest: signal_log
+   - field: LocatedAtHome
+@@ -386,6 +453,15 @@ routes:
+     dest: signal_log
+   - field: NumModuleTempMin
+     dest: signal_log
++  # Odometer carries the vehicle's lifetime distance in the active
++  # SettingDistanceUnit (km or mi). normalize.toSI converts to meters
++  # via the vehicle_unit_history layer; the SI value lands in
++  # signal_log. The vehicle_live_state writer mirrors the latest meters
++  # value into vehicle_live_state.odometer_m for the L2 live-state
++  # contract ΓÇö that mirror is writer-internal and is NOT a separate
++  # routing destination.
++  - field: Odometer
++    dest: signal_log
+   # OriginLocationLatitude/Longitude are the codec-flattened atomics of
+   # the OriginLocation compound (proto field 111). Like the
+   # DestinationLocation pair, they route to signal_log only ΓÇö no
+@@ -402,6 +478,10 @@ routes:
+     dest: signal_log
+   - field: PackVoltage
+     dest: signal_log
++  # PairedPhoneKeyAndKeyFobQty is the count of paired phone keys + key
++  # fobs (vehicle_state). Static config-shaped value, no hot column.
++  - field: PairedPhoneKeyAndKeyFobQty
++    dest: signal_log
+   - field: PassengerSeatBelt
+     dest: climate_snapshot
+     column: passenger_seat_belt
+@@ -422,6 +502,11 @@ routes:
+     dest: signal_log
+   - field: RatedRange
+     dest: signal_log
++  # RdWindow is the rear-driver window (vehicle_state, enum
++  # WindowState). See the FdWindow/FpWindow comment for the
++  # routing rationale.
++  - field: RdWindow
++    dest: signal_log
+   - field: RearSeatHeaters
+     dest: climate_snapshot
+     column: rear_seat_heaters
+@@ -431,6 +516,11 @@ routes:
+     dest: signal_log
+   - field: RouteTrafficMinutesDelay
+     dest: signal_log
++  # RpWindow is the rear-passenger window (vehicle_state, enum
++  # WindowState). See the FdWindow/FpWindow comment for the
++  # routing rationale.
++  - field: RpWindow
++    dest: signal_log
+   - field: ScheduledChargingMode
+     dest: signal_log
+   - field: ScheduledChargingPending
+@@ -459,14 +549,63 @@ routes:
+     column: seat_vent_enabled
+   - field: SemitruckPassengerSeatFoldPosition
+     dest: signal_log
++  # SentryMode is the security-armed state (vehicle_state, enum
++  # SentryModeState). Routes to security_event because every
++  # transition is a discrete security-relevant event; the writer
++  # diffs against the previous observation and emits one row per
++  # transition into the security_events hypertable.
++  - field: SentryMode
++    dest: security_event
++  # ServiceMode is the technician-unlock flag (vehicle_state, bool).
++  # safety_snapshots.service_mode (migrations/000170_snapshots_si.up.sql
++  # line 312) carries this as a continuous-value flag. State changes
++  # are also surfaced on security_events by the writer; routing here
++  # is for the hot-table snapshot read path.
++  - field: ServiceMode
++    dest: safety_snapshot
++    column: service_mode
+   - field: Soc
+     dest: signal_log
++  # SoftwareUpdate* atomics (vehicle_state). Update-progress UI feeds
++  # off the signal_log change stream; no hot column exists.
++  - field: SoftwareUpdateDownloadPercentComplete
++    dest: signal_log
++  - field: SoftwareUpdateExpectedDurationMinutes
++    dest: signal_log
++  - field: SoftwareUpdateInstallationPercentComplete
++    dest: signal_log
++  - field: SoftwareUpdateScheduledStartTime
++    dest: signal_log
++  - field: SoftwareUpdateVersion
++    dest: signal_log
++  # SpeedLimitMode is the on/off bool for the parental-style speed
++  # limit feature (vehicle_state). SpeedLimitWarning (already routed)
++  # is the audible-alert toggle and is distinct.
++  - field: SpeedLimitMode
++    dest: signal_log
+   - field: SpeedLimitWarning
+     dest: signal_log
+   - field: SuperchargerSessionTripPlanner
+     dest: signal_log
+   - field: TimeToFullCharge
+     dest: signal_log
++  # Cybertruck tonneau atomics (vehicle_state). Low-cardinality
++  # ordinal/percent state; signal_log drives the cargo-bay timeline
++  # UI. TonneauTentMode is an enum tracking the deployable tent
++  # accessory state.
++  - field: TonneauOpenPercent
++    dest: signal_log
++  - field: TonneauPosition
++    dest: signal_log
++  - field: TonneauTentMode
++    dest: signal_log
++  # ValetModeEnabled is the per-trip restricted-driver flag
++  # (vehicle_state, bool). Routes to security_event because every
++  # transition is a security-relevant event; the writer diffs
++  # against the previous observation and emits one row per
++  # transition into the security_events hypertable.
++  - field: ValetModeEnabled
++    dest: security_event
+   - field: VehicleSpeed
+     dest: drive_telemetry
+     column: speed_mps
+
+=== UNIT_TEST ===
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router	3.897s
+
+=== GATE ===
+
+TEST_VARIANCE: the prompt's coverage probe specifies four door atomic
+names (DoorStateFrontLeft, DoorStateFrontRight, DoorStateRearLeft,
+DoorStateRearRight) that DO NOT exist anywhere in the codebase. The
+actual codec-emitted DoorState flatten atomics (see
+internal/tesla/codec/flatten.go::flattenDoorStateJSON) are:
+  DoorStateDriverFront, DoorStateDriverRear,
+  DoorStatePassengerFront, DoorStatePassengerRear,
+  DoorStateFrontTrunk, DoorStateRearTrunk
+
+This is a documentation typo in the prompt itself, not a classifier bug
+(per the prompt's text in step 2: classifier ambiguity is the cross-
+category-duplicate scenario, which DOES NOT apply here). Routing the
+prompt's named atomics would silently introduce ghost entries that no
+codec output would ever hit. The gate below probes the actual codec-
+emitted door names; the rest of the prompt's gate (predecessor check,
+category-coverage walk over pm.Signals, go test -race, status diff)
+is unchanged.
+routing_map_size=187
+vehicle_state_atomics_matched=27
+door_flatten_atomics_matched=6
+OK
+
+go test -race ./internal/tesla/router/...
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router	(cached)
+
+git status --porcelain (allowed: routing.yaml + this log only)
+ M internal/tesla/router/routing.yaml
+working tree clean (only allowed files dirty)
+
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+A  .github/prompts/db-refactor/logs/phase-42-0045-routing-vehicle-state.log
+M  internal/tesla/router/routing.yaml
+[refactor/signals-rewrite e13857e9d416347ad52c14c70fa65ca975618a35] phase-42(0045): routing.yaml entries for Vehicle State category
+commit_exit=0
+
+EXIT=0
+STATUS=DONE

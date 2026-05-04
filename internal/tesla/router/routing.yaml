@@ -68,6 +68,12 @@ routes:
   - field: CabinOverheatProtectionTemperatureLimit
     dest: climate_snapshot
     column: cabin_overheat_protection_temperature_limit_c
+  # CenterDisplay is the head-unit display state (vehicle_state, enum
+  # DisplayState). No hot column exists; the value is a low-cardinality
+  # ordinal that tracks Off/Standby/Drive/Charge/etc. — signal_log gives
+  # the change feed for the timeline UI.
+  - field: CenterDisplay
+    dest: signal_log
   - field: ChargeAmps
     dest: signal_log
   - field: ChargeCurrentRequest
@@ -118,6 +124,13 @@ routes:
   - field: CruiseSetSpeed
     dest: drive_telemetry
     column: cruise_set_speed_mps
+  # CurrentLimitMph is the active speed-limit-mode threshold. The
+  # protomodel codegen tags this field UnitKindDistance (the wire value
+  # is in the active SettingDistanceUnit, not always mph despite the
+  # legacy name); normalize.toSI converts to meters via the
+  # vehicle_unit_history layer and the SI value lands in signal_log.
+  - field: CurrentLimitMph
+    dest: signal_log
   - field: DCChargingEnergyIn
     dest: charging_telemetry
     column: dc_charging_energy_in_wh
@@ -256,6 +269,32 @@ routes:
   - field: DiVBatRER
     dest: motor_snapshot
     column: rear_right_vbat_v
+  # DoorState flatten atomics. The codec parses the JSON-shaped
+  # string_value emitted for the DoorState compound (proto field 58,
+  # vehicle_state) via flattenDoorStateJSON in
+  # internal/tesla/codec/flatten.go and expands it into 6 boolean
+  # atomics: driver/passenger × front/rear, plus front/rear trunk.
+  # Note the JSON wire shape uses FrontTrunk/RearTrunk (the codec
+  # preserves the producer's field names verbatim — see the comment
+  # in flatten.go), which is why these atomics differ from the proto
+  # Doors message's TrunkFront/TrunkRear naming.
+  #
+  # Routing rule: door states route to signal_log for the change-feed
+  # analytics. Door open/close transitions surface on the security
+  # timeline through the security_events writer, which reads from
+  # signal_log rather than the router dispatching here directly.
+  - field: DoorStateDriverFront
+    dest: signal_log
+  - field: DoorStateDriverRear
+    dest: signal_log
+  - field: DoorStateFrontTrunk
+    dest: signal_log
+  - field: DoorStatePassengerFront
+    dest: signal_log
+  - field: DoorStatePassengerRear
+    dest: signal_log
+  - field: DoorStateRearTrunk
+    dest: signal_log
   - field: DriveRail
     dest: drive_telemetry
     column: drive_rail
@@ -279,6 +318,14 @@ routes:
     dest: charging_telemetry
     column: fast_charger_type
     also_signal_log: true
+  # Window-position atomics (vehicle_state, enum WindowState). Front-
+  # driver, front-passenger, rear-driver, rear-passenger. No hot
+  # column exists for window state; the change feed in signal_log
+  # is sufficient for the cabin-state timeline.
+  - field: FdWindow
+    dest: signal_log
+  - field: FpWindow
+    dest: signal_log
   - field: Gear
     dest: drive_telemetry
     column: gear
@@ -288,6 +335,17 @@ routes:
   - field: GpsState
     dest: positions
     column: gps_state
+  # GuestMode + Homelink atomics (vehicle_state). Low-cardinality
+  # ordinal/boolean state with no hot column — change feed in
+  # signal_log drives the access-control and "near home" UI.
+  - field: GuestModeEnabled
+    dest: signal_log
+  - field: GuestModeMobileAccessState
+    dest: signal_log
+  - field: HomelinkDeviceCount
+    dest: signal_log
+  - field: HomelinkNearby
+    dest: signal_log
   - field: HvacACEnabled
     dest: climate_snapshot
     column: hvac_ac_enabled
@@ -345,6 +403,15 @@ routes:
   - field: LifetimeEnergyUsedDrive
     dest: drive_telemetry
     column: lifetime_energy_used_drive_wh
+  # Exterior-light atomics (vehicle_state). Low-cardinality bool/enum
+  # state; signal_log drives the lights-on timeline and is the source
+  # for the security-event writer's hazard/turn-signal correlation.
+  - field: LightsHazardsActive
+    dest: signal_log
+  - field: LightsHighBeams
+    dest: signal_log
+  - field: LightsTurnSignal
+    dest: signal_log
   - field: LocatedAtFavorite
     dest: signal_log
   - field: LocatedAtHome
@@ -386,6 +453,15 @@ routes:
     dest: signal_log
   - field: NumModuleTempMin
     dest: signal_log
+  # Odometer carries the vehicle's lifetime distance in the active
+  # SettingDistanceUnit (km or mi). normalize.toSI converts to meters
+  # via the vehicle_unit_history layer; the SI value lands in
+  # signal_log. The vehicle_live_state writer mirrors the latest meters
+  # value into vehicle_live_state.odometer_m for the L2 live-state
+  # contract — that mirror is writer-internal and is NOT a separate
+  # routing destination.
+  - field: Odometer
+    dest: signal_log
   # OriginLocationLatitude/Longitude are the codec-flattened atomics of
   # the OriginLocation compound (proto field 111). Like the
   # DestinationLocation pair, they route to signal_log only — no
@@ -401,6 +477,10 @@ routes:
   - field: PackCurrent
     dest: signal_log
   - field: PackVoltage
+    dest: signal_log
+  # PairedPhoneKeyAndKeyFobQty is the count of paired phone keys + key
+  # fobs (vehicle_state). Static config-shaped value, no hot column.
+  - field: PairedPhoneKeyAndKeyFobQty
     dest: signal_log
   - field: PassengerSeatBelt
     dest: climate_snapshot
@@ -422,6 +502,11 @@ routes:
     dest: signal_log
   - field: RatedRange
     dest: signal_log
+  # RdWindow is the rear-driver window (vehicle_state, enum
+  # WindowState). See the FdWindow/FpWindow comment for the
+  # routing rationale.
+  - field: RdWindow
+    dest: signal_log
   - field: RearSeatHeaters
     dest: climate_snapshot
     column: rear_seat_heaters
@@ -430,6 +515,11 @@ routes:
   - field: RouteLine
     dest: signal_log
   - field: RouteTrafficMinutesDelay
+    dest: signal_log
+  # RpWindow is the rear-passenger window (vehicle_state, enum
+  # WindowState). See the FdWindow/FpWindow comment for the
+  # routing rationale.
+  - field: RpWindow
     dest: signal_log
   - field: ScheduledChargingMode
     dest: signal_log
@@ -459,7 +549,39 @@ routes:
     column: seat_vent_enabled
   - field: SemitruckPassengerSeatFoldPosition
     dest: signal_log
+  # SentryMode is the security-armed state (vehicle_state, enum
+  # SentryModeState). Routes to security_event because every
+  # transition is a discrete security-relevant event; the writer
+  # diffs against the previous observation and emits one row per
+  # transition into the security_events hypertable.
+  - field: SentryMode
+    dest: security_event
+  # ServiceMode is the technician-unlock flag (vehicle_state, bool).
+  # safety_snapshots.service_mode (migrations/000170_snapshots_si.up.sql
+  # line 312) carries this as a continuous-value flag. State changes
+  # are also surfaced on security_events by the writer; routing here
+  # is for the hot-table snapshot read path.
+  - field: ServiceMode
+    dest: safety_snapshot
+    column: service_mode
   - field: Soc
+    dest: signal_log
+  # SoftwareUpdate* atomics (vehicle_state). Update-progress UI feeds
+  # off the signal_log change stream; no hot column exists.
+  - field: SoftwareUpdateDownloadPercentComplete
+    dest: signal_log
+  - field: SoftwareUpdateExpectedDurationMinutes
+    dest: signal_log
+  - field: SoftwareUpdateInstallationPercentComplete
+    dest: signal_log
+  - field: SoftwareUpdateScheduledStartTime
+    dest: signal_log
+  - field: SoftwareUpdateVersion
+    dest: signal_log
+  # SpeedLimitMode is the on/off bool for the parental-style speed
+  # limit feature (vehicle_state). SpeedLimitWarning (already routed)
+  # is the audible-alert toggle and is distinct.
+  - field: SpeedLimitMode
     dest: signal_log
   - field: SpeedLimitWarning
     dest: signal_log
@@ -467,6 +589,23 @@ routes:
     dest: signal_log
   - field: TimeToFullCharge
     dest: signal_log
+  # Cybertruck tonneau atomics (vehicle_state). Low-cardinality
+  # ordinal/percent state; signal_log drives the cargo-bay timeline
+  # UI. TonneauTentMode is an enum tracking the deployable tent
+  # accessory state.
+  - field: TonneauOpenPercent
+    dest: signal_log
+  - field: TonneauPosition
+    dest: signal_log
+  - field: TonneauTentMode
+    dest: signal_log
+  # ValetModeEnabled is the per-trip restricted-driver flag
+  # (vehicle_state, bool). Routes to security_event because every
+  # transition is a security-relevant event; the writer diffs
+  # against the previous observation and emits one row per
+  # transition into the security_events hypertable.
+  - field: ValetModeEnabled
+    dest: security_event
   - field: VehicleSpeed
     dest: drive_telemetry
     column: speed_mps
