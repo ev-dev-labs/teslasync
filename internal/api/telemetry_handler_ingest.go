@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
-	"github.com/ev-dev-labs/teslasync/internal/telemetry"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/rs/zerolog/log"
 )
 
@@ -89,10 +90,12 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	// so the frontend conversion layer works consistently.
 	normalizeFleetUnits(signals)
 
-	// Canonicalize signal names — handle Tesla renames via alias registry.
-	// Must run before any consumer (SignalStore, Redis, history writer, FSM)
-	// so all downstream code sees canonical names only.
-	telemetry.CanonicalizeMap(signals)
+	// Phase-42 (prompt 0079a): the legacy telemetry.CanonicalizeMap alias
+	// rewrite was a no-op (SignalAliases was empty in internal/telemetry/
+	// signal_alias.go) and was removed alongside the internal/telemetry
+	// package retirement. Future Tesla signal renames belong in the
+	// generated protomodel/router layer (internal/tesla/protomodel +
+	// internal/tesla/router/routing.yaml), not in a parallel alias map.
 
 	// Find vehicle by VIN (needed for SignalStore keying and all downstream)
 	var vehicleID int64
@@ -160,30 +163,20 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	}
 
 	// Broadcast to SSE clients for real-time frontend updates using the typed
-	// per-table wire format. We re-run the legacy map batch through the same
-	// flatten/bucket/hot-row pipeline ProcessBatch uses, so both write-paths
-	// publish an identical shape: {vehicle_id, ts, tables:{<table>:{<col>:<val>}},
-	// cold:[{name,value}]}. No raw map / legacy jsonb fields are emitted.
+	// per-table wire format. After phase-42 (prompts 0077, 0078, 0079a) the
+	// only surviving hot table is `positions` — the climate / charging /
+	// motor / vehicle_live_state / security tables were dropped CASCADE and
+	// per-field updates are delivered via the dedicated `signal_change`
+	// channel (prompt 0071). The wire shape stays {vehicle_id, ts, tables}
+	// so the frontend's vehicle_update consumer (web/src/lib/sseManager.ts)
+	// keeps working unchanged.
 	if h.eventHub != nil && vehicleID > 0 {
-		named := make([]telemetry.NamedValue, 0, len(signals))
-		for k, v := range signals {
-			named = append(named, telemetry.NamedValue{Name: k, Value: v})
-		}
-		atomics := make([]telemetry.Atomic, 0, len(named)*2)
-		for _, nv := range named {
-			flat, ferr := telemetry.Flatten(nv.Name, nv.Value)
-			if ferr != nil {
-				continue
-			}
-			atomics = append(atomics, flat...)
-		}
-		bk := bucketAtomics(atomics)
 		ts := time.Now().UTC()
 		hotRows := map[string]map[string]any{}
-		for table, items := range bk.HotByTable {
-			row := h.buildHotRow(table, items, &bk.Cold)
+		if pos := h.extractPosition(signals); pos != nil {
+			row := positionToHotRow(*pos)
 			if len(row) > 0 {
-				hotRows[table] = row
+				hotRows["positions"] = row
 			}
 		}
 		h.broadcastSSE(buildSSEPayload(vehicleID, ts, hotRows))
@@ -370,21 +363,15 @@ func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Reques
 		Int("signals", len(payload.Signals)).
 		Msg("telemetry data received via HTTP")
 
-	// Build the signal map for downstream consumers. We first walk
-	// payload.Signals in Tesla emission order, normalize that ordered
-	// batch via telemetry.NormalizeFleetUnits, then merge into a map
-	// for the legacy map-based ProcessSignals pipeline. ProcessSignals
-	// will run normalization again as a safety net for the MQTT path,
-	// which is idempotent for these per-signal transforms.
-	ordered := make([]telemetry.NamedValue, 0, len(payload.Signals))
+	// Build the signal map for downstream consumers. payload.Signals
+	// preserves Tesla emission order on the wire, but ProcessSignals
+	// operates on a map, so we collapse the ordered slice into a map
+	// here. Enum-prefix stripping and compound flattening run inside
+	// ProcessSignals via normalizeFleetUnits — which is idempotent for
+	// these per-signal transforms — so callers don't need to pre-normalize.
+	signals := make(map[string]interface{}, len(payload.Signals)+len(payload.Data))
 	for _, sig := range payload.Signals {
-		ordered = append(ordered, telemetry.NamedValue{Name: sig.Name, Value: sig.Value})
-	}
-	ordered = telemetry.NormalizeFleetUnits(ordered)
-
-	signals := make(map[string]interface{}, len(ordered)+len(payload.Data))
-	for _, nv := range ordered {
-		signals[nv.Name] = nv.Value
+		signals[sig.Name] = sig.Value
 	}
 
 	// Also merge payload.Data (Fleet Telemetry server may use either format)
@@ -485,19 +472,26 @@ func (h *TelemetryHandler) extractPosition(signals map[string]interface{}) *mode
 	return pos
 }
 
-// ProcessBatch is the new slice-oriented write-path entrypoint that will
-// eventually replace the map-based ProcessSignals pipeline. It accepts an
-// ordered batch of telemetry.NamedValue (decoded in Tesla emission order)
-// and walks it through normalize -> flatten -> bucket -> persist stages.
+// ProcessBatch is the slice-oriented write-path entrypoint for callers that
+// already have an ordered batch of codec.Atomic (decoded in Tesla emission
+// order via internal/tesla/codec.Decode). Production ingest goes through
+// (*internal/tesla/normalize.Pipeline).Process — see ADR-004 #2 — which
+// already runs codec + normalize + router internally; this method is the
+// thin adapter that integration tests and the legacy HTTP debug path use
+// to feed pre-decoded atomics through the surrounding TelemetryHandler
+// orchestration (FSM, session tracker, position writer, SSE).
 //
-// This method is being assembled incrementally across the db-refactor
-// prompts. Today it covers stages 1-2 (normalize + flatten); subsequent
-// prompts add hot-route bucketing and per-table writers.
-func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded []telemetry.NamedValue) error {
+// Phase-42 (prompt 0079a): the legacy bucket / buildHotRow / LookupHot
+// fan-out was removed because every hot table other than `positions` was
+// dropped CASCADE in prompt 0078. Cold residue and per-field updates are
+// already handled by the typed signal_log pipeline (000167+) and the
+// `signal_change` SSE channel (prompt 0071) downstream of this call.
+func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded []codec.Atomic) error {
 	startedAt := time.Now()
-	// Resolve vehicle by VIN up-front so downstream stages (FSM hooks, hot/cold
-	// writers) all share the same identity columns. A missing vehicle is fatal
-	// for this batch — without an FK we cannot persist anything.
+	// Resolve vehicle by VIN up-front so downstream stages (FSM hooks,
+	// position writer) all share the same identity columns. A missing
+	// vehicle is fatal for this batch — without an FK we cannot persist
+	// anything.
 	veh, err := h.vehicleRepo.GetByVIN(ctx, vin)
 	if err != nil || veh == nil {
 		log.Warn().Err(err).Str("vin", vin).Msg("ProcessBatch: vehicle not found; dropping batch")
@@ -506,70 +500,30 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 	vehicleID := veh.ID
 	ts := time.Now().UTC()
 
-	normalized := telemetry.NormalizeFleetUnits(decoded)
-
-	atomics := make([]telemetry.Atomic, 0, len(normalized)*2)
-	var flattenErrs int
-	for _, nv := range normalized {
-		flat, err := telemetry.Flatten(nv.Name, nv.Value)
-		if err != nil {
-			flattenErrs++
-			log.Warn().
-				Err(err).
-				Str("signal", nv.Name).
-				Msg("flatten failed; skipping signal")
-			continue
-		}
-		atomics = append(atomics, flat...)
+	// Collapse the ordered atomics into a map so the FSM, position
+	// extractor, and SSE wire-builder can keep their map-based contracts.
+	// Order within a batch is preserved by codec.Decode; later atomics
+	// for the same field win, matching the legacy NormalizeFleetUnits
+	// behaviour where the last (most recent) value for a name was kept.
+	signals := make(map[string]any, len(decoded))
+	for _, a := range decoded {
+		signals[a.Field] = a.Value
 	}
-	log.Debug().
-		Int("normalized", len(normalized)).
-		Int("atomics", len(atomics)).
-		Int("flatten_errors", flattenErrs).
-		Msg("flatten step complete")
+	normalizeFleetUnits(signals)
 
-	buckets := bucketAtomics(atomics)
 	log.Debug().
-		Int("hot_tables", len(buckets.HotByTable)).
-		Int("cold_atomics", len(buckets.Cold)).
-		Msg("bucket step complete")
+		Int("atomics", len(decoded)).
+		Int("unique_signals", len(signals)).
+		Msg("ProcessBatch: decoded payload")
 
-	// Phase-42 (prompt 0077): the signal_catalog upsert + signal_observations
-	// fan-out + security_events case were dropped. Cold residue, security
-	// signals, and the catalog all flow through the typed signal_log pipeline
-	// (000167+) downstream. The local `unique` dedup is still computed for
-	// observability metrics.
-	seen := make(map[string]struct{}, len(buckets.AllNames))
-	unique := buckets.AllNames[:0]
-	for _, n := range buckets.AllNames {
-		if _, ok := seen[n]; ok {
-			continue
-		}
-		seen[n] = struct{}{}
-		unique = append(unique, n)
-	}
-	log.Debug().
-		Int("unique_names", len(unique)).
-		Msg("dedup step complete")
-
-	hotRows := map[string]map[string]any{}
-	for table, items := range buckets.HotByTable {
-		hotRows[table] = h.buildHotRow(table, items, &buckets.Cold)
-	}
-	log.Debug().
-		Int("hot_rows", len(hotRows)).
-		Int("cold_atomics_after_transform", len(buckets.Cold)).
-		Msg("hot row build step complete")
-
-	// FSM hooks — fire AFTER the bucket/transform step but BEFORE write fan-out
-	// so connection-state, drive, charge, and automation rule FSMs see every
-	// batch in arrival order. Order with writes matters (prompt 27): if writes
-	// were to fail, the FSM has already observed the transition and follow-up
-	// batches will keep its state coherent.
+	// FSM hooks fire BEFORE write fan-out so connection-state, drive,
+	// charge, and automation rule FSMs see every batch in arrival order.
+	// Per prompt 27: even if writes fail, the FSM has already observed
+	// the transition and follow-up batches keep its state coherent.
 	//
-	// 1. Connection FSM: per-vehicle health/staleness tracker. Lookup is guarded
-	//    by connFSMMu; the map is initialized in NewTelemetryHandler (e516fef
-	//    nil-map regression guard).
+	// 1. Connection FSM: per-vehicle health/staleness tracker. Lookup is
+	//    guarded by connFSMMu; the map is initialised in NewTelemetryHandler
+	//    (e516fef nil-map regression guard).
 	if vehicleID > 0 {
 		h.connFSMMu.Lock()
 		cfsm, ok := h.connFSMs[vehicleID]
@@ -582,78 +536,47 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 			h.connFSMs[vehicleID] = cfsm
 		}
 		h.connFSMMu.Unlock()
-		cfsm.RecordBatch(len(atomics), "fleet_telemetry")
+		cfsm.RecordBatch(len(decoded), "fleet_telemetry")
 	}
 
-	// 2. Vehicle/drive/charge FSM: feed it the same atomic stream the buckets
-	//    were built from, adapted to the legacy map shape its trackStateTransition
-	//    / commitStateTransition logic still expects. FSM internals are unchanged.
+	// 2. Vehicle/drive/charge FSM: feed it the same flattened signal map
+	//    so its trackStateTransition / commitStateTransition logic sees
+	//    every field. FSM internals are unchanged.
 	if vehicleID > 0 && h.fsmHandler != nil {
-		fsmSignals := make(map[string]interface{}, len(atomics))
-		for _, a := range atomics {
-			fsmSignals[a.Name] = a.Value
-		}
-		h.fsmHandler.ProcessSignals(ctx, vehicleID, fsmSignals)
+		h.fsmHandler.ProcessSignals(ctx, vehicleID, signals)
 	}
 
-	// Fan-out: dispatch each populated hot row to its per-table repo. Errors
-	// are aggregated (not returned) so a slow/failing table does not lose
-	// writes destined for sibling tables.
-	type writeErr struct {
-		table string
-		err   error
-	}
-	var writeErrs []writeErr
-	dispatch := func(table string, fn func() error) {
-		if err := fn(); err != nil {
-			writeErrs = append(writeErrs, writeErr{table, err})
+	// Position write — the only surviving hot-table destination after
+	// prompt 0078. extractPosition returns nil if no GPS coordinates are
+	// present, which keeps the table clean of (0,0) noise.
+	hotRows := map[string]map[string]any{}
+	if pos := h.extractPosition(signals); pos != nil {
+		row := positionToHotRow(*pos)
+		if len(row) > 0 {
+			hotRows["positions"] = row
 		}
-	}
-	for table, row := range hotRows {
-		if len(row) == 0 {
-			continue
-		}
-		switch table {
-		case "positions":
-			dispatch(table, func() error {
-				return h.posRepo.InsertFromMap(ctx, vehicleID, ts, row)
-			})
-		default:
-			// Tables whose repos were removed (vehicle_live_state, charging_telemetry,
-			// climate_snapshots, motor_snapshots, vehicle_meta_snapshots,
-			// security_events) are silently skipped — their signals already
-			// land in signal_log via signalHistoryWriter.
+		pos.VehicleID = vehicleID
+		pos.Ts = ts
+		pos.Source = "fleet_telemetry"
+		if err := h.posRepo.BulkInsert(ctx, []models.Position{*pos}); err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("ProcessBatch: failed to store position")
 		}
 	}
 
-	// Typed-tables SSE broadcast (Phase 6 wire format). Frontend SSE consumer
-	// rewrite to read `tables.<name>.<column>` is Phase 7's responsibility.
-	// Uses Redis Pub/Sub when available for multi-pod delivery.
+	// Typed-tables SSE broadcast (Phase 6 wire format, narrowed to
+	// `positions` after prompt 0078). Uses Redis Pub/Sub when available
+	// for multi-pod delivery.
 	h.broadcastSSE(buildSSEPayload(vehicleID, ts, hotRows))
-
-	total := len(hotRows)
-	failed := len(writeErrs)
-
-	for _, we := range writeErrs {
-		log.Error().
-			Err(we.err).
-			Str("table", we.table).
-			Msg("telemetry write failed")
-	}
 
 	log.Info().
 		Str("vin", vin).
 		Int64("vehicle_id", vehicleID).
-		Int("normalized", len(normalized)).
-		Int("atomics", len(atomics)).
-		Int("hot_writes", len(hotRows)).
-		Int("write_failures", failed).
+		Int("atomics", len(decoded)).
+		Int("unique_signals", len(signals)).
+		Int("hot_rows", len(hotRows)).
 		Dur("duration", time.Since(startedAt)).
 		Msg("telemetry batch processed")
 
-	if total > 0 && failed == total {
-		return fmt.Errorf("all %d write targets failed (systemic)", total)
-	}
 	return nil
 }
 
@@ -719,83 +642,204 @@ func (h *TelemetryHandler) broadcastSSE(payload map[string]any) {
 	h.eventHub.Broadcast("vehicle_update", payload)
 }
 
-// Phase-42 (prompt 0077): buildColdObservations was deleted with
-// internal/database/signal_observation_repo.go. Cold-residue atomics now
-// flow through the typed signal_log pipeline (000167+) rather than the
-// legacy signal_observations debug-helper hypertable.
+// Phase-42 (prompt 0079a): the buildHotRow / bucketAtomics / bucketResult
+// helpers and the cold-residue routing they implemented were removed
+// alongside internal/telemetry. Hot-table fan-out is now narrowed to
+// `positions` (the only surviving destination after prompt 0078); cold
+// signals flow through the typed signal_log pipeline (000167+) downstream
+// of this file.
 
-// buildHotRow folds a slice of atomics that all target the same table into one
-// column->value map, applying each route's Transformer where present. A
-// transform error does NOT abort the row — the offending atomic is appended to
-// demoteCold so the data still lands losslessly in signal_log.
-func (h *TelemetryHandler) buildHotRow(table string, atomics []telemetry.Atomic, demoteCold *[]telemetry.Atomic) map[string]any {
-	row := map[string]any{}
-	for _, a := range atomics {
-		hot := telemetry.LookupHot(a.Name)
-		if hot == nil || hot.Column == "" {
-			*demoteCold = append(*demoteCold, a)
-			continue
-		}
-		v := a.Value
-		if hot.Transformer != nil {
-			tv, err := hot.Transformer(v)
-			if err != nil {
-				log.Warn().
-					Err(err).
-					Str("signal", a.Name).
-					Str("table", table).
-					Msg("transform failed; demoting to cold")
-				*demoteCold = append(*demoteCold, a)
-				continue
-			}
-			v = tv
-		}
-		row[hot.Column] = v
+// positionToHotRow folds a *models.Position into the SI column map the
+// `positions` hypertable expects (lat / lng / heading_deg / speed_mps /
+// altitude_m / gps_state — see internal/database/position_repo.go::
+// positionColumns). Returns an empty map if no GPS coordinates are set
+// so the caller can skip the SSE write entirely.
+func positionToHotRow(p models.Position) map[string]any {
+	if p.Latitude == 0 && p.Longitude == 0 {
+		return map[string]any{}
+	}
+	row := map[string]any{
+		"lat": p.Latitude,
+		"lng": p.Longitude,
+	}
+	if p.Heading != nil {
+		row["heading_deg"] = float64(*p.Heading)
+	}
+	if p.SpeedMph != nil {
+		// SI canonical column is m/s; legacy models.Position carries mph.
+		row["speed_mps"] = *p.SpeedMph * 0.44704
+	}
+	if p.ElevationM != nil {
+		row["altitude_m"] = *p.ElevationM
+	}
+	if p.GpsState != nil {
+		row["gps_state"] = *p.GpsState
 	}
 	return row
 }
 
-// bucketResult partitions a flattened atomic stream into per-hot-table queues
-// and a cold residue (atomics with no HotCatalog mapping). AllNames preserves
-// every atomic name in arrival order for the catalog upsert step.
-type bucketResult struct {
-	HotByTable map[string][]telemetry.Atomic
-	Cold       []telemetry.Atomic
-	AllNames   []string
-}
+// normalizeFleetUnits applies the Tesla Fleet Telemetry enum-prefix
+// stripping and compound-map flattening that the legacy
+// internal/telemetry.NormalizeFleetUnits helper used to perform on the
+// map-based ProcessSignals path. The map is mutated in place.
+//
+// Phase-42 forward-only note: production ingest goes through
+// (*internal/tesla/normalize.Pipeline).Process which handles enum/unit
+// conversion via the typed protomodel + units packages. This map-based
+// helper exists ONLY for the legacy MQTT subscriber callback in
+// cmd/teslasync/main.go (which still hands ProcessSignals a
+// map[string]interface{}) and the HTTP debug ingest endpoint. A future
+// prompt that switches main.go to mqtt.NewPipelineSubscriber will retire
+// this helper alongside ProcessSignals.
+func normalizeFleetUnits(signals map[string]interface{}) {
+	for name, val := range signals {
+		switch name {
+		case "Gear":
+			if parsed := enums.ParseGear(toString(val)); parsed != "" {
+				signals[name] = parsed
+			}
+		case "ForwardCollisionWarning":
+			signals[name] = enums.ParseForwardCollisionWarning(toString(val))
+		case "LaneDepartureAvoidance":
+			signals[name] = enums.ParseLaneDepartureAvoidance(toString(val))
+		case "SpeedLimitWarning":
+			signals[name] = enums.ParseSpeedLimitWarning(toString(val))
+		case "CruiseFollowDistance":
+			signals[name] = enums.ParseCruiseFollowDistance(toString(val))
+		case "SentryMode":
+			signals[name] = enums.ParseSentryMode(toString(val))
+		case "CenterDisplay":
+			signals[name] = enums.ParseCenterDisplay(toString(val))
+		case "BMSState":
+			signals[name] = enums.ParseBMSState(toString(val))
+		case "ChargePort":
+			signals[name] = enums.ParseChargePort(toString(val))
+		case "ChargePortLatch":
+			signals[name] = enums.ParseChargePortLatch(toString(val))
+		case "ChargeState":
+			signals[name] = enums.ParseChargeState(toString(val))
+		case "DetailedChargeState":
+			signals[name] = enums.ParseDetailedChargeState(toString(val))
+		case "ScheduledChargingMode":
+			signals[name] = enums.ParseScheduledChargingMode(toString(val))
+		case "CabinOverheatProtectionMode":
+			signals[name] = enums.ParseCabinOverheatMode(toString(val))
+		case "ClimateKeeperMode":
+			signals[name] = enums.ParseClimateKeeperMode(toString(val))
+		case "LightsTurnSignal":
+			signals[name] = enums.ParseTurnSignal(toString(val))
+		case "TonneauPosition":
+			signals[name] = enums.ParseTonneauPosition(toString(val))
+		case "TonneauTentMode":
+			signals[name] = enums.ParseTonneauTentMode(toString(val))
+		case "DefrostMode":
+			signals[name] = enums.ParseDefrostMode(toString(val))
+		case "HvacAutoMode":
+			signals[name] = enums.ParseHvacAutoMode(toString(val))
+		case "FdWindow", "FpWindow", "RdWindow", "RpWindow":
+			signals[name] = enums.ParseWindowState(toString(val))
+		case "PowershareStatus":
+			signals[name] = enums.ParsePowershareStatus(toString(val))
+		case "PowershareStopReason":
+			signals[name] = enums.ParsePowershareStopReason(toString(val))
+		case "PowershareType":
+			signals[name] = enums.ParsePowershareType(toString(val))
+		}
 
-// bucketAtomics walks atomics and routes each one via telemetry.LookupHot.
-// Compound parents (HotRoute with empty Column) should never reach here —
-// Flatten expands them into atomics first. If one slips through, treat it as
-// unmapped and route to cold so we don't lose the data.
-func bucketAtomics(atomics []telemetry.Atomic) bucketResult {
-	res := bucketResult{
-		HotByTable: map[string][]telemetry.Atomic{},
-		Cold:       make([]telemetry.Atomic, 0),
-		AllNames:   make([]string, 0, len(atomics)),
-	}
-	for _, a := range atomics {
-		res.AllNames = append(res.AllNames, a.Name)
-		hot := telemetry.LookupHot(a.Name)
-		if hot == nil || hot.Column == "" {
-			res.Cold = append(res.Cold, a)
+		// Compound flattening for registry-typed signals. Done in the
+		// same pass so each entry is visited exactly once.
+		info, ok := enums.SignalRegistry[name]
+		if !ok {
 			continue
 		}
-		res.HotByTable[hot.Table] = append(res.HotByTable[hot.Table], a)
+		switch info.Type {
+		case enums.TypeDoors, enums.TypeTireLocation:
+			signals[name] = flattenCompoundMapValue(signals[name])
+		case enums.TypeTime:
+			signals[name] = flattenCompoundTimeValue(signals[name])
+		}
 	}
-	return res
 }
 
-// normalizeFleetSignals adapts the slice-based telemetry.NormalizeFleetUnits
-// helper to the legacy map-based ProcessSignals path.
-//
-// ProcessSignals (and the FSM/SignalStore consumers downstream) still use
-// map[string]interface{}, so we round-trip through the ordered slice API
-// for the duration of the normalization step. New code paths should call
-// telemetry.NormalizeFleetUnits directly with an ordered batch decoded
-// from Tesla emission order.
-func normalizeFleetUnits(signals map[string]interface{}) {
-	nvs := telemetry.FromMap(signals)
-	nvs = telemetry.NormalizeFleetUnits(nvs)
-	telemetry.WriteIntoMap(nvs, signals)
+// flattenCompoundMapValue renders a {DriverFront,...} or {FrontLeft,...}
+// compound map as a JSON string. Returns the input unchanged when it is
+// already a string or has an unsupported shape — this matches the legacy
+// internal/telemetry.flattenCompoundMap behaviour the FSM/SignalStore
+// consumers depend on.
+func flattenCompoundMapValue(v any) any {
+	if v == nil {
+		return v
+	}
+	if _, ok := v.(string); ok {
+		return v
+	}
+	m, ok := v.(map[string]interface{})
+	if !ok {
+		return v
+	}
+	if inner, has := m["value"]; has {
+		if innerMap, ok := inner.(map[string]interface{}); ok {
+			m = innerMap
+		} else if s, ok := inner.(string); ok {
+			return s
+		}
+	}
+	if jsonBytes, err := json.Marshal(m); err == nil {
+		return string(jsonBytes)
+	}
+	return v
+}
+
+// flattenCompoundTimeValue renders a {hour, minute, second} compound as
+// an "HH:MM:SS" string. Returns the input unchanged for malformed or
+// out-of-range values rather than corrupting them to "00:00:00".
+func flattenCompoundTimeValue(v any) any {
+	if v == nil {
+		return v
+	}
+	if _, ok := v.(string); ok {
+		return v
+	}
+	m, ok := v.(map[string]interface{})
+	if !ok {
+		return v
+	}
+	if inner, has := m["value"]; has {
+		if innerMap, ok := inner.(map[string]interface{}); ok {
+			m = innerMap
+		} else if s, ok := inner.(string); ok {
+			return s
+		}
+	}
+	hour, hOk := extractCompoundTimeField(m, "hour")
+	minute, mOk := extractCompoundTimeField(m, "minute")
+	if !hOk || !mOk {
+		return v
+	}
+	second, _ := extractCompoundTimeField(m, "second")
+	if hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59 {
+		return v
+	}
+	return fmt.Sprintf("%02d:%02d:%02d", hour, minute, second)
+}
+
+// extractCompoundTimeField pulls an integer time component from a compound
+// time map. Accepts the standard JSON-decoded number types plus json.Number.
+func extractCompoundTimeField(m map[string]interface{}, key string) (int, bool) {
+	v, ok := m[key]
+	if !ok {
+		return 0, false
+	}
+	switch val := v.(type) {
+	case float64:
+		return int(val), true
+	case int:
+		return val, true
+	case int64:
+		return int(val), true
+	case json.Number:
+		f, err := val.Float64()
+		return int(f), err == nil
+	}
+	return 0, false
 }

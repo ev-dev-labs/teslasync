@@ -17,7 +17,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	platformdb "github.com/ev-dev-labs/teslasync/internal/platform/database"
-	"github.com/ev-dev-labs/teslasync/internal/telemetry"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 )
 
 // TestTelemetryReplay is the Phase 6.32 merge-gate integration test. It replays
@@ -80,7 +80,7 @@ func TestTelemetryReplay(t *testing.T) {
 
 			before := snapshotCounts(t, pool, vehicleID)
 
-			if err := h.ProcessBatch(ctx, batch.VIN, batch.NamedValues()); err != nil {
+			if err := h.ProcessBatch(ctx, batch.VIN, batch.Atomics()); err != nil {
 				t.Fatalf("ProcessBatch: %v", err)
 			}
 
@@ -150,10 +150,22 @@ type fixtureBatch struct {
 	Signals []fixtureSignal `json:"signals"`
 }
 
-func (b fixtureBatch) NamedValues() []telemetry.NamedValue {
-	out := make([]telemetry.NamedValue, 0, len(b.Signals))
+// Atomics renders the fixture's signals into the codec.Atomic shape that
+// TelemetryHandler.ProcessBatch consumes. EmittedAt is set to time.Now()
+// because fixtures are JSON snapshots without a producer-side timestamp;
+// VehicleID carries the fixture VIN so downstream string-keyed assertions
+// (e.g. signal_log per-vehicle counts) line up with the rest of the test
+// harness.
+func (b fixtureBatch) Atomics() []codec.Atomic {
+	now := time.Now().UTC()
+	out := make([]codec.Atomic, 0, len(b.Signals))
 	for _, s := range b.Signals {
-		out = append(out, telemetry.NamedValue{Name: s.Name, Value: s.Value})
+		out = append(out, codec.Atomic{
+			Field:     s.Name,
+			Value:     s.Value,
+			EmittedAt: now,
+			VehicleID: b.VIN,
+		})
 	}
 	return out
 }

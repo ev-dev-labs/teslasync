@@ -1,0 +1,33 @@
+=== PREFLIGHT ===
+HEAD=b775d39d4d29a2e3a39744369f709091162045b2
+=== PREDECESSOR ===
+EXIT=0
+STATUS=DONE
+=== ACTION ===
+Replaced internal/telemetry import in telemetry_handler_ingest.go with internal/enums + internal/tesla/codec.
+Removed dead-code helpers: bucketAtomics, buildHotRow, bucketResult.
+Removed no-op telemetry.CanonicalizeMap call (SignalAliases was empty).
+Reimplemented private normalizeFleetUnits map helper inline using internal/enums (no telemetry shim).
+Added private flattenCompoundMapValue / flattenCompoundTimeValue / extractCompoundTimeField helpers (map-based equivalents of the legacy slice helpers).
+Added positionToHotRow helper to map *models.Position to SI columns for the surviving 'positions' SSE table.
+Rewrote ProcessBatch signature: []telemetry.NamedValue -> []codec.Atomic; removed bucket/hotRow logic; narrowed hot fan-out to positions-only.
+Rewrote SSE block in ProcessSignals to emit positions-only typed-tables payload (signal_change SSE channel handles per-field updates per prompt 0071).
+Updated telemetry_handler_integration_test.go: import codec instead of telemetry; renamed NamedValues() -> Atomics() returning []codec.Atomic.
+=== CHANGES ===
+ internal/api/telemetry_handler_ingest.go           | 508 +++++++++++----------
+ internal/api/telemetry_handler_integration_test.go |  22 +-
+ 2 files changed, 293 insertions(+), 237 deletions(-)
+
+--- import-residual scan ---
+no Go source imports of internal/telemetry remain outside internal/telemetry/
+
+--- go build ./... ---
+go build EXIT=0
+--- go vet ./... ---
+go vet EXIT=0
+=== GATE ===
+All gate checks passed.
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
+e589a96338058d657ae4714090006e11e9225907 fixer-precursor(0079a): Consumer migration -- api telemetry handler ingest
