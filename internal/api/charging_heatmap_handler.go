@@ -54,13 +54,17 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
+	// Phase-42 (000171_charging_si): SI canonical columns. We convert
+	// total_energy_added_wh -> kWh and peak_power_w -> kW at the SQL boundary
+	// so the JSON response keys (avg_energy in kWh, avg_power in kW) stay
+	// stable. The legacy duration column is derived from EXTRACT(EPOCH ...).
 	// Heatmap data: hour of day × day of week
 	heatmapRows, err := h.db.Pool.Query(ctx, `
-		SELECT EXTRACT(DOW FROM start_ts)::int  AS day_of_week,
-		       EXTRACT(HOUR FROM start_ts)::int  AS hour_of_day,
-		       COUNT(*)                             AS session_count,
-		       COALESCE(AVG(energy_added_kwh),0) AS avg_energy,
-		       COALESCE(AVG(cost),0)                AS avg_cost
+		SELECT EXTRACT(DOW FROM started_at)::int  AS day_of_week,
+		       EXTRACT(HOUR FROM started_at)::int AS hour_of_day,
+		       COUNT(*)                            AS session_count,
+		       COALESCE(AVG(total_energy_added_wh) / 1000.0, 0) AS avg_energy,
+		       COALESCE(AVG(cost_decimal), 0)      AS avg_cost
 		FROM charging_sessions
 		WHERE vehicle_id = $1
 		GROUP BY day_of_week, hour_of_day
@@ -90,16 +94,17 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Location breakdown
+	// Location breakdown — Phase-42 replaces the legacy charger-location text
+	// column with the geocoded start_place column captured at session start.
 	locRows, err := h.db.Pool.Query(ctx, `
-		SELECT COALESCE(location_name, 'Unknown') AS location,
-		       COUNT(*)                            AS count,
-		       COALESCE(SUM(energy_added_kwh),0) AS total_kwh,
-		       COALESCE(SUM(cost),0)                AS total_cost,
-		       COALESCE(AVG(charger_power_kw_max),0)       AS avg_power
+		SELECT COALESCE(start_place, 'Unknown')                  AS location,
+		       COUNT(*)                                          AS count,
+		       COALESCE(SUM(total_energy_added_wh) / 1000.0, 0)  AS total_kwh,
+		       COALESCE(SUM(cost_decimal), 0)                    AS total_cost,
+		       COALESCE(AVG(peak_power_w) / 1000.0, 0)           AS avg_power
 		FROM charging_sessions
 		WHERE vehicle_id = $1
-		GROUP BY location_name
+		GROUP BY start_place
 		ORDER BY count DESC
 		LIMIT 10`, vehicleID)
 	if err != nil {
@@ -128,13 +133,14 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Summary stats
+	// Summary stats — duration derived from ended_at - started_at since the
+	// legacy duration column was dropped by 000171.
 	var summary chargingSummary
 	err = h.db.Pool.QueryRow(ctx, `
-		SELECT COUNT(*)                             AS total_sessions,
-		       COALESCE(SUM(energy_added_kwh),0) AS total_kwh,
-		       COALESCE(SUM(cost),0)                AS total_cost,
-		       COALESCE(AVG(duration_min),0)        AS avg_duration
+		SELECT COUNT(*)                                                                      AS total_sessions,
+		       COALESCE(SUM(total_energy_added_wh) / 1000.0, 0)                              AS total_kwh,
+		       COALESCE(SUM(cost_decimal), 0)                                                AS total_cost,
+		       COALESCE(AVG(EXTRACT(EPOCH FROM (ended_at - started_at)) / 60.0), 0)          AS avg_duration
 		FROM charging_sessions WHERE vehicle_id = $1`, vehicleID).
 		Scan(&summary.TotalSessions, &summary.TotalKWh, &summary.TotalCost, &summary.AvgDuration)
 	if err != nil {

@@ -104,12 +104,17 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		// Count charge cycles from charging sessions (sum of SOC deltas / 100)
+		// Count charge cycles from charging sessions (sum of SOC deltas / 100).
+		// Phase-42 (000171_charging_si): use SI columns start_soc_pct/end_soc_pct
+		// (DOUBLE PRECISION) instead of legacy smallint battery percent columns.
+		// The new schema also stores the server-computed delta_soc_pct directly,
+		// but we sum GREATEST(end-start, 0) inline to keep the same semantics
+		// as the legacy query (filter to rows where the SoC actually rose).
 		if h.db != nil {
 			var totalSOCDelta *float64
 			if err := h.db.Pool.QueryRow(r.Context(),
-				`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0)) 
-				 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
+				`SELECT SUM(GREATEST(end_soc_pct - start_soc_pct, 0))
+				 FROM charging_sessions WHERE vehicle_id = $1 AND end_soc_pct > start_soc_pct`,
 				vehicleID).Scan(&totalSOCDelta); err != nil && err != pgx.ErrNoRows {
 				log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("battery: charge cycle SOC delta query failed")
 			}
