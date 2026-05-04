@@ -29,12 +29,17 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Total electricity cost from charging sessions
+	// Total electricity cost from charging sessions. Phase-42 SI canonical
+	// charging_sessions (000171): cost_decimal NUMERIC, total_energy_added_wh
+	// BIGINT. Cast cost_decimal to float8 for pgx scan; convert Wh→kWh.
 	var totalChargingCost, totalKWh float64
 	var totalSessions int
 	err = h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(SUM(cost), 0), COALESCE(SUM(energy_added_kwh), 0), COUNT(*)
-		 FROM charging_sessions WHERE vehicle_id = $1 AND cost > 0`, vehicleID,
+		`SELECT COALESCE(SUM(cost_decimal::float8), 0),
+		        COALESCE(SUM(total_energy_added_wh) / 1000.0, 0),
+		        COUNT(*)
+		 FROM charging_sessions
+		 WHERE vehicle_id = $1 AND cost_decimal > 0`, vehicleID,
 	).Scan(&totalChargingCost, &totalKWh, &totalSessions)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("tco: failed to get charging costs")
@@ -42,12 +47,16 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Total distance and date range from daily_mileage
+	// Total distance and date range derived from drives. Phase-42 dropped
+	// daily_mileage; SUM(distance_m) / 1000 gives km, MIN/MAX(started_at)
+	// give the ownership date range over the same data set.
 	var totalKm float64
 	var firstDate, lastDate *time.Time
 	err = h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(SUM(distance_km), 0), MIN(date), MAX(date)
-		 FROM daily_mileage WHERE vehicle_id = $1`, vehicleID,
+		`SELECT COALESCE(SUM(distance_m) / 1000.0, 0),
+		        MIN(started_at),
+		        MAX(started_at)
+		 FROM drives WHERE vehicle_id = $1 AND distance_m > 0`, vehicleID,
 	).Scan(&totalKm, &firstDate, &lastDate)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("tco: failed to get mileage data")
@@ -116,12 +125,12 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := h.db.Pool.Query(ctx,
-		`SELECT TO_CHAR(start_ts, 'YYYY-MM') as month,
-		        COALESCE(SUM(cost), 0) as monthly_cost,
-		        COALESCE(SUM(energy_added_kwh), 0) as monthly_kwh
+		`SELECT TO_CHAR(started_at, 'YYYY-MM') as month,
+		        COALESCE(SUM(cost_decimal::float8), 0) as monthly_cost,
+		        COALESCE(SUM(total_energy_added_wh) / 1000.0, 0) as monthly_kwh
 		 FROM charging_sessions
-		 WHERE vehicle_id = $1 AND cost > 0
-		 GROUP BY TO_CHAR(start_ts, 'YYYY-MM')
+		 WHERE vehicle_id = $1 AND cost_decimal > 0
+		 GROUP BY TO_CHAR(started_at, 'YYYY-MM')
 		 ORDER BY month`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Msg("tco: failed to get monthly breakdown")

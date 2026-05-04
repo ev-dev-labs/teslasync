@@ -355,36 +355,10 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	}
 	duration := time.Since(active.StartTime).Minutes()
 
-	// Backfill from telemetry readings if in-memory values are empty
-	if endBattery == 0 || active.EnergyAdded == 0 || active.Power == nil || active.Voltage == nil {
-		var maxBatt, maxPower, maxEnergy, maxVoltage, maxCurrent *float64
-		var maxPhases *int
-		_ = t.db.Pool.QueryRow(ctx, `SELECT 
-			MAX(battery_level)::float, MAX(power_kw), MAX(energy_added),
-			MAX(voltage), MAX(current_amps), MAX(phases)
-			FROM charge_telemetry_readings WHERE session_id = $1`,
-			active.SessionID).Scan(&maxBatt, &maxPower, &maxEnergy, &maxVoltage, &maxCurrent, &maxPhases)
-		if endBattery == 0 && maxBatt != nil {
-			endBattery = int(*maxBatt)
-		}
-		if active.EnergyAdded == 0 && maxEnergy != nil && *maxEnergy > 0 {
-			active.EnergyAdded = *maxEnergy
-		}
-		if active.Power == nil && maxPower != nil {
-			active.Power = maxPower
-		}
-		if active.Voltage == nil && maxVoltage != nil {
-			v := int(*maxVoltage)
-			active.Voltage = &v
-		}
-		if active.Current == nil && maxCurrent != nil {
-			v := int(*maxCurrent)
-			active.Current = &v
-		}
-		if active.Phases == nil && maxPhases != nil {
-			active.Phases = maxPhases
-		}
-	}
+	// Phase-42 (prompt 0077): the legacy charge-telemetry MAX-rollup
+	// backfill block was removed. The StateReader path immediately below is
+	// the SI replacement — it reconstructs full signal state at a point in
+	// time using last-known values (ADR-002 / phase-39).
 
 	// Estimate energy from battery% diff if direct energy signal unavailable
 	if active.EnergyAdded == 0 && active.StartBatteryLevel > 0 && endBattery > active.StartBatteryLevel {

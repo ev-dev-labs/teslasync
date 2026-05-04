@@ -212,11 +212,14 @@ func (p *Processor) processAnalytics(ctx context.Context, req *models.ExportJobR
 		fleetDrives += driveCount
 		fleetSessions += len(allSessions)
 
-		// Battery trend from cagg_battery_daily
+		// Battery trend from cagg_battery_daily.
+		// Phase-42 (prompt 0077, migration 000175): the legacy
+		// per-day charge-signal counter column was renamed to
+		// soc_sample_count.
 		const btNominalCap = 75.0
 		const btNominalRange = 531.0
 		btRows, btErr := p.db.Pool.Query(ctx,
-			`SELECT bucket, end_soc, min_soc, max_soc, charge_signal_count
+			`SELECT bucket, end_soc, min_soc, max_soc, soc_sample_count
 			 FROM cagg_battery_daily
 			 WHERE vehicle_id = $1 AND bucket >= $2
 			 ORDER BY bucket ASC`,

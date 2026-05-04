@@ -12,10 +12,8 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
@@ -26,12 +24,7 @@ type TelemetryHandler struct {
 	db                    *database.DB
 	posRepo               *database.PositionRepo
 	vehicleRepo           *database.VehicleRepo
-	stateRepo             *database.VehicleStateRepo
-	mileageRepo           *database.MileageRepo
-	securityRepo          *database.SecurityRepo
 	swUpdateRepo          *database.SoftwareUpdateRepo
-	signalCatalogRepo     *database.SignalCatalogRepo
-	signalObsRepo         *database.SignalObservationRepo
 	mqttClient            *mqtt.Client
 	logRepo               *database.APICallLogRepo
 	eventHub              *EventHub
@@ -370,130 +363,10 @@ func toTimestamp(v interface{}) *time.Time {
 	return nil
 }
 
-// trackSecurity stores security/access events when relevant signals arrive.
-func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	_, hasLocked := signals["Locked"]
-	_, hasSentry := signals["SentryMode"]
-	_, hasDoor := signals["DoorState"]
-	_, hasWindow := signals["FdWindow"]
-	if !hasLocked && !hasSentry && !hasDoor && !hasWindow {
-		return
-	}
-
-	log.Debug().Int64("vehicle_id", vehicleID).Bool("locked", hasLocked).Bool("sentry", hasSentry).Bool("door", hasDoor).Bool("window", hasWindow).Msg("telemetry: trackSecurity gate passed")
-
-	now := time.Now().UTC()
-
-	// Collect snapshot-level state from all signals in this batch.
-	var locked *bool
-	if v, ok := signals["Locked"]; ok {
-		b := toBool(v)
-		locked = &b
-	}
-	var sentryMode *bool
-	if v, ok := signals["SentryMode"]; ok {
-		b := enums.ParseEnumBool(toString(v))
-		sentryMode = &b
-	}
-	var doorsOpen *string
-	if v, ok := signals["DoorState"]; ok {
-		s := toString(v)
-		doorsOpen = &s
-	}
-	// Aggregate window states into a single WindowsOpen summary.
-	var windowParts []string
-	for _, wp := range []struct{ sig, label string }{
-		{"FdWindow", "FD"}, {"FpWindow", "FP"},
-		{"RdWindow", "RD"}, {"RpWindow", "RP"},
-	} {
-		if v, ok := signals[wp.sig]; ok {
-			s := toString(v)
-			if s != "" && s != "Closed" {
-				windowParts = append(windowParts, wp.label+":"+s)
-			}
-		}
-	}
-	var windowsOpen *string
-	if len(windowParts) > 0 {
-		s := strings.Join(windowParts, ",")
-		windowsOpen = &s
-	}
-	var userPresent *bool
-	if v, ok := signals["DriverSeatOccupied"]; ok {
-		b := toBool(v)
-		userPresent = &b
-	}
-
-	// Base event carries the full snapshot state; each derived event
-	// gets a distinct event_type matching the DB CHECK constraint.
-	base := models.SecurityEvent{
-		VehicleID:   vehicleID,
-		Ts:          now,
-		Locked:      locked,
-		SentryMode:  sentryMode,
-		DoorsOpen:   doorsOpen,
-		WindowsOpen: windowsOpen,
-		UserPresent: userPresent,
-		Source:      "fleet_telemetry",
-	}
-
-	var events []models.SecurityEvent
-
-	if locked != nil {
-		ev := base
-		if *locked {
-			ev.EventType = "lock"
-		} else {
-			ev.EventType = "unlock"
-		}
-		events = append(events, ev)
-	}
-	if sentryMode != nil {
-		ev := base
-		if *sentryMode {
-			ev.EventType = "sentry_on"
-		} else {
-			ev.EventType = "sentry_off"
-		}
-		events = append(events, ev)
-	}
-	if doorsOpen != nil {
-		ev := base
-		if *doorsOpen != "" && *doorsOpen != "Closed" {
-			ev.EventType = "door_open"
-		} else {
-			ev.EventType = "door_closed"
-		}
-		events = append(events, ev)
-	}
-	if hasWindow {
-		ev := base
-		if len(windowParts) > 0 {
-			ev.EventType = "window_open"
-		} else {
-			ev.EventType = "window_closed"
-		}
-		events = append(events, ev)
-	}
-	if userPresent != nil {
-		ev := base
-		if *userPresent {
-			ev.EventType = "user_present"
-		} else {
-			ev.EventType = "user_absent"
-		}
-		events = append(events, ev)
-	}
-
-	if len(events) == 0 {
-		return
-	}
-	if err := h.securityRepo.BulkInsert(ctx, events); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store security events")
-	} else {
-		log.Debug().Int64("vehicle_id", vehicleID).Int("count", len(events)).Msg("telemetry: security events stored")
-	}
-}
+// Phase-42 (prompt 0077): trackSecurity was deleted with security_repo.go.
+// Security signals (Locked, SentryMode, DoorState, FdWindow, etc.) flow
+// through the typed signal_log pipeline (000167+); the legacy snapshot
+// row writer has no SI replacement.
 
 // trackVehicleConfig tracks firmware version changes via swUpdateRepo.
 func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
@@ -517,32 +390,9 @@ func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int
 	}(vehicleID, version)
 }
 
-// trackUserPreferences updates vehicle_units with car display preferences.
-// (Snapshot write to user_preference_snapshots removed — signals land in signal_log.)
-func (h *TelemetryHandler) trackUserPreferences(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	hasDist := signals["SettingDistanceUnit"] != nil
-	hasTemp := signals["SettingTemperatureUnit"] != nil
-	hasCharge := signals["SettingChargeUnit"] != nil
-	hasPressure := signals["SettingTirePressureUnit"] != nil
-	if !hasDist && !hasTemp && !hasPressure && !hasCharge {
-		return
-	}
-
-	distPref := toString(signals["SettingDistanceUnit"])
-	tempPref := toString(signals["SettingTemperatureUnit"])
-	pressurePref := toString(signals["SettingTirePressureUnit"])
-	chargePref := toString(signals["SettingChargeUnit"])
-	_, _ = h.db.Pool.Exec(ctx,
-		`INSERT INTO vehicle_units (vehicle_id, car_distance_pref, car_temp_pref, car_pressure_pref, car_charge_pref, updated_at)
-		 VALUES ($1, NULLIF($2,''), NULLIF($3,''), NULLIF($4,''), NULLIF($5,''), NOW())
-		 ON CONFLICT (vehicle_id) DO UPDATE SET
-		   car_distance_pref = COALESCE(NULLIF($2,''), vehicle_units.car_distance_pref),
-		   car_temp_pref = COALESCE(NULLIF($3,''), vehicle_units.car_temp_pref),
-		   car_pressure_pref = COALESCE(NULLIF($4,''), vehicle_units.car_pressure_pref),
-		   car_charge_pref = COALESCE(NULLIF($5,''), vehicle_units.car_charge_pref),
-		   updated_at = NOW()`,
-		vehicleID, distPref, tempPref, pressurePref, chargePref)
-}
+// Phase-42 (prompt 0077): trackUserPreferences was deleted with the
+// vehicle_units table. Per-vehicle unit display preferences now live in
+// tesla_vehicle_unit_history (000168) populated by internal/tesla/unit_history.
 
 // formatSignalName converts camelCase signal names to snake_case for MQTT topic consistency.
 var _ = formatSignalName // kept for potential future use

@@ -115,48 +115,12 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Vampire drain vs temperature
-	drainRows, err := h.db.Pool.Query(ctx, `
-		SELECT
-		  CASE
-		    WHEN outside_temp_avg < 0 THEN 'Below 0°C'
-		    WHEN outside_temp_avg < 10 THEN '0-10°C'
-		    WHEN outside_temp_avg < 20 THEN '10-20°C'
-		    WHEN outside_temp_avg < 30 THEN '20-30°C'
-		    ELSE 'Above 30°C'
-		  END as temp_bucket,
-		  AVG(drain_rate_pct_per_hour) as avg_drain_rate,
-		  COUNT(*) as event_count
-		FROM vampire_drain_events
-		WHERE vehicle_id = $1 AND outside_temp_avg IS NOT NULL
-		GROUP BY temp_bucket
-		ORDER BY MIN(outside_temp_avg)`, vehicleID)
-	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("temp impact: failed to query vampire drain")
-		writeError(w, http.StatusInternalServerError, "failed to query vampire drain by temperature")
-		return
-	}
-	defer drainRows.Close()
-
-	var vampireDrain []vampireDrainBucket
-	for drainRows.Next() {
-		var b vampireDrainBucket
-		var avgDrain *float64
-		if err := drainRows.Scan(&b.TempBucket, &avgDrain, &b.EventCount); err != nil {
-			log.Error().Err(err).Msg("temp impact: scan vampire drain row")
-			writeError(w, http.StatusInternalServerError, "failed to scan vampire drain data")
-			return
-		}
-		if avgDrain != nil {
-			b.AvgDrainRate = math.Round(*avgDrain*100) / 100
-		}
-		vampireDrain = append(vampireDrain, b)
-	}
-	if err := drainRows.Err(); err != nil {
-		log.Error().Err(err).Msg("temp impact: vampire drain rows iteration")
-		writeError(w, http.StatusInternalServerError, "failed to read vampire drain data")
-		return
-	}
+	// Phase-42 (prompt 0077): vampire drain vs temperature was removed
+	// with the vampire_drain_events table. The frontend key is preserved
+	// as an empty array so the response shape is unchanged. Restoring
+	// this metric requires a follow-on prompt that reconstructs per-park
+	// drain from typed signal_log.
+	vampireDrain := make([]vampireDrainBucket, 0)
 
 	// Phase-42 SI canonical drives. Distance returned in km via SQL division
 	// to keep the legacy `total_distance` semantics (km).

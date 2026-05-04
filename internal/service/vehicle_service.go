@@ -32,24 +32,29 @@ type SignalStateReader interface {
 // and Tesla API synchronisation. Handlers delegate here instead of
 // interacting with repositories directly for complex operations.
 type VehicleService struct {
-	db           *database.DB
-	vehicleRepo  *database.VehicleRepo
-	positionRepo *database.PositionRepo
-	securityRepo *database.SecurityRepo
-	stateRepo    *database.VehicleStateRepo
-	settingsRepo *database.SettingsRepo
-	state        SignalStateReader
+	db            *database.DB
+	vehicleRepo   *database.VehicleRepo
+	positionRepo  *database.PositionRepo
+	settingsRepo  *database.SettingsRepo
+	stateProvider *vehicleStateProvider
+	state         SignalStateReader
 }
 
 // NewVehicleService creates a VehicleService with all required repos.
+//
+// Phase-42 (prompt 0077): the legacy securityRepo and stateRepo fields
+// were removed when their backing tables (security_events, vehicle_states)
+// were dropped. Current vehicle state is now derived from the FSM (see
+// internal/api/fsm_handler.go) + signal.StateReader; the new
+// vehicleStateProvider field exposes a thin fsm_transitions-backed
+// "since when" lookup for handlers that still need it.
 func NewVehicleService(db *database.DB) *VehicleService {
 	return &VehicleService{
-		db:           db,
-		vehicleRepo:  database.NewVehicleRepo(db),
-		positionRepo: database.NewPositionRepo(db),
-		securityRepo: database.NewSecurityRepo(db),
-		stateRepo:    database.NewVehicleStateRepo(db),
-		settingsRepo: database.NewSettingsRepo(db),
+		db:            db,
+		vehicleRepo:   database.NewVehicleRepo(db),
+		positionRepo:  database.NewPositionRepo(db),
+		settingsRepo:  database.NewSettingsRepo(db),
+		stateProvider: &vehicleStateProvider{db: db},
 	}
 }
 
@@ -79,9 +84,47 @@ func (s *VehicleService) SettingsRepo() *database.SettingsRepo {
 	return s.settingsRepo
 }
 
-// StateRepo returns the vehicle state repository.
-func (s *VehicleService) StateRepo() *database.VehicleStateRepo {
-	return s.stateRepo
+// StateRepo returns a vehicleStateProvider that derives current vehicle state
+// + transition timestamp from fsm_transitions (000174). This replaces the
+// legacy *database.VehicleStateRepo accessor that was removed when the
+// vehicle_states snapshot table was dropped (Phase-42 prompt 0077).
+func (s *VehicleService) StateRepo() *vehicleStateProvider {
+	return s.stateProvider
+}
+
+// vehicleStateProvider derives the current vehicle state and the timestamp at
+// which that state began, sourced from fsm_transitions (000174 schema).
+//
+// It is the lightweight fsm_transitions-backed replacement for the legacy
+// *database.VehicleStateRepo.GetCurrentStateSince introduced when the
+// vehicle_states snapshot table was dropped. Methods are nil-safe so
+// constructor-time tests that build a zero-value VehicleService keep
+// compiling.
+type vehicleStateProvider struct {
+	db *database.DB
+}
+
+// GetCurrentStateSince returns the most recent vehicle FSM state for
+// vehicleID along with the timestamp at which that state was entered.
+// Returns ("", nil, nil) when no row exists or when the provider is unwired
+// (for example, in tests that build &VehicleService{} directly).
+func (p *vehicleStateProvider) GetCurrentStateSince(ctx context.Context, vehicleID int64) (string, *time.Time, error) {
+	if p == nil || p.db == nil || p.db.Pool == nil {
+		return "", nil, nil
+	}
+	var state string
+	var since time.Time
+	err := p.db.Pool.QueryRow(ctx,
+		`SELECT to_state, ts FROM fsm_transitions
+		 WHERE vehicle_id = $1 AND fsm_name = 'vehicle'
+		 ORDER BY ts DESC LIMIT 1`,
+		vehicleID,
+	).Scan(&state, &since)
+	if err != nil {
+		// No-row is not a logical error — caller treats it as "unknown".
+		return "", nil, nil
+	}
+	return state, &since, nil
 }
 
 // BuildStateFromSignalStore constructs a VehicleState from the in-memory
@@ -283,9 +326,14 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		}
 	}
 
-	// --- Phase 3: Vehicle state — fallback from state history.
-	if state.State == "" && s.stateRepo != nil {
-		if currentState, err := s.stateRepo.GetCurrentState(ctx, vehicle.ID); err == nil && currentState != "" {
+	// --- Phase 3: Vehicle state — fallback from fsm_transitions.
+	//
+	// Phase-42 (prompt 0077): the legacy s.stateRepo.GetCurrentState read
+	// against vehicle_states was removed. The state-from-FSM lookup is
+	// retained via stateProvider so handlers that build a state from a cold
+	// SignalStore still get a non-empty State string after a pod restart.
+	if state.State == "" && s.stateProvider != nil {
+		if currentState, _, err := s.stateProvider.GetCurrentStateSince(ctx, vehicle.ID); err == nil && currentState != "" {
 			state.State = currentState
 		}
 	}

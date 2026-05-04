@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/fsm"
 	"github.com/ev-dev-labs/teslasync/internal/fsm/charge"
 	"github.com/ev-dev-labs/teslasync/internal/fsm/drive"
@@ -22,7 +21,6 @@ type FSMHandler struct {
 	machines    map[int64]*fsm.VehicleFSM
 	drives      map[int64]*drive.SessionFSM  // active drive sub-FSMs per vehicle
 	charges     map[int64]*charge.SessionFSM // active charge sub-FSMs per vehicle
-	stateRepo   *database.VehicleStateRepo
 	vehicleRepo *database.VehicleRepo
 	transRepo   *database.FSMTransitionRepo
 
@@ -33,12 +31,18 @@ type FSMHandler struct {
 }
 
 // NewFSMHandler creates an authoritative FSM handler.
-func NewFSMHandler(stateRepo *database.VehicleStateRepo, vehicleRepo *database.VehicleRepo, transRepo *database.FSMTransitionRepo) *FSMHandler {
+//
+// Phase-42 (prompt 0077): the legacy *database.VehicleStateRepo dependency
+// was removed. Vehicle current state is now sourced from the in-memory FSM
+// (machines map) populated by ProcessSignals + the periodic reconciler;
+// transitions are durably logged via transRepo.Insert into fsm_transitions
+// (000174 schema). Cold-start initial state defaults to fsm.Online and
+// converges to the correct state within seconds of incoming telemetry.
+func NewFSMHandler(vehicleRepo *database.VehicleRepo, transRepo *database.FSMTransitionRepo) *FSMHandler {
 	return &FSMHandler{
 		machines:      make(map[int64]*fsm.VehicleFSM),
 		drives:        make(map[int64]*drive.SessionFSM),
 		charges:       make(map[int64]*charge.SessionFSM),
-		stateRepo:     stateRepo,
 		vehicleRepo:   vehicleRepo,
 		transRepo:     transRepo,
 		reconcileStop: make(chan struct{}),
@@ -54,45 +58,36 @@ func (h *FSMHandler) SetSignalStore(store *signal.Store) {
 }
 
 // fsmAction handles all side effects of a vehicle state transition:
-// persists to vehicle_states, updates vehicles table, logs to fsm_transitions,
-// and manages drive/charge sub-FSM lifecycle.
+// updates vehicles table and logs to fsm_transitions, and manages
+// drive/charge sub-FSM lifecycle. Phase-42 (prompt 0077) dropped the
+// legacy snapshot-row writer (vehicle_states table) — durable transition
+// history now lives only in fsm_transitions, and the per-vehicle current
+// state is derived from the in-memory FSM.
 type fsmAction struct {
 	handler     *FSMHandler
-	stateRepo   *database.VehicleStateRepo
 	vehicleRepo *database.VehicleRepo
 	transRepo   *database.FSMTransitionRepo
 }
 
 func (a *fsmAction) Execute(ctx context.Context, vehicleID int64, from, to fsm.State, sctx *fsm.SignalContext) error {
 	// Best-effort writes; collect the first error so the FSM can decide whether to
-	// roll back its in-memory transition. We continue past failures so that, e.g.,
-	// a vehicle_states write failure doesn't block the vehicles.state update that
-	// the UI relies on.
+	// roll back its in-memory transition. Phase-42 (prompt 0077): the legacy
+	// vehicle_states snapshot-row writes were removed — fsm_transitions is now
+	// the sole durable record of the transition.
 	var firstErr error
 	keep := func(err error) {
 		if err != nil && firstErr == nil {
 			firstErr = err
 		}
 	}
+	_ = keep // retained for future best-effort write fan-out
 
-	// 1. End current state record
-	if err := a.stateRepo.EndCurrent(ctx, vehicleID); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: failed to end current state")
-		keep(err)
-	}
-
-	// 2. Insert new state record
-	if _, err := a.stateRepo.Insert(ctx, vehicleID, string(to)); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Str("state", string(to)).Msg("fsm: failed to insert state")
-		keep(err)
-	}
-
-	// 3. State is now tracked in the Redis signal cache and in-memory signal store.
+	// 1. State is now tracked in the Redis signal cache and in-memory signal store.
 	// The live-state repo is the single source of truth for current vehicle state.
 
-	// 4. Gear capability is now derived from the signal store, not stored on the vehicle row.
+	// 2. Gear capability is now derived from the signal store, not stored on the vehicle row.
 
-	// 5. Log transition to fsm_transitions
+	// 3. Log transition to fsm_transitions
 	if a.transRepo != nil {
 		snapshot := map[string]interface{}{}
 		if sctx.Gear != "" {
@@ -200,18 +195,17 @@ func (h *FSMHandler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.Vehi
 		return m
 	}
 
-	currentDB, _ := h.stateRepo.GetCurrentState(ctx, vehicleID)
-	if currentDB == "" {
-		currentDB = enums.StateOnline
-	}
-	initial := fsm.State(currentDB)
-	if !initial.IsValid() {
-		initial = fsm.Online
-	}
+	// Phase-42 (prompt 0077): the legacy *VehicleStateRepo.GetCurrentState
+	// lookup that hydrated initial FSM state from the dropped vehicle_states
+	// table is gone. Cold start defaults to fsm.Online; the periodic
+	// reconciler (reconcileVehicle) corrects it within ~15s once telemetry
+	// arrives. Restart-time precision is acceptable here because the
+	// reconciler treats Online → {Driving, Charging, Asleep, Offline} as a
+	// normal forward transition under the same metrics.
+	initial := fsm.Online
 
 	action := &fsmAction{
 		handler:     h,
-		stateRepo:   h.stateRepo,
 		vehicleRepo: h.vehicleRepo,
 		transRepo:   h.transRepo,
 	}
@@ -222,7 +216,7 @@ func (h *FSMHandler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.Vehi
 
 	h.machines[vehicleID] = m
 
-	log.Info().Int64("vehicle_id", vehicleID).Str("state", currentDB).Msg("fsm: initialized vehicle FSM from DB")
+	log.Info().Int64("vehicle_id", vehicleID).Str("state", string(initial)).Msg("fsm: initialized vehicle FSM (default)")
 	return m
 }
 

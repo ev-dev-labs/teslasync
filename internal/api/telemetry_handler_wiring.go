@@ -27,19 +27,14 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 	}
 	bgCtx, bgCancel := context.WithCancel(context.Background())
 	return &TelemetryHandler{
-		db:                db,
-		posRepo:           database.NewPositionRepo(db),
-		vehicleRepo:       database.NewVehicleRepo(db),
-		stateRepo:         database.NewVehicleStateRepo(db),
-		mileageRepo:       database.NewMileageRepo(db),
-		securityRepo:      database.NewSecurityRepo(db),
-		swUpdateRepo:      database.NewSoftwareUpdateRepo(db),
-		signalCatalogRepo: database.NewSignalCatalogRepo(db),
-		signalObsRepo:     database.NewSignalObservationRepo(db),
-		mqttClient:        mc,
-		logRepo:           database.NewAPICallLogRepo(db),
-		eventHub:          hub,
-		sessionTracker:    NewTelemetrySessionTracker(db, eventBus, geocoder, nil),
+		db:             db,
+		posRepo:        database.NewPositionRepo(db),
+		vehicleRepo:    database.NewVehicleRepo(db),
+		swUpdateRepo:   database.NewSoftwareUpdateRepo(db),
+		mqttClient:     mc,
+		logRepo:        database.NewAPICallLogRepo(db),
+		eventHub:       hub,
+		sessionTracker: NewTelemetrySessionTracker(db, eventBus, geocoder, nil),
 		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus, hub, func() pahomqtt.Client {
 			if mc != nil {
 				return mc.Underlying()
@@ -57,7 +52,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		lastWriteAt:           make(map[string]time.Time),
 		accumulatedSignals:    make(map[string]map[string]interface{}),
 		connFSMs:              make(map[int64]*telemetryfsm.ConnectionFSM),
-		fsmHandler:            NewFSMHandler(database.NewVehicleStateRepo(db), database.NewVehicleRepo(db), database.NewFSMTransitionRepo(db)),
+		fsmHandler:            NewFSMHandler(database.NewVehicleRepo(db), database.NewFSMTransitionRepo(db)),
 	}
 }
 

@@ -186,8 +186,7 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 				hotRows[table] = row
 			}
 		}
-		coldObs := h.buildColdObservations(vehicleID, ts, bk.Cold)
-		h.broadcastSSE(buildSSEPayload(vehicleID, ts, hotRows, coldObs))
+		h.broadcastSSE(buildSSEPayload(vehicleID, ts, hotRows))
 	}
 
 	// Update streaming health state
@@ -325,17 +324,17 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 				return
 			}
 
-			// Update daily mileage from odometer readings
-			h.trackMileage(bgCtx, vehicleID, writeSignals)
-
-			// Store security events
-			h.trackSecurity(bgCtx, vehicleID, writeSignals)
+			// Phase-42 (prompt 0077): trackMileage / trackSecurity /
+			// trackUserPreferences were removed with the daily_mileage,
+			// security_events, and vehicle_units tables. The underlying
+			// signals (Odometer, Locked, SentryMode, DoorState, FdWindow,
+			// SettingDistanceUnit, etc.) still flow through the typed
+			// signal_log pipeline (000167+). Per-vehicle unit display
+			// preferences are now persisted via internal/tesla/unit_history
+			// → tesla_vehicle_unit_history.
 
 			// Store vehicle config snapshots
 			h.trackVehicleConfig(bgCtx, vehicleID, writeSignals)
-
-			// Update vehicle_units with car display preferences
-			h.trackUserPreferences(bgCtx, vehicleID, writeSignals)
 
 			// Store accumulated position ╬ô├ç├╢ uses merged signals so fields like
 			// odometer, battery, location, speed are all populated from different
@@ -349,19 +348,6 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 				}
 			}
 		})
-	}
-}
-func (h *TelemetryHandler) trackMileage(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	odomVal, ok := signals["Odometer"]
-	if !ok {
-		return
-	}
-	odometer, odOk := toFloatOk(odomVal)
-	if !odOk || odometer <= 0 {
-		return
-	}
-	if err := h.mileageRepo.UpsertDaily(ctx, vehicleID, odometer); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to upsert daily mileage")
 	}
 }
 
@@ -548,9 +534,11 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 		Int("cold_atomics", len(buckets.Cold)).
 		Msg("bucket step complete")
 
-	// Catalog upsert: dedupe AllNames in-place (stable order) and register
-	// every observed signal name in signal_catalog before any cold inserts
-	// so the signal_observations FK resolves. Single round-trip per batch.
+	// Phase-42 (prompt 0077): the signal_catalog upsert + signal_observations
+	// fan-out + security_events case were dropped. Cold residue, security
+	// signals, and the catalog all flow through the typed signal_log pipeline
+	// (000167+) downstream. The local `unique` dedup is still computed for
+	// observability metrics.
 	seen := make(map[string]struct{}, len(buckets.AllNames))
 	unique := buckets.AllNames[:0]
 	for _, n := range buckets.AllNames {
@@ -560,18 +548,9 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 		seen[n] = struct{}{}
 		unique = append(unique, n)
 	}
-	newCount, err := h.signalCatalogRepo.BulkUpsertObserved(ctx, unique)
-	if err != nil {
-		log.Error().Err(fmt.Errorf("catalog upsert: %w", err)).
-			Str("vin", vin).
-			Int("unique_names", len(unique)).
-			Msg("catalog upsert failed; aborting batch")
-		return fmt.Errorf("catalog upsert: %w", err)
-	}
 	log.Debug().
 		Int("unique_names", len(unique)).
-		Int("new_names", newCount).
-		Msg("catalog upsert complete")
+		Msg("dedup step complete")
 
 	hotRows := map[string]map[string]any{}
 	for table, items := range buckets.HotByTable {
@@ -581,11 +560,6 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 		Int("hot_rows", len(hotRows)).
 		Int("cold_atomics_after_transform", len(buckets.Cold)).
 		Msg("hot row build step complete")
-
-	coldObs := h.buildColdObservations(vehicleID, ts, buckets.Cold)
-	log.Debug().
-		Int("cold_observations", len(coldObs)).
-		Msg("cold observation build step complete")
 
 	// FSM hooks — fire AFTER the bucket/transform step but BEFORE write fan-out
 	// so connection-state, drive, charge, and automation rule FSMs see every
@@ -622,10 +596,9 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 		h.fsmHandler.ProcessSignals(ctx, vehicleID, fsmSignals)
 	}
 
-	// Fan-out: dispatch each populated hot row to its per-table repo, then the
-	// cold residue to signal_observations. Errors are aggregated (not returned)
-	// so a slow/failing table does not lose writes destined for sibling tables;
-	// terminal handling of writeErrs is layered in the next prompt (28).
+	// Fan-out: dispatch each populated hot row to its per-table repo. Errors
+	// are aggregated (not returned) so a slow/failing table does not lose
+	// writes destined for sibling tables.
 	type writeErr struct {
 		table string
 		err   error
@@ -645,28 +618,20 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 			dispatch(table, func() error {
 				return h.posRepo.InsertFromMap(ctx, vehicleID, ts, row)
 			})
-		case "security_events":
-			dispatch(table, func() error {
-				return h.securityRepo.InsertFromMap(ctx, vehicleID, ts, row)
-			})
 		default:
 			// Tables whose repos were removed (vehicle_live_state, charging_telemetry,
-			// climate_snapshots, motor_snapshots, vehicle_meta_snapshots) are silently
-			// skipped — their signals already land in signal_log via signalHistoryWriter.
+			// climate_snapshots, motor_snapshots, vehicle_meta_snapshots,
+			// security_events) are silently skipped — their signals already
+			// land in signal_log via signalHistoryWriter.
 		}
-	}
-	if len(coldObs) > 0 {
-		dispatch("signal_observations", func() error {
-			return h.signalObsRepo.BulkInsert(ctx, coldObs)
-		})
 	}
 
 	// Typed-tables SSE broadcast (Phase 6 wire format). Frontend SSE consumer
 	// rewrite to read `tables.<name>.<column>` is Phase 7's responsibility.
 	// Uses Redis Pub/Sub when available for multi-pod delivery.
-	h.broadcastSSE(buildSSEPayload(vehicleID, ts, hotRows, coldObs))
+	h.broadcastSSE(buildSSEPayload(vehicleID, ts, hotRows))
 
-	total := len(hotRows) + boolToInt(len(coldObs) > 0)
+	total := len(hotRows)
 	failed := len(writeErrs)
 
 	for _, we := range writeErrs {
@@ -682,7 +647,6 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 		Int("normalized", len(normalized)).
 		Int("atomics", len(atomics)).
 		Int("hot_writes", len(hotRows)).
-		Int("cold_writes", len(coldObs)).
 		Int("write_failures", failed).
 		Dur("duration", time.Since(startedAt)).
 		Msg("telemetry batch processed")
@@ -693,40 +657,19 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 	return nil
 }
 
-// boolToInt returns 1 when b is true, else 0. Used to count the cold-write
-// target as one of the batch's total write targets without inflating the hot
-// row count.
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
-}
-
-// pickValue returns the populated value_* field of a SignalObservation, or nil.
-// Cold observations have exactly one of ValueNumeric/ValueText/ValueBool set.
-func pickValue(o models.SignalObservation) any {
-	switch {
-	case o.ValueNumeric != nil:
-		return *o.ValueNumeric
-	case o.ValueText != nil:
-		return *o.ValueText
-	case o.ValueBool != nil:
-		return *o.ValueBool
-	default:
-		return nil
-	}
-}
-
 // buildSSEPayload assembles the Phase-6 typed-tables SSE payload from the
-// already-built hot rows and cold observations. Wire shape:
+// already-built hot rows. Wire shape:
 //
-//	{ vehicle_id, ts, tables: {<table>: {<col>: <val>}}, cold: [{name, value}] }
+//	{ vehicle_id, ts, tables: {<table>: {<col>: <val>}} }
 //
-// Empty hot rows are skipped; cold is omitted entirely when there are no
-// observations. The frontend (Phase 7) reads tables.<name>.<column> instead of
-// the legacy raw_state/signals jsonb shape.
-func buildSSEPayload(vehicleID int64, ts time.Time, hotRows map[string]map[string]any, coldObs []models.SignalObservation) map[string]any {
+// Empty hot rows are skipped. The frontend (Phase 7) reads
+// tables.<name>.<column> instead of the legacy raw_state/signals jsonb shape.
+//
+// Phase-42 (prompt 0077): the `cold` array (signal_observations residue) was
+// removed from the wire format. Cold signals flow through the typed
+// signal_log pipeline (000167+) and SSE consumers receive them via the
+// dedicated `signal_change` channel (prompt 0071).
+func buildSSEPayload(vehicleID int64, ts time.Time, hotRows map[string]map[string]any) map[string]any {
 	tables := map[string]map[string]any{}
 	for table, row := range hotRows {
 		if len(row) == 0 {
@@ -734,22 +677,11 @@ func buildSSEPayload(vehicleID int64, ts time.Time, hotRows map[string]map[strin
 		}
 		tables[table] = row
 	}
-	payload := map[string]any{
+	return map[string]any{
 		"vehicle_id": vehicleID,
 		"ts":         ts,
 		"tables":     tables,
 	}
-	if len(coldObs) > 0 {
-		cold := make([]map[string]any, 0, len(coldObs))
-		for _, o := range coldObs {
-			cold = append(cold, map[string]any{
-				"name":  o.SignalName,
-				"value": pickValue(o),
-			})
-		}
-		payload["cold"] = cold
-	}
-	return payload
 }
 
 // broadcastSSE sends a vehicle_update SSE event. When Redis Pub/Sub is
@@ -787,60 +719,15 @@ func (h *TelemetryHandler) broadcastSSE(payload map[string]any) {
 	h.eventHub.Broadcast("vehicle_update", payload)
 }
 
-// buildColdObservations converts cold atomics (originally cold + transform-demoted)
-// into SignalObservation rows ready for signalObsRepo.BulkInsert. Each atomic's
-// Go type selects the correct value_* column; nulls are skipped. Unknown types
-// are stringified defensively into value_text with a warn log so no data is lost.
-func (h *TelemetryHandler) buildColdObservations(vehicleID int64, ts time.Time, cold []telemetry.Atomic) []models.SignalObservation {
-	out := make([]models.SignalObservation, 0, len(cold))
-	for _, a := range cold {
-		obs := models.SignalObservation{
-			VehicleID:  vehicleID,
-			Ts:         ts,
-			SignalName: a.Name,
-			Source:     "fleet_telemetry",
-		}
-		switch v := a.Value.(type) {
-		case nil:
-			continue
-		case bool:
-			b := v
-			obs.ValueBool = &b
-		case float64:
-			f := v
-			obs.ValueNumeric = &f
-		case float32:
-			f := float64(v)
-			obs.ValueNumeric = &f
-		case int:
-			f := float64(v)
-			obs.ValueNumeric = &f
-		case int32:
-			f := float64(v)
-			obs.ValueNumeric = &f
-		case int64:
-			f := float64(v)
-			obs.ValueNumeric = &f
-		case string:
-			s := v
-			obs.ValueText = &s
-		default:
-			s := fmt.Sprintf("%v", v)
-			obs.ValueText = &s
-			log.Warn().
-				Str("signal", a.Name).
-				Str("type", fmt.Sprintf("%T", v)).
-				Msg("cold signal had unexpected type; stringified")
-		}
-		out = append(out, obs)
-	}
-	return out
-}
+// Phase-42 (prompt 0077): buildColdObservations was deleted with
+// internal/database/signal_observation_repo.go. Cold-residue atomics now
+// flow through the typed signal_log pipeline (000167+) rather than the
+// legacy signal_observations debug-helper hypertable.
 
 // buildHotRow folds a slice of atomics that all target the same table into one
 // column->value map, applying each route's Transformer where present. A
 // transform error does NOT abort the row — the offending atomic is appended to
-// demoteCold so the data still lands losslessly in signal_observations.
+// demoteCold so the data still lands losslessly in signal_log.
 func (h *TelemetryHandler) buildHotRow(table string, atomics []telemetry.Atomic, demoteCold *[]telemetry.Atomic) map[string]any {
 	row := map[string]any{}
 	for _, a := range atomics {

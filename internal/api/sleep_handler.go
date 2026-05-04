@@ -5,13 +5,21 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
+	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
 )
 
 // SleepHandler handles sleep efficiency analytics requests.
+//
+// Phase-42 (prompt 0077): vehicle_states and vampire_drain_events were
+// dropped without SI replacement. Vehicle-state distribution is now
+// derived from fsm_transitions (000174); the sentry-vs-vampire drain
+// comparison is preserved as zero-valued JSON keys so the frontend
+// contract is unchanged. The drain field is absent from typed signal_log
+// without per-park reconstruction; restoring sentry/drain analytics
+// requires a follow-on prompt that adds a per-sleep aggregation pass.
 type SleepHandler struct {
 	db *database.DB
 }
@@ -39,7 +47,11 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 	// Look up vehicle-specific battery capacity
 	batteryCapacityKWh, capacitySource := lookupVehicleCapacity(ctx, h.db, vehicleID)
 
-	// Time in each vehicle state
+	// Time in each vehicle state — derived from fsm_transitions (000174).
+	// Each row represents the count of transitions INTO a given state in
+	// the window; total_minutes is left at 0 because the legacy
+	// per-row dwell-time field has no direct counterpart in the
+	// transition log without a paired next-transition lookup.
 	type stateEntry struct {
 		State        string  `json:"state"`
 		Count        int     `json:"count"`
@@ -47,13 +59,14 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 	}
 
 	rows, err := h.db.Pool.Query(ctx,
-		`SELECT state, COUNT(*) as count,
-		        COALESCE(SUM(duration_min), 0) as total_minutes
-		 FROM vehicle_states
-		 WHERE vehicle_id = $1 AND start_date > NOW() - make_interval(days => $2)
-		 GROUP BY state`, vehicleID, days)
+		`SELECT to_state AS state, COUNT(*) AS count, 0::float AS total_minutes
+		 FROM fsm_transitions
+		 WHERE vehicle_id = $1
+		   AND fsm_name = 'vehicle'
+		   AND ts > NOW() - make_interval(days => $2)
+		 GROUP BY to_state`, vehicleID, days)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("sleep: failed to get vehicle states")
+		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("sleep: failed to get fsm_transitions")
 		writeError(w, http.StatusInternalServerError, "failed to get sleep data")
 		return
 	}
@@ -83,7 +96,9 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		sleepEfficiencyPct = (sleepMinutes / totalMinutesAll) * 100
 	}
 
-	// Vampire drain events grouped by sentry mode
+	// Phase-42 (prompt 0077): sentry-vs-vampire drain comparison removed
+	// (vampire_drain_events table dropped). Frontend keys are preserved
+	// with empty/zero values to avoid breaking the contract.
 	type sentryGroup struct {
 		SentryMode     bool    `json:"sentry_mode"`
 		Count          int     `json:"count"`
@@ -92,58 +107,10 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		AvgBatteryLost float64 `json:"avg_battery_lost"`
 		AvgTemp        float64 `json:"avg_temp"`
 	}
-
-	sentryRows, err := h.db.Pool.Query(ctx,
-		`SELECT sentry_mode, COUNT(*) as count,
-		        AVG(drain_rate_pct_per_hour) as avg_drain_rate,
-		        AVG(duration_hours) as avg_duration,
-		        AVG(battery_lost) as avg_battery_lost,
-		        AVG(outside_temp_avg) as avg_temp
-		 FROM vampire_drain_events
-		 WHERE vehicle_id = $1 AND start_date > NOW() - make_interval(days => $2)
-		 GROUP BY sentry_mode`, vehicleID, days)
-	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("sleep: failed to get drain by sentry")
-		writeError(w, http.StatusInternalServerError, "failed to get sleep data")
-		return
-	}
-	defer sentryRows.Close()
-
-	var sentryComparison []sentryGroup
+	sentryComparison := make([]sentryGroup, 0)
 	var sentryOnDrainRate, sentryOffDrainRate float64
 	var sentryOnHours float64
-	for sentryRows.Next() {
-		var g sentryGroup
-		var avgDrain, avgDur, avgBat, avgTemp *float64
-		if err := sentryRows.Scan(&g.SentryMode, &g.Count, &avgDrain, &avgDur, &avgBat, &avgTemp); err != nil {
-			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("sleep: sentry comparison row scan failed")
-			continue
-		}
-		if avgDrain != nil {
-			g.AvgDrainRate = math.Round(*avgDrain*100) / 100
-		}
-		if avgDur != nil {
-			g.AvgDuration = math.Round(*avgDur*100) / 100
-		}
-		if avgBat != nil {
-			g.AvgBatteryLost = math.Round(*avgBat*100) / 100
-		}
-		if avgTemp != nil {
-			g.AvgTemp = math.Round(*avgTemp*10) / 10
-		}
-		if g.SentryMode {
-			sentryOnDrainRate = g.AvgDrainRate
-			sentryOnHours = g.AvgDuration
-		} else {
-			sentryOffDrainRate = g.AvgDrainRate
-		}
-		sentryComparison = append(sentryComparison, g)
-	}
-	if sentryComparison == nil {
-		sentryComparison = make([]sentryGroup, 0)
-	}
 
-	// Recent drain events
 	type drainEvent struct {
 		ID            int64    `json:"id"`
 		StartDate     string   `json:"start_date"`
@@ -156,43 +123,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		StartBattery  float64  `json:"start_battery"`
 		EndBattery    float64  `json:"end_battery"`
 	}
-
-	eventRows, err := h.db.Pool.Query(ctx,
-		`SELECT id, start_date, end_date, duration_hours, battery_lost,
-		        drain_rate_pct_per_hour, sentry_mode, outside_temp_avg,
-		        start_battery, end_battery
-		 FROM vampire_drain_events
-		 WHERE vehicle_id = $1 ORDER BY start_date DESC LIMIT 20`, vehicleID)
-	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("sleep: failed to get recent drain events")
-		writeError(w, http.StatusInternalServerError, "failed to get sleep data")
-		return
-	}
-	defer eventRows.Close()
-
-	var recentEvents []drainEvent
-	for eventRows.Next() {
-		var e drainEvent
-		var startDate, endDate interface{}
-		if err := eventRows.Scan(&e.ID, &startDate, &endDate, &e.DurationHours, &e.BatteryLost,
-			&e.DrainRate, &e.SentryMode, &e.OutsideTemp, &e.StartBattery, &e.EndBattery); err != nil {
-			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("sleep: drain event row scan failed")
-			continue
-		}
-		if t, ok := startDate.(interface{ Format(string) string }); ok {
-			e.StartDate = t.Format("2006-01-02T15:04:05Z")
-		}
-		if t, ok := endDate.(interface{ Format(string) string }); ok {
-			e.EndDate = t.Format("2006-01-02T15:04:05Z")
-		}
-		e.DurationHours = math.Round(e.DurationHours*100) / 100
-		e.BatteryLost = math.Round(e.BatteryLost*100) / 100
-		e.DrainRate = math.Round(e.DrainRate*100) / 100
-		recentEvents = append(recentEvents, e)
-	}
-	if recentEvents == nil {
-		recentEvents = make([]drainEvent, 0)
-	}
+	recentEvents := make([]drainEvent, 0)
 
 	// Get settings for cost calculations
 	var baseCostPerKWh float64
@@ -206,12 +137,13 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		baseCostPerKWh = 0.12
 	}
 
-	// Estimate sentry monthly cost
+	// Estimate sentry monthly cost — preserved as zero-valued cost since
+	// sentryOnDrainRate/sentryOffDrainRate are 0 until per-park drain
+	// reconstruction is reintroduced.
 	hoursPerMonth := 730.0 // avg hours in a month
 	sentryMonthlyKWh := sentryOnDrainRate / 100 * batteryCapacityKWh * hoursPerMonth
 	sentryMonthlyCost := sentryMonthlyKWh * baseCostPerKWh
 
-	// Extra drain from sentry = sentry drain - no-sentry drain
 	extraDrainRate := sentryOnDrainRate - sentryOffDrainRate
 	if extraDrainRate < 0 {
 		extraDrainRate = 0
@@ -219,41 +151,31 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 	extraMonthlyKWh := extraDrainRate / 100 * batteryCapacityKWh * hoursPerMonth
 	extraMonthlyCost := extraMonthlyKWh * baseCostPerKWh
 
-	// Avg time to sleep (from vehicle_states: time between 'online' and 'asleep')
-	var avgTimeToSleepMin *float64
-	err = h.db.Pool.QueryRow(ctx,
-		`SELECT AVG(duration_min) FROM vehicle_states
-		 WHERE vehicle_id = $1 AND state = 'online'
-		 AND start_date > NOW() - make_interval(days => $2)`, vehicleID, days,
-	).Scan(&avgTimeToSleepMin)
-	if err != nil {
-		avgTimeToSleepMin = nil
-	}
-
+	// Phase-42 (prompt 0077): the avg-time-to-sleep query against
+	// vehicle_states is gone; the value is preserved at 0 until a
+	// follow-on prompt re-derives it from fsm_transitions Online→Asleep
+	// pairing.
 	var timeToSleepAvg float64
-	if avgTimeToSleepMin != nil {
-		timeToSleepAvg = math.Round(*avgTimeToSleepMin*10) / 10
-	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"vehicle_id":             vehicleID,
-		"period_days":            days,
-		"state_distribution":     stateDistribution,
-		"sleep_efficiency_pct":   math.Round(sleepEfficiencyPct*10) / 10,
-		"time_to_sleep_avg_min":  timeToSleepAvg,
-		"sentry_comparison":      sentryComparison,
-		"sentry_on_drain_rate":   sentryOnDrainRate,
-		"sentry_off_drain_rate":  sentryOffDrainRate,
-		"sentry_monthly_kwh":     math.Round(sentryMonthlyKWh*100) / 100,
-		"sentry_monthly_cost":    math.Round(sentryMonthlyCost*100) / 100,
-		"sentry_extra_drain_rate": math.Round(extraDrainRate*100) / 100,
+		"vehicle_id":                vehicleID,
+		"period_days":               days,
+		"state_distribution":        stateDistribution,
+		"sleep_efficiency_pct":      math.Round(sleepEfficiencyPct*10) / 10,
+		"time_to_sleep_avg_min":     timeToSleepAvg,
+		"sentry_comparison":         sentryComparison,
+		"sentry_on_drain_rate":      sentryOnDrainRate,
+		"sentry_off_drain_rate":     sentryOffDrainRate,
+		"sentry_monthly_kwh":        math.Round(sentryMonthlyKWh*100) / 100,
+		"sentry_monthly_cost":       math.Round(sentryMonthlyCost*100) / 100,
+		"sentry_extra_drain_rate":   math.Round(extraDrainRate*100) / 100,
 		"sentry_extra_monthly_kwh":  math.Round(extraMonthlyKWh*100) / 100,
 		"sentry_extra_monthly_cost": math.Round(extraMonthlyCost*100) / 100,
-		"battery_capacity_kwh":  batteryCapacityKWh,
-		"capacity_source":       capacitySource,
-		"base_cost_per_kwh":     baseCostPerKWh,
-		"recent_events":         recentEvents,
-		"total_events":          len(recentEvents),
+		"battery_capacity_kwh":      batteryCapacityKWh,
+		"capacity_source":           capacitySource,
+		"base_cost_per_kwh":         baseCostPerKWh,
+		"recent_events":             recentEvents,
+		"total_events":              len(recentEvents),
 		"avg_sentry_duration_hours": sentryOnHours,
 	})
 }

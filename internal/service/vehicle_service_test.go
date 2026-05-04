@@ -45,11 +45,13 @@ func (f *fakeStateReader) State(_ context.Context, vehicleID int64, at time.Time
 }
 
 // newSvc builds a VehicleService wired only with the bits the fallback path
-// touches: the SignalStateReader. stateRepo is intentionally nil so the
-// test never reaches a real database; BuildStateFromSignalStore must guard
-// the call. This also doubles as a guard for ADR-001 — if the implementation
-// secretly tried to read a snapshot table through positionRepo/securityRepo
-// it would nil-pointer-panic here.
+// touches: the SignalStateReader. The other fields (db, stateProvider) are
+// intentionally nil so the test never reaches a real database;
+// BuildStateFromSignalStore must guard each call. This also doubles as a
+// guard for ADR-001 — if the implementation secretly tried to read a
+// snapshot table through positionRepo/vehicleRepo it would nil-pointer-panic
+// here. (Phase-42 prompt 0077: the legacy securityRepo + stateRepo fields
+// are gone; the equivalent guard now applies to stateProvider.)
 func newSvc(reader SignalStateReader) *VehicleService {
 	svc := &VehicleService{}
 	if reader != nil {
@@ -381,10 +383,13 @@ func TestBuildStateFromSignalStore_FieldToSignalNameMapping(t *testing.T) {
 
 // TestBuildStateFromSignalStore_DoesNotReadSnapshotTables verifies that
 // BuildStateFromSignalStore reaches for *no* repository besides the optional
-// stateRepo + the SignalStateReader. It does so by constructing a service
-// with every repo nil — any attempt to query positionRepo, securityRepo,
-// vehicleRepo, settingsRepo, etc. would nil-pointer-panic. ADR-001 anchor:
-// only signal_log, no snapshot table reads.
+// stateProvider + the SignalStateReader. It does so by constructing a service
+// with every field nil — any attempt to query positionRepo, vehicleRepo,
+// settingsRepo, etc. would nil-pointer-panic. ADR-001 anchor: only signal_log,
+// no snapshot table reads.
+//
+// Phase-42 (prompt 0077): the legacy securityRepo/stateRepo guard is now
+// stateProvider (nil-safe per its receiver guard).
 func TestBuildStateFromSignalStore_DoesNotReadSnapshotTables(t *testing.T) {
 	const vehicleID int64 = 7
 	store := newStore(t, vehicleID, map[string]interface{}{
@@ -395,7 +400,7 @@ func TestBuildStateFromSignalStore_DoesNotReadSnapshotTables(t *testing.T) {
 		"Odometer":   12345.6,
 		"InsideTemp": 22.7,
 	}}
-	svc := newSvc(fake) // positionRepo, securityRepo, stateRepo, etc. all nil
+	svc := newSvc(fake) // positionRepo, stateProvider, etc. all nil
 
 	defer func() {
 		if r := recover(); r != nil {

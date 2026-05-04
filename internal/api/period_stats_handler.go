@@ -35,59 +35,65 @@ func (h *PeriodStatsHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Build date filter
+	// Build date filter (drives uses started_at, charging uses started_at).
 	dateFilter := ""
 	if days > 0 {
-		dateFilter = " AND start_ts > NOW() - interval '" + strconv.Itoa(days) + " days'"
+		dateFilter = " AND started_at > NOW() - interval '" + strconv.Itoa(days) + " days'"
 	}
 
-	// Total distance & drives
-	var totalDist, totalDurMin *float64
+	// Total distance & drives. Phase-42 SI canonical drives (000172):
+	// distance_m / duration_s. Convert to km/min at JSON-populate site.
+	var totalDistM, totalDurS *float64
 	var totalDrives int
 	err = h.db.Pool.QueryRow(ctx,
-		`SELECT COUNT(*), COALESCE(SUM(distance_mi), 0), COALESCE(SUM(duration_min), 0)
-		 FROM drives WHERE vehicle_id = $1 AND end_ts IS NOT NULL`+dateFilter, vehicleID,
-	).Scan(&totalDrives, &totalDist, &totalDurMin)
+		`SELECT COUNT(*), COALESCE(SUM(distance_m), 0), COALESCE(SUM(duration_s), 0)
+		 FROM drives WHERE vehicle_id = $1 AND ended_at IS NOT NULL`+dateFilter, vehicleID,
+	).Scan(&totalDrives, &totalDistM, &totalDurS)
 	if err != nil {
 		log.Error().Err(err).Msg("period-stats: drives query")
 		writeError(w, http.StatusInternalServerError, "failed to query period stats")
 		return
 	}
 
-	// Energy & cost from charging sessions
-	var energyUsed, totalCost *float64
+	// Energy & cost from charging sessions. Phase-42 SI canonical
+	// charging_sessions (000171): total_energy_added_wh, cost_decimal.
+	var energyAddedWh, totalCost *float64
 	chargeDateFilter := dateFilter
 	err = h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(SUM(energy_added_kwh), 0), COALESCE(SUM(cost), 0)
+		`SELECT COALESCE(SUM(total_energy_added_wh), 0), COALESCE(SUM(cost_decimal::float8), 0)
 		 FROM charging_sessions WHERE vehicle_id = $1`+chargeDateFilter, vehicleID,
-	).Scan(&energyUsed, &totalCost)
+	).Scan(&energyAddedWh, &totalCost)
 	if err != nil {
 		log.Error().Err(err).Msg("period-stats: charging query")
-		energyUsed = new(float64)
+		energyAddedWh = new(float64)
 		totalCost = new(float64)
 	}
 
-	dist := 0.0
-	if totalDist != nil {
-		dist = *totalDist
+	distM := 0.0
+	if totalDistM != nil {
+		distM = *totalDistM
 	}
-	energy := 0.0
-	if energyUsed != nil {
-		energy = *energyUsed
+	energyWh := 0.0
+	if energyAddedWh != nil {
+		energyWh = *energyAddedWh
 	}
 	cost := 0.0
 	if totalCost != nil {
 		cost = *totalCost
 	}
 
-	// Efficiency: Wh/km
+	// Convert SI → display units (km, kWh) at the response boundary.
+	distKm := distM / 1000.0
+	energyKWh := energyWh / 1000.0
+
+	// Efficiency: Wh/km from SI columns directly (energy_wh / distance_km).
 	avgEff := 0.0
-	if dist > 0 && energy > 0 {
-		avgEff = (energy * 1000) / dist // kWh → Wh / km
+	if distKm > 0 && energyWh > 0 {
+		avgEff = energyWh / distKm
 	}
 
 	// CO2 saved vs ICE: ~120g/km for ICE, ~0 for EV (grid emissions vary)
-	co2Saved := dist * 0.120 // 120g/km saved → kg
+	co2Saved := distKm * 0.120 // 120g/km saved → kg
 
 	sf := func(v float64) float64 {
 		if math.IsNaN(v) || math.IsInf(v, 0) {
@@ -97,9 +103,9 @@ func (h *PeriodStatsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"total_distance": sf(dist),
+		"total_distance": sf(distKm),
 		"total_drives":   totalDrives,
-		"energy_used":    sf(energy),
+		"energy_used":    sf(energyKWh),
 		"avg_efficiency": sf(avgEff),
 		"total_cost":     sf(cost),
 		"co2_saved":      sf(co2Saved),

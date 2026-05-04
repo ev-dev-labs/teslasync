@@ -166,15 +166,20 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 
 	// Lifetime regen/drive energy — not available in current schema, use
 	// aggregated cagg_fleet_stats regen totals when available.
-	var totalRegenKWh, totalDriveKWh float64
+	// Phase-42 (prompt 0077, migration 000175): cagg_fleet_stats now stores
+	// energy in Wh (total_regen_wh / total_energy_wh). Convert to kWh at
+	// the JSON-populate site (×0.001) to keep the API contract unchanged.
+	var totalRegenWh, totalDriveWh float64
 	if err := h.db.Pool.QueryRow(ctx, `
 		SELECT
-			COALESCE(SUM(total_regen_kwh), 0),
-			COALESCE(SUM(total_energy_kwh), 0)
+			COALESCE(SUM(total_regen_wh), 0),
+			COALESCE(SUM(total_energy_wh), 0)
 		FROM cagg_fleet_stats
-		WHERE vehicle_id = $1`, vehicleID).Scan(&totalRegenKWh, &totalDriveKWh); err != nil && err != pgx.ErrNoRows {
+		WHERE vehicle_id = $1`, vehicleID).Scan(&totalRegenWh, &totalDriveWh); err != nil && err != pgx.ErrNoRows {
 		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("regen: cagg_fleet_stats query failed")
 	}
+	totalRegenKWh := totalRegenWh * 0.001
+	totalDriveKWh := totalDriveWh * 0.001
 
 	regenRatio := 0.0
 	if totalDriveKWh > 0 {

@@ -134,7 +134,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts, alertLiveSignalStore)
 	commandHandler := NewCommandHandler(db, teslaClient)
-	guardHandler := NewGuardHandler(db, teslaClient)
+	// Phase-42 (prompt 0077): GuardHandler deleted with guard_events table.
 	energyHandler := NewEnergyHandler(energySvc)
 	signalLogReader := database.NewSignalLogReader(db)
 	batteryHandler := NewBatteryHandler(db, stateReader)
@@ -155,11 +155,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	softwareUpdateHandler := NewSoftwareUpdateHandler(db)
 	tcoHandler := NewTCOHandler(db)
 	sleepHandler := NewSleepHandler(db)
-	vampireDrainHandler := NewVampireDrainHandler(db)
+	// Phase-42 (prompt 0077): VampireDrainHandler deleted (vampire_drain_events).
 	visitedLocationHandler := NewVisitedLocationHandler(db)
-	mileageHandler := NewMileageHandler(db)
+	// Phase-42 (prompt 0077): MileageHandler deleted (daily_mileage); TCO derives
+	// distance via SUM(distance_m) FROM drives.
 	tripHandler := NewTripHandler(db)
-	vehicleStateHandler := NewVehicleStateHandler(db)
+	// Phase-42 (prompt 0077): VehicleStateHandler deleted (vehicle_states);
+	// current state is sourced from fsm_transitions / signal.StateReader.
 	backupHandler := NewBackupHandler(db)
 	backupRestoreHandler := NewBackupRestoreHandler(db)
 	regenHandler := NewRegenHandler(db)
@@ -167,7 +169,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	auditHandler := NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
 	apiCallLogHandler := NewAPICallLogHandler(db)
 	apiKeyHandler := NewAPIKeyHandler(db, cfg.Auth.ForwardAuthHeader)
-	signalCatalogHandler := NewSignalCatalogHandler(db)
+	// Phase-42 (prompt 0077): SignalCatalogHandler deleted (signal_catalog +
+	// signal_observations); the typed signal_log pipeline (000167+) is the
+	// authoritative catalog/observation surface.
 	chargingHeatmapHandler := NewChargingHeatmapHandler(db)
 	speedProfileHandler := NewSpeedProfileHandler(db)
 	dataRepairHandler := NewDataRepairHandler(db)
@@ -410,14 +414,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/upgrades", vehicleInfoHandler.UpgradeEligibility)
 				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/upgrades/refresh", vehicleInfoHandler.RefreshUpgradeEligibility)
 
-				// Guard Mode (anti-theft)
-				r.Route("/guard", func(r chi.Router) {
-					r.Get("/", guardHandler.GetConfig)
-					r.Post("/", guardHandler.SetConfig)
-					r.Get("/events", guardHandler.ListEvents)
-					r.Post("/events/{eventID}/acknowledge", guardHandler.AcknowledgeEvent)
-					r.With(httprate.LimitByIP(3, 1*time.Minute)).Post("/panic", guardHandler.Panic)
-				})
+				// Phase-42 (prompt 0077): /guard routes deleted with
+				// guard_handler.go and the guard_events table.
 
 				// FSM debug diagnostics
 				r.Get("/fsm/debug", func(w http.ResponseWriter, req *http.Request) {
@@ -841,31 +839,23 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Software Updates
 		r.Get("/software-updates", softwareUpdateHandler.List)
 
-		// Vampire Drain
-		r.Route("/vampire-drain", func(r chi.Router) {
-			r.Get("/", vampireDrainHandler.List)
-			r.Get("/stats", vampireDrainHandler.Stats)
-		})
+		// Phase-42 (prompt 0077): /vampire-drain routes deleted with
+		// vampire_drain_handler.go (vampire_drain_events table dropped).
 
 		// Visited Locations
 		r.Get("/locations", visitedLocationHandler.List)
 
-		// Mileage
-		r.Route("/mileage", func(r chi.Router) {
-			r.Get("/daily", mileageHandler.Daily)
-			r.Get("/monthly", mileageHandler.Monthly)
-			r.Get("/stats", mileageHandler.Stats)
-		})
+		// Phase-42 (prompt 0077): /mileage routes deleted with
+		// mileage_handler.go (daily_mileage table dropped); per-period
+		// distance is now derived via SUM(distance_m) FROM drives.
 
 		// Trips
 		r.Get("/trips", tripHandler.List)
 
-		// Vehicle States / Timeline
-		r.Route("/vehicle-states", func(r chi.Router) {
-			r.Get("/timeline", vehicleStateHandler.Timeline)
-			r.Get("/summary", vehicleStateHandler.Summary)
-			r.Get("/daily", vehicleStateHandler.DailyBreakdown)
-		})
+		// Phase-42 (prompt 0077): /vehicle-states routes deleted with
+		// vehicle_state_handler.go (vehicle_states table dropped); current
+		// state is sourced from the in-memory FSM and durably logged via
+		// fsm_transitions.
 
 		// FSM shadow mode stats + transition log
 		r.Route("/fsm", func(r chi.Router) {
@@ -1155,11 +1145,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		}
 
-		// Signal Catalog & Observations (cold-path, ADR-002 + ADR-009).
-		// Registered before /signals/{vehicleID} so chi's trie prefers the
-		// literal segment over the {vehicleID} param.
-		r.Get("/signals/catalog", signalCatalogHandler.ListCatalog)
-		r.Get("/signals/observations", signalCatalogHandler.ListObservations)
+		// Phase-42 (prompt 0077): /signals/catalog and /signals/observations
+		// were deleted with signal_catalog_handler.go. The typed signal_log
+		// pipeline (000167+) plus internal/api/signal_handler.go's
+		// /available endpoint (which sources from protomodel.Signals) are
+		// the authoritative catalog/observation surface.
 
 		// Signal routes
 		r.Route("/signals/{vehicleID}", func(r chi.Router) {

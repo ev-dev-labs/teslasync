@@ -1111,9 +1111,9 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 			if (active.StartSoc == nil || *active.StartSoc == 0) && startPos.BatteryLvl > 0 {
 				backfill["start_battery_pct"] = int16(startPos.BatteryLvl)
 			}
-			if active.StartLatitude == nil && startPos.Latitude != 0 {
-				backfill["start_lat"] = startPos.Latitude
-				backfill["start_lon"] = startPos.Longitude
+			if active.StartLatitude == nil && startPos.Lat != 0 {
+				backfill["start_lat"] = startPos.Lat
+				backfill["start_lon"] = startPos.Lng
 			}
 		}
 	}
@@ -1138,9 +1138,9 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 				}
 			}
 		}
-		if active.LastLatitude == nil && endPos.Latitude != 0 {
-			backfill["end_lat"] = endPos.Latitude
-			backfill["end_lon"] = endPos.Longitude
+		if active.LastLatitude == nil && endPos.Lat != 0 {
+			backfill["end_lat"] = endPos.Lat
+			backfill["end_lon"] = endPos.Lng
 		}
 	}
 
