@@ -8,11 +8,12 @@ PREDECESSOR=(none required; phase-40 final gate is recommended-not-required pref
 PREDECESSOR_PATH=.github/prompts/db-refactor/logs/phase-40-99-final-gate.log
 PREDECESSOR_PRESENT=False
 PREDECESSOR_RATIONALE=phase-40 was a frontend/UX track (onboarding, freshness, changelog, broadcast channel). phase-41 is a Go-only backend quality sweep operating on internal/** and cmd/** only. The two phases touch disjoint trees, so phase-40 completion is recommended for hygiene but not a hard precondition for phase-41 to begin.
-GIT_HEAD_PRE=c846e1a0f phase-42(0091): unit-drift validator worker + cmd/unit-drift-validator CLI
+GIT_HEAD_PRE=8a9d018ec phase-42(9999): final gate BLOCKED — log only, full enumeration of gaps
 GIT_BRANCH=refactor/signals-rewrite
-GIT_STATUS_PRE=clean
+GIT_STATUS_PRE=working tree had prior log deleted (` D` on the survey log); restored from HEAD~1 (35f456798) before re-emitting current preflight
 LOG_FILE=.github/prompts/db-refactor/logs/phase-41-0000-survey-and-scope.log
-LOG_PRE_EXISTS=False
+LOG_PRE_EXISTS=True (HEAD~1 35f456798 already committed an authoritative copy; this re-run refreshes PREFLIGHT to reflect current HEAD and re-runs the gate)
+RERUN_NOTE=Audit body (AUDIT_SUMMARY tables, SCOPE rules, METHODOLOGY, TRIAGE, ROLLBACK) is the same factual deliverable established by the prior survey and is preserved verbatim. Only PREFLIGHT and the appended GATE block reflect the current re-run state.
 
 === AUDIT_SUMMARY ===
 SCAN_SCOPE=internal/** + cmd/** (Go-only backend)
