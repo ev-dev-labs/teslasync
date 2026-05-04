@@ -3,7 +3,6 @@ package signal
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -14,23 +13,26 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/rs/zerolog"
+
+	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 )
 
-// fakeRow is the in-memory analogue of a single signal_log row, holding the
-// typed value columns directly so tests can construct rows without going
-// through Postgres. Helper constructors below build common shapes.
+// fakeRow is the in-memory analogue of a single signal_log row, holding
+// the typed value columns directly so tests can construct rows without
+// going through Postgres. Helper constructors below build common shapes.
 type fakeRow struct {
-	signal    string
-	vNum      *float64
-	vStr      *string
-	vBool     *bool
-	vJsonb    []byte
-	createdAt time.Time
+	field string
+	kind  int16
+	sv    *string
+	bv    *bool
+	iv    *int64
+	fv    *float64
+	tv    *time.Time
 }
 
 // fakeRowIterator implements the unexported rowIterator interface so tests
-// can drive assembleState directly. Tracks the current cursor position via
-// pos (1-indexed: Next advances pos, Scan reads rows[pos-1]).
+// can drive assembleState directly. Tracks the current cursor position
+// via pos (1-indexed: Next advances pos, Scan reads rows[pos-1]).
 type fakeRowIterator struct {
 	rows   []fakeRow
 	pos    int
@@ -50,25 +52,26 @@ func (f *fakeRowIterator) Scan(dest ...any) error {
 	if f.pos == 0 || f.pos > len(f.rows) {
 		return errors.New("fakeRowIterator: Scan called out of order")
 	}
-	if len(dest) != 6 {
-		return fmt.Errorf("fakeRowIterator: expected 6 destinations, got %d", len(dest))
+	if len(dest) != 7 {
+		return fmt.Errorf("fakeRowIterator: expected 7 destinations, got %d", len(dest))
 	}
 	row := f.rows[f.pos-1]
-	*(dest[0].(*string)) = row.signal
-	*(dest[1].(**float64)) = row.vNum
-	*(dest[2].(**string)) = row.vStr
-	*(dest[3].(**bool)) = row.vBool
-	*(dest[4].(*[]byte)) = row.vJsonb
-	*(dest[5].(*time.Time)) = row.createdAt
+	*(dest[0].(*string)) = row.field
+	*(dest[1].(*int16)) = row.kind
+	*(dest[2].(**string)) = row.sv
+	*(dest[3].(**bool)) = row.bv
+	*(dest[4].(**int64)) = row.iv
+	*(dest[5].(**float64)) = row.fv
+	*(dest[6].(**time.Time)) = row.tv
 	return nil
 }
 
 func (f *fakeRowIterator) Err() error { return f.err }
 func (f *fakeRowIterator) Close()     { f.closed = true }
 
-// emptyPgxRows is a minimal pgx.Rows implementation used by fakeQuerier when
-// it needs to simulate a successful Query that returns zero rows. Most
-// methods return zero values; only Next/Close/Err are exercised by State.
+// emptyPgxRows is a minimal pgx.Rows implementation used by fakeQuerier
+// when it needs to simulate a successful Query that returns zero rows.
+// Most methods return zero values; only Next/Close/Err are exercised.
 type emptyPgxRows struct{}
 
 func (emptyPgxRows) Close()                                       {}
@@ -81,17 +84,20 @@ func (emptyPgxRows) Values() ([]any, error)                       { return nil, 
 func (emptyPgxRows) RawValues() [][]byte                          { return nil }
 func (emptyPgxRows) Conn() *pgx.Conn                              { return nil }
 
-// signalAtPgxRows is a single-row pgx.Rows for the SignalAt 4-column query
-// (value_num, value_str, value_bool, value_jsonb). hasRow=false simulates
-// "signal never emitted before at"; scanErr forces Scan to fail without
-// touching the destinations, exercising the SignalAt scan-error branch.
+// signalAtPgxRows is a single-row pgx.Rows for the SignalAt 6-column
+// query (value_kind, str_value, bool_value, int_value, float_value,
+// time_value). hasRow=false simulates "signal never emitted before at";
+// scanErr forces Scan to fail without touching the destinations,
+// exercising the SignalAt scan-error branch.
 type signalAtPgxRows struct {
 	hasRow    bool
 	delivered bool
-	vNum      *float64
-	vStr      *string
-	vBool     *bool
-	vJsonb    []byte
+	kind      int16
+	sv        *string
+	bv        *bool
+	iv        *int64
+	fv        *float64
+	tv        *time.Time
 	scanErr   error
 }
 
@@ -110,23 +116,25 @@ func (s *signalAtPgxRows) Scan(dest ...any) error {
 	if s.scanErr != nil {
 		return s.scanErr
 	}
-	if len(dest) != 4 {
-		return fmt.Errorf("signalAtPgxRows: expected 4 destinations, got %d", len(dest))
+	if len(dest) != 6 {
+		return fmt.Errorf("signalAtPgxRows: expected 6 destinations, got %d", len(dest))
 	}
-	*(dest[0].(**float64)) = s.vNum
-	*(dest[1].(**string)) = s.vStr
-	*(dest[2].(**bool)) = s.vBool
-	*(dest[3].(*[]byte)) = s.vJsonb
+	*(dest[0].(*int16)) = s.kind
+	*(dest[1].(**string)) = s.sv
+	*(dest[2].(**bool)) = s.bv
+	*(dest[3].(**int64)) = s.iv
+	*(dest[4].(**float64)) = s.fv
+	*(dest[5].(**time.Time)) = s.tv
 	return nil
 }
 func (s *signalAtPgxRows) Values() ([]any, error) { return nil, nil }
 func (s *signalAtPgxRows) RawValues() [][]byte    { return nil }
 func (s *signalAtPgxRows) Conn() *pgx.Conn        { return nil }
 
-// fakeQuerier implements the unexported pgxQuerier interface for tests that
-// need to drive the LogStateReader.State end-to-end (context cancel, slow
-// query, error logging). The calls counter lets tests assert that Query was
-// (or was not) invoked.
+// fakeQuerier implements the unexported pgxQuerier interface for tests
+// that need to drive the LogStateReader.State end-to-end (context cancel,
+// slow query, error logging). The calls counter lets tests assert that
+// Query was (or was not) invoked.
 type fakeQuerier struct {
 	err   error
 	rows  pgx.Rows
@@ -148,44 +156,69 @@ func (f *fakeQuerier) Query(ctx context.Context, sql string, args ...any) (pgx.R
 	return emptyPgxRows{}, nil
 }
 
-// --- unpackLocationCompounds tests ---------------------------------------
+// --- decodeRow / decodeSignalLogRow tests --------------------------------
 
-func TestUnpackLocationCompounds_FlattensWhenPresent(t *testing.T) {
-	in := State{"Location": map[string]any{"Lat": 12.3, "Lng": 45.6}}
-	got := unpackLocationCompounds(in)
-	if got["Latitude"] != 12.3 {
-		t.Fatalf("Latitude: want 12.3, got %v", got["Latitude"])
+func TestDecodeSignalLogRow_AllKinds(t *testing.T) {
+	str := "hello"
+	b := true
+	var i64 int64 = 42
+	f := 3.14
+	tm := time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name string
+		kind protomodel.ValueKind
+		sv   *string
+		bv   *bool
+		iv   *int64
+		fv   *float64
+		tv   *time.Time
+		want any
+	}{
+		{"string", protomodel.ValueKindString, &str, nil, nil, nil, nil, "hello"},
+		{"bool", protomodel.ValueKindBool, nil, &b, nil, nil, nil, true},
+		{"int32", protomodel.ValueKindInt32, nil, nil, &i64, nil, nil, int64(42)},
+		{"int64", protomodel.ValueKindInt64, nil, nil, &i64, nil, nil, int64(42)},
+		{"float", protomodel.ValueKindFloat, nil, nil, nil, &f, nil, 3.14},
+		{"double", protomodel.ValueKindDouble, nil, nil, nil, &f, nil, 3.14},
+		{"enum_int", protomodel.ValueKindEnum, nil, nil, &i64, nil, nil, int64(42)},
+		{"enum_str_fallback", protomodel.ValueKindEnum, &str, nil, nil, nil, nil, "hello"},
+		{"time", protomodel.ValueKindTime, nil, nil, nil, nil, &tm, tm},
+		{"unknown_drops", protomodel.ValueKindUnknown, &str, nil, nil, nil, nil, nil},
+		{"compound_drops", protomodel.ValueKindCompound, &str, nil, nil, nil, nil, nil},
+		{"invalid_drops", protomodel.ValueKindInvalid, &str, nil, nil, nil, nil, nil},
+		{"string_null_returns_nil", protomodel.ValueKindString, nil, nil, nil, nil, nil, nil},
+		{"bool_null_returns_nil", protomodel.ValueKindBool, nil, nil, nil, nil, nil, nil},
+		{"int32_null_returns_nil", protomodel.ValueKindInt32, nil, nil, nil, nil, nil, nil},
+		{"float_null_returns_nil", protomodel.ValueKindFloat, nil, nil, nil, nil, nil, nil},
+		{"time_null_returns_nil", protomodel.ValueKindTime, nil, nil, nil, nil, nil, nil},
 	}
-	if got["Longitude"] != 45.6 {
-		t.Fatalf("Longitude: want 45.6, got %v", got["Longitude"])
-	}
-	if _, exists := got["Location"]; exists {
-		t.Fatalf("Location key must be removed after flatten")
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := decodeRow(int16(tc.kind), tc.sv, tc.bv, tc.iv, tc.fv, tc.tv, nil)
+			if got != tc.want {
+				t.Fatalf("decodeRow(%v) = %v (%T), want %v (%T)", tc.kind, got, got, tc.want, tc.want)
+			}
+		})
 	}
 }
 
-func TestUnpackLocationCompounds_NoOpWhenAbsent(t *testing.T) {
-	in := State{"Speed": 50.0}
-	got := unpackLocationCompounds(in)
-	if len(got) != 1 {
-		t.Fatalf("map size: want 1, got %d", len(got))
-	}
-	if got["Speed"] != 50.0 {
-		t.Fatalf("Speed: want 50.0, got %v", got["Speed"])
-	}
-}
+func TestDecodeSignalLogRow_LogsUnexpectedKind(t *testing.T) {
+	var buf bytes.Buffer
+	log := zerolog.New(&buf)
+	r := &LogStateReader{pool: &fakeQuerier{}, log: log}
 
-func TestUnpackLocationCompounds_NoOpWhenWrongType(t *testing.T) {
-	in := State{"Location": "oops"}
-	got := unpackLocationCompounds(in)
-	if got["Location"] != "oops" {
-		t.Fatalf("Location should remain unchanged when not a map, got %v", got["Location"])
+	got := r.decodeSignalLogRow(99, nil, nil, nil, nil, nil)
+	if got != nil {
+		t.Fatalf("want nil for unknown kind, got %v", got)
 	}
-	if _, exists := got["Latitude"]; exists {
-		t.Fatalf("Latitude must not be set when Location is wrong type")
+	out := buf.String()
+	if !strings.Contains(out, "unexpected value_kind") {
+		t.Fatalf("want 'unexpected value_kind' in log, got %q", out)
 	}
-	if _, exists := got["Longitude"]; exists {
-		t.Fatalf("Longitude must not be set when Location is wrong type")
+	if !strings.Contains(out, `"value_kind":99`) {
+		t.Fatalf("want value_kind=99 in log, got %q", out)
 	}
 }
 
@@ -223,11 +256,10 @@ func TestLogStateReader_State_PropagatesContextCancel(t *testing.T) {
 func TestLogStateReader_State_BuildsMapFromRows(t *testing.T) {
 	speed := 50.0
 	soc := 80.0
-	now := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
 	iter := &fakeRowIterator{
 		rows: []fakeRow{
-			{signal: "Speed", vNum: &speed, createdAt: now},
-			{signal: "Soc", vNum: &soc, createdAt: now},
+			{field: "Speed", kind: int16(protomodel.ValueKindFloat), fv: &speed},
+			{field: "Soc", kind: int16(protomodel.ValueKindDouble), fv: &soc},
 		},
 	}
 
@@ -241,36 +273,37 @@ func TestLogStateReader_State_BuildsMapFromRows(t *testing.T) {
 	if got := state["Soc"]; got != 80.0 {
 		t.Fatalf("Soc: want 80.0, got %v", got)
 	}
-	if !iter.closed && false {
-		// Close is called by State (not assembleState) — skip the check here.
-	}
 }
 
-func TestLogStateReader_State_FlattensLocation(t *testing.T) {
-	locBytes, err := json.Marshal(map[string]any{"Lat": 1.0, "Lng": 2.0})
-	if err != nil {
-		t.Fatalf("marshal location: %v", err)
-	}
-	now := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
+func TestLogStateReader_State_DecodesAllKinds(t *testing.T) {
+	str := "Driving"
+	b := true
+	var i64 int64 = 1234
+	tm := time.Date(2026, 4, 30, 0, 0, 0, 0, time.UTC)
 	iter := &fakeRowIterator{
 		rows: []fakeRow{
-			{signal: "Location", vJsonb: locBytes, createdAt: now},
+			{field: "Gear", kind: int16(protomodel.ValueKindString), sv: &str},
+			{field: "Locked", kind: int16(protomodel.ValueKindBool), bv: &b},
+			{field: "Odometer", kind: int16(protomodel.ValueKindInt64), iv: &i64},
+			{field: "LastSeen", kind: int16(protomodel.ValueKindTime), tv: &tm},
 		},
 	}
 
-	raw, err := assembleState(iter)
+	state, err := assembleState(iter)
 	if err != nil {
 		t.Fatalf("assembleState: %v", err)
 	}
-	state := unpackLocationCompounds(raw)
-	if state["Latitude"] != 1.0 {
-		t.Fatalf("Latitude: want 1.0, got %v", state["Latitude"])
+	if state["Gear"] != "Driving" {
+		t.Fatalf("Gear: want 'Driving', got %v", state["Gear"])
 	}
-	if state["Longitude"] != 2.0 {
-		t.Fatalf("Longitude: want 2.0, got %v", state["Longitude"])
+	if state["Locked"] != true {
+		t.Fatalf("Locked: want true, got %v", state["Locked"])
 	}
-	if _, exists := state["Location"]; exists {
-		t.Fatalf("Location key must be removed after flatten")
+	if state["Odometer"] != int64(1234) {
+		t.Fatalf("Odometer: want int64(1234), got %v (%T)", state["Odometer"], state["Odometer"])
+	}
+	if got, ok := state["LastSeen"].(time.Time); !ok || !got.Equal(tm) {
+		t.Fatalf("LastSeen: want %v (time.Time), got %v (%T)", tm, state["LastSeen"], state["LastSeen"])
 	}
 }
 
@@ -336,7 +369,7 @@ func TestLogStateReader_State_LogsErrorBeforeReturn(t *testing.T) {
 
 func TestLogStateReader_SignalAt_ReturnsValueWhenFound(t *testing.T) {
 	speed := 50.0
-	q := &fakeQuerier{rows: &signalAtPgxRows{hasRow: true, vNum: &speed}}
+	q := &fakeQuerier{rows: &signalAtPgxRows{hasRow: true, kind: int16(protomodel.ValueKindFloat), fv: &speed}}
 	r := &LogStateReader{pool: q, log: zerolog.Nop()}
 
 	v, err := r.SignalAt(context.Background(), 1, "Speed", time.Now())
@@ -345,6 +378,48 @@ func TestLogStateReader_SignalAt_ReturnsValueWhenFound(t *testing.T) {
 	}
 	if v != 50.0 {
 		t.Fatalf("value: want 50.0, got %v", v)
+	}
+}
+
+func TestLogStateReader_SignalAt_DecodesString(t *testing.T) {
+	gear := "Driving"
+	q := &fakeQuerier{rows: &signalAtPgxRows{hasRow: true, kind: int16(protomodel.ValueKindString), sv: &gear}}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+
+	v, err := r.SignalAt(context.Background(), 1, "Gear", time.Now())
+	if err != nil {
+		t.Fatalf("SignalAt: %v", err)
+	}
+	if v != "Driving" {
+		t.Fatalf("value: want 'Driving', got %v (%T)", v, v)
+	}
+}
+
+func TestLogStateReader_SignalAt_DecodesBool(t *testing.T) {
+	locked := true
+	q := &fakeQuerier{rows: &signalAtPgxRows{hasRow: true, kind: int16(protomodel.ValueKindBool), bv: &locked}}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+
+	v, err := r.SignalAt(context.Background(), 1, "Locked", time.Now())
+	if err != nil {
+		t.Fatalf("SignalAt: %v", err)
+	}
+	if v != true {
+		t.Fatalf("value: want true, got %v (%T)", v, v)
+	}
+}
+
+func TestLogStateReader_SignalAt_DecodesInt(t *testing.T) {
+	var odo int64 = 123456
+	q := &fakeQuerier{rows: &signalAtPgxRows{hasRow: true, kind: int16(protomodel.ValueKindInt64), iv: &odo}}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+
+	v, err := r.SignalAt(context.Background(), 1, "Odometer", time.Now())
+	if err != nil {
+		t.Fatalf("SignalAt: %v", err)
+	}
+	if v != int64(123456) {
+		t.Fatalf("value: want int64(123456), got %v (%T)", v, v)
 	}
 }
 
@@ -436,19 +511,20 @@ func TestLogStateReader_SignalAt_RejectsEmptySignal(t *testing.T) {
 // --- Timeline() chart mode tests -----------------------------------------
 
 // timelineSeedRow is the in-memory analogue of a single signal_log row
-// returned by the seed (DISTINCT ON) query: 5 columns, no created_at.
+// returned by the seed (DISTINCT ON) query: 7 columns, no ts.
 type timelineSeedRow struct {
-	signal string
-	vNum   *float64
-	vStr   *string
-	vBool  *bool
-	vJsonb []byte
+	field string
+	kind  int16
+	sv    *string
+	bv    *bool
+	iv    *int64
+	fv    *float64
+	tv    *time.Time
 }
 
 // timelineSeedPgxRows implements the relevant subset of pgx.Rows used by
 // LogStateReader.Timeline's seed scan. Only Next/Scan/Err/Close are
-// exercised; the rest of pgx.Rows is satisfied with zero-value stubs so
-// the type compiles.
+// exercised; the rest of pgx.Rows is satisfied with zero-value stubs.
 type timelineSeedPgxRows struct {
 	rows []timelineSeedRow
 	pos  int
@@ -470,15 +546,17 @@ func (s *timelineSeedPgxRows) Scan(dest ...any) error {
 	if s.pos == 0 || s.pos > len(s.rows) {
 		return errors.New("timelineSeedPgxRows: Scan called out of order")
 	}
-	if len(dest) != 5 {
-		return fmt.Errorf("timelineSeedPgxRows: expected 5 destinations, got %d", len(dest))
+	if len(dest) != 7 {
+		return fmt.Errorf("timelineSeedPgxRows: expected 7 destinations, got %d", len(dest))
 	}
 	row := s.rows[s.pos-1]
-	*(dest[0].(*string)) = row.signal
-	*(dest[1].(**float64)) = row.vNum
-	*(dest[2].(**string)) = row.vStr
-	*(dest[3].(**bool)) = row.vBool
-	*(dest[4].(*[]byte)) = row.vJsonb
+	*(dest[0].(*string)) = row.field
+	*(dest[1].(*int16)) = row.kind
+	*(dest[2].(**string)) = row.sv
+	*(dest[3].(**bool)) = row.bv
+	*(dest[4].(**int64)) = row.iv
+	*(dest[5].(**float64)) = row.fv
+	*(dest[6].(**time.Time)) = row.tv
 	return nil
 }
 func (s *timelineSeedPgxRows) Values() ([]any, error) { return nil, nil }
@@ -486,14 +564,16 @@ func (s *timelineSeedPgxRows) RawValues() [][]byte    { return nil }
 func (s *timelineSeedPgxRows) Conn() *pgx.Conn        { return nil }
 
 // timelineWindowRow is the in-memory analogue of one signal_log row
-// returned by the window query: 6 columns including created_at first.
+// returned by the window query: 8 columns including ts first.
 type timelineWindowRow struct {
-	createdAt time.Time
-	signal    string
-	vNum      *float64
-	vStr      *string
-	vBool     *bool
-	vJsonb    []byte
+	ts    time.Time
+	field string
+	kind  int16
+	sv    *string
+	bv    *bool
+	iv    *int64
+	fv    *float64
+	tv    *time.Time
 }
 
 // timelineWindowPgxRows is the window-query counterpart to
@@ -519,16 +599,18 @@ func (w *timelineWindowPgxRows) Scan(dest ...any) error {
 	if w.pos == 0 || w.pos > len(w.rows) {
 		return errors.New("timelineWindowPgxRows: Scan called out of order")
 	}
-	if len(dest) != 6 {
-		return fmt.Errorf("timelineWindowPgxRows: expected 6 destinations, got %d", len(dest))
+	if len(dest) != 8 {
+		return fmt.Errorf("timelineWindowPgxRows: expected 8 destinations, got %d", len(dest))
 	}
 	row := w.rows[w.pos-1]
-	*(dest[0].(*time.Time)) = row.createdAt
-	*(dest[1].(*string)) = row.signal
-	*(dest[2].(**float64)) = row.vNum
-	*(dest[3].(**string)) = row.vStr
-	*(dest[4].(**bool)) = row.vBool
-	*(dest[5].(*[]byte)) = row.vJsonb
+	*(dest[0].(*time.Time)) = row.ts
+	*(dest[1].(*string)) = row.field
+	*(dest[2].(*int16)) = row.kind
+	*(dest[3].(**string)) = row.sv
+	*(dest[4].(**bool)) = row.bv
+	*(dest[5].(**int64)) = row.iv
+	*(dest[6].(**float64)) = row.fv
+	*(dest[7].(**time.Time)) = row.tv
 	return nil
 }
 func (w *timelineWindowPgxRows) Values() ([]any, error) { return nil, nil }
@@ -570,6 +652,23 @@ func (t *timelineQuerier) Query(ctx context.Context, sql string, args ...any) (p
 func ptrFloat64(v float64) *float64 { return &v }
 func ptrString(v string) *string    { return &v }
 
+// floatRow is a convenience builder for a float-kind window row.
+func floatRow(ts time.Time, field string, v float64) timelineWindowRow {
+	return timelineWindowRow{ts: ts, field: field, kind: int16(protomodel.ValueKindFloat), fv: &v}
+}
+
+func stringRow(ts time.Time, field string, v string) timelineWindowRow {
+	return timelineWindowRow{ts: ts, field: field, kind: int16(protomodel.ValueKindString), sv: &v}
+}
+
+func nullFloatRow(ts time.Time, field string) timelineWindowRow {
+	return timelineWindowRow{ts: ts, field: field, kind: int16(protomodel.ValueKindFloat)}
+}
+
+func floatSeedRow(field string, v float64) timelineSeedRow {
+	return timelineSeedRow{field: field, kind: int16(protomodel.ValueKindFloat), fv: &v}
+}
+
 // validWindow returns a (from, to) pair safely inside the 366-day guard
 // so happy-path tests do not have to spell out time literals.
 func validWindow() (time.Time, time.Time) {
@@ -608,7 +707,7 @@ func TestLogStateReader_Timeline_ChartMode_EmptyMappings(t *testing.T) {
 
 func TestLogStateReader_Timeline_ChartMode_SeedOnly_NoEvents(t *testing.T) {
 	q := &timelineQuerier{
-		seedRows:   &timelineSeedPgxRows{rows: []timelineSeedRow{{signal: "Speed", vNum: ptrFloat64(50)}}},
+		seedRows:   &timelineSeedPgxRows{rows: []timelineSeedRow{floatSeedRow("Speed", 50)}},
 		windowRows: emptyPgxRows{},
 	}
 	r := &LogStateReader{pool: q, log: zerolog.Nop()}
@@ -630,7 +729,7 @@ func TestLogStateReader_Timeline_ChartMode_SingleEvent(t *testing.T) {
 	t1 := time.Date(2026, 4, 30, 12, 30, 0, 0, time.UTC)
 	q := &timelineQuerier{
 		windowRows: &timelineWindowPgxRows{rows: []timelineWindowRow{
-			{createdAt: t1, signal: "Speed", vNum: ptrFloat64(50)},
+			floatRow(t1, "Speed", 50),
 		}},
 	}
 	r := &LogStateReader{pool: q, log: zerolog.Nop()}
@@ -655,10 +754,10 @@ func TestLogStateReader_Timeline_ChartMode_CarryForward(t *testing.T) {
 	t1 := time.Date(2026, 4, 30, 12, 30, 0, 0, time.UTC)
 	q := &timelineQuerier{
 		seedRows: &timelineSeedPgxRows{rows: []timelineSeedRow{
-			{signal: "Soc", vNum: ptrFloat64(80)},
+			floatSeedRow("Soc", 80),
 		}},
 		windowRows: &timelineWindowPgxRows{rows: []timelineWindowRow{
-			{createdAt: t1, signal: "Speed", vNum: ptrFloat64(50)},
+			floatRow(t1, "Speed", 50),
 		}},
 	}
 	r := &LogStateReader{pool: q, log: zerolog.Nop()}
@@ -687,8 +786,8 @@ func TestLogStateReader_Timeline_ChartMode_MergeSameTimestamp(t *testing.T) {
 	t1 := time.Date(2026, 4, 30, 12, 30, 0, 0, time.UTC)
 	q := &timelineQuerier{
 		windowRows: &timelineWindowPgxRows{rows: []timelineWindowRow{
-			{createdAt: t1, signal: "Speed", vNum: ptrFloat64(50)},
-			{createdAt: t1, signal: "Soc", vNum: ptrFloat64(80)},
+			floatRow(t1, "Speed", 50),
+			floatRow(t1, "Soc", 80),
 		}},
 	}
 	r := &LogStateReader{pool: q, log: zerolog.Nop()}
@@ -722,8 +821,8 @@ func TestLogStateReader_Timeline_ChartMode_DropsLeadingNilRows(t *testing.T) {
 	// real value and survives.
 	q := &timelineQuerier{
 		windowRows: &timelineWindowPgxRows{rows: []timelineWindowRow{
-			{createdAt: t1, signal: "Speed"},
-			{createdAt: t2, signal: "Speed", vNum: ptrFloat64(50)},
+			nullFloatRow(t1, "Speed"),
+			floatRow(t2, "Speed", 50),
 		}},
 	}
 	r := &LogStateReader{pool: q, log: zerolog.Nop()}
@@ -880,9 +979,9 @@ func TestLogStateReader_Timeline_CollapseMode_DropsConsecutiveDuplicates(t *test
 	// duplicate row is dropped.
 	q := &timelineQuerier{
 		windowRows: &timelineWindowPgxRows{rows: []timelineWindowRow{
-			{createdAt: t1, signal: "Title", vStr: ptrString("A")},
-			{createdAt: t2, signal: "Title", vStr: ptrString("A")},
-			{createdAt: t3, signal: "Title", vStr: ptrString("B")},
+			stringRow(t1, "Title", "A"),
+			stringRow(t2, "Title", "A"),
+			stringRow(t3, "Title", "B"),
 		}},
 	}
 	r := &LogStateReader{pool: q, log: zerolog.Nop()}
@@ -922,8 +1021,8 @@ func TestLogStateReader_Timeline_CollapseMode_KeepsFirstAlways(t *testing.T) {
 	// title="A") is kept as the first non-nil collapse value.
 	q := &timelineQuerier{
 		windowRows: &timelineWindowPgxRows{rows: []timelineWindowRow{
-			{createdAt: t1, signal: "Speed", vNum: ptrFloat64(50)},
-			{createdAt: t2, signal: "Title", vStr: ptrString("A")},
+			floatRow(t1, "Speed", 50),
+			stringRow(t2, "Title", "A"),
 		}},
 	}
 	r := &LogStateReader{pool: q, log: zerolog.Nop()}
@@ -989,12 +1088,12 @@ func TestLogStateReader_Timeline_CollapseMode_PreservesNonCollapsedFields(t *tes
 	// NOT bleed into the kept row 1's artist value.
 	q := &timelineQuerier{
 		windowRows: &timelineWindowPgxRows{rows: []timelineWindowRow{
-			{createdAt: t1, signal: "Title", vStr: ptrString("A")},
-			{createdAt: t1, signal: "Artist", vStr: ptrString("X")},
-			{createdAt: t2, signal: "Title", vStr: ptrString("A")},
-			{createdAt: t2, signal: "Artist", vStr: ptrString("Y")},
-			{createdAt: t3, signal: "Title", vStr: ptrString("B")},
-			{createdAt: t3, signal: "Artist", vStr: ptrString("Z")},
+			stringRow(t1, "Title", "A"),
+			stringRow(t1, "Artist", "X"),
+			stringRow(t2, "Title", "A"),
+			stringRow(t2, "Artist", "Y"),
+			stringRow(t3, "Title", "B"),
+			stringRow(t3, "Artist", "Z"),
 		}},
 	}
 	r := &LogStateReader{pool: q, log: zerolog.Nop()}
@@ -1054,3 +1153,9 @@ func TestLogStateReader_Timeline_CollapseMode_NoNPlusOne(t *testing.T) {
 		t.Fatalf("calls: want exactly 2 (seed + window) regardless of mapping count or collapse mode, got %d", got)
 	}
 }
+
+// suppress unused warnings: ptrFloat64/ptrString are kept for fixture
+// authors that prefer the explicit pointer form over the convenience
+// row-builders above.
+var _ = ptrFloat64
+var _ = ptrString

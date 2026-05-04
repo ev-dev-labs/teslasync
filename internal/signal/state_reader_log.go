@@ -10,13 +10,14 @@ package signal
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
+
+	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 )
 
 // pgxQuerier is the narrow query seam consumed by LogStateReader. *pgxpool.Pool
@@ -121,15 +122,18 @@ var _ StateReader = (*LogStateReader)(nil)
 //
 // # Schema
 //
-// signal_log stores values across four typed columns (value_num, value_str,
-// value_bool, value_jsonb). State decodes them into a single SignalValue
-// per signal using the canonical priority num → bool → jsonb → str.
-// Historical Location compounds (stored as JSONB {Lat, Lng}) are flattened
-// into Latitude/Longitude keys on the returned map via
-// unpackLocationCompounds.
+// signal_log stores values in typed columns dictated by value_kind (per
+// migration 000173): str_value, bool_value, int_value, float_value,
+// time_value. State decodes each row into the typed Go primitive
+// (string, bool, int64, float64, time.Time) — callers do val.(float64)
+// etc. and receive the correct Go type, matching the typed-value contract
+// Store.GetFloat/GetBool/GetString already provide on the L1 hot path.
+// Location compounds are flattened by the codec (prompt 0063) into
+// Latitude/Longitude atomics before they reach signal_log; the cold path
+// never sees a compound row. See ADR-002 + ADR-004.
 func (r *LogStateReader) State(ctx context.Context, vehicleID int64, at time.Time) (State, error) {
 	if at.IsZero() {
-		// A zero `at` would silently match no rows because every created_at
+		// A zero `at` would silently match no rows because every ts
 		// is after time.Time{} when serialized through pgx — but worse, a
 		// zero `at` is almost always a programming error (forgot to pass
 		// time.Now() at the call site). Fail loud instead of returning an
@@ -137,12 +141,11 @@ func (r *LogStateReader) State(ctx context.Context, vehicleID int64, at time.Tim
 		return nil, fmt.Errorf("state: at must be non-zero (use time.Now() for current state)")
 	}
 
-	const query = `SELECT DISTINCT ON (signal) signal,
-       value_num, value_str, value_bool, value_jsonb,
-       created_at
+	const query = `SELECT DISTINCT ON (field) field,
+       value_kind, str_value, bool_value, int_value, float_value, time_value
 FROM signal_log
-WHERE vehicle_id = $1 AND created_at <= $2
-ORDER BY signal, created_at DESC`
+WHERE vehicle_id = $1 AND ts <= $2
+ORDER BY field, ts DESC`
 
 	start := time.Now()
 	rows, err := r.pool.Query(ctx, query, vehicleID, at)
@@ -168,8 +171,6 @@ ORDER BY signal, created_at DESC`
 			Msg("state read failed")
 		return nil, fmt.Errorf("state at %s for vehicle %d: %w", at.Format(time.RFC3339), vehicleID, err)
 	}
-
-	state = unpackLocationCompounds(state)
 
 	if elapsed > 500*time.Millisecond {
 		r.log.Warn().
@@ -221,16 +222,17 @@ ORDER BY signal, created_at DESC`
 //
 // # Schema
 //
-// signal_log stores values across four typed columns (value_num, value_str,
-// value_bool, value_jsonb). SignalAt selects all four and decodes them
-// into a single SignalValue using the same canonical priority as State
-// (num → bool → jsonb → str). When `signal == "Location"` the returned
-// value is the raw decoded compound (typically map[string]any{"Lat", "Lng"});
-// callers who want flattened Latitude/Longitude scalars MUST use State,
-// which performs the unpack at the State-map level.
+// signal_log stores values in typed columns dictated by value_kind (per
+// migration 000173): str_value, bool_value, int_value, float_value,
+// time_value. SignalAt selects value_kind plus all five typed columns and
+// decodes them via decodeSignalLogRow into the typed Go primitive
+// (string, bool, int64, float64, time.Time). Location is flattened by
+// the codec (prompt 0063) into Latitude/Longitude atomics before reaching
+// signal_log, so callers asking for "Location" via SignalAt will see no
+// row; they must request "Latitude"/"Longitude" individually.
 func (r *LogStateReader) SignalAt(ctx context.Context, vehicleID int64, signal string, at time.Time) (SignalValue, error) {
 	if at.IsZero() {
-		// A zero `at` would silently match no rows because every created_at
+		// A zero `at` would silently match no rows because every ts
 		// is after time.Time{} when serialized through pgx — but worse, a
 		// zero `at` is almost always a programming error (forgot to pass
 		// time.Now() at the call site). Fail loud instead of returning
@@ -245,10 +247,10 @@ func (r *LogStateReader) SignalAt(ctx context.Context, vehicleID int64, signal s
 		return nil, fmt.Errorf("signal_at: signal name must not be empty")
 	}
 
-	const query = `SELECT value_num, value_str, value_bool, value_jsonb
+	const query = `SELECT value_kind, str_value, bool_value, int_value, float_value, time_value
 FROM signal_log
-WHERE vehicle_id = $1 AND signal = $2 AND created_at <= $3
-ORDER BY created_at DESC
+WHERE vehicle_id = $1 AND field = $2 AND ts <= $3
+ORDER BY ts DESC
 LIMIT 1`
 
 	start := time.Now()
@@ -268,11 +270,13 @@ LIMIT 1`
 
 	var value SignalValue
 	if rows.Next() {
-		var vNum *float64
-		var vStr *string
-		var vBool *bool
-		var vJsonb []byte
-		if err := rows.Scan(&vNum, &vStr, &vBool, &vJsonb); err != nil {
+		var kind int16
+		var sv *string
+		var bv *bool
+		var iv *int64
+		var fv *float64
+		var tv *time.Time
+		if err := rows.Scan(&kind, &sv, &bv, &iv, &fv, &tv); err != nil {
 			r.log.Error().
 				Err(err).
 				Int64("vehicle_id", vehicleID).
@@ -281,7 +285,7 @@ LIMIT 1`
 				Msg("signal_at read failed")
 			return nil, fmt.Errorf("signal_at %s for vehicle %d: %w", signal, vehicleID, err)
 		}
-		value = decodeSignalLogRow(vNum, vStr, vBool, vJsonb)
+		value = r.decodeSignalLogRow(kind, sv, bv, iv, fv, tv)
 	}
 	if err := rows.Err(); err != nil {
 		r.log.Error().
@@ -368,13 +372,13 @@ LIMIT 1`
 //
 // # Schema
 //
-// signal_log stores values across four typed columns (value_num, value_str,
-// value_bool, value_jsonb). Both the seed query and the window query
-// select all four and decode each row into a SignalValue using the
-// canonical priority num → bool → jsonb → str. When "Location" is in
-// the projected signal set the seed map is post-processed via
-// unpackLocationCompounds so callers asking for the Location compound
-// also see flattened Latitude/Longitude in the seed.
+// signal_log stores values in typed columns dictated by value_kind (per
+// migration 000173): str_value, bool_value, int_value, float_value,
+// time_value. Both the seed query and the window query select value_kind
+// plus all five typed columns and decode each row via decodeSignalLogRow.
+// Location compounds are flattened by the codec (prompt 0063) into
+// Latitude/Longitude atomics before signal_log writes; the cold path
+// never observes a Location compound row.
 func (r *LogStateReader) Timeline(ctx context.Context, vehicleID int64, fields []FieldMapping, from, to time.Time, opts TimelineOptions) ([]TimelineRow, error) {
 	// Edge guards run BEFORE any SQL. A misconfigured caller (zero `at`,
 	// inverted window, accidental whole-history scan) must be a loud error
@@ -419,29 +423,25 @@ func (r *LogStateReader) Timeline(ctx context.Context, vehicleID int64, fields [
 	// several output Fields off the same source Signal.
 	seen := make(map[string]struct{}, len(fields))
 	signals := make([]string, 0, len(fields))
-	hasLocation := false
 	for _, f := range fields {
 		if _, ok := seen[f.Signal]; ok {
 			continue
 		}
 		seen[f.Signal] = struct{}{}
 		signals = append(signals, f.Signal)
-		if f.Signal == "Location" {
-			hasLocation = true
-		}
 	}
 
 	start := time.Now()
 
-	// Seed query: DISTINCT ON (signal) over the at-or-before-from slice.
+	// Seed query: DISTINCT ON (field) over the at-or-before-from slice.
 	// Mirrors the pattern in State() but constrained to the requested
-	// signal set so the planner can pick the (vehicle_id, signal,
-	// created_at) composite index for a tight backward scan.
-	const seedQuery = `SELECT DISTINCT ON (signal) signal,
-       value_num, value_str, value_bool, value_jsonb
+	// signal set so the planner can pick the (vehicle_id, field, ts)
+	// composite index for a tight backward scan.
+	const seedQuery = `SELECT DISTINCT ON (field) field,
+       value_kind, str_value, bool_value, int_value, float_value, time_value
 FROM signal_log
-WHERE vehicle_id = $1 AND created_at <= $2 AND signal = ANY($3)
-ORDER BY signal, created_at DESC`
+WHERE vehicle_id = $1 AND ts <= $2 AND field = ANY($3)
+ORDER BY field, ts DESC`
 
 	seedRows, err := r.pool.Query(ctx, seedQuery, vehicleID, from, signals)
 	if err != nil {
@@ -456,12 +456,14 @@ ORDER BY signal, created_at DESC`
 
 	seed := make(map[string]SignalValue, len(signals))
 	for seedRows.Next() {
-		var sig string
-		var vNum *float64
-		var vStr *string
-		var vBool *bool
-		var vJsonb []byte
-		if err := seedRows.Scan(&sig, &vNum, &vStr, &vBool, &vJsonb); err != nil {
+		var fld string
+		var kind int16
+		var sv *string
+		var bv *bool
+		var iv *int64
+		var fv *float64
+		var tv *time.Time
+		if err := seedRows.Scan(&fld, &kind, &sv, &bv, &iv, &fv, &tv); err != nil {
 			seedRows.Close()
 			r.log.Error().
 				Err(err).
@@ -471,7 +473,7 @@ ORDER BY signal, created_at DESC`
 				Msg("timeline seed read failed")
 			return nil, fmt.Errorf("timeline seed %s..%s for vehicle %d: %w", from.Format(time.RFC3339), to.Format(time.RFC3339), vehicleID, err)
 		}
-		seed[sig] = decodeSignalLogRow(vNum, vStr, vBool, vJsonb)
+		seed[fld] = r.decodeSignalLogRow(kind, sv, bv, iv, fv, tv)
 	}
 	seedErr := seedRows.Err()
 	// Close the seed connection BEFORE issuing the window query so a
@@ -488,21 +490,19 @@ ORDER BY signal, created_at DESC`
 		return nil, fmt.Errorf("timeline seed %s..%s for vehicle %d: %w", from.Format(time.RFC3339), to.Format(time.RFC3339), vehicleID, seedErr)
 	}
 
-	if hasLocation {
-		// Treat seed as a State to reuse the canonical Location flatten;
-		// after this call the seed exposes Latitude/Longitude scalars in
-		// addition to (or replacing) the original Location compound.
-		seed = map[string]SignalValue(unpackLocationCompounds(State(seed)))
-	}
+	// Location compounds are flattened by the codec (prompt 0063) into
+	// Latitude/Longitude atomics; signal_log never stores compound rows
+	// post-phase-42. Callers that want lat/lng should map them as
+	// individual signals in `fields`.
 
 	// Window query: every emission in (from, to] for the requested
 	// signals, ordered ascending so forwardFold can stream events in
 	// chronological order without an in-memory sort.
-	const windowQuery = `SELECT created_at, signal,
-       value_num, value_str, value_bool, value_jsonb
+	const windowQuery = `SELECT ts, field,
+       value_kind, str_value, bool_value, int_value, float_value, time_value
 FROM signal_log
-WHERE vehicle_id = $1 AND created_at > $2 AND created_at <= $3 AND signal = ANY($4)
-ORDER BY created_at ASC`
+WHERE vehicle_id = $1 AND ts > $2 AND ts <= $3 AND field = ANY($4)
+ORDER BY ts ASC`
 
 	windowRows, err := r.pool.Query(ctx, windowQuery, vehicleID, from, to, signals)
 	if err != nil {
@@ -519,12 +519,14 @@ ORDER BY created_at ASC`
 	var events []rawEvent
 	for windowRows.Next() {
 		var eventTs time.Time
-		var sig string
-		var vNum *float64
-		var vStr *string
-		var vBool *bool
-		var vJsonb []byte
-		if err := windowRows.Scan(&eventTs, &sig, &vNum, &vStr, &vBool, &vJsonb); err != nil {
+		var fld string
+		var kind int16
+		var sv *string
+		var bv *bool
+		var iv *int64
+		var fv *float64
+		var tv *time.Time
+		if err := windowRows.Scan(&eventTs, &fld, &kind, &sv, &bv, &iv, &fv, &tv); err != nil {
 			r.log.Error().
 				Err(err).
 				Int64("vehicle_id", vehicleID).
@@ -535,8 +537,8 @@ ORDER BY created_at ASC`
 		}
 		events = append(events, rawEvent{
 			Ts:     eventTs,
-			Signal: sig,
-			Value:  decodeSignalLogRow(vNum, vStr, vBool, vJsonb),
+			Signal: fld,
+			Value:  r.decodeSignalLogRow(kind, sv, bv, iv, fv, tv),
 		})
 	}
 	if err := windowRows.Err(); err != nil {
@@ -584,24 +586,23 @@ ORDER BY created_at ASC`
 //
 // The iterator MUST be the result of a query that selects, in order:
 //
-//	signal, value_num, value_str, value_bool, value_jsonb, created_at
+//	field, value_kind, str_value, bool_value, int_value, float_value, time_value
 //
-// (matching the SQL in State). created_at is read for completeness but not
-// projected into the returned State — the State map's contract is "latest
-// per signal", not "latest per (signal, ts)".
+// (matching the SQL in State).
 func assembleState(rows rowIterator) (State, error) {
 	state := make(State)
 	for rows.Next() {
-		var signal string
-		var vNum *float64
-		var vStr *string
-		var vBool *bool
-		var vJsonb []byte
-		var createdAt time.Time
-		if err := rows.Scan(&signal, &vNum, &vStr, &vBool, &vJsonb, &createdAt); err != nil {
+		var fld string
+		var kind int16
+		var sv *string
+		var bv *bool
+		var iv *int64
+		var fv *float64
+		var tv *time.Time
+		if err := rows.Scan(&fld, &kind, &sv, &bv, &iv, &fv, &tv); err != nil {
 			return nil, fmt.Errorf("scan signal_log row: %w", err)
 		}
-		state[signal] = decodeSignalLogRow(vNum, vStr, vBool, vJsonb)
+		state[fld] = decodeRow(kind, sv, bv, iv, fv, tv, nil)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate signal_log rows: %w", err)
@@ -609,59 +610,79 @@ func assembleState(rows rowIterator) (State, error) {
 	return state, nil
 }
 
-// decodeSignalLogRow applies the canonical priority for multi-typed signal
-// values stored across signal_log's four typed columns:
+// decodeSignalLogRow decodes one signal_log row's typed columns into a
+// SignalValue dictated by value_kind. Returns the typed Go primitive
+// directly (string/bool/int64/float64/time.Time) so callers receive the
+// correct Go type via the existing SignalValue=any contract.
 //
-//	value_num (float64) → value_bool (bool) → value_jsonb (any) → value_str (string).
+// value_kind acts as the discriminator (per migration 000173):
+//   - ValueKindString               -> str_value
+//   - ValueKindBool                 -> bool_value
+//   - ValueKindInt32/Int64/Enum     -> int_value (BIGINT widens int32/enum)
+//   - ValueKindFloat/Double         -> float_value
+//   - ValueKindTime                 -> time_value
 //
-// Returns nil when every column is NULL. Malformed JSONB falls through to
-// value_str so a corrupt JSONB blob never silently drops a value that
-// another column captured correctly.
+// ValueKindUnknown / ValueKindCompound / ValueKindInvalid are NOT
+// representable in signal_log per the migration COMMENT block — the
+// codec drops invalid samples and the router rejects unknown kinds before
+// the cold-path writer ever sees them. Any such row is a defensive Warn
+// log + nil return rather than a panic.
 //
 // Named decodeSignalLogRow (not decodeSignalValue) to avoid collision with
-// the Redis-envelope decoder of the same conceptual purpose in redis_cache.go,
-// which operates on the L2 cache's string-encoded payload format.
-func decodeSignalLogRow(vNum *float64, vStr *string, vBool *bool, vJsonb []byte) SignalValue {
-	if vNum != nil {
-		return *vNum
-	}
-	if vBool != nil {
-		return *vBool
-	}
-	if len(vJsonb) > 0 {
-		var v any
-		if err := json.Unmarshal(vJsonb, &v); err == nil {
-			return v
-		}
-		// Malformed JSONB falls through to value_str on purpose.
-	}
-	if vStr != nil {
-		return *vStr
-	}
-	return nil
+// the Redis-envelope decoder of the same conceptual purpose in
+// redis_cache.go, which operates on the L2 cache's string-encoded payload
+// format.
+func (r *LogStateReader) decodeSignalLogRow(kind int16, sv *string, bv *bool, iv *int64, fv *float64, tv *time.Time) SignalValue {
+	return decodeRow(kind, sv, bv, iv, fv, tv, &r.log)
 }
 
-// unpackLocationCompounds flattens historical Location compound blobs
-// (stored as JSONB {Lat, Lng}) into top-level Latitude/Longitude keys,
-// removing the original Location key so callers see a flat lat/lng pair
-// regardless of the compound shape used at write time. Returns the same map
-// for chaining; if Location is absent or not a map[string]any, returns the
-// input unchanged.
-func unpackLocationCompounds(s State) State {
-	raw, ok := s["Location"]
-	if !ok {
-		return s
+// decodeRow is the package-scoped pure decoder shared by assembleState
+// (which has no logger) and LogStateReader.decodeSignalLogRow (which
+// passes its zerolog.Logger so unexpected kinds are observable). Pass
+// log==nil to skip the warn path.
+func decodeRow(kind int16, sv *string, bv *bool, iv *int64, fv *float64, tv *time.Time, log *zerolog.Logger) SignalValue {
+	switch protomodel.ValueKind(kind) {
+	case protomodel.ValueKindString, protomodel.ValueKindEnum:
+		// Enum is stored in int_value as the parsed proto enum number;
+		// when the writer falls back to a string label (no numeric
+		// route), str_value carries it. Prefer the int when present.
+		if iv != nil {
+			return *iv
+		}
+		if sv != nil {
+			return *sv
+		}
+		return nil
+	case protomodel.ValueKindBool:
+		if bv != nil {
+			return *bv
+		}
+		return nil
+	case protomodel.ValueKindInt32, protomodel.ValueKindInt64:
+		if iv != nil {
+			return *iv
+		}
+		return nil
+	case protomodel.ValueKindFloat, protomodel.ValueKindDouble:
+		if fv != nil {
+			return *fv
+		}
+		return nil
+	case protomodel.ValueKindTime:
+		if tv != nil {
+			return *tv
+		}
+		return nil
+	default:
+		// ValueKindUnknown / ValueKindCompound / ValueKindInvalid never
+		// appear in signal_log per migration 000173. Defensive log +
+		// nil return rather than panic so a stray bad row doesn't take
+		// down the cold path.
+		if log != nil {
+			log.Warn().
+				Int16("value_kind", kind).
+				Msg("state_reader: unexpected value_kind in signal_log row")
+		}
+		return nil
 	}
-	locMap, ok := raw.(map[string]any)
-	if !ok {
-		return s
-	}
-	if lat, ok := locMap["Lat"]; ok {
-		s["Latitude"] = lat
-	}
-	if lng, ok := locMap["Lng"]; ok {
-		s["Longitude"] = lng
-	}
-	delete(s, "Location")
-	return s
 }
