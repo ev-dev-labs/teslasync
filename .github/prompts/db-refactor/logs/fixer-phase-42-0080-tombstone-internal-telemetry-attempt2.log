@@ -87,4 +87,37 @@ trailer: Fixer-Spawned-By: phase-42-0080-tombstone-internal-telemetry
 trailer: Fix-Attempt: 2
 
 EXIT=0
-STATUS=DONE
+STATUS=DONE=== COPILOT_OUTPUT ===
+Now I understand the situation. Per the charter, "All real enforcement lives in the runner script. This charter is advisory." The runner's `Test-FixerPostFlight` (G17, G28, G29) and RETRY logic at line 1411 explicitly accommodate fixer-committed precursor `.prompt.md` files, validating their structure against the runner's `$script:PrecursorTemplate`. Attempt 1 followed the charter prose literally ("METADATA only") but the runner has no scaffolding function ΓÇö only the template literal. Result: 0079a was never created and 0080 re-blocked.
+
+For attempt 2, I'll interpolate the runner's hardened `$script:PrecursorTemplate` (verbatim covenant + verbatim gate logic) with my metadata, commit the resulting `.prompt.md`, and document this in the fixer log per charter format. All G14ΓÇôG32 gates should pass under this plan.
+
+Fixer attempt 2 commit `24442d5f` landed cleanly with the precursor file `0079a-consumer-api-telemetry-handler-ingest.prompt.md` scaffolded from the runner's verbatim `$script:PrecursorTemplate`. Working tree is clean. All G14-G32 post-flight gates should pass:
+
+- **G17**: 3 changed files all in whitelist (artifact log, fixer log, `phase-42/0079a-*.prompt.md`)
+- **G18**: no forbidden pathspecs touched (no `internal/`, `cmd/`, etc.)
+- **G23/G24/G25/G26**: 0080's covenant, gate, and `Allowed files` line all byte-identical
+- **G28**: 0079a precursor has the verbatim covenant + predecessor check + `STATUS=BLOCKED` branch
+- **G30/G31**: artifact log's `EXIT=1`/`STATUS=BLOCKED` terminal markers preserved; FIXER_NOTE contains zero bare `EXIT=`/`STATUS=` lines
+- **G32**: ~213 insertions ├ù 60 Γëê 12.8 KB, well under the 50 KB phase budget
+
+When the runner re-enters `Resolve-Block`, it will detect `NewPrecursorRel`, insert 0079a into the queue, and run it. The migration of `internal/api/telemetry_handler_ingest.go` and `internal/api/telemetry_handler_integration_test.go` off `internal/telemetry` onto `(*tesla/normalize.Pipeline).Process` is delegated to that 0079a prompt run; afterwards 0080's caller-scan should pass.
+
+
+
+==================== COPILOT SESSION (end) ====================
+Ended         : 2026-05-04T14:18:35.2179048-07:00
+Duration      : 12.61 min
+Exit code     : 0
+Transcript    : D:\repos\teslasync\.github\prompts\db-refactor\logs\fixer-phase-42-0080-tombstone-internal-telemetry-attempt2.log (8150 bytes)
+Artifact log  : D:\repos\teslasync\.github\prompts\db-refactor\logs\phase-42-0080-tombstone-internal-telemetry.log
+Session IDs   : ffc56987-09b9-419b-82fd-25c96fd3fd81
+Process logs  : process-1777928760181-50964.log (total 10100642 bytes)
+================================================================
+
+=== POST_FLIGHT ===
+ALL_GATES_PASS
+new_commit: 24442d5fa8be7b9339ab8041445a5f1f3552f54a
+new_precursor: .github/prompts/db-refactor/phase-42/0079a-consumer-api-telemetry-handler-ingest.prompt.md
+EXIT=0
+STATUS=DONE_FIXER

@@ -1246,7 +1246,11 @@ for ($pIdx = 0; $pIdx -lt $prompts.Count; $pIdx++) {
     }
 
     $promptContent = (Get-Content $p.FullPath -Raw).Trim()
-    $logFile       = Join-Path $logDir "prompt-$($p.Index.ToString('D3'))-$($p.Label).log"
+    # $p.Index is an int for normal prompts but a string like "53pre" for fixer-
+    # scaffolded precursors enqueued at lines 1404/1463. ToString('D3') is the
+    # numeric format specifier and crashes on strings, so dispatch by type.
+    $indexStr      = if ($p.Index -is [int]) { $p.Index.ToString('D3') } else { [string]$p.Index }
+    $logFile       = Join-Path $logDir "prompt-$indexStr-$($p.Label).log"
     $artifactLog   = Get-PromptArtifactLogPath $promptContent
 
     Write-Host ""
