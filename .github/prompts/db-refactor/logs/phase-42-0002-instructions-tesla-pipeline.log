@@ -1,0 +1,66 @@
+=== PREFLIGHT ===
+Verifying predecessor phase-42-0001 is DONE...
+Predecessor: .github\prompts\db-refactor\logs\phase-42-0001-adr-004-fleet-telemetry-pipeline.log
+  EXIT=0
+  STATUS=DONE
+
+Branch: refactor/signals-rewrite
+HEAD: b5031f64
+Working tree (before changes):
+
+
+=== INSTRUCTIONS_PREVIEW ===
+Target: .github/instructions/tesla-pipeline.instructions.md
+Already present (committed in earlier phase-42 work) with the exact content
+specified by this prompt:
+  - applyTo frontmatter scoped to internal/tesla/**, internal/enums/**,
+    internal/mqtt/**, internal/signal/**, api/proto/tesla/**,
+    cmd/protogen-tesla/**, cmd/unit-drift-validator/**, cmd/resubscribe/**
+  - All 10 prohibited patterns present (verified by gate regex below):
+    1. HARDCODED WIRE-FORMAT UNITS
+    2. HAND-WRITTEN SIGNAL METADATA
+    3. PARALLEL TRANSFORM PIPELINES
+    4. NESTED MAPS CROSSING THE INGEST BOUNDARY
+    5. SKIPPING SETTING*UNIT SUBSCRIPTIONS
+    6. SILENT FAILURES ON MISSING UNIT CONTEXT
+    7. ROUTING WITHOUT routing.yaml
+    8. STORING NON-SI VALUES
+    9. APP SETTINGS UNIT SELECTORS INFLUENCING INGEST
+   10. RECREATING DELETED PRIMITIVES
+  - Conventions section, "When to update routing.yaml" section, and
+    Verification commands section all present.
+First 6 lines of the instructions file:
+---
+applyTo: "internal/tesla/**,internal/enums/**,internal/mqtt/**,internal/signal/**,api/proto/tesla/**,cmd/protogen-tesla/**,cmd/unit-drift-validator/**,cmd/resubscribe/**"
+---
+
+# Tesla Fleet Telemetry Pipeline — Engineering Rules
+
+
+=== COPILOT_MD_UPDATE ===
+Target: .github/copilot-instructions.md
+Pointer to the new instructions file is already present at line 121:
+  > Telemetry-pipeline rules: see .github/instructions/tesla-pipeline.instructions.md
+Located inside the "## Architecture" section, immediately before the
+ASCII architecture diagram. Also referenced from the active-migration
+banner (line 88) which points future agents at ADR-004 plus this
+instructions file as the canonical phase-42 sources.
+
+=== CHANGES ===
+Both target files were authored during earlier phase-42 work and are
+already on disk with the exact content this prompt specifies. This
+re-run only creates the log artifact for the prompt-numbering plan.
+Files changed in this re-run (expected: only the log):
+
+=== GATE ===
+All gate checks passed.
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
+git status --porcelain (pre-commit):
+
+git status --porcelain (after staging):
+AM .github/prompts/db-refactor/logs/phase-42-0002-instructions-tesla-pipeline.log
+
+git log -1 --oneline:
+ccdf48c2 phase-42(0002): agent instructions for Tesla Fleet Telemetry pipeline
