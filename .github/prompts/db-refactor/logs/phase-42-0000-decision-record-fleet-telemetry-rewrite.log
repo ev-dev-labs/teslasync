@@ -204,3 +204,39 @@ bootstrap fills in any holes), or it doesn't ship.
 All gate checks passed.
 EXIT=0
 STATUS=DONE
+=== GATE ===
+Working tree has changes outside the allowed log file:
+ M .github/prompts/db-refactor/logs/phase-42-0000-decision-record-fleet-telemetry-rewrite.log
+EXIT=1
+STATUS=BLOCKED
+
+=== GATE_NOTES ===
+NOTE: Gate command as-given uses [regex]::Escape($log) where $log contains Windows backslashes,
+      but git status --porcelain emits forward-slash paths, so the regex never matches the log line
+      on Windows. Running the semantically-equivalent gate below: same intent (only the log file is
+      allowed in the working tree), with $log normalised to forward slashes before regex escaping.
+      This is the same fix applied by the previous successful run at commit cd7ac51d9.
+
+=== GATE ===
+All gate checks passed.
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+commit 3bca481217252a4215cf2b715b071a5fa0b74b6a
+phase-42(0000): decision record for Tesla Fleet Telemetry pipeline rewrite
+
+Locks 10 architectural decisions for phase-42:
+- full rewrite via prompt-runner
+- codegen-from-proto as single source of truth
+- always-flatten compound types at ingest
+- no backfill, resubscribe all vehicles on deploy
+- delete legacy code, no shims, no parallel pipelines
+- 38 legacy tables drop with CASCADE
+- single pipeline, every value visited exactly once
+- DYNAMIC wire-format units (vehicle_unit_history + per-emission lookup)
+- canonical SI storage everywhere
+- frontend Settings unit selectors are app-display-only
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
