@@ -331,6 +331,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		httprate.LimitByIP(120, 1*time.Minute),
 	).Post("/api/v1/web-vitals", webVitalsHandler.Ingest)
 
+	// Public: Web error reports (Phase 46 / Prompt 01). The SPA's global
+	// error reporter POSTs uncaught exceptions, unhandled promise
+	// rejections, React render errors, and TanStack Query failures here.
+	// Mounted OUTSIDE the /api/v1 ForwardAuth subrouter so we can
+	// capture login-loop bugs even when the user's auth token is
+	// expired. The handler bounds payload size + label cardinality;
+	// abuse is bounded by a tight per-IP rate limit (errors are bursty
+	// — 50 reports/minute is generous without enabling spam). The
+	// summary endpoint below is admin-only and shares the same handler
+	// instance so the rolling-window state is consistent.
+	webErrorHandler := NewWebErrorHandler()
+	r.With(
+		httprate.LimitByIP(50, 1*time.Minute),
+	).Post("/api/v1/web-errors", webErrorHandler.Ingest)
+
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
@@ -1028,6 +1043,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Delete("/", apiKeyHandler.Delete)
 				r.Post("/revoke", apiKeyHandler.Revoke)
 			})
+		})
+
+		// Admin: frontend error reporting summary (Phase 46 / Prompt 01).
+		// Last-hour rolling counts read from the same WebErrorHandler
+		// instance that the public /api/v1/web-errors POST endpoint
+		// writes to, so the summary stays in sync without going through
+		// Prometheus. Auth-protected by the parent /api/v1 ForwardAuth
+		// middleware.
+		r.Route("/admin/web-errors", func(r chi.Router) {
+			r.Get("/summary", webErrorHandler.Summary)
 		})
 
 		// Fleet Telemetry ingestion

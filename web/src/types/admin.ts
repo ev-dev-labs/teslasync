@@ -77,6 +77,30 @@ export interface AuditLogEntry {
 }
 
 /**
+ * Last-hour rolling summary of frontend errors reported by the SPA via
+ * `POST /api/v1/web-errors`. The same handler that ingests reports
+ * exposes this summary via `GET /api/v1/admin/web-errors/summary`.
+ *
+ * Backend wire format is snake_case (`window_seconds`, `as_of`); after
+ * `camelCaseKeys()` both forms are present at runtime — frontend code
+ * uses the snake_case names that match the Go JSON tags for clarity.
+ */
+export interface WebErrorsSummaryEntry {
+  name: string;
+  route: string;
+  count: number;
+}
+
+export interface WebErrorsSummary {
+  window_seconds: number;
+  windowSeconds: number;
+  total: number;
+  top: WebErrorsSummaryEntry[];
+  as_of: string;
+  asOf: string;
+}
+
+/**
  * Per-user activity entry returned by `GET /users/me/activity`
  * (Phase-40 / Prompt 49 — Recent Activity Discoverability).
  *

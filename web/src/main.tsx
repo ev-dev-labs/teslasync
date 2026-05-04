@@ -11,9 +11,19 @@ import { FormatterPrefsBridge } from './components/FormatterPrefsBridge'
 import { ThemeProvider } from './components/ui/ThemeProvider'
 import ReloadPrompt from './components/feedback/ReloadPrompt'
 import { SelectedVehicleProvider } from './store/selectedVehicle'
+import { installGlobalErrorReporting, reportFrontendError } from './lib/errorReporter'
 import App from './App'
 import './i18n'
 import './index.css'
+
+// ── Frontend error reporting (Phase 46 / Prompt 01) ───────────────────────────
+// Install global window.error / window.unhandledrejection listeners BEFORE
+// React mounts so we capture even very-early bootstrap exceptions. The
+// reporter no-ops in dev mode (HMR + StrictMode generate too much noise to
+// be useful) and gracefully buffers when offline. ErrorBoundary forwards
+// React render errors and the queryCache subscription below forwards
+// TanStack Query failures.
+installGlobalErrorReporting()
 
 // ── Density bootstrap (Phase 40 / Prompt 44) ──────────────────────────────────
 // Apply the cached UI density to <body> BEFORE React mounts so the first
@@ -70,6 +80,21 @@ const queryClient = new QueryClient({
       networkMode: 'offlineFirst',
     },
   },
+})
+
+// Phase 46 / Prompt 01: subscribe the queryCache to the error reporter so
+// background refetch failures (where no <QueryError> is mounted because
+// the user navigated away from the originating page) still get captured.
+// `event.action.type === 'error'` only fires on the moment a query
+// transitions into the error state — the coalescing window in the
+// reporter handles repeated identical errors from refetch retries.
+queryClient.getQueryCache().subscribe((event) => {
+  if (!event || event.type !== 'updated') return
+  const action = (event as { action?: { type?: string; error?: unknown } }).action
+  if (action?.type !== 'error') return
+  if (action.error !== undefined && action.error !== null) {
+    reportFrontendError(action.error, 'query')
+  }
 })
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

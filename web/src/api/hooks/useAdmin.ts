@@ -7,6 +7,7 @@ import type {
   APIKey, APICallLog, APICallLogStats, BackupConfig, BackupRun,
   SystemHealth, AuditLogEntry, SecurityEvent, DBStats, MigrationStatus,
   ConnectionPool, ExportJob, VehicleState, StateTransition,
+  WebErrorsSummary,
 } from '@/types/admin';
 
 export const adminKeys = {
@@ -24,6 +25,7 @@ export const adminKeys = {
   exportJobs: ['export-jobs'] as const,
   vehicleState: (vehicleId: string) => ['vehicle-state', vehicleId] as const,
   stateTimeline: (vehicleId: string) => ['state-timeline', vehicleId] as const,
+  webErrorsSummary: ['admin', 'web-errors-summary'] as const,
 };
 
 export function useApiKeys() {
@@ -124,6 +126,22 @@ export function useAuditLogs() {
     queryKey: adminKeys.auditLogs,
     queryFn: () => request<AuditLogEntry[]>('/system/audit'),
     select: safeArray,
+  });
+}
+
+/**
+ * Last-hour rolling summary of frontend error reports (Phase 46 / Prompt 01).
+ *
+ * Reads from the same WebErrorHandler instance that ingests reports via
+ * `POST /api/v1/web-errors`, so the count reflects what the SPA has
+ * actually shipped. Auto-refreshes on the standard interval so the
+ * admin page stays live without a manual refresh.
+ */
+export function useWebErrorsSummary() {
+  return useQuery({
+    queryKey: adminKeys.webErrorsSummary,
+    queryFn: () => request<WebErrorsSummary>('/admin/web-errors/summary'),
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 

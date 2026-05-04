@@ -1977,6 +1977,14 @@
     "audit": {
       "searchPlaceholder": "Search by action, resource, or details…",
       "noMatches": "No audit entries match your search."
+    },
+    "errors": {
+      "title": "Frontend Errors (Last Hour)",
+      "subtitle": "Reported by browser sessions via /api/v1/web-errors. Exported as Prometheus counter teslasync_web_errors_total.",
+      "totalLastHour": "Errors in last hour",
+      "topOffenders": "Top error sources",
+      "noErrors": "No frontend errors reported in the last hour.",
+      "unableToLoad": "Unable to load error summary."
     }
   },
   "apiLogs": {

@@ -21,13 +21,13 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import {
-  useSystemHealth, useAuditLogs, useApiKeys, useApiLogStats,
+  useSystemHealth, useAuditLogs, useApiKeys, useApiLogStats, useWebErrorsSummary,
 } from '@/api/hooks/useAdmin';
 import { useRefreshAuth } from '@/api/hooks/useSettings';
 import type { AuditLogEntry, APIKey, SystemHealth } from '@/types/admin';
 import {
   Shield, Clock, Activity, Database, RefreshCw, Download, Trash2,
-  Search, BarChart3, Key, Server, HardDrive, AlertTriangle,
+  Search, BarChart3, Key, Server, HardDrive, AlertTriangle, Bug,
 } from 'lucide-react';
 
 // ─── Page component ──────────────────────────────────────────────────────────
@@ -43,6 +43,7 @@ export default function AdminPage() {
   const { data: apiLogStats, isLoading: usageLoading, error: usageError } = useApiLogStats();
   const { data: auditLogs, isLoading: auditLoading, error: auditError } = useAuditLogs();
   const { data: apiKeys, isLoading: keysLoading, error: keysError } = useApiKeys();
+  const { data: webErrorsSummary, isLoading: webErrorsLoading } = useWebErrorsSummary();
   const refreshMut = useRefreshAuth();
 
   const typedHealth = health as SystemHealth | undefined;
@@ -206,6 +207,56 @@ export default function AdminPage() {
           </GlassPanel>
         </FadeIn>
       </div>
+
+      {/* ── Recent Audit Log ─────────────────────────────────────── */}
+      <FadeIn>
+        <GlassPanel className="p-6">
+          <span className="text-base font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+            <Bug className="w-5 h-5 text-neon-cyan" />
+            {t('admin.errors.title', 'Frontend Errors (Last Hour)')}
+          </span>
+          <span className="text-xs text-[var(--text-muted)] mb-4 block mt-2">
+            {t('admin.errors.subtitle', 'Reported by browser sessions via /api/v1/web-errors. Exported as Prometheus counter teslasync_web_errors_total.')}
+          </span>
+          {webErrorsLoading ? (
+            <div className="space-y-2 mt-4">{[1, 2, 3].map(i => <Skeleton key={i} className="h-6" />)}</div>
+          ) : webErrorsSummary ? (
+            <div className="mt-4">
+              <div className="mb-4 flex items-center justify-between py-2 border-b border-[var(--border-subtle)]">
+                <span className="text-sm text-[var(--text-muted)]">{t('admin.errors.totalLastHour', 'Errors in last hour')}</span>
+                <span className="text-sm font-mono text-[var(--text-primary)]">{fmtInt(webErrorsSummary.total ?? 0)}</span>
+              </div>
+              {(webErrorsSummary.top ?? []).length > 0 ? (
+                <div className="space-y-2">
+                  <span className="text-xs uppercase tracking-wide text-[var(--text-muted)] block">
+                    {t('admin.errors.topOffenders', 'Top error sources')}
+                  </span>
+                  {(webErrorsSummary.top ?? []).map((entry, idx) => (
+                    <div
+                      key={`${entry.name}|${entry.route}|${idx}`}
+                      className="flex items-center justify-between py-2 border-b border-[var(--border-subtle)] last:border-b-0"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Badge variant="neutral" size="sm">{entry.name ?? '—'}</Badge>
+                        <span className="text-xs font-mono text-cyan-300 truncate">{entry.route ?? '—'}</span>
+                      </div>
+                      <span className="text-sm font-mono text-[var(--text-primary)] shrink-0">{fmtInt(entry.count ?? 0)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-sm text-[var(--text-muted)] block">
+                  {t('admin.errors.noErrors', 'No frontend errors reported in the last hour.')}
+                </span>
+              )}
+            </div>
+          ) : (
+            <span className="text-sm text-[var(--text-muted)] mt-4 block">
+              {t('admin.errors.unableToLoad', 'Unable to load error summary.')}
+            </span>
+          )}
+        </GlassPanel>
+      </FadeIn>
 
       {/* ── Recent Audit Log ─────────────────────────────────────── */}
       <FadeIn>
