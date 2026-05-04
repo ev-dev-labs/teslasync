@@ -1,0 +1,23 @@
+=== PREFLIGHT ===
+Prompt: phase-42-0030-routing-charging
+Started: 2026-05-03T23:09:21.2977619-07:00
+Branch: refactor/signals-rewrite
+HEAD: 7fcba2cfa7aaa64b62d11675d3dd7a8caae7ac87
+
+
+=== GATE ===
+Predecessor log missing: .github\prompts\db-refactor\logs\phase-42-0057-mig-create-derived-rollups.log
+
+Per the prompt's Action Step 1: 'Verify Phase 42 Prompt 0057 is DONE.'
+Prompt 0057 (Migration 000168 - derived rollups) has not been executed.
+migrations/000168_caggs_and_mvs.up.sql is referenced by Action Step 3
+to decide 'also_signal_log: true' for analytics-aggregate fields.
+Without it, the also_signal_log decisions cannot be made correctly.
+
+Cannot commit routing.yaml entries that depend on data not yet defined.
+Predecessor log missing or not DONE
+Working tree at gate exit:
+ M .github/prompts/db-refactor/logs/phase-42-0026-package-normalize.log
+
+EXIT=1
+STATUS=BLOCKED
