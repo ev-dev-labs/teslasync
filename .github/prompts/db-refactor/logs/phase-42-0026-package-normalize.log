@@ -1,0 +1,64 @@
+=== PREFLIGHT ===
+working dir: D:\repos\teslasync
+head: e59b17d775d867ca666f566d52775ad35ed088b4
+branch: refactor/signals-rewrite
+date: 2026-05-03T23:07:21.0538969-07:00
+
+=== PIPELINE_DESIGN ===
+normalize.Pipeline is THE ONE entry between codec.Atomic and the typed
+per-destination writers. Process(ctx, payload, vehicleIntID) -> error
+calls codec.Decode (errors wrapped as ErrPayloadDrop), then
+processAtomics:
+  1. sortAtomicsSettingUnitFirst (sort.SliceStable by IsSettingUnit)
+  2. for each atomic:
+       Setting*Unit -> observeSettingUnit -> histRepo.Record(SourceTelemetry)
+       else         -> toSI -> router.Route
+toSI looks up the active unit at atomic.EmittedAt via histRepo.At and
+calls units.ToSI(field, raw, active). UnitKindCharge fields and
+dimensionless fields pass through unchanged. ErrNotFound from histRepo.At
+becomes ErrNoUnitContext (drop + UnitContextMissing metric).
+
+Routable interface (subset of *router.Router) lets the test suite supply
+a fake without populating the empty routing.yaml from Prompt 0025.
+A compile-time assert (var _ Routable = (*router.Router)(nil)) keeps the
+production wiring lockstep.
+
+=== INVARIANT_TEST ===
+TestSettingUnitProcessedFirstInSamePayload locks the SettingUnitFirst
+reordering: VehicleSpeed BEFORE SettingDistanceUnit in input -> repo.ops
+sequence is [record(distance,km), at(distance,t)]; speed is converted
+with the freshly-Recorded km row to 27.7 * 1000/3600 = 7.6944 m/s.
+TestSinglePipelineInvariant uses go/parser + go/ast to assert the only
+exported method on *Pipeline returning error is Process, and no other
+package-level exported function returns error.
+
+=== UNIT_TEST ===
+=== RUN   TestPipelineHappyPath
+=== PAUSE TestPipelineHappyPath
+=== RUN   TestSettingUnitProcessedFirstInSamePayload
+=== PAUSE TestSettingUnitProcessedFirstInSamePayload
+=== RUN   TestSinglePipelineInvariant
+--- PASS: TestSinglePipelineInvariant (0.01s)
+=== CONT  TestPipelineHappyPath
+=== CONT  TestSettingUnitProcessedFirstInSamePayload
+--- PASS: TestPipelineHappyPath (0.00s)
+--- PASS: TestSettingUnitProcessedFirstInSamePayload (0.00s)
+PASS
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/normalize	(cached)
+unit_test_exit=0
+
+=== GATE ===
+predecessor: OK (EXIT=0, STATUS=DONE)
+all required files present
+required tests present
+sort + IsSettingUnit references present
+public methods on *Pipeline: Process
+single public ingest entry verified
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/normalize	(cached)
+git status --porcelain output:
+?? internal/tesla/normalize/
+All gate checks passed.
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
