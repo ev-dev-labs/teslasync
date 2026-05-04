@@ -1,0 +1,25 @@
+=== PREFLIGHT ===
+verifying predecessor 0023 log...
+prev EXIT line: EXIT=0
+prev STATUS line: STATUS=DONE
+=== DESIGN ===
+intervals.go: categoryDefaults table + fieldOverrides table + IntervalFor(field) (int,bool).
+  setting_unit=1, driving/location/powertrain=5, charging=10, climate/safety_security/vehicle_state=30, media/config/prefs/metadata=60.
+  overrides: VehicleSpeed=1, Gear=1, BatteryLevel=30 (each commented w/ reason).
+config.go: Builder{Hostname,Port}, NewBuilder, SubscriptionFields(), BuildSubscription(), BuildFor(vins).
+  iterates protomodel.Signals once, skips Category=='metadata', sorts alphabetically, fills templates/full_subscription.json.tmpl, validates+pretty-prints via encoding/json round-trip for byte-stable output.
+  no HTTP — delivery owned by client_fleet_telemetry.go per ADR-004.
+=== UNIT_TEST ===
+TestConfigCoversAllFields: enumerates protomodel.Signals reflectively, asserts every non-metadata Field appears with positive interval_seconds, asserts every IsSettingUnit field has interval_seconds==1 — fails loudly with the missing field name.
+TestSubscriptionDeterministic: builds twice + asserts byte-equality + asserts BuildFor is order-independent on VIN list.
+TestBuildForIncludesVINs: round-trips hostname/port/VINs through the rendered body.
+TestIntervalForKnownAndUnknownFields: exercises override path + setting_unit category + unknown-field guard returning ok=false.
+=== COVERAGE ===
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/config	(cached)	coverage: 81.6% of statements
+=== GATE ===
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/config	(cached)
+--- working-tree drift check ---
+(clean except for the new log)
+All gate checks passed.
+EXIT=0
+STATUS=DONE
