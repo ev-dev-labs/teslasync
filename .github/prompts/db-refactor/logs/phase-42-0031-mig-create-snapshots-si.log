@@ -1,0 +1,415 @@
+=== PREFLIGHT ===
+Datetime: 2026-05-04T01:32-07:00
+Predecessor: phase-42-0030-mig-create-positions-si.log
+Predecessor markers: EXIT=0 / STATUS=DONE (verified by reading the
+unique '^EXIT=' and '^STATUS=' lines emitted by the predecessor's
+own gate output).
+
+Working-tree baseline before authoring (git status --porcelain):
+  (clean)
+
+=== SLOT_VARIANCE ===
+The prompt-as-pasted hardcodes migration slot 000163 in:
+  - the allowed-files header,
+  - the file-existence check,
+  - the `CREATE TABLE` substring check (via path interpolation),
+  - the working-tree allowlist,
+  - the git add line, and
+  - the commit message embed.
+
+Slot 000163 is occupied by `000163_audit_logs_actor_metadata.{up,down}.sql`,
+a pre-phase-42 migration committed long before this phase began.
+
+Variance scope: ONLY the migration slot number, in exactly these
+places:
+  migrations/000163_snapshots_si.up.sql   -> 000170_snapshots_si.up.sql
+  migrations/000163_snapshots_si.down.sql -> 000170_snapshots_si.down.sql
+  Gate's hardcoded existence checks: 000163 -> 000170
+  Gate's working-tree allowlist:      000163 -> 000170
+  Allowed-files allowlist:            000163 -> 000170
+
+Slot 000170 is the next free slot after the trailing edge of existing
+migrations. The full 000160-000169 run at the time of authoring is:
+  000160_settings_ui_density            (pre-phase-42, occupied)
+  000161  (free, intentionally skipped to follow trailing-edge rule)
+  000162_pinned_items                   (pre-phase-42, occupied)
+  000163_audit_logs_actor_metadata      (pre-phase-42, occupied)
+  000164_saved_views                    (pre-phase-42, occupied)
+  000165_push_subscriptions             (pre-phase-42, occupied)
+  000166_chatbot_sessions               (pre-phase-42, occupied)
+  000167_achievement_unlocks            (pre-phase-42, occupied)
+  000168_vehicle_unit_history           (phase-42 0022, occupied)
+  000169_positions_si                   (phase-42 0030, occupied)
+
+Following the slot-variance precedent set by phase-42 prompts 0022
+(000160 -> 000168) and 0030 (000162 -> 000169), this prompt moves
+000163 -> 000170 to the next free trailing-edge slot.
+
+Every other aspect of the prompt's intent is preserved verbatim:
+  - 7 snapshot hypertables created with SI-canonical columns and unit
+    suffixes (_c for Celsius, _pa for Pascal, _w for Watt, _nm for
+    Newton-meter, _a for Ampere, _v for Volt, _rpm for revolutions/min,
+    _ohm for Ohm, _s for seconds; _pct for percent volume).
+  - Composite PRIMARY KEY (vehicle_id, ts) on every snapshot table.
+    security_events extends the PK with event_type so two distinct
+    event kinds at the same instant remain insertable (e.g. AirbagDeployed
+    and CrashState changing in the same payload).
+  - TimescaleDB create_hypertable with chunk_time_interval => '7 days'
+    and if_not_exists => TRUE on every table.
+  - Per-table (vehicle_id, ts DESC) index. security_events also gets
+    an (event_type, ts DESC) index for filtered scans.
+  - down.sql drops all 7 tables CASCADE.
+  - Honesty covenants 1-10: unchanged.
+
+Allowed files this prompt (with variance applied):
+  migrations/000170_snapshots_si.up.sql
+  migrations/000170_snapshots_si.down.sql
+  .github/prompts/db-refactor/logs/phase-42-0031-mig-create-snapshots-si.log
+
+=== SCHEMA ===
+migrations/000170_snapshots_si.up.sql defines, in order:
+
+  DROP TABLE IF EXISTS climate_snapshots        CASCADE;
+  DROP TABLE IF EXISTS motor_snapshots          CASCADE;
+  DROP TABLE IF EXISTS security_events          CASCADE;
+  DROP TABLE IF EXISTS tire_pressure_snapshots  CASCADE;
+  DROP TABLE IF EXISTS media_snapshots          CASCADE;
+  DROP TABLE IF EXISTS safety_snapshots         CASCADE;
+  DROP TABLE IF EXISTS location_snapshots       CASCADE;
+
+  CREATE TABLE climate_snapshots ( ... PRIMARY KEY (vehicle_id, ts) );
+    34 columns total. SI temperatures: inside_temp_c, outside_temp_c,
+    hvac_left_request_c, hvac_right_request_c,
+    cabin_overheat_protection_temperature_limit_c. Booleans for HVAC
+    AC/Auto/Power/Defrost/Preconditioning/SeatBelt/Vent flags.
+    Integers for fan speed, seat heater levels, seat cooling levels,
+    steering-wheel heat level. TEXT for fan status / defrost mode /
+    climate keeper mode / cabin overheat protection mode /
+    rear seat heaters mode.
+
+  CREATE TABLE motor_snapshots ( ... PRIMARY KEY (vehicle_id, ts) );
+    37 columns total. Per-corner (front / rear / rear_left / rear_right):
+      *_torque_nm         (DiTorqueActual* in Newton-meters, SI)
+      *_stator_c          (DiStatorTemp* in Celsius, SI)
+      *_inverter_c        (DiInverterT* in Celsius, SI)
+      *_heatsink_c        (DiHeatsinkT* in Celsius, SI)
+      *_axle_speed_rpm    (DiAxleSpeed* in RPM; UnitKindNone in protomodel)
+      *_motor_current_a   (DiMotorCurrent* in Amperes, SI)
+      *_vbat_v            (DiVBat* in Volts, SI)
+      *_state             (DiState* enum; TEXT)
+    Plus power_w (Watts), torque_motor_nm, torque_command_nm
+    (DiSlaveTorqueCmd / DiTorquemotor; UnitKindNone but Nm), hvil_state
+    (Hvil enum), isolation_resistance_ohm.
+    The per-corner layout supports tri-motor (Plaid: F + REL + RER) and
+    quad-motor (Cybertruck: F + R + REL + RER) configurations without
+    schema changes; single-motor / dual-motor cars simply leave the
+    extra columns NULL.
+
+  CREATE TABLE security_events (
+    vehicle_id BIGINT NOT NULL,
+    ts         TIMESTAMPTZ NOT NULL,
+    event_type TEXT NOT NULL,
+    from_state TEXT,
+    to_state   TEXT,
+    details    JSONB,
+    PRIMARY KEY (vehicle_id, ts, event_type));
+    Append-only event log; downstream consumers INSERT only, no
+    UPDATE. PK includes event_type so two distinct event kinds at the
+    same `ts` remain insertable. Two indexes: (vehicle_id, ts DESC)
+    and (event_type, ts DESC).
+
+  CREATE TABLE tire_pressure_snapshots ( ... PRIMARY KEY (vehicle_id, ts) );
+    15 columns. Per-corner pressure (front_left/front_right/rear_left/
+    rear_right) in Pascals (_pa); per-corner status TEXT; per-corner
+    last_seen_at TIMESTAMPTZ (TpmsLastSeenPressureTime*); fleet-level
+    hard_warnings + soft_warnings TEXT (TpmsHardWarnings/TpmsSoftWarnings).
+
+  CREATE TABLE media_snapshots ( ... PRIMARY KEY (vehicle_id, ts) );
+    13 columns. track_name/artist/album/station/source/play_status TEXT;
+    volume_pct/volume_max/volume_increment INTEGER; duration_s/elapsed_s
+    INTEGER (seconds, SI). Source fields: MediaPlaybackStatus,
+    MediaPlaybackSource, MediaAudioVolume, MediaAudioVolumeMax,
+    MediaAudioVolumeIncrement, MediaNowPlaying{Title,Artist,Album,
+    Station,Duration,Elapsed}.
+
+  CREATE TABLE safety_snapshots ( ... PRIMARY KEY (vehicle_id, ts) );
+    6 columns: service_mode + service_mode_plus BOOLEAN, wiper_state +
+    crash_state TEXT (continuous-value flags; the corresponding
+    state-change events ALSO append to security_events).
+
+  CREATE TABLE location_snapshots ( ... PRIMARY KEY (vehicle_id, ts) );
+    6 columns: place / country / region TEXT (geocoded labels);
+    geocoded_at TIMESTAMPTZ (lookup wall-clock; lets a stale row be
+    detected without re-geocoding). Raw lat/lng/altitude/heading live
+    in `positions` (prompt 0030).
+
+WHY DROP TABLE IF EXISTS at the top of every block:
+  The pre-phase-42 snapshot tables created in 000142_baseline_typed
+  (climate_snapshots, motor_snapshots, security_events,
+  tire_pressure_snapshots, ...) were dropped wholesale by
+  000146_drop_snapshot_tables; none of them currently exist. The
+  redundant DROP at the top makes this migration self-healing if a
+  developer reapplies an old database snapshot, and it mirrors the
+  defensive pattern phase-42 prompt 0030 used for `positions`.
+  CASCADE is safe — a grep over migrations/ found zero
+  `REFERENCES <snapshot>(...)` clauses, so no other table depends on
+  any of these.
+
+WHY column-name suffix carries the unit (ADR-004 #4):
+  Every unit-bearing numeric column lives in canonical SI and the unit
+  suffix is part of the column name. This makes the SI contract self-
+  documenting and audit-grep-able. The forbidden-suffix scan in the
+  gate enforces the "no wire-format units in column names" rule.
+
+WHY rpm and ohm columns are not converted:
+  - axle_speed_rpm: rotational speed. Not a linear-velocity field,
+    therefore not converted by units.ToSI (UnitKindNone in protomodel,
+    matching internal/tesla/units/conversions.go's documented exclusion
+    of DiAxleSpeed* from speedFields). RPM is the field's natural unit.
+  - isolation_resistance_ohm: Ohms are SI base for resistance
+    (V/A = Ω). No conversion needed.
+
+WHY temperatures are stored in Celsius rather than Kelvin:
+  internal/tesla/units/conversions.go documents Celsius as the
+  canonical SI form for temperature in this codebase (the alternative
+  Kelvin would be 273.15K higher than every Celsius value, and Tesla
+  already produces values in Celsius after the °F→°C conversion).
+
+WHY no compression / retention policies in this migration:
+  Phase-42 prompt 0030 (positions) deliberately omitted compression
+  and retention policies, deferring those operational decisions to a
+  later prompt. This migration follows the same convention so the
+  policy-tuning prompt can apply them uniformly across all hot tables.
+
+migrations/000170_snapshots_si.down.sql:
+  DROP TABLE IF EXISTS climate_snapshots        CASCADE;
+  DROP TABLE IF EXISTS motor_snapshots          CASCADE;
+  DROP TABLE IF EXISTS security_events          CASCADE;
+  DROP TABLE IF EXISTS tire_pressure_snapshots  CASCADE;
+  DROP TABLE IF EXISTS media_snapshots          CASCADE;
+  DROP TABLE IF EXISTS safety_snapshots         CASCADE;
+  DROP TABLE IF EXISTS location_snapshots       CASCADE;
+  (Forward-only rollback — there is no legacy schema to restore.)
+
+=== APPLIED ===
+Verification was performed against an isolated TimescaleDB test
+database inside the running teslasync-postgres container (image
+timescale/timescaledb-ha:pg17), to avoid touching production data.
+
+Steps executed:
+  docker exec teslasync-postgres psql -U teslasync -d postgres
+    -c "DROP DATABASE IF EXISTS phase42_0031_verify;"
+    -c "CREATE DATABASE phase42_0031_verify;"
+  docker exec teslasync-postgres psql -U teslasync
+    -d phase42_0031_verify
+    -c "CREATE EXTENSION IF NOT EXISTS timescaledb;"
+  Get-Content migrations/000170_snapshots_si.up.sql -Raw
+    | docker exec -i teslasync-postgres psql -U teslasync
+        -d phase42_0031_verify -v ON_ERROR_STOP=1               -> exit 0
+
+up.sql output (verbatim, abridged for clarity):
+  DROP TABLE (x7)                       (no rows yet — fresh db)
+  CREATE TABLE                          climate_snapshots
+       create_hypertable
+   (1,public,climate_snapshots,t)
+  CREATE INDEX
+  COMMENT (x6)
+  CREATE TABLE                          motor_snapshots
+       create_hypertable
+   (2,public,motor_snapshots,t)
+  CREATE INDEX
+  COMMENT (x6)
+  CREATE TABLE                          security_events
+       create_hypertable
+   (3,public,security_events,t)
+  CREATE INDEX (x2)
+  COMMENT (x5)
+  CREATE TABLE                          tire_pressure_snapshots
+       create_hypertable
+   (4,public,tire_pressure_snapshots,t)
+  CREATE INDEX
+  COMMENT (x4)
+  CREATE TABLE                          media_snapshots
+       create_hypertable
+   (5,public,media_snapshots,t)
+  CREATE INDEX
+  COMMENT (x3)
+  CREATE TABLE                          safety_snapshots
+       create_hypertable
+   (6,public,safety_snapshots,t)
+  CREATE INDEX
+  COMMENT (x5)
+  CREATE TABLE                          location_snapshots
+       create_hypertable
+   (7,public,location_snapshots,t)
+  CREATE INDEX
+  COMMENT (x5)
+
+=== HYPERTABLE_VERIFY ===
+SELECT hypertable_name, num_dimensions
+  FROM timescaledb_information.hypertables
+  ORDER BY hypertable_name;
+  ->  climate_snapshots       | 1
+      location_snapshots      | 1
+      media_snapshots         | 1
+      motor_snapshots         | 1
+      safety_snapshots        | 1
+      security_events         | 1
+      tire_pressure_snapshots | 1
+  (7 rows — every one of the prompt's required tables is a hypertable
+  with exactly one time-dimension.)
+
+SELECT column_name, data_type
+  FROM information_schema.columns
+  WHERE table_name='climate_snapshots' AND column_name LIKE '%_c'
+  ORDER BY column_name;
+  ->  cabin_overheat_protection_temperature_limit_c | double precision
+      hvac_left_request_c                           | double precision
+      hvac_right_request_c                          | double precision
+      inside_temp_c                                 | double precision
+      outside_temp_c                                | double precision
+  (5 SI-Celsius columns, all double precision as expected.)
+
+Forbidden-suffix database scan (every snapshot table column):
+  SELECT column_name FROM information_schema.columns
+  WHERE table_name IN ('climate_snapshots','motor_snapshots',
+        'tire_pressure_snapshots','media_snapshots',
+        'safety_snapshots','location_snapshots','security_events')
+  AND (column_name ~ '_(mph|miles|psi|bar|fahrenheit|inches)$'
+       OR column_name ~ '_f$' OR column_name ~ '_ft$');
+  ->  (empty result — zero non-SI suffix columns)
+
+down.sql verification:
+  Get-Content migrations/000170_snapshots_si.down.sql -Raw
+    | docker exec -i teslasync-postgres psql -U teslasync
+        -d phase42_0031_verify -v ON_ERROR_STOP=1
+  ->  DROP TABLE (x7), exit 0
+
+  SELECT count(*) FROM information_schema.tables
+   WHERE table_name IN ('climate_snapshots','motor_snapshots',
+         'security_events','tire_pressure_snapshots',
+         'media_snapshots','safety_snapshots','location_snapshots');
+  ->  0
+  (down.sql cleanly removes every table the up.sql created.)
+
+Cleanup:
+  DROP DATABASE phase42_0031_verify;             -> DROP DATABASE
+
+=== GATE ===
+(Gate run output follows the in-prompt gate logic, slot-corrected
+for the documented variance from 000163 to 000170.)
+
+--- predecessor check ---
+prev EXIT line:   EXIT=0
+prev STATUS line: STATUS=DONE
+predecessor OK
+
+--- required-files check (slot-corrected: 000163 -> 000170) ---
+present: migrations/000170_snapshots_si.up.sql
+present: migrations/000170_snapshots_si.down.sql
+
+--- CREATE TABLE substring check (up.sql) ---
+$up = Get-Content "migrations/000170_snapshots_si.up.sql" -Raw
+foreach ($t in @('climate_snapshots','motor_snapshots','security_events',
+                 'tire_pressure_snapshots','media_snapshots',
+                 'safety_snapshots','location_snapshots')) {
+  if ($up -notmatch "CREATE TABLE\s+$t") { ...fail... }
+}
+  -> ok: climate_snapshots
+  -> ok: motor_snapshots
+  -> ok: security_events
+  -> ok: tire_pressure_snapshots
+  -> ok: media_snapshots
+  -> ok: safety_snapshots
+  -> ok: location_snapshots
+  All 7 tables matched.
+
+--- forbidden non-SI column suffix scan (up.sql) ---
+foreach ($forbidden in @('_mph','_miles','_psi\b','_bar\b',
+                         '_fahrenheit','_f\b','_inches','_ft\b')) { ... }
+  -> absent: _mph
+  -> absent: _miles
+  -> absent: _psi\b
+  -> absent: _bar\b
+  -> absent: _fahrenheit
+  -> absent: _f\b
+  -> absent: _inches
+  -> absent: _ft\b
+  All 8 forbidden patterns absent from the migration source.
+
+  Sanity-check on column names that contain the literal substrings 'f',
+  'r', 'mph', etc. inside larger identifiers:
+    - 'front_torque_nm', 'front_state', 'front_stator_c': '_f' is
+      followed by 'r' (a word character), so '_f\b' does NOT match
+      (\b is a word/non-word transition).
+    - 'defrost_for_preconditioning': '_f' is followed by 'o', no
+      word boundary, no match.
+    - 'isolation_resistance_ohm': contains no '_f', no '_psi', no
+      '_bar', no '_miles', no '_mph'.
+    - 'front_vbat_v': '_b' is followed by 'a', so '_bar\b' does not
+      match (and the substring is 'vbat_v' not 'bar').
+  Cross-checked by running the same 8 patterns against a sample
+  column-name list in PowerShell -match; zero matches.
+
+--- migration-collision check at slot 000170 ---
+slot 000170 is unique to this migration:
+  Get-ChildItem migrations/000170_*.sql
+    -> 000170_snapshots_si.up.sql
+    -> 000170_snapshots_si.down.sql
+  No other 000170_* file exists.
+
+--- variance footnote: confirm slot 000163 collision still exists ---
+  pre-existing at 000163: 000163_audit_logs_actor_metadata.up.sql
+  pre-existing at 000163: 000163_audit_logs_actor_metadata.down.sql
+  (This is the reason for the variance from 000163 -> 000170.)
+
+--- go test -race -run TestMigrationApply ./internal/database/... ---
+ok  github.com/ev-dev-labs/teslasync/internal/database  (cached) [no tests to run]
+go test exit code: 0
+
+(Note: TestMigrationApply does not exist anywhere in this repository
+— a `git grep -n 'func TestMigration'` finds zero matches. The
+prompt's gate command therefore matches no tests and Go reports "no
+tests to run" with exit 0; this is the same behavior the predecessor
+phase-42 prompts encountered. The substantive verification of the
+migration ran end-to-end against a live TimescaleDB container
+instead, captured under === APPLIED === and === HYPERTABLE_VERIFY ===
+above.)
+
+--- working-tree drift check (slot-corrected allowlist) ---
+git status --porcelain (filtered to disallowed entries):
+  (none)
+working tree clean (only allowed files modified):
+  ?? migrations/000170_snapshots_si.down.sql
+  ?? migrations/000170_snapshots_si.up.sql
+  (and the log itself, added with -f at commit time)
+
+All gate checks passed.
+
+=== COMMIT ===
+Files staged:
+  migrations/000170_snapshots_si.up.sql
+  migrations/000170_snapshots_si.down.sql
+  .github/prompts/db-refactor/logs/phase-42-0031-mig-create-snapshots-si.log
+  (the log added with `git add -f`)
+
+Commit message (slot-variance preserved verbatim from the prompt's
+template, plus a slot-variance footnote in the body):
+
+  phase-42(0031): 7 snapshot tables with SI columns
+
+  climate/motor/security/tire_pressure/media/safety/location_snapshots.
+  All numeric columns carry SI unit suffix in name; composite PK +
+  TimescaleDB hypertable on ts.
+
+  Slot variance: prompt hardcodes 000163, but that slot is occupied by
+  000163_audit_logs_actor_metadata (pre-phase-42). Allocated 000170,
+  the next free trailing-edge slot after 000169_positions_si (phase-42
+  prompt 0030). Same slot-variance pattern as prompts 0022 (000160 ->
+  000168) and 0030 (000162 -> 000169).
+
+  Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+EXIT=0
+STATUS=DONE
+--- end of log ---
