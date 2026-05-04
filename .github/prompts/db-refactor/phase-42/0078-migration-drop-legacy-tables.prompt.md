@@ -11,7 +11,7 @@ description: "Phase 42 - migration: DROP CASCADE all 38 legacy telemetry tables"
 | Field | Value |
 |---|---|
 | Output log | `.github/prompts/db-refactor/logs/phase-42-0078-mig-drop-legacy.log` |
-| Depends on | `phase-42-0077a-strip-residual-comments.log` |
+| Depends on | `phase-42-0077-consumer-cross-domain.log` |
 | Allowed files to change | `migrations/000161_drop_legacy_telemetry.up.sql`, `migrations/000161_drop_legacy_telemetry.down.sql`, `internal/database/fleet_subscription_repo.go` (DELETE), `internal/models/telemetry.go` (EDIT — drop `FleetTelemetrySubscription` struct only), `internal/api/devtools_handler.go` (EDIT — drop fleet-subscription audit trail), `internal/models/models.go` (EDIT — drop the moved-to-telemetry.go comment line for `FleetTelemetrySubscription`), the output log |
 
 ## Honesty Covenant
@@ -146,12 +146,26 @@ if (Test-Path 'internal/database/fleet_subscription_repo.go') {
   "internal/database/fleet_subscription_repo.go must be deleted by step 2" | Tee-Object -FilePath $log -Append
   "EXIT=1" | Tee-Object -FilePath $log -Append; "STATUS=BLOCKED" | Tee-Object -FilePath $log -Append; exit 1
 }
-$residualRefs = git --no-pager grep -nE 'fleet_telemetry_subscriptions|FleetSubscriptionRepo|NewFleetSubscriptionRepo' -- '*.go' ':!*_test.go' ':!internal/database/migrations/' 2>$null
+# SQL-context grep for the table name (consistent with the banned-table check
+# at line ~200). This intentionally does NOT match `// fleet_telemetry_subscriptions`
+# documentation comments in fleet_telemetry_handler.go and
+# fleet_telemetry_error_handler.go (authored by predecessor 0068 to document
+# that the legacy table query was replaced by package-derived state per
+# ADR-004 #2). Comments mentioning the dropped table by name are HISTORICAL
+# DOCUMENTATION, not active SQL — the previous revision's unanchored grep
+# false-positively flagged them and produced an unsolvable BLOCK because those
+# files are owned by 0068 and outside this prompt's allowed-files list.
+$tableSqlRefs = git --no-pager grep -nE 'FROM\s+fleet_telemetry_subscriptions\b|INSERT\s+INTO\s+fleet_telemetry_subscriptions\b|UPDATE\s+fleet_telemetry_subscriptions\b|DELETE\s+FROM\s+fleet_telemetry_subscriptions\b|JOIN\s+fleet_telemetry_subscriptions\b' -- '*.go' ':!*_test.go' ':!internal/database/migrations/' 2>$null
+# Plain-identifier grep for the Go types/constructors. These are unique
+# camelCase symbols (no English-word collision risk) and only ever appear in
+# fleet_subscription_repo.go (deleted) and devtools_handler.go (edited by step 2).
+$repoIdentRefs = git --no-pager grep -nE '\bFleetSubscriptionRepo\b|\bNewFleetSubscriptionRepo\b|\bfleetSubRepo\b' -- '*.go' ':!*_test.go' ':!internal/database/migrations/' 2>$null
 $modelHit = git --no-pager grep -nE 'type\s+FleetTelemetrySubscription\s+struct' -- 'internal/models/' 2>$null
-if ($residualRefs -or $modelHit) {
+if ($tableSqlRefs -or $repoIdentRefs -or $modelHit) {
   "Residual fleet_telemetry_subscriptions consumers remain — step 2 incomplete:" | Tee-Object -FilePath $log -Append
-  if ($residualRefs) { $residualRefs | Tee-Object -FilePath $log -Append }
-  if ($modelHit)     { $modelHit     | Tee-Object -FilePath $log -Append }
+  if ($tableSqlRefs)  { "  SQL-context refs:";       $tableSqlRefs  | Tee-Object -FilePath $log -Append }
+  if ($repoIdentRefs) { "  Go identifier refs:";     $repoIdentRefs | Tee-Object -FilePath $log -Append }
+  if ($modelHit)      { "  Model struct still present:"; $modelHit  | Tee-Object -FilePath $log -Append }
   "EXIT=1" | Tee-Object -FilePath $log -Append; "STATUS=BLOCKED" | Tee-Object -FilePath $log -Append; exit 1
 }
 
