@@ -1890,6 +1890,7 @@
       "off": "Off",
       "eventHistory": "Security Event History",
       "timeline": {
+        "title": "Security Event Timeline",
         "lock": {
           "positive": "Vehicle Locked",
           "negative": "Vehicle Unlocked",
@@ -3576,10 +3577,12 @@
       "subtitle": "Recent actions you have taken in TeslaSync.",
       "empty": "No recent activity in this window.",
       "disabled": {
-        "title": "Activity feed disabled"
+        "title": "Activity feed disabled",
+        "description": "Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure AUTH_FORWARD_HEADER."
       },
       "unauthorized": {
-        "title": "Identity required"
+        "title": "Identity required",
+        "description": "Your request did not include an identity header. Sign in through your identity provider and try again."
       },
       "error": {
         "title": "Could not load activity"
@@ -3838,6 +3841,7 @@
       "saved": "Saved {{amount}} vs gas"
     },
     "chargeHistory": {
+      "title": "Charge History",
       "total": "Total",
       "avg": "Avg"
     },

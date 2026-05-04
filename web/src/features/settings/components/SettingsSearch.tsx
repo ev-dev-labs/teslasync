@@ -102,8 +102,8 @@ export function SettingsSearch({ className }: SettingsSearchProps) {
   }
 
   const showDropdown = open && query.length > 0;
-  const placeholder = t('search.placeholder', 'Search settings…');
-  const ariaLabel = t('search.label', 'Search settings');
+  const placeholder = t('settings.search.placeholder', 'Search settings…');
+  const ariaLabel = t('settings.search.label', 'Search settings');
 
   return (
     <div ref={wrapperRef} className={cn('relative', className)}>
@@ -147,7 +147,7 @@ export function SettingsSearch({ className }: SettingsSearchProps) {
               aria-disabled
               className="px-4 py-3 text-xs text-[var(--text-muted)]"
             >
-              {t('search.noResults', 'No matching settings.')}
+              {t('settings.search.noResults', 'No matching settings.')}
             </li>
           )}
           {matches.map((entry, idx) => {

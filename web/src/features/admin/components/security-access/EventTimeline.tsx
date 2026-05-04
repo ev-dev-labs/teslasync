@@ -84,7 +84,7 @@ export function EventTimeline({ timelineEvents }: EventTimelineProps) {
     <FadeIn delay={0.35}>
       <GlassPanel className="p-4">
         <h2 className="text-lg font-semibold text-gray-200 mb-4">
-          {t('admin.security.timeline', 'Security Event Timeline')}
+          {t('admin.security.timeline.title', 'Security Event Timeline')}
         </h2>
         {timelineEvents.length > 0 ? (
           <div className="space-y-3 max-h-96 overflow-y-auto pr-1">

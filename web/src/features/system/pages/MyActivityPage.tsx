@@ -90,7 +90,7 @@ export default function MyActivityPage() {
               icon={<Icons.securityCheck className="h-8 w-8" />}
               title={t('activity.myActivity.disabled.title', 'Activity feed disabled')}
               message={t(
-                'activity.myActivity.disabled',
+                'activity.myActivity.disabled.description',
                 'Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure AUTH_FORWARD_HEADER.',
               )}
             />
@@ -99,7 +99,7 @@ export default function MyActivityPage() {
               icon={<Icons.user className="h-8 w-8" />}
               title={t('activity.myActivity.unauthorized.title', 'Identity required')}
               message={t(
-                'activity.myActivity.unauthorized',
+                'activity.myActivity.unauthorized.description',
                 'Your request did not include an identity header. Sign in through your identity provider and try again.',
               )}
             />
