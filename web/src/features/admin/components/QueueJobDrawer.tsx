@@ -1,0 +1,191 @@
+/**
+ * QueueJobDrawer — Phase-46 / Prompt 41.
+ *
+ * Slide-in panel that lists the most recent jobs for a single
+ * worker. Reuses the shared <Drawer> primitive so focus-trap +
+ * Escape-to-close behaviour stays consistent with the rest of the
+ * app.
+ *
+ * The fetch is gated on `open` via TanStack's `enabled` option so a
+ * closed drawer never burns a network call. Loading, error, and
+ * empty states each have a deterministic data-testid for the
+ * companion test file.
+ */
+
+import { useTranslation } from 'react-i18next'
+import { AlertTriangle } from 'lucide-react'
+
+import { Drawer } from '@/components/ui'
+import { Text, Caption } from '@/components/ui/Typography'
+import { Spinner } from '@/components/feedback'
+import { formatDateTime, formatDurationMsLong } from '@/lib/dateFormat'
+import { useQueueJobs } from '@/api/hooks/useSystemQueues'
+import type { QueueJobView } from '@/api/types'
+
+const STATUS_TONE: Record<string, string> = {
+  // notification
+  sent: 'text-emerald-300',
+  pending: 'text-amber-300',
+  deferred_dnd: 'text-amber-300',
+  failed: 'text-rose-300',
+
+  // export
+  ready: 'text-emerald-300',
+  queued: 'text-amber-300',
+  processing: 'text-cyan-300',
+
+  // automation
+  success: 'text-emerald-300',
+  partial: 'text-amber-300',
+  running: 'text-cyan-300',
+  cancelled: 'text-[var(--text-muted)]',
+  skipped: 'text-[var(--text-muted)]',
+}
+
+function statusToneClass(status: string): string {
+  return STATUS_TONE[status] ?? 'text-[var(--text-primary)]'
+}
+
+interface QueueJobRowProps {
+  job: QueueJobView
+}
+
+function QueueJobRow({ job }: QueueJobRowProps) {
+  const { t } = useTranslation()
+
+  const durationLabel =
+    typeof job.duration_ms === 'number'
+      ? formatDurationMsLong(job.duration_ms)
+      : job.finished_at
+        ? formatDurationMsLong(
+            new Date(job.finished_at).getTime() -
+              new Date(job.started_at).getTime(),
+          )
+        : null
+
+  return (
+    <li
+      className="rounded-md border border-white/[0.06] bg-[var(--surface-1)]/40 p-3"
+      data-testid={`queue-job-row-${job.id}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <Text variant="bodySm" className="font-medium truncate">
+          {job.title || job.id}
+        </Text>
+        <Text
+          variant="caption"
+          className={statusToneClass(job.status)}
+          data-testid={`queue-job-status-${job.id}`}
+        >
+          {t(`queueStatus.jobStatus.${job.status}`, job.status)}
+        </Text>
+      </div>
+      <Caption className="mt-1 block">
+        {t('queueStatus.jobStarted', 'Started {{at}}', {
+          at: formatDateTime(job.started_at),
+        })}
+        {durationLabel
+          ? ` · ${t('queueStatus.jobDuration', 'Took {{duration}}', {
+              duration: durationLabel,
+            })}`
+          : ''}
+      </Caption>
+      {job.error ? (
+        <div
+          className="mt-2 flex items-start gap-2 rounded border border-rose-500/30 bg-rose-500/5 p-2"
+          data-testid={`queue-job-error-${job.id}`}
+        >
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden />
+          <Caption className="text-rose-200 break-words">{job.error}</Caption>
+        </div>
+      ) : null}
+    </li>
+  )
+}
+
+export interface QueueJobDrawerProps {
+  worker: string | null
+  displayName?: string
+  open: boolean
+  onClose: () => void
+  /** Override the fetch hook for Storybook / tests. */
+  testHookOverride?: ReturnType<typeof useQueueJobs>
+}
+
+export function QueueJobDrawer({
+  worker,
+  displayName,
+  open,
+  onClose,
+  testHookOverride,
+}: QueueJobDrawerProps) {
+  const { t } = useTranslation()
+  // useQueueJobs requires a string identifier. When the drawer is
+  // closed we still need to render a stable hook call, so pass an
+  // empty placeholder and gate the network with enabled=false.
+  const liveQuery = useQueueJobs(worker ?? '__none__', {
+    enabled: Boolean(open && worker && !testHookOverride),
+  })
+  const query = testHookOverride ?? liveQuery
+
+  const data = query.data
+  const isLoading = query.isLoading && open
+  const error = query.error && open ? query.error : null
+  const jobs = data?.jobs ?? []
+
+  const title = displayName
+    ? t('queueStatus.drawer.titleWithWorker', 'Recent {{worker}} jobs', {
+        worker: displayName,
+      })
+    : t('queueStatus.drawer.title', 'Recent jobs')
+
+  return (
+    <Drawer open={open} onClose={onClose} title={title}>
+      <div data-testid="queue-job-drawer-body">
+        {isLoading ? (
+          <div
+            className="flex items-center gap-3 py-6 text-[var(--text-secondary)]"
+            data-testid="queue-job-drawer-loading"
+          >
+            <Spinner size="sm" />
+            <Text variant="bodySm">
+              {t('queueStatus.drawer.loading', 'Loading recent jobs…')}
+            </Text>
+          </div>
+        ) : error ? (
+          <div
+            className="flex items-start gap-3 rounded-md border border-rose-500/30 bg-rose-500/5 p-3"
+            data-testid="queue-job-drawer-error"
+          >
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden />
+            <Text variant="bodySm" className="text-rose-200">
+              {t(
+                'queueStatus.drawer.error',
+                'Could not load recent jobs. Check API logs and try again.',
+              )}
+            </Text>
+          </div>
+        ) : jobs.length === 0 ? (
+          <Text
+            variant="bodySm"
+            className="text-[var(--text-secondary)] italic"
+            data-testid="queue-job-drawer-empty"
+          >
+            {t(
+              'queueStatus.drawer.empty',
+              'No recent jobs to show. New jobs will appear here as the worker processes them.',
+            )}
+          </Text>
+        ) : (
+          <ul className="space-y-2" data-testid="queue-job-drawer-list">
+            {jobs.map((job) => (
+              <QueueJobRow key={job.id} job={job} />
+            ))}
+          </ul>
+        )}
+      </div>
+    </Drawer>
+  )
+}
+
+export default QueueJobDrawer

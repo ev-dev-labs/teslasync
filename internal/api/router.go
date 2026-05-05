@@ -464,6 +464,24 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		WriteCounter: apiWriteCounter,
 	})
 
+	// Phase-46 / Prompt 41 — worker heartbeat store powering the
+	// /system/queues panel. Backed by Redis when available so
+	// every worker process can write its heartbeat to the same
+	// snapshot the API server reads. Falls back to an in-memory
+	// store when Redis is disabled — the panel will then report
+	// every worker as "down (no heartbeat)" which honestly
+	// reflects the deployment state rather than fabricating an
+	// "ok" reading.
+	var queueHeartbeatStore database.WorkerStatusStore
+	if opt.CacheStore != nil {
+		if rdb := opt.CacheStore.Underlying(); rdb != nil {
+			queueHeartbeatStore = database.NewRedisWorkerStatusStore(rdb)
+		}
+	}
+	if queueHeartbeatStore == nil {
+		queueHeartbeatStore = database.NewMemoryWorkerStatusStore()
+	}
+
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
@@ -1220,6 +1238,22 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// applies in case a misconfigured client busy-loops it.
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).
 				Get("/rate-limits", rateLimitHandler.ServeHTTP)
+
+			// Phase-46 / Prompt 41 — Job queue status feed.
+			// Aggregates pending / in-progress / 24h success-fail
+			// counts across notification, export, automation
+			// workers, plus latest heartbeat (Redis). Both routes
+			// are GET-only and per-IP throttled at 60/min — the
+			// SPA polls /system/queues every 30s and lazy-loads
+			// the per-worker drawer on demand.
+			queueStatusHandler := NewQueueStatusHandler(QueueStatusHandlerConfig{
+				QueueRepo:      database.NewWorkerQueueRepo(db),
+				HeartbeatStore: queueHeartbeatStore,
+			})
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/queues", queueStatusHandler.ServeStatus)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/queues/{worker}/jobs", queueStatusHandler.ServeJobs)
 		})
 
 		// Per-user activity feed (Phase-40 / Prompt 49 — Recent Activity Discoverability).

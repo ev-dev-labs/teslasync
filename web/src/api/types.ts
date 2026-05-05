@@ -2368,3 +2368,75 @@ export interface RateLimitStatusResponse {
   generated_at: string
   scopes: ScopeBudget[]
 }
+
+// === Job queue status (Phase-46 / Prompt 41) ===
+
+/** Heartbeat staleness band rendered by the queue status panel. */
+export type QueueHeartbeatSeverity = 'ok' | 'warn' | 'critical' | 'down'
+
+/** Canonical worker identifiers exposed by the backend. Mirror of database.WorkerName*. */
+export type QueueWorkerName = 'notification' | 'export' | 'automation'
+
+/**
+ * Single worker row returned by GET /api/v1/system/queues.
+ *
+ * Counts come from each worker's domain table (notification_logs,
+ * export_jobs, automation_history) aggregated over the last 24
+ * hours. Heartbeat fields come from the Redis worker_status key
+ * each worker writes via internal/worker/heartbeat.Heartbeater.
+ */
+export interface QueueStat {
+  /** Stable worker identifier — use for routing the drawer. */
+  worker: string
+  /** Human-readable label (English fallback; SPA may translate). */
+  display_name: string
+  /** Items waiting to be picked up by the worker. */
+  pending: number
+  /** Items currently being processed. */
+  in_progress: number
+  /** Items completed successfully in the last 24 hours. */
+  succeeded_24h: number
+  /** Items that failed terminally in the last 24 hours. */
+  failed_24h: number
+  /** Age in seconds of the oldest pending item (0 = none). */
+  oldest_pending_age_seconds: number
+  /** Color band the panel renders for the heartbeat freshness. */
+  heartbeat_severity: QueueHeartbeatSeverity
+  /** Operator-facing footnote (e.g. "Last beat 7m ago"). */
+  heartbeat_detail: string
+  /** ISO timestamp of the worker's most recent heartbeat. */
+  last_heartbeat_at?: string | null
+  /** ISO timestamp the current worker process started. */
+  started_at?: string | null
+  /** Hostname the worker is running on. */
+  host?: string
+  /** Build version reported by the worker. */
+  version?: string
+}
+
+/** Envelope for GET /api/v1/system/queues. */
+export interface QueueStatusResponse {
+  generated_at: string
+  workers: QueueStat[]
+}
+
+/**
+ * Single recent-job row rendered inside the per-worker drawer.
+ * Mirrors the backend QueueJobView struct.
+ */
+export interface QueueJobView {
+  id: string
+  worker: string
+  status: string
+  title: string
+  started_at: string
+  finished_at?: string | null
+  duration_ms?: number | null
+  error?: string
+}
+
+/** Envelope for GET /api/v1/system/queues/{worker}/jobs. */
+export interface QueueJobsResponse {
+  worker: string
+  jobs: QueueJobView[]
+}

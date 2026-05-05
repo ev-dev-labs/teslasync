@@ -23,6 +23,7 @@ import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
 
 import { RateLimitStatusPanel } from '@/features/admin/components/RateLimitStatusPanel'
+import { QueueStatusPanel } from '@/features/admin/components/QueueStatusPanel'
 
 export const SYSTEM_PAGE_PATH = '/admin/system'
 
@@ -42,6 +43,7 @@ export default function SystemPage() {
       <FadeIn>
         <Stack className="gap-6" data-testid="system-page-stack">
           <RateLimitStatusPanel />
+          <QueueStatusPanel />
         </Stack>
       </FadeIn>
     </PageContainer>

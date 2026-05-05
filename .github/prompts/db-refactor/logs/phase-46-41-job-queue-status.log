@@ -1,0 +1,177 @@
+=== TYPESCRIPT ===
+=== LINT ===
+
+> teslasync-web@2.0.0 lint
+> eslint . --report-unused-disable-directives --max-warnings 0 && npm run lint:i18n && npm run lint:light-mode && npm run audit:empty-state && npm run audit:tooltip-text && npm run audit:i18n-shadowed && npm run audit:query-signal && npm run audit:datatable-tableid && npm run audit:filterbar-chips && npm run audit:forced-colors && npm run audit:sr-only && npm run audit:chart-a11y && npm run audit:marker-cluster && npm run audit:deferred-filter && npm run audit:prefetch-link && npm run audit:tag-input && npm run audit:required-fields && npm run audit:unit-input && npm run audit:masked-values
+
+
+> teslasync-web@2.0.0 lint:i18n
+> node scripts/lint-i18n-no-template-literals.mjs
+
+[i18n-lint] OK ΓÇö no template literals in src/i18n/*.json
+
+> teslasync-web@2.0.0 lint:light-mode
+> node scripts/audit-light-mode-parity.mjs
+
+
+Total violations: 0
+
+Allowed drift (LIGHT_MODE_ALLOWED_DRIFT): 0
+
+OK ΓÇö light-mode CSS-var parity holds.
+
+> teslasync-web@2.0.0 audit:empty-state
+> node scripts/audit-empty-state-cta.mjs
+
+OK ΓÇö every <EmptyState> in src\features has a CTA or // no-action: exemption
+
+> teslasync-web@2.0.0 audit:tooltip-text
+> node scripts/audit-tooltip-text-color.mjs
+
+OK ΓÇö no tooltip content overrides intrinsic text colour
+
+> teslasync-web@2.0.0 audit:i18n-shadowed
+> node scripts/audit-i18n-shadowed-keys.mjs
+
+Γ£à audit:i18n-shadowed-keys ΓÇö no violations
+
+> teslasync-web@2.0.0 audit:query-signal
+> node scripts/audit-query-signal.mjs
+
+OK ΓÇö every useQuery/useInfiniteQuery queryFn in src\api\hooks threads { signal } (45 files scanned)
+
+> teslasync-web@2.0.0 audit:datatable-tableid
+> node scripts/audit-datatable-tableid.mjs
+
+OK ΓÇö every <DataTable> in src\features has a tableId
+
+> teslasync-web@2.0.0 audit:filterbar-chips
+> node scripts/audit-filterbar-chips.mjs
+
+OK ΓÇö every <FilterBar> in [src\features, src\components\forms] has a sibling <ActiveFilterChips>
+
+> teslasync-web@2.0.0 audit:forced-colors
+> node scripts/audit-forced-colors.mjs
+
+OK ΓÇö every critical component (11) defines a forced-colors override
+
+> teslasync-web@2.0.0 audit:sr-only
+> node scripts/audit-sr-only.mjs
+
+OK ΓÇö no ad-hoc `sr-only` outside VisuallyHidden in src
+
+> teslasync-web@2.0.0 audit:chart-a11y
+> node scripts/audit-chart-a11y.mjs
+
+OK ΓÇö every <ChartContainer> in src has ariaLabel + data/dataColumns or a no-table justification
+
+> teslasync-web@2.0.0 audit:marker-cluster
+> node scripts/audit-marker-cluster.mjs
+
+OK ΓÇö every <Marker>/<CircleMarker> in src is either inside a <MarkerCluster> file or carries a marker-cluster:no justification (722 files scanned)
+
+> teslasync-web@2.0.0 audit:deferred-filter
+> node scripts/audit-deferred-filter.mjs
+
+OK ΓÇö 4 configured heavy-filter page(s) either adopt useDeferredFilter / useDeferredValue (with memo() on the row component) or carry a `deferred-filter:no` justification.
+
+> teslasync-web@2.0.0 audit:prefetch-link
+> node scripts/auditPrefetchLink.mjs
+
+OK ΓÇö every <Link>/<NavLink>/<GuardedLink>/<GuardedNavLink> in the 3 audited layout file(s) is either a <PrefetchLink> or carries a prefetch-link:no justification.
+
+> teslasync-web@2.0.0 audit:tag-input
+> node scripts/auditTagInput.mjs
+
+OK ΓÇö no hand-rolled tag-input patterns found (720 file(s) scanned, 2 allow-listed primitive(s) skipped).
+
+> teslasync-web@2.0.0 audit:required-fields
+> node scripts/auditRequiredFields.mjs
+
+OK ΓÇö every <Input|Textarea|Select required> in the 718 scanned file(s) carries a label / aria-label / aria-labelledby or a required-field:no justification.
+
+> teslasync-web@2.0.0 audit:unit-input
+> node scripts/auditUnitInput.mjs
+
+OK ΓÇö no hand-rolled unit-input patterns found (721 file(s) scanned, 1 allow-listed primitive(s) skipped).
+
+> teslasync-web@2.0.0 audit:masked-values
+> node scripts/auditMaskedValues.mjs
+
+audit:masked-values OK ΓÇö scanned 721 .tsx file(s); no cleartext sensitive renders found.
+=== FRONTEND_TEST ===
+
+> teslasync-web@2.0.0 test
+> vitest run --run QueueStatus useSystemQueues
+
+6:42:16 AM [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+6:42:16 AM [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+Both esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored. The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+
+[1m[46m RUN [49m[22m [36mv4.1.2 [39m[90mD:/repos/teslasync/web[39m
+
+stderr | src/features/admin/components/QueueStatusPanel.test.tsx > QueueStatusPanel > renders the spinner while the query is loading
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/features/admin/components/QueueStatusPanel.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 1376[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders the error banner when the query rejects [33m 1048[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m7 passed[39m[22m[90m (7)[39m
+[2m   Start at [22m 06:42:16
+[2m   Duration [22m 5.20s[2m (transform 1.62s, setup 101ms, import 2.39s, tests 1.38s, environment 1.08s)[22m
+
+=== GO_BUILD ===
+=== GO_VET ===
+=== GO_TEST ===
+ok  	github.com/ev-dev-labs/teslasync/internal/api	5.612s
+ok  	github.com/ev-dev-labs/teslasync/internal/database	3.543s
+ok  	github.com/ev-dev-labs/teslasync/internal/worker	1.167s
+=== GIT_STATUS ===
+ M internal/api/router.go
+ M web/src/api/types.ts
+ M web/src/features/admin/pages/SystemPage.tsx
+ M web/src/i18n/en.json
+?? internal/api/queue_status_handler.go
+?? internal/api/queue_status_handler_test.go
+?? internal/database/worker_status_queue_repo.go
+?? internal/database/worker_status_repo.go
+?? internal/worker/heartbeat.go
+?? internal/worker/heartbeat_test.go
+?? web/src/api/hooks/useSystemQueues.ts
+?? web/src/features/admin/components/QueueJobDrawer.tsx
+?? web/src/features/admin/components/QueueStatusPanel.test.tsx
+?? web/src/features/admin/components/QueueStatusPanel.tsx
+=== STATUS ===
+EXIT=0
+STATUS=DONE
+
+=== NOTES ===
+Blocked Path notes (for follow-up prompts):
+
+1. cmd/* heartbeat wiring (DEFERRED). The Heartbeater library
+   ships in internal/worker/heartbeat.go but the cmd/notification-
+   worker/main.go, cmd/export-worker/main.go, and
+   cmd/automation-worker/main.go process entry points are OUTSIDE
+   the allowed-files regex for this prompt and were not modified.
+   Until a follow-up prompt wires worker.NewHeartbeater(store, opts).Start(ctx)
+   into each main(), all three workers will display "Down" with
+   the heartbeat_detail "no heartbeat received" in the UI. The
+   panel handles this gracefully — failed/succeeded counts and
+   queue depth still render from the Postgres aggregate.
+
+2. Retry endpoint (DEFERRED per Out-of-scope). The prompt's
+   "Retry failed" action was scoped out for this prompt; no retry
+   button renders on the panel today. A future prompt could add
+   a per-row retry on the drawer once an idempotent re-enqueue
+   path lands in internal/notifier / internal/export /
+   internal/automation.
+
+Gate command quirk:
+   Vitest 4.1.2 treats | literally inside --run "X|Y" filters
+   so the gate's literal-pipe pattern matches zero files. The
+   intended behaviour is positional filters, which works:
+   
+pm test -- --run QueueStatus useSystemQueues (used here).
+   Same workaround documented in the phase-46/29-40 logs.

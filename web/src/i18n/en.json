@@ -7812,5 +7812,56 @@
       "warn": "Warning",
       "critical": "Critical"
     }
+  },
+  "queueStatus": {
+    "title": "Background workers",
+    "subtitle": "Live view of the notification, export, and automation worker queues. Heartbeat colour switches from green to amber after 60 seconds and to red after 5 minutes of silence; \"down\" means the worker has never reported in.",
+    "loading": "Loading worker status…",
+    "error": "Could not load worker status. Check API logs and try again.",
+    "empty": "No workers are currently registered. The notification, export, and automation processes report here once they start.",
+    "refresh": "Refresh",
+    "lastUpdated": "Updated {{when}}",
+    "queueDepth": "Queue depth",
+    "queueDepthDetail": "{{pending}} pending · {{inProgress}} in progress",
+    "heartbeatRelative": "Last beat {{when}}",
+    "heartbeatNever": "No heartbeat recorded",
+    "oldestPending": "Oldest pending: {{duration}}",
+    "openDrawer": "Show recent {{worker}} jobs",
+    "hostVersion": "{{host}} · {{version}}",
+    "hostUnknown": "No host reported",
+    "versionUnknown": "unknown",
+    "metric": {
+      "succeeded24h": "Succeeded 24h",
+      "failed24h": "Failed 24h"
+    },
+    "severity": {
+      "ok": "Healthy",
+      "warn": "Lagging",
+      "critical": "Stale",
+      "down": "Down"
+    },
+    "drawer": {
+      "title": "Recent jobs",
+      "titleWithWorker": "Recent {{worker}} jobs",
+      "loading": "Loading recent jobs…",
+      "error": "Could not load recent jobs. Check API logs and try again.",
+      "empty": "No recent jobs to show. New jobs will appear here as the worker processes them."
+    },
+    "jobStarted": "Started {{at}}",
+    "jobDuration": "Took {{duration}}",
+    "jobStatus": {
+      "sent": "Sent",
+      "pending": "Pending",
+      "deferred_dnd": "Deferred (DND)",
+      "failed": "Failed",
+      "queued": "Queued",
+      "processing": "Processing",
+      "ready": "Ready",
+      "running": "Running",
+      "success": "Succeeded",
+      "partial": "Partial",
+      "cancelled": "Cancelled",
+      "skipped": "Skipped"
+    }
   }
 }
