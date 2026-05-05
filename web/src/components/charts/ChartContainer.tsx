@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tag, Plus, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -6,6 +6,7 @@ import { Spinner } from '@/components/feedback/Spinner';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { SectionErrorBoundary } from '@/components/feedback/SectionErrorBoundary';
 import { Button } from '@/components/ui/Button';
+import { FullscreenButton } from '@/components/ui/FullscreenButton';
 import { VisuallyHidden } from '@/components/a11y';
 import { useChartExport } from '@/hooks/useChartExport';
 import { downloadCSV, objectsToCSV, defaultExportFilename, type CsvCellValue } from '@/lib/csvExport';
@@ -117,6 +118,21 @@ interface ChartContainerProps {
    * stringifies the raw value.
    */
   dataColumns?: ReadonlyArray<ChartDataColumn>;
+  /**
+   * Phase-46 / Prompt 56 — when `true`, a `<FullscreenButton>` is
+   * rendered in the chart toolbar (data-html2canvas-ignore'd along
+   * with the rest of the action buttons so it never bleeds into
+   * exported PNGs). Click expands the entire `<figure>` to the
+   * browser viewport via the standard Fullscreen API. Esc, the
+   * browser's own exit button, and a second click on the toolbar
+   * button all return the chart to its original size.
+   *
+   * The accompanying `:fullscreen` rule in `web/src/index.css`
+   * grows the inner chart canvas so axis labels stay readable on
+   * a 27" monitor; Recharts auto re-measures via its built-in
+   * ResizeObserver so consumers don't need to wire anything else.
+   */
+  fullscreen?: boolean;
 }
 
 /**
@@ -181,12 +197,20 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       ariaDescription,
       data,
       dataColumns,
+      fullscreen,
     },
     ref,
   ) {
     const { t } = useTranslation();
     const { chartRef, exportPNG, exportSVG, copyToClipboard, exporting } =
       useChartExport(exportFilename ?? title);
+    // Phase-46 / Prompt 56 — separate ref for the figure node used
+    // by the optional `<FullscreenButton>`. We can't reuse
+    // `chartRef` directly because `useChartExport` owns the lifecycle
+    // of that ref (it's typed as private to that hook), and we'd
+    // rather not couple the fullscreen primitive to an internal
+    // implementation detail of the export hook.
+    const figureRef = useRef<HTMLElement | null>(null);
 
     // Phase-46 / Prompt 13 — stable ids for figure ↔ figcaption wiring.
     const reactId = useId();
@@ -255,6 +279,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
 
     const mergedRef = useCallback(
       (node: HTMLDivElement | null) => {
+        figureRef.current = node;
         (chartRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
         if (typeof ref === 'function') ref(node);
         else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
@@ -392,6 +417,8 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                 busy={exporting}
               />
             )}
+
+            {fullscreen && <FullscreenButton targetRef={figureRef} />}
           </div>
         </div>
 

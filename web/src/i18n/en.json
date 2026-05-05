@@ -453,6 +453,10 @@
     "clear": "Clear",
     "export": "Export",
     "refresh": "Refresh",
+    "fullscreen": {
+      "enter": "Enter fullscreen",
+      "exit": "Exit fullscreen"
+    },
     "copyLink": {
       "action": "Copy link",
       "label": "Copy link to this view",

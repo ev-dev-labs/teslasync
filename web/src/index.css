@@ -1174,3 +1174,66 @@ select option:checked {
   direction: ltr;
   unicode-bidi: isolate;
 }
+
+/* ─────────────────────────────────────────────────────────────────
+ * Phase-46 / Prompt 56 — Fullscreen primitive styles.
+ *
+ * The shared `<FullscreenButton>` triggers the browser's standard
+ * Fullscreen API on the chart `<figure>` or the leaflet
+ * `.leaflet-container`. The `:fullscreen` pseudo-class lets us
+ * upgrade the visual treatment ONLY while the element is actually
+ * in fullscreen — no JavaScript class swap, no flash, and the
+ * regular layout is restored automatically when the user presses
+ * Esc.
+ *
+ * We deliberately scope each rule to a specific marker
+ * (`figure[data-print-card]` / `.leaflet-container`) instead of
+ * a bare `:fullscreen` so other call sites (Modal full-screen,
+ * print preview) don't pick up these overrides.
+ * ───────────────────────────────────────────────────────────── */
+
+/* Chart figure in fullscreen mode.
+ *
+ * In normal layout the figure is a fixed-height card (~320 px).
+ * In fullscreen we want the inner chart canvas to fill the entire
+ * viewport so axis labels, tooltips, and legend chips become
+ * readable on a 27" monitor. We grow the figure to a flex column
+ * and force the inner `role="img"` chart wrapper to flex-grow
+ * (overriding its inline `style={{ height }}` via `!important` —
+ * the only way a stylesheet can beat an inline declaration). */
+figure[data-print-card]:fullscreen {
+  background-color: var(--bg-app);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+}
+
+figure[data-print-card]:fullscreen > div[role='img'] {
+  flex: 1 1 auto;
+  height: auto !important;
+  min-height: 0;
+}
+
+figure[data-print-card]:fullscreen h3 {
+  font-size: 1.125rem;
+  line-height: 1.5;
+}
+
+figure[data-print-card]:fullscreen p {
+  font-size: 0.95rem;
+}
+
+/* Leaflet container in fullscreen mode.
+ *
+ * Without these rules the map keeps its parent-derived width/height
+ * and the surrounding CSS (transparent backdrop) bleeds through.
+ * Pin to the viewport so leaflet's internal resize observer picks
+ * up the new size and re-tiles. */
+.leaflet-container:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--bg-app);
+}

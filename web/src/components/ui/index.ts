@@ -46,6 +46,7 @@ export {
   type EditableTextDisplayProps,
 } from './EditableText';
 export { PrintButton, type PrintButtonProps } from './PrintButton';
+export { FullscreenButton, type FullscreenButtonProps } from './FullscreenButton';
 export {
   Lightbox,
   LIGHTBOX_MIN_ZOOM,
