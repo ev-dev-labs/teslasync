@@ -356,6 +356,16 @@
       "alertRule": "Rename alert rule {{name}}"
     }
   },
+  "lightbox": {
+    "counter": "{{current}} / {{total}}",
+    "close": "Close image viewer",
+    "previous": "Previous image",
+    "next": "Next image",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset zoom",
+    "zoomPercent": "{{value}}%"
+  },
   "mask": {
     "reveal": "Reveal value",
     "hide": "Hide value",
@@ -6885,6 +6895,13 @@
   },
   "vehicles": {
     "compareButton": "Compare vehicles",
+    "photos": {
+      "gallery": "Photo gallery",
+      "galleryNamed": "{{name}} photo gallery",
+      "openAt": "Open photo {{index}} of {{total}}",
+      "empty": "No photos uploaded yet.",
+      "emptyHelp": "Photos uploaded for this vehicle will appear here."
+    },
     "detail": {
       "batteryOverview": "Battery Overview",
       "driveTrend": "Drive Distance Trend",

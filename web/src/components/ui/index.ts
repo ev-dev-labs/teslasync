@@ -46,6 +46,14 @@ export {
   type EditableTextDisplayProps,
 } from './EditableText';
 export { PrintButton, type PrintButtonProps } from './PrintButton';
+export {
+  Lightbox,
+  LIGHTBOX_MIN_ZOOM,
+  LIGHTBOX_MAX_ZOOM,
+  LIGHTBOX_ZOOM_STEP,
+  type LightboxImage,
+  type LightboxProps,
+} from './Lightbox';
 export { default as Logo } from './Logo';
 export { PlaybackControls } from '../data-display/PlaybackControls';
 export {
