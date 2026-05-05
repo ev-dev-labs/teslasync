@@ -33,6 +33,12 @@ export function TorqueHistoryChart({ data }: TorqueHistoryChartProps) {
       <ChartContainer
         title={t('drivetrain.torqueHistory', 'Motor Torque')}
         subtitle={t('drivetrain.torqueHistorySub', 'Drive inverter torque output over time')}
+        ariaLabel={t('drivetrain.torqueHistory.aria', 'Motor inverter torque output history area chart')}
+        data={data.map((d) => ({ time: d.time, torque: d.torque }))}
+        dataColumns={[
+          { key: 'time', label: t('drivetrain.col.time', 'Time') },
+          { key: 'torque', label: t('drivetrain.col.torque', 'Torque (Nm)') },
+        ]}
         height={280}
       >
         <ResponsiveContainer width="100%" height="100%">

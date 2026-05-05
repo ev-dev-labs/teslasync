@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Download, MoreVertical, Tag, FileSpreadsheet, Image as ImageIcon, Plus, Eye, EyeOff,
@@ -8,6 +8,7 @@ import { Spinner } from '@/components/feedback/Spinner';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { SectionErrorBoundary } from '@/components/feedback/SectionErrorBoundary';
 import { Button } from '@/components/ui/Button';
+import { VisuallyHidden } from '@/components/a11y';
 import { useChartExport } from '@/hooks/useChartExport';
 import { downloadCSV, objectsToCSV, defaultExportFilename, type CsvCellValue } from '@/lib/csvExport';
 import { AnnotationList } from './AnnotationList';
@@ -66,19 +67,66 @@ interface ChartContainerProps {
    *  function so they can read the visible annotations from context. */
   annotations?: ChartAnnotationsConfig;
   /**
-   * Phase-45 / Prompt 13 — accessible description of the chart content.
+   * Phase-46 / Prompt 13 — REQUIRED accessible name for the chart figure.
    *
    * Recharts SVGs are otherwise an opaque "graphics-document" to assistive
-   * tech. This wraps the chart body in `role="img"` + `aria-label` so a
-   * screen-reader user hears one short summary instead of dozens of axis
-   * labels in series order.
+   * tech. Pass a one-sentence description such as
+   * `"Daily energy use over the last 30 days"` so a screen-reader user
+   * hears one short summary instead of dozens of axis labels in series
+   * order.
    *
-   * Pass a one-sentence description such as
-   * `"Line chart showing daily energy use over the last 30 days"`. When
-   * omitted, falls back to the existing `title` prop so the chart is at
-   * least announced as `Chart: {title}`.
+   * `audit:chart-a11y` (chained from `npm run lint`) fails the build if
+   * any `<ChartContainer>` JSX site is missing this prop.
    */
-  ariaLabel?: string;
+  ariaLabel: string;
+  /**
+   * Phase-46 / Prompt 13 — optional long description, e.g.
+   * `"Battery voltage ranged 380–410 V over the last 7 days, dipping
+   *  every night around 03:00."`. Wired to `aria-describedby` on the
+   * figure so SR users hear the prose summary right after the title.
+   */
+  ariaDescription?: string;
+  /**
+   * Phase-46 / Prompt 13 — series rows for the SR/forced-colors
+   * fallback `<table>`. When supplied the container renders a
+   * visually-hidden table (exposed in `forced-colors:` mode and to
+   * every assistive technology) carrying the same data the chart
+   * displays. Combine with `dataColumns` to pick the visible columns
+   * and their formatters.
+   *
+   * When `data` is omitted the audit requires a
+   * `// chart-a11y:no-table` comment justifying the absence (used for
+   * heatmaps, scatter clouds with thousands of points, etc.).
+   */
+  data?: ReadonlyArray<ChartDataRow>;
+  /**
+   * Column definitions for the fallback table. Required when `data`
+   * is set. `format` is unit-aware and runs once per cell; default
+   * stringifies the raw value.
+   */
+  dataColumns?: ReadonlyArray<ChartDataColumn>;
+}
+
+/**
+ * Phase-46 / Prompt 13 — row shape accepted by the fallback
+ * `<table>`. Keys must match the `key`s declared in `dataColumns`.
+ * Values may be `null` (rendered as the i18n empty marker) so a
+ * sparse time-series doesn't hide gaps from SR users.
+ */
+export type ChartDataRow = Record<string, string | number | null | undefined>;
+
+export interface ChartDataColumn {
+  /** Row key to read. */
+  key: string;
+  /** Visible column header. Pre-localized at the call site. */
+  label: string;
+  /**
+   * Optional formatter — typically `(v) => formatKWh(v as number)` so
+   * the table reads in the same units the visible chart axes use.
+   * When omitted, values are coerced to string and `null`/`undefined`
+   * is rendered as `—`.
+   */
+  format?: (value: unknown) => string;
 }
 
 const HIDDEN_STORAGE_PREFIX = 'teslasync-annotations-hidden:';
@@ -118,6 +166,9 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       exportable, exportFilename, exportData,
       annotations: annotationsConfig,
       ariaLabel,
+      ariaDescription,
+      data,
+      dataColumns,
     },
     ref,
   ) {
@@ -125,6 +176,11 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     const { chartRef, exportPNG, exporting } = useChartExport(exportFilename);
     const [menuOpen, setMenuOpen] = useState(false);
     const menuContainerRef = useRef<HTMLDivElement>(null);
+
+    // Phase-46 / Prompt 13 — stable ids for figure ↔ figcaption wiring.
+    const reactId = useId();
+    const titleId = `chart-title-${reactId}`;
+    const fallbackId = `chart-fallback-${reactId}`;
 
     // ── Annotation state (only active when annotationsConfig is supplied) ──
     const annotationsEnabled = annotationsConfig != null;
@@ -234,6 +290,17 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       ? children({ annotations: visibleAnnotations, hidden })
       : children;
 
+    // Phase-46 / Prompt 13 — does the caller supply enough info to
+    // render the SR/forced-colors fallback table? When `data` is set
+    // we always render `<table>`; otherwise we fall back to the
+    // `ariaDescription` prose alone (or just the title).
+    const hasFallbackTable = !!(
+      data &&
+      data.length > 0 &&
+      dataColumns &&
+      dataColumns.length > 0
+    );
+
     // Mobile-collapsed annotation marker row. Renders above the chart on
     // viewports ≤ 640px (Tailwind `sm` breakpoint) so the vertical reference
     // lines never hide the chart line on small screens. The chart consumer's
@@ -244,11 +311,17 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       annotationsEnabled && !hidden && visibleAnnotations.length > 0;
 
     return (
-      <div
+      <figure
         ref={mergedRef}
         data-print-card
+        aria-labelledby={titleId}
+        aria-describedby={fallbackId}
         className={cn(
           'group rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900',
+          // Tailwind preflight already removes default <figure> margins;
+          // re-state `m-0` defensively so any consumer override of preflight
+          // doesn't shift the chart vertical rhythm.
+          'm-0',
           'print:break-inside-avoid print:border-gray-300 print:bg-white',
           // Phase-46 / Prompt 11 — Windows High Contrast / forced-colors mode.
           // Pin the chart-container boundary to a system colour so the
@@ -262,7 +335,12 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       >
         <div className="mb-3 flex items-start justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+            <h3
+              id={titleId}
+              className="text-sm font-semibold text-gray-900 dark:text-gray-100"
+            >
+              {title}
+            </h3>
             {subtitle && (
               <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
             )}
@@ -406,12 +484,23 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
 
         <div
           style={{ height }}
-          className="relative"
-          // Phase-45 / Prompt 13 — give Recharts SVGs a single accessible
-          // name so screen-reader users hear one summary instead of dozens
-          // of axis labels read in series order.
+          className={cn(
+            'relative',
+            // Phase-46 / Prompt 13 — in Windows High Contrast / forced-colors
+            // mode the SVG strokes collapse to a small palette of system
+            // colours and the multi-series chart becomes illegible. Hide
+            // the SVG entirely there and rely on the `<figcaption>` table
+            // fallback below for both forced-colors users and screen
+            // readers.
+            'forced-colors:hidden',
+          )}
+          // The figure ancestor already provides the accessible name via
+          // `aria-labelledby={titleId}`; this inner wrapper still carries
+          // `role="img" aria-label` so a focus-stop on the chart body
+          // re-states the summary the user heard at the figure boundary
+          // (browsers don't always re-announce ancestor regions).
           role="img"
-          aria-label={ariaLabel ?? t('a11y.chartFigure', 'Chart: {{title}}', { title })}
+          aria-label={ariaLabel}
         >
           {loading ? (
             <div className="flex h-full items-center justify-center">
@@ -431,6 +520,99 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           )}
         </div>
 
+        {/*
+          Phase-46 / Prompt 13 — accessible chart fallback.
+
+          Visually hidden by default so sighted users see no change, but:
+            - exposed to every assistive technology (screen readers,
+              voice control, refreshable Braille) via the `<figcaption>`
+              role under the figure;
+            - revealed in `forced-colors:` mode so Windows High
+              Contrast users get a legible table where the SVG would
+              otherwise have collapsed to monochrome line noise.
+
+          Always rendered (never conditional) so `aria-describedby` on
+          the figure resolves to a stable target. When the caller has
+          opted out via `// chart-a11y:no-table`, only the
+          `ariaDescription` prose appears here.
+        */}
+        <VisuallyHidden
+          as="figcaption"
+          id={fallbackId}
+          className={cn(
+            'forced-colors:not-sr-only forced-colors:block',
+            'forced-colors:mt-3 forced-colors:p-2',
+            'forced-colors:border forced-colors:border-[CanvasText]',
+          )}
+        >
+          {ariaDescription && (
+            <p className="forced-colors:mb-2 forced-colors:text-[CanvasText]">
+              {ariaDescription}
+            </p>
+          )}
+          {hasFallbackTable ? (
+            <table
+              className={cn(
+                'w-full border-collapse text-xs',
+                'forced-colors:text-[CanvasText]',
+              )}
+            >
+              <caption className="text-left">
+                {t('chart.a11y.fallbackTableLabel', '{{title}} — data table', {
+                  title,
+                })}
+              </caption>
+              <thead>
+                <tr>
+                  {dataColumns!.map((col) => (
+                    <th
+                      key={col.key}
+                      scope="col"
+                      className={cn(
+                        'border border-gray-200 px-2 py-1 text-left font-medium',
+                        'forced-colors:border-[CanvasText]',
+                      )}
+                    >
+                      {col.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data!.map((row, i) => (
+                  <tr key={i}>
+                    {dataColumns!.map((col) => {
+                      const raw = row[col.key];
+                      const cell =
+                        col.format != null
+                          ? col.format(raw)
+                          : raw == null
+                            ? '—'
+                            : String(raw);
+                      return (
+                        <td
+                          key={col.key}
+                          className={cn(
+                            'border border-gray-200 px-2 py-1',
+                            'forced-colors:border-[CanvasText]',
+                          )}
+                        >
+                          {cell}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : !ariaDescription ? (
+            // Neither a structured table nor a long description — fall
+            // back to the bare summary so SR users still hear something
+            // when they navigate to the figcaption.
+            <p>{t('chart.a11y.summary', 'Chart: {{title}}', { title })}</p>
+          ) : null}
+        </VisuallyHidden>
+
         {annotationsEnabled && fetchedAnnotations.length > 0 && (
           <AnnotationList
             annotations={fetchedAnnotations}
@@ -447,7 +629,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             onCancel={() => setPopoverOpen(false)}
           />
         )}
-      </div>
+      </figure>
     );
   },
 );

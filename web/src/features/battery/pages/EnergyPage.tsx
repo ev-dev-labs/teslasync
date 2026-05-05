@@ -455,8 +455,10 @@ export default function EnergyPage() {
       <ChartTimeRangeProvider syncId="energy.daily">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <FadeIn delay={0.1}>
+              {/* chart-a11y:no-table dual-axis composed chart with brush; SR users can use Download CSV via the chart export menu */}
               <ChartContainer
                 title={t('energy.chart.energyCostDaily', 'Energy & Cost Daily')}
+                ariaLabel={t('energy.chart.energyCostDaily.aria', 'Daily energy and efficiency composed chart with bars and a line')}
                 exportable
                 exportFilename="energy-cost-daily"
                 annotations={{ vehicleId, scope: 'energy', chartId: 'energy-cost-daily' }}
@@ -536,7 +538,13 @@ export default function EnergyPage() {
             </FadeIn>
 
             <FadeIn delay={0.15}>
-              <ChartContainer title={t('energy.chart.efficiencyTrend', 'Efficiency Trend')} exportable exportFilename="efficiency-trend">
+              {/* chart-a11y:no-table efficiency + distance two-area trend; same daily breakdown is exportable as CSV via the chart menu */}
+              <ChartContainer
+                title={t('energy.chart.efficiencyTrend', 'Efficiency Trend')}
+                ariaLabel={t('energy.chart.efficiencyTrend.aria', 'Daily efficiency and distance area chart')}
+                exportable
+                exportFilename="efficiency-trend"
+              >
                 <div className="h-48 sm:h-64">
                   {dailyEnergy.length > 0 ? (
                     <EnergyChartSync>
@@ -604,7 +612,13 @@ export default function EnergyPage() {
           {/* ── Charts Row 2: Time of Day + Charger Breakdown ──── */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <FadeIn delay={0.2}>
-              <ChartContainer title={t('energy.chart.chargingByTime', 'Charging by Time of Day')} exportable exportFilename="charging-by-time">
+              {/* chart-a11y:no-table aggregated time-of-day buckets bar chart; CSV download available */}
+              <ChartContainer
+                title={t('energy.chart.chargingByTime', 'Charging by Time of Day')}
+                ariaLabel={t('energy.chart.chargingByTime.aria', 'Charging energy and session count by time of day bar chart')}
+                exportable
+                exportFilename="charging-by-time"
+              >
                 {timeOfDayData.length > 0 ? (
                   <>
                     <div className="h-44 sm:h-60">
@@ -653,7 +667,13 @@ export default function EnergyPage() {
             </FadeIn>
 
             <FadeIn delay={0.25}>
-              <ChartContainer title={t('energy.chart.chargerBreakdown', 'Charger Type Breakdown')} exportable exportFilename="charger-breakdown">
+              {/* chart-a11y:no-table charger-type pie-chart aggregation; CSV download available */}
+              <ChartContainer
+                title={t('energy.chart.chargerBreakdown', 'Charger Type Breakdown')}
+                ariaLabel={t('energy.chart.chargerBreakdown.aria', 'Charger type share pie chart')}
+                exportable
+                exportFilename="charger-breakdown"
+              >
                 {chargerBreakdown.length > 0 ? (
                   <div className="flex items-center gap-6">
                     <div className="h-48 w-48">

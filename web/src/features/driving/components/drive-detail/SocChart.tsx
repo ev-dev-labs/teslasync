@@ -22,7 +22,12 @@ export function SocChart({ chartData }: SocChartProps) {
 
   return (
     <FadeIn>
-      <ChartContainer title={t('driveDetail.socOverTime', 'SOC % Over Time')} height={220}>
+      {/* chart-a11y:no-table dense per-sample SOC trace; start/end SOC visible in the drive summary tiles */}
+      <ChartContainer
+        title={t('driveDetail.socOverTime', 'SOC % Over Time')}
+        ariaLabel={t('driveDetail.socOverTime.aria', 'State of charge percent over time area chart')}
+        height={220}
+      >
         {chartData.length > 1 ? (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart

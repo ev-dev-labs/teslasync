@@ -209,6 +209,12 @@ export default function TripListPage() {
       <FadeIn delay={0.1}>
         <ChartContainer
           title={t('trips.chart.title', 'Top Trips by Distance')}
+          ariaLabel={t('trips.chart.title.aria', 'Top trips ranked by distance horizontal bar chart')}
+          data={chartData.map((c) => ({ name: c.name, distance: c.distance }))}
+          dataColumns={[
+            { key: 'name', label: t('trips.chart.col.trip', 'Trip') },
+            { key: 'distance', label: `${t('trips.chart.distance', 'Distance')} (${distanceUnit})` },
+          ]}
           height={280}
           className="mb-6"
           action={

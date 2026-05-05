@@ -217,7 +217,12 @@ export default function SleepEfficiencyPage() {
           {/* State Distribution Donut + Sentry Comparison */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <FadeIn>
-              <ChartContainer title={t('sleep.stateDistribution', 'State Distribution')} height={264}>
+              {/* chart-a11y:no-table state-share donut; per-state hours announced via the legend below the chart */}
+              <ChartContainer
+                title={t('sleep.stateDistribution', 'State Distribution')}
+                ariaLabel={t('sleep.stateDistribution.aria', 'State distribution donut chart with per-state hours in the legend')}
+                height={264}
+              >
                 {pieData.length > 0 ? (
                   <>
                     <ResponsiveContainer width="100%" height={200}>
@@ -258,7 +263,12 @@ export default function SleepEfficiencyPage() {
 
             <FadeIn delay={0.1}>
               <div className="flex flex-col gap-4">
-                <ChartContainer title={t('sleep.sentryComparison', 'Sentry vs No-Sentry')} height={224}>
+                {/* chart-a11y:no-table small comparison bar chart; numbers visible in the sentry callout below */}
+                <ChartContainer
+                  title={t('sleep.sentryComparison', 'Sentry vs No-Sentry')}
+                  ariaLabel={t('sleep.sentryComparison.aria', 'Sentry on versus sentry off drain comparison bar chart')}
+                  height={224}
+                >
                   {comparisonData.some((d) => d.sentry_on > 0 || d.sentry_off > 0) ? (
                     <ResponsiveContainer width="100%" height={200}>
                       <BarChart data={comparisonData}>

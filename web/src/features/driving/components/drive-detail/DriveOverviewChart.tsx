@@ -27,7 +27,12 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
 
   return (
     <FadeIn>
-      <ChartContainer title={t('driveDetail.driveChart', 'Drive Overview')} height={360}>
+      {/* chart-a11y:no-table dense per-sample drive trace; mean/max/min summary table follows below in the rich legend */}
+      <ChartContainer
+        title={t('driveDetail.driveChart', 'Drive Overview')}
+        ariaLabel={t('driveDetail.driveChart.aria', 'Drive overview composed chart of speed, range, SOC and power over time')}
+        height={360}
+      >
         {chartData.length > 1 ? (
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart

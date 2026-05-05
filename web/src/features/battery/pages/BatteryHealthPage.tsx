@@ -650,9 +650,11 @@ export default function BatteryHealthPage() {
 
       {/* ── 5. Capacity Trend & Prediction ───────────────────────── */}
       <FadeIn delay={0.2}>
+        {/* chart-a11y:no-table composed actual+predicted percentage trend; SR users get capacity numbers via the metric cards above */}
         <ChartContainer
           title={t('battery.chart.capacityTrend', 'Capacity Trend & Prediction')}
           subtitle={t('battery.chart.dashedProjected', 'Dashed = projected')}
+          ariaLabel={t('battery.chart.capacityTrend.aria', 'Battery capacity trend with dashed projection line over time')}
           exportable
           exportFilename="capacity-trend"
         >
@@ -688,8 +690,10 @@ export default function BatteryHealthPage() {
 
       {/* ── 6. Range Trend ───────────────────────────────────────── */}
       <FadeIn delay={0.25}>
+        {/* chart-a11y:no-table per-snapshot range area chart; latest range surfaced in the summary card above */}
         <ChartContainer
           title={t('battery.chart.rangeTrend', 'Estimated Range Over Time')}
+          ariaLabel={t('battery.chart.rangeTrend.aria', 'Estimated battery range over time area chart')}
           exportable
           exportFilename="range-trend"
           annotations={{ vehicleId, scope: 'battery', chartId: 'battery-health-range-trend' }}
@@ -856,7 +860,13 @@ export default function BatteryHealthPage() {
       <SectionErrorBoundary name="battery:acdc-breakdown" fallbackTitle={t('battery.section.acdcFailed', 'AC/DC energy breakdown failed to load')}>
         <FadeIn delay={0.4}>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ChartContainer title={t('battery.chart.acdc', 'AC / DC Energy Breakdown')} exportable exportFilename="energy-breakdown">
+          {/* chart-a11y:no-table pie chart of aggregate AC vs DC energy share; raw counts surfaced in the Charging Statistics panel beside it */}
+          <ChartContainer
+            title={t('battery.chart.acdc', 'AC / DC Energy Breakdown')}
+            ariaLabel={t('battery.chart.acdc.aria', 'AC versus DC energy share pie chart')}
+            exportable
+            exportFilename="energy-breakdown"
+          >
             {energyBreakdown ? (
               <div className="h-52">
                 <ResponsiveContainer width="100%" height="100%">

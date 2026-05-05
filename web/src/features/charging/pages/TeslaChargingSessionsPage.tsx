@@ -366,7 +366,16 @@ export default function TeslaChargingSessionsPage() {
 
       {/* Monthly cost chart */}
       <FadeIn delay={0.08}>
-        <ChartContainer title={t('tesla_sessions.monthlyCost', 'Monthly Charging Cost')} height={280}>
+        <ChartContainer
+          title={t('tesla_sessions.monthlyCost', 'Monthly Charging Cost')}
+          ariaLabel={t('tesla_sessions.monthlyCost.aria', 'Monthly Tesla charging cost bar chart')}
+          data={monthlyData.map((m) => ({ month: m.month, total: m.total }))}
+          dataColumns={[
+            { key: 'month', label: t('tesla_sessions.col.month', 'Month') },
+            { key: 'total', label: t('tesla_sessions.col.total', 'Total ($)') },
+          ]}
+          height={280}
+        >
           {monthlyData.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={monthlyData}>

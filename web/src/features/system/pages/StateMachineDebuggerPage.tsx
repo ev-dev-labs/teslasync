@@ -647,6 +647,12 @@ export default function StateMachineDebuggerPage() {
         <FadeIn delay={0.25}>
           <ChartContainer
             title={t('fsm.distributionByState', 'State Distribution')}
+            ariaLabel={t('fsm.distributionByState.aria', 'FSM state distribution donut chart with per-state counts')}
+            data={pieData.map((p) => ({ name: p.name, value: p.value }))}
+            dataColumns={[
+              { key: 'name', label: t('fsm.col.state', 'State') },
+              { key: 'value', label: t('fsm.col.count', 'Count') },
+            ]}
             loading={transLoading}
             height={280}
           >

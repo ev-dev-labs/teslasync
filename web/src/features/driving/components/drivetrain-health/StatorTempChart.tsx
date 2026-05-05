@@ -34,6 +34,19 @@ export function StatorTempChart({ data }: StatorTempChartProps) {
       <ChartContainer
         title={t('drivetrain.statorTempHistory', 'Stator Temperature History')}
         subtitle={t('drivetrain.statorTempSub', 'Motor stator temperature over recent snapshots')}
+        ariaLabel={t('drivetrain.statorTempHistory.aria', 'Front, rear-left and rear-right motor stator temperature history line chart')}
+        data={data.map((d) => ({
+          time: d.time,
+          stator: d.stator,
+          statorRel: d.statorRel,
+          statorRer: d.statorRer,
+        }))}
+        dataColumns={[
+          { key: 'time', label: t('drivetrain.col.time', 'Time') },
+          { key: 'stator', label: `${t('drivetrain.col.stator', 'Stator')} (${tempUnit})` },
+          { key: 'statorRel', label: `${t('drivetrain.col.statorRel', 'Rear-Left')} (${tempUnit})` },
+          { key: 'statorRer', label: `${t('drivetrain.col.statorRer', 'Rear-Right')} (${tempUnit})` },
+        ]}
         height={280}
       >
         <ResponsiveContainer width="100%" height="100%">

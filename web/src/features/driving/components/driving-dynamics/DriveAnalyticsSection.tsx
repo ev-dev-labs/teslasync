@@ -134,6 +134,12 @@ export default function DriveAnalyticsSection({
           <ChartContainer
             title={t('dynamics.speedDistribution', 'Speed Distribution')}
             subtitle={t('dynamics.speedDistDesc', 'Drives grouped by average speed')}
+            ariaLabel={t('dynamics.speedDistribution.aria', 'Speed-bucket drive count distribution bar chart')}
+            data={speedDistribution.map((b) => ({ range: b.range, count: b.count }))}
+            dataColumns={[
+              { key: 'range', label: t('dynamics.col.range', 'Speed range') },
+              { key: 'count', label: t('dynamics.col.drives', 'Drives') },
+            ]}
             height={300}
             exportable
             exportFilename="speed-distribution"
@@ -152,9 +158,11 @@ export default function DriveAnalyticsSection({
             </ResponsiveContainer>
           </ChartContainer>
 
+          {/* chart-a11y:no-table scatter chart of every drive — a per-row table here would be too dense; CSV export available */}
           <ChartContainer
             title={t('dynamics.accelPatterns', 'Acceleration Patterns')}
             subtitle={t('dynamics.accelPatternsDesc', 'Peak power vs trip distance')}
+            ariaLabel={t('dynamics.accelPatterns.aria', 'Per-drive scatter chart of peak power versus trip distance')}
             height={300}
             exportable
             exportFilename="acceleration-patterns"
@@ -185,6 +193,17 @@ export default function DriveAnalyticsSection({
         <ChartContainer
           title={t('dynamics.powerProfile', 'Power Profile')}
           subtitle={t('dynamics.powerProfileDesc', 'Peak & regen power for recent drives')}
+          ariaLabel={t('dynamics.powerProfile.aria', 'Recent-drives peak and regen power dual-area chart')}
+          data={powerProfile.map((d) => ({
+            label: d.label,
+            powerMax: d.powerMax,
+            powerMin: d.powerMin,
+          }))}
+          dataColumns={[
+            { key: 'label', label: t('dynamics.col.drive', 'Drive') },
+            { key: 'powerMax', label: t('dynamics.col.maxKw', 'Max kW') },
+            { key: 'powerMin', label: t('dynamics.col.regenKw', 'Regen kW') },
+          ]}
           height={320}
           exportable
           exportFilename="power-profile"

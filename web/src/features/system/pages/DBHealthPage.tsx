@@ -208,6 +208,12 @@ export default function DBHealthPage() {
       <FadeIn delay={0.2}>
         <ChartContainer
           title={t('dbHealth.chartTitle', 'Table Sizes (Top 15)')}
+          ariaLabel={t('dbHealth.chartTitle.aria', 'Top fifteen database table sizes horizontal bar chart')}
+          data={chartData.map((r) => ({ name: r.name, rows: r.rows }))}
+          dataColumns={[
+            { key: 'name', label: t('dbHealth.col.table', 'Table') },
+            { key: 'rows', label: t('dbHealth.col.rows', 'Rows') },
+          ]}
           loading={statsLoading}
           height={300}
         >

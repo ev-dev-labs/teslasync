@@ -556,7 +556,16 @@ export default function DrivesListPage() {
       {filteredDrives.length > 3 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <FadeIn>
-            <ChartContainer title={t('drives.recentDrives', 'Recent Drives')} height={220}>
+            <ChartContainer
+              title={t('drives.recentDrives', 'Recent Drives')}
+              ariaLabel={t('drives.recentDrives.aria', 'Recent drives daily distance area chart')}
+              data={distanceTrend.map((d) => ({ date: d.date, distance: d.distance }))}
+              dataColumns={[
+                { key: 'date', label: t('drives.col.date', 'Date') },
+                { key: 'distance', label: `${t('drives.distance', 'Distance')} (${distanceUnit})` },
+              ]}
+              height={220}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={distanceTrend}>
                   {areaGradient('drivesDistGrad', '#00f0ff')}
@@ -577,7 +586,16 @@ export default function DrivesListPage() {
           </FadeIn>
 
           <FadeIn>
-            <ChartContainer title={t('drives.distanceDistribution', 'Trip Distance Distribution')} height={220}>
+            <ChartContainer
+              title={t('drives.distanceDistribution', 'Trip Distance Distribution')}
+              ariaLabel={t('drives.distanceDistribution.aria', 'Trip distance bucket distribution bar chart')}
+              data={distDist.map((b) => ({ range: b.range, count: b.count }))}
+              dataColumns={[
+                { key: 'range', label: t('drives.col.range', 'Distance range') },
+                { key: 'count', label: t('drives.col.drives', 'Drives') },
+              ]}
+              height={220}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={distDist}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -595,8 +613,10 @@ export default function DrivesListPage() {
       {/* Speed vs Efficiency scatter */}
       {scatterData.length > 5 && (
         <FadeIn>
+          {/* chart-a11y:no-table per-drive scatter cloud — too dense for a tabular fallback */}
           <ChartContainer
             title={t('drives.speedVsEfficiency', 'Speed vs Efficiency')}
+            ariaLabel={t('drives.speedVsEfficiency.aria', 'Per-drive speed versus efficiency scatter plot')}
             subtitle={`${t('drives.lower', 'Lower')} ${efficiencyUnit} = ${t('drives.better', 'better')}`}
             height={240}
           >

@@ -72,9 +72,11 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
     <>
       {/* Motor Power Over Time */}
       <FadeIn delay={0.2}>
+        {/* chart-a11y:no-table dense per-sample telemetry trace; CSV export available */}
         <ChartContainer
           title={t('dynamics.powerOverTime', 'Motor Power Over Time')}
           subtitle={t('dynamics.powerOverTimeDesc', 'Drive and regen power from motor telemetry')}
+          ariaLabel={t('dynamics.powerOverTime.aria', 'Motor power and regen over time area chart')}
           height={280}
           exportable
           exportFilename="motor-power"
@@ -103,9 +105,11 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
 
       {/* Motor Torque History */}
       <FadeIn delay={0.25}>
+        {/* chart-a11y:no-table dense per-sample telemetry trace; CSV export available */}
         <ChartContainer
           title={t('dynamics.torqueHistory', 'Motor Torque History')}
           subtitle={t('dynamics.torqueHistoryDesc', 'Front and rear motor torque over time')}
+          ariaLabel={t('dynamics.torqueHistory.aria', 'Front and rear motor torque over time line chart')}
           height={280}
           exportable
           exportFilename="torque-history"
@@ -130,9 +134,11 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
 
       {/* Motor RPM History */}
       <FadeIn delay={0.3}>
+        {/* chart-a11y:no-table dense per-sample telemetry trace; CSV export available */}
         <ChartContainer
           title={t('dynamics.rpmHistory', 'Motor RPM History')}
           subtitle={t('dynamics.rpmHistoryDesc', 'Front and rear motor RPM over time')}
+          ariaLabel={t('dynamics.rpmHistory.aria', 'Front and rear motor RPM over time line chart')}
           height={280}
           exportable
           exportFilename="motor-rpm"

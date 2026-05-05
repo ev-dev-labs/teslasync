@@ -1586,6 +1586,10 @@
       "open": "Open chart actions menu",
       "downloadCsv": "Download data as CSV",
       "downloadPng": "Download as PNG"
+    },
+    "a11y": {
+      "fallbackTableLabel": "{{title}} — data table",
+      "summary": "Chart: {{title}}"
     }
   },
   "replay": {

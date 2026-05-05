@@ -374,8 +374,10 @@ export default function BatteryDegradationPage() {
       {/* ── Health Trend & Projection ─────────────────── */}
       {projectionChartData.length > 0 ? (
         <FadeIn delay={0.15}>
+          {/* chart-a11y:no-table composed projection chart with confidence band; SR users get summary metrics in the cards above */}
           <ChartContainer
             title={t('battery.degradation.trendTitle', 'Health Trend & Projection')}
+            ariaLabel={t('battery.degradation.trendTitle.aria', 'Battery health trend and 95% confidence projection chart')}
             height={300}
             annotations={{ vehicleId: activeId, scope: 'battery', chartId: 'battery-degradation-trend' }}
           >

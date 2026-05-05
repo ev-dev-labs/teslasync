@@ -31,6 +31,15 @@ export default function SessionCurveChart({ curveData }: SessionCurveChartProps)
         'charging.curve.powerVsSocDesc',
         'Charging power curve for selected session',
       )}
+      ariaLabel={t(
+        'charging.curve.powerVsSoc.aria',
+        'Charging power versus state-of-charge area chart for the selected session',
+      )}
+      data={curveData.map((p) => ({ soc: p.soc, power: Math.round(p.power * 10) / 10 }))}
+      dataColumns={[
+        { key: 'soc', label: t('charging.curve.col.soc', 'SOC %') },
+        { key: 'power', label: t('charging.curve.col.power', 'Power (kW)') },
+      ]}
       height={320}
       exportable
       exportFilename="power-vs-soc"

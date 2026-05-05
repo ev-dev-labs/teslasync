@@ -54,6 +54,24 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
         'charging.curve.chargerTypeDesc',
         'Average kW and kWh per charger category',
       )}
+      ariaLabel={t(
+        'charging.curve.chargerType.aria',
+        'Composed bar/line chart of average power and energy per charger type',
+      )}
+      data={chargerTypeStats.map((s) => ({
+        label: s.label,
+        count: s.count,
+        avgKw: fmtNumber(s.avgKw, 1),
+        avgKwh: fmtNumber(s.avgKwh, 1),
+        avgDuration: fmtInt(s.avgDuration),
+      }))}
+      dataColumns={[
+        { key: 'label', label: t('charging.curve.col.charger', 'Charger Type') },
+        { key: 'count', label: t('charging.curve.col.sessions', 'Sessions') },
+        { key: 'avgKw', label: t('charging.curve.col.avgKw', 'Avg kW') },
+        { key: 'avgKwh', label: t('charging.curve.col.avgKwh', 'Avg kWh') },
+        { key: 'avgDuration', label: t('charging.curve.col.avgMin', 'Avg minutes') },
+      ]}
       height={280}
       exportable
       exportFilename="charge-rate-by-type"

@@ -24,7 +24,12 @@ export function PowerProfileChart({ chartData, stats }: PowerProfileChartProps) 
 
   return (
     <FadeIn>
-      <ChartContainer title={t('driveDetail.powerProfile', 'Power Profile')} height={220}>
+      {/* chart-a11y:no-table dense per-sample power trace; max/regen/avg stats appear below the chart */}
+      <ChartContainer
+        title={t('driveDetail.powerProfile', 'Power Profile')}
+        ariaLabel={t('driveDetail.powerProfile.aria', 'Drive power profile area chart over time')}
+        height={220}
+      >
         {chartData.length > 1 ? (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart

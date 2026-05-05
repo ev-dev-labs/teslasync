@@ -33,6 +33,17 @@ export function PowerOutputChart({ data }: PowerOutputChartProps) {
       <ChartContainer
         title={t('drivetrain.powerOutput', 'Power Output History')}
         subtitle={t('drivetrain.powerOutputSub', 'Peak and regen power per drive over time')}
+        ariaLabel={t('drivetrain.powerOutput.aria', 'Per-drive peak and regen motor power output history area chart')}
+        data={data.map((d) => ({
+          date: d.date,
+          power_max_kw: d.powerMax,
+          power_min_kw: d.powerMin,
+        }))}
+        dataColumns={[
+          { key: 'date', label: t('drivetrain.col.date', 'Date') },
+          { key: 'power_max_kw', label: t('drivetrain.col.powerMax', 'Peak (kW)') },
+          { key: 'power_min_kw', label: t('drivetrain.col.powerMin', 'Regen (kW)') },
+        ]}
         height={300}
       >
         <ResponsiveContainer width="100%" height="100%">

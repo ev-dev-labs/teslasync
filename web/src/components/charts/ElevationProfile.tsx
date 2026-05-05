@@ -72,8 +72,10 @@ export function ElevationProfile({
 
   if (data.length === 0) {
     return (
+      // chart-a11y:no-table empty state — there is no series to tabulate yet
       <ChartContainer
         title={t('replay.elevation.title', 'Elevation Profile')}
+        ariaLabel={t('replay.elevation.aria', 'Elevation profile chart — no data available yet')}
         height={height}
         className={className}
       >
@@ -85,9 +87,11 @@ export function ElevationProfile({
   }
 
   return (
+    // chart-a11y:no-table dense per-sample elevation series along the route — would be unusable as a table for SR users
     <ChartContainer
       title={t('replay.elevation.title', 'Elevation Profile')}
       subtitle={`↑ ${elevGain.gain}m  ↓ ${elevGain.loss}m`}
+      ariaLabel={t('replay.elevation.aria', 'Elevation profile chart along the route, with total gain and loss in meters')}
       height={height}
       className={className}
     >

@@ -35,6 +35,12 @@ export function TemperatureTrendChart({ data }: TemperatureTrendChartProps) {
       <ChartContainer
         title={t('drivetrain.tempHistory', 'Temperature Trend')}
         subtitle={t('drivetrain.tempHistorySub', 'Outside temperature recorded during recent drives')}
+        ariaLabel={t('drivetrain.tempHistory.aria', 'Outside temperature trend line chart per recent drive')}
+        data={data.map((d) => ({ date: d.date, outsideTemp: d.outsideTemp }))}
+        dataColumns={[
+          { key: 'date', label: t('drivetrain.col.date', 'Date') },
+          { key: 'outsideTemp', label: `${t('drivetrain.col.outside', 'Outside')} (${tempUnit})` },
+        ]}
         height={300}
       >
         <ResponsiveContainer width="100%" height="100%">

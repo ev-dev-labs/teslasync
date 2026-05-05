@@ -121,7 +121,13 @@ export default function TrueCostPage() {
 
           {/* Cumulative savings chart */}
           <FadeIn>
-            <ChartContainer title={t('tco.cumulativeSavings', 'Cumulative Savings Over Time')} exportable exportFilename="cumulative-savings">
+            {/* chart-a11y:no-table area chart of derived cumulative metric — value at any month is announced by the description */}
+            <ChartContainer
+              title={t('tco.cumulativeSavings', 'Cumulative Savings Over Time')}
+              ariaLabel={t('tco.cumulativeSavings.aria', 'Cumulative EV-vs-gas savings area chart over time')}
+              exportable
+              exportFilename="cumulative-savings"
+            >
               {monthlyBreakdown.length > 0 ? (
                 <div className="h-64 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
@@ -154,7 +160,13 @@ export default function TrueCostPage() {
           {/* Cost per km comparison + Monthly EV vs Gas */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <FadeIn delay={0.1}>
-              <ChartContainer title={t('tco.costPerKm', 'Cost per Kilometer')} exportable exportFilename="cost-per-km">
+              {/* chart-a11y:no-table EV-vs-gas comparison; numeric values announced via the cards below the chart */}
+              <ChartContainer
+                title={t('tco.costPerKm', 'Cost per Kilometer')}
+                ariaLabel={t('tco.costPerKm.aria', 'Cost per kilometer bar chart comparing EV electricity to gas')}
+                exportable
+                exportFilename="cost-per-km"
+              >
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={[
@@ -183,7 +195,13 @@ export default function TrueCostPage() {
             </FadeIn>
 
             <FadeIn delay={0.2}>
-              <ChartContainer title={t('tco.monthlyEvVsGas', 'Monthly EV vs Gas Cost')} exportable exportFilename="monthly-ev-vs-gas">
+              {/* chart-a11y:no-table month-by-month rollup bar chart; SR users get aggregate via the savings breakdown panel */}
+              <ChartContainer
+                title={t('tco.monthlyEvVsGas', 'Monthly EV vs Gas Cost')}
+                ariaLabel={t('tco.monthlyEvVsGas.aria', 'Monthly EV vs gas cost comparison bar chart')}
+                exportable
+                exportFilename="monthly-ev-vs-gas"
+              >
                 {monthlyBreakdown.length > 0 ? (
                   <div className="h-56">
                     <ResponsiveContainer width="100%" height="100%">

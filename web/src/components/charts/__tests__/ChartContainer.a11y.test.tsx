@@ -1,0 +1,240 @@
+/**
+ * Phase-46 / Prompt 13 — ChartContainer accessibility contract.
+ *
+ * Asserts the figure / figcaption / table fallback wiring that lets
+ * screen-reader users + Windows High Contrast users perceive a
+ * Recharts SVG that would otherwise be opaque to them.
+ */
+
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ChartContainer } from '../ChartContainer';
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (_key: string, fallback: string, opts?: Record<string, unknown>) => {
+      if (!opts) return fallback;
+      return Object.entries(opts).reduce(
+        (out, [k, v]) => out.replace(`{{${k}}}`, String(v)),
+        fallback,
+      );
+    },
+  }),
+  Trans: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  initReactI18next: { type: '3rdParty', init: () => undefined },
+}));
+
+// `useChartExport` ultimately reaches into html2canvas-pro / FileSaver
+// territory we don't need under unit tests. Mock it to a no-op that
+// matches the production return shape.
+vi.mock('@/hooks/useChartExport', () => ({
+  useChartExport: () => ({
+    chartRef: { current: null },
+    exportPNG: vi.fn(),
+    exporting: false,
+  }),
+}));
+
+// Annotations would otherwise hit the API client. Stub the hooks the
+// container imports.
+vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotationsAsData: () => ({ annotations: [] }),
+  useCreateAnnotation: () => ({ mutate: vi.fn() }),
+  useDeleteAnnotation: () => ({ mutate: vi.fn() }),
+}));
+
+function renderChart(ui: React.ReactNode) {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+}
+
+describe('ChartContainer accessibility contract', () => {
+  it('renders as a <figure> labelled by its title heading', () => {
+    renderChart(
+      <ChartContainer title="Daily Energy" ariaLabel="Daily energy use over the last 7 days">
+        <div data-testid="chart-body">chart</div>
+      </ChartContainer>,
+    );
+
+    // The figure becomes a "figure" landmark only when it has an
+    // accessible name — `aria-labelledby` to the heading provides one.
+    const figure = screen.getByRole('figure', { name: /Daily Energy/ });
+    expect(figure.tagName).toBe('FIGURE');
+
+    // The chart body is rendered inside an inner `role="img"` wrapper
+    // so a focus-stop on the chart re-states the summary.
+    const img = within(figure).getByRole('img', {
+      name: 'Daily energy use over the last 7 days',
+    });
+    expect(img).toBeInTheDocument();
+    expect(within(img).getByTestId('chart-body')).toBeInTheDocument();
+  });
+
+  it('wires aria-describedby to the figcaption fallback', () => {
+    renderChart(
+      <ChartContainer
+        title="Power"
+        ariaLabel="Power over time"
+        ariaDescription="Battery power flow ranged -120 kW to +180 kW over the last hour."
+      >
+        <div>chart</div>
+      </ChartContainer>,
+    );
+
+    const figure = screen.getByRole('figure', { name: /Power/ });
+    const describedBy = figure.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+
+    const captionNode = describedBy
+      ? document.getElementById(describedBy)
+      : null;
+    expect(captionNode).not.toBeNull();
+    expect(captionNode?.tagName).toBe('FIGCAPTION');
+    expect(captionNode?.textContent).toContain(
+      'Battery power flow ranged -120 kW to +180 kW',
+    );
+  });
+
+  it('renders the fallback table when data + dataColumns are supplied', () => {
+    renderChart(
+      <ChartContainer
+        title="Daily kWh"
+        ariaLabel="Energy used per day for the last 3 days"
+        data={[
+          { time: 'Mon', kwh: 10 },
+          { time: 'Tue', kwh: 12 },
+          { time: 'Wed', kwh: 8 },
+        ]}
+        dataColumns={[
+          { key: 'time', label: 'Day' },
+          { key: 'kwh', label: 'kWh', format: (v) => `${v as number} kWh` },
+        ]}
+      >
+        <div>chart</div>
+      </ChartContainer>,
+    );
+
+    // The table lives inside the figcaption — query by role.
+    const table = screen.getByRole('table');
+    expect(table).toBeInTheDocument();
+
+    // Two column headers in document order.
+    const headers = within(table).getAllByRole('columnheader');
+    expect(headers.map((h) => h.textContent)).toEqual(['Day', 'kWh']);
+
+    // Three data rows + 1 header row = 4 total.
+    const rows = within(table).getAllByRole('row');
+    expect(rows).toHaveLength(4);
+
+    // The formatter ran for the kWh column.
+    expect(within(table).getByText('10 kWh')).toBeInTheDocument();
+    expect(within(table).getByText('12 kWh')).toBeInTheDocument();
+    expect(within(table).getByText('8 kWh')).toBeInTheDocument();
+  });
+
+  it('renders the empty marker for null/undefined cells', () => {
+    renderChart(
+      <ChartContainer
+        title="Sparse"
+        ariaLabel="Sparse series"
+        data={[{ time: 'Mon', kwh: null }]}
+        dataColumns={[
+          { key: 'time', label: 'Day' },
+          { key: 'kwh', label: 'kWh' },
+        ]}
+      >
+        <div>chart</div>
+      </ChartContainer>,
+    );
+
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('—')).toBeInTheDocument();
+  });
+
+  it('falls back to the bare summary when neither data nor description is supplied', () => {
+    renderChart(
+      <ChartContainer title="Bare" ariaLabel="Bare chart with no fallback table">
+        <div>chart</div>
+      </ChartContainer>,
+    );
+
+    // No <table> is rendered.
+    expect(screen.queryByRole('table')).toBeNull();
+
+    // The figcaption still contains the chart summary so SR users
+    // hear something when they navigate to it.
+    const figure = screen.getByRole('figure', { name: /Bare/ });
+    const describedBy = figure.getAttribute('aria-describedby');
+    const caption = describedBy ? document.getElementById(describedBy) : null;
+    expect(caption?.textContent).toContain('Chart: Bare');
+  });
+
+  it('hides the chart in forced-colors mode and reveals the figcaption', () => {
+    renderChart(
+      <ChartContainer
+        title="Forced colors"
+        ariaLabel="Chart that is illegible in High Contrast mode"
+        data={[{ time: 'A', kwh: 1 }]}
+        dataColumns={[
+          { key: 'time', label: 'Time' },
+          { key: 'kwh', label: 'kWh' },
+        ]}
+      >
+        <div data-testid="chart-body">chart</div>
+      </ChartContainer>,
+    );
+
+    // The chart wrapper carries `forced-colors:hidden` so it
+    // disappears in Windows High Contrast mode (testable here only
+    // by inspecting the className, since jsdom doesn't honour the
+    // forced-colors media query).
+    const chartImg = screen.getByRole('img', {
+      name: 'Chart that is illegible in High Contrast mode',
+    });
+    expect(chartImg.className).toContain('forced-colors:hidden');
+
+    // The figcaption carries `forced-colors:not-sr-only` + `block`
+    // so it becomes the visible content in forced-colors mode.
+    const figure = screen.getByRole('figure', { name: /Forced colors/ });
+    const describedBy = figure.getAttribute('aria-describedby');
+    const caption = describedBy ? document.getElementById(describedBy) : null;
+    expect(caption).not.toBeNull();
+    expect(caption!.className).toContain('forced-colors:not-sr-only');
+    expect(caption!.className).toContain('forced-colors:block');
+  });
+
+  it('always renders the figcaption (so aria-describedby resolves) even when data is omitted', () => {
+    renderChart(
+      <ChartContainer title="No table" ariaLabel="Chart without a tabular representation">
+        <div>chart</div>
+      </ChartContainer>,
+    );
+    const figure = screen.getByRole('figure');
+    const describedBy = figure.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy!)).not.toBeNull();
+  });
+
+  it('produces unique figure/figcaption ids per ChartContainer instance', () => {
+    renderChart(
+      <>
+        <ChartContainer title="One" ariaLabel="One">
+          <div>a</div>
+        </ChartContainer>
+        <ChartContainer title="Two" ariaLabel="Two">
+          <div>b</div>
+        </ChartContainer>
+      </>,
+    );
+
+    const figures = screen.getAllByRole('figure');
+    expect(figures).toHaveLength(2);
+    const ids = figures.map((f) => f.getAttribute('aria-describedby'));
+    expect(ids[0]).toBeTruthy();
+    expect(ids[1]).toBeTruthy();
+    expect(ids[0]).not.toBe(ids[1]);
+  });
+});

@@ -341,7 +341,16 @@ export default function TeslaChargingHistoryPage() {
 
       {/* Monthly spending chart */}
       <FadeIn delay={0.1}>
-        <ChartContainer title={t('tesla_charging.monthlySpending', 'Monthly Spending')} height={280}>
+        <ChartContainer
+          title={t('tesla_charging.monthlySpending', 'Monthly Spending')}
+          ariaLabel={t('tesla_charging.monthlySpending.aria', 'Monthly Tesla charging spending bar chart')}
+          data={monthlyData.map((m) => ({ month: m.month, total: m.total }))}
+          dataColumns={[
+            { key: 'month', label: t('tesla_charging.col.month', 'Month') },
+            { key: 'total', label: t('tesla_charging.col.total', 'Total ($)') },
+          ]}
+          height={280}
+        >
           {monthlyData.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={monthlyData}>
