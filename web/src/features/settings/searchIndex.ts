@@ -261,6 +261,30 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       description: t('search.entries.notifications.criticalFlash.desc', 'Flash the browser tab title on critical alerts.'),
       keywords: ['flash', 'urgent', 'tab'],
     },
+    {
+      id: 'notifications.sound-master',
+      href: '/settings#notifications',
+      section: 'notifications',
+      title: t('search.entries.notifications.soundMaster.title', 'Notification sounds'),
+      description: t('search.entries.notifications.soundMaster.desc', 'Play short audio cues when alerts and completion events arrive.'),
+      keywords: ['audio', 'sound', 'chime', 'beep', 'noise', 'mute', 'volume'],
+    },
+    {
+      id: 'notifications.sound-channels',
+      href: '/settings#notifications',
+      section: 'notifications',
+      title: t('search.entries.notifications.soundChannels.title', 'Per-channel notification sounds'),
+      description: t('search.entries.notifications.soundChannels.desc', 'Toggle sound separately for critical, warning, and info alerts plus charge/drive/automation completions.'),
+      keywords: ['critical', 'warning', 'info', 'channel', 'category', 'audio', 'cue'],
+    },
+    {
+      id: 'notifications.sound-volume',
+      href: '/settings#notifications',
+      section: 'notifications',
+      title: t('search.entries.notifications.soundVolume.title', 'Notification sound volume'),
+      description: t('search.entries.notifications.soundVolume.desc', 'Adjust how loud notification cues play.'),
+      keywords: ['volume', 'loud', 'quiet', 'audio', 'level'],
+    },
 
     // ── Quiet hours / Do-Not-Disturb (Phase-46 / Prompt 19) ──────────
     {

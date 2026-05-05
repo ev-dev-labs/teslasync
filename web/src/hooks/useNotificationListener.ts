@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { sseManager } from '../lib/sseManager'
 import { useWebPush } from './useWebPush'
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
+import {
+  getNotificationSoundPrefs,
+  mapNotificationToCategory,
+  playNotificationSound,
+} from '@/lib/notificationSound'
 import type { Alert } from '@/api/types'
 
 const PREFS_KEY = 'teslasync-web-push-prefs'
@@ -153,6 +158,31 @@ export function useNotificationListener() {
       sseManager.unsubscribe('export_status', onExportStatus)
     }
   }, [permission, prefs, sendNotification, navigate])
+
+  // Per-channel notification sounds (Phase-46 / Prompt 29). Lives in its
+  // own effect because audio cues are independent of the OS browser
+  // notification permission and fire even while the tab is visible —
+  // they complement the in-app toast / OS notification, they don't
+  // replace them.
+  useEffect(() => {
+    const onAlertSound = (raw: unknown) => {
+      const data = raw as AlertEventData
+      if (data.quiet_suppressed || data.is_test) return
+      const category = mapNotificationToCategory({
+        type: data.type ?? 'alert',
+        severity: data.severity ?? null,
+      })
+      if (!category) return
+      // Pull prefs at fire-time (not effect-creation time) so toggling a
+      // channel in Settings takes effect on the very next event without
+      // re-subscribing the SSE handler.
+      playNotificationSound(category, getNotificationSoundPrefs())
+    }
+    sseManager.subscribe('alert', onAlertSound)
+    return () => {
+      sseManager.unsubscribe('alert', onAlertSound)
+    }
+  }, [])
 
   return { prefs, setPrefs }
 }

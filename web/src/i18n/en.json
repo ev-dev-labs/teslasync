@@ -6006,6 +6006,25 @@
     "exportStatus": "Export completions",
     "hint": "Notifications only fire when the app tab is in the background."
   },
+  "notificationSounds": {
+    "title": "Notification sounds",
+    "subtitle": "Play a short cue when an alert or completion event arrives. Plays even while the tab is visible.",
+    "master": "Enable notification sounds",
+    "categoriesHeading": "Channels",
+    "volume": "Volume",
+    "test": "Test",
+    "testAria": "Test {{name}} sound",
+    "autoplayHint": "Some browsers require a click before audio is allowed. Use the Test buttons below once to authorise playback.",
+    "category": {
+      "critical_alert": "Critical alerts",
+      "warning_alert": "Warning alerts",
+      "info_alert": "Informational alerts",
+      "charge_complete": "Charge complete",
+      "drive_complete": "Drive complete",
+      "automation_run": "Automation runs",
+      "achievement": "Achievements"
+    }
+  },
   "settings": {
     "tab": {
       "heading": "Browser tab signals",

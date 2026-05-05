@@ -13,6 +13,21 @@ import {
   kmToMiles,
 } from '@/lib/unitConversion'
 
+// Re-export per-channel notification sound preferences so callers can
+// import everything settings-related from `@/hooks/useSettings`. The
+// underlying storage (localStorage, not the backend `AppSettings` blob)
+// lives in `@/lib/notificationSound` to keep audio playback colocated
+// with the prefs that gate it.
+export {
+  DEFAULT_NOTIFICATION_SOUND_PREFS,
+  NOTIFICATION_SOUND_CATEGORIES,
+  getNotificationSoundPrefs,
+  setNotificationSoundPrefs,
+  useNotificationSoundPrefs,
+  type NotificationSoundCategory,
+  type NotificationSoundPrefs,
+} from '@/lib/notificationSound'
+
 const defaults: AppSettings = {
   unit_of_length: 'km',
   unit_of_temp: 'C',
