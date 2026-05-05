@@ -6123,6 +6123,16 @@
     }
   },
   "settings": {
+    "tours": {
+      "label": "Product tours",
+      "title": "Product tours",
+      "body": "Re-run the guided walkthroughs that introduce major sections.",
+      "replayMain": "Replay dashboard tour",
+      "replayDebugger": "Debugger tour",
+      "replayAutomations": "Automations tour",
+      "resetAll": "Reset all tours",
+      "resetDone": "All tours reset — they will play next time you open the matching page"
+    },
     "tab": {
       "heading": "Browser tab signals",
       "badge": "Show unread count in browser tab",

@@ -55,6 +55,12 @@ export type BroadcastMessage =
   | { type: 'changelog.seen'; version: string }
   | { type: 'tour.completed'; tourId: string; version: number }
   | { type: 'tour.reset'; tourId?: string }
+  // Phase-46 / Prompt 61 — Replay-requested by Settings UI / command palette.
+  // Same-tab callers MUST also dispatch the window CustomEvent
+  // `TOUR_START_EVENT` because the bus filters self-messages out by design;
+  // the broadcast variant exists so peer tabs that have Layout mounted can
+  // start the tour in lockstep without a page reload.
+  | { type: 'tour.replay-requested'; tourId: string }
   | { type: 'checklist.dismissed' }
   | { type: 'onboarded' }
   | { type: 'onboarding.skip.changed'; skipped: boolean }

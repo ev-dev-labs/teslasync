@@ -28,9 +28,11 @@ import {
   TOUR_START_EVENT,
   TOURS,
   dispatchTourLauncherOpen,
+  dispatchTourStart,
   isTourCompleted as isTourCompletedById,
   type TourStartEventDetail,
 } from '@/lib/tourRegistry'
+import { subscribe as subscribeToBroadcast } from '@/lib/broadcast'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -736,6 +738,21 @@ export default function Layout() {
     }
     window.addEventListener(TOUR_START_EVENT, handler)
     return () => window.removeEventListener(TOUR_START_EVENT, handler)
+  }, [])
+
+  // Phase-46 / Prompt 61 — Cross-tab replay sync. When a sibling tab calls
+  // `startTour(id)` from `@/lib/tourLauncher`, it broadcasts
+  // `tour.replay-requested`. The bus filters self-broadcasts (per
+  // `subscribe()` in `broadcast.ts`), so this only fires for peer tabs;
+  // the originating tab already received the local `TOUR_START_EVENT`
+  // CustomEvent above. Re-issue the same window event here so peer tabs
+  // funnel through the existing state machine instead of duplicating it.
+  useEffect(() => {
+    return subscribeToBroadcast((msg) => {
+      if (msg.type !== 'tour.replay-requested') return
+      if (!msg.tourId || !TOURS[msg.tourId]) return
+      dispatchTourStart(msg.tourId)
+    })
   }, [])
 
   // When activeTourId changes (event-triggered) start the tour.

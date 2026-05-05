@@ -58,6 +58,14 @@ export const TOPICS = {
   CHANGELOG_SEEN: 'changelog.seen',
   TOUR_COMPLETED: 'tour.completed',
   TOUR_RESET: 'tour.reset',
+  /**
+   * Phase-46 / Prompt 61 — A user clicked "Replay" on a tour from the
+   * Settings → Product tours panel (or any other UI surface). Receivers
+   * should clear their per-tour completion flag and start the tour. The
+   * publisher already does this for the local tab; this topic exists so
+   * peer tabs stay in sync.
+   */
+  TOUR_REPLAY_REQUESTED: 'tour.replay-requested',
   CHECKLIST_DISMISSED: 'checklist.dismissed',
   ONBOARDED: 'onboarded',
   ONBOARDING_SKIP_CHANGED: 'onboarding.skip.changed',
