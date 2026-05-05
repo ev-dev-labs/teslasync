@@ -41,6 +41,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
+import { PullToRefresh } from '@/components/mobile';
 import { formatDateTime, formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -207,7 +208,7 @@ export default function DrivesListPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDrives(vehicleIdStr);
-  const { data: drives, isLoading: isDrivesLoading, error: drivesError } = drivesQuery;
+  const { data: drives, isLoading: isDrivesLoading, error: drivesError, refetch: refetchDrives } = drivesQuery;
   const { data: stats } = useDrivingStats(vehicleIdStr);
 
   /* Unit conversion */
@@ -394,6 +395,7 @@ export default function DrivesListPage() {
         </div>
       }
     >
+      <PullToRefresh onRefresh={async () => { await refetchDrives(); }}>
       {/* Date range + search filter */}
       <FadeIn>
         <FilterBar>
@@ -734,6 +736,7 @@ export default function DrivesListPage() {
           }}
         />
       )}
+      </PullToRefresh>
     </PageContainer>
   );
 }

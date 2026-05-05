@@ -46,6 +46,7 @@ import type { NotificationLog, AlertRule, Vehicle } from '@/api/types';
 import { NotificationFilterBar } from '../components/NotificationFilterBar';
 import { NotificationRow } from '../components/NotificationRow';
 import { NotificationChannelsView } from '../components/NotificationChannelsView';
+import { PullToRefresh, SwipeRow } from '@/components/mobile';
 
 type InboxTab = 'inbox' | 'archived' | 'channels';
 
@@ -370,6 +371,7 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   };
 
   return (
+    <PullToRefresh onRefresh={async () => { await refetch(); }}>
     <div className="space-y-4">
       <FadeIn>
         <NotificationFilterBar
@@ -469,21 +471,35 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
                 </div>
                 <div className="space-y-1">
                   {group.rows.map(log => (
-                    <NotificationRow
+                    <SwipeRow
                       key={log.id}
-                      log={log}
-                      rule={log.alert_id != null ? ruleMap[log.alert_id] : undefined}
-                      vehicle={log.alert_id != null && ruleMap[log.alert_id]?.vehicle_id != null
-                        ? vehicleMap[ruleMap[log.alert_id]!.vehicle_id!]
-                        : undefined}
-                      selected={selected.has(log.id)}
-                      onSelectionChange={toggleSelected}
-                      onActivate={handleRowActivate}
-                      onArchive={!archived ? (id) => archiveMut.mutate([id]) : undefined}
-                      onUnarchive={archived ? (id) => unarchiveMut.mutate([id]) : undefined}
-                      onMarkRead={!log.read_at ? (id) => markReadMut.mutate([id]) : undefined}
-                      onMarkUnread={log.read_at ? (id) => markUnreadMut.mutate([id]) : undefined}
-                    />
+                      rightAction={!archived
+                        ? {
+                            label: t('mobile.swipe.archive', 'Archive'),
+                            onAction: () => archiveMut.mutate([log.id]),
+                            tone: 'default',
+                          }
+                        : {
+                            label: t('mobile.swipe.restore', 'Restore'),
+                            onAction: () => unarchiveMut.mutate([log.id]),
+                            tone: 'default',
+                          }}
+                    >
+                      <NotificationRow
+                        log={log}
+                        rule={log.alert_id != null ? ruleMap[log.alert_id] : undefined}
+                        vehicle={log.alert_id != null && ruleMap[log.alert_id]?.vehicle_id != null
+                          ? vehicleMap[ruleMap[log.alert_id]!.vehicle_id!]
+                          : undefined}
+                        selected={selected.has(log.id)}
+                        onSelectionChange={toggleSelected}
+                        onActivate={handleRowActivate}
+                        onArchive={!archived ? (id) => archiveMut.mutate([id]) : undefined}
+                        onUnarchive={archived ? (id) => unarchiveMut.mutate([id]) : undefined}
+                        onMarkRead={!log.read_at ? (id) => markReadMut.mutate([id]) : undefined}
+                        onMarkUnread={log.read_at ? (id) => markUnreadMut.mutate([id]) : undefined}
+                      />
+                    </SwipeRow>
                   ))}
                 </div>
               </div>
@@ -492,6 +508,7 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
         )}
       </GlassPanel>
     </div>
+    </PullToRefresh>
   );
 }
 

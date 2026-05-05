@@ -516,6 +516,20 @@
     "whmi": "Wh/mi",
     "psi": "PSI"
   },
+  "mobile": {
+    "refresh": {
+      "pull": "Pull to refresh",
+      "release": "Release to refresh",
+      "refreshing": "Refreshing…"
+    },
+    "swipe": {
+      "archive": "Archive",
+      "restore": "Restore",
+      "delete": "Delete",
+      "ack": "Acknowledge",
+      "dismiss": "Dismiss"
+    }
+  },
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Fleet overview and real-time analytics",
