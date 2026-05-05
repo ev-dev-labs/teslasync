@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { useVehiclePaint } from '@/hooks/useVehiclePaint';
 import { PAINT_PALETTE_LIST } from '@/lib/vehicleColors';
+import { VisuallyHidden } from '@/components/a11y';
 
 export interface VehiclePaintPickerProps {
   vehicleId: number;
@@ -86,7 +87,7 @@ export function VehiclePaintPicker({
                   </svg>
                 </span>
               )}
-              <span className="sr-only">{label}</span>
+              <VisuallyHidden>{label}</VisuallyHidden>
             </button>
           );
         })}

@@ -29,6 +29,7 @@ import { useToast } from '@/components/feedback/Toast';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
+import { useAnnouncer } from '@/hooks/useAnnouncer';
 import { useUrlEnum, useUrlString, useUrlArray, useUrlBatch } from '@/hooks/useUrlState';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import {
@@ -202,6 +203,7 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const unarchiveMut = useUnarchiveNotifications();
   const deleteMut = useDeleteNotifications();
   const toast = useToast();
+  const { announce } = useAnnouncer();
 
   // Auto-mark-read on inbox open (only on the Inbox tab, not Archived).
   const autoMarkedRef = useRef(false);
@@ -250,11 +252,21 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const handleBulkArchive = useCallback(async (ids: Array<string | number>) => {
     await archiveMut.mutateAsync(ids.map(Number));
     clearSelection();
-  }, [archiveMut]);
+    announce(
+      t('notifications.bulk.announceArchived', '{{count}} items archived', {
+        count: ids.length,
+      }),
+    );
+  }, [archiveMut, announce, clearSelection, t]);
   const handleBulkUnarchive = useCallback(async (ids: Array<string | number>) => {
     await unarchiveMut.mutateAsync(ids.map(Number));
     clearSelection();
-  }, [unarchiveMut]);
+    announce(
+      t('notifications.bulk.announceRestored', '{{count}} items restored', {
+        count: ids.length,
+      }),
+    );
+  }, [unarchiveMut, announce, clearSelection, t]);
   // Bulk mark-read: optimistically flip the selected rows, then surface a
   // toast with an Undo button that reverses the mutation. If the original
   // mutation rejects, the optimistic helper rolls back the cache and we

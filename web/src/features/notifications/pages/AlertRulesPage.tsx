@@ -7,6 +7,7 @@ import { BulkActionToolbar, SeverityBadge } from '@/components/data-display';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { EmptyState, Skeleton, ErrorDisplay } from '@/components/feedback';
+import { VisuallyHidden } from '@/components/a11y';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
@@ -140,9 +141,9 @@ export default function AlertRulesPage() {
               <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-2)] text-left text-[var(--text-secondary)]">
                 <tr>
                   <th className="w-12 px-3 py-3">
-                    <label className="sr-only" htmlFor="alert-rules-master">
+                    <VisuallyHidden as="label" htmlFor="alert-rules-master">
                       {t('bulk.selectAll', 'Select all')}
-                    </label>
+                    </VisuallyHidden>
                     <input
                       id="alert-rules-master"
                       type="checkbox"
@@ -171,9 +172,9 @@ export default function AlertRulesPage() {
                       data-selected={checked || undefined}
                     >
                       <td className="px-3 py-3">
-                        <label className="sr-only" htmlFor={`alert-rule-${r.id}`}>
+                        <VisuallyHidden as="label" htmlFor={`alert-rule-${r.id}`}>
                           {t('bulk.selectRow', 'Select row')}
-                        </label>
+                        </VisuallyHidden>
                         <input
                           id={`alert-rule-${r.id}`}
                           type="checkbox"

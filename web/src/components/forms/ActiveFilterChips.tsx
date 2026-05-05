@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Icon } from '@/components/ui/Icon';
 import { Icons } from '@/lib/icons';
+import { VisuallyHidden } from '@/components/a11y';
 
 /**
  * Description of one chip — typically derived from a single URL search-param.
@@ -233,9 +234,7 @@ export function ActiveFilterChips({
       )}
 
       {/* a11y live region — announces individual removals + clear-all. */}
-      <span role="status" aria-live="polite" className="sr-only">
-        {removalAnnouncement}
-      </span>
+      <VisuallyHidden liveRegion>{removalAnnouncement}</VisuallyHidden>
     </div>
   );
 }

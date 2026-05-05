@@ -14,6 +14,7 @@ import {
 import { Button, Input, Modal, Badge, ConfirmDialog } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
+import { useAnnouncer } from '@/hooks/useAnnouncer';
 import {
   useSavedViews,
   useCreateSavedView,
@@ -130,13 +131,18 @@ export function SavedViewMenu({
   const [deleteTarget, setDeleteTarget] = useState<SavedView | null>(null);
 
   // --- Handlers ---
+  const { announce } = useAnnouncer();
   const handleApply = (view: SavedView) => {
     onApply(view.query);
     setOpen(false);
+    announce(
+      t('savedViews.announceApplied', 'View {{name}} applied', { name: view.name }),
+    );
   };
 
   const handleClear = () => {
     onApply('');
+    announce(t('savedViews.announceCleared', 'Saved view cleared'));
   };
 
   const handleTogglePin = (view: SavedView) => {

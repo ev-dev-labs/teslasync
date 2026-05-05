@@ -5519,7 +5519,13 @@
         "restore": "Restore",
         "delete": "Delete",
         "deleteConfirmTitle": "Delete notifications?",
-        "deleteConfirmBody": "These notifications will be permanently removed. Archive is usually the safer choice."
+        "deleteConfirmBody": "These notifications will be permanently removed. Archive is usually the safer choice.",
+        "announceArchived": "{{count}} items archived",
+        "announceArchived_one": "{{count}} item archived",
+        "announceArchived_other": "{{count}} items archived",
+        "announceRestored": "{{count}} items restored",
+        "announceRestored_one": "{{count}} item restored",
+        "announceRestored_other": "{{count}} items restored"
       },
       "empty": {
         "title": "No notifications",
@@ -6511,7 +6517,9 @@
     "unsetDefault": "Clear default",
     "defaultBadge": "Default",
     "pin": "Pin",
-    "unpin": "Unpin"
+    "unpin": "Unpin",
+    "announceApplied": "View {{name}} applied",
+    "announceCleared": "Saved view cleared"
   },
   "trips": {
     "detail": {

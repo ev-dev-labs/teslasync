@@ -17,6 +17,7 @@ import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, Tabs, PinButton } from '@/components/ui';
 import { MetricCard, BulkActionToolbar } from '@/components/data-display';
 import { Skeleton, EmptyState, Spinner, AlertBanner } from '@/components/feedback';
+import { VisuallyHidden } from '@/components/a11y';
 import { useToast } from '@/components/feedback/Toast';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
@@ -591,9 +592,9 @@ export default function GeofencesPage() {
                     {/* Left: info */}
                     <div className="flex items-start gap-4">
                       <label className="flex items-center pt-1.5">
-                        <span className="sr-only">
+                        <VisuallyHidden>
                           {t('geofences.selectGeofence', 'Select geofence {{name}}', { name: g.name })}
-                        </span>
+                        </VisuallyHidden>
                         <input
                           type="checkbox"
                           checked={sel.isSelected(g.id)}

@@ -9,6 +9,7 @@ import { MaintenanceBanner } from '../feedback/MaintenanceBanner'
 import { TopProgress } from '../feedback/TopProgress'
 import { SessionExpiringModal } from '../feedback/SessionExpiringModal'
 import { SessionExpiredModal } from '../feedback/SessionExpiredModal'
+import { AnnouncerRegion, VisuallyHidden } from '@/components/a11y'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -1006,13 +1007,20 @@ export default function Layout() {
           straight to <main id="main-content"> so keyboard users don't have
           to tab through the entire sidebar to reach the page body.
           Phase-45 / Prompt 13 audit anchor: skipToMain|skip.to.main */}
-      <a
+      <VisuallyHidden
+        as="a"
+        focusable
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[300] focus:rounded-lg focus:bg-neon-cyan focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--bg)] focus:ring-neon-cyan"
+        className="focus:fixed focus:top-4 focus:left-4 focus:z-[300] focus:rounded-lg focus:bg-neon-cyan focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--bg)] focus:ring-neon-cyan"
         onClick={(e) => { e.preventDefault(); mainRef.current?.focus() }}
       >
         {t('a11y.skipToMain', 'Skip to main content')}
-      </a>
+      </VisuallyHidden>
+
+      {/* Phase-46 / Prompt 12 — global SR announcer. Mounted once here
+          so any component can fire imperative live-region messages via
+          `useAnnouncer()` without rendering its own hidden region. */}
+      <AnnouncerRegion />
 
       {/* Ambient background effects */}
       <div className="pointer-events-none fixed inset-0 z-0">
