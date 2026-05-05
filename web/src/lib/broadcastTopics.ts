@@ -79,6 +79,13 @@ export const TOPICS = {
   FORM_DRAFT_ACQUIRED: 'formDraft.acquired',
   FORM_DRAFT_RELEASED: 'formDraft.released',
   FORM_DRAFT_COMMITTED: 'formDraft.committed',
+  // ── Edit leases (Phase-46 / Prompt 66 — useEditLease) ────────────────────
+  /** A tab is asking who currently owns the edit lease for a resource. */
+  LEASE_REQUEST: 'lease.request',
+  /** A tab is asserting it owns the edit lease (or has just taken over). */
+  LEASE_GRANTED: 'lease.granted',
+  /** A tab is releasing the edit lease (typically on unmount / tab close). */
+  LEASE_RELEASED: 'lease.released',
   // ── TanStack Query ───────────────────────────────────────────────────────
   QUERY_INVALIDATE: 'queryInvalidate',
   // ── Settings (Phase-45 / Prompt 06) ──────────────────────────────────────

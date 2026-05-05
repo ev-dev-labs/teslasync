@@ -74,6 +74,18 @@ export type BroadcastMessage =
   | { type: 'formDraft.acquired'; draftKey: string; tabId: string; ts: number }
   | { type: 'formDraft.released'; draftKey: string; tabId: string }
   | { type: 'formDraft.committed'; draftKey: string }
+  // ── Edit leases (Phase-46 / Prompt 66 — useEditLease) ────────────────────
+  // Coordinates "I am editing X" between tabs of the same origin so a tab
+  // that opened a stale view of a shared resource can warn the user before
+  // their save silently overwrites a peer tab's changes. The protocol is
+  // intentionally minimal: a `lease.request` asks any active owner to
+  // re-announce; `lease.granted` IS that announcement and carries
+  // `claimedAt` so a later (newer) claim can win a tiebreaker; a
+  // `lease.released` lets peer tabs re-elect immediately when the owner
+  // closes the form. `tabId` is the owning tab's stable `TAB_ID`.
+  | { type: 'lease.request'; resourceKey: string; tabId: string }
+  | { type: 'lease.granted'; resourceKey: string; tabId: string; claimedAt: number }
+  | { type: 'lease.released'; resourceKey: string; tabId: string }
   // ── TanStack Query ───────────────────────────────────────────────────────
   | { type: 'queryInvalidate'; keys: ReadonlyArray<ReadonlyArray<unknown>> }
   // ── Settings / preferences (Phase-45 / Prompt 06) ────────────────────────

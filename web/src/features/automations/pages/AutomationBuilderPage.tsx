@@ -18,13 +18,14 @@ import {
   Toggle,
   Textarea as UiTextarea,
 } from '@/components/ui';
-import { AlertBanner, DraftRecoveryBanner, EmptyState } from '@/components/feedback';
+import { AlertBanner, DraftRecoveryBanner, EmptyState, EditConflictBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { FormSection } from '@/components/forms';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
+import { useEditLease } from '@/hooks/useEditLease';
 import { useConfirm } from '@/hooks/useConfirm';
 import { ConfirmDialog } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -248,6 +249,19 @@ export default function AutomationBuilderPage() {
   const presetId = searchParams.get('preset') ?? undefined;
   const isEdit = id != null;
   const automationId = id ? Number.parseInt(id, 10) : undefined;
+
+  // Phase-46 / Prompt 66 — per-automation edit lease so a second tab
+  // editing the SAME automation surfaces a conflict banner before its
+  // save can silently overwrite this tab's work. New-automation drafts
+  // are scoped per-preset (or "new") because two tabs editing two
+  // independent new automations are not in conflict; only same-id edits
+  // race.
+  const leaseKey = isEdit
+    ? `automation/${automationId ?? 'unknown'}`
+    : presetId
+      ? `automation/preset/${presetId}`
+      : 'automation/new';
+  useEditLease(leaseKey);
 
   usePageTitle(
     isEdit
@@ -573,6 +587,11 @@ export default function AutomationBuilderPage() {
         >
           {t('automations.builder.backToList', 'Back to Automations')}
         </UiButton>
+
+        <EditConflictBanner
+          resourceKey={leaseKey}
+          resourceLabel={t('editConflict.resource.automation', 'This automation')}
+        />
 
         {hasDraft && !isEdit && !presetId && (
           <DraftRecoveryBanner

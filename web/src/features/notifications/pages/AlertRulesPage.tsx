@@ -6,11 +6,12 @@ import { GlassPanel, Badge, EditableText } from '@/components/ui';
 import { BulkActionToolbar, SeverityBadge } from '@/components/data-display';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { EmptyState, Skeleton, ErrorDisplay } from '@/components/feedback';
+import { EmptyState, Skeleton, ErrorDisplay, EditConflictBanner } from '@/components/feedback';
 import { VisuallyHidden } from '@/components/a11y';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
+import { useEditLease } from '@/hooks/useEditLease';
 
 import {
   useAlertRules,
@@ -33,6 +34,14 @@ import { Icons } from '@/lib/icons';
 export default function AlertRulesPage() {
   const { t } = useTranslation();
   usePageTitle(t('alertRules.title', 'Alert rules'));
+
+  // Phase-46 / Prompt 66 — claim an edit lease so a second tab opening
+  // the same bulk-rules surface sees a banner before its renames /
+  // bulk-enables silently race this tab. The lease is scoped to the
+  // list view itself (not per-rule) because the rename / bulk
+  // affordances on this page operate across the whole rule set.
+  const leaseKey = 'alert-rules/list';
+  useEditLease(leaseKey);
 
   const { data: rulesRaw, isLoading, error } = useAlertRules();
   const rules: AlertRule[] = useMemo(() => rulesRaw ?? [], [rulesRaw]);
@@ -72,6 +81,10 @@ export default function AlertRulesPage() {
       )}
     >
       <FadeIn>
+        <EditConflictBanner
+          resourceKey={leaseKey}
+          resourceLabel={t('editConflict.resource.alertRules', 'Your alert rules')}
+        />
         <BulkActionToolbar
           selectedIds={Array.from(sel.selectedIds)}
           total={visibleIds.length}

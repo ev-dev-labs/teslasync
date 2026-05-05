@@ -9,6 +9,8 @@ import { usePageTitle } from '@/hooks/usePageTitle'
 import { dispatchTourLauncherOpen } from '@/lib/tourRegistry'
 import { restartChecklist } from '@/features/onboarding/checklist'
 import { useToast } from '@/components/feedback/Toast'
+import { EditConflictBanner } from '@/components/feedback'
+import { useEditLease } from '@/hooks/useEditLease'
 import { cn } from '@/lib/cn'
 import { Zap, ExternalLink, Download, PlayCircle, Rocket } from 'lucide-react'
 
@@ -53,6 +55,15 @@ export default function SettingsPage() {
   const toast = useToast()
   const location = useLocation()
 
+  // Phase-46 / Prompt 66 — claim an edit lease for the entire settings
+  // page so a second tab editing the same settings sees a banner before
+  // their save can silently overwrite this tab's changes. The lease is
+  // scoped per-origin (no per-user scoping yet because TeslaSync's
+  // settings are single-tenant); future work can append a user subject
+  // when multi-tenant settings land.
+  const settingsLeaseKey = 'settings/general'
+  useEditLease(settingsLeaseKey)
+
   // Hash-anchor scroll: when /settings#appearance (or any other anchor)
   // loads, scroll the corresponding <section id="..."> into view. Triggered
   // by the onboarding-checklist CTAs (Phase-40 / Prompt 68).
@@ -75,6 +86,11 @@ export default function SettingsPage() {
       loading={isLoading}
     >
       <SettingsSearch className="mb-2" />
+
+      <EditConflictBanner
+        resourceKey={settingsLeaseKey}
+        resourceLabel={t('editConflict.resource.settings', 'Your settings')}
+      />
 
       <section id="tesla-account">
         <TeslaAccountSection />
