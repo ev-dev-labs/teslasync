@@ -5625,6 +5625,18 @@
       "action": "Mark all read",
       "success": "All notifications marked as read"
     },
+    "bellPopover": {
+      "title": "Notifications",
+      "unreadCount": "{{count}} unread",
+      "allRead": "All caught up",
+      "loading": "Loading…",
+      "error": "Could not load notifications",
+      "emptyTitle": "You're all caught up",
+      "emptyMessage": "No unread notifications right now.",
+      "untitled": "Notification",
+      "markAllRead": "Mark all read",
+      "viewAll": "View all"
+    },
     "view": {
       "label": "View",
       "grouped": "Grouped",

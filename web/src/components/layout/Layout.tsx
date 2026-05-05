@@ -51,7 +51,7 @@ import { useFaviconBadge } from '../../hooks/useFaviconBadge'
 import { useDynamicAppIcon } from '../../hooks/useDynamicAppIcon'
 import { useCriticalAlertFlash } from '../../hooks/useCriticalAlertFlash'
 import { useToast } from '../feedback/Toast'
-import { useUnreadCount } from '@/api/hooks/useNotifications'
+import { NotificationBellPopover } from './NotificationBellPopover'
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
 import { Icons } from '@/lib/icons';
 
@@ -451,35 +451,15 @@ function findNavItemByExactPath(to: string) {
 }
 
 /**
- * Tiny header link that renders the bell icon and an unread-count badge.
- * Polls `/notifications/unread-count` via TanStack Query every 30s. Used in
- * both the desktop sidebar header and the mobile top bar.
+ * Phase-46 / Prompt 28 — header bell trigger.
+ *
+ * Replaced the original NavLink-only bell with `NotificationBellPopover`,
+ * which renders the same bell + badge but opens an in-place triage panel
+ * on desktop click (latest 10 unread + Mark-all-read + View-all). On
+ * mobile (viewport ≤ 640 px) the popover is bypassed and the trigger
+ * navigates straight to /notifications, preserving the original UX
+ * where popover positioning would clip on narrow viewports.
  */
-function NotificationBell({ className }: { className?: string }) {
-  const { t } = useTranslation()
-  const { data: count = 0 } = useUnreadCount()
-  const display = count > 99 ? '99+' : String(count)
-  const label = count > 0
-    ? t('nav.notificationsUnread', '{{count}} unread notifications', { count })
-    : t('nav.notifications', 'Notifications')
-  return (
-    <GuardedNavLink
-      to="/notifications"
-      aria-label={label}
-      className={`relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${className ?? ''}`}
-    >
-      <Icons.notifications className="h-5 w-5" aria-hidden="true" />
-      {count > 0 && (
-        <span
-          aria-hidden="true"
-          className="absolute -top-0.5 -right-0.5 inline-flex min-w-[1rem] h-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow ring-1 ring-rose-300/60"
-        >
-          {display}
-        </span>
-      )}
-    </GuardedNavLink>
-  )
-}
 
 /**
  * Phase-40 / Prompt 60 — top-bar quick theme switcher.
@@ -1094,7 +1074,7 @@ export default function Layout() {
             )}
           </GuardedNavLink>
           <ThemeQuickSwitcher placement="left" />
-          <NotificationBell />
+          <NotificationBellPopover />
         </div>
 
         {/* Sticky search trigger */}
@@ -1345,7 +1325,7 @@ export default function Layout() {
           <div className="flex-1 flex justify-center -ml-10">
             <Logo size={26} showWordmark />
           </div>
-          <NotificationBell className="ml-auto" />
+          <NotificationBellPopover className="ml-auto" />
           <ThemeQuickSwitcher />
         </header>
       )}

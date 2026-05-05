@@ -82,6 +82,12 @@ export const notificationKeys = {
   // with any concurrent flat-list query that targeted the same group.
   groups: (filters?: NotificationFilters) =>
     ['notification-logs', 'groups', filters ?? {}] as const,
+  // Phase-46 / Prompt 28 — header bell popover preview list. Sibling
+  // of `logsFiltered` keyed only by `limit` so every Layout mount on
+  // every page reuses the same cache entry. Sits under the
+  // `notification-logs` prefix so the bulk mark-read invalidation in
+  // `invalidateLogsAndUnread` cascades into it without bespoke wiring.
+  bellUnread: (limit: number) => ['notification-logs', 'bell-unread', limit] as const,
   unreadCount: ['notification-logs', 'unread-count'] as const,
   stats: ['notification-stats'] as const,
   quietHours: ['notification-quiet-hours'] as const,
@@ -593,6 +599,38 @@ export function useUnreadCount() {
     queryFn: ({ signal }) => request<{ count: number }>('/notifications/unread-count', { signal }),
     refetchInterval: INTERVALS.STANDARD,
     select: (data) => data?.count ?? 0,
+  });
+}
+
+/**
+ * Phase-46 / Prompt 28 — header bell popover preview list.
+ *
+ * Returns the latest N unread, non-archived notifications for the bell
+ * popover's in-place triage panel. Backend filters via
+ * `read=false&archived=false` — there is NO `unread_only=true` flag in
+ * `parseNotificationLogFilters`, that name was a doc-level shorthand
+ * in the prompt that doesn't match the actual route surface.
+ *
+ * Cache key sits under the shared `notification-logs` prefix so the
+ * post-mutation invalidations in `invalidateLogsAndUnread` (and the
+ * `queryKeys: [notificationKeys.logs]` hook in `useBulkMarkRead`)
+ * cascade in: marking everything read elsewhere zeroes the popover
+ * preview without bespoke wiring. `staleTime` is short — 30s — so an
+ * SSE-driven new-notification toast that arrives mid-session triggers
+ * a refetch the next time the popover opens, instead of showing stale
+ * rows from the previous open.
+ */
+export function useUnreadNotifications(params: { limit: number }) {
+  const limit = Math.max(1, Math.floor(params.limit));
+  return useQuery({
+    queryKey: notificationKeys.bellUnread(limit),
+    queryFn: ({ signal }) =>
+      request<NotificationLog[]>(
+        `/notifications/logs?read=false&archived=false&limit=${limit}`,
+        { signal },
+      ),
+    staleTime: STALE_TIMES.FAST,
+    select: safeArray,
   });
 }
 
