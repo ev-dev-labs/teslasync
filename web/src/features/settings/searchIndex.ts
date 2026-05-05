@@ -262,6 +262,32 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       keywords: ['flash', 'urgent', 'tab'],
     },
 
+    // ── Quiet hours / Do-Not-Disturb (Phase-46 / Prompt 19) ──────────
+    {
+      id: 'quiet-hours.windows',
+      href: '/settings#quiet-hours',
+      section: 'quiet-hours',
+      title: t('search.entries.quietHours.windows.title', 'Quiet hours windows'),
+      description: t('search.entries.quietHours.windows.desc', 'Defer non-critical notifications during sleep, work meetings, or any time-of-day window.'),
+      keywords: ['dnd', 'do not disturb', 'sleep', 'mute', 'silence', 'night'],
+    },
+    {
+      id: 'quiet-hours.bypass-severities',
+      href: '/settings#quiet-hours',
+      section: 'quiet-hours',
+      title: t('search.entries.quietHours.bypass.title', 'Quiet hours bypass severities'),
+      description: t('search.entries.quietHours.bypass.desc', 'Choose which severities (e.g. critical) still ring through during quiet hours.'),
+      keywords: ['critical', 'override', 'bypass', 'severity'],
+    },
+    {
+      id: 'quiet-hours.timezone',
+      href: '/settings#quiet-hours',
+      section: 'quiet-hours',
+      title: t('search.entries.quietHours.timezone.title', 'Quiet hours timezone'),
+      description: t('search.entries.quietHours.timezone.desc', 'Pick the IANA timezone the start/end times are evaluated against.'),
+      keywords: ['tz', 'timezone', 'iana', 'utc'],
+    },
+
     // ── Appearance ──────────────────────────────────────────────────
     {
       id: 'appearance.theme',

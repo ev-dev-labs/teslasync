@@ -134,9 +134,39 @@ func main() {
 	log.Info().Msg("MQTT connected")
 
 	// Start MQTT notification consumer
-	worker := notification.NewWorker(db)
+	// Phase-46 / Prompt 19 — register the quiet-hours decider so the
+	// dispatcher can defer notifications during DND windows. Replay
+	// loop below promotes deferred rows once the window ends.
+	quietHoursRepo := database.NewQuietHoursRepo(db)
+	quietHoursDecider := notification.NewRepoDecider(quietHoursRepo)
+	worker := notification.NewWorker(db).WithQuietHoursDecider(quietHoursDecider)
 	go func() {
 		worker.Start(ctx, mqttClient)
+	}()
+
+	// Phase-46 / Prompt 19 — DND replay loop. Walks deferred_dnd rows
+	// every 60 seconds and dispatches the ones whose window has
+	// ended. Replay goes through notification.Send directly (NOT
+	// MQTT) so we update the existing log row in place rather than
+	// creating a duplicate row.
+	go func() {
+		ticker := time.NewTicker(60 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				replayed, failed, err := worker.ReplayDeferred(ctx)
+				if err != nil {
+					log.Error().Err(err).Msg("notification: deferred replay failed")
+					continue
+				}
+				if replayed > 0 || failed > 0 {
+					log.Info().Int("replayed", replayed).Int("failed", failed).Msg("notification: deferred replay tick")
+				}
+			}
+		}
 	}()
 
 	// Start schedule processor (checks every 60s for due notifications)

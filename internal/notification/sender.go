@@ -32,6 +32,11 @@ type Request struct {
 	// from alert toast to context page (Phase 40 / Prompt 14) and for
 	// computed-metric alerts to surface as alert-backed notifications.
 	AlertID int64 `json:"alert_id,omitempty"`
+	// Severity is the wire-level severity ('info' | 'warn' | 'critical')
+	// used by the quiet-hours dispatcher to decide whether to bypass an
+	// active Do-Not-Disturb window. Empty values are treated as 'info'.
+	// Phase-46 / Prompt 19.
+	Severity string `json:"severity,omitempty"`
 }
 
 // InternalTopic is the MQTT topic used for internal notification dispatch.

@@ -928,6 +928,17 @@
     "common": {
       "error": "Something went wrong"
     },
+    "quietHours": {
+      "save": {
+        "created": "Quiet hours window created",
+        "updated": "Quiet hours window updated",
+        "error": "Failed to save quiet hours window"
+      },
+      "delete": {
+        "success": "Quiet hours window removed",
+        "error": "Failed to delete quiet hours window"
+      }
+    },
     "pin": {
       "pinned": {
         "success": "Pinned",
@@ -7302,6 +7313,55 @@
         "saveUrl": "Save URL",
         "forward": "Forward to GitHub"
       }
+    }
+  },
+  "quietHours": {
+    "title": "Quiet hours / Do-Not-Disturb",
+    "subtitle": "Defer non-critical notifications during sleep, meetings, or other time-of-day windows.",
+    "addWindow": "Add window",
+    "edit": "Edit",
+    "delete": "Delete",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "loading": "Loading quiet-hours windows…",
+    "empty": "No quiet-hours windows yet. Add one to defer non-critical notifications during sleep or meetings.",
+    "bypassLabel": "Always allow:",
+    "deferred": "DND deferred",
+    "deferredTooltip": "Held until the active quiet-hours window ends.",
+    "form": {
+      "addTitle": "New quiet-hours window",
+      "editTitle": "Edit window",
+      "enabled": "Enabled",
+      "start": "Start",
+      "end": "End",
+      "timezone": "Timezone (IANA)",
+      "weekdays": "Weekdays",
+      "bypass": "Always allow these severities through",
+      "create": "Create",
+      "update": "Update",
+      "cancel": "Cancel"
+    },
+    "weekday": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    },
+    "severity": {
+      "info": "Info",
+      "warn": "Warning",
+      "critical": "Critical"
+    },
+    "error": {
+      "startInvalid": "Start must be HH:MM (24-hour).",
+      "endInvalid": "End must be HH:MM (24-hour).",
+      "endEqual": "End must differ from start.",
+      "timezoneRequired": "Timezone is required.",
+      "weekdaysRequired": "Pick at least one weekday.",
+      "bypassRequired": "Pick at least one severity."
     }
   }
 }

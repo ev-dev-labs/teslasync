@@ -529,7 +529,8 @@ export interface NotificationLog {
   alert_id: number | null
   title: string
   message: string
-  status: 'pending' | 'sent' | 'failed'
+  status: 'pending' | 'sent' | 'failed' | 'deferred_dnd'
+  severity?: string
   error: string
   created_at: string
   sent_at: string | null
@@ -537,6 +538,36 @@ export interface NotificationLog {
   latency_ms?: number
   read_at?: string | null
   archived_at?: string | null
+}
+
+// Phase-46 / Prompt 19 — Do-Not-Disturb / quiet hours window.
+// Server-backed CRUD lives at /api/v1/notifications/quiet-hours.
+// Times are local-clock HH:MM strings, evaluated against `timezone`
+// (IANA name); `weekdays` is a 7-bit mask Sun=1..Sat=64.
+// `bypass_severities` is the allow-list that escapes DND.
+export interface QuietHoursWindow {
+  id: number
+  user_id: string
+  enabled: boolean
+  start_local: string
+  end_local: string
+  timezone: string
+  weekdays: number
+  bypass_severities: string[]
+  created_at: string
+  updated_at: string
+}
+
+// Patch payload for POST/PATCH against the quiet-hours endpoints. All
+// fields optional so the same body shape works for create and partial
+// update.
+export interface QuietHoursWindowInput {
+  enabled?: boolean
+  start_local?: string
+  end_local?: string
+  timezone?: string
+  weekdays?: number
+  bypass_severities?: string[]
 }
 
 export interface NotificationStats {

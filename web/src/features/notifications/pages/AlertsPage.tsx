@@ -230,7 +230,19 @@ function NotificationHistory({ t }: { t: TFunction }) {
     { key: 'time', header: t('Time'), render: (log) => <span className="text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(log.created_at)}</span>, visibleOnMobile: true },
     { key: 'title', header: t('Title'), render: (log) => <span className="text-[var(--text-primary)] max-w-[200px] truncate block">{log.title}</span>, visibleOnMobile: true },
     { key: 'channel', header: t('Channel'), render: (log) => <span className="text-[var(--text-secondary)]">{channelMap[log.channel_id] || `#${log.channel_id}`}</span> },
-    { key: 'status', header: t('Status'), render: (log) => <Badge variant={log.status === 'sent' ? 'success' : log.status === 'failed' ? 'danger' : 'warning'} size="sm">{log.status}</Badge>, visibleOnMobile: true },
+    { key: 'status', header: t('Status'), render: (log) => {
+      // Phase-46 / Prompt 19 — surface DND-deferred rows distinctly so
+      // the user can tell their notification is held (not lost).
+      if (log.status === 'deferred_dnd') {
+        return (
+          <Badge variant="warning" size="sm" title={t('quietHours.deferredTooltip', 'Held until the active quiet-hours window ends.')}>
+            {t('quietHours.deferred', 'DND deferred')}
+          </Badge>
+        );
+      }
+      const variant = log.status === 'sent' ? 'success' : log.status === 'failed' ? 'danger' : 'warning';
+      return <Badge variant={variant} size="sm">{log.status}</Badge>;
+    }, visibleOnMobile: true },
   ], [channelMap, t]);
 
   return (

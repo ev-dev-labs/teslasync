@@ -346,22 +346,62 @@ func (r *NotificationRepo) ToggleChannel(ctx context.Context, id int64, enabled 
 // --- Logs ---
 
 func (r *NotificationRepo) CreateLog(ctx context.Context, l *models.NotificationLog) error {
+	severity := strings.TrimSpace(strings.ToLower(l.Severity))
+	var sevArg any
+	if severity == "" {
+		sevArg = nil
+	} else {
+		sevArg = severity
+	}
 	return r.db.Pool.QueryRow(ctx,
-		`INSERT INTO notification_logs (channel_id, alert_id, title, message, status, error, created_at, sent_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-		l.ChannelID, l.AlertID, l.Title, l.Message, l.Status, l.Error, time.Now().UTC(), l.SentAt,
+		`INSERT INTO notification_logs (channel_id, alert_id, title, message, status, severity, error, created_at, sent_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+		l.ChannelID, l.AlertID, l.Title, l.Message, l.Status, sevArg, l.Error, time.Now().UTC(), l.SentAt,
 	).Scan(&l.ID)
+}
+
+// MarkLogSent flips a deferred row to status='sent' and stamps the
+// supplied delivery timestamp / latency. Used by the quiet-hours
+// replay loop in cmd/notification-worker after the original Send call
+// succeeds (Phase-46 / Prompt 19).
+func (r *NotificationRepo) MarkLogSent(ctx context.Context, id int64, sentAt time.Time, latencyMs int) error {
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE notification_logs
+		 SET status = 'sent', sent_at = $1, error = '', latency_ms = $2
+		 WHERE id = $3`,
+		sentAt.UTC(), latencyMs, id,
+	)
+	if err != nil {
+		return fmt.Errorf("notification_logs mark_sent: %w", err)
+	}
+	return nil
+}
+
+// MarkLogFailed flips a deferred row to status='failed' with the
+// supplied error message — invoked when the replay loop exhausts its
+// retries (Phase-46 / Prompt 19).
+func (r *NotificationRepo) MarkLogFailed(ctx context.Context, id int64, errMsg string, latencyMs int) error {
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE notification_logs
+		 SET status = 'failed', error = $1, latency_ms = $2
+		 WHERE id = $3`,
+		errMsg, latencyMs, id,
+	)
+	if err != nil {
+		return fmt.Errorf("notification_logs mark_failed: %w", err)
+	}
+	return nil
 }
 
 // notificationLogColumns is the canonical SELECT list for notification_logs
 // rows, matching the field order used by scanNotificationLog. Centralized so
 // every read path returns the same shape (incl. read_at / archived_at added in
-// Phase 40 / Prompt 29).
-const notificationLogColumns = `id, channel_id, alert_id, title, message, status, error, created_at, sent_at, read_at, archived_at`
+// Phase 40 / Prompt 29 and severity added in Phase-46 / Prompt 19).
+const notificationLogColumns = `id, channel_id, alert_id, title, message, status, COALESCE(severity, ''), error, created_at, sent_at, read_at, archived_at`
 
 func scanNotificationLog(rows pgx.Row, l *models.NotificationLog) error {
 	return rows.Scan(
-		&l.ID, &l.ChannelID, &l.AlertID, &l.Title, &l.Message, &l.Status, &l.Error,
+		&l.ID, &l.ChannelID, &l.AlertID, &l.Title, &l.Message, &l.Status, &l.Severity, &l.Error,
 		&l.CreatedAt, &l.SentAt, &l.ReadAt, &l.ArchivedAt,
 	)
 }
@@ -408,7 +448,36 @@ func (r *NotificationRepo) GetLogsByChannel(ctx context.Context, channelID int64
 	return logs, rows.Err()
 }
 
-// NotificationLogFilters describes the inbox query the frontend can express
+// ListDeferred returns every notification_logs row currently held in the
+// 'deferred_dnd' state, oldest first. The replay loop in
+// cmd/notification-worker walks the result on every tick and tries to
+// dispatch each row whose causing window has ended (Phase-46 / Prompt 19).
+func (r *NotificationRepo) ListDeferred(ctx context.Context, limit int) ([]*models.NotificationLog, error) {
+	if limit <= 0 || limit > 1000 {
+		limit = 200
+	}
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT `+notificationLogColumns+`
+		 FROM notification_logs
+		 WHERE status = 'deferred_dnd' AND archived_at IS NULL
+		 ORDER BY created_at ASC
+		 LIMIT $1`, limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("notification_logs list_deferred: %w", err)
+	}
+	defer rows.Close()
+
+	var logs []*models.NotificationLog
+	for rows.Next() {
+		l := &models.NotificationLog{}
+		if err := scanNotificationLog(rows, l); err != nil {
+			return nil, err
+		}
+		logs = append(logs, l)
+	}
+	return logs, rows.Err()
+}
 // via GET /notifications query params. All fields are optional; zero values
 // mean "no constraint". The Archived field is a tri-state (nil = both, false
 // = inbox only, true = archived only) because the inbox view defaults to the
@@ -488,7 +557,7 @@ func (r *NotificationRepo) GetLogsFiltered(ctx context.Context, f NotificationLo
 		}
 	}
 
-	const aliasedCols = `nl.id, nl.channel_id, nl.alert_id, nl.title, nl.message, nl.status, nl.error,
+	const aliasedCols = `nl.id, nl.channel_id, nl.alert_id, nl.title, nl.message, nl.status, COALESCE(nl.severity, ''), nl.error,
 		nl.created_at, nl.sent_at, nl.read_at, nl.archived_at`
 
 	query := "SELECT " + aliasedCols + " FROM notification_logs nl"

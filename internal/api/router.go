@@ -142,6 +142,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	analyticsHandler := NewAnalyticsHandler(db, stateReader)
 	notificationHandler := NewNotificationHandler(db)
 	notifScheduleHandler := NewNotificationScheduleHandler(db)
+	quietHoursHandler := NewQuietHoursHandler(database.NewQuietHoursRepo(db), cfg)
 	chatbotHandler := NewChatbotHandler(db, vehicleSvc, stateReader)
 	tirePressureHandler := NewTirePressureHandler(stateReader)
 	motorHandler := NewMotorHandler(stateReader)
@@ -814,6 +815,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/", notifScheduleHandler.ListSchedules)
 				r.Post("/", notifScheduleHandler.CreateSchedule)
 				r.Delete("/{scheduleID}", notifScheduleHandler.DeleteSchedule)
+			})
+			// Phase-46 / Prompt 19 — Do-Not-Disturb windows. Mounted
+			// before /{channelID} so chi's path matcher does not treat
+			// "quiet-hours" as a channel id.
+			r.Route("/quiet-hours", func(r chi.Router) {
+				r.Get("/", quietHoursHandler.List)
+				r.Post("/", quietHoursHandler.Create)
+				r.Patch("/{id}", quietHoursHandler.Patch)
+				r.Delete("/{id}", quietHoursHandler.Delete)
 			})
 			r.Route("/{channelID}", func(r chi.Router) {
 				r.Get("/", notificationHandler.GetChannel)

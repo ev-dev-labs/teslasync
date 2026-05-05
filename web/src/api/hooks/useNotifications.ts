@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
-import { INTERVALS } from '@/lib/constants';
+import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { useOptimisticMutation } from './useOptimisticMutation';
@@ -19,6 +19,8 @@ import type {
   NotificationChannel,
   NotificationLog,
   NotificationStats,
+  QuietHoursWindow,
+  QuietHoursWindowInput,
 } from '@/api/types';
 
 export type {
@@ -35,6 +37,8 @@ export type {
   NotificationChannel,
   NotificationLog,
   NotificationStats,
+  QuietHoursWindow,
+  QuietHoursWindowInput,
 };
 
 export type AlertRuleSaveRequest = AlertRuleInput | (AlertRuleUpdate & Pick<AlertRule, 'id'>);
@@ -66,6 +70,7 @@ export const notificationKeys = {
     ['notification-logs', 'filtered', filters ?? {}] as const,
   unreadCount: ['notification-logs', 'unread-count'] as const,
   stats: ['notification-stats'] as const,
+  quietHours: ['notification-quiet-hours'] as const,
 };
 
 /**
@@ -660,5 +665,71 @@ export function useTestChannel() {
       success('toast.channels.test.success', 'Test notification sent');
     },
     onError: (e) => error(e, 'toast.channels.test.error', 'Failed to send test'),
+  });
+}
+
+// === Phase-46 / Prompt 19 — Quiet hours / DND ===========================
+//
+// Server-backed CRUD for per-user Do-Not-Disturb windows. The dispatcher
+// consults the active windows on every notification and defers anything
+// whose severity is not on the bypass list — see
+// internal/notification/quiet_hours.go for the server-side decider.
+
+interface QuietHoursListResponse {
+  windows: QuietHoursWindow[];
+}
+
+export type QuietHoursSavePayload = QuietHoursWindowInput & { id?: number };
+
+export function useQuietHours() {
+  return useQuery({
+    queryKey: notificationKeys.quietHours,
+    queryFn: ({ signal }) =>
+      request<QuietHoursListResponse>('/notifications/quiet-hours', { signal }).then(
+        (r) => safeArray<QuietHoursWindow>(r?.windows),
+      ),
+    staleTime: STALE_TIMES.MODERATE,
+  });
+}
+
+export function useSaveQuietHours() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (data: QuietHoursSavePayload) => {
+      const { id, ...body } = data;
+      const isUpdate = typeof id === 'number' && id > 0;
+      return request<QuietHoursWindow>(
+        isUpdate ? `/notifications/quiet-hours/${id}` : '/notifications/quiet-hours',
+        {
+          method: isUpdate ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+      );
+    },
+    onSuccess: (_data, vars) => {
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.quietHours });
+      const isUpdate = typeof vars.id === 'number' && vars.id > 0;
+      success(
+        isUpdate ? 'toast.quietHours.save.updated' : 'toast.quietHours.save.created',
+        isUpdate ? 'Quiet hours window updated' : 'Quiet hours window created',
+      );
+    },
+    onError: (e) => error(e, 'toast.quietHours.save.error', 'Failed to save quiet hours window'),
+  });
+}
+
+export function useDeleteQuietHours() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (id: number) =>
+      request<void>(`/notifications/quiet-hours/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.quietHours });
+      success('toast.quietHours.delete.success', 'Quiet hours window removed');
+    },
+    onError: (e) => error(e, 'toast.quietHours.delete.error', 'Failed to delete quiet hours window'),
   });
 }

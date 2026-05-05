@@ -20,6 +20,7 @@ import {
   GeneralSettings,
   GasPriceSettings,
   NotificationSettings,
+  QuietHoursPanel,
   AppearanceSettings,
   AdvancedSettings,
   SettingsSearch,
@@ -101,6 +102,9 @@ export default function SettingsPage() {
       </section>
       <section id="notifications">
         <NotificationSettings />
+      </section>
+      <section id="quiet-hours">
+        <QuietHoursPanel />
       </section>
       <section id="appearance">
         <AppearanceSettings />

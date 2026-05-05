@@ -1,0 +1,1230 @@
+=== GATE ===
+=== PREFLIGHT ===
+PROMPT=phase-46/19-quiet-hours
+BRANCH=fix/bug-waave-46
+=== FILES_EXIST ===
+FILE[internal\api\quiet_hours_handler.go]=True
+FILE[internal\database\quiet_hours_repo.go]=True
+FILE[web\src\features\settings\components\QuietHoursPanel.tsx]=True
+MIGRATIONS_EXIST=True
+=== TYPESCRIPT ===
+TSC_EXIT=0
+=== LINT ===
+
+> teslasync-web@2.0.0 lint
+> eslint . --report-unused-disable-directives --max-warnings 0 && npm run lint:i18n && npm run lint:light-mode && npm run audit:empty-state && npm run audit:tooltip-text && npm run audit:i18n-shadowed && npm run audit:query-signal && npm run audit:datatable-tableid && npm run audit:filterbar-chips && npm run audit:forced-colors && npm run audit:sr-only && npm run audit:chart-a11y && npm run audit:marker-cluster && npm run audit:deferred-filter
+
+
+> teslasync-web@2.0.0 lint:i18n
+> node scripts/lint-i18n-no-template-literals.mjs
+
+[i18n-lint] OK ΓÇö no template literals in src/i18n/*.json
+
+> teslasync-web@2.0.0 lint:light-mode
+> node scripts/audit-light-mode-parity.mjs
+
+
+Total violations: 0
+
+Allowed drift (LIGHT_MODE_ALLOWED_DRIFT): 0
+
+OK ΓÇö light-mode CSS-var parity holds.
+
+> teslasync-web@2.0.0 audit:empty-state
+> node scripts/audit-empty-state-cta.mjs
+
+OK ΓÇö every <EmptyState> in src\features has a CTA or // no-action: exemption
+
+> teslasync-web@2.0.0 audit:tooltip-text
+> node scripts/audit-tooltip-text-color.mjs
+
+OK ΓÇö no tooltip content overrides intrinsic text colour
+
+> teslasync-web@2.0.0 audit:i18n-shadowed
+> node scripts/audit-i18n-shadowed-keys.mjs
+
+Γ£à audit:i18n-shadowed-keys ΓÇö no violations
+
+> teslasync-web@2.0.0 audit:query-signal
+> node scripts/audit-query-signal.mjs
+
+OK ΓÇö every useQuery/useInfiniteQuery queryFn in src\api\hooks threads { signal } (38 files scanned)
+
+> teslasync-web@2.0.0 audit:datatable-tableid
+> node scripts/audit-datatable-tableid.mjs
+
+OK ΓÇö every <DataTable> in src\features has a tableId
+
+> teslasync-web@2.0.0 audit:filterbar-chips
+> node scripts/audit-filterbar-chips.mjs
+
+OK ΓÇö every <FilterBar> in [src\features, src\components\forms] has a sibling <ActiveFilterChips>
+
+> teslasync-web@2.0.0 audit:forced-colors
+> node scripts/audit-forced-colors.mjs
+
+OK ΓÇö every critical component (11) defines a forced-colors override
+
+> teslasync-web@2.0.0 audit:sr-only
+> node scripts/audit-sr-only.mjs
+
+OK ΓÇö no ad-hoc `sr-only` outside VisuallyHidden in src
+
+> teslasync-web@2.0.0 audit:chart-a11y
+> node scripts/audit-chart-a11y.mjs
+
+OK ΓÇö every <ChartContainer> in src has ariaLabel + data/dataColumns or a no-table justification
+
+> teslasync-web@2.0.0 audit:marker-cluster
+> node scripts/audit-marker-cluster.mjs
+
+OK ΓÇö every <Marker>/<CircleMarker> in src is either inside a <MarkerCluster> file or carries a marker-cluster:no justification (695 files scanned)
+
+> teslasync-web@2.0.0 audit:deferred-filter
+> node scripts/audit-deferred-filter.mjs
+
+OK ΓÇö 4 configured heavy-filter page(s) either adopt useDeferredFilter / useDeferredValue (with memo() on the row component) or carry a `deferred-filter:no` justification.
+LINT_EXIT=0
+=== FRONTEND_TEST ===
+
+> teslasync-web@2.0.0 test
+> vitest run --run
+
+10:38:38 PM [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+10:38:38 PM [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+Both esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored. The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+
+[1m[46m RUN [49m[22m [36mv4.1.2 [39m[90mD:/repos/teslasync/web[39m
+
+[90mstdout[2m | src/components/feedback/__tests__/NavigationGuardProvider.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+[90mstdout[2m | src/components/ui/__tests__/DataTable.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+[90mstdout[2m | src/features/dashboard/components/__tests__/WidgetCatalogueDialog.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+[90mstdout[2m | src/components/forms/__tests__/Combobox.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+[90mstdout[2m | src/components/forms/__tests__/SearchInput.history.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+[90mstdout[2m | src/features/notifications/pages/NotificationsPage.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+[90mstdout[2m | src/components/forms/__tests__/ComboboxMulti.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+[90mstdout[2m | src/features/onboarding/pages/OnboardingPage.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+[90mstdout[2m | src/features/telemetry/pages/__tests__/SignalExplorerPage.help.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+stderr | src/components/feedback/__tests__/NavigationGuardProvider.test.tsx > NavigationGuardProvider > confirmIfDirty resolves true when no guards are dirty
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+stderr | src/components/vehicles/__tests__/VehiclePaintPicker.test.tsx > VehiclePaintPicker > renders 5 swatches as a radio group
+react-i18next:: useTranslation: You will need to pass in an i18next instance by using initReactI18next { code: 'NO_I18NEXT_INSTANCE' }
+
+stderr | src/hooks/__tests__/useConfirm.test.tsx > useConfirm > opens a dialog with the supplied title and message
+react-i18next:: useTranslation: You will need to pass in an i18next instance by using initReactI18next { code: 'NO_I18NEXT_INSTANCE' }
+
+ [32mΓ£ô[39m src/components/vehicles/__tests__/VehiclePaintPicker.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 823[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders 5 swatches as a radio group [33m 461[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useConfirm.test.tsx [2m([22m[2m13 tests[22m[2m)[22m[33m 1073[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m opens a dialog with the supplied title and message [33m 399[2mms[22m[39m
+ [32mΓ£ô[39m src/components/forms/__tests__/ComboboxMulti.test.tsx [2m([22m[2m12 tests[22m[2m)[22m[33m 1157[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders combobox role with aria-multiselectable on listbox [33m 441[2mms[22m[39m
+ [32mΓ£ô[39m src/components/forms/__tests__/Combobox.test.tsx [2m([22m[2m18 tests[22m[2m)[22m[33m 1303[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders the input with combobox role and aria-expanded=false [33m 361[2mms[22m[39m
+Not implemented: navigation to another Document
+ [32mΓ£ô[39m src/components/feedback/__tests__/NavigationGuardProvider.test.tsx [2m([22m[2m16 tests[22m[2m)[22m[33m 1564[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m confirm resolves with the user choice (discard = true) [33m 535[2mms[22m[39m
+ [32mΓ£ô[39m src/components/ui/__tests__/DataTable.test.tsx [2m([22m[2m28 tests[22m[2m)[22m[33m 1581[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m calls onSort when a sortable header is clicked [33m 438[2mms[22m[39m
+ [32mΓ£ô[39m src/components/charts/__tests__/ChartExportMenu.test.tsx [2m([22m[2m15 tests[22m[2m)[22m[33m 1430[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders only the trigger button while closed [33m 497[2mms[22m[39m
+stderr | src/features/onboarding/pages/OnboardingPage.test.tsx > OnboardingPage > renders the welcome heading and three setup steps
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+stderr | src/components/ui/__tests__/CommandPalette.test.tsx > CommandPalette keyboard shortcut > opens on Ctrl+K when focus is on the body
+react-i18next:: useTranslation: You will need to pass in an i18next instance by using initReactI18next { code: 'NO_I18NEXT_INSTANCE' }
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/components/forms/__tests__/SearchInput.history.test.tsx [2m([22m[2m16 tests[22m[2m)[22m[33m 1398[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m shows dropdown on focus when scope has entries and value is empty [33m 332[2mms[22m[39m
+ [32mΓ£ô[39m src/features/onboarding/pages/OnboardingPage.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[33m 1491[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m shows the Continue button only when onboarding is complete [33m 511[2mms[22m[39m
+stderr | src/components/ui/__tests__/CommandPalette.test.tsx > CommandPalette search > surfaces vehicle-switch entries when fleet has 2+ vehicles
+Warning: Encountered two children with the same key, `Preferences`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted ΓÇö the behavior is unsupported and could change in a future version.
+    at div
+    at div
+    at div
+    at MotionDOMComponent (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/motion/index.mjs:45:16)
+    at PopChildMeasure (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:13:1)
+    at PopChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:43:21)
+    at PresenceChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs:9:26)
+    at AnimatePresence (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs:44:28)
+    at CommandPalette (D:/repos/teslasync/web/src/components/ui/CommandPalette.tsx:465:27)
+    at SelectedVehicleProvider (D:/repos/teslasync/web/src/store/selectedVehicle.tsx:48:36)
+    at ToastProvider (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:91:26)
+    at ThemeProvider (D:/repos/teslasync/web/src/components/ui/ThemeProvider.tsx:210:26)
+    at Router (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+    at QueryClientProvider (file:///D:/repos/teslasync/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+    at Wrapper (D:/repos/teslasync/web/src/components/ui/__tests__/CommandPalette.test.tsx:56:28)
+
+[90mstdout[2m | src/components/forms/__tests__/ActiveFilterChips.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+[90mstdout[2m | src/features/settings/components/__tests__/SettingsSearch.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+stderr | src/features/system/pages/__tests__/StateMachineDebuggerPage.windowing.test.tsx > StateMachineDebuggerPage ΓÇö windowing reconciliation (Phase 45 / Prompt 35) > reads "0 in window ┬╖ 23 in 24 h" when 23 transitions exist outside the 10-min window
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+stderr | src/components/ui/__tests__/CommandPalette.test.tsx > CommandPalette search > ranks the "Drives" page above keyword-only matches (e.g. "debugger") for query "d"
+Warning: Encountered two children with the same key, `Pages`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted ΓÇö the behavior is unsupported and could change in a future version.
+    at div
+    at div
+    at div
+    at MotionDOMComponent (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/motion/index.mjs:45:16)
+    at PopChildMeasure (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:13:1)
+    at PopChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:43:21)
+    at PresenceChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs:9:26)
+    at AnimatePresence (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs:44:28)
+    at CommandPalette (D:/repos/teslasync/web/src/components/ui/CommandPalette.tsx:465:27)
+    at SelectedVehicleProvider (D:/repos/teslasync/web/src/store/selectedVehicle.tsx:48:36)
+    at ToastProvider (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:91:26)
+    at ThemeProvider (D:/repos/teslasync/web/src/components/ui/ThemeProvider.tsx:210:26)
+    at Router (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+    at QueryClientProvider (file:///D:/repos/teslasync/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+    at Wrapper (D:/repos/teslasync/web/src/components/ui/__tests__/CommandPalette.test.tsx:56:28)
+Warning: Encountered two children with the same key, `Vehicle Commands`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted ΓÇö the behavior is unsupported and could change in a future version.
+    at div
+    at div
+    at div
+    at MotionDOMComponent (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/motion/index.mjs:45:16)
+    at PopChildMeasure (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:13:1)
+    at PopChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:43:21)
+    at PresenceChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs:9:26)
+    at AnimatePresence (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs:44:28)
+    at CommandPalette (D:/repos/teslasync/web/src/components/ui/CommandPalette.tsx:465:27)
+    at SelectedVehicleProvider (D:/repos/teslasync/web/src/store/selectedVehicle.tsx:48:36)
+    at ToastProvider (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:91:26)
+    at ThemeProvider (D:/repos/teslasync/web/src/components/ui/ThemeProvider.tsx:210:26)
+    at Router (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+    at QueryClientProvider (file:///D:/repos/teslasync/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+    at Wrapper (D:/repos/teslasync/web/src/components/ui/__tests__/CommandPalette.test.tsx:56:28)
+Warning: Encountered two children with the same key, `Pages`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted ΓÇö the behavior is unsupported and could change in a future version.
+    at div
+    at div
+    at div
+    at MotionDOMComponent (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/motion/index.mjs:45:16)
+    at PopChildMeasure (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:13:1)
+    at PopChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:43:21)
+    at PresenceChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs:9:26)
+    at AnimatePresence (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs:44:28)
+    at CommandPalette (D:/repos/teslasync/web/src/components/ui/CommandPalette.tsx:465:27)
+    at SelectedVehicleProvider (D:/repos/teslasync/web/src/store/selectedVehicle.tsx:48:36)
+    at ToastProvider (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:91:26)
+    at ThemeProvider (D:/repos/teslasync/web/src/components/ui/ThemeProvider.tsx:210:26)
+    at Router (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+    at QueryClientProvider (file:///D:/repos/teslasync/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+    at Wrapper (D:/repos/teslasync/web/src/components/ui/__tests__/CommandPalette.test.tsx:56:28)
+Warning: Encountered two children with the same key, `Vehicle Commands`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted ΓÇö the behavior is unsupported and could change in a future version.
+    at div
+    at div
+    at div
+    at MotionDOMComponent (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/motion/index.mjs:45:16)
+    at PopChildMeasure (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:13:1)
+    at PopChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:43:21)
+    at PresenceChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs:9:26)
+    at AnimatePresence (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs:44:28)
+    at CommandPalette (D:/repos/teslasync/web/src/components/ui/CommandPalette.tsx:465:27)
+    at SelectedVehicleProvider (D:/repos/teslasync/web/src/store/selectedVehicle.tsx:48:36)
+    at ToastProvider (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:91:26)
+    at ThemeProvider (D:/repos/teslasync/web/src/components/ui/ThemeProvider.tsx:210:26)
+    at Router (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+    at QueryClientProvider (file:///D:/repos/teslasync/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+    at Wrapper (D:/repos/teslasync/web/src/components/ui/__tests__/CommandPalette.test.tsx:56:28)
+Warning: Encountered two children with the same key, `Preferences`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted ΓÇö the behavior is unsupported and could change in a future version.
+    at div
+    at div
+    at div
+    at MotionDOMComponent (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/motion/index.mjs:45:16)
+    at PopChildMeasure (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:13:1)
+    at PopChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:43:21)
+    at PresenceChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs:9:26)
+    at AnimatePresence (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs:44:28)
+    at CommandPalette (D:/repos/teslasync/web/src/components/ui/CommandPalette.tsx:465:27)
+    at SelectedVehicleProvider (D:/repos/teslasync/web/src/store/selectedVehicle.tsx:48:36)
+    at ToastProvider (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:91:26)
+    at ThemeProvider (D:/repos/teslasync/web/src/components/ui/ThemeProvider.tsx:210:26)
+    at Router (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+    at QueryClientProvider (file:///D:/repos/teslasync/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+    at Wrapper (D:/repos/teslasync/web/src/components/ui/__tests__/CommandPalette.test.tsx:56:28)
+Warning: Encountered two children with the same key, `Actions`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted ΓÇö the behavior is unsupported and could change in a future version.
+    at div
+    at div
+    at div
+    at MotionDOMComponent (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/motion/index.mjs:45:16)
+    at PopChildMeasure (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:13:1)
+    at PopChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:43:21)
+    at PresenceChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs:9:26)
+    at AnimatePresence (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs:44:28)
+    at CommandPalette (D:/repos/teslasync/web/src/components/ui/CommandPalette.tsx:465:27)
+    at SelectedVehicleProvider (D:/repos/teslasync/web/src/store/selectedVehicle.tsx:48:36)
+    at ToastProvider (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:91:26)
+    at ThemeProvider (D:/repos/teslasync/web/src/components/ui/ThemeProvider.tsx:210:26)
+    at Router (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+    at QueryClientProvider (file:///D:/repos/teslasync/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+    at Wrapper (D:/repos/teslasync/web/src/components/ui/__tests__/CommandPalette.test.tsx:56:28)
+Warning: Encountered two children with the same key, `Pages`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted ΓÇö the behavior is unsupported and could change in a future version.
+    at div
+    at div
+    at div
+    at MotionDOMComponent (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/motion/index.mjs:45:16)
+    at PopChildMeasure (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:13:1)
+    at PopChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:43:21)
+    at PresenceChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs:9:26)
+    at AnimatePresence (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs:44:28)
+    at CommandPalette (D:/repos/teslasync/web/src/components/ui/CommandPalette.tsx:465:27)
+    at SelectedVehicleProvider (D:/repos/teslasync/web/src/store/selectedVehicle.tsx:48:36)
+    at ToastProvider (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:91:26)
+    at ThemeProvider (D:/repos/teslasync/web/src/components/ui/ThemeProvider.tsx:210:26)
+    at Router (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+    at QueryClientProvider (file:///D:/repos/teslasync/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+    at Wrapper (D:/repos/teslasync/web/src/components/ui/__tests__/CommandPalette.test.tsx:56:28)
+Warning: Encountered two children with the same key, `Vehicle Commands`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted ΓÇö the behavior is unsupported and could change in a future version.
+    at div
+    at div
+    at div
+    at MotionDOMComponent (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/motion/index.mjs:45:16)
+    at PopChildMeasure (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:13:1)
+    at PopChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:43:21)
+    at PresenceChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs:9:26)
+    at AnimatePresence (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs:44:28)
+    at CommandPalette (D:/repos/teslasync/web/src/components/ui/CommandPalette.tsx:465:27)
+    at SelectedVehicleProvider (D:/repos/teslasync/web/src/store/selectedVehicle.tsx:48:36)
+    at ToastProvider (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:91:26)
+    at ThemeProvider (D:/repos/teslasync/web/src/components/ui/ThemeProvider.tsx:210:26)
+    at Router (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+    at QueryClientProvider (file:///D:/repos/teslasync/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+    at Wrapper (D:/repos/teslasync/web/src/components/ui/__tests__/CommandPalette.test.tsx:56:28)
+Warning: Encountered two children with the same key, `Pages`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted ΓÇö the behavior is unsupported and could change in a future version.
+    at div
+    at div
+    at div
+    at MotionDOMComponent (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/motion/index.mjs:45:16)
+    at PopChildMeasure (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:13:1)
+    at PopChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:43:21)
+    at PresenceChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs:9:26)
+    at AnimatePresence (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs:44:28)
+    at CommandPalette (D:/repos/teslasync/web/src/components/ui/CommandPalette.tsx:465:27)
+    at SelectedVehicleProvider (D:/repos/teslasync/web/src/store/selectedVehicle.tsx:48:36)
+    at ToastProvider (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:91:26)
+    at ThemeProvider (D:/repos/teslasync/web/src/components/ui/ThemeProvider.tsx:210:26)
+    at Router (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+    at QueryClientProvider (file:///D:/repos/teslasync/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+    at Wrapper (D:/repos/teslasync/web/src/components/ui/__tests__/CommandPalette.test.tsx:56:28)
+Warning: Encountered two children with the same key, `Vehicle Commands`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted ΓÇö the behavior is unsupported and could change in a future version.
+    at div
+    at div
+    at div
+    at MotionDOMComponent (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/motion/index.mjs:45:16)
+    at PopChildMeasure (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:13:1)
+    at PopChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:43:21)
+    at PresenceChild (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs:9:26)
+    at AnimatePresence (file:///D:/repos/teslasync/web/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs:44:28)
+    at CommandPalette (D:/repos/teslasync/web/src/components/ui/CommandPalette.tsx:465:27)
+    at SelectedVehicleProvider (D:/repos/teslasync/web/src/store/selectedVehicle.tsx:48:36)
+    at ToastProvider (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:91:26)
+    at ThemeProvider (D:/repos/teslasync/web/src/components/ui/ThemeProvider.tsx:210:26)
+    at Router (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+    at QueryClientProvider (file:///D:/repos/teslasync/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+    at Wrapper (D:/repos/teslasync/web/src/components/ui/__tests__/CommandPalette.test.tsx:56:28)
+
+stderr | src/features/notifications/pages/NotificationsPage.test.tsx > NotificationsPage > renders the three tabs (Inbox, Archived, Channels)
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+[90mstdout[2m | src/components/ui/__tests__/ConfirmDialog.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+stderr | src/features/telemetry/pages/__tests__/SignalExplorerPage.help.test.tsx > SignalExplorerPage ΓÇö HelpTooltip adoption > renders a HelpTooltip explaining signal layers (L1/L2/log)
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/features/dashboard/components/__tests__/WidgetCatalogueDialog.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 2438[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders a dialog with categorized widget sections when open [33m 981[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m lists every registry widget at least once (no silent drop) [33m 414[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m disables the Add button for widgets already on the dashboard [33m 361[2mms[22m[39m
+[90mstdout[2m | src/components/feedback/__tests__/QueryError.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/features/telemetry/pages/__tests__/SignalExplorerPage.help.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 1200[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders a HelpTooltip explaining signal layers (L1/L2/log) [33m 781[2mms[22m[39m
+stderr | src/components/feedback/__tests__/QueryError.test.tsx > QueryError > renders nothing when error is null/undefined
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/features/system/pages/__tests__/StateMachineDebuggerPage.windowing.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 1898[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m reads "0 in window ┬╖ 23 in 24 h" when 23 transitions exist outside the 10-min window [33m 935[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m after clicking "Widen window", the counter renders ticks and reflects the new window size [33m 735[2mms[22m[39m
+ [32mΓ£ô[39m src/components/ui/__tests__/CommandPalette.test.tsx [2m([22m[2m15 tests[22m[2m)[22m[33m 3823[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m opens on Ctrl+K when focus is on the body [33m 720[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m opens via the toggle-command-palette custom event (used by useKeyboardShortcuts) [33m 369[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m ranks the "Drives" page above keyword-only matches (e.g. "debugger") for query "d" [33m 394[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders a "Most Used" section when frecency data exists and the query is empty [33m 456[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m does NOT render a "Most Used" section when no commands have been recorded yet [33m 337[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m caps the Most Used section at 5 entries and orders by frecency score [33m 328[2mms[22m[39m
+ [32mΓ£ô[39m src/components/forms/__tests__/ActiveFilterChips.test.tsx [2m([22m[2m13 tests[22m[2m)[22m[33m 1120[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders one chip per descriptor [33m 457[2mms[22m[39m
+stderr | src/features/notifications/pages/NotificationsPage.test.tsx > NotificationsPage > clicking "Mark all read" calls useBulkMarkRead with all=true
+Warning: Received `true` for a non-boolean attribute `layout`.
+
+If you want to write it to the DOM, pass a string instead: layout="true" or layout={value.toString()}.
+    at div
+    at D:/repos/teslasync/web/src/features/notifications/pages/NotificationsPage.test.tsx:4:11
+    at AnimatePresence (D:/repos/teslasync/web/src/features/notifications/pages/NotificationsPage.test.tsx:14:22)
+    at div
+    at ToastProvider (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:91:26)
+    at SelectedVehicleProvider (D:/repos/teslasync/web/src/store/selectedVehicle.tsx:48:36)
+    at Router (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+    at QueryClientProvider (file:///D:/repos/teslasync/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+
+ [32mΓ£ô[39m src/components/feedback/__tests__/QueryError.test.tsx [2m([22m[2m13 tests[22m[2m)[22m[33m 850[2mms[22m[39m
+       [33m[2mΓ£ô[22m[39m renders "{resource} not found" title with Back-to-list CTA when listHref is provided [33m 457[2mms[22m[39m
+stderr | src/features/settings/components/__tests__/SettingsSearch.test.tsx > SettingsSearch > renders no listbox when the query is empty
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/components/ui/__tests__/CopyButton.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 935[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m writes the text to the clipboard on click and toggles to "Copied" [33m 591[2mms[22m[39m
+stderr | src/components/feedback/__tests__/FeedbackModal.test.tsx > FeedbackModal > keeps Send disabled while title/body fail zod validation
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/components/ui/__tests__/ConfirmDialog.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 1023[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders the checkbox when silenceKey is provided on a non-destructive prompt [33m 501[2mms[22m[39m
+[90mstdout[2m | src/components/feedback/__tests__/FeedbackModal.test.tsx[2m > [22m[2mFeedbackModal[2m > [22m[2mtoggling "include console" controls whether console_tail is attached
+[22m[39mhello-from-test
+
+ [32mΓ£ô[39m src/features/notifications/pages/NotificationsPage.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 3176[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders the three tabs (Inbox, Archived, Channels) [33m 1015[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m shows a success toast with an Undo action after "Mark all read"; clicking Undo fires markUnread for the snapshotted ids [33m 480[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m routes the bulk-toolbar "Mark read" through useBulkMarkRead with the selected ids and surfaces an Undo toast [33m 383[2mms[22m[39m
+ [32mΓ£ô[39m src/features/settings/components/__tests__/SettingsSearch.test.tsx [2m([22m[2m16 tests[22m[2m)[22m[33m 886[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m typing "theme" surfaces the Theme entry in the listbox [33m 334[2mms[22m[39m
+[90mstdout[2m | src/components/feedback/__tests__/FeedbackModal.test.tsx[2m > [22m[2mFeedbackModal[2m > [22m[2mtoggling "include console" controls whether console_tail is attached
+[22m[39msecond-line-for-the-buffer
+
+ [32mΓ£ô[39m src/components/feedback/__tests__/FeedbackModal.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 961[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m toggling "include console" controls whether console_tail is attached [33m 489[2mms[22m[39m
+ [32mΓ£ô[39m src/components/charts/__tests__/ChartContainer.a11y.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[33m 879[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders as a <figure> labelled by its title heading [33m 441[2mms[22m[39m
+ [32mΓ£ô[39m src/components/ui/__tests__/PrintButton.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 787[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders a Print button with a visible label [33m 438[2mms[22m[39m
+[90mstdout[2m | src/features/admin/components/__tests__/RedisDiagnosticEmptyState.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+[90mstdout[2m | src/components/feedback/__tests__/TeslaReauthBanner.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/hooks/__tests__/useSettings.broadcast.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 777[2mms[22m[39m
+ [32mΓ£ô[39m src/components/ui/__tests__/focusTrap.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 724[2mms[22m[39m
+       [33m[2mΓ£ô[22m[39m moves initial focus to the first focusable element on open [33m 394[2mms[22m[39m
+[90mstdout[2m | src/components/feedback/SectionErrorBoundary.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+stderr | src/components/feedback/__tests__/AchievementUnlockedToast.test.tsx > AchievementUnlockedToast > renders the achievement name and description
+Warning: Received `true` for a non-boolean attribute `layout`.
+
+If you want to write it to the DOM, pass a string instead: layout="true" or layout={value.toString()}.
+    at div
+    at D:/repos/teslasync/web/src/components/feedback/__tests__/AchievementUnlockedToast.test.tsx:16:99
+    at AchievementUnlockedToast (D:/repos/teslasync/web/src/components/feedback/AchievementUnlockedToast.tsx:34:37)
+    at Router (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+Error: Section explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/SectionErrorBoundary.test.tsx:7:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Section explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/SectionErrorBoundary.test.tsx:7:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+ [32mΓ£ô[39m src/components/ui/__tests__/PinButton.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 772[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders an unpinned trigger when the item is not in the pinned list [33m 509[2mms[22m[39m
+[90mstdout[2m | src/components/forms/SearchInput.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/components/ui/__tests__/HelpTooltip.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 714[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders a focusable button trigger with an accessible label [33m 459[2mms[22m[39m
+stderr | src/components/feedback/__tests__/TeslaReauthBanner.test.tsx > TeslaReauthBanner > renders nothing by default
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/components/feedback/__tests__/AchievementUnlockedToast.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 793[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m exposes a "View" affordance and a dismiss button [33m 354[2mms[22m[39m
+Error: Section explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/SectionErrorBoundary.test.tsx:7:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Section explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/SectionErrorBoundary.test.tsx:7:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Section explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/SectionErrorBoundary.test.tsx:7:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Section explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/SectionErrorBoundary.test.tsx:7:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Section explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/SectionErrorBoundary.test.tsx:7:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Section explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/SectionErrorBoundary.test.tsx:7:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+ [32mΓ£ô[39m src/components/feedback/SectionErrorBoundary.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 715[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m falls back to inline UI by default and shows Retry [33m 555[2mms[22m[39m
+[90mstdout[2m | src/components/data-display/__tests__/BulkActionToolbar.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/components/feedback/__tests__/TeslaReauthBanner.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 666[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m appears when teslasync:tesla-auth-expired is dispatched [33m 398[2mms[22m[39m
+ [32mΓ£ô[39m src/components/maps/__tests__/RoutePlayback.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 609[2mms[22m[39m
+ [32mΓ£ô[39m src/components/ui/__tests__/SignalConfigModal.viewport.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 657[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders inside the shared <Modal> (role="dialog" present) [33m 471[2mms[22m[39m
+ [32mΓ£ô[39m src/features/admin/components/__tests__/RedisDiagnosticEmptyState.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 786[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders the danger banner when mode=local [33m 383[2mms[22m[39m
+ [32mΓ£ô[39m src/components/charts/ChartBrush.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 730[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders inside a recharts chart container without crashing [33m 583[2mms[22m[39m
+ [32mΓ£ô[39m src/components/forms/SearchInput.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 722[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m shows the clear button only when there is text [33m 464[2mms[22m[39m
+stderr | src/components/layout/__tests__/PageContainer.test.tsx > PageContainer > renders the page title
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/components/layout/__tests__/PageContainer.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 746[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders the page title [33m 538[2mms[22m[39m
+stderr | src/components/data-display/__tests__/BulkActionToolbar.test.tsx > BulkActionToolbar (alias) > invokes the action onClick with the current selection
+Warning: An update to BulkActionsToolbar inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at BulkActionsToolbar (D:/repos/teslasync/web/src/components/data-display/BulkActionsToolbar.tsx:13:31)
+
+ [32mΓ£ô[39m src/components/data-display/__tests__/BulkActionToolbar.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 586[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders the count label and exposes a toolbar landmark [33m 376[2mms[22m[39m
+[90mstdout[2m | src/components/feedback/__tests__/EmptyState.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/components/feedback/__tests__/NewVersionBanner.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 712[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders the banner with both action buttons when a new version is available [33m 450[2mms[22m[39m
+stderr | src/components/feedback/__tests__/EmptyState.test.tsx > EmptyState > renders icon, title, and message
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/components/feedback/__tests__/EmptyState.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 659[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders icon, title, and message [33m 456[2mms[22m[39m
+Error: Page explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/PageErrorBoundary.test.tsx:5:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Page explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/PageErrorBoundary.test.tsx:5:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+ [32mΓ£ô[39m src/components/data-display/SeverityBadge.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[33m 507[2mms[22m[39m
+ [32mΓ£ô[39m src/features/charging/pages/__tests__/TeslaChargingSessionsMap.integration.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 598[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m routes 500 sessions through a single MarkerCluster, never per-marker JSX [33m 367[2mms[22m[39m
+ [32mΓ£ô[39m src/api/hooks/__tests__/useNotifications.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[33m 412[2mms[22m[39m
+[90mstdout[2m | src/features/dashboard/components/__tests__/AddWidgetButton.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+Error: Page explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/PageErrorBoundary.test.tsx:5:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Page explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/PageErrorBoundary.test.tsx:5:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+ [32mΓ£ô[39m src/components/feedback/PageErrorBoundary.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 630[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m shows the full-page fallback UI on error [33m 531[2mms[22m[39m
+ [32mΓ£ô[39m src/components/data-display/__tests__/Avatar.test.tsx [2m([22m[2m27 tests[22m[2m)[22m[33m 490[2mms[22m[39m
+ [32mΓ£ô[39m src/components/a11y/__tests__/VisuallyHidden.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[33m 462[2mms[22m[39m
+ [32mΓ£ô[39m src/components/mobile/__tests__/PullToRefresh.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 518[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m fires onRefresh when the user pulls past the threshold and releases [33m 401[2mms[22m[39m
+ [32mΓ£ô[39m src/components/feedback/__tests__/PageSkeleton.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 500[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m respects the height prop [33m 301[2mms[22m[39m
+[90mstdout[2m | src/components/feedback/__tests__/TopProgress.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/components/feedback/__tests__/TopProgress.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 495[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m appears when globalProgress.start() is called and disappears on stop() [33m 332[2mms[22m[39m
+ [32mΓ£ô[39m src/features/dashboard/components/__tests__/AddWidgetButton.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 474[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders a focusable button with an accessible label when not editing [33m 368[2mms[22m[39m
+ [32mΓ£ô[39m src/components/forms/FormField.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[33m 535[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders the label and child input [33m 412[2mms[22m[39m
+ [32mΓ£ô[39m src/api/hooks/__tests__/useMarkNotificationRead.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 395[2mms[22m[39m
+ [32mΓ£ô[39m src/components/ui/__tests__/Tooltip.contract.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 496[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders without inheriting any text colour override on the body [33m 438[2mms[22m[39m
+ [32mΓ£ô[39m src/api/hooks/__tests__/useBulkMarkRead.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 397[2mms[22m[39m
+ [32mΓ£ô[39m src/components/layout/sidebar/__tests__/NavSectionHeader.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 476[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders the action slot when provided [33m 335[2mms[22m[39m
+ [32mΓ£ô[39m src/__tests__/lazyRoutes.smoke.test.ts [2m([22m[2m105 tests[22m[2m)[22m[33m 22302[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m Dashboard chunk imports without throwing [33m 5539[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m GlancePage chunk imports without throwing [33m 1091[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m VehicleDetail chunk imports without throwing [33m 396[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m Charging chunk imports without throwing [33m 511[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m ChargingCurve chunk imports without throwing [33m 526[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m CostAnalysis chunk imports without throwing [33m 359[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m DriveDetail chunk imports without throwing [33m 1152[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m DrivingDynamics chunk imports without throwing [33m 628[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m DrivetrainHealth chunk imports without throwing [33m 349[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m Analytics chunk imports without throwing [33m 411[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m WeeklyDigest chunk imports without throwing [33m 494[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m YearReview chunk imports without throwing [33m 343[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m DevTools chunk imports without throwing [33m 744[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m SecurityAccess chunk imports without throwing [33m 310[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m Commands chunk imports without throwing [33m 319[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m Settings chunk imports without throwing [33m 815[2mms[22m[39m
+ [32mΓ£ô[39m src/components/data-display/__tests__/LiveIndicator.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 485[2mms[22m[39m
+ [32mΓ£ô[39m src/features/settings/components/__tests__/QuietHoursPanel.test.tsx [2m([22m[2m11 tests[22m[2m)[22m[33m 1452[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders existing windows from the hook [33m 304[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m opens the add-window form with defaults [33m 365[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m blocks submission when end equals start [33m 359[2mms[22m[39m
+[90mstdout[2m | src/features/trips/pages/__tests__/TripReplayPage.sync.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/components/data-display/__tests__/UserCell.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 478[2mms[22m[39m
+ [32mΓ£ô[39m src/components/data-display/format/__tests__/Format.test.tsx [2m([22m[2m60 tests[22m[2m)[22m[33m 344[2mms[22m[39m
+ [32mΓ£ô[39m src/components/data-display/__tests__/DataFreshness.test.tsx [2m([22m[2m24 tests[22m[2m)[22m[33m 414[2mms[22m[39m
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: Test explosion
+    at ThrowingComponent (D:/repos/teslasync/web/src/components/feedback/ErrorBoundary.test.tsx:6:26)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+ [32mΓ£ô[39m src/components/feedback/ErrorBoundary.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 314[2mms[22m[39m
+ [32mΓ£ô[39m src/components/vehicles/__tests__/VehicleTwin.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 391[2mms[22m[39m
+Error: useToast must be used within ToastProvider
+    at Module.useToast (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:88:19)
+    at Orphan (D:/repos/teslasync/web/src/components/feedback/Toast.test.tsx:119:7)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+Error: useToast must be used within ToastProvider
+    at Module.useToast (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:88:19)
+    at Orphan (D:/repos/teslasync/web/src/components/feedback/Toast.test.tsx:119:7)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+ [32mΓ£ô[39m src/components/feedback/Toast.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 390[2mms[22m[39m
+ [32mΓ£ô[39m src/components/data-display/Delta.test.tsx [2m([22m[2m22 tests[22m[2m)[22m[32m 275[2mms[22m[39m
+stderr | src/features/trips/pages/__tests__/TripReplayPage.sync.test.tsx > Phase-45 / Prompt 26 ΓÇö TripReplayCharts cursor bridge > forwards persistent cursor-sync writes to onSeekToIndex (idx mapping)
+Warning: A props object containing a "key" prop is being spread into JSX:
+  let props = {key: someKey, $$typeof: ..., type: ..., ref: ..., props: ..., _owner: ..., _store: ...};
+  <CartesianGrid {...props} />
+React keys must be passed directly to JSX without using spread:
+  let props = {$$typeof: ..., type: ..., ref: ..., props: ..., _owner: ..., _store: ...};
+  <CartesianGrid key={someKey} {...props} />
+    at TimelineChart (D:/repos/teslasync/web/src/features/trips/components/TripReplayCharts.tsx:54:26)
+    at ChartTimeRangeProvider (D:/repos/teslasync/web/src/components/charts/ChartTimeRangeContext.tsx:13:35)
+    at TripReplayCharts (D:/repos/teslasync/web/src/features/trips/components/TripReplayCharts.tsx:26:29)
+    at ToastProvider (D:/repos/teslasync/web/src/components/feedback/Toast.tsx:91:26)
+    at QueryClientProvider (file:///D:/repos/teslasync/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+
+ [32mΓ£ô[39m src/features/trips/pages/__tests__/TripReplayPage.sync.test.tsx [2m([22m[2m19 tests[22m[2m)[22m[33m 491[2mms[22m[39m
+ [32mΓ£ô[39m src/api/hooks/__tests__/useOptimisticMutation.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 292[2mms[22m[39m
+[90mstdout[2m | src/__tests__/mobile.viewport.test.tsx[2m > [22m[2mmobile.viewport :: shared primitives at 375px[2m > [22m[2mModal renders as a bottom sheet on mobile (no sm:rounded clipping)
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/hooks/__tests__/useFaviconBadge.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 179[2mms[22m[39m
+[90mstdout[2m | src/components/feedback/__tests__/RateLimitBanner.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/components/charts/ChartTooltip.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 312[2mms[22m[39m
+stderr | src/__tests__/mobile.viewport.test.tsx > mobile.viewport :: shared primitives at 375px > BottomTabBar carries safe-bottom + per-tab 44 px touch targets
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/__tests__/mobile.viewport.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 287[2mms[22m[39m
+stderr | src/hooks/__tests__/useUrlState.test.tsx > useUrlState > returns the default when the param is absent
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/hooks/__tests__/useUrlState.test.tsx [2m([22m[2m22 tests[22m[2m)[22m[32m 210[2mms[22m[39m
+ [32mΓ£ô[39m src/components/feedback/__tests__/RateLimitBanner.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 241[2mms[22m[39m
+Error: L is not defined
+    at Throw (D:/repos/teslasync/web/src/components/feedback/__tests__/ErrorBoundary.routeReset.test.tsx:6:9)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: L is not defined
+    at Throw (D:/repos/teslasync/web/src/components/feedback/__tests__/ErrorBoundary.routeReset.test.tsx:6:9)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: boom
+    at Throw (D:/repos/teslasync/web/src/components/feedback/__tests__/ErrorBoundary.routeReset.test.tsx:6:9)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+Error: boom
+    at Throw (D:/repos/teslasync/web/src/components/feedback/__tests__/ErrorBoundary.routeReset.test.tsx:6:9)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:114:17)
+ [32mΓ£ô[39m src/components/feedback/__tests__/ErrorBoundary.routeReset.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 221[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useChartPalette.test.tsx [2m([22m[2m11 tests[22m[2m)[22m[32m 209[2mms[22m[39m
+ [32mΓ£ô[39m src/components/feedback/__tests__/SessionExpiringModal.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 239[2mms[22m[39m
+stderr | src/hooks/__tests__/useSelectedVehicle.test.tsx > useSelectedVehicle > defaults to the first vehicle when nothing is selected
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/components/ui/__tests__/DataTable.tableId-coverage.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 302[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useSelectedVehicle.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 257[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useChartExport.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 154[2mms[22m[39m
+ [32mΓ£ô[39m src/components/mobile/__tests__/SwipeRow.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 239[2mms[22m[39m
+ [32mΓ£ô[39m src/components/feedback/__tests__/SessionExpiredModal.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 176[2mms[22m[39m
+stderr | src/components/layout/__tests__/Breadcrumbs.test.tsx > Breadcrumbs > renders nothing when items.length <= 1
+react-i18next:: useTranslation: You will need to pass in an i18next instance by using initReactI18next { code: 'NO_I18NEXT_INSTANCE' }
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/components/layout/__tests__/Breadcrumbs.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 215[2mms[22m[39m
+[90mstdout[2m | src/components/forms/__tests__/DateRangeFilter.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/components/forms/__tests__/DateRangeFilter.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 178[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/resilience.abort.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 145[2mms[22m[39m
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+ [32mΓ£ô[39m src/hooks/__tests__/useDynamicAppIcon.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 186[2mms[22m[39m
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+ [32mΓ£ô[39m src/components/feedback/__tests__/MaintenanceBanner.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[32m 210[2mms[22m[39m
+[90mstdout[2m | src/components/data-display/__tests__/TimeStamp.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+stderr | src/components/motion/__tests__/RouteTransition.test.tsx > RouteTransition > renders children for the current route
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/components/motion/__tests__/RouteTransition.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 204[2mms[22m[39m
+stderr | src/hooks/__tests__/useShortcutRegistry.test.tsx > useShortcutRegistry > useShortcut + useAllShortcuts > registers an entry on mount and removes on unmount
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/hooks/__tests__/useTitleBadge.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 246[2mms[22m[39m
+stderr | src/hooks/__tests__/useShortcutRegistry.test.tsx > useShortcutRegistry > delegated handler > skips route-scoped handlers when the current route does not match
+Warning: An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at TestComponent (D:\repos\teslasync\web\node_modules\@testing-library\react\dist\pure.js:328:5)
+    at Router (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1207:17)
+    at MemoryRouter (D:\repos\teslasync\web\node_modules\react-router\dist\umd\react-router.development.js:1101:7)
+    at D:/repos/teslasync/web/src/hooks/__tests__/useShortcutRegistry.test.tsx:13:12
+
+ [32mΓ£ô[39m src/hooks/__tests__/useShortcutRegistry.test.tsx [2m([22m[2m11 tests[22m[2m)[22m[32m 134[2mms[22m[39m
+ [32mΓ£ô[39m src/features/system/components/state-machine/__tests__/SnapshotInspector.empty.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 202[2mms[22m[39m
+ [32mΓ£ô[39m src/components/data-display/InsightsEngine.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 205[2mms[22m[39m
+ [32mΓ£ô[39m src/components/feedback/PageLoadSkeleton.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 139[2mms[22m[39m
+ [32mΓ£ô[39m src/components/data-display/__tests__/TimeStamp.test.tsx [2m([22m[2m11 tests[22m[2m)[22m[32m 278[2mms[22m[39m
+ [32mΓ£ô[39m src/features/system/components/state-machine/__tests__/StateTimeline.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 216[2mms[22m[39m
+ [32mΓ£ô[39m src/components/ui/Logo.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 141[2mms[22m[39m
+ [32mΓ£ô[39m src/features/system/components/state-machine/__tests__/StateTimeline.empty.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 156[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useVehiclePaint.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[32m 115[2mms[22m[39m
+stderr | src/hooks/__tests__/useDensitySync.test.tsx > useDensitySync > ignores unknown density values from the server
+Warning: An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at TestComponent (D:\repos\teslasync\web\node_modules\@testing-library\react\dist\pure.js:328:5)
+    at QueryClientProvider (file:///D:/repos/teslasync/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+    at D:/repos/teslasync/web/src/hooks/__tests__/useDensitySync.test.tsx:20:12
+
+ [32mΓ£ô[39m src/hooks/__tests__/useDensitySync.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 154[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useBulkSelection.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 75[2mms[22m[39m
+Error: useSelectedVehicleStore must be used within <SelectedVehicleProvider>
+    at useSelectedVehicleStore (D:/repos/teslasync/web/src/store/selectedVehicle.tsx:97:11)
+    at Probe (D:/repos/teslasync/web/src/store/__tests__/selectedVehicle.test.tsx:88:7)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+Error: useSelectedVehicleStore must be used within <SelectedVehicleProvider>
+    at useSelectedVehicleStore (D:/repos/teslasync/web/src/store/selectedVehicle.tsx:97:11)
+    at Probe (D:/repos/teslasync/web/src/store/__tests__/selectedVehicle.test.tsx:88:7)
+    at renderWithHooks (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (D:\repos\teslasync\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (D:\repos\teslasync\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+    at innerInvokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:360:16)
+    at invokeEventListeners (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (D:\repos\teslasync\web\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:243:9)
+ [32mΓ£ô[39m src/store/__tests__/selectedVehicle.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 114[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/dateFormat.duration.test.ts [2m([22m[2m55 tests[22m[2m)[22m[32m 80[2mms[22m[39m
+stderr | src/hooks/__tests__/useAlertContext.test.tsx > useAlertContext > returns nulls and hasContext=false when no params present
+ΓÜá∩╕Å React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+ΓÜá∩╕Å React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ [32mΓ£ô[39m src/hooks/__tests__/useAlertContext.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 96[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useFormDraft.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[32m 130[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/broadcast.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 92[2mms[22m[39m
+[90mstdout[2m | src/hooks/__tests__/useDirtyForm.test.ts
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/hooks/__tests__/useDirtyForm.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 87[2mms[22m[39m
+ [32mΓ£ô[39m src/components/charts/ChartTimeRangeContext.test.tsx [2m([22m[2m11 tests[22m[2m)[22m[32m 179[2mms[22m[39m
+ [32mΓ£ô[39m src/components/data-display/__tests__/SourceLayerBadge.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 198[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useDeferredFilter.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 113[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useVersionWatcher.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 95[2mms[22m[39m
+ [32mΓ£ô[39m src/components/charts/Charts.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 75[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useCriticalAlertFlash.test.tsx [2m([22m[2m11 tests[22m[2m)[22m[32m 139[2mms[22m[39m
+ [32mΓ£ô[39m src/components/maps/__tests__/GeofenceDrawer.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 66[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useChangelog.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[32m 106[2mms[22m[39m
+ [32mΓ£ô[39m src/components/maps/__tests__/MarkerCluster.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 70[2mms[22m[39m
+ [32mΓ£ô[39m src/features/onboarding/__tests__/checklist.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 113[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/certificate.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 97[2mms[22m[39m
+ [32mΓ£ô[39m src/components/charts/__tests__/cursorSync.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 61[2mms[22m[39m
+ [32mΓ£ô[39m src/features/admin/lib/__tests__/serviceOptions.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 70[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/gpx.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 83[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useLiveConnection.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 77[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useFilteredList.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 85[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/webVitalsReporter.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 57[2mms[22m[39m
+ [32mΓ£ô[39m src/components/maps/__tests__/MarkerCluster.bench.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 148[2mms[22m[39m
+ [32mΓ£ô[39m src/components/charts/useChartLegendState.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 106[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/errorReporter.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 71[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/dateFormat.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 80[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/rateLimit.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 61[2mms[22m[39m
+ [32mΓ£ô[39m src/features/onboarding/hooks/useOnboardingSkip.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useMotionPreference.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 63[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useAnnouncer.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 59[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/transition-integrity.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/closestRoute.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/coverage-matrix.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/teslaAuthRecovery.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32mΓ£ô[39m src/__tests__/url-state-adoption.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/globalProgress.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/commandRegistry.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/timezone.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 62[2mms[22m[39m
+ [32mΓ£ô[39m src/features/onboarding/__tests__/tours.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 77[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/disallowed.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/commandFrecency.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/searchHistory.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/vehicleColors.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/scenario-walkability.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/datePresets.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32mΓ£ô[39m src/components/ui/__tests__/ForcedColors.contract.test.tsx [2m([22m[2m13 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32mΓ£ô[39m src/features/driving/lib/__tests__/replayMarkers.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/titleStore.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/export.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/confirmSilence.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/vehicleState.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/edge-derivation.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/routeMeta.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/parseEnums.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/truth-table.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 81[2mms[22m[39m
+ [32mΓ£ô[39m src/types/fsm/__tests__/cross-fsm-wiring.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32mΓ£ô[39m src/features/system/components/state-machine/__tests__/windowTransitions.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/enums.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/chartA11y.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/alertDrillthrough.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/csvExport.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/gear.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32mΓ£ô[39m src/hooks/__tests__/useSessionMonitor.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/constants.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/__tests__/tokens.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/cleanNil.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32mΓ£ô[39m src/lib/resilience.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m164 passed[39m[22m[90m (164)[39m
+[2m      Tests [22m [1m[32m1907 passed[39m[22m[90m (1907)[39m
+[2m   Start at [22m 22:38:38
+[2m   Duration [22m 56.00s[2m (transform 41.14s, setup 39.78s, import 153.39s, tests 88.34s, environment 450.27s)[22m
+
+FRONTEND_TEST_EXIT=0
+=== GO_BUILD ===
+GO_BUILD_EXIT=0
+=== GO_TEST ===
+# Note: gate prompt has a typo (./internal/notifications/...). The actual package is
+# internal/notification (singular). Running the corrected path.
+ok  	github.com/ev-dev-labs/teslasync/internal/notification	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/api	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/database	(cached)
+GO_TEST_EXIT=0
+=== AUDIT_VIOLATIONS ===
+SEARCH_INDEXED=True
+=== GIT_STATUS ===
+ M cmd/notification-worker/main.go
+ M internal/api/router.go
+ M internal/database/notification_repo.go
+ M internal/models/models.go
+ M internal/notification/sender.go
+ M internal/notification/worker.go
+ M web/src/api/hooks/useNotifications.ts
+ M web/src/api/types.ts
+ M web/src/features/notifications/pages/AlertsPage.tsx
+ M web/src/features/settings/components/index.ts
+ M web/src/features/settings/pages/SettingsPage.tsx
+ M web/src/features/settings/searchIndex.ts
+ M web/src/i18n/en.json
+?? internal/api/quiet_hours_handler.go
+?? internal/api/quiet_hours_handler_test.go
+?? internal/database/quiet_hours_repo.go
+?? internal/database/quiet_hours_repo_test.go
+?? internal/models/quiet_hours.go
+?? internal/notification/quiet_hours.go
+?? internal/notification/quiet_hours_test.go
+?? migrations/000170_quiet_hours.down.sql
+?? migrations/000170_quiet_hours.up.sql
+?? web/src/features/settings/components/QuietHoursPanel.tsx
+?? web/src/features/settings/components/__tests__/QuietHoursPanel.test.tsx
+UNEXPECTED_STATUS_COUNT=0
+# NOTE: cmd/ added to allowed list because the prompt's Files-touched
+# entry 'internal/worker/notification_worker.go (verify path)' resolves to
+# cmd/notification-worker/main.go in this repo. The notification consumer
+# (worker.Start) lives there, so the DND replay loop must register beside it.
+=== STATUS ===
+EXIT=0
+STATUS=DONE

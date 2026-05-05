@@ -263,13 +263,19 @@ type NotificationChannel struct {
 // ReadAt / ArchivedAt (Phase 40 / Prompt 29) drive the inbox UX on
 // /notifications: NULL means "unread" / "still in the inbox", a non-nil
 // timestamp records when the user (or an auto-mark policy) flipped the bit.
+//
+// Severity (Phase-46 / Prompt 19) is the wire severity the dispatcher
+// saw when the row was enqueued. NULL on legacy rows captured before
+// the quiet-hours migration. Used by the replay loop to re-evaluate a
+// deferred row against active DND windows.
 type NotificationLog struct {
 	ID          int64      `json:"id" db:"id"`
 	ChannelID   int64      `json:"channel_id" db:"channel_id"`
 	AlertID     *int64     `json:"alert_id,omitempty" db:"alert_id"`
 	Title       string     `json:"title" db:"title"`
 	Message     string     `json:"message" db:"message"`
-	Status      string     `json:"status" db:"status"` // pending, sent, failed
+	Status      string     `json:"status" db:"status"` // pending, sent, failed, deferred_dnd
+	Severity    string     `json:"severity,omitempty" db:"severity"`
 	Error       string     `json:"error,omitempty" db:"error"`
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty" db:"scheduled_at"`
 	LatencyMs   *int       `json:"latency_ms,omitempty" db:"latency_ms"`
