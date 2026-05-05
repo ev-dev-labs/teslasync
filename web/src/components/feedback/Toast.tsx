@@ -174,6 +174,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 transition={reduce ? { duration: 0 } : { type: 'spring', bounce: 0.2, duration: 0.4 }}
                 className={clsx(
                   'pointer-events-auto rounded-xl border backdrop-blur-xl p-4 bg-white/[0.03]',
+                  // Phase-46 / Prompt 11 — Windows High Contrast / forced-colors mode.
+                  // Toast borders are tinted alpha (e.g. `border-emerald-500/30`)
+                  // and the box-shadow glow is suppressed entirely under
+                  // `forced-colors: active`. Without an explicit system-colour
+                  // border the toast turns into floating text against the
+                  // Canvas background. Pin the boundary + opaque Canvas bg so
+                  // the toast remains perceivable for low-vision users.
+                  'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
                   s.border, s.glow
                 )}
               >

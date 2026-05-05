@@ -250,6 +250,13 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
         className={cn(
           'group rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900',
           'print:break-inside-avoid print:border-gray-300 print:bg-white',
+          // Phase-46 / Prompt 11 — Windows High Contrast / forced-colors mode.
+          // Pin the chart-container boundary to a system colour so the
+          // chart frame remains perceivable when the alpha border collapses
+          // to transparent. Recharts SVG strokes get their own
+          // forced-colors overrides via the global rules in `index.css`
+          // (axis ticks / grid lines / legend text → `CanvasText`).
+          'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
           className,
         )}
       >

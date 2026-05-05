@@ -1033,3 +1033,103 @@ select option:checked {
     margin: 12mm;
   }
 }
+
+
+/* === @media (forced-colors: active) (Phase-46 / Prompt 11) ====================
+ * Windows High Contrast / Aquatic / Contrast Themes support.
+ *
+ * In forced-colors mode the OS overrides foreground/background colours,
+ * suppresses `box-shadow`, suppresses background images, and treats
+ * `border-color: transparent` as invisible. The TeslaSync UI relies
+ * heavily on alpha-blended borders, glassmorphism backgrounds, and
+ * shadow-only button boundaries — all of which vanish unless we pin
+ * a system colour for low-vision users.
+ *
+ * Component overrides live with the components themselves via the
+ * Tailwind `forced-colors:` variant (registered in `tailwind.config.js`
+ * and audited by `scripts/audit-forced-colors.mjs`). This block covers
+ * what cannot be expressed as a class on a single element:
+ *
+ *   - `:focus-visible` outlines that need to win over component-level
+ *     `outline-none` + neon ring tokens (rings are box-shadow, which is
+ *     suppressed under forced-colors → keyboard users lose their focus
+ *     indicator entirely without an `outline` fallback).
+ *   - Recharts SVG axes, grid lines, ticks, legend, and default tooltip
+ *     (Recharts renders inline SVG with hardcoded fills/strokes that
+ *     forced-colors collapses to `CanvasText` for everything — making
+ *     overlapping series visually identical).
+ *   - `[data-print-card]` panels — covers GlassPanel and any other
+ *     surface that opted into the print-card marker.
+ *   - Leaflet polylines and circle markers used for drive paths and
+ *     geofences (raster tiles are unaffected; vector overlays need a
+ *     `CanvasText` stroke or they vanish into the map).
+ *
+ * Audit: `npm run audit:forced-colors` enforces that every critical
+ * component under `components/ui`, `components/feedback`,
+ * `components/charts`, and `components/maps` carries an explicit
+ * `forced-colors:` variant or `@media (forced-colors: active)` block.
+ * ============================================================================ */
+@media (forced-colors: active) {
+  /* Restore a visible focus ring for keyboard users. The neon focus rings
+   * across the app use `box-shadow` (Tailwind `ring-*`), which is
+   * suppressed entirely in forced-colors mode. Use `outline` instead so
+   * the OS Highlight system colour wins. */
+  *:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px !important;
+  }
+
+  /* GlassPanel / Card / any opted-in print-card surface. These are the
+   * primary content containers throughout the app — without an explicit
+   * border they're invisible against the OS Canvas. */
+  [data-print-card] {
+    border: 1px solid CanvasText !important;
+    background: Canvas !important;
+  }
+
+  /* Recharts: every SVG axis tick / grid line / legend label / ref-line
+   * shares the same `CanvasText` fill in forced-colors mode, so without
+   * explicit overrides nothing on the chart can be visually distinguished
+   * from anything else. The chart container itself is bordered above; the
+   * rules here keep at least the axes + grid + legend readable. The
+   * series themselves still render via SVG fills — phase-46 / 13 tracks
+   * a long-form `<NoColorChartFallback>` data-table for users who need
+   * tabular access to the values. */
+  .recharts-cartesian-grid line {
+    stroke: CanvasText !important;
+    opacity: 0.4 !important;
+  }
+  .recharts-cartesian-axis-line,
+  .recharts-cartesian-axis-tick-line {
+    stroke: CanvasText !important;
+  }
+  .recharts-text,
+  .recharts-cartesian-axis-tick-value,
+  .recharts-label,
+  .recharts-legend-item-text {
+    fill: CanvasText !important;
+  }
+  .recharts-default-tooltip {
+    background: Canvas !important;
+    border: 1px solid CanvasText !important;
+    color: CanvasText !important;
+  }
+  .recharts-reference-line line {
+    stroke: CanvasText !important;
+  }
+
+  /* Leaflet vector overlays: drive paths, geofence rings, marker outlines.
+   * Raster tile layers are unaffected (the OS does not remap raster
+   * pixels), but SVG overlays inherit `CanvasText` for stroke + fill,
+   * collapsing distinct overlays into a single colour. Force opacity so
+   * at least the path is perceivable; specific apps overlay legends
+   * where colour distinction matters. */
+  .leaflet-overlay-pane svg path {
+    stroke: CanvasText !important;
+    stroke-opacity: 1 !important;
+  }
+  .leaflet-marker-icon,
+  .leaflet-marker-shadow {
+    forced-color-adjust: none;
+  }
+}

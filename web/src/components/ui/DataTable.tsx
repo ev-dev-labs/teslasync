@@ -722,6 +722,13 @@ export function DataTable<T>({
   const headRowClass = cn(
     tableTokens.head,
     effectiveStickyHeader && tableTokens.stickyHead,
+    // Phase-46 / Prompt 11 — Windows High Contrast / forced-colors mode.
+    // The default `border-b border-white/[0.06]` from `tableTokens.head`
+    // collapses to invisible against the OS Canvas background, leaving
+    // table headers indistinguishable from the body. Pin the bottom edge
+    // to a system colour so the column-header row stays a clear visual
+    // boundary for low-vision users.
+    'forced-colors:border-b forced-colors:border-[CanvasText]',
   )
 
   const showToolbar =
