@@ -452,6 +452,14 @@
       "rbac": "Role-based access control"
     }
   },
+  "compat": {
+    "banner": {
+      "title": "Your browser is missing required features",
+      "body": "TeslaSync needs {{features}} to work correctly. {{recommendation}}",
+      "recommendation": "Use Chrome ≥ 110, Edge ≥ 110, Firefox ≥ 109, or Safari ≥ 16.",
+      "dismiss": "Dismiss"
+    }
+  },
   "common": {
     "loading": "Loading...",
     "noData": "No data available",

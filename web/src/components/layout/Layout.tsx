@@ -23,6 +23,7 @@ import { TourOverlay } from '../feedback/TourOverlay'
 import { ChangelogModal } from '../feedback/ChangelogModal'
 import { DraftRestorePrompt } from '../feedback/DraftRestorePrompt'
 import { SkipToContent } from '../feedback/SkipToContent'
+import { BrowserCompatBanner } from '../feedback/BrowserCompatBanner'
 import { TourLauncher } from '@/features/onboarding/TourLauncher'
 import {
   TOUR_START_EVENT,
@@ -1334,6 +1335,12 @@ export default function Layout() {
         {/* Spacer for fixed mobile header */}
         <div className="h-14 shrink-0 lg:hidden" />
 
+        {/* Browser-compat warning (Phase-46 / Prompt 63) — topmost banner
+            in the main content column so users on outdated browsers see
+            WHY the SPA is breaking instead of staring at a white page.
+            Sits BELOW the SkipToContent link in DOM order so keyboard
+            users still hit the WCAG bypass-blocks link first. */}
+        <BrowserCompatBanner />
         <ServiceStatusBanner />
         <main
           id="main-content"
