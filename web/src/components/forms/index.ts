@@ -13,3 +13,4 @@ export {
   type TagInputHandle,
   type TagSeparator,
 } from './TagInput';
+export { UnitInput, type UnitInputProps } from './UnitInput';
