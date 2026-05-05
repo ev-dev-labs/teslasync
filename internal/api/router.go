@@ -1089,6 +1089,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/workers", WorkersHealthHandler())
 			r.Get("/metrics-catalog", MetricsCatalogHandler())
 			r.Get("/openapi", OpenAPIHandler())
+
+			// Phase-46 / Prompt 33 — Aggregated self-test endpoint.
+			// Single click runs ~10 checks (DB, MQTT, Redis, Tesla
+			// token + breaker, signal_log freshness, migrations,
+			// runtime, health monitor) and returns a structured
+			// DiagnosticReport. Per-IP rate-limited because each
+			// call fans out concurrent probes against every shared
+			// dependency.
+			diagnosticHandler := NewDiagnosticHandler(db, teslaClient, mqttClient, opt.CacheStore, health, cfg)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).
+				Post("/diagnostic", diagnosticHandler.ServeHTTP)
 		})
 
 		// Per-user activity feed (Phase-40 / Prompt 49 — Recent Activity Discoverability).

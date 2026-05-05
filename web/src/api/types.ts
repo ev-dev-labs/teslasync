@@ -1064,6 +1064,26 @@ export interface ExtendedHealthResponse {
   system: { goroutines: number; go_version: string; uptime_seconds: number }
 }
 
+// === Aggregated diagnostic / self-test (Phase-46 / Prompt 33) ===
+
+export type DiagnosticCheckStatus = 'ok' | 'warn' | 'fail'
+export type DiagnosticOverallStatus = 'ok' | 'degraded' | 'down'
+
+export interface DiagnosticCheck {
+  id: string
+  name: string
+  status: DiagnosticCheckStatus
+  detail: string
+  remediation?: string
+  duration_ms: number
+}
+
+export interface DiagnosticReport {
+  generated_at: string
+  overall_status: DiagnosticOverallStatus
+  checks: DiagnosticCheck[]
+}
+
 export interface BackupStats {
   database_size: string
   table_count: number
