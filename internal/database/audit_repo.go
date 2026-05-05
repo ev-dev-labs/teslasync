@@ -36,6 +36,27 @@ import (
 // action MUST use this exact constant.
 const AuditRevealAction = "masked_reveal"
 
+// AuditImpersonationStartAction is the canonical `action` string
+// written when an admin begins an impersonation session. Phase-46 /
+// Prompt 46. The dashboard filter "every impersonation event in the
+// last 30 days" is the headline use case — keep this constant stable
+// across the prompt's lifetime even if the human-facing label
+// changes.
+const AuditImpersonationStartAction = "impersonation.start"
+
+// AuditImpersonationEndAction is the canonical `action` string
+// written when an admin ends an impersonation session. Cookie expiry
+// does NOT write this row; only an explicit POST /admin/impersonate/end
+// call does, so the row count is a precise "manually ended" metric.
+const AuditImpersonationEndAction = "impersonation.end"
+
+// MaxAuditImpersonationSubjectLen caps the length of the actor and
+// target subject strings written into the audit row. The proxy emits
+// short opaque tokens (typically <128 bytes) but a misbehaving header
+// injection could send arbitrary text — the cap keeps a single audit
+// row from ballooning to multi-megabyte size.
+const MaxAuditImpersonationSubjectLen = 256
+
 // MaxAuditRevealVariantLen caps the variant label written into the
 // `entity_type` column. The variant comes from a short enum on the
 // frontend (`token`, `vin`, `coords`, `email`, `generic`) but a
@@ -166,4 +187,135 @@ func nullIfEmpty(s string) any {
 		return nil
 	}
 	return s
+}
+
+// AuditImpersonationEvent is the shared write-shape for both the
+// start and end audit rows. The handler chooses the action constant;
+// the row layout is identical so the dashboards can union the two
+// actions and group by (actor, target) without per-row schema
+// surprises.
+//
+// Both Actor (the admin) and Target (the impersonated subject) are
+// always recorded — the dashboard's "who did what to whom" query
+// joins on actor + entity_type + detail without needing a JSONB
+// payload.
+type AuditImpersonationEvent struct {
+	// Actor is the original admin subject — the operator who started
+	// (or is ending) the impersonation. Stored in `audit_logs.actor`
+	// so the per-actor index keeps "every action by this admin"
+	// queries fast.
+	Actor string
+
+	// Target is the subject being impersonated. Stored in
+	// `audit_logs.detail` so the entity_type column stays a stable
+	// canonical token ("impersonation") and the detail captures the
+	// per-row variable (the target identity). This mirrors how the
+	// reveal-event variant uses entity_type vs. detail.
+	Target string
+
+	// IP and UserAgent come from the originating HTTP request so a
+	// post-incident audit can confirm the device that initiated the
+	// impersonation. Empty strings persist as NULL.
+	IP        string
+	UserAgent string
+}
+
+// WriteImpersonationStart persists an `impersonation.start` audit row.
+// Returns an error so the handler can decide whether to surface a 5xx;
+// in practice the handler logs and continues — the impersonation cookie
+// is the source of truth for the in-flight session, the audit row is
+// best-effort accountability.
+func (r *AuditRepo) WriteImpersonationStart(ctx context.Context, evt AuditImpersonationEvent) error {
+	return r.writeImpersonationEvent(ctx, AuditImpersonationStartAction, evt)
+}
+
+// WriteImpersonationEnd persists an `impersonation.end` audit row.
+// Cookie expiry does NOT call this method — only an explicit
+// POST /admin/impersonate/end does — so the count of these rows is a
+// precise "manually ended" metric.
+func (r *AuditRepo) WriteImpersonationEnd(ctx context.Context, evt AuditImpersonationEvent) error {
+	return r.writeImpersonationEvent(ctx, AuditImpersonationEndAction, evt)
+}
+
+// writeImpersonationEvent is the shared implementation between Start
+// and End. Centralising the validation + INSERT keeps the two action
+// constants the only divergence between the two write paths.
+func (r *AuditRepo) writeImpersonationEvent(ctx context.Context, action string, evt AuditImpersonationEvent) error {
+	if r == nil || r.pool == nil {
+		return errors.New("audit repo not configured")
+	}
+
+	actor := strings.TrimSpace(evt.Actor)
+	target := strings.TrimSpace(evt.Target)
+	if actor == "" {
+		return errors.New("audit_logs impersonation: actor required")
+	}
+	if target == "" {
+		return errors.New("audit_logs impersonation: target required")
+	}
+	if len(actor) > MaxAuditImpersonationSubjectLen {
+		actor = actor[:MaxAuditImpersonationSubjectLen]
+	}
+	if len(target) > MaxAuditImpersonationSubjectLen {
+		target = target[:MaxAuditImpersonationSubjectLen]
+	}
+
+	const query = `
+		INSERT INTO audit_logs (ts, actor, action, entity_type, entity_id, detail, ip, user_agent)
+		VALUES ($1, $2, $3, 'impersonation', NULL, $4, $5, $6)`
+
+	_, err := r.pool.Exec(ctx, query,
+		r.now().UTC(),
+		actor,
+		action,
+		target,
+		nullIfEmpty(evt.IP),
+		nullIfEmpty(evt.UserAgent),
+	)
+	if err != nil {
+		return fmt.Errorf("audit_logs impersonation insert: %w", err)
+	}
+	return nil
+}
+
+// ListDistinctActiveSubjects returns the set of subjects that have at
+// least one non-revoked auth_sessions row, sorted alphabetically for
+// stable rendering. Phase-46 / Prompt 46 — used by the impersonation
+// candidates endpoint as a stand-in for the future
+// `auth_subjects` table (prompt 57). When prompt 57 lands, swap this
+// query to read from `auth_subjects` directly.
+//
+// The query intentionally does NOT exclude the actor — that filtering
+// is the handler's job because the handler also has to enforce
+// "exclude self when impersonating" semantics.
+func (r *AuditRepo) ListDistinctActiveSubjects(ctx context.Context) ([]string, error) {
+	if r == nil || r.pool == nil {
+		return nil, errors.New("audit repo not configured")
+	}
+	const query = `
+		SELECT DISTINCT subject
+		FROM auth_sessions
+		WHERE revoked_at IS NULL
+		ORDER BY subject ASC`
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("auth_sessions distinct subjects: %w", err)
+	}
+	defer rows.Close()
+	out := make([]string, 0, 8)
+	for rows.Next() {
+		var s string
+		if err := rows.Scan(&s); err != nil {
+			return nil, fmt.Errorf("auth_sessions scan: %w", err)
+		}
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		out = append(out, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("auth_sessions iterate: %w", err)
+	}
+	return out, nil
 }

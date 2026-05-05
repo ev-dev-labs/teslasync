@@ -221,6 +221,22 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	rolePermissionsRepo := database.NewRolePermissionsRepo(db)
 	rbacHandler := NewRBACHandler(rolePermissionsRepo, cfg.Auth.ForwardAuthHeader)
 
+	// Phase-46 / Prompt 46 — admin impersonation. The store mints
+	// HMAC-signed cookies (15-min TTL) carrying the original-admin /
+	// target pair; the middleware mounted further down rewrites the
+	// principal header so downstream handlers see the impersonation
+	// target as the request principal. The audit repo doubles as the
+	// candidates store via its ListDistinctActiveSubjects helper —
+	// see audit_repo.go for the rationale on co-locating that query.
+	auditRepo := database.NewAuditRepoWithDB(db)
+	impersonationStore := tsauth.MustNewImpersonationStore()
+	impersonationHandler := NewImpersonationHandler(
+		impersonationStore,
+		auditRepo,
+		auditRepo,
+		cfg.Auth.ForwardAuthHeader,
+	)
+
 	dashboardLayoutHandler := NewDashboardLayoutHandler(db)
 	chartAnnotationHandler := NewChartAnnotationHandler(db)
 	pinnedHandler := NewPinnedHandler(db)
@@ -561,6 +577,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// (no FORWARD_AUTH_HEADER configured) is a passthrough.
 		r.Use(tsauth.Middleware(cfg.Auth.ForwardAuthHeader, authSessionsRepo, tsauth.SessionTrackerOptions{}))
 
+		// Phase-46 / Prompt 46 — Impersonation middleware. MUST run
+		// AFTER the session tracker so the tracker pins the cookie to
+		// the actual admin identity (not the rewritten target). The
+		// middleware verifies the HMAC-signed impersonation cookie,
+		// re-binds it against the live admin subject, and rewrites the
+		// FORWARD_AUTH header to the impersonation target so all
+		// downstream handlers transparently "see what the target sees".
+		// Open mode is a passthrough.
+		r.Use(tsauth.ImpersonationMiddleware(cfg.Auth.ForwardAuthHeader, impersonationStore))
+
 		// Auth (stricter rate limits to prevent brute force)
 		r.Route("/auth", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(10, 1*time.Minute))
@@ -571,13 +597,22 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/status", authHandler.Status)
 			// Phase-46 / Prompt 31 — destructive: revokes Tesla
 			// refresh token and clears credentials. Sudo gated.
-			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/disconnect", authHandler.Disconnect)
+			// Phase-46 / Prompt 46 — Blocked during impersonation so
+			// an admin cannot accidentally disconnect the target's
+			// Tesla account; the original admin must end impersonation
+			// first.
+			r.With(tsauth.RequireNotImpersonating(), RequireSudo(sudoStore, sudoCfg)).Post("/disconnect", authHandler.Disconnect)
 			// Phase-46 / Prompt 31 — Sudo step-up reauth. POST a
 			// password OR totp_code to mint a 5-minute X-Sudo-Token
 			// the SPA echoes on subsequent destructive requests. In
 			// open mode this returns 200 mode="open" without minting
 			// anything; the dialog falls back to typed-confirmation.
-			r.Post("/reauth", sudoHandler.Reauth)
+			// Phase-46 / Prompt 46 — Blocked during impersonation so
+			// no fresh sudo tokens can be minted under the target's
+			// rewritten principal. Existing tokens won't validate
+			// either (token subject != rewritten subject), so this is
+			// belt-and-suspenders.
+			r.With(tsauth.RequireNotImpersonating()).Post("/reauth", sudoHandler.Reauth)
 			// Phase-46 / Prompt 35 — per-user TOTP enrollment.
 			// /totp                              GET    status pill backing
 			// /totp/enroll                       POST   start enrollment
@@ -585,7 +620,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// /totp/sudo                         POST   mint sudo token via per-user TOTP
 			// /totp                              DELETE revoke (sudo-gated)
 			// /totp/backup-codes/regenerate      POST   rotate backup codes (sudo-gated)
+			//
+			// Phase-46 / Prompt 46 — The entire /totp subtree is
+			// blocked during impersonation. Enrollment, verification,
+			// and sudo-token mints all read the principal from the
+			// (rewritten) header and would otherwise act as the target.
 			r.Route("/totp", func(r chi.Router) {
+				r.Use(tsauth.RequireNotImpersonating())
 				r.Get("/", totpHandler.GetStatus)
 				r.Post("/enroll", totpHandler.Enroll)
 				r.Post("/verify", totpHandler.Verify)
@@ -598,12 +639,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// sudo-gated (RequireSudo is a passthrough in open mode,
 			// so the handler's own AUTH_MODE_OPEN check is what
 			// guards the resource semantics there).
+			//
+			// Phase-46 / Prompt 46 — DELETEs are blocked during
+			// impersonation so an admin cannot revoke the target's
+			// real sessions. List is allowed because it's read-only
+			// and reflects what the target sees, which is exactly the
+			// "see what they see" contract.
 			r.Route("/sessions", func(r chi.Router) {
 				r.Get("/", sessionHandler.List)
 				// `all-others` MUST be registered BEFORE `/{id}` so chi
 				// doesn't bind the literal as a UUID param.
-				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/all-others", sessionHandler.RevokeAllOthers)
-				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/{id}", sessionHandler.Revoke)
+				r.With(tsauth.RequireNotImpersonating(), RequireSudo(sudoStore, sudoCfg)).Delete("/all-others", sessionHandler.RevokeAllOthers)
+				r.With(tsauth.RequireNotImpersonating(), RequireSudo(sudoStore, sudoCfg)).Delete("/{id}", sessionHandler.Revoke)
 			})
 		})
 
@@ -1426,6 +1473,24 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
 			r.Get("/matrix", rbacHandler.GetMatrix)
 			r.With(RequireSudo(sudoStore, sudoCfg)).Put("/matrix", rbacHandler.UpsertMatrix)
+		})
+
+		// Phase-46 / Prompt 46 — Admin impersonation endpoints.
+		// GET state + GET candidates are read-only and unguarded so
+		// the SPA can poll them to render the banner. POST start is
+		// sudo-gated AND blocked while already impersonating so a
+		// nested impersonation cannot be initiated. POST end is NOT
+		// sudo-gated — exiting impersonation should always succeed
+		// without a re-auth prompt — and is idempotent, so a
+		// parallel-tab end click does not surface an error toast.
+		// In open mode every endpoint returns 501 AUTH_MODE_OPEN
+		// inside the handler.
+		r.Route("/admin/impersonate", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(30, 1*time.Minute))
+			r.Get("/", impersonationHandler.GetState)
+			r.Get("/candidates", impersonationHandler.Candidates)
+			r.With(tsauth.RequireNotImpersonating(), RequireSudo(sudoStore, sudoCfg)).Post("/", impersonationHandler.Start)
+			r.Post("/end", impersonationHandler.End)
 		})
 
 		// Admin: live log tail stream (Phase-46 / Prompt 34).

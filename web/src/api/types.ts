@@ -2601,3 +2601,41 @@ export interface RbacUpsertCell {
 export interface RbacUpsertRequest {
   cells: RbacUpsertCell[]
 }
+
+
+// Phase-46 / Prompt 46 — Admin impersonation API contracts.
+//
+// The state endpoint returns one of three modes: 'open' (501 in open-
+// mode installs), 'inactive' (forward-auth, no cookie present), or
+// 'active' (forward-auth, valid cookie). Discriminated unions let the
+// banner hide / show without mode-string string-comparisons in the
+// component.
+export type ImpersonationStatus =
+  | { mode: 'open' }
+  | { mode: 'inactive' }
+  | {
+      mode: 'active'
+      original_admin: string
+      target: string
+      expires_at: string
+    }
+
+// Single row in the candidates list. Subject is the opaque
+// proxy-issued identity; the SPA renders it verbatim because the
+// future prompt 57 may add a display-name column without changing
+// this contract.
+export interface ImpersonationCandidate {
+  subject: string
+}
+
+export type ImpersonationCandidatesResponse =
+  | { mode: 'open' }
+  | {
+      mode: 'session'
+      candidates: ImpersonationCandidate[]
+    }
+
+export interface ImpersonationStartRequest {
+  subject: string
+}
+

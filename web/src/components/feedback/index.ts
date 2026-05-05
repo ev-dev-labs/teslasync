@@ -24,6 +24,7 @@ export { AuthExpiredOverlay } from './AuthExpiredOverlay';
 export { TeslaReauthBanner } from './TeslaReauthBanner';
 export { RateLimitBanner } from './RateLimitBanner';
 export { MaintenanceBanner } from './MaintenanceBanner';
+export { ImpersonationBanner } from './ImpersonationBanner';
 export { GotoIndicator } from './GotoIndicator';
 export { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 export { TourOverlay } from './TourOverlay';

@@ -8019,5 +8019,39 @@
     "toasts": {
       "saved": "RBAC matrix updated."
     }
+  },
+  "impersonation": {
+    "banner": {
+      "title": "Impersonating {{target}}",
+      "body": "You are viewing TeslaSync as another subject. End impersonation to restore your session.",
+      "endsIn": "Expires in {{time}}",
+      "expired": "Session expired",
+      "end": "End impersonation",
+      "ending": "Ending…"
+    },
+    "button": {
+      "start": "Impersonate",
+      "starting": "Starting…",
+      "aria": "Impersonate {{subject}}"
+    },
+    "confirm": {
+      "title": "Start impersonation session?",
+      "message": "You will see TeslaSync as {{subject}} for up to 15 minutes. The action is logged to the audit log. End the session from the banner when you are done.",
+      "confirm": "Start impersonation",
+      "cancel": "Cancel"
+    },
+    "users": {
+      "title": "Subjects",
+      "subtitle": "Active subjects you can impersonate for support. Sessions are limited to 15 minutes and recorded in the audit log.",
+      "openMode": "Impersonation requires forward-auth mode. This install is in open mode, so per-user identity is not available.",
+      "emptyTitle": "No other subjects",
+      "emptyMessage": "No other subjects have an active session right now. Sign someone else in to enable impersonation."
+    },
+    "toast": {
+      "started": "Impersonation started",
+      "startFailed": "Failed to start impersonation",
+      "ended": "Impersonation ended",
+      "endFailed": "Failed to end impersonation"
+    }
   }
 }

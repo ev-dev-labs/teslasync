@@ -6,6 +6,7 @@ import { NewVersionBanner } from '../feedback/NewVersionBanner'
 import { TeslaReauthBanner } from '../feedback/TeslaReauthBanner'
 import { RateLimitBanner } from '../feedback/RateLimitBanner'
 import { MaintenanceBanner } from '../feedback/MaintenanceBanner'
+import { ImpersonationBanner } from '../feedback/ImpersonationBanner'
 import { TopProgress } from '../feedback/TopProgress'
 import { SessionExpiringModal } from '../feedback/SessionExpiringModal'
 import { SessionExpiredModal } from '../feedback/SessionExpiredModal'
@@ -1392,6 +1393,13 @@ export default function Layout() {
 
       {/* Offline status banner (PWA / mobile) */}
       <OfflineBanner />
+
+      {/* Impersonation banner (Phase-46 / Prompt 46) — security context,
+          highest priority. Mounted ABOVE every other banner because an
+          admin viewing the app as another subject must see the
+          impersonation flag at all times; everything else (maintenance,
+          rate-limit, etc.) is secondary while a session is active. */}
+      <ImpersonationBanner />
 
       {/* Service-mode banner (Phase-46 / Prompt 04) — operator-controlled
           maintenance/degraded banner. Mounted ABOVE the rate-limit and
