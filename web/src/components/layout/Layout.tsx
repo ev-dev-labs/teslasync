@@ -45,7 +45,7 @@ import { Breadcrumbs } from './Breadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
 import { NavSectionHeader } from './sidebar/NavSectionHeader'
 import { request } from '@/api/client'
-import type { Alert, Vehicle, VersionInfo, StaleSessionsResponse } from '@/api/types'
+import type { Alert, Vehicle, StaleSessionsResponse } from '@/api/types'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useNotificationListener } from '../../hooks/useNotificationListener'
 import { useTitleBadge } from '../../hooks/useTitleBadge'
@@ -764,10 +764,8 @@ export default function Layout() {
     }
   }, [tour.isActive, tour.currentStep, tour.targetRect])
 
-  // Version info — shown as the small chip in the sidebar/mobile header.
-  // (Footer status bar has its own VersionSegment that hits the same query
-  // key so this fetch is deduped.)
-  const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: () => request<VersionInfo>('/system/version'), staleTime: 60_000, refetchInterval: 60_000 })
+  // Build version intentionally not fetched here; canonical provenance lives
+  // in the footer <VersionSegment> (Phase-40 / 59 + Phase-46 / 58).
 
   // Live data for sidebar
   const { data: alerts } = useQuery({ queryKey: ['alerts-sidebar'], queryFn: () => request<Alert[]>('/alerts?limit=50&offset=0'), refetchInterval: 30_000, retry: 1 })
@@ -912,12 +910,6 @@ export default function Layout() {
       ]
     : []
 
-  const versionLabel = versionInfo?.chart_version && versionInfo.chart_version !== 'unknown'
-    ? `v${versionInfo.chart_version}`
-    : versionInfo?.app_version && versionInfo.app_version !== 'unknown'
-      ? versionInfo.app_version
-      : ''
-
   const mainRef = useRef<HTMLElement>(null)
   const renderNavLink = (item: NavItem, compact = false, activeScope = 'main') => {
     const { to, icon: Icon, label, color, ...rest } = item
@@ -1042,16 +1034,13 @@ export default function Layout() {
           sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full'
         )}
       >
-        {/* Mobile sidebar brand, shown only while the drawer is open */}
+        {/* Mobile sidebar brand. Build version intentionally not rendered
+            here; canonical provenance lives in the footer <VersionSegment>
+            (Phase-40 / 59 + Phase-46 / 58). */}
         <div className="flex items-center gap-2 border-b border-[var(--glass-border)] px-5 py-4 shrink-0 lg:hidden">
           <GuardedNavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-xl transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
           </GuardedNavLink>
-          {versionLabel && (
-            <span className="rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
-              {versionLabel}
-            </span>
-          )}
           <Button
             type="button"
             variant="ghost"
@@ -1065,15 +1054,12 @@ export default function Layout() {
           </Button>
         </div>
 
-        {/* Logo — desktop sidebar header */}
+        {/* Logo — desktop sidebar header. Build version intentionally not
+            rendered here; canonical provenance lives in the footer
+            <VersionSegment> (Phase-40 / 59 + Phase-46 / 58). */}
         <div className="hidden lg:flex items-center gap-2 px-5 py-5 border-b border-[var(--glass-border)] shrink-0">
           <GuardedNavLink to="/" className="flex flex-1 items-center gap-3 hover:bg-[var(--surface-2)] -mx-2 px-2 py-1 rounded-md transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
-            {versionLabel && (
-              <span className="ml-auto rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
-                {versionLabel}
-              </span>
-            )}
           </GuardedNavLink>
           <ThemeQuickSwitcher placement="left" />
           <NotificationBellPopover />
