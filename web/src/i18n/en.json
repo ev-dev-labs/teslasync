@@ -7749,6 +7749,79 @@
       "quietHours": "Quiet hours"
     }
   },
+  "settingsReset": {
+    "title": "Reset to defaults",
+    "subtitle": "Restore an individual section to its default state. Each reset is destructive and cannot be undone — export your settings first if you want a backup.",
+    "deniedTitle": "Sections that aren’t user-resettable",
+    "deniedSubtitle": "These sections live outside this server’s preference store. The Settings page can’t reset them, but the linked instructions tell you where to go.",
+    "section": {
+      "general": {
+        "title": "General preferences",
+        "desc": "Units, language, currency, timezone, and energy/gas pricing defaults."
+      },
+      "appearance": {
+        "title": "Appearance",
+        "desc": "Theme, density, chart palette, and notification badge / flash preferences."
+      },
+      "alertRules": {
+        "title": "Alert rules",
+        "desc": "Delete every alert rule you have authored. Cannot be undone."
+      },
+      "geofences": {
+        "title": "Geofences",
+        "desc": "Delete every geofence and its electricity-rate overrides. Vehicle home assignments will be cleared."
+      },
+      "notificationChannels": {
+        "title": "Notification channels",
+        "desc": "Delete every webhook, Discord, Slack, email, and push channel along with their delivery history."
+      },
+      "dashboardLayout": {
+        "title": "Dashboard layouts",
+        "desc": "Delete every saved dashboard layout preset."
+      },
+      "automations": {
+        "title": "Automations",
+        "desc": "Delete every automation, including its triggers, conditions, actions, variables, and run history."
+      },
+      "quietHours": {
+        "title": "Quiet hours",
+        "desc": "Delete every quiet-hours window for your account."
+      }
+    },
+    "denied": {
+      "tariffs": {
+        "title": "Charge cost tariffs",
+        "reason": "Tariffs are stored per-vehicle. Reset the assignment from the Vehicle Settings page on the vehicle detail screen."
+      },
+      "soundPrefs": {
+        "title": "Notification sound preferences",
+        "reason": "Notification sound preferences are stored in your browser. Clear them via your browser’s site-data controls."
+      }
+    },
+    "actions": {
+      "reset": "Reset"
+    },
+    "dangerZone": {
+      "title": "Danger zone",
+      "subtitle": "Wipe every user-discoverable preference at once. Alert rules, geofences, channels, automations, dashboard layouts, and your typed preference rows are all deleted in a single transaction.",
+      "help": "You will be asked to type RESET to confirm.",
+      "cta": "Reset ALL settings"
+    },
+    "confirm": {
+      "sectionTitle": "Reset {{name}}?",
+      "sectionMessage": "{{description}} This action is permanent.",
+      "allTitle": "Reset every user-discoverable setting?",
+      "allMessage": "Every alert rule, geofence, channel, automation, dashboard layout preset, and preference row will be permanently deleted. This cannot be undone.",
+      "confirmLabel": "Reset",
+      "allConfirmLabel": "Reset everything",
+      "cancelLabel": "Cancel",
+      "typedLabel": "Type RESET to confirm"
+    },
+    "toasts": {
+      "successTitle": "Settings reset",
+      "successDetail": "{{count}} item(s) reset across {{sections}} section(s)."
+    }
+  },
   "webhookChannels": {
     "title": "Webhook channels",
     "subtitle": "Forward TeslaSync notifications to Discord, Slack, n8n, Home Assistant, or any HTTP receiver. Each channel can be HMAC-signed so receivers can verify authenticity.",

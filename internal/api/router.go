@@ -193,6 +193,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	)
 	settingsExportHandler := NewSettingsExportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
 	settingsImportHandler := NewSettingsImportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
+	// Phase-46 / Prompt 50 — per-section + global "Reset to defaults".
+	// Sudo-gated at the route below so the SPA's <ReauthDialog>
+	// always pops on the danger-zone "Reset ALL settings" button.
+	settingsResetRepo := database.NewSettingsResetRepo(db)
+	settingsResetHandler := NewSettingsResetHandler(settingsResetRepo, cfg.Auth.ForwardAuthHeader)
 	// Phase-46 / Prompt 43 — per-vehicle settings layer.
 	//
 	// The resolver layers vehicle-scoped overrides on top of the
@@ -877,6 +882,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// credential. Both routes carry the parent rate limit.
 			r.Get("/settings/export", settingsExportHandler.Export)
 			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/settings/import", settingsImportHandler.Import)
+			// Phase-46 / Prompt 50 — POST /settings/reset.
+			// Sudo-gated for the same reason as /settings/import: every
+			// reset is destructive (wipes alert rules, geofences, or
+			// the entire user-discoverable preference surface) and
+			// should always carry a fresh credential.
+			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/settings/reset", settingsResetHandler.Reset)
 		})
 
 		// Named dashboard layout library (Phase 40 / Prompt 30).

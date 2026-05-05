@@ -41,6 +41,10 @@ import { WebhookChannelsSection } from '../components/WebhookChannelsSection'
 // direct-import rationale: barrel is outside the prompt's
 // allowed-files regex.
 import { ActiveSessionsSection } from '../components/ActiveSessionsSection'
+// Phase-46 / Prompt 50 — Reset to defaults. Same direct-import
+// rationale as above; the components barrel is outside the prompt's
+// allowed-files regex.
+import { ResetSection } from '../components/ResetSection'
 
 export default function SettingsPage() {
   const { t } = useTranslation('settings')
@@ -139,6 +143,9 @@ export default function SettingsPage() {
       </section>
       <section id="backup">
         <SettingsExportImport />
+      </section>
+      <section id="reset">
+        <ResetSection />
       </section>
 
       {/* Data Export — link */}

@@ -490,6 +490,46 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       ),
       keywords: ['test', 'fire', 'verify', 'debug', 'try'],
     },
+    // ── Reset to defaults (Phase-46 / Prompt 50) ────────────────────
+    {
+      id: 'reset.section',
+      href: '/settings#reset',
+      section: 'reset',
+      title: t('search.entries.reset.section.title', 'Reset a section to defaults'),
+      description: t(
+        'search.entries.reset.section.desc',
+        'Wipe one section at a time — alert rules, geofences, channels, automations, dashboard layouts, quiet hours, or general/appearance preferences.',
+      ),
+      keywords: [
+        'reset',
+        'defaults',
+        'wipe',
+        'clear',
+        'restore',
+        'factory',
+        'erase',
+      ],
+    },
+    {
+      id: 'reset.all',
+      href: '/settings#reset',
+      section: 'reset',
+      title: t('search.entries.reset.all.title', 'Reset ALL settings'),
+      description: t(
+        'search.entries.reset.all.desc',
+        'Danger zone — wipe every user-discoverable preference, alert rule, channel, geofence, automation, and dashboard layout in one transaction. Requires typing RESET to confirm.',
+      ),
+      keywords: [
+        'reset',
+        'all',
+        'danger',
+        'wipe',
+        'nuke',
+        'factory',
+        'erase',
+        'fresh start',
+      ],
+    },
   ];
 }
 
