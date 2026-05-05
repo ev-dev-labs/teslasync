@@ -74,6 +74,15 @@ services:
       - TESLASYNC_VAPID_PUBLIC_KEY=${TESLASYNC_VAPID_PUBLIC_KEY:-}
       - TESLASYNC_VAPID_PRIVATE_KEY=${TESLASYNC_VAPID_PRIVATE_KEY:-}
       - TESLASYNC_VAPID_SUBJECT=${TESLASYNC_VAPID_SUBJECT:-}
+      # Service-mode banner override — Phase 46 / Prompt 04.
+      # When TESLASYNC_SYSTEM_MODE is set ("ok", "degraded",
+      # "maintenance"), it overrides the system_state DB row so an
+      # operator can force-set or force-clear the top-of-app banner
+      # during deploys/rollbacks without touching the database. Leave
+      # empty to defer to the DB row + admin POST API.
+      - TESLASYNC_SYSTEM_MODE=${TESLASYNC_SYSTEM_MODE:-}
+      - TESLASYNC_SYSTEM_MAINTENANCE_MESSAGE=${TESLASYNC_SYSTEM_MAINTENANCE_MESSAGE:-}
+      - TESLASYNC_SYSTEM_MAINTENANCE_UNTIL=${TESLASYNC_SYSTEM_MAINTENANCE_UNTIL:-}
     depends_on:
       postgres:
         condition: service_healthy

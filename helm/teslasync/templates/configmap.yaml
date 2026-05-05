@@ -135,3 +135,9 @@ data:
   {{- if and .Values.webPush .Values.webPush.publicKey }}
   TESLASYNC_VAPID_PUBLIC_KEY: {{ .Values.webPush.publicKey | quote }}
   {{- end }}
+  # Service-mode banner override (Phase 46 / Prompt 04). Always rendered
+  # so the API picks up the env knob deterministically; empty values
+  # mean "fall through to the system_state DB row + admin POST API".
+  TESLASYNC_SYSTEM_MODE: {{ default "" (and .Values.system .Values.system.mode) | quote }}
+  TESLASYNC_SYSTEM_MAINTENANCE_MESSAGE: {{ default "" (and .Values.system .Values.system.maintenanceMessage) | quote }}
+  TESLASYNC_SYSTEM_MAINTENANCE_UNTIL: {{ default "" (and .Values.system .Values.system.maintenanceUntil) | quote }}

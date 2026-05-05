@@ -7,7 +7,7 @@ import type {
   APIKey, APICallLog, APICallLogStats, BackupConfig, BackupRun,
   SystemHealth, AuditLogEntry, SecurityEvent, DBStats, MigrationStatus,
   ConnectionPool, ExportJob, VehicleState, StateTransition,
-  WebErrorsSummary,
+  WebErrorsSummary, MaintenanceState, MaintenanceUpdateInput,
 } from '@/types/admin';
 
 export const adminKeys = {
@@ -26,6 +26,7 @@ export const adminKeys = {
   vehicleState: (vehicleId: string) => ['vehicle-state', vehicleId] as const,
   stateTimeline: (vehicleId: string) => ['state-timeline', vehicleId] as const,
   webErrorsSummary: ['admin', 'web-errors-summary'] as const,
+  maintenance: ['admin', 'maintenance'] as const,
 };
 
 export function useApiKeys() {
@@ -118,6 +119,53 @@ export function useSystemHealth() {
     queryKey: adminKeys.systemHealth,
     queryFn: ({ signal }) => request<SystemHealth>('/system/health', { signal }),
     refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+/**
+ * Persisted maintenance/degraded-mode state (Phase 46 / Prompt 04).
+ *
+ * GET /api/v1/admin/maintenance returns the current system_state row
+ * plus a `source` marker indicating whether an env override is
+ * currently shadowing the DB value. The admin Maintenance Mode panel
+ * polls this on the standard interval; the MaintenanceBanner reads
+ * /system/health (which carries the resolved view) on a separate
+ * cadence so the banner stays close to live without double-polling.
+ */
+export function useMaintenanceState() {
+  return useQuery({
+    queryKey: adminKeys.maintenance,
+    queryFn: ({ signal }) => request<MaintenanceState>('/admin/maintenance', { signal }),
+    refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+/**
+ * POST /api/v1/admin/maintenance — operator override for the service-mode
+ * banner. Invalidates BOTH the admin maintenance query and the system
+ * health query so the banner picks up the change within one cycle
+ * instead of waiting for the next refetchInterval to fire.
+ */
+export function useUpdateMaintenance() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (input: MaintenanceUpdateInput) =>
+      request<MaintenanceState>('/admin/maintenance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: input.mode,
+          message: input.message ?? '',
+          until: input.until ?? null,
+        }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: adminKeys.maintenance });
+      qc.invalidateQueries({ queryKey: adminKeys.systemHealth });
+      success('toast.admin.maintenance.success', 'Maintenance state updated');
+    },
+    onError: (e) => error(e, 'toast.admin.maintenance.error', 'Failed to update maintenance state'),
   });
 }
 

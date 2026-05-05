@@ -24,6 +24,7 @@ import {
   useSystemHealth, useAuditLogs, useApiKeys, useApiLogStats, useWebErrorsSummary,
 } from '@/api/hooks/useAdmin';
 import { useRefreshAuth } from '@/api/hooks/useSettings';
+import { MaintenanceModePanel } from '@/features/admin/components/MaintenanceModePanel';
 import type { AuditLogEntry, APIKey, SystemHealth } from '@/types/admin';
 import {
   Shield, Clock, Activity, Database, RefreshCw, Download, Trash2,
@@ -151,6 +152,11 @@ export default function AdminPage() {
             ))}
           </div>
         </GlassPanel>
+      </FadeIn>
+
+      {/* ── Service Mode panel (Phase-46 / Prompt 04) ────────────── */}
+      <FadeIn>
+        <MaintenanceModePanel />
       </FadeIn>
 
       {/* ── Polling Config + Database ────────────────────────────── */}

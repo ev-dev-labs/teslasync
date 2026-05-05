@@ -5,6 +5,7 @@ import { OfflineBanner } from '../feedback/OfflineBanner'
 import { NewVersionBanner } from '../feedback/NewVersionBanner'
 import { TeslaReauthBanner } from '../feedback/TeslaReauthBanner'
 import { RateLimitBanner } from '../feedback/RateLimitBanner'
+import { MaintenanceBanner } from '../feedback/MaintenanceBanner'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -1370,6 +1371,13 @@ export default function Layout() {
 
       {/* Offline status banner (PWA / mobile) */}
       <OfflineBanner />
+
+      {/* Service-mode banner (Phase-46 / Prompt 04) — operator-controlled
+          maintenance/degraded banner. Mounted ABOVE the rate-limit and
+          version banners because an operator-declared outage is the
+          highest-priority operational message and should not be hidden
+          under transient client-side notices. */}
+      <MaintenanceBanner />
 
       {/* Rate-limit / circuit-breaker banner (Phase-45 / Prompt 33) —
           most-transient surface, sits on top so the user sees the

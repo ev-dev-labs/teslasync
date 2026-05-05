@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"net/http"
@@ -16,6 +17,20 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
+
+// MaintenanceView is the resolved service-mode snapshot returned by the
+// system-state provider closure passed into ExtendedHealthCheck. Source
+// indicates which input "won" — "env" when the operator set
+// TESLASYNC_SYSTEM_MODE, "db" when an admin POSTed to
+// /admin/maintenance, "default" when neither is set. The SPA uses
+// `source == "env"` to disable the admin-panel write controls.
+type MaintenanceView struct {
+	Mode      string
+	Message   string
+	Until     *time.Time
+	UpdatedAt time.Time
+	Source    string
+}
 
 var startTime = time.Now()
 
@@ -248,8 +263,12 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 
 // ExtendedHealthCheck returns a detailed health check with per-component latency,
 // pool stats, and system information. bufferStats is optional — if non-nil, it adds
-// telemetry write buffer statistics.
-func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor, bufferStats func() (int, int)) http.HandlerFunc {
+// telemetry write buffer statistics. systemState is optional — if non-nil, it injects
+// the operator-controlled service-mode banner block (Phase-46 / Prompt 04) into the
+// response under top-level keys `mode`, `maintenance_message`, `maintenance_until`,
+// `maintenance_updated_at`, and `maintenance_source` so the SPA can render the
+// MaintenanceBanner without a separate round-trip.
+func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor, bufferStats func() (int, int), systemState func(context.Context) MaintenanceView) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		results := make(map[string]interface{})
 
@@ -335,11 +354,31 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor, buff
 			statusCode = http.StatusServiceUnavailable
 		}
 
-		writeJSON(w, statusCode, map[string]interface{}{
+		body := map[string]interface{}{
 			"status":     overall,
 			"components": results,
 			"checked_at": time.Now(),
-		})
+			// Default service-mode block — overwritten below when systemState is wired.
+			// Always emitted so SPA consumers can rely on the field's presence.
+			"mode":   database.SystemModeOK,
+			"source": "default",
+		}
+		if systemState != nil {
+			view := systemState(r.Context())
+			body["mode"] = view.Mode
+			body["source"] = view.Source
+			if view.Message != "" {
+				body["maintenance_message"] = view.Message
+			}
+			if view.Until != nil {
+				body["maintenance_until"] = view.Until.UTC().Format(time.RFC3339)
+			}
+			if !view.UpdatedAt.IsZero() {
+				body["maintenance_updated_at"] = view.UpdatedAt.UTC().Format(time.RFC3339)
+			}
+		}
+
+		writeJSON(w, statusCode, body)
 	}
 }
 

@@ -627,6 +627,32 @@ webPush:
   subject: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Service mode banner override (Phase 46 / Prompt 04)
+#
+# When `system.mode` is set to "ok", "degraded", or "maintenance" the env
+# value overrides the persisted system_state DB row so an operator can
+# force-set or force-clear the top-of-app banner during deploys/rollbacks
+# without touching the database. Leave empty (the default) to defer to the
+# DB row + the admin UI / POST /api/v1/admin/maintenance API.
+#
+# `mode === "ok"` while the env override is active explicitly clears the
+# banner regardless of the DB state — useful for "abort the maintenance
+# window" rollback scenarios.
+# ─────────────────────────────────────────────────────────────────────────────
+system:
+  # -- Service mode override. One of "" (use DB), "ok", "degraded",
+  # "maintenance". Other values are ignored and fall through to the DB.
+  mode: ""
+  # -- Banner message shown to users when mode is "degraded" or
+  # "maintenance". Trimmed and capped at 280 chars. Ignored when mode is
+  # "ok" or empty.
+  maintenanceMessage: ""
+  # -- RFC3339 timestamp used by the SPA to render a countdown to the
+  # window's end. Empty means "no scheduled end". Ignored when mode is
+  # "ok" or empty.
+  maintenanceUntil: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Tesla API credentials
 # ─────────────────────────────────────────────────────────────────────────────
 tesla:

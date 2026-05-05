@@ -346,6 +346,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		httprate.LimitByIP(50, 1*time.Minute),
 	).Post("/api/v1/web-errors", webErrorHandler.Ingest)
 
+	// System state (Phase 46 / Prompt 04): single-row maintenance/degraded-mode
+	// banner state. Repo + handler + maintenance provider are constructed
+	// once here so the GET /system/health closure and the admin POST share
+	// the same store and env-vs-DB resolver semantics.
+	systemStateRepo := database.NewSystemStateRepo(db)
+	adminMaintenanceHandler := NewAdminMaintenanceHandler(systemStateRepo, cfg, db)
+	maintenanceProvider := BuildMaintenanceProvider(systemStateRepo, cfg)
+
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
@@ -987,7 +995,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					}
 				}
 			}
-			r.Get("/health", ExtendedHealthCheck(db, health, bufferStats))
+			r.Get("/health", ExtendedHealthCheck(db, health, bufferStats, maintenanceProvider))
 			r.Get("/api-usage", APIUsageHandler(db))
 			r.Get("/compression-stats", CompressionStatsHandler(db))
 			r.Get("/backup", backupHandler.ExportData)
@@ -1053,6 +1061,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// middleware.
 		r.Route("/admin/web-errors", func(r chi.Router) {
 			r.Get("/summary", webErrorHandler.Summary)
+		})
+
+		// Admin: operator-controlled maintenance/degraded banner
+		// (Phase 46 / Prompt 04). GET returns the persisted DB row
+		// plus an env-override marker; POST validates and writes the
+		// row, audits the change via logAuditFromRequest, and rate-
+		// limits per IP because state-change endpoints are otherwise
+		// trivially abusable. Auth-protected by the parent /api/v1
+		// ForwardAuth middleware (any authenticated user can write —
+		// audit trail is the accountability surface; a future RBAC
+		// layer can wrap this without changing the response shape).
+		r.Route("/admin/maintenance", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(30, 1*time.Minute))
+			r.Get("/", adminMaintenanceHandler.Get)
+			r.Post("/", adminMaintenanceHandler.Set)
 		})
 
 		// Fleet Telemetry ingestion

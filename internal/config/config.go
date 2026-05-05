@@ -27,6 +27,30 @@ type Config struct {
 	AzureMaps      AzureMapsConfig
 	APILogs        APILogsConfig
 	WebPush        WebPushConfig
+	System         SystemConfig
+}
+
+// SystemConfig holds the operator-controlled service-mode banner state
+// (Phase-46 / Prompt 04). When Mode is empty, the effective state comes
+// from the system_state DB row; when Mode is non-empty (any of "ok",
+// "degraded", "maintenance"), the env values override the DB so an
+// operator can force-clear or force-set the banner without touching the
+// database (useful during deploy/rollback).
+type SystemConfig struct {
+	// Mode is the operator-supplied service mode override. Empty means
+	// "fall through to DB state". Valid non-empty values: "ok",
+	// "degraded", "maintenance". Other values are treated as empty
+	// (no override) by the resolver.
+	Mode string
+	// MaintenanceMessage is the banner text shown to users when Mode is
+	// "degraded" or "maintenance". Trimmed and truncated to 280 chars
+	// at write time. Ignored when Mode is empty or "ok".
+	MaintenanceMessage string
+	// MaintenanceUntil is an RFC3339 timestamp when the banner should
+	// auto-clear (informational; the SPA renders a countdown). Empty
+	// string means no scheduled end. Invalid values are passed through
+	// to the SPA as-is so misconfiguration surfaces in dev tools.
+	MaintenanceUntil string
 }
 
 // WebPushConfig holds VAPID credentials used to sign and deliver Web Push
@@ -357,6 +381,12 @@ func Load() (*Config, error) {
 			PublicKey:  envStr("TESLASYNC_VAPID_PUBLIC_KEY", ""),
 			PrivateKey: envStr("TESLASYNC_VAPID_PRIVATE_KEY", ""),
 			Subject:    envStr("TESLASYNC_VAPID_SUBJECT", ""),
+		},
+
+		System: SystemConfig{
+			Mode:               envStr("TESLASYNC_SYSTEM_MODE", ""),
+			MaintenanceMessage: envStr("TESLASYNC_SYSTEM_MAINTENANCE_MESSAGE", ""),
+			MaintenanceUntil:   envStr("TESLASYNC_SYSTEM_MAINTENANCE_UNTIL", ""),
 		},
 	}
 
