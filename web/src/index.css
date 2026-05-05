@@ -1133,3 +1133,44 @@ select option:checked {
     forced-color-adjust: none;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────
+ * Phase-46 / Prompt 48 — RTL (Arabic / Hebrew / Persian / Urdu).
+ *
+ * The bulk of layout flipping is handled by Tailwind logical
+ * utilities (ms-/me-/ps-/pe-/start-/end-) — see
+ * `scripts/audit-rtl-properties.mjs` for the migration tracker.
+ * The overrides below cover edge cases that cannot be expressed
+ * via utility classes:
+ *
+ *   - Inline icons inside text runs need their bidi state reset
+ *     so that LTR brand glyphs (lightning bolt, chart sparkline)
+ *     stay upright instead of being flipped along with the
+ *     surrounding paragraph.
+ *
+ *   - Numeric figures (e.g. `120 km`, `45 %`) should keep their
+ *     LTR digit order even when the parent block is RTL.
+ *
+ *   - Leaflet ships hard-coded LTR positioning on its zoom
+ *     control buttons; we don't override the control position
+ *     itself (consumers swap that via `position` prop) but we do
+ *     reset the inner button text so badges read correctly.
+ * ───────────────────────────────────────────────────────────── */
+[dir='rtl'] .keep-ltr,
+[dir='rtl'] .lucide,
+[dir='rtl'] svg[role='img'] {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+[dir='rtl'] .tabular-nums,
+[dir='rtl'] .font-mono {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Leaflet zoom control buttons — keep the +/- glyphs upright. */
+[dir='rtl'] .leaflet-control-zoom a {
+  direction: ltr;
+  unicode-bidi: isolate;
+}

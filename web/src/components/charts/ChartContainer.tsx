@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { VisuallyHidden } from '@/components/a11y';
 import { useChartExport } from '@/hooks/useChartExport';
 import { downloadCSV, objectsToCSV, defaultExportFilename, type CsvCellValue } from '@/lib/csvExport';
+import { getLangDir, textAnchorForDir, type Direction } from '@/lib/i18nDir';
 import { AnnotationList } from './AnnotationList';
 import { AddAnnotationPopover } from './AddAnnotationPopover';
 import { ChartExportMenu } from './ChartExportMenu';
@@ -563,3 +564,28 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     );
   },
 );
+
+/**
+ * Phase-46 / Prompt 48 — chart label-anchor hook.
+ *
+ * Resolves the writing direction from the active i18n language and
+ * returns the SVG `text-anchor` value for a Recharts axis label so
+ * that consumers don't have to thread direction state through every
+ * chart prop.
+ *
+ * Usage:
+ *   const anchor = useChartLabelAnchor('y');
+ *   <YAxis tick={{ textAnchor: anchor }} />
+ *
+ * Mirrors `textAnchorForDir` from `@/lib/i18nDir`; the bare helper
+ * is also re-exported here so chart authors get both the hook (for
+ * components) and the pure helper (for tests / non-React call sites)
+ * from a single import path.
+ */
+export function useChartLabelAnchor(axis: 'x' | 'y'): 'start' | 'middle' | 'end' {
+  const { i18n } = useTranslation();
+  const dir: Direction = getLangDir(i18n.language);
+  return textAnchorForDir(axis, dir);
+}
+
+export { textAnchorForDir } from '@/lib/i18nDir';
