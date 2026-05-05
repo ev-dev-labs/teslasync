@@ -581,6 +581,16 @@ config:
   # back to a generic "your authentication provider" string.
   authProviderHint: ""
 
+  # ── Cookie / GDPR consent banner — Phase 46 / Prompt 70 ─────────────
+  # Most TeslaSync deployments are single-user self-hosted instances
+  # where no consent is required. Flip this to `true` on multi-user
+  # fleet deployments or any public-facing instance with optional
+  # client-side reporting enabled (web vitals, error reporter) so the
+  # SPA shows a non-blocking bottom banner on the first visit and
+  # gates optional POSTs on the user's stored consent. Default
+  # `false` — set explicitly to opt in.
+  requireCookieConsent: false
+
   # ── Authentik SSE Auth (DEPRECATED) ──────────────────────────────────
   # DEPRECATED: Removed in Phase 18 auth unification. Use forwardAuthHeader instead.
   # authentikURL: ""

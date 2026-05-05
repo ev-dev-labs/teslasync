@@ -25,6 +25,7 @@ import { DraftRestorePrompt } from '../feedback/DraftRestorePrompt'
 import { SkipToContent } from '../feedback/SkipToContent'
 import { BrowserCompatBanner } from '../feedback/BrowserCompatBanner'
 import { TimeMachineBanner } from '../feedback/TimeMachineBanner'
+import { CookieConsentBanner } from '../feedback/CookieConsentBanner'
 import { TourLauncher } from '@/features/onboarding/TourLauncher'
 import {
   TOUR_START_EVENT,
@@ -1486,6 +1487,14 @@ export default function Layout() {
           component is a no-op when no drafts exist and self-throttles
           via a per-session sessionStorage flag. */}
       <DraftRestorePrompt />
+
+      {/* Phase-46 / Prompt 70 — Cookie / GDPR consent banner. Renders
+          ONLY when the deployment opts in via TESLASYNC_REQUIRE_COOKIE_CONSENT
+          (default OFF on self-hosted installs) AND the user has not
+          recorded a decision. Mounted last so the bottom-of-screen
+          banner sits above every sticky surface but below modal
+          dialogs the user is interacting with. */}
+      <CookieConsentBanner />
       </div>
     </>
   )

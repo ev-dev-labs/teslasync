@@ -161,3 +161,11 @@ data:
   # presentation-only. Empty by default: SPA falls back to a
   # generic "your authentication provider" string.
   TESLASYNC_AUTH_PROVIDER_HINT: {{ default "" (and .Values.config .Values.config.authProviderHint) | quote }}
+  # Cookie / GDPR consent banner — Phase 46 / Prompt 70.
+  # Default "false": single-user self-hosted installs do not
+  # require a banner. Flip to "true" on multi-user fleet or
+  # public-facing deployments to comply with ePrivacy / GDPR.
+  # When true, the SPA renders a non-blocking bottom banner on
+  # first visit and gates optional client-side reporting (web
+  # vitals, error reporter) on the user's stored consent.
+  TESLASYNC_REQUIRE_COOKIE_CONSENT: {{ default false (and .Values.config .Values.config.requireCookieConsent) | quote }}

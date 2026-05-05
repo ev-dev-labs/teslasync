@@ -13,23 +13,35 @@ type Config struct {
 	LogLevel         string
 	CORSOrigins      string
 	VehiclePhotoDir  string
-	Database         DatabaseConfig
-	Tesla            TeslaConfig
-	MQTT             MQTTConfig
-	Worker           WorkerConfig
-	Redis            RedisConfig
-	Auth             AuthConfig
-	Retention        RetentionConfig
-	FleetTelemetry   FleetTelemetryConfig
-	MongoDB          MongoDBConfig
-	GasPrice         GasPriceConfig
-	OpenTelemetry    OpenTelemetryConfig
-	GoogleMaps       GoogleMapsConfig
-	AzureMaps        AzureMapsConfig
-	APILogs          APILogsConfig
-	WebPush          WebPushConfig
-	System           SystemConfig
-	GitHub           GitHubConfig
+	// RequireCookieConsent (Phase-46 / Prompt 70) opts the deployment
+	// into the GDPR / ePrivacy cookie-consent banner. Default false so
+	// the typical self-hosted single-user instance is unaffected — only
+	// fleet operators serving multiple EU drivers, or instances exposed
+	// publicly with analytics enabled, need to flip this to true.
+	//
+	// When true, the SPA renders a bottom-of-screen banner the first
+	// time a visitor lands on the page; client-side reporting (web
+	// vitals, error reporter) gates its POSTs on the user's stored
+	// consent. When false, all reporting flows unchanged and the
+	// banner never renders.
+	RequireCookieConsent bool
+	Database             DatabaseConfig
+	Tesla                TeslaConfig
+	MQTT                 MQTTConfig
+	Worker               WorkerConfig
+	Redis                RedisConfig
+	Auth                 AuthConfig
+	Retention            RetentionConfig
+	FleetTelemetry       FleetTelemetryConfig
+	MongoDB              MongoDBConfig
+	GasPrice             GasPriceConfig
+	OpenTelemetry        OpenTelemetryConfig
+	GoogleMaps           GoogleMapsConfig
+	AzureMaps            AzureMapsConfig
+	APILogs              APILogsConfig
+	WebPush              WebPushConfig
+	System               SystemConfig
+	GitHub               GitHubConfig
 }
 
 // GitHubConfig holds the credentials used by the optional GitHub Issues
@@ -285,6 +297,11 @@ func Load() (*Config, error) {
 		LogLevel:        envStr("TESLASYNC_LOG_LEVEL", "info"),
 		CORSOrigins:     envStr("CORS_ORIGINS", ""),
 		VehiclePhotoDir: envStr("TESLASYNC_VEHICLE_PHOTO_DIR", "/var/lib/teslasync/photos"),
+		// Phase-46 / Prompt 70 — default OFF so self-hosted installs
+		// keep working without a banner. Set TESLASYNC_REQUIRE_COOKIE_CONSENT=true
+		// only on multi-user / public-facing deployments where GDPR /
+		// ePrivacy compliance applies.
+		RequireCookieConsent: envBool("TESLASYNC_REQUIRE_COOKIE_CONSENT", false),
 
 		Database: DatabaseConfig{
 			Host:              envStr("DATABASE_HOST", "localhost"),

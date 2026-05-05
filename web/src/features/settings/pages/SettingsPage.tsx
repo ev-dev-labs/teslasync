@@ -47,6 +47,10 @@ import { ActiveSessionsSection } from '../components/ActiveSessionsSection'
 // rationale as above; the components barrel is outside the prompt's
 // allowed-files regex.
 import { ResetSection } from '../components/ResetSection'
+// Phase-46 / Prompt 70 — Privacy section (now expanded with cookie /
+// GDPR consent management). Direct import for the same barrel-scope
+// rationale.
+import { PrivacySection } from '../components/PrivacySection'
 
 export default function SettingsPage() {
   const { t } = useTranslation('settings')
@@ -156,6 +160,9 @@ export default function SettingsPage() {
       </section>
       <section id="advanced">
         <AdvancedSettings />
+      </section>
+      <section id="privacy">
+        <PrivacySection />
       </section>
       <section id="backup">
         <SettingsExportImport />

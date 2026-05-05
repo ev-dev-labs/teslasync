@@ -14,6 +14,7 @@
  */
 
 import { isRateLimitError, isUpstreamUnavailableError } from './resilience'
+import { isReportingAllowed } from './cookieConsent'
 
 const ENDPOINT = '/api/v1/web-errors'
 const COALESCE_WINDOW_MS = 60_000
@@ -69,6 +70,10 @@ interface ReporterState {
   // successfully-POSTed report is still attachable.
   feedbackRing: FeedbackErrorReport[]
   enabledOverride?: boolean
+  // Phase-46 / Prompt 70 — deployment-wide GDPR / ePrivacy gate.
+  // When true, isEnabled() short-circuits unless the user has
+  // explicitly accepted via the cookie consent banner.
+  requireCookieConsent: boolean
 }
 
 const state: ReporterState = {
@@ -76,6 +81,17 @@ const state: ReporterState = {
   buckets: new Map(),
   buffer: [],
   feedbackRing: [],
+  requireCookieConsent: false,
+}
+
+/**
+ * Phase-46 / Prompt 70 — push the deployment-wide consent requirement
+ * down into the reporter. Called from main.tsx once the
+ * `/system/version` query resolves. Mid-session flips are honored on
+ * the next captured error.
+ */
+export function setErrorReporterConsentRequirement(required: boolean): void {
+  state.requireCookieConsent = Boolean(required)
 }
 
 function isEnabled(): boolean {
@@ -83,7 +99,13 @@ function isEnabled(): boolean {
   // Web errors only get reported in production builds — dev errors come
   // from HMR reloads, StrictMode double-invokes, or work-in-progress
   // code that hasn't been pushed yet, all of which would create noise.
-  return Boolean(import.meta.env.PROD)
+  if (!import.meta.env.PROD) return false
+  // Phase-46 / Prompt 70 — when the deployment requires consent and
+  // the user has not yet accepted, suppress wire reporting. The
+  // feedback ring buffer is unaffected because it never leaves the
+  // browser; it is only consumed by the in-app feedback modal.
+  if (!isReportingAllowed(state.requireCookieConsent)) return false
+  return true
 }
 
 function isOffline(): boolean {
@@ -281,6 +303,11 @@ export function __resetErrorReporterForTests(): void {
   state.buffer.length = 0
   state.feedbackRing.length = 0
   state.enabledOverride = undefined
+  // Phase-46 / Prompt 70 — restore the legacy "consent not required"
+  // baseline so existing errorReporter tests continue to observe the
+  // unchanged behaviour. The cookie consent unit tests reset the
+  // localStorage gate independently in their own beforeEach.
+  state.requireCookieConsent = false
 }
 
 export function __setErrorReporterEnabledForTests(v: boolean | undefined): void {
