@@ -652,6 +652,10 @@ export default function AutomationBuilderPage() {
           >
             <UiSelect
               label={t('automations.builder.triggerType', 'Trigger Type')}
+              help={{
+                i18nKey: 'help.fields.automations.triggerType',
+                content: 'Decides when this automation starts: signal change, geofence enter/exit, time of day, charging event, or another automation completing.',
+              }}
               options={triggerOptions}
               value={selectedTrigger?.kind ?? ''}
               onChange={(event) => handleTriggerKindChange(event.target.value)}

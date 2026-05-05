@@ -3,7 +3,7 @@ import {
   useGasPriceStatus, usePollGasPrice,
   useToggleGasPrice, useUpdateGasPriceConfig,
 } from '@/api/hooks/useSettings'
-import { GlassPanel, Button, Select } from '@/components/ui'
+import { GlassPanel, Button, Select, HelpIcon } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { cn } from '@/lib/cn'
@@ -34,7 +34,13 @@ export function GasPriceSettings() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <SettingField label={t('gas.autoPoll', 'Auto-Poll')}>
+          <SettingField
+            label={t('gas.autoPoll', 'Auto-Poll')}
+            help={{
+              i18nKey: 'help.fields.settings.gasPriceAutoPoll',
+              for: 'gas-auto-poll',
+            }}
+          >
             <Button
               variant="ghost"
               onClick={() => {
@@ -54,17 +60,25 @@ export function GasPriceSettings() {
             </Button>
           </SettingField>
 
-          <Select
-            label={t('gas.pollInterval', 'Poll Interval')}
-            value={gasPriceStatus?.poll_interval || '7d'}
-            onChange={e => gasConfigMut.mutate(e.target.value, { onSuccess: () => toast.info(t('gas.intervalUpdated', 'Poll interval updated')) })}
-            options={[
-              { value: 'daily', label: t('gas.daily', 'Daily') },
-              { value: '7d', label: t('gas.weekly', 'Weekly') },
-              { value: '15d', label: t('gas.biweekly', 'Bi-weekly') },
-              { value: '30d', label: t('gas.monthly', 'Monthly') },
-            ]}
-          />
+          <div>
+            <Select
+              label={t('gas.pollInterval', 'Poll Interval')}
+              value={gasPriceStatus?.poll_interval || '7d'}
+              onChange={e => gasConfigMut.mutate(e.target.value, { onSuccess: () => toast.info(t('gas.intervalUpdated', 'Poll interval updated')) })}
+              options={[
+                { value: 'daily', label: t('gas.daily', 'Daily') },
+                { value: '7d', label: t('gas.weekly', 'Weekly') },
+                { value: '15d', label: t('gas.biweekly', 'Bi-weekly') },
+                { value: '30d', label: t('gas.monthly', 'Monthly') },
+              ]}
+            />
+            <div className="mt-1">
+              <HelpIcon
+                i18nKey="help.fields.settings.gasPricePollInterval"
+                for="gas-poll-interval"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

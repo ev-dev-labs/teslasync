@@ -1,9 +1,16 @@
 import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { Label } from './Label';
+import { HelpIcon, type HelpIconProps } from './HelpIcon';
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string;
+  /**
+   * Optional `<HelpIcon>` rendered immediately after the label. The
+   * HelpIcon's `for` defaults to the input's resolved id so screen
+   * readers announce "Help for {{id}}" when the trigger is focused.
+   */
+  help?: Omit<HelpIconProps, 'for'> & { for?: string };
   error?: string;
   hint?: string;
   icon?: ReactNode;
@@ -26,18 +33,21 @@ const sizeClasses: Record<NonNullable<InputProps['size']>, string> = {
 };
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, icon, suffix, size = 'md', className, id, required, ...props }, ref) => {
+  ({ label, help, error, hint, icon, suffix, size = 'md', className, id, required, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
     return (
       <div className="space-y-1">
         {label && (
-          <Label
-            htmlFor={inputId}
-            required={required}
-            className="text-sm font-medium text-[var(--text-secondary)]"
-          >
-            {label}
-          </Label>
+          <div className="flex items-center gap-1">
+            <Label
+              htmlFor={inputId}
+              required={required}
+              className="text-sm font-medium text-[var(--text-secondary)]"
+            >
+              {label}
+            </Label>
+            {help && <HelpIcon {...help} for={help.for ?? inputId} />}
+          </div>
         )}
         <div className="relative">
           {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">{icon}</span>}

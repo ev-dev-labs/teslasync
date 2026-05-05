@@ -12,6 +12,7 @@ export { Slider, type SliderProps } from './Slider';
 export { RangeSlider, type RangeSliderProps } from './RangeSlider';
 export { Tooltip, type TooltipProps } from './Tooltip';
 export { HelpTooltip, type HelpTooltipProps } from './HelpTooltip';
+export { HelpIcon, type HelpIconProps } from './HelpIcon';
 export { PinButton, type PinButtonProps } from './PinButton';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
 export { IconBox } from './IconBox';

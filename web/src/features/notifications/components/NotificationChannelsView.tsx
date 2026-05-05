@@ -12,7 +12,7 @@ import {
   Megaphone, Smartphone, CheckCircle, XCircle, Pencil, TestTube,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Badge, Button, GlassPanel, Input, Modal, Toggle } from '@/components/ui';
+import { Badge, Button, GlassPanel, HelpIcon, Input, Modal, Toggle } from '@/components/ui';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
@@ -28,6 +28,57 @@ import type {
   NotificationChannelKind,
 } from '@/api/types';
 import { BrowserPushChannelCard } from './BrowserPushChannelCard';
+
+const FIELD_HELP: Record<string, { i18nKey: string; content: string }> = {
+  webhook_url: {
+    i18nKey: 'help.fields.channels.webhookUrl',
+    content: 'Full HTTPS endpoint that receives JSON-formatted alert payloads. Treat as a credential — anyone with this URL can post to your channel.',
+  },
+  bot_token: {
+    i18nKey: 'help.fields.channels.botToken',
+    content: 'Bot API credential issued by the messaging provider. Stored encrypted at rest; rotate immediately if leaked.',
+  },
+  chat_id: {
+    i18nKey: 'help.fields.channels.chatId',
+    content: 'Numeric ID of the conversation that should receive alerts. Group chats are negative; DMs are positive.',
+  },
+  smtp_host: {
+    i18nKey: 'help.fields.channels.smtpHost',
+    content: 'SMTP server hostname (no protocol prefix). Common providers: smtp.gmail.com, smtp.sendgrid.net, smtp.mailgun.org.',
+  },
+  smtp_port: {
+    i18nKey: 'help.fields.channels.smtpPort',
+    content: 'SMTP submission port. Use 587 for STARTTLS (most providers) or 465 for implicit TLS.',
+  },
+  smtp_password: {
+    i18nKey: 'help.fields.channels.smtpPassword',
+    content: 'SMTP password or app-specific password. Stored encrypted at rest. Many providers (Gmail, Microsoft 365) require an app password rather than your account password.',
+  },
+  url: {
+    i18nKey: 'help.fields.channels.webhookUrl',
+    content: 'Full HTTPS endpoint that receives JSON-formatted alert payloads. Treat as a credential — anyone with this URL can post to your channel.',
+  },
+  method: {
+    i18nKey: 'help.fields.channels.method',
+    content: 'HTTP method TeslaSync uses to deliver the payload. POST is the conventional choice; PUT/PATCH are supported for systems that require them.',
+  },
+  headers: {
+    i18nKey: 'help.fields.channels.headersJson',
+    content: 'Optional JSON object of extra headers to send with each delivery, e.g. {"Authorization": "Bearer abc123"}. Must be valid JSON.',
+  },
+  body_template: {
+    i18nKey: 'help.fields.channels.bodyTemplate',
+    content: 'Mustache-style template controlling the request body. Use {{message}}, {{title}}, {{severity}}, {{vehicle_name}} placeholders.',
+  },
+  server_url: {
+    i18nKey: 'help.fields.channels.ntfyServer',
+    content: 'Base URL of the ntfy server. Use https://ntfy.sh for the public free tier or your self-hosted instance.',
+  },
+  topic: {
+    i18nKey: 'help.fields.channels.ntfyTopic',
+    content: 'Topic name (channel) on the ntfy server. Anyone subscribed to this topic receives the alerts.',
+  },
+};
 
 const CHANNEL_TYPES = [
   { value: 'discord', label: 'Discord', icon: Hash, color: '#5865F2', fields: [
@@ -247,25 +298,43 @@ function ChannelFormModal({ channel, onClose, onSaved }: {
 
             <Input
               label={t('notifications.channels.nameLabel', 'Channel Name')}
+              help={{
+                i18nKey: 'help.fields.channels.nameLabel',
+                content: 'Friendly identifier shown in the channel list and on alert delivery logs. Has no functional impact — pick anything memorable.',
+              }}
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder={`${t('notifications.channels.namePlaceholderPrefix', 'My')} ${meta.label}`}
             />
 
             <div className="space-y-3">
-              <span className="block text-xs font-medium text-[var(--text-secondary)]">
+              <span className="flex items-center gap-1 text-xs font-medium text-[var(--text-secondary)]">
                 {meta.label} {t('notifications.channels.configLabel', 'Configuration')}
+                <HelpIcon
+                  i18nKey="help.fields.channels.configSection"
+                  content="Provider-specific credentials and routing details. Required fields vary by channel type. All secrets are encrypted at rest."
+                  for={`channel-config-${meta.value}`}
+                />
               </span>
               {meta.fields.map(f => (
                 <Input
                   key={f.key}
                   label={f.label}
+                  help={FIELD_HELP[f.key]}
                   type={f.type === 'password' ? 'password' : 'text'}
                   value={config[f.key] ?? ''}
                   onChange={e => setConfig({ ...config, [f.key]: e.target.value })}
                   placeholder={f.placeholder}
                 />
               ))}
+              <p className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+                <HelpIcon
+                  i18nKey="help.fields.channels.testHint"
+                  content='Use the "Send Test" button after saving to verify your configuration. Tests bypass severity filters but otherwise match real delivery.'
+                  for={`channel-test-${meta.value}`}
+                />
+                {t('notifications.channels.testHint', 'Save then click "Send Test" to verify the configuration.')}
+              </p>
             </div>
 
             <Toggle

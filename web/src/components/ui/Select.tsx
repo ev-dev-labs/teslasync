@@ -1,6 +1,7 @@
 import { forwardRef, type SelectHTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
 import { Label } from './Label';
+import { HelpIcon, type HelpIconProps } from './HelpIcon';
 
 export interface SelectOption {
   value: string;
@@ -11,6 +12,12 @@ export interface SelectOption {
 export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'children' | 'size'> {
   options: SelectOption[];
   label?: string;
+  /**
+   * Optional `<HelpIcon>` rendered immediately after the label. The
+   * HelpIcon's `for` defaults to the select's resolved id so screen
+   * readers announce "Help for {{id}}" when the trigger is focused.
+   */
+  help?: Omit<HelpIconProps, 'for'> & { for?: string };
   error?: string;
   hint?: string;
   placeholder?: string;
@@ -30,18 +37,21 @@ const sizeClasses: Record<NonNullable<SelectProps['size']>, string> = {
 };
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ options, label, error, hint, placeholder, size = 'md', className, id, required, ...props }, ref) => {
+  ({ options, label, help, error, hint, placeholder, size = 'md', className, id, required, ...props }, ref) => {
     const selectId = id || label?.toLowerCase().replace(/\s+/g, '-');
     return (
       <div className="space-y-1">
         {label && (
-          <Label
-            htmlFor={selectId}
-            required={required}
-            className="text-sm font-medium text-[var(--text-secondary)]"
-          >
-            {label}
-          </Label>
+          <div className="flex items-center gap-1">
+            <Label
+              htmlFor={selectId}
+              required={required}
+              className="text-sm font-medium text-[var(--text-secondary)]"
+            >
+              {label}
+            </Label>
+            {help && <HelpIcon {...help} for={help.for ?? selectId} />}
+          </div>
         )}
         <select
           ref={ref}

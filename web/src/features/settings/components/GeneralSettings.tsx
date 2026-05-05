@@ -336,7 +336,14 @@ export function GeneralSettings() {
                 </p>
               </SettingField>
 
-              <SettingField label={t('app.electricityCost', 'Electricity Cost (per kWh)')}>
+              <SettingField
+                label={t('app.electricityCost', 'Electricity Cost (per kWh)')}
+                help={{
+                  i18nKey: 'help.fields.settings.electricityCost',
+                  content: 'Cost per kWh used to compute charging spend across drives, charging sessions, and TCO analytics. Currency follows the Currency setting above.',
+                  for: 'electricity-cost',
+                }}
+              >
                 <CurrencyInput
                   ariaLabel={t('app.electricityCost', 'Electricity Cost (per kWh)')}
                   currency={symbolToIsoCode(form.currency_symbol)}

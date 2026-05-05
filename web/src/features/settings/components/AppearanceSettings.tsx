@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { GlassPanel, IconBox, ThemePicker, Toggle, Button } from '@/components/ui'
+import { GlassPanel, IconBox, ThemePicker, Toggle, Button, HelpIcon } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { useSettings, useSaveSettings } from '@/api/hooks/useSettings'
@@ -131,6 +131,10 @@ export function AppearanceSettings() {
             <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
               {t('theme.density.label', 'Information density')}
             </p>
+            <HelpIcon
+              i18nKey="help.fields.settings.appearanceDensity"
+              for="appearance-density"
+            />
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {densityChoices.map(choice => {
@@ -221,6 +225,10 @@ export function AppearanceSettings() {
             <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
               {t('theme.timeFormat.label', 'Default time format')}
             </p>
+            <HelpIcon
+              i18nKey="help.fields.settings.timeFormat"
+              for="time-format"
+            />
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {timeFormatChoices.map(choice => {
@@ -261,6 +269,10 @@ export function AppearanceSettings() {
             <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
               {t('theme.chartPalette.label', 'Chart palette')}
             </p>
+            <HelpIcon
+              i18nKey="help.fields.settings.chartPalette"
+              for="chart-palette"
+            />
           </div>
           <div
             className="grid grid-cols-1 gap-3 sm:grid-cols-2"

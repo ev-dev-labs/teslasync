@@ -266,6 +266,10 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
           ) : (
             <UiInput
               label={t('automations.builder.cronExpr', 'Cron Expression')}
+              help={{
+                i18nKey: 'help.fields.automations.cronExpr',
+                content: 'Standard 5-field cron syntax (minute hour day-of-month month day-of-week). Use the simple mode above for the most common schedules.',
+              }}
               value={trigger.cron_expr}
               onChange={(event) => onChange({ ...trigger, cron_expr: event.target.value })}
               placeholder={t('automations.builder.cronPlaceholder', '0 8 * * 1-5')}
@@ -343,6 +347,10 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
           {trigger.event === 'dwell' && (
             <UiInput
               label={t('automations.builder.dwellMinutes', 'Dwell Minutes')}
+              help={{
+                i18nKey: 'help.fields.automations.dwellMinutes',
+                content: 'How many minutes the vehicle must stay inside the geofence before this dwell trigger fires.',
+              }}
               type="number"
               min={1}
               max={60}

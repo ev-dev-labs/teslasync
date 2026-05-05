@@ -84,6 +84,60 @@
       "socRange": "The starting and ending state-of-charge percentages for this session. Wider ranges generally mean longer sessions and more taper.",
       "chargeCurve": "Power vs SoC curve for the session. Tapering — the gradual drop in power as the battery approaches full — is inherent to lithium chemistry and is not a fault. Sudden drops below the curve indicate derating: the charger or battery is throttling power because of cell or ambient temperature limits.",
       "kwhPerHour": "Average kWh added per hour across the session. Useful for estimating how long a future session will take at the same charger."
+    },
+    "fields": {
+      "settings": {
+        "region": "Tesla account region (NA, EU, CN). Determines which Fleet API endpoint TeslaSync calls. Refresh after changing your Tesla account country.",
+        "gasPriceAutoPoll": "When enabled, TeslaSync automatically fetches U.S. average gasoline prices from the EIA. Used to compute fuel-savings vs. driving an EV.",
+        "gasPricePollInterval": "How often the gas-price worker polls the EIA. Daily catches price spikes; weekly is plenty for most users and is gentler on the upstream feed.",
+        "notificationChannels": "Where alert messages are delivered. Add channels (Discord, Slack, email, webhook, ntfy, Pushover, Telegram) before alerts can fire.",
+        "appearanceDensity": "Controls row height, padding, and font sizes across tables and dashboards. Compact fits more on screen; comfortable is easier to read on large displays.",
+        "chartPalette": "Colour scheme used for chart series. Vivid is the default high-contrast palette; muted reduces visual noise; print is grayscale-friendly for exports.",
+        "timeFormat": "12-hour (1:30 PM) vs 24-hour (13:30) display across timestamps. Affects all surfaces — drives, charging, alerts, telemetry charts.",
+        "uiTheme": "Light / dark / system theme. System follows your OS preference and switches automatically when your OS toggles between modes.",
+        "language": "Display language for UI strings. TeslaSync ships English; community translations may be incomplete for newer features.",
+        "weekStart": "First day of the week in calendar pickers and weekly aggregations. ISO 8601 default is Monday; many U.S. users prefer Sunday.",
+        "electricityCost": "Cost per kWh used to compute charging spend across drives, charging sessions, and TCO analytics. Currency follows the Currency setting above."
+      },
+      "alertStudio": {
+        "cooldown": "Minimum minutes between repeat firings of this rule. Prevents the same condition from spamming your channels (e.g. battery at 19% triggering once per minute).",
+        "severity": "Visual / routing priority — info, warn, or critical. Channels can subscribe to specific severities to keep critical alerts from being drowned out by chatty info ones.",
+        "triggerMode": "Repeat fires every cooldown while the condition stays true; once fires the first time and waits for the condition to reset to false before it can fire again.",
+        "kind": "Signal threshold compares a single live telemetry value (e.g. BatteryLevel < 20). Computed metric aggregates over a time window (e.g. cost > $5 in last 24h).",
+        "vehicleId": "Restricts the rule to a single vehicle. Leave blank to apply across every vehicle on the account.",
+        "operator": "Comparison applied to the signal value: =, !=, <, <=, >, >=, between, any change. Some operators only apply to numeric signals.",
+        "testMessage": "Message body sent when the rule fires. Use {{SignalName}} placeholders to interpolate the current value into the notification."
+      },
+      "automations": {
+        "triggerType": "What kicks the automation off — a time schedule, a signal threshold crossing, a geofence enter/exit, or another automation completing.",
+        "operator": "How the trigger or condition value is compared (=, !=, <, >, between, etc.). Numeric operators are only available for numeric signals.",
+        "conditionLogic": "When multiple conditions are configured, ALL must pass (AND) or ANY must pass (OR) for the actions to run.",
+        "debounce": "Minimum milliseconds between consecutive runs of this automation. Protects against duplicate triggers when a signal flickers across the threshold.",
+        "geofence": "A named circular region defined in /locations. Automations can react when the vehicle enters or exits the region.",
+        "timeWindow": "Time-of-day range (e.g. 22:00–06:00) and timezone. The condition only passes during that window in the chosen timezone.",
+        "otherAutomation": "Make this automation depend on another automation's recent state — e.g. only run if 'Morning prep' has not run today.",
+        "signal": "The vehicle telemetry signal this condition reads. Booleans use true/false, 'state' uses keywords like online/asleep, all others compare numeric values.",
+        "cronExpr": "Standard 5-field cron syntax (minute hour day-of-month month day-of-week). Use the simple mode above for the most common schedules.",
+        "timezone": "IANA time zone used to interpret the start/end window. Defaults to your browser zone if left blank.",
+        "dwellMinutes": "How many minutes the vehicle must stay inside the geofence before this dwell trigger fires."
+      },
+      "channels": {
+        "webhookUrl": "Full HTTPS URL TeslaSync POSTs the JSON body to. Discord and Slack provide their own webhook endpoints; for custom services use the generic Webhook channel.",
+        "hmacSecret": "Optional shared secret. When set, TeslaSync signs every request with HMAC-SHA256 in the X-TeslaSync-Signature header so receivers can verify authenticity.",
+        "headersJson": "Extra HTTP headers as a JSON object — e.g. {\"Authorization\": \"Bearer XYZ\"}. Useful for receivers that require API keys outside the URL.",
+        "bodyTemplate": "Optional JSON template for the request body. Use {{message}}, {{severity}}, {{timestamp}} placeholders. If omitted, TeslaSync sends its default JSON envelope.",
+        "smtpHost": "Mail server hostname (e.g. smtp.gmail.com). Most providers use port 587 with STARTTLS; check your provider's docs for the right host + port pair.",
+        "smtpPort": "SMTP server port. 587 for STARTTLS (recommended), 465 for implicit TLS, 25 for plain (insecure — only on local relays).",
+        "smtpPassword": "SMTP password or app-specific password. Stored encrypted at rest. Many providers (Gmail, Microsoft 365) require an app password rather than your account password.",
+        "botToken": "Telegram BotFather token in the format `<id>:<secret>`. Create a bot via @BotFather on Telegram, then start a chat with it before TeslaSync can deliver.",
+        "chatId": "Numeric Telegram chat ID. For a private bot chat this is your user ID; for a group it's negative (e.g. -1001234567890).",
+        "ntfyServer": "Base URL of the ntfy server (e.g. https://ntfy.sh for the public server, or your self-hosted instance).",
+        "ntfyTopic": "Topic name on the ntfy server. Anyone with the topic name can subscribe — pick something hard to guess for sensitive alerts.",
+        "method": "HTTP method TeslaSync uses for outbound delivery. POST is universal; some receivers require PUT or PATCH.",
+        "nameLabel": "Friendly identifier shown in the channel list and on alert delivery logs. Has no functional impact — pick anything memorable.",
+        "configSection": "Provider-specific credentials and routing details. Required fields vary by channel type. All secrets are encrypted at rest.",
+        "testHint": "Use the \"Send Test\" button after saving to verify your configuration. Tests bypass severity filters but otherwise match real delivery."
+      }
     }
   },
   "date": {
@@ -1621,7 +1675,8 @@
     "openCommandPalette": "Open command palette",
     "openSettings": "Open settings",
     "dataFreshness": "Data freshness: {{state}}",
-    "chartFigure": "Chart: {{title}}"
+    "chartFigure": "Chart: {{title}}",
+    "helpFor": "Help for {{field}}"
   },
   "table": {
     "selection": {
