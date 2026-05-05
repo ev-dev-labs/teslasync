@@ -568,6 +568,32 @@ export interface NotificationLog {
   archived_at?: string | null
 }
 
+// Phase-46 / Prompt 27 — server-aggregated notification "thread".
+//
+// A group represents repeated deliveries of the same alert rule + severity
+// (the canonical key is `sha256(alert_rule_id + "|" + severity_lc)`).
+// Singleton rows — anything without a derivable group_key (NULL alert_id,
+// blank severity, or fully ad-hoc notifications) — are returned as
+// one-row groups with `group_key = null`.
+//
+// `count` and `unread_count` reflect the FILTERED subset that was sent
+// to /notifications/logs?grouped=true; e.g. `read=false` makes
+// `count == unread_count`. The frontend should render the count chip
+// without implying it's a global tally.
+//
+// `vehicle_ids` is `array_remove(array_agg(DISTINCT alert_rules.vehicle_id), NULL)`
+// so it can be empty when every member belonged to a vehicle-less rule.
+//
+// Members are NOT inlined — clients fetch them on expand via
+// /notifications/logs?group_key=<group_key>&view=flat.
+export interface NotificationLogGroup {
+  group_key: string | null
+  latest: NotificationLog
+  count: number
+  unread_count: number
+  vehicle_ids: number[]
+}
+
 // Phase-46 / Prompt 19 — Do-Not-Disturb / quiet hours window.
 // Server-backed CRUD lives at /api/v1/notifications/quiet-hours.
 // Times are local-clock HH:MM strings, evaluated against `timezone`

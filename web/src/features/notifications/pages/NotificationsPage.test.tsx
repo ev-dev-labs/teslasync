@@ -123,7 +123,7 @@ function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/notifications']}>
+      <MemoryRouter initialEntries={['/notifications?view=flat']}>
         <SelectedVehicleProvider>
           <ToastProvider>
             <NotificationsPage />

@@ -5625,6 +5625,31 @@
       "action": "Mark all read",
       "success": "All notifications marked as read"
     },
+    "view": {
+      "label": "View",
+      "grouped": "Grouped",
+      "flat": "Flat"
+    },
+    "group": {
+      "expand": "Show {{count}} similar",
+      "expand_one": "Show 1 similar",
+      "expand_other": "Show {{count}} similar",
+      "collapse": "Hide similar",
+      "similar": "+{{count}} similar",
+      "similar_one": "+1 similar",
+      "similar_other": "+{{count}} similar",
+      "markRead": "Mark group read",
+      "markReadSuccess": "Marked {{count}} thread members as read",
+      "markReadError": "Could not mark group as read",
+      "vehicleAffected": "{{count}} vehicle affected",
+      "vehicleAffected_one": "{{count}} vehicle affected",
+      "vehicleAffected_other": "{{count}} vehicles affected",
+      "loadingMembers": "Loading thread members…",
+      "membersError": "Could not load thread members",
+      "noMembers": "No thread members found",
+      "emptyTitle": "No notification threads",
+      "emptyMessage": "When alert rules fire repeatedly, related notifications will be grouped here."
+    },
     "stats": {
       "sent": "Total Sent",
       "failed": "Failed",

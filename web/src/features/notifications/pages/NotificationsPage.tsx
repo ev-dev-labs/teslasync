@@ -25,7 +25,8 @@
 
 import { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Archive, ArchiveRestore, Bell, MailOpen, Trash2, CheckCheck } from 'lucide-react';
+import { Archive, ArchiveRestore, Bell, MailOpen, Trash2, CheckCheck, Layers, List } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { PageContainer } from '@/components/layout';
 import { Button, GlassPanel, TabNav } from '@/components/ui';
 import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
@@ -41,6 +42,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import {
   useAlertRules,
   useNotificationLogs,
+  useNotificationGroups,
   useArchiveNotifications,
   useUnarchiveNotifications,
   useMarkNotificationsRead,
@@ -52,6 +54,7 @@ import {
 import type { NotificationLog, AlertRule, Vehicle } from '@/api/types';
 import { NotificationFilterBar } from '../components/NotificationFilterBar';
 import { NotificationRow } from '../components/NotificationRow';
+import { NotificationGroupRow } from '../components/NotificationGroupRow';
 import { NotificationChannelsView } from '../components/NotificationChannelsView';
 import { PullToRefresh, SwipeRow } from '@/components/mobile';
 
@@ -64,6 +67,13 @@ type SeverityValue = (typeof SEVERITY_VALUES)[number];
 
 const READ_VALUES = ['all', 'read', 'unread'] as const;
 type ReadValue = (typeof READ_VALUES)[number];
+
+// Phase-46 / Prompt 27 — grouped/threaded vs flat inbox view. Default
+// is grouped because power users with many alert rules drown in flat
+// duplicates; flat remains available for the historical workflow and
+// for users who want to see every individual delivery.
+const VIEW_VALUES = ['grouped', 'flat'] as const;
+type ViewValue = (typeof VIEW_VALUES)[number];
 
 const PREF_MARK_ON_OPEN = 'teslasync.notifications.markOnOpen';
 const PREF_MARK_ON_CLICK = 'teslasync.notifications.markOnClick';
@@ -139,7 +149,11 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const [readState] = useUrlEnum<ReadValue>('read', READ_VALUES, 'all');
   const [from] = useUrlString('from', '');
   const [to] = useUrlString('to', '');
+  // Phase-46 / Prompt 27 — view mode is URL-backed too so a deep link can
+  // express "Inbox, grouped" vs "Inbox, flat" independent of filter state.
+  const [view, setView] = useUrlEnum<ViewValue>('view', VIEW_VALUES, 'grouped');
   const setFiltersBatch = useUrlBatch();
+  const isGrouped = view === 'grouped' && !archived;
 
   // Sanitize unknown severity values so a hand-edited URL can't corrupt the
   // request payload.
@@ -188,8 +202,19 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     });
   }, [setFiltersBatch]);
 
-  const { data: rawRows, isLoading, error, refetch } = useNotificationLogs(filters);
+  const { data: rawRows, isLoading, error, refetch } = useNotificationLogs(filters, { enabled: !isGrouped });
   const rows = useMemo<NotificationLog[]>(() => rawRows ?? [], [rawRows]);
+
+  // Phase-46 / Prompt 27 — grouped/threaded fetch. Only enabled in
+  // grouped mode AND on the inbox tab (archived doesn't group; the
+  // archive workflow is row-by-row triage).
+  const {
+    data: rawGroups,
+    isLoading: groupsLoading,
+    error: groupsError,
+    refetch: groupsRefetch,
+  } = useNotificationGroups(filters, { enabled: isGrouped });
+  const groups = useMemo(() => rawGroups ?? [], [rawGroups]);
 
   const ruleMap = useMemo<Record<number, AlertRule>>(() => {
     const m: Record<number, AlertRule> = {};
@@ -211,10 +236,13 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const toast = useToast();
   const { announce } = useAnnouncer();
 
-  // Auto-mark-read on inbox open (only on the Inbox tab, not Archived).
+  // Auto-mark-read on inbox open (only on the Inbox tab, flat view; in
+  // grouped view this would dismiss every thread head and defeat the
+  // purpose of the user-driven "Mark group read" affordance).
   const autoMarkedRef = useRef(false);
   useEffect(() => {
     if (archived) return;
+    if (isGrouped) return;
     if (autoMarkedRef.current) return;
     if (isLoading) return;
     if (!readPref(PREF_MARK_ON_OPEN)) return;
@@ -222,7 +250,7 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     if (unread.length === 0) return;
     autoMarkedRef.current = true;
     markReadMut.mutate(unread);
-  }, [archived, isLoading, rows, markReadMut]);
+  }, [archived, isLoading, rows, markReadMut, isGrouped]);
 
   // Phase-45 / Prompt 32 — generic bulk-selection helper replaces the
   // hand-rolled Set<number> state from Phase-45 / 28. The hook owns the
@@ -389,7 +417,7 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   };
 
   return (
-    <PullToRefresh onRefresh={async () => { await refetch(); }}>
+    <PullToRefresh onRefresh={async () => { await (isGrouped ? groupsRefetch() : refetch()); }}>
     <div className="space-y-4">
       <FadeIn>
         <NotificationFilterBar
@@ -415,26 +443,75 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
         {/* Select-all row + Mark-all-read header action. The header action
             sits opposite the count so it stays out of the way of the
             primary checkbox affordance and only reveals itself on the
-            inbox tab when there's something to mark. */}
+            inbox tab when there's something to mark.
+            Phase-46/27 — when in grouped mode, the per-row select-all
+            checkbox is hidden because group rows aren't individually
+            selectable; the user toggles the view first to bulk-select. */}
         <div className="mb-2 flex items-center gap-3 px-1 pb-2 border-b border-white/[0.04]">
-          <input
-            type="checkbox"
-            checked={allVisibleSelected}
-            onChange={e => (e.target.checked ? selectAllVisible() : clearSelection())}
-            aria-label={t('notifications.inbox.selectAll', 'Select all visible')}
-            className="h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
-          />
+          {!isGrouped && (
+            <input
+              type="checkbox"
+              checked={allVisibleSelected}
+              onChange={e => (e.target.checked ? selectAllVisible() : clearSelection())}
+              aria-label={t('notifications.inbox.selectAll', 'Select all visible')}
+              className="h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
+            />
+          )}
           <span className="text-xs text-[var(--text-muted)]">
-            {t('notifications.inbox.countLabel', '{{count}} notifications', { count: rows.length })}
+            {isGrouped
+              ? t('notifications.inbox.countLabel', '{{count}} notifications', { count: groups.length })
+              : t('notifications.inbox.countLabel', '{{count}} notifications', { count: rows.length })}
           </span>
-          {!archived && unreadCount > 0 && (
+          {!archived && (
+            <div
+              className="ml-auto flex items-center gap-1 rounded-full border border-white/[0.06] bg-white/[0.02] p-0.5"
+              role="group"
+              aria-label={t('notifications.view.label', 'View')}
+            >
+              <button
+                type="button"
+                onClick={() => setView('grouped')}
+                aria-pressed={view === 'grouped'}
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs',
+                  view === 'grouped'
+                    ? 'bg-cyan-400/15 text-cyan-200'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
+                )}
+                data-testid="view-toggle-grouped"
+              >
+                <Layers className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">
+                  {t('notifications.view.grouped', 'Grouped')}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('flat')}
+                aria-pressed={view === 'flat'}
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs',
+                  view === 'flat'
+                    ? 'bg-cyan-400/15 text-cyan-200'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
+                )}
+                data-testid="view-toggle-flat"
+              >
+                <List className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">
+                  {t('notifications.view.flat', 'Flat')}
+                </span>
+              </button>
+            </div>
+          )}
+          {!archived && !isGrouped && unreadCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
               onClick={handleMarkAllRead}
               disabled={bulkMarkReadMut.isPending}
               icon={<CheckCheck className="h-3.5 w-3.5" />}
-              className="ml-auto text-xs"
+              className="text-xs"
               aria-label={t('notifications.markAllRead.action', 'Mark all read')}
             >
               {t('notifications.markAllRead.action', 'Mark all read')}
@@ -442,13 +519,15 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           )}
         </div>
 
-        {isLoading && (
+        {/* Loading / error / empty states — branched so the right cache
+            and error message surface for whichever view is active. */}
+        {((isGrouped && groupsLoading) || (!isGrouped && isLoading)) && (
           <div className="space-y-2">
             {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-14" />)}
           </div>
         )}
 
-        {!isLoading && error && (
+        {!isGrouped && !isLoading && error && (
           <EmptyState
             icon={<Bell className="h-8 w-8" />}
             title={t('notifications.inbox.error.title', 'Could not load notifications')}
@@ -460,7 +539,22 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           />
         )}
 
-        {!isLoading && !error && grouped.length === 0 && (
+        {isGrouped && !groupsLoading && groupsError && (
+          <EmptyState
+            icon={<Bell className="h-8 w-8" />}
+            title={t('notifications.inbox.error.title', 'Could not load notifications')}
+            message={String(groupsError)}
+            action={{
+              label: t('common.retry', 'Retry'),
+              onClick: () => { void groupsRefetch(); },
+            }}
+          />
+        )}
+
+        {/* Empty state — flat-mode uses the day-grouped buckets; grouped
+            mode uses the bare groups array. Both surface the same i18n
+            empty copy so the "no rules configured" CTA reads the same. */}
+        {!isGrouped && !isLoading && !error && grouped.length === 0 && (
           <EmptyState
             icon={<Bell className="h-8 w-8" />}
             title={archived
@@ -476,7 +570,23 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           />
         )}
 
-        {!isLoading && !error && grouped.length > 0 && (
+        {isGrouped && !groupsLoading && !groupsError && groups.length === 0 && (
+          <EmptyState
+            icon={<Bell className="h-8 w-8" />}
+            title={t('notifications.group.emptyTitle', 'No notification threads')}
+            message={t('notifications.group.emptyMessage', 'When alert rules fire repeatedly, related notifications will be grouped here.')}
+            actionTo={{
+              label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
+              to: '/alert-studio',
+            }}
+          />
+        )}
+
+        {/* Body render — flat mode keeps the day-bucket grouping and bulk
+            selection affordances; grouped mode renders one
+            NotificationGroupRow per thread without day buckets (threads
+            already aggregate across time). */}
+        {!isGrouped && !isLoading && !error && grouped.length > 0 && (
           <div className="space-y-4">
             {grouped.map(group => (
               <div key={group.day}>
@@ -521,6 +631,25 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
                   ))}
                 </div>
               </div>
+            ))}
+          </div>
+        )}
+
+        {isGrouped && !groupsLoading && !groupsError && groups.length > 0 && (
+          <div className="space-y-2" data-testid="notification-groups">
+            {groups.map((g, idx) => (
+              <NotificationGroupRow
+                key={g.group_key ?? `singleton:${g.latest.id}:${idx}`}
+                group={g}
+                ruleMap={ruleMap}
+                vehicleMap={vehicleMap}
+                filters={filters}
+                archived={archived}
+                onActivate={handleRowActivate}
+                onArchive={(id) => archiveMut.mutate([id])}
+                onMarkRead={(id) => markReadMut.mutate([id])}
+                onMarkUnread={(id) => markUnreadMut.mutate([id])}
+              />
             ))}
           </div>
         )}

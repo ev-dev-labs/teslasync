@@ -20,6 +20,7 @@ import type {
   ComputedMetricSummary,
   NotificationChannel,
   NotificationLog,
+  NotificationLogGroup,
   NotificationStats,
   QuietHoursWindow,
   QuietHoursWindowInput,
@@ -40,6 +41,7 @@ export type {
   ComputedMetricSummary,
   NotificationChannel,
   NotificationLog,
+  NotificationLogGroup,
   NotificationStats,
   QuietHoursWindow,
   QuietHoursWindowInput,
@@ -73,6 +75,13 @@ export const notificationKeys = {
   logs: ['notification-logs'] as const,
   logsFiltered: (filters?: NotificationFilters) =>
     ['notification-logs', 'filtered', filters ?? {}] as const,
+  // Phase-46 / Prompt 27 — grouped/threaded inbox. Sibling of `logsFiltered`
+  // so a same-filter swap between flat and grouped views doesn't fight the
+  // cache. Members of a single group reuse `logsFiltered` keyed on
+  // `{ group_key }` so the expand-row payload is automatically deduped
+  // with any concurrent flat-list query that targeted the same group.
+  groups: (filters?: NotificationFilters) =>
+    ['notification-logs', 'groups', filters ?? {}] as const,
   unreadCount: ['notification-logs', 'unread-count'] as const,
   stats: ['notification-stats'] as const,
   quietHours: ['notification-quiet-hours'] as const,
@@ -91,6 +100,10 @@ export interface NotificationFilters {
   read?: boolean;
   archived?: boolean;
   q?: string;
+  // Phase-46 / Prompt 27 — when set, restricts the flat list to members
+  // of a single notification thread. The backend validates this is a
+  // 64-char lower-hex sha256 and 400s otherwise.
+  group_key?: string;
   limit?: number;
   offset?: number;
 }
@@ -105,6 +118,7 @@ function serializeNotificationFilters(filters: NotificationFilters): string {
   if (typeof filters.read === 'boolean') params.set('read', String(filters.read));
   if (typeof filters.archived === 'boolean') params.set('archived', String(filters.archived));
   if (filters.q) params.set('q', filters.q);
+  if (filters.group_key) params.set('group_key', filters.group_key);
   if (typeof filters.limit === 'number') params.set('limit', String(filters.limit));
   if (typeof filters.offset === 'number') params.set('offset', String(filters.offset));
   return params.toString();
@@ -494,7 +508,10 @@ export function useNotificationChannels() {
   });
 }
 
-export function useNotificationLogs(filters: NotificationFilters = {}) {
+export function useNotificationLogs(
+  filters: NotificationFilters = {},
+  options?: { enabled?: boolean },
+) {
   const qs = serializeNotificationFilters(filters);
   // GET /notifications/logs returns the same shape — backend `GetLogs` parses
   // the same query params for both `/notifications` and `/notifications/logs`
@@ -502,7 +519,71 @@ export function useNotificationLogs(filters: NotificationFilters = {}) {
   return useQuery({
     queryKey: notificationKeys.logsFiltered(filters),
     queryFn: ({ signal }) => request<NotificationLog[]>(`/notifications/logs${qs ? `?${qs}` : ''}`, { signal }),
+    enabled: options?.enabled ?? true,
     select: safeArray,
+  });
+}
+
+/**
+ * Phase-46 / Prompt 27 — fetch the inbox in grouped/threaded form.
+ *
+ * Server returns one row per `(alert_rule_id, severity)` thread plus one
+ * row per "singleton" (notifications without a derivable group_key). The
+ * `count` and `unread_count` reflect the FILTERED subset, NOT a global
+ * tally — UI should phrase the chip as "+N similar".
+ *
+ * Composing with `?group_key=` is a server-side error (the handler 400s),
+ * so this hook clears any group_key the caller might have left in the
+ * filters object before serializing. Mirrors the backend's mutual-
+ * exclusion contract so the cache key stays stable across `view` swaps.
+ */
+export function useNotificationGroups(
+  filters: NotificationFilters = {},
+  options?: { enabled?: boolean },
+) {
+  const sanitized: NotificationFilters = { ...filters };
+  delete sanitized.group_key;
+  const qs = serializeNotificationFilters(sanitized);
+  const tail = qs ? `&${qs}` : '';
+  return useQuery({
+    queryKey: notificationKeys.groups(sanitized),
+    queryFn: ({ signal }) =>
+      request<NotificationLogGroup[]>(`/notifications/logs?grouped=true${tail}`, { signal }),
+    enabled: options?.enabled ?? true,
+    select: safeArray,
+  });
+}
+
+/**
+ * Phase-46 / Prompt 27 — fetch the members of a single thread on expand.
+ *
+ * Reuses the flat list endpoint with `?group_key=…` so the response shape
+ * matches `useNotificationLogs` exactly and inline-render code paths can
+ * be shared. Disabled when `groupKey` is null/empty so the row's collapsed
+ * state doesn't trigger any network traffic.
+ *
+ * Inherits filters (severity/vehicle/from/to/etc.) from the parent inbox so
+ * the expanded list mirrors the same window the user is viewing — anything
+ * that didn't make it into the group's `count` won't show up here either.
+ */
+export function useGroupMembers(
+  groupKey: string | null | undefined,
+  filters: NotificationFilters = {},
+  options?: { enabled?: boolean },
+) {
+  const trimmed = (groupKey ?? '').trim();
+  const enabled = trimmed.length > 0 && (options?.enabled ?? true);
+  const merged: NotificationFilters = { ...filters, group_key: trimmed };
+  const qs = serializeNotificationFilters(merged);
+  return useQuery({
+    queryKey: enabled
+      ? notificationKeys.logsFiltered(merged)
+      : ['notification-logs', 'group-members', 'disabled'],
+    queryFn: ({ signal }) =>
+      request<NotificationLog[]>(`/notifications/logs${qs ? `?${qs}` : ''}`, { signal }),
+    enabled,
+    select: safeArray,
+    staleTime: STALE_TIMES.QUICK,
   });
 }
 
@@ -563,17 +644,21 @@ export function useMarkNotificationsRead() {
 /**
  * Phase-45 / 28 — bulk-mark-read with optional whole-inbox flag.
  *
- * Variants accepted (mirrors the relaxed backend contract):
+ * Variants accepted (mirrors the relaxed backend contract; mutually exclusive):
  *
- *   { ids: number[] }  → mark exactly those rows as read.
- *   { all: true }      → mark every currently-unread, non-archived row as read.
+ *   { ids: number[] }       → mark exactly those rows as read.
+ *   { all: true }           → mark every currently-unread, non-archived row as read.
+ *   { group_key: string }   → (Phase-46/27) mark every member of a thread as read.
  *
  * Differs from `useMarkNotificationsRead` in three ways:
- *   1. Accepts `{ ids?, all? }` — needed so the page can wire one mutation
- *      to both the bulk-selected toolbar button AND the "Mark all read"
- *      header action without juggling two separate hooks.
- *   2. Optimistic updater handles both shapes — when `all=true`, every
- *      unread row in every cached filtered list flips to read in one pass.
+ *   1. Accepts `{ ids? | all? | group_key? }` — needed so the page can wire one
+ *      mutation to the toolbar button, the "Mark all read" header action, AND
+ *      the per-thread "Mark group read" action without juggling separate hooks.
+ *   2. Optimistic updater handles `ids` and `all` shapes — for `group_key` it
+ *      skips the optimistic step (the cache doesn't store `group_key` on each
+ *      row, so we'd have to re-derive the sha256 client-side) and just relies
+ *      on the post-settle invalidation. Worst case: the row stays bold for one
+ *      refetch tick, which is acceptable given the action is explicit.
  *   3. Emits NO success/error toast of its own — the caller (NotificationsPage)
  *      shows a custom toast with an Undo action that fires the reverse
  *      mutation. Auto-emitting a generic success toast here would race
@@ -582,11 +667,16 @@ export function useMarkNotificationsRead() {
  * Failures still roll the optimistic update back via the helper's snapshot
  * machinery; the caller is responsible for surfacing the error to the user.
  */
+export type BulkMarkReadVars =
+  | { ids: number[]; all?: never; group_key?: never }
+  | { ids?: never; all: true; group_key?: never }
+  | { ids?: never; all?: never; group_key: string };
+
 export function useBulkMarkRead() {
   const qc = useQueryClient();
   return useOptimisticMutation<
     { updated: number },
-    { ids?: number[]; all?: boolean },
+    BulkMarkReadVars,
     NotificationLog[]
   >({
     mutationFn: (vars) =>
@@ -598,17 +688,34 @@ export function useBulkMarkRead() {
     queryKeys: [notificationKeys.logs],
     updater: (prev, vars) => {
       if (!prev) return prev;
+      // group_key path — no optimistic update because cached rows don't
+      // carry group_key. The post-settle invalidation refreshes both the
+      // flat list and the grouped/thread caches so the UI converges.
+      if ('group_key' in vars && vars.group_key) {
+        return prev;
+      }
       const now = new Date().toISOString();
-      if (vars.all) {
+      if ('all' in vars && vars.all) {
         return prev.map((n) => (n.read_at ? n : { ...n, read_at: now }));
       }
-      const idSet = new Set(vars.ids ?? []);
-      if (idSet.size === 0) return prev;
-      return prev.map((n) =>
-        idSet.has(n.id) && !n.read_at ? { ...n, read_at: now } : n,
-      );
+      if ('ids' in vars && vars.ids) {
+        const idSet = new Set(vars.ids);
+        if (idSet.size === 0) return prev;
+        return prev.map((n) =>
+          idSet.has(n.id) && !n.read_at ? { ...n, read_at: now } : n,
+        );
+      }
+      return prev;
     },
     broadcast: true,
+    onSuccess: (_data, vars) => {
+      // Group-key path skipped optimistic, so explicitly invalidate the
+      // grouped cache too — the flat-list invalidation is handled by
+      // queryKeys: [notificationKeys.logs] in the helper.
+      if ('group_key' in vars && vars.group_key) {
+        invalidateAndBroadcast(qc, { queryKey: notificationKeys.logs });
+      }
+    },
     onSettled: () => {
       // Unread-count badge is a sibling cache that the helper doesn't know
       // about — invalidate it explicitly so the bell badge eventually
