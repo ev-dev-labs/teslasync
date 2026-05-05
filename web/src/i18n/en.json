@@ -7794,5 +7794,23 @@
       "title": "Available payload variables",
       "intro": "Webhook receivers get a JSON envelope with these fields:"
     }
+  },
+  "rateLimitStatus": {
+    "title": "Rate-limit budgets",
+    "subtitle": "Live view of every server-side throttle that affects this TeslaSync deployment. Bars climb as the window fills; colour switches from green to amber at 50% and to red at 80%.",
+    "loading": "Loading rate-limit status…",
+    "error": "Could not load rate-limit status. Check API logs and try again.",
+    "empty": "No rate-limited resources are currently observed. Counters appear here once the API has handled at least one request.",
+    "refresh": "Refresh",
+    "lastUpdated": "Updated {{when}}",
+    "windowSeconds": "Last {{seconds}}s window",
+    "windowInstant": "Live snapshot",
+    "resetIn": "Refills in {{duration}}",
+    "usage": "{{current}} / {{limit}}",
+    "severity": {
+      "ok": "Healthy",
+      "warn": "Warning",
+      "critical": "Critical"
+    }
   }
 }

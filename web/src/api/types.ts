@@ -2338,3 +2338,33 @@ export interface TOTPSudoToken {
 export interface TOTPBackupCodesResponse {
   backup_codes: string[]
 }
+
+// === Rate-limit status (Phase-46 / Prompt 40) ===
+
+/** Single scope row returned by GET /api/v1/system/rate-limits. */
+export type RateLimitSeverity = 'ok' | 'warn' | 'critical'
+
+export interface ScopeBudget {
+  /** Stable scope identifier; see backend RateLimitScope* constants. */
+  id: string
+  /** Human-readable label rendered next to the bar. */
+  name: string
+  /** Observed usage in the same unit as `limit`. */
+  current: number
+  /** Per-window cap. */
+  limit: number
+  /** Sliding-window length in seconds. Zero means a token-bucket snapshot. */
+  window_seconds: number
+  /** Optional UTC instant at which the bucket fully refills. */
+  reset_at?: string | null
+  /** Colour band the panel renders. */
+  severity: RateLimitSeverity
+  /** Operator-facing footnote shown under the row. */
+  detail?: string
+}
+
+/** Envelope for GET /api/v1/system/rate-limits. */
+export interface RateLimitStatusResponse {
+  generated_at: string
+  scopes: ScopeBudget[]
+}

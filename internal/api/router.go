@@ -450,9 +450,31 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 	adminFeedbackHandler := NewAdminFeedbackHandler(userFeedbackRepo, cfg, db, githubBridge)
 
+	// Phase-46 / Prompt 40 — rate-limit status counters. Construct two
+	// sliding-window observers (one for every /api/v1 request, one
+	// scoped to writes only) and a handler that joins them with the
+	// Tesla client's bucket snapshot. Counters are attached as plain
+	// chi middleware below; the GET /system/rate-limits route reads
+	// from them on demand.
+	apiRequestCounter := platform.NewWindowCounter()
+	apiWriteCounter := platform.NewWindowCounter()
+	rateLimitHandler := NewRateLimitHandler(RateLimitHandlerConfig{
+		TeslaClient:  teslaClient,
+		APICounter:   apiRequestCounter,
+		WriteCounter: apiWriteCounter,
+	})
+
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
+		// Phase-46 / Prompt 40 — count every /api/v1 request and every
+		// write-method request before any rate-limit middleware so the
+		// status panel reflects raw load even when downstream limiters
+		// are rejecting traffic. Mounted BEFORE APICallLog so a panic
+		// inside log persistence doesn't leak counter state.
+		r.Use(apiRequestCounter.Middleware(nil))
+		r.Use(apiWriteCounter.Middleware(platform.WriteMethodFilter()))
+
 		// APICallLog middleware: persist every inbound /api/v1 request to
 		// api_call_logs (service="teslasync-api"). Mounted BEFORE
 		// ForwardAuthMiddleware so 401 responses from the auth layer are
@@ -1191,6 +1213,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			diagnosticHandler := NewDiagnosticHandler(db, teslaClient, mqttClient, opt.CacheStore, health, cfg)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).
 				Post("/diagnostic", diagnosticHandler.ServeHTTP)
+
+			// Phase-46 / Prompt 40 — Rate-limit status panel feed.
+			// Read-only; cheap (no DB / no Redis); polled every 30s
+			// by the admin status panel. Per-IP throttle still
+			// applies in case a misconfigured client busy-loops it.
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/rate-limits", rateLimitHandler.ServeHTTP)
 		})
 
 		// Per-user activity feed (Phase-40 / Prompt 49 — Recent Activity Discoverability).
