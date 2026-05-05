@@ -1551,8 +1551,14 @@
     "columns": {
       "button": "Columns",
       "menu": "Show or hide columns",
+      "menuReorder": "Reorder or hide columns",
       "heading": "Visible columns",
+      "headingReorder": "Columns",
       "showAll": "Show all",
+      "reset": "Reset",
+      "toggleColumn": "Show or hide {{col}}",
+      "moveUp": "Move {{col}} up",
+      "moveDown": "Move {{col}} down",
       "resizeLabel": "Resize column {{col}}"
     },
     "expand": {

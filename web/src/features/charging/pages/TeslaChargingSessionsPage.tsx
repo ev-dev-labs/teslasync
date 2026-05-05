@@ -433,7 +433,8 @@ export default function TeslaChargingSessionsPage() {
               onSort={handleSort}
               pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
               tableId="tesla-charging-sessions"
-              showColumnsMenu
+              columnVisibility
+              columnReorder
               stickyHeader
               maxHeight={600}
               selectable="multi"

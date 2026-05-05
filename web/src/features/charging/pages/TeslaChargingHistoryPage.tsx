@@ -416,7 +416,8 @@ export default function TeslaChargingHistoryPage() {
                   onSort={handleSort}
                   pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
                   tableId="tesla-charging-history"
-                  showColumnsMenu
+                  columnVisibility
+                  columnReorder
                   stickyHeader
                   maxHeight={600}
                   selectable="multi"

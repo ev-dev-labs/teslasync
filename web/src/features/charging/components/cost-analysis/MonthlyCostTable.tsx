@@ -118,6 +118,8 @@ export function MonthlyCostTable({ data }: MonthlyCostTableProps) {
           onSort={handleSort}
           compact
           pagination
+          columnVisibility
+          columnReorder
         />
       ) : (
         <div className="flex h-32 items-center justify-center text-sm text-[var(--text-muted)]">
