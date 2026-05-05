@@ -21,6 +21,7 @@ import { KeyboardShortcutsModal } from '../feedback/KeyboardShortcutsModal'
 import { FeedbackModal } from '../feedback/FeedbackModal'
 import { TourOverlay } from '../feedback/TourOverlay'
 import { ChangelogModal } from '../feedback/ChangelogModal'
+import { DraftRestorePrompt } from '../feedback/DraftRestorePrompt'
 import { TourLauncher } from '@/features/onboarding/TourLauncher'
 import {
   TOUR_START_EVENT,
@@ -1467,6 +1468,12 @@ export default function Layout() {
           once-per-24h after the OnboardingWizard, or on demand via the command
           palette ("What's new") and footer status bar version segment. */}
       <ChangelogModal />
+
+      {/* Phase-46 / Prompt 47 — surfaces unsaved form drafts after a
+          tab close, browser crash, PWA reload, or auth redirect. The
+          component is a no-op when no drafts exist and self-throttles
+          via a per-session sessionStorage flag. */}
+      <DraftRestorePrompt />
     </div>
   )
 }
