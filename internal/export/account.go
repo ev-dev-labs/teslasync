@@ -14,7 +14,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // processAccount produces a GDPR-style ZIP export with one CSV per allowed
@@ -22,7 +21,14 @@ import (
 // archive is generated entirely in memory; callers should stream it to the
 // client immediately to keep peak RSS bounded. Per-table row counts are
 // capped by MaxAccountRowsPerTable.
-func (p *Processor) processAccount(ctx context.Context, req *models.ExportJobRequest) (*ProcessResult, error) {
+//
+// When req.Columns is non-empty, the per-table CSV emission filters to the
+// intersection of the snapshot's columns and the requested allowlist —
+// per-table because account exports span tables with disjoint schemas, and
+// it would be hostile to fail a 30-table export when one column happens to
+// not exist in 28 of them. The manifest records the requested allowlist so
+// consumers can detect that the archive was filtered.
+func (p *Processor) processAccount(ctx context.Context, req *JobRequest) (*ProcessResult, error) {
 	if p.db == nil {
 		return nil, fmt.Errorf("processAccount: db is nil")
 	}
@@ -36,24 +42,26 @@ func (p *Processor) processAccount(ctx context.Context, req *models.ExportJobReq
 	}
 
 	manifest := struct {
-		ExportedAt     time.Time   `json:"exported_at"`
-		SchemaVersion  string      `json:"schema_version"`
-		Format         string      `json:"format"`
-		VehicleID      *int64      `json:"vehicle_id,omitempty"`
-		StartDate      *time.Time  `json:"start_date,omitempty"`
-		EndDate        *time.Time  `json:"end_date,omitempty"`
-		MaxRowsCap     int         `json:"max_rows_cap"`
-		Tables         []tableMeta `json:"tables"`
-		TotalRowCount  int         `json:"total_row_count"`
-		TotalSizeBytes int64       `json:"total_size_bytes"`
+		ExportedAt        time.Time   `json:"exported_at"`
+		SchemaVersion     string      `json:"schema_version"`
+		Format            string      `json:"format"`
+		VehicleID         *int64      `json:"vehicle_id,omitempty"`
+		StartDate         *time.Time  `json:"start_date,omitempty"`
+		EndDate           *time.Time  `json:"end_date,omitempty"`
+		MaxRowsCap        int         `json:"max_rows_cap"`
+		RequestedColumns  []string    `json:"requested_columns,omitempty"`
+		Tables            []tableMeta `json:"tables"`
+		TotalRowCount     int         `json:"total_row_count"`
+		TotalSizeBytes    int64       `json:"total_size_bytes"`
 	}{
-		ExportedAt:    time.Now().UTC(),
-		SchemaVersion: AccountSchemaVersion,
-		Format:        "zip-csv",
-		VehicleID:     req.VehicleID,
-		StartDate:     req.StartDate,
-		EndDate:       req.EndDate,
-		MaxRowsCap:    MaxAccountRowsPerTable,
+		ExportedAt:       time.Now().UTC(),
+		SchemaVersion:    AccountSchemaVersion,
+		Format:           "zip-csv",
+		VehicleID:        req.VehicleID,
+		StartDate:        req.StartDate,
+		EndDate:          req.EndDate,
+		MaxRowsCap:       MaxAccountRowsPerTable,
+		RequestedColumns: req.Columns,
 	}
 
 	var buf bytes.Buffer
@@ -82,7 +90,7 @@ func (p *Processor) processAccount(ctx context.Context, req *models.ExportJobReq
 			continue
 		}
 
-		csvBytes, err := snapshotToCSV(snap, req.StartDate, req.EndDate)
+		csvBytes, err := snapshotToCSV(snap, req.StartDate, req.EndDate, req.Columns)
 		if err != nil {
 			log.Warn().Err(err).Str("table", table).Msg("export account: failed to encode CSV")
 			continue
@@ -145,13 +153,42 @@ func (p *Processor) processAccount(ctx context.Context, req *models.ExportJobReq
 // or "start_ts" column and date filters are present in the request, rows
 // outside the range are dropped. Date filtering is best-effort — rows with
 // non-string/timestamp values pass through.
-func snapshotToCSV(snap *database.ExportTableSnapshot, startDate, endDate *time.Time) ([]byte, error) {
+//
+// allowedColumns, when non-empty, restricts the output to the intersection
+// of the snapshot's columns and the allowlist (case-sensitive). Order in
+// the output follows the allowlist's order. When no requested column is
+// present in this snapshot, the resulting CSV is empty (header + no rows).
+// allowedColumns nil/empty preserves byte-for-byte parity with the
+// pre-Phase-46/62 caller — sorted alphabetic column order, every column
+// emitted.
+func snapshotToCSV(snap *database.ExportTableSnapshot, startDate, endDate *time.Time, allowedColumns []string) ([]byte, error) {
 	if snap == nil {
 		return nil, fmt.Errorf("snapshotToCSV: nil snapshot")
 	}
 
-	cols := append([]string(nil), snap.Columns...)
-	sort.Strings(cols)
+	var cols []string
+	if len(allowedColumns) == 0 {
+		cols = append([]string(nil), snap.Columns...)
+		sort.Strings(cols)
+	} else {
+		// Intersection: keep only requested columns that exist in this
+		// snapshot, preserving the requested order. Account exports span
+		// many tables with disjoint schemas, so an "unknown" column at
+		// this layer is silently skipped — strict per-type validation
+		// happens upstream in resolveColumnSelection for the non-account
+		// writers.
+		present := make(map[string]bool, len(snap.Columns))
+		for _, c := range snap.Columns {
+			present[c] = true
+		}
+		seen := make(map[string]bool, len(allowedColumns))
+		for _, c := range allowedColumns {
+			if present[c] && !seen[c] {
+				cols = append(cols, c)
+				seen[c] = true
+			}
+		}
+	}
 
 	var buf bytes.Buffer
 	cw := csv.NewWriter(&buf)
@@ -159,7 +196,14 @@ func snapshotToCSV(snap *database.ExportTableSnapshot, startDate, endDate *time.
 		return nil, err
 	}
 
+	// pickTimestampKey scans the resolved column set for date filtering;
+	// when the user has filtered out the timestamp column entirely, scan
+	// the full snapshot so we still honour the date range against the
+	// underlying row data.
 	tsKey := pickTimestampKey(cols)
+	if tsKey == "" {
+		tsKey = pickTimestampKey(snap.Columns)
+	}
 	for _, row := range snap.Rows {
 		if tsKey != "" && (startDate != nil || endDate != nil) {
 			if !rowInDateRange(row[tsKey], startDate, endDate) {

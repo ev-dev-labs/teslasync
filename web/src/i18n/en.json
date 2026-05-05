@@ -6545,6 +6545,14 @@
       "step3": "STEP 3 — Select Vehicle",
       "step4": "STEP 4 — Date Range"
     },
+    "columns": {
+      "title": "STEP 2½ — Columns",
+      "helperText": "Select which columns to include in the export. Required columns cannot be removed.",
+      "selectAll": "Select all",
+      "clear": "Clear",
+      "alwaysIncluded": "Required",
+      "none": "No columns selected"
+    },
     "allVehicles": "All Vehicles",
     "customRange": "Custom Range",
     "exportHistory": "Export History",

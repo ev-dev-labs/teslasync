@@ -41,11 +41,12 @@ func NewExportJobHandler(db *database.DB, mqttClient pahomqtt.Client) *ExportHan
 // SubmitJob creates a new export job and publishes it to the MQTT queue.
 func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Type      string `json:"type"`
-		Format    string `json:"format"`
-		VehicleID *int64 `json:"vehicle_id,omitempty"`
-		Start     string `json:"start,omitempty"`
-		End       string `json:"end,omitempty"`
+		Type      string   `json:"type"`
+		Format    string   `json:"format"`
+		VehicleID *int64   `json:"vehicle_id,omitempty"`
+		Start     string   `json:"start,omitempty"`
+		End       string   `json:"end,omitempty"`
+		Columns   []string `json:"columns,omitempty"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -76,6 +77,22 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Type == "account" {
 		req.Format = "zip"
+	}
+
+	// Phase-46/62 — validate columns allowlist up-front so the caller
+	// learns about a typo synchronously instead of through a failed job.
+	// Account exports skip strict per-type validation: their column set
+	// is dynamic per-table and the writer applies a per-table
+	// intersection downstream.
+	if len(req.Columns) > 0 && req.Type != "account" {
+		if !export.SupportsColumnSelection(req.Type) {
+			writeError(w, http.StatusBadRequest, "columns are not supported for this export type")
+			return
+		}
+		if _, err := export.ValidateColumns(req.Type, req.Columns); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 	}
 
 	// Parse optional date range
@@ -120,13 +137,16 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Publish to MQTT for worker processing
-	mqttReq := &models.ExportJobRequest{
-		JobID:     jobID,
-		Type:      req.Type,
-		Format:    req.Format,
-		VehicleID: req.VehicleID,
-		StartDate: startDate,
-		EndDate:   endDate,
+	mqttReq := &export.JobRequest{
+		ExportJobRequest: models.ExportJobRequest{
+			JobID:     jobID,
+			Type:      req.Type,
+			Format:    req.Format,
+			VehicleID: req.VehicleID,
+			StartDate: startDate,
+			EndDate:   endDate,
+		},
+		Columns: req.Columns,
 	}
 
 	if err := export.Publish(h.mqttClient, mqttReq); err != nil {
@@ -260,10 +280,12 @@ func (h *ExportHandler) SubmitImportJob(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	mqttReq := &models.ExportJobRequest{
-		JobID:  jobID,
-		Type:   importType,
-		Format: "csv",
+	mqttReq := &export.JobRequest{
+		ExportJobRequest: models.ExportJobRequest{
+			JobID:  jobID,
+			Type:   importType,
+			Format: "csv",
+		},
 	}
 	if err := export.Publish(h.mqttClient, mqttReq); err != nil {
 		_ = h.jobRepo.Fail(r.Context(), jobID, "failed to queue: "+err.Error())
@@ -334,13 +356,15 @@ func (h *ExportHandler) SubmitAccountJob(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	mqttReq := &models.ExportJobRequest{
-		JobID:     jobID,
-		Type:      string(export.TypeAccount),
-		Format:    "zip",
-		VehicleID: req.VehicleID,
-		StartDate: startDate,
-		EndDate:   endDate,
+	mqttReq := &export.JobRequest{
+		ExportJobRequest: models.ExportJobRequest{
+			JobID:     jobID,
+			Type:      string(export.TypeAccount),
+			Format:    "zip",
+			VehicleID: req.VehicleID,
+			StartDate: startDate,
+			EndDate:   endDate,
+		},
 	}
 	if err := export.Publish(h.mqttClient, mqttReq); err != nil {
 		log.Error().Err(err).Str("job_id", jobID).Msg("export account: failed to publish to MQTT")

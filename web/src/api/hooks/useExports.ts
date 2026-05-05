@@ -10,6 +10,10 @@ export const exportKeys = {
   detail: (id: string) => ['exports', id] as const,
   jobs: ['export-jobs'] as const,
   job: (id: string) => ['export-jobs', id] as const,
+  /** Phase-46/62 — column-picker catalog cache key, keyed by export type so
+   *  switching the wizard between drives/charging triggers a separate
+   *  fetch instead of stale-flashing the previous catalog. */
+  columns: (type: string) => ['export-columns', type] as const,
 };
 
 /** Backwards-compatible: legacy hook used by the dashboard ExportStatusWidget.
@@ -88,6 +92,12 @@ export interface CreateExportPayload {
   vehicle_id?: number;
   start?: string;
   end?: string;
+  /** Phase-46/62 — caller-supplied column allowlist. When omitted the
+   *  backend writes every catalog column (legacy behaviour). When present
+   *  the backend validates each entry against the catalog for `type`,
+   *  silently re-prepends always-included columns, and emits the data
+   *  in the caller-supplied order. */
+  columns?: string[];
 }
 
 export function useCreateExport() {
@@ -177,3 +187,42 @@ export function useBulkExportsDelete() {
       error(err, 'toast.export.bulkDelete.error', 'Failed to delete exports'),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Phase-46 / Prompt 62 — column-selector catalog
+// ---------------------------------------------------------------------------
+
+/** Wire shape of a single column entry as returned by GET /exports/columns. */
+export interface ExportColumnInfo {
+  name: string;
+  label: string;
+  always_included: boolean;
+}
+
+/** Wire shape of the columns endpoint response. `columns` is empty when
+ *  the export type is recognised but column selection isn't supported
+ *  (e.g. account, backup, analytics). The frontend hides the picker when
+ *  `supports_selection` is false. */
+export interface ExportColumnsResponse {
+  type: string;
+  columns: ExportColumnInfo[];
+  supports_selection: boolean;
+}
+
+/** Fetch the publishable column catalog for a given export type. The
+ *  catalog is static per type, so we cache aggressively (5 minutes
+ *  staleTime). Disabled when `type` is empty / unsupported so callers
+ *  can wire it conditionally without additional guards. */
+export function useExportColumns(type: string | undefined) {
+  return useQuery({
+    queryKey: exportKeys.columns(type ?? '__none__'),
+    queryFn: ({ signal }) =>
+      request<ExportColumnsResponse>(
+        `/exports/columns?type=${encodeURIComponent(type ?? '')}`,
+        { signal },
+      ),
+    enabled: !!type,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+

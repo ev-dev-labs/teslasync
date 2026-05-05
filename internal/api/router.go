@@ -1816,6 +1816,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			pahoClient = mqttClient.Underlying()
 		}
 		exportJobHandler := NewExportJobHandler(db, pahoClient)
+		exportColumnsHandler := NewExportColumnsHandler()
+		// Phase-46 / Prompt 62 — column-selector UI fetches the publishable
+		// column catalog for the active export type. Read-only and cheap;
+		// rate-limited to soak up accidental SPA loops.
+		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/exports/columns", exportColumnsHandler.ListColumns)
 		r.Route("/export/jobs", func(r chi.Router) {
 			r.Post("/", exportJobHandler.SubmitJob)
 			r.Post("/account", exportJobHandler.SubmitAccountJob)
