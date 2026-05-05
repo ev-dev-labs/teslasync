@@ -178,6 +178,26 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	authSessionsRepo := database.NewAuthSessionsRepo(db)
 	sessionHandler := NewSessionHandler(authSessionsRepo, cfg.Auth.ForwardAuthHeader)
 
+	// Phase-46 / Prompt 57 — Auth-mode contract.
+	//
+	// The auth_subjects materialisation table is the single source
+	// of truth for "every distinct subject this deployment has ever
+	// seen". The recorder middleware (mounted on the /api/v1 group
+	// below, AFTER ForwardAuthMiddleware so the header is the
+	// authoritative one) bumps last_seen_at on every request via an
+	// in-process per-subject debounce so we never spam the DB.
+	//
+	// systemAuthModeHandler answers GET /system/auth-mode — the SPA's
+	// source of truth for "what mode am I in, and who am I". Mounted
+	// inside /system below; deliberately NOT sudo-gated and NOT
+	// wrapped in RequireSubjectMiddleware so it stays reachable in
+	// open mode AND when the upstream proxy strips the header on a
+	// specific request.
+	authSubjectsRepo := database.NewAuthSubjectsRepo(db)
+	subjectRecorder := tsauth.NewSubjectRecorder(authSubjectsStoreAdapter{repo: authSubjectsRepo}, tsauth.SubjectRecorderOptions{})
+	systemAuthModeHandler := NewSystemAuthModeHandler(cfg.Auth.ForwardAuthHeader, cfg.Auth.ProviderHint)
+	_ = authSubjectsRepo // referenced via subjectRecorder; held for future per-user tables.
+
 	// Phase-46 / Prompt 34 — Live log tail. Build a process-wide
 	// pub/sub registry for zerolog events and tee the global logger
 	// through it so every Info/Warn/Error/etc. fans out to any
@@ -593,6 +613,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// ForwardAuth: protect all /api/v1/* routes via reverse-proxy header.
 		// No-op when ForwardAuthHeader is empty (dev mode / no auth configured).
 		r.Use(ForwardAuthMiddleware(cfg.Auth.ForwardAuthHeader))
+
+		// Phase-46 / Prompt 57 — Subject recorder. MUST run AFTER
+		// ForwardAuthMiddleware (so the principal header is the
+		// authoritative one for this request) and BEFORE both the
+		// session tracker and the impersonation rewrite (so the
+		// recorded subject is the *original* admin identity even
+		// during an active impersonation, matching the contract that
+		// auth_subjects materialises every distinct human operator
+		// who has touched the API). Open mode is a passthrough.
+		r.Use(tsauth.SubjectRecorderMiddleware(cfg.Auth.ForwardAuthHeader, subjectRecorder))
 
 		// Phase-46 / Prompt 42 — Session tracker. MUST run AFTER
 		// ForwardAuthMiddleware so the principal header is guaranteed
@@ -1360,6 +1390,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				}
 			}
 			r.Get("/health", ExtendedHealthCheck(db, health, bufferStats, maintenanceProvider))
+
+			// Phase-46 / Prompt 57 — Auth-mode contract endpoint.
+			// Always reachable; deliberately NOT sudo-gated and NOT
+			// wrapped in RequireSubjectMiddleware because the SPA's
+			// session-monitor + RequiresAuth components rely on this
+			// endpoint to discover the deployment's mode and the
+			// current request's resolved subject — even when the
+			// upstream proxy stripped the header on this specific
+			// request. Per-IP rate-limited because the SPA polls it
+			// at boot and on focus refresh.
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/auth-mode", systemAuthModeHandler.ServeHTTP)
+
 			r.Get("/api-usage", APIUsageHandler(db))
 			r.Get("/compression-stats", CompressionStatsHandler(db))
 			r.Get("/backup", backupHandler.ExportData)

@@ -97,6 +97,15 @@ services:
       # at runtime (3 sizes per upload). Mount a volume here in
       # production so photos survive container restart.
       - TESLASYNC_VEHICLE_PHOTO_DIR=${TESLASYNC_VEHICLE_PHOTO_DIR:-/var/lib/teslasync/photos}
+      # Auth-mode contract — Phase 46 / Prompt 57.
+      # Free-text hint surfaced verbatim by /system/auth-mode and
+      # rendered by the SPA's RequiresAuth empty state. Set to the
+      # name of your upstream IdP (Authentik, Authelia, oauth2-proxy,
+      # Keycloak, …) for nicer copy. TeslaSync NEVER speaks to the
+      # IdP's admin API and NEVER routes off this value — it is
+      # presentation-only. Default empty: SPA falls back to a
+      # generic "your authentication provider" string.
+      - TESLASYNC_AUTH_PROVIDER_HINT=${TESLASYNC_AUTH_PROVIDER_HINT:-}
     volumes:
       - vehicle_photos:/var/lib/teslasync/photos
     depends_on:

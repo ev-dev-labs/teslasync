@@ -75,6 +75,26 @@ function buildHeaders(headers: HeadersInit | undefined, hasBody: boolean): Heade
 export const SUDO_REQUIRED_CODE = 'SUDO_REQUIRED'
 
 /**
+ * Sentinel code returned by every endpoint that has no sensible
+ * behaviour without an upstream identity provider configured —
+ * Phase-46 / Prompt 57 (`AUTH_MODE_OPEN`). Mirrors the backend
+ * constants `internal/api.ErrCodeAuthModeOpen` and
+ * `internal/auth.AuthModeOpenCode`.
+ *
+ * Auth-coupled hooks (useAuthMode, useTOTP, useSessions,
+ * useImpersonation, useRbacMatrix, …) match this code on a 501
+ * response to swap in the inline "feature requires authentication"
+ * placeholder via <RequiresAuth>. Callers that need a richer typed
+ * error can build it from `isApiError(err) && err.code ===
+ * AUTH_MODE_OPEN_CODE`; we deliberately do NOT subclass ApiError
+ * here because the existing duck-type check already terminates
+ * resilientFetch's retry loop (501 is non-retryable) and a
+ * subclass would mean threading a new instanceof ladder through
+ * every consumer.
+ */
+export const AUTH_MODE_OPEN_CODE = 'AUTH_MODE_OPEN'
+
+/**
  * Signals that the user dismissed the <ReauthDialog> instead of
  * supplying a credential. Distinct from ApiError so callers can tell
  * "user cancelled" apart from "backend rejected the credential".

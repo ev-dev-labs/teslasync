@@ -2661,3 +2661,64 @@ export interface VehiclePhotoMeta {
   uploaded_at?: string
   sizes?: VehiclePhotoSizes
 }
+
+// === Auth-mode contract (Phase-46 / Prompt 57) ===
+
+/**
+ * Two-state classification returned by GET /api/v1/system/auth-mode.
+ *
+ *   - `open`         — no upstream identity provider configured
+ *                      (FORWARD_AUTH_HEADER unset). The SPA should
+ *                      replace every auth-coupled section with the
+ *                      <RequiresAuth> placeholder.
+ *   - `forward_auth` — a ForwardAuth-shaped reverse proxy is in
+ *                      front of TeslaSync (Authentik, Authelia,
+ *                      oauth2-proxy, Keycloak, …) and is supplying
+ *                      the identity header named in `subject_header`.
+ *
+ * The string is the source of truth; never derive the mode from
+ * `subject_header` being set, because the proxy can momentarily
+ * strip the header on a single request even when the deployment
+ * is configured for forward-auth.
+ */
+export type AuthMode = 'open' | 'forward_auth'
+
+/**
+ * Per-feature gate the SPA uses to decide whether to mount an
+ * auth-coupled section or replace it with the inline <RequiresAuth>
+ * placeholder. Every field is `false` in open mode and `true` in
+ * forward-auth mode (the per-feature *preconditions* live inside
+ * each feature's own handler — this matrix only reports whether
+ * the deployment's auth mode allows the feature to exist at all).
+ *
+ * Keep these keys in lock-step with `internal/api.AuthModeCapabilities`
+ * — drift here silently disables the corresponding section.
+ */
+export interface AuthModeCapabilities {
+  step_up_reauth: boolean
+  totp_enrollment: boolean
+  session_list: boolean
+  impersonation: boolean
+  rbac: boolean
+}
+
+/** Envelope returned by `GET /api/v1/system/auth-mode`. */
+export interface AuthModeResponse {
+  mode: AuthMode
+  /** Header name TeslaSync reads (e.g. "X-Forwarded-User"). Omitted in open mode. */
+  subject_header?: string
+  /**
+   * The current request's resolved subject (the value of
+   * `subject_header`). `null` / undefined in open mode AND when
+   * the proxy stripped the header for this specific request.
+   */
+  subject?: string | null
+  /**
+   * Operator-supplied free text — typically the upstream IdP's
+   * brand name. The SPA renders this verbatim in the
+   * <RequiresAuth> empty state and the session-timeout banner;
+   * it is NEVER used as a routing key.
+   */
+  provider_hint?: string
+  capabilities: AuthModeCapabilities
+}

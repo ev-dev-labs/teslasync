@@ -250,6 +250,13 @@ type AuthConfig struct {
 	Enabled           bool
 	JWTSecret         string
 	ForwardAuthHeader string // Header set by reverse proxy auth (e.g. X-Forwarded-User)
+	// ProviderHint is operator-supplied free text surfaced verbatim by
+	// the /system/auth-mode endpoint. The SPA renders it as informative
+	// copy ("Sign in via Authentik / Authelia / oauth2-proxy / Keycloak
+	// / …"); TeslaSync NEVER routes off it or speaks to the upstream
+	// IdP's admin API. Empty by default — when unset the SPA falls back
+	// to a generic "your authentication provider" string.
+	ProviderHint string
 }
 
 type RetentionConfig struct {
@@ -334,6 +341,7 @@ func Load() (*Config, error) {
 			Enabled:           envBool("AUTH_ENABLED", false),
 			JWTSecret:         envStr("AUTH_JWT_SECRET", ""),
 			ForwardAuthHeader: envStr("FORWARD_AUTH_HEADER", ""),
+			ProviderHint:      envStr("TESLASYNC_AUTH_PROVIDER_HINT", ""),
 		},
 
 		Retention: RetentionConfig{

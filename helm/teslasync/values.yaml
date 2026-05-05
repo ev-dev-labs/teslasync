@@ -572,6 +572,15 @@ config:
   #   Empty:         disables auth (dev mode)
   forwardAuthHeader: ""
 
+  # ── Auth-mode contract — Phase 46 / Prompt 57 ────────────────────────
+  # Free-text hint surfaced verbatim by /system/auth-mode and rendered
+  # by the SPA's RequiresAuth empty state. Set to your upstream IdP's
+  # name (Authentik, Authelia, oauth2-proxy, Keycloak, …) for nicer
+  # copy. TeslaSync NEVER speaks to the IdP's admin API and NEVER
+  # routes off this value — it is presentation-only. Empty: SPA falls
+  # back to a generic "your authentication provider" string.
+  authProviderHint: ""
+
   # ── Authentik SSE Auth (DEPRECATED) ──────────────────────────────────
   # DEPRECATED: Removed in Phase 18 auth unification. Use forwardAuthHeader instead.
   # authentikURL: ""

@@ -26,6 +26,7 @@ export { TeslaReauthBanner } from './TeslaReauthBanner';
 export { RateLimitBanner } from './RateLimitBanner';
 export { MaintenanceBanner } from './MaintenanceBanner';
 export { ImpersonationBanner } from './ImpersonationBanner';
+export { RequiresAuth, requiresAuthEmptyTestId, type RequiresAuthProps, type RequiresAuthCapability } from './RequiresAuth';
 export { GotoIndicator } from './GotoIndicator';
 export { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 export { TourOverlay } from './TourOverlay';
