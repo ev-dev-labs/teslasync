@@ -256,7 +256,7 @@ export function SearchInput({
           <button
             type="button"
             onClick={handleClear}
-            className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="touch-target-overlay rounded p-0.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
             aria-label={label}
           >
             <X className="h-3.5 w-3.5" />
@@ -305,7 +305,7 @@ export function SearchInput({
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => handleRemoveEntry(entry)}
                       aria-label={t('search.history.removeAria', 'Remove "{{query}}" from search history', { query: entry })}
-                      className="rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="touch-target-overlay rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <X className="h-3 w-3" aria-hidden />
                     </button>

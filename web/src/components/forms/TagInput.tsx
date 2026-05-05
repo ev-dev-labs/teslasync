@@ -500,7 +500,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(
                   removeAt(i);
                 }}
                 className={cn(
-                  'inline-flex h-4 w-4 items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)]',
+                  'touch-target-overlay inline-flex h-4 w-4 items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)]',
                   'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500',
                   'disabled:cursor-not-allowed disabled:opacity-50',
                 )}

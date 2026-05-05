@@ -224,7 +224,7 @@ export default function AlertRulesPage() {
                                 type="button"
                                 onClick={onStartEdit}
                                 aria-label={t('editableText.rename.alertRule', 'Rename alert rule {{name}}', { name: r.name })}
-                                className="rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                                className="rounded p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                               >
                                 <Icons.edit className="h-3.5 w-3.5" />
                               </button>

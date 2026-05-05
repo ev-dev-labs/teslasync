@@ -271,7 +271,7 @@ function Chip({ descriptor, onRemove, onKey, fullWidth }: ChipProps) {
         onKeyDown={(e) => onKey(e, descriptor)}
         aria-label={removeLabel}
         className={cn(
-          'inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full',
+          'touch-target-overlay inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full',
           'text-[var(--text-muted)] hover:bg-white/[0.08] hover:text-[var(--text-primary)]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
         )}

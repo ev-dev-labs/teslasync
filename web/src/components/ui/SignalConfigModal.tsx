@@ -252,7 +252,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
               }}>
                 <ChevronDown className={clsx('h-3.5 w-3.5 text-[var(--text-muted)] transition-transform', !expanded && '-rotate-90')} />
                 <button onClick={e => { e.stopPropagation(); toggleCategory(category) }}
-                  className={clsx('h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
+                  className={clsx('touch-target-overlay h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
                     allCatSelected ? 'bg-neon-cyan border-neon-cyan' : someCatSelected ? 'bg-neon-cyan/40 border-neon-cyan/60' : 'border-[var(--border-strong)]'
                   )}>
                   {allCatSelected && <CheckCircle className="h-2.5 w-2.5 text-black" />}
@@ -282,7 +282,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
                         sig.selected ? 'bg-white/[0.01]' : 'opacity-40'
                       )}>
                         <button onClick={() => updateSignal(sig.name, { selected: !sig.selected })}
-                          className={clsx('h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
+                          className={clsx('touch-target-overlay h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
                             sig.selected ? 'bg-neon-cyan border-neon-cyan' : 'border-[var(--border-strong)]'
                           )}>
                           {sig.selected && <CheckCircle className="h-2.5 w-2.5 text-black" />}

@@ -735,7 +735,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
                   <>
                     <button
                       onClick={goBack}
-                      className="flex-shrink-0 rounded-lg p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+                      className="flex-shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </button>

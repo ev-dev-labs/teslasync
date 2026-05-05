@@ -729,7 +729,7 @@ export function DataTable<T>({
                   : t('table.expand.expand', 'Expand row')
               }
               className={cn(
-                'inline-flex h-5 w-5 items-center justify-center rounded',
+                'touch-target-overlay inline-flex h-5 w-5 items-center justify-center rounded',
                 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
                 'transition-colors',

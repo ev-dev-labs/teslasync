@@ -168,7 +168,7 @@ export function AchievementUnlockedToast({
           type="button"
           onClick={onDismiss}
           aria-label={t('achievements.dismiss', 'Dismiss achievement notification')}
-          className="flex-shrink-0 rounded-lg p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.05] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent"
+          className="flex-shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.05] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent"
         >
           <X className="h-3.5 w-3.5" aria-hidden="true" />
         </button>

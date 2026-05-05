@@ -52,12 +52,12 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
       <div className="flex items-center gap-1 self-end sm:self-auto">
         <button onClick={() => onPageChange(1)} disabled={page <= 1}
           aria-label={t('pagination.first', 'First page')}
-          className="rounded-md p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
+          className="rounded-md p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
           <ChevronsLeft className="h-4 w-4" aria-hidden="true" />
         </button>
         <button onClick={() => onPageChange(page - 1)} disabled={page <= 1}
           aria-label={t('pagination.previous', 'Previous page')}
-          className="rounded-md p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
+          className="rounded-md p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
           <ChevronLeft className="h-4 w-4" aria-hidden="true" />
         </button>
         <span
@@ -69,12 +69,12 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
         </span>
         <button onClick={() => onPageChange(page + 1)} disabled={page >= totalPages}
           aria-label={t('pagination.next', 'Next page')}
-          className="rounded-md p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
+          className="rounded-md p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
           <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </button>
         <button onClick={() => onPageChange(totalPages)} disabled={page >= totalPages}
           aria-label={t('pagination.last', 'Last page')}
-          className="rounded-md p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
+          className="rounded-md p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
           <ChevronsRight className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>

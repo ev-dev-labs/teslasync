@@ -467,7 +467,7 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
               aria-label={t('combobox.removeChip', 'Remove {{label}}', {
                 label: (getChipLabel ?? getOptionLabel)(opt),
               })}
-              className="rounded p-0.5 transition-colors hover:bg-[var(--surface-overlay)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="touch-target-overlay rounded p-0.5 transition-colors hover:bg-[var(--surface-overlay)] focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <X className="h-3 w-3" aria-hidden="true" />
             </button>

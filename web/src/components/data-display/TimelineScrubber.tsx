@@ -396,7 +396,7 @@ function TimelineMarkerTick({
         type="button"
         data-timeline-marker
         className={cn(
-          'absolute top-1/2 h-3 w-1 -translate-x-1/2 -translate-y-1/2 rounded-sm opacity-80 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white/40',
+          'touch-target-overlay absolute top-1/2 h-3 w-1 -translate-x-1/2 -translate-y-1/2 rounded-sm opacity-80 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white/40',
           color,
         )}
         style={{ left }}

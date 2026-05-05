@@ -1237,3 +1237,52 @@ figure[data-print-card]:fullscreen p {
   height: 100vh;
   background-color: var(--bg-app);
 }
+
+/* ─────────────────────────────────────────────────────────────────
+ * Phase-46 / Prompt 69 — WCAG 2.5.5 touch-target utilities.
+ *
+ * `audit:touch-target` (web/scripts/audit-touch-target.mjs) blocks
+ * clickable controls below the WCAG 2.5.8 AA floor (24 × 24 CSS px)
+ * or the Apple HIG / WCAG 2.5.5 AAA recommendation (44 × 44).
+ *
+ *   • `.touch-target`         — direct minimum dimensions. Use on
+ *                                buttons that can grow visually
+ *                                (icon buttons in toolbars, action
+ *                                rows, dialog headers).
+ *
+ *   • `.touch-target-overlay` — invisible ::before hit-area extender.
+ *                                Use on visually-tiny clickable
+ *                                glyphs that MUST stay at icon size
+ *                                (chip-X dismiss buttons, timeline
+ *                                marker dots, density-packed table
+ *                                row toolbars). The visual element
+ *                                stays at its declared size; the
+ *                                pointer hit region grows to ≥ 44 ×
+ *                                44 around the centre.
+ *
+ * The audit recognises both variants as "safe" so callers can pick
+ * whichever matches the visual constraint without having to
+ * allowlist the call site.
+ * ───────────────────────────────────────────────────────────── */
+@layer utilities {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .touch-target-overlay {
+    position: relative;
+  }
+
+  .touch-target-overlay::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+    /* Transparent — the hit region sits invisibly over the visual
+       element and surrounding whitespace. */
+  }
+}

@@ -232,7 +232,7 @@ export function DraftRestorePrompt({
               type="button"
               onClick={handleDismiss}
               aria-label={t('draft.recovery.close', 'Close')}
-              className="shrink-0 rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+              className="shrink-0 rounded p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
             >
               <X className="h-3.5 w-3.5" aria-hidden />
             </button>
