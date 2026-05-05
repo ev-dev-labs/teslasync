@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { Badge, Button, DataTable, GlassPanel, Input, Select, type Column } from '@/components/ui'
+import { Badge, Button, DataTable, GlassPanel, Input, MaskedValue, Select, type Column } from '@/components/ui'
 import { PageContainer } from '@/components/layout'
 import { EmptyState, QueryError, Spinner } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
@@ -319,7 +319,17 @@ function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating }: FeedbackE
         </div>
         <div>
           <span className="font-semibold">{t('feedback.queue.expand.userEmail', 'Email')}: </span>
-          <span className="text-[var(--text-primary)]">{row.user_email || '—'}</span>
+          {row.user_email ? (
+            <MaskedValue
+              value={row.user_email}
+              variant="email"
+              ariaLabel={t('feedback.queue.maskedEmail', 'Reporter email, click to reveal')}
+              copyable
+              auditOnReveal
+            />
+          ) : (
+            <span className="text-[var(--text-primary)]">—</span>
+          )}
         </div>
       </div>
 

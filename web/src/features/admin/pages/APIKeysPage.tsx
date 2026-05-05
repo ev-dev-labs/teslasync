@@ -12,6 +12,7 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { CopyButton } from '@/components/ui/CopyButton';
+import { MaskedValue } from '@/components/ui/MaskedValue';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
@@ -94,8 +95,14 @@ export default function APIKeysPage() {
               {t("Copy this key now — it won't be shown again.")}
             </span>
             <div className="flex items-center gap-2">
-              <GlassPanel className="flex-1 p-3 font-mono text-xs text-cyan-300 break-all">
-                {generatedKey}
+              <GlassPanel className="flex-1 p-3">
+                <MaskedValue
+                  value={generatedKey}
+                  variant="token"
+                  ariaLabel={t('API key, click to reveal')}
+                  copyable
+                  auditOnReveal
+                />
               </GlassPanel>
               <CopyButton
                 text={generatedKey}

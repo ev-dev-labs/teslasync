@@ -342,6 +342,11 @@
   "form": {
     "required": "required"
   },
+  "mask": {
+    "reveal": "Reveal value",
+    "hide": "Hide value",
+    "copy": "Copy value"
+  },
   "draft": {
     "restored": "Draft restored from {{when}}.",
     "restoredItem": "{{noun}} draft restored from {{when}}.",

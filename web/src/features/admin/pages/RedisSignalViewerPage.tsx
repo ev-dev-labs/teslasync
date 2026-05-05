@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Database, Search, RefreshCw } from 'lucide-react'
 
 import { PageContainer } from '@/components/layout'
-import { GlassPanel, Badge, Button as UiButton, DataTable, useSortToggle, Toggle, Input as UiInput, Select as UiSelect, type Column } from '@/components/ui'
+import { GlassPanel, Badge, Button as UiButton, DataTable, useSortToggle, Toggle, Input as UiInput, Select as UiSelect, MaskedValue, type Column } from '@/components/ui'
 import { StatCard } from '@/components/data-display'
 import { Skeleton, EmptyState } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
@@ -45,6 +45,17 @@ interface SignalRow {
   category: SignalCategory
 }
 
+/**
+ * isLocationSignal — true for lat/lng/gps signal names that should be
+ * masked by default. Operators can still reveal the value (the
+ * `<MaskedValue>` toggle exposes the raw number) but a casual screen
+ * share or screenshot does not leak the parking spot.
+ */
+function isLocationSignal(name: string): boolean {
+  const n = name.toLowerCase()
+  return /^(latitude|longitude|gps_lat|gps_lng|gps_latitude|gps_longitude|location_lat|location_lng)$/.test(n)
+}
+
 /* ─── table columns ─────────────────────────────────────────────────── */
 
 function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>[] {
@@ -59,6 +70,21 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
       key: 'value',
       header: t('redis.value', 'Value'),
       render: (row) => {
+        // Location signals are routed through MaskedValue so the raw
+        // coordinate never sits on screen by default. The mask still
+        // shows enough structure (••.•••) to confirm the row carries
+        // a number, and the operator can click to reveal for ops work.
+        if (isLocationSignal(row.name) && (typeof row.value === 'number' || typeof row.value === 'string')) {
+          return (
+            <MaskedValue
+              value={String(row.value)}
+              variant="coords"
+              ariaLabel={t('redis.maskedCoord', 'Coordinate, click to reveal')}
+              copyable
+              auditOnReveal
+            />
+          )
+        }
         // Per-type toned-down syntax-highlight colors (phase-40/02 forbids
         // neon for tabular body text). Mirrors common dev-console conventions:
         //   number  → cyan-300, string → amber-300, boolean → purple-300.
