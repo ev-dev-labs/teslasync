@@ -10,7 +10,7 @@ import { ImpersonationBanner } from '../feedback/ImpersonationBanner'
 import { TopProgress } from '../feedback/TopProgress'
 import { SessionExpiringModal } from '../feedback/SessionExpiringModal'
 import { SessionExpiredModal } from '../feedback/SessionExpiredModal'
-import { AnnouncerRegion, VisuallyHidden } from '@/components/a11y'
+import { AnnouncerRegion } from '@/components/a11y'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -22,6 +22,7 @@ import { FeedbackModal } from '../feedback/FeedbackModal'
 import { TourOverlay } from '../feedback/TourOverlay'
 import { ChangelogModal } from '../feedback/ChangelogModal'
 import { DraftRestorePrompt } from '../feedback/DraftRestorePrompt'
+import { SkipToContent } from '../feedback/SkipToContent'
 import { TourLauncher } from '@/features/onboarding/TourLauncher'
 import {
   TOUR_START_EVENT,
@@ -976,21 +977,14 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex h-dvh bg-[var(--bg)] text-[var(--text-primary)]">
-      {/* Skip to content (WCAG 2.4.1). Hidden until focused; sends focus
-          straight to <main id="main-content"> so keyboard users don't have
-          to tab through the entire sidebar to reach the page body.
-          Phase-45 / Prompt 13 audit anchor: skipToMain|skip.to.main */}
-      <VisuallyHidden
-        as="a"
-        focusable
-        href="#main-content"
-        className="focus:fixed focus:top-4 focus:left-4 focus:z-[300] focus:rounded-lg focus:bg-neon-cyan focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--bg)] focus:ring-neon-cyan"
-        onClick={(e) => { e.preventDefault(); mainRef.current?.focus() }}
-      >
-        {t('a11y.skipToMain', 'Skip to main content')}
-      </VisuallyHidden>
-
+    <>
+      {/* Skip to content (WCAG 2.4.1). MUST be the very first interactive
+          element in the DOM so a single Tab press from page load reveals
+          it before any sidebar / header / banner control. Phase-46 /
+          Prompt 60 — supersedes the previous `a11y.skipToMain` link.
+          Audit anchor: skipToContent|skip.to.content */}
+      <SkipToContent />
+      <div className="flex h-dvh bg-[var(--bg)] text-[var(--text-primary)]">
       {/* Phase-46 / Prompt 12 — global SR announcer. Mounted once here
           so any component can fire imperative live-region messages via
           `useAnnouncer()` without rendering its own hidden region. */}
@@ -1460,6 +1454,7 @@ export default function Layout() {
           component is a no-op when no drafts exist and self-throttles
           via a per-session sessionStorage flag. */}
       <DraftRestorePrompt />
-    </div>
+      </div>
+    </>
   )
 }

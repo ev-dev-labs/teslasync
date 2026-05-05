@@ -1569,7 +1569,7 @@
     }
   },
   "a11y": {
-    "skipToMain": "Skip to main content",
+    "skipToContent": "Skip to main content",
     "primaryNav": "Primary",
     "primaryHeader": "Site header",
     "footerStatus": "Status bar",

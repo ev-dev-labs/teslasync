@@ -36,3 +36,4 @@ export { AchievementUnlockListener } from './AchievementUnlockListener';
 export { ChangelogModal } from './ChangelogModal';
 export { TopProgress } from './TopProgress';
 export { SuspenseProgressBoundary } from './SuspenseProgressBoundary';
+export { SkipToContent } from './SkipToContent';
