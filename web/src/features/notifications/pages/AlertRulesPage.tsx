@@ -2,7 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import { GlassPanel, Badge } from '@/components/ui';
+import { GlassPanel, Badge, EditableText } from '@/components/ui';
 import { BulkActionToolbar, SeverityBadge } from '@/components/data-display';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
@@ -17,6 +17,7 @@ import {
   useBulkEnableRules,
   useBulkDisableRules,
   useDeleteAlertRule,
+  useSaveAlertRule,
 } from '@/api/hooks/useNotifications';
 import type { AlertRule } from '@/api/types';
 import { Icons } from '@/lib/icons';
@@ -41,6 +42,7 @@ export default function AlertRulesPage() {
   const bulkEnable = useBulkEnableRules();
   const bulkDisable = useBulkDisableRules();
   const deleteOne = useDeleteAlertRule();
+  const saveRule = useSaveAlertRule();
 
   const masterState = sel.masterState(visibleIds);
 
@@ -185,12 +187,37 @@ export default function AlertRulesPage() {
                         />
                       </td>
                       <td className="px-3 py-3 font-medium text-[var(--text-primary)]">
-                        <Link
-                          to={`/alert-studio?rule=${r.id}`}
-                          className="text-cyan-300 underline-offset-2 hover:underline"
-                        >
-                          {r.name}
-                        </Link>
+                        <EditableText
+                          value={r.name}
+                          ariaLabel={t('editableText.rename.alertRule', 'Rename alert rule {{name}}', { name: r.name })}
+                          validate={(next) =>
+                            next.length > 120
+                              ? t('alertRules.error.nameTooLong', 'Max 120 characters')
+                              : null
+                          }
+                          maxLength={120}
+                          onSave={async (next) => {
+                            await saveRule.mutateAsync({ id: r.id, name: next });
+                          }}
+                          display={({ value, onStartEdit }) => (
+                            <span className="inline-flex items-center gap-2">
+                              <Link
+                                to={`/alert-studio?rule=${r.id}`}
+                                className="text-cyan-300 underline-offset-2 hover:underline"
+                              >
+                                {value}
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={onStartEdit}
+                                aria-label={t('editableText.rename.alertRule', 'Rename alert rule {{name}}', { name: r.name })}
+                                className="rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                              >
+                                <Icons.edit className="h-3.5 w-3.5" />
+                              </button>
+                            </span>
+                          )}
+                        />
                       </td>
                       <td className="px-3 py-3 text-[var(--text-secondary)]">
                         {r.signal_name}

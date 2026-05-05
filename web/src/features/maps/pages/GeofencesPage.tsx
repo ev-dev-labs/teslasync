@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, Tabs, PinButton } from '@/components/ui';
+import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, Tabs, PinButton, EditableText } from '@/components/ui';
 import { MetricCard, BulkActionToolbar } from '@/components/data-display';
 import { Skeleton, EmptyState, Spinner, AlertBanner } from '@/components/feedback';
 import { VisuallyHidden } from '@/components/a11y';
@@ -204,6 +204,23 @@ export default function GeofencesPage() {
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['geofences'] }),
     onError: (err: Error) => toast.error(t('Failed to toggle geofence'), err.message),
+  });
+
+  // Phase-46 / Prompt 38 — inline rename. Sends a full merged payload
+  // (rather than a partial `{ name }`) so the backend's PUT semantics
+  // are unambiguous regardless of whether it does field-level merge.
+  // Errors are surfaced inline by EditableText, so no toast here.
+  const renameMut = useMutation({
+    mutationFn: ({ g, name }: { g: Geofence; name: string }) => {
+      const { id: _id, createdAt: _createdAt, ...rest } = g;
+      void _id;
+      void _createdAt;
+      return request<Geofence>(`/geofences/${g.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ...rest, name }),
+      });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['geofences'] }),
   });
 
   // ─── Computed stats ──────────────────────────────────────────────────────
@@ -609,9 +626,20 @@ export default function GeofencesPage() {
 
                       <div className="min-w-0">
                         <div className="mb-1 flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-semibold text-[var(--text-primary)]">
-                            {g.name}
-                          </span>
+                          <EditableText
+                            value={g.name}
+                            variant="heading"
+                            ariaLabel={t('editableText.rename.geofence', 'Rename geofence {{name}}', { name: g.name })}
+                            maxLength={120}
+                            validate={(next) =>
+                              next.length > 120
+                                ? t('geofences.error.nameTooLong', 'Max 120 characters')
+                                : null
+                            }
+                            onSave={async (next) => {
+                              await renameMut.mutateAsync({ g, name: next });
+                            }}
+                          />
                           <Badge variant={g.enabled ? 'success' : 'neutral'} size="sm">
                             {g.enabled ? t('Active') : t('Inactive')}
                           </Badge>
