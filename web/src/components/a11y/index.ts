@@ -13,3 +13,4 @@ export {
   type VisuallyHiddenOwnProps,
 } from './VisuallyHidden';
 export { AnnouncerRegion } from './AnnouncerRegion';
+export { RouteAnnouncer, type RouteAnnouncerProps } from './RouteAnnouncer';

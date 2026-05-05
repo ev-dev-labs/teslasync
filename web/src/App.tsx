@@ -8,6 +8,7 @@ import { SuspenseProgressBoundary } from './components/feedback/SuspenseProgress
 import { AuthExpiredOverlay } from '@/components/feedback'
 import { OnboardingGate } from '@/features/onboarding/components/OnboardingGate'
 import { DensityApplier } from '@/components/ui/DensityApplier'
+import { RouteAnnouncer } from '@/components/a11y'
 
 // ── ALL pages live in features/ — zero imports from pages/ ──────────────
 
@@ -207,6 +208,9 @@ export default function App() {
       <OnboardingGate />
       <ScrollRestoration />
       <DensityApplier />
+      {/* Phase-46 / Prompt 21 — announces the new page title to screen
+          readers on every SPA navigation. WCAG 2.4.2. */}
+      <RouteAnnouncer />
       <Routes>
       <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
       <Route path="glance" element={<SafeRoute name="Glance"><GlancePage /></SafeRoute>} />
