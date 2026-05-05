@@ -2339,6 +2339,39 @@ export interface TOTPBackupCodesResponse {
   backup_codes: string[]
 }
 
+// Phase-46 / Prompt 42 — Active sessions / device management.
+//
+// One row per TeslaSync-issued device cookie binding. Provider-agnostic:
+// TeslaSync mints its OWN cookie and persists the binding here, so
+// revoking a row only invalidates this app's session — the upstream
+// IdP cookie/session is untouched.
+//
+// Keys are snake_case to mirror the rest of the API surface; the
+// camelCaseKeys transformer exposes both forms for SPA consumers.
+export interface ActiveSession {
+  id: string
+  user_agent: string
+  ip: string
+  created_at: string
+  last_seen_at: string
+  revoked_at?: string
+  current: boolean
+}
+
+// GET /api/v1/auth/sessions response shape. The discriminator is
+// `mode`: `'open'` means the install runs without a forward-auth
+// header so per-device sessions cannot be tracked (the SPA renders
+// an inline placeholder); `'session'` carries the active rows.
+export type ActiveSessionsResponse =
+  | { mode: 'open' }
+  | { mode: 'session'; sessions: ActiveSession[] }
+
+// DELETE /api/v1/auth/sessions/all-others response shape.
+export interface RevokeAllOthersResponse {
+  mode: 'session'
+  revoked: number
+}
+
 // === Rate-limit status (Phase-46 / Prompt 40) ===
 
 /** Single scope row returned by GET /api/v1/system/rate-limits. */

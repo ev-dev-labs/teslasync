@@ -37,6 +37,10 @@ import { SettingsExportImport } from '../components/SettingsExportImport'
 // same reason: the `../components` barrel is outside this prompt's
 // allowed-files regex.
 import { WebhookChannelsSection } from '../components/WebhookChannelsSection'
+// Phase-46 / Prompt 42 — Active sessions / device management. Same
+// direct-import rationale: barrel is outside the prompt's
+// allowed-files regex.
+import { ActiveSessionsSection } from '../components/ActiveSessionsSection'
 
 export default function SettingsPage() {
   const { t } = useTranslation('settings')
@@ -126,6 +130,9 @@ export default function SettingsPage() {
       </section>
       <section id="security">
         <TOTPEnrollmentSection />
+      </section>
+      <section id="sessions">
+        <ActiveSessionsSection />
       </section>
       <section id="advanced">
         <AdvancedSettings />

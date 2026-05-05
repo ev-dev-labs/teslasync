@@ -7863,5 +7863,45 @@
       "cancelled": "Cancelled",
       "skipped": "Skipped"
     }
+  },
+  "settingsSessions": {
+    "title": "Active sessions",
+    "subtitle": "Devices currently signed in to TeslaSync. Revoking a session signs that browser out on its next request — your upstream identity provider's session is unaffected.",
+    "openMode": {
+      "title": "Active sessions",
+      "message": "Active session tracking requires forward-auth mode. Configure your reverse proxy to inject X-Forwarded-User then reload."
+    },
+    "empty": "No active sessions for this account.",
+    "loading": "Loading sessions…",
+    "current": "This device",
+    "columns": {
+      "device": "Device",
+      "ip": "IP address",
+      "createdAt": "Signed in",
+      "lastSeenAt": "Last seen"
+    },
+    "row": {
+      "revoke": "Sign out",
+      "revokeAria": "Sign out {{device}}"
+    },
+    "revokeAllOthers": "Sign out all other devices",
+    "revokeAllOthersBusy": "Signing out…",
+    "confirm": {
+      "revokeTitle": "Sign out this device?",
+      "revokeMessage": "{{device}} will be signed out on its next request. Your other devices will stay signed in.",
+      "revokeConfirm": "Sign out",
+      "revokeCancel": "Keep signed in",
+      "allOthersTitle": "Sign out all other devices?",
+      "allOthersMessage": "Every browser other than this one will be signed out on its next request. You can sign back in immediately.",
+      "allOthersConfirm": "Sign out all others",
+      "allOthersCancel": "Cancel"
+    },
+    "errors": {
+      "load": "Failed to load active sessions."
+    },
+    "toasts": {
+      "revoked": "Session signed out.",
+      "revokedAllOthers": "Signed out {{count}} other devices."
+    }
   }
 }

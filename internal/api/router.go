@@ -25,6 +25,8 @@ import (
 	signal "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/webpush"
+
+	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -154,6 +156,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// indistinguishable downstream from a successful password step-up.
 	totpRepo := database.NewTOTPRepo(db)
 	totpHandler := NewTOTPHandler(totpRepo, opt.Encryptor, sudoStore, cfg.Auth.ForwardAuthHeader)
+
+	// Phase-46 / Prompt 42 — active sessions / device management.
+	// TeslaSync mints its OWN per-device cookie on the first
+	// authenticated request from a browser (auth.Middleware below)
+	// and persists the (subject, cookie hash) tuple here so the
+	// Settings page can list devices and revoke individual sessions
+	// without touching the upstream IdP. The repo's HMAC signing
+	// secret is freshly generated on every restart — desired
+	// semantics for a "local session" primitive; operators wanting
+	// cross-restart persistence already get it from the upstream IdP.
+	authSessionsRepo := database.NewAuthSessionsRepo(db)
+	sessionHandler := NewSessionHandler(authSessionsRepo, cfg.Auth.ForwardAuthHeader)
 
 	// Phase-46 / Prompt 34 — Live log tail. Build a process-wide
 	// pub/sub registry for zerolog events and tee the global logger
@@ -511,6 +525,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// No-op when ForwardAuthHeader is empty (dev mode / no auth configured).
 		r.Use(ForwardAuthMiddleware(cfg.Auth.ForwardAuthHeader))
 
+		// Phase-46 / Prompt 42 — Session tracker. MUST run AFTER
+		// ForwardAuthMiddleware so the principal header is guaranteed
+		// present. Mints + binds a TeslaSync-issued cookie on the first
+		// authenticated request, validates it on every subsequent one,
+		// and rejects revoked cookies with 401 + clear-cookie. Open mode
+		// (no FORWARD_AUTH_HEADER configured) is a passthrough.
+		r.Use(tsauth.Middleware(cfg.Auth.ForwardAuthHeader, authSessionsRepo, tsauth.SessionTrackerOptions{}))
+
 		// Auth (stricter rate limits to prevent brute force)
 		r.Route("/auth", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(10, 1*time.Minute))
@@ -542,6 +564,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Post("/sudo", totpHandler.VerifySudo)
 				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", totpHandler.Revoke)
 				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/backup-codes/regenerate", totpHandler.RegenerateBackupCodes)
+			})
+			// Phase-46 / Prompt 42 — Active sessions / device
+			// management. List is read-only; both DELETE routes are
+			// sudo-gated (RequireSudo is a passthrough in open mode,
+			// so the handler's own AUTH_MODE_OPEN check is what
+			// guards the resource semantics there).
+			r.Route("/sessions", func(r chi.Router) {
+				r.Get("/", sessionHandler.List)
+				// `all-others` MUST be registered BEFORE `/{id}` so chi
+				// doesn't bind the literal as a UUID param.
+				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/all-others", sessionHandler.RevokeAllOthers)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/{id}", sessionHandler.Revoke)
 			})
 		})
 

@@ -396,6 +396,29 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       ),
       keywords: ['disable', 'remove', 'totp', '2fa', 'unenroll'],
     },
+    // Phase-46 / Prompt 42 — Active sessions / device management.
+    {
+      id: 'security.sessions.list',
+      href: '/settings#sessions',
+      section: 'security',
+      title: t('search.entries.security.sessionsList.title', 'Active sessions'),
+      description: t(
+        'search.entries.security.sessionsList.desc',
+        'See which browsers and devices are currently signed in to TeslaSync and revoke individual sessions.',
+      ),
+      keywords: ['session', 'device', 'browser', 'sign out', 'logout', 'revoke', 'cookie'],
+    },
+    {
+      id: 'security.sessions.revokeAll',
+      href: '/settings#sessions',
+      section: 'security',
+      title: t('search.entries.security.sessionsRevokeAll.title', 'Sign out all other devices'),
+      description: t(
+        'search.entries.security.sessionsRevokeAll.desc',
+        'Revoke every TeslaSync session except the current browser. Useful after a lost laptop or shared computer.',
+      ),
+      keywords: ['logout', 'revoke', 'session', 'everywhere', 'all devices', 'security'],
+    },
 
     // ── Advanced ────────────────────────────────────────────────────
     {
