@@ -5,6 +5,7 @@ import { Badge, Button, DataTable, GlassPanel, Input, Select, type Column } from
 import { PageContainer } from '@/components/layout'
 import { EmptyState, QueryError, Spinner } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
+import { UserCell } from '@/components/data-display'
 import { Icons } from '@/lib/icons'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useFeedbackList, useUpdateFeedback } from '@/api/hooks/useFeedback'
@@ -94,6 +95,18 @@ export default function FeedbackQueuePage() {
           ) : (
             <span className="text-xs text-[var(--text-muted)]">—</span>
           ),
+      },
+      {
+        key: 'reporter',
+        header: t('feedback.queue.col.reporter', 'Reporter'),
+        render: (row: FeedbackEntry) => (
+          <UserCell
+            user={{
+              id: row.submitter_subject || null,
+              email: row.user_email || null,
+            }}
+          />
+        ),
       },
       {
         key: 'status',

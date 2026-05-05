@@ -7205,6 +7205,12 @@
       "unknownAgent": "Unknown browser"
     }
   },
+  "avatar": {
+    "unknown": "Unknown user",
+    "statusOnline": "Online",
+    "statusIdle": "Idle",
+    "statusOffline": "Offline"
+  },
   "feedback": {
     "title": "Report a bug / Send feedback",
     "openShort": "Report bug",
@@ -7260,6 +7266,7 @@
         "title": "Title",
         "pageRoute": "Page",
         "status": "Status",
+        "reporter": "Reporter",
         "github": "GitHub"
       },
       "status": {
