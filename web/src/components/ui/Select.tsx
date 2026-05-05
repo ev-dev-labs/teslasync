@@ -1,5 +1,6 @@
 import { forwardRef, type SelectHTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
+import { Label } from './Label';
 
 export interface SelectOption {
   value: string;
@@ -29,18 +30,24 @@ const sizeClasses: Record<NonNullable<SelectProps['size']>, string> = {
 };
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ options, label, error, hint, placeholder, size = 'md', className, id, ...props }, ref) => {
+  ({ options, label, error, hint, placeholder, size = 'md', className, id, required, ...props }, ref) => {
     const selectId = id || label?.toLowerCase().replace(/\s+/g, '-');
     return (
       <div className="space-y-1">
         {label && (
-          <label htmlFor={selectId} className="text-sm font-medium text-[var(--text-secondary)]">
+          <Label
+            htmlFor={selectId}
+            required={required}
+            className="text-sm font-medium text-[var(--text-secondary)]"
+          >
             {label}
-          </label>
+          </Label>
         )}
         <select
           ref={ref}
           id={selectId}
+          required={required}
+          aria-required={required ? 'true' : undefined}
           className={cn(
             'w-full rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] transition-colors',
             sizeClasses[size],

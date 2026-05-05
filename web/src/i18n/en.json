@@ -339,6 +339,9 @@
   "filter": {
     "pending": "Filtering…"
   },
+  "form": {
+    "required": "required"
+  },
   "draft": {
     "restored": "Draft restored from {{when}}.",
     "restoredItem": "{{noun}} draft restored from {{when}}.",

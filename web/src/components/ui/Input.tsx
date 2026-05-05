@@ -1,5 +1,6 @@
 import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import { Label } from './Label';
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string;
@@ -25,20 +26,26 @@ const sizeClasses: Record<NonNullable<InputProps['size']>, string> = {
 };
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, icon, suffix, size = 'md', className, id, ...props }, ref) => {
+  ({ label, error, hint, icon, suffix, size = 'md', className, id, required, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
     return (
       <div className="space-y-1">
         {label && (
-          <label htmlFor={inputId} className="text-sm font-medium text-[var(--text-secondary)]">
+          <Label
+            htmlFor={inputId}
+            required={required}
+            className="text-sm font-medium text-[var(--text-secondary)]"
+          >
             {label}
-          </label>
+          </Label>
         )}
         <div className="relative">
           {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">{icon}</span>}
           <input
             ref={ref}
             id={inputId}
+            required={required}
+            aria-required={required ? 'true' : undefined}
             className={cn(
               'w-full rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] transition-colors',
               sizeClasses[size],

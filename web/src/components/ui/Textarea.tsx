@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
 import { cn } from '@/lib/cn';
+import { Label } from './Label';
 
 export interface TextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'size'> {
   label?: string;
@@ -20,18 +21,24 @@ const sizeClasses: Record<NonNullable<TextareaProps['size']>, string> = {
 };
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, label, error, size = 'md', id, ...props }, ref) => {
+  ({ className, label, error, size = 'md', id, required, ...props }, ref) => {
     const textareaId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
     return (
       <div>
         {label && (
-          <label htmlFor={textareaId} className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">
+          <Label
+            htmlFor={textareaId}
+            required={required}
+            className="mb-1 block text-xs font-medium text-[var(--text-secondary)]"
+          >
             {label}
-          </label>
+          </Label>
         )}
         <textarea
           ref={ref}
           id={textareaId}
+          required={required}
+          aria-required={required ? 'true' : undefined}
           className={cn(
             'w-full rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)]',
             sizeClasses[size],
