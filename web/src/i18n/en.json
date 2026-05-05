@@ -1579,7 +1579,17 @@
     "markerRow": "Annotations on this chart"
   },
   "chart": {
-    "export": "Export as PNG",
+    "export": {
+      "menuLabel": "Export chart",
+      "disabledTooltip": "Chart not ready to export",
+      "csv": "Download data as CSV",
+      "png": "Save as PNG",
+      "svg": "Save as SVG",
+      "copy": "Copy image to clipboard",
+      "copySuccess": "Chart image copied to clipboard",
+      "copyFallback": "Clipboard not available — image downloaded instead",
+      "copyFailed": "Failed to copy chart image"
+    },
     "exportCsv": "Download data as CSV",
     "menu": {
       "label": "Chart actions",

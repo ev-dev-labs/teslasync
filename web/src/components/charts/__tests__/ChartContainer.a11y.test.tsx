@@ -32,6 +32,8 @@ vi.mock('@/hooks/useChartExport', () => ({
   useChartExport: () => ({
     chartRef: { current: null },
     exportPNG: vi.fn(),
+    exportSVG: vi.fn(),
+    copyToClipboard: vi.fn(async () => 'copied' as const),
     exporting: false,
   }),
 }));

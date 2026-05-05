@@ -1,8 +1,6 @@
-import { forwardRef, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Download, MoreVertical, Tag, FileSpreadsheet, Image as ImageIcon, Plus, Eye, EyeOff,
-} from 'lucide-react';
+import { Tag, Plus, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Spinner } from '@/components/feedback/Spinner';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -13,6 +11,7 @@ import { useChartExport } from '@/hooks/useChartExport';
 import { downloadCSV, objectsToCSV, defaultExportFilename, type CsvCellValue } from '@/lib/csvExport';
 import { AnnotationList } from './AnnotationList';
 import { AddAnnotationPopover } from './AddAnnotationPopover';
+import { ChartExportMenu } from './ChartExportMenu';
 import {
   useChartAnnotationsAsData,
   useCreateAnnotation,
@@ -55,8 +54,20 @@ interface ChartContainerProps {
   action?: React.ReactNode;
   children: ChartContainerChildren;
   className?: string;
-  /** Show the PNG download button (also used as the trigger when only PNG is
-   *  available). Combined with `exportData` it expands into a kebab menu. */
+  /**
+   * Phase-46 / Prompt 16 — render the `<ChartExportMenu>` (PNG / SVG /
+   * Copy-image, plus CSV when `exportData` is supplied) in the title-bar
+   * action area.
+   *
+   * Defaults to `true` because every `<ChartContainer>` ships with a
+   * mandatory `ariaLabel` (phase-46 / prompt 13), which is the same
+   * "is this chart shareable?" precondition the export menu checks.
+   * Pass `exportable={false}` to explicitly opt out (e.g. for tour
+   * step-throughs or print-only contexts).
+   *
+   * The menu is also auto-hidden while the chart is in `loading` or
+   * `empty` states because there's no captured image worth sharing yet.
+   */
   exportable?: boolean;
   exportFilename?: string;
   /** Phase-40 / Prompt 31 — when set, exposes "Download data as CSV" in the
@@ -173,9 +184,8 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     ref,
   ) {
     const { t } = useTranslation();
-    const { chartRef, exportPNG, exporting } = useChartExport(exportFilename);
-    const [menuOpen, setMenuOpen] = useState(false);
-    const menuContainerRef = useRef<HTMLDivElement>(null);
+    const { chartRef, exportPNG, exportSVG, copyToClipboard, exporting } =
+      useChartExport(exportFilename ?? title);
 
     // Phase-46 / Prompt 13 — stable ids for figure ↔ figcaption wiring.
     const reactId = useId();
@@ -251,40 +261,19 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       [ref, chartRef],
     );
 
-    // Close the dropdown on outside click / Escape.
-    useEffect(() => {
-      if (!menuOpen) return;
-      const onClickOutside = (e: MouseEvent) => {
-        if (!menuContainerRef.current?.contains(e.target as Node)) setMenuOpen(false);
-      };
-      const onKey = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') setMenuOpen(false);
-      };
-      document.addEventListener('mousedown', onClickOutside);
-      document.addEventListener('keydown', onKey);
-      return () => {
-        document.removeEventListener('mousedown', onClickOutside);
-        document.removeEventListener('keydown', onKey);
-      };
-    }, [menuOpen]);
-
     const handleCsv = useCallback(() => {
       if (!exportData || exportData.length === 0) return;
       const filename = exportFilename ?? defaultExportFilename(title.toLowerCase().replace(/\s+/g, '-') || 'chart');
       downloadCSV(filename, objectsToCSV(exportData));
-      setMenuOpen(false);
     }, [exportData, exportFilename, title]);
 
-    const handlePng = useCallback(() => {
-      void exportPNG();
-      setMenuOpen(false);
-    }, [exportPNG]);
-
     const hasCsv = !!exportData && exportData.length > 0;
-    const hasPng = !!exportable;
-    const showMenu = hasCsv && hasPng;
-    const showCsvOnly = hasCsv && !hasPng;
-    const showPngOnly = hasPng && !hasCsv;
+    const exportableResolved = exportable !== false;
+    // Hide the export menu entirely while there is nothing to capture.
+    // CSV-only exports stay available because they don't need the chart
+    // DOM, but the image actions only make sense once the chart is
+    // actually rendered with data.
+    const showExportMenu = exportableResolved && !loading && !empty;
 
     const childrenContent = isFunctionChildren(children)
       ? children({ annotations: visibleAnnotations, hidden })
@@ -345,7 +334,15 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
             )}
           </div>
-          <div className="flex items-center gap-1">
+          <div
+            className="flex items-center gap-1"
+            // Phase-46 / Prompt 16 — exclude the title-bar action toolbar
+            // (annotation buttons, export menu, page-supplied actions)
+            // from the chart capture so the exported PNG/clipboard image
+            // shows only the chart visualisation, not the buttons used
+            // to invoke the export.
+            data-html2canvas-ignore="true"
+          >
             {action}
 
             {annotationsEnabled && (
@@ -385,81 +382,14 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               </>
             )}
 
-            {showPngOnly && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="!h-7 !w-7 !p-0 text-gray-400 hover:text-gray-600 dark:text-white/30 dark:hover:text-white/60"
-                icon={<Download className="h-3.5 w-3.5" />}
-                loading={exporting}
-                onClick={exportPNG}
-                aria-label={t('chart.export', 'Export as PNG')}
+            {showExportMenu && (
+              <ChartExportMenu
+                onExportPNG={exportPNG}
+                onExportSVG={exportSVG}
+                onCopyImage={copyToClipboard}
+                onExportCsv={hasCsv ? handleCsv : undefined}
+                busy={exporting}
               />
-            )}
-
-            {showCsvOnly && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="!h-7 !w-7 !p-0 text-gray-400 hover:text-gray-600 dark:text-white/30 dark:hover:text-white/60"
-                icon={<Download className="h-3.5 w-3.5" />}
-                onClick={handleCsv}
-                aria-label={t('chart.exportCsv', 'Download chart data as CSV')}
-              />
-            )}
-
-            {showMenu && (
-              <div ref={menuContainerRef} className="relative">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="!h-7 !w-7 !p-0 text-gray-400 hover:text-gray-600 dark:text-white/30 dark:hover:text-white/60"
-                  icon={<MoreVertical className="h-3.5 w-3.5" />}
-                  onClick={() => setMenuOpen((v) => !v)}
-                  aria-haspopup="menu"
-                  aria-expanded={menuOpen}
-                  aria-label={t('chart.menu.open', 'Chart options')}
-                />
-                {menuOpen && (
-                  <div
-                    role="menu"
-                    aria-label={t('chart.menu.label', 'Chart options')}
-                    className={cn(
-                      'absolute right-0 z-30 mt-1 w-52 rounded-lg p-1',
-                      'border border-white/[0.08] bg-[var(--surface-elevated)] shadow-xl',
-                    )}
-                  >
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={handleCsv}
-                      className={cn(
-                        'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
-                        'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-                        'focus-visible:outline-none focus-visible:bg-white/[0.06]',
-                      )}
-                    >
-                      <FileSpreadsheet className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span>{t('chart.menu.downloadCsv', 'Download data as CSV')}</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={handlePng}
-                      disabled={exporting}
-                      className={cn(
-                        'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
-                        'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-                        'focus-visible:outline-none focus-visible:bg-white/[0.06]',
-                        'disabled:opacity-50 disabled:cursor-not-allowed',
-                      )}
-                    >
-                      <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span>{t('chart.menu.downloadPng', 'Download as PNG')}</span>
-                    </button>
-                  </div>
-                )}
-              </div>
             )}
           </div>
         </div>
