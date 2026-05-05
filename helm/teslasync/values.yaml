@@ -676,6 +676,18 @@ github:
   token: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Vehicle hero photos — Phase 46 / Prompt 54
+# ─────────────────────────────────────────────────────────────────────────────
+# User-uploaded vehicle hero photos are written under `dir` at
+# runtime (3 sizes per upload: 256/1024/2048 px JPEG). For
+# persistence across pod restarts, mount a PV at this path on the
+# API deployment. The chart does NOT mount one by default so
+# existing installs are not surprised — operators must add their
+# own volume + volumeMount alongside `dir`.
+vehiclePhotos:
+  dir: "/var/lib/teslasync/photos"
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Tesla API credentials
 # ─────────────────────────────────────────────────────────────────────────────
 tesla:

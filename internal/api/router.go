@@ -110,10 +110,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Security headers (clickjacking, MIME sniffing, CSP, HSTS, etc.)
 	r.Use(SecurityHeadersMiddleware)
 
-	// Request body size limit (1MB) ╬ô├ç├╢ prevents DoS via large payloads
+	// Request body size limit (1 MB default). The vehicle photo
+	// upload endpoint legitimately ships up to ~12 MB (8 MB image
+	// + multipart envelope), so bypass the cap on that exact
+	// path. Wrapping a wrapped MaxBytesReader can't loosen the
+	// inner limit, so this MUST happen here in the global
+	// middleware rather than inside the handler.
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			req.Body = http.MaxBytesReader(w, req.Body, 1<<20)
+			limit := int64(1 << 20)
+			if isVehiclePhotoUploadPath(req.Method, req.URL.Path) {
+				limit = 12 << 20
+			}
+			req.Body = http.MaxBytesReader(w, req.Body, limit)
 			next.ServeHTTP(w, req)
 		})
 	})
@@ -216,6 +225,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		vehicleSettingsRepo,
 		vehicleSettingsResolver,
 		NewVehicleExistenceChecker(vehicleSettingsRepoForRouter),
+	)
+
+	// Phase-46 / Prompt 54 — vehicle photo upload. The handler
+	// owns the on-disk write/read pipeline plus the per-vehicle
+	// upload mutex; the repo is a thin SQL facade that persists
+	// the rendered paths in vehicle_photos.
+	vehiclePhotoRepo := database.NewVehiclePhotoRepo(db)
+	vehiclePhotoHandler := NewVehiclePhotoHandler(
+		vehiclePhotoRepo,
+		NewVehicleExistenceChecker(vehicleSettingsRepoForRouter),
+		cfg.VehiclePhotoDir,
 	)
 
 	// Phase-46 / Prompt 44 — RBAC matrix admin handler.
@@ -742,6 +762,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/settings", vehicleSettingsHandler.List)
 				r.With(httprate.LimitByIP(60, 1*time.Minute)).Put("/settings/{key}", vehicleSettingsHandler.Put)
 				r.With(httprate.LimitByIP(60, 1*time.Minute)).Delete("/settings/{key}", vehicleSettingsHandler.Delete)
+
+				// Phase-46 / Prompt 54 — vehicle hero photo. POST
+				// + DELETE are rate-limited at 5/min (uploads are
+				// expensive and the SPA only fires them on
+				// explicit user action). GET routes are unguarded
+				// — they're served frequently by the hero card.
+				r.Get("/photo", vehiclePhotoHandler.GetMeta)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/photo", vehiclePhotoHandler.Upload)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Delete("/photo", vehiclePhotoHandler.Delete)
+				r.Get("/photo/{size}", vehiclePhotoHandler.GetFile)
 			})
 		})
 
@@ -1932,4 +1962,29 @@ func installAdminLogStreamTap(reg *platform.LogSubscriberRegistry) {
 		return
 	}
 	adminLogStreamTapState.current.SetTarget(reg)
+}
+
+// isVehiclePhotoUploadPath returns true when the request is the
+// vehicle photo upload endpoint (POST /api/v1/vehicles/{id}/photo).
+// Used by the global body-limit middleware to bypass the 1 MB cap
+// for photo uploads — a wrapped http.MaxBytesReader can't be
+// loosened later, so the bypass MUST happen at the global layer.
+func isVehiclePhotoUploadPath(method, path string) bool {
+if method != http.MethodPost {
+return false
+}
+const prefix = "/api/v1/vehicles/"
+if !strings.HasPrefix(path, prefix) {
+return false
+}
+rest := path[len(prefix):]
+idx := strings.Index(rest, "/")
+if idx <= 0 {
+return false
+}
+tail := rest[idx:]
+// Accept exactly /photo (no trailing slash, no sub-path) so
+// future endpoints under /vehicles/{id}/photo/X don't
+// inherit the 12 MB limit.
+return tail == "/photo"
 }

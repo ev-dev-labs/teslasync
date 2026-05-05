@@ -2639,3 +2639,25 @@ export interface ImpersonationStartRequest {
   subject: string
 }
 
+
+/**
+ * Phase-46 / Prompt 54 — Vehicle photo upload types.
+ *
+ * The backend stores three rendered sizes per upload (thumb 256,
+ * medium 1024, full 2048 pixels along the longer edge); GET /photo
+ * returns metadata only and the SPA builds the actual bytes URL via
+ * vehiclePhotoUrl() with uploaded_at as the cache buster.
+ */
+export type VehiclePhotoSize = 'thumb' | 'medium' | 'full'
+
+export interface VehiclePhotoSizes {
+  thumb: VehiclePhotoSize
+  medium: VehiclePhotoSize
+  full: VehiclePhotoSize
+}
+
+export interface VehiclePhotoMeta {
+  has_photo: boolean
+  uploaded_at?: string
+  sizes?: VehiclePhotoSizes
+}

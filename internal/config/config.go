@@ -9,26 +9,27 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	Port           int
-	LogLevel       string
-	CORSOrigins    string
-	Database       DatabaseConfig
-	Tesla          TeslaConfig
-	MQTT           MQTTConfig
-	Worker         WorkerConfig
-	Redis          RedisConfig
-	Auth           AuthConfig
-	Retention      RetentionConfig
-	FleetTelemetry FleetTelemetryConfig
-	MongoDB        MongoDBConfig
-	GasPrice       GasPriceConfig
-	OpenTelemetry  OpenTelemetryConfig
-	GoogleMaps     GoogleMapsConfig
-	AzureMaps      AzureMapsConfig
-	APILogs        APILogsConfig
-	WebPush        WebPushConfig
-	System         SystemConfig
-	GitHub         GitHubConfig
+	Port             int
+	LogLevel         string
+	CORSOrigins      string
+	VehiclePhotoDir  string
+	Database         DatabaseConfig
+	Tesla            TeslaConfig
+	MQTT             MQTTConfig
+	Worker           WorkerConfig
+	Redis            RedisConfig
+	Auth             AuthConfig
+	Retention        RetentionConfig
+	FleetTelemetry   FleetTelemetryConfig
+	MongoDB          MongoDBConfig
+	GasPrice         GasPriceConfig
+	OpenTelemetry    OpenTelemetryConfig
+	GoogleMaps       GoogleMapsConfig
+	AzureMaps        AzureMapsConfig
+	APILogs          APILogsConfig
+	WebPush          WebPushConfig
+	System           SystemConfig
+	GitHub           GitHubConfig
 }
 
 // GitHubConfig holds the credentials used by the optional GitHub Issues
@@ -273,9 +274,10 @@ type RetentionConfig struct {
 // these fields first or log only non-sensitive values.
 func Load() (*Config, error) {
 	cfg := &Config{
-		Port:        envInt("TESLASYNC_PORT", 4000),
-		LogLevel:    envStr("TESLASYNC_LOG_LEVEL", "info"),
-		CORSOrigins: envStr("CORS_ORIGINS", ""),
+		Port:            envInt("TESLASYNC_PORT", 4000),
+		LogLevel:        envStr("TESLASYNC_LOG_LEVEL", "info"),
+		CORSOrigins:     envStr("CORS_ORIGINS", ""),
+		VehiclePhotoDir: envStr("TESLASYNC_VEHICLE_PHOTO_DIR", "/var/lib/teslasync/photos"),
 
 		Database: DatabaseConfig{
 			Host:              envStr("DATABASE_HOST", "localhost"),

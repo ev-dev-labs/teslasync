@@ -146,3 +146,9 @@ data:
   # corresponding TESLASYNC_GITHUB_TOKEN is rendered to the Secret
   # template only when set. Empty repo disables the bridge entirely.
   TESLASYNC_GITHUB_REPO: {{ default "" (and .Values.github .Values.github.repo) | quote }}
+  # Vehicle photo upload root — Phase 46 / Prompt 54.
+  # Hero photos are written under this directory at runtime (3
+  # rendered sizes per upload). For persistence across pod restarts,
+  # mount a PV at this path on the API deployment — the chart does
+  # NOT mount one by default so existing installs aren't surprised.
+  TESLASYNC_VEHICLE_PHOTO_DIR: {{ default "/var/lib/teslasync/photos" (and .Values.vehiclePhotos .Values.vehiclePhotos.dir) | quote }}

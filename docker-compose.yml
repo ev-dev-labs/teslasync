@@ -92,6 +92,13 @@ services:
       # unconfigured.
       - TESLASYNC_GITHUB_REPO=${TESLASYNC_GITHUB_REPO:-}
       - TESLASYNC_GITHUB_TOKEN=${TESLASYNC_GITHUB_TOKEN:-}
+      # Vehicle photo upload root — Phase 46 / Prompt 54.
+      # User-uploaded vehicle hero photos are written to this dir
+      # at runtime (3 sizes per upload). Mount a volume here in
+      # production so photos survive container restart.
+      - TESLASYNC_VEHICLE_PHOTO_DIR=${TESLASYNC_VEHICLE_PHOTO_DIR:-/var/lib/teslasync/photos}
+    volumes:
+      - vehicle_photos:/var/lib/teslasync/photos
     depends_on:
       postgres:
         condition: service_healthy
@@ -481,3 +488,4 @@ volumes:
   mosquitto_data:
   redis_data:
   prometheus_data:
+  vehicle_photos:

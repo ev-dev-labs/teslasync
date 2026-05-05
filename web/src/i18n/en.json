@@ -6935,7 +6935,23 @@
       "galleryNamed": "{{name}} photo gallery",
       "openAt": "Open photo {{index}} of {{total}}",
       "empty": "No photos uploaded yet.",
-      "emptyHelp": "Photos uploaded for this vehicle will appear here."
+      "emptyHelp": "Photos uploaded for this vehicle will appear here.",
+      "uploadSuccess": "Photo uploaded.",
+      "uploadFailed": "Photo upload failed.",
+      "deleteSuccess": "Photo removed.",
+      "deleteFailed": "Failed to remove photo.",
+      "upload": {
+        "title": "Vehicle photo",
+        "dropPrompt": "Drag a photo here or click to choose a file",
+        "constraints": "JPEG or PNG — up to {{max}} MB",
+        "previewAlt": "Vehicle photo preview",
+        "choose": "Choose photo",
+        "replace": "Replace photo",
+        "remove": "Remove photo",
+        "uploading": "Uploading…",
+        "confirmRemoveTitle": "Remove vehicle photo?",
+        "confirmRemoveMessage": "The hero card will fall back to the stock model render until a new photo is uploaded."
+      }
     },
     "detail": {
       "batteryOverview": "Battery Overview",
@@ -7426,6 +7442,9 @@
       "range": "Range",
       "inside": "Inside",
       "outside": "Outside"
+    },
+    "photo": {
+      "alt": "{{name}} photo"
     },
     "stat": {
       "insideTemp": "Inside Temp",
