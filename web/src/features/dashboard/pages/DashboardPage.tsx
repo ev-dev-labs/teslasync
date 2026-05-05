@@ -31,6 +31,7 @@ import { KioskOverlay } from '../components/KioskOverlay';
 import { KioskSettingsModal } from '../components/KioskSettingsModal';
 import { AddWidgetButton } from '../components/AddWidgetButton';
 import { WidgetCatalogueDialog } from '../components/WidgetCatalogueDialog';
+import { RecentlyViewedWidget } from '../components/RecentlyViewedWidget';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
 import { useLayoutKeyboard } from '../hooks/useLayoutKeyboard';
 import { useKioskMode } from '../hooks/useKioskMode';
@@ -478,6 +479,13 @@ export default function DashboardPage() {
             </AlertBanner>
           </FadeIn>
         )}
+
+        {/* Phase-46 / Prompt 51 — Recently viewed widget. Renders an empty
+            placeholder until the user navigates around the app, so first-run
+            users still see the affordance and learn what it does. */}
+        <FadeIn>
+          <RecentlyViewedWidget />
+        </FadeIn>
 
         {/* Layout Manager — always show when there are dashboards */}
         {dashboards.length > 0 && (

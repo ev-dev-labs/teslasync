@@ -1454,6 +1454,18 @@
       "commands": "Vehicle Commands",
       "selectVehicle": "Select Vehicle"
     },
+    "recent": {
+      "justNow": "Just now",
+      "minutesAgo": "{{count}}m ago",
+      "minutesAgo_one": "{{count}}m ago",
+      "minutesAgo_other": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "hoursAgo_one": "{{count}}h ago",
+      "hoursAgo_other": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago",
+      "daysAgo_one": "{{count}}d ago",
+      "daysAgo_other": "{{count}}d ago"
+    },
     "cmd": {
       "selectVehicle": "Select vehicle…",
       "switchVehicle": "Switch to {{name}}",
@@ -8143,5 +8155,27 @@
       "ended": "Impersonation ended",
       "endFailed": "Failed to end impersonation"
     }
+  },
+  "privacy": {
+    "title": "Privacy",
+    "subtitle": "Manage local browsing history surfaces. These settings only affect this browser."
+  },
+  "recentPages": {
+    "widgetTitle": "Recently Viewed",
+    "empty": "Pages you visit will appear here for quick access.",
+    "shortMinute": "m",
+    "shortHour": "h",
+    "shortDay": "d",
+    "justNow": "Just now",
+    "clearTitle": "Recently viewed pages",
+    "clearBody": "Wipe the list of pages used by the dashboard widget and the Recent section in the command palette.",
+    "clearButton": "Clear recent pages",
+    "clearConfirmTitle": "Clear recent pages?",
+    "clearConfirmBody": "This will wipe the list immediately. The dashboard widget and palette Recent section will be empty until you visit new pages.",
+    "clearConfirmCta": "Clear pages",
+    "cleared": "Recent pages cleared",
+    "storedCount_one": "{{count}} entry stored",
+    "storedCount_other": "{{count}} entries stored",
+    "storedCount": "{{count}} entries stored"
   }
 }
