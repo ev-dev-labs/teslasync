@@ -227,6 +227,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// always pops on the danger-zone "Reset ALL settings" button.
 	settingsResetRepo := database.NewSettingsResetRepo(db)
 	settingsResetHandler := NewSettingsResetHandler(settingsResetRepo, cfg.Auth.ForwardAuthHeader)
+	// Phase-46 / Prompt 65 — recurring scheduled exports.
+	//
+	// Owner identity comes from the configured FORWARD_AUTH_HEADER on
+	// every read/write — the handler NEVER trusts owner_subject in the
+	// request body. The repo's per-row UPDATE/DELETE statements scope
+	// by (id, owner_subject) so cross-user mutations collapse to 404.
+	scheduledExportRepo := database.NewScheduledExportRepo(db)
+	scheduledExportsHandler := NewScheduledExportsHandler(scheduledExportRepo, cfg.Auth.ForwardAuthHeader, nil)
 	// Phase-46 / Prompt 43 — per-vehicle settings layer.
 	//
 	// The resolver layers vehicle-scoped overrides on top of the
@@ -1833,6 +1841,22 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/", exportJobHandler.ListJobs)
 			r.Get("/{jobID}", exportJobHandler.GetJob)
 			r.Get("/{jobID}/download", exportJobHandler.DownloadJob)
+		})
+
+		// Phase-46 / Prompt 65 — recurring scheduled exports.
+		// Five routes mounted as a separate /scheduled-exports
+		// subtree (NOT /export/jobs/scheduled) because they
+		// describe schedule rows, not one-shot job rows. Owner
+		// identity flows from the configured FORWARD_AUTH_HEADER on
+		// every call; the handler refuses owner_subject in the body
+		// (DisallowUnknownFields). Per-row writes are scoped at the
+		// SQL layer so cross-user mutations collapse to 404.
+		r.Route("/scheduled-exports", func(r chi.Router) {
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/", scheduledExportsHandler.List)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", scheduledExportsHandler.Create)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/{id}", scheduledExportsHandler.Update)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/{id}", scheduledExportsHandler.Delete)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/{id}/run", scheduledExportsHandler.RunNow)
 		})
 
 		// ╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç

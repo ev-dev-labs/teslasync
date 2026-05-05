@@ -6594,6 +6594,56 @@
       "endDate": "End date (optional)",
       "warning": "Large signal histories are capped per table to keep the ZIP under control. Track progress in the floating widget that appears once your export starts.",
       "start": "Start full export"
+    },
+    "scheduled": {
+      "feature": "Scheduled exports",
+      "title": "Scheduled exports",
+      "subtitle": "Cron-driven recurring exports. The server runs each schedule on its cadence and delivers the result via download, email, or webhook.",
+      "newSchedule": "New schedule",
+      "empty": "No schedules yet",
+      "emptyMessage": "Create a schedule to receive recurring exports automatically.",
+      "table": {
+        "name": "Name",
+        "type": "Type",
+        "format": "Format",
+        "cron": "Cron",
+        "delivery": "Delivery",
+        "nextRun": "Next run",
+        "lastRun": "Last run",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "status": {
+        "ok": "OK",
+        "failed": "Failed",
+        "never": "Never"
+      },
+      "actions": {
+        "runNow": "Run now",
+        "edit": "Edit",
+        "delete": "Delete",
+        "enable": "Enable",
+        "disable": "Disable"
+      },
+      "form": {
+        "name": "Name",
+        "namePlaceholder": "Drives weekly",
+        "exportType": "Export type",
+        "format": "Format",
+        "vehicle": "Vehicle (optional)",
+        "scheduleCron": "Cron expression",
+        "scheduleCronHelp": "Standard 5-field cron, e.g. '0 9 * * 0' for 09:00 every Sunday.",
+        "rangeWindow": "Range window",
+        "rangeWindowHelp": "Relative window applied at run time. Format: number + m/h/d (e.g. 7d).",
+        "delivery": "Delivery",
+        "deliveryKind": "Delivery kind",
+        "deliveryTarget": "Delivery target",
+        "deliveryTargetHelp": "Email address (email kind) or HTTPS URL (webhook kind). Ignored for download.",
+        "submit": "Save schedule",
+        "cancel": "Cancel"
+      },
+      "deleteConfirmTitle": "Delete schedule?",
+      "deleteConfirmBody": "This will stop future runs of {{name}}. Past download artifacts are not affected."
     }
   },
   "dbHealth": {

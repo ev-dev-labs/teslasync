@@ -22,6 +22,8 @@ import { formatDurationMsLong, formatRelative } from '@/lib/dateFormat';
 import { request } from '@/api/client';
 import { useCreateAccountExport, useExportColumns } from '@/api/hooks/useExports';
 import { JobProgressDrawer } from '@/components/feedback/JobProgressDrawer';
+import { RequiresAuth } from '@/components/feedback/RequiresAuth';
+import { ScheduledExportsPanel } from './ScheduledExportsPanel';
 import type { Vehicle } from '@/api/types';
 import { Icons } from '@/lib/icons';
 
@@ -1241,6 +1243,19 @@ export default function DataExportPage() {
           onDownload={handleDownload}
           onRefresh={handleRefresh}
         />
+      </FadeIn>
+
+      {/* Phase-46 / Prompt 65 — recurring scheduled exports panel.
+          Wrapped in <RequiresAuth> because the underlying API takes
+          ownership from FORWARD_AUTH_HEADER; in open mode the
+          placeholder explains why the section can't render. */}
+      <FadeIn delay={0.2}>
+        <RequiresAuth
+          capability="session_list"
+          feature={t('dataExport.scheduled.feature', 'Scheduled exports')}
+        >
+          <ScheduledExportsPanel />
+        </RequiresAuth>
       </FadeIn>
 
       {/* Floating job progress drawer — visible across the page */}

@@ -26,7 +26,19 @@ vi.mock('@/api/client', async () => {
 });
 
 import { request } from '@/api/client';
-import { useExportColumns, exportKeys, type ExportColumnsResponse } from './useExports';
+import { ToastProvider } from '@/components/feedback/Toast';
+import {
+  useExportColumns,
+  exportKeys,
+  type ExportColumnsResponse,
+  useScheduledExports,
+  useCreateScheduledExport,
+  useUpdateScheduledExport,
+  useDeleteScheduledExport,
+  useRunScheduledExportNow,
+  type ScheduledExport,
+  type ScheduledExportInput,
+} from './useExports';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 
@@ -37,7 +49,11 @@ function wrapper({ children }: { children: ReactNode }) {
       mutations: { retry: false },
     },
   });
-  return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={qc}>
+      <ToastProvider>{children}</ToastProvider>
+    </QueryClientProvider>
+  );
 }
 
 const drivesPayload: ExportColumnsResponse = {
@@ -110,5 +126,133 @@ describe('useExportColumns', () => {
     const { result } = renderHook(() => useExportColumns('drives'), { wrapper });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(Error);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase-46 / Prompt 65 — scheduled exports hook coverage
+// ---------------------------------------------------------------------------
+
+const sampleSchedule: ScheduledExport = {
+  id: 7,
+  owner_subject: 'alice',
+  name: 'Drives weekly',
+  export_type: 'drives',
+  format: 'csv',
+  vehicle_id: null,
+  columns: null,
+  schedule_cron: '0 9 * * 0',
+  delivery: { kind: 'download' },
+  range_window: '7d',
+  enabled: true,
+  last_run_at: null,
+  last_status: null,
+  last_error: null,
+  next_run_at: '2025-06-22T09:00:00Z',
+  created_at: '2025-06-15T12:00:00Z',
+  updated_at: '2025-06-15T12:00:00Z',
+};
+
+const validInput: ScheduledExportInput = {
+  name: 'Drives weekly',
+  export_type: 'drives',
+  format: 'csv',
+  schedule_cron: '0 9 * * 0',
+  delivery: { kind: 'download' },
+  range_window: '7d',
+};
+
+describe('exportKeys.scheduled', () => {
+  it('produces a stable identity-free key tuple', () => {
+    expect(exportKeys.scheduled).toEqual(['scheduled-exports']);
+  });
+});
+
+describe('useScheduledExports', () => {
+  it('GETs /scheduled-exports and surfaces the array', async () => {
+    mockedRequest.mockResolvedValueOnce([sampleSchedule]);
+    const { result } = renderHook(() => useScheduledExports(), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/scheduled-exports');
+    expect(opts).toHaveProperty('signal');
+    expect(result.current.data).toHaveLength(1);
+    expect(result.current.data?.[0].id).toBe(7);
+  });
+
+  it('coerces a missing payload to an empty array via safeArray', async () => {
+    mockedRequest.mockResolvedValueOnce(null as unknown as ScheduledExport[]);
+    const { result } = renderHook(() => useScheduledExports(), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual([]);
+  });
+});
+
+describe('useCreateScheduledExport', () => {
+  it('POSTs the payload and surfaces the created row', async () => {
+    mockedRequest.mockResolvedValueOnce(sampleSchedule);
+    const { result } = renderHook(() => useCreateScheduledExport(), { wrapper });
+    const created = await result.current.mutateAsync(validInput);
+    expect(created.id).toBe(7);
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/scheduled-exports');
+    expect(opts.method).toBe('POST');
+    expect(JSON.parse(opts.body as string)).toEqual(validInput);
+  });
+
+  it('does NOT include owner_subject in the request body', async () => {
+    mockedRequest.mockResolvedValueOnce(sampleSchedule);
+    const { result } = renderHook(() => useCreateScheduledExport(), { wrapper });
+    // Even if a caller sneaks owner_subject into the input, the
+    // ScheduledExportInput type does not declare it. Behavioural check:
+    // pass a plain payload and confirm the serialised body has no
+    // owner_subject key.
+    await result.current.mutateAsync(validInput);
+    const body = JSON.parse(
+      (mockedRequest.mock.calls[0][1] as { body: string }).body,
+    );
+    expect(body).not.toHaveProperty('owner_subject');
+  });
+});
+
+describe('useUpdateScheduledExport', () => {
+  it('PUTs to /scheduled-exports/{id}', async () => {
+    mockedRequest.mockResolvedValueOnce({ ...sampleSchedule, name: 'renamed' });
+    const { result } = renderHook(() => useUpdateScheduledExport(), { wrapper });
+    const updated = await result.current.mutateAsync({
+      id: 7,
+      payload: { ...validInput, name: 'renamed' },
+    });
+    expect(updated.name).toBe('renamed');
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/scheduled-exports/7');
+    expect(opts.method).toBe('PUT');
+  });
+});
+
+describe('useDeleteScheduledExport', () => {
+  it('DELETEs /scheduled-exports/{id}', async () => {
+    mockedRequest.mockResolvedValueOnce(undefined);
+    const { result } = renderHook(() => useDeleteScheduledExport(), { wrapper });
+    await result.current.mutateAsync(7);
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/scheduled-exports/7');
+    expect(opts.method).toBe('DELETE');
+  });
+});
+
+describe('useRunScheduledExportNow', () => {
+  it('POSTs /scheduled-exports/{id}/run and returns the updated row', async () => {
+    mockedRequest.mockResolvedValueOnce({
+      ...sampleSchedule,
+      next_run_at: '2025-06-15T12:00:00Z',
+    });
+    const { result } = renderHook(() => useRunScheduledExportNow(), { wrapper });
+    const row = await result.current.mutateAsync(7);
+    expect(row.next_run_at).toBe('2025-06-15T12:00:00Z');
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/scheduled-exports/7/run');
+    expect(opts.method).toBe('POST');
   });
 });
