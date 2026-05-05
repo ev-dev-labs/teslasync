@@ -31,3 +31,5 @@ export { JobProgressDrawer } from './JobProgressDrawer';
 export { AchievementUnlockedToast, AchievementUnlockedToastStack, type AchievementUnlockedToastProps } from './AchievementUnlockedToast';
 export { AchievementUnlockListener } from './AchievementUnlockListener';
 export { ChangelogModal } from './ChangelogModal';
+export { TopProgress } from './TopProgress';
+export { SuspenseProgressBoundary } from './SuspenseProgressBoundary';

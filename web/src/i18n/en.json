@@ -1,4 +1,7 @@
 {
+  "global": {
+    "loading": "Loading"
+  },
   "achievements": {
     "unlocked": "Achievement unlocked: {{name}}",
     "noneYet": "Drive, charge, and explore — achievements will appear here as you unlock them",

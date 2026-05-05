@@ -1,9 +1,10 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, useEffect } from 'react'
 import { Navigate, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import { ScrollRestoration } from './components/layout/ScrollRestoration'
 import { PageLoadSkeleton } from './components/feedback/PageLoadSkeleton'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
+import { SuspenseProgressBoundary } from './components/feedback/SuspenseProgressBoundary'
 import { AuthExpiredOverlay } from '@/components/feedback'
 import { OnboardingGate } from '@/features/onboarding/components/OnboardingGate'
 import { DensityApplier } from '@/components/ui/DensityApplier'
@@ -160,7 +161,13 @@ const WatchFace = lazy(() => import('./features/watch/pages/WatchFacePage'))
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation.
  *  Uses PageLoadSkeleton (layout-shaped) instead of a plain spinner so the page
  *  doesn't reflow when the lazy chunk arrives — important for our CLS budget.
- *  See web/lighthouserc.json for the active assertions (Phase 40 / Prompt 35). */
+ *  See web/lighthouserc.json for the active assertions (Phase 40 / Prompt 35).
+ *
+ *  Phase-46 / Prompt 07 — wraps Suspense in SuspenseProgressBoundary so
+ *  every route-chunk download also activates the global <TopProgress>
+ *  bar mounted in <Layout>. The bar gives the user a visible "loading"
+ *  affordance during chunk download even before the layout-shaped
+ *  skeleton paints. */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
   const { pathname } = useLocation()
   // key={pathname} guarantees a fresh ErrorBoundary instance on every navigation,
@@ -169,7 +176,7 @@ function SafeRoute({ children, name }: { children: React.ReactNode; name: string
   // would otherwise reuse the boundary instance across path changes.
   return (
     <ErrorBoundary key={pathname} name={name} resetKey={pathname}>
-      <Suspense fallback={<PageLoadSkeleton />}>{children}</Suspense>
+      <SuspenseProgressBoundary fallback={<PageLoadSkeleton />}>{children}</SuspenseProgressBoundary>
     </ErrorBoundary>
   )
 }

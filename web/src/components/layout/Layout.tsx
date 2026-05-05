@@ -6,6 +6,7 @@ import { NewVersionBanner } from '../feedback/NewVersionBanner'
 import { TeslaReauthBanner } from '../feedback/TeslaReauthBanner'
 import { RateLimitBanner } from '../feedback/RateLimitBanner'
 import { MaintenanceBanner } from '../feedback/MaintenanceBanner'
+import { TopProgress } from '../feedback/TopProgress'
 import { SessionExpiringModal } from '../feedback/SessionExpiringModal'
 import { SessionExpiredModal } from '../feedback/SessionExpiredModal'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -1370,6 +1371,14 @@ export default function Layout() {
 
       {/* PWA Install Prompt */}
       <InstallPrompt />
+
+      {/* Route-change / mutation progress bar (Phase-46 / Prompt 07) —
+          mounted ABOVE every banner so the slim 2 px strip at the very
+          top of the viewport is never occluded by a stacked banner.
+          Activated by SuspenseProgressBoundary at every lazy() route
+          boundary in App.tsx, plus opt-in useGlobalProgress() in
+          long-running mutations. */}
+      <TopProgress />
 
       {/* Offline status banner (PWA / mobile) */}
       <OfflineBanner />
