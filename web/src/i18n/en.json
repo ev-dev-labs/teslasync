@@ -2332,6 +2332,23 @@
         "title": "No signals cached for this vehicle",
         "body": "Both L1 and L2 are empty. If this vehicle is currently streaming, give the next batch a few seconds to arrive. Otherwise check the telemetry pipeline."
       },
+      "cacheNotWired": {
+        "title": "Redis cache is not configured",
+        "body": "The TeslaSync API server started without a Redis connection. Set REDIS_ADDR (or REDIS_HOST + REDIS_PORT) in your environment, ensure the Redis service is reachable, and restart the API. This page reads exclusively from Redis and cannot function without it.",
+        "cta": "See cache configuration docs"
+      },
+      "unreachable": {
+        "title": "Redis is unreachable",
+        "body": "The API server is configured to use Redis, but the connection failed. Check that the Redis pod is running, that network policies allow the API to reach it, and review API server logs for \"redis signal cache: GetAll failed\"."
+      },
+      "requestFailed": {
+        "title": "Could not load Redis signals",
+        "body": "The server returned an error: {{status}} {{message}}. The Redis Signal Viewer cannot recover automatically — try refreshing, and if the error persists check the API server logs."
+      },
+      "networkError": {
+        "title": "Cannot reach the API server",
+        "body": "The browser failed to fetch /api/v1/dev-tools/redis-signals. Check that the API server is running, the proxy/ingress is healthy, and there are no CORS or network errors in DevTools."
+      },
       "otherVehicles": "Other vehicles with cached signals",
       "meta": {
         "mode": "Live store mode",

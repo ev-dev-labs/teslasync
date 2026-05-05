@@ -13,7 +13,8 @@ import { getRedisSignals, type RedisSignalEntry } from '@/api/devtools'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { fmtInt } from '@/lib/numberFormat'
 import { INTERVALS } from '@/lib/constants'
-import { RedisDiagnosticEmptyState } from '../components/RedisDiagnosticEmptyState'
+import { isApiError, type ApiError } from '@/lib/resilience'
+import { RedisDiagnosticEmptyState, type DiagnosticErrorProps } from '../components/RedisDiagnosticEmptyState'
 
 /* ─── signal categorization ─────────────────────────────────────────── */
 
@@ -147,6 +148,8 @@ export default function RedisSignalViewerPage() {
     data: signalData,
     isLoading,
     isFetching,
+    error,
+    isError,
     refetch,
   } = useQuery({
     queryKey: ['redis-signals', selectedVehicleId],
@@ -191,6 +194,18 @@ export default function RedisSignalViewerPage() {
   const { sortKey, sortDir, onSort } = useSortToggle('name', 'asc')
 
   const meta = signalData?.meta
+
+  // Phase-46 / Prompt 59 — when the upstream query failed, the diagnostic
+  // banner takes over so the operator sees the real failure mode (cache
+  // not wired, redis unreachable, generic 5xx, network) instead of the
+  // legacy "no signals cached" black box. Stat cards also display a
+  // placeholder so the top-of-page numbers don't lie about a 0 count.
+  const errorBannerProps: DiagnosticErrorProps = !isError
+    ? {}
+    : isApiError(error)
+      ? { serverError: error as ApiError }
+      : { serverError: null, networkError: true }
+  const showStatPlaceholder = isLoading || isError
 
   const vehicleOptions = vehicleList.map((v) => ({
     value: String(v.id),
@@ -294,20 +309,20 @@ export default function RedisSignalViewerPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <StatCard
                 label={t('redis.totalSignals', 'Total Signals')}
-                value={isLoading ? '—' : fmtInt(signalData?.signal_count ?? 0)}
+                value={showStatPlaceholder ? '—' : fmtInt(signalData?.signal_count ?? 0)}
                 icon={<Database className="h-5 w-5" />}
               />
               <StatCard
                 label={t('redis.numbers', 'Numbers')}
-                value={isLoading ? '—' : fmtInt(rows.filter((r) => r.type === 'number').length)}
+                value={showStatPlaceholder ? '—' : fmtInt(rows.filter((r) => r.type === 'number').length)}
               />
               <StatCard
                 label={t('redis.strings', 'Strings')}
-                value={isLoading ? '—' : fmtInt(rows.filter((r) => r.type === 'string').length)}
+                value={showStatPlaceholder ? '—' : fmtInt(rows.filter((r) => r.type === 'string').length)}
               />
               <StatCard
                 label={t('redis.booleans', 'Booleans')}
-                value={isLoading ? '—' : fmtInt(rows.filter((r) => r.type === 'boolean').length)}
+                value={showStatPlaceholder ? '—' : fmtInt(rows.filter((r) => r.type === 'boolean').length)}
               />
             </div>
           </FadeIn>
@@ -330,11 +345,12 @@ export default function RedisSignalViewerPage() {
                 <Skeleton className="h-8 w-full" />
               </div>
             ) : filteredRows.length === 0 ? (
-              rows.length === 0 ? (
+              rows.length === 0 || isError ? (
                 <RedisDiagnosticEmptyState
                   vehicleId={selectedVehicleId!}
                   meta={meta}
                   onSelectVehicle={setSelectedVehicleId}
+                  {...errorBannerProps}
                 />
               ) : (
                 <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

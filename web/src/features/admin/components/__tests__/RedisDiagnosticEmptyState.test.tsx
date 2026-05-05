@@ -26,6 +26,7 @@ vi.mock('@/api/devtools', async (importOriginal) => {
 });
 
 import { getRedisSignalKeys, type RedisSignalsMeta } from '@/api/devtools';
+import { ApiError } from '@/lib/resilience';
 import { RedisDiagnosticEmptyState } from '../RedisDiagnosticEmptyState';
 
 const mockedGetKeys = getRedisSignalKeys as unknown as ReturnType<typeof vi.fn>;
@@ -37,6 +38,19 @@ function makeWrapper() {
   return function Wrapper({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
   };
+}
+
+/**
+ * Construct an ApiError-shaped value via Object.assign so the duck-type
+ * `isApiError` guard in `web/src/lib/resilience.ts` recognises it even
+ * when the bundler splits ApiError across chunks. Mirrors the pattern
+ * used by the test for `ApiError` consumers.
+ */
+function makeApiError(status: number, message: string): ApiError {
+  return Object.assign(new Error(message), {
+    name: 'ApiError',
+    status,
+  }) as ApiError;
 }
 
 function baseMeta(overrides: Partial<RedisSignalsMeta> = {}): RedisSignalsMeta {
@@ -248,5 +262,114 @@ describe('RedisDiagnosticEmptyState — Phase-45 / Prompt 37', () => {
     expect(within(banner).getByText('L2 fields (raw)')).toBeInTheDocument();
     expect(within(banner).getByText('VIN')).toBeInTheDocument();
     expect(within(banner).getByText('TESLA1234567890')).toBeInTheDocument();
+  });
+
+  // ── Phase-46 / Prompt 59 — error-aware branches ───────────────────────
+  // The page now subscribes to useQuery's error/isError and threads the
+  // failure mode into this component so a 503 / network error never
+  // disguises itself as the legacy "no signals cached" black box.
+
+  it('renders the cacheNotWired banner when serverError is 503 "not available"', () => {
+    const Wrapper = makeWrapper();
+    const err = makeApiError(503, 'Redis signal cache is not available');
+    render(
+      <Wrapper>
+        <RedisDiagnosticEmptyState
+          vehicleId={1}
+          meta={undefined}
+          serverError={err}
+          onSelectVehicle={() => {}}
+        />
+      </Wrapper>,
+    );
+    const banner = screen.getByTestId('redis-diagnostic-banner');
+    expect(banner).toHaveAttribute('data-tone', 'danger');
+    expect(within(banner).getByText('Redis cache is not configured')).toBeInTheDocument();
+    // The legacy fallback string MUST NOT appear when an error is present.
+    expect(screen.queryByText('No signals cached for this vehicle')).toBeNull();
+    // CTA link to the docs is rendered.
+    expect(within(banner).getByRole('link', { name: /cache configuration docs/i })).toBeInTheDocument();
+  });
+
+  it('renders the unreachable banner when serverError is 503 "unreachable"', () => {
+    const Wrapper = makeWrapper();
+    const err = makeApiError(503, 'Redis is unreachable');
+    render(
+      <Wrapper>
+        <RedisDiagnosticEmptyState
+          vehicleId={1}
+          meta={undefined}
+          serverError={err}
+          onSelectVehicle={() => {}}
+        />
+      </Wrapper>,
+    );
+    const banner = screen.getByTestId('redis-diagnostic-banner');
+    expect(banner).toHaveAttribute('data-tone', 'danger');
+    expect(within(banner).getByText('Redis is unreachable')).toBeInTheDocument();
+    expect(screen.queryByText('No signals cached for this vehicle')).toBeNull();
+  });
+
+  it('renders the requestFailed banner when serverError is a generic 500', () => {
+    const Wrapper = makeWrapper();
+    const err = makeApiError(500, 'database query failed');
+    render(
+      <Wrapper>
+        <RedisDiagnosticEmptyState
+          vehicleId={1}
+          meta={undefined}
+          serverError={err}
+          onSelectVehicle={() => {}}
+        />
+      </Wrapper>,
+    );
+    const banner = screen.getByTestId('redis-diagnostic-banner');
+    expect(banner).toHaveAttribute('data-tone', 'warning');
+    expect(within(banner).getByText('Could not load Redis signals')).toBeInTheDocument();
+    // The body interpolates the status + raw message so an operator can
+    // grep the API logs for the same string.
+    expect(within(banner).getByText(/500/)).toBeInTheDocument();
+    expect(within(banner).getByText(/database query failed/i)).toBeInTheDocument();
+    expect(screen.queryByText('No signals cached for this vehicle')).toBeNull();
+  });
+
+  it('renders the networkError banner when networkError=true', () => {
+    const Wrapper = makeWrapper();
+    render(
+      <Wrapper>
+        <RedisDiagnosticEmptyState
+          vehicleId={1}
+          meta={undefined}
+          serverError={null}
+          networkError
+          onSelectVehicle={() => {}}
+        />
+      </Wrapper>,
+    );
+    const banner = screen.getByTestId('redis-diagnostic-banner');
+    expect(banner).toHaveAttribute('data-tone', 'warning');
+    expect(within(banner).getByText('Cannot reach the API server')).toBeInTheDocument();
+    expect(screen.queryByText('No signals cached for this vehicle')).toBeNull();
+  });
+
+  it('error branches take precedence over meta-driven branches', () => {
+    // Even with valid meta indicating an "L2 mirror is failing" condition,
+    // a server error wins. The operator needs to fix the connection
+    // before the meta-driven diagnostic could be trusted anyway.
+    const Wrapper = makeWrapper();
+    const err = makeApiError(503, 'Redis signal cache is not available');
+    render(
+      <Wrapper>
+        <RedisDiagnosticEmptyState
+          vehicleId={7}
+          meta={baseMeta({ l1_signal_count: 99, redis_field_count: 0 })}
+          serverError={err}
+          onSelectVehicle={() => {}}
+        />
+      </Wrapper>,
+    );
+    const banner = screen.getByTestId('redis-diagnostic-banner');
+    expect(within(banner).getByText('Redis cache is not configured')).toBeInTheDocument();
+    expect(screen.queryByText('L2 mirror is failing')).toBeNull();
   });
 });

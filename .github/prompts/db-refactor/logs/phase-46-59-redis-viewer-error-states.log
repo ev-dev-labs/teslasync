@@ -1,0 +1,34 @@
+=== GATE ===
+=== PREFLIGHT ===
+PROMPT=phase-46/59-redis-viewer-error-states
+BRANCH=fix/bug-waave-46
+=== FILES_EXIST ===
+FILE[web\src\features\admin\pages\RedisSignalViewerPage.tsx]=True
+FILE[web\src\features\admin\components\RedisDiagnosticEmptyState.tsx]=True
+FILE[web\src\features\admin\components\__tests__\RedisDiagnosticEmptyState.test.tsx]=True
+FILE[web\src\i18n\en.json]=True
+=== ERROR_BRANCH_CHECK ===
+PAGE_ERROR_SUBSCRIPTION=PRESENT
+PAGE_ERROR_PROPAGATION=PRESENT
+BRANCH[cacheNotWired]=PRESENT
+BRANCH[unreachable]=PRESENT
+BRANCH[requestFailed]=PRESENT
+BRANCH[networkError]=PRESENT
+I18N[redis.diagnostic.cacheNotWired]=PRESENT
+I18N[redis.diagnostic.unreachable]=PRESENT
+I18N[redis.diagnostic.requestFailed]=PRESENT
+I18N[redis.diagnostic.networkError]=PRESENT
+=== TYPESCRIPT ===
+TSC_EXIT=0
+=== LINT ===
+LINT_EXIT=0
+=== FRONTEND_TEST ===
+FRONTEND_TEST_EXIT=0
+=== AUDIT_VIOLATIONS ===
+PAGE_NOSIGNALS_HITS=0
+BACKEND_UNCHANGED=YES
+=== GIT_STATUS ===
+UNEXPECTED_STATUS_COUNT=0
+=== STATUS ===
+EXIT=0
+STATUS=DONE
