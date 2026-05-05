@@ -124,6 +124,13 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
   // Clear the form on close so a stale draft doesn't leak between
   // submissions / different bug reports.
+  //
+  // We intentionally exclude `submit` from the dep array: TanStack
+  // Query re-creates the mutation object on every internal state
+  // change — including the very `reset()` call below — which would
+  // re-fire this effect and create an infinite render loop while the
+  // modal is closed. The reset only needs to run on the open→closed
+  // transition, so depending on `open` alone is correct.
   useEffect(() => {
     if (!open) {
       setValues(initialValues)
@@ -136,7 +143,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
       })
       submit.reset()
     }
-  }, [open, submit])
+  }, [open])
 
   const validation = useMemo(() => schema.safeParse(values), [values])
   const errors = useMemo(() => {
