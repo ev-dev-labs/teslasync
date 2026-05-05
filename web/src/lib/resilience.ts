@@ -129,6 +129,38 @@ function dispatchTeslaAuthExpired(): void {
   document.dispatchEvent(new CustomEvent('teslasync:tesla-auth-expired'))
 }
 
+// --- Phase-46 / Prompt 05 — ForwardAuth session expiry signal ---
+//
+// Dispatched by `resilientFetch` when a non-/auth/session request
+// returns 401 AND the structured-error code is NOT
+// `TESLA_TOKEN_EXPIRED` (that case stays on the dedicated Tesla
+// reauth banner). The {@link SessionExpiredModal} listens for this
+// event and hard-blocks the UI until the user clicks "Sign in again".
+//
+// IMPORTANT: do NOT fire this event for /auth/session itself. The
+// session-info endpoint is configured server-side to return 200 even
+// when unauthenticated; if it ever returns a 401 (e.g. proxy
+// misconfig), the polling SPA would dispatch the expired modal,
+// which on close re-poll the same endpoint, infinite-loop.
+function dispatchSessionExpired(): void {
+  if (typeof document === 'undefined') return
+  document.dispatchEvent(new CustomEvent('teslasync:session-expired'))
+}
+
+/**
+ * Conditionally dispatches the session-expired signal — only when
+ * `path` is NOT the polling endpoint that powers the modal itself.
+ * Centralised here so every 401 branch can share the loop guard
+ * without re-deriving it.
+ */
+function maybeDispatchSessionExpired(path: string): void {
+  // Normalise: client.ts always passes paths with a leading slash; be
+  // defensive in case a caller skipped that.
+  const normalised = path.startsWith('/') ? path : `/${path}`
+  if (normalised === '/auth/session') return
+  dispatchSessionExpired()
+}
+
 // --- Token Refresh on 401 ---
 
 let _refreshing: Promise<void> | null = null
@@ -587,12 +619,14 @@ async function _doFetch<T>(
 
       if (res.ok && contentType.includes('text/html')) {
         // We asked for JSON from /api/v1 but got HTML — login page redirect
+        maybeDispatchSessionExpired(path)
         handleAuthExpired()
         throw new ApiError('Authentication session expired', 401)
       }
 
       if (res.status === 401 && !contentType.includes('application/json')) {
         // 401 from auth middleware (our API always returns JSON on 401)
+        maybeDispatchSessionExpired(path)
         handleAuthExpired()
         throw new ApiError('Authentication session expired', 401)
       }
@@ -628,6 +662,15 @@ async function _doFetch<T>(
             dispatchTeslaAuthExpired()
             throw new TeslaAuthExpiredError('Session expired. Please reconnect your Tesla account in Settings.')
           }
+        }
+
+        // Phase-46 / Prompt 05 — surface the SessionExpiredModal for any
+        // remaining 401 (post-refresh failure, structured-error 401 with
+        // an unknown code, etc.). The /auth/session polling endpoint is
+        // explicitly excluded so the polling SPA never dispatches its
+        // own hard-block on itself.
+        if (res.status === 401) {
+          maybeDispatchSessionExpired(path)
         }
 
         // Phase-45 / Prompt 33 — 429 Rate Limited.

@@ -2073,3 +2073,31 @@ export interface PushSubscribeBody {
   }
 }
 
+// === Auth Session Info (Phase 46 / Prompt 05) ===
+
+/**
+ * Snapshot of the upstream ForwardAuth session, returned by
+ * `GET /api/v1/auth/session`. The endpoint is mounted OUTSIDE the
+ * /api/v1 ForwardAuth subrouter and ALWAYS responds 200 OK so the
+ * SPA's polling hook never trips the hard-401 path on itself.
+ *
+ * `mode === 'open'` indicates the deployment has FORWARD_AUTH_HEADER
+ * unset — there is no auth proxy and therefore no session to expire.
+ * The {@link useSessionMonitor} hook short-circuits all expiry logic
+ * in this branch.
+ *
+ * `expires_at` is the RFC3339 timestamp the upstream proxy reports for
+ * cookie expiry; null when the proxy doesn't expose it. `expires_in`
+ * is the same value pre-computed against the server clock — preferred
+ * by the SPA so the countdown is immune to client clock skew.
+ */
+export interface SessionInfo {
+  authenticated: boolean
+  mode: 'open' | 'session'
+  expires_at: string | null
+  expires_in: number | null
+  user: { sub: string; email?: string } | null
+  renewable: boolean
+}
+
+

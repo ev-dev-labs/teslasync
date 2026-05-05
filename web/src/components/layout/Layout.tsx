@@ -6,6 +6,8 @@ import { NewVersionBanner } from '../feedback/NewVersionBanner'
 import { TeslaReauthBanner } from '../feedback/TeslaReauthBanner'
 import { RateLimitBanner } from '../feedback/RateLimitBanner'
 import { MaintenanceBanner } from '../feedback/MaintenanceBanner'
+import { SessionExpiringModal } from '../feedback/SessionExpiringModal'
+import { SessionExpiredModal } from '../feedback/SessionExpiredModal'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -1396,6 +1398,16 @@ export default function Layout() {
           sticky top-of-page recovery surface for the partial-failure case
           where Tesla-backed calls 401 but non-Tesla data still loads. */}
       <TeslaReauthBanner />
+
+      {/* ForwardAuth session-expiry modals (Phase-46 / Prompt 05) —
+          SessionExpiringModal opens ~60s before the proxy cookie ages
+          out (soft-dismissible countdown with unsaved-draft list).
+          SessionExpiredModal hard-blocks the UI when the cookie has
+          actually expired (or any API call returned 401), preserving
+          the current URL so the user can resume after re-auth.
+          Both are no-ops in open mode (no FORWARD_AUTH_HEADER). */}
+      <SessionExpiringModal />
+      <SessionExpiredModal />
 
       {/* Keyboard shortcut overlays */}
       <GlobalShortcuts />

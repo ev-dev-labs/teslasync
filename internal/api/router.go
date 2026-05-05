@@ -346,6 +346,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		httprate.LimitByIP(50, 1*time.Minute),
 	).Post("/api/v1/web-errors", webErrorHandler.Ingest)
 
+	// Public: Auth session-info endpoint (Phase 46 / Prompt 05). The
+	// SPA polls this every 5 minutes so it can surface the
+	// SessionExpiringModal countdown ~60s before the upstream
+	// ForwardAuth cookie expires, and the SessionExpiredModal hard-
+	// block once it has expired. Mounted OUTSIDE the /api/v1
+	// ForwardAuth subrouter and ALWAYS returns 200 OK — if it returned
+	// 401 when unauthenticated the polling SPA would hit the same
+	// expired-session path that drove it here, infinite-looping the
+	// hard-expired modal. Per-IP rate limit is generous (60/min)
+	// because every SPA tab independently polls.
+	authSessionHandler := NewAuthSessionHandler(cfg)
+	r.With(
+		httprate.LimitByIP(60, 1*time.Minute),
+	).Get("/api/v1/auth/session", authSessionHandler.Session)
+
 	// System state (Phase 46 / Prompt 04): single-row maintenance/degraded-mode
 	// banner state. Repo + handler + maintenance provider are constructed
 	// once here so the GET /system/health closure and the admin POST share
