@@ -2,6 +2,29 @@
  * @module api/client
  *
  * Foundation layer — resilient HTTP helper used by every domain module.
+ *
+ * Phase-46 / Prompt 31 — sudo-style step-up reauth interceptor.
+ * Sensitive admin endpoints (revoke API key, delete vehicle, drop a
+ * data-repair table, restore a backup, rotate the Tesla token) require
+ * a fresh credential before they fire. The backend gates them with
+ * RequireSudo middleware that returns 401 + `code: 'SUDO_REQUIRED'`
+ * when no valid X-Sudo-Token is present.
+ *
+ * This module:
+ *   • caches the minted token in memory (NEVER localStorage) and
+ *     attaches it as `X-Sudo-Token` on every outbound request;
+ *   • on a 401+SUDO_REQUIRED response, calls a registered challenge
+ *     provider (the <ReauthDialog> via {@link registerSudoChallengeProvider})
+ *     to mint a fresh token, then replays the original request once;
+ *   • on user cancel, throws {@link SudoCanceledError} so callers can
+ *     distinguish "user gave up" from a true API failure.
+ *
+ * The interceptor sits OUTSIDE resilientFetch on purpose: the
+ * auto-refresh-on-401 path inside resilientFetch would otherwise
+ * dispatch SessionExpiredModal before we ever see the SUDO_REQUIRED
+ * code. For every request we therefore attempt a single directRequest
+ * first; only on non-sudo failures do we fall through to the resilient
+ * pipeline.
  */
 import { resilientFetch, ApiError, getApiBase, isApiError } from '../lib/resilience'
 
@@ -43,17 +66,135 @@ function buildHeaders(headers: HeadersInit | undefined, hasBody: boolean): Heade
   return merged
 }
 
-async function parseError(res: Response): Promise<string> {
-  const contentType = res.headers.get('content-type') ?? ''
-  if (contentType.includes('json')) {
-    const body = await res.json().catch(() => ({ error: res.statusText }))
-    return typeof body.error === 'string' ? body.error : res.statusText
-  }
+/**
+ * Sentinel code returned by the backend when a request hits a route
+ * gated by the RequireSudo middleware and the caller has not provided
+ * a valid `X-Sudo-Token`. Kept as a const so callers can check
+ * `e.code === SUDO_REQUIRED_CODE` instead of magic-stringing it.
+ */
+export const SUDO_REQUIRED_CODE = 'SUDO_REQUIRED'
 
-  const text = await res.text()
-  return text || res.statusText
+/**
+ * Signals that the user dismissed the <ReauthDialog> instead of
+ * supplying a credential. Distinct from ApiError so callers can tell
+ * "user cancelled" apart from "backend rejected the credential".
+ */
+export class SudoCanceledError extends Error {
+  constructor(message = 'Reauthentication cancelled by user') {
+    super(message)
+    this.name = 'SudoCanceledError'
+  }
 }
 
+/**
+ * Token returned by the challenge provider after a successful
+ * /auth/reauth call. `mode === 'open'` indicates the install runs
+ * without a forward-auth header — no token is issued and the dialog
+ * resolved via typed-confirmation only; in that mode subsequent
+ * requests should NOT carry an X-Sudo-Token header.
+ */
+export interface SudoCredential {
+  mode: 'open' | 'session'
+  token?: string
+  /** RFC3339 timestamp when the token expires. */
+  expiresAt?: string
+}
+
+/**
+ * Function signature the <ReauthDialog> registers via
+ * {@link registerSudoChallengeProvider}. Called by the interceptor on
+ * a 401+SUDO_REQUIRED. Resolves with a SudoCredential or rejects with
+ * a {@link SudoCanceledError}.
+ *
+ * The `path` argument is the API path that triggered the challenge,
+ * passed in case the dialog wants to surface "you are about to do X"
+ * context. The dialog implementation MAY ignore it.
+ */
+export type SudoChallengeProvider = (path: string) => Promise<SudoCredential>
+
+let sudoProvider: SudoChallengeProvider | null = null
+
+/**
+ * Registers the dialog opener used by the SUDO_REQUIRED interceptor.
+ * <ReauthDialogRoot> calls this on mount so callers don't need to
+ * manually wire it. Returns an unregister function for tests.
+ */
+export function registerSudoChallengeProvider(
+  provider: SudoChallengeProvider,
+): () => void {
+  sudoProvider = provider
+  return () => {
+    if (sudoProvider === provider) sudoProvider = null
+  }
+}
+
+interface CachedSudoToken {
+  token: string
+  expiresAtMs: number
+}
+
+let cachedSudoToken: CachedSudoToken | null = null
+
+/**
+ * Returns the cached token if non-null and not yet expired, else null.
+ * Centralised here so both the request injector and the interceptor
+ * use the same expiry check.
+ */
+function getCachedSudoToken(): CachedSudoToken | null {
+  if (cachedSudoToken == null) return null
+  if (cachedSudoToken.expiresAtMs <= Date.now()) {
+    cachedSudoToken = null
+    return null
+  }
+  return cachedSudoToken
+}
+
+/**
+ * Stashes a freshly minted token. Pass `null` to clear (e.g. on
+ * /auth/disconnect). Never persists to storage — process-restart and
+ * tab-close discard the token, matching the security posture.
+ */
+export function setCachedSudoToken(value: CachedSudoToken | null): void {
+  cachedSudoToken = value
+}
+
+/**
+ * Test-only escape hatch — wipes the in-memory cache and the
+ * registered provider so a fresh `describe` block starts from a known
+ * baseline. Marked with the `__tests__` underscore prefix to flag for
+ * lint that it should not be imported from production code.
+ */
+export function __resetSudoStateForTests(): void {
+  cachedSudoToken = null
+  sudoProvider = null
+}
+
+/**
+ * Parses an error response body. Returns the human message AND the
+ * structured `code` (when present) so the SUDO_REQUIRED interceptor
+ * can dispatch on the latter without parsing the body twice.
+ */
+async function parseError(res: Response): Promise<{ message: string; code?: string }> {
+  const contentType = res.headers.get('content-type') ?? ''
+  if (contentType.includes('json')) {
+    const body = await res.json().catch(() => ({}) as Record<string, unknown>)
+    const message =
+      typeof body.error === 'string' && body.error.trim() !== ''
+        ? body.error
+        : res.statusText
+    const code = typeof body.code === 'string' && body.code.trim() !== '' ? body.code : undefined
+    return { message, code }
+  }
+  const text = await res.text()
+  return { message: text || res.statusText }
+}
+
+/**
+ * Internal direct-fetch path used by both the interceptor and the
+ * `skipAuthRefresh` opt-in. Exposed only to this module — external
+ * callers should always go through {@link request} so they pick up
+ * the sudo interceptor + header injection.
+ */
 async function directRequest<T>(
   path: string,
   options: RequestInit,
@@ -67,7 +208,8 @@ async function directRequest<T>(
   })
 
   if (!res.ok) {
-    throw new ApiError(await parseError(res), res.status)
+    const { message, code } = await parseError(res)
+    throw new ApiError(message, res.status, code)
   }
 
   if (responseType === 'text') {
@@ -82,19 +224,136 @@ async function directRequest<T>(
 }
 
 /**
+ * Builds a fresh Headers from the user-supplied options and overlays
+ * the cached sudo token (if any). Always returns a new Headers
+ * instance so we never mutate the caller's object across retries.
+ */
+function withSudoToken(headers: HeadersInit | undefined, token: string | null): Headers {
+  const merged = new Headers(headers)
+  if (token != null) merged.set('X-Sudo-Token', token)
+  return merged
+}
+
+/**
+ * Treats an error as a SUDO_REQUIRED response from the backend. The
+ * type guard lets the interceptor narrow before opening the dialog.
+ */
+function isSudoRequired(err: unknown): err is ApiError {
+  return isApiError(err) && err.status === 401 && err.code === SUDO_REQUIRED_CODE
+}
+
+/**
+ * Resolves a credential challenge through the registered provider.
+ * Throws {@link SudoCanceledError} if no provider is registered (the
+ * dialog never mounted) so callers fail closed instead of looping on
+ * the same 401.
+ */
+async function challengeForSudo(path: string): Promise<SudoCredential> {
+  if (sudoProvider == null) {
+    throw new SudoCanceledError('No reauth dialog is mounted')
+  }
+  return sudoProvider(path)
+}
+
+/**
+ * Computes the cache expiry for a freshly-minted token. When the
+ * server omits `expires_at`, we fall back to a 5-minute window
+ * matching the backend default (database.DefaultSudoTokenTTL).
+ */
+function expiresAtMsFromCredential(cred: SudoCredential): number {
+  if (cred.expiresAt != null) {
+    const parsed = Date.parse(cred.expiresAt)
+    if (!Number.isNaN(parsed) && parsed > Date.now()) return parsed
+  }
+  return Date.now() + 5 * 60 * 1000
+}
+
+/**
  * Makes a resilient API request to the given path, with automatic retry
  * and circuit breaker protection.
+ *
+ * SUDO interception: every call attempts a single directRequest first
+ * with the cached sudo token attached. If that returns 401+SUDO_REQUIRED,
+ * the dialog is opened, the token is stored, and the request is
+ * replayed once. Any other error falls through to the original
+ * resilientFetch pipeline (which keeps its retry, circuit-breaker and
+ * 401-refresh semantics intact).
+ *
  * @template T - Expected JSON response type
  * @param path - API endpoint path (without /api/v1 prefix)
  * @param options - Standard fetch RequestInit options
  * @returns Parsed JSON response of type T
  */
 export async function request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { responseType = 'json', skipAuthRefresh = false, ...fetchOptions } = options
+  const { responseType = 'json', skipAuthRefresh = false, headers, ...fetchOptions } = options
 
-  if (responseType === 'text' || skipAuthRefresh) {
-    return directRequest<T>(path, fetchOptions, responseType)
+  const directResponseType: 'json' | 'text' = responseType
+  const cached = getCachedSudoToken()
+  const headersWithToken = withSudoToken(headers, cached?.token ?? null)
+
+  // Attempt 1: directRequest. The interceptor needs to see the raw
+  // 401+SUDO_REQUIRED before resilientFetch's auto-refresh path runs
+  // (which would dispatch SessionExpiredModal on the second 401 and
+  // confuse the user). For non-sudo failures we forward to the
+  // resilient pipeline below.
+  try {
+    return await directRequest<T>(
+      path,
+      { ...fetchOptions, headers: headersWithToken },
+      directResponseType,
+    )
+  } catch (err) {
+    if (isSudoRequired(err)) {
+      let cred: SudoCredential
+      try {
+        cred = await challengeForSudo(path)
+      } catch (challengeErr) {
+        if (challengeErr instanceof SudoCanceledError) throw challengeErr
+        throw new SudoCanceledError(
+          challengeErr instanceof Error ? challengeErr.message : 'Reauth dialog failed',
+        )
+      }
+
+      // Open mode: server confirms there is no credential to verify
+      // (FORWARD_AUTH_HEADER unset). The typed-confirmation dialog
+      // already resolved, so we replay the request unchanged. Token
+      // header is intentionally NOT set — the route's RequireSudo
+      // middleware is a passthrough in this mode.
+      if (cred.mode === 'open') {
+        return await directRequest<T>(
+          path,
+          { ...fetchOptions, headers: withSudoToken(headers, null) },
+          directResponseType,
+        )
+      }
+
+      if (cred.token == null || cred.token.trim() === '') {
+        throw new SudoCanceledError('Reauth provider returned no token')
+      }
+
+      setCachedSudoToken({
+        token: cred.token,
+        expiresAtMs: expiresAtMsFromCredential(cred),
+      })
+
+      return await directRequest<T>(
+        path,
+        { ...fetchOptions, headers: withSudoToken(headers, cred.token) },
+        directResponseType,
+      )
+    }
+
+    // For text responses or callers that opted out of the resilient
+    // refresh loop, the directRequest result IS the final answer —
+    // re-throw rather than re-attempting through resilientFetch
+    // (which doesn't know about the text response type).
+    if (responseType === 'text' || skipAuthRefresh) {
+      throw err
+    }
+
+    // Fall through: rerun via resilientFetch so the original retry,
+    // circuit-breaker, and 401-refresh policies still apply for
+    // transient or non-sudo failures.
+    return resilientFetch<T>(path, { ...fetchOptions, headers: headersWithToken })
   }
-
-  return resilientFetch<T>(path, fetchOptions)
 }

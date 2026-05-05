@@ -119,6 +119,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	chargingHandler := NewChargingHandler(db, stateReader)
 	geofenceHandler := NewGeofenceHandler(db)
 	authHandler := NewAuthHandler(db, teslaClient, opt.Encryptor)
+	// Phase-46 / Prompt 31 — Sudo step-up. Construct the in-memory
+	// token store and the reauth HTTP handler once and share them
+	// across the route table. The store is the source of truth for
+	// step-up authorisation; the middleware reads from it on every
+	// gated request, the handler writes to it on a successful
+	// /auth/reauth.
+	sudoCfg := LoadSudoConfig(cfg)
+	sudoStore := database.NewSudoTokenStore(sudoCfg.TTL)
+	// TOTPVerifier left nil until prompt 35 wires the real RFC 6238
+	// implementation; until then the TOTP path returns 401
+	// INVALID_CREDENTIAL by design.
+	sudoHandler := NewSudoHandler(sudoCfg, sudoStore, nil)
 	settingsHandler := NewSettingsHandler(db)
 	dashboardLayoutHandler := NewDashboardLayoutHandler(db)
 	chartAnnotationHandler := NewChartAnnotationHandler(db)
@@ -412,7 +424,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/callback", authHandler.Callback)
 			r.Post("/refresh", authHandler.Refresh)
 			r.Get("/status", authHandler.Status)
-			r.Post("/disconnect", authHandler.Disconnect)
+			// Phase-46 / Prompt 31 — destructive: revokes Tesla
+			// refresh token and clears credentials. Sudo gated.
+			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/disconnect", authHandler.Disconnect)
+			// Phase-46 / Prompt 31 — Sudo step-up reauth. POST a
+			// password OR totp_code to mint a 5-minute X-Sudo-Token
+			// the SPA echoes on subsequent destructive requests. In
+			// open mode this returns 200 mode="open" without minting
+			// anything; the dialog falls back to typed-confirmation.
+			r.Post("/reauth", sudoHandler.Reauth)
 		})
 
 		// Onboarding (Phase 40 / Prompt 18): first-run gate status.
@@ -428,7 +448,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/sync", vehicleHandler.SyncFromTesla)
 			r.Route("/{vehicleID}", func(r chi.Router) {
 				r.Get("/", vehicleHandler.Get)
-				r.Delete("/", vehicleHandler.Delete)
+				// Phase-46 / Prompt 31 — destructive: requires sudo.
+				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", vehicleHandler.Delete)
 				r.Get("/positions", vehicleHandler.Positions)
 				r.Get("/state", vehicleHandler.CurrentState)
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/wake", vehicleHandler.Wake)
@@ -1100,8 +1121,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/", apiKeyHandler.List)
 			r.Post("/", apiKeyHandler.Create)
 			r.Route("/{id}", func(r chi.Router) {
-				r.Delete("/", apiKeyHandler.Delete)
-				r.Post("/revoke", apiKeyHandler.Revoke)
+				// Phase-46 / Prompt 31 — destructive: requires sudo.
+				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", apiKeyHandler.Delete)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/revoke", apiKeyHandler.Revoke)
 			})
 		})
 
@@ -1339,16 +1361,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Data Repair
 		r.Route("/data-repair", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(20, 1*time.Minute))
+			// GET stays read-only and unguarded; every mutating route
+			// below threads through RequireSudo (Phase-46 / Prompt 31).
 			r.Get("/stale-sessions", dataRepairHandler.GetStaleSessions)
 			r.Route("/charging/{id}", func(r chi.Router) {
-				r.Put("/", dataRepairHandler.UpdateCharging)
-				r.Post("/close", dataRepairHandler.CloseCharging)
-				r.Delete("/", dataRepairHandler.DeleteCharging)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Put("/", dataRepairHandler.UpdateCharging)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/close", dataRepairHandler.CloseCharging)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", dataRepairHandler.DeleteCharging)
 			})
 			r.Route("/drive/{id}", func(r chi.Router) {
-				r.Put("/", dataRepairHandler.UpdateDrive)
-				r.Post("/close", dataRepairHandler.CloseDrive)
-				r.Delete("/", dataRepairHandler.DeleteDrive)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Put("/", dataRepairHandler.UpdateDrive)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/close", dataRepairHandler.CloseDrive)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", dataRepairHandler.DeleteDrive)
 			})
 		})
 
@@ -1358,7 +1382,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/configs", backupRestoreHandler.CreateConfig)
 			r.Get("/configs/{configID}", backupRestoreHandler.GetConfig)
 			r.Put("/configs/{configID}", backupRestoreHandler.UpdateConfig)
-			r.Delete("/configs/{configID}", backupRestoreHandler.DeleteConfig)
+			// Phase-46 / Prompt 31 — destructive: requires sudo.
+			r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/configs/{configID}", backupRestoreHandler.DeleteConfig)
 			r.Post("/configs/{configID}/trigger", backupRestoreHandler.TriggerBackup)
 			r.Post("/quick", backupRestoreHandler.TriggerQuickBackup)
 			r.Get("/runs", backupRestoreHandler.ListRuns)
@@ -1380,7 +1405,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/export/jobs", func(r chi.Router) {
 			r.Post("/", exportJobHandler.SubmitJob)
 			r.Post("/account", exportJobHandler.SubmitAccountJob)
-			r.Post("/import", exportJobHandler.SubmitImportJob)
+			// Phase-46 / Prompt 31 — destructive: a settings import
+			// can overwrite live config; gate on sudo.
+			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/import", exportJobHandler.SubmitImportJob)
 			// Bulk operations (Phase-45 / Prompt 32) — registered before
 			// /{jobID} so chi matches the static `/bulk` path first.
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", exportJobHandler.BulkUpdate)
