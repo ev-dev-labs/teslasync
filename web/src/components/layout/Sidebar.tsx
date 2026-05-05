@@ -11,7 +11,7 @@
 // of truth in the future.
 
 import type { ComponentType, SVGProps } from 'react';
-import { Activity } from 'lucide-react';
+import { Activity, ScrollText } from 'lucide-react';
 
 /**
  * Stable shape for a single sidebar nav entry. The `to` field is the
@@ -48,9 +48,23 @@ export const DIAGNOSTIC_NAV_ENTRY: SidebarNavEntry = {
 };
 
 /**
+ * Live log tail viewer (Phase-46 / Prompt 34). SSE-backed admin
+ * surface that streams structured zerolog events with grep + level
+ * filters. Lives under "Infrastructure" alongside the diagnostic.
+ */
+export const LIVE_LOGS_NAV_ENTRY: SidebarNavEntry = {
+  to: '/live-logs',
+  i18nKey: 'liveLogs.title',
+  defaultLabel: 'Live logs',
+  icon: ScrollText,
+  section: 'infrastructure',
+};
+
+/**
  * All sidebar nav entries this prompt contributes. Kept as an array
  * so future prompts can append without changing the call signature.
  */
 export const SIDEBAR_NAV_ENTRIES: readonly SidebarNavEntry[] = [
   DIAGNOSTIC_NAV_ENTRY,
+  LIVE_LOGS_NAV_ENTRY,
 ];

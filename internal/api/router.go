@@ -3,11 +3,13 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
@@ -16,6 +18,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/platform"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	signal "github.com/ev-dev-labs/teslasync/internal/signal"
@@ -25,6 +28,8 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/automation"
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
@@ -131,6 +136,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// implementation; until then the TOTP path returns 401
 	// INVALID_CREDENTIAL by design.
 	sudoHandler := NewSudoHandler(sudoCfg, sudoStore, nil)
+
+	// Phase-46 / Prompt 34 — Live log tail. Build a process-wide
+	// pub/sub registry for zerolog events and tee the global logger
+	// through it so every Info/Warn/Error/etc. fans out to any
+	// connected SSE subscriber. The tee is idempotent: installAdminLogStreamTap
+	// guards against double-wrapping when NewRouter is called more
+	// than once in the same process (e.g. parallel router tests).
+	logTap := platform.NewLogSubscriberRegistry()
+	installAdminLogStreamTap(logTap)
+	logStreamHandler := NewAdminLogStreamHandler(logTap)
 	settingsHandler := NewSettingsHandler(db)
 	dashboardLayoutHandler := NewDashboardLayoutHandler(db)
 	chartAnnotationHandler := NewChartAnnotationHandler(db)
@@ -409,8 +424,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// api_call_logs (service="teslasync-api"). Mounted BEFORE
 		// ForwardAuthMiddleware so 401 responses from the auth layer are
 		// also captured. Skip predicate excludes streaming/health/metrics
-		// and the api-logs admin UI itself (feedback loop).
-		r.Use(APICallLogMiddleware(GetAPICallLogger(), cfg.APILogs.CaptureBodies, DefaultAPILogSkip))
+		// and the api-logs admin UI itself (feedback loop). The admin
+		// live log stream (phase-46/34) is also excluded so the
+		// SSE viewer doesn't recursively log itself.
+		r.Use(APICallLogMiddleware(GetAPICallLogger(), cfg.APILogs.CaptureBodies, func(p string) bool {
+			if p == AdminLogStreamPath {
+				return true
+			}
+			return DefaultAPILogSkip(p)
+		}))
 
 		// ForwardAuth: protect all /api/v1/* routes via reverse-proxy header.
 		// No-op when ForwardAuthHeader is empty (dev mode / no auth configured).
@@ -1189,6 +1211,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		})
 
+		// Admin: live log tail stream (Phase-46 / Prompt 34).
+		// SSE endpoint that fans out structured zerolog events to
+		// any authenticated browser. Read-only, idempotent — kept
+		// behind the parent /api/v1 ForwardAuth gate but
+		// intentionally NOT chained through RequireSudo: the SPA
+		// uses fetch+ReadableStream (NOT EventSource) so it could
+		// send X-Sudo-Token, but the stream itself triggers no side
+		// effects so step-up is reserved for destructive admin
+		// actions per Prompt 31's intent. httprate caps reconnect
+		// storms to 10/min/IP.
+		r.Route("/admin/logs", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(10, 1*time.Minute))
+			r.Get("/stream", logStreamHandler.ServeHTTP)
+		})
+
 		// Fleet Telemetry ingestion
 		r.Route("/telemetry", func(r chi.Router) {
 			r.Post("/", telemetryHandler.TelemetryIngest)
@@ -1529,4 +1566,77 @@ func spaFallback(dir string, fs http.Handler) http.HandlerFunc {
 		// SPA fallback ╬ô├ç├╢ serve index.html for client-side routing
 		http.ServeFile(w, r, filepath.Join(dir, "index.html"))
 	}
+}
+
+// adminLogStreamTapState guards installAdminLogStreamTap so the global
+// zerolog.Logger is teed to a LogSubscriberRegistry exactly once per
+// process even when NewRouter is invoked multiple times (router tests
+// run in parallel inside the same binary). The first call captures the
+// pre-existing logger sink as `primary` and re-assigns the global
+// log.Logger to a MultiLevelWriter; subsequent calls swap the registry
+// pointer in-place via SetTarget so a fresh router still receives
+// events without rebuilding the underlying tee.
+var adminLogStreamTapState struct {
+	mu      sync.Mutex
+	primary io.Writer
+	current *adminLogStreamTapForwarder
+}
+
+// adminLogStreamTapForwarder satisfies zerolog.LevelWriter by
+// delegating to a swappable target registry. SetTarget is called on
+// every NewRouter invocation so each router instance owns the
+// registry it hands to its handler — without this, a stale registry
+// from a previous test would silently swallow events.
+type adminLogStreamTapForwarder struct {
+	mu     sync.RWMutex
+	target zerolog.LevelWriter
+}
+
+func (f *adminLogStreamTapForwarder) Write(p []byte) (int, error) {
+	f.mu.RLock()
+	t := f.target
+	f.mu.RUnlock()
+	if t == nil {
+		return len(p), nil
+	}
+	return t.Write(p)
+}
+
+func (f *adminLogStreamTapForwarder) WriteLevel(level zerolog.Level, p []byte) (int, error) {
+	f.mu.RLock()
+	t := f.target
+	f.mu.RUnlock()
+	if t == nil {
+		return len(p), nil
+	}
+	return t.WriteLevel(level, p)
+}
+
+func (f *adminLogStreamTapForwarder) SetTarget(t zerolog.LevelWriter) {
+	f.mu.Lock()
+	f.target = t
+	f.mu.Unlock()
+}
+
+// installAdminLogStreamTap wires the zerolog global logger so every
+// log record fans out to the supplied registry in addition to the
+// configured primary sink. The first invocation chooses the primary
+// sink (ConsoleWriter when TESLASYNC_DEV=true, otherwise os.Stdout)
+// and rewires log.Logger via zerolog.MultiLevelWriter; subsequent
+// invocations only swap the registry pointer.
+func installAdminLogStreamTap(reg *platform.LogSubscriberRegistry) {
+	adminLogStreamTapState.mu.Lock()
+	defer adminLogStreamTapState.mu.Unlock()
+	if adminLogStreamTapState.current == nil {
+		var primary io.Writer = os.Stdout
+		if strings.EqualFold(os.Getenv("TESLASYNC_DEV"), "true") {
+			primary = zerolog.ConsoleWriter{Out: os.Stderr}
+		}
+		fwd := &adminLogStreamTapForwarder{target: reg}
+		adminLogStreamTapState.primary = primary
+		adminLogStreamTapState.current = fwd
+		log.Logger = log.Logger.Output(zerolog.MultiLevelWriter(primary, fwd))
+		return
+	}
+	adminLogStreamTapState.current.SetTarget(reg)
 }

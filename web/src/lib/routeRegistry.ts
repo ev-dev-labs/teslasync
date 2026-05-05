@@ -68,6 +68,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/guard-mode', name: 'GuardMode', label: 'Guard Mode', i18nKey: 'routes.guardMode' },
   { path: '/lifetime-stats', name: 'LifetimeStats', label: 'Lifetime Stats', i18nKey: 'routes.lifetimeStats' },
   { path: '/live', name: 'LiveMap', label: 'Live Map', i18nKey: 'routes.liveMap' },
+  { path: '/live-logs', name: 'LiveLogs', label: 'Live Logs', i18nKey: 'routes.liveLogs' },
   { path: '/live-monitor', name: 'LiveSignalMonitor', label: 'Live Signal Monitor', i18nKey: 'routes.liveSignalMonitor' },
   { path: '/locations', name: 'Locations', label: 'Locations', i18nKey: 'routes.locations' },
   { path: '/maintenance', name: 'Maintenance', label: 'Maintenance', i18nKey: 'routes.maintenance' },
