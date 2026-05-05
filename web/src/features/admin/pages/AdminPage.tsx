@@ -285,6 +285,7 @@ export default function AdminPage() {
                   onChange={setAuditSearch}
                   placeholder={t('admin.audit.searchPlaceholder', 'Search by action, resource, or details…')}
                   className="w-full sm:w-72"
+                  historyScope="admin:audit"
                 />
               </FilterBar>
               <ActiveFilterChips

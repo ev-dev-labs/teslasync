@@ -210,6 +210,7 @@ export function NotificationFilterBar({
           onChange={setQuery}
           placeholder={t('notifications.inbox.filter.searchPlaceholder', 'Search messages…')}
           className="w-full sm:w-72"
+          historyScope="notifications"
         />
       </FilterBar>
 

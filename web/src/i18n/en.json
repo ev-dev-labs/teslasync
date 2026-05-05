@@ -1444,6 +1444,11 @@
       "automation": "Automations",
       "location": "Locations",
       "trip": "Trips"
+    },
+    "history": {
+      "title": "Recent searches",
+      "clear": "Clear history",
+      "removeAria": "Remove \"{{query}}\" from search history"
     }
   },
   "a11y": {

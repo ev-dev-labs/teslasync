@@ -378,6 +378,7 @@ export default function TeslaChargingHistoryPage() {
                   onChange={setSearch}
                   placeholder={t('tesla_charging.searchPlaceholder', 'Search by location…')}
                   className="w-full sm:w-72"
+                  historyScope="charging"
                 />
               </FilterBar>
               <ActiveFilterChips

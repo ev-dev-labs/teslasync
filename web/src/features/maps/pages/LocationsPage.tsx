@@ -183,6 +183,7 @@ export default function LocationsPage() {
               onChange={setSearch}
               placeholder={t('Search by address…')}
               className="w-full sm:w-72"
+              historyScope="locations"
             />
           </FilterBar>
           <ActiveFilterChips

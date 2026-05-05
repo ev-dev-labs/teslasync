@@ -288,6 +288,7 @@ function NotificationHistory({ t }: { t: TFunction }) {
             onChange={setLogSearch}
             placeholder={t('Search by title or channel…')}
             className="w-full sm:w-72"
+            historyScope="alerts:logs"
           />
         </FilterBar>
         <ActiveFilterChips
@@ -793,6 +794,7 @@ export default function AlertsPage() {
                 onChange={(v) => { setAlertSearch(v); setAlertPage(1); }}
                 placeholder={t('alerts.searchPlaceholder', 'Search by title or message…')}
                 className="w-full sm:w-72"
+                historyScope="alerts"
               />
               <div className="flex items-center gap-2" data-tour="alerts-filters">
                 <Icons.filter className="h-4 w-4 text-[var(--text-muted)]" />

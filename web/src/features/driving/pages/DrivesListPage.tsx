@@ -402,6 +402,7 @@ export default function DrivesListPage() {
             onChange={(v) => { setSearch(v); setPage(1); }}
             placeholder={t('drives.searchPlaceholder', 'Search by start or end address…')}
             className="w-full sm:w-72"
+            historyScope="drives"
           />
           <DateRangeFilter
             startDate={startDate}

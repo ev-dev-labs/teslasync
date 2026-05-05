@@ -556,6 +556,7 @@ export default function GeofencesPage() {
                   onChange={setSearch}
                   placeholder={t('geofences.searchPlaceholder', 'Search by name…')}
                   className="w-full sm:w-72"
+                  historyScope="geofences"
                 />
               </FilterBar>
               <ActiveFilterChips

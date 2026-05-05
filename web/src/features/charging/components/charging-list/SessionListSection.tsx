@@ -128,6 +128,7 @@ export function SessionListSection({
             onChange={onSearchQueryChange}
             placeholder={t('charging.sessions.searchPlaceholder', 'Search by location or charger type…')}
             className="w-full sm:w-72"
+            historyScope="charging:sessions"
           />
         </FilterBar>
         <ActiveFilterChips

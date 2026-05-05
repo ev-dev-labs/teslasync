@@ -144,7 +144,6 @@ describe('FeedbackModal', () => {
     const first = renderModal()
     // Generate something for the console buffer.
     // The buffer wrapper is installed lazily on modal open, so log AFTER render.
-    // eslint-disable-next-line no-console
     console.log('hello-from-test')
     fireEvent.change(screen.getByLabelText(/title/i), {
       target: { value: 'A bug with enough title length' },
@@ -162,7 +161,6 @@ describe('FeedbackModal', () => {
     // Second submit: console toggle ON.
     mockedRequest.mockResolvedValueOnce({ id: 2 })
     renderModal()
-    // eslint-disable-next-line no-console
     console.log('second-line-for-the-buffer')
     fireEvent.change(screen.getByLabelText(/title/i), {
       target: { value: 'Another bug with enough title length' },
