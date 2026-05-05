@@ -23,12 +23,13 @@
  * is already an asynchronous gap that lets the input stay responsive.
  */
 
-import { useEffect, useMemo, useRef, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useCallback, type MouseEvent as ReactMouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Archive, ArchiveRestore, Bell, MailOpen, Trash2, CheckCheck, Layers, List } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Archive, ArchiveRestore, Bell, MailOpen, Mail, Trash2, CheckCheck, Layers, List, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { PageContainer } from '@/components/layout';
-import { Button, GlassPanel, TabNav } from '@/components/ui';
+import { Button, GlassPanel, TabNav, useContextMenu, type ContextMenuItem } from '@/components/ui';
 import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
@@ -51,7 +52,8 @@ import {
   useDeleteNotifications,
   type NotificationFilters,
 } from '@/api/hooks/useNotifications';
-import type { NotificationLog, AlertRule, Vehicle } from '@/api/types';
+import type { NotificationLog, AlertRule, Vehicle, Alert } from '@/api/types';
+import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import { NotificationFilterBar } from '../components/NotificationFilterBar';
 import { NotificationRow } from '../components/NotificationRow';
 import { NotificationGroupRow } from '../components/NotificationGroupRow';
@@ -416,6 +418,101 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     markReadMut.mutate([log.id]);
   };
 
+  // Phase-46 / Prompt 30 — right-click on a notification row surfaces
+  // mark-read / archive / view-context actions via the shared
+  // <ContextMenuRoot/>. Exposing these as a context menu means the inbox
+  // doesn't need to render hover-only icons on every row to advertise
+  // them — they remain reachable but visually quiet by default.
+  const navigate = useNavigate();
+  const { openMenu: openRowContextMenu } = useContextMenu();
+  const buildRowContextMenu = useCallback(
+    (log: NotificationLog): ContextMenuItem[] => {
+      const items: ContextMenuItem[] = [];
+      const rule = log.alert_id != null ? ruleMap[log.alert_id] : undefined;
+      const vehicle = log.alert_id != null && rule?.vehicle_id != null
+        ? vehicleMap[rule.vehicle_id]
+        : undefined;
+      const isRead = !!log.read_at;
+      const isArchived = !!log.archived_at;
+      if (!isRead) {
+        items.push({
+          id: 'mark-read',
+          label: t('notifications.inbox.row.markRead', 'Mark as read'),
+          icon: <MailOpen className="h-3.5 w-3.5" aria-hidden="true" />,
+          onClick: () => markReadMut.mutate([log.id]),
+        });
+      } else {
+        items.push({
+          id: 'mark-unread',
+          label: t('notifications.inbox.row.markUnread', 'Mark as unread'),
+          icon: <Mail className="h-3.5 w-3.5" aria-hidden="true" />,
+          onClick: () => markUnreadMut.mutate([log.id]),
+        });
+      }
+      if (!isArchived) {
+        items.push({
+          id: 'archive',
+          label: t('notifications.inbox.row.archive', 'Archive'),
+          icon: <Archive className="h-3.5 w-3.5" aria-hidden="true" />,
+          onClick: () => archiveMut.mutate([log.id]),
+        });
+      } else {
+        items.push({
+          id: 'restore',
+          label: t('notifications.inbox.row.unarchive', 'Restore'),
+          icon: <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />,
+          onClick: () => unarchiveMut.mutate([log.id]),
+        });
+      }
+      if (rule) {
+        const synthetic: Alert = {
+          id: log.id,
+          vehicle_id: vehicle?.id ?? rule.vehicle_id ?? 0,
+          type: rule.name ?? log.title,
+          severity: (rule.severity ?? 'info') as Alert['severity'],
+          title: log.title,
+          message: log.message,
+          is_read: isRead,
+          created_at: log.created_at,
+          rule_id: rule.id,
+          rule_signal: rule.signal_name,
+          rule_severity: rule.severity,
+        };
+        const href = getAlertDrillthroughHref(synthetic);
+        if (href) {
+          items.push({
+            id: 'view-context',
+            label: t('alerts.viewContext', 'View context'),
+            icon: <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />,
+            onClick: () => navigate(href),
+          });
+        }
+      }
+      items.push({
+        id: 'delete',
+        label: t('common.delete', 'Delete'),
+        icon: <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />,
+        destructive: true,
+        onClick: () => deleteMut.mutate([log.id]),
+      });
+      return items;
+    },
+    [ruleMap, vehicleMap, t, archiveMut, unarchiveMut, markReadMut, markUnreadMut, deleteMut, navigate],
+  );
+  const handleRowContextMenu = useCallback(
+    (log: NotificationLog) =>
+      (e: ReactMouseEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement;
+        // Allow native menus on form controls / links / buttons inside the row.
+        if (target.closest('input, textarea, select, a, button')) return;
+        const items = buildRowContextMenu(log);
+        if (items.length === 0) return;
+        e.preventDefault();
+        openRowContextMenu(items, e.clientX, e.clientY);
+      },
+    [buildRowContextMenu, openRowContextMenu],
+  );
+
   return (
     <PullToRefresh onRefresh={async () => { await (isGrouped ? groupsRefetch() : refetch()); }}>
     <div className="space-y-4">
@@ -613,20 +710,22 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
                             tone: 'default',
                           }}
                     >
-                      <NotificationRow
-                        log={log}
-                        rule={log.alert_id != null ? ruleMap[log.alert_id] : undefined}
-                        vehicle={log.alert_id != null && ruleMap[log.alert_id]?.vehicle_id != null
-                          ? vehicleMap[ruleMap[log.alert_id]!.vehicle_id!]
-                          : undefined}
-                        selected={selected.has(log.id)}
-                        onSelectionChange={toggleSelected}
-                        onActivate={handleRowActivate}
-                        onArchive={!archived ? (id) => archiveMut.mutate([id]) : undefined}
-                        onUnarchive={archived ? (id) => unarchiveMut.mutate([id]) : undefined}
-                        onMarkRead={!log.read_at ? (id) => markReadMut.mutate([id]) : undefined}
-                        onMarkUnread={log.read_at ? (id) => markUnreadMut.mutate([id]) : undefined}
-                      />
+                      <div onContextMenu={handleRowContextMenu(log)}>
+                        <NotificationRow
+                          log={log}
+                          rule={log.alert_id != null ? ruleMap[log.alert_id] : undefined}
+                          vehicle={log.alert_id != null && ruleMap[log.alert_id]?.vehicle_id != null
+                            ? vehicleMap[ruleMap[log.alert_id]!.vehicle_id!]
+                            : undefined}
+                          selected={selected.has(log.id)}
+                          onSelectionChange={toggleSelected}
+                          onActivate={handleRowActivate}
+                          onArchive={!archived ? (id) => archiveMut.mutate([id]) : undefined}
+                          onUnarchive={archived ? (id) => unarchiveMut.mutate([id]) : undefined}
+                          onMarkRead={!log.read_at ? (id) => markReadMut.mutate([id]) : undefined}
+                          onMarkUnread={log.read_at ? (id) => markUnreadMut.mutate([id]) : undefined}
+                        />
+                      </div>
                     </SwipeRow>
                   ))}
                 </div>
@@ -638,18 +737,22 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
         {isGrouped && !groupsLoading && !groupsError && groups.length > 0 && (
           <div className="space-y-2" data-testid="notification-groups">
             {groups.map((g, idx) => (
-              <NotificationGroupRow
+              <div
                 key={g.group_key ?? `singleton:${g.latest.id}:${idx}`}
-                group={g}
-                ruleMap={ruleMap}
-                vehicleMap={vehicleMap}
-                filters={filters}
-                archived={archived}
-                onActivate={handleRowActivate}
-                onArchive={(id) => archiveMut.mutate([id])}
-                onMarkRead={(id) => markReadMut.mutate([id])}
-                onMarkUnread={(id) => markUnreadMut.mutate([id])}
-              />
+                onContextMenu={handleRowContextMenu(g.latest)}
+              >
+                <NotificationGroupRow
+                  group={g}
+                  ruleMap={ruleMap}
+                  vehicleMap={vehicleMap}
+                  filters={filters}
+                  archived={archived}
+                  onActivate={handleRowActivate}
+                  onArchive={(id) => archiveMut.mutate([id])}
+                  onMarkRead={(id) => markReadMut.mutate([id])}
+                  onMarkUnread={(id) => markUnreadMut.mutate([id])}
+                />
+              </div>
             ))}
           </div>
         )}

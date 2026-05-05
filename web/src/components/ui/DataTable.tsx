@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { type ReactNode, type MouseEvent as ReactMouseEvent, useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '../../lib/cn'
@@ -9,6 +9,7 @@ import { SectionErrorBoundary } from '../feedback/SectionErrorBoundary'
 import { DataTableColumnsMenu } from './DataTableColumnsMenu'
 import { DataTableBulkBar } from './DataTableBulkBar'
 import { DataTableResizer } from './DataTableResizer'
+import { useContextMenu, type ContextMenuItem } from './ContextMenu'
 import {
   toCSV,
   downloadCSV,
@@ -200,6 +201,15 @@ interface DataTableProps<T> {
    *  virtualized. Defaults to 8 — higher values smooth fast scrolling at
    *  the cost of slightly more DOM. */
   overscan?: number
+
+  // ── Phase-46 / Prompt 30 — per-row right-click context menu ───────────
+  /** Optional builder that returns a list of `ContextMenuItem`s to show
+   *  when the user right-clicks a body row. Returning an empty array (or
+   *  omitting this prop entirely) leaves the browser's native context
+   *  menu intact — no preventDefault, no shared menu. The shared
+   *  `<ContextMenuRoot/>` mounted in `App.tsx` renders the popup; this
+   *  prop only declares which actions belong to which row. */
+  rowContextMenu?: (row: T) => ContextMenuItem[]
 }
 
 const STORAGE_PREFIX = 'teslasync.table'
@@ -270,8 +280,13 @@ export function DataTable<T>({
   virtualized = false,
   rowHeight,
   overscan,
+  rowContextMenu,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
+  // Phase-46 / Prompt 30 — shared context menu host. We call this once per
+  // table render so the imperative `openMenu` reference stays stable
+  // across row renders.
+  const { openMenu } = useContextMenu()
   // Resolve effective density. Explicit `density` wins; otherwise the
   // legacy `compact` boolean maps to 'compact'; otherwise default to
   // 'auto' so the global setting flows through. Phase 40 / Prompt 44.
@@ -602,6 +617,18 @@ export function DataTable<T>({
       tableTokens.row,
       selected && tableTokens.rowSelected,
     )
+    const handleRowContextMenu = rowContextMenu
+      ? (e: ReactMouseEvent<HTMLTableRowElement>) => {
+          // Allow right-clicks on form controls / links to keep their
+          // native menus (text-input copy/paste, link-context, etc.).
+          const target = e.target as HTMLElement
+          if (target.closest('input, textarea, select, a')) return
+          const items = rowContextMenu(row)
+          if (!items || items.length === 0) return
+          e.preventDefault()
+          openMenu(items, e.clientX, e.clientY)
+        }
+      : undefined
     const rows: ReactNode[] = [
       <tr
         key={rowKey}
@@ -609,6 +636,7 @@ export function DataTable<T>({
         data-selected={selected ? 'true' : undefined}
         data-expanded={expanded ? 'true' : undefined}
         aria-selected={isSelectable ? selected : undefined}
+        onContextMenu={handleRowContextMenu}
         onKeyDown={(e) => {
           if (e.key === ' ' && isSelectable) {
             e.preventDefault()

@@ -26,6 +26,14 @@ export { DataTableResizer } from './DataTableResizer';
 export { DensityApplier } from './DensityApplier';
 export { Drawer } from './Drawer';
 export { CommandPalette } from './CommandPalette';
+export {
+  ContextMenuRoot,
+  useContextMenu,
+  openContextMenu,
+  closeContextMenu,
+  type ContextMenuItem,
+  type UseContextMenuReturn,
+} from './ContextMenu';
 export { ThemePicker, type ThemePickerProps } from './ThemePicker';
 export { Textarea } from './Textarea';
 export type { TextareaProps } from './Textarea';

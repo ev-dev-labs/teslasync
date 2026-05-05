@@ -8,6 +8,7 @@ import { SuspenseProgressBoundary } from './components/feedback/SuspenseProgress
 import { AuthExpiredOverlay } from '@/components/feedback'
 import { OnboardingGate } from '@/features/onboarding/components/OnboardingGate'
 import { DensityApplier } from '@/components/ui/DensityApplier'
+import { ContextMenuRoot } from '@/components/ui/ContextMenu'
 import { RouteAnnouncer } from '@/components/a11y'
 
 // ── ALL pages live in features/ — zero imports from pages/ ──────────────
@@ -211,6 +212,11 @@ export default function App() {
       {/* Phase-46 / Prompt 21 — announces the new page title to screen
           readers on every SPA navigation. WCAG 2.4.2. */}
       <RouteAnnouncer />
+      {/* Phase-46 / Prompt 30 — single portal host for the shared
+          right-click ContextMenu primitive. Subscribes to a module-level
+          store so any DataTable row, notification row, or future
+          adopter can open a menu without prop drilling. */}
+      <ContextMenuRoot />
       <Routes>
       <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
       <Route path="glance" element={<SafeRoute name="Glance"><GlancePage /></SafeRoute>} />
