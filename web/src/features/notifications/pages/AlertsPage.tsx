@@ -55,6 +55,14 @@ import {
 import { usePinned } from '@/api/hooks/usePinned';
 import type { Alert, NotificationLog } from '@/api/types';
 import { Icons } from '@/lib/icons';
+import { AcknowledgeAlertDialog } from '@/features/admin/components/AcknowledgeAlertDialog';
+import { AlertDetailTimeline } from '@/features/admin/components/AlertDetailTimeline';
+import { Modal } from '@/components/ui/Modal';
+import {
+  useAcknowledgeAlert as useAcknowledgeAlertHook,
+  useReopenAlert as useReopenAlertHook,
+  useAlertDetail as useAlertDetailHook,
+} from '@/api/hooks/useNotifications';
 
 // ─── Severity helpers ────────────────────────────────────────────────────────
 //
@@ -122,12 +130,20 @@ function loadDigestMode(): DigestMode {
 
 // ─── AlertCard sub-component ─────────────────────────────────────────────────
 
-function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => void; t: TFunction }) {
+function AlertCard({ alert, onMarkRead, onAcknowledge, onOpenDetail, onReopen, t }: {
+  alert: Alert;
+  onMarkRead: () => void;
+  onAcknowledge: () => void;
+  onOpenDetail: () => void;
+  onReopen: () => void;
+  t: TFunction;
+}) {
   const sev = normalizeSeverity(alert.severity);
   const tokens = severityTokens[sev];
   const Icon = typeIcons[alert.type] || Icons.notifications;
   const timeAgo = getTimeAgo(alert.created_at);
   const drillHref = getAlertDrillthroughHref(alert);
+  const isAcked = Boolean(alert.acknowledged_at);
 
   return (
     <GlassPanel
@@ -161,7 +177,7 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
             />
           )}
         </div>
-        <div className="flex items-center gap-3 mt-2">
+        <div className="flex items-center gap-3 mt-2 flex-wrap">
           <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-1">
             <Icons.clock className="h-2.5 w-2.5" />{timeAgo}
           </span>
@@ -169,6 +185,13 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
             {alert.severity}
           </SeverityBadge>
           <span className="text-[10px] text-[var(--text-muted)]">{(alert.type ?? 'notification').replace(/_/g, ' ')}</span>
+          {isAcked && (
+            <Badge variant="success" size="sm">
+              {alert.acknowledged_by
+                ? t('alerts.ack.ackedBy', 'Acknowledged by {{actor}}', { actor: alert.acknowledged_by })
+                : t('alerts.ack.ackedByAnonymous', 'Acknowledged')}
+            </Badge>
+          )}
           <Link
             to={drillHref}
             className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-cyan-300 hover:text-cyan-200 underline-offset-2 hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
@@ -176,6 +199,33 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
             {t('alerts.viewContext', 'View context')}
             <Icons.next className="h-3 w-3" />
           </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Icons.notifications className="h-3 w-3" />}
+            onClick={onOpenDetail}
+          >
+            {t('alerts.timeline.title', 'Audit timeline')}
+          </Button>
+          {isAcked ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Icons.refresh className="h-3 w-3" />}
+              onClick={onReopen}
+            >
+              {t('alerts.timeline.kindAnonymous.reopened', 'Reopened')}
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Icons.success className="h-3 w-3" />}
+              onClick={onAcknowledge}
+            >
+              {t('alerts.ack.button', 'Acknowledge')}
+            </Button>
+          )}
           {!alert.is_read && (
             <Button variant="ghost" size="sm" icon={<Icons.show className="h-3 w-3" />} onClick={onMarkRead}>
               {t('Mark read')}
@@ -507,6 +557,12 @@ export default function AlertsPage() {
   const { data: alerts, isLoading, error } = alertsQuery;
   const { data: rules } = useAlertRules();
   const markReadMut = useMarkAlertRead();
+  const ackMut = useAcknowledgeAlertHook();
+  const reopenMut = useReopenAlertHook();
+  const [ackDialogId, setAckDialogId] = useState<number | null>(null);
+  const [detailId, setDetailId] = useState<number | null>(null);
+  const detailQuery = useAlertDetailHook(detailId, { enabled: detailId !== null });
+  const ackTarget = useMemo(() => alerts?.find((a) => a.id === ackDialogId) ?? null, [alerts, ackDialogId]);
   const { data: rulePins = [] } = usePinned('alert_rule');
   const pinnedRules = useMemo(() => {
     if (!rules || rulePins.length === 0) return [];
@@ -592,6 +648,34 @@ export default function AlertsPage() {
       onSuccess: () => toast.info(t('Alert marked as read')),
     });
   }, [markReadMut, toast, t]);
+
+  const handleAcknowledgeSubmit = useCallback((note: string) => {
+    if (ackDialogId === null) return;
+    const id = ackDialogId;
+    setAckDialogId(null);
+    ackMut.mutate(
+      { id, note },
+      {
+        onSuccess: () => {
+          toast.toast({
+            type: 'success',
+            title: t('alerts.ack.success', 'Alert acknowledged'),
+            duration: 5000,
+            action: {
+              label: t('alerts.ack.undo', 'Undo'),
+              onClick: () => {
+                reopenMut.mutate(id);
+              },
+            },
+          });
+        },
+      },
+    );
+  }, [ackDialogId, ackMut, reopenMut, toast, t]);
+
+  const handleReopen = useCallback((id: number) => {
+    reopenMut.mutate(id);
+  }, [reopenMut]);
 
   return (
     <PageContainer
@@ -864,7 +948,14 @@ export default function AlertsPage() {
             <StaggerContainer className="space-y-2">
               {pagedAlerts.map(a => (
                 <StaggerItem key={a.id}>
-                  <AlertCard alert={a} onMarkRead={() => handleMarkRead(a.id)} t={t} />
+                  <AlertCard
+                    alert={a}
+                    onMarkRead={() => handleMarkRead(a.id)}
+                    onAcknowledge={() => setAckDialogId(a.id)}
+                    onReopen={() => handleReopen(a.id)}
+                    onOpenDetail={() => setDetailId(a.id)}
+                    t={t}
+                  />
                 </StaggerItem>
               ))}
             </StaggerContainer>
@@ -907,6 +998,45 @@ export default function AlertsPage() {
 
       {/* ── Preferences Tab ──────────────────────────────────────────── */}
       {tab === 'preferences' && <PreferencesSection t={t} />}
+
+      {/* Phase-46 / Prompt 20 — ack dialog + audit timeline modal */}
+      <AcknowledgeAlertDialog
+        open={ackDialogId !== null}
+        onClose={() => setAckDialogId(null)}
+        onSubmit={handleAcknowledgeSubmit}
+        submitting={ackMut.isPending}
+        alertTitle={ackTarget?.title}
+      />
+      <Modal
+        open={detailId !== null}
+        onClose={() => setDetailId(null)}
+        title={t('alerts.timeline.title', 'Audit timeline')}
+        size="md"
+      >
+        <div className="space-y-4">
+          {detailQuery.isLoading ? (
+            <Skeleton className="h-32" />
+          ) : detailQuery.data ? (
+            <>
+              <div className="space-y-1">
+                <span className="block text-sm font-medium text-[var(--text-primary)]">
+                  {detailQuery.data.title}
+                </span>
+                <span className="block text-xs text-[var(--text-muted)]">
+                  {detailQuery.data.message}
+                </span>
+              </div>
+              <AlertDetailTimeline events={detailQuery.data.events} />
+            </>
+          ) : (
+            <EmptyState /* no-action: detail load failed; reopening the modal will retry */
+              icon={<Icons.notifications className="h-6 w-6" />}
+              title={t('alerts.timeline.empty', 'No events yet')}
+              message={t('alerts.timeline.empty', 'No events yet')}
+            />
+          )}
+        </div>
+      </Modal>
     </PageContainer>
   );
 }

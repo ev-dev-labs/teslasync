@@ -710,6 +710,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/enable", alertHandler.BulkEnableRules)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/disable", alertHandler.BulkDisableRules)
 			r.Post("/test", alertHandler.TestRule)
+			// Phase-46 / Prompt 20 — alert acknowledgement + audit timeline.
+			// Registered AFTER the static `/rules`, `/metrics`, `/test` routes
+			// above so chi's static-first matching routes them correctly.
+			r.Get("/{alertID}", alertHandler.GetAlert)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/{alertID}/acknowledge", alertHandler.AcknowledgeAlert)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/{alertID}/comment", alertHandler.CommentAlert)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/{alertID}/reopen", alertHandler.ReopenAlert)
 		})
 
 		// Automations

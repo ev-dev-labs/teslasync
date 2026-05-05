@@ -7,6 +7,8 @@ import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { useOptimisticMutation } from './useOptimisticMutation';
 import type {
   Alert,
+  AlertDetail,
+  AlertEvent,
   AlertRule,
   AlertRuleInput,
   AlertRuleSnoozeRequest,
@@ -25,6 +27,8 @@ import type {
 
 export type {
   Alert,
+  AlertDetail,
+  AlertEvent,
   AlertRule,
   AlertRuleInput,
   AlertRuleSnoozeRequest,
@@ -62,6 +66,7 @@ export type NotificationChannelInput =
 
 export const notificationKeys = {
   alerts: ['alerts'] as const,
+  alertDetail: (id: number) => ['alerts', 'detail', id] as const,
   alertRules: ['alert-rules'] as const,
   alertMetrics: ['alert-metrics'] as const,
   channels: ['notification-channels'] as const,
@@ -134,6 +139,142 @@ export function useMarkAlertRead() {
       success('toast.alerts.markRead.success', 'Alert marked as read'),
     onError: (e) =>
       error(e, 'toast.alerts.markRead.error', 'Failed to mark alert as read'),
+  });
+}
+
+// ─── Phase-46 / Prompt 20 — alert ack + audit timeline ──────────────────────
+
+/**
+ * useAlertDetail fetches a single alert with its full event timeline. Used by
+ * the alert detail modal/page; the list endpoint omits the events array to
+ * keep the inbox payload small.
+ *
+ * `enabled` defaults to `true` when `id` is a positive integer; pass an
+ * explicit `enabled: false` to defer the fetch (e.g. while a modal is closed).
+ */
+export function useAlertDetail(
+  id: number | null | undefined,
+  options?: { enabled?: boolean },
+) {
+  const numericId = typeof id === 'number' && Number.isFinite(id) && id > 0 ? id : null;
+  return useQuery({
+    queryKey: numericId !== null ? notificationKeys.alertDetail(numericId) : ['alerts', 'detail', 'disabled'],
+    queryFn: ({ signal }) =>
+      request<AlertDetail>(`/alerts/${numericId}`, { signal }),
+    enabled: numericId !== null && (options?.enabled ?? true),
+    staleTime: STALE_TIMES.QUICK,
+  });
+}
+
+export interface AcknowledgeAlertInput {
+  id: number;
+  note?: string;
+}
+
+/**
+ * useAcknowledgeAlert posts to /alerts/{id}/acknowledge with an optional note.
+ * Optimistically marks the alert as acknowledged in the inbox cache so the
+ * row updates instantly; the server-confirmed AlertDetail is then written
+ * back into the alertDetail cache so the detail view re-renders without an
+ * extra fetch.
+ */
+export function useAcknowledgeAlert() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useOptimisticMutation<AlertDetail, AcknowledgeAlertInput, Alert[]>({
+    mutationFn: ({ id, note }) =>
+      request<AlertDetail>(`/alerts/${id}/acknowledge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(note && note.trim().length > 0 ? { note: note.trim() } : {}),
+      }),
+    queryKeys: [notificationKeys.alerts],
+    updater: (prev, { id, note }) => {
+      if (!prev) return prev;
+      const nowIso = new Date().toISOString();
+      const trimmed = note?.trim();
+      return prev.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              acknowledged_at: nowIso,
+              acknowledgement_note: trimmed && trimmed.length > 0 ? trimmed : a.acknowledgement_note ?? null,
+            }
+          : a,
+      );
+    },
+    broadcast: true,
+    onSuccess: (detail, vars) => {
+      qc.setQueryData(notificationKeys.alertDetail(vars.id), detail);
+      success('toast.alerts.ack.success', 'Alert acknowledged');
+    },
+    onError: (e) =>
+      error(e, 'toast.alerts.ack.error', 'Failed to acknowledge alert'),
+  });
+}
+
+export interface CommentAlertInput {
+  id: number;
+  note: string;
+}
+
+/**
+ * useCommentAlert posts to /alerts/{id}/comment with a non-empty note. Does
+ * NOT touch ack state — pure timeline append. Invalidates the alertDetail
+ * cache so the timeline refetches; the inbox list cache is untouched because
+ * comments don't change any list-visible field.
+ */
+export function useCommentAlert() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: ({ id, note }: CommentAlertInput) =>
+      request<AlertDetail>(`/alerts/${id}/comment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: note.trim() }),
+      }),
+    onSuccess: (detail, vars) => {
+      qc.setQueryData(notificationKeys.alertDetail(vars.id), detail);
+      success('toast.alerts.comment.success', 'Comment added');
+    },
+    onError: (e) =>
+      error(e, 'toast.alerts.comment.error', 'Failed to add comment'),
+  });
+}
+
+/**
+ * useReopenAlert posts to /alerts/{id}/reopen. Used by the "Undo" affordance
+ * on the Acknowledge toast and by the explicit Reopen button in the detail
+ * view. Optimistically clears the ack columns in the inbox cache.
+ */
+export function useReopenAlert() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useOptimisticMutation<AlertDetail, number, Alert[]>({
+    mutationFn: (id) =>
+      request<AlertDetail>(`/alerts/${id}/reopen`, { method: 'POST' }),
+    queryKeys: [notificationKeys.alerts],
+    updater: (prev, id) => {
+      if (!prev) return prev;
+      return prev.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              acknowledged_at: null,
+              acknowledged_by: null,
+              acknowledgement_note: null,
+            }
+          : a,
+      );
+    },
+    broadcast: true,
+    onSuccess: (detail, id) => {
+      qc.setQueryData(notificationKeys.alertDetail(id), detail);
+      success('toast.alerts.reopen.success', 'Alert reopened');
+    },
+    onError: (e) =>
+      error(e, 'toast.alerts.reopen.error', 'Failed to reopen alert'),
   });
 }
 

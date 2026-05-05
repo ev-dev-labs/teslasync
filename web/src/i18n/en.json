@@ -1033,6 +1033,18 @@
         "success": "Rule snoozed",
         "cleared": "Snooze cleared",
         "error": "Failed to snooze rule"
+      },
+      "ack": {
+        "success": "Alert acknowledged",
+        "error": "Failed to acknowledge alert"
+      },
+      "comment": {
+        "success": "Comment added",
+        "error": "Failed to add comment"
+      },
+      "reopen": {
+        "success": "Alert reopened",
+        "error": "Failed to reopen alert"
       }
     },
     "channels": {
@@ -1799,7 +1811,45 @@
       "title": "Delete rule?",
       "message": "This cannot be undone."
     },
-    "signal": "Signal"
+    "signal": "Signal",
+    "ack": {
+      "button": "Acknowledge",
+      "buttonAcked": "Acknowledged",
+      "dialogTitle": "Acknowledge alert",
+      "noteLabel": "Note (optional)",
+      "notePlaceholder": "Optional: what's being done?",
+      "noteHint": "Up to {{max}} characters. Shared in the audit timeline.",
+      "submit": "Acknowledge",
+      "cancel": "Cancel",
+      "undo": "Undo",
+      "ackedBy": "Acknowledged by {{actor}}",
+      "ackedByAnonymous": "Acknowledged",
+      "ackedAt": "{{time}}"
+    },
+    "comment": {
+      "button": "Comment",
+      "dialogTitle": "Add comment",
+      "noteLabel": "Comment",
+      "notePlaceholder": "Add a note to the audit timeline…",
+      "submit": "Add comment",
+      "cancel": "Cancel"
+    },
+    "timeline": {
+      "title": "Audit timeline",
+      "anonymous": "Unknown",
+      "kind": {
+        "created": "Alert created",
+        "acknowledged": "Acknowledged by {{actor}}",
+        "reopened": "Reopened by {{actor}}",
+        "commented": "Comment by {{actor}}"
+      },
+      "kindAnonymous": {
+        "acknowledged": "Acknowledged",
+        "reopened": "Reopened",
+        "commented": "Comment added"
+      },
+      "empty": "No events yet"
+    }
   },
   "pagination": {
     "showing": "Showing {{start}}–{{end}} of {{total}}",

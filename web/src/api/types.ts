@@ -358,6 +358,34 @@ export interface Alert {
   rule_id?: number | null
   rule_signal?: string | null
   rule_severity?: AlertRuleSeverity | string | null
+  /** Phase-46 / Prompt 20 — acknowledgement state. Populated by
+   *  GET /alerts/{id} and by the ack/reopen mutations. List endpoint also
+   *  returns these when the row is acknowledged so the inbox can show a
+   *  badge without a per-row detail fetch. */
+  acknowledged_at?: string | null
+  acknowledged_by?: string | null
+  acknowledgement_note?: string | null
+}
+
+/** Phase-46 / Prompt 20 — entry in an alert's audit timeline. The synthetic
+ *  `created` event has `id: 0` and is reconstructed from
+ *  `notification_logs.created_at` server-side; persisted events have a
+ *  positive `id` from `notification_log_events`. */
+export type AlertEventKind = 'created' | 'acknowledged' | 'reopened' | 'commented' | string
+
+export interface AlertEvent {
+  id: number
+  occurred_at: string
+  actor?: string | null
+  kind: AlertEventKind
+  note?: string | null
+}
+
+/** Phase-46 / Prompt 20 — wire shape of GET /alerts/{id}. Extends Alert with
+ *  the ack columns (already optional on Alert) and an always-present events
+ *  array (oldest first, includes synthetic `created`). */
+export interface AlertDetail extends Alert {
+  events: AlertEvent[]
 }
 
 export type AlertRuleSeverity = 'info' | 'warn' | 'critical'

@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // AlertRule mirrors the post-migration `alert_rules` schema (Phase 3, ADR-001).
 // Typed alert rule storage: handlers reject legacy CEP request fields such as
@@ -62,4 +65,30 @@ type AlertRule struct {
 const (
 	AlertRuleKindSignal         = "signal"
 	AlertRuleKindComputedMetric = "computed_metric"
+)
+
+// NotificationLogEvent represents one entry in the per-alert audit timeline
+// introduced by Phase-46 / Prompt 20. Stored in `notification_log_events`,
+// one row per state-changing action against a notification_logs row.
+//
+// The synthetic "created" event surfaced to the frontend is reconstructed
+// from `notification_logs.created_at` at read time and is NOT persisted —
+// existing CreateLog write paths therefore do not need to change.
+type NotificationLogEvent struct {
+	ID                int64           `json:"id" db:"id"`
+	NotificationLogID int64           `json:"notification_log_id" db:"notification_log_id"`
+	OccurredAt        time.Time       `json:"occurred_at" db:"occurred_at"`
+	Actor             *string         `json:"actor,omitempty" db:"actor"`
+	Kind              string          `json:"kind" db:"kind"` // acknowledged | reopened | commented
+	Note              *string         `json:"note,omitempty" db:"note"`
+	Metadata          json.RawMessage `json:"metadata,omitempty" db:"metadata"`
+}
+
+// NotificationLogEventKind constants enumerate the kinds the
+// `notification_log_events.kind` CHECK constraint admits. The synthetic
+// "created" entry is computed at read time and is intentionally absent here.
+const (
+	NotificationLogEventKindAcknowledged = "acknowledged"
+	NotificationLogEventKindReopened     = "reopened"
+	NotificationLogEventKindCommented    = "commented"
 )

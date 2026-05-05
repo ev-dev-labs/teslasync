@@ -396,13 +396,19 @@ func (r *NotificationRepo) MarkLogFailed(ctx context.Context, id int64, errMsg s
 // notificationLogColumns is the canonical SELECT list for notification_logs
 // rows, matching the field order used by scanNotificationLog. Centralized so
 // every read path returns the same shape (incl. read_at / archived_at added in
-// Phase 40 / Prompt 29 and severity added in Phase-46 / Prompt 19).
-const notificationLogColumns = `id, channel_id, alert_id, title, message, status, COALESCE(severity, ''), error, created_at, sent_at, read_at, archived_at`
+// Phase 40 / Prompt 29, severity added in Phase-46 / Prompt 19, and the ack
+// columns added in Phase-46 / Prompt 20).
+//
+// IMPORTANT: any change here MUST also be applied to the aliased version used
+// by GetLogsFiltered below; both must stay in lockstep with scanNotificationLog
+// or one of the read paths will break at runtime.
+const notificationLogColumns = `id, channel_id, alert_id, title, message, status, COALESCE(severity, ''), error, created_at, sent_at, read_at, archived_at, acknowledged_at, acknowledged_by, acknowledgement_note`
 
 func scanNotificationLog(rows pgx.Row, l *models.NotificationLog) error {
 	return rows.Scan(
 		&l.ID, &l.ChannelID, &l.AlertID, &l.Title, &l.Message, &l.Status, &l.Severity, &l.Error,
 		&l.CreatedAt, &l.SentAt, &l.ReadAt, &l.ArchivedAt,
+		&l.AcknowledgedAt, &l.AcknowledgedBy, &l.AcknowledgementNote,
 	)
 }
 
@@ -558,7 +564,8 @@ func (r *NotificationRepo) GetLogsFiltered(ctx context.Context, f NotificationLo
 	}
 
 	const aliasedCols = `nl.id, nl.channel_id, nl.alert_id, nl.title, nl.message, nl.status, COALESCE(nl.severity, ''), nl.error,
-		nl.created_at, nl.sent_at, nl.read_at, nl.archived_at`
+		nl.created_at, nl.sent_at, nl.read_at, nl.archived_at,
+		nl.acknowledged_at, nl.acknowledged_by, nl.acknowledgement_note`
 
 	query := "SELECT " + aliasedCols + " FROM notification_logs nl"
 	if needsRuleJoin {
@@ -722,6 +729,281 @@ func (r *NotificationRepo) GetStats(ctx context.Context) (map[string]interface{}
 	stats["enabled_channels"] = enabled
 
 	return stats, nil
+}
+
+// --- Acknowledgement + audit timeline (Phase-46 / Prompt 20) ---
+
+// GetLog returns a single notification_logs row by id, or nil if no row
+// exists. Errors other than "not found" are wrapped and returned.
+func (r *NotificationRepo) GetLog(ctx context.Context, id int64) (*models.NotificationLog, error) {
+	row := r.db.Pool.QueryRow(ctx,
+		`SELECT `+notificationLogColumns+`
+		 FROM notification_logs WHERE id = $1`, id,
+	)
+	l := &models.NotificationLog{}
+	if err := scanNotificationLog(row, l); err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("notification_logs get: %w", err)
+	}
+	return l, nil
+}
+
+// AcknowledgeLog flips the ack columns to (NOW, actor, note) iff the row
+// exists and is not yet acknowledged, then inserts a matching row into
+// notification_log_events. The whole operation runs in one transaction so a
+// partial failure cannot leave the row + audit timeline desynced.
+//
+// Returns:
+//   - the post-update row (always reloaded inside the tx so the caller sees
+//     either the just-set values or the existing-ack values),
+//   - true if a NEW acknowledgement was recorded (ack columns transitioned
+//     NULL → set, audit event written), false if the row was already
+//     acknowledged (idempotent no-op),
+//   - nil error if the row existed; (nil, false, nil) when id is missing so
+//     the caller can render a 404.
+//
+// `note` is stored verbatim; trim whitespace before calling. Pass empty
+// string to leave the acknowledgement_note column NULL.
+func (r *NotificationRepo) AcknowledgeLog(ctx context.Context, id int64, actor, note string) (*models.NotificationLog, bool, error) {
+	var (
+		updated *models.NotificationLog
+		newAck  bool
+	)
+	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		// Existence pre-read inside the tx so 404 is reliable even if a
+		// concurrent DELETE just removed the row.
+		existing := &models.NotificationLog{}
+		err := scanNotificationLog(
+			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs WHERE id = $1`, id),
+			existing,
+		)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return nil
+			}
+			return fmt.Errorf("notification_logs ack pre-read: %w", err)
+		}
+		if existing.AcknowledgedAt != nil {
+			updated = existing
+			return nil
+		}
+
+		var noteArg any
+		if note == "" {
+			noteArg = nil
+		} else {
+			noteArg = note
+		}
+		var actorArg any
+		if actor == "" {
+			actorArg = nil
+		} else {
+			actorArg = actor
+		}
+
+		ct, err := tx.Exec(ctx,
+			`UPDATE notification_logs
+			   SET acknowledged_at = NOW(),
+			       acknowledged_by = $2,
+			       acknowledgement_note = $3
+			 WHERE id = $1 AND acknowledged_at IS NULL`,
+			id, actorArg, noteArg,
+		)
+		if err != nil {
+			return fmt.Errorf("notification_logs ack update: %w", err)
+		}
+		if ct.RowsAffected() == 0 {
+			// Lost a race with a concurrent ack; reload to surface the
+			// winning state to the caller.
+			updated = existing
+			return nil
+		}
+
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO notification_log_events (notification_log_id, actor, kind, note)
+			 VALUES ($1, $2, $3, $4)`,
+			id, actorArg, models.NotificationLogEventKindAcknowledged, noteArg,
+		); err != nil {
+			return fmt.Errorf("notification_log_events ack insert: %w", err)
+		}
+
+		updated = &models.NotificationLog{}
+		if err := scanNotificationLog(
+			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs WHERE id = $1`, id),
+			updated,
+		); err != nil {
+			return fmt.Errorf("notification_logs ack reload: %w", err)
+		}
+		newAck = true
+		return nil
+	})
+	if err != nil {
+		return nil, false, err
+	}
+	return updated, newAck, nil
+}
+
+// ReopenLog clears the ack columns iff the row exists and is currently
+// acknowledged, then inserts a matching `reopened` event row. Idempotent:
+// reopening an already-reopened (or never-acked) row is a no-op that returns
+// the row unchanged with reopened=false. (nil, false, nil) signals "not
+// found" so the caller can render 404.
+func (r *NotificationRepo) ReopenLog(ctx context.Context, id int64, actor string) (*models.NotificationLog, bool, error) {
+	var (
+		updated  *models.NotificationLog
+		reopened bool
+	)
+	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		existing := &models.NotificationLog{}
+		err := scanNotificationLog(
+			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs WHERE id = $1`, id),
+			existing,
+		)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return nil
+			}
+			return fmt.Errorf("notification_logs reopen pre-read: %w", err)
+		}
+		if existing.AcknowledgedAt == nil {
+			updated = existing
+			return nil
+		}
+
+		ct, err := tx.Exec(ctx,
+			`UPDATE notification_logs
+			   SET acknowledged_at = NULL,
+			       acknowledged_by = NULL,
+			       acknowledgement_note = NULL
+			 WHERE id = $1 AND acknowledged_at IS NOT NULL`,
+			id,
+		)
+		if err != nil {
+			return fmt.Errorf("notification_logs reopen update: %w", err)
+		}
+		if ct.RowsAffected() == 0 {
+			updated = existing
+			return nil
+		}
+
+		var actorArg any
+		if actor == "" {
+			actorArg = nil
+		} else {
+			actorArg = actor
+		}
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO notification_log_events (notification_log_id, actor, kind)
+			 VALUES ($1, $2, $3)`,
+			id, actorArg, models.NotificationLogEventKindReopened,
+		); err != nil {
+			return fmt.Errorf("notification_log_events reopen insert: %w", err)
+		}
+
+		updated = &models.NotificationLog{}
+		if err := scanNotificationLog(
+			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs WHERE id = $1`, id),
+			updated,
+		); err != nil {
+			return fmt.Errorf("notification_logs reopen reload: %w", err)
+		}
+		reopened = true
+		return nil
+	})
+	if err != nil {
+		return nil, false, err
+	}
+	return updated, reopened, nil
+}
+
+// CommentOnLog inserts a `commented` audit event without touching the ack
+// columns. Returns the inserted event row with its server-assigned id and
+// occurred_at. Returns (nil, nil) when the parent notification_logs row is
+// missing so the caller can render 404.
+func (r *NotificationRepo) CommentOnLog(ctx context.Context, id int64, actor, note string) (*models.NotificationLogEvent, error) {
+	var event *models.NotificationLogEvent
+	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		var exists bool
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS(SELECT 1 FROM notification_logs WHERE id = $1)`, id,
+		).Scan(&exists); err != nil {
+			return fmt.Errorf("notification_logs comment pre-read: %w", err)
+		}
+		if !exists {
+			return nil
+		}
+		var actorArg any
+		if actor == "" {
+			actorArg = nil
+		} else {
+			actorArg = actor
+		}
+		var noteArg any
+		if note == "" {
+			noteArg = nil
+		} else {
+			noteArg = note
+		}
+		ev := &models.NotificationLogEvent{
+			NotificationLogID: id,
+			Actor:             nilOrPtr(actor),
+			Kind:              models.NotificationLogEventKindCommented,
+			Note:              nilOrPtr(note),
+		}
+		if err := tx.QueryRow(ctx,
+			`INSERT INTO notification_log_events (notification_log_id, actor, kind, note)
+			 VALUES ($1, $2, $3, $4)
+			 RETURNING id, occurred_at`,
+			id, actorArg, models.NotificationLogEventKindCommented, noteArg,
+		).Scan(&ev.ID, &ev.OccurredAt); err != nil {
+			return fmt.Errorf("notification_log_events comment insert: %w", err)
+		}
+		event = ev
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func nilOrPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+// ListLogEvents returns every persisted notification_log_events row for the
+// supplied notification_logs id, oldest first. The synthetic "created" entry
+// is reconstructed by the API layer from notification_logs.created_at and is
+// NOT returned by this method.
+func (r *NotificationRepo) ListLogEvents(ctx context.Context, logID int64) ([]*models.NotificationLogEvent, error) {
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT id, notification_log_id, occurred_at, actor, kind, note, metadata
+		   FROM notification_log_events
+		  WHERE notification_log_id = $1
+		  ORDER BY occurred_at ASC, id ASC`,
+		logID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("notification_log_events list: %w", err)
+	}
+	defer rows.Close()
+	var events []*models.NotificationLogEvent
+	for rows.Next() {
+		ev := &models.NotificationLogEvent{}
+		if err := rows.Scan(
+			&ev.ID, &ev.NotificationLogID, &ev.OccurredAt,
+			&ev.Actor, &ev.Kind, &ev.Note, &ev.Metadata,
+		); err != nil {
+			return nil, fmt.Errorf("notification_log_events scan: %w", err)
+		}
+		events = append(events, ev)
+	}
+	return events, rows.Err()
 }
 
 // --- Chatbot ---
