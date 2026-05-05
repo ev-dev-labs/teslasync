@@ -30,6 +30,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { DateRangeFilter } from '@/components/forms/DateRangeFilter';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { FilterBar } from '@/components/forms/FilterBar';
+import { ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms/ActiveFilterChips';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useUrlBatch, useUrlEnum, useUrlString, useUrlNumber } from '@/hooks/useUrlState';
 import { FadeIn } from '@/components/motion/FadeIn';
@@ -411,6 +412,42 @@ export default function DrivesListPage() {
             onApply={() => setPage(1)}
           />
         </FilterBar>
+        <ActiveFilterChips
+          className="mt-3"
+          filters={
+            ([
+              search
+                ? {
+                    key: 'q',
+                    label: t('drives.filterLabel.search', 'Search'),
+                    value: search,
+                    onRemove: () => { setSearch(''); setPage(1); },
+                  } satisfies FilterChipDescriptor
+                : null,
+              startDate && startDate !== defaultStart
+                ? {
+                    key: 'from',
+                    label: t('drives.filterLabel.from', 'From'),
+                    value: startDate,
+                    onRemove: () => { setStartDate(defaultStart); setPage(1); },
+                  } satisfies FilterChipDescriptor
+                : null,
+              endDate && endDate !== defaultEnd
+                ? {
+                    key: 'to',
+                    label: t('drives.filterLabel.to', 'To'),
+                    value: endDate,
+                    onRemove: () => { setEndDate(defaultEnd); setPage(1); },
+                  } satisfies FilterChipDescriptor
+                : null,
+            ].filter(Boolean) as FilterChipDescriptor[]) as readonly FilterChipDescriptor[]
+          }
+          onClearAll={() => {
+            setSearch('');
+            setRangeBatch({ from: defaultStart, to: defaultEnd });
+            setPage(1);
+          }}
+        />
       </FadeIn>
 
       {/* Hero gauges */}

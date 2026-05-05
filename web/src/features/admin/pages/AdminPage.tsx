@@ -14,7 +14,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
-import { SearchInput, FilterBar } from '@/components/forms';
+import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useToast } from '@/components/feedback/Toast';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -287,6 +287,22 @@ export default function AdminPage() {
                   className="w-full sm:w-72"
                 />
               </FilterBar>
+              <ActiveFilterChips
+                className="mb-3"
+                filters={
+                  (auditSearch
+                    ? [
+                        {
+                          key: 'q',
+                          label: t('admin.audit.filterLabel.search', 'Search'),
+                          value: auditSearch,
+                          onRemove: () => setAuditSearch(''),
+                        } satisfies FilterChipDescriptor,
+                      ]
+                    : []) as readonly FilterChipDescriptor[]
+                }
+                onClearAll={() => setAuditSearch('')}
+              />
               {filteredAuditLogs.length > 0 ? (
                 <DataTable
                   tableId="admin:audit-logs"

@@ -5,7 +5,7 @@ import { Button, Pagination } from '@/components/ui';
 import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, EmptyState } from '@/components/feedback';
-import { SearchInput, FilterBar } from '@/components/forms';
+import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import { cn } from '@/lib/cn';
 import type { ChargingSession } from '@/api/types';
 import { ChargingSessionCard } from '../ChargingSessionCard';
@@ -130,6 +130,38 @@ export function SessionListSection({
             className="w-full sm:w-72"
           />
         </FilterBar>
+        <ActiveFilterChips
+          className="mt-2"
+          filters={
+            ([
+              searchQuery
+                ? {
+                    key: 'q',
+                    label: t('charging.sessions.filterLabel.search', 'Search'),
+                    value: searchQuery,
+                    onRemove: () => onSearchQueryChange(''),
+                  } satisfies FilterChipDescriptor
+                : null,
+              chargerFilter !== 'all'
+                ? {
+                    key: 'charger',
+                    label: t('charging.sessions.filterLabel.charger', 'Charger'),
+                    value:
+                      chargerFilter === 'home'
+                        ? t('charging.sessions.filterHome', 'Home')
+                        : chargerFilter === 'supercharger'
+                          ? t('charging.sessions.filterSC', 'SC')
+                          : t('charging.sessions.filterDC', 'DC'),
+                    onRemove: () => onChargerFilterChange('all'),
+                  } satisfies FilterChipDescriptor
+                : null,
+            ].filter(Boolean) as FilterChipDescriptor[]) as readonly FilterChipDescriptor[]
+          }
+          onClearAll={() => {
+            onSearchQueryChange('');
+            onChargerFilterChange('all');
+          }}
+        />
       </FadeIn>
 
       {/* Sort & Filter controls */}

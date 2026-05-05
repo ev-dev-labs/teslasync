@@ -13,7 +13,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { SearchInput, FilterBar } from '@/components/forms';
+import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useUrlEnum, useUrlString } from '@/hooks/useUrlState';
 import {
@@ -380,6 +380,22 @@ export default function TeslaChargingHistoryPage() {
                   className="w-full sm:w-72"
                 />
               </FilterBar>
+              <ActiveFilterChips
+                className="mb-3"
+                filters={
+                  (search
+                    ? [
+                        {
+                          key: 'q',
+                          label: t('tesla_charging.filterLabel.search', 'Search'),
+                          value: search,
+                          onRemove: () => setSearch(''),
+                        } satisfies FilterChipDescriptor,
+                      ]
+                    : []) as readonly FilterChipDescriptor[]
+                }
+                onClearAll={() => setSearch('')}
+              />
               {sortedEntries.length > 0 ? (
                 <DataTable
                   columns={columns}

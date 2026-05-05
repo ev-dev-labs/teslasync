@@ -19,7 +19,7 @@ import { MetricCard, BulkActionToolbar } from '@/components/data-display';
 import { Skeleton, EmptyState, Spinner, AlertBanner } from '@/components/feedback';
 import { useToast } from '@/components/feedback/Toast';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { SearchInput, FilterBar } from '@/components/forms';
+import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -558,6 +558,22 @@ export default function GeofencesPage() {
                   className="w-full sm:w-72"
                 />
               </FilterBar>
+              <ActiveFilterChips
+                className="mt-2"
+                filters={
+                  (search
+                    ? [
+                        {
+                          key: 'q',
+                          label: t('geofences.filterLabel.search', 'Search'),
+                          value: search,
+                          onRemove: () => setSearch(''),
+                        } satisfies FilterChipDescriptor,
+                      ]
+                    : []) as readonly FilterChipDescriptor[]
+                }
+                onClearAll={() => setSearch('')}
+              />
             </StaggerItem>
           )}
           {filteredGeofences.length > 0 ? (

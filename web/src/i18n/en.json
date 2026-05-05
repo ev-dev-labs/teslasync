@@ -324,7 +324,14 @@
     "saveError": "Failed to save changes"
   },
   "filters": {
-    "reset": "Reset filters"
+    "reset": "Reset filters",
+    "activeLabel": "Active filters",
+    "clearAll": "Clear all",
+    "clearedAll": "All filters cleared",
+    "moreCount": "+{{count}} more",
+    "moreLabel": "Additional active filters",
+    "removed": "Filter removed",
+    "removeAria": "Remove filter {{label}}"
   },
   "draft": {
     "restored": "Draft restored from {{when}}.",

@@ -38,7 +38,7 @@ import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
-import { SearchInput, FilterBar } from '@/components/forms';
+import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -189,7 +189,7 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
 
 // ─── NotificationHistory sub-component ───────────────────────────────────────
 
-function NotificationHistory({ t }: { t: (k: string) => string }) {
+function NotificationHistory({ t }: { t: TFunction }) {
 
   const { data: logs, isLoading: logsLoading } = useNotificationLogs();
   const { data: stats } = useNotificationStats();
@@ -290,6 +290,22 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
             className="w-full sm:w-72"
           />
         </FilterBar>
+        <ActiveFilterChips
+          className="mb-3"
+          filters={
+            (logSearch
+              ? [
+                  {
+                    key: 'q',
+                    label: t('notifications.log.filterLabel.search', 'Search'),
+                    value: logSearch,
+                    onRemove: () => setLogSearch(''),
+                  } satisfies FilterChipDescriptor,
+                ]
+              : []) as readonly FilterChipDescriptor[]
+          }
+          onClearAll={() => setLogSearch('')}
+        />
         {logsLoading ? (
           <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-10" />)}</div>
         ) : filteredLogs.length > 0 ? (
@@ -791,6 +807,37 @@ export default function AlertsPage() {
                 />
               </div>
             </FilterBar>
+            <ActiveFilterChips
+              className="mt-3"
+              filters={
+                ([
+                  alertSearch
+                    ? {
+                        key: 'q',
+                        label: t('alerts.filterLabel.search', 'Search'),
+                        value: alertSearch,
+                        onRemove: () => { setAlertSearch(''); setAlertPage(1); },
+                      } satisfies FilterChipDescriptor
+                    : null,
+                  filter !== 'all'
+                    ? {
+                        key: 'filter',
+                        label: t('alerts.filterLabel.status', 'Status'),
+                        value:
+                          filter === 'unread'
+                            ? t('Unread')
+                            : t('Critical'),
+                        onRemove: () => { setFilter('all'); setAlertPage(1); },
+                      } satisfies FilterChipDescriptor
+                    : null,
+                ].filter(Boolean) as FilterChipDescriptor[]) as readonly FilterChipDescriptor[]
+              }
+              onClearAll={() => {
+                setAlertSearch('');
+                setFilter('all');
+                setAlertPage(1);
+              }}
+            />
           </FadeIn>
 
           {isLoading ? (
