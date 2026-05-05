@@ -420,6 +420,8 @@ export default function TeslaChargingHistoryPage() {
                   columnReorder
                   stickyHeader
                   maxHeight={600}
+                  virtualized
+                  rowHeight={56}
                   selectable="multi"
                   selectedKeys={selectedKeys}
                   onSelectionChange={setSelectedKeys}

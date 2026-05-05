@@ -437,6 +437,8 @@ export default function TeslaChargingSessionsPage() {
               columnReorder
               stickyHeader
               maxHeight={600}
+              virtualized
+              rowHeight={56}
               selectable="multi"
               selectedKeys={selectedKeys}
               onSelectionChange={setSelectedKeys}

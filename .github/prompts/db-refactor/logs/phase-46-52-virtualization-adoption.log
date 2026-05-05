@@ -1,0 +1,230 @@
+=== TYPESCRIPT ===
+=== LINT ===
+
+> teslasync-web@2.0.0 lint
+> eslint . --report-unused-disable-directives --max-warnings 0 && npm run lint:i18n && npm run lint:light-mode && npm run audit:empty-state && npm run audit:tooltip-text && npm run audit:i18n-shadowed && npm run audit:query-signal && npm run audit:datatable-tableid && npm run audit:filterbar-chips && npm run audit:forced-colors && npm run audit:sr-only && npm run audit:chart-a11y && npm run audit:marker-cluster && npm run audit:deferred-filter && npm run audit:prefetch-link && npm run audit:tag-input && npm run audit:required-fields && npm run audit:unit-input && npm run audit:masked-values && npm run audit:rtl
+
+
+> teslasync-web@2.0.0 lint:i18n
+> node scripts/lint-i18n-no-template-literals.mjs
+
+[i18n-lint] OK ΓÇö no template literals in src/i18n/*.json
+
+> teslasync-web@2.0.0 lint:light-mode
+> node scripts/audit-light-mode-parity.mjs
+
+
+Total violations: 0
+
+Allowed drift (LIGHT_MODE_ALLOWED_DRIFT): 0
+
+OK ΓÇö light-mode CSS-var parity holds.
+
+> teslasync-web@2.0.0 audit:empty-state
+> node scripts/audit-empty-state-cta.mjs
+
+OK ΓÇö every <EmptyState> in src\features has a CTA or // no-action: exemption
+
+> teslasync-web@2.0.0 audit:tooltip-text
+> node scripts/audit-tooltip-text-color.mjs
+
+OK ΓÇö no tooltip content overrides intrinsic text colour
+
+> teslasync-web@2.0.0 audit:i18n-shadowed
+> node scripts/audit-i18n-shadowed-keys.mjs
+
+Γ£à audit:i18n-shadowed-keys ΓÇö no violations
+
+> teslasync-web@2.0.0 audit:query-signal
+> node scripts/audit-query-signal.mjs
+
+OK ΓÇö every useQuery/useInfiniteQuery queryFn in src\api\hooks threads { signal } (50 files scanned)
+
+> teslasync-web@2.0.0 audit:datatable-tableid
+> node scripts/audit-datatable-tableid.mjs
+
+OK ΓÇö every <DataTable> in src\features has a tableId
+
+> teslasync-web@2.0.0 audit:filterbar-chips
+> node scripts/audit-filterbar-chips.mjs
+
+OK ΓÇö every <FilterBar> in [src\features, src\components\forms] has a sibling <ActiveFilterChips>
+
+> teslasync-web@2.0.0 audit:forced-colors
+> node scripts/audit-forced-colors.mjs
+
+OK ΓÇö every critical component (11) defines a forced-colors override
+
+> teslasync-web@2.0.0 audit:sr-only
+> node scripts/audit-sr-only.mjs
+
+OK ΓÇö no ad-hoc `sr-only` outside VisuallyHidden in src
+
+> teslasync-web@2.0.0 audit:chart-a11y
+> node scripts/audit-chart-a11y.mjs
+
+OK ΓÇö every <ChartContainer> in src has ariaLabel + data/dataColumns or a no-table justification
+
+> teslasync-web@2.0.0 audit:marker-cluster
+> node scripts/audit-marker-cluster.mjs
+
+OK ΓÇö every <Marker>/<CircleMarker> in src is either inside a <MarkerCluster> file or carries a marker-cluster:no justification (734 files scanned)
+
+> teslasync-web@2.0.0 audit:deferred-filter
+> node scripts/audit-deferred-filter.mjs
+
+OK ΓÇö 4 configured heavy-filter page(s) either adopt useDeferredFilter / useDeferredValue (with memo() on the row component) or carry a `deferred-filter:no` justification.
+
+> teslasync-web@2.0.0 audit:prefetch-link
+> node scripts/auditPrefetchLink.mjs
+
+OK ΓÇö every <Link>/<NavLink>/<GuardedLink>/<GuardedNavLink> in the 3 audited layout file(s) is either a <PrefetchLink> or carries a prefetch-link:no justification.
+
+> teslasync-web@2.0.0 audit:tag-input
+> node scripts/auditTagInput.mjs
+
+OK ΓÇö no hand-rolled tag-input patterns found (732 file(s) scanned, 2 allow-listed primitive(s) skipped).
+
+> teslasync-web@2.0.0 audit:required-fields
+> node scripts/auditRequiredFields.mjs
+
+OK ΓÇö every <Input|Textarea|Select required> in the 730 scanned file(s) carries a label / aria-label / aria-labelledby or a required-field:no justification.
+
+> teslasync-web@2.0.0 audit:unit-input
+> node scripts/auditUnitInput.mjs
+
+OK ΓÇö no hand-rolled unit-input patterns found (733 file(s) scanned, 1 allow-listed primitive(s) skipped).
+
+> teslasync-web@2.0.0 audit:masked-values
+> node scripts/auditMaskedValues.mjs
+
+audit:masked-values OK ΓÇö scanned 733 .tsx file(s); no cleartext sensitive renders found.
+
+> teslasync-web@2.0.0 audit:rtl
+> node scripts/audit-rtl-properties.mjs
+
+[audit:rtl] scanned 875 .tsx file(s) under D:\repos\teslasync\web\src
+[audit:rtl] physical-direction utility hits: 385 (budget: 400)
+[audit:rtl] top 20 offenders:
+    11  components/layout/Layout.tsx
+     8  features/dashboard/pages/DashboardPage.tsx
+     7  features/analytics/pages/YearReviewPage.tsx
+     7  features/dashboard/components/DashboardGrid.tsx
+     7  features/driving/pages/DriveScorePage.tsx
+     6  components/data-display/SavedViewMenu.tsx
+     6  components/forms/Combobox.tsx
+     6  components/layout/status-bar/VersionSegment.tsx
+     6  features/dashboard/components/ImportPreviewModal.tsx
+     6  features/dashboard/components/KioskOverlay.tsx
+     6  features/dashboard/components/LayoutSwitcher.tsx
+     6  features/system/pages/DataRepairPage.tsx
+     5  components/ui/CommandPalette.tsx
+     5  features/battery/pages/PowerFlowDashboardPage.tsx
+     5  features/settings/components/SettingsExportImport.tsx
+     4  components/forms/ComboboxMulti.tsx
+     4  components/ui/Input.tsx
+     4  components/ui/Lightbox.tsx
+     4  components/ui/Tooltip.tsx
+     4  features/automations/pages/AutomationBuilderPage.tsx
+[audit:rtl] OK ΓÇö count is at or below the baseline budget.
+=== FRONTEND_TEST ===
+
+> teslasync-web@2.0.0 test
+> vitest run --run DataTable
+
+10:49:23 AM [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+10:49:23 AM [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+Both esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored. The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+
+[1m[46m RUN [49m[22m [36mv4.1.2 [39m[90mD:/repos/teslasync/web[39m
+
+ [32mΓ£ô[39m src/components/ui/__tests__/DataTable.tableId-coverage.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 116[2mms[22m[39m
+[90mstdout[2m | src/components/ui/__tests__/DataTable.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+[90mstdout[2m | src/components/ui/DataTable.test.tsx
+[22m[39m≡ƒîÉ i18next is made possible by our own product, Locize ΓÇö consider powering your project with managed localization (AI, CDN, integrations): https://locize.com ≡ƒÆÖ
+
+ [32mΓ£ô[39m src/components/ui/DataTable.test.tsx [2m([22m[2m11 tests[22m[2m)[22m[33m 1143[2mms[22m[39m
+ [32mΓ£ô[39m src/components/ui/__tests__/DataTable.test.tsx [2m([22m[2m28 tests[22m[2m)[22m[33m 2296[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m renders the Columns picker when showColumnsMenu + tableId set, and toggles visibility [33m 371[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[32m41 passed[39m[22m[90m (41)[39m
+[2m   Start at [22m 10:49:23
+[2m   Duration [22m 4.53s[2m (transform 707ms, setup 330ms, import 1.45s, tests 3.56s, environment 3.64s)[22m
+
+=== AUDIT_VIRT ===
+
+> teslasync-web@2.0.0 audit:virtualization
+> node scripts/audit-virtualization.mjs
+
+[audit:virtualization] HOT_TABLE_PAGES: 6, passes: 6, expandable-exempt: 0, waiver-exempt: 0, failures: 0
+[audit:virtualization] virtualized OK:
+  Γ£ô features/notifications/pages/AlertsPage.tsx#datatable-1
+  Γ£ô features/admin/pages/LiveLogsPage.tsx#datatable-1
+  Γ£ô features/charging/pages/TeslaChargingSessionsPage.tsx#datatable-1
+  Γ£ô features/charging/pages/TeslaChargingHistoryPage.tsx#datatable-1
+  Γ£ô features/admin/pages/RedisSignalViewerPage.tsx#datatable-1
+  Γ£ô features/telemetry/pages/MQTTInspectorPage.tsx#datatable-1
+
+[audit:virtualization] WARN ΓÇö 5 page(s) render long lists via raw .map() instead of <DataTable/>:
+  ┬╖ features/notifications/pages/NotificationsPage.tsx 
+  ┬╖ features/admin/pages/ApiLogsPage.tsx 
+  ┬╖ features/driving/pages/DrivesListPage.tsx 
+  ┬╖ features/charging/pages/ChargingListPage.tsx 
+  ┬╖ features/trips/pages/TripListPage.tsx 
+  These should be migrated to DataTable+virtualized in a follow-up sweep.
+
+[audit:virtualization] OK ΓÇö every hot table is virtualized or exempt.
+=== GIT_STATUS ===
+=== STATUS ===
+EXIT=0
+STATUS=DONE
+
+=== NOTES ===
+Deviations from the prompt's "Files touched" / "Adopt" list:
+
+ADOPTED irtualized (3 pages):
+  - features/charging/pages/TeslaChargingSessionsPage.tsx (rowHeight=56)
+  - features/charging/pages/TeslaChargingHistoryPage.tsx  (rowHeight=56)
+  - features/admin/pages/RedisSignalViewerPage.tsx        (rowHeight=48)
+
+ALREADY VIRTUALIZED (no edit, audit verifies):
+  - features/notifications/pages/AlertsPage.tsx           (Phase-44, defaultPageSize=500)
+  - features/admin/pages/LiveLogsPage.tsx                 (Phase-46/34, gated >200 rows)
+  - features/telemetry/pages/MQTTInspectorPage.tsx        (read-only — outside allowed regex)
+
+NOT ADOPTED — page does not use <DataTable/> (renders rows via raw .map()):
+  - features/notifications/pages/NotificationsPage.tsx  → custom div .map()
+  - features/admin/pages/ApiLogsPage.tsx                → custom expand-on-click div pattern
+  - features/driving/pages/DrivesListPage.tsx           → custom div .map()
+  - features/charging/pages/ChargingListPage.tsx        → custom div .map()
+  - features/trips/pages/TripListPage.tsx               → custom div .map()
+  Migrating these to <DataTable/> would be a substantial rewrite and is
+  out of scope for this prompt (which is about adopting the existing
+  irtualized prop). The audit script surfaces them as a WARN-level
+  PENDING_MIGRATION list so the backlog stays visible in CI output.
+
+NOT ADOPTED — xpandable prop is incompatible with irtualized:
+  - features/admin/pages/FeedbackQueuePage.tsx          → expandable drawer
+  - features/telemetry/pages/SignalLogViewerPage.tsx    → expandable drawer (also outside allowed regex)
+  Per Phase-40 / Prompt 37, variable-height rows are explicitly out of
+  scope; the table falls back to non-virtualized rendering when both
+  props are passed. The audit script treats xpandable as a recognised
+  exemption.
+
+NOT IN SCOPE — AuditLogPage listed as "(if exists)" in the prompt but
+no such page exists in the codebase. The closest analogues are
+eatures/admin/pages/AdminPage.tsx (admin audit logs sub-table,
+small) and eatures/dashboard/widgets/AuditLogWidget.tsx (dashboard
+widget, outside allowed regex). Neither was included in
+HOT_TABLE_PAGES.
+
+VITEST 4.1.2 LITERAL-PIPE NOTE: gate uses 
+pm test -- --run "DataTable"
+(single substring filter, no |) so the broken-pipe behaviour from
+prior prompts (Phase-46/35–51) does not apply here — all 3 DataTable
+test files (DataTable.test.tsx, __tests__/DataTable.test.tsx,
+__tests__/DataTable.tableId-coverage.test.tsx) match the substring
+filter and run together (41 tests, 0 failures).

@@ -31,6 +31,7 @@
     "audit:unit-input": "node scripts/auditUnitInput.mjs",
     "audit:masked-values": "node scripts/auditMaskedValues.mjs",
     "audit:rtl": "node scripts/audit-rtl-properties.mjs",
+    "audit:virtualization": "node scripts/audit-virtualization.mjs",
     "audit:skeletons": "node scripts/auditSkeletons.mjs",
     "audit:motion": "node scripts/auditMotionTokens.mjs",
     "audit:palette": "node scripts/auditChartPalette.mjs",

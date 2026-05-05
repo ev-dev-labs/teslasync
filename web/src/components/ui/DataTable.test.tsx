@@ -214,3 +214,58 @@ describe('DataTable — columnReorder + columnVisibility (Phase-46 / Prompt 45)'
     expect(layout.hidden).toContain('status')
   })
 })
+
+// ── Phase-46 / Prompt 52 — virtualization adoption ────────────────────────
+// Stress test: with `virtualized` enabled on a 5000-row dataset the DOM
+// must contain only the spacer rows + a small visible window — never
+// the full row set. This guards against accidental virtualization
+// regressions on the long-list pages (TeslaChargingSessionsPage,
+// TeslaChargingHistoryPage, RedisSignalViewerPage, etc.) where we rely
+// on a bounded DOM to keep scroll smooth.
+describe('DataTable — virtualization stress (Phase-46 / Prompt 52)', () => {
+  function buildBigDataset(count: number): Row[] {
+    return Array.from({ length: count }, (_, i) => ({
+      id: i + 1,
+      name: `Row ${i + 1}`,
+      status: i % 2 === 0 ? 'ok' : 'fail',
+    }))
+  }
+
+  it('renders < 50 body rows when handed 5000 rows with virtualized', () => {
+    const data = buildBigDataset(5000)
+    const { container } = render(
+      <DataTable
+        columns={REORDER_COLS}
+        data={data}
+        keyExtractor={r => r.id}
+        virtualized
+        rowHeight={56}
+        maxHeight={600}
+      />,
+    )
+    const tbody = container.querySelector('tbody')
+    expect(tbody).not.toBeNull()
+    const rows = tbody!.querySelectorAll('tr')
+    // Count includes spacer rows; the prompt's threshold is < 50.
+    expect(rows.length).toBeLessThan(50)
+    // Defensive: also ensure we did NOT explode the DOM.
+    expect(rows.length).toBeGreaterThan(0)
+  })
+
+  it('5000-row virtualized table keeps a bottom spacer so scrollHeight reflects the full dataset', () => {
+    const data = buildBigDataset(5000)
+    const { container } = render(
+      <DataTable
+        columns={REORDER_COLS}
+        data={data}
+        keyExtractor={r => r.id}
+        virtualized
+        rowHeight={56}
+        maxHeight={600}
+      />,
+    )
+    const tbody = container.querySelector('tbody')
+    const bottomSpacer = tbody?.querySelector('tr[data-virtual-spacer="bottom"]')
+    expect(bottomSpacer).not.toBeNull()
+  })
+})

@@ -352,6 +352,8 @@ export default function RedisSignalViewerPage() {
                 sortDir={sortDir}
                 onSort={onSort}
                 pagination={{ defaultPageSize: 50 }}
+                virtualized
+                rowHeight={48}
               />
             )}
           </GlassPanel>
