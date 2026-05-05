@@ -1,7 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
+import { createQueryClient } from './api/queryClient'
 import { ToastProvider } from './components/feedback/Toast'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { NavigationGuardProvider } from './components/feedback/NavigationGuardProvider'
@@ -57,30 +58,10 @@ if (import.meta.env.DEV && import.meta.env.VITE_PWA_DEV !== 'true' && 'serviceWo
     })
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60_000,
-      retry: 1,
-      retryDelay: (attempt) => Math.min(2000 * 2 ** attempt, 30_000),
-      refetchOnWindowFocus: false,
-      // PWA: serve cached data when the device is offline instead of
-      // throwing immediately. TanStack Query keeps the query in 'paused'
-      // state until `navigator.onLine` flips back to true, then automatically
-      // refetches. Combined with `<OfflineBanner>` this gives Tesla owners a
-      // usable app inside tunnels / dead-zones without a hard error wall.
-      networkMode: 'offlineFirst',
-    },
-    mutations: {
-      retry: 1,
-      // PWA: queue mutations triggered while offline (instead of erroring) and
-      // replay them automatically when the connection returns. Long-term
-      // durability across full page reloads requires a persister — see the
-      // out-of-scope note in phase-40 prompt 36.
-      networkMode: 'offlineFirst',
-    },
-  },
-})
+// Phase-46 / Prompt 53: defaults moved to `api/queryClient.ts` so the
+// pause-when-hidden contract (`refetchIntervalInBackground: false`) and
+// the rest of the shared options live in a single, testable module.
+const queryClient = createQueryClient()
 
 // Phase 46 / Prompt 01: subscribe the queryCache to the error reporter so
 // background refetch failures (where no <QueryError> is mounted because
