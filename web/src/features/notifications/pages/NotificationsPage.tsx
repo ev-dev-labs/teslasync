@@ -15,6 +15,12 @@
  * `teslasync.notifications.markOnOpen` / `teslasync.notifications.markOnClick`
  * to localStorage with the value 'false'. A future Settings page can surface
  * them as toggles without changing this file's contract.
+ *
+ * deferred-filter:no server-driven — filter state (severity, vehicle, rule,
+ * search, read, from/to) is forwarded to `useNotificationLogs(filters)` and
+ * the API returns the matching rows. A client-side `useDeferredValue` would
+ * be redundant: the heavy work happens server-side and the network round-trip
+ * is already an asynchronous gap that lets the input stay responsive.
  */
 
 import { useEffect, useMemo, useRef, useCallback } from 'react';

@@ -336,6 +336,9 @@
     "removed": "Filter removed",
     "removeAria": "Remove filter {{label}}"
   },
+  "filter": {
+    "pending": "Filtering…"
+  },
   "draft": {
     "restored": "Draft restored from {{when}}.",
     "restoredItem": "{{noun}} draft restored from {{when}}.",

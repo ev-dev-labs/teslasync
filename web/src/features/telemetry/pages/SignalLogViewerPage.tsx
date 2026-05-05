@@ -2,6 +2,13 @@
  * SignalLogViewerPage — query signal history from Postgres.
  *
  * Select signals, set date range, click Query to browse paginated signal history.
+ *
+ * deferred-filter:no server-driven — there is no client-side text filter on
+ * the rendered rows. The signal multi-select and datetime range are gathered
+ * into the `useQuery` key and the page only fetches when the user clicks
+ * "Query". Pagination is local slicing of the already-fetched batch, which is
+ * cheap (≤500 rows per page). A `useDeferredValue` would have nothing to
+ * defer.
  */
 
 import { useState, useMemo, useCallback } from 'react';

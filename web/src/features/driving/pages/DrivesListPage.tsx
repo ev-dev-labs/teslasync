@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect, useDeferredValue, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -83,7 +83,7 @@ interface DriveCardProps {
   onToggleSelect?: (id: number, on: boolean) => void;
 }
 
-function DriveCard({
+function DriveCardImpl({
   drive, convertDistance, convertSpeed, convertEfficiency,
   distanceUnit, speedUnit, efficiencyUnit, formatEnergyCost,
   selected, onToggleSelect,
@@ -195,6 +195,24 @@ function DriveCard({
   );
 }
 
+/**
+ * memo() with a custom equality so unchanged rows skip re-render when
+ * the deferred filter value commits. `useSettings` returns fresh
+ * function references on every parent render, so the default shallow
+ * comparison would never short-circuit; here we only consider the
+ * row-shaping inputs that actually affect the rendered output.
+ *
+ * Phase-46 / Prompt 18.
+ */
+const DriveCard = memo(DriveCardImpl, (prev, next) =>
+  prev.drive === next.drive &&
+  prev.selected === next.selected &&
+  prev.distanceUnit === next.distanceUnit &&
+  prev.speedUnit === next.speedUnit &&
+  prev.efficiencyUnit === next.efficiencyUnit &&
+  prev.onToggleSelect === next.onToggleSelect,
+);
+
 /* ------------------------------------------------------------------ */
 /*  DrivesListPage                                                    */
 /* ------------------------------------------------------------------ */
@@ -250,11 +268,17 @@ export default function DrivesListPage() {
   }, [drives, startDate, endDate]);
 
   /* ---- Search filter (start/end address) ---- */
+  // Phase-46 / Prompt 18 — defer the search query so the input stays
+  // responsive while the heavy downstream chain (filteredDrives →
+  // sortedDrives → distDist / scatterData / distanceTrend / charts /
+  // 50 DriveCards) re-renders at non-urgent priority.
+  const deferredSearch = useDeferredValue(search);
+  const isSearchPending = !Object.is(search, deferredSearch);
   const driveSearchFields = useMemo(
     () => ['startAddress', 'endAddress'] as const satisfies ReadonlyArray<keyof Drive>,
     [],
   );
-  const filteredDrives = useFilteredList(dateFilteredDrives, search, driveSearchFields);
+  const filteredDrives = useFilteredList(dateFilteredDrives, deferredSearch, driveSearchFields);
 
   /* ---- Sort ---- */
   const sortedDrives = useMemo(() => {
@@ -399,13 +423,23 @@ export default function DrivesListPage() {
       {/* Date range + search filter */}
       <FadeIn>
         <FilterBar>
-          <SearchInput
-            value={search}
-            onChange={(v) => { setSearch(v); setPage(1); }}
-            placeholder={t('drives.searchPlaceholder', 'Search by start or end address…')}
-            className="w-full sm:w-72"
-            historyScope="drives"
-          />
+          <div className="relative w-full sm:w-72">
+            <SearchInput
+              value={search}
+              onChange={(v) => { setSearch(v); setPage(1); }}
+              placeholder={t('drives.searchPlaceholder', 'Search by start or end address…')}
+              className="w-full"
+              historyScope="drives"
+            />
+            {isSearchPending && (
+              <span
+                role="status"
+                aria-live="polite"
+                aria-label={t('filter.pending', 'Filtering…')}
+                className="pointer-events-none absolute right-9 top-1/2 -translate-y-1/2 inline-block h-3 w-3 rounded-full border-2 border-cyan-400/40 border-t-cyan-400 animate-spin"
+              />
+            )}
+          </div>
           <DateRangeFilter
             startDate={startDate}
             endDate={endDate}

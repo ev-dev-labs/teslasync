@@ -6,7 +6,7 @@
  * timeline of command executions.
  */
 
-import { useMemo } from 'react';
+import { useDeferredValue, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { PageContainer, Grid } from '@/components/layout';
@@ -117,6 +117,12 @@ export default function CommandHistoryPage() {
   const [searchQuery, setSearchQuery] = useUrlString('q', '');
   const [page, setPage] = useUrlNumber('page', 1);
 
+  // Phase-46 / Prompt 18 — defer the search query so the input stays
+  // responsive while the timeline + stats + pagination chain re-renders
+  // at non-urgent priority.
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const isSearchPending = !Object.is(searchQuery, deferredSearchQuery);
+
   // Reset page when filters change
   const handleStatusChange = (key: string) => {
     setStatusFilter(key as StatusFilter);
@@ -137,8 +143,8 @@ export default function CommandHistoryPage() {
     if (statusFilter !== 'all') {
       result = result.filter((c) => c.status === statusFilter);
     }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (deferredSearchQuery.trim()) {
+      const q = deferredSearchQuery.toLowerCase();
       result = result.filter(
         (c) =>
           c.command.toLowerCase().includes(q) ||
@@ -146,7 +152,7 @@ export default function CommandHistoryPage() {
       );
     }
     return result;
-  }, [allCommands, statusFilter, searchQuery]);
+  }, [allCommands, statusFilter, deferredSearchQuery]);
 
   // Pagination
   const paginatedCommands = useMemo(
@@ -281,7 +287,7 @@ export default function CommandHistoryPage() {
             </div>
 
             {/* Search */}
-            <div className="sm:w-56">
+            <div className="relative sm:w-56">
               <ControlInput
                 type="text"
                 value={searchQuery}
@@ -289,8 +295,16 @@ export default function CommandHistoryPage() {
                 placeholder={t('commandHistory.searchPlaceholder', 'Search commands…')}
                 aria-label={t('commandHistory.searchCommands', 'Search commands')}
                 icon={<Search className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
-                className="h-auto w-full rounded-lg border-0 bg-white/[0.04] py-1.5 pl-8 pr-3 text-xs text-[var(--text-secondary)] ring-1 ring-white/[0.08] placeholder:text-[var(--text-muted)] dark:bg-white/[0.04]"
+                className="h-auto w-full rounded-lg border-0 bg-white/[0.04] py-1.5 pl-8 pr-9 text-xs text-[var(--text-secondary)] ring-1 ring-white/[0.08] placeholder:text-[var(--text-muted)] dark:bg-white/[0.04]"
               />
+              {isSearchPending && (
+                <span
+                  role="status"
+                  aria-live="polite"
+                  aria-label={t('filter.pending', 'Filtering…')}
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 inline-block h-3 w-3 rounded-full border-2 border-cyan-400/40 border-t-cyan-400 animate-spin"
+                />
+              )}
             </div>
           </div>
         </GlassPanel>
