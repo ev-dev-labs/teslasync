@@ -212,6 +212,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		vehicleSettingsResolver,
 		NewVehicleExistenceChecker(vehicleSettingsRepoForRouter),
 	)
+
+	// Phase-46 / Prompt 44 — RBAC matrix admin handler.
+	// Matrix bindings live in role_permissions; permissions are a
+	// hand-maintained catalog in internal/auth. The handler is
+	// auth-mode aware (501 AUTH_MODE_OPEN in open mode) and the PUT
+	// route is wrapped in RequireSudo below.
+	rolePermissionsRepo := database.NewRolePermissionsRepo(db)
+	rbacHandler := NewRBACHandler(rolePermissionsRepo, cfg.Auth.ForwardAuthHeader)
+
 	dashboardLayoutHandler := NewDashboardLayoutHandler(db)
 	chartAnnotationHandler := NewChartAnnotationHandler(db)
 	pinnedHandler := NewPinnedHandler(db)
@@ -1404,6 +1413,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/", adminFeedbackHandler.Get)
 				r.Patch("/", adminFeedbackHandler.Patch)
 			})
+		})
+
+		// Phase-46 / Prompt 44 — RBAC matrix admin endpoints.
+		// GET is unguarded so any authenticated caller can render
+		// the page; PUT is sudo-gated since it changes the
+		// authorisation matrix the install runs under. In open mode
+		// both endpoints return 501 AUTH_MODE_OPEN inside the
+		// handler before any DB work — the RequireSudo wrapper is a
+		// passthrough in open mode anyway.
+		r.Route("/admin/rbac", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/matrix", rbacHandler.GetMatrix)
+			r.With(RequireSudo(sudoStore, sudoCfg)).Put("/matrix", rbacHandler.UpsertMatrix)
 		})
 
 		// Admin: live log tail stream (Phase-46 / Prompt 34).

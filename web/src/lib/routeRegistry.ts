@@ -22,6 +22,7 @@ export interface RouteEntry {
 export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/', name: 'Dashboard', label: 'Dashboard', i18nKey: 'routes.dashboard' },
   { path: '/admin', name: 'Admin', label: 'Admin', i18nKey: 'routes.admin' },
+  { path: '/admin/rbac', name: 'RbacMatrix', label: 'RBAC Matrix', i18nKey: 'routes.rbacMatrix' },
   { path: '/alert-studio', name: 'AlertStudio', label: 'Alert Studio', i18nKey: 'routes.alertStudio' },
   { path: '/alerts', name: 'Alerts', label: 'Alerts', i18nKey: 'routes.alerts' },
   { path: '/analytics', name: 'Analytics', label: 'Analytics', i18nKey: 'routes.analytics' },

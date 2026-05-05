@@ -11,7 +11,7 @@
 // of truth in the future.
 
 import type { ComponentType, SVGProps } from 'react';
-import { Activity, ScrollText } from 'lucide-react';
+import { Activity, ScrollText, ShieldCheck } from 'lucide-react';
 
 /**
  * Stable shape for a single sidebar nav entry. The `to` field is the
@@ -61,10 +61,24 @@ export const LIVE_LOGS_NAV_ENTRY: SidebarNavEntry = {
 };
 
 /**
+ * RBAC matrix admin (Phase-46 / Prompt 44). Provider-agnostic
+ * "who can do what" page; only meaningful in forward-auth mode (the
+ * page itself renders an inline placeholder in open mode).
+ */
+export const RBAC_NAV_ENTRY: SidebarNavEntry = {
+  to: '/admin/rbac',
+  i18nKey: 'rbac.title',
+  defaultLabel: 'RBAC matrix',
+  icon: ShieldCheck,
+  section: 'admin',
+};
+
+/**
  * All sidebar nav entries this prompt contributes. Kept as an array
  * so future prompts can append without changing the call signature.
  */
 export const SIDEBAR_NAV_ENTRIES: readonly SidebarNavEntry[] = [
   DIAGNOSTIC_NAV_ENTRY,
   LIVE_LOGS_NAV_ENTRY,
+  RBAC_NAV_ENTRY,
 ];

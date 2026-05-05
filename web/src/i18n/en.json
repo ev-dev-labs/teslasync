@@ -7962,4 +7962,56 @@
       "reset": "Failed to reset setting."
     }
   }
+,
+  "rbac": {
+    "title": "RBAC matrix",
+    "subtitle": "Provider-agnostic role-permission bindings",
+    "permissionColumn": "Permission",
+    "openMode": {
+      "title": "RBAC requires forward-auth mode",
+      "message": "The RBAC matrix is meaningful only when an upstream proxy (Authentik, Authelia, oauth2-proxy, Keycloak, etc.) injects an authenticated subject header. Configure FORWARD_AUTH_HEADER and TESLASYNC_RBAC_GROUPS_HEADER on the API service then reload."
+    },
+    "actions": {
+      "edit": "Edit",
+      "save": "Save ({{count}})",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "retry": "Retry"
+    },
+    "category": {
+      "fleet": "Fleet",
+      "commands": "Commands",
+      "automation": "Automation",
+      "notifications": "Notifications",
+      "admin": "Admin"
+    },
+    "cell": {
+      "allowed": "Allowed",
+      "denied": "Denied",
+      "toggle": "Toggle {{role}} / {{perm}}"
+    },
+    "effective": {
+      "count": "{{count}} / {{total}} effective",
+      "tooltip": "Permissions effective for your current roles"
+    },
+    "myRoles": {
+      "label": "My roles: {{roles}}",
+      "none": "No roles claimed"
+    },
+    "groupsHeader": {
+      "label": "Groups header: {{name}}"
+    },
+    "empty": {
+      "title": "No roles configured",
+      "message": "No roles have been forwarded by the upstream proxy and no bindings exist in the database. Configure TESLASYNC_RBAC_GROUPS_HEADER on the API service and reload."
+    },
+    "errors": {
+      "loadTitle": "Failed to load RBAC matrix",
+      "loadGeneric": "The matrix endpoint returned an error.",
+      "saveGeneric": "The matrix endpoint rejected the update."
+    },
+    "toasts": {
+      "saved": "RBAC matrix updated."
+    }
+  }
 }

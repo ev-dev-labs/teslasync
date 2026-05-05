@@ -2522,3 +2522,82 @@ export interface VehicleSettingsResponse {
  * intentionally narrow rather than `any`.
  */
 export type VehicleSettingValue = string | number | boolean
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase-46 / Prompt 44 — RBAC matrix admin
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * RBAC permission catalog entry as emitted by GET /admin/rbac/matrix.
+ * IDs are stable, lowercase, dotted strings (e.g. `fleet.read`); the
+ * admin matrix UI groups rows by `category` and renders `name` as
+ * the user-visible label.
+ */
+export interface RbacPermission {
+  id: string
+  name: string
+  category: string
+}
+
+/**
+ * RBAC role identity. `id` is the upstream proxy group name verbatim
+ * (or the implicit `user` default when no groups header is
+ * configured); `name` is the matrix-column label — currently identical
+ * to `id` but split out so a future "display label" pass doesn't
+ * break the API contract.
+ */
+export interface RbacRole {
+  id: string
+  name: string
+}
+
+/**
+ * Matrix payload. `matrix[role_id][perm_id]` is true when the role
+ * grants the permission. A missing `role_id` row OR a missing
+ * `perm_id` cell within a row both mean "no opinion → deny".
+ *
+ * `effective_for_me` is the merged grant map for the calling subject
+ * across `my_roles`; the SPA renders it as a "what I can do right
+ * now" pill so the operator can sanity-check their own role
+ * assignment before publishing matrix edits.
+ *
+ * `mode === 'open'` is the synthetic envelope returned by the
+ * useRbacMatrix hook when the backend reports AUTH_MODE_OPEN — the
+ * SPA renders an inline "configure forward-auth" placeholder instead
+ * of a 401/501 toast.
+ */
+export type RbacMatrixResponse =
+  | RbacMatrixSessionResponse
+  | RbacMatrixOpenModeResponse
+
+export interface RbacMatrixSessionResponse {
+  mode: 'session'
+  roles: RbacRole[]
+  permissions: RbacPermission[]
+  categories: string[]
+  matrix: Record<string, Record<string, boolean>>
+  effective_for_me: Record<string, boolean>
+  my_roles: string[]
+  groups_header_name?: string
+}
+
+export interface RbacMatrixOpenModeResponse {
+  mode: 'open'
+}
+
+/**
+ * Single cell in a PUT /admin/rbac/matrix batch. The handler caps a
+ * single request at `MaxRBACUpsertCells` (1000) cells; the SPA is
+ * expected to send only the cells the operator actually toggled, so
+ * realistic payloads are tiny.
+ */
+export interface RbacUpsertCell {
+  role_id: string
+  permission_id: string
+  allowed: boolean
+}
+
+export interface RbacUpsertRequest {
+  cells: RbacUpsertCell[]
+}
