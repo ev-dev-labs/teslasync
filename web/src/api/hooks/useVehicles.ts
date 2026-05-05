@@ -4,6 +4,7 @@ import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import { useAsOfDate, AS_OF_QUERY_PARAM } from '@/hooks/useAsOfDate';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '../types';
 export { deriveVehicleStatus as getVehicleStatus } from '../types';
@@ -11,9 +12,21 @@ export { deriveVehicleStatus as getVehicleStatus } from '../types';
 export const vehicleKeys = {
   all: ['vehicles'] as const,
   detail: (id: string) => ['vehicles', id] as const,
-  state: (id: number) => ['vehicle-state', id] as const,
+  state: (id: number, asOf?: string | null) =>
+    asOf ? (['vehicle-state', id, asOf] as const) : (['vehicle-state', id] as const),
   positions: (id: number) => ['vehicle-positions', id] as const,
 };
+
+/**
+ * Phase-46 / Prompt 64 — append `?as_of=` to a path when the time-machine
+ * URL parameter is set. Returns the path unchanged when the parameter is
+ * absent so live-mode callers stay on the existing live read path.
+ */
+function withAsOf(path: string, asOf: string | null): string {
+  if (!asOf) return path
+  const sep = path.includes('?') ? '&' : '?'
+  return `${path}${sep}${AS_OF_QUERY_PARAM}=${encodeURIComponent(asOf)}`
+}
 
 export function useVehicles() {
   return useQuery({
@@ -37,11 +50,12 @@ export function useVehicle(id: string) {
 }
 
 export function useVehicleState(vehicleId: number, options?: { refetchInterval?: number }) {
+  const { asOf } = useAsOfDate()
   return useQuery({
-    queryKey: vehicleKeys.state(vehicleId),
+    queryKey: vehicleKeys.state(vehicleId, asOf),
     queryFn: async ({ signal }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const res = await request<any>(`/vehicles/${vehicleId}/state`, { signal })
+      const res = await request<any>(withAsOf(`/vehicles/${vehicleId}/state`, asOf), { signal })
       if (res.state && typeof res.state === 'object' && 'vehicle_id' in res.state) {
         return { state: res.state as VehicleState, live: res.live ?? false }
       }
@@ -73,7 +87,11 @@ export function useVehicleState(vehicleId: number, options?: { refetchInterval?:
       return { state, live: res.live ?? false }
     },
     enabled: vehicleId > 0,
-    refetchInterval: options?.refetchInterval ?? INTERVALS.STANDARD,
+    // Time-machine reads return historical snapshots that never refetch
+    // on their own — interval polling would be wasteful and could mask
+    // the historical-mode banner. Live mode preserves the existing
+    // STANDARD interval so the live state stays fresh.
+    refetchInterval: asOf ? false : (options?.refetchInterval ?? INTERVALS.STANDARD),
   });
 }
 

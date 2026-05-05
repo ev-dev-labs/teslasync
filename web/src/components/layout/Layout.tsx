@@ -24,6 +24,7 @@ import { ChangelogModal } from '../feedback/ChangelogModal'
 import { DraftRestorePrompt } from '../feedback/DraftRestorePrompt'
 import { SkipToContent } from '../feedback/SkipToContent'
 import { BrowserCompatBanner } from '../feedback/BrowserCompatBanner'
+import { TimeMachineBanner } from '../feedback/TimeMachineBanner'
 import { TourLauncher } from '@/features/onboarding/TourLauncher'
 import {
   TOUR_START_EVENT,
@@ -1341,6 +1342,13 @@ export default function Layout() {
             Sits BELOW the SkipToContent link in DOM order so keyboard
             users still hit the WCAG bypass-blocks link first. */}
         <BrowserCompatBanner />
+        {/* Time-machine "viewing data as of …" banner (Phase-46 / Prompt 64)
+            — visible only when ?as_of= is set or the inline picker is
+            open. Stacked between BrowserCompatBanner and ServiceStatusBanner
+            so the historical-mode warning sits at the top of the main
+            content column without displacing the higher-priority compat
+            and service status notices. */}
+        <TimeMachineBanner />
         <ServiceStatusBanner />
         <main
           id="main-content"

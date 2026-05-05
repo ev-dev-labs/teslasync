@@ -41,6 +41,21 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Phase-46 / Prompt 64 — point-in-time time-machine view.
+	// `?as_of=` reroutes the per-signal lookups to a historical anchor
+	// instead of time.Now(). Validation, lookback bounds, and RFC 3339
+	// parsing live in signal.ParseAsOf so every handler that gains the
+	// parameter shares one policy. Absence of the parameter preserves
+	// the legacy live-state behavior exactly.
+	queryTime, hasAsOf, asOfErr := signal.ParseAsOf(r.URL.Query(), time.Now())
+	if asOfErr != nil {
+		writeError(w, http.StatusBadRequest, asOfErr.Error())
+		return
+	}
+	if !hasAsOf {
+		queryTime = time.Now()
+	}
+
 	// Derive battery health from signal_log (no more battery_snapshots table)
 	var healthScore, capacityKWh, degradation, estRange float64
 	var avgTemp *float64
@@ -51,8 +66,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		const nominalRangeKm = 531.0
 
 		if h.state != nil {
-			now := time.Now()
-			val, err := h.state.SignalAt(r.Context(), vehicleID, "EnergyRemaining", now)
+			val, err := h.state.SignalAt(r.Context(), vehicleID, "EnergyRemaining", queryTime)
 			if err != nil {
 				log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "EnergyRemaining").Msg("battery: failed to read signal state")
 				writeError(w, http.StatusInternalServerError, "failed to read battery state")
@@ -68,7 +82,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 					degradation = 100 - healthScore
 				}
 			}
-			val, err = h.state.SignalAt(r.Context(), vehicleID, "EstBatteryRange", now)
+			val, err = h.state.SignalAt(r.Context(), vehicleID, "EstBatteryRange", queryTime)
 			if err != nil {
 				log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "EstBatteryRange").Msg("battery: failed to read signal state")
 				writeError(w, http.StatusInternalServerError, "failed to read battery state")
@@ -80,7 +94,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			// Derive avgTemp from ModuleTempMax/ModuleTempMin — nil means "no data"
-			valMax, err := h.state.SignalAt(r.Context(), vehicleID, "ModuleTempMax", now)
+			valMax, err := h.state.SignalAt(r.Context(), vehicleID, "ModuleTempMax", queryTime)
 			if err != nil {
 				log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "ModuleTempMax").Msg("battery: failed to read signal state")
 				writeError(w, http.StatusInternalServerError, "failed to read battery state")
@@ -88,7 +102,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 			}
 			if valMax != nil {
 				if tempMax, ok := toFloatOk(valMax); ok {
-					valMin, err := h.state.SignalAt(r.Context(), vehicleID, "ModuleTempMin", now)
+					valMin, err := h.state.SignalAt(r.Context(), vehicleID, "ModuleTempMin", queryTime)
 					if err != nil {
 						log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "ModuleTempMin").Msg("battery: failed to read signal state")
 						writeError(w, http.StatusInternalServerError, "failed to read battery state")
@@ -176,7 +190,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 	// Model Y Long Range nominal range ~531 km (330 mi)
 	const nominalRangeKm = 531.0
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	resp := map[string]interface{}{
 		"vehicle_id":                 vehicleID,
 		"health_score":               healthScore,
 		"capacity_kwh":               capacityKWh,
@@ -189,5 +203,13 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		"cycle_count":                cycleCount,
 		"avg_cell_temp_c":            avgTemp,
 		"monthly_trend":              trend,
-	})
+	}
+	if hasAsOf {
+		// Echo the parsed timestamp back so the SPA can confirm the
+		// server honored the requested point-in-time anchor and can
+		// surface the same value to the user via the time-machine
+		// banner. Phase-46 / Prompt 64.
+		resp["as_of"] = queryTime.Format(time.RFC3339)
+	}
+	writeJSON(w, http.StatusOK, resp)
 }

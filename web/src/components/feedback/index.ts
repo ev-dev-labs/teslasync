@@ -38,3 +38,4 @@ export { TopProgress } from './TopProgress';
 export { SuspenseProgressBoundary } from './SuspenseProgressBoundary';
 export { SkipToContent } from './SkipToContent';
 export { BrowserCompatBanner } from './BrowserCompatBanner';
+export { TimeMachineBanner, TIME_MACHINE_OPEN_PICKER_EVENT } from './TimeMachineBanner';

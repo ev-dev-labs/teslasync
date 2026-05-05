@@ -460,6 +460,19 @@
       "dismiss": "Dismiss"
     }
   },
+  "timeMachine": {
+    "banner": {
+      "title": "Viewing data as of {{when}}",
+      "body": "Read-only point-in-time mode — current state, battery, and other live signals are reconstructed from history. Live actions stay disabled.",
+      "pickPrompt": "Open the time machine",
+      "pickBody": "Pick a date and time within the last 90 days to reconstruct what TeslaSync looked like at that moment.",
+      "pick": "Pick a date",
+      "returnToLive": "Return to live",
+      "submit": "View as of date",
+      "cancel": "Cancel",
+      "inputLabel": "Date and time"
+    }
+  },
   "common": {
     "loading": "Loading...",
     "noData": "No data available",
@@ -1513,6 +1526,7 @@
       "securitySettings": "Open security & access",
       "systemStatus": "View system status",
       "apiPlayground": "Open API playground",
+      "timeMachineOpen": "Open time machine",
       "export": "Open data export",
       "settings": "Open settings",
       "shortcuts": "Show keyboard shortcuts",

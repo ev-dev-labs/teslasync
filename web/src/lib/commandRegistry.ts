@@ -276,6 +276,25 @@ export const commandRegistry: CommandDefinition[] = [
     perform: (ctx) => ctx.navigate('/system-status'),
   },
   {
+    // Phase-46 / Prompt 64 — open the global time-machine date picker.
+    // The banner (rendered in Layout) listens for the
+    // 'time-machine.open-picker' window event and reveals an inline
+    // <input type="datetime-local"> seeded with yesterday at noon. The
+    // command is one-click — actually choosing a date is a separate
+    // step inside the banner, which is fine because the chosen
+    // timestamp must be picked deliberately rather than triggered by
+    // a stray Enter on a fuzzy palette match.
+    id: 'time-machine.open',
+    labelKey: 'palette.cmd.timeMachineOpen',
+    labelFallback: 'Open time machine',
+    icon: Icons.history,
+    section: 'actions',
+    keywords: ['time', 'machine', 'history', 'as of', 'point-in-time', 'replay', 'past'],
+    perform: () => {
+      window.dispatchEvent(new CustomEvent('time-machine.open-picker'))
+    },
+  },
+  {
     id: 'action.api.playground',
     labelKey: 'palette.cmd.apiPlayground',
     labelFallback: 'Open API playground',

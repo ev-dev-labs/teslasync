@@ -4,6 +4,7 @@ import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import { useAsOfDate, AS_OF_QUERY_PARAM } from '@/hooks/useAsOfDate';
 import type {
   EnergyStats,
   BatteryHealth,
@@ -33,9 +34,17 @@ export function useEnergyStats(vehicleId: string | null, days = 30) {
 }
 
 export function useBatteryHealth(vehicleId: string | null) {
+  const { asOf } = useAsOfDate()
+  // Phase-46 / Prompt 64 — propagate the global as-of timestamp so the
+  // backend reroutes per-signal SignalAt lookups through signal_log.
+  // The query key includes asOf so live and historical reads cache
+  // independently and switching between them does not show stale data.
+  const path = asOf
+    ? `/vehicles/${vehicleId}/battery?${AS_OF_QUERY_PARAM}=${encodeURIComponent(asOf)}`
+    : `/vehicles/${vehicleId}/battery`
   return useQuery({
-    queryKey: ['battery-health', vehicleId],
-    queryFn: ({ signal }) => request<BatteryHealth>(`/vehicles/${vehicleId}/battery`, { signal }),
+    queryKey: asOf ? ['battery-health', vehicleId, asOf] : ['battery-health', vehicleId],
+    queryFn: ({ signal }) => request<BatteryHealth>(path, { signal }),
     enabled: vehicleId !== null,
   });
 }
