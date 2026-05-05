@@ -7096,6 +7096,22 @@
     "charging": "Charging",
     "loading": "Loading"
   },
+  "combobox": {
+    "noResults": "No results",
+    "loading": "Loading",
+    "openListAria": "Show options",
+    "closeListAria": "Hide options",
+    "removeChip": "Remove {{label}}",
+    "removedChip": "Removed {{label}}",
+    "clearAria": "Clear selection",
+    "resultsCount": "{{count}} results",
+    "resultsCountOne": "1 result",
+    "moreHidden": "{{count}} more — refine search",
+    "maxReached": "Maximum reached"
+  },
+  "addressInput": {
+    "label": "Address"
+  },
   "signalQuery": {
     "from": "From",
     "to": "To",

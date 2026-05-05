@@ -1,4 +1,6 @@
 export { ActiveFilterChips, type ActiveFilterChipsProps, type FilterChipDescriptor } from './ActiveFilterChips';
+export { Combobox, type ComboboxProps, type ComboboxOptions } from './Combobox';
+export { ComboboxMulti, type ComboboxMultiProps } from './ComboboxMulti';
 export { DatePresetChips, type DatePresetChipsProps, type DatePresetSelection } from './DatePresetChips';
 export { DateRangeFilter } from './DateRangeFilter';
 export { FilterBar, type FilterBarProps } from './FilterBar';

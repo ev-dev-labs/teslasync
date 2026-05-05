@@ -13,7 +13,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import { Input } from '@/components/ui/Input';
@@ -23,6 +22,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { AlertBanner } from '@/components/feedback/AlertBanner';
+import { ComboboxMulti } from '@/components/forms';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import {
@@ -67,7 +67,6 @@ export default function SignalExplorerPage() {
   // Signal selection
   const { data: availableSignals, error: signalsError } = useSignals(vehicleId);
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
-  const [signalSearch, setSignalSearch] = useState('');
 
   // DateTime range
   const defaultFrom = useMemo(() => toLocalDatetimeStr(new Date(Date.now() - 3600_000)), []);
@@ -178,12 +177,6 @@ export default function SignalExplorerPage() {
     setExploreKey(Date.now());
   }, [canExplore]);
 
-  const toggleSignal = useCallback((sig: string) => {
-    setSelectedSignals(prev =>
-      prev.includes(sig) ? prev.filter(s => s !== sig) : prev.length < 5 ? [...prev, sig] : prev,
-    );
-  }, []);
-
   const fromIso = fromStr ? new Date(fromStr).toISOString() : '';
   const toIso = toStr ? new Date(toStr).toISOString() : '';
 
@@ -265,14 +258,6 @@ export default function SignalExplorerPage() {
     return ranges[0] / ranges[1] > 10 || ranges[1] / ranges[0] > 10;
   }, [activeStats]);
 
-  // Signal search filter
-  const filteredSignals = useMemo(() => {
-    if (!availableSignals) return [];
-    if (!signalSearch) return availableSignals;
-    const q = signalSearch.toLowerCase();
-    return availableSignals.filter(s => s.toLowerCase().includes(q));
-  }, [availableSignals, signalSearch]);
-
   // Table columns
   const tableColumns: Column<SignalLogEntry>[] = useMemo(() => [
     { key: 'time', header: t('Time'), render: (r) => <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{new Date(r.created_at).toLocaleString()}</span> },
@@ -297,10 +282,10 @@ export default function SignalExplorerPage() {
 
       {/* ── Controls ──────────────────────────────────────────────── */}
       <GlassPanel className="p-4 sm:p-5 space-y-4">
-        {/* Signal picker */}
+        {/* Signal picker — shared ComboboxMulti (max 5 signals) */}
         <div>
           <span className="flex items-center gap-1 text-xs font-medium uppercase tracking-wider mb-2 text-[var(--text-muted)]">
-            {t('Signals')} ({selectedSignals.length}/5)
+            {t('Signals')}
             <HelpTooltip
               i18nKey="help.signal.layers"
               defaultValue="TeslaSync exposes three live-state layers: L1 (in-process), L2 (Redis shared), and log (TimescaleDB history)."
@@ -308,44 +293,21 @@ export default function SignalExplorerPage() {
               placement="bottom"
             />
           </span>
-          <div className="flex items-center gap-2 mb-2">
-            <Input
-              icon={<Search className="h-3.5 w-3.5" />}
-              placeholder={t('Search signals…')}
-              value={signalSearch}
-              onChange={e => setSignalSearch(e.target.value)}
-              className="flex-1"
-            />
-          </div>
-          {selectedSignals.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {selectedSignals.map((sig, i) => (
-                <Badge
-                  key={sig}
-                  variant="info"
-                  size="sm"
-                  className="cursor-pointer"
-                  style={{ borderColor: CHART_COLORS[i % CHART_COLORS.length], color: CHART_COLORS[i % CHART_COLORS.length] }}
-                  onClick={() => toggleSignal(sig)}
-                >
-                  {sig} ×
-                </Badge>
-              ))}
-            </div>
-          )}
-          <div className="max-h-48 overflow-y-auto space-y-0.5">
-            {filteredSignals.slice(0, 100).map(sig => (
-              <Button
-                key={sig}
-                size="sm"
-                variant={selectedSignals.includes(sig) ? 'primary' : 'ghost'}
-                onClick={() => toggleSignal(sig)}
-                className="w-full text-left text-xs font-mono truncate justify-start"
-              >
-                {sig}
-              </Button>
-            ))}
-          </div>
+          <ComboboxMulti<string>
+            label={t('Signals')}
+            hideLabel
+            placeholder={t('Search signals…')}
+            icon={<Search className="h-3.5 w-3.5" aria-hidden="true" />}
+            value={selectedSignals}
+            onChange={(next) => setSelectedSignals(next.slice(0, 5))}
+            options={availableSignals ?? []}
+            getOptionLabel={(s) => s}
+            getOptionKey={(s) => s}
+            maxItems={5}
+            renderOption={(s) => (
+              <span className="font-mono text-xs">{s}</span>
+            )}
+          />
         </div>
 
         {/* DateTime range — hidden in live mode */}
