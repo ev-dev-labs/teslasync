@@ -1,0 +1,179 @@
+=== TYPESCRIPT ===
+=== LINT ===
+
+> teslasync-web@2.0.0 lint
+> eslint . --report-unused-disable-directives --max-warnings 0 && npm run lint:i18n && npm run lint:light-mode && npm run audit:empty-state && npm run audit:tooltip-text && npm run audit:i18n-shadowed && npm run audit:query-signal && npm run audit:datatable-tableid && npm run audit:filterbar-chips && npm run audit:forced-colors && npm run audit:sr-only && npm run audit:chart-a11y && npm run audit:marker-cluster && npm run audit:deferred-filter && npm run audit:prefetch-link && npm run audit:tag-input && npm run audit:required-fields && npm run audit:unit-input && npm run audit:masked-values && npm run audit:rtl
+
+
+> teslasync-web@2.0.0 lint:i18n
+> node scripts/lint-i18n-no-template-literals.mjs
+
+[i18n-lint] OK ΓÇö no template literals in src/i18n/*.json
+
+> teslasync-web@2.0.0 lint:light-mode
+> node scripts/audit-light-mode-parity.mjs
+
+
+Total violations: 0
+
+Allowed drift (LIGHT_MODE_ALLOWED_DRIFT): 0
+
+OK ΓÇö light-mode CSS-var parity holds.
+
+> teslasync-web@2.0.0 audit:empty-state
+> node scripts/audit-empty-state-cta.mjs
+
+OK ΓÇö every <EmptyState> in src\features has a CTA or // no-action: exemption
+
+> teslasync-web@2.0.0 audit:tooltip-text
+> node scripts/audit-tooltip-text-color.mjs
+
+OK ΓÇö no tooltip content overrides intrinsic text colour
+
+> teslasync-web@2.0.0 audit:i18n-shadowed
+> node scripts/audit-i18n-shadowed-keys.mjs
+
+Γ£à audit:i18n-shadowed-keys ΓÇö no violations
+
+> teslasync-web@2.0.0 audit:query-signal
+> node scripts/audit-query-signal.mjs
+
+OK ΓÇö every useQuery/useInfiniteQuery queryFn in src\api\hooks threads { signal } (49 files scanned)
+
+> teslasync-web@2.0.0 audit:datatable-tableid
+> node scripts/audit-datatable-tableid.mjs
+
+OK ΓÇö every <DataTable> in src\features has a tableId
+
+> teslasync-web@2.0.0 audit:filterbar-chips
+> node scripts/audit-filterbar-chips.mjs
+
+OK ΓÇö every <FilterBar> in [src\features, src\components\forms] has a sibling <ActiveFilterChips>
+
+> teslasync-web@2.0.0 audit:forced-colors
+> node scripts/audit-forced-colors.mjs
+
+OK ΓÇö every critical component (11) defines a forced-colors override
+
+> teslasync-web@2.0.0 audit:sr-only
+> node scripts/audit-sr-only.mjs
+
+OK ΓÇö no ad-hoc `sr-only` outside VisuallyHidden in src
+
+> teslasync-web@2.0.0 audit:chart-a11y
+> node scripts/audit-chart-a11y.mjs
+
+OK ΓÇö every <ChartContainer> in src has ariaLabel + data/dataColumns or a no-table justification
+
+> teslasync-web@2.0.0 audit:marker-cluster
+> node scripts/audit-marker-cluster.mjs
+
+OK ΓÇö every <Marker>/<CircleMarker> in src is either inside a <MarkerCluster> file or carries a marker-cluster:no justification (731 files scanned)
+
+> teslasync-web@2.0.0 audit:deferred-filter
+> node scripts/audit-deferred-filter.mjs
+
+OK ΓÇö 4 configured heavy-filter page(s) either adopt useDeferredFilter / useDeferredValue (with memo() on the row component) or carry a `deferred-filter:no` justification.
+
+> teslasync-web@2.0.0 audit:prefetch-link
+> node scripts/auditPrefetchLink.mjs
+
+OK ΓÇö every <Link>/<NavLink>/<GuardedLink>/<GuardedNavLink> in the 3 audited layout file(s) is either a <PrefetchLink> or carries a prefetch-link:no justification.
+
+> teslasync-web@2.0.0 audit:tag-input
+> node scripts/auditTagInput.mjs
+
+OK ΓÇö no hand-rolled tag-input patterns found (729 file(s) scanned, 2 allow-listed primitive(s) skipped).
+
+> teslasync-web@2.0.0 audit:required-fields
+> node scripts/auditRequiredFields.mjs
+
+OK ΓÇö every <Input|Textarea|Select required> in the 727 scanned file(s) carries a label / aria-label / aria-labelledby or a required-field:no justification.
+
+> teslasync-web@2.0.0 audit:unit-input
+> node scripts/auditUnitInput.mjs
+
+OK ΓÇö no hand-rolled unit-input patterns found (730 file(s) scanned, 1 allow-listed primitive(s) skipped).
+
+> teslasync-web@2.0.0 audit:masked-values
+> node scripts/auditMaskedValues.mjs
+
+audit:masked-values OK ΓÇö scanned 730 .tsx file(s); no cleartext sensitive renders found.
+
+> teslasync-web@2.0.0 audit:rtl
+> node scripts/audit-rtl-properties.mjs
+
+[audit:rtl] scanned 870 .tsx file(s) under D:\repos\teslasync\web\src
+[audit:rtl] physical-direction utility hits: 382 (budget: 400)
+[audit:rtl] top 20 offenders:
+    11  components/layout/Layout.tsx
+     8  features/dashboard/pages/DashboardPage.tsx
+     7  features/analytics/pages/YearReviewPage.tsx
+     7  features/dashboard/components/DashboardGrid.tsx
+     7  features/driving/pages/DriveScorePage.tsx
+     6  components/data-display/SavedViewMenu.tsx
+     6  components/forms/Combobox.tsx
+     6  components/layout/status-bar/VersionSegment.tsx
+     6  features/dashboard/components/ImportPreviewModal.tsx
+     6  features/dashboard/components/KioskOverlay.tsx
+     6  features/dashboard/components/LayoutSwitcher.tsx
+     6  features/system/pages/DataRepairPage.tsx
+     5  components/ui/CommandPalette.tsx
+     5  features/battery/pages/PowerFlowDashboardPage.tsx
+     5  features/settings/components/SettingsExportImport.tsx
+     4  components/forms/ComboboxMulti.tsx
+     4  components/ui/Input.tsx
+     4  components/ui/Lightbox.tsx
+     4  components/ui/Tooltip.tsx
+     4  features/automations/pages/AutomationBuilderPage.tsx
+[audit:rtl] OK ΓÇö count is at or below the baseline budget.
+=== FRONTEND_TEST ===
+# attempt-1: gate-spec literal-pipe filter
+
+> teslasync-web@2.0.0 test
+> vitest run --run CurrencyInput|currencyFormat
+
+9:53:55 AM [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+9:53:55 AM [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+Both esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored. The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+
+[1m[46m RUN [49m[22m [36mv4.1.2 [39m[90mD:/repos/teslasync/web[39m
+
+No test files found, exiting with code 1
+
+filter: CurrencyInput|currencyFormat
+include: src/**/*.test.{ts,tsx}
+exclude:  **/node_modules/**, **/.git/**
+
+# attempt-1 failed (vitest 4.1.2 treats literal '|' as substring char, not regex OR);
+# documented workaround: positional filters per stored memories phase-46-{38,42,44,45}.
+# attempt-2: positional filters
+
+> teslasync-web@2.0.0 test
+> vitest run --run CurrencyInput currencyFormat
+
+9:53:57 AM [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+9:53:57 AM [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+Both esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored. The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+
+[1m[46m RUN [49m[22m [36mv4.1.2 [39m[90mD:/repos/teslasync/web[39m
+
+ [32mΓ£ô[39m src/lib/currencyFormat.test.ts [2m([22m[2m34 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32mΓ£ô[39m src/components/forms/CurrencyInput.test.tsx [2m([22m[2m18 tests[22m[2m)[22m[32m 257[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m52 passed[39m[22m[90m (52)[39m
+[2m   Start at [22m 09:53:57
+[2m   Duration [22m 3.96s[2m (transform 1.45s, setup 242ms, import 2.19s, tests 296ms, environment 2.47s)[22m
+
+=== GIT_STATUS ===
+# allowlist updated per Blocked Path: TariffSection -> GeneralSettings (file does not exist; cost fields live in GeneralSettings).
+ M web/src/components/forms/index.ts
+ M web/src/features/settings/components/GeneralSettings.tsx
+?? web/src/components/forms/CurrencyInput.test.tsx
+?? web/src/components/forms/CurrencyInput.tsx
+?? web/src/lib/currencyFormat.test.ts
+?? web/src/lib/currencyFormat.ts
+=== STATUS ===
+EXIT=0
+STATUS=DONE
