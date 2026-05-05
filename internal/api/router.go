@@ -193,6 +193,25 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	)
 	settingsExportHandler := NewSettingsExportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
 	settingsImportHandler := NewSettingsImportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
+	// Phase-46 / Prompt 43 — per-vehicle settings layer.
+	//
+	// The resolver layers vehicle-scoped overrides on top of the
+	// existing install-global SettingsRepo and the vehicles base
+	// table. Construct here so the same SettingsRepo + VehicleRepo
+	// instances back both the global settings handler above and
+	// the per-vehicle resolver below.
+	vehicleSettingsRepo := database.NewVehicleSettingsRepo(db)
+	vehicleSettingsRepoForRouter := database.NewVehicleRepo(db)
+	vehicleSettingsResolver := database.NewVehicleSettingsResolver(
+		vehicleSettingsRepo,
+		database.NewVehicleNameLookup(vehicleSettingsRepoForRouter),
+		database.NewUserSettingsLookup(database.NewSettingsRepo(db)),
+	)
+	vehicleSettingsHandler := NewVehicleSettingsHandler(
+		vehicleSettingsRepo,
+		vehicleSettingsResolver,
+		NewVehicleExistenceChecker(vehicleSettingsRepoForRouter),
+	)
 	dashboardLayoutHandler := NewDashboardLayoutHandler(db)
 	chartAnnotationHandler := NewChartAnnotationHandler(db)
 	pinnedHandler := NewPinnedHandler(db)
@@ -652,6 +671,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					}
 					fh.HandleDebug(w, req)
 				})
+
+				// Phase-46 / Prompt 43 — per-vehicle settings.
+				// GET is read-only and unguarded; PUT/DELETE are
+				// rate-limited by IP at 60/min — the SPA only fires
+				// these on user save/reset clicks, but the guard
+				// keeps a buggy or malicious client from saturating
+				// the upsert path.
+				r.Get("/settings", vehicleSettingsHandler.List)
+				r.With(httprate.LimitByIP(60, 1*time.Minute)).Put("/settings/{key}", vehicleSettingsHandler.Put)
+				r.With(httprate.LimitByIP(60, 1*time.Minute)).Delete("/settings/{key}", vehicleSettingsHandler.Delete)
 			})
 		})
 

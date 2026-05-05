@@ -2473,3 +2473,52 @@ export interface QueueJobsResponse {
   worker: string
   jobs: QueueJobView[]
 }
+
+/* Phase-46 / Prompt 43 - Per-vehicle settings layer
+ * ───────────────────────────────────────────────────
+ * The resolver returns one EffectiveSetting per supported key, each
+ * tagged with the layer that produced its value. The SPA's
+ * VehicleSettingsTab renders a "source" pill from this discriminator.
+ *
+ * Sources:
+ *  - 'override': vehicle_settings row exists for (vehicleID, key)
+ *  - 'user'    : install-global SettingsRepo provided the value
+ *  - 'vehicle' : vehicles base table (e.g. nickname → display_name)
+ *  - 'default' : hard-coded fallback in the Go database package
+ *
+ * Backend source: internal/database/vehicle_settings_repo.go ::
+ * EffectiveSettingSource + internal/api/vehicle_settings_handler.go.
+ */
+export type EffectiveSettingSource = 'override' | 'user' | 'vehicle' | 'default'
+
+/**
+ * One resolved per-vehicle setting row. `value` is rendered by the
+ * SPA against the per-key UnitInput / picker / datetime control; the
+ * pill renders `source` so the user can tell which layer produced
+ * the current effective value.
+ *
+ * The wire shape is {key, value, source} — the resolver always
+ * fills `value` (no nulls) so the SPA can render every row without
+ * presence checks.
+ */
+export interface EffectiveSetting {
+  key: string
+  value: unknown
+  source: EffectiveSettingSource
+}
+
+/** Envelope for GET /api/v1/vehicles/{vehicleID}/settings. */
+export interface VehicleSettingsResponse {
+  settings: EffectiveSetting[]
+}
+
+/**
+ * Per-key value type for the PUT body. The handler dispatches on
+ * the key's kind (text|number|boolean|timestamp) and rejects values
+ * that don't match — see decodeValueForKey in
+ * internal/api/vehicle_settings_handler.go.
+ *
+ * The SPA builds these from typed inputs, so the union is
+ * intentionally narrow rather than `any`.
+ */
+export type VehicleSettingValue = string | number | boolean

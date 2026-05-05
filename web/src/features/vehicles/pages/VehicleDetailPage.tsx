@@ -41,6 +41,8 @@ import {
   VehicleConfigSection,
   QuickLinksSection,
 } from '../components/vehicle-detail'
+import VehicleSettingsTab from '../components/VehicleSettingsTab'
+import { useVehicleSettings, findEffectiveSetting } from '@/api/hooks/useVehicleSettings'
 
 /* ─── Loading skeleton (Phase-45 / Prompt 18) ─────────────────────── */
 
@@ -84,6 +86,16 @@ export default function VehicleDetailPage() {
     queryFn: () => request<Vehicle>(`/vehicles/${vehicleId}`),
     enabled: vehicleId > 0,
   })
+
+  // Phase-46 / Prompt 43 — per-vehicle settings. Nickname override
+  // feeds the page title + breadcrumb; falls back to vehicles.display_name
+  // when no override is present.
+  const { data: vehicleSettings } = useVehicleSettings(vehicleId)
+  const nicknameSetting = findEffectiveSetting(vehicleSettings, 'nickname')
+  const effectiveName =
+    typeof nicknameSetting?.value === 'string' && nicknameSetting.value !== ''
+      ? nicknameSetting.value
+      : vehicle?.display_name
 
   const { data: stateData, refetch: refetchState } = useQuery({
     queryKey: ['vehicle-state', vehicleId],
@@ -172,10 +184,10 @@ export default function VehicleDetailPage() {
 
   return (
     <PageContainer
-      title={vehicle?.display_name ?? t('vehicles.detail.title', 'Vehicle Detail')}
+      title={effectiveName ?? t('vehicles.detail.title', 'Vehicle Detail')}
       error={vehicleError as Error | null}
       breadcrumbLabels={{
-        '/vehicles/:id': vehicle?.display_name ?? `Vehicle #${id}`,
+        '/vehicles/:id': effectiveName ?? `Vehicle #${id}`,
       }}
       actions={<LiveIndicator variant="compact" />}
     >
@@ -239,6 +251,12 @@ export default function VehicleDetailPage() {
           </SectionErrorBoundary>
           <SectionErrorBoundary name="vehicle-detail:quick-links" fallbackTitle={t('vehicles.detail.section.quickLinksFailed', 'Quick links failed to load')}>
             <FadeIn delay={0.28}><QuickLinksSection /></FadeIn>
+          </SectionErrorBoundary>
+          <SectionErrorBoundary
+            name="vehicle-detail:settings"
+            fallbackTitle={t('vehicles.detail.section.settingsFailed', 'Per-vehicle settings failed to load')}
+          >
+            <FadeIn delay={0.30}><VehicleSettingsTab vehicleId={vehicleId} /></FadeIn>
           </SectionErrorBoundary>
         </>
       )}

@@ -7903,5 +7903,63 @@
       "revoked": "Session signed out.",
       "revokedAllOthers": "Signed out {{count}} other devices."
     }
+  },
+  "vehicleSettings": {
+    "title": "Per-vehicle settings",
+    "subtitle": "Override individual settings for this vehicle. Resets fall back to your account-wide values.",
+    "loading": "Loading vehicle settings…",
+    "error": "Could not load vehicle settings.",
+    "source": {
+      "override": "Override",
+      "user": "User default",
+      "vehicle": "Vehicle name",
+      "default": "System default"
+    },
+    "actions": {
+      "save": "Save",
+      "saving": "Saving…",
+      "reset": "Reset to default",
+      "resetting": "Resetting…",
+      "cancel": "Cancel"
+    },
+    "keys": {
+      "nickname": {
+        "label": "Nickname",
+        "help": "Friendly name shown in the vehicle list and page title."
+      },
+      "mute_until": {
+        "label": "Mute alerts until",
+        "help": "Suppresses alerts for this vehicle until the chosen date and time. Clear to receive alerts immediately."
+      },
+      "charge_cost_tariff_id": {
+        "label": "Charge cost tariff",
+        "help": "Tariff identifier used when calculating per-session charge costs for this vehicle."
+      },
+      "units_distance": {
+        "label": "Distance unit",
+        "help": "Override the distance unit (mi or km) for this vehicle's panels."
+      },
+      "units_temperature": {
+        "label": "Temperature unit",
+        "help": "Override the temperature unit (°C or °F) for this vehicle's panels."
+      },
+      "units_energy": {
+        "label": "Energy unit",
+        "help": "Override the energy display unit (kWh) for this vehicle's panels."
+      }
+    },
+    "validation": {
+      "required": "Value is required.",
+      "invalid": "Value is not valid for this setting.",
+      "invalidDate": "Enter a valid date and time."
+    },
+    "toasts": {
+      "saved": "Setting saved.",
+      "reset": "Reverted to default."
+    },
+    "errors": {
+      "save": "Failed to save setting.",
+      "reset": "Failed to reset setting."
+    }
   }
 }
