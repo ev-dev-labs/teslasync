@@ -28,6 +28,21 @@ type Config struct {
 	APILogs        APILogsConfig
 	WebPush        WebPushConfig
 	System         SystemConfig
+	GitHub         GitHubConfig
+}
+
+// GitHubConfig holds the credentials used by the optional GitHub Issues
+// bridge in the admin feedback queue (Phase-46 / Prompt 08). When Repo
+// or Token is empty the bridge is disabled — the admin endpoint
+// surfaces this in its response and the SPA hides the "Forward to
+// GitHub" action.
+type GitHubConfig struct {
+	// Repo is the target repository in "owner/name" form (e.g.
+	// "ev-dev-labs/teslasync"). Empty disables the bridge.
+	Repo string
+	// Token is a fine-grained Personal Access Token with the "Issues:
+	// write" scope on Repo. Empty disables the bridge.
+	Token string
 }
 
 // SystemConfig holds the operator-controlled service-mode banner state
@@ -387,6 +402,11 @@ func Load() (*Config, error) {
 			Mode:               envStr("TESLASYNC_SYSTEM_MODE", ""),
 			MaintenanceMessage: envStr("TESLASYNC_SYSTEM_MAINTENANCE_MESSAGE", ""),
 			MaintenanceUntil:   envStr("TESLASYNC_SYSTEM_MAINTENANCE_UNTIL", ""),
+		},
+
+		GitHub: GitHubConfig{
+			Repo:  envStr("TESLASYNC_GITHUB_REPO", ""),
+			Token: envStr("TESLASYNC_GITHUB_TOKEN", ""),
 		},
 	}
 

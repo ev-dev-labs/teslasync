@@ -16,6 +16,7 @@ import { GlobalShortcuts } from '@/lib/globalShortcuts'
 import { useTour } from '@/hooks/useTour'
 import { GotoIndicator } from '../feedback/GotoIndicator'
 import { KeyboardShortcutsModal } from '../feedback/KeyboardShortcutsModal'
+import { FeedbackModal } from '../feedback/FeedbackModal'
 import { TourOverlay } from '../feedback/TourOverlay'
 import { ChangelogModal } from '../feedback/ChangelogModal'
 import { TourLauncher } from '@/features/onboarding/TourLauncher'
@@ -720,6 +721,16 @@ export default function Layout() {
     return () => window.removeEventListener('toggle-keyboard-shortcuts', handler)
   }, [toggleCheatSheet])
 
+  // Phase-46 / Prompt 08 — in-app feedback modal. Same decoupled-event
+  // pattern as the cheat sheet above so the Cmd+K palette ("feedback.open")
+  // and the sidebar footer button can both open it without prop-drilling.
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
+  useEffect(() => {
+    const handler = () => setFeedbackOpen(true)
+    window.addEventListener('open-feedback-modal', handler)
+    return () => window.removeEventListener('open-feedback-modal', handler)
+  }, [])
+
   // Onboarding tour — Phase-40 / Prompt 65.
   // Only one tour can be active at a time. The launcher (or a CustomEvent
   // dispatched from anywhere) sets `activeTourId`; we wire the matching
@@ -1294,6 +1305,17 @@ export default function Layout() {
               <Icons.helpCircle className="h-3 w-3" aria-hidden />
               {t('tour.launcher.openShort', 'Take a tour')}
             </button>
+            <span className="mx-1.5 text-[var(--text-muted)]/60">·</span>
+            <button
+              type="button"
+              onClick={() => setFeedbackOpen(true)}
+              className="inline-flex items-center gap-1 rounded text-[10px] text-[var(--text-muted)] underline-offset-2 hover:text-[var(--text-secondary)] hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]"
+              aria-label={t('feedback.openAria', 'Open feedback / bug report form')}
+              data-testid="sidebar-feedback-trigger"
+            >
+              <Icons.bug className="h-3 w-3" aria-hidden />
+              {t('feedback.openShort', 'Report bug')}
+            </button>
           </p>
         </div>
       </aside>
@@ -1422,6 +1444,12 @@ export default function Layout() {
       <GlobalShortcuts />
       <GotoIndicator visible={shortcutMode === 'goto'} />
       <KeyboardShortcutsModal open={showCheatSheet} onClose={toggleCheatSheet} />
+
+      {/* In-app feedback modal (Phase-46 / Prompt 08) — opened via the
+          sidebar footer button, the Cmd+K palette ("feedback.open"
+          command), or any other surface that dispatches the
+          `open-feedback-modal` window event. */}
+      <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
 
       {/* Onboarding tour */}
       {tour.isActive && tour.step && (

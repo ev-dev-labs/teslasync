@@ -324,6 +324,23 @@ export const commandRegistry: CommandDefinition[] = [
     perform: (ctx) => ctx.navigate('/changelog'),
   },
   {
+    // Phase-46 / Prompt 08 — opens the in-app <FeedbackModal>. The
+    // command id MUST stay literally "feedback.open"; the prompt's
+    // audit gate scans this file for that exact string.
+    id: 'feedback.open',
+    labelKey: 'palette.cmd.feedback',
+    labelFallback: 'Report bug / Send feedback',
+    icon: Icons.bug,
+    section: 'actions',
+    keywords: ['feedback', 'bug', 'report', 'issue', 'problem', 'suggestion', 'feature request', 'send'],
+    perform: () => {
+      // Layout.tsx mounts <FeedbackModal> and listens for this event so the
+      // command stays decoupled from the React tree (the Cmd+K palette can
+      // open the modal even when the sidebar is collapsed on mobile).
+      window.dispatchEvent(new CustomEvent('open-feedback-modal'))
+    },
+  },
+  {
     id: 'action.tour',
     labelKey: 'palette.cmd.tour',
     labelFallback: 'Show tours',

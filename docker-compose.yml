@@ -83,6 +83,15 @@ services:
       - TESLASYNC_SYSTEM_MODE=${TESLASYNC_SYSTEM_MODE:-}
       - TESLASYNC_SYSTEM_MAINTENANCE_MESSAGE=${TESLASYNC_SYSTEM_MAINTENANCE_MESSAGE:-}
       - TESLASYNC_SYSTEM_MAINTENANCE_UNTIL=${TESLASYNC_SYSTEM_MAINTENANCE_UNTIL:-}
+      # Optional GitHub Issues bridge for the in-app feedback widget
+      # (Phase 46 / Prompt 08). When both REPO ("owner/name") and TOKEN
+      # (PAT with Issues:write) are set, the admin feedback queue
+      # exposes a "Forward to GitHub" action that mirrors the user
+      # report into a real GitHub issue. Leave empty to disable — the
+      # SPA hides the action when the server reports the bridge as
+      # unconfigured.
+      - TESLASYNC_GITHUB_REPO=${TESLASYNC_GITHUB_REPO:-}
+      - TESLASYNC_GITHUB_TOKEN=${TESLASYNC_GITHUB_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy

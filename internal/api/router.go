@@ -14,6 +14,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
+	"github.com/ev-dev-labs/teslasync/internal/integrations"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/service"
@@ -368,6 +369,25 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	systemStateRepo := database.NewSystemStateRepo(db)
 	adminMaintenanceHandler := NewAdminMaintenanceHandler(systemStateRepo, cfg, db)
 	maintenanceProvider := BuildMaintenanceProvider(systemStateRepo, cfg)
+
+	// Phase 46 / Prompt 08: in-app feedback widget. Repo is shared
+	// between the public POST ingest endpoint (rate-limited per
+	// submitter) and the admin queue endpoints (list + patch + optional
+	// GitHub Issues bridge). The bridge is wired at construction time
+	// from cfg.GitHub; when Repo or Token is empty, NewGitHubIssuesClient
+	// returns nil and the admin endpoint flips github_bridge_enabled to
+	// false in its response so the SPA hides the Forward action.
+	userFeedbackRepo := database.NewUserFeedbackRepo(db)
+	feedbackHandler := NewFeedbackHandler(userFeedbackRepo, cfg)
+	githubIssuesClient := integrations.NewGitHubIssuesClient(integrations.GitHubIssuesConfig{
+		Repo:  cfg.GitHub.Repo,
+		Token: cfg.GitHub.Token,
+	})
+	var githubBridge GitHubIssuesPoster
+	if githubIssuesClient != nil {
+		githubBridge = githubIssuesClient
+	}
+	adminFeedbackHandler := NewAdminFeedbackHandler(userFeedbackRepo, cfg, db, githubBridge)
 
 
 	// API v1 routes
@@ -1091,6 +1111,32 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Use(httprate.LimitByIP(30, 1*time.Minute))
 			r.Get("/", adminMaintenanceHandler.Get)
 			r.Post("/", adminMaintenanceHandler.Set)
+		})
+
+		// In-app feedback / report-bug widget (Phase 46 / Prompt 08).
+		// POST /feedback is the public ingest path used by the SPA's
+		// <FeedbackModal> (sidebar button + Cmd+K command palette
+		// entry). Mounted INSIDE this ForwardAuth subrouter so anonymous
+		// spam is bounded (per the prompt's Out-of-scope: "Anonymous
+		// feedback (must be authenticated to prevent spam)"). Per-row
+		// rate limit (3/hour) is enforced inside the handler against
+		// user_feedback so it survives pod restarts; a tighter per-IP
+		// httprate ceiling guards against payload-flooding even when
+		// the DB lookup fails open.
+		r.With(httprate.LimitByIP(20, 1*time.Hour)).Post("/feedback", feedbackHandler.Submit)
+
+		// Admin feedback queue (Phase 46 / Prompt 08): list / get /
+		// patch the user_feedback rows. PATCH optionally forwards the
+		// row to GitHub Issues when cfg.GitHub is configured. Any
+		// authenticated caller can read/write — audit_logs is the
+		// accountability surface, mirroring /admin/maintenance.
+		r.Route("/admin/feedback", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/", adminFeedbackHandler.List)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", adminFeedbackHandler.Get)
+				r.Patch("/", adminFeedbackHandler.Patch)
+			})
 		})
 
 		// Fleet Telemetry ingestion

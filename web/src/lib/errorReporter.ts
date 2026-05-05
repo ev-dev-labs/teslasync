@@ -18,6 +18,25 @@ import { isRateLimitError, isUpstreamUnavailableError } from './resilience'
 const ENDPOINT = '/api/v1/web-errors'
 const COALESCE_WINDOW_MS = 60_000
 const MAX_BUFFER_SIZE = 20
+// How many most-recent reports we keep around for the in-app feedback
+// modal (Phase 46 / Prompt 08). Independent of the offline send buffer
+// above so reports remain available for attachment after they have
+// successfully been POSTed.
+const FEEDBACK_RING_SIZE = 10
+
+/**
+ * A captured frontend error in the shape the in-app feedback modal
+ * attaches to a user report. snake_case keys match the JSONB column
+ * the backend persists into `user_feedback.recent_errors`.
+ */
+export interface FeedbackErrorReport {
+  name: string
+  message: string
+  stack?: string
+  route: string
+  occurred_at: string
+  source: ErrorSource
+}
 
 /**
  * Source channel that originated the report. Used internally to
@@ -44,6 +63,11 @@ interface ReporterState {
   // bucketKey → epoch-ms timestamp of the most recent POST for the bucket
   buckets: Map<string, number>
   buffer: BufferedSend[]
+  // Phase-46 / Prompt 08 — most-recent reports surfaced to <FeedbackModal>
+  // so users can attach diagnostic context to a bug report. Kept
+  // separate from `buffer` (which exists only for offline retry) so a
+  // successfully-POSTed report is still attachable.
+  feedbackRing: FeedbackErrorReport[]
   enabledOverride?: boolean
 }
 
@@ -51,6 +75,7 @@ const state: ReporterState = {
   installed: false,
   buckets: new Map(),
   buffer: [],
+  feedbackRing: [],
 }
 
 function isEnabled(): boolean {
@@ -153,7 +178,6 @@ function flushBuffer(): void {
  * Never throws — telemetry must not break the app.
  */
 export function reportFrontendError(err: unknown, source: ErrorSource): void {
-  if (!isEnabled()) return
   if (shouldSkip(err)) return
 
   const payload: FrontendErrorPayload = {
@@ -164,6 +188,21 @@ export function reportFrontendError(err: unknown, source: ErrorSource): void {
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
     occurredAt: new Date().toISOString(),
   }
+
+  // Always push into the feedback ring buffer — even in dev and even
+  // when the upstream POST will be skipped by isEnabled() — so the
+  // <FeedbackModal> can attach the most recent context regardless of
+  // whether the report was actually shipped to the backend.
+  pushFeedbackReport({
+    name: payload.name,
+    message: payload.message,
+    stack: payload.stack,
+    route: payload.route,
+    occurred_at: payload.occurredAt,
+    source,
+  })
+
+  if (!isEnabled()) return
 
   const key = bucketKey(source, payload)
   const now = Date.now()
@@ -180,6 +219,26 @@ export function reportFrontendError(err: unknown, source: ErrorSource): void {
   }
 
   sendPayload(payload)
+}
+
+function pushFeedbackReport(report: FeedbackErrorReport): void {
+  state.feedbackRing.push(report)
+  if (state.feedbackRing.length > FEEDBACK_RING_SIZE) {
+    state.feedbackRing.splice(0, state.feedbackRing.length - FEEDBACK_RING_SIZE)
+  }
+}
+
+/**
+ * Returns the most-recent {@link FeedbackErrorReport}s captured by the
+ * reporter, oldest-first, capped at {@link FEEDBACK_RING_SIZE}. Used
+ * by the in-app <FeedbackModal> (Phase 46 / Prompt 08) to attach
+ * diagnostic context to a user-submitted bug report.
+ *
+ * Returns a fresh array on every call so callers can safely mutate
+ * without affecting the internal ring state.
+ */
+export function getRecentReportsForFeedback(): FeedbackErrorReport[] {
+  return state.feedbackRing.slice()
 }
 
 /**
@@ -220,6 +279,7 @@ export function __resetErrorReporterForTests(): void {
   state.installed = false
   state.buckets.clear()
   state.buffer.length = 0
+  state.feedbackRing.length = 0
   state.enabledOverride = undefined
 }
 

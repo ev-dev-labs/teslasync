@@ -1,0 +1,36 @@
+=== GATE ===
+=== PREFLIGHT ===
+PROMPT=phase-46/08-feedback-widget
+BRANCH=fix/bug-waave-46
+=== FILES_EXIST ===
+FILE[internal\api\feedback_handler.go]=True
+FILE[internal\api\admin_feedback_handler.go]=True
+FILE[internal\database\user_feedback_repo.go]=True
+FILE[web\src\components\feedback\FeedbackModal.tsx]=True
+FILE[web\src\features\admin\pages\FeedbackQueuePage.tsx]=True
+MIGRATIONS_EXIST=True
+=== TYPESCRIPT ===
+TSC_EXIT=0
+=== LINT ===
+LINT_EXIT=0
+=== FRONTEND_TEST ===
+FRONTEND_TEST_EXIT=0
+=== GO_BUILD ===
+GO_BUILD_EXIT=0
+=== GO_TEST ===
+ok  	github.com/ev-dev-labs/teslasync/internal/api	2.081s
+ok  	github.com/ev-dev-labs/teslasync/internal/database	3.714s
+GO_TEST_EXIT=0
+=== HELM_LINT ===
+==> Linting helm/teslasync
+[INFO] Chart.yaml: icon is recommended
+
+1 chart(s) linted, 0 chart(s) failed
+HELM_LINT_EXIT=0
+=== AUDIT_VIOLATIONS ===
+FEEDBACK_COMMAND_REGISTERED=True
+=== GIT_STATUS ===
+UNEXPECTED_STATUS_COUNT=0
+=== STATUS ===
+EXIT=0
+STATUS=DONE

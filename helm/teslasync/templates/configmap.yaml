@@ -141,3 +141,8 @@ data:
   TESLASYNC_SYSTEM_MODE: {{ default "" (and .Values.system .Values.system.mode) | quote }}
   TESLASYNC_SYSTEM_MAINTENANCE_MESSAGE: {{ default "" (and .Values.system .Values.system.maintenanceMessage) | quote }}
   TESLASYNC_SYSTEM_MAINTENANCE_UNTIL: {{ default "" (and .Values.system .Values.system.maintenanceUntil) | quote }}
+  # Optional GitHub Issues bridge for the in-app feedback widget
+  # (Phase 46 / Prompt 08). Repo is the non-secret half — the
+  # corresponding TESLASYNC_GITHUB_TOKEN is rendered to the Secret
+  # template only when set. Empty repo disables the bridge entirely.
+  TESLASYNC_GITHUB_REPO: {{ default "" (and .Values.github .Values.github.repo) | quote }}

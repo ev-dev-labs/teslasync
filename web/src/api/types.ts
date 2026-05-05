@@ -2101,3 +2101,58 @@ export interface SessionInfo {
 }
 
 
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase-46 / Prompt 08 — In-app feedback widget
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type FeedbackCategory = 'bug' | 'feature' | 'other'
+export type FeedbackStatus = 'new' | 'triaged' | 'closed'
+
+export interface FeedbackEntry {
+  id: number
+  created_at: string
+  category: FeedbackCategory
+  title: string
+  body: string
+  page_route: string
+  user_agent: string
+  app_version: string
+  user_email: string
+  recent_errors: unknown
+  console_tail: string
+  status: FeedbackStatus
+  github_issue_url: string
+  submitter_subject: string
+  submitter_ip: string
+  triaged_at: string | null
+  triaged_by: string
+}
+
+export interface FeedbackSubmitInput {
+  category: FeedbackCategory
+  title: string
+  body: string
+  page_route?: string
+  user_agent?: string
+  app_version?: string
+  user_email?: string
+  recent_errors?: unknown
+  console_tail?: string
+}
+
+export interface FeedbackUpdateInput {
+  status?: FeedbackStatus
+  github_issue_url?: string
+  forward_to_github?: boolean
+}
+
+export interface FeedbackListResponse {
+  items: FeedbackEntry[]
+  total: number
+  limit: number
+  offset: number
+  github_bridge_enabled: boolean
+  github_repo?: string
+}

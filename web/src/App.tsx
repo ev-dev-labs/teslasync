@@ -122,6 +122,7 @@ const SecurityAccess = lazy(() => import('./features/admin/pages/SecurityAccessP
 const BackupRestore = lazy(() => import('./features/admin/pages/BackupRestorePage'))
 const ApiPlayground = lazy(() => import('./features/admin/pages/ApiPlaygroundPage'))
 const RedisSignalViewer = lazy(() => import('./features/admin/pages/RedisSignalViewerPage'))
+const FeedbackQueue = lazy(() => import('./features/admin/pages/FeedbackQueuePage'))
 
 // System & Ops
 const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
@@ -261,6 +262,7 @@ export default function App() {
         <Route path="compare" element={<Navigate to="/period-compare" replace />} />
         <Route path="period-compare" element={<SafeRoute name="PeriodCompare"><PeriodCompare /></SafeRoute>} />
         <Route path="admin" element={<SafeRoute name="Admin"><Admin /></SafeRoute>} />
+        <Route path="admin/feedback" element={<SafeRoute name="FeedbackQueue"><FeedbackQueue /></SafeRoute>} />
         <Route path="api-logs" element={<SafeRoute name="ApiLogs"><ApiLogs /></SafeRoute>} />
         <Route path="fleet-api" element={<SafeRoute name="FleetAPI"><FleetAPI /></SafeRoute>} />
         <Route path="dev-tools" element={<SafeRoute name="DevTools"><DevTools /></SafeRoute>} />
