@@ -7694,5 +7694,74 @@
       "geofences": "Geofences",
       "quietHours": "Quiet hours"
     }
+  },
+  "webhookChannels": {
+    "title": "Webhook channels",
+    "subtitle": "Forward TeslaSync notifications to Discord, Slack, n8n, Home Assistant, or any HTTP receiver. Each channel can be HMAC-signed so receivers can verify authenticity.",
+    "addButton": "Add webhook",
+    "loadError": "Failed to load webhook channels: {{error}}",
+    "savingAnnouncement": "Saving webhook…",
+    "empty": {
+      "title": "No webhooks yet",
+      "message": "Add a webhook to forward TeslaSync events to your favourite chat or automation tool.",
+      "action": "Add your first webhook"
+    },
+    "row": {
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "toggle": "Active",
+      "test": "Test webhook",
+      "edit": "Edit webhook",
+      "delete": "Delete webhook"
+    },
+    "test": {
+      "success": "Success",
+      "failure": "Failed",
+      "status": "Status {{status}}",
+      "latency": "{{ms}} ms",
+      "signature": "Signature:",
+      "body": "Response body",
+      "truncated": "… (truncated)"
+    },
+    "form": {
+      "addTitle": "Add webhook",
+      "editTitle": "Edit webhook",
+      "name": "Name",
+      "namePlaceholder": "Discord #alerts",
+      "nameRequired": "Name is required.",
+      "url": "URL",
+      "urlPlaceholder": "https://discord.com/api/webhooks/...",
+      "urlInvalid": "URL must start with http:// or https://.",
+      "urlHelp": "Compatible with Discord, Slack, n8n, Home Assistant, and any HTTP receiver.",
+      "method": "HTTP method",
+      "secret": "Signing secret",
+      "secretPlaceholder": "Optional — used for HMAC signing",
+      "secretPlaceholderEdit": "Leave blank to keep existing",
+      "secretHelp": "When set, every request includes X-TeslaSync-Signature: sha256=<hmac> so the receiver can verify authenticity.",
+      "showSecret": "Show secret",
+      "hideSecret": "Hide secret",
+      "enabled": "Enabled",
+      "cancel": "Cancel",
+      "save": "Add webhook",
+      "saveEdit": "Save changes",
+      "saving": "Saving…"
+    },
+    "signature": {
+      "label": "Signature preview",
+      "loading": "Computing signature…",
+      "error": "Failed to compute signature: {{error}}",
+      "empty": "Add a signing secret to preview the X-TeslaSync-Signature header.",
+      "help": "Send this header value with every webhook so receivers can verify authenticity."
+    },
+    "delete": {
+      "title": "Delete webhook?",
+      "message": "This will permanently remove the webhook. TeslaSync will stop sending notifications to it immediately.",
+      "confirm": "Delete webhook",
+      "cancel": "Cancel"
+    },
+    "docs": {
+      "title": "Available payload variables",
+      "intro": "Webhook receivers get a JSON envelope with these fields:"
+    }
   }
 }

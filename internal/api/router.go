@@ -200,6 +200,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	batteryHandler := NewBatteryHandler(db, stateReader)
 	analyticsHandler := NewAnalyticsHandler(db, stateReader)
 	notificationHandler := NewNotificationHandler(db)
+	notificationChannelHandler := NewNotificationChannelHandler(db)
 	notifScheduleHandler := NewNotificationScheduleHandler(db)
 	quietHoursHandler := NewQuietHoursHandler(database.NewQuietHoursRepo(db), cfg)
 	chatbotHandler := NewChatbotHandler(db, vehicleSvc, stateReader)
@@ -929,12 +930,26 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Patch("/{id}", quietHoursHandler.Patch)
 				r.Delete("/{id}", quietHoursHandler.Delete)
 			})
+			// Phase-46 / Prompt 37 — webhook signature preview is a
+			// pure utility (no DB touch, no outbound call); rate-limited
+			// because it computes HMAC SHA-256 on caller-supplied input.
+			// Mounted before /{channelID} for the same reason as
+			// /quiet-hours above — chi otherwise binds "webhooks" as
+			// the channel id.
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Post("/webhooks/preview-signature", notificationChannelHandler.WebhookSignaturePreview)
 			r.Route("/{channelID}", func(r chi.Router) {
 				r.Get("/", notificationHandler.GetChannel)
 				r.Put("/", notificationHandler.UpdateChannel)
 				r.Delete("/", notificationHandler.DeleteChannel)
 				r.Post("/toggle", notificationHandler.ToggleChannel)
 				r.Post("/test", notificationHandler.TestChannel)
+				// Phase-46 / Prompt 37 — HMAC-aware webhook test. Sibling
+				// of /test so the legacy generic test stays available;
+				// this endpoint exists solely for webhook-kind channels
+				// and 404s on any other kind.
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).
+					Post("/webhook-test", notificationChannelHandler.WebhookTest)
 				r.Get("/preferences", notifScheduleHandler.GetPreferences)
 				r.Put("/preferences", notifScheduleHandler.UpdatePreference)
 				r.Get("/metrics", notifScheduleHandler.GetChannelMetrics)

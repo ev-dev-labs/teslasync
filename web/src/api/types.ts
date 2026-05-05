@@ -551,6 +551,39 @@ export type {
   NotificationChannelPushover,
 } from '@/types/notifications'
 
+// Phase-46 / Prompt 37 — webhook channel test endpoint result.
+//
+// Mirrors `webhookTestResponse` in
+// internal/api/notification_channel_handler.go. The handler returns
+// the SAME shape on transport-level failures (`status_code === 0`,
+// `error` populated) and HTTP-level failures (`status_code >= 400`,
+// `success === false`), so the UI renders both cases uniformly.
+export interface WebhookTestResult {
+  success: boolean
+  status_code: number
+  latency_ms: number
+  body_preview?: string
+  truncated?: boolean
+  signature?: string
+  error?: string
+}
+
+// Phase-46 / Prompt 37 — request shape for the signature preview
+// utility endpoint. `body` is the verbatim bytes the receiver would
+// HMAC-validate; the server signs them with `secret` and returns the
+// resulting `sha256=<hex>` value.
+export interface WebhookSignaturePreviewRequest {
+  secret: string
+  body: string
+}
+
+// Phase-46 / Prompt 37 — preview-signature endpoint response. Always
+// non-empty when the request validated (empty `secret` is rejected
+// with 400 server-side, never echoed back as an empty signature).
+export interface WebhookSignaturePreviewResult {
+  signature: string
+}
+
 export interface NotificationLog {
   id: number
   channel_id: number

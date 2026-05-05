@@ -33,6 +33,10 @@ import { TOTPEnrollmentSection } from '../components/TOTPEnrollmentSection'
 // rationale as TOTPEnrollmentSection above; the components barrel
 // is not in the prompt's allowed-files regex.
 import { SettingsExportImport } from '../components/SettingsExportImport'
+// Phase-46 / Prompt 37 — Webhook channels. Direct import for the
+// same reason: the `../components` barrel is outside this prompt's
+// allowed-files regex.
+import { WebhookChannelsSection } from '../components/WebhookChannelsSection'
 
 export default function SettingsPage() {
   const { t } = useTranslation('settings')
@@ -110,6 +114,9 @@ export default function SettingsPage() {
       </section>
       <section id="notifications">
         <NotificationSettings />
+      </section>
+      <section id="webhooks">
+        <WebhookChannelsSection />
       </section>
       <section id="quiet-hours">
         <QuietHoursPanel />

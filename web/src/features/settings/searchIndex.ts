@@ -424,6 +424,49 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       description: t('search.entries.backup.import.desc', 'Restore alert rules, geofences, and quiet-hours windows from a previously exported bundle.'),
       keywords: ['restore', 'upload', 'json', 'load', 'recover', 'configuration'],
     },
+    // ── Webhook channels (Phase-46 / Prompt 37) ─────────────────────
+    {
+      id: 'webhooks.list',
+      href: '/settings#webhooks',
+      section: 'webhooks',
+      title: t('search.entries.webhooks.list.title', 'Webhook channels'),
+      description: t(
+        'search.entries.webhooks.list.desc',
+        'Forward TeslaSync notifications to Discord, Slack, n8n, Home Assistant, or any HTTP receiver.',
+      ),
+      keywords: [
+        'webhook',
+        'discord',
+        'slack',
+        'n8n',
+        'home assistant',
+        'http',
+        'integration',
+        'automation',
+      ],
+    },
+    {
+      id: 'webhooks.signing',
+      href: '/settings#webhooks',
+      section: 'webhooks',
+      title: t('search.entries.webhooks.signing.title', 'Webhook HMAC signing'),
+      description: t(
+        'search.entries.webhooks.signing.desc',
+        'Sign outbound webhooks with a shared secret so receivers can verify authenticity via the X-TeslaSync-Signature header.',
+      ),
+      keywords: ['hmac', 'sign', 'signature', 'sha256', 'secret', 'verify', 'authenticity'],
+    },
+    {
+      id: 'webhooks.test',
+      href: '/settings#webhooks',
+      section: 'webhooks',
+      title: t('search.entries.webhooks.test.title', 'Test a webhook channel'),
+      description: t(
+        'search.entries.webhooks.test.desc',
+        'Fire a test event at a configured webhook to verify your receiver and signature pipeline.',
+      ),
+      keywords: ['test', 'fire', 'verify', 'debug', 'try'],
+    },
   ];
 }
 
