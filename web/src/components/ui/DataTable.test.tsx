@@ -6,7 +6,7 @@
  * full-coverage suite still lives in
  * `web/src/components/ui/__tests__/DataTable.test.tsx`.
  */
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import '@/i18n'
 import { DataTable, type Column } from './DataTable'
@@ -267,5 +267,159 @@ describe('DataTable — virtualization stress (Phase-46 / Prompt 52)', () => {
     const tbody = container.querySelector('tbody')
     const bottomSpacer = tbody?.querySelector('tr[data-virtual-spacer="bottom"]')
     expect(bottomSpacer).not.toBeNull()
+  })
+})
+
+// ── Phase-46 / Prompt 55 — DataTable export adoption ──────────────────────
+// Long-tail list pages (charging, alerts, etc.) opt into a "Download CSV"
+// button via the `exportable` prop. These tests guard against regressions
+// in the export pipeline:
+//   1. The button is rendered + accessible when `exportable` is true.
+//   2. Clicking it triggers a download with the configured filename.
+//   3. The exported CSV contains the rows currently visible to the user
+//      (post-filter / post-sort), serialized via `exportRow` so React-node
+//      cells flatten to plain strings.
+describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
+  // Capture all download attempts triggered by `<a download="…">.click()`.
+  // jsdom doesn't navigate, so we intercept via spy on
+  // HTMLAnchorElement.prototype.click. URL.createObjectURL is stubbed to
+  // stash the source Blob keyed by the synthetic blob URL, and the test
+  // helper `latestCsv()` awaits the Blob's text() to read it back.
+  const blobStash = new Map<string, Blob>()
+  const downloads: { filename: string; url: string }[] = []
+  let originalClick: typeof HTMLAnchorElement.prototype.click
+
+  beforeEach(() => {
+    blobStash.clear()
+    downloads.length = 0
+    originalClick = HTMLAnchorElement.prototype.click
+    HTMLAnchorElement.prototype.click = function () {
+      downloads.push({
+        filename: (this as HTMLAnchorElement).download,
+        url: (this as HTMLAnchorElement).href,
+      })
+    }
+    // @ts-expect-error — jsdom URL.createObjectURL isn't typed as configurable.
+    URL.createObjectURL = vi.fn((blob: Blob) => {
+      const url = `blob:test/${blobStash.size + 1}`
+      blobStash.set(url, blob)
+      return url
+    })
+    // @ts-expect-error — jsdom URL.revokeObjectURL isn't typed as configurable.
+    URL.revokeObjectURL = vi.fn()
+  })
+
+  afterEach(() => {
+    HTMLAnchorElement.prototype.click = originalClick
+  })
+
+  async function latestCsv(): Promise<string> {
+    const last = downloads[downloads.length - 1]
+    if (!last) throw new Error('no download captured')
+    const blob = blobStash.get(last.url)
+    if (!blob) throw new Error(`no blob stashed for ${last.url}`)
+    return await blob.text()
+  }
+
+  it('renders the "Download CSV" button when `exportable` is set', () => {
+    render(
+      <DataTable
+        columns={REORDER_COLS}
+        data={ROWS}
+        keyExtractor={r => r.id}
+        tableId="export-1"
+        exportable
+      />,
+    )
+    expect(screen.getByRole('button', { name: /download csv/i })).toBeInTheDocument()
+  })
+
+  it('does NOT render the export button when `exportable` is omitted', () => {
+    render(
+      <DataTable
+        columns={REORDER_COLS}
+        data={ROWS}
+        keyExtractor={r => r.id}
+        tableId="export-2"
+      />,
+    )
+    expect(screen.queryByRole('button', { name: /download csv/i })).toBeNull()
+  })
+
+  it('disables the export button when there is no data', () => {
+    render(
+      <DataTable
+        columns={REORDER_COLS}
+        data={[]}
+        keyExtractor={r => r.id}
+        tableId="export-3"
+        exportable
+      />,
+    )
+    expect(screen.getByRole('button', { name: /download csv/i })).toBeDisabled()
+  })
+
+  it('clicking export triggers a download with the configured filename', async () => {
+    render(
+      <DataTable
+        columns={REORDER_COLS}
+        data={ROWS}
+        keyExtractor={r => r.id}
+        tableId="export-4"
+        exportable
+        exportFilename="drives-2024-11"
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /download csv/i }))
+    // The export handler is async; flush microtasks so the download lands.
+    await new Promise((r) => setTimeout(r, 0))
+    expect(downloads.length).toBe(1)
+    // downloadCSV() appends `.csv` if missing.
+    expect(downloads[0].filename).toBe('drives-2024-11.csv')
+  })
+
+  it('falls back to a date-stamped filename derived from `tableId` when `exportFilename` is omitted', async () => {
+    render(
+      <DataTable
+        columns={REORDER_COLS}
+        data={ROWS}
+        keyExtractor={r => r.id}
+        tableId="export-5"
+        exportable
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /download csv/i }))
+    await new Promise((r) => setTimeout(r, 0))
+    expect(downloads.length).toBe(1)
+    // Filename pattern: `<tableId>-YYYY-MM-DD.csv`.
+    expect(downloads[0].filename).toMatch(/^export-5-\d{4}-\d{2}-\d{2}\.csv$/)
+  })
+
+  it('exports the visible rows with values flattened via `exportRow`', async () => {
+    render(
+      <DataTable
+        columns={REORDER_COLS}
+        data={ROWS}
+        keyExtractor={r => r.id}
+        tableId="export-6"
+        exportable
+        exportFilename="export-6"
+        exportRow={(row) => ({
+          id: row.id,
+          name: row.name.toUpperCase(),
+          status: row.status,
+        })}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /download csv/i }))
+    await new Promise((r) => setTimeout(r, 0))
+    expect(downloads.length).toBe(1)
+    const csv = await latestCsv()
+    // Header derived from column.header values.
+    expect(csv).toContain('ID,Name,Status')
+    // exportRow uppercased the name field.
+    expect(csv).toContain('1,ALPHA,ok')
+    expect(csv).toContain('2,BRAVO,fail')
+    expect(csv).toContain('3,CHARLIE,ok')
   })
 })

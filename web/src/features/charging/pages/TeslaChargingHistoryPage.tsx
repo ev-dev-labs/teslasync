@@ -422,6 +422,19 @@ export default function TeslaChargingHistoryPage() {
                   maxHeight={600}
                   virtualized
                   rowHeight={56}
+                  exportable
+                  exportFilename={`tesla-charging-history-${new Date().toISOString().slice(0, 10)}`}
+                  exportRow={(row) => ({
+                    date: row.charge_start_datetime,
+                    location: row.site_location_name ?? '',
+                    duration: durationMinutes(row.charge_start_datetime, row.charge_stop_datetime) ?? null,
+                    energy: row.usage_kwh ?? null,
+                    cost: row.total_due ?? null,
+                    currency: row.currency_code ?? '',
+                    rate: row.rate_base ?? null,
+                    pricing_type: row.pricing_type ?? '',
+                    invoice: row.invoice_content_id ?? '',
+                  })}
                   selectable="multi"
                   selectedKeys={selectedKeys}
                   onSelectionChange={setSelectedKeys}

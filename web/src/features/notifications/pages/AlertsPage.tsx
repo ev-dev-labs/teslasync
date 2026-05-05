@@ -385,6 +385,14 @@ function NotificationHistory({ t }: { t: TFunction }) {
                 showColumnsMenu
                 stickyHeader
                 maxHeight={520}
+                exportable
+                exportFilename={`notification-logs-${new Date().toISOString().slice(0, 10)}`}
+                exportRow={(log) => ({
+                  time: log.created_at,
+                  title: log.title,
+                  channel: channelMap[log.channel_id] || `#${log.channel_id}`,
+                  status: log.status,
+                })}
               />
             </div>
         ) : (

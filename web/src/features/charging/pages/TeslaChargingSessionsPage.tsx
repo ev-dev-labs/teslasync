@@ -439,6 +439,19 @@ export default function TeslaChargingSessionsPage() {
               maxHeight={600}
               virtualized
               rowHeight={56}
+              exportable
+              exportFilename={`tesla-fleet-sessions-${new Date().toISOString().slice(0, 10)}`}
+              exportRow={(row) => ({
+                date: row.charge_start_datetime,
+                location: row.site_location_name ?? '',
+                vin: row.vin ?? '',
+                energy: row.energy_added_kwh ?? null,
+                peakPower: row.peak_power_kw ?? null,
+                duration: row.charge_duration_s ?? null,
+                cost: row.total_cost ?? null,
+                rate: row.per_kwh_rate ?? null,
+                type: row.charger_type ?? '',
+              })}
               selectable="multi"
               selectedKeys={selectedKeys}
               onSelectionChange={setSelectedKeys}
