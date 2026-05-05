@@ -6054,6 +6054,70 @@
           "unsavedNavigation": "Leave page with unsaved changes"
         }
       }
+    },
+    "totp": {
+      "title": "Two-factor authentication",
+      "subtitle": "TOTP codes from your authenticator app are required for the sudo step-up before destructive admin actions.",
+      "loading": "Loading two-factor settings…",
+      "status": {
+        "active": "Active",
+        "notEnrolled": "Not enrolled"
+      },
+      "actions": {
+        "enroll": "Enable TOTP",
+        "enrollHint": "Compatible with Google Authenticator, 1Password, Bitwarden, Authy and other RFC 6238 clients.",
+        "regenerate": "Regenerate backup codes",
+        "disable": "Disable"
+      },
+      "lastUsed": {
+        "label": "Last used",
+        "never": "Never"
+      },
+      "backupCodesRemaining": {
+        "label": "Backup codes remaining"
+      },
+      "modal": {
+        "enrollTitle": "Enable TOTP",
+        "scanInstructions": "Scan the QR code with your authenticator app, or enter the secret manually.",
+        "qrAlt": "TOTP QR code",
+        "manualLabel": "Manual entry secret",
+        "codeLabel": "Enter the 6-digit code from your app",
+        "verify": "Verify and activate",
+        "cancel": "Cancel"
+      },
+      "backupCodes": {
+        "title": "Save your backup codes",
+        "warning": "These codes will not be shown again. Store them in a password manager. Each code can be used once if you lose access to your authenticator app.",
+        "download": "Download .txt",
+        "done": "I saved them",
+        "fileHeader": "# TeslaSync TOTP backup codes — keep secret."
+      },
+      "disable": {
+        "title": "Disable two-factor authentication?",
+        "message": "You will no longer be prompted for a TOTP code on the sudo step-up. Your backup codes will be invalidated.",
+        "confirm": "Disable",
+        "cancel": "Keep TOTP enabled",
+        "typedLabel": "Type DISABLE to confirm"
+      },
+      "openMode": {
+        "message": "Per-user TOTP requires forward-auth mode. Configure your reverse proxy to inject X-Forwarded-User then reload."
+      },
+      "errors": {
+        "codeLength": "Enter all 6 digits.",
+        "invalidCode": "Code did not match. Try the next one.",
+        "rateLimited": "Too many incorrect attempts. Try again in 15 minutes.",
+        "enrollmentExpired": "Enrollment expired. Close and start over.",
+        "verifyGeneric": "Verification failed.",
+        "enroll": "Failed to start TOTP enrollment",
+        "verify": "Verification failed",
+        "disable": "Failed to disable TOTP",
+        "regenerate": "Failed to regenerate backup codes"
+      },
+      "toasts": {
+        "verified": "TOTP enabled. Save your backup codes!",
+        "disabled": "TOTP disabled.",
+        "backupRegenerated": "Backup codes regenerated."
+      }
     }
   },
   "confirm": {
@@ -6169,6 +6233,7 @@
       "totpRequired": "Enter the 6-digit code from your authenticator.",
       "invalidPassword": "Password did not match.",
       "invalidTotp": "Authenticator code was rejected.",
+      "totpRateLimit": "Too many failed authenticator attempts. Try again in 15 minutes.",
       "notConfigured": "Step-up reauth is not configured on this server. Ask your administrator to set TESLASYNC_SUDO_PASSWORD or TESLASYNC_SUDO_TOTP_SECRET.",
       "typedConfirmationMismatch": "Type {{token}} exactly to confirm.",
       "unknown": "Reauthentication failed."

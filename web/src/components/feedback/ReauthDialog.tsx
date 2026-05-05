@@ -43,6 +43,7 @@ import {
   type SudoCredential,
   apiUrl,
 } from '@/api/client'
+import { useTOTPStatus } from '@/api/hooks/useTOTP'
 
 export { SudoCanceledError } from '@/api/client'
 
@@ -205,13 +206,55 @@ export function ReauthDialogRoot({ forceMode }: ReauthDialogProps = {}) {
   const mode: DialogMode =
     forceMode ?? (monitor.mode === 'open' ? 'confirm' : 'credential')
 
+  // Phase-46 / Prompt 35 — query per-user TOTP enrollment so the
+  // dialog can:
+  //   1. show/hide the TOTP tab based on whether the current subject
+  //      has actually enrolled (open-mode never reaches credential
+  //      mode anyway, so the tab gate only fires in forward-auth).
+  //   2. route TOTP submissions to the per-user /auth/totp/sudo
+  //      endpoint when enrolled, falling back to the legacy shared-
+  //      secret /auth/reauth path otherwise (some installs still rely
+  //      on TESLASYNC_SUDO_TOTP_SECRET).
+  // The query is gated on credential mode so the dialog never wakes
+  // up the network in open mode.
+  const totpStatus = useTOTPStatus({ enabled: mode === 'credential' })
+  const totpEnrolled =
+    totpStatus.data != null &&
+    totpStatus.data.mode === 'session' &&
+    totpStatus.data.activated === true
+  // Show the TOTP tab when EITHER per-user TOTP is enrolled OR we
+  // haven't proven it isn't (loading / errored / 501) — preserves
+  // backward compat with installs that have only the shared secret
+  // and never call the per-user endpoint.
+  const totpTabAvailable =
+    !totpStatus.isFetched ||
+    totpStatus.isError ||
+    totpEnrolled ||
+    (totpStatus.data?.mode !== 'open')
+
+  const submitCredential = useMemo<
+    PureReauthDialogProps['onSubmitCredential']
+  >(() => {
+    if (!totpEnrolled) return undefined
+    // When per-user TOTP is enrolled, route TOTP submissions to the
+    // per-user endpoint; password submissions still go to /auth/reauth.
+    return async (body: SudoSubmitBody): Promise<SudoCredential> => {
+      if (body.totp_code != null) {
+        return submitPerUserTotp(body.totp_code)
+      }
+      return defaultSubmitCredential(body)
+    }
+  }, [totpEnrolled])
+
   return (
     <ReauthDialog
       open={open}
       mode={mode}
       path={current?.path ?? ''}
+      totpTabAvailable={totpTabAvailable}
       onSubmit={(cred) => resolveActive(cred)}
       onCancel={() => rejectActive(new SudoCanceledError())}
+      onSubmitCredential={submitCredential}
     />
   )
 }
@@ -229,6 +272,15 @@ export interface PureReauthDialogProps {
   /** Override the credential POST for tests. Must mirror the server's
    * { sudo_token, expires_at, mode } shape. */
   onSubmitCredential?: (body: SudoSubmitBody) => Promise<SudoCredential>
+  /**
+   * Phase-46 / Prompt 35 — controls visibility of the TOTP tab.
+   * Defaults to true so test helpers that render the pure dialog
+   * directly still get both tabs (preserving prompt-31 test
+   * coverage). Production code (ReauthDialogRoot) sets this to false
+   * when the current subject has neither per-user TOTP enrolled nor
+   * the legacy shared-secret TOTP available.
+   */
+  totpTabAvailable?: boolean
 }
 
 interface SudoSubmitBody {
@@ -241,6 +293,11 @@ interface SudoSubmitBody {
  * a free function (not an `request<T>` call) so it bypasses the
  * SUDO_REQUIRED interceptor — calling the interceptor from inside the
  * recovery flow would deadlock.
+ *
+ * Phase-46 / Prompt 35 — parses snake_case `sudo_token` and
+ * `expires_at` (was previously reading `token` / `expiresAt` which
+ * the server never sends). The cached token now lands in
+ * setCachedSudoToken with a real value instead of always-undefined.
  */
 async function defaultSubmitCredential(body: SudoSubmitBody): Promise<SudoCredential> {
   const res = await fetch(apiUrl('/auth/reauth'), {
@@ -264,11 +321,68 @@ async function defaultSubmitCredential(body: SudoSubmitBody): Promise<SudoCreden
     ;(err as Error & { code?: string; status?: number }).status = res.status
     throw err
   }
-  const json = (await res.json()) as Partial<SudoCredential>
+  const json = (await res.json()) as Record<string, unknown>
+  const tokenValue =
+    typeof json.sudo_token === 'string'
+      ? json.sudo_token
+      : typeof json.token === 'string'
+        ? json.token
+        : undefined
+  const expiresValue =
+    typeof json.expires_at === 'string'
+      ? json.expires_at
+      : typeof json.expiresAt === 'string'
+        ? json.expiresAt
+        : undefined
   return {
     mode: json.mode === 'open' ? 'open' : 'session',
-    token: typeof json.token === 'string' ? json.token : undefined,
-    expiresAt: typeof json.expiresAt === 'string' ? json.expiresAt : undefined,
+    token: tokenValue,
+    expiresAt: expiresValue,
+  }
+}
+
+/**
+ * Phase-46 / Prompt 35 — per-user TOTP submit. Routes to
+ * /auth/totp/sudo (which validates against the subject's enrolled
+ * secret) instead of /auth/reauth (which validates against the
+ * shared-process TESLASYNC_SUDO_TOTP_SECRET).
+ *
+ * Same error / response handling shape as defaultSubmitCredential so
+ * the dialog can flow it through the same code path.
+ */
+async function submitPerUserTotp(code: string): Promise<SudoCredential> {
+  const res = await fetch(apiUrl('/auth/totp/sudo'), {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ code }),
+  })
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}) as Record<string, unknown>)
+    const code =
+      typeof errBody.code === 'string' && errBody.code.trim() !== ''
+        ? errBody.code
+        : undefined
+    // Map per-user TOTP errors back to the legacy INVALID_CREDENTIAL
+    // code so the dialog's existing error-message branch still fires.
+    const remappedCode = code === 'TOTP_INVALID' ? 'INVALID_CREDENTIAL' : code
+    const message =
+      typeof errBody.error === 'string' && errBody.error.trim() !== ''
+        ? errBody.error
+        : `HTTP ${res.status}`
+    const err = new Error(message)
+    ;(err as Error & { code?: string; status?: number }).code = remappedCode
+    ;(err as Error & { code?: string; status?: number }).status = res.status
+    throw err
+  }
+  const json = (await res.json()) as Record<string, unknown>
+  return {
+    mode: 'session',
+    token: typeof json.sudo_token === 'string' ? json.sudo_token : undefined,
+    expiresAt: typeof json.expires_at === 'string' ? json.expires_at : undefined,
   }
 }
 
@@ -283,15 +397,21 @@ export function ReauthDialog(props: PureReauthDialogProps) {
     onSubmit,
     onCancel,
     onSubmitCredential = defaultSubmitCredential,
+    totpTabAvailable = true,
   } = props
   const { t } = useTranslation()
 
   const credentialTabs = useMemo<TabItem[]>(
-    () => [
-      { key: 'password', label: t('sudo.tabs.password', 'Password') },
-      { key: 'totp', label: t('sudo.tabs.totp', 'Authenticator') },
-    ],
-    [t],
+    () => {
+      const tabs: TabItem[] = [
+        { key: 'password', label: t('sudo.tabs.password', 'Password') },
+      ]
+      if (totpTabAvailable) {
+        tabs.push({ key: 'totp', label: t('sudo.tabs.totp', 'Authenticator') })
+      }
+      return tabs
+    },
+    [t, totpTabAvailable],
   )
 
   const [activeTab, setActiveTab] = useState<'password' | 'totp'>('password')
@@ -301,6 +421,15 @@ export function ReauthDialog(props: PureReauthDialogProps) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const submittingRef = useRef(false)
+
+  // If the TOTP tab disappears mid-flight (e.g. status query returns
+  // mode='open'), fall back to the password tab so the visible
+  // selection always matches a tab that actually exists.
+  useEffect(() => {
+    if (!totpTabAvailable && activeTab === 'totp') {
+      setActiveTab('password')
+    }
+  }, [totpTabAvailable, activeTab])
 
   // Reset form whenever the dialog re-opens for a fresh challenge so the
   // previous attempt's text never bleeds across actions. Re-keyed on

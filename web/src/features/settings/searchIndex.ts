@@ -362,6 +362,41 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       keywords: ['confetti', 'sound', 'achievement', 'unlock'],
     },
 
+    // ── Security (TOTP) ─────────────────────────────────────────────
+    {
+      id: 'security.totp.enroll',
+      href: '/settings#security',
+      section: 'security',
+      title: t('search.entries.security.totpEnroll.title', 'Enable two-factor authentication'),
+      description: t(
+        'search.entries.security.totpEnroll.desc',
+        'Set up TOTP from your authenticator app to protect destructive admin actions.',
+      ),
+      keywords: ['totp', '2fa', 'mfa', 'authenticator', 'security', 'sudo', 'step-up'],
+    },
+    {
+      id: 'security.totp.backupCodes',
+      href: '/settings#security',
+      section: 'security',
+      title: t('search.entries.security.totpBackupCodes.title', 'TOTP backup codes'),
+      description: t(
+        'search.entries.security.totpBackupCodes.desc',
+        'Regenerate or download the backup codes used when you lose access to your authenticator.',
+      ),
+      keywords: ['backup', 'recovery', 'codes', 'totp', '2fa'],
+    },
+    {
+      id: 'security.totp.disable',
+      href: '/settings#security',
+      section: 'security',
+      title: t('search.entries.security.totpDisable.title', 'Disable two-factor authentication'),
+      description: t(
+        'search.entries.security.totpDisable.desc',
+        'Remove the TOTP credential and revoke all backup codes for the current subject.',
+      ),
+      keywords: ['disable', 'remove', 'totp', '2fa', 'unenroll'],
+    },
+
     // ── Advanced ────────────────────────────────────────────────────
     {
       id: 'advanced.restoreConfirms',

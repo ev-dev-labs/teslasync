@@ -2261,3 +2261,47 @@ export interface FeedbackListResponse {
   github_bridge_enabled: boolean
   github_repo?: string
 }
+
+// Phase-46 / Prompt 35 — per-user TOTP enrollment.
+//
+// Status response from GET /api/v1/auth/totp. The discriminator is
+// `mode`: `'open'` means the install runs without a forward-auth
+// header so per-user TOTP cannot be wired (the SPA renders an inline
+// "feature requires authenticated mode" placeholder). `'session'` means
+// per-user TOTP is available; `activated` then gates between
+// "Enrolled" and "Not enrolled" pills.
+export type TOTPStatus =
+  | { mode: 'open' }
+  | {
+      mode: 'session'
+      activated: boolean
+      last_used_at?: string
+      backup_codes_remaining: number
+    }
+
+// Returned by POST /api/v1/auth/totp/enroll. The plain-text backup
+// codes are returned exactly once — re-enrolling generates a fresh
+// set. The SPA must surface a copy/download step before the user
+// closes the modal.
+export interface TOTPEnrollment {
+  secret: string
+  otpauth_uri: string
+  qr_data_uri: string
+  backup_codes: string[]
+  expires_at: string
+}
+
+// Returned by POST /api/v1/auth/totp/sudo. Same shape as the password
+// reauth response from prompt 31 so the SPA's reauth interceptor can
+// consume it without a discriminator.
+export interface TOTPSudoToken {
+  mode: 'session'
+  sudo_token: string
+  expires_at: string
+}
+
+// Returned by POST /api/v1/auth/totp/backup-codes/regenerate. Just a
+// fresh set of plain-text codes — the secret itself is unchanged.
+export interface TOTPBackupCodesResponse {
+  backup_codes: string[]
+}

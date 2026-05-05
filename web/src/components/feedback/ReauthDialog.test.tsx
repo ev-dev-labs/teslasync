@@ -55,6 +55,27 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+// Phase-46 / Prompt 35 — ReauthDialogRoot now consults the TOTP
+// status query to decide whether to show the TOTP tab and where to
+// route TOTP submissions. The existing tests run without a
+// QueryClientProvider, so we stub the hook with a sensible default
+// that mirrors the open-mode 501 (TOTP unavailable). Individual
+// tests below override `mockTotpStatus` when they need to exercise
+// the per-user TOTP path.
+type MockTotpStatus = {
+  data: { mode: 'open' } | { mode: 'session'; activated: boolean } | undefined
+  isError: boolean
+  isFetched: boolean
+}
+let mockTotpStatus: MockTotpStatus = {
+  data: { mode: 'open' },
+  isError: false,
+  isFetched: true,
+}
+vi.mock('@/api/hooks/useTOTP', () => ({
+  useTOTPStatus: () => mockTotpStatus,
+}))
+
 import {
   ReauthDialog,
   ReauthDialogRoot,
@@ -74,6 +95,11 @@ beforeEach(() => {
     expiresInSeconds: 600,
     isExpiringSoon: false,
     refresh: () => Promise.resolve(),
+  }
+  mockTotpStatus = {
+    data: { mode: 'open' },
+    isError: false,
+    isFetched: true,
   }
   __resetReauthDialogForTests()
   __resetSudoStateForTests()

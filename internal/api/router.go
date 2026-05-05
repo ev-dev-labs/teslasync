@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -28,6 +29,7 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
+	"github.com/pquerna/otp/totp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -132,10 +134,26 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// /auth/reauth.
 	sudoCfg := LoadSudoConfig(cfg)
 	sudoStore := database.NewSudoTokenStore(sudoCfg.TTL)
-	// TOTPVerifier left nil until prompt 35 wires the real RFC 6238
-	// implementation; until then the TOTP path returns 401
-	// INVALID_CREDENTIAL by design.
-	sudoHandler := NewSudoHandler(sudoCfg, sudoStore, nil)
+	// Phase-46 / Prompt 35 — wire the real RFC 6238 verifier so the
+	// shared TESLASYNC_SUDO_TOTP_SECRET path validates for real (and
+	// not just NULL-on-arrival as it did before). We pass a thin
+	// closure rather than a bare totp.Validate reference so any future
+	// switch to a non-default Validate variant (different period /
+	// digits / skew) only changes one line.
+	sudoTOTPVerifier := func(secret, code string) error {
+		if !totp.Validate(code, secret) {
+			return errors.New("invalid totp code")
+		}
+		return nil
+	}
+	sudoHandler := NewSudoHandler(sudoCfg, sudoStore, sudoTOTPVerifier)
+
+	// Phase-46 / Prompt 35 — per-user TOTP enrollment. Owns its own
+	// pending/active tables; mints sudo tokens via the shared sudoStore
+	// from prompt 31 so a successful per-user TOTP step-up is
+	// indistinguishable downstream from a successful password step-up.
+	totpRepo := database.NewTOTPRepo(db)
+	totpHandler := NewTOTPHandler(totpRepo, opt.Encryptor, sudoStore, cfg.Auth.ForwardAuthHeader)
 
 	// Phase-46 / Prompt 34 — Live log tail. Build a process-wide
 	// pub/sub registry for zerolog events and tee the global logger
@@ -455,6 +473,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// open mode this returns 200 mode="open" without minting
 			// anything; the dialog falls back to typed-confirmation.
 			r.Post("/reauth", sudoHandler.Reauth)
+			// Phase-46 / Prompt 35 — per-user TOTP enrollment.
+			// /totp                              GET    status pill backing
+			// /totp/enroll                       POST   start enrollment
+			// /totp/verify                       POST   confirm enrollment
+			// /totp/sudo                         POST   mint sudo token via per-user TOTP
+			// /totp                              DELETE revoke (sudo-gated)
+			// /totp/backup-codes/regenerate      POST   rotate backup codes (sudo-gated)
+			r.Route("/totp", func(r chi.Router) {
+				r.Get("/", totpHandler.GetStatus)
+				r.Post("/enroll", totpHandler.Enroll)
+				r.Post("/verify", totpHandler.Verify)
+				r.Post("/sudo", totpHandler.VerifySudo)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", totpHandler.Revoke)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/backup-codes/regenerate", totpHandler.RegenerateBackupCodes)
+			})
 		})
 
 		// Onboarding (Phase 40 / Prompt 18): first-run gate status.

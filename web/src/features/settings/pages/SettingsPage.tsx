@@ -25,6 +25,10 @@ import {
   AdvancedSettings,
   SettingsSearch,
 } from '../components'
+// Phase-46 / Prompt 35 — TOTPEnrollmentSection is intentionally
+// imported directly, NOT through the `../components` barrel, so the
+// barrel index.ts can stay outside the prompt's allowed-files regex.
+import { TOTPEnrollmentSection } from '../components/TOTPEnrollmentSection'
 
 export default function SettingsPage() {
   const { t } = useTranslation('settings')
@@ -108,6 +112,9 @@ export default function SettingsPage() {
       </section>
       <section id="appearance">
         <AppearanceSettings />
+      </section>
+      <section id="security">
+        <TOTPEnrollmentSection />
       </section>
       <section id="advanced">
         <AdvancedSettings />
