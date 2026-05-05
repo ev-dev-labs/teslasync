@@ -161,18 +161,6 @@ function maybeDispatchSessionExpired(path: string): void {
   dispatchSessionExpired()
 }
 
-// --- Token Refresh on 401 ---
-
-let _refreshing: Promise<void> | null = null
-
-async function refreshTokenOnce(): Promise<void> {
-  if (_refreshing) return _refreshing
-  _refreshing = fetch(`${getApiBase()}/api/v1/auth/refresh`, { method: 'POST' })
-    .then(res => { if (!res.ok) throw new Error('refresh failed') })
-    .finally(() => { _refreshing = null })
-  return _refreshing
-}
-
 // --- Resilient Fetch ---
 
 interface ResilientOptions extends RequestInit {
@@ -648,27 +636,15 @@ async function _doFetch<T>(
           throw new TeslaAuthExpiredError(apiErr.message || 'Tesla account disconnected')
         }
 
-        // 401 Unauthorized — attempt automatic token refresh and retry once.
-        // Bail before the refresh round-trip if the caller has already
-        // cancelled — the retry would be wasted bandwidth.
-        if (res.status === 401 && attempt === 0) {
-          if (userSignal?.aborted) {
-            throw new DOMException('aborted', 'AbortError')
-          }
-          try {
-            await refreshTokenOnce()
-            continue
-          } catch {
-            dispatchTeslaAuthExpired()
-            throw new TeslaAuthExpiredError('Session expired. Please reconnect your Tesla account in Settings.')
-          }
-        }
-
-        // Phase-46 / Prompt 05 — surface the SessionExpiredModal for any
-        // remaining 401 (post-refresh failure, structured-error 401 with
-        // an unknown code, etc.). The /auth/session polling endpoint is
-        // explicitly excluded so the polling SPA never dispatches its
-        // own hard-block on itself.
+        // Plain 401 (no TESLA_TOKEN_EXPIRED code) means the request was
+        // rejected by the auth layer for non-Tesla reasons — typically a
+        // ForwardAuth session expiry or a handler that requires a logged-in
+        // user. Auto-refreshing the *Tesla OAuth token* (the previous
+        // behaviour) does not help in either case and only generated 502
+        // spam in open-mode installs that have no Tesla account linked.
+        // Surface the SessionExpiredModal directly so the user can sign in
+        // again. The /auth/session polling endpoint is excluded so the
+        // polling SPA never dispatches its own hard-block on itself.
         if (res.status === 401) {
           maybeDispatchSessionExpired(path)
         }

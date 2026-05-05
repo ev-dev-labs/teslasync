@@ -77,6 +77,26 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
+	// No-op fast-path: when no Tesla account is linked there is nothing
+	// to refresh. Returning 200 with a `noop` status (instead of 502)
+	// stops the SPA's auto-refresh-on-401 loop from spamming the console
+	// in open-mode / unconfigured installs. The Settings UI's manual
+	// "Refresh Tesla token" button also receives a meaningful payload
+	// instead of a generic Bad Gateway.
+	existing, err := h.tokenRepo.Get(r.Context())
+	if err != nil {
+		log.Error().Err(err).Msg("failed to read token before refresh")
+		writeError(w, http.StatusInternalServerError, "failed to read token")
+		return
+	}
+	if existing == nil {
+		writeJSON(w, http.StatusOK, map[string]string{
+			"status": "noop",
+			"reason": "no tesla account linked",
+		})
+		return
+	}
+
 	tokenResp, err := h.teslaClient.RefreshTokens(r.Context())
 	if err != nil {
 		TokenRefreshes.WithLabelValues("failure").Inc()

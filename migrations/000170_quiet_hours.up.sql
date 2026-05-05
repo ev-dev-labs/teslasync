@@ -17,6 +17,18 @@
 
 BEGIN;
 
+-- Baseline migration 000142 created an earlier `notification_quiet_hours`
+-- table with a per-channel schema (channel_id / start_time / end_time).
+-- Phase-46 / Prompt 19 redesigned the feature around per-user windows, so
+-- the legacy table is incompatible with the columns and indexes below
+-- (notably the `user_id` index). Drop it first so this migration can
+-- run cleanly on databases that contain the baseline table.
+--
+-- This is forward-only: the legacy table was empty in production (no UI
+-- ever wrote to it) so dropping it loses no data. The DROP is a no-op on
+-- fresh databases that never went through 000142.
+DROP TABLE IF EXISTS notification_quiet_hours CASCADE;
+
 CREATE TABLE IF NOT EXISTS notification_quiet_hours (
   id                bigserial   PRIMARY KEY,
   user_id           text        NOT NULL,
