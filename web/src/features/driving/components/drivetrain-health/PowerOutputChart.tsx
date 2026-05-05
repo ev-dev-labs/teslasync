@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import {
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   AreaChart,
   Area,
@@ -10,12 +11,12 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
   ReferenceLine,
   AREA_DEFAULTS,
   areaGradient,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
+import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 
 import type { ChartDataPoint } from './constants';
 
@@ -26,6 +27,10 @@ interface PowerOutputChartProps {
 export function PowerOutputChart({ data }: PowerOutputChartProps) {
   const { t } = useTranslation();
 
+  // Phase-46 / Prompt 67 — URL-persisted hidden-series state for the
+  // peak vs regen power chart so users can declutter to a single trace.
+  const hidden = useHiddenSeries('drivetrain-power-output');
+
   if (data.length <= 1) return null;
 
   return (
@@ -34,6 +39,7 @@ export function PowerOutputChart({ data }: PowerOutputChartProps) {
         title={t('drivetrain.powerOutput', 'Power Output History')}
         subtitle={t('drivetrain.powerOutputSub', 'Peak and regen power per drive over time')}
         ariaLabel={t('drivetrain.powerOutput.aria', 'Per-drive peak and regen motor power output history area chart')}
+        chartKey="drivetrain-power-output"
         data={data.map((d) => ({
           date: d.date,
           power_max_kw: d.powerMax,
@@ -62,13 +68,14 @@ export function PowerOutputChart({ data }: PowerOutputChartProps) {
               }}
             />
             <Tooltip content={<ChartTooltip />} />
-            <Legend />
+            <ChartLegend state={hidden} />
             <Area
               {...AREA_DEFAULTS}
               dataKey="powerMax"
               name={t('drivetrain.powerMax', 'Peak Power (kW)')}
               stroke="#8b5cf6"
               fill="url(#dtPwrMaxGrad)"
+              hide={hidden.isHidden('powerMax')}
             />
             <Area
               {...AREA_DEFAULTS}
@@ -76,6 +83,7 @@ export function PowerOutputChart({ data }: PowerOutputChartProps) {
               name={t('drivetrain.powerMin', 'Regen Power (kW)')}
               stroke="#ef4444"
               fill="url(#dtPwrMinGrad)"
+              hide={hidden.isHidden('powerMin')}
             />
             <ReferenceLine y={0} stroke="#64748b" strokeDasharray="2 2" />
           </AreaChart>

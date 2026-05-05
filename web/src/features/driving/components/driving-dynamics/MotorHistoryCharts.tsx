@@ -4,6 +4,7 @@ import { Activity } from 'lucide-react';
 
 import {
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   ChartGradient,
   AreaChart,
@@ -20,6 +21,7 @@ import {
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import type { MotorSnapshot } from '@/api/types';
 
 interface MotorHistoryChartsProps {
@@ -30,6 +32,11 @@ interface MotorHistoryChartsProps {
 
 export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsProps) {
   const { t } = useTranslation();
+
+  // Phase-46 / Prompt 67 — URL-persisted hidden-series state for the
+  // power-vs-regen trace; users often want to isolate one or the other
+  // when looking at a regen-heavy descent or a sustained throttle pull.
+  const powerHidden = useHiddenSeries('motor-power-history');
 
   const powerChartData = useMemo(
     () =>
@@ -78,6 +85,7 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
           subtitle={t('dynamics.powerOverTimeDesc', 'Drive and regen power from motor telemetry')}
           ariaLabel={t('dynamics.powerOverTime.aria', 'Motor power and regen over time area chart')}
           height={280}
+          chartKey="motor-power-history"
           exportable
           exportFilename="motor-power"
         >
@@ -92,9 +100,9 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
                 <XAxis dataKey="time" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} />
                 <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit=" kW" />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
-                <Area {...AREA_DEFAULTS} dataKey="power" stroke="#06b6d4" fill="url(#powerAreaGrad)" name={t('dynamics.power', 'Power')} />
-                <Area {...AREA_DEFAULTS} dataKey="regen" stroke="#22c55e" fill="url(#regenAreaGrad)" name={t('dynamics.regen', 'Regen')} />
+                <ChartLegend state={powerHidden} wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
+                <Area {...AREA_DEFAULTS} dataKey="power" stroke="#06b6d4" fill="url(#powerAreaGrad)" name={t('dynamics.power', 'Power')} hide={powerHidden.isHidden('power')} />
+                <Area {...AREA_DEFAULTS} dataKey="regen" stroke="#22c55e" fill="url(#regenAreaGrad)" name={t('dynamics.regen', 'Regen')} hide={powerHidden.isHidden('regen')} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (

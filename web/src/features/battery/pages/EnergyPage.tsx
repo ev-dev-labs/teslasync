@@ -6,7 +6,7 @@ import { Zap, Leaf, Fuel, Sun, Moon, ArrowRight, Activity } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Select, DataTable, type Column } from '@/components/ui';
 import {
-  RadialGauge, ChartContainer, ChartTooltip, ChartGradient,
+  RadialGauge, ChartContainer, ChartLegend, ChartTooltip, ChartGradient,
   chartGrid, axisTickSm, renderAnnotationLines,
   AreaChart, Area, BarChart, Bar, ComposedChart, Line, ReferenceLine,
   PieChart, Pie, Cell, Brush, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -25,6 +25,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
+import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
@@ -148,6 +149,10 @@ export default function EnergyPage() {
   const [startDate, setStartDate] = useUrlString('from', defaultStartDate);
   const [endDate, setEndDate] = useUrlString('to', defaultEndDate);
   const setRangeBatch = useUrlBatch();
+
+  /* Phase-46 / Prompt 67 — URL-persisted hidden-series state for the
+     two-series energy/efficiency composed chart. */
+  const energyCostHidden = useHiddenSeries('energy-cost-daily');
 
   /* ── Data fetching ────────────────────────────────────────────── */
   const {
@@ -461,6 +466,7 @@ export default function EnergyPage() {
                 ariaLabel={t('energy.chart.energyCostDaily.aria', 'Daily energy and efficiency composed chart with bars and a line')}
                 exportable
                 exportFilename="energy-cost-daily"
+                chartKey="energy-cost-daily"
                 annotations={{ vehicleId, scope: 'energy', chartId: 'energy-cost-daily' }}
               >
                 {({ annotations: chartAnnotations }) => (
@@ -483,6 +489,7 @@ export default function EnergyPage() {
                               <YAxis yAxisId="left" tick={axisTickSm} tickLine={false} axisLine={false} />
                               <YAxis yAxisId="right" orientation="right" tick={axisTickSm} tickLine={false} axisLine={false} />
                               <Tooltip content={<ChartTooltip />} />
+                              <ChartLegend state={energyCostHidden} />
                               {renderAnnotationLines(chartAnnotations, (ts) => ts)}
                               <Bar
                                 yAxisId="left"
@@ -492,6 +499,7 @@ export default function EnergyPage() {
                                 fillOpacity={0.6}
                                 radius={[3, 3, 0, 0]}
                                 animationDuration={800}
+                                hide={energyCostHidden.isHidden('energy_kwh')}
                               />
                               <Line
                                 {...AREA_DEFAULTS}
@@ -500,6 +508,7 @@ export default function EnergyPage() {
                                 name={efficiencyUnit}
                                 stroke="#10b981"
                                 animationDuration={800}
+                                hide={energyCostHidden.isHidden('efficiency_wh_per_mi')}
                               />
                               {syncedX != null && (
                                 <ReferenceLine

@@ -10,7 +10,7 @@ import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel, Select, Button } from '@/components/ui';
 import { MetricCard, SavedViewMenu, DataFreshnessAuto } from '@/components/data-display';
 import {
-  RadialGauge, ChartTooltip, ChartContainer,
+  RadialGauge, ChartTooltip, ChartContainer, ChartLegend,
   chartGrid, axisTickSm,
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -27,6 +27,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
+import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
@@ -97,6 +98,11 @@ export default function StatisticsPage() {
 
   // Phase-45/23 — reactive chart palette (CB-safe / neon per user pref).
   const palette = useChartPalette();
+
+  // Phase-46 / Prompt 67 — URL-persisted hidden-series state for the
+  // multi-vehicle distance/energy bar chart so users can isolate one
+  // metric across the fleet.
+  const fleetCompareHidden = useHiddenSeries('fleet-vehicle-comparison');
 
   /* ── Data hooks ────────────────────────────────────────────────── */
   const statsQuery = useQuery({
@@ -266,6 +272,7 @@ export default function StatisticsPage() {
             <ChartContainer
               title={t('statistics.vehicleComparison', 'Vehicle Comparison')}
               ariaLabel={t('statistics.vehicleComparison.aria', 'Distance and energy bar chart comparing all vehicles in the fleet')}
+              chartKey="fleet-vehicle-comparison"
               exportable
               exportFilename="vehicle-comparison"
             >
@@ -277,9 +284,9 @@ export default function StatisticsPage() {
                       <XAxis dataKey="name" tick={axisTickSm} tickLine={false} axisLine={false} />
                       <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                       <Tooltip content={<ChartTooltip />} />
-                      <Legend />
-                      <Bar dataKey="distance" name={`${t('statistics.distance', 'Distance')} (${distanceUnit})`} fill={palette[0]} radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="energy" name={t('statistics.energy', 'Energy (kWh)')} fill={palette[1]} radius={[4, 4, 0, 0]} />
+                      <ChartLegend state={fleetCompareHidden} />
+                      <Bar dataKey="distance" name={`${t('statistics.distance', 'Distance')} (${distanceUnit})`} fill={palette[0]} radius={[4, 4, 0, 0]} hide={fleetCompareHidden.isHidden('distance')} />
+                      <Bar dataKey="energy" name={t('statistics.energy', 'Energy (kWh)')} fill={palette[1]} radius={[4, 4, 0, 0]} hide={fleetCompareHidden.isHidden('energy')} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

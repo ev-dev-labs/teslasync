@@ -14,12 +14,14 @@ import { getLangDir, textAnchorForDir, type Direction } from '@/lib/i18nDir';
 import { AnnotationList } from './AnnotationList';
 import { AddAnnotationPopover } from './AddAnnotationPopover';
 import { ChartExportMenu } from './ChartExportMenu';
+import { ChartHiddenSeriesProvider } from './ChartHiddenSeriesContext';
 import {
   useChartAnnotationsAsData,
   useCreateAnnotation,
   useDeleteAnnotation,
 } from '@/api/hooks/useAnnotations';
 import type { AnnotationCategory, AnnotationScope, DataAnnotation } from '@/types/annotations';
+import type { HiddenSeriesState } from '@/hooks/useHiddenSeries';
 
 /**
  * Phase 40 / Prompt 43 — annotation integration helper. When `annotations` is
@@ -41,6 +43,14 @@ export interface ChartContainerRenderProps {
   /** True when the user has toggled annotations off. Children should skip
    *  rendering `<ReferenceLine>`s in this case. */
   hidden: boolean;
+  /**
+   * Phase-46 / Prompt 67 — URL-persisted hidden-series toggle state. Only
+   * non-null when the surrounding `<ChartContainer>` was given a
+   * `chartKey` prop (which both opts the chart into URL state AND sets up
+   * a `<ChartHiddenSeriesContext>` for the legend). Pages typically wire
+   * the returned state into `<Line hide={hiddenSeries?.isHidden('foo')}/>`.
+   */
+  hiddenSeries: HiddenSeriesState | null;
 }
 
 type ChartContainerChildren =
@@ -133,6 +143,23 @@ interface ChartContainerProps {
    * ResizeObserver so consumers don't need to wire anything else.
    */
   fullscreen?: boolean;
+  /**
+   * Phase-46 / Prompt 67 — stable identifier used for URL-persisted
+   * legend-toggle state. When set, `<ChartContainer>` calls
+   * `useHiddenSeries(chartKey)` and exposes the resulting state both
+   * via the function-children render-prop (`{ hiddenSeries }`) and
+   * via `<ChartHiddenSeriesContext>` so a context-aware `<ChartLegend>`
+   * inside the chart can toggle series without explicit prop passing.
+   *
+   * Pages typically use the render-prop form to wire `hide={…}` on
+   * each `<Line>`/`<Bar>`/`<Area>` because Recharts traverses its
+   * direct children synchronously and won't see hooks in arbitrary
+   * wrapper components.
+   *
+   * The audit script `audit:chart-legend` warns when a chart with
+   * ≥ 2 line/bar/area series is missing this prop.
+   */
+  chartKey?: string;
 }
 
 /**
@@ -198,6 +225,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       data,
       dataColumns,
       fullscreen,
+      chartKey,
     },
     ref,
   ) {
@@ -301,9 +329,13 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     // actually rendered with data.
     const showExportMenu = exportableResolved && !loading && !empty;
 
-    const childrenContent = isFunctionChildren(children)
-      ? children({ annotations: visibleAnnotations, hidden })
-      : children;
+    // Phase-46 / Prompt 67 — `childrenContent` is now a function of the
+    // resolved `hiddenSeries` state because the function-children
+    // render-prop receives it. Non-function children ignore the parameter.
+    const renderChildren = (hiddenSeries: HiddenSeriesState | null) =>
+      isFunctionChildren(children)
+        ? children({ annotations: visibleAnnotations, hidden, hiddenSeries })
+        : children;
 
     // Phase-46 / Prompt 13 — does the caller supply enough info to
     // render the SR/forced-colors fallback table? When `data` is set
@@ -469,12 +501,16 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               message={t('chart.noData', 'No data available')}
             />
           ) : (
-            <SectionErrorBoundary
-              name={`chart:${title}`}
-              fallbackTitle={t('errors.section.chartTitle', 'This chart failed to load')}
-            >
-              {childrenContent}
-            </SectionErrorBoundary>
+            <ChartHiddenSeriesProvider chartKey={chartKey}>
+              {(hiddenSeries) => (
+                <SectionErrorBoundary
+                  name={`chart:${title}`}
+                  fallbackTitle={t('errors.section.chartTitle', 'This chart failed to load')}
+                >
+                  {renderChildren(hiddenSeries)}
+                </SectionErrorBoundary>
+              )}
+            </ChartHiddenSeriesProvider>
           )}
         </div>
 

@@ -11,7 +11,7 @@ import {
 } from '@/components/ui';
 import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import {
-  RadialGauge, ChartContainer, ChartTooltip, renderAnnotationLines,
+  RadialGauge, ChartContainer, ChartLegend, ChartTooltip, renderAnnotationLines,
   chartGrid, axisTickSm, CHART_COLORS,
   AreaChart, Area, ComposedChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
@@ -24,6 +24,7 @@ import { FadeIn } from '@/components/motion';
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -110,6 +111,10 @@ export default function BatteryDegradationPage() {
 
   /* Degradation data (for prediction, risk factors, trend) */
   const { data: degradation } = useBatteryDegradation(activeIdStr);
+
+  /* Phase-46 / Prompt 67 — URL-persisted hidden-series state for the
+     trend chart so users can declutter (and share) the projection view. */
+  const trendHidden = useHiddenSeries('battery-degradation-trend');
 
   /* Chart data */
   const rangeData = useMemo(() => {
@@ -379,6 +384,7 @@ export default function BatteryDegradationPage() {
             title={t('battery.degradation.trendTitle', 'Health Trend & Projection')}
             ariaLabel={t('battery.degradation.trendTitle.aria', 'Battery health trend and 95% confidence projection chart')}
             height={300}
+            chartKey="battery-degradation-trend"
             annotations={{ vehicleId: activeId, scope: 'battery', chartId: 'battery-degradation-trend' }}
           >
             {({ annotations: chartAnnotations }) => (
@@ -394,7 +400,7 @@ export default function BatteryDegradationPage() {
                   <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
                   <YAxis domain={[60, 100]} tick={axisTickSm} tickLine={false} axisLine={false} unit="%" />
                   <Tooltip content={<ChartTooltip />} />
-                  <Legend />
+                  <ChartLegend state={trendHidden} />
                   <ReferenceLine
                     y={80}
                     stroke="#f59e0b"
@@ -422,6 +428,7 @@ export default function BatteryDegradationPage() {
                     fill="url(#ciBand)"
                     name={t('battery.degradation.confidence', '95% Confidence')}
                     connectNulls={false}
+                    hide={trendHidden.isHidden('confidence_band')}
                   />
                   <Line
                     {...AREA_DEFAULTS}
@@ -431,6 +438,7 @@ export default function BatteryDegradationPage() {
                     strokeWidth={2.5}
                     dot={{ fill: '#10b981', r: 3 }}
                     connectNulls={false}
+                    hide={trendHidden.isHidden('health')}
                   />
                   <Line
                     {...AREA_DEFAULTS}
@@ -439,6 +447,7 @@ export default function BatteryDegradationPage() {
                     stroke="#a855f7"
                     strokeDasharray="8 4"
                     connectNulls={false}
+                    hide={trendHidden.isHidden('projected')}
                   />
                   {/*
                     Phase 40 / Prompt 26: brush enables zooming into specific

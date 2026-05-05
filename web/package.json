@@ -34,6 +34,7 @@
     "audit:bg-polling": "node scripts/audit-background-polling.mjs",
     "audit:export-adoption": "node scripts/audit-export-adoption.mjs",
     "audit:virtualization": "node scripts/audit-virtualization.mjs",
+    "audit:chart-legend": "node scripts/audit-chart-legend-toggle.mjs",
     "audit:skeletons": "node scripts/auditSkeletons.mjs",
     "audit:motion": "node scripts/auditMotionTokens.mjs",
     "audit:palette": "node scripts/auditChartPalette.mjs",
