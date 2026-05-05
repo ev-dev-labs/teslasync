@@ -406,6 +406,24 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       description: t('search.entries.advanced.restoreConfirms.desc', 'Re-enable “Don’t ask again” prompts you previously silenced.'),
       keywords: ['confirm', 'dialog', 'silence', 'dont ask', 'reset', 'restore'],
     },
+
+    // ── Backup & Restore (Phase-46 / Prompt 36) ─────────────────────
+    {
+      id: 'backup.export',
+      href: '/settings#backup',
+      section: 'backup',
+      title: t('search.entries.backup.export.title', 'Export settings as JSON'),
+      description: t('search.entries.backup.export.desc', 'Download a portable bundle of general settings, alert rules, geofences, and quiet-hours windows.'),
+      keywords: ['backup', 'download', 'json', 'save', 'snapshot', 'configuration'],
+    },
+    {
+      id: 'backup.import',
+      href: '/settings#backup',
+      section: 'backup',
+      title: t('search.entries.backup.import.title', 'Import settings from JSON'),
+      description: t('search.entries.backup.import.desc', 'Restore alert rules, geofences, and quiet-hours windows from a previously exported bundle.'),
+      keywords: ['restore', 'upload', 'json', 'load', 'recover', 'configuration'],
+    },
   ];
 }
 

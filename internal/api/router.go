@@ -165,6 +165,20 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	installAdminLogStreamTap(logTap)
 	logStreamHandler := NewAdminLogStreamHandler(logTap)
 	settingsHandler := NewSettingsHandler(db)
+	// Phase-46 / Prompt 36 — settings export/import. The serializer
+	// fans out across four repos (settings, alert_rules, geofences,
+	// notification_quiet_hours); construct it once + share between
+	// the export + import handlers so future repos can be added in a
+	// single place. Apply is sudo-gated by RequireSudo on the import
+	// route below; export is read-only and runs unguarded.
+	settingsSerializer := database.NewSettingsSerializer(
+		database.NewSettingsRepo(db),
+		database.NewAlertRuleRepo(db),
+		database.NewGeofenceRepo(db),
+		database.NewQuietHoursRepo(db),
+	)
+	settingsExportHandler := NewSettingsExportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
+	settingsImportHandler := NewSettingsImportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
 	dashboardLayoutHandler := NewDashboardLayoutHandler(db)
 	chartAnnotationHandler := NewChartAnnotationHandler(db)
 	pinnedHandler := NewPinnedHandler(db)
@@ -696,6 +710,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Put("/settings/polling-config", settingsHandler.UpdatePollingConfig)
 			r.Get("/settings/dashboard-layouts", settingsHandler.GetDashboardLayouts)
 			r.Put("/settings/dashboard-layouts", settingsHandler.UpdateDashboardLayouts)
+			// Phase-46 / Prompt 36 — JSON bundle export + import.
+			// Export is read-only; import is sudo-gated because a
+			// large alert-rule replay or bulk geofence rewrite is a
+			// destructive action that should always carry a fresh
+			// credential. Both routes carry the parent rate limit.
+			r.Get("/settings/export", settingsExportHandler.Export)
+			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/settings/import", settingsImportHandler.Import)
 		})
 
 		// Named dashboard layout library (Phase 40 / Prompt 30).

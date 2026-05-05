@@ -29,6 +29,10 @@ import {
 // imported directly, NOT through the `../components` barrel, so the
 // barrel index.ts can stay outside the prompt's allowed-files regex.
 import { TOTPEnrollmentSection } from '../components/TOTPEnrollmentSection'
+// Phase-46 / Prompt 36 — Settings export/import. Same direct-import
+// rationale as TOTPEnrollmentSection above; the components barrel
+// is not in the prompt's allowed-files regex.
+import { SettingsExportImport } from '../components/SettingsExportImport'
 
 export default function SettingsPage() {
   const { t } = useTranslation('settings')
@@ -118,6 +122,9 @@ export default function SettingsPage() {
       </section>
       <section id="advanced">
         <AdvancedSettings />
+      </section>
+      <section id="backup">
+        <SettingsExportImport />
       </section>
 
       {/* Data Export — link */}
