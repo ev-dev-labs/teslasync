@@ -8,6 +8,8 @@ export { Tabs, type TabsProps, type TabItem } from './Tabs';
 export { GlassPanel, type GlassPanelProps } from './GlassPanel';
 export { StatusPill, type StatusPillProps } from './StatusPill';
 export { Toggle, type ToggleProps } from './Toggle';
+export { Slider, type SliderProps } from './Slider';
+export { RangeSlider, type RangeSliderProps } from './RangeSlider';
 export { Tooltip, type TooltipProps } from './Tooltip';
 export { HelpTooltip, type HelpTooltipProps } from './HelpTooltip';
 export { PinButton, type PinButtonProps } from './PinButton';
