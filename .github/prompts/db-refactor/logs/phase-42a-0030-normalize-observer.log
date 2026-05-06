@@ -1,0 +1,302 @@
+phase-42a / 0030-normalize-observer
+====================================
+
+Severity: Gate
+Atomic: yes
+Delegation: FORBIDDEN
+Predecessor: phase-42a-0022-router-writers-unit-history.log (EXIT=0/STATUS=DONE)
+
+Allowed files to change:
+  - internal/tesla/normalize/observer.go
+  - internal/tesla/normalize/observer_test.go
+  - internal/tesla/normalize/pipeline.go
+  - internal/tesla/normalize/pipeline_test.go
+  - internal/tesla_pipeline/side_effects_observer.go
+  - internal/tesla_pipeline/side_effects_observer_test.go
+  - this log
+
+What this prompt does NOT do:
+  - Wire SideEffectsObserver into production cmd/teslasync (deferred to 0050 cutover)
+  - Delete legacy (*TelemetryHandler).ProcessSignals (deferred to 0090 legacy deletion)
+  - Touch routing.yaml or any router writers
+  - Touch the codec layer
+  - Wire MQTT subscriber to use the pipeline (deferred to 0050)
+  - Wire DLQ + manual-ack (deferred to 0040)
+
+=== PREFLIGHT ===
+HEAD: 15d52098749c0e6ecb4ca4ca58acc77b4874c506
+git status --short (pre-prompt):
+  (clean working tree)
+Predecessor log exists: True
+Predecessor log final block:
+  EXIT=0
+  STATUS=DONE
+
+=== AUDIT_EVIDENCE ===
+
+Check 1: current normalize.New signature (locked target before extension)
+  command: Select-String -Path internal/tesla/normalize/pipeline.go -Pattern '^func New'
+  result:
+    func New(histRepo unithistory.Repo, r Routable, log zerolog.Logger) *Pipeline {
+  expected: 3-arg constructor with no observer slot -> CONFIRMED
+
+Check 2: codec.Atomic shape (no SIValue field; Value carries either raw or post-conversion value)
+  command: Select-String -Path internal/tesla/codec/types.go -Pattern '^type Atomic struct' -Context 0,5
+  result:
+    type Atomic struct {
+        Field     string
+        Value     any
+        EmittedAt time.Time
+        VehicleID string
+    }
+  note: Decision #8 references 'a.SIValue'. The actual field is 'Value';
+        for unit-bearing fields it is mutated in-place by processOne after
+        toSI conversion. The observer therefore sees SI values.
+
+Check 3: legacy 5 callback signatures (from internal/api/telemetry_handler_ingest.go)
+  - liveSignalStore.UpdateNonBlocking(ctx, vehicleID, signals)        (line 40)
+  - signalHistoryWriter.Append(vehicleID, signals)                    (line 131)
+  - broadcastSSE(buildSSEPayload(vehicleID, ts, hotRows))             (line 182)
+  - sessionTracker.ProcessSignals(ctx, vehicleID, vin, signals, accum) (line 232)
+  - alertEvaluator.Evaluate(ctx, vehicleID, vin, signals, accum)       (line 233)
+  - fsmHandler.ProcessSignals(bgCtx, vehicleID, signalsCopy)          (line 248)
+  Decision #7 names UpdateAll for the live-store interface; the production
+  adapter at 0050 will bridge UpdateAll -> UpdateNonBlocking.
+
+Check 4: TestSinglePipelineInvariant reflection assertion (must continue to pass)
+  command: Select-String -Path internal/tesla/normalize/normalize_test.go -Pattern 'fn.Name.Name == "Process"' -Context 0,1
+  result:
+    if fn.Name.Name == "Process" {
+        continue
+    }
+  expected: Process is the single allowed exported method on *Pipeline
+            returning error -> CONFIRMED. Variadic observer extension to
+            New keeps the public surface = (New, Process), so the
+            invariant test stays green without modification.
+
+Check 5: existing callers of normalize.New across the repo
+  command: Select-String -Path internal -Pattern 'normalize\.New\(' -Recurse
+  result:
+    internal/mqtt/mqtt.go:894 (in a comment block; no live call)
+  note: production wiring is deferred to 0050 per the prompt scope. The
+        only live New callers are in normalize/normalize_test.go and the
+        new normalize/observer_test.go + normalize/pipeline_test.go
+        files added by this prompt. Variadic extension is therefore
+        source-compatible.
+
+=== DESIGN ===
+
+Goal: bridge codec atomics -> legacy 5 cross-cutting effects without
+coupling normalize.Pipeline to FSM / sessions / alerts. Pattern locked
+in 0000 Decision #1: AtomicsObserver injected via variadic constructor.
+
+normalize package surface (post-extension):
+  New(histRepo, r, log, observers ...AtomicsObserver) *Pipeline
+  Pipeline.Process(ctx, payload, vehicleIntID) error
+  type AtomicsObserver interface {
+      OnPayloadProcessed(ctx, vehicleID int64, atomics []codec.Atomic)
+  }
+
+Lifecycle inside processAtomics:
+  1. sortAtomicsSettingUnitFirst(atomics)
+  2. for each i in atomics: ctx-check -> processOne(ctx, &atomics[i], vehicleIntID)
+     - Setting*Unit short-circuit: Value untouched (proto enum preserved)
+     - toSI success: atomics[i].Value mutated in place to SI value, then routed
+     - toSI failure: Value left as-is, atomic NOT routed
+  3. for each observer in registration order:
+     - notifyObserver wraps the call in defer/recover so an observer panic
+       is logged + counted but does NOT fail Process
+  4. return nil
+
+processOne signature change: now takes *codec.Atomic so the in-place
+mutation in step 2 is observable to step 3. The reflective
+TestSinglePipelineInvariant only inspects EXPORTED methods, so a private
+signature change is invisible to the gate.
+
+Observer execution ordering (locked by Decision #5):
+  observers run sequentially in registration order. Production wiring
+  registers exactly one observer (SideEffectsObserver). Test wiring may
+  register more.
+
+SideEffectsObserver call order inside OnPayloadProcessed (per Decision
+#10 (e) + (f) and the prompt's Step 4):
+  atomics -> signals (map[string]any) using SIValue per atomic
+  vin = vinResolver.VINByID(ctx, vehicleID); on error -> SKIP sessions+alerts only
+       (live store / history / FSM / SSE do not need vin and proceed)
+  1. live.UpdateAll(ctx, vehicleID, signals)         L1 store
+  2. history.Append(vehicleID, signals)              durable history
+  3. fsm.ProcessSignals(ctx, vehicleID, signals)     FSM (may read live)
+  4. sessions.ProcessSignals(ctx, vehicleID, vin, signals, signals)
+     alerts.Evaluate(ctx, vehicleID, vin, signals, signals)
+     (the accumulator parameter is the SAME per-payload map per Decision
+     #8; the legacy cross-batch accumulator is NOT preserved in the
+     bridge — a follow-up prompt may add a tracker if observed
+     regressions surface)
+  5. broadcastSSE(map[string]any{...}) LAST so the wire view reflects
+     all upstream side-effects
+
+Escape hatch evaluation (variadic source-compat):
+  Existing live callers of New: 4 in normalize_test.go (TestPipelineHappyPath,
+  TestSettingUnitProcessedFirstInSamePayload, plus two more added in this
+  prompt's pipeline_test.go + observer_test.go). All compile unchanged
+  because variadic observers are an additive parameter. NO call sites
+  exceed the 5-site escape-hatch threshold; NewWithObservers shim NOT
+  required. New stays a single constructor with a variadic tail.
+
+=== IMPLEMENTATION ===
+
+Files written/modified (4 files in internal/tesla/normalize/, 2 in internal/tesla_pipeline/):
+
+  internal/tesla/normalize/observer.go (NEW, 73 lines)
+    - type AtomicsObserver interface { OnPayloadProcessed(ctx, vehicleID, atomics) }
+    - Doc comment locks: invocation EXACTLY ONCE per successful payload
+      AFTER the route loop; NOT called on codec.Decode failure; observers
+      MUST NOT mutate the slice (no defensive copy by Pipeline);
+      sequential registration-order execution; panic recovery wraps
+      observer invocation; no error return -- observer-internal failures
+      are the implementation's own concern.
+
+  internal/tesla/normalize/pipeline.go (MODIFIED)
+    - Pipeline gains observers []AtomicsObserver field with godoc
+      explaining the architectural seam (ADR-004 #11) and the
+      defensive-copy rationale.
+    - New(...) extended to variadic observers ...AtomicsObserver tail;
+      defensive copy of the variadic slice happens at construction so a
+      caller mutating its own backing slice cannot reorder observer
+      registration.
+    - processAtomics: index-based loop so processOne can mutate
+      atomics[i].Value in place after a successful toSI conversion;
+      observer fan-out runs at the bottom of the function, after the
+      route loop drains; ctx-cancellation between atomics still applies.
+    - processOne: receiver argument switched from value codec.Atomic to
+      *codec.Atomic so the SI substitution is observable to the
+      observer fan-out. Setting*Unit short-circuit and toSI-failure
+      paths leave Value unchanged (the codec-original is what
+      observers see for those cases).
+    - notifyObserver: new helper that wraps a single observer call in
+      defer/recover and logs at WARN on panic; subsequent observers
+      still run.
+
+  internal/tesla/normalize/observer_test.go (NEW, 14080 chars)
+    - Test fakes: recordingObserver (panic-aware, ordering-aware via
+      shared atomicCounter), atomicCounter helper.
+    - TestPipelineObserver_InvokedWithPostRouteAtomicsSlice — Decision
+      #9(a) + verifies SI substitution (Odometer 100km -> 100000m
+      visible to observer); pass-through fields retain codec-original
+      Value; Setting*Unit retains proto enum Value.
+    - TestPipelineObserver_NotInvokedOnDecodeFailure — Decision #9(b)
+      using Process(garbage bytes) which fails proto.Unmarshal under
+      ErrPayloadDrop; observer must report 0 calls.
+    - TestPipelineObserver_PanicRecoveredAndLogged — Decision #9(c) +
+      verifies WARN log (level + value + body); subsequent observers
+      still run after a prior observer panics.
+    - TestPipelineObserver_RunInRegistrationOrder — Decision #9(d) using
+      shared atomicCounter; ticks 1/2/3 by registration order.
+    - TestPipelineObserver_ZeroObserversNoOp — variadic source-compat:
+      callers that pass no observers still drive the dispatch loop.
+    - TestPipelineObserver_ConstructorDefensivelyCopiesObserverSlice —
+      construction-guard: caller mutating its own slice after New
+      cannot reorder observer registration.
+
+  internal/tesla/normalize/pipeline_test.go (NEW, ~4 kB)
+    - TestPipelineProcess_ObserverInvokedFromBytesEntry — exercises the
+      full Process(ctx, bytes, vehicleID) entry: proto.Marshal a real
+      ftproto.Payload with VehicleSpeed + Gear, seed unit-history with
+      a km row so VehicleSpeed converts cleanly, observe both atomics
+      reaching the observer post-route. Pinned separately from the
+      processAtomics-driven tests so a future Process delegation
+      regression surfaces here.
+
+  internal/tesla_pipeline/side_effects_observer.go (NEW, ~13 kB)
+    - 6 callback interfaces: LiveSignalStore.UpdateAll,
+      SignalHistoryWriter.Append, FSMHandler.ProcessSignals,
+      SessionTracker.ProcessSignals (vin + accumulated),
+      AlertEvaluator.Evaluate (vin + accumulated), VINResolver.VINByID.
+    - 1 callback function type: BroadcastSSEFunc func(payload).
+    - Config struct with optional Logger + Now (clock injection).
+    - New(cfg) panics on any nil dependency.
+    - OnPayloadProcessed implements normalize.AtomicsObserver:
+        atomics -> signals (a.Field -> a.Value)
+        1. live.UpdateAll               (FSM may read live state)
+        2. history.Append
+        3. fsm.ProcessSignals
+        4. vin = vinResolver.VINByID    -- on err: SKIP sessions+alerts
+           sessions.ProcessSignals(vehicleID, vin, signals, signals)
+           alerts.Evaluate(vehicleID, vin, signals, signals)
+        5. broadcastSSE({vehicle_id, ts, signals})        -- LAST
+    - Compile-time conformance: var _ normalize.AtomicsObserver = (*SideEffectsObserver)(nil).
+    - SSE payload shape intentionally differs from legacy
+      {vehicle_id, ts, tables} -- documented in code that legacy SSE
+      is owned by the legacy ProcessSignals path until phase-42a/0090
+      retires it.
+
+  internal/tesla_pipeline/side_effects_observer_test.go (NEW, ~26 kB)
+    - 7 test fakes (live, history, fsm, sessions, alerts, vin, broadcaster)
+      with shared callRecorder for ordering ticks.
+    - TestSideEffectsObserver_AtomicsConvertedToSignalsMap — Decision
+      #10(a): 3 atomics -> 3-key map with mixed types (float64, bool,
+      string).
+    - TestSideEffectsObserver_AllCallbacksInvokedOncePerPayload —
+      Decision #10(b): 6 invocations + VIN lookup all =1.
+    - TestSideEffectsObserver_VINLookupInvokedOncePerPayload — Decision
+      #10(c).
+    - TestSideEffectsObserver_FSMAndSessionsAndAlertsShareSignalsMap —
+      Decision #10(d): mutate FSM's map and observe the change in
+      sessions' and alerts' maps (pointer-equality through
+      map-mutation channel); accumulated == signals per Decision #8.
+    - TestSideEffectsObserver_LiveStoreCalledBeforeFSM — Decision #10(e).
+    - TestSideEffectsObserver_SSECalledLast — Decision #10(f).
+    - TestSideEffectsObserver_FullCallOrderLivesUpToDesignContract —
+      composite ordering pin: live(1) < history(2) < fsm(3) <
+      {sessions, alerts}(4..5) < sse(6).
+    - TestSideEffectsObserver_VINLookupFailureSkipsSessionsAndAlertsOnly
+      — partial-failure semantics.
+    - TestSideEffectsObserver_LiveStoreErrorDoesNotFailChain — error
+      logged at WARN, downstream callbacks still run.
+    - TestSideEffectsObserver_SSEPayloadShape — wire shape includes
+      vehicle_id, ts (frozen clock), signals map.
+    - TestSideEffectsObserver_DoesNotMutateAtomicsSlice — observer
+      contract: MUST NOT mutate the caller's slice.
+    - TestSideEffectsObserver_EmptyAtomicsStillRunsAllCallbacks —
+      empty signals map still propagates through all 6 callbacks.
+    - TestNew_NilDependenciesPanic — 7 sub-cases, one per dependency.
+    - TestNew_DefaultClockUsesWallTime — Now: nil exercises wall-clock fallback.
+
+=== GATE ===
+
+Gate 1: go build ./internal/tesla/normalize/... ./internal/tesla_pipeline/...
+
+exit=0
+PASS
+
+Gate 2: go vet ./internal/tesla/normalize/... ./internal/tesla_pipeline/...
+
+exit=0
+PASS
+
+Gate 3: go test -count=1 -race ./internal/tesla/normalize/... ./internal/tesla_pipeline/...
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/normalize	2.465s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla_pipeline	2.446s
+
+exit=0
+PASS
+
+Gate 4: git status --short -- only allowed files changed?
+ M internal/tesla/normalize/pipeline.go
+?? internal/tesla/normalize/observer.go
+?? internal/tesla/normalize/observer_test.go
+?? internal/tesla/normalize/pipeline_test.go
+?? internal/tesla_pipeline/
+
+disallowed-files=0
+PASS
+
+
+=== COMMIT ===
+HEAD=d2f1bc00
+branch=refactor/signals-rewrite
+files=7 (1974+ / 11-)
+message=feat(tesla): add AtomicsObserver + SideEffectsObserver for pipeline side-effects
+
+EXIT=0
+STATUS=DONE

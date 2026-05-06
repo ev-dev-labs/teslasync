@@ -106,27 +106,68 @@ type Pipeline struct {
 	// is exposed as a struct field so a future test or out-of-process
 	// renderer can substitute its own registry.
 	metrics *Metrics
+
+	// observers is the registered AtomicsObserver list invoked once
+	// per successful payload AFTER the route loop in processAtomics
+	// has drained every atomic. Per ADR-004 #11 (added in
+	// Phase-42a/0000) this is the architectural seam for the legacy
+	// cross-cutting effects (live store, history append, FSM
+	// dispatch, sessions+alerts, SSE fanout) that do not belong
+	// inside a per-destination router.Writer. Production wiring
+	// registers exactly one observer (tesla_pipeline.SideEffectsObserver);
+	// test wiring may register multiple to assert ordering or
+	// isolation.
+	//
+	// Stored as a slice (rather than a single observer) so the test
+	// suite can assert registration-order semantics without an
+	// indirection layer, and so a future observer (e.g. a metrics
+	// shim or an audit-log tap) can be added without rewriting the
+	// production wiring.
+	observers []AtomicsObserver
 }
 
 // New constructs a Pipeline. histRepo and r MUST be non-nil; a
 // zero-value zerolog.Logger is acceptable (logs go to /dev/null).
+// Zero or more AtomicsObserver values may be registered; they are
+// invoked sequentially in registration order at the bottom of
+// processAtomics — see the AtomicsObserver doc comment in
+// observer.go for the full contract.
 //
 // Returning a non-pointer error here would be a constructor-time
 // invariant violation, but Pipeline has no fallible setup, so New
 // is total: misuse panics. This matches the bootstrap.New + router.New
 // contracts in the same family of packages.
-func New(histRepo unithistory.Repo, r Routable, log zerolog.Logger) *Pipeline {
+//
+// The variadic observers tail keeps the constructor source-compatible
+// with the pre-Phase-42a/0030 callers (4 live call sites in the
+// normalize_test.go test fixture all pass through unchanged); per
+// the Phase-42a/0030 prompt's escape-hatch evaluation the count
+// stays well under the 5-site threshold that would have triggered
+// a separate NewWithObservers shim.
+func New(histRepo unithistory.Repo, r Routable, log zerolog.Logger, observers ...AtomicsObserver) *Pipeline {
 	if histRepo == nil {
 		panic("normalize: New: histRepo must be non-nil")
 	}
 	if r == nil {
 		panic("normalize: New: router must be non-nil")
 	}
+	// Defensively copy the variadic slice so a caller that mutates
+	// its own backing array after construction cannot reorder our
+	// observer registration. The cost is one allocation at process
+	// startup; the safety property is worth it because observer
+	// ordering is part of the public contract documented on
+	// AtomicsObserver.
+	var registered []AtomicsObserver
+	if len(observers) > 0 {
+		registered = make([]AtomicsObserver, len(observers))
+		copy(registered, observers)
+	}
 	return &Pipeline{
-		histRepo: histRepo,
-		router:   r,
-		log:      log,
-		metrics:  defaultMetrics,
+		histRepo:  histRepo,
+		router:    r,
+		log:       log,
+		metrics:   defaultMetrics,
+		observers: registered,
 	}
 }
 
@@ -170,16 +211,35 @@ func (p *Pipeline) Process(ctx context.Context, payload []byte, vehicleIntID int
 // unit context for the current EmittedAt is recorded BEFORE any
 // sibling unit-bearing atomic with the same EmittedAt is converted.
 // See the package doc comment for the full rationale.
+//
+// AtomicsObserver fan-out: AFTER the dispatch loop drains every
+// atomic, every registered observer's OnPayloadProcessed is invoked
+// once with the (possibly mutated — see processOne for the in-place
+// SI substitution) atomics slice. Observers run in registration
+// order; a panic in any observer is recovered + logged inside
+// notifyObserver so a buggy observer cannot kill ingest. Observers
+// are NOT invoked when codec.Decode fails because in that case
+// processAtomics is never reached — Process returns ErrPayloadDrop
+// and the MQTT subscriber's poison-pill path takes over.
 func (p *Pipeline) processAtomics(ctx context.Context, atomics []codec.Atomic, vehicleIntID int64) error {
 	sortAtomicsSettingUnitFirst(atomics)
-	for _, atomic := range atomics {
+	// Index-based loop so processOne can mutate atomics[i].Value in
+	// place after a successful toSI conversion. The mutation is
+	// observable to the AtomicsObserver fan-out below — observers
+	// see SI values for fields that converted successfully and the
+	// codec-original Value for everything else (Setting*Unit,
+	// pass-through, conversion failures).
+	for i := range atomics {
 		// Honor cancellation between atomics. A cancelled context is
 		// the only "unrecoverable" path the contract permits — every
 		// other per-atomic failure is logged + counted + skipped.
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		p.processOne(ctx, atomic, vehicleIntID)
+		p.processOne(ctx, &atomics[i], vehicleIntID)
+	}
+	for _, obs := range p.observers {
+		p.notifyObserver(ctx, obs, vehicleIntID, atomics)
 	}
 	return nil
 }
@@ -188,16 +248,25 @@ func (p *Pipeline) processAtomics(ctx context.Context, atomics []codec.Atomic, v
 // convert + route. Errors are NOT propagated; they are logged and
 // counted via p.metrics.ValuesProcessed so the dispatch loop in
 // processAtomics can keep draining the rest of the payload.
-func (p *Pipeline) processOne(ctx context.Context, atomic codec.Atomic, vehicleIntID int64) {
+//
+// Pointer receiver on the atomic argument: when toSI succeeds, the
+// converted SI value is written back into atomic.Value so the
+// AtomicsObserver fan-out at the bottom of processAtomics observes
+// SI values rather than codec-original wire-format values. The
+// pointer is otherwise unused — this is purely the
+// observer-handoff substitution, not a wider mutation API.
+func (p *Pipeline) processOne(ctx context.Context, atomic *codec.Atomic, vehicleIntID int64) {
 	meta := protomodel.SignalsByName[atomic.Field]
 
 	// Setting*Unit atomics short-circuit the toSI + router.Route
 	// path. They land in vehicle_unit_history and stop there; per
 	// ADR-004 #8 the SettingDistanceUnit / SettingTemperatureUnit /
 	// SettingTirePressureUnit / SettingChargeUnit Fields are not
-	// routed to any hot table.
+	// routed to any hot table. Value is intentionally NOT mutated
+	// for Setting*Unit atomics — the proto enum form is what the
+	// observer (and the Setting*Unit history entry) records.
 	if meta != nil && meta.IsSettingUnit {
-		if err := p.observeSettingUnit(ctx, atomic, vehicleIntID); err != nil {
+		if err := p.observeSettingUnit(ctx, *atomic, vehicleIntID); err != nil {
 			p.metrics.ValuesProcessed.WithLabelValues(atomic.Field, outcomeError).Inc()
 			p.log.Warn().
 				Err(err).
@@ -211,7 +280,7 @@ func (p *Pipeline) processOne(ctx context.Context, atomic codec.Atomic, vehicleI
 		return
 	}
 
-	converted, err := p.toSI(ctx, atomic, vehicleIntID)
+	converted, err := p.toSI(ctx, *atomic, vehicleIntID)
 	if err != nil {
 		p.metrics.ValuesProcessed.WithLabelValues(atomic.Field, outcomeFor(err)).Inc()
 		p.log.Warn().
@@ -222,6 +291,12 @@ func (p *Pipeline) processOne(ctx context.Context, atomic codec.Atomic, vehicleI
 			Msg("normalize: toSI failed; dropping atomic")
 		return
 	}
+
+	// Mutate the slice element in place so the AtomicsObserver
+	// fan-out sees the SI value. Pass-through atomics (where toSI
+	// returns the input unchanged) write back the same Value — the
+	// extra assignment is harmless and keeps the call shape uniform.
+	atomic.Value = converted.Value
 
 	if err := p.router.Route(ctx, converted); err != nil {
 		outcome := outcomeError
@@ -238,6 +313,32 @@ func (p *Pipeline) processOne(ctx context.Context, atomic codec.Atomic, vehicleI
 		return
 	}
 	p.metrics.ValuesProcessed.WithLabelValues(atomic.Field, outcomeOK).Inc()
+}
+
+// notifyObserver invokes a single AtomicsObserver in a panic-safe
+// wrapper. A panic in the observer is recovered + logged at WARN so
+// a buggy observer cannot fail the payload or interrupt the rest of
+// the observer registration list. The contract is documented on
+// AtomicsObserver.OnPayloadProcessed.
+//
+// We deliberately do NOT bump a Prometheus counter here: observer
+// implementations own their own metrics (e.g. SideEffectsObserver
+// records per-callback success/failure inside the observer body).
+// A pipeline-level "observer panicked" counter would be redundant
+// with the WARN log and would bloat the cardinality budget for a
+// failure mode that should be a programming bug fixed in tests, not
+// a steady-state production signal.
+func (p *Pipeline) notifyObserver(ctx context.Context, obs AtomicsObserver, vehicleIntID int64, atomics []codec.Atomic) {
+	defer func() {
+		if r := recover(); r != nil {
+			p.log.Warn().
+				Interface("recover", r).
+				Int64("vehicle_id", vehicleIntID).
+				Int("atomic_count", len(atomics)).
+				Msg("normalize: AtomicsObserver panicked; payload effects partially applied")
+		}
+	}()
+	obs.OnPayloadProcessed(ctx, vehicleIntID, atomics)
 }
 
 // outcomeFor maps a toSI error to the LOCKED outcome label set
