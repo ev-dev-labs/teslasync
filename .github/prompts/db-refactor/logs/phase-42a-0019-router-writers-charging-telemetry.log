@@ -1,0 +1,268 @@
+phase-42a / 0019-router-writers-charging-telemetry
+==================================================
+
+Severity: Gate
+Atomic: yes
+Delegation: FORBIDDEN
+Predecessor: phase-42a-0010-router-writers-snapshot-base.log (EXIT=0/STATUS=DONE)
+
+Allowed files to change:
+  - internal/tesla/router/writers/charging_telemetry_writer.go
+  - internal/tesla/router/writers/charging_telemetry_writer_test.go
+  - this log
+
+What this prompt does NOT do:
+  - Author the AtomicsObserver / session tracker (deferred to 0030 — that
+    side-effect observer backfills charging_telemetry.session_id via
+    UPDATE after session boundaries are detected; the writer here leaves
+    session_id untouched on insert per Decision #3).
+  - Wire the charging-session aggregate table charging_sessions
+    (different table; populated by the session tracker in 0030, NOT by
+    this per-tick writer).
+  - Wire DLQ / manual-ack (deferred to 0040).
+  - Cut over MQTT subscriber to the new pipeline (deferred to 0050).
+  - Refactor the HTTP webhook (deferred to 0060).
+  - Delete legacy ingest code (deferred to 0090).
+  - Backfill historical charging data — Phase-42a is forward-only
+    schema with replacement endpoints per ADR-004 amendment #7'.
+
+=== PREFLIGHT ===
+HEAD: 991cbd149f38042f49250571bcefd12088a32539
+git status --short (pre-implementation):
+  (clean)
+Predecessor log exists: True
+Predecessor log last 2 lines:
+  EXIT=0
+  STATUS=DONE
+
+=== AUDIT_EVIDENCE ===
+
+Check 1: routing.yaml entry count under `dest: charging_telemetry`
+  command: Select-String -Path internal\tesla\router\routing.yaml -Pattern 'dest: charging_telemetry' -SimpleMatch | Measure-Object | % Count
+  result: 12
+  expected: 12  -> PASS
+  (matches the prompt header "12 routes covering AC/DC charging power,
+  voltage, current, energy in/out, charger phase")
+
+Check 2: enumerate the 12 routes in routing.yaml order
+  command: Select-String -Path internal\tesla\router\routing.yaml -Pattern '^  - field:|dest: charging_telemetry|^    column:' -Context 0,0
+  result (rendered as field -> column with the SI/scalar kind from migrations/000184_charging_si.up.sql):
+    1.  ACChargingEnergyIn -> ac_charging_energy_in_wh   (DOUBLE PRECISION, float64)
+    2.  ACChargingPower    -> ac_charging_power_w        (DOUBLE PRECISION, float64)
+    3.  BatteryHeaterOn    -> battery_heater_on          (BOOLEAN, bool)
+    4.  ChargeLimitSoc     -> charge_limit_soc_pct       (DOUBLE PRECISION, float64)
+    5.  ChargePortDoorOpen -> charge_port_door_open      (BOOLEAN, bool)
+    6.  ChargePortLatch    -> charge_port_latch          (TEXT, string)
+    7.  ChargerPhases      -> charger_phases             (INTEGER, int64)
+    8.  ChargerVoltage     -> charger_voltage_v          (DOUBLE PRECISION, float64)
+    9.  ChargingCableType  -> charging_cable_type        (TEXT, string)
+    10. DCChargingEnergyIn -> dc_charging_energy_in_wh   (DOUBLE PRECISION, float64)
+    11. DCChargingPower    -> dc_charging_power_w        (DOUBLE PRECISION, float64)
+    12. FastChargerType    -> fast_charger_type          (TEXT, string)
+  expected: 12 routes split across float64/int64/bool/string scalar
+  kinds (the four LOCKED types accepted by snapshot_base.go's
+  bindSnapshotValue at lines 194-209)  -> PASS
+
+Check 3: charging_telemetry table columns from migration 000184
+  source: migrations/000184_charging_si.up.sql:81-102
+  result: 19 columns total
+    PK / FK columns (3):
+      vehicle_id  BIGINT      NOT NULL
+      ts          TIMESTAMPTZ NOT NULL
+      session_id  BIGINT                   <-- NULLABLE; FK into charging_sessions(id), backfilled by 0030
+    Routed columns (12 — match Check 2):
+      ac_charging_power_w         DOUBLE PRECISION
+      dc_charging_power_w         DOUBLE PRECISION
+      ac_charging_energy_in_wh    DOUBLE PRECISION
+      dc_charging_energy_in_wh    DOUBLE PRECISION
+      charger_voltage_v           DOUBLE PRECISION
+      charger_phases              INTEGER
+      battery_heater_on           BOOLEAN
+      charge_limit_soc_pct        DOUBLE PRECISION
+      fast_charger_type           TEXT
+      charging_cable_type         TEXT
+      charge_port_door_open       BOOLEAN
+      charge_port_latch           TEXT
+    Reserved (unrouted today, available for one-line append in a
+    future routing prompt without schema migration) (4):
+      charger_actual_current_a    DOUBLE PRECISION
+      charger_pilot_current_a     DOUBLE PRECISION
+      battery_heater_power_w      DOUBLE PRECISION
+      charge_request              TEXT
+  PK shape: PRIMARY KEY (vehicle_id, ts)  -> matches snapshot_base.go's
+  ON CONFLICT (vehicle_id, ts) upsert clause exactly — the per-tick
+  time-series table reuses the same composition pattern as the
+  *_snapshots tables because two atomics for the same tick coalesce
+  into one row with both columns set, matching the ~1 Hz sampling
+  contract documented at migration 000184:111-112.
+
+Check 4: VIN RESOLUTION CONTRACT preserved in snapshot_base.go
+  command: Select-String -Path internal\tesla\router\writers\snapshot_base.go -Pattern 'FROM vehicles v WHERE v.vin'
+  result: 1 line (snapshot_base.go:159 — INSERT INTO %s (vehicle_id, ts, %s) SELECT v.id, $2, $3 FROM vehicles v WHERE v.vin = $1)
+  expected: 1 line  -> PASS
+  Composition Decision #2 means this charging_telemetry writer
+  INHERITS the VIN -> numeric vehicles.id resolution for free; no
+  additional VIN handling needed in the new file.
+
+Check 5: charging_telemetry destination const exists in router/types.go
+  command: Select-String -Path internal\tesla\router\types.go -Pattern 'DestChargingTelemetry'
+  result: types.go:95: DestChargingTelemetry Destination = "charging_telemetry"
+  expected: 1 declaration  -> PASS
+
+Check 6: charging_telemetry writer source file does NOT exist pre-prompt
+  command: Test-Path internal\tesla\router\writers\charging_telemetry_writer.go
+  result: False (before this prompt)
+  expected: False  -> PASS  (clean predecessor surface)
+
+Check 7: Decision #3 escape hatch — no routed `column:` references session_id
+  command: Select-String -Path internal\tesla\router\routing.yaml -Pattern 'column: session_id'
+  result: 0 lines
+  expected: 0  -> PASS  (escape hatch in the prompt: "If a routed
+  column: references session_id: BLOCK — that column is managed by
+  the session tracker, not the writer." — no routing entry threatens
+  this invariant today)
+
+Check 8: snapshot_base.go's INSERT statement omits session_id from the
+  column list (the source-of-truth assertion that backs Decision #3)
+  command: Select-String -Path internal\tesla\router\writers\snapshot_base.go -Pattern 'INSERT INTO'
+  result: snapshot_base.go:158: "INSERT INTO %s (vehicle_id, ts, %s) "
+  expected: column list = (vehicle_id, ts, %s)  -> PASS
+  The %s is filled from columnFor(atom.Field) which only ever
+  resolves to one of the 12 routed columns from
+  chargingTelemetryColumnByField — session_id is NOT in that map and
+  is therefore never bindable as the third column. ON CONFLICT
+  DO UPDATE SET <col> = EXCLUDED.<col> updates only the per-payload
+  routed column, never session_id, so a late-arriving session_id
+  UPDATE from the 0030 session tracker survives subsequent writer
+  re-deliveries to the same (vehicle_id, ts) row.
+
+=== IMPLEMENTATION ===
+
+File 1: internal/tesla/router/writers/charging_telemetry_writer.go
+  - Per Decision #1: NewChargingTelemetryWriter(pool *pgxpool.Pool) router.Writer
+    Panics on nil pool with "NewChargingTelemetryWriter: pool must
+    be non-nil" — same fail-fast pattern as NewClimateWriter,
+    NewSafetyWriter, NewMediaWriter. Wrapped snapshotWriter
+    constructor errors panic with the wrapped error in the message.
+  - Per Decision #2: composes newSnapshotWriter(pool,
+    "charging_telemetry", chargingTelemetryColumnFor). The (vehicle_id,
+    ts) PK upsert pattern from snapshot_base.go works for time-series
+    too because charging_telemetry's PK matches the *_snapshots PK
+    shape, and two atomics for the same tick coalesce into one row
+    with both columns set — exactly the ~1 Hz sampling contract from
+    migration 000184:111-112.
+  - Per Decision #3: writer NEVER touches session_id. snapshot_base.go's
+    INSERT column list is (vehicle_id, ts, <col>) where <col> is
+    sourced from chargingTelemetryColumnByField, so session_id is
+    omitted from BOTH the INSERT and the ON CONFLICT DO UPDATE SET
+    clause — the FK survives across per-column re-deliveries. The
+    map's godoc explicitly references the 0030 session tracker as the
+    backfill source.
+  - Per Decision #4 (map source): chargingTelemetryColumnByField is
+    a static var — 12 entries copied verbatim from routing.yaml's
+    `dest: charging_telemetry` block; the godoc cites the
+    AUDIT_EVIDENCE Check 2 enumeration for verifiability.
+  - All 12 codec.Atomic.Value kinds (7 float64, 1 int64, 2 bool, 2
+    string) are covered by snapshot_base.go's bindSnapshotValue at
+    lines 194-209; no TIMESTAMPTZ hybrid wrapper needed (cf.
+    tire_pressure_writer.go's writeTimestamp seam) because no
+    charging_telemetry column is TIMESTAMPTZ.
+
+File 2: internal/tesla/router/writers/charging_telemetry_writer_test.go
+  - Per Decision #5 (reflective coverage):
+    TestChargingTelemetryWriter_ColumnMapMatchesRoutingYAML calls
+    router.LoadMap(), filters by Destination == DestChargingTelemetry,
+    asserts count == 12, and asserts the writer map matches
+    entry-for-entry. Catches three drift classes (missing-in-writer,
+    extra-in-writer, column-name-mismatch).
+  - Per Decision #6 (per-kind positives):
+    TestChargingTelemetryWriter_TypeMatrix exercises one positive
+    write per scalar kind: float64 (ACChargingPower), int64
+    (ChargerPhases), bool (BatteryHeaterOn), text (FastChargerType).
+    All four scalar kinds the helper handles are touched because
+    charging_telemetry has columns of all four types.
+  - Per Decision #6 (assert session_id NULL on insert):
+    TestChargingTelemetryWriter_SessionIDNotTouched iterates EVERY
+    routed field, sends a Write with a kind-appropriate value, and
+    asserts the rendered SQL does NOT contain the substring
+    "session_id". Per-field iteration (rather than one
+    representative) defends against a future bug that affects only
+    one column path.
+  - Per Decision #6 (unknown-field):
+    TestChargingTelemetryWriter_UnknownFieldReturnsError uses
+    "VehicleSpeed" (a routed field for drive_telemetry) — defends
+    against accidentally widening the charging_telemetry map to
+    swallow non-charging fields. Asserts error wording and zero
+    db.Exec calls.
+  - TestNewChargingTelemetryWriter_NilPoolPanics locks Decision #1's
+    fail-fast contract.
+
+Reused fakes from snapshot_base_test.go (same package):
+  - recorder + recordedCall
+  - assertCallShape
+
+=== GATE ===
+
+Gate 1: build
+  command: go build ./internal/tesla/router/writers/...
+  exit:    0   -> PASS
+
+Gate 2: vet
+  command: go vet ./internal/tesla/router/writers/...
+  exit:    0   -> PASS
+
+Gate 3: writers package tests (full)
+  command: go test ./internal/tesla/router/writers/... -count=1
+  result:  ok  github.com/ev-dev-labs/teslasync/internal/tesla/router/writers  0.149s
+  exit:    0   -> PASS
+
+Gate 4: charging-telemetry-only test sweep
+  command: go test ./internal/tesla/router/writers/... -run "ChargingTelemetry" -v -count=1
+  results:
+    PASS: TestChargingTelemetryWriter_ColumnMapMatchesRoutingYAML
+    PASS: TestChargingTelemetryWriter_TypeMatrix (4 sub-cases)
+      PASS: float64_ACChargingPower
+      PASS: int64_ChargerPhases
+      PASS: bool_BatteryHeaterOn
+      PASS: text_FastChargerType
+    PASS: TestChargingTelemetryWriter_SessionIDNotTouched (12 sub-cases — one per routed field)
+      PASS: ACChargingEnergyIn
+      PASS: ACChargingPower
+      PASS: BatteryHeaterOn
+      PASS: ChargeLimitSoc
+      PASS: ChargePortDoorOpen
+      PASS: ChargePortLatch
+      PASS: ChargerPhases
+      PASS: ChargerVoltage
+      PASS: ChargingCableType
+      PASS: DCChargingEnergyIn
+      PASS: DCChargingPower
+      PASS: FastChargerType
+    PASS: TestChargingTelemetryWriter_UnknownFieldReturnsError
+    PASS: TestNewChargingTelemetryWriter_NilPoolPanics
+  totals:  19 passes (5 top-level + 4 type-matrix + 12 session-id sub-cases — 0 failures, 0 skips)
+  exit:    0   -> PASS
+
+Gate 5: allowed-files compliance
+  command: git status --short
+  result (post-implementation, pre-commit):
+    A  .github/prompts/db-refactor/logs/phase-42a-0019-router-writers-charging-telemetry.log
+    A  internal/tesla/router/writers/charging_telemetry_writer.go
+    A  internal/tesla/router/writers/charging_telemetry_writer_test.go
+  expected: only the 3 allowed files  -> PASS
+
+Gate 6: predecessor 0010 still DONE
+  command: Get-Content .github\prompts\db-refactor\logs\phase-42a-0010-router-writers-snapshot-base.log -Tail 2
+  result:
+    EXIT=0
+    STATUS=DONE
+  expected: same  -> PASS
+
+=== COMMIT ===
+
+Commit:  feat(tesla/router): add charging telemetry writer (charging_telemetry, 12 fields)
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+EXIT=0
+STATUS=DONE
