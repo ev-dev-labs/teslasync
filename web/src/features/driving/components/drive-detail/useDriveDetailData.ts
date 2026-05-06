@@ -2,16 +2,39 @@ import { useMemo } from 'react';
 import { useDrive } from '@/api/hooks/useDriving';
 import { useVehicle } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import {
+  convertDistanceFromSI,
+  convertSpeedFromSI,
+  convertTempFromSI,
+  convertPressureFromSI,
+} from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { LatLngExpression } from '@/components/maps';
 import type { ChartDataPoint, DriveStats, RoutePoint, SpeedSegment, SpeedHistogramBucket } from './types';
 
+// Speed-segment colour thresholds for the route map. Phase-43 / Prompt 0022
+// re-expresses them in SI (m/s) so the routeSource can stay in raw SI units
+// and the colours remain meaningful for users on either mph or km/h. The
+// thresholds correspond to 100 / 60 / 30 mph (= 44.704 / 26.8224 / 13.4112 m/s).
+const SPEED_SEGMENT_HIGH_MPS = 100 * 0.44704;
+const SPEED_SEGMENT_MED_MPS = 60 * 0.44704;
+const SPEED_SEGMENT_LOW_MPS = 30 * 0.44704;
+
 export function useDriveDetailData(id: string) {
   const { data: drive, isLoading, error } = useDrive(id);
   const { data: vehicle } = useVehicle(String(drive?.vehicleId ?? ''));
-  const {
-    convertDistance, convertSpeed, convertTemp, convertPressure,
-  } = useSettings();
+  // Drive aggregate fields (distanceMi, maxSpeedMph, avgSpeedMph) stay on the
+  // legacy useSettings surface — same locked-policy continuation as Phase-43 /
+  // Prompt 0020 Drive.distance_mi (genuine miles after the SQL adapter
+  // boundary in internal/database/drive_repo.go).
+  const { convertDistance, convertSpeed } = useSettings();
+  // Telemetry / position fields from drive(Telemetry|Position)FieldMappings are
+  // strict SI per ADR-004 (m, m/s, °C, Pa). Use the SI-aware converters from
+  // @/lib/unitConversion so changing the user's display unit (km/h ↔ mph,
+  // °C ↔ °F, kPa ↔ psi ↔ bar) produces correct values without re-passing data
+  // through the legacy mph-input converters.
+  const { unitPrefs } = useUnits();
 
   /* ---- Route data ---- */
   const routeSource = useMemo<RoutePoint[]>(() => {
@@ -34,16 +57,18 @@ export function useDriveDetailData(id: string) {
   const centerPos: [number, number] = startPos
     ?? (drive?.startLat && drive?.startLon ? [drive.startLat, drive.startLon] : [47.6, -122.3]);
 
-  /* Speed-colored segments */
+  /* Speed-colored segments. routeSource[i].speed is m/s SI (raw VehicleSpeed),
+   * so the colour bands are likewise expressed in m/s — see SPEED_SEGMENT_*_MPS
+   * constants at the top of this file. */
   const speedSegments = useMemo<SpeedSegment[]>(() => {
     const segs: SpeedSegment[] = [];
     for (let i = 1; i < routeSource.length; i++) {
       const prev = routeSource[i - 1];
       const curr = routeSource[i];
       let color = '#10b981';
-      if (curr.speed >= 100) color = '#ef4444';
-      else if (curr.speed >= 60) color = '#f59e0b';
-      else if (curr.speed >= 30) color = '#00f0ff';
+      if (curr.speed >= SPEED_SEGMENT_HIGH_MPS) color = '#ef4444';
+      else if (curr.speed >= SPEED_SEGMENT_MED_MPS) color = '#f59e0b';
+      else if (curr.speed >= SPEED_SEGMENT_LOW_MPS) color = '#00f0ff';
       segs.push({ positions: [[prev.lat, prev.lng], [curr.lat, curr.lng]], color });
     }
     return segs;
@@ -56,24 +81,24 @@ export function useDriveDetailData(id: string) {
     if (tele.length > 0) {
       return tele.map((tp) => ({
         time: new Date(tp.createdAt ?? tp.created_at ?? tp.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        speed: convertSpeed(tp.speed ?? 0),
+        speed: convertSpeedFromSI(tp.speed ?? 0, unitPrefs.speed),
         battery: tp.batteryLevel ?? 0,
         elevation: tp.elevation ?? 0,
         power: tp.power ?? 0,
-        outsideTemp: tp.outsideTemp != null ? convertTemp(tp.outsideTemp) : null,
-        insideTemp: tp.insideTemp != null ? convertTemp(tp.insideTemp) : null,
-        driverTemp: tp.driverTemp != null ? convertTemp(tp.driverTemp) : null,
-        passengerTemp: tp.passengerTemp != null ? convertTemp(tp.passengerTemp) : null,
-        idealRange: tp.idealRange != null ? convertDistance(tp.idealRange) : null,
-        ratedRange: tp.ratedRange != null ? convertDistance(tp.ratedRange) : null,
-        estRange: tp.estRange != null ? convertDistance(tp.estRange) : null,
-        odometer: tp.odometer != null ? convertDistance(tp.odometer) : null,
+        outsideTemp: tp.outsideTemp != null ? convertTempFromSI(tp.outsideTemp, unitPrefs.temperature) : null,
+        insideTemp: tp.insideTemp != null ? convertTempFromSI(tp.insideTemp, unitPrefs.temperature) : null,
+        driverTemp: tp.driverTemp != null ? convertTempFromSI(tp.driverTemp, unitPrefs.temperature) : null,
+        passengerTemp: tp.passengerTemp != null ? convertTempFromSI(tp.passengerTemp, unitPrefs.temperature) : null,
+        idealRange: tp.idealRange != null ? convertDistanceFromSI(tp.idealRange, unitPrefs.distance) : null,
+        ratedRange: tp.ratedRange != null ? convertDistanceFromSI(tp.ratedRange, unitPrefs.distance) : null,
+        estRange: tp.estRange != null ? convertDistanceFromSI(tp.estRange, unitPrefs.distance) : null,
+        odometer: tp.odometer != null ? convertDistanceFromSI(tp.odometer, unitPrefs.distance) : null,
         soc: tp.soc,
         usableSoc: tp.usableSoc,
-        tireFl: tp.tirePressureFl != null ? convertPressure(tp.tirePressureFl) : null,
-        tireFr: tp.tirePressureFr != null ? convertPressure(tp.tirePressureFr) : null,
-        tireRl: tp.tirePressureRl != null ? convertPressure(tp.tirePressureRl) : null,
-        tireRr: tp.tirePressureRr != null ? convertPressure(tp.tirePressureRr) : null,
+        tireFl: tp.tirePressureFl != null ? convertPressureFromSI(tp.tirePressureFl / 1000, unitPrefs.pressure) : null,
+        tireFr: tp.tirePressureFr != null ? convertPressureFromSI(tp.tirePressureFr / 1000, unitPrefs.pressure) : null,
+        tireRl: tp.tirePressureRl != null ? convertPressureFromSI(tp.tirePressureRl / 1000, unitPrefs.pressure) : null,
+        tireRr: tp.tirePressureRr != null ? convertPressureFromSI(tp.tirePressureRr / 1000, unitPrefs.pressure) : null,
         climateOn: tp.isClimateOn ?? null,
         fanStatus: tp.fanStatus ?? null,
       }));
@@ -81,18 +106,21 @@ export function useDriveDetailData(id: string) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- positions may have snake_case fallback fields
     return (drive.positions ?? []).map((p: any) => ({
       time: new Date(p.createdAt ?? p.created_at ?? p.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      speed: convertSpeed(p.speed ?? 0),
+      // Position.speed comes from drivePositionFieldMappings VehicleSpeed -> speed_mph
+      // -> aliasPositionFields renames to 'speed'. The value is still m/s SI; the
+      // legacy '_mph' suffix from the mapping is misleading per ADR-004 #6.
+      speed: convertSpeedFromSI(p.speed ?? 0, unitPrefs.speed),
       battery: p.batteryLevel ?? p.battery_level ?? 0,
       elevation: p.elevation ?? 0,
       power: p.power ?? 0,
-      outsideTemp: (p.outsideTemp ?? p.outside_temp) != null ? convertTemp(p.outsideTemp ?? p.outside_temp) : null,
-      insideTemp: (p.insideTemp ?? p.inside_temp) != null ? convertTemp(p.insideTemp ?? p.inside_temp) : null,
+      outsideTemp: (p.outsideTemp ?? p.outside_temp) != null ? convertTempFromSI(p.outsideTemp ?? p.outside_temp, unitPrefs.temperature) : null,
+      insideTemp: (p.insideTemp ?? p.inside_temp) != null ? convertTempFromSI(p.insideTemp ?? p.inside_temp, unitPrefs.temperature) : null,
       driverTemp: null as number | null,
       passengerTemp: null as number | null,
-      idealRange: (p.idealRange ?? p.ideal_range) != null ? convertDistance(p.idealRange ?? p.ideal_range) : null,
-      ratedRange: (p.ratedRange ?? p.rated_range) != null ? convertDistance(p.ratedRange ?? p.rated_range) : null,
+      idealRange: (p.idealRange ?? p.ideal_range) != null ? convertDistanceFromSI(p.idealRange ?? p.ideal_range, unitPrefs.distance) : null,
+      ratedRange: (p.ratedRange ?? p.rated_range) != null ? convertDistanceFromSI(p.ratedRange ?? p.rated_range, unitPrefs.distance) : null,
       estRange: null as number | null,
-      odometer: p.odometer != null ? convertDistance(p.odometer) : null,
+      odometer: p.odometer != null ? convertDistanceFromSI(p.odometer, unitPrefs.distance) : null,
       soc: null as number | null,
       usableSoc: null as number | null,
       tireFl: null as number | null,
@@ -102,7 +130,7 @@ export function useDriveDetailData(id: string) {
       climateOn: p.isClimateOn ?? null,
       fanStatus: p.fanStatus ?? null,
     }));
-  }, [drive, convertSpeed, convertTemp, convertDistance, convertPressure]);
+  }, [drive, unitPrefs.speed, unitPrefs.temperature, unitPrefs.distance, unitPrefs.pressure]);
 
   /* ---- Computed stats ---- */
   const stats = useMemo<DriveStats | null>(() => {
