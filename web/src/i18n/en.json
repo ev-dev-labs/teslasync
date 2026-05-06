@@ -5433,7 +5433,9 @@
     "avgSpeed": "Avg Speed",
     "elevGain": "Elevation Gain",
     "elevation": "Elevation Profile",
+    "elevTooltipLabel": "Elevation",
     "speed": "Speed Profile",
+    "speedTooltipLabel": "Speed",
     "noMapData": "Route data is not available for this shared drive.",
     "footer": "Shared via TeslaSync — Self-hosted Tesla Fleet Intelligence",
     "learnMore": "Learn more →"
