@@ -496,7 +496,10 @@
       "rule_other": "alert rules",
       "notification_one": "notification",
       "notification_other": "notifications"
-    }
+    },
+    "selectAll": "Select all",
+    "selectRow": "Select row",
+    "archived": "{{count}} items archived"
   },
   "requiresAuth": {
     "title": "{{feature}} requires authentication mode",
@@ -705,7 +708,15 @@
     "today": "Today",
     "yesterday": "Yesterday",
     "undo": "Undo",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "printButton": {
+      "print": "Print"
+    },
+    "previous": "Previous",
+    "next": "Next",
+    "retry": "Retry",
+    "outside": "Outside",
+    "remove": "Remove"
   },
   "units": {
     "km": "km",
@@ -823,7 +834,8 @@
       "editTitle": "Edit dashboard (E)",
       "editEnter": "Edit",
       "editExit": "Done"
-    }
+    },
+    "printSnapshot": "Print snapshot"
   },
   "charging": {
     "list": {
@@ -900,7 +912,11 @@
       "sortPower": "Power",
       "exportCsv": "CSV",
       "exportJson": "JSON",
-      "searchPlaceholder": "Search by location or charger type…"
+      "searchPlaceholder": "Search by location or charger type…",
+      "filterLabel": {
+        "search": "Search",
+        "charger": "Charger"
+      }
     },
     "table": {
       "type": "Type",
@@ -967,7 +983,23 @@
       "title": "Charging Curve",
       "subtitle": "Power vs state-of-charge across sessions",
       "empty": "No charging sessions to plot a curve.",
-      "selectSession": "Select a session to inspect"
+      "selectSession": "Select a session to inspect",
+      "col": {
+        "charger": "Charger Type",
+        "sessions": "Sessions",
+        "avgKw": "Avg kW",
+        "avgKwh": "Avg kWh",
+        "avgMin": "Avg minutes",
+        "soc": "SOC %",
+        "power": "Power (kW)",
+        "month": "Month",
+        "dcAvgKw": "DC Avg kW",
+        "acAvgKw": "AC Avg kW",
+        "year": "Year",
+        "avg10to80": "10→80% avg min",
+        "avg20to80": "20→80% avg min",
+        "dcSessions": "DC Sessions"
+      }
     },
     "optimizer": {
       "heatmap": "Charging Cost Heatmap",
@@ -1137,7 +1169,12 @@
       "delete": {
         "success": "Quiet hours window removed",
         "error": "Failed to delete quiet hours window"
-      }
+      },
+      "updated": "Quiet hours window updated",
+      "created": "Quiet hours window created",
+      "saveError": "Failed to save quiet hours window",
+      "deleted": "Quiet hours window removed",
+      "deleteError": "Failed to delete quiet hours window"
     },
     "pin": {
       "pinned": {
@@ -1702,6 +1739,222 @@
       "title": "Recent searches",
       "clear": "Clear history",
       "removeAria": "Remove \"{{query}}\" from search history"
+    },
+    "entries": {
+      "tesla": {
+        "connect": {
+          "title": "Connect Tesla account",
+          "desc": "Authorize TeslaSync to access your Tesla account."
+        },
+        "refreshToken": {
+          "title": "Tesla refresh token",
+          "desc": "Manually refresh the cached Tesla OAuth token."
+        },
+        "disconnect": {
+          "title": "Disconnect Tesla account",
+          "desc": "Sign out and remove the cached OAuth token."
+        },
+        "syncVehicles": {
+          "title": "Sync vehicles from Tesla",
+          "desc": "Pull the current vehicle list from the Tesla Fleet API."
+        }
+      },
+      "region": {
+        "title": "Region & Fleet API endpoint",
+        "desc": "Tesla account region and the resolved Fleet API base URL."
+      },
+      "features": {
+        "title": "Feature flags",
+        "desc": "Tesla account feature configuration synced from the Fleet API."
+      },
+      "orders": {
+        "title": "Active orders",
+        "desc": "Vehicle orders and delivery tracking from Tesla."
+      },
+      "general": {
+        "distance": {
+          "title": "Distance unit",
+          "desc": "Show distances in kilometers or miles."
+        },
+        "temperature": {
+          "title": "Temperature unit",
+          "desc": "Show temperatures in Celsius or Fahrenheit."
+        },
+        "pressure": {
+          "title": "Tire pressure unit",
+          "desc": "Show tire pressure in Bar or PSI."
+        },
+        "range": {
+          "title": "Preferred range",
+          "desc": "Display rated or ideal range for the battery."
+        },
+        "precision": {
+          "title": "Decimal precision",
+          "desc": "Number of decimal places shown on numeric metrics."
+        },
+        "language": {
+          "title": "Language",
+          "desc": "Application interface language."
+        },
+        "currency": {
+          "title": "Currency",
+          "desc": "Currency symbol used in cost and savings displays."
+        },
+        "locale": {
+          "title": "Number & date locale",
+          "desc": "Locale used for number, date, and time formatting."
+        },
+        "timezone": {
+          "title": "Time zone",
+          "desc": "Whether timestamps follow the vehicle, your local time, or UTC."
+        },
+        "electricityCost": {
+          "title": "Electricity cost (per kWh)",
+          "desc": "Per-kWh price used in charging cost calculations."
+        },
+        "gasPriceManual": {
+          "title": "Comparison gas price",
+          "desc": "Manual gas price used in EV-vs-ICE savings comparisons."
+        },
+        "mpg": {
+          "title": "Comparison vehicle MPG",
+          "desc": "Average MPG of the equivalent gas car for savings calculations."
+        },
+        "googleMaps": {
+          "title": "Google Maps API key",
+          "desc": "Optional key enabling satellite views and Places autocomplete."
+        }
+      },
+      "gasPrice": {
+        "title": "Gas price auto-poll",
+        "desc": "Automatically fetch US average gas prices from EIA."
+      },
+      "notifications": {
+        "browser": {
+          "title": "Browser notifications",
+          "desc": "Enable browser notifications when the tab is in the background."
+        },
+        "alerts": {
+          "title": "Alert notifications",
+          "desc": "Get notified when an alert rule fires."
+        },
+        "exportStatus": {
+          "title": "Export completion notifications",
+          "desc": "Get notified when a CSV/JSON export finishes."
+        },
+        "tabBadge": {
+          "title": "Browser tab unread badge",
+          "desc": "Show unread count in the browser tab title and favicon."
+        },
+        "criticalFlash": {
+          "title": "Critical alert tab flash",
+          "desc": "Flash the browser tab title on critical alerts."
+        },
+        "soundMaster": {
+          "title": "Notification sounds",
+          "desc": "Play short audio cues when alerts and completion events arrive."
+        },
+        "soundChannels": {
+          "title": "Per-channel notification sounds",
+          "desc": "Toggle sound separately for critical, warning, and info alerts plus charge/drive/automation completions."
+        },
+        "soundVolume": {
+          "title": "Notification sound volume",
+          "desc": "Adjust how loud notification cues play."
+        }
+      },
+      "quietHours": {
+        "windows": {
+          "title": "Quiet hours windows",
+          "desc": "Defer non-critical notifications during sleep, work meetings, or any time-of-day window."
+        },
+        "bypass": {
+          "title": "Quiet hours bypass severities",
+          "desc": "Choose which severities (e.g. critical) still ring through during quiet hours."
+        },
+        "timezone": {
+          "title": "Quiet hours timezone",
+          "desc": "Pick the IANA timezone the start/end times are evaluated against."
+        }
+      },
+      "appearance": {
+        "theme": {
+          "title": "Theme",
+          "desc": "Choose light, dark, or system mode and pick an accent color."
+        },
+        "density": {
+          "title": "Information density",
+          "desc": "Compact, comfortable, or spacious row sizing across tables and cards."
+        },
+        "timeFormat": {
+          "title": "Default time format",
+          "desc": "Show timestamps as relative (\"2h ago\") or absolute (\"Nov 12, 13:42\")."
+        },
+        "chartPalette": {
+          "title": "Chart palette",
+          "desc": "Color-blind safe (Okabe-Ito) or stylistic neon chart colors."
+        },
+        "statusBar": {
+          "title": "Status bar",
+          "desc": "Show or hide the always-on footer status bar."
+        },
+        "celebrations": {
+          "title": "Achievement celebrations",
+          "desc": "Celebration toasts and sound when an achievement unlocks."
+        }
+      },
+      "security": {
+        "totpEnroll": {
+          "title": "Enable two-factor authentication"
+        },
+        "totpBackupCodes": {
+          "title": "TOTP backup codes"
+        },
+        "totpDisable": {
+          "title": "Disable two-factor authentication"
+        },
+        "sessionsList": {
+          "title": "Active sessions"
+        },
+        "sessionsRevokeAll": {
+          "title": "Sign out all other devices"
+        }
+      },
+      "advanced": {
+        "restoreConfirms": {
+          "title": "Restore confirmation prompts",
+          "desc": "Re-enable “Don’t ask again” prompts you previously silenced."
+        }
+      },
+      "backup": {
+        "export": {
+          "title": "Export settings as JSON",
+          "desc": "Download a portable bundle of general settings, alert rules, geofences, and quiet-hours windows."
+        },
+        "import": {
+          "title": "Import settings from JSON",
+          "desc": "Restore alert rules, geofences, and quiet-hours windows from a previously exported bundle."
+        }
+      },
+      "webhooks": {
+        "list": {
+          "title": "Webhook channels"
+        },
+        "signing": {
+          "title": "Webhook HMAC signing"
+        },
+        "test": {
+          "title": "Test a webhook channel"
+        }
+      },
+      "reset": {
+        "section": {
+          "title": "Reset a section to defaults"
+        },
+        "all": {
+          "title": "Reset ALL settings"
+        }
+      }
     }
   },
   "a11y": {
@@ -1846,13 +2099,19 @@
     "a11y": {
       "fallbackTableLabel": "{{title}} — data table",
       "summary": "Chart: {{title}}"
+    },
+    "noData": "No data available",
+    "col": {
+      "time": "Time",
+      "energy": "Energy (kWh)"
     }
   },
   "replay": {
     "elevation": {
       "title": "Elevation Profile",
       "noData": "No elevation data available",
-      "label": "Elevation"
+      "label": "Elevation",
+      "aria": "Elevation profile chart — no data available yet"
     },
     "controls": {
       "reset": "Reset",
@@ -1912,7 +2171,8 @@
       "subtitle": "Click to seek replay position",
       "speed": "Speed",
       "power": "Power",
-      "noData": "No telemetry data available"
+      "noData": "No telemetry data available",
+      "aria": "Trip replay speed and power timeline area chart"
     },
     "summary": {
       "title": "Drive Summary",
@@ -1982,7 +2242,9 @@
       "resetAll": "Reset all tours",
       "close": "Close",
       "startAria": "Start {{tour}} tour",
-      "replayAria": "Replay {{tour}} tour"
+      "replayAria": "Replay {{tour}} tour",
+      "openAria": "Open tour launcher",
+      "openShort": "Take a tour"
     },
     "tours": {
       "main": {
@@ -2044,7 +2306,8 @@
       "undo": "Undo",
       "ackedBy": "Acknowledged by {{actor}}",
       "ackedByAnonymous": "Acknowledged",
-      "ackedAt": "{{time}}"
+      "ackedAt": "{{time}}",
+      "success": "Alert acknowledged"
     },
     "comment": {
       "button": "Comment",
@@ -2069,7 +2332,13 @@
         "commented": "Comment added"
       },
       "empty": "No events yet"
-    }
+    },
+    "rule": "Rule",
+    "filterLabel": {
+      "search": "Search",
+      "status": "Status"
+    },
+    "unsavedRule": "You have an unsaved alert rule."
   },
   "pagination": {
     "showing": "Showing {{start}}–{{end}} of {{total}}",
@@ -2307,7 +2576,10 @@
     },
     "audit": {
       "searchPlaceholder": "Search by action, resource, or details…",
-      "noMatches": "No audit entries match your search."
+      "noMatches": "No audit entries match your search.",
+      "filterLabel": {
+        "search": "Search"
+      }
     },
     "errors": {
       "title": "Frontend Errors (Last Hour)",
@@ -2429,7 +2701,40 @@
     "metadata": "Backup Metadata",
     "tables": "Tables",
     "noTables": "No tables found in backup",
-    "loadingPreview": "Loading preview…"
+    "loadingPreview": "Loading preview…",
+    "export": {
+      "successTitle": "Settings exported",
+      "successDetail": "Saved to your downloads folder.",
+      "title": "Export settings",
+      "busy": "Exporting…",
+      "cta": "Export JSON"
+    },
+    "import": {
+      "errorTooLarge": "File is too large (max 1 MB).",
+      "errorRead": "Failed to read the file.",
+      "errorJson": "File is not valid JSON: {{detail}}",
+      "errorPreview": "Failed to preview import.",
+      "appliedTitle": "Settings imported",
+      "appliedDetail": "{{added}} added, {{updated}} updated, {{skipped}} skipped.",
+      "title": "Import settings",
+      "dropPrompt": "Drag a JSON bundle here, or",
+      "parsing": "Reading…",
+      "choose": "Choose a file",
+      "previewHeader": "Previewing {{name}} ({{size}} bytes)",
+      "changeFile": "Change file",
+      "cancel": "Cancel",
+      "applying": "Applying…",
+      "applyCount": "Apply {{count}} change(s)",
+      "applyNoChanges": "Nothing to apply",
+      "appliedHeader": "Import complete",
+      "done": "Done"
+    },
+    "section": {
+      "settings": "General settings",
+      "alertRules": "Alert rules",
+      "geofences": "Geofences",
+      "quietHours": "Quiet hours"
+    }
   },
   "redis": {
     "signalName": "Signal Name",
@@ -2500,7 +2805,8 @@
     "headerChip": {
       "mode": "Mode: {{mode}}",
       "l1Seen": "L1 last: {{date}}"
-    }
+    },
+    "maskedCoord": "Coordinate, click to reveal"
   },
   "lifetime": {
     "unlocked": "✓ Unlocked",
@@ -3479,7 +3785,11 @@
       "costPerKwh": "Cost per kWh Trend",
       "rateLabel": "$/kWh",
       "monthlyCost": "Monthly Cost Trend",
-      "cost": "Cost ($)"
+      "cost": "Cost ($)",
+      "col": {
+        "month": "Month",
+        "cost": "Cost ($)"
+      }
     },
     "forecast": {
       "title": "Cost Forecast",
@@ -3648,7 +3958,9 @@
       "energy": "Energy (kWh)",
       "cost": "Cost",
       "rate": "Rate",
-      "invoice": "Invoice"
+      "invoice": "Invoice",
+      "month": "Month",
+      "total": "Total ($)"
     },
     "downloadInvoice": "Download invoice",
     "subtitle": "Supercharger & DC fast charging billing records from Tesla",
@@ -3666,7 +3978,10 @@
     "sessions": "Charging Sessions",
     "searchPlaceholder": "Search by location…",
     "noMatches": "No sessions match your search.",
-    "noData": "No Tesla charging history yet. Click \"Refresh from Tesla\" to import your Supercharger sessions."
+    "noData": "No Tesla charging history yet. Click \"Refresh from Tesla\" to import your Supercharger sessions.",
+    "filterLabel": {
+      "search": "Search"
+    }
   },
   "tesla_sessions": {
     "title": "Fleet Charging Sessions",
@@ -3680,7 +3995,9 @@
       "duration": "Duration",
       "cost": "Cost",
       "rate": "Rate/kWh",
-      "type": "Type"
+      "type": "Type",
+      "month": "Month",
+      "total": "Total ($)"
     },
     "subtitle": "Detailed charging session data from Tesla (business accounts only)",
     "refreshing": "Syncing...",
@@ -3728,7 +4045,8 @@
     "error": "error",
     "lastUpdated": "Last updated: {{time}}",
     "neverUpdated": "Never updated",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "updatingTooltip": "Updating…"
   },
   "export": {
     "urlTooLong": "Layout too large for URL sharing ({{size}} chars). Use clipboard or file export instead.",
@@ -5091,7 +5409,8 @@
       "inYear": "in {year}",
       "noData": "No year-in-review data",
       "title": "Year in Review"
-    }
+    },
+    "updateStatus": "{{status}}"
   },
   "anomaly": {
     "title": "Anomaly Detection",
@@ -5211,7 +5530,11 @@
       "powerProfileFailed": "Power profile chart failed to load",
       "tirePressureFailed": "Tire pressure section failed to load"
     },
-    "vehicle": "Vehicle"
+    "vehicle": "Vehicle",
+    "col": {
+      "range": "Speed range",
+      "pct": "% of drive"
+    }
   },
   "drivetrain": {
     "temperatures": "Temperature Details",
@@ -5290,7 +5613,18 @@
     "torque": "Torque",
     "title": "Drivetrain Health",
     "subtitle": "Motor, inverter, and battery thermal status",
-    "allVehicles": "All Vehicles"
+    "allVehicles": "All Vehicles",
+    "col": {
+      "date": "Date",
+      "powerMax": "Peak (kW)",
+      "powerMin": "Regen (kW)",
+      "time": "Time",
+      "stator": "Stator",
+      "statorRel": "Rear-Left",
+      "statorRer": "Rear-Right",
+      "outside": "Outside",
+      "torque": "Torque (Nm)"
+    }
   },
   "dynamics": {
     "autopilot": "Autopilot & Cruise",
@@ -5398,7 +5732,14 @@
     "peakRegen": "Peak Regen",
     "title": "Driving Dynamics",
     "subtitle": "Live motor telemetry, G-forces & driving analysis",
-    "selectVehicle": "Select vehicle"
+    "selectVehicle": "Select vehicle",
+    "col": {
+      "range": "Speed range",
+      "drives": "Drives",
+      "drive": "Drive",
+      "maxKw": "Max kW",
+      "regenKw": "Regen kW"
+    }
   },
   "share": {
     "title": "Share Drive",
@@ -5443,7 +5784,12 @@
   "tripPlanner": {
     "socChart": {
       "title": "Battery Along Route",
-      "empty": "Plan a trip to see the SOC curve"
+      "empty": "Plan a trip to see the SOC curve",
+      "aria": "Planned route battery state-of-charge area chart",
+      "col": {
+        "distance": "Distance",
+        "soc": "SOC %"
+      }
     },
     "legs": {
       "title": "Route Breakdown",
@@ -5580,7 +5926,19 @@
     "highestSpeed": "Highest Max Speed",
     "aPlusCount": "A+ Drives",
     "rangePreservation": "Range Preservation",
-    "tripLength": "Trip Length"
+    "tripLength": "Trip Length",
+    "col": {
+      "date": "Date",
+      "score": "Score",
+      "efficiency": "Efficiency",
+      "smoothness": "Smoothness",
+      "speed": "Speed",
+      "category": "Category",
+      "value": "Value",
+      "max": "Max",
+      "range": "Score range",
+      "drives": "Drives"
+    }
   },
   "drives": {
     "score": "score",
@@ -5615,7 +5973,21 @@
     "sortDistance": "Distance",
     "sortEfficiency": "Efficiency",
     "emptyTitle": "No drives recorded yet",
-    "emptyMessage": "Drive data will appear here once your vehicle records trips."
+    "emptyMessage": "Drive data will appear here once your vehicle records trips.",
+    "selectDrive": "Select drive on {{date}}",
+    "filterLabel": {
+      "search": "Search",
+      "from": "From",
+      "to": "To"
+    },
+    "col": {
+      "date": "Date",
+      "range": "Distance range",
+      "drives": "Drives"
+    },
+    "empty": {
+      "cta": "Reset filters"
+    }
   },
   "efficiency": {
     "title": "Efficiency",
@@ -5654,7 +6026,11 @@
     "totalDistLabel": "Total Distance",
     "topSpeed": "Top Speed",
     "costPerKmLabel": "Est. Cost/km",
-    "noInsights": "No energy insights available yet"
+    "noInsights": "No energy insights available yet",
+    "col": {
+      "date": "Date",
+      "range": "Speed range"
+    }
   },
   "regen": {
     "title": "Regenerative Braking",
@@ -5680,7 +6056,12 @@
     "distanceCol": "Distance",
     "maxRegenCol": "Max Regen",
     "ratioCol": "Ratio",
-    "noData": "No regen efficiency data available yet"
+    "noData": "No regen efficiency data available yet",
+    "col": {
+      "month": "Month",
+      "regenKwh": "Regen kWh",
+      "drives": "Drives"
+    }
   },
   "routeEfficiency": {
     "trips": "trips",
@@ -5698,7 +6079,10 @@
     "metrics": "Route Metrics",
     "bestLabel": "Best Efficiency",
     "worstLabel": "Worst Efficiency",
-    "mostDrivenLabel": "Most Driven Route"
+    "mostDrivenLabel": "Most Driven Route",
+    "col": {
+      "route": "Route"
+    }
   },
   "speedProfile": {
     "title": "Speed Profile",
@@ -5736,7 +6120,24 @@
     "getLocation": "Get Location",
     "drawOnMap": "Draw on map",
     "drawHint": "Click the circle tool, then click and drag on the map to draw a fence.",
-    "drawerLabel": "Geofence drawing map"
+    "drawerLabel": "Geofence drawing map",
+    "noun": {
+      "one": "geofence",
+      "other": "geofences"
+    },
+    "bulk": {
+      "delete": "Delete",
+      "deleteConfirm": {
+        "title": "Delete geofences?"
+      }
+    },
+    "filterLabel": {
+      "search": "Search"
+    },
+    "selectGeofence": "Select geofence {{name}}",
+    "error": {
+      "nameTooLong": "Max 120 characters"
+    }
   },
   "mapOverview": {
     "pageTitle": "Map Overview",
@@ -5802,7 +6203,10 @@
     "bucketTitle": "Efficiency by Temperature Range",
     "avgEff": "Avg Efficiency",
     "optimalTitle": "Optimal Temperature Analysis",
-    "tipsTitle": "Recommendations"
+    "tipsTitle": "Recommendations",
+    "tipOptimal": "Best efficiency observed in the {{range}} range",
+    "optimalDesc": "Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drives.",
+    "optimalDelta": "Compared to the worst range ({{worst}}), you save {{delta}} {{unit}} on average."
   },
   "notifications": {
     "title": "Notifications",
@@ -5824,7 +6228,10 @@
         "searchPlaceholder": "Search messages…",
         "severity.info": "Info",
         "severity.warn": "Warn",
-        "severity.critical": "Critical"
+        "severity.critical": "Critical",
+        "searchLabel": "Search",
+        "from": "From",
+        "to": "To"
       },
       "row": {
         "select": "Select notification",
@@ -5851,7 +6258,8 @@
         "title": "No notifications",
         "message": "When alert rules fire, the resulting notifications appear here.",
         "archivedTitle": "No archived notifications",
-        "archivedMessage": "Archived notifications will appear here."
+        "archivedMessage": "Archived notifications will appear here.",
+        "cta": "Configure alert rules"
       },
       "error": {
         "title": "Could not load notifications"
@@ -5933,7 +6341,8 @@
       "empty": {
         "title": "No channels configured",
         "message": "Add a notification channel to start receiving alerts via Discord, Slack, Telegram, Email, and more."
-      }
+      },
+      "testHint": "Save then click \"Send Test\" to verify the configuration."
     },
     "alertStudio": {
       "title": "Alert Studio",
@@ -5956,7 +6365,8 @@
         "enableRule": "Enable rule",
         "confirmDeleteTitle": "Delete rule?",
         "confirmDelete": "Delete \"{{name}}\"?",
-        "deleteRule": "Delete rule"
+        "deleteRule": "Delete rule",
+        "selectRow": "Select rule {{name}}"
       },
       "severity": {
         "info": "Info",
@@ -6069,12 +6479,22 @@
         "thresholdPlaceholder": "e.g. 200",
         "preview": "Live preview",
         "previewLoading": "Computing…",
-        "wouldNot": "NOT"
+        "wouldNot": "NOT",
+        "would": ""
       },
       "kind": {
         "signal": "Signal threshold",
         "computedMetric": "Computed metric"
       }
+    },
+    "log": {
+      "filterLabel": {
+        "search": "Search"
+      }
+    },
+    "bulk": {
+      "announceArchived": "{{count}} items archived",
+      "announceRestored": "{{count}} items restored"
     }
   },
   "orders": {
@@ -6140,6 +6560,12 @@
       "absolute": "Absolute (Nov 12, 13:42)",
       "absoluteHelp": "Best for trip planning and event correlation",
       "help": "Hover any timestamp to see the alternate format. Override per-surface with the format prop where needed."
+    },
+    "chartPalette": {
+      "cbSafe": "Color-blind safe",
+      "neon": "Stylistic neon",
+      "label": "Chart palette",
+      "help": "Defaults to the Okabe-Ito palette so series remain distinguishable for the ~8% of users with red-green colour vision deficiency."
     }
   },
   "featureConfig": {
@@ -6362,7 +6788,8 @@
         "disabled": "TOTP disabled.",
         "backupRegenerated": "Backup codes regenerated."
       }
-    }
+    },
+    "electricityCost": "Electricity Cost (per kWh)"
   },
   "confirm": {
     "silence": {
@@ -6569,6 +6996,10 @@
       "duration": "Duration in State",
       "timestamp": "Timestamp",
       "context": "Context Snapshot"
+    },
+    "col": {
+      "state": "State",
+      "count": "Count"
     }
   },
   "changelog": {
@@ -6633,7 +7064,8 @@
       "untitled": "Untitled conversation",
       "empty": "Empty",
       "messageCount_one": "{{count}} msg",
-      "messageCount_other": "{{count}} msgs"
+      "messageCount_other": "{{count}} msgs",
+      "messageCount": "{{count}} msgs"
     },
     "delete": {
       "title": "Delete conversation?",
@@ -6814,7 +7246,11 @@
       "waitCount": "Wait Count",
       "waitDuration": "Wait Duration"
     },
-    "poolUsage": "Pool Usage"
+    "poolUsage": "Pool Usage",
+    "col": {
+      "table": "Table",
+      "rows": "Rows"
+    }
   },
   "roadmap": {
     "title": "Roadmap",
@@ -6956,6 +7392,12 @@
       "unpin": "Unpin selected",
       "csv": "Copy CSV",
       "addAlert": "Add as alert rule"
+    },
+    "legend": {
+      "delta": "Δ",
+      "deltaAria": "More info about the Δ column",
+      "source": "Src A / Src B",
+      "sourceAria": "More info about the source-layer column"
     }
   },
   "debugger": {
@@ -7095,7 +7537,10 @@
     "chart": {
       "title": "Top Trips by Distance",
       "distance": "Distance",
-      "empty": "No trip data to chart"
+      "empty": "No trip data to chart",
+      "col": {
+        "trip": "Trip"
+      }
     },
     "export": {
       "csv": "CSV",
@@ -7281,7 +7726,8 @@
         "recentDrivesFailed": "Recent drives failed to load",
         "recentChargesFailed": "Recent charges failed to load",
         "vehicleConfigFailed": "Vehicle config section failed to load",
-        "quickLinksFailed": "Quick links failed to load"
+        "quickLinksFailed": "Quick links failed to load",
+        "settingsFailed": "Per-vehicle settings failed to load"
       }
     },
     "syncToast": "Vehicles synced successfully",
@@ -7301,7 +7747,8 @@
     "batteryStatus": "Fleet Battery Status",
     "avgLabel": "avg",
     "allVehicles": "All Vehicles",
-    "removeTitle": "Remove Vehicle"
+    "removeTitle": "Remove Vehicle",
+    "removeMessage": "Are you sure you want to remove \"{{name}}\"? This will delete all associated data including drives, charges, and state history."
   },
   "card": {
     "interior": "Interior",
@@ -7746,7 +8193,8 @@
     "unpin": "Unpin from vehicle",
     "pin": "Pin to current vehicle",
     "menuFooter": "Manage layouts in the tab strip below",
-    "resetMessage": "This removes all customizations and restores the shipped default dashboard. Your other saved layouts are not affected."
+    "resetMessage": "This removes all customizations and restores the shipped default dashboard. Your other saved layouts are not affected.",
+    "editTitle": "Edit dashboard (E)"
   },
   "webpush": {
     "title": "Browser push",
@@ -7857,7 +8305,8 @@
         "githubUrl": "GitHub issue URL",
         "saveUrl": "Save URL",
         "forward": "Forward to GitHub"
-      }
+      },
+      "maskedEmail": "Reporter email, click to reveal"
     }
   },
   "quietHours": {
@@ -8340,8 +8789,7 @@
       "save": "Failed to save setting.",
       "reset": "Failed to reset setting."
     }
-  }
-,
+  },
   "rbac": {
     "title": "RBAC matrix",
     "subtitle": "Provider-agnostic role-permission bindings",
@@ -8448,5 +8896,170 @@
     "storedCount_one": "{{count}} entry stored",
     "storedCount_other": "{{count}} entries stored",
     "storedCount": "{{count}} entries stored"
-  }
+  },
+  "View": "View",
+  "tagInput": {
+    "addedOne": "Tag added",
+    "added": "{{count}} tags added",
+    "duplicate": "{{tag}} is already added",
+    "maxReachedAnnounce": "Tag limit reached",
+    "removed": "Removed {{tag}}",
+    "removeTag": "Remove {{tag}}",
+    "maxReached": "Tag limit reached",
+    "placeholder": "Add a tag…",
+    "tagsNone": "No tags yet",
+    "tagsList": "Tags: {{tags}}",
+    "maxReachedHint": "Maximum {{count}} tags"
+  },
+  "contextMenu": {
+    "menuLabel": "Context menu"
+  },
+  "slider": {
+    "thumbMin": "{{label}} minimum",
+    "thumbMax": "{{label}} maximum"
+  },
+  "system": {
+    "page": {
+      "title": "System budgets"
+    }
+  },
+  "automationList": {
+    "title": "Automations (list)",
+    "noun": {
+      "one": "automation",
+      "other": "automations"
+    },
+    "bulk": {
+      "enable": "Enable",
+      "disable": "Disable",
+      "delete": "Delete"
+    },
+    "empty": {
+      "title": "No automations yet",
+      "cta": "Open builder"
+    },
+    "col": {
+      "name": "Name",
+      "desc": "Description",
+      "runs": "Runs",
+      "status": "Status"
+    },
+    "selectAutomation": "Select automation {{name}}"
+  },
+  "selectSession": "Select charging session",
+  "exportsList": {
+    "title": "Exports",
+    "noun": {
+      "one": "export",
+      "other": "exports"
+    },
+    "bulk": {
+      "delete": "Delete",
+      "deleteConfirm": {
+        "title": "Delete export jobs?"
+      }
+    },
+    "empty": {
+      "title": "No exports yet"
+    },
+    "col": {
+      "type": "Type",
+      "format": "Format",
+      "size": "Size",
+      "created": "Created",
+      "status": "Status"
+    },
+    "selectExport": "Select export {{id}}",
+    "download": "Download"
+  },
+  "locations": {
+    "filterLabel": {
+      "search": "Search"
+    },
+    "empty": {
+      "cta": "View drives"
+    }
+  },
+  "alertRules": {
+    "title": "Alert rules",
+    "noun": {
+      "one": "rule",
+      "other": "rules"
+    },
+    "bulk": {
+      "enable": "Enable",
+      "disable": "Disable",
+      "delete": "Delete",
+      "deleteConfirm": {
+        "title": "Delete alert rules?"
+      }
+    },
+    "empty": {
+      "title": "No alert rules yet",
+      "cta": "Open Alert Studio"
+    },
+    "col": {
+      "name": "Name",
+      "signal": "Signal",
+      "severity": "Severity",
+      "status": "Status"
+    },
+    "selectRule": "Select rule {{name}}",
+    "error": {
+      "nameTooLong": "Max 120 characters"
+    },
+    "openStudio": "Open Alert Studio"
+  },
+  "advanced": {
+    "restoreConfirms": {
+      "title": "Confirmation prompts",
+      "restoreAll": "Restore all",
+      "restore": "Restore"
+    }
+  },
+  "totp": {
+    "disable": {
+      "typedLabel": "Type DISABLE to confirm",
+      "title": "Disable two-factor authentication?",
+      "confirm": "Disable",
+      "cancel": "Keep TOTP enabled"
+    },
+    "errors": {
+      "codeLength": "Enter all 6 digits.",
+      "invalidCode": "Code did not match. Try the next one.",
+      "verifyGeneric": "Verification failed."
+    },
+    "loading": "Loading two-factor settings…",
+    "title": "Two-factor authentication",
+    "status": {
+      "active": "Active",
+      "notEnrolled": "Not enrolled"
+    },
+    "lastUsed": {
+      "label": "Last used",
+      "never": "Never"
+    },
+    "backupCodesRemaining": {
+      "label": "Backup codes remaining"
+    },
+    "actions": {
+      "regenerate": "Regenerate backup codes",
+      "disable": "Disable",
+      "enroll": "Enable TOTP"
+    },
+    "modal": {
+      "enrollTitle": "Enable TOTP",
+      "qrAlt": "TOTP QR code",
+      "manualLabel": "Manual entry secret",
+      "codeLabel": "Enter the 6-digit code from your app",
+      "cancel": "Cancel",
+      "verify": "Verify and activate"
+    },
+    "backupCodes": {
+      "title": "Save your backup codes",
+      "download": "Download .txt",
+      "done": "I saved them"
+    }
+  },
+  "Read-Write": "Read-Write"
 }
