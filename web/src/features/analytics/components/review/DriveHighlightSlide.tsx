@@ -1,8 +1,11 @@
 import { motion } from '@/components/motion';
 import { useTranslation } from 'react-i18next';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import type { YearReviewDriveHighlight } from '@/api/types';
 import { MapPin, Clock, Zap, ArrowRight } from 'lucide-react';
+
+const KM_PER_MILE = 1.609344;
 
 interface Props {
   drive: YearReviewDriveHighlight | null;
@@ -12,7 +15,9 @@ interface Props {
 
 export function DriveHighlightSlide({ drive, label, emoji }: Props) {
   const { t } = useTranslation();
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   if (!drive) {
     return (
@@ -26,6 +31,11 @@ export function DriveHighlightSlide({ drive, label, emoji }: Props) {
   const hours = Math.floor(drive.duration_min / 60);
   const mins = drive.duration_min % 60;
   const durationStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  // backend `distance_km` is SI km; `efficiency_wh_km` is SI Wh/km.
+  const distDisplay = convertDistanceFromSI(drive.distance_km * 1000, distanceUnit);
+  const effDisplay = distanceUnit === 'mi'
+    ? drive.efficiency_wh_km * KM_PER_MILE
+    : drive.efficiency_wh_km;
 
   return (
     <div className="flex flex-col items-center justify-center h-full px-8 text-center">
@@ -65,7 +75,7 @@ export function DriveHighlightSlide({ drive, label, emoji }: Props) {
         <div className="grid grid-cols-3 gap-3">
           <div>
             <p className="text-2xl font-bold text-white">
-              {Math.round(convertDistance(drive.distance_km))}
+              {Math.round(distDisplay)}
             </p>
             <p className="text-xs text-[var(--text-muted)]">{distanceUnit}</p>
           </div>
@@ -80,10 +90,10 @@ export function DriveHighlightSlide({ drive, label, emoji }: Props) {
             <div className="flex items-center justify-center gap-1">
               <Zap className="h-3 w-3 text-[var(--text-muted)]" />
               <p className="text-2xl font-bold text-white">
-                {drive.efficiency_wh_km > 0 ? Math.round(drive.efficiency_wh_km) : '—'}
+                {drive.efficiency_wh_km > 0 ? Math.round(effDisplay) : '—'}
               </p>
             </div>
-            <p className="text-xs text-[var(--text-muted)]">Wh/km</p>
+            <p className="text-xs text-[var(--text-muted)]">{efficiencyUnit}</p>
           </div>
         </div>
 

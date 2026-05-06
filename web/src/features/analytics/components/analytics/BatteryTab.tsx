@@ -11,14 +11,18 @@ import {
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { FleetAnalytics } from '@/api/types';
 import { SectionTitle } from './helpers';
 
 export function BatteryTab({ data }: { data: FleetAnalytics | undefined }) {
   const { t } = useTranslation();
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  // backend `range_km` is SI km; convert via meter-floored helper.
+  const fromKm = (km: number) => convertDistanceFromSI(km * 1000, distanceUnit);
 
   const trend = data?.battery_trend ?? [];
   const latest = trend.length > 0 ? trend[trend.length - 1] : null;
@@ -63,7 +67,7 @@ export function BatteryTab({ data }: { data: FleetAnalytics | undefined }) {
         />
         <MetricCard
           label={t('analytics.battery.estRange', 'Est. Range')}
-          value={latest ? fmtNumber(convertDistance(safe(latest.range_km)), 0) : '—'}
+          value={latest ? fmtNumber(fromKm(safe(latest.range_km)), 0) : '—'}
           subtitle={distanceUnit}
           icon={<MapPin className="h-4 w-4" />}
           color="purple"
@@ -113,7 +117,7 @@ export function BatteryTab({ data }: { data: FleetAnalytics | undefined }) {
           <SectionTitle>{t('analytics.battery.rangeTrend', 'Range Trend')}</SectionTitle>
           <ResponsiveContainer width="100%" height={260}>
             <LineChart
-              data={trend.map((d) => ({ ...d, range: convertDistance(safe(d.range_km)) }))}
+              data={trend.map((d) => ({ ...d, range: fromKm(safe(d.range_km)) }))}
               margin={chartMarginLabeled}
               {...chartAnimation}
             >

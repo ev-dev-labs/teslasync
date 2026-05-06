@@ -2731,6 +2731,7 @@
     "peakHour": "Peak driving hour",
     "drivesWeek": "drives/week",
     "kmPerDrive": "km/drive avg",
+    "distancePerDrive": "{{unit}}/drive avg",
     "avg": "avg",
     "youSaved": "You saved",
     "vsGas": "vs. driving a gas car",

@@ -2,14 +2,19 @@ import { useTranslation } from 'react-i18next';
 import { MapPin, Car, Zap, Gauge, DollarSign, Leaf } from 'lucide-react';
 import { MetricCard } from '@/components/data-display';
 import { safe } from '@/components/charts';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { FleetAnalytics } from '@/api/types';
 import { MetricSkeleton } from './helpers';
 
+const KM_PER_MILE = 1.609344;
+
 export function HeroGauges({ data }: { data: FleetAnalytics | undefined }) {
   const { t } = useTranslation();
-  const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   if (!data) {
     return (
@@ -19,9 +24,16 @@ export function HeroGauges({ data }: { data: FleetAnalytics | undefined }) {
     );
   }
 
-  const totalDist = convertDistance(data.total_distance_km ?? 0);
-  const gasSavings = totalDist * 0.085 * 1.5 - safe(data.total_cost);
-  const co2Saved = totalDist * 0.12;
+  // backend `total_distance_km` is SI km — go through the meter-floored helper
+  // so the conversion factor lives in `lib/unitConversion`, not here.
+  const totalDistKm = data.total_distance_km ?? 0;
+  const totalDist = convertDistanceFromSI(totalDistKm * 1000, distanceUnit);
+  // Gas savings + CO₂ heuristics are tied to KM regardless of display unit so
+  // the dollar/kg outputs stay stable for the same trip.
+  const gasSavings = totalDistKm * 0.085 * 1.5 - safe(data.total_cost);
+  const co2Saved = totalDistKm * 0.12;
+  const avgEffWhPerKm = data.avg_efficiency_wh_km ?? 0;
+  const avgEffDisplay = distanceUnit === 'mi' ? avgEffWhPerKm * KM_PER_MILE : avgEffWhPerKm;
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
@@ -47,7 +59,7 @@ export function HeroGauges({ data }: { data: FleetAnalytics | undefined }) {
       />
       <MetricCard
         label={t('analytics.hero.efficiency', 'Efficiency')}
-        value={fmtNumber(convertEfficiency(data.avg_efficiency_wh_km ?? 0), 1)}
+        value={fmtNumber(avgEffDisplay, 1)}
         subtitle={efficiencyUnit}
         icon={<Gauge className="h-4 w-4" />}
         color="amber"
