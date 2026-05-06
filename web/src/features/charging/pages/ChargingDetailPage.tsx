@@ -5,6 +5,8 @@ import type { ChargingSession, ChargeTelemetryReading } from '@/api/types';
 import { useChargingSessionDetail, useChargeTelemetry } from '@/api/hooks/useCharging';
 import { useVehicle, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertTempFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDate, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtWithUnit, fmtPercent } from '@/lib/numberFormat';
@@ -109,10 +111,22 @@ export default function ChargingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const sessionId = Number(id);
 
+  // ChargingSession.miles_added (genuine miles after charging_repo.go SQL adapter
+  // boundary) and live ChargingTelemetry.{battery_range_mi,charge_rate_mph,
+  // charge_miles_added} (suffix-named misleading fields whose values are SI per
+  // Phase-43/0020 PREFLIGHT) stay on legacy useSettings.convertDistance per the
+  // locked-policy deferral. ChargeTelemetryReading.{rated_range,...} similarly
+  // keep convertDistance until backend populates SI.
   const {
-    convertDistance, convertTemp, distanceUnit, tempUnit,
+    convertDistance, distanceUnit,
     costPerKwh: settingsCostPerKwh, currencySymbol, formatEnergyCost,
   } = useSettings();
+  // Battery / inside / outside temperatures from chargeTelemetryFieldMappings
+  // (InsideTemp/OutsideTemp/ModuleTempMax) are °C SI — migrate to the SI-aware
+  // useUnits surface. unitPrefs.temperature replaces the old tempUnit string;
+  // chart values use convertTempFromSI so YAxis ticks remain raw numbers.
+  const { unitPrefs } = useUnits();
+  const tempUnit = unitPrefs.temperature;
 
   const { data: session, isLoading } = useChargingSessionDetail(sessionId || null);
   const { data: telemetry } = useChargeTelemetry(session?.id ?? null);
@@ -181,11 +195,11 @@ export default function ChargingDetailPage() {
     if (!hasTelemetry) return [];
     return telemetry.map((r: ChargeTelemetryReading) => ({
       time: formatTime(r.created_at),
-      battery: r.battery_temp != null ? convertTemp(r.battery_temp) : null,
-      inside: r.inside_temp != null ? convertTemp(r.inside_temp) : null,
-      outside: r.outside_temp != null ? convertTemp(r.outside_temp) : null,
+      battery: r.battery_temp != null ? convertTempFromSI(r.battery_temp, unitPrefs.temperature) : null,
+      inside: r.inside_temp != null ? convertTempFromSI(r.inside_temp, unitPrefs.temperature) : null,
+      outside: r.outside_temp != null ? convertTempFromSI(r.outside_temp, unitPrefs.temperature) : null,
     }));
-  }, [telemetry, hasTelemetry, convertTemp]);
+  }, [telemetry, hasTelemetry, unitPrefs.temperature]);
 
   const voltCurrentData = useMemo(() => {
     if (!hasTelemetry) return [];
