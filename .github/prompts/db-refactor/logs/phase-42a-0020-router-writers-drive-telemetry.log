@@ -1,0 +1,270 @@
+phase-42a / 0020-router-writers-drive-telemetry
+================================================
+
+Severity: Gate
+Atomic: yes
+Delegation: FORBIDDEN
+Predecessor: phase-42a-0010-router-writers-snapshot-base.log (EXIT=0/STATUS=DONE)
+
+Allowed files to change:
+  - internal/tesla/router/writers/drive_telemetry_writer.go
+  - internal/tesla/router/writers/drive_telemetry_writer_test.go
+  - this log
+
+What this prompt does:
+  - Verifies the prerequisites for a per-tick drive telemetry writer
+    (routing.yaml entries, schema target table) before authoring code.
+  - Triggers the prompt's documented escape hatch when the schema
+    target is missing.
+
+What this prompt does NOT do (BLOCKED outcome):
+  - Author internal/tesla/router/writers/drive_telemetry_writer.go.
+    The escape hatch fires: there is no `drive_telemetry` table for
+    the writer to INSERT/UPSERT into. Authoring the writer anyway
+    would produce code that panics or fails on every Write at
+    runtime against a fresh database, and would also force a fake
+    schema in tests that does not match production reality. Either
+    outcome violates the Honesty Covenant (rule 1: do not fabricate;
+    rule 6: tests must reflect production schema).
+  - Author the test file. Same rationale — the reflective coverage
+    test would assert against a column map drawn from a table the
+    schema does not contain.
+
+=== PREFLIGHT ===
+HEAD: ee834d1f37287a268e8992deac01cf3058dedfb1
+git status --short (pre-implementation):
+  (clean)
+Predecessor log exists: True
+Predecessor log last 2 lines:
+  EXIT=0
+  STATUS=DONE
+
+=== AUDIT_EVIDENCE ===
+
+Check 1: routing.yaml entry count under `dest: drive_telemetry`
+  command: Select-String -Path internal\tesla\router\routing.yaml -Pattern 'dest: drive_telemetry' -SimpleMatch | Measure-Object | % Count
+  result: 11
+  expected per prompt header: 11  -> matches
+
+Check 2: enumerate the 11 routes in routing.yaml order
+  command: Select-String -Path internal\tesla\router\routing.yaml -Pattern '^  - field:|dest: drive_telemetry|^    column:' -Context 0,0
+  result (rendered as field -> column with the SI/scalar kind expected
+  by ADR-004 #4 for the per-tick drive telemetry destination):
+    1.  BrakePedal                  -> brake_pedal                          (BOOLEAN, bool)
+    2.  BrakePedalPos               -> brake_pedal_pos_pct                  (DOUBLE PRECISION, float64)
+    3.  CruiseSetSpeed              -> cruise_set_speed_mps                 (DOUBLE PRECISION, float64)
+    4.  DriveRail                   -> drive_rail                           (TEXT, string)
+    5.  Gear                        -> gear                                 (TEXT, string  — Stringer-derived enum)
+    6.  LateralAcceleration         -> lateral_acceleration_mps2            (DOUBLE PRECISION, float64)
+    7.  LifetimeEnergyGainedRegen   -> lifetime_energy_gained_regen_wh      (DOUBLE PRECISION, float64)
+    8.  LifetimeEnergyUsedDrive     -> lifetime_energy_used_drive_wh        (DOUBLE PRECISION, float64)
+    9.  LongitudinalAcceleration    -> longitudinal_acceleration_mps2       (DOUBLE PRECISION, float64)
+    10. PedalPosition               -> pedal_position_pct                   (DOUBLE PRECISION, float64)
+    11. VehicleSpeed                -> speed_mps                            (DOUBLE PRECISION, float64)
+  All 11 routes have a `column:` declaration (no signal_log fan-out
+  from this destination).
+
+Check 3: Destination constant registered in router types
+  command: Select-String -Path internal\tesla\router\types.go -Pattern 'DestDriveTelemetry'
+  result: types.go:97 godoc + types.go:100
+          DestDriveTelemetry Destination = "drive_telemetry"
+  command: Select-String -Path internal\tesla\router\routing_loader.go -Pattern 'DestDriveTelemetry'
+  result: routing_loader.go:36 — listed in the loader's known-destination
+          set, so router.LoadMap() validates each routing.yaml entry's
+          `dest:` against this constant and would FAIL to load if the
+          11 drive_telemetry entries pointed at an unknown destination.
+  Conclusion: the routing layer treats drive_telemetry as a first-class
+  destination today.
+
+Check 4: ALL phase-42 SI migrations enumerated and grepped for
+  `CREATE TABLE drive_telemetry` (the per-tick table this writer
+  presumes).
+  command: Get-ChildItem migrations -Filter "*.up.sql" | Where-Object { $_.Name -match '^00018[0-9]|^00019[0-9]|^0002[0-9][0-9]' } | Sort-Object Name | ForEach-Object Name
+  result:
+    000180_drop_legacy_telemetry.up.sql
+    000181_vehicle_unit_history.up.sql
+    000182_positions_si.up.sql
+    000183_snapshots_si.up.sql
+    000184_charging_si.up.sql
+    000185_drives_si.up.sql
+    000186_signal_log.up.sql
+    000187_fsm_live.up.sql
+    000188_caggs_and_mvs.up.sql
+  command: Select-String -Path migrations\*.up.sql -Pattern 'CREATE TABLE\s+drive_telemetry\b'
+  result: (no matches)
+  command: Select-String -Path migrations\*.up.sql -Pattern 'CREATE TABLE.*drive_telemetry\b'
+  result:
+    migrations\000021_drive_charge_enhancements.up.sql:182:CREATE TABLE IF NOT EXISTS drive_telemetry_readings (
+    -- only legacy table `drive_telemetry_readings` (different name);
+    -- this table was DROPPED by 000146_drop_snapshot_tables.up.sql:20
+    -- and is also explicitly named in 000180_drop_legacy_telemetry.up.sql:32.
+  Conclusion: no migration in the active schema chain creates a
+  table named `drive_telemetry`.
+
+Check 5: tables actually created by 000185_drives_si.up.sql
+  command: Select-String -Path migrations\000185_drives_si.up.sql -Pattern '^CREATE TABLE'
+  result:
+    L93:  CREATE TABLE drives (...)
+    L177: CREATE TABLE trips (...)
+    L?:   CREATE TABLE trip_drives (...)
+  Conclusion: 000185 creates the SESSION-AGGREGATE `drives` table
+  (one row per drive — started_at/ended_at summary with SI
+  aggregates) plus user-grouping `trips` and join `trip_drives`.
+  None of these is the per-tick storage target the writer requires.
+
+Check 6: prompt-source confirmation that 000185 is the only intended
+  drive table producer in phase-42.
+  command: Get-ChildItem .github\prompts\db-refactor\phase-42 | Select-Object Name | Sort-Object Name
+  result: 0030..0036 are the migration prompts. The drive-related
+          prompt is 0033-migration-create-drives-si.prompt.md.
+  command: Select-String -Path .github\prompts\db-refactor\phase-42\0033-migration-create-drives-si.prompt.md -Pattern 'CREATE TABLE'
+  result:
+    L36: CREATE TABLE drives (...)
+    L65: CREATE TABLE trips (...)
+    L79: CREATE TABLE trip_drives (...)
+  Conclusion: phase-42 prompt 0033 deliberately authored ONLY the
+  three session-aggregate / user-grouping tables. There was no
+  separate phase-42 prompt creating a per-tick `drive_telemetry`
+  table — the writer prompt 0020 presumes a target that was never
+  scheduled.
+
+Check 7: re-confirm 000185 schema does not even comment-mention a
+  per-tick column shape that could plausibly belong on the `drives`
+  table itself (i.e., is the prompt actually pointing at `drives`
+  under a different name?).
+  command: Select-String -Path migrations\000185_drives_si.up.sql -Pattern 'speed_mps|brake_pedal|cruise_set_speed|drive_rail|pedal_position|lateral_acceleration|longitudinal_acceleration|lifetime_energy'
+  result: (no matches)
+  Conclusion: none of the 11 routed columns from Check 2 appear in
+  the `drives` table. The `drives` table holds end-of-drive
+  aggregates (avg_speed_mps, max_speed_mps, distance_m, duration_s,
+  energy_used_wh, regen_energy_wh) — different columns from a
+  different scale (per-drive, not per-tick). Renaming the writer's
+  target to `drives` would be semantically wrong: drives.id is
+  BIGSERIAL and one row per drive, not per (vehicle_id, ts) tick.
+
+Check 8: ADR-004 #4 + locked-decision #2 require composing the
+  shared snapshotWriter with a per-tick (vehicle_id, ts) PK upsert
+  pattern (see internal/tesla/router/writers/snapshot_base.go:158
+  and the charging_telemetry precedent at
+  migrations/000184_charging_si.up.sql:81). The `drives` table has
+  PRIMARY KEY (id) with id BIGSERIAL — the snapshotWriter's
+  ON CONFLICT (vehicle_id, ts) would never fire and every Write
+  would INSERT a fresh row, multiplying drive count by tick count.
+  Pointing the writer at `drives` is therefore not just naming-wrong
+  but architecturally incompatible.
+
+Check 9: write_buffer.go preserves a stale logging tag.
+  command: Select-String -Path internal\database\write_buffer.go -Pattern 'drive_telemetry'
+  result:
+    write_buffer.go:26: // name is used for logging (e.g. "drive_telemetry", "charge_telemetry").
+  This is a comment-only reference, not a schema source. Noted as
+  unrelated cleanup; not in scope for this prompt.
+
+=== IMPLEMENTATION ===
+
+ESCAPE HATCH TRIGGERED.
+
+The prompt body's escape hatch reads (verbatim):
+
+  > If mig 000185 does NOT actually create a per-tick drive
+  > telemetry table (only the session-aggregate `drives` table),
+  > BLOCK and surface — this writer's existence presumes a per-tick
+  > storage target. A schema gap is a separate prompt.
+
+Audit Checks 4-8 establish unambiguously that:
+  (a) routing.yaml has 11 entries pointing at `dest: drive_telemetry`,
+  (b) router types/loader register DestDriveTelemetry as a
+      first-class destination,
+  (c) NO migration anywhere in the active phase-42 schema chain
+      (000180-000188) creates a table named `drive_telemetry`,
+  (d) 000185 creates `drives` / `trips` / `trip_drives` only, and
+      the `drives` table is the wrong shape (BIGSERIAL PK, one row
+      per drive — not per-tick) and lacks the 11 routed columns,
+  (e) phase-42 prompt 0033 (the migration that produced 000185) was
+      scoped to summary tables only — no separate prompt scheduled
+      a per-tick drive telemetry table.
+
+Per the escape hatch, NO files in
+internal/tesla/router/writers/ are modified by this prompt. The
+allowed-files set
+  - internal/tesla/router/writers/drive_telemetry_writer.go
+  - internal/tesla/router/writers/drive_telemetry_writer_test.go
+  - this log
+is intentionally narrowed to ONLY this log.
+
+Files touched: 0 of 2 code files (intentional — escape hatch); 1 log file.
+
+Hand-off: a separate phase-42a (or phase-42 follow-up) prompt must
+land a migration that creates the per-tick `drive_telemetry` table.
+At a minimum the table must:
+  - have PRIMARY KEY (vehicle_id, ts) so snapshotWriter's ON CONFLICT
+    DO UPDATE upserts coalesce two atomics for the same tick into
+    one row (the same shape as charging_telemetry per
+    migrations/000184_charging_si.up.sql:81);
+  - declare 11 nullable non-PK columns matching the right side of
+    Check 2 (brake_pedal BOOLEAN, brake_pedal_pos_pct DOUBLE
+    PRECISION, cruise_set_speed_mps DOUBLE PRECISION, drive_rail
+    TEXT, gear TEXT, lateral_acceleration_mps2 DOUBLE PRECISION,
+    lifetime_energy_gained_regen_wh DOUBLE PRECISION,
+    lifetime_energy_used_drive_wh DOUBLE PRECISION,
+    longitudinal_acceleration_mps2 DOUBLE PRECISION,
+    pedal_position_pct DOUBLE PRECISION, speed_mps DOUBLE PRECISION);
+  - declare a nullable `drive_id BIGINT` column that the session
+    tracker (phase-42a/0030) backfills via UPDATE — symmetric to
+    charging_telemetry.session_id per phase-42a/0019 Decision #3;
+  - be a Timescale hypertable on (ts) given the ~1 Hz ingest cadence
+    (consistent with charging_telemetry's hypertable at
+    migrations/000184_charging_si.up.sql:111-112).
+Once that migration lands, this prompt (0020) can be re-run as-is
+against the new schema and the escape hatch will not trigger.
+
+=== GATE ===
+
+Gate criterion (per Honesty Covenant rules 1, 6, 11): if the
+prerequisite schema target is missing, BLOCK rather than author a
+writer that targets a nonexistent table.
+
+Result: prerequisite missing -> BLOCKED.
+
+  Code-file allowed-files modified: 0  -> as expected for BLOCKED
+  Log-file allowed-files modified:  1  -> this log
+  Disallowed files modified:        0
+  git status --short (post-write):  .github/prompts/db-refactor/logs/phase-42a-0020-router-writers-drive-telemetry.log
+                                    (gitignored — staged with `git add -f`
+                                     per repo memory `.gitignore:83-89`)
+
+Pre-existing build/lint state of the writers package is untouched
+because no .go files were modified. No `go build` / `go test` /
+`golangci-lint` runs are required by this BLOCKED outcome — there is
+no new code to validate. (Running them would still pass; the writers
+package compiled green at HEAD ee834d1f as of the predecessor
+prompt 0019's gate, and this prompt mutated zero .go files.)
+
+=== COMMIT ===
+
+Commit (BLOCKED — log-only):
+  chore(phase-42a/0020): BLOCKED — drive_telemetry table missing from schema chain (escape hatch)
+
+  Phase-42a prompt 0020 author the per-tick drive telemetry writer
+  presumes a `drive_telemetry` table created by migration 000185.
+  Audit confirms 000185 creates only the session-aggregate `drives`
+  table plus user-grouping `trips` / `trip_drives` — NO per-tick
+  table named `drive_telemetry` exists in any phase-42 migration
+  (000180-000188). 11 routing.yaml entries and DestDriveTelemetry
+  in router/types.go reference a destination with no storage target.
+
+  Per the prompt's documented escape hatch, BLOCK and surface the
+  schema gap rather than author a writer that targets a nonexistent
+  table (which would violate Honesty Covenant rules 1 + 6).
+
+  Hand-off: a separate migration prompt must create
+  `drive_telemetry` with PK (vehicle_id, ts), 11 SI-canonical
+  columns matching the routing.yaml entries, and a nullable
+  drive_id BIGINT for the session tracker (phase-42a/0030) to
+  backfill — symmetric to charging_telemetry per phase-42a/0019.
+  Once that migration lands, prompt 0020 can be re-run as-is.
+
+  Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+EXIT=1
+STATUS=BLOCKED
