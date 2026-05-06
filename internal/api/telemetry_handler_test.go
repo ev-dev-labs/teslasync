@@ -283,6 +283,7 @@ func TestNormalizeFleetUnitsRegression(t *testing.T) {
 		"func " + "flattenCompound" + "TimeValue",
 		"func " + "extractCompound" + "TimeField",
 		"func (h *TelemetryHandler) " + "ProcessSignals" + "(",
+		"func (h *TelemetryHandler) " + "processSignalsLegacy" + "Deprecated(",
 	}
 	for _, token := range forbidden {
 		if strings.Contains(src, token) {
