@@ -86,6 +86,16 @@ export function useEnergyFlow(vehicleId: string | null) {
   });
 }
 
+/**
+ * Phase-42 / Prompt 0077 — DEPRECATED. The backend `/vampire-drain/stats`
+ * route was deleted alongside the `vampire_drain_events` table; this hook
+ * will reliably 404 in production. Kept (not removed) because the
+ * `features/dashboard` VampireDrainWidget and the legacy VampireDrainPage
+ * still call it; their UI surfaces the resulting query error gracefully.
+ * A future replacement should derive vampire-drain metrics from `signal_log`
+ * (BatteryLevel + IdleNumberOfMinutes) and route through `useSleepEfficiency`
+ * style aggregates.
+ */
 export function useVampireDrainStats(vehicleId: string | null) {
   return useQuery({
     queryKey: ['vampire-drain-stats', vehicleId],
@@ -94,6 +104,10 @@ export function useVampireDrainStats(vehicleId: string | null) {
   });
 }
 
+/**
+ * Phase-42 / Prompt 0077 — DEPRECATED. See `useVampireDrainStats` for the
+ * deletion rationale and migration plan. Returns 404 from the backend.
+ */
 export function useVampireDrainEvents(vehicleId: string | null, limit = 50) {
   return useQuery({
     queryKey: ['vampire-drain-events', vehicleId, limit],

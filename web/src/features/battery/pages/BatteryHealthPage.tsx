@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { Link } from 'react-router-dom';
@@ -26,6 +26,8 @@ import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/us
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAlertContext } from '@/hooks/useAlertContext';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -220,7 +222,18 @@ function BatteryHealthSkeleton() {
 export default function BatteryHealthPage() {
   const { t } = useTranslation();
   usePageTitle(t('battery.title', 'Battery Health'));
-  const { convertDistance, distanceUnit, convertTemp, tempUnit } = useSettings();
+  const { convertTemp, tempUnit } = useSettings();
+  // Phase-43 / Prompt 0023 — `convertDistance` from useSettings expects MILES
+  // input. Backend's analytics range_km is genuinely km (derived SI from
+  // signal_log via `internal/api/battery_degradation_handler.go`). To convert
+  // safely, route km → metres then through `convertDistanceFromSI`. Mixing
+  // the legacy helper with km input was the pre-existing bug this prompt
+  // fixes (same root cause as the Phase-43/0022 driving telemetry fix).
+  const { unitPrefs } = useUnits();
+  const fromKm = useCallback(
+    (km: number): number => convertDistanceFromSI(km * 1000, unitPrefs.distance),
+    [unitPrefs.distance],
+  );
 
   /* ── Vehicle selector (Phase 40 / Prompt 16: header picker is the source of truth) ─ */
   // Alert drillthrough URLs (?vehicle_id=…&t=…) flow into the global store
@@ -279,9 +292,9 @@ export default function BatteryHealthPage() {
     () =>
       (health?.history ?? []).map((h) => ({
         label: formatDateShort(h.date),
-        range: Math.round(convertDistance(h.range_km)),
+        range: Math.round(fromKm(h.range_km)),
       })),
-    [health, convertDistance],
+    [health, fromKm],
   );
 
   /* ── Derived: charge level distribution ────────────────────────── */
@@ -715,7 +728,7 @@ export default function BatteryHealthPage() {
                     <Area
                       {...AREA_DEFAULTS}
                       dataKey="range"
-                      name={`${t('battery.chart.range', 'Range')} (${distanceUnit})`}
+                      name={`${t('battery.chart.range', 'Range')} (${unitPrefs.distance})`}
                       stroke={COLOR.GOOD}
                       fill="url(#rangeGrad)"
                     />
@@ -828,9 +841,9 @@ export default function BatteryHealthPage() {
               </p>
               <p className="text-2xl font-bold text-[var(--text-primary)]">
                 {health.history.length > 0
-                  ? fmtInt(convertDistance(health.history[0].range_km))
+                  ? fmtInt(fromKm(health.history[0].range_km))
                   : '—'}
-                <span className="text-sm text-[var(--text-muted)]"> {distanceUnit}</span>
+                <span className="text-sm text-[var(--text-muted)]"> {unitPrefs.distance}</span>
               </p>
             </GlassPanel>
             <GlassPanel className="p-4 text-center">
@@ -839,15 +852,15 @@ export default function BatteryHealthPage() {
               </p>
               <p className="text-2xl font-bold text-emerald-300">
                 {health.history.length > 0
-                  ? fmtInt(convertDistance(health.history[health.history.length - 1].range_km))
+                  ? fmtInt(fromKm(health.history[health.history.length - 1].range_km))
                   : '—'}
-                <span className="text-sm text-[var(--text-muted)]"> {distanceUnit}</span>
+                <span className="text-sm text-[var(--text-muted)]"> {unitPrefs.distance}</span>
               </p>
               {health.history.length >= 2 && (
                 <p className="text-[10px] text-rose-300 mt-1">
-                  -{fmtInt(convertDistance(
+                  -{fmtInt(fromKm(
                     health.history[0].range_km - health.history[health.history.length - 1].range_km,
-                  ))} {distanceUnit} {t('battery.newVsNow.lost', 'lost')}
+                  ))} {unitPrefs.distance} {t('battery.newVsNow.lost', 'lost')}
                 </p>
               )}
             </GlassPanel>

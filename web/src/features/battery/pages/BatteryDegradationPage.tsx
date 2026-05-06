@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Battery, TrendingDown, Zap, Thermometer,
@@ -25,6 +25,8 @@ import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/us
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -116,6 +118,17 @@ export default function BatteryDegradationPage() {
      trend chart so users can declutter (and share) the projection view. */
   const trendHidden = useHiddenSeries('battery-degradation-trend');
 
+  /* Phase-43 / Prompt 0023 — backend `range_km` and `odometer` fields are
+     derived SI in km. Convert km → metres → user-pref display via the
+     SI-canonical helper so users with `unit_of_length=mi` see miles
+     (the legacy useSettings.convertDistance helper expected miles input
+     and would silently double-convert here). */
+  const { unitPrefs } = useUnits();
+  const fromKm = useCallback(
+    (km: number): number => convertDistanceFromSI(km * 1000, unitPrefs.distance),
+    [unitPrefs.distance],
+  );
+
   /* Chart data */
   const rangeData = useMemo(() => {
     if (!data?.history || data.history.length === 0) return [];
@@ -173,7 +186,7 @@ export default function BatteryDegradationPage() {
       {
         key: 'odometer',
         header: t('Odometer'),
-        render: (row: DegradationEntry) => `${fmtNumber(row.odometer)} km`,
+        render: (row: DegradationEntry) => `${fmtNumber(fromKm(row.odometer))} ${unitPrefs.distance}`,
         sortable: true,
       },
       {
@@ -204,11 +217,11 @@ export default function BatteryDegradationPage() {
       {
         key: 'range_km',
         header: t('Range'),
-        render: (row: DegradationEntry) => `${fmtNumber(row.range_km)} km`,
+        render: (row: DegradationEntry) => `${fmtNumber(fromKm(row.range_km))} ${unitPrefs.distance}`,
         sortable: true,
       },
     ],
-    [t],
+    [t, fromKm, unitPrefs.distance],
   );
 
   /* ── Render ──────────────────────────────────────────── */
