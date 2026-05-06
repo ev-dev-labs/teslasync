@@ -43,6 +43,10 @@ climate_snapshots(vehicle_id BIGINT, ts TIMESTAMPTZ,
 This writer composes `snapshotWriter` from prompt 0010 with a
 field→column map covering all 31 routes.
 
+## VIN RESOLUTION CONTRACT (inherited from 0010, commit a53135018)
+
+`codec.Atomic.VehicleID` is the **Payload-level VIN string**, NOT the numeric `vehicles.id`. This writer composes `snapshotWriter` so it INHERITS the VIN-lookup INSERT pattern for free. No additional handling.
+
 ## Locked Implementation Decisions
 
 | # | Decision | Choice |

@@ -30,9 +30,14 @@ schema mirrors mig 000185. The session-aggregate table `drives` is
 populated by the session tracker (drive-tracking side effect), not this
 writer.
 
-## Locked Implementation Decisions
+## VIN RESOLUTION CONTRACT (inherited from 0010, commit a53135018)
 
-Identical pattern to 0019:
+`codec.Atomic.VehicleID` is the **Payload-level VIN string**, NOT the
+numeric `vehicles.id`. Composing `snapshotWriter` (Decision #2) means
+this writer INHERITS the VIN→numeric resolution for free. Verify
+snapshot_base.go's pattern in AUDIT_EVIDENCE; no additional handling.
+
+## Locked Implementation Decisions
 
 | # | Decision | Choice |
 |---|---|---|

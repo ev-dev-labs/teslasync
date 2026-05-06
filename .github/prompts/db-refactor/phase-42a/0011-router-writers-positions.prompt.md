@@ -27,6 +27,27 @@ description: "Phase 42a - positions writer (positions_si table)"
 
 Write `=== PREFLIGHT ===`, `=== AUDIT_EVIDENCE ===`, `=== IMPLEMENTATION ===`, `=== GATE ===`, `=== COMMIT ===` to the output log.
 
+## VIN RESOLUTION CONTRACT (inherited from 0010, commit a53135018)
+
+`codec.Atomic.VehicleID` is the **Payload-level VIN string** (see
+`internal/tesla/codec/types.go:57`), NOT the numeric `vehicles.id`.
+All SI tables use `vehicle_id BIGINT NOT NULL`. The established
+phase-42a writer pattern (locked by 0010 commit a53135018) resolves
+VIN→numeric id INSIDE the INSERT via the unique-indexed `vehicles.vin`
+column. **Every bespoke INSERT in this prompt MUST follow the same
+pattern**:
+
+```sql
+INSERT INTO <table> (vehicle_id, ts, <cols...>)
+SELECT v.id, $2, $3, ... FROM vehicles v WHERE v.vin = $1
+ON CONFLICT (vehicle_id, ts) DO UPDATE SET <col> = EXCLUDED.<col>
+```
+
+`tag.RowsAffected() == 0` means the VIN is not registered → return a
+typed error WITHOUT including the VIN in the message (PII). The legacy
+`VALUES ($1, $2, $3)` shape from prior prompt drafts is INCORRECT and
+MUST NOT be used.
+
 ## Problem
 
 `positions` is the SI-canonical table created by migration 000182. It

@@ -38,6 +38,16 @@ charging_telemetry(vehicle_id BIGINT, ts TIMESTAMPTZ, session_id BIGINT,
 `session_id` is populated later by the session tracker FK update — the
 writer leaves it NULL on insert.
 
+## VIN RESOLUTION CONTRACT (inherited from 0010, commit a53135018)
+
+`codec.Atomic.VehicleID` is the **Payload-level VIN string**, NOT the
+numeric `vehicles.id`. Composing `snapshotWriter` (Decision #2) means
+this writer INHERITS the VIN→numeric resolution for free — the helper
+already does `INSERT ... SELECT v.id FROM vehicles WHERE v.vin = $1
+ON CONFLICT (vehicle_id, ts) DO UPDATE SET <col> = EXCLUDED.<col>`.
+No additional VIN handling needed in this prompt; just verify
+snapshot_base.go's pattern is intact in AUDIT_EVIDENCE.
+
 ## Locked Implementation Decisions
 
 | # | Decision | Choice |

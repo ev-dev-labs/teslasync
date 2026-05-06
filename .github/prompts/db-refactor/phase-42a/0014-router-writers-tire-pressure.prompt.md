@@ -41,6 +41,10 @@ Per ADR-004 #9, the SI value arriving at this writer is ALREADY in
 Pascals (the unit conversion happened in `normalize.toSI`). The writer
 just persists; it does not re-convert.
 
+## VIN RESOLUTION CONTRACT (inherited from 0010, commit a53135018)
+
+`codec.Atomic.VehicleID` is the **Payload-level VIN string**, NOT the numeric `vehicles.id`. This writer composes `snapshotWriter` so it INHERITS the VIN-lookup INSERT pattern for free. No additional handling.
+
 ## Locked Implementation Decisions
 
 Same composition pattern as 0012/0013:

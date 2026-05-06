@@ -34,6 +34,10 @@ safety_snapshots(vehicle_id, ts, service_mode BOOLEAN, service_mode_plus BOOLEAN
 Even with only 1 routed field today, the writer is authored to handle
 the full column set so a future routing.yaml addition Just Works.
 
+## VIN RESOLUTION CONTRACT (inherited from 0010, commit a53135018)
+
+`codec.Atomic.VehicleID` is the **Payload-level VIN string**, NOT the numeric `vehicles.id`. This writer composes `snapshotWriter` so it INHERITS the VIN-lookup INSERT pattern for free. No additional handling.
+
 ## Locked Implementation Decisions
 
 | # | Decision | Choice |
