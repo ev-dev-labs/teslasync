@@ -1,0 +1,296 @@
+Phase-42a / 0050 — HARD CUTOVER (cmd/teslasync: legacy NewSubscriber -> NewPipelineSubscriber)
+================================================================================
+Author: Copilot CLI (Claude Opus 4.7 xhigh)
+Branch: refactor/signals-rewrite
+HEAD-at-start: ea2f316da feat(mqtt): production wiring helper for PipelineSubscriber + DLQ + manual-ack
+Run-mode: autopilot
+
+=== PREFLIGHT ===
+
+(1) Working tree status (must be clean before starting)
+    > git status --short
+    (no output — clean)
+
+(2) HEAD provenance
+    > git log -1 --oneline
+    ea2f316da feat(mqtt): production wiring helper for PipelineSubscriber + DLQ + manual-ack
+
+(3) Predecessor 0040 status (must be EXIT=0 / STATUS=DONE)
+    > Get-Content .github\prompts\db-refactor\logs\phase-42a-0040-dlq-and-manual-ack.log -Tail 5
+    message=feat(mqtt): production wiring helper for PipelineSubscriber + DLQ + manual-ack
+    post-commit-status=cleanEXIT=0
+    STATUS=DONE
+    => OK.
+
+(4) Full predecessor chain status (Honesty Covenant rule 6 — surface every prior gap)
+    > Get-ChildItem .github\prompts\db-refactor\logs\phase-42a-*.log | ForEach-Object { last 2 lines }
+    phase-42a-0000-methodology-and-cutover-decision.log:                 EXIT=0 STATUS=DONE
+    phase-42a-0010-router-writers-snapshot-base.log:                     EXIT=0 STATUS=DONE
+    phase-42a-0011-router-writers-positions.log:                         EXIT=0 STATUS=DONE
+    phase-42a-0012-router-writers-climate.log:                           EXIT=0 STATUS=DONE
+    phase-42a-0013-router-writers-motor.log:                             EXIT=0 STATUS=DONE
+    phase-42a-0014-router-writers-tire-pressure.log:                     EXIT=0 STATUS=DONE
+    phase-42a-0015-router-writers-media.log:                             EXIT=0 STATUS=DONE
+    phase-42a-0016-router-writers-safety.log:                            EXIT=0 STATUS=DONE
+    phase-42a-0017-router-writers-location.log:                          EXIT=0 STATUS=DONE
+    phase-42a-0018-router-writers-security-event.log:                    EXIT=0 STATUS=DONE
+    phase-42a-0019-router-writers-charging-telemetry.log:                EXIT=0 STATUS=DONE
+    phase-42a-0020-router-writers-drive-telemetry.log:                   EXIT=1 STATUS=BLOCKED  <-- !!
+    phase-42a-0021-router-writers-signal-log.log:                        EXIT=0 STATUS=DONE
+    phase-42a-0022-router-writers-unit-history.log:                      EXIT=0 STATUS=DONE
+    phase-42a-0030-normalize-observer.log:                               EXIT=0 STATUS=DONE
+    phase-42a-0040-dlq-and-manual-ack.log:                               EXIT=0 STATUS=DONE
+    => OBSERVATION: prompt 0020 is BLOCKED (drive_telemetry writer never authored).
+       The cutover prompt's narrative requires "all 12 writers"; today we have 11.
+       Continuing into AUDIT_EVIDENCE_BEFORE to confirm the gap is still real
+       (it is possible a later prompt — e.g. 0030, 0040 — silently filled in the
+       drive_telemetry writer; the only honest way to know is to re-grep now).
+
+=== AUDIT_EVIDENCE_BEFORE ===
+
+(B1) Legacy ftSubscriber wiring still present in cmd/teslasync/main.go
+    > grep -n 'NewSubscriber\|NewPipelineSubscriber' cmd/teslasync/main.go
+    476:                  ftSubscriber := mqtt.NewSubscriber(
+    => Legacy present (line 476). PipelineSubscriber NOT yet wired. Matches the
+       "before-cutover" precondition.
+
+(B2) Production router.Writer constructors available in internal/tesla/router/writers/
+    > Select-String '^func New[A-Z]' internal\tesla\router\writers\*.go | %{ $_.Line }
+       (filtered to public constructors with capital-letter second char,
+        excluding lowercase test helpers like newChargingTelemetryTestWriter)
+
+    NewChargingTelemetryWriter(pool *pgxpool.Pool) router.Writer
+    NewClimateWriter(pool *pgxpool.Pool)           router.Writer
+    NewLocationWriter(pool *pgxpool.Pool)          router.Writer
+    NewMediaWriter(pool *pgxpool.Pool)             router.Writer
+    NewMotorWriter(pool *pgxpool.Pool)             router.Writer
+    NewPositionsWriter(pool *pgxpool.Pool)         router.Writer
+    NewSafetyWriter(pool *pgxpool.Pool)            router.Writer
+    NewSecurityEventWriter(pool *pgxpool.Pool)     router.Writer
+    NewSignalLogWriter(pool *pgxpool.Pool)         router.Writer
+    NewTirePressureWriter(pool *pgxpool.Pool)      router.Writer
+    NewUnitHistoryWriter()                         router.Writer
+
+    Count: 11. Prompt 0050 narrative requires 12 (positions, climate, motor,
+    tire_pressure, media, safety, location, security_event, charging_telemetry,
+    drive_telemetry, signal_log, unit_history). The missing constructor is
+    NewDriveTelemetryWriter. This is the precondition gap predicted by the
+    BLOCKED status of prompt 0020.
+
+(B3) routing.yaml still references the missing destination
+    > (Select-String 'dest:\s+drive_telemetry' internal\tesla\router\routing.yaml).Count
+    11
+
+    Lines: 70, 73, 153, 339, 434, 505, 508, 513, 552, 662, 1005
+
+    All 11 entries point at DestDriveTelemetry, which router.New (per
+    internal/tesla/router/router.go:127) requires a writer for at process
+    startup time (DestDrop is the only exemption). The drive_telemetry writer
+    is mandatory for any successful router.New() call.
+
+(B4) drive_telemetry table NOW exists in the schema chain (delta vs prompt 0020)
+    > grep -n 'CREATE TABLE\s+drive_telemetry\b' migrations\*.up.sql
+    migrations\000190_drive_telemetry_si.up.sql:19:CREATE TABLE drive_telemetry (
+
+    The schema gap that BLOCKED prompt 0020 (table missing entirely) has been
+    filled by migration 000190 (added between prompts 0021 and 0050). The 11
+    routed columns in routing.yaml all map cleanly to columns in mig 000190's
+    DDL (verified by direct read of 000190_drive_telemetry_si.up.sql lines
+    19-35: speed_mps, cruise_set_speed_mps, pedal_position_pct, brake_pedal,
+    brake_pedal_pos_pct, gear, drive_rail, lateral_acceleration_mps2,
+    longitudinal_acceleration_mps2, lifetime_energy_used_drive_wh,
+    lifetime_energy_gained_regen_wh — exactly 11 SI-canonical columns +
+    nullable drive_id BIGINT for the session tracker, per the Hand-off note in
+    the prompt 0020 BLOCKED log).
+
+(B5) NO drive_telemetry writer authored after mig 000190 landed
+    > grep -rn 'DriveTelemetry\|drive_telemetry' internal\tesla\router\writers\*.go --include='*.go' --no-test
+    (only doc-comment references in OTHER writer test files like
+     'TestMotorWriter_*' explaining "this destination is also routed via
+     drive_telemetry per routing.yaml". No drive_telemetry_writer.go exists.)
+
+    > glob internal/tesla/router/writers/drive*.go
+    No files matched the pattern.
+
+    > git log --oneline -- internal/tesla/router/writers/drive_telemetry_writer.go
+    (empty — file has never existed in this branch's history)
+
+    => Confirmed: phase-42 prompt 0020 was BLOCKED; the schema gap was later
+       fixed (mig 000190); but no follow-up prompt re-ran 0020 to author the
+       writer itself. The cmd/teslasync cutover precondition ("all 12 writers")
+       is therefore NOT met.
+
+(B6) End-to-end probe: confirm router.New rejects the 11-writer wiring
+    Created a throw-away probe at cmd/probe-router/main.go (deleted afterwards
+    so git status stays clean for this prompt):
+
+    Stage 1 — register the 11 production destinations EXCEPT DestDriveTelemetry,
+    each pointed at a stub writer that satisfies router.Writer:
+
+      router.New(map[Destination]Writer{
+        DestPositions, DestClimateSnapshot, DestSecurityEvent,
+        DestMotorSnapshot, DestTirePressure, DestMediaSnapshot,
+        DestSafetySnapshot, DestLocationSnapshot, DestChargingTelemetry,
+        DestSignalLog, DestUnitHistory   <-- 11 destinations, no drive_telemetry
+      })
+
+    > go run ./cmd/probe-router
+    Stage 1 (11 writers): EXPECTED FAIL: router: routing.yaml uses destination
+      "drive_telemetry" for field "BrakePedalPos" with no writer registered
+
+    Stage 2 — add DestDriveTelemetry to the same map:
+    Stage 2 (12 writers): SUCCESS — router.New accepts the 12-writer map
+
+    => This is direct, executed, end-to-end evidence that the cutover wiring
+       described by Decision #1 cannot construct a working *router.Router today.
+       Calling router.New from cmd/teslasync/main.go would fail at process
+       startup with the exact error message above, and the daemon would
+       log.Fatal — every TeslaSync pod would crash-loop.
+
+    > Test-Path .\cmd\probe-router
+    False                                        (probe directory removed)
+    > git status --short
+    (no output)                                  (working tree still clean)
+
+(B7) Allowed-files boundary forbids in-prompt remediation
+    Per the prompt's "Allowed files to change" header:
+      cmd/teslasync/main.go,
+      cmd/teslasync/main_pipeline_wiring_test.go,
+      the output log
+    Authoring internal/tesla/router/writers/drive_telemetry_writer.go in this
+    same prompt would violate the allowed-files boundary AND merge two
+    architecturally distinct concerns (writer authorship + cutover) into a
+    single non-atomic commit. Both are Honesty Covenant violations
+    (rule 4 — atomicity, and the locked rule 12 — no production blind spot
+    via expanding the diff scope).
+
+    The prompt anticipates exactly this case in its Escape hatch:
+
+      > If ANY of the AUDIT_EVIDENCE_AFTER greps returns the wrong result
+      > (legacy still present, new still absent), STOP, mark BLOCKED, do NOT
+      > commit. The cutover is incomplete and committing would put the system
+      > in a half-cut state.
+
+    Although the literal text of the escape hatch refers to AUDIT_EVIDENCE_AFTER,
+    the spirit ("the cutover is incomplete; do not commit a half-cut state")
+    applies a fortiori when the precondition ("all 12 writers") has already
+    failed in AUDIT_EVIDENCE_BEFORE — there is no point proceeding to write
+    code that we already know will not compile against a working *router.Router.
+
+=== IMPLEMENTATION ===
+
+(I1) NO source files were modified.
+    > git status --short
+    (no output — clean)
+
+    Per the BLOCK decision documented in AUDIT_EVIDENCE_BEFORE, this prompt
+    intentionally does NOT touch:
+      - cmd/teslasync/main.go             (cutover would fail at runtime)
+      - cmd/teslasync/main_pipeline_wiring_test.go   (no value asserting an
+                                                      11-writer wiring that
+                                                      router.New rejects)
+      - internal/tesla/router/writers/    (out of allowed-files scope)
+
+    The only deliverable from this prompt is this log file documenting the
+    architectural gap and the remediation path.
+
+=== AUDIT_EVIDENCE_AFTER ===
+
+(A1) Mandatory greps from prompt's Action Step #6 — captured to confirm the
+     BEFORE state is preserved (no half-cut wiring left behind):
+
+    > grep -n 'NewSubscriber' cmd/teslasync/main.go
+    476:                  ftSubscriber := mqtt.NewSubscriber(
+    Expected: 0 lines (per prompt). Actual: 1 line. STATE UNCHANGED FROM BEFORE.
+    => Cutover NOT performed. AUDIT_EVIDENCE_AFTER assertion FAILS by design.
+
+    > grep -n 'NewPipelineSubscriber' cmd/teslasync/main.go
+    (no matches)
+    Expected: >= 1 line (per prompt). Actual: 0 lines. STATE UNCHANGED FROM BEFORE.
+
+    > grep -n 'normalize.New\|router.New' cmd/teslasync/main.go
+    (no matches)
+    Expected: >= 2 lines (per prompt). Actual: 0 lines. STATE UNCHANGED FROM BEFORE.
+
+(A2) Predecessor wiring continues to function unchanged:
+    The legacy mqtt.NewSubscriber subscriber at L476-494 of cmd/teslasync/main.go
+    remains the production MQTT consumer. ProcessSignals -> SignalStore /
+    SignalHistoryWriter / FSM / SessionTracker / AlertEvaluator continues to
+    operate exactly as before this prompt. No behavioural regression has been
+    introduced.
+
+=== GATE ===
+
+Per the Escape hatch ("STOP, mark BLOCKED, do NOT commit") this prompt does
+NOT run the build/vet/test gates from Action Step #7. Running them would
+either (a) succeed because no code changed (no signal) or (b) fail because of
+unrelated drift (false positive). The dispositive gate is the AUDIT_EVIDENCE
+above:
+
+    GATE_1_PRECONDITION_12_WRITERS:                           FAIL (11 / 12)
+    GATE_2_ROUTER_NEW_ACCEPTS_WIRING:                         FAIL (probe B6)
+    GATE_3_PROMPT_ALLOWED_FILES_PERMITS_REMEDIATION_HERE:     FAIL (boundary)
+
+The cutover cannot proceed under the prompt's constraints. STATUS=BLOCKED.
+
+=== COMMIT ===
+
+Commit (BLOCKED — log-only):
+
+  chore(phase-42a/0050): BLOCKED — drive_telemetry writer missing; cutover precondition unmet (escape hatch)
+
+  Phase-42a/0050 is the hard cutover from legacy mqtt.NewSubscriber to
+  mqtt.NewPipelineSubscriber in cmd/teslasync/main.go. The cutover requires
+  router.New(map[Destination]Writer{...}) to succeed at process startup; per
+  internal/tesla/router/router.go:127, router.New rejects any wiring that
+  omits a writer for any non-DestDrop destination referenced in routing.yaml.
+
+  routing.yaml has 11 entries with `dest: drive_telemetry`. The
+  drive_telemetry table now exists (mig 000190, landed after prompt 0020
+  was BLOCKED). However, no follow-up prompt re-ran 0020 to author the
+  drive_telemetry writer itself — internal/tesla/router/writers/ today
+  contains 11 production constructors (NewChargingTelemetryWriter,
+  NewClimateWriter, NewLocationWriter, NewMediaWriter, NewMotorWriter,
+  NewPositionsWriter, NewSafetyWriter, NewSecurityEventWriter,
+  NewSignalLogWriter, NewTirePressureWriter, NewUnitHistoryWriter) —
+  one short of the 12 the prompt 0050 narrative requires.
+
+  An end-to-end probe (cmd/probe-router/main.go, deleted after the run)
+  confirmed that router.New with the available 11 writers fails with:
+      router: routing.yaml uses destination "drive_telemetry" for
+      field "BrakePedalPos" with no writer registered
+  and that the same wiring with a 12th drive_telemetry writer succeeds.
+  Performing the cutover today would crash-loop every TeslaSync pod at
+  startup.
+
+  Per the prompt's allowed-files boundary
+  (cmd/teslasync/main.go + main_pipeline_wiring_test.go + this log),
+  authoring drive_telemetry_writer.go in this same prompt is forbidden,
+  and merging writer authorship with cutover into a single non-atomic
+  commit would violate Honesty Covenant rules 4 and 12.
+
+  Per the prompt's Escape hatch ("STOP, mark BLOCKED, do NOT commit. The
+  cutover is incomplete and committing would put the system in a half-cut
+  state"), this prompt mutates zero .go files and surfaces the gap in
+  this log.
+
+  Hand-off / remediation:
+    1. Re-run phase-42a/0020 (the original prompt is unchanged, but its
+       schema-gap escape hatch is now satisfied by mig 000190). The
+       output log path is the same:
+         .github/prompts/db-refactor/logs/phase-42a-0020-router-writers-drive-telemetry.log
+       The prompt 0020 BLOCKED log already documents the expected writer
+       shape: snapshotWriter composition with table=drive_telemetry,
+       11-entry static driveTelemetryColumnByField map matching the SI
+       column names in mig 000190, and a reflective LoadMap test.
+       drive_id is NEVER touched by the writer (Decision #3 contract
+       lifted from charging_telemetry — backfill is the session tracker's
+       job per phase-42a/0030).
+    2. Once 0020 is DONE, re-run THIS prompt (0050) as authored. All
+       audit-evidence checks should then pass on the first attempt
+       because the only missing piece was the writer.
+
+  Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+EXIT=1
+STATUS=BLOCKED
