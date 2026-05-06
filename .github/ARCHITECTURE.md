@@ -733,3 +733,47 @@ unit-annotation findings across 241 actionable Tesla proto fields.
   pipeline end-to-end for representative fields of every category.
 - `cmd/unit-drift-validator/` runs nightly and pages on suspected wire-unit
   contract drift.
+
+## ADR-005: Frontend SI Cutover (forward-port, no deletions)
+
+**Status:** Accepted (phase-43)
+**Context:** Phase 42 rewrote the Tesla telemetry pipeline. Public API endpoints
+are preserved, but response shapes are SI-canonical and field names match the
+regenerated proto. The React frontend must be forward-ported to consume these
+shapes without regressing user-facing functionality.
+
+**Decisions.**
+1. **Forward-port only.** Every page, route, hook, and shared component
+   present at phase-43 start MUST exist at phase-43 end. UI deletions
+   require per-case user approval surfaced via STATUS=BLOCKED. No silent
+   stubs (`<EmptyState>` is not a substitute for porting).
+2. **SI in, display out.** All API hooks return SI values verbatim. Display
+   conversion happens at the render boundary via `web/src/lib/unitConversion.ts`
+   (informed by `web/src/hooks/useUnits.ts` user preference). No SI
+   assumptions inside hooks; no display assumptions inside `lib/`.
+3. **Snake_case from the wire.** Hook return types use the exact JSON tag
+   names from the new Go structs (snake_case). The optional `camelCaseKeys()`
+   transform is preserved for backward compatibility but new code reads
+   snake_case directly to avoid drift.
+4. **Typed SSE envelope.** The signal stream uses the typed envelope
+   `{ kind: string, value: SIValue, ts: number }` produced by phase-42
+   prompt 0072. The client parser is `web/src/api/sseClient.ts` and is the
+   only sanctioned consumer of that stream.
+5. **Audit, do not prune.** Phase-43's hook/route/i18n coverage prompts
+   (0080-0082) BLOCK on orphans rather than delete. Real cleanup is a
+   future phase with explicit user approval.
+6. **No new direct library imports.** Existing prohibited-pattern rules
+   (no inline styles with var(--*), no raw HTML, no direct recharts/leaflet,
+   no `/api/v1/` prefix in hook URLs, no camelCase query params) continue to
+   apply. Phase-43 prompts run an audit at every gate.
+7. **Verification floor.** Every domain prompt's gate runs `npx tsc --noEmit`
+   AND `npm run build` AND a violation audit. Failure of any of the three
+   blocks the prompt; STATUS=DONE requires all three green.
+
+**Consequences.** The frontend stays at parity with the rewritten backend
+without losing pages, without bending engineering rules, and without
+accidentally regressing on shared-component or i18n discipline. The cost is
+that some pages may need section-by-section reimplementation when their
+underlying signal source has changed (e.g., a page reading from
+`vehicle_units` snapshots now reads from `vehicle_unit_history` via the new
+backend). Such pages are ported, not deleted.
