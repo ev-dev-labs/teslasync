@@ -105,6 +105,23 @@ func (h *TelemetryHandler) SetEventHub(hub *EventHub) {
 	h.eventHub = hub
 }
 
+// BroadcastSSE forwards a vehicle_update SSE payload through the
+// handler's existing fanout (Redis Pub/Sub when configured, in-process
+// EventHub fallback otherwise). Exposed as a public accessor so the
+// phase-42a/0050 cutover wiring in cmd/teslasync can register the
+// teslapipeline.SideEffectsObserver's BroadcastSSEFunc against the
+// canonical TelemetryHandler implementation without duplicating the
+// pub/sub-with-fallback branching logic.
+//
+// Mirrors the existing FSMHandler / SessionTracker / AlertEvaluator
+// accessor pattern on this struct: the underlying field
+// (broadcastSSE method) stays unexported; this is the public seam.
+// A nil eventHub at call time is a no-op (matches the legacy
+// HTTP-ingest behaviour).
+func (h *TelemetryHandler) BroadcastSSE(payload map[string]any) {
+	h.broadcastSSE(payload)
+}
+
 // GetSignalStore returns the signal store (for use by other handlers).
 func (h *TelemetryHandler) GetSignalStore() *signal.Store {
 	return h.signalStore

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -26,6 +27,11 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	sigsvc "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/normalize"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/router/writers"
+	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
+	teslapipeline "github.com/ev-dev-labs/teslasync/internal/tesla_pipeline"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/ev-dev-labs/teslasync/internal/webpush"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
@@ -471,26 +477,174 @@ func main() {
 		// Backfill addresses for drives that have coordinates but no geocoded name
 		go telemetryHandler.SessionTracker().BackfillAddresses(ctx)
 
-		// Start MQTT subscriber for fleet-telemetry data
+		// Start MQTT subscriber for fleet-telemetry data.
+		//
+		// Phase-42a/0050 HARD CUTOVER: the legacy mqtt subscriber +
+		// telemetryHandler.ProcessSignals callback is REPLACED by the
+		// new normalize.Pipeline + router + writers + SideEffectsObserver
+		// stack. There is NO feature flag and NO parallel pipeline —
+		// per ADR-004 #12 (Single ingest cutover) the legacy subscriber
+		// is deleted in this same diff.
+		//
+		// ROLLBACK: revert this commit. SI tables stop receiving data
+		// immediately; legacy snapshot/aggregate tables were dropped
+		// CASCADE in mig 000180, so a full rollback requires the
+		// phase-42-pre-drop backup. Effectively, this cutover is one-way.
+		//
+		// Wiring order (per phase-42a/0000 Decision #2 + this prompt's
+		// Decision #2):
+		//   1. Construct all 12 router.Writer implementations
+		//   2. Construct *router.Router via router.New(writersByDest)
+		//   3. Construct unithistory.Cache + unithistory.Repo
+		//   4. Construct teslapipeline.SideEffectsObserver with the 6
+		//      legacy callbacks + BroadcastSSE
+		//   5. Construct *normalize.Pipeline with histRepo + router +
+		//      observer
+		//   6. Construct paho client + MQTTDLQPublisher via
+		//      mqtt.NewProductionPipelineMQTT
+		//   7. Construct *mqtt.PipelineSubscriber and Start it
 		if mqttClient != nil && cfg.FleetTelemetry.TopicBase != "" {
-			ftSubscriber := mqtt.NewSubscriber(
-				mqttClient.Underlying(),
-				cfg.FleetTelemetry.TopicBase,
-				cfg.FleetTelemetry.BatchMs,
-				func(ctx context.Context, vin string, signals map[string]interface{}) {
-					// Process signals without re-publishing to MQTT (fleet-telemetry already published)
-					telemetryHandler.ProcessSignals(ctx, vin, signals, false)
+			pipelineLogger := log.With().Str("component", "tesla_pipeline").Logger()
+
+			// (1) Twelve writers — one per destination in routing.yaml
+			// (DestDrop is the sole destination router.New exempts
+			// from the writer-required invariant).
+			pipelineWriters := map[router.Destination]router.Writer{
+				router.DestPositions:         writers.NewPositionsWriter(db.Pool),
+				router.DestClimateSnapshot:   writers.NewClimateWriter(db.Pool),
+				router.DestMotorSnapshot:     writers.NewMotorWriter(db.Pool),
+				router.DestTirePressure:      writers.NewTirePressureWriter(db.Pool),
+				router.DestMediaSnapshot:     writers.NewMediaWriter(db.Pool),
+				router.DestSafetySnapshot:    writers.NewSafetyWriter(db.Pool),
+				router.DestLocationSnapshot:  writers.NewLocationWriter(db.Pool),
+				router.DestSecurityEvent:     writers.NewSecurityEventWriter(db.Pool),
+				router.DestChargingTelemetry: writers.NewChargingTelemetryWriter(db.Pool),
+				router.DestDriveTelemetry:    writers.NewDriveTelemetryWriter(db.Pool),
+				router.DestSignalLog:         writers.NewSignalLogWriter(db.Pool),
+				router.DestUnitHistory:       writers.NewUnitHistoryWriter(),
+			}
+
+			// (2) Router — fails the process at startup if routing.yaml
+			// names a destination with no writer registered.
+			pipelineRouter, err := router.New(pipelineWriters)
+			if err != nil {
+				log.Fatal().Err(err).Msg("phase-42a: router.New failed; cannot start fleet-telemetry pipeline")
+			}
+
+			// (3) Unit-history cache + repo — Cache accepts a nil
+			// redis client and degrades to L0-only mode; Repo accepts
+			// a nil cache and skips the cache-invalidate step. Both
+			// degraded modes are safe (the 60s TTL bounds any
+			// inconsistency window).
+			unitCache := unithistory.NewCache(cacheStore.Underlying())
+			unitRepo := unithistory.NewRepo(db.Pool, unitCache)
+
+			// (4) SideEffectsObserver — bridges normalize.Pipeline
+			// payload completion to the legacy 5 cross-cutting
+			// effects (live store, signal history, FSM, sessions+
+			// alerts, SSE). All callbacks resolve telemetryHandler /
+			// liveSignalStore / signalHistoryWriter at CALL time so
+			// the eventHub, redisCache, etc. that are wired LATER
+			// inside api.NewRouter are observed without re-binding
+			// here. Per phase-42a/0000 Decision #8 sessions + alerts
+			// receive the same per-payload signals map for both the
+			// current and accumulated arguments — the cross-batch
+			// accumulator carry-over is a known degradation while
+			// the new pipeline runs alongside the legacy HTTP path.
+			liveStoreAdapter := &liveSignalStoreAdapter{store: liveSignalStore}
+			vinByID := &vinByIDResolver{repo: vehicleRepo}
+			sideEffects := teslapipeline.New(teslapipeline.Config{
+				Live:        liveStoreAdapter,
+				History:     signalHistoryWriter,
+				FSM:         telemetryHandler.FSMHandler(),
+				Sessions:    telemetryHandler.SessionTracker(),
+				Alerts:      telemetryHandler.AlertEvaluator(),
+				VINResolver: vinByID,
+				BroadcastSSE: func(payload map[string]any) {
+					telemetryHandler.BroadcastSSE(payload)
 				},
+				Logger: pipelineLogger,
+			})
+
+			// (5) normalize.Pipeline — THE single entry from the
+			// codec boundary to the typed writers. Reflective
+			// TestSinglePipelineInvariant (in
+			// internal/tesla/normalize/normalize_test.go) fails the
+			// build if any other entry point appears.
+			normPipeline := normalize.New(unitRepo, pipelineRouter, pipelineLogger, sideEffects)
+
+			// (6) Production paho client + MQTTDLQPublisher. The
+			// underlying client is constructed with
+			// SetAutoAckDisabled(true) so PipelineSubscriber.handlePayload
+			// owns ack timing — a successful Process call acks; a
+			// codec-failure with redeliveries-remaining returns
+			// without ack so the broker re-delivers; an
+			// exceeded-redeliveries case routes to the DLQ then
+			// acks. dlqTopic = "{TopicBase}/dlq" keeps the DLQ
+			// scoped to the same deployment namespace as the
+			// payload subscription.
+			dlqTopic := strings.TrimSuffix(cfg.FleetTelemetry.TopicBase, "/") + "/dlq"
+			pahoClient, dlq, err := mqtt.NewProductionPipelineMQTT(
+				ctx,
+				cfg.MQTT.BrokerURL(),
+				cfg.MQTT.ClientID+"-pipeline",
+				cfg.MQTT.Username,
+				cfg.MQTT.Password,
+				dlqTopic,
+				pipelineLogger,
 			)
-			if err := ftSubscriber.Start(); err != nil {
-				log.Warn().Err(err).Msg("fleet-telemetry MQTT subscriber failed to start")
+			if err != nil {
+				log.Fatal().Err(err).
+					Str("broker", cfg.MQTT.BrokerURL()).
+					Str("dlq_topic", dlqTopic).
+					Msg("phase-42a: NewProductionPipelineMQTT failed; cannot start fleet-telemetry pipeline")
+			}
+			defer pahoClient.Disconnect(500)
+
+			// VINResolver for the MQTT subscriber: maps the topic
+			// VIN (string) to the internal numeric vehicle ID
+			// expected by normalize.Pipeline.Process. Returns
+			// mqtt.ErrUnknownVIN for "VIN not registered" so the
+			// subscriber acks and drops without DLQ involvement;
+			// any other error is treated as transient and triggers
+			// redelivery.
+			subscriberVINResolver := func(ctx context.Context, vin string) (int64, error) {
+				v, lookupErr := vehicleRepo.GetByVIN(ctx, vin)
+				if lookupErr != nil {
+					return 0, fmt.Errorf("phase-42a vinResolver: lookup vin: %w", lookupErr)
+				}
+				if v == nil {
+					return 0, mqtt.ErrUnknownVIN
+				}
+				return v.ID, nil
+			}
+
+			// (7) PipelineSubscriber — registers against
+			// {TopicBase}/payload/+ and forwards raw payload bytes
+			// (per ADR-004 #2 the subscriber does NOT decode) to
+			// normPipeline.Process.
+			pipelineSubscriber := mqtt.NewPipelineSubscriber(
+				pahoClient,
+				normPipeline,
+				dlq,
+				subscriberVINResolver,
+				mqtt.PipelineSubscriberConfig{
+					TopicBase: cfg.FleetTelemetry.TopicBase,
+				},
+				pipelineLogger,
+			)
+			if err := pipelineSubscriber.Start(); err != nil {
+				log.Warn().Err(err).
+					Str("topic_base", cfg.FleetTelemetry.TopicBase).
+					Msg("phase-42a: PipelineSubscriber failed to start")
 			} else {
 				log.Info().
 					Str("topic_base", cfg.FleetTelemetry.TopicBase).
-					Int("batch_ms", cfg.FleetTelemetry.BatchMs).
+					Str("dlq_topic", dlqTopic).
+					Int("writer_count", len(pipelineWriters)).
 					Dur("stale_timeout", cfg.FleetTelemetry.StaleTimeout).
-					Msg("fleet-telemetry MQTT subscriber active")
-				defer ftSubscriber.Stop()
+					Msg("phase-42a: fleet-telemetry PipelineSubscriber active")
+				defer pipelineSubscriber.Stop()
 			}
 		}
 	}
@@ -818,4 +972,42 @@ func main() {
 	}
 
 	log.Info().Msg("TeslaSync stopped cleanly")
+}
+
+// liveSignalStoreAdapter bridges signal.LiveSignalStore (whose
+// per-payload write method is UpdateNonBlocking) to the
+// teslapipeline.LiveSignalStore interface (whose method is named
+// UpdateAll). The two have identical semantics — the rename exists so
+// the teslapipeline package can describe the contract in its own
+// vocabulary without depending on the internal/signal naming
+// conventions. Wraps the legacy implementation verbatim; no behaviour
+// change.
+type liveSignalStoreAdapter struct {
+	store sigsvc.LiveSignalStore
+}
+
+func (a *liveSignalStoreAdapter) UpdateAll(ctx context.Context, vehicleID int64, signals map[string]any) error {
+	return a.store.UpdateNonBlocking(ctx, vehicleID, signals)
+}
+
+// vinByIDResolver bridges *database.VehicleRepo (whose lookup returns
+// the full *models.Vehicle) to the teslapipeline.VINResolver
+// interface (which only needs the VIN string). Returns a wrapped
+// "vehicle not registered" error when the row is nil so the
+// SideEffectsObserver's WARN log includes enough context for triage
+// without leaking the VIN itself; the legacy AlertEvaluator + session
+// tracker handle the same case identically.
+type vinByIDResolver struct {
+	repo *database.VehicleRepo
+}
+
+func (r *vinByIDResolver) VINByID(ctx context.Context, vehicleID int64) (string, error) {
+	v, err := r.repo.GetByID(ctx, vehicleID)
+	if err != nil {
+		return "", fmt.Errorf("phase-42a vinByID: %w", err)
+	}
+	if v == nil {
+		return "", fmt.Errorf("phase-42a vinByID: vehicle %d not registered", vehicleID)
+	}
+	return v.VIN, nil
 }
