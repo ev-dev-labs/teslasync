@@ -222,6 +222,23 @@ func (g Geofence) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// UnmarshalJSON is the symmetric counterpart of MarshalJSON. The
+// derived `latitude`, `longitude`, `radius` fields emitted by
+// MarshalJSON are accepted on input but discarded — they are
+// recomputed from PolygonWKT on every read. Without this method,
+// settings export/import (Phase-46 / Prompt 36) round-trips fail
+// when `DisallowUnknownFields()` is enabled on the import decoder.
+func (g *Geofence) UnmarshalJSON(data []byte) error {
+	type alias Geofence
+	aux := struct {
+		*alias
+		Latitude  *float64 `json:"latitude,omitempty"`
+		Longitude *float64 `json:"longitude,omitempty"`
+		Radius    *float64 `json:"radius,omitempty"`
+	}{alias: (*alias)(g)}
+	return json.Unmarshal(data, &aux)
+}
+
 // ElectricityCost mirrors the post-migration `electricity_cost` schema
 // (time-of-use rate schedule). RatePerKwh is numeric(10,6); represented as
 // float64 since the rate has a fixed magnitude well within float64 precision.
