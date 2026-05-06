@@ -1,0 +1,281 @@
+phase-42a / 0018-router-writers-security-event
+================================================
+
+Severity: Gate
+Atomic: yes
+Delegation: FORBIDDEN
+Predecessor: phase-42a-0010-router-writers-snapshot-base.log (EXIT=0/STATUS=DONE)
+
+Allowed files to change:
+  - internal/tesla/router/writers/security_event_writer.go
+  - internal/tesla/router/writers/security_event_writer_test.go
+  - this log
+
+Output log: .github/prompts/db-refactor/logs/phase-42a-0018-router-writers-security-event.log
+
+What this prompt does NOT do:
+  - Compose snapshotWriter (Decision #2 explicitly forbids; security_events is an event-table not a per-(vehicle_id, ts) hot snapshot)
+  - Touch routing.yaml (already declares all 3 security_event entries with no column: per Decision #4 contract)
+  - Add a UNIQUE(vehicle_id, ts, event_type) migration (table already has PK on those 3 columns per migration 000183 line 204 — see AUDIT_EVIDENCE)
+  - Wire from_state lookup or details JSONB builder (deferred to a future routing extension; both NULL today per Decision #4)
+  - Wire writer into pipeline (deferred to phase-42a/0050 cutover)
+  - Modify snapshot_base.go's pgxPool interface (not in allowed-files; secEventDB is a local superset declared in security_event_writer.go)
+
+=== PREFLIGHT ===
+HEAD before prompt: f4aa1252291e5f3c12dcb2c1813f315500f58293
+Datetime: 2026-05-06T12:07:49Z
+git status --short BEFORE prompt:
+  (clean — only the new untracked .go files this prompt produces)
+Predecessor log present: True
+Predecessor log last 5 lines:
+     Rule 12: production code path tested end-to-end via the
+              in-file recorder; no production blind spot.
+  
+  EXIT=0
+  STATUS=DONE
+
+=== AUDIT_EVIDENCE ===
+
+Check 1: routing.yaml routes with dest: security_event (must be 3 per prompt)
+  command: Select-String -Path internal\tesla\router\routing.yaml -Pattern 'dest: security_event'
+  result: 3 line(s)
+  expected: 3  -> PASS
+  routed fields: Locked (line 549), SentryMode (line 799), ValetModeEnabled (line 996)
+
+Check 2: routing.yaml security_event entries MUST NOT declare a column: per Decision #4
+  Verified by reading lines 549-550, 799-800, 996-997 of routing.yaml — none has a column: line.
+  The reflective coverage test (TestSecurityEventWriter_TypeMapMatchesRoutingYAML) asserts e.Column == '' for every routed entry.
+
+Check 3: security_events column list (full schema, migration 000183 lines 197-205)
+  vehicle_id BIGINT      NOT NULL,
+  ts         TIMESTAMPTZ NOT NULL,
+  event_type TEXT        NOT NULL,
+  from_state TEXT,
+  to_state   TEXT,
+  details    JSONB,
+  PRIMARY KEY (vehicle_id, ts, event_type)
+
+  PRIMARY KEY (vehicle_id, ts, event_type) is significant — see Inconsistency below.
+  to_state and from_state are nullable TEXT; details is nullable JSONB.
+  This writer populates only vehicle_id, ts, event_type, to_state. from_state and details left NULL per Decision #4.
+
+Check 4: codec emits typed proto enum for SentryMode (NOT pre-converted to string)
+  protomodel/datum_decoder_gen.go lines 117-118:
+    case *ftproto.Value_SentryModeStateValue:
+        return x.SentryModeStateValue, nil
+  protomodel/signal_metadata_gen.go: SentryMode -> ValueKind=ValueKindEnum, EnumTypeName=SentryModeState
+  Implication: bindSecurityEventState MUST handle fmt.Stringer (every protobuf-generated enum has .String())
+  in addition to bool (Locked, ValetModeEnabled per ValueKindBool) and string (forward-compat).
+
+Check 5: writer interface seam
+  *pgxpool.Pool satisfies (Exec + QueryRow) per pgxpool docs; compile-time assertion in security_event_writer.go.
+  snapshot_base.go's pgxPool interface only has Exec — security event writer needs QueryRow for the
+  slow-path RowsAffected==0 disambiguation. Per the allowed-files list this prompt cannot widen pgxPool;
+  instead a local secEventDB interface is declared in security_event_writer.go.
+
+Check 6: contradiction in prompt-locked decisions (recorded for posterity per phase-42a/0011 precedent)
+
+  Decision #2: `Bespoke implementation. NOT composing snapshotWriter. Direct VIN-resolving INSERT per VIN
+              RESOLUTION CONTRACT above. No ON CONFLICT clause.`
+
+  Decision #3: `the writer queries EXISTS (SELECT 1 FROM security_events WHERE vehicle_id=$1 AND ts=$2 AND
+              event_type=$3) BEFORE the insert, and skips if present. Two-statement transaction.
+              Alternative considered + rejected: a UNIQUE(vehicle_id, ts, event_type) index would be cleaner
+              but requires a migration; defer that to a follow-up if double-writes are observed in production.`
+
+  VIN RESOLUTION CONTRACT: `Or, simpler, use a CTE: WITH v AS (SELECT id FROM vehicles WHERE vin=$1) then
+              INSERT ... SELECT from v + NOT EXISTS check. tag.RowsAffected()==0 covers BOTH unknown VIN AND
+              duplicate event — the writer log message should distinguish them via a follow-up SELECT only on
+              the slow-path, not per-write.`
+
+  Three internal contradictions:
+    (a) Decision #3 claims `UNIQUE(vehicle_id, ts, event_type) index would be cleaner but requires a migration` —
+        but migration 000183 line 204 ALREADY declares PRIMARY KEY (vehicle_id, ts, event_type) which IS that
+        unique constraint. The premise behind `Two-statement transaction` is therefore moot.
+    (b) Decision #3 specifies `Two-statement transaction` (EXISTS check then INSERT in tx) while the VIN
+        RESOLUTION CONTRACT specifies a single INSERT...SELECT...WHERE NOT EXISTS that fuses both.
+    (c) Decision #2 forbids ON CONFLICT but the table's existing PK would make ON CONFLICT (vehicle_id, ts,
+        event_type) DO NOTHING the simplest idempotency mechanism. The prompt-author appears to have been
+        unaware of the existing PK.
+
+  Reconciliation chosen: implement the single INSERT...SELECT...WHERE NOT EXISTS form recommended by the VIN
+  RESOLUTION CONTRACT, which:
+    - satisfies Decision #2's `no ON CONFLICT` literal text,
+    - satisfies the spirit of Decision #3 (idempotent, EXISTS check before insert),
+    - is naturally atomic — no race window between check and insert that a transaction would otherwise need
+      to bridge,
+    - is the form explicitly endorsed by the VIN RESOLUTION CONTRACT inherited from phase-42a prompt 0010
+      (commit a53135018) and used by positions_writer.go.
+
+  Per the VIN RESOLUTION CONTRACT, RowsAffected==0 is ambiguous (unknown VIN OR duplicate event). The slow-path
+  follow-up SELECT EXISTS disambiguates, satisfying both Decision #3's `skips if present` (idempotent dup
+  returns nil) and the contract's PII rule (VIN omitted from the unknown-vehicle error message).
+
+Check 7: existing writer files (must NOT be modified by this prompt)
+  Output of Get-ChildItem internal\tesla\router\writers (sorted by name, file count + sizes):
+    climate_writer_test.go (7823 bytes)
+    climate_writer.go (5290 bytes)
+    doc.go (473 bytes)
+    location_writer_test.go (8167 bytes)
+    location_writer.go (4719 bytes)
+    media_writer_test.go (7587 bytes)
+    media_writer.go (4149 bytes)
+    motor_writer_test.go (7716 bytes)
+    motor_writer.go (5265 bytes)
+    positions_writer_test.go (26953 bytes)
+    positions_writer.go (16404 bytes)
+    safety_writer_test.go (7387 bytes)
+    safety_writer.go (4003 bytes)
+    security_event_writer_test.go (21091 bytes)
+    security_event_writer.go (16382 bytes)
+    snapshot_base_test.go (12782 bytes)
+    snapshot_base.go (9177 bytes)
+    tire_pressure_writer_test.go (20253 bytes)
+    tire_pressure_writer.go (14007 bytes)
+  Only security_event_writer.go and security_event_writer_test.go are net new.
+
+=== IMPLEMENTATION ===
+
+Files created:
+  internal/tesla/router/writers/security_event_writer.go      (~16.3 KB)
+  internal/tesla/router/writers/security_event_writer_test.go (~21.1 KB)
+
+Decision #1 — File + constructor: NewSecurityEventWriter(*pgxpool.Pool) router.Writer
+  - Mirrors the wrapper-pattern from NewSafetyWriter / NewLocationWriter / NewMediaWriter
+  - Panics on nil pool (process-start fail-fast, same pattern as every prior 0011-0017 wrapper)
+  - Compile-time assertion: var _ router.Writer = (*securityEventWriter)(nil)
+
+Decision #2 — Bespoke (NOT composing snapshotWriter):
+  - secEventDB local interface (Exec + QueryRow) — broader than snapshot_base.go's pgxPool because
+    of the slow-path disambiguation requirement
+  - Compile-time assertion: var _ secEventDB = (*pgxpool.Pool)(nil)
+  - SQL is a single INSERT...SELECT...WHERE NOT EXISTS (per VIN RESOLUTION CONTRACT and Check 6
+    reconciliation above)
+
+Decision #3 — Idempotency via slow-path disambiguation:
+  - Primary: securityEventInsertSQL — INSERT INTO security_events (vehicle_id, ts, event_type, to_state)
+             SELECT v.id, $2, $3, $4 FROM vehicles v WHERE v.vin = $1
+               AND NOT EXISTS (SELECT 1 FROM security_events se WHERE se.vehicle_id = v.id AND se.ts = $2 AND se.event_type = $3)
+  - Slow path: securityEventVehicleExistsSQL — SELECT EXISTS(SELECT 1 FROM vehicles WHERE vin = $1)
+  - Outcome matrix:
+      RowsAffected == 1                           -> success (steady-state hot path, 1 round-trip)
+      RowsAffected == 0 + vehicle exists          -> success (idempotent dup skip per Decision #3)
+      RowsAffected == 0 + vehicle does NOT exist  -> error `vehicle not registered` (PII-clean, no VIN)
+      Exec returns error                          -> error wrapped with prefix; slow-path NOT executed
+      QueryRow.Scan returns error                 -> error wrapped with `disambiguation query` sub-prefix
+
+Decision #4 — Field -> event_type mapping (3 entries today, snake_case canonical tokens per migration COMMENT):
+  Locked            -> locked
+  SentryMode        -> sentry_mode
+  ValetModeEnabled  -> valet_mode_enabled
+  from_state always NULL (not computable from a single atomic — downstream consumers reconstruct
+    transitions from the per-(vehicle_id, event_type) ordered series)
+  details always NULL (deferred to a future routing extension that wants to attach JSONB context)
+
+Decision #5 — Tests:
+  TestSecurityEventWriter_TypeMapMatchesRoutingYAML        — reflective coverage gate (count==3, no extras,
+                                                              no missing, every entry e.Column == '')
+  TestSecurityEventWriter_HappyPath_PerRoute               — 5 sub-cases: bool true/false for Locked,
+                                                              bool true for ValetModeEnabled, Stringer for
+                                                              SentryMode armed/off (covers both code paths
+                                                              of bindSecurityEventState that production traffic hits)
+  TestSecurityEventWriter_IdempotentDuplicate              — RowsAffected==0 + vehicle exists -> nil
+  TestSecurityEventWriter_UnknownVehicle                   — RowsAffected==0 + vehicle absent -> error,
+                                                              VIN-omission PII rule pinned
+  TestSecurityEventWriter_UnknownFieldReturnsError         — VehicleSpeed (routed elsewhere) -> error,
+                                                              widening guard pinned
+  TestSecurityEventWriter_BindStateRejectsBadValues        — 6 sub-cases: nil, int, float64, []byte,
+                                                              empty string, empty Stringer
+  TestSecurityEventWriter_DBExecErrorWrapped               — sentinel unwrap + prefix; slow-path NOT
+                                                              issued when primary errors
+  TestSecurityEventWriter_DBQueryErrorWrapped              — slow-path failure mode + `disambiguation query`
+                                                              sub-prefix + sentinel unwrap
+  TestSecurityEventWriter_TimestampNormalisation           — non-UTC monotonic ts -> equivalent UTC bound
+  TestNewSecurityEventWriter_NilPoolPanics                 — constructor fail-fast
+  TestSecurityEventWriter_SatisfiesRouterWriter            — runtime mirror of the compile-time assertion
+
+  In-file test fakes: secEventRecorder (Exec+QueryRow), secEventRow (Scan), stubStringer (fmt.Stringer
+  stand-in for proto enums). Recorder is local to security_event_writer_test.go because the shared
+  recorder in snapshot_base_test.go does not implement QueryRow and that file is not in the
+  allowed-files list.
+
+=== GATE ===
+
+Gate 1: go build ./internal/tesla/router/writers/
+  exit code: 0
+  result: PASS
+
+Gate 2: go vet ./internal/tesla/router/writers/
+  exit code: 0
+  result: PASS
+
+Gate 3: go test -race -run 'TestSecurityEventWriter|TestNewSecurityEventWriter' -v ./internal/tesla/router/writers/
+  exit code: 0
+  === RUN   TestSecurityEventWriter_TypeMapMatchesRoutingYAML
+  --- PASS: TestSecurityEventWriter_TypeMapMatchesRoutingYAML (0.00s)
+  === RUN   TestSecurityEventWriter_HappyPath_PerRoute
+  === RUN   TestSecurityEventWriter_HappyPath_PerRoute/bool_Locked_true
+  === RUN   TestSecurityEventWriter_HappyPath_PerRoute/bool_Locked_false
+  === RUN   TestSecurityEventWriter_HappyPath_PerRoute/bool_ValetModeEnabled_true
+  === RUN   TestSecurityEventWriter_HappyPath_PerRoute/stringer_SentryMode_Armed
+  === RUN   TestSecurityEventWriter_HappyPath_PerRoute/stringer_SentryMode_Off
+  --- PASS: TestSecurityEventWriter_HappyPath_PerRoute (0.00s)
+      --- PASS: TestSecurityEventWriter_HappyPath_PerRoute/bool_Locked_true (0.00s)
+      --- PASS: TestSecurityEventWriter_HappyPath_PerRoute/bool_Locked_false (0.00s)
+      --- PASS: TestSecurityEventWriter_HappyPath_PerRoute/bool_ValetModeEnabled_true (0.00s)
+      --- PASS: TestSecurityEventWriter_HappyPath_PerRoute/stringer_SentryMode_Armed (0.00s)
+      --- PASS: TestSecurityEventWriter_HappyPath_PerRoute/stringer_SentryMode_Off (0.00s)
+  === RUN   TestSecurityEventWriter_IdempotentDuplicate
+  --- PASS: TestSecurityEventWriter_IdempotentDuplicate (0.00s)
+  === RUN   TestSecurityEventWriter_UnknownVehicle
+  --- PASS: TestSecurityEventWriter_UnknownVehicle (0.00s)
+  === RUN   TestSecurityEventWriter_UnknownFieldReturnsError
+  --- PASS: TestSecurityEventWriter_UnknownFieldReturnsError (0.00s)
+  === RUN   TestSecurityEventWriter_BindStateRejectsBadValues
+  === RUN   TestSecurityEventWriter_BindStateRejectsBadValues/nil
+  === RUN   TestSecurityEventWriter_BindStateRejectsBadValues/int
+  === RUN   TestSecurityEventWriter_BindStateRejectsBadValues/float64
+  === RUN   TestSecurityEventWriter_BindStateRejectsBadValues/byte_slice
+  === RUN   TestSecurityEventWriter_BindStateRejectsBadValues/empty_string
+  === RUN   TestSecurityEventWriter_BindStateRejectsBadValues/empty_stringer
+  --- PASS: TestSecurityEventWriter_BindStateRejectsBadValues (0.00s)
+      --- PASS: TestSecurityEventWriter_BindStateRejectsBadValues/nil (0.00s)
+      --- PASS: TestSecurityEventWriter_BindStateRejectsBadValues/int (0.00s)
+      --- PASS: TestSecurityEventWriter_BindStateRejectsBadValues/float64 (0.00s)
+      --- PASS: TestSecurityEventWriter_BindStateRejectsBadValues/byte_slice (0.00s)
+      --- PASS: TestSecurityEventWriter_BindStateRejectsBadValues/empty_string (0.00s)
+      --- PASS: TestSecurityEventWriter_BindStateRejectsBadValues/empty_stringer (0.00s)
+  === RUN   TestSecurityEventWriter_DBExecErrorWrapped
+  --- PASS: TestSecurityEventWriter_DBExecErrorWrapped (0.00s)
+  === RUN   TestSecurityEventWriter_DBQueryErrorWrapped
+  --- PASS: TestSecurityEventWriter_DBQueryErrorWrapped (0.00s)
+  === RUN   TestSecurityEventWriter_TimestampNormalisation
+  --- PASS: TestSecurityEventWriter_TimestampNormalisation (0.00s)
+  === RUN   TestNewSecurityEventWriter_NilPoolPanics
+  --- PASS: TestNewSecurityEventWriter_NilPoolPanics (0.00s)
+  === RUN   TestSecurityEventWriter_SatisfiesRouterWriter
+  --- PASS: TestSecurityEventWriter_SatisfiesRouterWriter (0.00s)
+  PASS
+  ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router/writers	(cached)
+  result: PASS
+
+Gate 4: go test -race ./internal/tesla/router/... (no regressions)
+  exit code: 0
+  ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router	(cached)
+  ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router/writers	(cached)
+  result: PASS
+
+Gate 5: git status --short — only allowed files staged
+  observed: ?? internal/tesla/router/writers/security_event_writer.go
+  observed: ?? internal/tesla/router/writers/security_event_writer_test.go
+  disallowed-file count: 0
+  result: PASS
+
+=== COMMIT ===
+
+git commit exit code: 0
+HEAD after commit: 16e075f0ebccd6aeb82ffc35debadf39f9c50c30
+Commit subject: feat(tesla/router): add security event writer (security_events)
+
+EXIT=0
+STATUS=DONE
