@@ -105,7 +105,7 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
         aria-label={showLabel ? undefined : label}
         aria-valuetext={display}
         className={cn(
-          'h-2 w-full cursor-pointer appearance-none rounded-full bg-[var(--surface-2)]',
+          'h-2 w-full cursor-pointer appearance-none rounded-full bg-[var(--glass-border)]',
           'accent-cyan-500',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
           'disabled:cursor-not-allowed disabled:opacity-50',

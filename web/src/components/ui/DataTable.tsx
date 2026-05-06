@@ -145,7 +145,10 @@ interface DataTableProps<T> {
   bulkActions?: (selected: T[]) => ReactNode
 
   // STICKY / SCROLL
-  /** Make the `<thead>` stick to the top of the wrapper while the body scrolls. */
+  /** Make the `<thead>` stick to the top of the wrapper while the body scrolls.
+   *  Defaults to `true` so every DataTable in the app has consistent sticky-
+   *  header behavior. Pass `false` to opt out (e.g. very short tables in
+   *  modals where a sticky header adds visual weight without value). */
   stickyHeader?: boolean
   /** Cap the wrapper height; combined with `stickyHeader` lets long tables
    *  scroll vertically inside their panel. */
@@ -292,7 +295,7 @@ export function DataTable<T>({
   selectedKeys,
   onSelectionChange,
   bulkActions,
-  stickyHeader = false,
+  stickyHeader = true,
   maxHeight,
   expandable = false,
   expandedKeys,
@@ -770,11 +773,11 @@ export function DataTable<T>({
   }
 
   // ── Render ──────────────────────────────────────────────────────────────
-  // When virtualized, the wrapper MUST be the scrollable element with a
-  // bounded height (otherwise the virtualizer can't compute the viewport).
-  // We default to maxHeight=600 and auto-enable a sticky header so the
-  // column titles stay visible while the user scrolls through thousands of
-  // rows.
+  // Sticky headers are on by default (see `stickyHeader` prop) so every
+  // DataTable in the app pins its column titles when the body scrolls.
+  // Virtualization additionally requires a bounded wrapper height so the
+  // virtualizer can compute the viewport — we default to maxHeight=600 in
+  // that case. Callers can opt out per-table with `stickyHeader={false}`.
   const effectiveMaxHeight = maxHeight ?? (virtualizationActive ? 600 : undefined)
   const effectiveStickyHeader = stickyHeader || virtualizationActive
 

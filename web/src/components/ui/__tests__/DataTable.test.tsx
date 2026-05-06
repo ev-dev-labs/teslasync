@@ -274,6 +274,33 @@ describe('DataTable — sticky header / max height', () => {
     expect(wrapper).not.toBeNull()
     expect(wrapper?.style.maxHeight).toBe('400px')
   })
+
+  it('defaults stickyHeader to true so every DataTable has a sticky thead', () => {
+    const { container } = render(
+      <DataTable
+        columns={COLS.slice(0, 3)}
+        data={ROWS}
+        keyExtractor={r => r.id}
+      />,
+    )
+    const thead = container.querySelector('thead')
+    const tr = thead?.querySelector('tr')
+    expect(tr?.className).toMatch(/sticky/)
+  })
+
+  it('respects stickyHeader={false} as an explicit opt-out', () => {
+    const { container } = render(
+      <DataTable
+        columns={COLS.slice(0, 3)}
+        data={ROWS}
+        keyExtractor={r => r.id}
+        stickyHeader={false}
+      />,
+    )
+    const thead = container.querySelector('thead')
+    const tr = thead?.querySelector('tr')
+    expect(tr?.className).not.toMatch(/sticky/)
+  })
 })
 
 describe('DataTable — column resize persistence', () => {

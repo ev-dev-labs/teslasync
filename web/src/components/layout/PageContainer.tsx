@@ -111,13 +111,13 @@ export function PageContainer({
       {showBreadcrumbs && (
         <Breadcrumbs items={resolvedBreadcrumbs} className="mb-2" />
       )}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="min-w-0 sm:flex-1">
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">{subtitle}</p>}
         </div>
         {(actions || copyLink || resolvedQuery) && (
-          <div className="flex items-center gap-2 flex-wrap shrink-0">
+          <div className="flex items-center gap-2 flex-wrap min-w-0 max-w-full justify-start sm:justify-end">
             {resolvedQuery && <DataFreshnessAuto query={resolvedQuery} />}
             {copyLink && <CopyLinkButton />}
             {actions}

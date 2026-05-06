@@ -11,6 +11,7 @@ import type { TFunction } from 'i18next'
 import { Input } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { navSearchKeywords, navSections } from '@/components/layout/Layout'
+import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand'
 import { COMMANDS, type CommandDef } from '@/features/system/commands'
@@ -325,26 +326,32 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
 
   // ── Build palette items ───────────────────────────────────────────────────
 
+  // Hide auth-gated nav items (e.g. /me/activity) from search when running in
+  // open mode — same policy as the sidebar nav.
+  const isForwardAuth = useIsForwardAuth()
+
   const navItems: PaletteItem[] = useMemo(() =>
     navSections.flatMap(section =>
-      section.items.map(item => {
-        const keywords = navSearchKeywords[item.to] ?? []
-        const sublabel = keywords.length > 0
-          ? `${section.title} · ${keywords.slice(0, 3).join(', ')}`
-          : section.title
-        return {
-          id: item.to,
-          label: item.label,
-          section: t('palette.section.pages', 'Pages'),
-          icon: <item.icon className="h-4 w-4" />,
-          action: () => go(item.to),
-          keywords,
-          sublabel,
-          type: 'navigate' as const,
-        }
-      })
+      section.items
+        .filter(item => !('requiresAuth' in item) || !(item as { requiresAuth?: boolean }).requiresAuth || isForwardAuth)
+        .map(item => {
+          const keywords = navSearchKeywords[item.to] ?? []
+          const sublabel = keywords.length > 0
+            ? `${section.title} · ${keywords.slice(0, 3).join(', ')}`
+            : section.title
+          return {
+            id: item.to,
+            label: item.label,
+            section: t('palette.section.pages', 'Pages'),
+            icon: <item.icon className="h-4 w-4" />,
+            action: () => go(item.to),
+            keywords,
+            sublabel,
+            type: 'navigate' as const,
+          }
+        })
     ),
-  [go, t])
+  [go, t, isForwardAuth])
 
   const commandItems: PaletteItem[] = useMemo(() => {
     if (vehicleList.length === 0) return []

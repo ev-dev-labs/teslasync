@@ -51,6 +51,7 @@ import { Breadcrumbs } from './Breadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
 import { NavSectionHeader } from './sidebar/NavSectionHeader'
 import { request } from '@/api/client'
+import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
 import type { Alert, Vehicle, StaleSessionsResponse } from '@/api/types'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useNotificationListener } from '../../hooks/useNotificationListener'
@@ -379,7 +380,7 @@ export const navSections = [
     title: 'Settings & Admin',
     items: [
       { to: '/settings', icon: Icons.settings, label: 'Settings', color: 'text-[var(--text-muted)]' },
-      { to: '/me/activity', icon: Icons.history, label: 'My Activity', color: 'text-cyan-400' },
+      { to: '/me/activity', icon: Icons.history, label: 'My Activity', color: 'text-cyan-400', requiresAuth: true },
       { to: '/admin', icon: Icons.keyRound, label: 'Admin', color: 'text-red-400' },
       { to: '/api-keys', icon: Icons.key, label: 'API Keys', color: 'text-amber-400' },
     ],
@@ -432,8 +433,13 @@ export const navSections = [
 type NavSection = (typeof navSections)[number]
 type NavItem = NavSection['items'][number]
 
-function isVisibleNavItem(item: NavItem, vehicleCount: number) {
-  return !('minVehicles' in item) || vehicleCount >= (item as { minVehicles?: number }).minVehicles!
+function isVisibleNavItem(item: NavItem, vehicleCount: number, isForwardAuth: boolean) {
+  if ('minVehicles' in item && vehicleCount < (item as { minVehicles?: number }).minVehicles!) return false
+  // Items marked `requiresAuth` are useless without a configured ForwardAuth
+  // identity provider (per-user state, audit feeds, etc.) — hide them in
+  // open mode rather than route the user to a 503-style empty state.
+  if ('requiresAuth' in item && (item as { requiresAuth?: boolean }).requiresAuth && !isForwardAuth) return false
+  return true
 }
 
 function isActiveNavPath(pathname: string, to: string) {
@@ -815,6 +821,11 @@ export default function Layout() {
   const { data: staleSessions } = useQuery({ queryKey: ['stale-sessions-sidebar'], queryFn: () => request<StaleSessionsResponse>('/data-repair/stale-sessions'), refetchInterval: 60_000, retry: 1 })
   const staleCount = (staleSessions?.stale_charging?.length ?? 0) + (staleSessions?.stale_drives?.length ?? 0)
 
+  // Hide auth-gated nav items (e.g. "My Activity") when the deployment isn't
+  // running behind a ForwardAuth identity provider — the underlying endpoints
+  // 503 in open mode and there is nothing useful to show.
+  const isForwardAuth = useIsForwardAuth()
+
   const activeNavEntry = useMemo(() => findNavItemByPath(location.pathname), [location.pathname])
   const activeSectionTitle = activeNavEntry?.section.title
   const activeSectionStyle = activeSectionTitle ? SECTION_ICON_STYLES[activeSectionTitle] : undefined
@@ -822,26 +833,26 @@ export default function Layout() {
     navSections
       .map(section => ({
         ...section,
-        items: section.items.filter(item => isVisibleNavItem(item, vehicleCount)),
+        items: section.items.filter(item => isVisibleNavItem(item, vehicleCount, isForwardAuth)),
       }))
       .filter(section => section.items.length > 0),
-    [vehicleCount],
+    [vehicleCount, isForwardAuth],
   )
   const pinnedNavItems = useMemo(() =>
     pinnedNavPaths
       .map(path => findNavItemByExactPath(path))
       .filter((entry): entry is { section: NavSection; item: NavItem } => Boolean(entry))
       .map(entry => entry.item)
-      .filter(item => isVisibleNavItem(item, vehicleCount)),
-    [pinnedNavPaths, vehicleCount],
+      .filter(item => isVisibleNavItem(item, vehicleCount, isForwardAuth)),
+    [pinnedNavPaths, vehicleCount, isForwardAuth],
   )
   const recentNavItems = useMemo(() =>
     recentNavPaths
       .map(path => findNavItemByExactPath(path))
       .filter((entry): entry is { section: NavSection; item: NavItem } => Boolean(entry))
       .map(entry => entry.item)
-      .filter(item => isVisibleNavItem(item, vehicleCount)),
-    [recentNavPaths, vehicleCount],
+      .filter(item => isVisibleNavItem(item, vehicleCount, isForwardAuth)),
+    [recentNavPaths, vehicleCount, isForwardAuth],
   )
 
   useEffect(() => {
@@ -1045,7 +1056,13 @@ export default function Layout() {
         className={cn(
           'fixed left-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-normal ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
           'flex flex-col border-r border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl lg:shadow-none',
-          sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full'
+          sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full',
+          // Reserve space for the fixed footer StatusBar (Phase-40 / Prompt 59)
+          // so the bottom "Take a tour / Report bug" row never slides under
+          // it. Mobile open-state already overlays StatusBar (sidebar z-66 >
+          // StatusBar z-55), so the reservation only matters on desktop where
+          // the sidebar is `lg:static` and shares layout space with <main>.
+          statusBarPrefs.enabled && 'lg:pb-7'
         )}
       >
         {/* Mobile sidebar brand. Build version intentionally not rendered
