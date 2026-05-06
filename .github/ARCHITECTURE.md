@@ -734,6 +734,135 @@ unit-annotation findings across 241 actionable Tesla proto fields.
 - `cmd/unit-drift-validator/` runs nightly and pages on suspected wire-unit
   contract drift.
 
+### Phase-42a Amendment
+
+**Status:** Accepted (phase-42a, 2026-05-06).
+
+**Context.**
+Phase-42 (60 prompts, gate PASSED at commit `b1dd7ea4`) built the forward-only
+Tesla Fleet Telemetry pipeline rewrite per ADR-004 — vendored proto + codegen
++ reflective coverage, new `internal/tesla/{codec,units,unit_history,bootstrap,
+config,router,normalize}` packages, 286-route `routing.yaml` across 12
+destinations, SI-canonical schema (migrations 000181-000188), and migrated all
+CONSUMERS to read from the new tables (signal store, signal pivot, signal
+redis cache, signal state reader, FSM adapter, FSM domain, API fleet
+telemetry, API signals, API telemetry handlers, API SSE, frontend typed
+envelope, drives, charging, positions+trips, cross-domain). Phase-42 did NOT,
+however:
+1. Author any production `router.Writer` implementations
+   (verified: `grep -rn 'router\.Writer' internal/ --include='*.go' | grep -v
+   _test.go` returns 0 lines).
+2. Cover the 5 cross-cutting side effects (live store, signal history, SSE,
+   FSM, sessions+alerts) that the legacy `(*TelemetryHandler).ProcessSignals`
+   performed per payload.
+3. Cut over `cmd/teslasync/main.go` to the new subscriber
+   (verified: `grep -n 'NewPipelineSubscriber' cmd/teslasync/main.go` returns
+   0 lines).
+4. Refactor the HTTP webhook ingest (`(*TelemetryHandler).ProcessBatch`) to
+   use the pipeline (verified: `normalizeFleetUnits` still called at
+   `internal/api/telemetry_handler_ingest.go:512`).
+
+Phase-43's hook-coverage audit (prompt 0080) also surfaced 6 dropped backend
+features (`useStateTimeline`, mileage, vampire-drain, guard, signal-catalog,
+trip-detail) whose frontend consumers were left orphaned, contradicting the
+spirit of "single source of truth" for live state. Phase-42a closes the
+backend gaps; phase-43a (separate slate) authors the replacement endpoints.
+
+**Reversal of decision #7 (forward-only schema, no backfill).**
+
+The original text:
+
+> ~~7. **Forward-only schema.** All 38 tables populated by the broken pipeline
+> are dropped with `CASCADE` and recreated with SI-canonical schemas. No
+> backfill — operator triggers a fleet-wide resubscribe at deploy time, and
+> Tesla's process-startup snapshot reseeds all subscribed signals into the
+> new schema.~~
+
+is amended to:
+
+> 7'. **Forward-only schema, replacement endpoints required.** All 38 tables
+> populated by the broken pipeline are dropped with `CASCADE` and recreated
+> with SI-canonical schemas. Backfill is NOT performed, but every dropped
+> backend feature that had a frontend consumer MUST have a replacement
+> endpoint sourced from the new SI schema (`signal_log`, `fsm_live`,
+> `drives_si`, `trips`, etc.). Replacement endpoints are tracked in
+> phase-43a (separate slate) and MUST land before any frontend hook can be
+> @deprecated-removed. Operator still triggers a fleet-wide resubscribe at
+> deploy time, and Tesla's process-startup snapshot still reseeds all
+> subscribed signals into the new schema.
+
+The cost/correctness argument against backfilling raw historical telemetry
+is unchanged — Tesla's snapshot is faster, cheaper, and produces clean SI
+data. What changes is the rule that frontend features can be lost as
+collateral damage of a backend refactor: they cannot.
+
+**Addition of decision #11.**
+
+> 11. **AtomicsObserver pattern.** `normalize.New` accepts a variadic list of
+> `AtomicsObserver`. `Pipeline.Process` invokes each observer's
+> `OnPayloadProcessed(ctx, vehicleID, atomics)` AFTER the route loop
+> completes for the payload. Observers own their atomic→map conversion and
+> invoke side-effect callbacks (live signal store, signal history writer,
+> SSE broadcast, FSM handler, session tracker, alert evaluator). Observers
+> MUST NOT mutate the atomics slice. The single production observer is
+> `tesla_pipeline.SideEffectsObserver` constructed with the existing 5
+> callbacks. Test observers (recording fakes) live in `_test.go` files
+> only. A reflective test in the e2e prompt walks the production binary's
+> pipeline construction site and asserts a non-empty observer list.
+>
+> Rationale: preserves the single-public-entry invariant from ADR-004 #2
+> (`Process` remains THE one entry from bytes), keeps the pipeline pure
+> (codec → unit → route + observer-fanout), and lets the subscriber own
+> orchestration. Alternatives considered and rejected: (a) extending
+> `Pipeline` with side-effect knowledge (god-object, breaks #2);
+> (b) moving side effects into writers (writers must stay best-effort
+> idempotent on `(vehicle_id, ts, field)` per ADR-004 #8, and
+> payload-scoped effects like FSM cannot be field-scoped);
+> (c) re-decoding bytes in the subscriber (double-codec on hot path,
+> creates a second mental model of the payload, splits the
+> single-pipeline invariant).
+
+**Addition of decision #12.**
+
+> 12. **Single ingest cutover.** `cmd/teslasync` constructs exactly one MQTT
+> subscriber: `mqtt.NewPipelineSubscriber`. The legacy `mqtt.NewSubscriber`
+> is deleted in the cutover prompt — no feature flag, no parallel
+> pipeline, no `if newPipelineEnabled` switch. The deletion + replacement
+> is one atomic prompt. The HTTP webhook entry
+> (`(*TelemetryHandler).ProcessBatch`) calls `pipeline.Process` directly
+> on raw bytes; `normalizeFleetUnits`, `flattenCompoundMapValue`, and the
+> per-call `signals := make(map[string]interface{})` adapter are deleted
+> from `internal/api/telemetry_handler_ingest.go` in the same prompt.
+> Both MQTT and HTTP webhook ingest paths terminate at exactly one entry
+> point: `pipeline.Process(ctx, bytes, vehicleID)`.
+>
+> Rationale: a feature flag would (a) leave dead code at the legacy entry
+> point indefinitely, (b) split observability across two pipelines, and
+> (c) defer the only test that genuinely matters — production traffic on
+> the new pipeline. Phase-42's reflective `TestSinglePipelineInvariant`
+> already enforces "no second pipeline"; the hard cutover makes it
+> visibly true. Rollback is a one-line revert of the cutover commit, not
+> a careful unflipping of a flag.
+
+**Sequencing.** Phase-42a's prompt slate:
+
+| Prompt | Scope |
+|---|---|
+| 0000 | Methodology + cutover decision + ADR-004 amendment (this prompt) |
+| 0010-0023 | Author 12 production `router.Writer` implementations |
+| 0030 | Author `tesla_pipeline.SideEffectsObserver` |
+| 0040 | Wire DLQ + manual-ack in `cmd/teslasync` |
+| 0050 | Cutover MQTT subscriber (delete legacy, replace with PipelineSubscriber) |
+| 0060 | Refactor HTTP webhook (`ProcessBatch` → `pipeline.Process`) |
+| 0090 | Delete legacy code (`mqtt.Subscriber`, `ProcessSignals`, `normalizeFleetUnits`, `flattenCompoundMapValue`, residual `internal/telemetry/*` shims) |
+| 9999 | Final gate |
+
+Phase-43a (replacement endpoints for the 6 orphaned hooks) is sequenced
+AFTER phase-42a's final gate because phase-43a's handlers query the new SI
+tables — those tables have schema but no data flowing in until phase-42a's
+writers + cutover are live. Authoring phase-43a handlers against empty
+tables would be untestable end-to-end and unsafe to ship.
+
 ## ADR-005: Frontend SI Cutover (forward-port, no deletions)
 
 **Status:** Accepted (phase-43)

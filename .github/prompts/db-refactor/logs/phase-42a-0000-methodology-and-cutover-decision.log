@@ -1,0 +1,279 @@
+phase-42a / 0000-methodology-and-cutover-decision
+=================================================
+
+Severity: Gate
+Atomic: yes
+Delegation: FORBIDDEN
+Predecessor: phase-42-9999v2-final-gate.log (EXIT=0/STATUS=DONE @ commit b1dd7ea4)
+
+Allowed files to change:
+  - .github/ARCHITECTURE.md
+  - this log
+
+What this prompt does NOT do:
+  - Author writers (deferred to 0010-0023)
+  - Author observer (deferred to 0030)
+  - Wire DLQ + manual-ack (deferred to 0040)
+  - Cut over (deferred to 0050)
+  - Refactor HTTP webhook (deferred to 0060)
+  - Delete legacy code (deferred to 0090)
+  - Author phase-43a (separate slate)
+
+=== PREFLIGHT ===
+HEAD: 1fe09ce41f8d7da3bd890b78e54ca3b802055944
+git status --short:
+  (clean)
+Predecessor log exists: True
+
+Predecessor log first 5 lines:
+  phase-42 / 9999v2-final-gate
+  ==============================
+  
+  Supersedes: phase-42-9999-final-gate.log (BLOCKED)
+  Predecessor: commit b1dd7ea4 (phase-42/9999-fixup)
+
+Predecessor log last 5 lines:
+  
+  Working tree (this session): expected dirty (v2 prompt + this log + banner update; per the v2 fixup pattern, all three commit together).
+  
+  EXIT=0
+  STATUS=DONE
+
+=== AUDIT_EVIDENCE ===
+
+Check 1: production router.Writer implementations (must be 0)
+  command: grep -rn 'router\.Writer' internal/ --include='*.go' (excluding _test.go)
+  result: 0 line(s)
+  expected: 0  -> PASS
+
+Check 2: NewPipelineSubscriber in cmd/teslasync/main.go (must be 0)
+  command: Select-String -Path cmd\teslasync\main.go -Pattern 'NewPipelineSubscriber'
+  result: 0 line(s)
+  expected: 0  -> PASS
+
+Check 3: normalizeFleetUnits in telemetry_handler_ingest.go (must be >=1)
+  command: Select-String -Path internal\api\telemetry_handler_ingest.go -Pattern 'normalizeFleetUnits'
+  result: 8 line(s)
+    73: // Copy the signals map to avoid concurrent read/write with normalizeFleetUnits
+    91: normalizeFleetUnits(signals)
+    370: // ProcessSignals via normalizeFleetUnits — which is idempotent for
+    506: // for the same field win, matching the legacy NormalizeFleetUnits
+    512: normalizeFleetUnits(signals)
+    681: // normalizeFleetUnits applies the Tesla Fleet Telemetry enum-prefix
+    683: // internal/telemetry.NormalizeFleetUnits helper used to perform on the
+    694: func normalizeFleetUnits(signals map[string]interface{}) {
+  expected: >=1  -> PASS
+
+Check 4: route count in routing.yaml (must be 286)
+  result: 286
+  expected: 286  -> PASS
+
+Check 5: distinct destinations in routing.yaml (must be 12)
+  result: 12
+  destinations:
+    - charging_telemetry
+    - climate_snapshot
+    - drive_telemetry
+    - drop
+    - media_snapshot
+    - motor_snapshot
+    - positions
+    - safety_snapshot
+    - security_event
+    - signal_log
+    - tire_pressure_snapshot
+    - unit_history
+  expected: 12  -> PASS
+
+All 5 audit checks PASS — gap is real, phase-42a's starting conditions hold.
+
+=== DECISIONS ===
+
+The 8 locked architectural decisions for phase-42a (verbatim from the prompt):
+
+| # | Decision | Choice |
+|---|---|---|
+| 1 | Side-effects pattern | AtomicsObserver registered with normalize.New. Pipeline calls each registered observer's OnPayloadProcessed(ctx, vehicleID, atomics) AFTER the route loop completes for the payload. Observers do their own atomic->map conversion and invoke the legacy callbacks (UpdateAll, Append, broadcastSSE, FSMHandler.ProcessSignals, SessionTracker.ProcessSignals, AlertEvaluator.Evaluate). This preserves the single-public-entry invariant (Process remains THE one entry from bytes), keeps the pipeline pure (codec -> unit -> route + observer-fanout), and lets the subscriber own orchestration. |
+| 2 | Writer organisation | One Go file per destination under internal/tesla/router/writers/. Each file exports a New<Dest>Writer(...) constructor returning router.Writer. Snapshot writers (climate, motor, tire_pressure, media, safety, location, security_event) share an unexported snapshotWriter helper for the (vehicle_id, ts, column) upsert pattern; per-destination wrappers only differ in target table name and any per-column transforms. |
+| 3 | DLQ wiring | Production *MQTTDLQPublisher (already exists at internal/mqtt/mqtt.go:831) wired in cmd/teslasync with paho client constructed via SetAutoAckDisabled(true). ack-on-success / nack-and-DLQ on errors.Is(err, normalize.ErrPayloadDrop). All other per-atomic failures are swallowed (logged + counted via tesla_router_writer_failures_total) and the message is acked normally per ADR-004 #8. |
+| 4 | Cutover discipline | Hard cutover, no feature flag, no parallel pipeline. The cutover prompt deletes the legacy ftSubscriber := mqtt.NewSubscriber(...) and replaces it with ftSubscriber := mqtt.NewPipelineSubscriber(...) in the same diff. No `if newPipelineEnabled` switch. The deletion + replacement is one atomic prompt. |
+| 5 | HTTP webhook unification | (*TelemetryHandler).ProcessBatch is rewritten to call pipeline.Process with the raw payload bytes; normalizeFleetUnits is deleted from telemetry_handler_ingest.go in the same prompt. Both MQTT and HTTP webhook ingest paths terminate at pipeline.Process. |
+| 6 | Legacy code deletion | After cutover, the following are deleted in prompt 0090: legacy mqtt.Subscriber (the non-Pipeline variant), (*TelemetryHandler).ProcessSignals (the legacy entry — the side-effect callbacks themselves stay; only the legacy entry is deleted), normalizeFleetUnits, flattenCompoundMapValue, and any remaining internal/telemetry/* shims. The reflective TestSinglePipelineInvariant already enforces this; the deletion makes it visibly true. |
+| 7 | No-UI-deletion (ADR-004 #4 reversal) | ADR-004 #4 ("None — start fresh on deploy") is amended: dropped backend features that had a frontend consumer MUST have a replacement endpoint sourced from the new SI schema. Replacement endpoints are scoped to phase-43a (separate slate) and are NOT in scope for phase-42a. Phase-42a's job is to make data flow through the pipeline so phase-43a's handlers have something to query. |
+| 8 | Observer test fakes vs production observers | The single production observer is tesla_pipeline.SideEffectsObserver constructed with the existing 5 callbacks (live store, signal history, SSE, FSM, sessions+alerts). Test observers (recording fakes for unit tests) live in _test.go files only. A reflective test in the e2e prompt walks the production binary's pipeline construction site and asserts a non-empty observer list. |
+
+=== REASONING ===
+
+A. Why AtomicsObserver pattern (Decision #1) over the alternatives
+-----------------------------------------------------------------
+
+  Trade-off matrix (X = violates, ~ = partial, OK = satisfies):
+
+  Property                         | (a) Extend     | (b) Move side    | (c) Re-decode  | AtomicsObserver
+                                   | Pipeline with  | effects into     | bytes in the   | (chosen)
+                                   | side-effects   | writers          | subscriber     |
+  ---------------------------------|----------------|------------------|----------------|----------------
+  ADR-004 #2 single-responsibility | X (Pipeline    | X (writer is no  | OK             | OK (Pipeline
+  (pipeline = normalize+dispatch)  |   becomes god  |   longer "best   |                |   stays pure;
+                                   |   object)      |   effort idem-   |                |   observers
+                                   |                |   potent")       |                |   own effects)
+  Single public entry from bytes   | OK             | OK               | X (subscriber  | OK (Process
+  (Process remains THE one entry)  |                |                  |   bypasses     |   stays the
+                                   |                |                  |   Process for  |   one entry)
+                                   |                |                  |   side effects)|
+  Payload-scoped vs field-scoped   | OK             | X (writers are   | OK             | OK (observers
+  effects (FSM/sessions/alerts)    |                |   per-atomic;    |                |   fire AFTER
+                                   |                |   FSM needs the  |                |   route loop,
+                                   |                |   merged map)    |                |   see merged
+                                   |                |                  |                |   payload)
+  Performance (no double-decode)   | OK             | OK               | X (codec runs  | OK
+                                   |                |                  |   twice on hot |
+                                   |                |                  |   path)        |
+  Testability (mock observers      | ~ (have to     | X (writers must  | X (subscriber  | OK (test
+  in unit tests)                   |   stub 5       |   be mocked AND  |   needs raw    |   observers
+                                   |   callback     |   composed)      |   bytes; codec |   in _test.go
+                                   |   fields on    |                  |   must be      |   files only)
+                                   |   Pipeline)    |                  |   mocked)      |
+  Reflective single-pipeline       | ~ (still one   | OK               | X (two paths   | OK (one path,
+  invariant test stays meaningful  |   path but     |                  |   from bytes)  |   one set of
+                                   |   tightly                          |                  |   observers,
+                                   |   coupled)     |                  |                |   one Process)
+
+  Verdict: AtomicsObserver is the only option that satisfies all six
+  properties. (a) was already partially explored in phase-42 prompt 0079
+  and rejected for the god-object reason. (b) was explored in phase-42
+  prompt 0030 routing-spec and rejected because writers MUST stay
+  best-effort idempotent. (c) was never explored; rejected here on
+  performance + invariant grounds.
+
+B. Why hard cutover (Decision #4) over a feature-flagged switchover
+-------------------------------------------------------------------
+
+  Decision #4 of phase-42a's locked decisions: hard cutover, no flag.
+  Rationale:
+
+  - A flag leaves dead code at the legacy entry point indefinitely.
+    Every future contributor has to ask "which path is live?" and the
+    answer depends on env at runtime, not on the source.
+  - Observability splits across two pipelines. Two sets of metrics,
+    two sets of dashboards, two sets of alerts. Operationally heavier
+    than the cutover risk it claims to mitigate.
+  - The only test that genuinely matters (production traffic on the
+    new pipeline) is deferred indefinitely under a flag. Without
+    production traffic, the new pipeline accumulates rot.
+  - Phase-42's reflective TestSinglePipelineInvariant ALREADY asserts
+    there is no second pipeline. A flag would either subvert that test
+    (by gating which pipeline the test sees) or be incompatible with
+    it (the test would fail under either flag value while both paths
+    coexist). Both outcomes are worse than a hard cutover.
+  - Rollback is a one-line revert of the cutover commit. The risk of
+    "we cannot roll back" is mitigated by having ONE commit that did
+    the cutover, not by having a flag that requires careful unflipping.
+
+C. Why ADR-004 #4 is being reversed (Decision #7)
+-------------------------------------------------
+
+  User-stated invariant: no UI feature may be deleted as collateral
+  damage of a backend refactor. Phase-43 audit (prompt 0080) found 9
+  hooks with broken URLs, 6 of which call endpoints that read from
+  tables phase-42 dropped without replacement. Under the original
+  ADR-004 #7 ("no backfill — start fresh on deploy"), those frontend
+  features would either silently 404 or be removed. The user's
+  invariant rules out both outcomes.
+
+  The amendment narrows the no-backfill rule: data is still not
+  backfilled (per the original cost/correctness argument), but every
+  dropped feature must have a replacement endpoint sourced from the
+  new SI schema (signal_log, fsm_live, drives_si, trips, etc.). The
+  replacement endpoints are scoped to phase-43a (a separate slate),
+  not phase-42a, because they cannot be authored until the new SI
+  tables are actually receiving writes — which is phase-42a's job.
+
+D. Why phase-43a is sequenced AFTER phase-42a (data flow dependency)
+--------------------------------------------------------------------
+
+  Phase-43a's replacement handlers query the new SI tables. Those
+  tables have schema (migrations 000181-000188 from phase-42) but no
+  data flowing in until phase-42a wires up writers + cutover. Authoring
+  phase-43a handlers before phase-42a finishes would mean writing
+  handlers against empty tables, which:
+
+  - Cannot be tested end-to-end (handler returns 0 rows; cannot
+    distinguish broken handler from missing data).
+  - Cannot be safely shipped (operator would deploy and see all
+    replacement endpoints return empty, indistinguishable from "the
+    feature is broken").
+  - Forces phase-43a to maintain test fixtures that double-shadow
+    what phase-42a's writers will produce, creating drift risk.
+
+  Sequencing phase-43a AFTER phase-42a means phase-43a handlers can
+  be tested against a production-shaped data stream and shipped with
+  confidence.
+
+=== GATE ===
+
+Gate 1: git status --short -- .github/ARCHITECTURE.md (must show 1 modified file)
+  result:  M .github/ARCHITECTURE.md
+  line count: 1
+  -> PASS
+
+Gate 2: git diff --stat (must show only the ADR file changed)
+   .github/ARCHITECTURE.md | 129 ++++++++++++++++++++++++++++++++++++++++++++++++
+   1 file changed, 129 insertions(+)
+
+  files changed (count=1): .github/ARCHITECTURE.md
+  -> PASS
+
+Gate 3: Phase-42a Amendment header (must be >=1 match)
+  matches: 1
+    737: ### Phase-42a Amendment
+  -> PASS
+
+Gate 4: AtomicsObserver pattern (must be >=1 match)
+  matches: 1
+    801: > 11. **AtomicsObserver pattern.** `normalize.New` accepts a variadic list of
+  -> PASS
+
+Gate summary: ALL PASS
+
+=== COMMIT ===
+
+Files staged:
+  .github/ARCHITECTURE.md (modified)
+  .github/prompts/db-refactor/logs/phase-42a-0000-methodology-and-cutover-decision.log (new, gitignored, requires -f)
+
+Commit message:
+  docs(adr): phase-42a — amend ADR-004 (#4 reversed, +#11, +#12)
+
+Trailer:
+  Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+=== NOTES ===
+
+PowerShell-7 quirks encountered / reused for this prompt:
+
+(a) git diff --name-only with one changed file returns a SINGLE STRING, not a 1-element array.
+    PowerShell then treats $changed[0] as the FIRST CHARACTER of the string ('.') instead
+    of the first array element. Workaround: wrap in @(...) explicitly: $changed = @(git diff --name-only).
+    Same applies to git status --short. First gate run failed due to this gotcha; second
+    run with @() wrapper passed all 4 gates. Trimmed and re-ran the GATE section of the log
+    using $content.LastIndexOf('=== GATE ===') + Substring + Set-Content -NoNewline.
+
+(b) .github/prompts/ is gitignored per .gitignore:83-89; new logs require git add -f.
+    Confirmed by: git status --short showed only ARCHITECTURE.md modification, never the new log.
+
+(c) Add-Content default encoding under pwsh 7 is UTF8 (no BOM); -Encoding UTF8 explicitly used
+    for consistency with prior phase logs and to keep Get-Content -Raw + LastIndexOf semantics
+    deterministic across edits.
+
+Scope confirmation: this prompt amends documentation only. No production code changed.
+  - No writers authored (deferred to 0010-0023)
+  - No observer authored (deferred to 0030)
+  - No DLQ wiring (deferred to 0040)
+  - No cutover (deferred to 0050)
+  - No HTTP webhook refactor (deferred to 0060)
+  - No legacy code deletion (deferred to 0090)
+  - No phase-43a work (separate slate)
+
+EXIT=0
+STATUS=DONE
