@@ -1264,6 +1264,7 @@ export default function ClimateControlPage() {
             <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No history records found.')} />
           ) : (
             <DataTable
+              tableId="vehicle-systems:climate-history"
               columns={columns}
               data={sortedHistory}
               keyExtractor={(row) => String(row.id ?? 0)}

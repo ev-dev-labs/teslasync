@@ -2,20 +2,23 @@ import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import { GlassPanel, Badge } from '@/components/ui';
+import { GlassPanel, Badge, EditableText } from '@/components/ui';
 import { BulkActionToolbar, SeverityBadge } from '@/components/data-display';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { EmptyState, Skeleton, ErrorDisplay } from '@/components/feedback';
+import { EmptyState, Skeleton, ErrorDisplay, EditConflictBanner } from '@/components/feedback';
+import { VisuallyHidden } from '@/components/a11y';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
+import { useEditLease } from '@/hooks/useEditLease';
 
 import {
   useAlertRules,
   useBulkEnableRules,
   useBulkDisableRules,
   useDeleteAlertRule,
+  useSaveAlertRule,
 } from '@/api/hooks/useNotifications';
 import type { AlertRule } from '@/api/types';
 import { Icons } from '@/lib/icons';
@@ -32,6 +35,14 @@ export default function AlertRulesPage() {
   const { t } = useTranslation();
   usePageTitle(t('alertRules.title', 'Alert rules'));
 
+  // Phase-46 / Prompt 66 — claim an edit lease so a second tab opening
+  // the same bulk-rules surface sees a banner before its renames /
+  // bulk-enables silently race this tab. The lease is scoped to the
+  // list view itself (not per-rule) because the rename / bulk
+  // affordances on this page operate across the whole rule set.
+  const leaseKey = 'alert-rules/list';
+  useEditLease(leaseKey);
+
   const { data: rulesRaw, isLoading, error } = useAlertRules();
   const rules: AlertRule[] = useMemo(() => rulesRaw ?? [], [rulesRaw]);
   const visibleIds = useMemo(() => rules.map((r) => r.id), [rules]);
@@ -40,6 +51,7 @@ export default function AlertRulesPage() {
   const bulkEnable = useBulkEnableRules();
   const bulkDisable = useBulkDisableRules();
   const deleteOne = useDeleteAlertRule();
+  const saveRule = useSaveAlertRule();
 
   const masterState = sel.masterState(visibleIds);
 
@@ -69,6 +81,10 @@ export default function AlertRulesPage() {
       )}
     >
       <FadeIn>
+        <EditConflictBanner
+          resourceKey={leaseKey}
+          resourceLabel={t('editConflict.resource.alertRules', 'Your alert rules')}
+        />
         <BulkActionToolbar
           selectedIds={Array.from(sel.selectedIds)}
           total={visibleIds.length}
@@ -140,9 +156,9 @@ export default function AlertRulesPage() {
               <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-2)] text-left text-[var(--text-secondary)]">
                 <tr>
                   <th className="w-12 px-3 py-3">
-                    <label className="sr-only" htmlFor="alert-rules-master">
+                    <VisuallyHidden as="label" htmlFor="alert-rules-master">
                       {t('bulk.selectAll', 'Select all')}
-                    </label>
+                    </VisuallyHidden>
                     <input
                       id="alert-rules-master"
                       type="checkbox"
@@ -171,9 +187,9 @@ export default function AlertRulesPage() {
                       data-selected={checked || undefined}
                     >
                       <td className="px-3 py-3">
-                        <label className="sr-only" htmlFor={`alert-rule-${r.id}`}>
+                        <VisuallyHidden as="label" htmlFor={`alert-rule-${r.id}`}>
                           {t('bulk.selectRow', 'Select row')}
-                        </label>
+                        </VisuallyHidden>
                         <input
                           id={`alert-rule-${r.id}`}
                           type="checkbox"
@@ -184,12 +200,37 @@ export default function AlertRulesPage() {
                         />
                       </td>
                       <td className="px-3 py-3 font-medium text-[var(--text-primary)]">
-                        <Link
-                          to={`/alert-studio?rule=${r.id}`}
-                          className="text-cyan-300 underline-offset-2 hover:underline"
-                        >
-                          {r.name}
-                        </Link>
+                        <EditableText
+                          value={r.name}
+                          ariaLabel={t('editableText.rename.alertRule', 'Rename alert rule {{name}}', { name: r.name })}
+                          validate={(next) =>
+                            next.length > 120
+                              ? t('alertRules.error.nameTooLong', 'Max 120 characters')
+                              : null
+                          }
+                          maxLength={120}
+                          onSave={async (next) => {
+                            await saveRule.mutateAsync({ id: r.id, name: next });
+                          }}
+                          display={({ value, onStartEdit }) => (
+                            <span className="inline-flex items-center gap-2">
+                              <Link
+                                to={`/alert-studio?rule=${r.id}`}
+                                className="text-cyan-300 underline-offset-2 hover:underline"
+                              >
+                                {value}
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={onStartEdit}
+                                aria-label={t('editableText.rename.alertRule', 'Rename alert rule {{name}}', { name: r.name })}
+                                className="rounded p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                              >
+                                <Icons.edit className="h-3.5 w-3.5" />
+                              </button>
+                            </span>
+                          )}
+                        />
                       </td>
                       <td className="px-3 py-3 text-[var(--text-secondary)]">
                         {r.signal_name}

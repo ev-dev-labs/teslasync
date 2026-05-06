@@ -174,7 +174,7 @@ export function StateTimeline({
                   onSelect?.(tr);
                 }}
                 className={cn(
-                  'absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-all',
+                  'touch-target-overlay absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-all',
                   isSelected
                     ? 'h-4 w-4 border-[var(--border-strong)] ring-2 ring-white/30'
                     : 'h-2.5 w-2.5 border-transparent hover:h-3.5 hover:w-3.5',

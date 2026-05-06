@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bot, User, RotateCw, Pencil, Check, X } from 'lucide-react';
+import { RotateCw, Pencil, Check, X } from 'lucide-react';
 import { Button, CopyButton, Textarea } from '@/components/ui';
+import { Avatar } from '@/components/data-display';
 import { cn } from '@/lib/cn';
 import { formatTime } from '@/lib/dateFormat';
 import type { ChatMessage } from '@/api/types';
@@ -116,15 +117,10 @@ export function ChatMessageItem({
     >
       {!isUser && (
         <div
-          className={cn(
-            'shrink-0 rounded-lg p-1.5 h-fit mt-1',
-            showAvatar
-              ? 'bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/20'
-              : 'invisible',
-          )}
+          className={cn('shrink-0 h-fit mt-1', !showAvatar && 'invisible')}
           aria-hidden={!showAvatar}
         >
-          <Bot className="h-4 w-4 text-purple-300" />
+          <Avatar kind="bot" size="md" shape="rounded" />
         </div>
       )}
 
@@ -222,13 +218,10 @@ export function ChatMessageItem({
 
       {isUser && (
         <div
-          className={cn(
-            'shrink-0 rounded-lg p-1.5 h-fit mt-1',
-            showAvatar ? 'bg-cyan-500/10 border border-cyan-500/20' : 'invisible',
-          )}
+          className={cn('shrink-0 h-fit mt-1', !showAvatar && 'invisible')}
           aria-hidden={!showAvatar}
         >
-          <User className="h-4 w-4 text-cyan-300" />
+          <Avatar kind="user" size="md" shape="rounded" />
         </div>
       )}
     </div>

@@ -43,7 +43,7 @@ export function AnnotationList({ annotations, onRemove }: AnnotationListProps) {
             variant="ghost"
             size="sm"
             onClick={() => onRemove(ann.id)}
-            className="shrink-0 !h-5 !w-5 !p-0 text-gray-300 opacity-0 transition-all hover:!text-red-400 group-hover:opacity-100 dark:text-white/20"
+            className="touch-target-overlay shrink-0 !h-5 !w-5 !p-0 text-gray-300 opacity-0 transition-all hover:!text-red-400 group-hover:opacity-100 dark:text-white/20"
             icon={<X className="h-3 w-3" />}
             aria-label={t('annotation.remove', 'Remove annotation')}
           />

@@ -126,7 +126,12 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
       // eslint-disable-next-line no-restricted-syntax
       <div className="fixed inset-0 z-[60] overflow-y-auto">
         <div
-          className="fixed inset-0 bg-[var(--surface-overlay)] backdrop-blur-sm"
+          // Phase-46 / Prompt 11 — forced-colors mode suppresses
+          // box-shadow + background-image, so a glass backdrop with a
+          // semi-transparent rgba turns invisible. Force an opaque
+          // Canvas-colour scrim so the dialog reads as modal in
+          // Windows High Contrast.
+          className="fixed inset-0 bg-[var(--surface-overlay)] backdrop-blur-sm forced-colors:bg-[Canvas]"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -141,6 +146,10 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
             className={cn(
               'relative z-10 flex w-full flex-col bg-[var(--surface-1)] text-[var(--text-primary)] shadow-xl outline-none',
               'border border-[var(--glass-border)]',
+              // Phase-46 / Prompt 11 — pin the dialog edge to a system
+              // colour so the modal frame remains perceivable when the
+              // glass-border alpha collapses to transparent.
+              'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
               // Below sm: bottom sheet that fills width, capped to viewport height.
               // From sm and up: rounded card, auto height up to 90vh, centered.
               'max-h-[100dvh] rounded-none sm:h-auto sm:max-h-[90vh] sm:rounded-lg',

@@ -113,6 +113,47 @@ func (c *Client) CircuitBreakerCounts() map[string]interface{} {
 	}
 }
 
+// BucketSnapshot is a thread-safe, read-only view of the Fleet API
+// rate limiter's current state. Returned by BucketSnapshot() so the
+// /system/rate-limits status panel can show callers how much
+// client-side rate-limit headroom they have before the next Tesla
+// request will be queued or rejected.
+//
+// Tokens / Burst yields a "% of burst capacity remaining" gauge:
+// when Tokens drops to zero, the next outbound call will block on
+// limiter.Wait until the bucket refills at Limit tokens/sec.
+//
+// Note: this snapshot describes the CLIENT-SIDE token bucket
+// configured in NewClient (currently 10 req/s, burst 5). Tesla's
+// SERVER-SIDE per-account daily quota is not exposed by their API
+// and cannot be observed here — the panel surfaces the client-side
+// budget as the closest proxy. See `internal/api/rate_limit_handler.go`
+// for the rationale baked into the ScopeBudget detail string.
+type BucketSnapshot struct {
+	// Tokens is the number of tokens currently available in the bucket.
+	// Reads x/time/rate.Limiter.Tokens(); may be fractional and may
+	// briefly exceed Burst when the limiter has been idle.
+	Tokens float64 `json:"tokens"`
+	// Burst is the bucket's maximum capacity (configured in NewClient).
+	Burst int `json:"burst"`
+	// Limit is the steady-state refill rate in tokens/second.
+	Limit float64 `json:"limit"`
+}
+
+// BucketSnapshot returns a read-only view of the Fleet API client's
+// rate-limit bucket state. Safe to call from any goroutine; the
+// underlying x/time/rate.Limiter is internally synchronised.
+func (c *Client) BucketSnapshot() BucketSnapshot {
+	if c == nil || c.limiter == nil {
+		return BucketSnapshot{}
+	}
+	return BucketSnapshot{
+		Tokens: c.limiter.Tokens(),
+		Burst:  c.limiter.Burst(),
+		Limit:  float64(c.limiter.Limit()),
+	}
+}
+
 // BaseURL returns the configured Fleet API base URL.
 func (c *Client) BaseURL() string { return c.baseURL }
 

@@ -35,7 +35,7 @@ export function useGlobalSearch(query: string, options: UseGlobalSearchOptions =
   const enabled = !options.disabled && trimmed.length >= SEARCH_MIN_QUERY_LENGTH;
   return useQuery({
     queryKey: searchKeys.global(trimmed, options.types, options.limit),
-    queryFn: () => {
+    queryFn: ({ signal }) => {
       const params = new URLSearchParams({ q: trimmed });
       if (options.types && options.types.length > 0) {
         params.set('types', options.types.join(','));
@@ -43,7 +43,7 @@ export function useGlobalSearch(query: string, options: UseGlobalSearchOptions =
       if (options.limit && options.limit > 0) {
         params.set('limit', String(options.limit));
       }
-      return request<SearchResponse>(`/search?${params.toString()}`);
+      return request<SearchResponse>(`/search?${params.toString()}`, { signal });
     },
     enabled,
     staleTime: STALE_TIMES.FAST,

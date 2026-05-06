@@ -26,6 +26,11 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         ref={ref}
         className={cn(
           'rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-sm',
+          // Phase-46 / Prompt 11 — forced-colors mode: the glass-border
+          // alpha collapses to invisible against OS Canvas, and box-shadow
+          // is suppressed entirely. Pin the boundary to a system color so
+          // cards remain perceivable in Windows High Contrast.
+          'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
           paddings[padding],
           hover && 'cursor-pointer transition-shadow hover:shadow-md',
           className,

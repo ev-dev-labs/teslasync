@@ -177,7 +177,7 @@ export function SessionList({
                         setPendingDelete(session);
                       }}
                       className={cn(
-                        'absolute top-1.5 right-1.5 p-1 rounded',
+                        'absolute top-1.5 right-1.5 p-1.5 rounded',
                         'opacity-0 group-hover:opacity-100 focus:opacity-100',
                         'text-[var(--text-muted)] hover:text-rose-300 hover:bg-rose-500/10',
                         'focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40',

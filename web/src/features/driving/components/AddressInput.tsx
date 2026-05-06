@@ -1,6 +1,6 @@
-import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
-import { Button as ControlButton, Input as ControlInput } from '@/components/ui';
-import { Spinner } from '@/components/feedback';
+import { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Combobox } from '@/components/forms';
 import { useGeocodeSearch } from '@/api/hooks/useDriving';
 import { MapPin } from 'lucide-react';
 import type { GeocodeResult, TripLocation } from '@/types/driving';
@@ -13,78 +13,61 @@ interface AddressInputProps {
   label?: string;
 }
 
+/**
+ * Geocoded address input — wraps the shared {@link Combobox} primitive
+ * with the trip-planner's address autocomplete behaviour. The parent
+ * owns the raw text via `value` / `onChange`; selecting a suggestion
+ * additionally fires `onSelect` with the resolved coordinates.
+ */
 export function AddressInput({ value, onChange, onSelect, placeholder, label }: AddressInputProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const { t } = useTranslation();
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const containerRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // Debounce the search query (400ms)
+  // Debounce typed input → geocode-search query (400ms) so we don't
+  // hammer the upstream geocoder on every keystroke.
   useEffect(() => {
-    timerRef.current = setTimeout(() => setDebouncedQuery(value), 400);
-    return () => clearTimeout(timerRef.current);
+    const id = setTimeout(() => setDebouncedQuery(value), 400);
+    return () => clearTimeout(id);
   }, [value]);
 
-  const { data: results, isLoading } = useGeocodeSearch(debouncedQuery, isOpen);
-  const suggestions = useMemo(() => results ?? [], [results]);
+  const { data: results, isLoading } = useGeocodeSearch(debouncedQuery);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  const handleSelect = useCallback((result: GeocodeResult) => {
-    onChange(result.display_name);
-    onSelect({ lat: result.lat, lng: result.lng, name: result.display_name });
-    setIsOpen(false);
-  }, [onChange, onSelect]);
+  const handleSelect = useCallback(
+    (result: GeocodeResult | null) => {
+      if (!result) return;
+      onChange(result.display_name);
+      onSelect({ lat: result.lat, lng: result.lng, name: result.display_name });
+    },
+    [onChange, onSelect],
+  );
 
   return (
-    <div ref={containerRef} className="relative">
-      {label && (
-        <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">{label}</label>
+    <Combobox<GeocodeResult>
+      label={label ?? t('addressInput.label', 'Address')}
+      hideLabel={!label}
+      placeholder={placeholder}
+      icon={<MapPin className="h-4 w-4" aria-hidden="true" />}
+      noChevron
+      noClearButton
+      value={null}
+      onChange={handleSelect}
+      inputValue={value}
+      onInputChange={onChange}
+      options={results ?? []}
+      getOptionLabel={(r) => r.display_name}
+      getOptionKey={(r) => `${r.lat}-${r.lng}-${r.display_name}`}
+      loading={isLoading && debouncedQuery.length >= 3}
+      maxVisibleOptions={5}
+      allowFreeText
+      renderOption={(r) => (
+        <span className="flex items-start gap-2">
+          <MapPin
+            className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]"
+            aria-hidden="true"
+          />
+          <span className="line-clamp-2">{r.display_name}</span>
+        </span>
       )}
-      <div className="relative">
-        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
-        <ControlInput
-          value={value}
-          onChange={(e) => {
-            onChange(e.target.value);
-            setIsOpen(true);
-          }}
-          onFocus={() => setIsOpen(true)}
-          placeholder={placeholder}
-          className="pl-9"
-        />
-        {isLoading && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <Spinner className="h-4 w-4" />
-          </div>
-        )}
-      </div>
-      {isOpen && suggestions.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full rounded-lg border border-[var(--border-subtle)] bg-gray-900/95 backdrop-blur-xl shadow-xl max-h-60 overflow-y-auto">
-          {suggestions.map((result, idx) => (
-            <ControlButton
-              key={`${result.lat}-${result.lng}-${idx}`}
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-auto w-full items-start justify-start gap-2 rounded-none px-3 py-2 text-left text-sm font-normal text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
-              onClick={() => handleSelect(result)}
-            >
-              <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-[var(--text-muted)]" />
-              <span className="line-clamp-2">{result.display_name}</span>
-            </ControlButton>
-          ))}
-        </div>
-      )}
-    </div>
+    />
   );
 }

@@ -58,6 +58,14 @@ export const TOPICS = {
   CHANGELOG_SEEN: 'changelog.seen',
   TOUR_COMPLETED: 'tour.completed',
   TOUR_RESET: 'tour.reset',
+  /**
+   * Phase-46 / Prompt 61 — A user clicked "Replay" on a tour from the
+   * Settings → Product tours panel (or any other UI surface). Receivers
+   * should clear their per-tour completion flag and start the tour. The
+   * publisher already does this for the local tab; this topic exists so
+   * peer tabs stay in sync.
+   */
+  TOUR_REPLAY_REQUESTED: 'tour.replay-requested',
   CHECKLIST_DISMISSED: 'checklist.dismissed',
   ONBOARDED: 'onboarded',
   ONBOARDING_SKIP_CHANGED: 'onboarding.skip.changed',
@@ -71,6 +79,13 @@ export const TOPICS = {
   FORM_DRAFT_ACQUIRED: 'formDraft.acquired',
   FORM_DRAFT_RELEASED: 'formDraft.released',
   FORM_DRAFT_COMMITTED: 'formDraft.committed',
+  // ── Edit leases (Phase-46 / Prompt 66 — useEditLease) ────────────────────
+  /** A tab is asking who currently owns the edit lease for a resource. */
+  LEASE_REQUEST: 'lease.request',
+  /** A tab is asserting it owns the edit lease (or has just taken over). */
+  LEASE_GRANTED: 'lease.granted',
+  /** A tab is releasing the edit lease (typically on unmount / tab close). */
+  LEASE_RELEASED: 'lease.released',
   // ── TanStack Query ───────────────────────────────────────────────────────
   QUERY_INVALIDATE: 'queryInvalidate',
   // ── Settings (Phase-45 / Prompt 06) ──────────────────────────────────────

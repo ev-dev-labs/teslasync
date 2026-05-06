@@ -34,8 +34,8 @@ export interface VehicleLiveSignalsResponse {
 export function useSignals(vehicleId: number) {
   return useQuery({
     queryKey: telemetryKeys.signals(vehicleId),
-    queryFn: async () => {
-      const resp = await request<{ signals?: string[] } | string[]>(`/signals/${vehicleId}/available`);
+    queryFn: async ({ signal }) => {
+      const resp = await request<{ signals?: string[] } | string[]>(`/signals/${vehicleId}/available`, { signal });
       // API wraps signals in { signals: [...] } but old code expected string[]
       if (Array.isArray(resp)) return resp;
       return (resp as { signals?: string[] }).signals ?? [];
@@ -46,14 +46,19 @@ export function useSignals(vehicleId: number) {
   });
 }
 
-export function getVehicleLiveSignals(vehicleId: number) {
-  return request<VehicleLiveSignalsResponse>(`/signals/${vehicleId}/live`);
+export function getVehicleLiveSignals(
+  vehicleId: number,
+  opts?: { signal?: AbortSignal | null },
+) {
+  return request<VehicleLiveSignalsResponse>(`/signals/${vehicleId}/live`, {
+    signal: opts?.signal,
+  });
 }
 
 export function useVehicleLiveSignals(vehicleId?: number) {
   return useQuery({
     queryKey: telemetryKeys.liveSignals(vehicleId),
-    queryFn: () => getVehicleLiveSignals(vehicleId ?? 0),
+    queryFn: ({ signal }) => getVehicleLiveSignals(vehicleId ?? 0, { signal }),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.REALTIME,
     retry: 1,
@@ -63,7 +68,7 @@ export function useVehicleLiveSignals(vehicleId?: number) {
 export function useSignalStats(vehicleId: number) {
   return useQuery({
     queryKey: telemetryKeys.signalStats(vehicleId),
-    queryFn: () => request<SignalStats>(`/signals/${vehicleId}/stats`),
+    queryFn: ({ signal }) => request<SignalStats>(`/signals/${vehicleId}/stats`, { signal }),
     enabled: vehicleId > 0,
   });
 }
@@ -71,7 +76,7 @@ export function useSignalStats(vehicleId: number) {
 export function useSignalHistory(vehicleId: number, signal: string, hours: number) {
   return useQuery({
     queryKey: telemetryKeys.signalHistory(vehicleId, signal, hours),
-    queryFn: () => request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?hours=${hours}`),
+    queryFn: ({ signal }) => request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?hours=${hours}`, { signal }),
     enabled: vehicleId > 0 && !!signal,
     refetchInterval: INTERVALS.STANDARD,
   });
@@ -80,9 +85,9 @@ export function useSignalHistory(vehicleId: number, signal: string, hours: numbe
 export function useSignalLog(vehicleId: number, signal: string, hours: number, page: number, pageSize: number) {
   return useQuery({
     queryKey: telemetryKeys.signalLog(vehicleId, signal, hours, page),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<SignalHistoryResponse>(
-        `/signals/${vehicleId}/${signal}/history?hours=${hours}&page=${page}&page_size=${pageSize}`
+        `/signals/${vehicleId}/${signal}/history?hours=${hours}&page=${page}&page_size=${pageSize}`, { signal }
       ),
     enabled: vehicleId > 0 && !!signal,
   });
@@ -91,8 +96,8 @@ export function useSignalLog(vehicleId: number, signal: string, hours: number, p
 export function useSignalDiff(vehicleId: number, signal: string, from: string, to: string) {
   return useQuery({
     queryKey: telemetryKeys.signalDiff(vehicleId, signal, from, to),
-    queryFn: () =>
-      request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?from=${from}&to=${to}`),
+    queryFn: ({ signal }) =>
+      request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?from=${from}&to=${to}`, { signal }),
     enabled: vehicleId > 0 && !!signal && !!from && !!to,
   });
 }
@@ -147,13 +152,13 @@ export function useSignalSnapshot(
 ) {
   return useQuery({
     queryKey: telemetryKeys.signalSnapshot(vehicleId, at, signalsCsv),
-    queryFn: () => {
+    queryFn: ({ signal }) => {
       const usp = new URLSearchParams();
       if (at) usp.set('at', at);
       if (signalsCsv) usp.set('signals', signalsCsv);
       const qs = usp.toString();
       return request<SignalSnapshotResponse>(
-        `/signals/${vehicleId}/snapshot${qs ? `?${qs}` : ''}`,
+        `/signals/${vehicleId}/snapshot${qs ? `?${qs}` : ''}`, { signal },
       );
     },
     enabled: (options?.enabled ?? true) && vehicleId > 0,
@@ -175,13 +180,13 @@ export function useSignalDiffServer(
 ) {
   return useQuery({
     queryKey: telemetryKeys.signalDiffServer(vehicleId, atA, atB, signalsCsv),
-    queryFn: () => {
+    queryFn: ({ signal }) => {
       const usp = new URLSearchParams();
       if (atA) usp.set('at_a', atA);
       if (atB) usp.set('at_b', atB);
       if (signalsCsv) usp.set('signals', signalsCsv);
       return request<SignalDiffServerResponse>(
-        `/signals/${vehicleId}/diff?${usp.toString()}`,
+        `/signals/${vehicleId}/diff?${usp.toString()}`, { signal },
       );
     },
     enabled: (options?.enabled ?? true) && vehicleId > 0 && !!atA && !!atB,
@@ -192,8 +197,8 @@ export function useSignalDiffServer(
 export function useSignalGaps(vehicleId: number) {
   return useQuery({
     queryKey: telemetryKeys.signalGaps(vehicleId),
-    queryFn: async () => {
-      const res = await request<{ signals?: Record<string, { value: unknown; timestamp: string }> }>(`/signals/${vehicleId}/live`);
+    queryFn: async ({ signal }) => {
+      const res = await request<{ signals?: Record<string, { value: unknown; timestamp: string }> }>(`/signals/${vehicleId}/live`, { signal });
       return res.signals ?? {};
     },
     enabled: vehicleId > 0,
@@ -204,8 +209,8 @@ export function useSignalGaps(vehicleId: number) {
 export function useMQTTStatus() {
   return useQuery({
     queryKey: telemetryKeys.mqttStatus,
-    queryFn: async () => {
-      const raw = await request<TelemetryStatus>('/telemetry');
+    queryFn: async ({ signal }) => {
+      const raw = await request<TelemetryStatus>('/telemetry', { signal });
       // Backend returns vehicles as Record<vin, VehicleStreamState>.
       // Normalize to array for the page.
       const vehiclesRaw = raw.vehicles ?? raw.streaming_vehicles;
@@ -237,7 +242,7 @@ export function useMQTTStatus() {
 export function useSignalCatalog() {
   return useQuery({
     queryKey: ['signal-catalog'],
-    queryFn: () => request<SignalCatalogEntry[]>('/signals/catalog'),
+    queryFn: ({ signal }) => request<SignalCatalogEntry[]>('/signals/catalog', { signal }),
     staleTime: STALE_TIMES.SLOW,
   });
 }
@@ -255,7 +260,7 @@ export function useSignalObservations(
 
   return useQuery({
     queryKey: ['signal-observations', vehicleId, opts],
-    queryFn: () => request<SignalObservation[]>(`/signals/observations?${params}`),
+    queryFn: ({ signal }) => request<SignalObservation[]>(`/signals/observations?${params}`, { signal }),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.REALTIME,
   });
@@ -287,7 +292,7 @@ export interface FleetTelemetryError {
 export function useFleetTelemetryErrorVINs() {
   return useQuery({
     queryKey: ['fleet-telemetry-error-vins'],
-    queryFn: () => request<FleetTelemetryErrorVIN[]>('/tesla/fleet-telemetry/error-vins'),
+    queryFn: ({ signal }) => request<FleetTelemetryErrorVIN[]>('/tesla/fleet-telemetry/error-vins', { signal }),
     staleTime: STALE_TIMES.STANDARD,
   });
 }
@@ -295,9 +300,9 @@ export function useFleetTelemetryErrorVINs() {
 export function useFleetTelemetryErrors(vin?: string) {
   return useQuery({
     queryKey: ['fleet-telemetry-errors', vin],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<FleetTelemetryError[]>(
-        `/tesla/fleet-telemetry/errors${vin ? `?vin=${vin}` : ''}`
+        `/tesla/fleet-telemetry/errors${vin ? `?vin=${vin}` : ''}`, { signal }
       ),
     staleTime: STALE_TIMES.STANDARD,
   });

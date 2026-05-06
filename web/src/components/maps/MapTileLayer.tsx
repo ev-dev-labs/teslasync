@@ -1,7 +1,9 @@
 import { TileLayer, useMap } from 'react-leaflet'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { getMapConfig } from '@/api/settings'
+import { FullscreenButton } from '@/components/ui/FullscreenButton'
 
 export type MapStyle = 'dark' | 'satellite' | 'streets' | 'terrain'
 
@@ -75,4 +77,100 @@ export function MapInvalidator() {
     return () => clearTimeout(timer)
   }, [map])
   return null
+}
+
+/**
+ * Phase-46 / Prompt 56 — fullscreen overlay for leaflet maps.
+ *
+ * Must be rendered as a child of `<MapContainer>`. Uses `useMap()`
+ * to grab the active leaflet map instance, then portals a small
+ * `<FullscreenButton>` chip into the leaflet container's DOM
+ * (`map.getContainer()`) so the button positions itself in the
+ * map corner instead of having to be styled by every page that
+ * adopts it.
+ *
+ * On enter/exit fullscreen, leaflet's own ResizeObserver picks up
+ * the size change and re-tiles automatically — `MapInvalidator`'s
+ * 100 ms `invalidateSize()` only runs at mount, so we additionally
+ * call it on every `fullscreenchange` to defend against the rare
+ * case where leaflet misses the resize (covered observationally on
+ * Firefox 124).
+ *
+ * The `:fullscreen` rule in `web/src/index.css` sizes the leaflet
+ * container to the viewport so the map fills the screen.
+ */
+export interface MapFullscreenControlProps {
+  /**
+   * Corner of the map to mount the button in. Defaults to
+   * `topright`. RTL pages typically pass `topleft` so the control
+   * stays on the page's "trailing edge" in the user's reading
+   * direction.
+   */
+  position?: 'topleft' | 'topright' | 'bottomleft' | 'bottomright'
+  /** Override the "Enter fullscreen" accessible label. */
+  ariaLabelEnter?: string
+  /** Override the "Exit fullscreen" accessible label. */
+  ariaLabelExit?: string
+}
+
+const POSITION_CLASS: Record<NonNullable<MapFullscreenControlProps['position']>, string> = {
+  topleft: 'top-2 left-2',
+  topright: 'top-2 right-2',
+  bottomleft: 'bottom-2 left-2',
+  bottomright: 'bottom-2 right-2',
+}
+
+export function MapFullscreenControl({
+  position = 'topright',
+  ariaLabelEnter,
+  ariaLabelExit,
+}: MapFullscreenControlProps) {
+  const map = useMap()
+  // Set the ref synchronously during render — `map.getContainer()`
+  // returns the same `.leaflet-container` div across the lifetime of
+  // the map, so this is safe and idempotent. Doing it here (instead
+  // of in a `useEffect`) means the FullscreenButton's own mount-time
+  // listener can read a populated ref on first paint, even though
+  // child effects run before parent effects in React's commit
+  // ordering.
+  const containerRef = useRef<HTMLElement | null>(null)
+  containerRef.current = map.getContainer()
+
+  // Keep leaflet's tile grid in sync with the new viewport. Leaflet
+  // already re-fires `invalidateSize()` on its own ResizeObserver,
+  // but on browsers that defer the resize until the next paint we'd
+  // briefly see grey bands at the right/bottom edges. This safety
+  // net pays the cost of one extra `invalidateSize()` call per
+  // toggle, which is cheap.
+  useEffect(() => {
+    const onChange = () => {
+      requestAnimationFrame(() => map.invalidateSize())
+    }
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [map])
+
+  const container = map.getContainer()
+  if (!container) return null
+
+  return createPortal(
+    <div
+      // Sits above the leaflet panes (z-400 is above marker
+      // shadows = 600… leaflet's own controls live at 800; we use
+      // 800 here so the button stays clickable above marker
+      // popups too).
+      className={`leaflet-control absolute z-[800] m-2 pointer-events-auto ${POSITION_CLASS[position]}`}
+      // The leaflet container uses pointer-events for map drags —
+      // the wrapper here MUST re-enable them on the button so
+      // clicks register.
+    >
+      <FullscreenButton
+        targetRef={containerRef}
+        ariaLabelEnter={ariaLabelEnter}
+        ariaLabelExit={ariaLabelExit}
+        className="bg-[var(--surface-1)]/90 border border-[var(--border-default)] text-[var(--text-primary)] shadow"
+      />
+    </div>,
+    container,
+  )
 }

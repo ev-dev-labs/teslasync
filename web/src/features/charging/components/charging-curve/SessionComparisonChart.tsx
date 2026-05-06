@@ -52,11 +52,16 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
 
   return (
     <FadeIn delay={0.15}>
+      {/* chart-a11y:no-table dense overlay of up to 10 power curves; per-session detail available on the session page */}
       <ChartContainer
         title={t('charging.curve.sessionComparison', 'Session Comparison')}
         subtitle={t(
           'charging.curve.sessionComparisonDesc',
           'Power curves overlaid from last 10 sessions',
+        )}
+        ariaLabel={t(
+          'charging.curve.sessionComparison.aria',
+          'Overlaid power-vs-SOC line chart comparing the last several charging sessions',
         )}
         height={300}
         exportable

@@ -3,27 +3,37 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
+	"github.com/ev-dev-labs/teslasync/internal/integrations"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/platform"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	signal "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/webpush"
+
+	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
+	"github.com/pquerna/otp/totp"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/automation"
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
@@ -100,10 +110,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Security headers (clickjacking, MIME sniffing, CSP, HSTS, etc.)
 	r.Use(SecurityHeadersMiddleware)
 
-	// Request body size limit (1MB) ╬ô├ç├╢ prevents DoS via large payloads
+	// Request body size limit (1 MB default). The vehicle photo
+	// upload endpoint legitimately ships up to ~12 MB (8 MB image
+	// + multipart envelope), so bypass the cap on that exact
+	// path. Wrapping a wrapped MaxBytesReader can't loosen the
+	// inner limit, so this MUST happen here in the global
+	// middleware rather than inside the handler.
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			req.Body = http.MaxBytesReader(w, req.Body, 1<<20)
+			limit := int64(1 << 20)
+			if isVehiclePhotoUploadPath(req.Method, req.URL.Path) {
+				limit = 12 << 20
+			}
+			req.Body = http.MaxBytesReader(w, req.Body, limit)
 			next.ServeHTTP(w, req)
 		})
 	})
@@ -118,7 +137,159 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	chargingHandler := NewChargingHandler(db, stateReader)
 	geofenceHandler := NewGeofenceHandler(db)
 	authHandler := NewAuthHandler(db, teslaClient, opt.Encryptor)
+	// Phase-46 / Prompt 31 — Sudo step-up. Construct the in-memory
+	// token store and the reauth HTTP handler once and share them
+	// across the route table. The store is the source of truth for
+	// step-up authorisation; the middleware reads from it on every
+	// gated request, the handler writes to it on a successful
+	// /auth/reauth.
+	sudoCfg := LoadSudoConfig(cfg)
+	sudoStore := database.NewSudoTokenStore(sudoCfg.TTL)
+	// Phase-46 / Prompt 35 — wire the real RFC 6238 verifier so the
+	// shared TESLASYNC_SUDO_TOTP_SECRET path validates for real (and
+	// not just NULL-on-arrival as it did before). We pass a thin
+	// closure rather than a bare totp.Validate reference so any future
+	// switch to a non-default Validate variant (different period /
+	// digits / skew) only changes one line.
+	sudoTOTPVerifier := func(secret, code string) error {
+		if !totp.Validate(code, secret) {
+			return errors.New("invalid totp code")
+		}
+		return nil
+	}
+	sudoHandler := NewSudoHandler(sudoCfg, sudoStore, sudoTOTPVerifier)
+
+	// Phase-46 / Prompt 35 — per-user TOTP enrollment. Owns its own
+	// pending/active tables; mints sudo tokens via the shared sudoStore
+	// from prompt 31 so a successful per-user TOTP step-up is
+	// indistinguishable downstream from a successful password step-up.
+	totpRepo := database.NewTOTPRepo(db)
+	totpHandler := NewTOTPHandler(totpRepo, opt.Encryptor, sudoStore, cfg.Auth.ForwardAuthHeader)
+
+	// Phase-46 / Prompt 42 — active sessions / device management.
+	// TeslaSync mints its OWN per-device cookie on the first
+	// authenticated request from a browser (auth.Middleware below)
+	// and persists the (subject, cookie hash) tuple here so the
+	// Settings page can list devices and revoke individual sessions
+	// without touching the upstream IdP. The repo's HMAC signing
+	// secret is freshly generated on every restart — desired
+	// semantics for a "local session" primitive; operators wanting
+	// cross-restart persistence already get it from the upstream IdP.
+	authSessionsRepo := database.NewAuthSessionsRepo(db)
+	sessionHandler := NewSessionHandler(authSessionsRepo, cfg.Auth.ForwardAuthHeader)
+
+	// Phase-46 / Prompt 57 — Auth-mode contract.
+	//
+	// The auth_subjects materialisation table is the single source
+	// of truth for "every distinct subject this deployment has ever
+	// seen". The recorder middleware (mounted on the /api/v1 group
+	// below, AFTER ForwardAuthMiddleware so the header is the
+	// authoritative one) bumps last_seen_at on every request via an
+	// in-process per-subject debounce so we never spam the DB.
+	//
+	// systemAuthModeHandler answers GET /system/auth-mode — the SPA's
+	// source of truth for "what mode am I in, and who am I". Mounted
+	// inside /system below; deliberately NOT sudo-gated and NOT
+	// wrapped in RequireSubjectMiddleware so it stays reachable in
+	// open mode AND when the upstream proxy strips the header on a
+	// specific request.
+	authSubjectsRepo := database.NewAuthSubjectsRepo(db)
+	subjectRecorder := tsauth.NewSubjectRecorder(authSubjectsStoreAdapter{repo: authSubjectsRepo}, tsauth.SubjectRecorderOptions{})
+	systemAuthModeHandler := NewSystemAuthModeHandler(cfg.Auth.ForwardAuthHeader, cfg.Auth.ProviderHint)
+	_ = authSubjectsRepo // referenced via subjectRecorder; held for future per-user tables.
+
+	// Phase-46 / Prompt 34 — Live log tail. Build a process-wide
+	// pub/sub registry for zerolog events and tee the global logger
+	// through it so every Info/Warn/Error/etc. fans out to any
+	// connected SSE subscriber. The tee is idempotent: installAdminLogStreamTap
+	// guards against double-wrapping when NewRouter is called more
+	// than once in the same process (e.g. parallel router tests).
+	logTap := platform.NewLogSubscriberRegistry()
+	installAdminLogStreamTap(logTap)
+	logStreamHandler := NewAdminLogStreamHandler(logTap)
 	settingsHandler := NewSettingsHandler(db)
+	// Phase-46 / Prompt 36 — settings export/import. The serializer
+	// fans out across four repos (settings, alert_rules, geofences,
+	// notification_quiet_hours); construct it once + share between
+	// the export + import handlers so future repos can be added in a
+	// single place. Apply is sudo-gated by RequireSudo on the import
+	// route below; export is read-only and runs unguarded.
+	settingsSerializer := database.NewSettingsSerializer(
+		database.NewSettingsRepo(db),
+		database.NewAlertRuleRepo(db),
+		database.NewGeofenceRepo(db),
+		database.NewQuietHoursRepo(db),
+	)
+	settingsExportHandler := NewSettingsExportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
+	settingsImportHandler := NewSettingsImportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
+	// Phase-46 / Prompt 50 — per-section + global "Reset to defaults".
+	// Sudo-gated at the route below so the SPA's <ReauthDialog>
+	// always pops on the danger-zone "Reset ALL settings" button.
+	settingsResetRepo := database.NewSettingsResetRepo(db)
+	settingsResetHandler := NewSettingsResetHandler(settingsResetRepo, cfg.Auth.ForwardAuthHeader)
+	// Phase-46 / Prompt 65 — recurring scheduled exports.
+	//
+	// Owner identity comes from the configured FORWARD_AUTH_HEADER on
+	// every read/write — the handler NEVER trusts owner_subject in the
+	// request body. The repo's per-row UPDATE/DELETE statements scope
+	// by (id, owner_subject) so cross-user mutations collapse to 404.
+	scheduledExportRepo := database.NewScheduledExportRepo(db)
+	scheduledExportsHandler := NewScheduledExportsHandler(scheduledExportRepo, cfg.Auth.ForwardAuthHeader, nil)
+	// Phase-46 / Prompt 43 — per-vehicle settings layer.
+	//
+	// The resolver layers vehicle-scoped overrides on top of the
+	// existing install-global SettingsRepo and the vehicles base
+	// table. Construct here so the same SettingsRepo + VehicleRepo
+	// instances back both the global settings handler above and
+	// the per-vehicle resolver below.
+	vehicleSettingsRepo := database.NewVehicleSettingsRepo(db)
+	vehicleSettingsRepoForRouter := database.NewVehicleRepo(db)
+	vehicleSettingsResolver := database.NewVehicleSettingsResolver(
+		vehicleSettingsRepo,
+		database.NewVehicleNameLookup(vehicleSettingsRepoForRouter),
+		database.NewUserSettingsLookup(database.NewSettingsRepo(db)),
+	)
+	vehicleSettingsHandler := NewVehicleSettingsHandler(
+		vehicleSettingsRepo,
+		vehicleSettingsResolver,
+		NewVehicleExistenceChecker(vehicleSettingsRepoForRouter),
+	)
+
+	// Phase-46 / Prompt 54 — vehicle photo upload. The handler
+	// owns the on-disk write/read pipeline plus the per-vehicle
+	// upload mutex; the repo is a thin SQL facade that persists
+	// the rendered paths in vehicle_photos.
+	vehiclePhotoRepo := database.NewVehiclePhotoRepo(db)
+	vehiclePhotoHandler := NewVehiclePhotoHandler(
+		vehiclePhotoRepo,
+		NewVehicleExistenceChecker(vehicleSettingsRepoForRouter),
+		cfg.VehiclePhotoDir,
+	)
+
+	// Phase-46 / Prompt 44 — RBAC matrix admin handler.
+	// Matrix bindings live in role_permissions; permissions are a
+	// hand-maintained catalog in internal/auth. The handler is
+	// auth-mode aware (501 AUTH_MODE_OPEN in open mode) and the PUT
+	// route is wrapped in RequireSudo below.
+	rolePermissionsRepo := database.NewRolePermissionsRepo(db)
+	rbacHandler := NewRBACHandler(rolePermissionsRepo, cfg.Auth.ForwardAuthHeader)
+
+	// Phase-46 / Prompt 46 — admin impersonation. The store mints
+	// HMAC-signed cookies (15-min TTL) carrying the original-admin /
+	// target pair; the middleware mounted further down rewrites the
+	// principal header so downstream handlers see the impersonation
+	// target as the request principal. The audit repo doubles as the
+	// candidates store via its ListDistinctActiveSubjects helper —
+	// see audit_repo.go for the rationale on co-locating that query.
+	auditRepo := database.NewAuditRepoWithDB(db)
+	impersonationStore := tsauth.MustNewImpersonationStore()
+	impersonationHandler := NewImpersonationHandler(
+		impersonationStore,
+		auditRepo,
+		auditRepo,
+		cfg.Auth.ForwardAuthHeader,
+	)
+
 	dashboardLayoutHandler := NewDashboardLayoutHandler(db)
 	chartAnnotationHandler := NewChartAnnotationHandler(db)
 	pinnedHandler := NewPinnedHandler(db)
@@ -140,7 +311,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	batteryHandler := NewBatteryHandler(db, stateReader)
 	analyticsHandler := NewAnalyticsHandler(db, stateReader)
 	notificationHandler := NewNotificationHandler(db)
+	notificationChannelHandler := NewNotificationChannelHandler(db)
 	notifScheduleHandler := NewNotificationScheduleHandler(db)
+	quietHoursHandler := NewQuietHoursHandler(database.NewQuietHoursRepo(db), cfg)
 	chatbotHandler := NewChatbotHandler(db, vehicleSvc, stateReader)
 	tirePressureHandler := NewTirePressureHandler(stateReader)
 	motorHandler := NewMotorHandler(stateReader)
@@ -331,19 +504,151 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		httprate.LimitByIP(120, 1*time.Minute),
 	).Post("/api/v1/web-vitals", webVitalsHandler.Ingest)
 
+	// Public: Web error reports (Phase 46 / Prompt 01). The SPA's global
+	// error reporter POSTs uncaught exceptions, unhandled promise
+	// rejections, React render errors, and TanStack Query failures here.
+	// Mounted OUTSIDE the /api/v1 ForwardAuth subrouter so we can
+	// capture login-loop bugs even when the user's auth token is
+	// expired. The handler bounds payload size + label cardinality;
+	// abuse is bounded by a tight per-IP rate limit (errors are bursty
+	// — 50 reports/minute is generous without enabling spam). The
+	// summary endpoint below is admin-only and shares the same handler
+	// instance so the rolling-window state is consistent.
+	webErrorHandler := NewWebErrorHandler()
+	r.With(
+		httprate.LimitByIP(50, 1*time.Minute),
+	).Post("/api/v1/web-errors", webErrorHandler.Ingest)
+
+	// Public: Auth session-info endpoint (Phase 46 / Prompt 05). The
+	// SPA polls this every 5 minutes so it can surface the
+	// SessionExpiringModal countdown ~60s before the upstream
+	// ForwardAuth cookie expires, and the SessionExpiredModal hard-
+	// block once it has expired. Mounted OUTSIDE the /api/v1
+	// ForwardAuth subrouter and ALWAYS returns 200 OK — if it returned
+	// 401 when unauthenticated the polling SPA would hit the same
+	// expired-session path that drove it here, infinite-looping the
+	// hard-expired modal. Per-IP rate limit is generous (60/min)
+	// because every SPA tab independently polls.
+	authSessionHandler := NewAuthSessionHandler(cfg)
+	r.With(
+		httprate.LimitByIP(60, 1*time.Minute),
+	).Get("/api/v1/auth/session", authSessionHandler.Session)
+
+	// System state (Phase 46 / Prompt 04): single-row maintenance/degraded-mode
+	// banner state. Repo + handler + maintenance provider are constructed
+	// once here so the GET /system/health closure and the admin POST share
+	// the same store and env-vs-DB resolver semantics.
+	systemStateRepo := database.NewSystemStateRepo(db)
+	adminMaintenanceHandler := NewAdminMaintenanceHandler(systemStateRepo, cfg, db)
+	maintenanceProvider := BuildMaintenanceProvider(systemStateRepo, cfg)
+
+	// Phase 46 / Prompt 08: in-app feedback widget. Repo is shared
+	// between the public POST ingest endpoint (rate-limited per
+	// submitter) and the admin queue endpoints (list + patch + optional
+	// GitHub Issues bridge). The bridge is wired at construction time
+	// from cfg.GitHub; when Repo or Token is empty, NewGitHubIssuesClient
+	// returns nil and the admin endpoint flips github_bridge_enabled to
+	// false in its response so the SPA hides the Forward action.
+	userFeedbackRepo := database.NewUserFeedbackRepo(db)
+	feedbackHandler := NewFeedbackHandler(userFeedbackRepo, cfg)
+	githubIssuesClient := integrations.NewGitHubIssuesClient(integrations.GitHubIssuesConfig{
+		Repo:  cfg.GitHub.Repo,
+		Token: cfg.GitHub.Token,
+	})
+	var githubBridge GitHubIssuesPoster
+	if githubIssuesClient != nil {
+		githubBridge = githubIssuesClient
+	}
+	adminFeedbackHandler := NewAdminFeedbackHandler(userFeedbackRepo, cfg, db, githubBridge)
+
+	// Phase-46 / Prompt 40 — rate-limit status counters. Construct two
+	// sliding-window observers (one for every /api/v1 request, one
+	// scoped to writes only) and a handler that joins them with the
+	// Tesla client's bucket snapshot. Counters are attached as plain
+	// chi middleware below; the GET /system/rate-limits route reads
+	// from them on demand.
+	apiRequestCounter := platform.NewWindowCounter()
+	apiWriteCounter := platform.NewWindowCounter()
+	rateLimitHandler := NewRateLimitHandler(RateLimitHandlerConfig{
+		TeslaClient:  teslaClient,
+		APICounter:   apiRequestCounter,
+		WriteCounter: apiWriteCounter,
+	})
+
+	// Phase-46 / Prompt 41 — worker heartbeat store powering the
+	// /system/queues panel. Backed by Redis when available so
+	// every worker process can write its heartbeat to the same
+	// snapshot the API server reads. Falls back to an in-memory
+	// store when Redis is disabled — the panel will then report
+	// every worker as "down (no heartbeat)" which honestly
+	// reflects the deployment state rather than fabricating an
+	// "ok" reading.
+	var queueHeartbeatStore database.WorkerStatusStore
+	if opt.CacheStore != nil {
+		if rdb := opt.CacheStore.Underlying(); rdb != nil {
+			queueHeartbeatStore = database.NewRedisWorkerStatusStore(rdb)
+		}
+	}
+	if queueHeartbeatStore == nil {
+		queueHeartbeatStore = database.NewMemoryWorkerStatusStore()
+	}
+
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
+		// Phase-46 / Prompt 40 — count every /api/v1 request and every
+		// write-method request before any rate-limit middleware so the
+		// status panel reflects raw load even when downstream limiters
+		// are rejecting traffic. Mounted BEFORE APICallLog so a panic
+		// inside log persistence doesn't leak counter state.
+		r.Use(apiRequestCounter.Middleware(nil))
+		r.Use(apiWriteCounter.Middleware(platform.WriteMethodFilter()))
+
 		// APICallLog middleware: persist every inbound /api/v1 request to
 		// api_call_logs (service="teslasync-api"). Mounted BEFORE
 		// ForwardAuthMiddleware so 401 responses from the auth layer are
 		// also captured. Skip predicate excludes streaming/health/metrics
-		// and the api-logs admin UI itself (feedback loop).
-		r.Use(APICallLogMiddleware(GetAPICallLogger(), cfg.APILogs.CaptureBodies, DefaultAPILogSkip))
+		// and the api-logs admin UI itself (feedback loop). The admin
+		// live log stream (phase-46/34) is also excluded so the
+		// SSE viewer doesn't recursively log itself.
+		r.Use(APICallLogMiddleware(GetAPICallLogger(), cfg.APILogs.CaptureBodies, func(p string) bool {
+			if p == AdminLogStreamPath {
+				return true
+			}
+			return DefaultAPILogSkip(p)
+		}))
 
 		// ForwardAuth: protect all /api/v1/* routes via reverse-proxy header.
 		// No-op when ForwardAuthHeader is empty (dev mode / no auth configured).
 		r.Use(ForwardAuthMiddleware(cfg.Auth.ForwardAuthHeader))
+
+		// Phase-46 / Prompt 57 — Subject recorder. MUST run AFTER
+		// ForwardAuthMiddleware (so the principal header is the
+		// authoritative one for this request) and BEFORE both the
+		// session tracker and the impersonation rewrite (so the
+		// recorded subject is the *original* admin identity even
+		// during an active impersonation, matching the contract that
+		// auth_subjects materialises every distinct human operator
+		// who has touched the API). Open mode is a passthrough.
+		r.Use(tsauth.SubjectRecorderMiddleware(cfg.Auth.ForwardAuthHeader, subjectRecorder))
+
+		// Phase-46 / Prompt 42 — Session tracker. MUST run AFTER
+		// ForwardAuthMiddleware so the principal header is guaranteed
+		// present. Mints + binds a TeslaSync-issued cookie on the first
+		// authenticated request, validates it on every subsequent one,
+		// and rejects revoked cookies with 401 + clear-cookie. Open mode
+		// (no FORWARD_AUTH_HEADER configured) is a passthrough.
+		r.Use(tsauth.Middleware(cfg.Auth.ForwardAuthHeader, authSessionsRepo, tsauth.SessionTrackerOptions{}))
+
+		// Phase-46 / Prompt 46 — Impersonation middleware. MUST run
+		// AFTER the session tracker so the tracker pins the cookie to
+		// the actual admin identity (not the rewritten target). The
+		// middleware verifies the HMAC-signed impersonation cookie,
+		// re-binds it against the live admin subject, and rewrites the
+		// FORWARD_AUTH header to the impersonation target so all
+		// downstream handlers transparently "see what the target sees".
+		// Open mode is a passthrough.
+		r.Use(tsauth.ImpersonationMiddleware(cfg.Auth.ForwardAuthHeader, impersonationStore))
 
 		// Auth (stricter rate limits to prevent brute force)
 		r.Route("/auth", func(r chi.Router) {
@@ -353,7 +658,63 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/callback", authHandler.Callback)
 			r.Post("/refresh", authHandler.Refresh)
 			r.Get("/status", authHandler.Status)
-			r.Post("/disconnect", authHandler.Disconnect)
+			// Phase-46 / Prompt 31 — destructive: revokes Tesla
+			// refresh token and clears credentials. Sudo gated.
+			// Phase-46 / Prompt 46 — Blocked during impersonation so
+			// an admin cannot accidentally disconnect the target's
+			// Tesla account; the original admin must end impersonation
+			// first.
+			r.With(tsauth.RequireNotImpersonating(), RequireSudo(sudoStore, sudoCfg)).Post("/disconnect", authHandler.Disconnect)
+			// Phase-46 / Prompt 31 — Sudo step-up reauth. POST a
+			// password OR totp_code to mint a 5-minute X-Sudo-Token
+			// the SPA echoes on subsequent destructive requests. In
+			// open mode this returns 200 mode="open" without minting
+			// anything; the dialog falls back to typed-confirmation.
+			// Phase-46 / Prompt 46 — Blocked during impersonation so
+			// no fresh sudo tokens can be minted under the target's
+			// rewritten principal. Existing tokens won't validate
+			// either (token subject != rewritten subject), so this is
+			// belt-and-suspenders.
+			r.With(tsauth.RequireNotImpersonating()).Post("/reauth", sudoHandler.Reauth)
+			// Phase-46 / Prompt 35 — per-user TOTP enrollment.
+			// /totp                              GET    status pill backing
+			// /totp/enroll                       POST   start enrollment
+			// /totp/verify                       POST   confirm enrollment
+			// /totp/sudo                         POST   mint sudo token via per-user TOTP
+			// /totp                              DELETE revoke (sudo-gated)
+			// /totp/backup-codes/regenerate      POST   rotate backup codes (sudo-gated)
+			//
+			// Phase-46 / Prompt 46 — The entire /totp subtree is
+			// blocked during impersonation. Enrollment, verification,
+			// and sudo-token mints all read the principal from the
+			// (rewritten) header and would otherwise act as the target.
+			r.Route("/totp", func(r chi.Router) {
+				r.Use(tsauth.RequireNotImpersonating())
+				r.Get("/", totpHandler.GetStatus)
+				r.Post("/enroll", totpHandler.Enroll)
+				r.Post("/verify", totpHandler.Verify)
+				r.Post("/sudo", totpHandler.VerifySudo)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", totpHandler.Revoke)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/backup-codes/regenerate", totpHandler.RegenerateBackupCodes)
+			})
+			// Phase-46 / Prompt 42 — Active sessions / device
+			// management. List is read-only; both DELETE routes are
+			// sudo-gated (RequireSudo is a passthrough in open mode,
+			// so the handler's own AUTH_MODE_OPEN check is what
+			// guards the resource semantics there).
+			//
+			// Phase-46 / Prompt 46 — DELETEs are blocked during
+			// impersonation so an admin cannot revoke the target's
+			// real sessions. List is allowed because it's read-only
+			// and reflects what the target sees, which is exactly the
+			// "see what they see" contract.
+			r.Route("/sessions", func(r chi.Router) {
+				r.Get("/", sessionHandler.List)
+				// `all-others` MUST be registered BEFORE `/{id}` so chi
+				// doesn't bind the literal as a UUID param.
+				r.With(tsauth.RequireNotImpersonating(), RequireSudo(sudoStore, sudoCfg)).Delete("/all-others", sessionHandler.RevokeAllOthers)
+				r.With(tsauth.RequireNotImpersonating(), RequireSudo(sudoStore, sudoCfg)).Delete("/{id}", sessionHandler.Revoke)
+			})
 		})
 
 		// Onboarding (Phase 40 / Prompt 18): first-run gate status.
@@ -369,7 +730,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/sync", vehicleHandler.SyncFromTesla)
 			r.Route("/{vehicleID}", func(r chi.Router) {
 				r.Get("/", vehicleHandler.Get)
-				r.Delete("/", vehicleHandler.Delete)
+				// Phase-46 / Prompt 31 — destructive: requires sudo.
+				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", vehicleHandler.Delete)
 				r.Get("/positions", vehicleHandler.Positions)
 				r.Get("/state", vehicleHandler.CurrentState)
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/wake", vehicleHandler.Wake)
@@ -428,6 +790,26 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					}
 					fh.HandleDebug(w, req)
 				})
+
+				// Phase-46 / Prompt 43 — per-vehicle settings.
+				// GET is read-only and unguarded; PUT/DELETE are
+				// rate-limited by IP at 60/min — the SPA only fires
+				// these on user save/reset clicks, but the guard
+				// keeps a buggy or malicious client from saturating
+				// the upsert path.
+				r.Get("/settings", vehicleSettingsHandler.List)
+				r.With(httprate.LimitByIP(60, 1*time.Minute)).Put("/settings/{key}", vehicleSettingsHandler.Put)
+				r.With(httprate.LimitByIP(60, 1*time.Minute)).Delete("/settings/{key}", vehicleSettingsHandler.Delete)
+
+				// Phase-46 / Prompt 54 — vehicle hero photo. POST
+				// + DELETE are rate-limited at 5/min (uploads are
+				// expensive and the SPA only fires them on
+				// explicit user action). GET routes are unguarded
+				// — they're served frequently by the hero card.
+				r.Get("/photo", vehiclePhotoHandler.GetMeta)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/photo", vehiclePhotoHandler.Upload)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Delete("/photo", vehiclePhotoHandler.Delete)
+				r.Get("/photo/{size}", vehiclePhotoHandler.GetFile)
 			})
 		})
 
@@ -561,6 +943,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Put("/settings/polling-config", settingsHandler.UpdatePollingConfig)
 			r.Get("/settings/dashboard-layouts", settingsHandler.GetDashboardLayouts)
 			r.Put("/settings/dashboard-layouts", settingsHandler.UpdateDashboardLayouts)
+			// Phase-46 / Prompt 36 — JSON bundle export + import.
+			// Export is read-only; import is sudo-gated because a
+			// large alert-rule replay or bulk geofence rewrite is a
+			// destructive action that should always carry a fresh
+			// credential. Both routes carry the parent rate limit.
+			r.Get("/settings/export", settingsExportHandler.Export)
+			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/settings/import", settingsImportHandler.Import)
+			// Phase-46 / Prompt 50 — POST /settings/reset.
+			// Sudo-gated for the same reason as /settings/import: every
+			// reset is destructive (wipes alert rules, geofences, or
+			// the entire user-discoverable preference surface) and
+			// should always carry a fresh credential.
+			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/settings/reset", settingsResetHandler.Reset)
 		})
 
 		// Named dashboard layout library (Phase 40 / Prompt 30).
@@ -651,6 +1046,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/enable", alertHandler.BulkEnableRules)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/disable", alertHandler.BulkDisableRules)
 			r.Post("/test", alertHandler.TestRule)
+			// Phase-46 / Prompt 20 — alert acknowledgement + audit timeline.
+			// Registered AFTER the static `/rules`, `/metrics`, `/test` routes
+			// above so chi's static-first matching routes them correctly.
+			r.Get("/{alertID}", alertHandler.GetAlert)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/{alertID}/acknowledge", alertHandler.AcknowledgeAlert)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/{alertID}/comment", alertHandler.CommentAlert)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/{alertID}/reopen", alertHandler.ReopenAlert)
 		})
 
 		// Automations
@@ -757,12 +1159,35 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Post("/", notifScheduleHandler.CreateSchedule)
 				r.Delete("/{scheduleID}", notifScheduleHandler.DeleteSchedule)
 			})
+			// Phase-46 / Prompt 19 — Do-Not-Disturb windows. Mounted
+			// before /{channelID} so chi's path matcher does not treat
+			// "quiet-hours" as a channel id.
+			r.Route("/quiet-hours", func(r chi.Router) {
+				r.Get("/", quietHoursHandler.List)
+				r.Post("/", quietHoursHandler.Create)
+				r.Patch("/{id}", quietHoursHandler.Patch)
+				r.Delete("/{id}", quietHoursHandler.Delete)
+			})
+			// Phase-46 / Prompt 37 — webhook signature preview is a
+			// pure utility (no DB touch, no outbound call); rate-limited
+			// because it computes HMAC SHA-256 on caller-supplied input.
+			// Mounted before /{channelID} for the same reason as
+			// /quiet-hours above — chi otherwise binds "webhooks" as
+			// the channel id.
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Post("/webhooks/preview-signature", notificationChannelHandler.WebhookSignaturePreview)
 			r.Route("/{channelID}", func(r chi.Router) {
 				r.Get("/", notificationHandler.GetChannel)
 				r.Put("/", notificationHandler.UpdateChannel)
 				r.Delete("/", notificationHandler.DeleteChannel)
 				r.Post("/toggle", notificationHandler.ToggleChannel)
 				r.Post("/test", notificationHandler.TestChannel)
+				// Phase-46 / Prompt 37 — HMAC-aware webhook test. Sibling
+				// of /test so the legacy generic test stays available;
+				// this endpoint exists solely for webhook-kind channels
+				// and 404s on any other kind.
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).
+					Post("/webhook-test", notificationChannelHandler.WebhookTest)
 				r.Get("/preferences", notifScheduleHandler.GetPreferences)
 				r.Put("/preferences", notifScheduleHandler.UpdatePreference)
 				r.Get("/metrics", notifScheduleHandler.GetChannelMetrics)
@@ -972,7 +1397,20 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					}
 				}
 			}
-			r.Get("/health", ExtendedHealthCheck(db, health, bufferStats))
+			r.Get("/health", ExtendedHealthCheck(db, health, bufferStats, maintenanceProvider))
+
+			// Phase-46 / Prompt 57 — Auth-mode contract endpoint.
+			// Always reachable; deliberately NOT sudo-gated and NOT
+			// wrapped in RequireSubjectMiddleware because the SPA's
+			// session-monitor + RequiresAuth components rely on this
+			// endpoint to discover the deployment's mode and the
+			// current request's resolved subject — even when the
+			// upstream proxy stripped the header on this specific
+			// request. Per-IP rate-limited because the SPA polls it
+			// at boot and on focus refresh.
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/auth-mode", systemAuthModeHandler.ServeHTTP)
+
 			r.Get("/api-usage", APIUsageHandler(db))
 			r.Get("/compression-stats", CompressionStatsHandler(db))
 			r.Get("/backup", backupHandler.ExportData)
@@ -993,6 +1431,40 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/workers", WorkersHealthHandler())
 			r.Get("/metrics-catalog", MetricsCatalogHandler())
 			r.Get("/openapi", OpenAPIHandler())
+
+			// Phase-46 / Prompt 33 — Aggregated self-test endpoint.
+			// Single click runs ~10 checks (DB, MQTT, Redis, Tesla
+			// token + breaker, signal_log freshness, migrations,
+			// runtime, health monitor) and returns a structured
+			// DiagnosticReport. Per-IP rate-limited because each
+			// call fans out concurrent probes against every shared
+			// dependency.
+			diagnosticHandler := NewDiagnosticHandler(db, teslaClient, mqttClient, opt.CacheStore, health, cfg)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).
+				Post("/diagnostic", diagnosticHandler.ServeHTTP)
+
+			// Phase-46 / Prompt 40 — Rate-limit status panel feed.
+			// Read-only; cheap (no DB / no Redis); polled every 30s
+			// by the admin status panel. Per-IP throttle still
+			// applies in case a misconfigured client busy-loops it.
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/rate-limits", rateLimitHandler.ServeHTTP)
+
+			// Phase-46 / Prompt 41 — Job queue status feed.
+			// Aggregates pending / in-progress / 24h success-fail
+			// counts across notification, export, automation
+			// workers, plus latest heartbeat (Redis). Both routes
+			// are GET-only and per-IP throttled at 60/min — the
+			// SPA polls /system/queues every 30s and lazy-loads
+			// the per-worker drawer on demand.
+			queueStatusHandler := NewQueueStatusHandler(QueueStatusHandlerConfig{
+				QueueRepo:      database.NewWorkerQueueRepo(db),
+				HeartbeatStore: queueHeartbeatStore,
+			})
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/queues", queueStatusHandler.ServeStatus)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/queues/{worker}/jobs", queueStatusHandler.ServeJobs)
 		})
 
 		// Per-user activity feed (Phase-40 / Prompt 49 — Recent Activity Discoverability).
@@ -1025,9 +1497,107 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/", apiKeyHandler.List)
 			r.Post("/", apiKeyHandler.Create)
 			r.Route("/{id}", func(r chi.Router) {
-				r.Delete("/", apiKeyHandler.Delete)
-				r.Post("/revoke", apiKeyHandler.Revoke)
+				// Phase-46 / Prompt 31 — destructive: requires sudo.
+				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", apiKeyHandler.Delete)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/revoke", apiKeyHandler.Revoke)
 			})
+		})
+
+		// Admin: frontend error reporting summary (Phase 46 / Prompt 01).
+		// Last-hour rolling counts read from the same WebErrorHandler
+		// instance that the public /api/v1/web-errors POST endpoint
+		// writes to, so the summary stays in sync without going through
+		// Prometheus. Auth-protected by the parent /api/v1 ForwardAuth
+		// middleware.
+		r.Route("/admin/web-errors", func(r chi.Router) {
+			r.Get("/summary", webErrorHandler.Summary)
+		})
+
+		// Admin: operator-controlled maintenance/degraded banner
+		// (Phase 46 / Prompt 04). GET returns the persisted DB row
+		// plus an env-override marker; POST validates and writes the
+		// row, audits the change via logAuditFromRequest, and rate-
+		// limits per IP because state-change endpoints are otherwise
+		// trivially abusable. Auth-protected by the parent /api/v1
+		// ForwardAuth middleware (any authenticated user can write —
+		// audit trail is the accountability surface; a future RBAC
+		// layer can wrap this without changing the response shape).
+		r.Route("/admin/maintenance", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(30, 1*time.Minute))
+			r.Get("/", adminMaintenanceHandler.Get)
+			r.Post("/", adminMaintenanceHandler.Set)
+		})
+
+		// In-app feedback / report-bug widget (Phase 46 / Prompt 08).
+		// POST /feedback is the public ingest path used by the SPA's
+		// <FeedbackModal> (sidebar button + Cmd+K command palette
+		// entry). Mounted INSIDE this ForwardAuth subrouter so anonymous
+		// spam is bounded (per the prompt's Out-of-scope: "Anonymous
+		// feedback (must be authenticated to prevent spam)"). Per-row
+		// rate limit (3/hour) is enforced inside the handler against
+		// user_feedback so it survives pod restarts; a tighter per-IP
+		// httprate ceiling guards against payload-flooding even when
+		// the DB lookup fails open.
+		r.With(httprate.LimitByIP(20, 1*time.Hour)).Post("/feedback", feedbackHandler.Submit)
+
+		// Admin feedback queue (Phase 46 / Prompt 08): list / get /
+		// patch the user_feedback rows. PATCH optionally forwards the
+		// row to GitHub Issues when cfg.GitHub is configured. Any
+		// authenticated caller can read/write — audit_logs is the
+		// accountability surface, mirroring /admin/maintenance.
+		r.Route("/admin/feedback", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/", adminFeedbackHandler.List)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", adminFeedbackHandler.Get)
+				r.Patch("/", adminFeedbackHandler.Patch)
+			})
+		})
+
+		// Phase-46 / Prompt 44 — RBAC matrix admin endpoints.
+		// GET is unguarded so any authenticated caller can render
+		// the page; PUT is sudo-gated since it changes the
+		// authorisation matrix the install runs under. In open mode
+		// both endpoints return 501 AUTH_MODE_OPEN inside the
+		// handler before any DB work — the RequireSudo wrapper is a
+		// passthrough in open mode anyway.
+		r.Route("/admin/rbac", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/matrix", rbacHandler.GetMatrix)
+			r.With(RequireSudo(sudoStore, sudoCfg)).Put("/matrix", rbacHandler.UpsertMatrix)
+		})
+
+		// Phase-46 / Prompt 46 — Admin impersonation endpoints.
+		// GET state + GET candidates are read-only and unguarded so
+		// the SPA can poll them to render the banner. POST start is
+		// sudo-gated AND blocked while already impersonating so a
+		// nested impersonation cannot be initiated. POST end is NOT
+		// sudo-gated — exiting impersonation should always succeed
+		// without a re-auth prompt — and is idempotent, so a
+		// parallel-tab end click does not surface an error toast.
+		// In open mode every endpoint returns 501 AUTH_MODE_OPEN
+		// inside the handler.
+		r.Route("/admin/impersonate", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(30, 1*time.Minute))
+			r.Get("/", impersonationHandler.GetState)
+			r.Get("/candidates", impersonationHandler.Candidates)
+			r.With(tsauth.RequireNotImpersonating(), RequireSudo(sudoStore, sudoCfg)).Post("/", impersonationHandler.Start)
+			r.Post("/end", impersonationHandler.End)
+		})
+
+		// Admin: live log tail stream (Phase-46 / Prompt 34).
+		// SSE endpoint that fans out structured zerolog events to
+		// any authenticated browser. Read-only, idempotent — kept
+		// behind the parent /api/v1 ForwardAuth gate but
+		// intentionally NOT chained through RequireSudo: the SPA
+		// uses fetch+ReadableStream (NOT EventSource) so it could
+		// send X-Sudo-Token, but the stream itself triggers no side
+		// effects so step-up is reserved for destructive admin
+		// actions per Prompt 31's intent. httprate caps reconnect
+		// storms to 10/min/IP.
+		r.Route("/admin/logs", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(10, 1*time.Minute))
+			r.Get("/stream", logStreamHandler.ServeHTTP)
 		})
 
 		// Fleet Telemetry ingestion
@@ -1213,16 +1783,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Data Repair
 		r.Route("/data-repair", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(20, 1*time.Minute))
+			// GET stays read-only and unguarded; every mutating route
+			// below threads through RequireSudo (Phase-46 / Prompt 31).
 			r.Get("/stale-sessions", dataRepairHandler.GetStaleSessions)
 			r.Route("/charging/{id}", func(r chi.Router) {
-				r.Put("/", dataRepairHandler.UpdateCharging)
-				r.Post("/close", dataRepairHandler.CloseCharging)
-				r.Delete("/", dataRepairHandler.DeleteCharging)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Put("/", dataRepairHandler.UpdateCharging)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/close", dataRepairHandler.CloseCharging)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", dataRepairHandler.DeleteCharging)
 			})
 			r.Route("/drive/{id}", func(r chi.Router) {
-				r.Put("/", dataRepairHandler.UpdateDrive)
-				r.Post("/close", dataRepairHandler.CloseDrive)
-				r.Delete("/", dataRepairHandler.DeleteDrive)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Put("/", dataRepairHandler.UpdateDrive)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/close", dataRepairHandler.CloseDrive)
+				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", dataRepairHandler.DeleteDrive)
 			})
 		})
 
@@ -1232,7 +1804,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/configs", backupRestoreHandler.CreateConfig)
 			r.Get("/configs/{configID}", backupRestoreHandler.GetConfig)
 			r.Put("/configs/{configID}", backupRestoreHandler.UpdateConfig)
-			r.Delete("/configs/{configID}", backupRestoreHandler.DeleteConfig)
+			// Phase-46 / Prompt 31 — destructive: requires sudo.
+			r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/configs/{configID}", backupRestoreHandler.DeleteConfig)
 			r.Post("/configs/{configID}/trigger", backupRestoreHandler.TriggerBackup)
 			r.Post("/quick", backupRestoreHandler.TriggerQuickBackup)
 			r.Get("/runs", backupRestoreHandler.ListRuns)
@@ -1251,16 +1824,39 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			pahoClient = mqttClient.Underlying()
 		}
 		exportJobHandler := NewExportJobHandler(db, pahoClient)
+		exportColumnsHandler := NewExportColumnsHandler()
+		// Phase-46 / Prompt 62 — column-selector UI fetches the publishable
+		// column catalog for the active export type. Read-only and cheap;
+		// rate-limited to soak up accidental SPA loops.
+		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/exports/columns", exportColumnsHandler.ListColumns)
 		r.Route("/export/jobs", func(r chi.Router) {
 			r.Post("/", exportJobHandler.SubmitJob)
 			r.Post("/account", exportJobHandler.SubmitAccountJob)
-			r.Post("/import", exportJobHandler.SubmitImportJob)
+			// Phase-46 / Prompt 31 — destructive: a settings import
+			// can overwrite live config; gate on sudo.
+			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/import", exportJobHandler.SubmitImportJob)
 			// Bulk operations (Phase-45 / Prompt 32) — registered before
 			// /{jobID} so chi matches the static `/bulk` path first.
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", exportJobHandler.BulkUpdate)
 			r.Get("/", exportJobHandler.ListJobs)
 			r.Get("/{jobID}", exportJobHandler.GetJob)
 			r.Get("/{jobID}/download", exportJobHandler.DownloadJob)
+		})
+
+		// Phase-46 / Prompt 65 — recurring scheduled exports.
+		// Five routes mounted as a separate /scheduled-exports
+		// subtree (NOT /export/jobs/scheduled) because they
+		// describe schedule rows, not one-shot job rows. Owner
+		// identity flows from the configured FORWARD_AUTH_HEADER on
+		// every call; the handler refuses owner_subject in the body
+		// (DisallowUnknownFields). Per-row writes are scoped at the
+		// SQL layer so cross-user mutations collapse to 404.
+		r.Route("/scheduled-exports", func(r chi.Router) {
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/", scheduledExportsHandler.List)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", scheduledExportsHandler.Create)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/{id}", scheduledExportsHandler.Update)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/{id}", scheduledExportsHandler.Delete)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/{id}/run", scheduledExportsHandler.RunNow)
 		})
 
 		// ╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç
@@ -1365,4 +1961,102 @@ func spaFallback(dir string, fs http.Handler) http.HandlerFunc {
 		// SPA fallback ╬ô├ç├╢ serve index.html for client-side routing
 		http.ServeFile(w, r, filepath.Join(dir, "index.html"))
 	}
+}
+
+// adminLogStreamTapState guards installAdminLogStreamTap so the global
+// zerolog.Logger is teed to a LogSubscriberRegistry exactly once per
+// process even when NewRouter is invoked multiple times (router tests
+// run in parallel inside the same binary). The first call captures the
+// pre-existing logger sink as `primary` and re-assigns the global
+// log.Logger to a MultiLevelWriter; subsequent calls swap the registry
+// pointer in-place via SetTarget so a fresh router still receives
+// events without rebuilding the underlying tee.
+var adminLogStreamTapState struct {
+	mu      sync.Mutex
+	primary io.Writer
+	current *adminLogStreamTapForwarder
+}
+
+// adminLogStreamTapForwarder satisfies zerolog.LevelWriter by
+// delegating to a swappable target registry. SetTarget is called on
+// every NewRouter invocation so each router instance owns the
+// registry it hands to its handler — without this, a stale registry
+// from a previous test would silently swallow events.
+type adminLogStreamTapForwarder struct {
+	mu     sync.RWMutex
+	target zerolog.LevelWriter
+}
+
+func (f *adminLogStreamTapForwarder) Write(p []byte) (int, error) {
+	f.mu.RLock()
+	t := f.target
+	f.mu.RUnlock()
+	if t == nil {
+		return len(p), nil
+	}
+	return t.Write(p)
+}
+
+func (f *adminLogStreamTapForwarder) WriteLevel(level zerolog.Level, p []byte) (int, error) {
+	f.mu.RLock()
+	t := f.target
+	f.mu.RUnlock()
+	if t == nil {
+		return len(p), nil
+	}
+	return t.WriteLevel(level, p)
+}
+
+func (f *adminLogStreamTapForwarder) SetTarget(t zerolog.LevelWriter) {
+	f.mu.Lock()
+	f.target = t
+	f.mu.Unlock()
+}
+
+// installAdminLogStreamTap wires the zerolog global logger so every
+// log record fans out to the supplied registry in addition to the
+// configured primary sink. The first invocation chooses the primary
+// sink (ConsoleWriter when TESLASYNC_DEV=true, otherwise os.Stdout)
+// and rewires log.Logger via zerolog.MultiLevelWriter; subsequent
+// invocations only swap the registry pointer.
+func installAdminLogStreamTap(reg *platform.LogSubscriberRegistry) {
+	adminLogStreamTapState.mu.Lock()
+	defer adminLogStreamTapState.mu.Unlock()
+	if adminLogStreamTapState.current == nil {
+		var primary io.Writer = os.Stdout
+		if strings.EqualFold(os.Getenv("TESLASYNC_DEV"), "true") {
+			primary = zerolog.ConsoleWriter{Out: os.Stderr}
+		}
+		fwd := &adminLogStreamTapForwarder{target: reg}
+		adminLogStreamTapState.primary = primary
+		adminLogStreamTapState.current = fwd
+		log.Logger = log.Logger.Output(zerolog.MultiLevelWriter(primary, fwd))
+		return
+	}
+	adminLogStreamTapState.current.SetTarget(reg)
+}
+
+// isVehiclePhotoUploadPath returns true when the request is the
+// vehicle photo upload endpoint (POST /api/v1/vehicles/{id}/photo).
+// Used by the global body-limit middleware to bypass the 1 MB cap
+// for photo uploads — a wrapped http.MaxBytesReader can't be
+// loosened later, so the bypass MUST happen at the global layer.
+func isVehiclePhotoUploadPath(method, path string) bool {
+if method != http.MethodPost {
+return false
+}
+const prefix = "/api/v1/vehicles/"
+if !strings.HasPrefix(path, prefix) {
+return false
+}
+rest := path[len(prefix):]
+idx := strings.Index(rest, "/")
+if idx <= 0 {
+return false
+}
+tail := rest[idx:]
+// Accept exactly /photo (no trailing slash, no sub-path) so
+// future endpoints under /vehicles/{id}/photo/X don't
+// inherit the 12 MB limit.
+return tail == "/photo"
 }

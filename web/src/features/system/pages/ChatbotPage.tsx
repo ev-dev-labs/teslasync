@@ -13,6 +13,7 @@ import { Bot, Send, Square, History as HistoryIcon } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Button, Textarea } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
+import { VisuallyHidden } from '@/components/a11y';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { cn } from '@/lib/cn';
@@ -401,9 +402,9 @@ export default function ChatbotPage() {
           </div>
 
           <div className="p-4 border-t border-[var(--glass-border)]">
-            <label htmlFor="chatbot-input" className="sr-only">
+            <VisuallyHidden as="label" htmlFor="chatbot-input">
               {t('chatbot.inputLabel', 'Message')}
-            </label>
+            </VisuallyHidden>
             <div className="flex items-end gap-3">
               <Textarea
                 ref={inputRef}

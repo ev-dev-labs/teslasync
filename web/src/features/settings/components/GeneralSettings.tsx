@@ -5,16 +5,38 @@ import {
   useSettings, useSaveSettings, useVehicles, useCarPreferences,
 } from '@/api/hooks/useSettings'
 import { GlassPanel, Button, IconBox, Input, Select } from '@/components/ui'
+import { CurrencyInput } from '@/components/forms'
 import { Skeleton, DraftRecoveryBanner } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { useFormDraft } from '@/hooks/useFormDraft'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { parseSettingEnum, isSettingMiles, isSettingFahrenheit, isSettingPSI, isSettingBar } from '@/lib/parseSettingEnum'
+import { microToValue, valueToMicro } from '@/lib/currencyFormat'
 import { SettingField } from './SettingField'
 import {
   Settings as SettingsIcon, Save, Download, Car, CheckCircle, Clock,
 } from 'lucide-react'
+
+// Map the user's stored currency_symbol glyph to an ISO 4217 code so
+// CurrencyInput can use Intl.NumberFormat with style:'currency'. The
+// glyphs come from the dropdown above (line ~260) — keep the two in sync.
+const CURRENCY_SYMBOL_TO_ISO: Record<string, string> = {
+  '$': 'USD',
+  '€': 'EUR',
+  '£': 'GBP',
+  'C$': 'CAD',
+  'A$': 'AUD',
+  '¥': 'JPY',
+  '元': 'CNY',
+  'CHF': 'CHF',
+  'kr': 'SEK',
+  '₹': 'INR',
+}
+
+function symbolToIsoCode(symbol: string | undefined): string {
+  return CURRENCY_SYMBOL_TO_ISO[(symbol ?? '$').trim()] ?? 'USD'
+}
 
 const DEFAULT_FORM: AppSettings = {
   unit_of_length: 'km',
@@ -314,33 +336,38 @@ export function GeneralSettings() {
                 </p>
               </SettingField>
 
-              <SettingField label={t('app.electricityCost', 'Electricity Cost (per kWh)')}>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">
-                    {form.currency_symbol ?? '$'}
-                  </span>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={form.base_cost_per_kwh}
-                    onChange={e => setForm({ ...form, base_cost_per_kwh: parseFloat(e.target.value) || 0 })}
-                    className="w-full pl-7 pr-3 py-2.5 text-sm"
-                  />
-                </div>
+              <SettingField
+                label={t('app.electricityCost', 'Electricity Cost (per kWh)')}
+                help={{
+                  i18nKey: 'help.fields.settings.electricityCost',
+                  content: 'Cost per kWh used to compute charging spend across drives, charging sessions, and TCO analytics. Currency follows the Currency setting above.',
+                  for: 'electricity-cost',
+                }}
+              >
+                <CurrencyInput
+                  ariaLabel={t('app.electricityCost', 'Electricity Cost (per kWh)')}
+                  currency={symbolToIsoCode(form.currency_symbol)}
+                  locale={form.locale ?? 'en-US'}
+                  precision={form.decimal_precision ?? 2}
+                  valueMicro={valueToMicro(form.base_cost_per_kwh)}
+                  onChange={({ valueMicro }) =>
+                    setForm({ ...form, base_cost_per_kwh: microToValue(valueMicro) ?? 0 })
+                  }
+                />
               </SettingField>
 
               <SettingField label={t('app.gasPrice', 'Gas Price (for EV vs ICE comparison)')}>
                 <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">
-                      {form.currency_symbol ?? '$'}
-                    </span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={form.gas_price_per_unit}
-                      onChange={e => setForm({ ...form, gas_price_per_unit: parseFloat(e.target.value) || 0 })}
-                      className="w-full pl-7 pr-3 py-2.5 text-sm"
+                  <div className="flex-1">
+                    <CurrencyInput
+                      ariaLabel={t('app.gasPrice', 'Gas Price (for EV vs ICE comparison)')}
+                      currency={symbolToIsoCode(form.currency_symbol)}
+                      locale={form.locale ?? 'en-US'}
+                      precision={form.decimal_precision ?? 2}
+                      valueMicro={valueToMicro(form.gas_price_per_unit)}
+                      onChange={({ valueMicro }) =>
+                        setForm({ ...form, gas_price_per_unit: microToValue(valueMicro) ?? 0 })
+                      }
                     />
                   </div>
                   <Select

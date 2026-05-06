@@ -133,7 +133,13 @@ export function FleetTelemetryHealth() {
           {vinsLoading ? (
             <Skeleton className="h-24" />
           ) : vinList.length > 0 ? (
-            <DataTable columns={vinColumns} data={vinList} keyExtractor={(r) => r.vin} compact />
+            <DataTable
+              tableId="admin:fleet-health-vins"
+              columns={vinColumns}
+              data={vinList}
+              keyExtractor={(r) => r.vin}
+              compact
+            />
           ) : (
             <p className="py-4 text-center text-sm text-[var(--text-muted)]">
               {t('devtools.health.noErrorVins', 'No vehicles with telemetry errors')}
@@ -165,7 +171,14 @@ export function FleetTelemetryHealth() {
           {errorsLoading ? (
             <Skeleton className="h-40" />
           ) : errorList.length > 0 ? (
-            <DataTable columns={errorColumns} data={errorList} keyExtractor={(r) => String(r.id)} compact pagination />
+            <DataTable
+              tableId="admin:fleet-health-errors"
+              columns={errorColumns}
+              data={errorList}
+              keyExtractor={(r) => String(r.id)}
+              compact
+              pagination
+            />
           ) : (
             <p className="py-4 text-center text-sm text-[var(--text-muted)]">
               {t('devtools.health.noErrors', 'No fleet telemetry errors recorded')}

@@ -19,7 +19,7 @@ export const userKeys = {
 export function useCurrentUser() {
   return useQuery({
     queryKey: userKeys.me,
-    queryFn: () => request<User>('/users/me'),
+    queryFn: ({ signal }) => request<User>('/users/me', { signal }),
   });
 }
 
@@ -70,8 +70,8 @@ function buildActivityQuery(params: MyActivityParams): string {
 export function useMyRecentActivity(params: MyActivityParams = {}) {
   return useQuery({
     queryKey: userKeys.myActivity(params),
-    queryFn: () =>
-      request<UserActivityEntry[]>(`/users/me/activity${buildActivityQuery(params)}`),
+    queryFn: ({ signal }) =>
+      request<UserActivityEntry[]>(`/users/me/activity${buildActivityQuery(params)}`, { signal }),
     select: safeArray,
     staleTime: STALE_TIMES.STANDARD,
   });
@@ -87,7 +87,7 @@ interface TeslaConfigEnvelope<T = Record<string, unknown>> {
 export function useTeslaFeatureConfig() {
   return useQuery({
     queryKey: userKeys.teslaFeatureConfig,
-    queryFn: () => request<TeslaConfigEnvelope>('/tesla/user/feature-config'),
+    queryFn: ({ signal }) => request<TeslaConfigEnvelope>('/tesla/user/feature-config', { signal }),
     staleTime: STALE_TIMES.EXTENDED,
   });
 }
@@ -116,7 +116,7 @@ interface TeslaRegionData {
 export function useTeslaUserRegion() {
   return useQuery({
     queryKey: userKeys.teslaRegion,
-    queryFn: () => request<TeslaConfigEnvelope<TeslaRegionData>>('/tesla/user/region'),
+    queryFn: ({ signal }) => request<TeslaConfigEnvelope<TeslaRegionData>>('/tesla/user/region', { signal }),
     staleTime: STALE_TIMES.STATIC,
   });
 }
@@ -159,7 +159,7 @@ interface TeslaOrdersEnvelope {
 export function useTeslaUserOrders() {
   return useQuery({
     queryKey: userKeys.teslaOrders,
-    queryFn: () => request<TeslaOrdersEnvelope>('/tesla/user/orders'),
+    queryFn: ({ signal }) => request<TeslaOrdersEnvelope>('/tesla/user/orders', { signal }),
     staleTime: STALE_TIMES.SLOW,
   });
 }
@@ -198,7 +198,7 @@ interface TeslaProfileEnvelope {
 export function useTeslaUserProfile() {
   return useQuery({
     queryKey: userKeys.teslaProfile,
-    queryFn: () => request<TeslaProfileEnvelope>('/tesla/user/profile'),
+    queryFn: ({ signal }) => request<TeslaProfileEnvelope>('/tesla/user/profile', { signal }),
     staleTime: STALE_TIMES.SLOW,
   });
 }

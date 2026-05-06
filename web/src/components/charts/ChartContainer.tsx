@@ -1,23 +1,27 @@
-import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Download, MoreVertical, Tag, FileSpreadsheet, Image as ImageIcon, Plus, Eye, EyeOff,
-} from 'lucide-react';
+import { Tag, Plus, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Spinner } from '@/components/feedback/Spinner';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { SectionErrorBoundary } from '@/components/feedback/SectionErrorBoundary';
 import { Button } from '@/components/ui/Button';
+import { FullscreenButton } from '@/components/ui/FullscreenButton';
+import { VisuallyHidden } from '@/components/a11y';
 import { useChartExport } from '@/hooks/useChartExport';
 import { downloadCSV, objectsToCSV, defaultExportFilename, type CsvCellValue } from '@/lib/csvExport';
+import { getLangDir, textAnchorForDir, type Direction } from '@/lib/i18nDir';
 import { AnnotationList } from './AnnotationList';
 import { AddAnnotationPopover } from './AddAnnotationPopover';
+import { ChartExportMenu } from './ChartExportMenu';
+import { ChartHiddenSeriesProvider } from './ChartHiddenSeriesContext';
 import {
   useChartAnnotationsAsData,
   useCreateAnnotation,
   useDeleteAnnotation,
 } from '@/api/hooks/useAnnotations';
 import type { AnnotationCategory, AnnotationScope, DataAnnotation } from '@/types/annotations';
+import type { HiddenSeriesState } from '@/hooks/useHiddenSeries';
 
 /**
  * Phase 40 / Prompt 43 — annotation integration helper. When `annotations` is
@@ -39,6 +43,14 @@ export interface ChartContainerRenderProps {
   /** True when the user has toggled annotations off. Children should skip
    *  rendering `<ReferenceLine>`s in this case. */
   hidden: boolean;
+  /**
+   * Phase-46 / Prompt 67 — URL-persisted hidden-series toggle state. Only
+   * non-null when the surrounding `<ChartContainer>` was given a
+   * `chartKey` prop (which both opts the chart into URL state AND sets up
+   * a `<ChartHiddenSeriesContext>` for the legend). Pages typically wire
+   * the returned state into `<Line hide={hiddenSeries?.isHidden('foo')}/>`.
+   */
+  hiddenSeries: HiddenSeriesState | null;
 }
 
 type ChartContainerChildren =
@@ -54,8 +66,20 @@ interface ChartContainerProps {
   action?: React.ReactNode;
   children: ChartContainerChildren;
   className?: string;
-  /** Show the PNG download button (also used as the trigger when only PNG is
-   *  available). Combined with `exportData` it expands into a kebab menu. */
+  /**
+   * Phase-46 / Prompt 16 — render the `<ChartExportMenu>` (PNG / SVG /
+   * Copy-image, plus CSV when `exportData` is supplied) in the title-bar
+   * action area.
+   *
+   * Defaults to `true` because every `<ChartContainer>` ships with a
+   * mandatory `ariaLabel` (phase-46 / prompt 13), which is the same
+   * "is this chart shareable?" precondition the export menu checks.
+   * Pass `exportable={false}` to explicitly opt out (e.g. for tour
+   * step-throughs or print-only contexts).
+   *
+   * The menu is also auto-hidden while the chart is in `loading` or
+   * `empty` states because there's no captured image worth sharing yet.
+   */
   exportable?: boolean;
   exportFilename?: string;
   /** Phase-40 / Prompt 31 — when set, exposes "Download data as CSV" in the
@@ -66,19 +90,98 @@ interface ChartContainerProps {
    *  function so they can read the visible annotations from context. */
   annotations?: ChartAnnotationsConfig;
   /**
-   * Phase-45 / Prompt 13 — accessible description of the chart content.
+   * Phase-46 / Prompt 13 — REQUIRED accessible name for the chart figure.
    *
    * Recharts SVGs are otherwise an opaque "graphics-document" to assistive
-   * tech. This wraps the chart body in `role="img"` + `aria-label` so a
-   * screen-reader user hears one short summary instead of dozens of axis
-   * labels in series order.
+   * tech. Pass a one-sentence description such as
+   * `"Daily energy use over the last 30 days"` so a screen-reader user
+   * hears one short summary instead of dozens of axis labels in series
+   * order.
    *
-   * Pass a one-sentence description such as
-   * `"Line chart showing daily energy use over the last 30 days"`. When
-   * omitted, falls back to the existing `title` prop so the chart is at
-   * least announced as `Chart: {title}`.
+   * `audit:chart-a11y` (chained from `npm run lint`) fails the build if
+   * any `<ChartContainer>` JSX site is missing this prop.
    */
-  ariaLabel?: string;
+  ariaLabel: string;
+  /**
+   * Phase-46 / Prompt 13 — optional long description, e.g.
+   * `"Battery voltage ranged 380–410 V over the last 7 days, dipping
+   *  every night around 03:00."`. Wired to `aria-describedby` on the
+   * figure so SR users hear the prose summary right after the title.
+   */
+  ariaDescription?: string;
+  /**
+   * Phase-46 / Prompt 13 — series rows for the SR/forced-colors
+   * fallback `<table>`. When supplied the container renders a
+   * visually-hidden table (exposed in `forced-colors:` mode and to
+   * every assistive technology) carrying the same data the chart
+   * displays. Combine with `dataColumns` to pick the visible columns
+   * and their formatters.
+   *
+   * When `data` is omitted the audit requires a
+   * `// chart-a11y:no-table` comment justifying the absence (used for
+   * heatmaps, scatter clouds with thousands of points, etc.).
+   */
+  data?: ReadonlyArray<ChartDataRow>;
+  /**
+   * Column definitions for the fallback table. Required when `data`
+   * is set. `format` is unit-aware and runs once per cell; default
+   * stringifies the raw value.
+   */
+  dataColumns?: ReadonlyArray<ChartDataColumn>;
+  /**
+   * Phase-46 / Prompt 56 — when `true`, a `<FullscreenButton>` is
+   * rendered in the chart toolbar (data-html2canvas-ignore'd along
+   * with the rest of the action buttons so it never bleeds into
+   * exported PNGs). Click expands the entire `<figure>` to the
+   * browser viewport via the standard Fullscreen API. Esc, the
+   * browser's own exit button, and a second click on the toolbar
+   * button all return the chart to its original size.
+   *
+   * The accompanying `:fullscreen` rule in `web/src/index.css`
+   * grows the inner chart canvas so axis labels stay readable on
+   * a 27" monitor; Recharts auto re-measures via its built-in
+   * ResizeObserver so consumers don't need to wire anything else.
+   */
+  fullscreen?: boolean;
+  /**
+   * Phase-46 / Prompt 67 — stable identifier used for URL-persisted
+   * legend-toggle state. When set, `<ChartContainer>` calls
+   * `useHiddenSeries(chartKey)` and exposes the resulting state both
+   * via the function-children render-prop (`{ hiddenSeries }`) and
+   * via `<ChartHiddenSeriesContext>` so a context-aware `<ChartLegend>`
+   * inside the chart can toggle series without explicit prop passing.
+   *
+   * Pages typically use the render-prop form to wire `hide={…}` on
+   * each `<Line>`/`<Bar>`/`<Area>` because Recharts traverses its
+   * direct children synchronously and won't see hooks in arbitrary
+   * wrapper components.
+   *
+   * The audit script `audit:chart-legend` warns when a chart with
+   * ≥ 2 line/bar/area series is missing this prop.
+   */
+  chartKey?: string;
+}
+
+/**
+ * Phase-46 / Prompt 13 — row shape accepted by the fallback
+ * `<table>`. Keys must match the `key`s declared in `dataColumns`.
+ * Values may be `null` (rendered as the i18n empty marker) so a
+ * sparse time-series doesn't hide gaps from SR users.
+ */
+export type ChartDataRow = Record<string, string | number | null | undefined>;
+
+export interface ChartDataColumn {
+  /** Row key to read. */
+  key: string;
+  /** Visible column header. Pre-localized at the call site. */
+  label: string;
+  /**
+   * Optional formatter — typically `(v) => formatKWh(v as number)` so
+   * the table reads in the same units the visible chart axes use.
+   * When omitted, values are coerced to string and `null`/`undefined`
+   * is rendered as `—`.
+   */
+  format?: (value: unknown) => string;
 }
 
 const HIDDEN_STORAGE_PREFIX = 'teslasync-annotations-hidden:';
@@ -118,13 +221,29 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       exportable, exportFilename, exportData,
       annotations: annotationsConfig,
       ariaLabel,
+      ariaDescription,
+      data,
+      dataColumns,
+      fullscreen,
+      chartKey,
     },
     ref,
   ) {
     const { t } = useTranslation();
-    const { chartRef, exportPNG, exporting } = useChartExport(exportFilename);
-    const [menuOpen, setMenuOpen] = useState(false);
-    const menuContainerRef = useRef<HTMLDivElement>(null);
+    const { chartRef, exportPNG, exportSVG, copyToClipboard, exporting } =
+      useChartExport(exportFilename ?? title);
+    // Phase-46 / Prompt 56 — separate ref for the figure node used
+    // by the optional `<FullscreenButton>`. We can't reuse
+    // `chartRef` directly because `useChartExport` owns the lifecycle
+    // of that ref (it's typed as private to that hook), and we'd
+    // rather not couple the fullscreen primitive to an internal
+    // implementation detail of the export hook.
+    const figureRef = useRef<HTMLElement | null>(null);
+
+    // Phase-46 / Prompt 13 — stable ids for figure ↔ figcaption wiring.
+    const reactId = useId();
+    const titleId = `chart-title-${reactId}`;
+    const fallbackId = `chart-fallback-${reactId}`;
 
     // ── Annotation state (only active when annotationsConfig is supplied) ──
     const annotationsEnabled = annotationsConfig != null;
@@ -188,6 +307,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
 
     const mergedRef = useCallback(
       (node: HTMLDivElement | null) => {
+        figureRef.current = node;
         (chartRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
         if (typeof ref === 'function') ref(node);
         else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
@@ -195,44 +315,38 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       [ref, chartRef],
     );
 
-    // Close the dropdown on outside click / Escape.
-    useEffect(() => {
-      if (!menuOpen) return;
-      const onClickOutside = (e: MouseEvent) => {
-        if (!menuContainerRef.current?.contains(e.target as Node)) setMenuOpen(false);
-      };
-      const onKey = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') setMenuOpen(false);
-      };
-      document.addEventListener('mousedown', onClickOutside);
-      document.addEventListener('keydown', onKey);
-      return () => {
-        document.removeEventListener('mousedown', onClickOutside);
-        document.removeEventListener('keydown', onKey);
-      };
-    }, [menuOpen]);
-
     const handleCsv = useCallback(() => {
       if (!exportData || exportData.length === 0) return;
       const filename = exportFilename ?? defaultExportFilename(title.toLowerCase().replace(/\s+/g, '-') || 'chart');
       downloadCSV(filename, objectsToCSV(exportData));
-      setMenuOpen(false);
     }, [exportData, exportFilename, title]);
 
-    const handlePng = useCallback(() => {
-      void exportPNG();
-      setMenuOpen(false);
-    }, [exportPNG]);
-
     const hasCsv = !!exportData && exportData.length > 0;
-    const hasPng = !!exportable;
-    const showMenu = hasCsv && hasPng;
-    const showCsvOnly = hasCsv && !hasPng;
-    const showPngOnly = hasPng && !hasCsv;
+    const exportableResolved = exportable !== false;
+    // Hide the export menu entirely while there is nothing to capture.
+    // CSV-only exports stay available because they don't need the chart
+    // DOM, but the image actions only make sense once the chart is
+    // actually rendered with data.
+    const showExportMenu = exportableResolved && !loading && !empty;
 
-    const childrenContent = isFunctionChildren(children)
-      ? children({ annotations: visibleAnnotations, hidden })
-      : children;
+    // Phase-46 / Prompt 67 — `childrenContent` is now a function of the
+    // resolved `hiddenSeries` state because the function-children
+    // render-prop receives it. Non-function children ignore the parameter.
+    const renderChildren = (hiddenSeries: HiddenSeriesState | null) =>
+      isFunctionChildren(children)
+        ? children({ annotations: visibleAnnotations, hidden, hiddenSeries })
+        : children;
+
+    // Phase-46 / Prompt 13 — does the caller supply enough info to
+    // render the SR/forced-colors fallback table? When `data` is set
+    // we always render `<table>`; otherwise we fall back to the
+    // `ariaDescription` prose alone (or just the title).
+    const hasFallbackTable = !!(
+      data &&
+      data.length > 0 &&
+      dataColumns &&
+      dataColumns.length > 0
+    );
 
     // Mobile-collapsed annotation marker row. Renders above the chart on
     // viewports ≤ 640px (Tailwind `sm` breakpoint) so the vertical reference
@@ -244,23 +358,49 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       annotationsEnabled && !hidden && visibleAnnotations.length > 0;
 
     return (
-      <div
+      <figure
         ref={mergedRef}
         data-print-card
+        aria-labelledby={titleId}
+        aria-describedby={fallbackId}
         className={cn(
           'group rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900',
+          // Tailwind preflight already removes default <figure> margins;
+          // re-state `m-0` defensively so any consumer override of preflight
+          // doesn't shift the chart vertical rhythm.
+          'm-0',
           'print:break-inside-avoid print:border-gray-300 print:bg-white',
+          // Phase-46 / Prompt 11 — Windows High Contrast / forced-colors mode.
+          // Pin the chart-container boundary to a system colour so the
+          // chart frame remains perceivable when the alpha border collapses
+          // to transparent. Recharts SVG strokes get their own
+          // forced-colors overrides via the global rules in `index.css`
+          // (axis ticks / grid lines / legend text → `CanvasText`).
+          'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
           className,
         )}
       >
         <div className="mb-3 flex items-start justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+            <h3
+              id={titleId}
+              className="text-sm font-semibold text-gray-900 dark:text-gray-100"
+            >
+              {title}
+            </h3>
             {subtitle && (
               <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
             )}
           </div>
-          <div className="flex items-center gap-1">
+          <div
+            className="flex items-center gap-1"
+            // Phase-46 / Prompt 16 — exclude the title-bar action toolbar
+            // (annotation buttons, export menu, page-supplied actions)
+            // from the chart capture so the exported PNG/clipboard image
+            // shows only the chart visualisation, not the buttons used
+            // to invoke the export.
+            data-html2canvas-ignore="true"
+          >
             {action}
 
             {annotationsEnabled && (
@@ -300,82 +440,17 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               </>
             )}
 
-            {showPngOnly && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="!h-7 !w-7 !p-0 text-gray-400 hover:text-gray-600 dark:text-white/30 dark:hover:text-white/60"
-                icon={<Download className="h-3.5 w-3.5" />}
-                loading={exporting}
-                onClick={exportPNG}
-                aria-label={t('chart.export', 'Export as PNG')}
+            {showExportMenu && (
+              <ChartExportMenu
+                onExportPNG={exportPNG}
+                onExportSVG={exportSVG}
+                onCopyImage={copyToClipboard}
+                onExportCsv={hasCsv ? handleCsv : undefined}
+                busy={exporting}
               />
             )}
 
-            {showCsvOnly && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="!h-7 !w-7 !p-0 text-gray-400 hover:text-gray-600 dark:text-white/30 dark:hover:text-white/60"
-                icon={<Download className="h-3.5 w-3.5" />}
-                onClick={handleCsv}
-                aria-label={t('chart.exportCsv', 'Download chart data as CSV')}
-              />
-            )}
-
-            {showMenu && (
-              <div ref={menuContainerRef} className="relative">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="!h-7 !w-7 !p-0 text-gray-400 hover:text-gray-600 dark:text-white/30 dark:hover:text-white/60"
-                  icon={<MoreVertical className="h-3.5 w-3.5" />}
-                  onClick={() => setMenuOpen((v) => !v)}
-                  aria-haspopup="menu"
-                  aria-expanded={menuOpen}
-                  aria-label={t('chart.menu.open', 'Chart options')}
-                />
-                {menuOpen && (
-                  <div
-                    role="menu"
-                    aria-label={t('chart.menu.label', 'Chart options')}
-                    className={cn(
-                      'absolute right-0 z-30 mt-1 w-52 rounded-lg p-1',
-                      'border border-white/[0.08] bg-[var(--surface-elevated)] shadow-xl',
-                    )}
-                  >
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={handleCsv}
-                      className={cn(
-                        'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
-                        'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-                        'focus-visible:outline-none focus-visible:bg-white/[0.06]',
-                      )}
-                    >
-                      <FileSpreadsheet className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span>{t('chart.menu.downloadCsv', 'Download data as CSV')}</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={handlePng}
-                      disabled={exporting}
-                      className={cn(
-                        'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
-                        'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-                        'focus-visible:outline-none focus-visible:bg-white/[0.06]',
-                        'disabled:opacity-50 disabled:cursor-not-allowed',
-                      )}
-                    >
-                      <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span>{t('chart.menu.downloadPng', 'Download as PNG')}</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+            {fullscreen && <FullscreenButton targetRef={figureRef} />}
           </div>
         </div>
 
@@ -399,12 +474,23 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
 
         <div
           style={{ height }}
-          className="relative"
-          // Phase-45 / Prompt 13 — give Recharts SVGs a single accessible
-          // name so screen-reader users hear one summary instead of dozens
-          // of axis labels read in series order.
+          className={cn(
+            'relative',
+            // Phase-46 / Prompt 13 — in Windows High Contrast / forced-colors
+            // mode the SVG strokes collapse to a small palette of system
+            // colours and the multi-series chart becomes illegible. Hide
+            // the SVG entirely there and rely on the `<figcaption>` table
+            // fallback below for both forced-colors users and screen
+            // readers.
+            'forced-colors:hidden',
+          )}
+          // The figure ancestor already provides the accessible name via
+          // `aria-labelledby={titleId}`; this inner wrapper still carries
+          // `role="img" aria-label` so a focus-stop on the chart body
+          // re-states the summary the user heard at the figure boundary
+          // (browsers don't always re-announce ancestor regions).
           role="img"
-          aria-label={ariaLabel ?? t('a11y.chartFigure', 'Chart: {{title}}', { title })}
+          aria-label={ariaLabel}
         >
           {loading ? (
             <div className="flex h-full items-center justify-center">
@@ -415,14 +501,111 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               message={t('chart.noData', 'No data available')}
             />
           ) : (
-            <SectionErrorBoundary
-              name={`chart:${title}`}
-              fallbackTitle={t('errors.section.chartTitle', 'This chart failed to load')}
-            >
-              {childrenContent}
-            </SectionErrorBoundary>
+            <ChartHiddenSeriesProvider chartKey={chartKey}>
+              {(hiddenSeries) => (
+                <SectionErrorBoundary
+                  name={`chart:${title}`}
+                  fallbackTitle={t('errors.section.chartTitle', 'This chart failed to load')}
+                >
+                  {renderChildren(hiddenSeries)}
+                </SectionErrorBoundary>
+              )}
+            </ChartHiddenSeriesProvider>
           )}
         </div>
+
+        {/*
+          Phase-46 / Prompt 13 — accessible chart fallback.
+
+          Visually hidden by default so sighted users see no change, but:
+            - exposed to every assistive technology (screen readers,
+              voice control, refreshable Braille) via the `<figcaption>`
+              role under the figure;
+            - revealed in `forced-colors:` mode so Windows High
+              Contrast users get a legible table where the SVG would
+              otherwise have collapsed to monochrome line noise.
+
+          Always rendered (never conditional) so `aria-describedby` on
+          the figure resolves to a stable target. When the caller has
+          opted out via `// chart-a11y:no-table`, only the
+          `ariaDescription` prose appears here.
+        */}
+        <VisuallyHidden
+          as="figcaption"
+          id={fallbackId}
+          className={cn(
+            'forced-colors:not-sr-only forced-colors:block',
+            'forced-colors:mt-3 forced-colors:p-2',
+            'forced-colors:border forced-colors:border-[CanvasText]',
+          )}
+        >
+          {ariaDescription && (
+            <p className="forced-colors:mb-2 forced-colors:text-[CanvasText]">
+              {ariaDescription}
+            </p>
+          )}
+          {hasFallbackTable ? (
+            <table
+              className={cn(
+                'w-full border-collapse text-xs',
+                'forced-colors:text-[CanvasText]',
+              )}
+            >
+              <caption className="text-left">
+                {t('chart.a11y.fallbackTableLabel', '{{title}} — data table', {
+                  title,
+                })}
+              </caption>
+              <thead>
+                <tr>
+                  {dataColumns!.map((col) => (
+                    <th
+                      key={col.key}
+                      scope="col"
+                      className={cn(
+                        'border border-gray-200 px-2 py-1 text-left font-medium',
+                        'forced-colors:border-[CanvasText]',
+                      )}
+                    >
+                      {col.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data!.map((row, i) => (
+                  <tr key={i}>
+                    {dataColumns!.map((col) => {
+                      const raw = row[col.key];
+                      const cell =
+                        col.format != null
+                          ? col.format(raw)
+                          : raw == null
+                            ? '—'
+                            : String(raw);
+                      return (
+                        <td
+                          key={col.key}
+                          className={cn(
+                            'border border-gray-200 px-2 py-1',
+                            'forced-colors:border-[CanvasText]',
+                          )}
+                        >
+                          {cell}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : !ariaDescription ? (
+            // Neither a structured table nor a long description — fall
+            // back to the bare summary so SR users still hear something
+            // when they navigate to the figcaption.
+            <p>{t('chart.a11y.summary', 'Chart: {{title}}', { title })}</p>
+          ) : null}
+        </VisuallyHidden>
 
         {annotationsEnabled && fetchedAnnotations.length > 0 && (
           <AnnotationList
@@ -440,7 +623,32 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             onCancel={() => setPopoverOpen(false)}
           />
         )}
-      </div>
+      </figure>
     );
   },
 );
+
+/**
+ * Phase-46 / Prompt 48 — chart label-anchor hook.
+ *
+ * Resolves the writing direction from the active i18n language and
+ * returns the SVG `text-anchor` value for a Recharts axis label so
+ * that consumers don't have to thread direction state through every
+ * chart prop.
+ *
+ * Usage:
+ *   const anchor = useChartLabelAnchor('y');
+ *   <YAxis tick={{ textAnchor: anchor }} />
+ *
+ * Mirrors `textAnchorForDir` from `@/lib/i18nDir`; the bare helper
+ * is also re-exported here so chart authors get both the hook (for
+ * components) and the pure helper (for tests / non-React call sites)
+ * from a single import path.
+ */
+export function useChartLabelAnchor(axis: 'x' | 'y'): 'start' | 'middle' | 'end' {
+  const { i18n } = useTranslation();
+  const dir: Direction = getLangDir(i18n.language);
+  return textAnchorForDir(axis, dir);
+}
+
+export { textAnchorForDir } from '@/lib/i18nDir';

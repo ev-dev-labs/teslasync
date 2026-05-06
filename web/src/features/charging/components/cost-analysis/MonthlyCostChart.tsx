@@ -22,6 +22,12 @@ export function MonthlyCostChart({ data, vehicleId }: MonthlyCostChartProps) {
   return (
     <ChartContainer
       title={t('costAnalysis.charts.monthlyCost', 'Monthly Cost Trend')}
+      ariaLabel={t('costAnalysis.charts.monthlyCost.aria', 'Monthly charging cost trend area chart')}
+      data={data.map((d) => ({ month: d.month, cost: d.cost }))}
+      dataColumns={[
+        { key: 'month', label: t('costAnalysis.charts.col.month', 'Month') },
+        { key: 'cost', label: t('costAnalysis.charts.col.cost', 'Cost ($)') },
+      ]}
       height={260}
       annotations={{ vehicleId, scope: 'cost', chartId: 'cost-monthly-trend' }}
     >

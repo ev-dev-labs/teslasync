@@ -86,6 +86,7 @@ export function EventHistoryTable({ history, isLoading }: EventHistoryTableProps
           <Skeleton lines={8} />
         ) : (
           <DataTable<SecurityEvent>
+            tableId="admin:security-events"
             columns={eventColumns}
             data={history}
             keyExtractor={(row) => row.id}

@@ -6,6 +6,7 @@ import { BulkActionToolbar } from '@/components/data-display';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { EmptyState, Skeleton, ErrorDisplay } from '@/components/feedback';
+import { VisuallyHidden } from '@/components/a11y';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
@@ -113,9 +114,9 @@ export default function ExportsPage() {
               <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-2)] text-left text-[var(--text-secondary)]">
                 <tr>
                   <th className="w-12 px-3 py-3">
-                    <label className="sr-only" htmlFor="exports-master">
+                    <VisuallyHidden as="label" htmlFor="exports-master">
                       {t('bulk.selectAll', 'Select all')}
-                    </label>
+                    </VisuallyHidden>
                     <input
                       id="exports-master"
                       type="checkbox"
@@ -146,9 +147,9 @@ export default function ExportsPage() {
                       data-selected={checked || undefined}
                     >
                       <td className="px-3 py-3">
-                        <label className="sr-only" htmlFor={`export-${j.id}`}>
+                        <VisuallyHidden as="label" htmlFor={`export-${j.id}`}>
                           {t('bulk.selectRow', 'Select row')}
-                        </label>
+                        </VisuallyHidden>
                         <input
                           id={`export-${j.id}`}
                           type="checkbox"

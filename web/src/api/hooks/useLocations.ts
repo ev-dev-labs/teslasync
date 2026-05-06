@@ -13,8 +13,8 @@ export const locationKeys = {
 export function useLocations(vehicleId?: string) {
   return useQuery({
     queryKey: locationKeys.all(vehicleId),
-    queryFn: () => request<Location[]>(
-      vehicleId ? `/locations?vehicle_id=${vehicleId}` : '/locations',
+    queryFn: ({ signal }) => request<Location[]>(
+      vehicleId ? `/locations?vehicle_id=${vehicleId}` : '/locations', { signal },
     ),
     enabled: !!vehicleId,
     select: safeArray,
@@ -24,7 +24,7 @@ export function useLocations(vehicleId?: string) {
 export function useGeofences() {
   return useQuery({
     queryKey: locationKeys.geofences,
-    queryFn: () => request<Geofence[]>('/geofences'),
+    queryFn: ({ signal }) => request<Geofence[]>('/geofences', { signal }),
     select: safeArray,
   });
 }

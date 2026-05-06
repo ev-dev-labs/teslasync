@@ -1,130 +1,0 @@
-=== GATE ===
-=== PREFLIGHT ===
-PROMPT=phase-45/99-execution-gate
-BRANCH=phase-45/32-bulk-actions-framework
-HEAD=ae3ddd43
-=== PROMPT_FILES_EXIST ===
-PROMPT[01-i18n-template-literal-eradication.prompt.md]=True
-PROMPT[02-error-boundary-route-reset.prompt.md]=True
-PROMPT[03-nan-safe-formatters.prompt.md]=True
-PROMPT[04-modal-overlay-consolidation.prompt.md]=True
-PROMPT[05-lazy-route-bundle-smoke-test.prompt.md]=True
-PROMPT[06-settings-broadcast-propagation.prompt.md]=True
-PROMPT[07-sidebar-section-header-typography.prompt.md]=True
-PROMPT[08-light-mode-css-var-parity-revisit.prompt.md]=True
-PROMPT[09-help-tooltip-technical-screens.prompt.md]=True
-PROMPT[10-dockerfile-go-compile-hardening.prompt.md]=True
-PROMPT[11-pwa-stale-chunk-reload-resilience.prompt.md]=True
-PROMPT[12-web-vitals-real-world-measurement.prompt.md]=True
-PROMPT[13-a11y-comprehensive-audit.prompt.md]=True
-PROMPT[14-mobile-responsive-audit.prompt.md]=True
-PROMPT[15-optimistic-updates-mutations.prompt.md]=True
-PROMPT[16-unsaved-changes-navigation-guard.prompt.md]=True
-PROMPT[17-url-state-filters-saved-views.prompt.md]=True
-PROMPT[18-skeleton-loader-shape-consistency.prompt.md]=True
-PROMPT[19-stale-while-revalidate-indicator.prompt.md]=True
-PROMPT[20-error-state-granularity.prompt.md]=True
-PROMPT[21-animation-duration-tokens.prompt.md]=True
-PROMPT[22-time-format-relative-absolute-toggle.prompt.md]=True
-PROMPT[23-color-blind-safe-chart-palette.prompt.md]=True
-PROMPT[24-settings-search.prompt.md]=True
-PROMPT[25-dashboard-widget-add-discovery.prompt.md]=True
-PROMPT[26-trip-replay-map-chart-sync.prompt.md]=True
-PROMPT[27-command-palette-usage-ranking.prompt.md]=True
-PROMPT[28-notifications-bulk-mark-all-read.prompt.md]=True
-PROMPT[29-confirm-dialog-dont-ask-again.prompt.md]=True
-PROMPT[30-tesla-auth-recovery-banner.prompt.md]=True
-PROMPT[31-empty-state-cta-wiring.prompt.md]=True
-PROMPT[32-bulk-actions-framework.prompt.md]=True
-PROMPT[33-rate-limit-circuit-breaker-ux.prompt.md]=True
-PROMPT[34-tooltip-text-color-audit.prompt.md]=True
-PROMPT[35-state-machine-empty-window-ux.prompt.md]=True
-PROMPT[36-time-range-filter-batch-and-active-state.prompt.md]=True
-PROMPT[37-redis-signal-viewer-diagnostic-context.prompt.md]=True
-PROMPT[38-api-logs-service-filter-dynamic.prompt.md]=True
-PROMPTS_EXPECTED=38
-PROMPTS_MISSING=0
-=== PROMPT_LOGS_EXIST ===
-LOG[phase-45-01-i18n-template-literal-eradication.log]=True
-LOG[phase-45-02-error-boundary-route-reset.log]=True
-LOG[phase-45-03-nan-safe-formatters.log]=True
-LOG[phase-45-04-modal-overlay-consolidation.log]=True
-LOG[phase-45-05-lazy-route-bundle-smoke-test.log]=True
-LOG[phase-45-06-settings-broadcast-propagation.log]=True
-LOG[phase-45-07-sidebar-section-header-typography.log]=True
-LOG[phase-45-08-light-mode-css-var-parity-revisit.log]=True
-LOG[phase-45-09-help-tooltip-technical-screens.log]=True
-LOG[phase-45-10-dockerfile-go-compile-hardening.log]=True
-LOG[phase-45-11-pwa-stale-chunk-reload-resilience.log]=True
-LOG[phase-45-12-web-vitals-real-world-measurement.log]=True
-LOG[phase-45-13-a11y-comprehensive-audit.log]=True
-LOG[phase-45-14-mobile-responsive-audit.log]=True
-LOG[phase-45-15-optimistic-updates-mutations.log]=True
-LOG[phase-45-16-unsaved-changes-navigation-guard.log]=True
-LOG[phase-45-17-url-state-filters-saved-views.log]=True
-LOG[phase-45-18-skeleton-loader-shape-consistency.log]=True
-LOG[phase-45-19-stale-while-revalidate-indicator.log]=True
-LOG[phase-45-20-error-state-granularity.log]=True
-LOG[phase-45-21-animation-duration-tokens.log]=True
-LOG[phase-45-22-time-format-relative-absolute-toggle.log]=True
-LOG[phase-45-23-color-blind-safe-chart-palette.log]=True
-LOG[phase-45-24-settings-search.log]=True
-LOG[phase-45-25-dashboard-widget-add-discovery.log]=True
-LOG[phase-45-26-trip-replay-map-chart-sync.log]=True
-LOG[phase-45-27-command-palette-usage-ranking.log]=True
-LOG[phase-45-28-notifications-bulk-mark-all-read.log]=True
-LOG[phase-45-29-confirm-dialog-dont-ask-again.log]=True
-LOG[phase-45-30-tesla-auth-recovery-banner.log]=True
-LOG[phase-45-31-empty-state-cta-wiring.log]=True
-LOG[phase-45-32-bulk-actions-framework.log]=True
-LOG[phase-45-33-rate-limit-circuit-breaker-ux.log]=True
-LOG[phase-45-34-tooltip-text-color-audit.log]=True
-LOG[phase-45-35-state-machine-empty-window-ux.log]=True
-LOG[phase-45-36-time-range-filter-batch-and-active-state.log]=True
-LOG[phase-45-37-redis-signal-viewer-diagnostic-context.log]=True
-LOG[phase-45-38-api-logs-service-filter-dynamic.log]=True
-LOGS_EXPECTED=38
-LOGS_MISSING=0
-=== PROMPT_LOGS_GREEN ===
-LOG_TAIL[phase-45-01-i18n-template-literal-eradication.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-02-error-boundary-route-reset.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-03-nan-safe-formatters.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-04-modal-overlay-consolidation.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-05-lazy-route-bundle-smoke-test.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-06-settings-broadcast-propagation.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-07-sidebar-section-header-typography.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-08-light-mode-css-var-parity-revisit.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-09-help-tooltip-technical-screens.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-10-dockerfile-go-compile-hardening.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-11-pwa-stale-chunk-reload-resilience.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-12-web-vitals-real-world-measurement.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-13-a11y-comprehensive-audit.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-14-mobile-responsive-audit.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-15-optimistic-updates-mutations.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-16-unsaved-changes-navigation-guard.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-17-url-state-filters-saved-views.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-18-skeleton-loader-shape-consistency.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-19-stale-while-revalidate-indicator.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-20-error-state-granularity.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-21-animation-duration-tokens.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-22-time-format-relative-absolute-toggle.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-23-color-blind-safe-chart-palette.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-24-settings-search.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-25-dashboard-widget-add-discovery.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-26-trip-replay-map-chart-sync.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-27-command-palette-usage-ranking.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-28-notifications-bulk-mark-all-read.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-29-confirm-dialog-dont-ask-again.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-30-tesla-auth-recovery-banner.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-31-empty-state-cta-wiring.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-32-bulk-actions-framework.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-33-rate-limit-circuit-breaker-ux.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-34-tooltip-text-color-audit.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-35-state-machine-empty-window-ux.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-36-time-range-filter-batch-and-active-state.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-37-redis-signal-viewer-diagnostic-context.log]=EXIT=0 | STATUS=DONE
-LOG_TAIL[phase-45-38-api-logs-service-filter-dynamic.log]=EXIT=0 | STATUS=DONE
-LOGS_BLOCKED=0
-=== STATUS ===
-EXIT=0
-STATUS=DONE

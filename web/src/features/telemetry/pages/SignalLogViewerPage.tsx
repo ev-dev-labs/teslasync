@@ -2,6 +2,13 @@
  * SignalLogViewerPage — query signal history from Postgres.
  *
  * Select signals, set date range, click Query to browse paginated signal history.
+ *
+ * deferred-filter:no server-driven — there is no client-side text filter on
+ * the rendered rows. The signal multi-select and datetime range are gathered
+ * into the `useQuery` key and the page only fetches when the user clicks
+ * "Query". Pagination is local slicing of the already-fetched batch, which is
+ * cheap (≤500 rows per page). A `useDeferredValue` would have nothing to
+ * defer.
  */
 
 import { useState, useMemo, useCallback } from 'react';
@@ -17,6 +24,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { AlertBanner } from '@/components/feedback';
+import { ComboboxMulti } from '@/components/forms';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
@@ -55,7 +63,6 @@ export default function SignalLogViewerPage() {
   // so a query view can be shared with another developer.
   const { data: availableSignals } = useSignals(vehicleId);
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
-  const [signalSearch, setSignalSearch] = useState('');
 
   // DateTime range — defaults are recomputed relative to "now" if the URL
   // doesn't pin them, so a fresh page load gets the last hour.
@@ -89,12 +96,6 @@ export default function SignalLogViewerPage() {
     setPage(1);
     setQueryKey(Date.now());
   }, [canQuery]);
-
-  const toggleSignal = useCallback((sig: string) => {
-    setSelectedSignals(prev =>
-      prev.includes(sig) ? prev.filter(s => s !== sig) : [...prev, sig],
-    );
-  }, []);
 
   const fromIso = fromStr ? new Date(fromStr).toISOString() : '';
   const toIso = toStr ? new Date(toStr).toISOString() : '';
@@ -131,14 +132,6 @@ export default function SignalLogViewerPage() {
     return (allRows ?? []).slice(start, start + perPage);
   }, [allRows, page, perPage]);
   const hasQueried = queryKey !== null;
-
-  // Signal search filter
-  const filteredSignals = useMemo(() => {
-    if (!availableSignals) return [];
-    if (!signalSearch) return availableSignals;
-    const q = signalSearch.toLowerCase();
-    return availableSignals.filter(s => s.toLowerCase().includes(q));
-  }, [availableSignals, signalSearch]);
 
   // Table columns
   const logColumns: Column<SignalLogEntry>[] = useMemo(() => [
@@ -181,47 +174,25 @@ export default function SignalLogViewerPage() {
 
       {/* ── Controls ──────────────────────────────────────────────── */}
       <GlassPanel className="p-4 sm:p-5 space-y-4">
-        {/* Signal picker */}
+        {/* Signal picker — shared ComboboxMulti */}
         <div>
           <span className="block text-xs font-medium uppercase tracking-wider mb-2 text-[var(--text-muted)]">
             <Filter className="inline h-3 w-3 mr-1" />{t('Signals')} ({selectedSignals.length})
           </span>
-          <Input
-            icon={<Search className="h-3.5 w-3.5" />}
+          <ComboboxMulti<string>
+            label={t('Signals')}
+            hideLabel
             placeholder={t('Search signals…')}
-            value={signalSearch}
-            onChange={e => setSignalSearch(e.target.value)}
-            className="mb-2"
+            icon={<Search className="h-3.5 w-3.5" aria-hidden="true" />}
+            value={selectedSignals}
+            onChange={setSelectedSignals}
+            options={availableSignals ?? []}
+            getOptionLabel={(s) => s}
+            getOptionKey={(s) => s}
+            renderOption={(s) => (
+              <span className="font-mono text-xs">{s}</span>
+            )}
           />
-          {selectedSignals.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {selectedSignals.map((sig, i) => (
-                <Badge
-                  key={sig}
-                  variant="info"
-                  size="sm"
-                  className="cursor-pointer"
-                  style={{ borderColor: CHART_COLORS[i % CHART_COLORS.length], color: CHART_COLORS[i % CHART_COLORS.length] }}
-                  onClick={() => toggleSignal(sig)}
-                >
-                  {sig} ×
-                </Badge>
-              ))}
-            </div>
-          )}
-          <div className="max-h-48 overflow-y-auto space-y-0.5">
-            {filteredSignals.slice(0, 100).map(sig => (
-              <Button
-                key={sig}
-                size="sm"
-                variant={selectedSignals.includes(sig) ? 'primary' : 'ghost'}
-                onClick={() => toggleSignal(sig)}
-                className="w-full text-left text-xs font-mono truncate justify-start"
-              >
-                {sig}
-              </Button>
-            ))}
-          </div>
         </div>
 
         {/* DateTime range */}

@@ -1,8 +1,16 @@
 import { forwardRef } from 'react';
 import { cn } from '@/lib/cn';
+import { Label } from './Label';
+import { HelpIcon, type HelpIconProps } from './HelpIcon';
 
 export interface TextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'size'> {
   label?: string;
+  /**
+   * Optional `<HelpIcon>` rendered immediately after the label. The
+   * HelpIcon's `for` defaults to the textarea's resolved id so screen
+   * readers announce "Help for {{id}}" when the trigger is focused.
+   */
+  help?: Omit<HelpIconProps, 'for'> & { for?: string };
   error?: string;
   /**
    * Sizing scale. Defaults to `'md'` for back-compat. Pass `'auto'` to
@@ -20,18 +28,27 @@ const sizeClasses: Record<NonNullable<TextareaProps['size']>, string> = {
 };
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, label, error, size = 'md', id, ...props }, ref) => {
+  ({ className, label, help, error, size = 'md', id, required, ...props }, ref) => {
     const textareaId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
     return (
       <div>
         {label && (
-          <label htmlFor={textareaId} className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">
-            {label}
-          </label>
+          <div className="mb-1 flex items-center gap-1">
+            <Label
+              htmlFor={textareaId}
+              required={required}
+              className="block text-xs font-medium text-[var(--text-secondary)]"
+            >
+              {label}
+            </Label>
+            {help && <HelpIcon {...help} for={help.for ?? textareaId} />}
+          </div>
         )}
         <textarea
           ref={ref}
           id={textareaId}
+          required={required}
+          aria-required={required ? 'true' : undefined}
           className={cn(
             'w-full rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)]',
             sizeClasses[size],

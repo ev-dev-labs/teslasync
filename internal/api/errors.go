@@ -8,8 +8,18 @@ import "net/http"
 // Phase-45 / Prompt 30 — TESLA_TOKEN_EXPIRED is the distinct signal the
 // SPA uses to surface the <TeslaReauthBanner> recovery UI; it MUST NOT
 // be conflated with the generic Authentik-session 401 path.
+//
+// Phase-46 / Prompt 57 — AUTH_MODE_OPEN is the canonical signal returned
+// by every endpoint that has no sensible behaviour without an upstream
+// identity provider configured. The SPA's auth-coupled hooks
+// (useAuthMode, useTOTP, useSessions, useImpersonation, useRbacMatrix,
+// …) match this exact string to decide whether to render the inline
+// "feature requires authentication" placeholder. Mirrored as
+// internal/auth.AuthModeOpenCode for handlers that live outside the
+// api package.
 const (
 	ErrCodeTeslaTokenExpired = "TESLA_TOKEN_EXPIRED"
+	ErrCodeAuthModeOpen      = "AUTH_MODE_OPEN"
 )
 
 // Error categories for grouping and filtering.

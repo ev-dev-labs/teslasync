@@ -3,12 +3,98 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"math"
 	"net/http"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
+
+// geofenceCreateRequest is the wire shape accepted by Create/Update.
+//
+// The web client posts circle geometry (`latitude`, `longitude`, `radius` in
+// meters) plus optional alert/enabled flags that the current schema does not
+// persist. Legacy callers that already produce polygon WKT may post
+// `polygon_wkt` directly. Whichever geometry is present wins; circle takes
+// precedence when both are supplied.
+type geofenceCreateRequest struct {
+	Name       string                   `json:"name"`
+	PolygonWKT string                   `json:"polygon_wkt"`
+	Category   *models.GeofenceCategory `json:"category"`
+
+	Latitude  *float64 `json:"latitude"`
+	Longitude *float64 `json:"longitude"`
+	Radius    *float64 `json:"radius"`
+}
+
+// geofenceCircleSegments controls the smoothness of the synthesized
+// polygon. 32 segments keeps the WKT compact while staying visually round
+// at typical city-block radii.
+const geofenceCircleSegments = 32
+
+// circleToPolygonWKT approximates a geodetic circle with a regular N-gon.
+// Coordinates are emitted in WKT order: `POLYGON((lon lat, ..., lon lat))`,
+// closing on the first vertex per the OGC spec.
+func circleToPolygonWKT(latDeg, lonDeg, radiusMeters float64, segments int) string {
+	if segments < 3 {
+		segments = 3
+	}
+	const metersPerDegLat = 111_320.0
+	latRad := latDeg * math.Pi / 180.0
+	metersPerDegLon := metersPerDegLat * math.Cos(latRad)
+	if metersPerDegLon < 1 {
+		// At the poles longitude collapses; clamp so we never divide by ~0.
+		metersPerDegLon = 1
+	}
+	dLat := radiusMeters / metersPerDegLat
+	dLon := radiusMeters / metersPerDegLon
+
+	var b strings.Builder
+	b.WriteString("POLYGON((")
+	for i := 0; i < segments; i++ {
+		theta := 2 * math.Pi * float64(i) / float64(segments)
+		lon := lonDeg + dLon*math.Sin(theta)
+		lat := latDeg + dLat*math.Cos(theta)
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		fmt.Fprintf(&b, "%.7f %.7f", lon, lat)
+	}
+	// Close the ring by repeating the first vertex.
+	lonClose := lonDeg + dLon*math.Sin(0)
+	latClose := latDeg + dLat*math.Cos(0)
+	fmt.Fprintf(&b, ",%.7f %.7f", lonClose, latClose)
+	b.WriteString("))")
+	return b.String()
+}
+
+// decodeGeofenceWriteBody unmarshals the request and resolves whichever
+// geometry the client supplied into a populated *models.Geofence.
+//
+// Validation that depends on the resolved geometry (centroid bounds, radius
+// limits) is delegated to validateGeofence() so Create and Update share one
+// rule set.
+func decodeGeofenceWriteBody(body io.Reader) (*models.Geofence, error) {
+	var req geofenceCreateRequest
+	if err := json.NewDecoder(body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("decode geofence body: %w", err)
+	}
+
+	g := &models.Geofence{
+		Name:       strings.TrimSpace(req.Name),
+		PolygonWKT: strings.TrimSpace(req.PolygonWKT),
+		Category:   req.Category,
+	}
+
+	if req.Latitude != nil && req.Longitude != nil && req.Radius != nil {
+		g.PolygonWKT = circleToPolygonWKT(*req.Latitude, *req.Longitude, *req.Radius, geofenceCircleSegments)
+	}
+
+	return g, nil
+}
 
 func validateGeofence(g *models.Geofence) error {
 	if g.Latitude() < -90 || g.Latitude() > 90 {
@@ -50,8 +136,8 @@ func (h *GeofenceHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *GeofenceHandler) Create(w http.ResponseWriter, r *http.Request) {
-	var g models.Geofence
-	if err := json.NewDecoder(r.Body).Decode(&g); err != nil {
+	g, err := decodeGeofenceWriteBody(r.Body)
+	if err != nil {
 		writeAppError(w, r, ErrInvalidJSON)
 		return
 	}
@@ -59,12 +145,12 @@ func (h *GeofenceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		writeAppError(w, r, ErrMissingField.WithMessage("name and positive radius required"))
 		return
 	}
-	if err := validateGeofence(&g); err != nil {
+	if err := validateGeofence(g); err != nil {
 		writeAppError(w, r, ErrGeofenceInvalidCoords.WithMessage(err.Error()))
 		return
 	}
 
-	if err := h.geofenceRepo.Create(r.Context(), &g); err != nil {
+	if err := h.geofenceRepo.Create(r.Context(), g); err != nil {
 		log.Error().Err(err).Msg("failed to create geofence")
 		writeAppError(w, r, ErrDBQuery.WithMessage("failed to create geofence"))
 		return
@@ -99,8 +185,8 @@ func (h *GeofenceHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var g models.Geofence
-	if err := json.NewDecoder(r.Body).Decode(&g); err != nil {
+	g, err := decodeGeofenceWriteBody(r.Body)
+	if err != nil {
 		writeAppError(w, r, ErrInvalidJSON)
 		return
 	}
@@ -110,12 +196,12 @@ func (h *GeofenceHandler) Update(w http.ResponseWriter, r *http.Request) {
 		writeAppError(w, r, ErrMissingField.WithMessage("name and positive radius required"))
 		return
 	}
-	if err := validateGeofence(&g); err != nil {
+	if err := validateGeofence(g); err != nil {
 		writeAppError(w, r, ErrGeofenceInvalidCoords.WithMessage(err.Error()))
 		return
 	}
 
-	if err := h.geofenceRepo.Update(r.Context(), &g); err != nil {
+	if err := h.geofenceRepo.Update(r.Context(), g); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to update geofence")
 		writeAppError(w, r, ErrDBQuery.WithMessage("failed to update geofence"))
 		return

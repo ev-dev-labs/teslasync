@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { GlassPanel, IconBox, ThemePicker, Toggle, Button } from '@/components/ui'
+import { GlassPanel, IconBox, ThemePicker, Toggle, Button, HelpIcon } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { useSettings, useSaveSettings } from '@/api/hooks/useSettings'
@@ -9,8 +9,10 @@ import {
   setAchievementCelebrationPrefs,
 } from '@/hooks/useAchievementCelebrationPrefs'
 import { cn } from '@/lib/cn'
-import { Palette, CheckCircle, Rows3, PanelBottom, Trophy, Clock, Eye } from 'lucide-react'
+import { Palette, CheckCircle, Rows3, PanelBottom, Trophy, Clock, Eye, PlayCircle, RotateCcw } from 'lucide-react'
 import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors'
+import { startTour } from '@/lib/tourLauncher'
+import { resetAllTours } from '@/lib/tourRegistry'
 
 type DensityId = 'compact' | 'comfortable' | 'spacious'
 type TimeFormatId = 'relative' | 'absolute'
@@ -129,6 +131,10 @@ export function AppearanceSettings() {
             <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
               {t('theme.density.label', 'Information density')}
             </p>
+            <HelpIcon
+              i18nKey="help.fields.settings.appearanceDensity"
+              for="appearance-density"
+            />
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {densityChoices.map(choice => {
@@ -219,6 +225,10 @@ export function AppearanceSettings() {
             <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
               {t('theme.timeFormat.label', 'Default time format')}
             </p>
+            <HelpIcon
+              i18nKey="help.fields.settings.timeFormat"
+              for="time-format"
+            />
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {timeFormatChoices.map(choice => {
@@ -259,6 +269,10 @@ export function AppearanceSettings() {
             <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
               {t('theme.chartPalette.label', 'Chart palette')}
             </p>
+            <HelpIcon
+              i18nKey="help.fields.settings.chartPalette"
+              for="chart-palette"
+            />
           </div>
           <div
             className="grid grid-cols-1 gap-3 sm:grid-cols-2"
@@ -422,6 +436,65 @@ export function AppearanceSettings() {
                 checked={celebrationPrefs.pushOnUnlock}
                 onChange={(next) => setAchievementCelebrationPrefs({ pushOnUnlock: next })}
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Product tours (Phase-46 / Prompt 61) — replay or reset onboarding tours */}
+        <div data-tour="settings-product-tours" data-testid="product-tours-section">
+          <div className="flex items-center gap-2 mb-3">
+            <PlayCircle className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              {t('settings.tours.label', 'Product tours')}
+            </p>
+          </div>
+          <div className="space-y-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4">
+            <div>
+              <p className="text-sm font-medium text-[var(--text-primary)]">
+                {t('settings.tours.title', 'Product tours')}
+              </p>
+              <p className="text-xs text-[var(--text-muted)]">
+                {t('settings.tours.body', 'Re-run the guided walkthroughs that introduce major sections.')}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={() => startTour('main')}
+                data-testid="replay-tour-main"
+              >
+                <PlayCircle className="h-4 w-4 mr-2" />
+                {t('settings.tours.replayMain', 'Replay dashboard tour')}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => startTour('debugger')}
+                data-testid="replay-tour-debugger"
+              >
+                {t('settings.tours.replayDebugger', 'Debugger tour')}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => startTour('automations')}
+                data-testid="replay-tour-automations"
+              >
+                {t('settings.tours.replayAutomations', 'Automations tour')}
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  resetAllTours()
+                  toast.success(
+                    t(
+                      'settings.tours.resetDone',
+                      'All tours reset — they will play next time you open the matching page',
+                    ),
+                  )
+                }}
+                data-testid="reset-all-tours"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                {t('settings.tours.resetAll', 'Reset all tours')}
+              </Button>
             </div>
           </div>
         </div>

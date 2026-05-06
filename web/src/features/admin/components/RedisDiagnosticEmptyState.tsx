@@ -5,17 +5,34 @@ import { AlertTriangle, Database, ServerCrash, Radio, Zap } from 'lucide-react'
 
 import { GlassPanel, Badge, Button } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
+import { type ApiError } from '@/lib/resilience'
 import {
   getRedisSignalKeys,
   type RedisSignalsMeta,
   type RedisSignalKeyEntry,
 } from '@/api/devtools'
 
-interface Props {
+/**
+ * Discriminated union for the error-aware props. Phase-46 / Prompt 59:
+ * the banner now also speaks for the upstream useQuery — when the page
+ * hit a 503 or a network failure, the banner takes precedence over the
+ * meta-driven empty-state branches. Three legal shapes:
+ *   - no error          → both undefined / false
+ *   - typed API error   → serverError = ApiError instance
+ *   - network failure   → serverError = null + networkError = true
+ * The illegal shape (serverError: ApiError + networkError: true) is
+ * type-rejected at the call site.
+ */
+export type DiagnosticErrorProps =
+  | { serverError?: undefined; networkError?: false }
+  | { serverError: ApiError; networkError?: false }
+  | { serverError: null; networkError: true }
+
+export type RedisDiagnosticEmptyStateProps = {
   vehicleId: number
   meta: RedisSignalsMeta | undefined
   onSelectVehicle: (vehicleId: number) => void
-}
+} & DiagnosticErrorProps
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -26,15 +43,101 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
  * maps to one of the five empty-state root causes (mode-local, mirror-failed,
  * TTL-expired, never-streamed, fall-through) so engineers see a specific
  * next step instead of a black box.
+ *
+ * Phase-46 / Prompt 59 — also surfaces upstream request failures (503 cache
+ * not wired, 503 unreachable, generic 5xx, network error) before the
+ * meta-driven branches so a backend outage is never disguised as an
+ * empty cache. Error branches always win over meta branches.
  */
-export function RedisDiagnosticEmptyState({ vehicleId, meta, onSelectVehicle }: Props) {
+export function RedisDiagnosticEmptyState({
+  vehicleId,
+  meta,
+  serverError,
+  networkError,
+  onSelectVehicle,
+}: RedisDiagnosticEmptyStateProps) {
   const { t } = useTranslation()
 
-  const { data: keysData } = useQuery({
+  const { data: keysData, isError: keysQueryError } = useQuery({
     queryKey: ['redis-signal-keys'],
     queryFn: () => getRedisSignalKeys(50),
     staleTime: 30_000,
   })
+
+  // Branch 0.A — Redis cache wiring missing on the API server (503 + specific msg).
+  if (
+    serverError &&
+    serverError.status === 503 &&
+    /not available/i.test(serverError.message)
+  ) {
+    return (
+      <DiagnosticBanner
+        tone="danger"
+        icon={<ServerCrash className="h-6 w-6" />}
+        title={t('redis.diagnostic.cacheNotWired.title', 'Redis cache is not configured')}
+        body={t(
+          'redis.diagnostic.cacheNotWired.body',
+          'The TeslaSync API server started without a Redis connection. Set REDIS_ADDR (or REDIS_HOST + REDIS_PORT) in your environment, ensure the Redis service is reachable, and restart the API. This page reads exclusively from Redis and cannot function without it.',
+        )}
+        cta={t('redis.diagnostic.cacheNotWired.cta', 'See cache configuration docs')}
+        ctaHref="/docs/caching#configuration"
+        meta={meta}
+      />
+    )
+  }
+
+  // Branch 0.B — Redis configured but unreachable (5xx + 'unreachable'/'upstream' msg).
+  if (
+    serverError &&
+    (serverError.status === 503 || serverError.status === 502 || serverError.status === 504) &&
+    /unreachable|upstream/i.test(serverError.message)
+  ) {
+    return (
+      <DiagnosticBanner
+        tone="danger"
+        icon={<ServerCrash className="h-6 w-6" />}
+        title={t('redis.diagnostic.unreachable.title', 'Redis is unreachable')}
+        body={t(
+          'redis.diagnostic.unreachable.body',
+          'The API server is configured to use Redis, but the connection failed. Check that the Redis pod is running, that network policies allow the API to reach it, and review API server logs for "redis signal cache: GetAll failed".',
+        )}
+        meta={meta}
+      />
+    )
+  }
+
+  // Branch 0.C — Any other typed API error (4xx that shouldn't happen, generic 5xx).
+  if (serverError) {
+    return (
+      <DiagnosticBanner
+        tone="warning"
+        icon={<AlertTriangle className="h-6 w-6" />}
+        title={t('redis.diagnostic.requestFailed.title', 'Could not load Redis signals')}
+        body={t(
+          'redis.diagnostic.requestFailed.body',
+          'The server returned an error: {{status}} {{message}}. The Redis Signal Viewer cannot recover automatically — try refreshing, and if the error persists check the API server logs.',
+          { status: serverError.status, message: serverError.message },
+        )}
+        meta={meta}
+      />
+    )
+  }
+
+  // Branch 0.D — Network-layer failure (fetch threw before the server replied).
+  if (networkError) {
+    return (
+      <DiagnosticBanner
+        tone="warning"
+        icon={<AlertTriangle className="h-6 w-6" />}
+        title={t('redis.diagnostic.networkError.title', 'Cannot reach the API server')}
+        body={t(
+          'redis.diagnostic.networkError.body',
+          'The browser failed to fetch /api/v1/dev-tools/redis-signals. Check that the API server is running, the proxy/ingress is healthy, and there are no CORS or network errors in DevTools.',
+        )}
+        meta={meta}
+      />
+    )
+  }
 
   if (!meta) {
     // Backend doesn't expose meta yet — fall back to the legacy generic message.
@@ -46,8 +149,12 @@ export function RedisDiagnosticEmptyState({ vehicleId, meta, onSelectVehicle }: 
     )
   }
 
-  const otherKeys: RedisSignalKeyEntry[] =
-    keysData?.keys.filter((k) => k.vehicle_id !== vehicleId && k.field_count > 0) ?? []
+  // When the keys query itself is in an error state we hide the
+  // "other vehicles" sub-section rather than render misleading chips
+  // — the outer banner already tells the operator the request failed.
+  const otherKeys: RedisSignalKeyEntry[] = keysQueryError
+    ? []
+    : keysData?.keys.filter((k) => k.vehicle_id !== vehicleId && k.field_count > 0) ?? []
 
   // Branch 1 — mode=local: structural cause; banner explains the rollback switch.
   if (meta.live_signal_store_mode === 'local') {
@@ -142,7 +249,7 @@ interface BannerProps {
   ctaHref?: string
   otherKeys?: RedisSignalKeyEntry[]
   onSelectVehicle?: (id: number) => void
-  meta: RedisSignalsMeta
+  meta: RedisSignalsMeta | undefined
 }
 
 function DiagnosticBanner({
@@ -170,7 +277,7 @@ function DiagnosticBanner({
         <div className="flex-1 space-y-3">
           <h3 className="text-base font-semibold text-[var(--text-primary)]">{title}</h3>
           <p className="text-sm text-[var(--text-secondary)]">{body}</p>
-          <DiagnosticMetaList meta={meta} />
+          {meta && <DiagnosticMetaList meta={meta} />}
           {cta && ctaHref && (
             <a href={ctaHref} target="_blank" rel="noreferrer">
               <Button variant="secondary" size="sm">{cta}</Button>

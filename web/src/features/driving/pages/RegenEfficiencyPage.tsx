@@ -206,6 +206,17 @@ export default function RegenEfficiencyPage() {
             <FadeIn>
               <ChartContainer
                 title={t('regen.monthlyTrend', 'Monthly Regen Trend')}
+                ariaLabel={t('regen.monthlyTrend.aria', 'Monthly regen energy and drive count composed chart')}
+                data={monthlyTrend.map((m) => ({
+                  month: m.month,
+                  regenKwh: m.regenKwh,
+                  drives: m.drives,
+                }))}
+                dataColumns={[
+                  { key: 'month', label: t('regen.col.month', 'Month') },
+                  { key: 'regenKwh', label: t('regen.col.regenKwh', 'Regen kWh') },
+                  { key: 'drives', label: t('regen.col.drives', 'Drives') },
+                ]}
                 height={260}
                 annotations={{ vehicleId, scope: 'efficiency', chartId: 'regen-monthly-trend' }}
               >

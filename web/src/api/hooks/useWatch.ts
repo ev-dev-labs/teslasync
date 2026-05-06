@@ -78,7 +78,7 @@ export function useWatchSummary(vehicleId?: number) {
   const params = vehicleId ? `?vehicle_id=${vehicleId}` : '';
   return useQuery({
     queryKey: watchKeys.summary(vehicleId),
-    queryFn: () => watchRequest<WatchSummary>(`/watch/summary${params}`),
+    queryFn: ({ signal }) => watchRequest<WatchSummary>(`/watch/summary${params}`, { signal }),
     refetchInterval: INTERVALS.STANDARD,
     staleTime: STALE_TIMES.MODERATE,
     retry: 2,
@@ -90,7 +90,7 @@ export function useWatchComplication(vehicleId?: number) {
   const params = vehicleId ? `?vehicle_id=${vehicleId}` : '';
   return useQuery({
     queryKey: watchKeys.complication(vehicleId),
-    queryFn: () => watchRequest<WatchComplication>(`/watch/complication${params}`),
+    queryFn: ({ signal }) => watchRequest<WatchComplication>(`/watch/complication${params}`, { signal }),
     refetchInterval: INTERVALS.SLOW,
     staleTime: STALE_TIMES.FAST,
   });

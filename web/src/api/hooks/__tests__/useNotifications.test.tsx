@@ -114,7 +114,10 @@ describe('useUnreadCount', () => {
     requestMock.mockResolvedValue({ count: 7 });
     const { result } = renderHook(() => useUnreadCount(), { wrapper: makeWrapper() });
     await waitFor(() => expect(result.current.data).toBe(7));
-    expect(requestMock).toHaveBeenCalledWith('/notifications/unread-count');
+    expect(requestMock).toHaveBeenCalledWith(
+      '/notifications/unread-count',
+      expect.objectContaining({ signal: expect.anything() }),
+    );
   });
 
   it('falls back to 0 when count is missing', async () => {

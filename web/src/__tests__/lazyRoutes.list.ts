@@ -132,6 +132,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'BackupRestore', load: () => import('../features/admin/pages/BackupRestorePage') },
   { name: 'ApiPlayground', load: () => import('../features/admin/pages/ApiPlaygroundPage') },
   { name: 'RedisSignalViewer', load: () => import('../features/admin/pages/RedisSignalViewerPage') },
+  { name: 'FeedbackQueue', load: () => import('../features/admin/pages/FeedbackQueuePage') },
 
   // System
   { name: 'SystemStatus', load: () => import('../features/system/pages/SystemStatusPage') },

@@ -43,9 +43,11 @@ type NotificationHandler struct {
 // handlers (filter, bulk, unread-count). Extracted so tests can stub the DB.
 type notificationInboxStore interface {
 	GetLogsFiltered(ctx context.Context, f database.NotificationLogFilters) ([]*models.NotificationLog, error)
+	ListGrouped(ctx context.Context, f database.NotificationLogFilters) ([]*models.NotificationLogGroup, error)
 	GetUnreadCount(ctx context.Context) (int64, error)
 	BulkSetRead(ctx context.Context, ids []int64, read bool) (int64, error)
 	BulkSetReadAll(ctx context.Context) (int64, error)
+	BulkSetReadByGroupKey(ctx context.Context, groupKey string) (int64, error)
 	BulkSetArchived(ctx context.Context, ids []int64, archived bool) (int64, error)
 	BulkDelete(ctx context.Context, ids []int64) (int64, error)
 }
@@ -306,6 +308,30 @@ func (h *NotificationHandler) GetLogs(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	// Phase-46 / Prompt 27 — ?grouped=true switches the response shape
+	// from a flat NotificationLog list to a list of NotificationLogGroup
+	// (latest member + count + unread + vehicle ids). Mutually exclusive
+	// with ?group_key=... because asking for the members of a single
+	// group AND requesting them grouped is a contradiction (and would
+	// return at most one bucket on success).
+	groupedRequested := strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("grouped")), "true")
+	if groupedRequested && filters.GroupKey != "" {
+		writeError(w, http.StatusBadRequest, "grouped=true and group_key are mutually exclusive")
+		return
+	}
+	if groupedRequested {
+		groups, gErr := h.inbox.ListGrouped(r.Context(), filters)
+		if gErr != nil {
+			log.Error().Err(gErr).Msg("failed to list notification log groups")
+			writeError(w, http.StatusInternalServerError, "failed to get logs")
+			return
+		}
+		if groups == nil {
+			groups = []*models.NotificationLogGroup{}
+		}
+		writeJSON(w, http.StatusOK, groups)
+		return
+	}
 	logs, err := h.inbox.GetLogsFiltered(r.Context(), filters)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get notification logs")
@@ -385,6 +411,16 @@ func parseNotificationLogFilters(r *http.Request) (database.NotificationLogFilte
 	if s := strings.TrimSpace(q.Get("q")); s != "" {
 		f.Query = s
 	}
+	if s := strings.TrimSpace(q.Get("group_key")); s != "" {
+		// Phase-46 / Prompt 27 — accept the lower-hex sha256 derived
+		// in the repo. We validate strictly (length + alphabet) so a
+		// stray garbage value can't trigger an unbounded scan; the
+		// caller just gets a 400.
+		if !database.IsValidNotificationGroupKey(s) {
+			return f, fmt.Errorf("invalid group_key: must be 64-char lower-hex")
+		}
+		f.GroupKey = s
+	}
 	return f, nil
 }
 
@@ -439,9 +475,15 @@ func parseBoolish(s string) (bool, error) {
 // `All` is honoured only by the mark-read endpoint (see decodeMarkReadBody).
 // When set to `true`, the handler delegates to the repo's whole-inbox path
 // instead of requiring an id list.
+//
+// `GroupKey` (Phase-46 / Prompt 27) is also honoured only by mark-read and
+// is mutually exclusive with both `IDs` and `All`. When supplied, the
+// handler delegates to BulkSetReadByGroupKey to mark every member of a
+// thread as read in one round-trip.
 type bulkIDsRequest struct {
-	IDs []int64 `json:"ids"`
-	All bool    `json:"all"`
+	IDs      []int64 `json:"ids"`
+	All      bool    `json:"all"`
+	GroupKey string  `json:"group_key,omitempty"`
 }
 
 func decodeBulkIDs(r *http.Request) ([]int64, error) {
@@ -459,44 +501,67 @@ func decodeBulkIDs(r *http.Request) ([]int64, error) {
 }
 
 // decodeMarkReadBody is the relaxed decoder used by MarkRead. The body must
-// supply EITHER a non-empty `ids` array OR `all: true` — supplying both is
-// rejected so the caller can't accidentally mask one path with the other.
+// supply exactly one of: a non-empty `ids` array, `all: true`, or a
+// `group_key` string. Supplying more than one is rejected so the caller
+// can't accidentally mask one path with another.
 //
-// When `all` is true, the returned id slice is nil and the handler is expected
-// to call the BulkSetReadAll path. Otherwise the same validation as
-// `decodeBulkIDs` applies (non-empty, ≤1000).
-func decodeMarkReadBody(r *http.Request) (ids []int64, all bool, err error) {
+// Returns:
+//   - ids (non-nil, ≤1000): mark exactly those rows as read
+//   - all=true: mark every non-archived, currently-unread row as read
+//   - groupKey != "": mark every member of that thread as read
+func decodeMarkReadBody(r *http.Request) (ids []int64, all bool, groupKey string, err error) {
 	var body bulkIDsRequest
 	if decErr := json.NewDecoder(r.Body).Decode(&body); decErr != nil {
-		return nil, false, fmt.Errorf("invalid request body: %w", decErr)
+		return nil, false, "", fmt.Errorf("invalid request body: %w", decErr)
 	}
-	if body.All && len(body.IDs) > 0 {
-		return nil, false, fmt.Errorf("cannot specify both ids and all=true")
+	gk := strings.TrimSpace(body.GroupKey)
+	// Count selectors to enforce mutual exclusion. Exactly one must be set.
+	selectors := 0
+	if len(body.IDs) > 0 {
+		selectors++
 	}
 	if body.All {
-		return nil, true, nil
+		selectors++
 	}
-	if len(body.IDs) == 0 {
-		return nil, false, fmt.Errorf("ids must be non-empty (or pass all=true)")
+	if gk != "" {
+		selectors++
+	}
+	if selectors > 1 {
+		return nil, false, "", fmt.Errorf("ids, all, and group_key are mutually exclusive")
+	}
+	if selectors == 0 {
+		return nil, false, "", fmt.Errorf("ids must be non-empty (or pass all=true or group_key)")
+	}
+	if gk != "" {
+		if !database.IsValidNotificationGroupKey(gk) {
+			return nil, false, "", fmt.Errorf("invalid group_key: must be 64-char lower-hex")
+		}
+		return nil, false, gk, nil
+	}
+	if body.All {
+		return nil, true, "", nil
 	}
 	if len(body.IDs) > 1000 {
-		return nil, false, fmt.Errorf("ids exceeds 1000 cap")
+		return nil, false, "", fmt.Errorf("ids exceeds 1000 cap")
 	}
-	return body.IDs, false, nil
+	return body.IDs, false, "", nil
 }
 
 // MarkRead flips read_at to NOW() for each id in the request body.
 //
 // Body shapes accepted:
 //
-//	{"ids":[1,2,3]}  → mark exactly those rows as read.
-//	{"all":true}     → mark every non-archived, currently-unread row as read.
+//	{"ids":[1,2,3]}               → mark exactly those rows as read.
+//	{"all":true}                  → mark every non-archived, currently-unread row as read.
+//	{"group_key":"<sha256-hex>"}  → mark every member of that thread as read.
 //
 // Phase-45 / 28 added the all-flag to power the "Mark all read" header
 // action without forcing the client to enumerate every visible id (which
-// could exceed the 1000-id cap on busy inboxes).
+// could exceed the 1000-id cap on busy inboxes). Phase-46 / 27 added the
+// group_key path so the threaded inbox's "Mark group read" action can
+// flip an entire thread without expanding it client-side.
 func (h *NotificationHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
-	ids, all, err := decodeMarkReadBody(r)
+	ids, all, groupKey, err := decodeMarkReadBody(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -505,13 +570,19 @@ func (h *NotificationHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
 		updated int64
 		opErr   error
 	)
-	if all {
+	switch {
+	case groupKey != "":
+		updated, opErr = h.inbox.BulkSetReadByGroupKey(r.Context(), groupKey)
+	case all:
 		updated, opErr = h.inbox.BulkSetReadAll(r.Context())
-	} else {
+	default:
 		updated, opErr = h.inbox.BulkSetRead(r.Context(), ids, true)
 	}
 	if opErr != nil {
-		log.Error().Err(opErr).Bool("all", all).Msg("bulk mark read")
+		log.Error().Err(opErr).
+			Bool("all", all).
+			Bool("by_group", groupKey != "").
+			Msg("bulk mark read")
 		writeError(w, http.StatusInternalServerError, "failed to mark notifications read")
 		return
 	}

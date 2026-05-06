@@ -13,7 +13,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { SearchInput, FilterBar } from '@/components/forms';
+import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useUrlEnum, useUrlString } from '@/hooks/useUrlState';
 import {
@@ -341,7 +341,16 @@ export default function TeslaChargingHistoryPage() {
 
       {/* Monthly spending chart */}
       <FadeIn delay={0.1}>
-        <ChartContainer title={t('tesla_charging.monthlySpending', 'Monthly Spending')} height={280}>
+        <ChartContainer
+          title={t('tesla_charging.monthlySpending', 'Monthly Spending')}
+          ariaLabel={t('tesla_charging.monthlySpending.aria', 'Monthly Tesla charging spending bar chart')}
+          data={monthlyData.map((m) => ({ month: m.month, total: m.total }))}
+          dataColumns={[
+            { key: 'month', label: t('tesla_charging.col.month', 'Month') },
+            { key: 'total', label: t('tesla_charging.col.total', 'Total ($)') },
+          ]}
+          height={280}
+        >
           {monthlyData.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={monthlyData}>
@@ -378,8 +387,25 @@ export default function TeslaChargingHistoryPage() {
                   onChange={setSearch}
                   placeholder={t('tesla_charging.searchPlaceholder', 'Search by location…')}
                   className="w-full sm:w-72"
+                  historyScope="charging"
                 />
               </FilterBar>
+              <ActiveFilterChips
+                className="mb-3"
+                filters={
+                  (search
+                    ? [
+                        {
+                          key: 'q',
+                          label: t('tesla_charging.filterLabel.search', 'Search'),
+                          value: search,
+                          onRemove: () => setSearch(''),
+                        } satisfies FilterChipDescriptor,
+                      ]
+                    : []) as readonly FilterChipDescriptor[]
+                }
+                onClearAll={() => setSearch('')}
+              />
               {sortedEntries.length > 0 ? (
                 <DataTable
                   columns={columns}
@@ -390,9 +416,25 @@ export default function TeslaChargingHistoryPage() {
                   onSort={handleSort}
                   pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
                   tableId="tesla-charging-history"
-                  showColumnsMenu
+                  columnVisibility
+                  columnReorder
                   stickyHeader
                   maxHeight={600}
+                  virtualized
+                  rowHeight={56}
+                  exportable
+                  exportFilename={`tesla-charging-history-${new Date().toISOString().slice(0, 10)}`}
+                  exportRow={(row) => ({
+                    date: row.charge_start_datetime,
+                    location: row.site_location_name ?? '',
+                    duration: durationMinutes(row.charge_start_datetime, row.charge_stop_datetime) ?? null,
+                    energy: row.usage_kwh ?? null,
+                    cost: row.total_due ?? null,
+                    currency: row.currency_code ?? '',
+                    rate: row.rate_base ?? null,
+                    pricing_type: row.pricing_type ?? '',
+                    invoice: row.invoice_content_id ?? '',
+                  })}
                   selectable="multi"
                   selectedKeys={selectedKeys}
                   onSelectionChange={setSelectedKeys}

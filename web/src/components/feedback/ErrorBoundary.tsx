@@ -2,6 +2,7 @@ import { Component, type ReactNode } from 'react'
 import { AlertTriangle, RefreshCw, Home, WifiOff } from 'lucide-react'
 import i18n from 'i18next'
 import { Button } from '../ui/Button'
+import { reportFrontendError } from '@/lib/errorReporter'
 
 interface Props {
   children: ReactNode
@@ -55,6 +56,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
+    // Phase 46 / Prompt 01: forward the captured error to the central
+    // reporter BEFORE any recovery logic so it ships even if the
+    // chunk-load reload below succeeds (and tears down the page).
+    reportFrontendError(error, 'react')
+
     // Log structured error for observability
     console.error(`[ErrorBoundary${this.props.name ? `:${this.props.name}` : ''}]`, {
       error: error.message,

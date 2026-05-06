@@ -358,6 +358,34 @@ export interface Alert {
   rule_id?: number | null
   rule_signal?: string | null
   rule_severity?: AlertRuleSeverity | string | null
+  /** Phase-46 / Prompt 20 — acknowledgement state. Populated by
+   *  GET /alerts/{id} and by the ack/reopen mutations. List endpoint also
+   *  returns these when the row is acknowledged so the inbox can show a
+   *  badge without a per-row detail fetch. */
+  acknowledged_at?: string | null
+  acknowledged_by?: string | null
+  acknowledgement_note?: string | null
+}
+
+/** Phase-46 / Prompt 20 — entry in an alert's audit timeline. The synthetic
+ *  `created` event has `id: 0` and is reconstructed from
+ *  `notification_logs.created_at` server-side; persisted events have a
+ *  positive `id` from `notification_log_events`. */
+export type AlertEventKind = 'created' | 'acknowledged' | 'reopened' | 'commented' | string
+
+export interface AlertEvent {
+  id: number
+  occurred_at: string
+  actor?: string | null
+  kind: AlertEventKind
+  note?: string | null
+}
+
+/** Phase-46 / Prompt 20 — wire shape of GET /alerts/{id}. Extends Alert with
+ *  the ack columns (already optional on Alert) and an always-present events
+ *  array (oldest first, includes synthetic `created`). */
+export interface AlertDetail extends Alert {
+  events: AlertEvent[]
 }
 
 export type AlertRuleSeverity = 'info' | 'warn' | 'critical'
@@ -523,13 +551,47 @@ export type {
   NotificationChannelPushover,
 } from '@/types/notifications'
 
+// Phase-46 / Prompt 37 — webhook channel test endpoint result.
+//
+// Mirrors `webhookTestResponse` in
+// internal/api/notification_channel_handler.go. The handler returns
+// the SAME shape on transport-level failures (`status_code === 0`,
+// `error` populated) and HTTP-level failures (`status_code >= 400`,
+// `success === false`), so the UI renders both cases uniformly.
+export interface WebhookTestResult {
+  success: boolean
+  status_code: number
+  latency_ms: number
+  body_preview?: string
+  truncated?: boolean
+  signature?: string
+  error?: string
+}
+
+// Phase-46 / Prompt 37 — request shape for the signature preview
+// utility endpoint. `body` is the verbatim bytes the receiver would
+// HMAC-validate; the server signs them with `secret` and returns the
+// resulting `sha256=<hex>` value.
+export interface WebhookSignaturePreviewRequest {
+  secret: string
+  body: string
+}
+
+// Phase-46 / Prompt 37 — preview-signature endpoint response. Always
+// non-empty when the request validated (empty `secret` is rejected
+// with 400 server-side, never echoed back as an empty signature).
+export interface WebhookSignaturePreviewResult {
+  signature: string
+}
+
 export interface NotificationLog {
   id: number
   channel_id: number
   alert_id: number | null
   title: string
   message: string
-  status: 'pending' | 'sent' | 'failed'
+  status: 'pending' | 'sent' | 'failed' | 'deferred_dnd'
+  severity?: string
   error: string
   created_at: string
   sent_at: string | null
@@ -537,6 +599,62 @@ export interface NotificationLog {
   latency_ms?: number
   read_at?: string | null
   archived_at?: string | null
+}
+
+// Phase-46 / Prompt 27 — server-aggregated notification "thread".
+//
+// A group represents repeated deliveries of the same alert rule + severity
+// (the canonical key is `sha256(alert_rule_id + "|" + severity_lc)`).
+// Singleton rows — anything without a derivable group_key (NULL alert_id,
+// blank severity, or fully ad-hoc notifications) — are returned as
+// one-row groups with `group_key = null`.
+//
+// `count` and `unread_count` reflect the FILTERED subset that was sent
+// to /notifications/logs?grouped=true; e.g. `read=false` makes
+// `count == unread_count`. The frontend should render the count chip
+// without implying it's a global tally.
+//
+// `vehicle_ids` is `array_remove(array_agg(DISTINCT alert_rules.vehicle_id), NULL)`
+// so it can be empty when every member belonged to a vehicle-less rule.
+//
+// Members are NOT inlined — clients fetch them on expand via
+// /notifications/logs?group_key=<group_key>&view=flat.
+export interface NotificationLogGroup {
+  group_key: string | null
+  latest: NotificationLog
+  count: number
+  unread_count: number
+  vehicle_ids: number[]
+}
+
+// Phase-46 / Prompt 19 — Do-Not-Disturb / quiet hours window.
+// Server-backed CRUD lives at /api/v1/notifications/quiet-hours.
+// Times are local-clock HH:MM strings, evaluated against `timezone`
+// (IANA name); `weekdays` is a 7-bit mask Sun=1..Sat=64.
+// `bypass_severities` is the allow-list that escapes DND.
+export interface QuietHoursWindow {
+  id: number
+  user_id: string
+  enabled: boolean
+  start_local: string
+  end_local: string
+  timezone: string
+  weekdays: number
+  bypass_severities: string[]
+  created_at: string
+  updated_at: string
+}
+
+// Patch payload for POST/PATCH against the quiet-hours endpoints. All
+// fields optional so the same body shape works for create and partial
+// update.
+export interface QuietHoursWindowInput {
+  enabled?: boolean
+  start_local?: string
+  end_local?: string
+  timezone?: string
+  weekdays?: number
+  bypass_severities?: string[]
 }
 
 export interface NotificationStats {
@@ -977,6 +1095,26 @@ export interface ExtendedHealthResponse {
   database: { status: string; latency_ms: number }
   database_pool: { total_conns: number; idle_conns: number; acquired_conns: number }
   system: { goroutines: number; go_version: string; uptime_seconds: number }
+}
+
+// === Aggregated diagnostic / self-test (Phase-46 / Prompt 33) ===
+
+export type DiagnosticCheckStatus = 'ok' | 'warn' | 'fail'
+export type DiagnosticOverallStatus = 'ok' | 'degraded' | 'down'
+
+export interface DiagnosticCheck {
+  id: string
+  name: string
+  status: DiagnosticCheckStatus
+  detail: string
+  remediation?: string
+  duration_ms: number
+}
+
+export interface DiagnosticReport {
+  generated_at: string
+  overall_status: DiagnosticOverallStatus
+  checks: DiagnosticCheck[]
 }
 
 export interface BackupStats {
@@ -2073,3 +2211,514 @@ export interface PushSubscribeBody {
   }
 }
 
+// === Auth Session Info (Phase 46 / Prompt 05) ===
+
+/**
+ * Snapshot of the upstream ForwardAuth session, returned by
+ * `GET /api/v1/auth/session`. The endpoint is mounted OUTSIDE the
+ * /api/v1 ForwardAuth subrouter and ALWAYS responds 200 OK so the
+ * SPA's polling hook never trips the hard-401 path on itself.
+ *
+ * `mode === 'open'` indicates the deployment has FORWARD_AUTH_HEADER
+ * unset — there is no auth proxy and therefore no session to expire.
+ * The {@link useSessionMonitor} hook short-circuits all expiry logic
+ * in this branch.
+ *
+ * `expires_at` is the RFC3339 timestamp the upstream proxy reports for
+ * cookie expiry; null when the proxy doesn't expose it. `expires_in`
+ * is the same value pre-computed against the server clock — preferred
+ * by the SPA so the countdown is immune to client clock skew.
+ */
+export interface SessionInfo {
+  authenticated: boolean
+  mode: 'open' | 'session'
+  expires_at: string | null
+  expires_in: number | null
+  user: { sub: string; email?: string } | null
+  renewable: boolean
+}
+
+
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase-46 / Prompt 08 — In-app feedback widget
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type FeedbackCategory = 'bug' | 'feature' | 'other'
+export type FeedbackStatus = 'new' | 'triaged' | 'closed'
+
+export interface FeedbackEntry {
+  id: number
+  created_at: string
+  category: FeedbackCategory
+  title: string
+  body: string
+  page_route: string
+  user_agent: string
+  app_version: string
+  user_email: string
+  recent_errors: unknown
+  console_tail: string
+  status: FeedbackStatus
+  github_issue_url: string
+  submitter_subject: string
+  submitter_ip: string
+  triaged_at: string | null
+  triaged_by: string
+}
+
+export interface FeedbackSubmitInput {
+  category: FeedbackCategory
+  title: string
+  body: string
+  page_route?: string
+  user_agent?: string
+  app_version?: string
+  user_email?: string
+  recent_errors?: unknown
+  console_tail?: string
+}
+
+export interface FeedbackUpdateInput {
+  status?: FeedbackStatus
+  github_issue_url?: string
+  forward_to_github?: boolean
+}
+
+export interface FeedbackListResponse {
+  items: FeedbackEntry[]
+  total: number
+  limit: number
+  offset: number
+  github_bridge_enabled: boolean
+  github_repo?: string
+}
+
+// Phase-46 / Prompt 35 — per-user TOTP enrollment.
+//
+// Status response from GET /api/v1/auth/totp. The discriminator is
+// `mode`: `'open'` means the install runs without a forward-auth
+// header so per-user TOTP cannot be wired (the SPA renders an inline
+// "feature requires authenticated mode" placeholder). `'session'` means
+// per-user TOTP is available; `activated` then gates between
+// "Enrolled" and "Not enrolled" pills.
+export type TOTPStatus =
+  | { mode: 'open' }
+  | {
+      mode: 'session'
+      activated: boolean
+      last_used_at?: string
+      backup_codes_remaining: number
+    }
+
+// Returned by POST /api/v1/auth/totp/enroll. The plain-text backup
+// codes are returned exactly once — re-enrolling generates a fresh
+// set. The SPA must surface a copy/download step before the user
+// closes the modal.
+export interface TOTPEnrollment {
+  secret: string
+  otpauth_uri: string
+  qr_data_uri: string
+  backup_codes: string[]
+  expires_at: string
+}
+
+// Returned by POST /api/v1/auth/totp/sudo. Same shape as the password
+// reauth response from prompt 31 so the SPA's reauth interceptor can
+// consume it without a discriminator.
+export interface TOTPSudoToken {
+  mode: 'session'
+  sudo_token: string
+  expires_at: string
+}
+
+// Returned by POST /api/v1/auth/totp/backup-codes/regenerate. Just a
+// fresh set of plain-text codes — the secret itself is unchanged.
+export interface TOTPBackupCodesResponse {
+  backup_codes: string[]
+}
+
+// Phase-46 / Prompt 42 — Active sessions / device management.
+//
+// One row per TeslaSync-issued device cookie binding. Provider-agnostic:
+// TeslaSync mints its OWN cookie and persists the binding here, so
+// revoking a row only invalidates this app's session — the upstream
+// IdP cookie/session is untouched.
+//
+// Keys are snake_case to mirror the rest of the API surface; the
+// camelCaseKeys transformer exposes both forms for SPA consumers.
+export interface ActiveSession {
+  id: string
+  user_agent: string
+  ip: string
+  created_at: string
+  last_seen_at: string
+  revoked_at?: string
+  current: boolean
+}
+
+// GET /api/v1/auth/sessions response shape. The discriminator is
+// `mode`: `'open'` means the install runs without a forward-auth
+// header so per-device sessions cannot be tracked (the SPA renders
+// an inline placeholder); `'session'` carries the active rows.
+export type ActiveSessionsResponse =
+  | { mode: 'open' }
+  | { mode: 'session'; sessions: ActiveSession[] }
+
+// DELETE /api/v1/auth/sessions/all-others response shape.
+export interface RevokeAllOthersResponse {
+  mode: 'session'
+  revoked: number
+}
+
+// === Rate-limit status (Phase-46 / Prompt 40) ===
+
+/** Single scope row returned by GET /api/v1/system/rate-limits. */
+export type RateLimitSeverity = 'ok' | 'warn' | 'critical'
+
+export interface ScopeBudget {
+  /** Stable scope identifier; see backend RateLimitScope* constants. */
+  id: string
+  /** Human-readable label rendered next to the bar. */
+  name: string
+  /** Observed usage in the same unit as `limit`. */
+  current: number
+  /** Per-window cap. */
+  limit: number
+  /** Sliding-window length in seconds. Zero means a token-bucket snapshot. */
+  window_seconds: number
+  /** Optional UTC instant at which the bucket fully refills. */
+  reset_at?: string | null
+  /** Colour band the panel renders. */
+  severity: RateLimitSeverity
+  /** Operator-facing footnote shown under the row. */
+  detail?: string
+}
+
+/** Envelope for GET /api/v1/system/rate-limits. */
+export interface RateLimitStatusResponse {
+  generated_at: string
+  scopes: ScopeBudget[]
+}
+
+// === Job queue status (Phase-46 / Prompt 41) ===
+
+/** Heartbeat staleness band rendered by the queue status panel. */
+export type QueueHeartbeatSeverity = 'ok' | 'warn' | 'critical' | 'down'
+
+/** Canonical worker identifiers exposed by the backend. Mirror of database.WorkerName*. */
+export type QueueWorkerName = 'notification' | 'export' | 'automation'
+
+/**
+ * Single worker row returned by GET /api/v1/system/queues.
+ *
+ * Counts come from each worker's domain table (notification_logs,
+ * export_jobs, automation_history) aggregated over the last 24
+ * hours. Heartbeat fields come from the Redis worker_status key
+ * each worker writes via internal/worker/heartbeat.Heartbeater.
+ */
+export interface QueueStat {
+  /** Stable worker identifier — use for routing the drawer. */
+  worker: string
+  /** Human-readable label (English fallback; SPA may translate). */
+  display_name: string
+  /** Items waiting to be picked up by the worker. */
+  pending: number
+  /** Items currently being processed. */
+  in_progress: number
+  /** Items completed successfully in the last 24 hours. */
+  succeeded_24h: number
+  /** Items that failed terminally in the last 24 hours. */
+  failed_24h: number
+  /** Age in seconds of the oldest pending item (0 = none). */
+  oldest_pending_age_seconds: number
+  /** Color band the panel renders for the heartbeat freshness. */
+  heartbeat_severity: QueueHeartbeatSeverity
+  /** Operator-facing footnote (e.g. "Last beat 7m ago"). */
+  heartbeat_detail: string
+  /** ISO timestamp of the worker's most recent heartbeat. */
+  last_heartbeat_at?: string | null
+  /** ISO timestamp the current worker process started. */
+  started_at?: string | null
+  /** Hostname the worker is running on. */
+  host?: string
+  /** Build version reported by the worker. */
+  version?: string
+}
+
+/** Envelope for GET /api/v1/system/queues. */
+export interface QueueStatusResponse {
+  generated_at: string
+  workers: QueueStat[]
+}
+
+/**
+ * Single recent-job row rendered inside the per-worker drawer.
+ * Mirrors the backend QueueJobView struct.
+ */
+export interface QueueJobView {
+  id: string
+  worker: string
+  status: string
+  title: string
+  started_at: string
+  finished_at?: string | null
+  duration_ms?: number | null
+  error?: string
+}
+
+/** Envelope for GET /api/v1/system/queues/{worker}/jobs. */
+export interface QueueJobsResponse {
+  worker: string
+  jobs: QueueJobView[]
+}
+
+/* Phase-46 / Prompt 43 - Per-vehicle settings layer
+ * ───────────────────────────────────────────────────
+ * The resolver returns one EffectiveSetting per supported key, each
+ * tagged with the layer that produced its value. The SPA's
+ * VehicleSettingsTab renders a "source" pill from this discriminator.
+ *
+ * Sources:
+ *  - 'override': vehicle_settings row exists for (vehicleID, key)
+ *  - 'user'    : install-global SettingsRepo provided the value
+ *  - 'vehicle' : vehicles base table (e.g. nickname → display_name)
+ *  - 'default' : hard-coded fallback in the Go database package
+ *
+ * Backend source: internal/database/vehicle_settings_repo.go ::
+ * EffectiveSettingSource + internal/api/vehicle_settings_handler.go.
+ */
+export type EffectiveSettingSource = 'override' | 'user' | 'vehicle' | 'default'
+
+/**
+ * One resolved per-vehicle setting row. `value` is rendered by the
+ * SPA against the per-key UnitInput / picker / datetime control; the
+ * pill renders `source` so the user can tell which layer produced
+ * the current effective value.
+ *
+ * The wire shape is {key, value, source} — the resolver always
+ * fills `value` (no nulls) so the SPA can render every row without
+ * presence checks.
+ */
+export interface EffectiveSetting {
+  key: string
+  value: unknown
+  source: EffectiveSettingSource
+}
+
+/** Envelope for GET /api/v1/vehicles/{vehicleID}/settings. */
+export interface VehicleSettingsResponse {
+  settings: EffectiveSetting[]
+}
+
+/**
+ * Per-key value type for the PUT body. The handler dispatches on
+ * the key's kind (text|number|boolean|timestamp) and rejects values
+ * that don't match — see decodeValueForKey in
+ * internal/api/vehicle_settings_handler.go.
+ *
+ * The SPA builds these from typed inputs, so the union is
+ * intentionally narrow rather than `any`.
+ */
+export type VehicleSettingValue = string | number | boolean
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase-46 / Prompt 44 — RBAC matrix admin
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * RBAC permission catalog entry as emitted by GET /admin/rbac/matrix.
+ * IDs are stable, lowercase, dotted strings (e.g. `fleet.read`); the
+ * admin matrix UI groups rows by `category` and renders `name` as
+ * the user-visible label.
+ */
+export interface RbacPermission {
+  id: string
+  name: string
+  category: string
+}
+
+/**
+ * RBAC role identity. `id` is the upstream proxy group name verbatim
+ * (or the implicit `user` default when no groups header is
+ * configured); `name` is the matrix-column label — currently identical
+ * to `id` but split out so a future "display label" pass doesn't
+ * break the API contract.
+ */
+export interface RbacRole {
+  id: string
+  name: string
+}
+
+/**
+ * Matrix payload. `matrix[role_id][perm_id]` is true when the role
+ * grants the permission. A missing `role_id` row OR a missing
+ * `perm_id` cell within a row both mean "no opinion → deny".
+ *
+ * `effective_for_me` is the merged grant map for the calling subject
+ * across `my_roles`; the SPA renders it as a "what I can do right
+ * now" pill so the operator can sanity-check their own role
+ * assignment before publishing matrix edits.
+ *
+ * `mode === 'open'` is the synthetic envelope returned by the
+ * useRbacMatrix hook when the backend reports AUTH_MODE_OPEN — the
+ * SPA renders an inline "configure forward-auth" placeholder instead
+ * of a 401/501 toast.
+ */
+export type RbacMatrixResponse =
+  | RbacMatrixSessionResponse
+  | RbacMatrixOpenModeResponse
+
+export interface RbacMatrixSessionResponse {
+  mode: 'session'
+  roles: RbacRole[]
+  permissions: RbacPermission[]
+  categories: string[]
+  matrix: Record<string, Record<string, boolean>>
+  effective_for_me: Record<string, boolean>
+  my_roles: string[]
+  groups_header_name?: string
+}
+
+export interface RbacMatrixOpenModeResponse {
+  mode: 'open'
+}
+
+/**
+ * Single cell in a PUT /admin/rbac/matrix batch. The handler caps a
+ * single request at `MaxRBACUpsertCells` (1000) cells; the SPA is
+ * expected to send only the cells the operator actually toggled, so
+ * realistic payloads are tiny.
+ */
+export interface RbacUpsertCell {
+  role_id: string
+  permission_id: string
+  allowed: boolean
+}
+
+export interface RbacUpsertRequest {
+  cells: RbacUpsertCell[]
+}
+
+
+// Phase-46 / Prompt 46 — Admin impersonation API contracts.
+//
+// The state endpoint returns one of three modes: 'open' (501 in open-
+// mode installs), 'inactive' (forward-auth, no cookie present), or
+// 'active' (forward-auth, valid cookie). Discriminated unions let the
+// banner hide / show without mode-string string-comparisons in the
+// component.
+export type ImpersonationStatus =
+  | { mode: 'open' }
+  | { mode: 'inactive' }
+  | {
+      mode: 'active'
+      original_admin: string
+      target: string
+      expires_at: string
+    }
+
+// Single row in the candidates list. Subject is the opaque
+// proxy-issued identity; the SPA renders it verbatim because the
+// future prompt 57 may add a display-name column without changing
+// this contract.
+export interface ImpersonationCandidate {
+  subject: string
+}
+
+export type ImpersonationCandidatesResponse =
+  | { mode: 'open' }
+  | {
+      mode: 'session'
+      candidates: ImpersonationCandidate[]
+    }
+
+export interface ImpersonationStartRequest {
+  subject: string
+}
+
+
+/**
+ * Phase-46 / Prompt 54 — Vehicle photo upload types.
+ *
+ * The backend stores three rendered sizes per upload (thumb 256,
+ * medium 1024, full 2048 pixels along the longer edge); GET /photo
+ * returns metadata only and the SPA builds the actual bytes URL via
+ * vehiclePhotoUrl() with uploaded_at as the cache buster.
+ */
+export type VehiclePhotoSize = 'thumb' | 'medium' | 'full'
+
+export interface VehiclePhotoSizes {
+  thumb: VehiclePhotoSize
+  medium: VehiclePhotoSize
+  full: VehiclePhotoSize
+}
+
+export interface VehiclePhotoMeta {
+  has_photo: boolean
+  uploaded_at?: string
+  sizes?: VehiclePhotoSizes
+}
+
+// === Auth-mode contract (Phase-46 / Prompt 57) ===
+
+/**
+ * Two-state classification returned by GET /api/v1/system/auth-mode.
+ *
+ *   - `open`         — no upstream identity provider configured
+ *                      (FORWARD_AUTH_HEADER unset). The SPA should
+ *                      replace every auth-coupled section with the
+ *                      <RequiresAuth> placeholder.
+ *   - `forward_auth` — a ForwardAuth-shaped reverse proxy is in
+ *                      front of TeslaSync (Authentik, Authelia,
+ *                      oauth2-proxy, Keycloak, …) and is supplying
+ *                      the identity header named in `subject_header`.
+ *
+ * The string is the source of truth; never derive the mode from
+ * `subject_header` being set, because the proxy can momentarily
+ * strip the header on a single request even when the deployment
+ * is configured for forward-auth.
+ */
+export type AuthMode = 'open' | 'forward_auth'
+
+/**
+ * Per-feature gate the SPA uses to decide whether to mount an
+ * auth-coupled section or replace it with the inline <RequiresAuth>
+ * placeholder. Every field is `false` in open mode and `true` in
+ * forward-auth mode (the per-feature *preconditions* live inside
+ * each feature's own handler — this matrix only reports whether
+ * the deployment's auth mode allows the feature to exist at all).
+ *
+ * Keep these keys in lock-step with `internal/api.AuthModeCapabilities`
+ * — drift here silently disables the corresponding section.
+ */
+export interface AuthModeCapabilities {
+  step_up_reauth: boolean
+  totp_enrollment: boolean
+  session_list: boolean
+  impersonation: boolean
+  rbac: boolean
+}
+
+/** Envelope returned by `GET /api/v1/system/auth-mode`. */
+export interface AuthModeResponse {
+  mode: AuthMode
+  /** Header name TeslaSync reads (e.g. "X-Forwarded-User"). Omitted in open mode. */
+  subject_header?: string
+  /**
+   * The current request's resolved subject (the value of
+   * `subject_header`). `null` / undefined in open mode AND when
+   * the proxy stripped the header for this specific request.
+   */
+  subject?: string | null
+  /**
+   * Operator-supplied free text — typically the upstream IdP's
+   * brand name. The SPA renders this verbatim in the
+   * <RequiresAuth> empty state and the session-timeout banner;
+   * it is NEVER used as a routing key.
+   */
+  provider_hint?: string
+  capabilities: AuthModeCapabilities
+}

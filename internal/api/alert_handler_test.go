@@ -628,6 +628,38 @@ func cloneAlertRuleForTest(rule *models.AlertRule) *models.AlertRule {
 
 type fakeNotificationRepo struct {
 	logs []*models.NotificationLog
+
+	// Phase-46 / Prompt 20 — alert ack + audit timeline state.
+	logsByID    map[int64]*models.NotificationLog
+	eventsByID  map[int64][]*models.NotificationLogEvent
+	nextEventID int64
+
+	getLogErr        error
+	ackErr           error
+	reopenErr        error
+	commentErr       error
+	listLogEventsErr error
+
+	ackCalls     []ackCall
+	reopenCalls  []reopenCall
+	commentCalls []commentCall
+}
+
+type ackCall struct {
+	id    int64
+	actor string
+	note  string
+}
+
+type reopenCall struct {
+	id    int64
+	actor string
+}
+
+type commentCall struct {
+	id    int64
+	actor string
+	note  string
 }
 
 func (f *fakeNotificationRepo) GetLogs(context.Context, int, int) ([]*models.NotificationLog, error) {
@@ -652,6 +684,126 @@ func (f *fakeNotificationRepo) GetChannel(context.Context, int64) (*models.Notif
 
 func (f *fakeNotificationRepo) GetAllChannels(context.Context) ([]*models.NotificationChannel, error) {
 	return []*models.NotificationChannel{}, nil
+}
+
+func (f *fakeNotificationRepo) GetLog(_ context.Context, id int64) (*models.NotificationLog, error) {
+	if f.getLogErr != nil {
+		return nil, f.getLogErr
+	}
+	if f.logsByID == nil {
+		return nil, nil
+	}
+	return f.logsByID[id], nil
+}
+
+func (f *fakeNotificationRepo) AcknowledgeLog(_ context.Context, id int64, actor, note string) (*models.NotificationLog, bool, error) {
+	if f.ackErr != nil {
+		return nil, false, f.ackErr
+	}
+	f.ackCalls = append(f.ackCalls, ackCall{id: id, actor: actor, note: note})
+	if f.logsByID == nil {
+		return nil, false, nil
+	}
+	row, ok := f.logsByID[id]
+	if !ok || row == nil {
+		return nil, false, nil
+	}
+	if row.AcknowledgedAt != nil {
+		return row, false, nil
+	}
+	now := time.Now().UTC()
+	row.AcknowledgedAt = &now
+	if actor != "" {
+		a := actor
+		row.AcknowledgedBy = &a
+	}
+	if note != "" {
+		n := note
+		row.AcknowledgementNote = &n
+	}
+	f.appendEvent(id, &models.NotificationLogEvent{
+		Actor: nilOrPtrString(actor),
+		Kind:  models.NotificationLogEventKindAcknowledged,
+		Note:  nilOrPtrString(note),
+	})
+	return row, true, nil
+}
+
+func (f *fakeNotificationRepo) ReopenLog(_ context.Context, id int64, actor string) (*models.NotificationLog, bool, error) {
+	if f.reopenErr != nil {
+		return nil, false, f.reopenErr
+	}
+	f.reopenCalls = append(f.reopenCalls, reopenCall{id: id, actor: actor})
+	if f.logsByID == nil {
+		return nil, false, nil
+	}
+	row, ok := f.logsByID[id]
+	if !ok || row == nil {
+		return nil, false, nil
+	}
+	if row.AcknowledgedAt == nil {
+		return row, false, nil
+	}
+	row.AcknowledgedAt = nil
+	row.AcknowledgedBy = nil
+	row.AcknowledgementNote = nil
+	f.appendEvent(id, &models.NotificationLogEvent{
+		Actor: nilOrPtrString(actor),
+		Kind:  models.NotificationLogEventKindReopened,
+	})
+	return row, true, nil
+}
+
+func (f *fakeNotificationRepo) CommentOnLog(_ context.Context, id int64, actor, note string) (*models.NotificationLogEvent, error) {
+	if f.commentErr != nil {
+		return nil, f.commentErr
+	}
+	f.commentCalls = append(f.commentCalls, commentCall{id: id, actor: actor, note: note})
+	if f.logsByID == nil {
+		return nil, nil
+	}
+	if _, ok := f.logsByID[id]; !ok {
+		return nil, nil
+	}
+	ev := &models.NotificationLogEvent{
+		Actor: nilOrPtrString(actor),
+		Kind:  models.NotificationLogEventKindCommented,
+		Note:  nilOrPtrString(note),
+	}
+	f.appendEvent(id, ev)
+	return ev, nil
+}
+
+func (f *fakeNotificationRepo) ListLogEvents(_ context.Context, logID int64) ([]*models.NotificationLogEvent, error) {
+	if f.listLogEventsErr != nil {
+		return nil, f.listLogEventsErr
+	}
+	if f.eventsByID == nil {
+		return nil, nil
+	}
+	out := make([]*models.NotificationLogEvent, len(f.eventsByID[logID]))
+	copy(out, f.eventsByID[logID])
+	return out, nil
+}
+
+func (f *fakeNotificationRepo) appendEvent(logID int64, ev *models.NotificationLogEvent) {
+	if f.eventsByID == nil {
+		f.eventsByID = make(map[int64][]*models.NotificationLogEvent)
+	}
+	f.nextEventID++
+	ev.ID = f.nextEventID
+	ev.NotificationLogID = logID
+	if ev.OccurredAt.IsZero() {
+		ev.OccurredAt = time.Now().UTC()
+	}
+	f.eventsByID[logID] = append(f.eventsByID[logID], ev)
+}
+
+func nilOrPtrString(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }
 
 // ─── Adapter tests (Phase 40 / Prompt 04) ───────────────────────────────────

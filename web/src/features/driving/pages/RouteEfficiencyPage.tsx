@@ -176,7 +176,18 @@ export default function RouteEfficiencyPage() {
       {/* Route efficiency comparison chart */}
       {chartData.length > 1 && (
         <FadeIn>
-          <ChartContainer title={t('routeEfficiency.comparison', 'Route Efficiency Comparison')} height={260}>
+          <ChartContainer
+            title={t('routeEfficiency.comparison', 'Route Efficiency Comparison')}
+            ariaLabel={t('routeEfficiency.comparison.aria', 'Per-route best, average, and worst efficiency comparison bar chart')}
+            data={chartData.map((r) => ({ name: r.name, best: r.best, avg: r.avg, worst: r.worst }))}
+            dataColumns={[
+              { key: 'name', label: t('routeEfficiency.col.route', 'Route') },
+              { key: 'best', label: `${t('routeEfficiency.best', 'Best')} ${efficiencyUnit}` },
+              { key: 'avg', label: `${t('routeEfficiency.avgLabel', 'Avg')} ${efficiencyUnit}` },
+              { key: 'worst', label: `${t('routeEfficiency.worst', 'Worst')} ${efficiencyUnit}` },
+            ]}
+            height={260}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />

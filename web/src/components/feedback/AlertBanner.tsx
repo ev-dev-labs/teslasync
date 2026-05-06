@@ -46,7 +46,7 @@ export function AlertBanner({ variant, title, children, onClose, icon, className
         <div className={cn('text-xs', v.text, title && 'mt-0.5')}>{children}</div>
       </div>
       {onClose && (
-        <button onClick={onClose} className={cn('shrink-0 rounded-lg p-1 transition-colors hover:bg-white/[0.06]', v.text)}>
+        <button onClick={onClose} className={cn('shrink-0 rounded-lg p-1.5 transition-colors hover:bg-white/[0.06]', v.text)}>
           <X className="h-3.5 w-3.5" />
         </button>
       )}

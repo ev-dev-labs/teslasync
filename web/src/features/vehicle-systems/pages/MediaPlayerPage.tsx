@@ -578,6 +578,7 @@ export default function MediaPlayerPage() {
           </h3>
           {sortedHistory.length > 0 ? (
             <DataTable<MediaSnapshot>
+              tableId="vehicle-systems:media-history"
               columns={columns}
               data={sortedHistory}
               keyExtractor={(row) => row.id}

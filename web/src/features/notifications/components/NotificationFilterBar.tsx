@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { AlertOctagon, AlertTriangle, Info } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Select } from '@/components/ui';
-import { FilterBar, SearchInput, DateRangeFilter } from '@/components/forms';
+import { FilterBar, SearchInput, DateRangeFilter, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import type { NotificationFilters } from '@/api/hooks/useNotifications';
 import type { Vehicle, AlertRule } from '@/api/types';
 
@@ -84,6 +84,79 @@ export function NotificationFilterBar({
     ...rules.map(r => ({ value: String(r.id), label: r.name })),
   ];
 
+  const severityLabels: Record<Severity, string> = {
+    info: t('notifications.inbox.filter.severity.info', 'Info'),
+    warn: t('notifications.inbox.filter.severity.warn', 'Warn'),
+    critical: t('notifications.inbox.filter.severity.critical', 'Critical'),
+  };
+
+  const activeFilterChips: FilterChipDescriptor[] = [];
+  if (filters.severity?.length) {
+    const summary = filters.severity.map(s => severityLabels[s]).join(', ');
+    activeFilterChips.push({
+      key: 'severity',
+      label: t('notifications.inbox.filter.severity', 'Severity'),
+      value: summary,
+      onRemove: () => onChange({ ...filters, severity: undefined }),
+    });
+  }
+  if (filters.vehicle_id?.length) {
+    const id = filters.vehicle_id[0];
+    const match = vehicles.find(v => v.id === id);
+    activeFilterChips.push({
+      key: 'vehicle_id',
+      label: t('notifications.inbox.filter.vehicle', 'Vehicle'),
+      value: match?.display_name || `#${id}`,
+      onRemove: () => onChange({ ...filters, vehicle_id: undefined }),
+    });
+  }
+  if (filters.rule_id?.length) {
+    const id = filters.rule_id[0];
+    const match = rules.find(r => r.id === id);
+    activeFilterChips.push({
+      key: 'rule_id',
+      label: t('notifications.inbox.filter.rule', 'Rule'),
+      value: match?.name || `#${id}`,
+      onRemove: () => onChange({ ...filters, rule_id: undefined }),
+    });
+  }
+  if (filters.q) {
+    activeFilterChips.push({
+      key: 'q',
+      label: t('notifications.inbox.filter.searchLabel', 'Search'),
+      value: filters.q,
+      onRemove: () => onChange({ ...filters, q: undefined }),
+    });
+  }
+  if (filters.from) {
+    activeFilterChips.push({
+      key: 'from',
+      label: t('notifications.inbox.filter.from', 'From'),
+      value: filters.from.slice(0, 10),
+      onRemove: () => onChange({ ...filters, from: undefined }),
+    });
+  }
+  if (filters.to) {
+    activeFilterChips.push({
+      key: 'to',
+      label: t('notifications.inbox.filter.to', 'To'),
+      value: filters.to.slice(0, 10),
+      onRemove: () => onChange({ ...filters, to: undefined }),
+    });
+  }
+
+  const handleClearAll = () => {
+    onChange({
+      ...filters,
+      severity: undefined,
+      vehicle_id: undefined,
+      rule_id: undefined,
+      q: undefined,
+      from: undefined,
+      to: undefined,
+    });
+  };
+
   return (
     <div className="space-y-3">
       <FilterBar>
@@ -137,6 +210,7 @@ export function NotificationFilterBar({
           onChange={setQuery}
           placeholder={t('notifications.inbox.filter.searchPlaceholder', 'Search messages…')}
           className="w-full sm:w-72"
+          historyScope="notifications"
         />
       </FilterBar>
 
@@ -146,6 +220,8 @@ export function NotificationFilterBar({
         onStartDateChange={setFrom}
         onEndDateChange={setTo}
       />
+
+      <ActiveFilterChips filters={activeFilterChips} onClearAll={handleClearAll} />
     </div>
   );
 }

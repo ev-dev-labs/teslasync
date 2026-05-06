@@ -11,7 +11,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // Worker subscribes to the internal MQTT export topic and processes
@@ -52,7 +51,7 @@ func (w *Worker) Start(ctx context.Context, mqttClient pahomqtt.Client) {
 		}
 
 		token := mqttClient.Subscribe(InternalTopic, 1, func(_ pahomqtt.Client, msg pahomqtt.Message) {
-			var req models.ExportJobRequest
+			var req JobRequest
 			if err := json.Unmarshal(msg.Payload(), &req); err != nil {
 				log.Error().Err(err).Msg("export worker: invalid message")
 				return
@@ -85,7 +84,7 @@ func (w *Worker) Start(ctx context.Context, mqttClient pahomqtt.Client) {
 	log.Info().Msg("export worker stopped")
 }
 
-func (w *Worker) processJob(ctx context.Context, req *models.ExportJobRequest) {
+func (w *Worker) processJob(ctx context.Context, req *JobRequest) {
 	startTime := time.Now()
 	log.Info().Str("job_id", req.JobID).Str("type", req.Type).Str("format", req.Format).Msg("export worker: processing job")
 
@@ -180,7 +179,7 @@ func (w *Worker) publishStatusEvent(jobID, status, jobType, errMsg string, recor
 }
 
 // Publish sends an export job request to the MQTT topic for async processing.
-func Publish(mqttClient pahomqtt.Client, req *models.ExportJobRequest) error {
+func Publish(mqttClient pahomqtt.Client, req *JobRequest) error {
 	if mqttClient == nil || !mqttClient.IsConnected() {
 		return fmt.Errorf("MQTT not available")
 	}

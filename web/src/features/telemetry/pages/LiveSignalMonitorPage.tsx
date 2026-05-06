@@ -258,6 +258,7 @@ export default function LiveSignalMonitorPage() {
 
           <div ref={tableRef} className="overflow-auto max-h-[65vh] rounded-lg border border-[var(--border-subtle)]">
             <DataTable<SignalEntry>
+              tableId="telemetry:live-signals"
               columns={signalColumns}
               data={filteredEntries}
               keyExtractor={(entry) => entry.id}

@@ -26,7 +26,12 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
 
   return (
     <FadeIn>
-      <ChartContainer title={t('driveDetail.elevProfile', 'Elevation Profile')} height={220}>
+      {/* chart-a11y:no-table dense per-sample elevation+speed trace; gain/loss/net stats appear above the chart */}
+      <ChartContainer
+        title={t('driveDetail.elevProfile', 'Elevation Profile')}
+        ariaLabel={t('driveDetail.elevProfile.aria', 'Elevation and speed area+line chart over the drive timeline')}
+        height={220}
+      >
         {chartData.length > 1 ? (
           <>
             <div className="flex items-center gap-4 mb-2 text-xs">

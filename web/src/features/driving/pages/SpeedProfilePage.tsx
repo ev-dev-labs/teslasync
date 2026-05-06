@@ -165,7 +165,12 @@ export default function SpeedProfilePage() {
 
           {/* Speed distribution bar chart */}
           <FadeIn>
-            <ChartContainer title={t('speedProfile.distribution', 'Speed Distribution')} height={280}>
+            {/* chart-a11y:no-table per-bucket detail cards (below) provide the same numbers in an accessible format */}
+            <ChartContainer
+              title={t('speedProfile.distribution', 'Speed Distribution')}
+              ariaLabel={t('speedProfile.distribution.aria', 'Speed-bucket time-share distribution bar chart')}
+              height={280}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={(data.distribution ?? []).map((b) => {
                   const range = b.speedBucket ?? b.speed_bucket ?? '';
@@ -236,8 +241,10 @@ export default function SpeedProfilePage() {
           {/* Speed vs Efficiency scatter */}
           {scatterData.length > 3 && (
             <FadeIn>
+              {/* chart-a11y:no-table per-drive scatter cloud — too dense for a tabular fallback */}
               <ChartContainer
                 title={t('speedProfile.effVsSpeed', 'Efficiency vs Speed')}
+                ariaLabel={t('speedProfile.effVsSpeed.aria', 'Per-drive efficiency versus speed scatter plot')}
                 subtitle={`${t('speedProfile.lower', 'Lower')} ${efficiencyUnit} = ${t('speedProfile.better', 'better')}`}
                 height={240}
               >

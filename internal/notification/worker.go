@@ -18,6 +18,7 @@ import (
 type Worker struct {
 	repo       *database.NotificationRepo
 	metricRepo *database.NotificationMetricRepo
+	decider    QuietHoursDecider
 	wg         sync.WaitGroup
 }
 
@@ -27,6 +28,15 @@ func NewWorker(db *database.DB) *Worker {
 		repo:       database.NewNotificationRepo(db),
 		metricRepo: database.NewNotificationMetricRepo(db),
 	}
+}
+
+// WithQuietHoursDecider wires a Do-Not-Disturb decider that is consulted
+// before every delivery (Phase-46 / Prompt 19). Passing nil disables the
+// check, which is the historical behaviour. Returns the worker for
+// fluent setup so cmd/notification-worker can chain construction.
+func (w *Worker) WithQuietHoursDecider(d QuietHoursDecider) *Worker {
+	w.decider = d
+	return w
 }
 
 // Start subscribes to the internal notification topic and processes messages.
@@ -84,6 +94,23 @@ func (w *Worker) Start(ctx context.Context, mqttClient pahomqtt.Client) {
 }
 
 func (w *Worker) processNotification(ctx context.Context, req *Request) {
+	// Phase-46 / Prompt 19 — Do-Not-Disturb gate. When a quiet-hours
+	// window is active and the request severity is not on its bypass
+	// list, skip delivery and persist a deferred row so the replay loop
+	// in cmd/notification-worker can dispatch it later.
+	if w.decider != nil && req.ChannelID > 0 {
+		shouldDefer, win, err := w.decider.ShouldDefer(ctx, req.Severity, time.Now())
+		if err != nil {
+			// Don't block delivery on a transient lookup failure;
+			// fall through to the normal Send path so the user still
+			// gets the notification.
+			log.Warn().Err(err).Str("channel", req.ChannelType).Msg("notification: quiet-hours decider failed, delivering anyway")
+		} else if shouldDefer {
+			w.persistDeferred(ctx, req, win)
+			return
+		}
+	}
+
 	startTime := time.Now()
 	var lastErr error
 
@@ -170,6 +197,127 @@ func (w *Worker) Shutdown() {
 	case <-time.After(30 * time.Second):
 		log.Warn().Msg("shutdown timeout exceeded (30s), forcing exit with in-flight work abandoned")
 	}
+}
+
+// persistDeferred writes a notification_logs row in the deferred_dnd
+// state. The replay loop in cmd/notification-worker promotes the row to
+// 'sent' once the matching window ends. (Phase-46 / Prompt 19.)
+func (w *Worker) persistDeferred(ctx context.Context, req *Request, win *models.QuietHoursWindow) {
+	logEntry := &models.NotificationLog{
+		ChannelID: req.ChannelID,
+		Title:     req.Title,
+		Message:   req.Message,
+		Status:    StatusDeferredDND,
+		Severity:  req.Severity,
+	}
+	if req.AlertID > 0 {
+		alertID := req.AlertID
+		logEntry.AlertID = &alertID
+	}
+	if err := w.repo.CreateLog(ctx, logEntry); err != nil {
+		log.Warn().Err(err).Msg("notification: failed to create deferred_dnd log row")
+	}
+	ev := log.Info().
+		Str("channel", req.ChannelType).
+		Str("title", req.Title).
+		Str("severity", req.Severity)
+	if win != nil {
+		ev = ev.
+			Int64("quiet_hours_window_id", win.ID).
+			Str("quiet_hours_user", win.UserID).
+			Str("quiet_hours_tz", win.Timezone)
+	}
+	ev.Msg("notification deferred (DND active)")
+}
+
+// ReplayDeferred examines every deferred_dnd row and re-dispatches the
+// ones whose window has ended. Each row is sent through the supplied
+// dispatch function (typically `notification.Send`) and marked sent on
+// success. Returns the number of rows replayed and the number that
+// failed; non-fatal so the caller's outer loop can keep ticking.
+//
+// Channels are looked up at replay time so disabled / deleted channels
+// short-circuit cleanly (the row is marked failed with a descriptive
+// error message rather than blocking the replay queue forever).
+//
+// Phase-46 / Prompt 19.
+func (w *Worker) ReplayDeferred(ctx context.Context) (replayed, failed int, err error) {
+	if w == nil || w.repo == nil {
+		return 0, 0, nil
+	}
+	deferred, err := w.repo.ListDeferred(ctx, 200)
+	if err != nil {
+		return 0, 0, err
+	}
+	if len(deferred) == 0 {
+		return 0, 0, nil
+	}
+	now := time.Now()
+	for _, row := range deferred {
+		if row == nil {
+			continue
+		}
+		// Re-evaluate against current windows. If still deferred, skip.
+		if w.decider != nil {
+			stillDefer, _, evalErr := w.decider.ShouldDefer(ctx, row.Severity, now)
+			if evalErr != nil {
+				log.Warn().Err(evalErr).Int64("log_id", row.ID).Msg("notification replay: decider failed")
+				continue
+			}
+			if stillDefer {
+				continue
+			}
+		}
+		ch, chErr := w.repo.GetChannel(ctx, row.ChannelID)
+		if chErr != nil || ch == nil {
+			msg := "channel not found at replay time"
+			if chErr != nil {
+				msg = "channel lookup failed: " + chErr.Error()
+			}
+			if mErr := w.repo.MarkLogFailed(ctx, row.ID, msg, 0); mErr != nil {
+				log.Warn().Err(mErr).Int64("log_id", row.ID).Msg("notification replay: mark_failed failed")
+			}
+			failed++
+			continue
+		}
+		if !ch.Enabled {
+			if mErr := w.repo.MarkLogFailed(ctx, row.ID, "channel disabled at replay time", 0); mErr != nil {
+				log.Warn().Err(mErr).Int64("log_id", row.ID).Msg("notification replay: mark_failed failed")
+			}
+			failed++
+			continue
+		}
+		req := &Request{
+			ChannelType: ch.Type,
+			Config:      ch.Config,
+			Title:       row.Title,
+			Message:     row.Message,
+			ChannelID:   ch.ID,
+			Severity:    row.Severity,
+		}
+		if row.AlertID != nil {
+			req.AlertID = *row.AlertID
+		}
+		started := time.Now()
+		if sendErr := Send(req); sendErr != nil {
+			latency := int(time.Since(started).Milliseconds())
+			if mErr := w.repo.MarkLogFailed(ctx, row.ID, sendErr.Error(), latency); mErr != nil {
+				log.Warn().Err(mErr).Int64("log_id", row.ID).Msg("notification replay: mark_failed failed")
+			}
+			failed++
+			continue
+		}
+		latency := int(time.Since(started).Milliseconds())
+		if mErr := w.repo.MarkLogSent(ctx, row.ID, time.Now(), latency); mErr != nil {
+			log.Warn().Err(mErr).Int64("log_id", row.ID).Msg("notification replay: mark_sent failed")
+		}
+		if mErr := w.metricRepo.Record(ctx, ch.ID, true, latency); mErr != nil {
+			log.Warn().Err(mErr).Msg("notification replay: failed to record metric")
+		}
+		replayed++
+		log.Info().Int64("log_id", row.ID).Str("channel", ch.Type).Msg("notification replayed after DND window ended")
+	}
+	return replayed, failed, nil
 }
 
 // Publish sends a notification request to the MQTT topic for async delivery.

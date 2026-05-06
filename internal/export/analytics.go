@@ -14,7 +14,7 @@ import (
 // processAnalytics generates a fleet analytics report as JSON.
 // This mirrors the computation from analytics_handler.Fleet() but runs
 // asynchronously in the export worker, avoiding HTTP timeouts for large fleets.
-func (p *Processor) processAnalytics(ctx context.Context, req *models.ExportJobRequest) (*ProcessResult, error) {
+func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*ProcessResult, error) {
 	vehicles, err := p.vehicleRepo.GetAll(ctx)
 	if err != nil {
 		return nil, err

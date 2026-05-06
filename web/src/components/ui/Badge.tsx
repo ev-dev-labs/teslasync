@@ -32,6 +32,14 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
       ref={ref}
       className={cn(
         'inline-flex items-center gap-1 rounded-full font-medium',
+        // Phase-46 / Prompt 11 — forced-colors mode: badge backgrounds
+        // (e.g. `bg-emerald-100`) are remapped to the OS Canvas colour
+        // and the visual chip vanishes against panel surfaces. Add a
+        // system-colour border so the chip outline survives, regardless
+        // of variant. We do NOT use `forced-color-adjust: none` here —
+        // the user's OS palette wins for body chips; the border alone
+        // is enough to keep them perceivable.
+        'forced-colors:border forced-colors:border-[CanvasText]',
         variants[variant],
         badgeSizes[size],
         className,

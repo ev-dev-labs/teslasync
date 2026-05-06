@@ -308,6 +308,12 @@ export default function EfficiencyPage() {
           <FadeIn>
             <ChartContainer
               title={t('efficiency.dailyTrend', { unit: efficiencyUnit, defaultValue: 'Daily Efficiency ({{unit}})' })}
+              ariaLabel={t('efficiency.dailyTrend.aria', 'Daily efficiency trend area chart')}
+              data={dailyTrend.map((d) => ({ date: d.date, efficiency: d.efficiency }))}
+              dataColumns={[
+                { key: 'date', label: t('efficiency.col.date', 'Date') },
+                { key: 'efficiency', label: efficiencyUnit },
+              ]}
               height={240}
               annotations={{ vehicleId, scope: 'efficiency', chartId: 'efficiency-daily-trend' }}
             >
@@ -328,7 +334,16 @@ export default function EfficiencyPage() {
           </FadeIn>
 
           <FadeIn>
-            <ChartContainer title={t('efficiency.speedDist', 'Efficiency by Speed Range')} height={240}>
+            <ChartContainer
+              title={t('efficiency.speedDist', 'Efficiency by Speed Range')}
+              ariaLabel={t('efficiency.speedDist.aria', 'Efficiency by speed-range bar chart')}
+              data={speedDist.map((b) => ({ range: b.range, avgEff: b.avgEff }))}
+              dataColumns={[
+                { key: 'range', label: t('efficiency.col.range', 'Speed range') },
+                { key: 'avgEff', label: `${t('efficiency.avg', 'Avg')} ${efficiencyUnit}` },
+              ]}
+              height={240}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={speedDist}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -351,7 +366,12 @@ export default function EfficiencyPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {speedVsEff.length > 3 && (
           <FadeIn>
-            <ChartContainer title={t('efficiency.speedVsEfficiency', 'Speed vs Efficiency')} height={220}>
+            {/* chart-a11y:no-table per-drive scatter cloud — fall back to ariaLabel only; aggregated stats are visible above */}
+            <ChartContainer
+              title={t('efficiency.speedVsEfficiency', 'Speed vs Efficiency')}
+              ariaLabel={t('efficiency.speedVsEfficiency.aria', 'Speed versus efficiency scatter plot')}
+              height={220}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <ScatterChart>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -367,7 +387,12 @@ export default function EfficiencyPage() {
 
         {tempVsEff.length > 3 && (
           <FadeIn>
-            <ChartContainer title={t('efficiency.tempVsEfficiency', 'Temperature vs Efficiency')} height={220}>
+            {/* chart-a11y:no-table per-drive scatter cloud — fall back to ariaLabel only; bucketed temperature table follows below */}
+            <ChartContainer
+              title={t('efficiency.tempVsEfficiency', 'Temperature vs Efficiency')}
+              ariaLabel={t('efficiency.tempVsEfficiency.aria', 'Temperature versus efficiency scatter plot')}
+              height={220}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <ScatterChart>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -390,6 +415,7 @@ export default function EfficiencyPage() {
           </h3>
           {tempBuckets.length > 0 ? (
             <DataTable
+              tableId="driving:efficiency-temp-buckets"
               data={tempBuckets}
               keyExtractor={(b) => b.range}
               compact

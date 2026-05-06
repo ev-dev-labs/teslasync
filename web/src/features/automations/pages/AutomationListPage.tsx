@@ -7,6 +7,7 @@ import { BulkActionToolbar } from '@/components/data-display';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { EmptyState, Skeleton, ErrorDisplay } from '@/components/feedback';
+import { VisuallyHidden } from '@/components/a11y';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
@@ -139,9 +140,9 @@ export default function AutomationListPage() {
               <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-2)] text-left text-[var(--text-secondary)]">
                 <tr>
                   <th className="w-12 px-3 py-3">
-                    <label className="sr-only" htmlFor="automations-master">
+                    <VisuallyHidden as="label" htmlFor="automations-master">
                       {t('bulk.selectAll', 'Select all')}
-                    </label>
+                    </VisuallyHidden>
                     <input
                       id="automations-master"
                       type="checkbox"
@@ -170,9 +171,9 @@ export default function AutomationListPage() {
                       data-selected={checked || undefined}
                     >
                       <td className="px-3 py-3">
-                        <label className="sr-only" htmlFor={`automation-${a.id}`}>
+                        <VisuallyHidden as="label" htmlFor={`automation-${a.id}`}>
                           {t('bulk.selectRow', 'Select row')}
-                        </label>
+                        </VisuallyHidden>
                         <input
                           id={`automation-${a.id}`}
                           type="checkbox"

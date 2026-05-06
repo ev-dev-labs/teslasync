@@ -24,10 +24,17 @@ export {
   useBulkDisableRules,
   useTestAlertRule,
   useSnoozeAlertRule,
+  // Phase-46 / Prompt 20 — alert ack + audit timeline.
+  useAlertDetail,
+  useAcknowledgeAlert,
+  useCommentAlert,
+  useReopenAlert,
 } from './useNotifications';
 
 export type {
   Alert,
+  AlertDetail,
+  AlertEvent,
   AlertRule,
   AlertRuleInput,
   AlertRuleSaveRequest,
@@ -38,4 +45,7 @@ export type {
   AlertTestTarget,
   ComputedMetricPreview,
   ComputedMetricSummary,
+  // Phase-46 / Prompt 20 — alert ack + audit timeline.
+  AcknowledgeAlertInput,
+  CommentAlertInput,
 } from './useNotifications';

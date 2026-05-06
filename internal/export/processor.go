@@ -12,7 +12,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // Processor generates export files from database data.
@@ -41,7 +40,7 @@ type ProcessResult struct {
 }
 
 // Process executes the export job and returns the generated file.
-func (p *Processor) Process(ctx context.Context, req *models.ExportJobRequest) (*ProcessResult, error) {
+func (p *Processor) Process(ctx context.Context, req *JobRequest) (*ProcessResult, error) {
 	switch req.Type {
 	case string(TypeDrives):
 		return p.processDrives(ctx, req)
@@ -62,20 +61,43 @@ func (p *Processor) Process(ctx context.Context, req *models.ExportJobRequest) (
 	}
 }
 
-func (p *Processor) processDrives(ctx context.Context, req *models.ExportJobRequest) (*ProcessResult, error) {
+// driveRow is the canonical in-memory shape for a single drive row in the
+// drives export. Lifted to package scope so cellLookup helpers can be
+// pure functions instead of closures over inline anonymous structs.
+type driveRow struct {
+	ID        int64   `json:"id"`
+	VehicleID int64   `json:"vehicle_id"`
+	StartDate string  `json:"start_date"`
+	EndDate   string  `json:"end_date"`
+	Distance  float64 `json:"distance"`
+	Duration  float64 `json:"duration_min"`
+	SpeedMax  float64 `json:"speed_max"`
+}
+
+// chargingRow is the canonical in-memory shape for a single charging
+// session row in the charging export. Lifted to package scope for the
+// same reason as driveRow.
+type chargingRow struct {
+	ID           int64   `json:"id"`
+	VehicleID    int64   `json:"vehicle_id"`
+	StartDate    string  `json:"start_date"`
+	EndDate      string  `json:"end_date"`
+	EnergyAdded  float64 `json:"energy_added_kwh"`
+	StartBattery int     `json:"start_battery"`
+	EndBattery   int     `json:"end_battery"`
+	ChargerPower float64 `json:"charger_power"`
+	Duration     float64 `json:"duration_min"`
+}
+
+func (p *Processor) processDrives(ctx context.Context, req *JobRequest) (*ProcessResult, error) {
+	cols, err := resolveColumnSelection(string(TypeDrives), req.Columns)
+	if err != nil {
+		return nil, err
+	}
+
 	vehicles, err := p.vehicleRepo.GetAll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("fetch vehicles: %w", err)
-	}
-
-	type exportDrive struct {
-		ID        int64   `json:"id"`
-		VehicleID int64   `json:"vehicle_id"`
-		StartDate string  `json:"start_date"`
-		EndDate   string  `json:"end_date"`
-		Distance  float64 `json:"distance"`
-		Duration  float64 `json:"duration_min"`
-		SpeedMax  float64 `json:"speed_max"`
 	}
 
 	var startTime, endTime time.Time
@@ -86,7 +108,7 @@ func (p *Processor) processDrives(ctx context.Context, req *models.ExportJobRequ
 		endTime = *req.EndDate
 	}
 
-	var allDrives []exportDrive
+	var allDrives []driveRow
 	for _, v := range vehicles {
 		if req.VehicleID != nil && v.ID != *req.VehicleID {
 			continue
@@ -102,7 +124,7 @@ func (p *Processor) processDrives(ctx context.Context, req *models.ExportJobRequ
 				break
 			}
 			for _, d := range drives {
-				ed := exportDrive{
+				ed := driveRow{
 					ID:        d.ID,
 					VehicleID: d.VehicleID,
 					StartDate: d.StartTs.Format("2006-01-02T15:04:05Z"),
@@ -122,26 +144,41 @@ func (p *Processor) processDrives(ctx context.Context, req *models.ExportJobRequ
 		}
 	}
 
+	colNames := columnNames(cols)
+
 	var buf bytes.Buffer
 	ext := req.Format
 	if req.Format == "json" {
-		if err := json.NewEncoder(&buf).Encode(allDrives); err != nil {
-			return nil, fmt.Errorf("encode json: %w", err)
+		if len(req.Columns) == 0 {
+			// Backwards-compat path: keep the historical strongly-typed
+			// shape (slice of structs) so existing consumers parsing
+			// drives JSON byte-for-byte are unaffected.
+			if err := json.NewEncoder(&buf).Encode(allDrives); err != nil {
+				return nil, fmt.Errorf("encode json: %w", err)
+			}
+		} else {
+			ordered := make([]map[string]any, 0, len(allDrives))
+			for _, d := range allDrives {
+				row := make(map[string]any, len(colNames))
+				for _, c := range colNames {
+					row[c] = jsonCellForDrive(d, c)
+				}
+				ordered = append(ordered, row)
+			}
+			if err := json.NewEncoder(&buf).Encode(ordered); err != nil {
+				return nil, fmt.Errorf("encode json: %w", err)
+			}
 		}
 	} else {
 		ext = "csv"
 		cw := csv.NewWriter(&buf)
-		_ = cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "distance", "duration_min", "speed_max"})
+		_ = cw.Write(colNames)
 		for _, d := range allDrives {
-			_ = cw.Write([]string{
-				strconv.FormatInt(d.ID, 10),
-				strconv.FormatInt(d.VehicleID, 10),
-				d.StartDate,
-				d.EndDate,
-				fmt.Sprintf("%.2f", d.Distance),
-				fmt.Sprintf("%.1f", d.Duration),
-				fmt.Sprintf("%.1f", d.SpeedMax),
-			})
+			row := make([]string, len(colNames))
+			for i, c := range colNames {
+				row[i] = csvCellForDrive(d, c)
+			}
+			_ = cw.Write(row)
 		}
 		cw.Flush()
 	}
@@ -153,22 +190,64 @@ func (p *Processor) processDrives(ctx context.Context, req *models.ExportJobRequ
 	}, nil
 }
 
-func (p *Processor) processCharging(ctx context.Context, req *models.ExportJobRequest) (*ProcessResult, error) {
+// csvCellForDrive renders a single drive cell as the CSV string the
+// pre-Phase-46/62 writer would have produced. Keep the formatting in
+// lockstep with the legacy column-by-column cw.Write call so default
+// (no-Columns) output is byte-for-byte identical.
+func csvCellForDrive(d driveRow, col string) string {
+	switch col {
+	case "id":
+		return strconv.FormatInt(d.ID, 10)
+	case "vehicle_id":
+		return strconv.FormatInt(d.VehicleID, 10)
+	case "start_date":
+		return d.StartDate
+	case "end_date":
+		return d.EndDate
+	case "distance":
+		return fmt.Sprintf("%.2f", d.Distance)
+	case "duration_min":
+		return fmt.Sprintf("%.1f", d.Duration)
+	case "speed_max":
+		return fmt.Sprintf("%.1f", d.SpeedMax)
+	default:
+		return ""
+	}
+}
+
+// jsonCellForDrive returns the typed value for a drive column suitable
+// for JSON encoding. Used by the column-filtered JSON path so numeric
+// columns survive as numbers, not strings.
+func jsonCellForDrive(d driveRow, col string) any {
+	switch col {
+	case "id":
+		return d.ID
+	case "vehicle_id":
+		return d.VehicleID
+	case "start_date":
+		return d.StartDate
+	case "end_date":
+		return d.EndDate
+	case "distance":
+		return d.Distance
+	case "duration_min":
+		return d.Duration
+	case "speed_max":
+		return d.SpeedMax
+	default:
+		return nil
+	}
+}
+
+func (p *Processor) processCharging(ctx context.Context, req *JobRequest) (*ProcessResult, error) {
+	cols, err := resolveColumnSelection(string(TypeCharging), req.Columns)
+	if err != nil {
+		return nil, err
+	}
+
 	vehicles, err := p.vehicleRepo.GetAll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("fetch vehicles: %w", err)
-	}
-
-	type exportSession struct {
-		ID           int64   `json:"id"`
-		VehicleID    int64   `json:"vehicle_id"`
-		StartDate    string  `json:"start_date"`
-		EndDate      string  `json:"end_date"`
-		EnergyAdded  float64 `json:"energy_added_kwh"`
-		StartBattery int     `json:"start_battery"`
-		EndBattery   int     `json:"end_battery"`
-		ChargerPower float64 `json:"charger_power"`
-		Duration     float64 `json:"duration_min"`
 	}
 
 	var startTime, endTime time.Time
@@ -179,7 +258,7 @@ func (p *Processor) processCharging(ctx context.Context, req *models.ExportJobRe
 		endTime = *req.EndDate
 	}
 
-	var allSessions []exportSession
+	var allSessions []chargingRow
 	for _, v := range vehicles {
 		if req.VehicleID != nil && v.ID != *req.VehicleID {
 			continue
@@ -195,7 +274,7 @@ func (p *Processor) processCharging(ctx context.Context, req *models.ExportJobRe
 				break
 			}
 			for _, s := range sessions {
-				es := exportSession{
+				es := chargingRow{
 					ID:           s.ID,
 					VehicleID:    s.VehicleID,
 					StartDate:    s.StartTs.Format("2006-01-02T15:04:05Z"),
@@ -217,28 +296,38 @@ func (p *Processor) processCharging(ctx context.Context, req *models.ExportJobRe
 		}
 	}
 
+	colNames := columnNames(cols)
+
 	var buf bytes.Buffer
 	ext := req.Format
 	if req.Format == "json" {
-		if err := json.NewEncoder(&buf).Encode(allSessions); err != nil {
-			return nil, fmt.Errorf("encode json: %w", err)
+		if len(req.Columns) == 0 {
+			if err := json.NewEncoder(&buf).Encode(allSessions); err != nil {
+				return nil, fmt.Errorf("encode json: %w", err)
+			}
+		} else {
+			ordered := make([]map[string]any, 0, len(allSessions))
+			for _, s := range allSessions {
+				row := make(map[string]any, len(colNames))
+				for _, c := range colNames {
+					row[c] = jsonCellForCharging(s, c)
+				}
+				ordered = append(ordered, row)
+			}
+			if err := json.NewEncoder(&buf).Encode(ordered); err != nil {
+				return nil, fmt.Errorf("encode json: %w", err)
+			}
 		}
 	} else {
 		ext = "csv"
 		cw := csv.NewWriter(&buf)
-		_ = cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "energy_added_kwh", "start_battery", "end_battery", "charger_power", "duration_min"})
+		_ = cw.Write(colNames)
 		for _, s := range allSessions {
-			_ = cw.Write([]string{
-				strconv.FormatInt(s.ID, 10),
-				strconv.FormatInt(s.VehicleID, 10),
-				s.StartDate,
-				s.EndDate,
-				fmt.Sprintf("%.2f", s.EnergyAdded),
-				strconv.Itoa(s.StartBattery),
-				strconv.Itoa(s.EndBattery),
-				fmt.Sprintf("%.1f", s.ChargerPower),
-				fmt.Sprintf("%.1f", s.Duration),
-			})
+			row := make([]string, len(colNames))
+			for i, c := range colNames {
+				row[i] = csvCellForCharging(s, c)
+			}
+			_ = cw.Write(row)
 		}
 		cw.Flush()
 	}
@@ -248,6 +337,59 @@ func (p *Processor) processCharging(ctx context.Context, req *models.ExportJobRe
 		Data:        buf.Bytes(),
 		RecordCount: len(allSessions),
 	}, nil
+}
+
+// csvCellForCharging matches the legacy column-by-column cw.Write call.
+func csvCellForCharging(s chargingRow, col string) string {
+	switch col {
+	case "id":
+		return strconv.FormatInt(s.ID, 10)
+	case "vehicle_id":
+		return strconv.FormatInt(s.VehicleID, 10)
+	case "start_date":
+		return s.StartDate
+	case "end_date":
+		return s.EndDate
+	case "energy_added_kwh":
+		return fmt.Sprintf("%.2f", s.EnergyAdded)
+	case "start_battery":
+		return strconv.Itoa(s.StartBattery)
+	case "end_battery":
+		return strconv.Itoa(s.EndBattery)
+	case "charger_power":
+		return fmt.Sprintf("%.1f", s.ChargerPower)
+	case "duration_min":
+		return fmt.Sprintf("%.1f", s.Duration)
+	default:
+		return ""
+	}
+}
+
+// jsonCellForCharging returns typed values for the column-filtered JSON
+// charging-export path so numbers stay numeric in the output.
+func jsonCellForCharging(s chargingRow, col string) any {
+	switch col {
+	case "id":
+		return s.ID
+	case "vehicle_id":
+		return s.VehicleID
+	case "start_date":
+		return s.StartDate
+	case "end_date":
+		return s.EndDate
+	case "energy_added_kwh":
+		return s.EnergyAdded
+	case "start_battery":
+		return s.StartBattery
+	case "end_battery":
+		return s.EndBattery
+	case "charger_power":
+		return s.ChargerPower
+	case "duration_min":
+		return s.Duration
+	default:
+		return nil
+	}
 }
 
 // allowedBackupTables mirrors the whitelist from the backup handler.
@@ -260,7 +402,8 @@ var allowedBackupTables = map[string]bool{
 	"visited_locations": true, "trips": true,
 }
 
-func (p *Processor) processBackup(ctx context.Context, req *models.ExportJobRequest) (*ProcessResult, error) {
+func (p *Processor) processBackup(ctx context.Context, req *JobRequest) (*ProcessResult, error) {
+	_ = req // backup ignores per-job options today (full snapshot only)
 	backup := make(map[string]interface{})
 	totalRecords := 0
 

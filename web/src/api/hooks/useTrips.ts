@@ -27,7 +27,7 @@ export function useTrips(params?: UseTripParams) {
 
   return useQuery({
     queryKey: [...tripKeys.all, params ?? {}],
-    queryFn: () => request<Trip[]>(qs ? `/trips?${qs}` : '/trips'),
+    queryFn: ({ signal }) => request<Trip[]>(qs ? `/trips?${qs}` : '/trips', { signal }),
     select: safeArray,
   });
 }
@@ -35,7 +35,7 @@ export function useTrips(params?: UseTripParams) {
 export function useTrip(id: string) {
   return useQuery({
     queryKey: tripKeys.detail(id),
-    queryFn: () => request<Trip>(`/trips/${id}`),
+    queryFn: ({ signal }) => request<Trip>(`/trips/${id}`, { signal }),
     enabled: !!id,
   });
 }

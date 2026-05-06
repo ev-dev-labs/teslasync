@@ -20,8 +20,10 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useToast } from '@/components/feedback/Toast';
 import { formatDurationMsLong, formatRelative } from '@/lib/dateFormat';
 import { request } from '@/api/client';
-import { useCreateAccountExport } from '@/api/hooks/useExports';
+import { useCreateAccountExport, useExportColumns } from '@/api/hooks/useExports';
 import { JobProgressDrawer } from '@/components/feedback/JobProgressDrawer';
+import { RequiresAuth } from '@/components/feedback/RequiresAuth';
+import { ScheduledExportsPanel } from './ScheduledExportsPanel';
 import type { Vehicle } from '@/api/types';
 import { Icons } from '@/lib/icons';
 
@@ -54,6 +56,10 @@ interface ExportSubmitPayload {
   vehicle_id?: number;
   start?: string;
   end?: string;
+  /** Phase-46/62 — caller-supplied column allowlist. Omitted when the
+   *  user kept the default selection (every column) so the backend
+   *  preserves byte-for-byte legacy behaviour. */
+  columns?: string[];
 }
 
 interface DataOverview {
@@ -497,6 +503,18 @@ function ExportWizard({
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
   const [useCustomRange, setUseCustomRange] = useState(false);
+  // Phase-46/62 — column allowlist state. `null` means "user has not
+  // touched the picker; submit without `columns` so backend preserves
+  // legacy byte-for-byte behaviour". A non-null value is the explicit
+  // ordered allowlist the backend should honour.
+  const [selectedColumns, setSelectedColumns] = useState<string[] | null>(null);
+
+  // Reset the column selection whenever the export type changes — a
+  // catalog from the previous type is meaningless against the new one.
+  const handleExportTypeChange = useCallback((next: ExportType) => {
+    setExportType(next);
+    setSelectedColumns(null);
+  }, []);
 
   const handlePresetChange = useCallback((days: number) => {
     setPresetDays(days);
@@ -518,8 +536,11 @@ function ExportWizard({
       payload.start = daysAgo(presetDays);
       payload.end = new Date().toISOString().split('T')[0];
     }
+    if (selectedColumns !== null && selectedColumns.length > 0) {
+      payload.columns = selectedColumns;
+    }
     onSubmit(payload);
-  }, [exportType, exportFormat, vehicleId, presetDays, customStart, customEnd, useCustomRange, onSubmit]);
+  }, [exportType, exportFormat, vehicleId, presetDays, customStart, customEnd, useCustomRange, selectedColumns, onSubmit]);
 
   const vehicleOptions = useMemo(() => {
     const opts = [{ value: '', label: t('All Vehicles') }];
@@ -545,7 +566,7 @@ function ExportWizard({
         <p className="text-xs font-medium text-[var(--text-secondary)] mb-2 uppercase tracking-wider">
           {t('dataExport.wizard.step1', 'STEP 1 — Select Data Type')}
         </p>
-        <ExportTypeSelector selected={exportType} onChange={setExportType} />
+        <ExportTypeSelector selected={exportType} onChange={handleExportTypeChange} />
       </div>
 
       {/* Step 2: Format */}
@@ -555,6 +576,13 @@ function ExportWizard({
         </p>
         <FormatSelector selected={exportFormat} onChange={setExportFormat} />
       </div>
+
+      {/* Step 2.5 (Phase-46/62): Columns — only when the catalog supports it */}
+      <ColumnPickerSection
+        exportType={exportType}
+        selectedColumns={selectedColumns}
+        onChange={setSelectedColumns}
+      />
 
       {/* Step 3: Vehicle */}
       {vehicles && vehicles.length > 0 && (
@@ -610,6 +638,178 @@ function ExportWizard({
         {t('Start Export')}
       </Button>
     </GlassPanel>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Column Picker (Phase-46 / Prompt 62)                                */
+/* ------------------------------------------------------------------ */
+
+/** Maps the page's export-type identifiers (`drives`, `charging`, ...) to
+ *  the backend catalog identifiers. The page exposes a few extra options
+ *  (`full_backup`, `maintenance`, `energy`) that don't have a fixed
+ *  column catalog — for those we return an empty string so the hook
+ *  short-circuits and the picker hides itself. */
+function catalogTypeFor(t: ExportType): string {
+  switch (t) {
+    case 'drives':
+      return 'drives';
+    case 'charging':
+      return 'charging';
+    default:
+      return '';
+  }
+}
+
+function ColumnPickerSection({
+  exportType,
+  selectedColumns,
+  onChange,
+}: {
+  exportType: ExportType;
+  selectedColumns: string[] | null;
+  onChange: (next: string[] | null) => void;
+}) {
+  const { t } = useTranslation();
+  const catalogType = catalogTypeFor(exportType);
+  const { data, isLoading, isError } = useExportColumns(catalogType || undefined);
+
+  // Hide the picker entirely when the export type doesn't publish a
+  // catalog. The backend will continue to write all of its native
+  // columns — this matches today's behaviour exactly.
+  if (!catalogType) {
+    return null;
+  }
+  if (isLoading) {
+    return (
+      <div className="mb-5">
+        <p className="text-xs font-medium text-[var(--text-secondary)] mb-2 uppercase tracking-wider">
+          {t('dataExport.columns.title', 'STEP 2½ — Columns')}
+        </p>
+        <Skeleton className="h-24 w-full" />
+      </div>
+    );
+  }
+  if (isError || !data || !data.supports_selection || data.columns.length === 0) {
+    return null;
+  }
+
+  // The "selected" set drives the checkbox UI. Default = every column.
+  const allColumnNames = data.columns.map((c) => c.name);
+  const effectiveSelected = selectedColumns ?? allColumnNames;
+  const selectedSet = new Set(effectiveSelected);
+  const allSelected =
+    effectiveSelected.length === allColumnNames.length &&
+    allColumnNames.every((n) => selectedSet.has(n));
+
+  const requiredSet = new Set(
+    data.columns.filter((c) => c.always_included).map((c) => c.name),
+  );
+
+  const toggleColumn = (name: string) => {
+    if (requiredSet.has(name)) return;
+    const next = new Set(effectiveSelected);
+    if (next.has(name)) {
+      next.delete(name);
+    } else {
+      next.add(name);
+    }
+    // Preserve catalog order when emitting the new selection so the
+    // backend writes columns in a stable order.
+    const ordered = allColumnNames.filter((n) => next.has(n));
+    // If the user re-selected every column, collapse to the legacy
+    // "all selected" state by passing null — the wizard will then omit
+    // `columns` from the submit payload entirely.
+    if (ordered.length === allColumnNames.length) {
+      onChange(null);
+    } else {
+      onChange(ordered);
+    }
+  };
+
+  const handleSelectAll = () => onChange(null);
+  const handleClear = () => {
+    // "Clear" leaves the always-included columns selected — the backend
+    // would silently re-add them anyway and it's clearer if the UI
+    // reflects that instead of letting the user think they unchecked them.
+    const required = allColumnNames.filter((n) => requiredSet.has(n));
+    if (required.length === allColumnNames.length) {
+      onChange(null);
+    } else {
+      onChange(required);
+    }
+  };
+
+  return (
+    <div className="mb-5" data-testid="export-column-picker">
+      <p className="text-xs font-medium text-[var(--text-secondary)] mb-2 uppercase tracking-wider">
+        {t('dataExport.columns.title', 'STEP 2½ — Columns')}
+      </p>
+      <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-[var(--text-secondary)]">
+            {t(
+              'dataExport.columns.helperText',
+              'Select which columns to include in the export. Required columns cannot be removed.',
+            )}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSelectAll}
+              disabled={allSelected}
+              data-testid="export-column-select-all"
+            >
+              {t('dataExport.columns.selectAll', 'Select all')}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClear}
+              data-testid="export-column-clear"
+            >
+              {t('dataExport.columns.clear', 'Clear')}
+            </Button>
+          </div>
+        </div>
+        <div
+          className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"
+          role="group"
+          aria-label={t('dataExport.columns.title', 'STEP 2½ — Columns')}
+        >
+          {data.columns.map((col) => {
+            const checked = selectedSet.has(col.name);
+            const required = requiredSet.has(col.name);
+            return (
+              <label
+                key={col.name}
+                className={cn(
+                  'flex items-center gap-2 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-3 py-2 text-xs',
+                  required ? 'opacity-70' : 'cursor-pointer hover:bg-[var(--surface-2)]',
+                )}
+                data-testid={`export-column-row-${col.name}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={required}
+                  onChange={() => toggleColumn(col.name)}
+                  aria-label={col.label}
+                  data-testid={`export-column-checkbox-${col.name}`}
+                />
+                <span className="text-[var(--text-primary)]">{col.label}</span>
+                {required ? (
+                  <span className="ml-auto rounded-sm bg-amber-500/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-amber-300">
+                    {t('dataExport.columns.alwaysIncluded', 'Required')}
+                  </span>
+                ) : null}
+              </label>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -776,6 +976,7 @@ function ExportHistoryTable({
         />
       ) : (
         <DataTable
+          tableId="system:data-export-jobs"
           columns={columns}
           data={jobs}
           keyExtractor={(row) => row.id}
@@ -1042,6 +1243,19 @@ export default function DataExportPage() {
           onDownload={handleDownload}
           onRefresh={handleRefresh}
         />
+      </FadeIn>
+
+      {/* Phase-46 / Prompt 65 — recurring scheduled exports panel.
+          Wrapped in <RequiresAuth> because the underlying API takes
+          ownership from FORWARD_AUTH_HEADER; in open mode the
+          placeholder explains why the section can't render. */}
+      <FadeIn delay={0.2}>
+        <RequiresAuth
+          capability="session_list"
+          feature={t('dataExport.scheduled.feature', 'Scheduled exports')}
+        >
+          <ScheduledExportsPanel />
+        </RequiresAuth>
       </FadeIn>
 
       {/* Floating job progress drawer — visible across the page */}

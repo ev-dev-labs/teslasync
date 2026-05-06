@@ -72,6 +72,12 @@ func VersionHandler(appVersion string, cfg *config.Config) http.HandlerFunc {
 			"arch":           runtime.GOARCH,
 			"uptime_seconds": time.Since(bootTime).Seconds(),
 			"goroutines":     runtime.NumGoroutine(),
+			// Phase-46 / Prompt 70 — surface the GDPR / ePrivacy
+			// cookie-consent flag so the SPA knows whether to mount
+			// its consent banner and whether to gate optional
+			// reporters (web vitals, error reporter) on user
+			// consent. False on every default deployment.
+			"require_cookie_consent": cfg != nil && cfg.RequireCookieConsent,
 		}
 
 		// Endpoint configuration (read-only, from Helm/env)

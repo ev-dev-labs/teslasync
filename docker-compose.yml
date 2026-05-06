@@ -74,6 +74,49 @@ services:
       - TESLASYNC_VAPID_PUBLIC_KEY=${TESLASYNC_VAPID_PUBLIC_KEY:-}
       - TESLASYNC_VAPID_PRIVATE_KEY=${TESLASYNC_VAPID_PRIVATE_KEY:-}
       - TESLASYNC_VAPID_SUBJECT=${TESLASYNC_VAPID_SUBJECT:-}
+      # Service-mode banner override — Phase 46 / Prompt 04.
+      # When TESLASYNC_SYSTEM_MODE is set ("ok", "degraded",
+      # "maintenance"), it overrides the system_state DB row so an
+      # operator can force-set or force-clear the top-of-app banner
+      # during deploys/rollbacks without touching the database. Leave
+      # empty to defer to the DB row + admin POST API.
+      - TESLASYNC_SYSTEM_MODE=${TESLASYNC_SYSTEM_MODE:-}
+      - TESLASYNC_SYSTEM_MAINTENANCE_MESSAGE=${TESLASYNC_SYSTEM_MAINTENANCE_MESSAGE:-}
+      - TESLASYNC_SYSTEM_MAINTENANCE_UNTIL=${TESLASYNC_SYSTEM_MAINTENANCE_UNTIL:-}
+      # Optional GitHub Issues bridge for the in-app feedback widget
+      # (Phase 46 / Prompt 08). When both REPO ("owner/name") and TOKEN
+      # (PAT with Issues:write) are set, the admin feedback queue
+      # exposes a "Forward to GitHub" action that mirrors the user
+      # report into a real GitHub issue. Leave empty to disable — the
+      # SPA hides the action when the server reports the bridge as
+      # unconfigured.
+      - TESLASYNC_GITHUB_REPO=${TESLASYNC_GITHUB_REPO:-}
+      - TESLASYNC_GITHUB_TOKEN=${TESLASYNC_GITHUB_TOKEN:-}
+      # Vehicle photo upload root — Phase 46 / Prompt 54.
+      # User-uploaded vehicle hero photos are written to this dir
+      # at runtime (3 sizes per upload). Mount a volume here in
+      # production so photos survive container restart.
+      - TESLASYNC_VEHICLE_PHOTO_DIR=${TESLASYNC_VEHICLE_PHOTO_DIR:-/var/lib/teslasync/photos}
+      # Auth-mode contract — Phase 46 / Prompt 57.
+      # Free-text hint surfaced verbatim by /system/auth-mode and
+      # rendered by the SPA's RequiresAuth empty state. Set to the
+      # name of your upstream IdP (Authentik, Authelia, oauth2-proxy,
+      # Keycloak, …) for nicer copy. TeslaSync NEVER speaks to the
+      # IdP's admin API and NEVER routes off this value — it is
+      # presentation-only. Default empty: SPA falls back to a
+      # generic "your authentication provider" string.
+      - TESLASYNC_AUTH_PROVIDER_HINT=${TESLASYNC_AUTH_PROVIDER_HINT:-}
+      # Cookie / GDPR consent banner — Phase 46 / Prompt 70.
+      # Default OFF: self-hosted single-user installs do not need a
+      # consent banner. Flip to "true" on multi-user fleet
+      # deployments or any public-facing instance with optional
+      # client-side reporting enabled (web vitals, error reporter)
+      # to comply with ePrivacy / GDPR. When true, the SPA renders
+      # a non-blocking banner the first visit and gates optional
+      # POSTs on the user's stored consent.
+      - TESLASYNC_REQUIRE_COOKIE_CONSENT=${TESLASYNC_REQUIRE_COOKIE_CONSENT:-false}
+    volumes:
+      - vehicle_photos:/var/lib/teslasync/photos
     depends_on:
       postgres:
         condition: service_healthy
@@ -463,3 +506,4 @@ volumes:
   mosquitto_data:
   redis_data:
   prometheus_data:
+  vehicle_photos:

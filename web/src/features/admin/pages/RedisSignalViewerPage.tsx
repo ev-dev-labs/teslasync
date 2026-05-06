@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Database, Search, RefreshCw } from 'lucide-react'
 
 import { PageContainer } from '@/components/layout'
-import { GlassPanel, Badge, Button as UiButton, DataTable, useSortToggle, Toggle, Input as UiInput, Select as UiSelect, type Column } from '@/components/ui'
+import { GlassPanel, Badge, Button as UiButton, DataTable, useSortToggle, Toggle, Input as UiInput, Select as UiSelect, MaskedValue, type Column } from '@/components/ui'
 import { StatCard } from '@/components/data-display'
 import { Skeleton, EmptyState } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
@@ -13,7 +13,8 @@ import { getRedisSignals, type RedisSignalEntry } from '@/api/devtools'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { fmtInt } from '@/lib/numberFormat'
 import { INTERVALS } from '@/lib/constants'
-import { RedisDiagnosticEmptyState } from '../components/RedisDiagnosticEmptyState'
+import { isApiError, type ApiError } from '@/lib/resilience'
+import { RedisDiagnosticEmptyState, type DiagnosticErrorProps } from '../components/RedisDiagnosticEmptyState'
 
 /* ─── signal categorization ─────────────────────────────────────────── */
 
@@ -45,6 +46,17 @@ interface SignalRow {
   category: SignalCategory
 }
 
+/**
+ * isLocationSignal — true for lat/lng/gps signal names that should be
+ * masked by default. Operators can still reveal the value (the
+ * `<MaskedValue>` toggle exposes the raw number) but a casual screen
+ * share or screenshot does not leak the parking spot.
+ */
+function isLocationSignal(name: string): boolean {
+  const n = name.toLowerCase()
+  return /^(latitude|longitude|gps_lat|gps_lng|gps_latitude|gps_longitude|location_lat|location_lng)$/.test(n)
+}
+
 /* ─── table columns ─────────────────────────────────────────────────── */
 
 function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>[] {
@@ -59,6 +71,21 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
       key: 'value',
       header: t('redis.value', 'Value'),
       render: (row) => {
+        // Location signals are routed through MaskedValue so the raw
+        // coordinate never sits on screen by default. The mask still
+        // shows enough structure (••.•••) to confirm the row carries
+        // a number, and the operator can click to reveal for ops work.
+        if (isLocationSignal(row.name) && (typeof row.value === 'number' || typeof row.value === 'string')) {
+          return (
+            <MaskedValue
+              value={String(row.value)}
+              variant="coords"
+              ariaLabel={t('redis.maskedCoord', 'Coordinate, click to reveal')}
+              copyable
+              auditOnReveal
+            />
+          )
+        }
         // Per-type toned-down syntax-highlight colors (phase-40/02 forbids
         // neon for tabular body text). Mirrors common dev-console conventions:
         //   number  → cyan-300, string → amber-300, boolean → purple-300.
@@ -121,6 +148,8 @@ export default function RedisSignalViewerPage() {
     data: signalData,
     isLoading,
     isFetching,
+    error,
+    isError,
     refetch,
   } = useQuery({
     queryKey: ['redis-signals', selectedVehicleId],
@@ -165,6 +194,18 @@ export default function RedisSignalViewerPage() {
   const { sortKey, sortDir, onSort } = useSortToggle('name', 'asc')
 
   const meta = signalData?.meta
+
+  // Phase-46 / Prompt 59 — when the upstream query failed, the diagnostic
+  // banner takes over so the operator sees the real failure mode (cache
+  // not wired, redis unreachable, generic 5xx, network) instead of the
+  // legacy "no signals cached" black box. Stat cards also display a
+  // placeholder so the top-of-page numbers don't lie about a 0 count.
+  const errorBannerProps: DiagnosticErrorProps = !isError
+    ? {}
+    : isApiError(error)
+      ? { serverError: error as ApiError }
+      : { serverError: null, networkError: true }
+  const showStatPlaceholder = isLoading || isError
 
   const vehicleOptions = vehicleList.map((v) => ({
     value: String(v.id),
@@ -268,20 +309,20 @@ export default function RedisSignalViewerPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <StatCard
                 label={t('redis.totalSignals', 'Total Signals')}
-                value={isLoading ? '—' : fmtInt(signalData?.signal_count ?? 0)}
+                value={showStatPlaceholder ? '—' : fmtInt(signalData?.signal_count ?? 0)}
                 icon={<Database className="h-5 w-5" />}
               />
               <StatCard
                 label={t('redis.numbers', 'Numbers')}
-                value={isLoading ? '—' : fmtInt(rows.filter((r) => r.type === 'number').length)}
+                value={showStatPlaceholder ? '—' : fmtInt(rows.filter((r) => r.type === 'number').length)}
               />
               <StatCard
                 label={t('redis.strings', 'Strings')}
-                value={isLoading ? '—' : fmtInt(rows.filter((r) => r.type === 'string').length)}
+                value={showStatPlaceholder ? '—' : fmtInt(rows.filter((r) => r.type === 'string').length)}
               />
               <StatCard
                 label={t('redis.booleans', 'Booleans')}
-                value={isLoading ? '—' : fmtInt(rows.filter((r) => r.type === 'boolean').length)}
+                value={showStatPlaceholder ? '—' : fmtInt(rows.filter((r) => r.type === 'boolean').length)}
               />
             </div>
           </FadeIn>
@@ -304,11 +345,12 @@ export default function RedisSignalViewerPage() {
                 <Skeleton className="h-8 w-full" />
               </div>
             ) : filteredRows.length === 0 ? (
-              rows.length === 0 ? (
+              rows.length === 0 || isError ? (
                 <RedisDiagnosticEmptyState
                   vehicleId={selectedVehicleId!}
                   meta={meta}
                   onSelectVehicle={setSelectedVehicleId}
+                  {...errorBannerProps}
                 />
               ) : (
                 <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -318,6 +360,7 @@ export default function RedisSignalViewerPage() {
               )
             ) : (
               <DataTable
+                tableId="admin:redis-signals"
                 data={filteredRows}
                 columns={columns}
                 keyExtractor={(row) => row.name}
@@ -325,6 +368,8 @@ export default function RedisSignalViewerPage() {
                 sortDir={sortDir}
                 onSort={onSort}
                 pagination={{ defaultPageSize: 50 }}
+                virtualized
+                rowHeight={48}
               />
             )}
           </GlassPanel>

@@ -81,7 +81,7 @@ function buildQuery(params: AnnotationListParams): string {
 export function useChartAnnotations(params: AnnotationListParams = {}) {
   return useQuery({
     queryKey: annotationKeys.list(params),
-    queryFn: () => request<ChartAnnotationRow[]>(`/annotations${buildQuery(params)}`),
+    queryFn: ({ signal }) => request<ChartAnnotationRow[]>(`/annotations${buildQuery(params)}`, { signal }),
     staleTime: STALE_TIMES.SLOW,
   });
 }

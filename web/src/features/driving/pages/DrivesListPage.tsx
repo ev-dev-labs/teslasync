@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect, useDeferredValue, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -30,6 +30,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { DateRangeFilter } from '@/components/forms/DateRangeFilter';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { FilterBar } from '@/components/forms/FilterBar';
+import { ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms/ActiveFilterChips';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useUrlBatch, useUrlEnum, useUrlString, useUrlNumber } from '@/hooks/useUrlState';
 import { FadeIn } from '@/components/motion/FadeIn';
@@ -40,6 +41,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
+import { PullToRefresh } from '@/components/mobile';
 import { formatDateTime, formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -81,7 +83,7 @@ interface DriveCardProps {
   onToggleSelect?: (id: number, on: boolean) => void;
 }
 
-function DriveCard({
+function DriveCardImpl({
   drive, convertDistance, convertSpeed, convertEfficiency,
   distanceUnit, speedUnit, efficiencyUnit, formatEnergyCost,
   selected, onToggleSelect,
@@ -193,6 +195,24 @@ function DriveCard({
   );
 }
 
+/**
+ * memo() with a custom equality so unchanged rows skip re-render when
+ * the deferred filter value commits. `useSettings` returns fresh
+ * function references on every parent render, so the default shallow
+ * comparison would never short-circuit; here we only consider the
+ * row-shaping inputs that actually affect the rendered output.
+ *
+ * Phase-46 / Prompt 18.
+ */
+const DriveCard = memo(DriveCardImpl, (prev, next) =>
+  prev.drive === next.drive &&
+  prev.selected === next.selected &&
+  prev.distanceUnit === next.distanceUnit &&
+  prev.speedUnit === next.speedUnit &&
+  prev.efficiencyUnit === next.efficiencyUnit &&
+  prev.onToggleSelect === next.onToggleSelect,
+);
+
 /* ------------------------------------------------------------------ */
 /*  DrivesListPage                                                    */
 /* ------------------------------------------------------------------ */
@@ -206,7 +226,7 @@ export default function DrivesListPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDrives(vehicleIdStr);
-  const { data: drives, isLoading: isDrivesLoading, error: drivesError } = drivesQuery;
+  const { data: drives, isLoading: isDrivesLoading, error: drivesError, refetch: refetchDrives } = drivesQuery;
   const { data: stats } = useDrivingStats(vehicleIdStr);
 
   /* Unit conversion */
@@ -248,11 +268,17 @@ export default function DrivesListPage() {
   }, [drives, startDate, endDate]);
 
   /* ---- Search filter (start/end address) ---- */
+  // Phase-46 / Prompt 18 — defer the search query so the input stays
+  // responsive while the heavy downstream chain (filteredDrives →
+  // sortedDrives → distDist / scatterData / distanceTrend / charts /
+  // 50 DriveCards) re-renders at non-urgent priority.
+  const deferredSearch = useDeferredValue(search);
+  const isSearchPending = !Object.is(search, deferredSearch);
   const driveSearchFields = useMemo(
     () => ['startAddress', 'endAddress'] as const satisfies ReadonlyArray<keyof Drive>,
     [],
   );
-  const filteredDrives = useFilteredList(dateFilteredDrives, search, driveSearchFields);
+  const filteredDrives = useFilteredList(dateFilteredDrives, deferredSearch, driveSearchFields);
 
   /* ---- Sort ---- */
   const sortedDrives = useMemo(() => {
@@ -393,15 +419,27 @@ export default function DrivesListPage() {
         </div>
       }
     >
+      <PullToRefresh onRefresh={async () => { await refetchDrives(); }}>
       {/* Date range + search filter */}
       <FadeIn>
         <FilterBar>
-          <SearchInput
-            value={search}
-            onChange={(v) => { setSearch(v); setPage(1); }}
-            placeholder={t('drives.searchPlaceholder', 'Search by start or end address…')}
-            className="w-full sm:w-72"
-          />
+          <div className="relative w-full sm:w-72">
+            <SearchInput
+              value={search}
+              onChange={(v) => { setSearch(v); setPage(1); }}
+              placeholder={t('drives.searchPlaceholder', 'Search by start or end address…')}
+              className="w-full"
+              historyScope="drives"
+            />
+            {isSearchPending && (
+              <span
+                role="status"
+                aria-live="polite"
+                aria-label={t('filter.pending', 'Filtering…')}
+                className="pointer-events-none absolute right-9 top-1/2 -translate-y-1/2 inline-block h-3 w-3 rounded-full border-2 border-cyan-400/40 border-t-cyan-400 animate-spin"
+              />
+            )}
+          </div>
           <DateRangeFilter
             startDate={startDate}
             endDate={endDate}
@@ -411,6 +449,42 @@ export default function DrivesListPage() {
             onApply={() => setPage(1)}
           />
         </FilterBar>
+        <ActiveFilterChips
+          className="mt-3"
+          filters={
+            ([
+              search
+                ? {
+                    key: 'q',
+                    label: t('drives.filterLabel.search', 'Search'),
+                    value: search,
+                    onRemove: () => { setSearch(''); setPage(1); },
+                  } satisfies FilterChipDescriptor
+                : null,
+              startDate && startDate !== defaultStart
+                ? {
+                    key: 'from',
+                    label: t('drives.filterLabel.from', 'From'),
+                    value: startDate,
+                    onRemove: () => { setStartDate(defaultStart); setPage(1); },
+                  } satisfies FilterChipDescriptor
+                : null,
+              endDate && endDate !== defaultEnd
+                ? {
+                    key: 'to',
+                    label: t('drives.filterLabel.to', 'To'),
+                    value: endDate,
+                    onRemove: () => { setEndDate(defaultEnd); setPage(1); },
+                  } satisfies FilterChipDescriptor
+                : null,
+            ].filter(Boolean) as FilterChipDescriptor[]) as readonly FilterChipDescriptor[]
+          }
+          onClearAll={() => {
+            setSearch('');
+            setRangeBatch({ from: defaultStart, to: defaultEnd });
+            setPage(1);
+          }}
+        />
       </FadeIn>
 
       {/* Hero gauges */}
@@ -516,7 +590,16 @@ export default function DrivesListPage() {
       {filteredDrives.length > 3 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <FadeIn>
-            <ChartContainer title={t('drives.recentDrives', 'Recent Drives')} height={220}>
+            <ChartContainer
+              title={t('drives.recentDrives', 'Recent Drives')}
+              ariaLabel={t('drives.recentDrives.aria', 'Recent drives daily distance area chart')}
+              data={distanceTrend.map((d) => ({ date: d.date, distance: d.distance }))}
+              dataColumns={[
+                { key: 'date', label: t('drives.col.date', 'Date') },
+                { key: 'distance', label: `${t('drives.distance', 'Distance')} (${distanceUnit})` },
+              ]}
+              height={220}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={distanceTrend}>
                   {areaGradient('drivesDistGrad', '#00f0ff')}
@@ -537,7 +620,16 @@ export default function DrivesListPage() {
           </FadeIn>
 
           <FadeIn>
-            <ChartContainer title={t('drives.distanceDistribution', 'Trip Distance Distribution')} height={220}>
+            <ChartContainer
+              title={t('drives.distanceDistribution', 'Trip Distance Distribution')}
+              ariaLabel={t('drives.distanceDistribution.aria', 'Trip distance bucket distribution bar chart')}
+              data={distDist.map((b) => ({ range: b.range, count: b.count }))}
+              dataColumns={[
+                { key: 'range', label: t('drives.col.range', 'Distance range') },
+                { key: 'count', label: t('drives.col.drives', 'Drives') },
+              ]}
+              height={220}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={distDist}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -555,8 +647,10 @@ export default function DrivesListPage() {
       {/* Speed vs Efficiency scatter */}
       {scatterData.length > 5 && (
         <FadeIn>
+          {/* chart-a11y:no-table per-drive scatter cloud — too dense for a tabular fallback */}
           <ChartContainer
             title={t('drives.speedVsEfficiency', 'Speed vs Efficiency')}
+            ariaLabel={t('drives.speedVsEfficiency.aria', 'Per-drive speed versus efficiency scatter plot')}
             subtitle={`${t('drives.lower', 'Lower')} ${efficiencyUnit} = ${t('drives.better', 'better')}`}
             height={240}
           >
@@ -696,6 +790,7 @@ export default function DrivesListPage() {
           }}
         />
       )}
+      </PullToRefresh>
     </PageContainer>
   );
 }

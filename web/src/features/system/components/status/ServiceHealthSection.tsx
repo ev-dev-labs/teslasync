@@ -66,7 +66,15 @@ export function ServiceHealthSection() {
             <MetricCard label={t('Total Signals')} value={fmtInt(data.aggregate_stats?.total_signals_received ?? 0)} icon={<Zap className="h-4 w-4" />} color="purple" />
             <MetricCard label={t('Avg Signals/s')} value={data.aggregate_stats?.avg_signals_per_second ?? '0'} icon={<TrendingUp className="h-4 w-4" />} color="cyan" />
           </Grid>
-          <DataTable columns={vehicleColumns} data={vehicles} keyExtractor={(v) => v.vin} compact pagination emptyMessage={t('No vehicles connected')} />
+          <DataTable
+            tableId="system:service-vehicles"
+            columns={vehicleColumns}
+            data={vehicles}
+            keyExtractor={(v) => v.vin}
+            compact
+            pagination
+            emptyMessage={t('No vehicles connected')}
+          />
         </div>
       )}
     </AccordionSection>

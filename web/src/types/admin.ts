@@ -66,6 +66,41 @@ export interface SystemHealth {
   components: Record<string, SystemHealthComponent>;
   databaseSize: string;
   tableCount: number;
+  /**
+   * Operator-controlled service-mode banner (Phase-46 / Prompt 04).
+   * Emitted by /api/v1/system/health alongside the existing component
+   * map. `mode === 'ok'` means hide the banner; `'degraded'` or
+   * `'maintenance'` mean show with the supplied message + countdown.
+   * `source` is `'env'` when TESLASYNC_SYSTEM_MODE is set, `'db'`
+   * when the value comes from an admin POST, `'default'` when neither
+   * input is configured.
+   */
+  mode?: 'ok' | 'degraded' | 'maintenance';
+  maintenance_message?: string;
+  maintenance_until?: string;
+  maintenance_updated_at?: string;
+  source?: 'env' | 'db' | 'default';
+}
+
+/**
+ * Persisted system_state row + env-override marker for the admin
+ * Maintenance Mode panel. Returned by GET /api/v1/admin/maintenance
+ * and the POST mutation. snake_case mirrors the Go JSON tags.
+ */
+export interface MaintenanceState {
+  mode: 'ok' | 'degraded' | 'maintenance';
+  maintenance_message?: string;
+  maintenance_until?: string | null;
+  updated_at: string;
+  updated_by?: string;
+  source: 'env' | 'db' | 'default';
+  env_override_mode?: string;
+}
+
+export interface MaintenanceUpdateInput {
+  mode: 'ok' | 'degraded' | 'maintenance';
+  message?: string;
+  until?: string | null;
 }
 
 export interface AuditLogEntry {
@@ -74,6 +109,30 @@ export interface AuditLogEntry {
   resource: string;
   details: string;
   createdAt: string;
+}
+
+/**
+ * Last-hour rolling summary of frontend errors reported by the SPA via
+ * `POST /api/v1/web-errors`. The same handler that ingests reports
+ * exposes this summary via `GET /api/v1/admin/web-errors/summary`.
+ *
+ * Backend wire format is snake_case (`window_seconds`, `as_of`); after
+ * `camelCaseKeys()` both forms are present at runtime — frontend code
+ * uses the snake_case names that match the Go JSON tags for clarity.
+ */
+export interface WebErrorsSummaryEntry {
+  name: string;
+  route: string;
+  count: number;
+}
+
+export interface WebErrorsSummary {
+  window_seconds: number;
+  windowSeconds: number;
+  total: number;
+  top: WebErrorsSummaryEntry[];
+  as_of: string;
+  asOf: string;
 }
 
 /**

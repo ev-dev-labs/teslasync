@@ -5,6 +5,12 @@ import { OfflineBanner } from '../feedback/OfflineBanner'
 import { NewVersionBanner } from '../feedback/NewVersionBanner'
 import { TeslaReauthBanner } from '../feedback/TeslaReauthBanner'
 import { RateLimitBanner } from '../feedback/RateLimitBanner'
+import { MaintenanceBanner } from '../feedback/MaintenanceBanner'
+import { ImpersonationBanner } from '../feedback/ImpersonationBanner'
+import { TopProgress } from '../feedback/TopProgress'
+import { SessionExpiringModal } from '../feedback/SessionExpiringModal'
+import { SessionExpiredModal } from '../feedback/SessionExpiredModal'
+import { AnnouncerRegion } from '@/components/a11y'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -12,16 +18,24 @@ import { GlobalShortcuts } from '@/lib/globalShortcuts'
 import { useTour } from '@/hooks/useTour'
 import { GotoIndicator } from '../feedback/GotoIndicator'
 import { KeyboardShortcutsModal } from '../feedback/KeyboardShortcutsModal'
+import { FeedbackModal } from '../feedback/FeedbackModal'
 import { TourOverlay } from '../feedback/TourOverlay'
 import { ChangelogModal } from '../feedback/ChangelogModal'
+import { DraftRestorePrompt } from '../feedback/DraftRestorePrompt'
+import { SkipToContent } from '../feedback/SkipToContent'
+import { BrowserCompatBanner } from '../feedback/BrowserCompatBanner'
+import { TimeMachineBanner } from '../feedback/TimeMachineBanner'
+import { CookieConsentBanner } from '../feedback/CookieConsentBanner'
 import { TourLauncher } from '@/features/onboarding/TourLauncher'
 import {
   TOUR_START_EVENT,
   TOURS,
   dispatchTourLauncherOpen,
+  dispatchTourStart,
   isTourCompleted as isTourCompletedById,
   type TourStartEventDetail,
 } from '@/lib/tourRegistry'
+import { subscribe as subscribeToBroadcast } from '@/lib/broadcast'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -37,7 +51,8 @@ import { Breadcrumbs } from './Breadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
 import { NavSectionHeader } from './sidebar/NavSectionHeader'
 import { request } from '@/api/client'
-import type { Alert, Vehicle, VersionInfo, StaleSessionsResponse } from '@/api/types'
+import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
+import type { Alert, Vehicle, StaleSessionsResponse } from '@/api/types'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useNotificationListener } from '../../hooks/useNotificationListener'
 import { useTitleBadge } from '../../hooks/useTitleBadge'
@@ -45,7 +60,7 @@ import { useFaviconBadge } from '../../hooks/useFaviconBadge'
 import { useDynamicAppIcon } from '../../hooks/useDynamicAppIcon'
 import { useCriticalAlertFlash } from '../../hooks/useCriticalAlertFlash'
 import { useToast } from '../feedback/Toast'
-import { useUnreadCount } from '@/api/hooks/useNotifications'
+import { NotificationBellPopover } from './NotificationBellPopover'
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
 import { Icons } from '@/lib/icons';
 
@@ -365,7 +380,7 @@ export const navSections = [
     title: 'Settings & Admin',
     items: [
       { to: '/settings', icon: Icons.settings, label: 'Settings', color: 'text-[var(--text-muted)]' },
-      { to: '/me/activity', icon: Icons.history, label: 'My Activity', color: 'text-cyan-400' },
+      { to: '/me/activity', icon: Icons.history, label: 'My Activity', color: 'text-cyan-400', requiresAuth: true },
       { to: '/admin', icon: Icons.keyRound, label: 'Admin', color: 'text-red-400' },
       { to: '/api-keys', icon: Icons.key, label: 'API Keys', color: 'text-amber-400' },
     ],
@@ -418,8 +433,13 @@ export const navSections = [
 type NavSection = (typeof navSections)[number]
 type NavItem = NavSection['items'][number]
 
-function isVisibleNavItem(item: NavItem, vehicleCount: number) {
-  return !('minVehicles' in item) || vehicleCount >= (item as { minVehicles?: number }).minVehicles!
+function isVisibleNavItem(item: NavItem, vehicleCount: number, isForwardAuth: boolean) {
+  if ('minVehicles' in item && vehicleCount < (item as { minVehicles?: number }).minVehicles!) return false
+  // Items marked `requiresAuth` are useless without a configured ForwardAuth
+  // identity provider (per-user state, audit feeds, etc.) — hide them in
+  // open mode rather than route the user to a 503-style empty state.
+  if ('requiresAuth' in item && (item as { requiresAuth?: boolean }).requiresAuth && !isForwardAuth) return false
+  return true
 }
 
 function isActiveNavPath(pathname: string, to: string) {
@@ -445,35 +465,15 @@ function findNavItemByExactPath(to: string) {
 }
 
 /**
- * Tiny header link that renders the bell icon and an unread-count badge.
- * Polls `/notifications/unread-count` via TanStack Query every 30s. Used in
- * both the desktop sidebar header and the mobile top bar.
+ * Phase-46 / Prompt 28 — header bell trigger.
+ *
+ * Replaced the original NavLink-only bell with `NotificationBellPopover`,
+ * which renders the same bell + badge but opens an in-place triage panel
+ * on desktop click (latest 10 unread + Mark-all-read + View-all). On
+ * mobile (viewport ≤ 640 px) the popover is bypassed and the trigger
+ * navigates straight to /notifications, preserving the original UX
+ * where popover positioning would clip on narrow viewports.
  */
-function NotificationBell({ className }: { className?: string }) {
-  const { t } = useTranslation()
-  const { data: count = 0 } = useUnreadCount()
-  const display = count > 99 ? '99+' : String(count)
-  const label = count > 0
-    ? t('nav.notificationsUnread', '{{count}} unread notifications', { count })
-    : t('nav.notifications', 'Notifications')
-  return (
-    <GuardedNavLink
-      to="/notifications"
-      aria-label={label}
-      className={`relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${className ?? ''}`}
-    >
-      <Icons.notifications className="h-5 w-5" aria-hidden="true" />
-      {count > 0 && (
-        <span
-          aria-hidden="true"
-          className="absolute -top-0.5 -right-0.5 inline-flex min-w-[1rem] h-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow ring-1 ring-rose-300/60"
-        >
-          {display}
-        </span>
-      )}
-    </GuardedNavLink>
-  )
-}
 
 /**
  * Phase-40 / Prompt 60 — top-bar quick theme switcher.
@@ -716,6 +716,16 @@ export default function Layout() {
     return () => window.removeEventListener('toggle-keyboard-shortcuts', handler)
   }, [toggleCheatSheet])
 
+  // Phase-46 / Prompt 08 — in-app feedback modal. Same decoupled-event
+  // pattern as the cheat sheet above so the Cmd+K palette ("feedback.open")
+  // and the sidebar footer button can both open it without prop-drilling.
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
+  useEffect(() => {
+    const handler = () => setFeedbackOpen(true)
+    window.addEventListener('open-feedback-modal', handler)
+    return () => window.removeEventListener('open-feedback-modal', handler)
+  }, [])
+
   // Onboarding tour — Phase-40 / Prompt 65.
   // Only one tour can be active at a time. The launcher (or a CustomEvent
   // dispatched from anywhere) sets `activeTourId`; we wire the matching
@@ -737,6 +747,21 @@ export default function Layout() {
     }
     window.addEventListener(TOUR_START_EVENT, handler)
     return () => window.removeEventListener(TOUR_START_EVENT, handler)
+  }, [])
+
+  // Phase-46 / Prompt 61 — Cross-tab replay sync. When a sibling tab calls
+  // `startTour(id)` from `@/lib/tourLauncher`, it broadcasts
+  // `tour.replay-requested`. The bus filters self-broadcasts (per
+  // `subscribe()` in `broadcast.ts`), so this only fires for peer tabs;
+  // the originating tab already received the local `TOUR_START_EVENT`
+  // CustomEvent above. Re-issue the same window event here so peer tabs
+  // funnel through the existing state machine instead of duplicating it.
+  useEffect(() => {
+    return subscribeToBroadcast((msg) => {
+      if (msg.type !== 'tour.replay-requested') return
+      if (!msg.tourId || !TOURS[msg.tourId]) return
+      dispatchTourStart(msg.tourId)
+    })
   }, [])
 
   // When activeTourId changes (event-triggered) start the tour.
@@ -766,10 +791,8 @@ export default function Layout() {
     }
   }, [tour.isActive, tour.currentStep, tour.targetRect])
 
-  // Version info — shown as the small chip in the sidebar/mobile header.
-  // (Footer status bar has its own VersionSegment that hits the same query
-  // key so this fetch is deduped.)
-  const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: () => request<VersionInfo>('/system/version'), staleTime: 60_000, refetchInterval: 60_000 })
+  // Build version intentionally not fetched here; canonical provenance lives
+  // in the footer <VersionSegment> (Phase-40 / 59 + Phase-46 / 58).
 
   // Live data for sidebar
   const { data: alerts } = useQuery({ queryKey: ['alerts-sidebar'], queryFn: () => request<Alert[]>('/alerts?limit=50&offset=0'), refetchInterval: 30_000, retry: 1 })
@@ -798,6 +821,11 @@ export default function Layout() {
   const { data: staleSessions } = useQuery({ queryKey: ['stale-sessions-sidebar'], queryFn: () => request<StaleSessionsResponse>('/data-repair/stale-sessions'), refetchInterval: 60_000, retry: 1 })
   const staleCount = (staleSessions?.stale_charging?.length ?? 0) + (staleSessions?.stale_drives?.length ?? 0)
 
+  // Hide auth-gated nav items (e.g. "My Activity") when the deployment isn't
+  // running behind a ForwardAuth identity provider — the underlying endpoints
+  // 503 in open mode and there is nothing useful to show.
+  const isForwardAuth = useIsForwardAuth()
+
   const activeNavEntry = useMemo(() => findNavItemByPath(location.pathname), [location.pathname])
   const activeSectionTitle = activeNavEntry?.section.title
   const activeSectionStyle = activeSectionTitle ? SECTION_ICON_STYLES[activeSectionTitle] : undefined
@@ -805,26 +833,26 @@ export default function Layout() {
     navSections
       .map(section => ({
         ...section,
-        items: section.items.filter(item => isVisibleNavItem(item, vehicleCount)),
+        items: section.items.filter(item => isVisibleNavItem(item, vehicleCount, isForwardAuth)),
       }))
       .filter(section => section.items.length > 0),
-    [vehicleCount],
+    [vehicleCount, isForwardAuth],
   )
   const pinnedNavItems = useMemo(() =>
     pinnedNavPaths
       .map(path => findNavItemByExactPath(path))
       .filter((entry): entry is { section: NavSection; item: NavItem } => Boolean(entry))
       .map(entry => entry.item)
-      .filter(item => isVisibleNavItem(item, vehicleCount)),
-    [pinnedNavPaths, vehicleCount],
+      .filter(item => isVisibleNavItem(item, vehicleCount, isForwardAuth)),
+    [pinnedNavPaths, vehicleCount, isForwardAuth],
   )
   const recentNavItems = useMemo(() =>
     recentNavPaths
       .map(path => findNavItemByExactPath(path))
       .filter((entry): entry is { section: NavSection; item: NavItem } => Boolean(entry))
       .map(entry => entry.item)
-      .filter(item => isVisibleNavItem(item, vehicleCount)),
-    [recentNavPaths, vehicleCount],
+      .filter(item => isVisibleNavItem(item, vehicleCount, isForwardAuth)),
+    [recentNavPaths, vehicleCount, isForwardAuth],
   )
 
   useEffect(() => {
@@ -914,12 +942,6 @@ export default function Layout() {
       ]
     : []
 
-  const versionLabel = versionInfo?.chart_version && versionInfo.chart_version !== 'unknown'
-    ? `v${versionInfo.chart_version}`
-    : versionInfo?.app_version && versionInfo.app_version !== 'unknown'
-      ? versionInfo.app_version
-      : ''
-
   const mainRef = useRef<HTMLElement>(null)
   const renderNavLink = (item: NavItem, compact = false, activeScope = 'main') => {
     const { to, icon: Icon, label, color, ...rest } = item
@@ -986,18 +1008,18 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex h-dvh bg-[var(--bg)] text-[var(--text-primary)]">
-      {/* Skip to content (WCAG 2.4.1). Hidden until focused; sends focus
-          straight to <main id="main-content"> so keyboard users don't have
-          to tab through the entire sidebar to reach the page body.
-          Phase-45 / Prompt 13 audit anchor: skipToMain|skip.to.main */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[300] focus:rounded-lg focus:bg-neon-cyan focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--bg)] focus:ring-neon-cyan"
-        onClick={(e) => { e.preventDefault(); mainRef.current?.focus() }}
-      >
-        {t('a11y.skipToMain', 'Skip to main content')}
-      </a>
+    <>
+      {/* Skip to content (WCAG 2.4.1). MUST be the very first interactive
+          element in the DOM so a single Tab press from page load reveals
+          it before any sidebar / header / banner control. Phase-46 /
+          Prompt 60 — supersedes the previous `a11y.skipToMain` link.
+          Audit anchor: skipToContent|skip.to.content */}
+      <SkipToContent />
+      <div className="flex h-dvh bg-[var(--bg)] text-[var(--text-primary)]">
+      {/* Phase-46 / Prompt 12 — global SR announcer. Mounted once here
+          so any component can fire imperative live-region messages via
+          `useAnnouncer()` without rendering its own hidden region. */}
+      <AnnouncerRegion />
 
       {/* Ambient background effects */}
       <div className="pointer-events-none fixed inset-0 z-0">
@@ -1034,19 +1056,22 @@ export default function Layout() {
         className={cn(
           'fixed left-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-normal ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
           'flex flex-col border-r border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl lg:shadow-none',
-          sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full'
+          sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full',
+          // Reserve space for the fixed footer StatusBar (Phase-40 / Prompt 59)
+          // so the bottom "Take a tour / Report bug" row never slides under
+          // it. Mobile open-state already overlays StatusBar (sidebar z-66 >
+          // StatusBar z-55), so the reservation only matters on desktop where
+          // the sidebar is `lg:static` and shares layout space with <main>.
+          statusBarPrefs.enabled && 'lg:pb-7'
         )}
       >
-        {/* Mobile sidebar brand, shown only while the drawer is open */}
+        {/* Mobile sidebar brand. Build version intentionally not rendered
+            here; canonical provenance lives in the footer <VersionSegment>
+            (Phase-40 / 59 + Phase-46 / 58). */}
         <div className="flex items-center gap-2 border-b border-[var(--glass-border)] px-5 py-4 shrink-0 lg:hidden">
           <GuardedNavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-xl transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
           </GuardedNavLink>
-          {versionLabel && (
-            <span className="rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
-              {versionLabel}
-            </span>
-          )}
           <Button
             type="button"
             variant="ghost"
@@ -1060,18 +1085,15 @@ export default function Layout() {
           </Button>
         </div>
 
-        {/* Logo — desktop sidebar header */}
+        {/* Logo — desktop sidebar header. Build version intentionally not
+            rendered here; canonical provenance lives in the footer
+            <VersionSegment> (Phase-40 / 59 + Phase-46 / 58). */}
         <div className="hidden lg:flex items-center gap-2 px-5 py-5 border-b border-[var(--glass-border)] shrink-0">
           <GuardedNavLink to="/" className="flex flex-1 items-center gap-3 hover:bg-[var(--surface-2)] -mx-2 px-2 py-1 rounded-md transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
-            {versionLabel && (
-              <span className="ml-auto rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
-                {versionLabel}
-              </span>
-            )}
           </GuardedNavLink>
           <ThemeQuickSwitcher placement="left" />
-          <NotificationBell />
+          <NotificationBellPopover />
         </div>
 
         {/* Sticky search trigger */}
@@ -1290,6 +1312,17 @@ export default function Layout() {
               <Icons.helpCircle className="h-3 w-3" aria-hidden />
               {t('tour.launcher.openShort', 'Take a tour')}
             </button>
+            <span className="mx-1.5 text-[var(--text-muted)]/60">·</span>
+            <button
+              type="button"
+              onClick={() => setFeedbackOpen(true)}
+              className="inline-flex items-center gap-1 rounded text-[10px] text-[var(--text-muted)] underline-offset-2 hover:text-[var(--text-secondary)] hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]"
+              aria-label={t('feedback.openAria', 'Open feedback / bug report form')}
+              data-testid="sidebar-feedback-trigger"
+            >
+              <Icons.bug className="h-3 w-3" aria-hidden />
+              {t('feedback.openShort', 'Report bug')}
+            </button>
           </p>
         </div>
       </aside>
@@ -1311,7 +1344,7 @@ export default function Layout() {
           <div className="flex-1 flex justify-center -ml-10">
             <Logo size={26} showWordmark />
           </div>
-          <NotificationBell className="ml-auto" />
+          <NotificationBellPopover className="ml-auto" />
           <ThemeQuickSwitcher />
         </header>
       )}
@@ -1321,6 +1354,19 @@ export default function Layout() {
         {/* Spacer for fixed mobile header */}
         <div className="h-14 shrink-0 lg:hidden" />
 
+        {/* Browser-compat warning (Phase-46 / Prompt 63) — topmost banner
+            in the main content column so users on outdated browsers see
+            WHY the SPA is breaking instead of staring at a white page.
+            Sits BELOW the SkipToContent link in DOM order so keyboard
+            users still hit the WCAG bypass-blocks link first. */}
+        <BrowserCompatBanner />
+        {/* Time-machine "viewing data as of …" banner (Phase-46 / Prompt 64)
+            — visible only when ?as_of= is set or the inline picker is
+            open. Stacked between BrowserCompatBanner and ServiceStatusBanner
+            so the historical-mode warning sits at the top of the main
+            content column without displacing the higher-priority compat
+            and service status notices. */}
+        <TimeMachineBanner />
         <ServiceStatusBanner />
         <main
           id="main-content"
@@ -1368,8 +1414,30 @@ export default function Layout() {
       {/* PWA Install Prompt */}
       <InstallPrompt />
 
+      {/* Route-change / mutation progress bar (Phase-46 / Prompt 07) —
+          mounted ABOVE every banner so the slim 2 px strip at the very
+          top of the viewport is never occluded by a stacked banner.
+          Activated by SuspenseProgressBoundary at every lazy() route
+          boundary in App.tsx, plus opt-in useGlobalProgress() in
+          long-running mutations. */}
+      <TopProgress />
+
       {/* Offline status banner (PWA / mobile) */}
       <OfflineBanner />
+
+      {/* Impersonation banner (Phase-46 / Prompt 46) — security context,
+          highest priority. Mounted ABOVE every other banner because an
+          admin viewing the app as another subject must see the
+          impersonation flag at all times; everything else (maintenance,
+          rate-limit, etc.) is secondary while a session is active. */}
+      <ImpersonationBanner />
+
+      {/* Service-mode banner (Phase-46 / Prompt 04) — operator-controlled
+          maintenance/degraded banner. Mounted ABOVE the rate-limit and
+          version banners because an operator-declared outage is the
+          highest-priority operational message and should not be hidden
+          under transient client-side notices. */}
+      <MaintenanceBanner />
 
       {/* Rate-limit / circuit-breaker banner (Phase-45 / Prompt 33) —
           most-transient surface, sits on top so the user sees the
@@ -1389,10 +1457,26 @@ export default function Layout() {
           where Tesla-backed calls 401 but non-Tesla data still loads. */}
       <TeslaReauthBanner />
 
+      {/* ForwardAuth session-expiry modals (Phase-46 / Prompt 05) —
+          SessionExpiringModal opens ~60s before the proxy cookie ages
+          out (soft-dismissible countdown with unsaved-draft list).
+          SessionExpiredModal hard-blocks the UI when the cookie has
+          actually expired (or any API call returned 401), preserving
+          the current URL so the user can resume after re-auth.
+          Both are no-ops in open mode (no FORWARD_AUTH_HEADER). */}
+      <SessionExpiringModal />
+      <SessionExpiredModal />
+
       {/* Keyboard shortcut overlays */}
       <GlobalShortcuts />
       <GotoIndicator visible={shortcutMode === 'goto'} />
       <KeyboardShortcutsModal open={showCheatSheet} onClose={toggleCheatSheet} />
+
+      {/* In-app feedback modal (Phase-46 / Prompt 08) — opened via the
+          sidebar footer button, the Cmd+K palette ("feedback.open"
+          command), or any other surface that dispatches the
+          `open-feedback-modal` window event. */}
+      <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
 
       {/* Onboarding tour */}
       {tour.isActive && tour.step && (
@@ -1414,6 +1498,21 @@ export default function Layout() {
           once-per-24h after the OnboardingWizard, or on demand via the command
           palette ("What's new") and footer status bar version segment. */}
       <ChangelogModal />
-    </div>
+
+      {/* Phase-46 / Prompt 47 — surfaces unsaved form drafts after a
+          tab close, browser crash, PWA reload, or auth redirect. The
+          component is a no-op when no drafts exist and self-throttles
+          via a per-session sessionStorage flag. */}
+      <DraftRestorePrompt />
+
+      {/* Phase-46 / Prompt 70 — Cookie / GDPR consent banner. Renders
+          ONLY when the deployment opts in via TESLASYNC_REQUIRE_COOKIE_CONSENT
+          (default OFF on self-hosted installs) AND the user has not
+          recorded a decision. Mounted last so the bottom-of-screen
+          banner sits above every sticky surface but below modal
+          dialogs the user is interacting with. */}
+      <CookieConsentBanner />
+      </div>
+    </>
   )
 }

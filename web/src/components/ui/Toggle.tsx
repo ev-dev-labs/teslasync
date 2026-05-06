@@ -62,6 +62,12 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           className={cn(
             'relative inline-flex shrink-0 rounded-full transition-colors duration-normal',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
+            // Phase-46 / Prompt 11 — forced-colors mode flattens the
+            // track tint to a system colour, making on/off visually
+            // identical. Add a system-colour border on the track and
+            // (below) on the thumb so the off-state knob is visible
+            // and the switch boundary survives Windows High Contrast.
+            'forced-colors:border forced-colors:border-[ButtonBorder]',
             trackSize[size],
             checked
               ? 'bg-cyan-500 dark:bg-cyan-600'
@@ -71,6 +77,9 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           <span
             className={cn(
               'pointer-events-none inline-block rounded-full bg-white shadow-sm transition-transform duration-normal',
+              // Phase-46 / Prompt 11 — outline the thumb so it remains
+              // distinguishable from the (now system-coloured) track.
+              'forced-colors:border forced-colors:border-[ButtonBorder]',
               thumbSize[size],
               'translate-y-[3px] translate-x-[3px]',
               checked && thumbTranslate[size],

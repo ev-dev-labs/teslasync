@@ -30,9 +30,9 @@ export const pushKeys = {
 export function usePushPublicKey() {
   return useQuery({
     queryKey: pushKeys.publicKey,
-    queryFn: async (): Promise<string | null> => {
+    queryFn: async ({ signal }): Promise<string | null> => {
       try {
-        const res = await request<{ publicKey: string }>('/push/public-key');
+        const res = await request<{ publicKey: string }>('/push/public-key', { signal });
         return res.publicKey || null;
       } catch (err) {
         // 404 from the server means VAPID is unconfigured — surface as
@@ -58,7 +58,7 @@ export function usePushPublicKey() {
 export function usePushSubscriptions() {
   return useQuery({
     queryKey: pushKeys.list,
-    queryFn: () => request<PushSubscriptionRow[]>('/push/subscribe'),
+    queryFn: ({ signal }) => request<PushSubscriptionRow[]>('/push/subscribe', { signal }),
     staleTime: STALE_TIMES.STANDARD,
   });
 }

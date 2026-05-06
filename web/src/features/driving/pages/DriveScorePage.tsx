@@ -978,6 +978,21 @@ export default function DriveScorePage() {
             <GlassPanel>
               <ChartContainer
                 title={t('driveScore.scoreTrend', 'Score Trend')}
+                ariaLabel={t('driveScore.scoreTrend.aria', 'Drive score trend line chart with category breakdowns')}
+                data={trendChartData.map((d) => ({
+                  date: d.date,
+                  score: d.score,
+                  efficiency: d.efficiency,
+                  smoothness: d.smoothness,
+                  speed: d.speed,
+                }))}
+                dataColumns={[
+                  { key: 'date', label: t('driveScore.col.date', 'Date') },
+                  { key: 'score', label: t('driveScore.col.score', 'Score') },
+                  { key: 'efficiency', label: t('driveScore.col.efficiency', 'Efficiency') },
+                  { key: 'smoothness', label: t('driveScore.col.smoothness', 'Smoothness') },
+                  { key: 'speed', label: t('driveScore.col.speed', 'Speed') },
+                ]}
                 height={300}
                 annotations={{ vehicleId, scope: 'efficiency', chartId: 'drive-score-trend' }}
               >
@@ -1042,7 +1057,17 @@ export default function DriveScorePage() {
           {/* -------- Section 5: Category bar chart -------- */}
           <StaggerItem>
             <GlassPanel>
-              <ChartContainer title={t('driveScore.categoryBreakdown', 'Category Breakdown')} height={260}>
+              <ChartContainer
+                title={t('driveScore.categoryBreakdown', 'Category Breakdown')}
+                ariaLabel={t('driveScore.categoryBreakdown.aria', 'Drive score category breakdown horizontal bar chart')}
+                data={categoryBarData.map((c) => ({ name: c.name, value: c.value, max: c.max }))}
+                dataColumns={[
+                  { key: 'name', label: t('driveScore.col.category', 'Category') },
+                  { key: 'value', label: t('driveScore.col.value', 'Value') },
+                  { key: 'max', label: t('driveScore.col.max', 'Max') },
+                ]}
+                height={260}
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={categoryBarData} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} />
@@ -1076,7 +1101,16 @@ export default function DriveScorePage() {
           {/* -------- Section 5b: Score Distribution Histogram -------- */}
           <StaggerItem>
             <GlassPanel>
-              <ChartContainer title={t('driveScore.scoreDistribution', 'Score Distribution')} height={220}>
+              <ChartContainer
+                title={t('driveScore.scoreDistribution', 'Score Distribution')}
+                ariaLabel={t('driveScore.scoreDistribution.aria', 'Drive score distribution histogram bar chart')}
+                data={histogramData.map((h) => ({ range: h.range, count: h.count }))}
+                dataColumns={[
+                  { key: 'range', label: t('driveScore.col.range', 'Score range') },
+                  { key: 'count', label: t('driveScore.col.drives', 'Drives') },
+                ]}
+                height={220}
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={histogramData} barCategoryGap="20%">
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} vertical={false} />

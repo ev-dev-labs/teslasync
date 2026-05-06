@@ -246,7 +246,6 @@ describe('CommandPalette search', () => {
       // compareDocumentPosition: bit 4 = following. So drives BEFORE stateMachine
       // means drivesButton.compareDocumentPosition(stateMachineButton) has bit 4 set.
       const pos = drivesButton!.compareDocumentPosition(stateMachineButton!)
-      // eslint-disable-next-line no-bitwise
       expect(pos & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     }
   })

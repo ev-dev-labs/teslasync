@@ -402,6 +402,7 @@ export default function TimelinePage() {
             {t('timeline.stateTransitions', 'State Transitions')}
           </p>
           <DataTable
+            tableId="analytics:timeline-transitions"
             columns={columns}
             data={transitions}
             keyExtractor={(row) => row.index}

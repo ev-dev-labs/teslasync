@@ -1,12 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
-import { INTERVALS } from '@/lib/constants';
+import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { useOptimisticMutation } from './useOptimisticMutation';
 import type {
   Alert,
+  AlertDetail,
+  AlertEvent,
   AlertRule,
   AlertRuleInput,
   AlertRuleSnoozeRequest,
@@ -18,11 +20,16 @@ import type {
   ComputedMetricSummary,
   NotificationChannel,
   NotificationLog,
+  NotificationLogGroup,
   NotificationStats,
+  QuietHoursWindow,
+  QuietHoursWindowInput,
 } from '@/api/types';
 
 export type {
   Alert,
+  AlertDetail,
+  AlertEvent,
   AlertRule,
   AlertRuleInput,
   AlertRuleSnoozeRequest,
@@ -34,7 +41,10 @@ export type {
   ComputedMetricSummary,
   NotificationChannel,
   NotificationLog,
+  NotificationLogGroup,
   NotificationStats,
+  QuietHoursWindow,
+  QuietHoursWindowInput,
 };
 
 export type AlertRuleSaveRequest = AlertRuleInput | (AlertRuleUpdate & Pick<AlertRule, 'id'>);
@@ -58,14 +68,29 @@ export type NotificationChannelInput =
 
 export const notificationKeys = {
   alerts: ['alerts'] as const,
+  alertDetail: (id: number) => ['alerts', 'detail', id] as const,
   alertRules: ['alert-rules'] as const,
   alertMetrics: ['alert-metrics'] as const,
   channels: ['notification-channels'] as const,
   logs: ['notification-logs'] as const,
   logsFiltered: (filters?: NotificationFilters) =>
     ['notification-logs', 'filtered', filters ?? {}] as const,
+  // Phase-46 / Prompt 27 — grouped/threaded inbox. Sibling of `logsFiltered`
+  // so a same-filter swap between flat and grouped views doesn't fight the
+  // cache. Members of a single group reuse `logsFiltered` keyed on
+  // `{ group_key }` so the expand-row payload is automatically deduped
+  // with any concurrent flat-list query that targeted the same group.
+  groups: (filters?: NotificationFilters) =>
+    ['notification-logs', 'groups', filters ?? {}] as const,
+  // Phase-46 / Prompt 28 — header bell popover preview list. Sibling
+  // of `logsFiltered` keyed only by `limit` so every Layout mount on
+  // every page reuses the same cache entry. Sits under the
+  // `notification-logs` prefix so the bulk mark-read invalidation in
+  // `invalidateLogsAndUnread` cascades into it without bespoke wiring.
+  bellUnread: (limit: number) => ['notification-logs', 'bell-unread', limit] as const,
   unreadCount: ['notification-logs', 'unread-count'] as const,
   stats: ['notification-stats'] as const,
+  quietHours: ['notification-quiet-hours'] as const,
 };
 
 /**
@@ -81,6 +106,10 @@ export interface NotificationFilters {
   read?: boolean;
   archived?: boolean;
   q?: string;
+  // Phase-46 / Prompt 27 — when set, restricts the flat list to members
+  // of a single notification thread. The backend validates this is a
+  // 64-char lower-hex sha256 and 400s otherwise.
+  group_key?: string;
   limit?: number;
   offset?: number;
 }
@@ -95,6 +124,7 @@ function serializeNotificationFilters(filters: NotificationFilters): string {
   if (typeof filters.read === 'boolean') params.set('read', String(filters.read));
   if (typeof filters.archived === 'boolean') params.set('archived', String(filters.archived));
   if (filters.q) params.set('q', filters.q);
+  if (filters.group_key) params.set('group_key', filters.group_key);
   if (typeof filters.limit === 'number') params.set('limit', String(filters.limit));
   if (typeof filters.offset === 'number') params.set('offset', String(filters.offset));
   return params.toString();
@@ -106,7 +136,7 @@ export const __serializeNotificationFiltersForTest = serializeNotificationFilter
 export function useAlerts() {
   return useQuery({
     queryKey: notificationKeys.alerts,
-    queryFn: () => request<Alert[]>('/alerts'),
+    queryFn: ({ signal }) => request<Alert[]>('/alerts', { signal }),
     refetchInterval: INTERVALS.STANDARD,
     select: safeArray,
   });
@@ -118,8 +148,14 @@ export function useMarkAlertRead() {
     mutationFn: (id) =>
       request<void>(`/alerts/${id}/read`, { method: 'POST' }),
     queryKeys: [notificationKeys.alerts],
-    updater: (prev, id) =>
-      prev?.map((a) => (String(a.id) === id ? { ...a, is_read: true } : a)),
+    updater: (prev, id) => {
+      // The `['alerts']` prefix matches sibling caches (e.g. `alertDetail`)
+      // whose payload is a single object, not an array. Guard so the
+      // optimistic helper's broadcast over every prefixed cache only mutates
+      // the array-shaped inbox list and leaves object caches untouched.
+      if (!Array.isArray(prev)) return prev;
+      return prev.map((a) => (String(a.id) === id ? { ...a, is_read: true } : a));
+    },
     broadcast: true,
     onMutate: () => {
       // Row already dimmed by the helper. Toast waits for server ack so a
@@ -132,10 +168,149 @@ export function useMarkAlertRead() {
   });
 }
 
+// ─── Phase-46 / Prompt 20 — alert ack + audit timeline ──────────────────────
+
+/**
+ * useAlertDetail fetches a single alert with its full event timeline. Used by
+ * the alert detail modal/page; the list endpoint omits the events array to
+ * keep the inbox payload small.
+ *
+ * `enabled` defaults to `true` when `id` is a positive integer; pass an
+ * explicit `enabled: false` to defer the fetch (e.g. while a modal is closed).
+ */
+export function useAlertDetail(
+  id: number | null | undefined,
+  options?: { enabled?: boolean },
+) {
+  const numericId = typeof id === 'number' && Number.isFinite(id) && id > 0 ? id : null;
+  return useQuery({
+    queryKey: numericId !== null ? notificationKeys.alertDetail(numericId) : ['alerts', 'detail', 'disabled'],
+    queryFn: ({ signal }) =>
+      request<AlertDetail>(`/alerts/${numericId}`, { signal }),
+    enabled: numericId !== null && (options?.enabled ?? true),
+    staleTime: STALE_TIMES.QUICK,
+  });
+}
+
+export interface AcknowledgeAlertInput {
+  id: number;
+  note?: string;
+}
+
+/**
+ * useAcknowledgeAlert posts to /alerts/{id}/acknowledge with an optional note.
+ * Optimistically marks the alert as acknowledged in the inbox cache so the
+ * row updates instantly; the server-confirmed AlertDetail is then written
+ * back into the alertDetail cache so the detail view re-renders without an
+ * extra fetch.
+ */
+export function useAcknowledgeAlert() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useOptimisticMutation<AlertDetail, AcknowledgeAlertInput, Alert[]>({
+    mutationFn: ({ id, note }) =>
+      request<AlertDetail>(`/alerts/${id}/acknowledge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(note && note.trim().length > 0 ? { note: note.trim() } : {}),
+      }),
+    queryKeys: [notificationKeys.alerts],
+    updater: (prev, { id, note }) => {
+      // Skip non-array sibling caches under the `['alerts']` prefix (e.g.
+      // `alertDetail`) — only the inbox list payload is mutated optimistically.
+      if (!Array.isArray(prev)) return prev;
+      const nowIso = new Date().toISOString();
+      const trimmed = note?.trim();
+      return prev.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              acknowledged_at: nowIso,
+              acknowledgement_note: trimmed && trimmed.length > 0 ? trimmed : a.acknowledgement_note ?? null,
+            }
+          : a,
+      );
+    },
+    broadcast: true,
+    onSuccess: (detail, vars) => {
+      qc.setQueryData(notificationKeys.alertDetail(vars.id), detail);
+      success('toast.alerts.ack.success', 'Alert acknowledged');
+    },
+    onError: (e) =>
+      error(e, 'toast.alerts.ack.error', 'Failed to acknowledge alert'),
+  });
+}
+
+export interface CommentAlertInput {
+  id: number;
+  note: string;
+}
+
+/**
+ * useCommentAlert posts to /alerts/{id}/comment with a non-empty note. Does
+ * NOT touch ack state — pure timeline append. Invalidates the alertDetail
+ * cache so the timeline refetches; the inbox list cache is untouched because
+ * comments don't change any list-visible field.
+ */
+export function useCommentAlert() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: ({ id, note }: CommentAlertInput) =>
+      request<AlertDetail>(`/alerts/${id}/comment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: note.trim() }),
+      }),
+    onSuccess: (detail, vars) => {
+      qc.setQueryData(notificationKeys.alertDetail(vars.id), detail);
+      success('toast.alerts.comment.success', 'Comment added');
+    },
+    onError: (e) =>
+      error(e, 'toast.alerts.comment.error', 'Failed to add comment'),
+  });
+}
+
+/**
+ * useReopenAlert posts to /alerts/{id}/reopen. Used by the "Undo" affordance
+ * on the Acknowledge toast and by the explicit Reopen button in the detail
+ * view. Optimistically clears the ack columns in the inbox cache.
+ */
+export function useReopenAlert() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useOptimisticMutation<AlertDetail, number, Alert[]>({
+    mutationFn: (id) =>
+      request<AlertDetail>(`/alerts/${id}/reopen`, { method: 'POST' }),
+    queryKeys: [notificationKeys.alerts],
+    updater: (prev, id) => {
+      // Skip non-array sibling caches under the `['alerts']` prefix.
+      if (!Array.isArray(prev)) return prev;
+      return prev.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              acknowledged_at: null,
+              acknowledged_by: null,
+              acknowledgement_note: null,
+            }
+          : a,
+      );
+    },
+    broadcast: true,
+    onSuccess: (detail, id) => {
+      qc.setQueryData(notificationKeys.alertDetail(id), detail);
+      success('toast.alerts.reopen.success', 'Alert reopened');
+    },
+    onError: (e) =>
+      error(e, 'toast.alerts.reopen.error', 'Failed to reopen alert'),
+  });
+}
+
 export function useAlertRules() {
   return useQuery({
     queryKey: notificationKeys.alertRules,
-    queryFn: () => request<AlertRule[]>('/alerts/rules'),
+    queryFn: ({ signal }) => request<AlertRule[]>('/alerts/rules', { signal }),
     select: safeArray,
   });
 }
@@ -148,7 +323,7 @@ export function useAlertRules() {
 export function useAlertMetrics() {
   return useQuery({
     queryKey: notificationKeys.alertMetrics,
-    queryFn: () => request<ComputedMetricSummary[]>('/alerts/metrics'),
+    queryFn: ({ signal }) => request<ComputedMetricSummary[]>('/alerts/metrics', { signal }),
     select: safeArray,
     staleTime: INTERVALS.STATIC,
   });
@@ -343,29 +518,128 @@ export function useSnoozeAlertRule() {
 export function useNotificationChannels() {
   return useQuery({
     queryKey: notificationKeys.channels,
-    queryFn: () => request<NotificationChannel[]>('/notifications'),
+    queryFn: ({ signal }) => request<NotificationChannel[]>('/notifications', { signal }),
     select: safeArray,
   });
 }
 
-export function useNotificationLogs(filters: NotificationFilters = {}) {
+export function useNotificationLogs(
+  filters: NotificationFilters = {},
+  options?: { enabled?: boolean },
+) {
   const qs = serializeNotificationFilters(filters);
   // GET /notifications/logs returns the same shape — backend `GetLogs` parses
   // the same query params for both `/notifications` and `/notifications/logs`
   // (the latter is the historical alias used by older widgets).
   return useQuery({
     queryKey: notificationKeys.logsFiltered(filters),
-    queryFn: () => request<NotificationLog[]>(`/notifications/logs${qs ? `?${qs}` : ''}`),
+    queryFn: ({ signal }) => request<NotificationLog[]>(`/notifications/logs${qs ? `?${qs}` : ''}`, { signal }),
+    enabled: options?.enabled ?? true,
     select: safeArray,
+  });
+}
+
+/**
+ * Phase-46 / Prompt 27 — fetch the inbox in grouped/threaded form.
+ *
+ * Server returns one row per `(alert_rule_id, severity)` thread plus one
+ * row per "singleton" (notifications without a derivable group_key). The
+ * `count` and `unread_count` reflect the FILTERED subset, NOT a global
+ * tally — UI should phrase the chip as "+N similar".
+ *
+ * Composing with `?group_key=` is a server-side error (the handler 400s),
+ * so this hook clears any group_key the caller might have left in the
+ * filters object before serializing. Mirrors the backend's mutual-
+ * exclusion contract so the cache key stays stable across `view` swaps.
+ */
+export function useNotificationGroups(
+  filters: NotificationFilters = {},
+  options?: { enabled?: boolean },
+) {
+  const sanitized: NotificationFilters = { ...filters };
+  delete sanitized.group_key;
+  const qs = serializeNotificationFilters(sanitized);
+  const tail = qs ? `&${qs}` : '';
+  return useQuery({
+    queryKey: notificationKeys.groups(sanitized),
+    queryFn: ({ signal }) =>
+      request<NotificationLogGroup[]>(`/notifications/logs?grouped=true${tail}`, { signal }),
+    enabled: options?.enabled ?? true,
+    select: safeArray,
+  });
+}
+
+/**
+ * Phase-46 / Prompt 27 — fetch the members of a single thread on expand.
+ *
+ * Reuses the flat list endpoint with `?group_key=…` so the response shape
+ * matches `useNotificationLogs` exactly and inline-render code paths can
+ * be shared. Disabled when `groupKey` is null/empty so the row's collapsed
+ * state doesn't trigger any network traffic.
+ *
+ * Inherits filters (severity/vehicle/from/to/etc.) from the parent inbox so
+ * the expanded list mirrors the same window the user is viewing — anything
+ * that didn't make it into the group's `count` won't show up here either.
+ */
+export function useGroupMembers(
+  groupKey: string | null | undefined,
+  filters: NotificationFilters = {},
+  options?: { enabled?: boolean },
+) {
+  const trimmed = (groupKey ?? '').trim();
+  const enabled = trimmed.length > 0 && (options?.enabled ?? true);
+  const merged: NotificationFilters = { ...filters, group_key: trimmed };
+  const qs = serializeNotificationFilters(merged);
+  return useQuery({
+    queryKey: enabled
+      ? notificationKeys.logsFiltered(merged)
+      : ['notification-logs', 'group-members', 'disabled'],
+    queryFn: ({ signal }) =>
+      request<NotificationLog[]>(`/notifications/logs${qs ? `?${qs}` : ''}`, { signal }),
+    enabled,
+    select: safeArray,
+    staleTime: STALE_TIMES.QUICK,
   });
 }
 
 export function useUnreadCount() {
   return useQuery({
     queryKey: notificationKeys.unreadCount,
-    queryFn: () => request<{ count: number }>('/notifications/unread-count'),
+    queryFn: ({ signal }) => request<{ count: number }>('/notifications/unread-count', { signal }),
     refetchInterval: INTERVALS.STANDARD,
     select: (data) => data?.count ?? 0,
+  });
+}
+
+/**
+ * Phase-46 / Prompt 28 — header bell popover preview list.
+ *
+ * Returns the latest N unread, non-archived notifications for the bell
+ * popover's in-place triage panel. Backend filters via
+ * `read=false&archived=false` — there is NO `unread_only=true` flag in
+ * `parseNotificationLogFilters`, that name was a doc-level shorthand
+ * in the prompt that doesn't match the actual route surface.
+ *
+ * Cache key sits under the shared `notification-logs` prefix so the
+ * post-mutation invalidations in `invalidateLogsAndUnread` (and the
+ * `queryKeys: [notificationKeys.logs]` hook in `useBulkMarkRead`)
+ * cascade in: marking everything read elsewhere zeroes the popover
+ * preview without bespoke wiring. `staleTime` is short — 30s — so an
+ * SSE-driven new-notification toast that arrives mid-session triggers
+ * a refetch the next time the popover opens, instead of showing stale
+ * rows from the previous open.
+ */
+export function useUnreadNotifications(params: { limit: number }) {
+  const limit = Math.max(1, Math.floor(params.limit));
+  return useQuery({
+    queryKey: notificationKeys.bellUnread(limit),
+    queryFn: ({ signal }) =>
+      request<NotificationLog[]>(
+        `/notifications/logs?read=false&archived=false&limit=${limit}`,
+        { signal },
+      ),
+    staleTime: STALE_TIMES.FAST,
+    select: safeArray,
   });
 }
 
@@ -390,7 +664,10 @@ export function useMarkNotificationsRead() {
       }),
     queryKeys: [notificationKeys.logs],
     updater: (prev, ids) => {
-      if (!prev) return prev;
+      // The `['notification-logs']` prefix matches caches with non-array
+      // shapes (e.g. `unread-count: {count: number}`). Guard so map-based
+      // mutation only runs on the array-shaped inbox/preview/groups payloads.
+      if (!Array.isArray(prev)) return prev;
       const idSet = new Set(ids);
       const now = new Date().toISOString();
       return prev.map((n) =>
@@ -417,17 +694,21 @@ export function useMarkNotificationsRead() {
 /**
  * Phase-45 / 28 — bulk-mark-read with optional whole-inbox flag.
  *
- * Variants accepted (mirrors the relaxed backend contract):
+ * Variants accepted (mirrors the relaxed backend contract; mutually exclusive):
  *
- *   { ids: number[] }  → mark exactly those rows as read.
- *   { all: true }      → mark every currently-unread, non-archived row as read.
+ *   { ids: number[] }       → mark exactly those rows as read.
+ *   { all: true }           → mark every currently-unread, non-archived row as read.
+ *   { group_key: string }   → (Phase-46/27) mark every member of a thread as read.
  *
  * Differs from `useMarkNotificationsRead` in three ways:
- *   1. Accepts `{ ids?, all? }` — needed so the page can wire one mutation
- *      to both the bulk-selected toolbar button AND the "Mark all read"
- *      header action without juggling two separate hooks.
- *   2. Optimistic updater handles both shapes — when `all=true`, every
- *      unread row in every cached filtered list flips to read in one pass.
+ *   1. Accepts `{ ids? | all? | group_key? }` — needed so the page can wire one
+ *      mutation to the toolbar button, the "Mark all read" header action, AND
+ *      the per-thread "Mark group read" action without juggling separate hooks.
+ *   2. Optimistic updater handles `ids` and `all` shapes — for `group_key` it
+ *      skips the optimistic step (the cache doesn't store `group_key` on each
+ *      row, so we'd have to re-derive the sha256 client-side) and just relies
+ *      on the post-settle invalidation. Worst case: the row stays bold for one
+ *      refetch tick, which is acceptable given the action is explicit.
  *   3. Emits NO success/error toast of its own — the caller (NotificationsPage)
  *      shows a custom toast with an Undo action that fires the reverse
  *      mutation. Auto-emitting a generic success toast here would race
@@ -436,11 +717,16 @@ export function useMarkNotificationsRead() {
  * Failures still roll the optimistic update back via the helper's snapshot
  * machinery; the caller is responsible for surfacing the error to the user.
  */
+export type BulkMarkReadVars =
+  | { ids: number[]; all?: never; group_key?: never }
+  | { ids?: never; all: true; group_key?: never }
+  | { ids?: never; all?: never; group_key: string };
+
 export function useBulkMarkRead() {
   const qc = useQueryClient();
   return useOptimisticMutation<
     { updated: number },
-    { ids?: number[]; all?: boolean },
+    BulkMarkReadVars,
     NotificationLog[]
   >({
     mutationFn: (vars) =>
@@ -451,18 +737,38 @@ export function useBulkMarkRead() {
       }),
     queryKeys: [notificationKeys.logs],
     updater: (prev, vars) => {
-      if (!prev) return prev;
+      // Skip non-array sibling caches under the `['notification-logs']`
+      // prefix (e.g. `unread-count: {count}`). Mutating `.map` on those
+      // shapes throws "n.map is not a function" and breaks the toast.
+      if (!Array.isArray(prev)) return prev;
+      // group_key path — no optimistic update because cached rows don't
+      // carry group_key. The post-settle invalidation refreshes both the
+      // flat list and the grouped/thread caches so the UI converges.
+      if ('group_key' in vars && vars.group_key) {
+        return prev;
+      }
       const now = new Date().toISOString();
-      if (vars.all) {
+      if ('all' in vars && vars.all) {
         return prev.map((n) => (n.read_at ? n : { ...n, read_at: now }));
       }
-      const idSet = new Set(vars.ids ?? []);
-      if (idSet.size === 0) return prev;
-      return prev.map((n) =>
-        idSet.has(n.id) && !n.read_at ? { ...n, read_at: now } : n,
-      );
+      if ('ids' in vars && vars.ids) {
+        const idSet = new Set(vars.ids);
+        if (idSet.size === 0) return prev;
+        return prev.map((n) =>
+          idSet.has(n.id) && !n.read_at ? { ...n, read_at: now } : n,
+        );
+      }
+      return prev;
     },
     broadcast: true,
+    onSuccess: (_data, vars) => {
+      // Group-key path skipped optimistic, so explicitly invalidate the
+      // grouped cache too — the flat-list invalidation is handled by
+      // queryKeys: [notificationKeys.logs] in the helper.
+      if ('group_key' in vars && vars.group_key) {
+        invalidateAndBroadcast(qc, { queryKey: notificationKeys.logs });
+      }
+    },
     onSettled: () => {
       // Unread-count badge is a sibling cache that the helper doesn't know
       // about — invalidate it explicitly so the bell badge eventually
@@ -488,7 +794,8 @@ export function useMarkNotificationsUnread() {
       }),
     queryKeys: [notificationKeys.logs],
     updater: (prev, ids) => {
-      if (!prev) return prev;
+      // Skip non-array sibling caches under the `['notification-logs']` prefix.
+      if (!Array.isArray(prev)) return prev;
       const idSet = new Set(ids);
       return prev.map((n) =>
         idSet.has(n.id) && n.read_at ? { ...n, read_at: null } : n,
@@ -526,7 +833,8 @@ export function useArchiveNotifications() {
       }),
     queryKeys: [notificationKeys.logs],
     updater: (prev, ids) => {
-      if (!prev) return prev;
+      // Skip non-array sibling caches under the `['notification-logs']` prefix.
+      if (!Array.isArray(prev)) return prev;
       const idSet = new Set(ids);
       const now = new Date().toISOString();
       return prev.map((n) =>
@@ -589,7 +897,7 @@ export function useDeleteNotifications() {
 export function useNotificationStats() {
   return useQuery({
     queryKey: notificationKeys.stats,
-    queryFn: () => request<NotificationStats>('/notifications/stats'),
+    queryFn: ({ signal }) => request<NotificationStats>('/notifications/stats', { signal }),
     refetchInterval: INTERVALS.STANDARD,
   });
 }
@@ -660,5 +968,71 @@ export function useTestChannel() {
       success('toast.channels.test.success', 'Test notification sent');
     },
     onError: (e) => error(e, 'toast.channels.test.error', 'Failed to send test'),
+  });
+}
+
+// === Phase-46 / Prompt 19 — Quiet hours / DND ===========================
+//
+// Server-backed CRUD for per-user Do-Not-Disturb windows. The dispatcher
+// consults the active windows on every notification and defers anything
+// whose severity is not on the bypass list — see
+// internal/notification/quiet_hours.go for the server-side decider.
+
+interface QuietHoursListResponse {
+  windows: QuietHoursWindow[];
+}
+
+export type QuietHoursSavePayload = QuietHoursWindowInput & { id?: number };
+
+export function useQuietHours() {
+  return useQuery({
+    queryKey: notificationKeys.quietHours,
+    queryFn: ({ signal }) =>
+      request<QuietHoursListResponse>('/notifications/quiet-hours', { signal }).then(
+        (r) => safeArray<QuietHoursWindow>(r?.windows),
+      ),
+    staleTime: STALE_TIMES.MODERATE,
+  });
+}
+
+export function useSaveQuietHours() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (data: QuietHoursSavePayload) => {
+      const { id, ...body } = data;
+      const isUpdate = typeof id === 'number' && id > 0;
+      return request<QuietHoursWindow>(
+        isUpdate ? `/notifications/quiet-hours/${id}` : '/notifications/quiet-hours',
+        {
+          method: isUpdate ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+      );
+    },
+    onSuccess: (_data, vars) => {
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.quietHours });
+      const isUpdate = typeof vars.id === 'number' && vars.id > 0;
+      success(
+        isUpdate ? 'toast.quietHours.save.updated' : 'toast.quietHours.save.created',
+        isUpdate ? 'Quiet hours window updated' : 'Quiet hours window created',
+      );
+    },
+    onError: (e) => error(e, 'toast.quietHours.save.error', 'Failed to save quiet hours window'),
+  });
+}
+
+export function useDeleteQuietHours() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (id: number) =>
+      request<void>(`/notifications/quiet-hours/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.quietHours });
+      success('toast.quietHours.delete.success', 'Quiet hours window removed');
+    },
+    onError: (e) => error(e, 'toast.quietHours.delete.error', 'Failed to delete quiet hours window'),
   });
 }

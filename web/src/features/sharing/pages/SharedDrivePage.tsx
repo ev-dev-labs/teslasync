@@ -261,7 +261,12 @@ export default function SharedDrivePage() {
         {/* Elevation profile */}
         {elevationData.length > 0 && (
           <FadeIn delay={0.15}>
-            <ChartContainer title={t('share.elevation', 'Elevation Profile')} height={200}>
+            {/* chart-a11y:no-table dense per-sample shared-drive trace */}
+            <ChartContainer
+              title={t('share.elevation', 'Elevation Profile')}
+              ariaLabel={t('share.elevation.aria', 'Shared drive elevation profile area chart by distance')}
+              height={200}
+            >
               <ResponsiveContainer width="100%" height={200}>
                 <AreaChart data={elevationData}>
                   <defs>
@@ -294,7 +299,12 @@ export default function SharedDrivePage() {
         {/* Speed profile */}
         {speedData.length > 0 && (
           <FadeIn delay={0.2}>
-            <ChartContainer title={t('share.speed', 'Speed Profile')} height={200}>
+            {/* chart-a11y:no-table dense per-sample shared-drive trace */}
+            <ChartContainer
+              title={t('share.speed', 'Speed Profile')}
+              ariaLabel={t('share.speed.aria', 'Shared drive speed profile line chart by distance')}
+              height={200}
+            >
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart data={speedData}>
                   <CartesianGrid {...chartGrid} />

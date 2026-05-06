@@ -572,6 +572,25 @@ config:
   #   Empty:         disables auth (dev mode)
   forwardAuthHeader: ""
 
+  # ── Auth-mode contract — Phase 46 / Prompt 57 ────────────────────────
+  # Free-text hint surfaced verbatim by /system/auth-mode and rendered
+  # by the SPA's RequiresAuth empty state. Set to your upstream IdP's
+  # name (Authentik, Authelia, oauth2-proxy, Keycloak, …) for nicer
+  # copy. TeslaSync NEVER speaks to the IdP's admin API and NEVER
+  # routes off this value — it is presentation-only. Empty: SPA falls
+  # back to a generic "your authentication provider" string.
+  authProviderHint: ""
+
+  # ── Cookie / GDPR consent banner — Phase 46 / Prompt 70 ─────────────
+  # Most TeslaSync deployments are single-user self-hosted instances
+  # where no consent is required. Flip this to `true` on multi-user
+  # fleet deployments or any public-facing instance with optional
+  # client-side reporting enabled (web vitals, error reporter) so the
+  # SPA shows a non-blocking bottom banner on the first visit and
+  # gates optional POSTs on the user's stored consent. Default
+  # `false` — set explicitly to opt in.
+  requireCookieConsent: false
+
   # ── Authentik SSE Auth (DEPRECATED) ──────────────────────────────────
   # DEPRECATED: Removed in Phase 18 auth unification. Use forwardAuthHeader instead.
   # authentikURL: ""
@@ -625,6 +644,67 @@ webPush:
   # -- VAPID `sub` field. Operator contact the push service can use.
   # Must be a `mailto:` URL or an https:// URL.
   subject: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Service mode banner override (Phase 46 / Prompt 04)
+#
+# When `system.mode` is set to "ok", "degraded", or "maintenance" the env
+# value overrides the persisted system_state DB row so an operator can
+# force-set or force-clear the top-of-app banner during deploys/rollbacks
+# without touching the database. Leave empty (the default) to defer to the
+# DB row + the admin UI / POST /api/v1/admin/maintenance API.
+#
+# `mode === "ok"` while the env override is active explicitly clears the
+# banner regardless of the DB state — useful for "abort the maintenance
+# window" rollback scenarios.
+# ─────────────────────────────────────────────────────────────────────────────
+system:
+  # -- Service mode override. One of "" (use DB), "ok", "degraded",
+  # "maintenance". Other values are ignored and fall through to the DB.
+  mode: ""
+  # -- Banner message shown to users when mode is "degraded" or
+  # "maintenance". Trimmed and capped at 280 chars. Ignored when mode is
+  # "ok" or empty.
+  maintenanceMessage: ""
+  # -- RFC3339 timestamp used by the SPA to render a countdown to the
+  # window's end. Empty means "no scheduled end". Ignored when mode is
+  # "ok" or empty.
+  maintenanceUntil: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GitHub Issues bridge for the in-app feedback widget (Phase 46 / Prompt 08)
+#
+# When BOTH `github.repo` ("owner/name") and `github.token` (a GitHub
+# fine-grained PAT with the "Issues: write" permission on `repo`) are
+# set, the admin feedback queue exposes a "Forward to GitHub" action
+# that mirrors a user's report into a real GitHub issue and stores the
+# resulting URL back on the feedback row. Leave either empty to
+# disable — the SPA hides the action when the server reports the
+# bridge as unconfigured.
+#
+# `repo` is rendered to the (non-secret) ConfigMap; `token` is rendered
+# to the Secret only when set, never to the ConfigMap and never to the
+# frontend bundle.
+# ─────────────────────────────────────────────────────────────────────────────
+github:
+  # -- Target GitHub repository in "owner/name" form
+  # (e.g. "ev-dev-labs/teslasync"). Empty disables the bridge.
+  repo: ""
+  # -- Fine-grained GitHub PAT with "Issues: write" on `repo`. SECRET
+  # — kept in the Helm-rendered Secret. Empty disables the bridge.
+  token: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Vehicle hero photos — Phase 46 / Prompt 54
+# ─────────────────────────────────────────────────────────────────────────────
+# User-uploaded vehicle hero photos are written under `dir` at
+# runtime (3 sizes per upload: 256/1024/2048 px JPEG). For
+# persistence across pod restarts, mount a PV at this path on the
+# API deployment. The chart does NOT mount one by default so
+# existing installs are not surprised — operators must add their
+# own volume + volumeMount alongside `dir`.
+vehiclePhotos:
+  dir: "/var/lib/teslasync/photos"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Tesla API credentials

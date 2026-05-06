@@ -109,6 +109,7 @@ export function MonthlyCostTable({ data }: MonthlyCostTableProps) {
       </h3>
       {sortedData.length > 0 ? (
         <DataTable<MonthlyBucket>
+          tableId="charging:cost-monthly"
           columns={columns}
           data={sortedData}
           keyExtractor={(row) => row.month}
@@ -117,6 +118,8 @@ export function MonthlyCostTable({ data }: MonthlyCostTableProps) {
           onSort={handleSort}
           compact
           pagination
+          columnVisibility
+          columnReorder
         />
       ) : (
         <div className="flex h-32 items-center justify-center text-sm text-[var(--text-muted)]">

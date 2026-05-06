@@ -17,7 +17,16 @@ export function SpeedHistogramChart({ speedHistData }: SpeedHistogramChartProps)
 
   return (
     <FadeIn>
-      <ChartContainer title={t('driveDetail.speedHistogram', 'Speed Histogram')} height={220}>
+      <ChartContainer
+        title={t('driveDetail.speedHistogram', 'Speed Histogram')}
+        ariaLabel={t('driveDetail.speedHistogram.aria', 'Speed-bucket distribution histogram')}
+        data={speedHistData.map((b) => ({ range: b.range, pct: b.pct }))}
+        dataColumns={[
+          { key: 'range', label: t('driveDetail.col.range', 'Speed range') },
+          { key: 'pct', label: t('driveDetail.col.pct', '% of drive') },
+        ]}
+        height={220}
+      >
         {speedHistData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={speedHistData}>

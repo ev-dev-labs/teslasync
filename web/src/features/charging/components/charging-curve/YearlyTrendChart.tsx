@@ -32,6 +32,17 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
         'charging.curve.yearlyTrendDesc',
         'Average time-to-charge and session count by year',
       )}
+      ariaLabel={t(
+        'charging.curve.yearlyTrend.aria',
+        'Yearly average charge-time and session-count composed chart',
+      )}
+      data={yearlyTrend}
+      dataColumns={[
+        { key: 'year', label: t('charging.curve.col.year', 'Year') },
+        { key: 'avg10to80', label: t('charging.curve.col.avg10to80', '10→80% avg min') },
+        { key: 'avg20to80', label: t('charging.curve.col.avg20to80', '20→80% avg min') },
+        { key: 'count', label: t('charging.curve.col.dcSessions', 'DC Sessions') },
+      ]}
       height={280}
       exportable
       exportFilename="yearly-charging-trend"

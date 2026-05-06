@@ -26,7 +26,7 @@ import {
 } from '@/api/hooks/useNotifications'
 import type { AlertRuleKind, ComputedMetricOp } from '@/api/types'
 import type { SignalValueType } from '@/types/signals'
-import { GlassPanel, Badge, Button as UiButton, ConfirmDialog, Input as UiInput, Select as UiSelect, Modal } from '@/components/ui'
+import { GlassPanel, Badge, Button as UiButton, ConfirmDialog, Input as UiInput, Select as UiSelect, Modal, HelpIcon } from '@/components/ui'
 import { BulkActionsToolbar, type BulkAction, SeverityBadge, SeverityIcon } from '@/components/data-display'
 import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
@@ -1319,13 +1319,15 @@ export default function AlertStudio() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-vehicle-id">
                   {t('notifications.alertStudio.editor.vehicleIdLabel', 'Vehicle ID')}
                   <span className="text-[var(--text-muted)] ml-1 normal-case tracking-normal">
                     {t('notifications.alertStudio.editor.optionalLabel', 'Optional')}
                   </span>
+                  <HelpIcon i18nKey="help.fields.alertStudio.vehicleId" content="Restrict this rule to a single vehicle by ID. Leave blank to apply across all vehicles in the fleet." for="alert-vehicle-id" />
                 </label>
                 <UiInput
+                  id="alert-vehicle-id"
                   type="number"
                   min={1}
                   className="w-full"
@@ -1335,8 +1337,9 @@ export default function AlertStudio() {
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" id="alert-kind-label">
                   {t('notifications.alertStudio.editor.kindLabel', 'Rule type')}
+                  <HelpIcon i18nKey="help.fields.alertStudio.kind" content="Choose 'Signal threshold' to trigger when a raw telemetry signal crosses a value. Choose 'Computed metric' to trigger on a derived analytic such as efficiency or charging cost." for="alert-kind-label" />
                 </label>
                 <div className="inline-flex rounded-lg border border-[var(--border-subtle)] overflow-hidden">
                   <button
@@ -1423,10 +1426,12 @@ export default function AlertStudio() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                    <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-operator">
                       {t('notifications.alertStudio.editor.operatorLabel', 'Operator')}
+                      <HelpIcon i18nKey="help.fields.alertStudio.operator" content="The comparison applied between the live signal value and your typed value. Available operators depend on the signal's value type." for="alert-operator" />
                     </label>
                     <UiSelect
+                      id="alert-operator"
                       className="w-full"
                       value={editor.op}
                       onChange={e => handleOperatorChange(e.target.value as RuleOp)}
@@ -1440,10 +1445,12 @@ export default function AlertStudio() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-severity">
                   {t('notifications.alertStudio.editor.severityLabel', 'Severity')}
+                  <HelpIcon i18nKey="help.fields.alertStudio.severity" content="Determines how the alert is presented and prioritised: Info is informational, Warning is actionable, Critical is urgent." for="alert-severity" />
                 </label>
                 <UiSelect
+                  id="alert-severity"
                   className="w-full"
                   value={editor.severity}
                   onChange={e => setEditor(s => ({ ...s, severity: e.target.value as Severity }))}
@@ -1475,10 +1482,12 @@ export default function AlertStudio() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-cooldown">
                   {t('notifications.alertStudio.editor.cooldownLabel', 'Cooldown (minutes)')}
+                  <HelpIcon i18nKey="help.fields.alertStudio.cooldown" content="Minimum minutes to wait between repeat firings of this rule. Helps prevent notification spam during prolonged threshold breaches." for="alert-cooldown" />
                 </label>
                 <UiInput
+                  id="alert-cooldown"
                   type="number"
                   min={1}
                   className="w-full"
@@ -1487,10 +1496,12 @@ export default function AlertStudio() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-trigger-mode">
                   {t('notifications.alertStudio.editor.triggerModeLabel', 'Trigger Mode')}
+                  <HelpIcon i18nKey="help.fields.alertStudio.triggerMode" content="'Once' fires on the rising edge then re-arms after the condition clears. 'Repeat' fires every cooldown interval while the condition stays true." for="alert-trigger-mode" />
                 </label>
                 <UiSelect
+                  id="alert-trigger-mode"
                   className="w-full"
                   value={editor.trigger_mode}
                   onChange={e => setEditor(s => ({ ...s, trigger_mode: normalizeTriggerMode(e.target.value) }))}
@@ -1510,13 +1521,15 @@ export default function AlertStudio() {
                 </p>
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-test-message">
                   {t('notifications.alertStudio.editor.testMessageLabel', 'Test Message')}
                   <span className="text-[var(--text-muted)] ml-1 normal-case tracking-normal">
                     {t('notifications.alertStudio.editor.signalHint', 'Use {{SignalName}}')}
                   </span>
+                  <HelpIcon i18nKey="help.fields.alertStudio.testMessage" content="The notification body that gets delivered when this rule fires. Reference signals with double-brace placeholders like {{BatteryLevel}} to interpolate live values." for="alert-test-message" />
                 </label>
                 <UiInput
+                  id="alert-test-message"
                   className="w-full"
                   placeholder={t('notifications.alertStudio.editor.testMessagePlaceholder', 'Battery at {{BatteryLevel}}%')}
                   value={editor.message}

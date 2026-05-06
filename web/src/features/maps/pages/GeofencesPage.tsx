@@ -14,12 +14,13 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, Tabs, PinButton } from '@/components/ui';
+import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, Tabs, PinButton, EditableText } from '@/components/ui';
 import { MetricCard, BulkActionToolbar } from '@/components/data-display';
 import { Skeleton, EmptyState, Spinner, AlertBanner } from '@/components/feedback';
+import { VisuallyHidden } from '@/components/a11y';
 import { useToast } from '@/components/feedback/Toast';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { SearchInput, FilterBar } from '@/components/forms';
+import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -203,6 +204,23 @@ export default function GeofencesPage() {
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['geofences'] }),
     onError: (err: Error) => toast.error(t('Failed to toggle geofence'), err.message),
+  });
+
+  // Phase-46 / Prompt 38 — inline rename. Sends a full merged payload
+  // (rather than a partial `{ name }`) so the backend's PUT semantics
+  // are unambiguous regardless of whether it does field-level merge.
+  // Errors are surfaced inline by EditableText, so no toast here.
+  const renameMut = useMutation({
+    mutationFn: ({ g, name }: { g: Geofence; name: string }) => {
+      const { id: _id, createdAt: _createdAt, ...rest } = g;
+      void _id;
+      void _createdAt;
+      return request<Geofence>(`/geofences/${g.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ...rest, name }),
+      });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['geofences'] }),
   });
 
   // ─── Computed stats ──────────────────────────────────────────────────────
@@ -556,8 +574,25 @@ export default function GeofencesPage() {
                   onChange={setSearch}
                   placeholder={t('geofences.searchPlaceholder', 'Search by name…')}
                   className="w-full sm:w-72"
+                  historyScope="geofences"
                 />
               </FilterBar>
+              <ActiveFilterChips
+                className="mt-2"
+                filters={
+                  (search
+                    ? [
+                        {
+                          key: 'q',
+                          label: t('geofences.filterLabel.search', 'Search'),
+                          value: search,
+                          onRemove: () => setSearch(''),
+                        } satisfies FilterChipDescriptor,
+                      ]
+                    : []) as readonly FilterChipDescriptor[]
+                }
+                onClearAll={() => setSearch('')}
+              />
             </StaggerItem>
           )}
           {filteredGeofences.length > 0 ? (
@@ -574,9 +609,9 @@ export default function GeofencesPage() {
                     {/* Left: info */}
                     <div className="flex items-start gap-4">
                       <label className="flex items-center pt-1.5">
-                        <span className="sr-only">
+                        <VisuallyHidden>
                           {t('geofences.selectGeofence', 'Select geofence {{name}}', { name: g.name })}
-                        </span>
+                        </VisuallyHidden>
                         <input
                           type="checkbox"
                           checked={sel.isSelected(g.id)}
@@ -591,9 +626,20 @@ export default function GeofencesPage() {
 
                       <div className="min-w-0">
                         <div className="mb-1 flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-semibold text-[var(--text-primary)]">
-                            {g.name}
-                          </span>
+                          <EditableText
+                            value={g.name}
+                            variant="heading"
+                            ariaLabel={t('editableText.rename.geofence', 'Rename geofence {{name}}', { name: g.name })}
+                            maxLength={120}
+                            validate={(next) =>
+                              next.length > 120
+                                ? t('geofences.error.nameTooLong', 'Max 120 characters')
+                                : null
+                            }
+                            onSave={async (next) => {
+                              await renameMut.mutateAsync({ g, name: next });
+                            }}
+                          />
                           <Badge variant={g.enabled ? 'success' : 'neutral'} size="sm">
                             {g.enabled ? t('Active') : t('Inactive')}
                           </Badge>
