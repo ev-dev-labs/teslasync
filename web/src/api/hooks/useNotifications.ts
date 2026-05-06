@@ -148,8 +148,14 @@ export function useMarkAlertRead() {
     mutationFn: (id) =>
       request<void>(`/alerts/${id}/read`, { method: 'POST' }),
     queryKeys: [notificationKeys.alerts],
-    updater: (prev, id) =>
-      prev?.map((a) => (String(a.id) === id ? { ...a, is_read: true } : a)),
+    updater: (prev, id) => {
+      // The `['alerts']` prefix matches sibling caches (e.g. `alertDetail`)
+      // whose payload is a single object, not an array. Guard so the
+      // optimistic helper's broadcast over every prefixed cache only mutates
+      // the array-shaped inbox list and leaves object caches untouched.
+      if (!Array.isArray(prev)) return prev;
+      return prev.map((a) => (String(a.id) === id ? { ...a, is_read: true } : a));
+    },
     broadcast: true,
     onMutate: () => {
       // Row already dimmed by the helper. Toast waits for server ack so a
@@ -210,7 +216,9 @@ export function useAcknowledgeAlert() {
       }),
     queryKeys: [notificationKeys.alerts],
     updater: (prev, { id, note }) => {
-      if (!prev) return prev;
+      // Skip non-array sibling caches under the `['alerts']` prefix (e.g.
+      // `alertDetail`) — only the inbox list payload is mutated optimistically.
+      if (!Array.isArray(prev)) return prev;
       const nowIso = new Date().toISOString();
       const trimmed = note?.trim();
       return prev.map((a) =>
@@ -276,7 +284,8 @@ export function useReopenAlert() {
       request<AlertDetail>(`/alerts/${id}/reopen`, { method: 'POST' }),
     queryKeys: [notificationKeys.alerts],
     updater: (prev, id) => {
-      if (!prev) return prev;
+      // Skip non-array sibling caches under the `['alerts']` prefix.
+      if (!Array.isArray(prev)) return prev;
       return prev.map((a) =>
         a.id === id
           ? {
@@ -655,7 +664,10 @@ export function useMarkNotificationsRead() {
       }),
     queryKeys: [notificationKeys.logs],
     updater: (prev, ids) => {
-      if (!prev) return prev;
+      // The `['notification-logs']` prefix matches caches with non-array
+      // shapes (e.g. `unread-count: {count: number}`). Guard so map-based
+      // mutation only runs on the array-shaped inbox/preview/groups payloads.
+      if (!Array.isArray(prev)) return prev;
       const idSet = new Set(ids);
       const now = new Date().toISOString();
       return prev.map((n) =>
@@ -725,7 +737,10 @@ export function useBulkMarkRead() {
       }),
     queryKeys: [notificationKeys.logs],
     updater: (prev, vars) => {
-      if (!prev) return prev;
+      // Skip non-array sibling caches under the `['notification-logs']`
+      // prefix (e.g. `unread-count: {count}`). Mutating `.map` on those
+      // shapes throws "n.map is not a function" and breaks the toast.
+      if (!Array.isArray(prev)) return prev;
       // group_key path — no optimistic update because cached rows don't
       // carry group_key. The post-settle invalidation refreshes both the
       // flat list and the grouped/thread caches so the UI converges.
@@ -779,7 +794,8 @@ export function useMarkNotificationsUnread() {
       }),
     queryKeys: [notificationKeys.logs],
     updater: (prev, ids) => {
-      if (!prev) return prev;
+      // Skip non-array sibling caches under the `['notification-logs']` prefix.
+      if (!Array.isArray(prev)) return prev;
       const idSet = new Set(ids);
       return prev.map((n) =>
         idSet.has(n.id) && n.read_at ? { ...n, read_at: null } : n,
@@ -817,7 +833,8 @@ export function useArchiveNotifications() {
       }),
     queryKeys: [notificationKeys.logs],
     updater: (prev, ids) => {
-      if (!prev) return prev;
+      // Skip non-array sibling caches under the `['notification-logs']` prefix.
+      if (!Array.isArray(prev)) return prev;
       const idSet = new Set(ids);
       const now = new Date().toISOString();
       return prev.map((n) =>

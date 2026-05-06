@@ -465,7 +465,11 @@ func (r *NotificationRepo) MarkLogFailed(ctx context.Context, id int64, errMsg s
 // IMPORTANT: any change here MUST also be applied to the aliased version used
 // by GetLogsFiltered below; both must stay in lockstep with scanNotificationLog
 // or one of the read paths will break at runtime.
-const notificationLogColumns = `id, channel_id, alert_id, title, message, status, COALESCE(severity, ''), error, created_at, sent_at, read_at, archived_at, acknowledged_at, acknowledged_by, acknowledgement_note`
+//
+// `severity` and `error` are nullable in the DB but the model uses non-pointer
+// `string` fields, so both columns must be COALESCEd to '' to avoid pgx
+// "cannot scan NULL into *string" failures on rows with no error message.
+const notificationLogColumns = `id, channel_id, alert_id, title, message, status, COALESCE(severity, ''), COALESCE(error, ''), created_at, sent_at, read_at, archived_at, acknowledged_at, acknowledged_by, acknowledgement_note`
 
 func scanNotificationLog(rows pgx.Row, l *models.NotificationLog) error {
 	return rows.Scan(
@@ -651,7 +655,7 @@ func (r *NotificationRepo) GetLogsFiltered(ctx context.Context, f NotificationLo
 	args := w.args
 	ph := func(offset int) string { return fmt.Sprintf("$%d", len(args)+offset) }
 
-	const aliasedCols = `nl.id, nl.channel_id, nl.alert_id, nl.title, nl.message, nl.status, COALESCE(nl.severity, ''), nl.error,
+	const aliasedCols = `nl.id, nl.channel_id, nl.alert_id, nl.title, nl.message, nl.status, COALESCE(nl.severity, ''), COALESCE(nl.error, ''),
 		nl.created_at, nl.sent_at, nl.read_at, nl.archived_at,
 		nl.acknowledged_at, nl.acknowledged_by, nl.acknowledgement_note`
 
@@ -755,7 +759,7 @@ SELECT
   agg.unread,
   agg.vehicle_ids,
   nl.id, nl.channel_id, nl.alert_id, nl.title, nl.message, nl.status,
-  COALESCE(nl.severity, ''), nl.error,
+  COALESCE(nl.severity, ''), COALESCE(nl.error, ''),
   nl.created_at, nl.sent_at, nl.read_at, nl.archived_at,
   nl.acknowledged_at, nl.acknowledged_by, nl.acknowledgement_note
 FROM agg

@@ -126,9 +126,17 @@ export function NotificationBellPopover({ className }: NotificationBellPopoverPr
       const el = triggerRef.current
       if (!el) return
       const rect = el.getBoundingClientRect()
+      // Anchor the popover's right edge to the trigger's right edge, but clamp
+      // so the LEFT edge stays inside the viewport. Without this clamp, a
+      // trigger placed away from the viewport's right edge (e.g. when a wide
+      // overlay shifts layout, or in centered headers) lets a 360px popover
+      // extend past x=0 and clip its content. Both bounds use an 8px margin.
+      const margin = 8
+      const desiredRight = Math.max(margin, window.innerWidth - rect.right)
+      const maxRight = Math.max(margin, window.innerWidth - POPOVER_WIDTH_PX - margin)
       setCoords({
         top: rect.bottom + 8,
-        right: Math.max(8, window.innerWidth - rect.right),
+        right: Math.min(desiredRight, maxRight),
       })
     }
     update()

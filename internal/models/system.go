@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"math"
 	"strconv"
 	"strings"
@@ -196,6 +197,29 @@ func geofenceHaversineM(lat1, lon1, lat2, lon2 float64) float64 {
 		math.Cos(lat1r)*math.Cos(lat2r)*math.Sin(dLon/2)*math.Sin(dLon/2)
 	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 	return R * c
+}
+
+// MarshalJSON augments the default Geofence encoding with the circle-shape
+// fields the web client consumes (`latitude`, `longitude`, `radius`).
+//
+// The DB stores a polygon as WKT; the centroid and bounding radius are
+// derived on the fly via the existing Centroid()/Radius() methods. Emitting
+// these alongside `polygon_wkt` is purely additive — no field is removed —
+// so non-web consumers continue to see the same shape they always did.
+func (g Geofence) MarshalJSON() ([]byte, error) {
+	type alias Geofence
+	lat, lon := g.Centroid()
+	return json.Marshal(struct {
+		alias
+		Latitude  float64 `json:"latitude"`
+		Longitude float64 `json:"longitude"`
+		Radius    float64 `json:"radius"`
+	}{
+		alias:     alias(g),
+		Latitude:  lat,
+		Longitude: lon,
+		Radius:    g.Radius(),
+	})
 }
 
 // ElectricityCost mirrors the post-migration `electricity_cost` schema

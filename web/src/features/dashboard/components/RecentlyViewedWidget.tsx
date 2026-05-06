@@ -55,9 +55,7 @@ function iconForKind(kind: RecentPageKind): React.ReactNode {
     default:
       return <FileText className="h-3.5 w-3.5" />
   }
-}
-
-function formatRelative(
+}function formatRelative(
   visitedAt: number,
   now: number,
   t: TFunction,
@@ -105,10 +103,10 @@ export function RecentlyViewedWidget({
 
   return (
     <GlassPanel
-      className={className ?? 'p-5'}
+      className={className ?? 'p-4'}
       data-testid="recently-viewed-widget"
     >
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2">
         <h3 className="section-title flex items-center gap-2">
           <Clock className="h-4 w-4 text-cyan-300" />
           {t('recentPages.widgetTitle', 'Recently Viewed')}
@@ -116,7 +114,7 @@ export function RecentlyViewedWidget({
       </div>
       {entries.length === 0 ? (
         <p
-          className="text-xs text-[var(--text-muted)] py-4 text-center"
+          className="text-xs text-[var(--text-muted)] py-3 text-center"
           data-testid="recently-viewed-empty"
         >
           {t(
@@ -125,19 +123,24 @@ export function RecentlyViewedWidget({
           )}
         </p>
       ) : (
+        // Responsive grid: 1 col on narrow viewports, 2 col ≥sm, 3 col ≥lg.
+        // Cuts widget height to ~⅓ on the dashboard's typical wide layout
+        // without changing per-row content. Each row drops the icon-chip
+        // background and uses tighter padding so individual entries no
+        // longer feel like primary navigation tiles.
         <ul
-          className="flex flex-col gap-1"
+          className="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3"
           data-testid="recently-viewed-list"
         >
           {entries.map((entry) => (
             <li key={entry.path}>
               <Link
                 to={entry.path}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
                 data-testid={`recently-viewed-row-${entry.path}`}
               >
                 <span
-                  className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-[var(--surface-2)] text-cyan-300"
+                  className="flex-shrink-0 text-cyan-300"
                   aria-hidden="true"
                 >
                   {iconForKind(entry.kind)}
