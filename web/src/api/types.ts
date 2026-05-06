@@ -2,6 +2,39 @@
  * @module api/types
  *
  * Every exported interface and type alias used across the API layer.
+ *
+ * === SI Unit Conventions (Phase-43 / Prompt 0011) ===
+ *
+ * Field names carry their unit as a suffix. Fields marked `(SI)` are stored
+ * and transported in canonical SI (or derived-SI) form; the frontend
+ * unit-conversion layer (`@/lib/unitConversion`) is the only place that
+ * converts to user-display units.
+ *
+ *   `_m`        -> meters                    (SI: length)
+ *   `_km`       -> kilometers                (derived SI)
+ *   `_c`        -> degrees Celsius           (SI: temperature)
+ *   `_pa`       -> pascals                   (SI: pressure)
+ *   `_kg`       -> kilograms                 (SI: mass)
+ *   `_kwh`      -> kilowatt-hours            (derived SI: energy)
+ *   `_kw`       -> kilowatts                 (derived SI: power)
+ *   `_wh_km`    -> watt-hours per kilometer  (derived SI: energy intensity)
+ *   `_v` /
+ *   `_voltage`  -> volts                     (derived SI: electric potential)
+ *   `_amps`     -> amperes                   (SI: electric current)
+ *   `_nm`       -> newton-meters             (derived SI: torque)
+ *   `_rpm`      -> revolutions per minute    (NON-SI; angular velocity)
+ *   `_sec`      -> seconds                   (SI: time)
+ *   `_ms`       -> milliseconds              (derived SI: time)
+ *
+ * NON-SI suffixes (legacy / display-only): `_mi`, `_mph`, `_psi`, `_f`,
+ * `_min`, `_hr`. These mirror Go struct fields in source units; the API
+ * does NOT convert them — `lib/unitConversion.ts` does on the boundary.
+ *
+ * Rule of thumb: any field tagged `(SI)` in JSDoc below is safe to feed
+ * directly into `metersToKm()` / `celsiusToF()` / `pascalsToPsi()` etc.
+ *
+ * Mirrors Go structs under `internal/api/*`, `internal/models/*`, and
+ * `internal/tesla/protomodel/*`.
  */
 
 import type {
@@ -45,6 +78,7 @@ export interface Position {
   longitude: number
   heading: number | null
   speed_mph: number | null
+  /** Elevation in meters (SI). */
   elevation_m: number | null
   gps_state: string | null
   source: string
@@ -65,12 +99,17 @@ export interface Drive {
   end_lon: number | null
   start_battery_pct: number | null
   end_battery_pct: number | null
+  /** Energy in kilowatt-hours (kWh, derived SI). */
   energy_used_kwh: number | null
+  /** Energy in kilowatt-hours (kWh, derived SI). */
   regen_kwh: number | null
   avg_speed_mph: number | null
   max_speed_mph: number | null
+  /** Power in kilowatts (kW, derived SI). */
   avg_power_kw: number | null
+  /** Temperature in degrees Celsius (SI). */
   outside_temp_avg_c: number | null
+  /** Temperature in degrees Celsius (SI). */
   inside_temp_avg_c: number | null
   score: number | null
   ended_status: string | null
@@ -86,14 +125,18 @@ export interface ChargingSession {
   duration_min: number
   start_battery_pct: number
   end_battery_pct: number | null
+  /** Energy added in kilowatt-hours (kWh, derived SI). */
   energy_added_kwh: number
   miles_added: number | null
   charger_type: string | null
   charger_location: string | null
+  /** Peak charger power in kilowatts (kW, derived SI). */
   charger_power_kw_max: number | null
+  /** Average charger power in kilowatts (kW, derived SI). */
   charger_power_kw_avg: number | null
   cost: number | null
   cost_currency: string | null
+  /** Maximum charger voltage in volts (V, derived SI). */
   max_charger_voltage: number | null
   charger_phases: number | null
   cable_type: string | null
@@ -140,8 +183,11 @@ export interface ChargeTelemetryReading {
   vehicle_id: number
   battery_level: number | null
   soc: number | null
+  /** Instantaneous power in kilowatts (kW, derived SI). */
   power_kw: number | null
+  /** Voltage in volts (V, derived SI). */
   voltage: number | null
+  /** Current in amperes (SI). */
   current_amps: number | null
   phases: number | null
   energy_added: number | null
@@ -319,11 +365,16 @@ export interface AuthStatus {
 // === New Feature Types ===
 
 export interface EnergyStats {
+  /** Energy in kilowatt-hours (kWh, derived SI). */
   total_energy_used_kwh: number
+  /** Energy in kilowatt-hours (kWh, derived SI). */
   total_energy_charged_kwh: number
+  /** Energy intensity in watt-hours per kilometer (Wh/km, derived SI). */
   avg_efficiency_wh_km: number
+  /** Distance in kilometers (km, derived SI). */
   total_distance_km: number
   total_cost: number
+  /** CO2 saved in kilograms (kg, SI). */
   co2_saved_kg: number
   daily_breakdown: { date: string; energy_kwh: number; distance_km: number; efficiency: number }[]
 }
@@ -332,7 +383,9 @@ export interface BatteryReport {
   vehicle_id: number
   current_capacity_pct: number
   degradation_pct: number
+  /** Estimated range when new in kilometers (km, derived SI). */
   estimated_range_new_km: number
+  /** Current estimated range in kilometers (km, derived SI). */
   estimated_range_current_km: number
   total_cycles: number
   health_score: number
@@ -489,11 +542,14 @@ export interface StatsSummary {
 export interface FleetAnalytics {
   period_days: number
   total_vehicles: number
+  /** Distance in kilometers (km, derived SI). */
   total_distance_km: number
   total_drives: number
   total_charging_sessions: number
+  /** Energy in kilowatt-hours (kWh, derived SI). */
   total_energy_kwh: number
   total_cost: number
+  /** Energy intensity in watt-hours per kilometer (Wh/km, derived SI). */
   avg_efficiency_wh_km: number
   most_efficient_vehicle: { id: number; name: string; efficiency: number } | null
   vehicle_comparison: { id: number; name: string; distance: number; energy: number; efficiency: number; drives: number }[]
@@ -770,33 +826,39 @@ export interface MotorSnapshot {
   ts: string
   created_at?: string
   vehicle_id?: number
-  // Torque (DiTorqueActualF/R, DiTorquemotor)
+  /** Front-axle torque in newton-meters (Nm, derived SI). */
   torque_nm_front: number | null
+  /** Rear-axle torque in newton-meters (Nm, derived SI). */
   torque_nm_rear: number | null
   di_torque: number | null
-  // Axle speed (DiAxleSpeedF/R)
+  // Axle speed (DiAxleSpeedF/R) — non-SI (rpm)
   motor_rpm_front: number | null
   motor_rpm_rear: number | null
-  // Temperatures (DiStatorTempF/R, DiInverterTF/R, DiHeatsinkTF/R)
+  /** Front motor temperature in degrees Celsius (SI). */
   motor_temp_c_front: number | null
+  /** Rear motor temperature in degrees Celsius (SI). */
   motor_temp_c_rear: number | null
+  /** Inverter temperature in degrees Celsius (SI). */
   inverter_temp_c: number | null
   inverter_temp_rear: number | null
   heatsink_temp_front: number | null
   heatsink_temp_rear: number | null
-  // Motor current (DiMotorCurrentF/R)
+  // Motor current (DiMotorCurrentF/R) — amperes (SI)
   motor_current_front: number | null
   motor_current_rear: number | null
   // State (DiStateF/R, Gear)
   state_front: string | null
   state_rear: string | null
   shift_state: string | null
-  // Battery voltage (DiVBatF/R)
+  // Battery voltage (DiVBatF/R) — volts (V, derived SI)
   vbat_front: number | null
   vbat_rear: number | null
   // Fields with no backing motor signal — always undefined from signal_log backend
+  /** Power in kilowatts (kW, derived SI). */
   power_kw?: number | null
+  /** Regen power in kilowatts (kW, derived SI). */
   regen_kw?: number | null
+  /** Battery temperature in degrees Celsius (SI). */
   battery_temp_c?: number | null
   source?: string | null
   di_stator_temp?: number | null
@@ -808,9 +870,13 @@ export interface MotorSnapshot {
 export interface ClimateSnapshot {
   vehicle_id: number
   ts: string
+  /** Cabin inside temperature in degrees Celsius (SI). */
   inside_temp_c: number | null
+  /** Outside ambient temperature in degrees Celsius (SI). */
   outside_temp_c: number | null
+  /** Driver-side HVAC setpoint in degrees Celsius (SI). */
   driver_setpoint_c: number | null
+  /** Passenger-side HVAC setpoint in degrees Celsius (SI). */
   passenger_setpoint_c: number | null
   hvac_state: string | null
   defrost_mode: string | null
@@ -952,6 +1018,7 @@ export interface VampireDrainEvent {
   start_battery: number
   end_battery: number | null
   battery_lost: number
+  /** Range lost in kilometers (km, derived SI). */
   range_lost_km: number
   duration_hours: number
   drain_rate_pct_per_hour: number
@@ -974,10 +1041,12 @@ export interface DailyMileage {
   id: number
   vehicle_id: number
   date: string
+  /** Distance in kilometers (km, derived SI). */
   distance_km: number
   odometer_start: number
   odometer_end: number
   drive_count: number
+  /** Energy in kilowatt-hours (kWh, derived SI). */
   energy_used_kwh: number
 }
 
@@ -1015,7 +1084,9 @@ export interface Trip {
   name: string | null
   start_date: string
   end_date: string | null
+  /** Distance in kilometers (km, derived SI). */
   total_distance_km: number
+  /** Energy in kilowatt-hours (kWh, derived SI). */
   total_energy_kwh: number
   total_cost: number
   drive_count: number
@@ -1471,13 +1542,18 @@ export interface ChargingTelemetry {
   battery_level: number | null
   battery_range_mi: number | null
   charging_state: string | null
+  /** Charger voltage in volts (V, derived SI). */
   charger_voltage: number | null
+  /** Charger actual current in amperes (SI). */
   charger_actual_current: number | null
+  /** Charger power in kilowatts (kW, derived SI). */
   charger_power_kw: number | null
   charger_phases: number | null
+  /** Energy added in kilowatt-hours (kWh, derived SI). */
   charge_energy_added_kwh: number | null
   charge_miles_added: number | null
   charge_rate_mph: number | null
+  /** Charger pilot current in amperes (SI). */
   charger_pilot_current: number | null
   scheduled_charging_at: string | null
   source: string
@@ -1553,6 +1629,7 @@ export interface LocationSnapshot {
   longitude?: number
   heading?: number
   gps_state?: string
+  /** Elevation in meters (SI). */
   elevation_m?: number
   speed_mph?: number
   // Navigation & route
@@ -1653,8 +1730,10 @@ export interface BackupRun {
 export interface TCOAnalytics {
   vehicle_id: number
   total_charging_cost: number
+  /** Total charged energy in kilowatt-hours (kWh, derived SI). */
   total_kwh: number
   total_sessions: number
+  /** Total distance in kilometers (km, derived SI). */
   total_km: number
   first_date: string
   last_date: string
@@ -1667,6 +1746,7 @@ export interface TCOAnalytics {
   maintenance_savings_estimate: number
   gas_price: number
   gas_efficiency_mpg: number
+  /** Base electricity cost per kilowatt-hour. */
   base_cost_per_kwh: number
   monthly_breakdown: {
     month: string
@@ -1772,10 +1852,13 @@ export interface BatteryDegradationData {
   snapshots: {
     id: number
     health_score: number
+    /** Battery capacity in kilowatt-hours (kWh, derived SI). */
     capacity_kwh: number
     degradation_pct: number
+    /** Estimated range in kilometers (km, derived SI). */
     est_range_km: number
     cycle_count: number
+    /** Average cell temperature in degrees Celsius (SI). */
     avg_cell_temp_c: number
     created_at: string
   }[]
@@ -2007,17 +2090,21 @@ export interface VehicleInvitation {
 export interface YearReviewDriveHighlight {
   drive_id: number
   date: string
+  /** Distance in kilometers (km, derived SI). */
   distance_km: number
   duration_min: number
   start_address: string
   end_address: string
+  /** Energy intensity in watt-hours per kilometer (Wh/km, derived SI). */
   efficiency_wh_km: number
 }
 
 export interface YearReviewMonthStat {
   month: number
   drives: number
+  /** Distance in kilometers (km, derived SI). */
   distance_km: number
+  /** Energy in kilowatt-hours (kWh, derived SI). */
   energy_kwh: number
   cost: number
 }
@@ -2038,12 +2125,15 @@ export interface YearReview {
 
   // Headline stats
   total_drives: number
+  /** Total distance in kilometers (km, derived SI). */
   total_distance_km: number
+  /** Total energy in kilowatt-hours (kWh, derived SI). */
   total_energy_kwh: number
   total_charge_sessions: number
   total_driving_minutes: number
   total_charging_cost: number
   gas_savings: number
+  /** CO2 offset in kilograms (kg, SI). */
   co2_offset_kg: number
 
   // Extremes
@@ -2052,7 +2142,9 @@ export interface YearReview {
   most_efficient_drive: YearReviewDriveHighlight | null
   least_efficient_drive: YearReviewDriveHighlight | null
   fastest_speed_kmh: number
+  /** Coldest drive temperature in degrees Celsius (SI). */
   coldest_drive_temp_c: number
+  /** Hottest drive temperature in degrees Celsius (SI). */
   hottest_drive_temp_c: number
 
   // Monthly breakdown
@@ -2062,7 +2154,9 @@ export interface YearReview {
   most_active_day_of_week: string
   most_active_hour: number
   avg_drives_per_week: number
+  /** Average distance per drive in kilometers (km, derived SI). */
   avg_distance_per_drive_km: number
+  /** Average energy intensity in watt-hours per kilometer (Wh/km, derived SI). */
   avg_efficiency_wh_km: number
 
   // Charging habits
