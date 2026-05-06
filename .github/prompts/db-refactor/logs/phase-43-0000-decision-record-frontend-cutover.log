@@ -1,0 +1,92 @@
+=== PREFLIGHT ===
+prompt: phase-43/0000-decision-record-frontend-cutover
+date: 2026-05-05T23:25:47.9502815-07:00
+cwd: D:\repos\teslasync
+git_head: 4c9b0afa67a4c70d551a60a79519fa609ff4364a
+git_branch: refactor/signals-rewrite
+predecessor_log: .github/prompts/db-refactor/logs/phase-42-9999v2-final-gate.log
+predecessor_status: EXIT=0; STATUS=DONE
+allowed_files: .github\prompts\db-refactor\logs\phase-43-0000-decision-record-frontend-cutover.log (log only)
+
+=== DECISIONS ===
+Phase-43 forward-ports the React SPA onto the Tesla Fleet Telemetry SI pipeline
+delivered by phase-42 (ADR-004, normalize.Pipeline, signal.Store L1 + Redis L2 +
+signal_log durable history, generated proto enums, tesla_* prefixed tables).
+Public API URLs (/vehicles, /charging, /drives, /analytics/*, /signals/*) are
+preserved; response shapes use SI canonical units (meters, m/s, degC, kPa,
+joules) and field names match the regenerated proto-derived Go structs.
+
+The following six decisions are LOCKED for the duration of phase-43 and govern
+every subsequent prompt (0001+):
+
+1. Forward-port only.
+   Every page, route, component, and hook that exists at phase-43 start MUST
+   exist at phase-43 end. NO deletions of user-facing surface without explicit
+   per-case user approval surfaced as STATUS=BLOCKED on the prompt that wants
+   to delete it. Refactoring file paths is allowed; removing functionality is
+   not. The audit prompts in this phase enforce this by counting routes,
+   pages, hooks, and i18n keys at start vs end.
+
+2. SI everywhere.
+   Frontend code assumes SI canonical units from the API and converts to the
+   user's preferred display units only at the render boundary via
+   web/src/lib/unitConversion.ts. Hooks (web/src/api/hooks/*) MUST NOT mutate,
+   round, or convert values. lib/unitConversion.ts MUST NOT assume the
+   inbound display unit; it converts FROM SI canonical TO display. This
+   matches .github/instructions/unit-conversion.instructions.md.
+
+3. Strict-after phase-42.
+   This phase requires phase-42-9999v2-final-gate.log to be STATUS=DONE
+   EXIT=0 before any prompt 0001+ runs. v2 is the canonical phase-42
+   completion log per ADR-004; v1 (phase-42-9999-final-gate.log) remained
+   BLOCKED on log-discipline gaps and is superseded. Every phase-43 prompt's
+   gate begins by re-asserting this predecessor invariant.
+
+4. Domain-by-domain end-to-end.
+   Each of the 19 feature directories under web/src/features/* gets one
+   prompt that updates hooks (web/src/api/hooks) -> types
+   (web/src/api/types.ts and web/src/types/*) -> pages
+   (web/src/features/<domain>/pages/*) -> i18n (web/src/i18n/en.json) ->
+   tests, then verifies cd web; npx tsc --noEmit && npm run build && the
+   relevant audit script. A domain prompt is DONE only when the full chain
+   is green for that domain.
+
+5. Audit-not-prune.
+   Phase-43 includes coverage audits for hooks
+   (audit-api-hooks-vs-router.mjs), routes (audit-route-coverage.mjs), and
+   i18n keys (audit-i18n-coverage.mjs). When an audit finds an orphan
+   (frontend hook with no backend route, page with no entry in router,
+   i18n key with no usage) the prompt BLOCKs and the resolution is to add
+   the missing surface, NOT to silently delete the orphan. Deletions are
+   gated decisions, not housekeeping.
+
+6. No raw HTML, no inline styles, no direct recharts/leaflet imports.
+   Existing engineering rules from .github/copilot-instructions.md continue
+   to apply: shared <Button>/<Input>/<Select>/<Textarea>/<Modal>/<DataTable>
+   from @/components/ui; charts via @/components/charts (no
+   import { LineChart } from 'recharts'); maps via @/components/maps (no
+   import { MapContainer } from 'react-leaflet'); no inline style={{}}
+   with static CSS variables; no hardcoded English strings; no double
+   /api/v1 prefix in hook URLs; snake_case query params; light-mode parity
+   via var(--text-primary)/var(--text-secondary)/var(--text-muted); WCAG
+   2.5.5/2.5.8 touch-target floor of >=24x24. The audit gate enforces
+   these on every domain prompt.
+
+These six decisions are not negotiable within phase-43. A prompt that wants
+to bend any of them MUST STOP and surface STATUS=BLOCKED with a clear
+explanation; the user (not the agent) decides whether to amend ADR-004 or
+override the lock.
+
+=== GATE ===
+Predecessor OK: .github\prompts\db-refactor\logs\phase-42-9999v2-final-gate.log -> EXIT=0 / STATUS=DONE
+Decisions key found: Forward-port only
+Decisions key found: SI everywhere
+Decisions key found: Strict-after phase-42
+Decisions key found: Domain-by-domain
+Decisions key found: Audit-not-prune
+Decisions key found: No raw HTML
+All gate checks passed.
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
+log_lines: 91
