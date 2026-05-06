@@ -50,6 +50,14 @@ export const guardKeys = {
 
 // ── Hooks ───────────────────────────────────────────────────────────────
 
+/**
+ * @deprecated Phase-42 (prompt 0077) deleted the `/vehicles/{id}/guard*`
+ * routes alongside `guard_handler.go` and the `guard_events` table. This
+ * hook will surface a 404 (handled gracefully via `PageContainer.error`
+ * per ADR-005 #1). Retained because in-scope `GuardModePage` and
+ * out-of-scope `GuardModeWidget` still import it. A future replacement
+ * would re-derive guard semantics from existing alert/notification rules.
+ */
 export function useGuardConfig(vehicleId: number) {
   return useQuery({
     queryKey: guardKeys.config(vehicleId),
@@ -60,6 +68,10 @@ export function useGuardConfig(vehicleId: number) {
   });
 }
 
+/**
+ * @deprecated See {@link useGuardConfig} — `/vehicles/{id}/guard/events`
+ * was deleted by Phase-42 (prompt 0077).
+ */
 export function useGuardEvents(vehicleId: number) {
   return useQuery({
     queryKey: guardKeys.events(vehicleId),
@@ -69,6 +81,10 @@ export function useGuardEvents(vehicleId: number) {
   });
 }
 
+/**
+ * @deprecated See {@link useGuardConfig} — POST `/vehicles/{id}/guard`
+ * was deleted by Phase-42 (prompt 0077).
+ */
 export function useSetGuardConfig() {
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -96,6 +112,10 @@ export function useSetGuardConfig() {
   });
 }
 
+/**
+ * @deprecated See {@link useGuardConfig} — POST
+ * `/vehicles/{id}/guard/panic` was deleted by Phase-42 (prompt 0077).
+ */
 export function useGuardPanic() {
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -114,6 +134,11 @@ export function useGuardPanic() {
   });
 }
 
+/**
+ * @deprecated See {@link useGuardConfig} — POST
+ * `/vehicles/{id}/guard/events/{event_id}/acknowledge` was deleted by
+ * Phase-42 (prompt 0077).
+ */
 export function useAcknowledgeGuardEvent() {
   const queryClient = useQueryClient();
   const toast = useToast();

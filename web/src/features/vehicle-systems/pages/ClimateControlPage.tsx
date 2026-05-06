@@ -50,7 +50,8 @@ import {
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertTempFromSI } from '@/lib/unitConversion';
 import { formatDateTime, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
@@ -246,9 +247,14 @@ function climateAccessor(row: ClimateState, key: string): number | string {
 export default function ClimateControlPage() {
   const { t } = useTranslation();
   usePageTitle(t('Climate Control'));
-  const { convertTemp, tempUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const tempUnit = unitPrefs.temperature;
   const isFahrenheit = tempUnit === '°F';
   const tempGaugeMax = isFahrenheit ? 131 : 55;
+  // Backend ClimateState fields (insideTemp, outsideTemp, driverTempSetting,
+  // passengerTempSetting) arrive in °C SI. `convertTempFromSI` accepts the
+  // °C scalar directly and returns the user-pref display value.
+  const convertTemp = (celsius: number) => convertTempFromSI(celsius, tempUnit);
 
   /* ─── Vehicle selector — Phase 40 / Prompt 16: header VehiclePicker is the source of truth ─── */
   const { vehicleId } = useSelectedVehicle();
@@ -373,7 +379,10 @@ export default function ClimateControlPage() {
       driverTempSetting: h.driverTempSetting != null ? convertTemp(h.driverTempSetting) : null,
       acActive: h.isAcOn ? 1 : 0,
     })),
-    [chronoHistory, convertTemp],
+    // Track the primitive `tempUnit` instead of the closure `convertTemp`
+    // so non-temperature settings churn doesn't invalidate the memo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [chronoHistory, tempUnit],
   );
 
   /* ─── Comfort score & temp delta ─── */

@@ -30,6 +30,8 @@ import {
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useSecurityLatest } from '@/api/hooks/useVehicles';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
@@ -436,6 +438,8 @@ function SafetyPageSkeleton() {
 export default function SafetySettingsPage() {
   const { t } = useTranslation();
   usePageTitle(t('Safety Settings'));
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
 
   /* --- vehicle selector --- */
   const { data: vehicles, error: vehiclesError } = useQuery<Vehicle[]>({
@@ -662,23 +666,33 @@ export default function SafetySettingsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <MetricCard
                   icon={<Navigation className="h-5 w-5" />}
-                  label={t('safety.milesSinceReset', 'Miles Since Reset')}
+                  label={t('safety.distanceSinceReset', 'Distance Since Reset')}
                   value={
                     latest.miles_since_reset != null
-                      ? fmtNumber(latest.miles_since_reset)
+                      ? fmtNumber(
+                          convertDistanceFromSI(
+                            latest.miles_since_reset,
+                            distanceUnit,
+                          ),
+                        )
                       : '—'
                   }
-                  subtitle={t('safety.miles', 'miles')}
+                  subtitle={distanceUnit}
                 />
                 <MetricCard
                   icon={<Cpu className="h-5 w-5" />}
-                  label={t('safety.selfDrivingMiles', 'Self-Driving Miles')}
+                  label={t('safety.selfDrivingDistance', 'Self-Driving Distance')}
                   value={
                     latest.self_driving_miles_since_reset != null
-                      ? fmtNumber(latest.self_driving_miles_since_reset)
+                      ? fmtNumber(
+                          convertDistanceFromSI(
+                            latest.self_driving_miles_since_reset,
+                            distanceUnit,
+                          ),
+                        )
                       : '—'
                   }
-                  subtitle={t('safety.milesAutopilot', 'miles (autopilot)')}
+                  subtitle={t('safety.distanceAutopilot', '{{unit}} (autopilot)', { unit: distanceUnit })}
                 />
               </div>
             </GlassPanel>

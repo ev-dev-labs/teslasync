@@ -7166,7 +7166,10 @@
     "milesSinceReset": "Miles Since Reset",
     "miles": "miles",
     "selfDrivingMiles": "Self-Driving Miles",
-    "milesAutopilot": "miles (autopilot)"
+    "milesAutopilot": "miles (autopilot)",
+    "distanceSinceReset": "Distance Since Reset",
+    "selfDrivingDistance": "Self-Driving Distance",
+    "distanceAutopilot": "{{unit}} (autopilot)"
   },
   "softwareUpdates": {
     "title": "Software Updates"

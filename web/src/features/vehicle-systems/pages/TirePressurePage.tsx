@@ -19,7 +19,8 @@ import { FadeIn } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertPressureFromSI } from '@/lib/unitConversion';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -57,10 +58,15 @@ function hasTpmsWarning(val: string | null | undefined): boolean {
   }
 }
 
-// Thresholds in Bar (internal unit — DB stores Bar)
-const NORMAL_MIN_BAR = 2.5;
-const NORMAL_MAX_BAR = 3.5;
-const GAUGE_MAX_BAR = 5.0;
+// Thresholds in Pascals (SI). Backend `signal_log` stores TpmsPressure
+// values in Pa after Phase-42 normalization (units.ToSI converts both
+// bar and psi inputs to Pa per `internal/tesla/units/units.go`).
+// 1 bar = 100_000 Pa, 1 psi ≈ 6894.757 Pa.
+const NORMAL_MIN_PA = 250_000; // 2.5 bar
+const NORMAL_MAX_PA = 350_000; // 3.5 bar
+const SOFT_LOW_PA = 200_000; // 2.0 bar
+const SOFT_HIGH_PA = 400_000; // 4.0 bar
+const GAUGE_MAX_PA = 500_000; // 5.0 bar
 
 const TIRE_POSITIONS = ['fl', 'fr', 'rl', 'rr'] as const;
 type TirePosition = (typeof TIRE_POSITIONS)[number];
@@ -101,17 +107,17 @@ function getTirePressureValue(
 
 type PressureStatus = 'normal' | 'low' | 'high' | 'critical';
 
-function pressureColor(bar: number): string {
-  if (bar >= NORMAL_MIN_BAR && bar <= NORMAL_MAX_BAR) return '#10b981';
-  if (bar >= 2.0 && bar <= 4.0) return '#f59e0b';
+function pressureColor(pa: number): string {
+  if (pa >= NORMAL_MIN_PA && pa <= NORMAL_MAX_PA) return '#10b981';
+  if (pa >= SOFT_LOW_PA && pa <= SOFT_HIGH_PA) return '#f59e0b';
   return '#ef4444';
 }
 
-function pressureStatus(bar: number): PressureStatus {
-  if (bar < 2.0) return 'critical';
-  if (bar < NORMAL_MIN_BAR) return 'low';
-  if (bar > 4.0) return 'critical';
-  if (bar > NORMAL_MAX_BAR) return 'high';
+function pressureStatus(pa: number): PressureStatus {
+  if (pa < SOFT_LOW_PA) return 'critical';
+  if (pa < NORMAL_MIN_PA) return 'low';
+  if (pa > SOFT_HIGH_PA) return 'critical';
+  if (pa > NORMAL_MAX_PA) return 'high';
   return 'normal';
 }
 
@@ -154,9 +160,16 @@ const LINE_COLORS: Record<TirePosition, string> = {
 export default function TirePressurePage() {
   const { t } = useTranslation();
   usePageTitle(t('tirePressure.title', 'Tire Pressure'));
-  const { convertPressure, pressureUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const pressureUnit = unitPrefs.pressure;
 
-  const gaugeMax = convertPressure(GAUGE_MAX_BAR);
+  // Backend `front_left`/`front_right`/`rear_left`/`rear_right` arrive
+  // in Pa (SI). `convertPressureFromSI` expects kPa, so divide by 1000
+  // at the boundary (precedent: Phase-43/0022 useDriveDetailData).
+  const toDisplayPressure = (pa: number) =>
+    convertPressureFromSI(pa / 1000, unitPrefs.pressure);
+
+  const gaugeMax = toDisplayPressure(GAUGE_MAX_PA);
 
   // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
   const { vehicleId: activeVehicleId } = useSelectedVehicle();
@@ -204,7 +217,7 @@ export default function TirePressurePage() {
     const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
     const min = Math.min(...values);
     const warningCount = values.filter(
-      (v) => v < NORMAL_MIN_BAR || v > NORMAL_MAX_BAR,
+      (v) => v < NORMAL_MIN_PA || v > NORMAL_MAX_PA,
     ).length;
     return { avg, min, warningCount };
   }, [latest]);
@@ -213,12 +226,16 @@ export default function TirePressurePage() {
     if (!history?.length) return [];
     return [...history].reverse().map((r) => ({
       time: formatDateTime(r.created_at),
-      fl: convertPressure(r.front_left),
-      fr: convertPressure(r.front_right),
-      rl: convertPressure(r.rear_left),
-      rr: convertPressure(r.rear_right),
+      fl: toDisplayPressure(r.front_left),
+      fr: toDisplayPressure(r.front_right),
+      rl: toDisplayPressure(r.rear_left),
+      rr: toDisplayPressure(r.rear_right),
     }));
-  }, [history, convertPressure]);
+    // unitPrefs.pressure is the only relevant primitive dep — depending on
+    // the closure-captured `toDisplayPressure` would also work but referencing
+    // the primitive keeps the dep list stable for memo invalidation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [history, unitPrefs.pressure]);
 
   /* ---- Table columns ---- */
 
@@ -239,7 +256,7 @@ export default function TirePressurePage() {
             const status = pressureStatus(val);
             return (
               <Badge variant={statusVariant(status)} size="sm">
-                {fmtNumber(convertPressure(val ?? 0))}
+                {fmtNumber(toDisplayPressure(val ?? 0))}
               </Badge>
             );
           },
@@ -346,7 +363,7 @@ export default function TirePressurePage() {
                     ) : (
                       <>
                         <RadialGauge
-                          value={convertPressure(value)}
+                          value={toDisplayPressure(value)}
                           max={gaugeMax}
                           label={TIRE_LABELS[pos]}
                           unit={pressureUnit}
@@ -371,7 +388,7 @@ export default function TirePressurePage() {
             label={t('Avg Pressure')}
             value={
               summaryStats
-                ? `${fmtNumber(convertPressure(summaryStats.avg ?? 0))} ${pressureUnit}`
+                ? `${fmtNumber(toDisplayPressure(summaryStats.avg ?? 0))} ${pressureUnit}`
                 : '—'
             }
             icon={<Activity className="h-5 w-5" />}
@@ -381,7 +398,7 @@ export default function TirePressurePage() {
             label={t('Min Pressure')}
             value={
               summaryStats
-                ? `${fmtNumber(convertPressure(summaryStats.min ?? 0))} ${pressureUnit}`
+                ? `${fmtNumber(toDisplayPressure(summaryStats.min ?? 0))} ${pressureUnit}`
                 : '—'
             }
             icon={<TrendingDown className="h-5 w-5" />}
