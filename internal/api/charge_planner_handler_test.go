@@ -11,7 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 // newChargePlannerOptimizeRequest builds a POST /charge-planner/optimize
@@ -143,5 +145,95 @@ func TestChargePlanner_PropagatesError(t *testing.T) {
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want 500; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+// TestChargePlanner_ApplyWrapsSendCommandWithTimeout verifies that
+// ChargePlannerHandler.applyChargeScheduleToVehicle wraps each Tesla
+// SendCommand call in its own context.WithTimeout — the project rule
+// for external Tesla API calls (Tesla API: 30s). Without a per-call
+// deadline a stalled Tesla API would hang the request goroutine for as
+// long as the inbound HTTP client is willing to wait (forever, by
+// default), starving the worker pool and any /charge-planner/apply
+// request queueing behind it. The legacy bare-context calls
+// (set_charge_limit and set_scheduled_charging at L347-364) inherited
+// only the inbound request context, which carries no deadline, and a
+// future regression that re-introduces the bare-context pattern is
+// caught here.
+//
+// The test points a real *tesla.Client at a mock server that blocks
+// indefinitely (until the request context cancels), then substitutes
+// the package-level chargePlannerCommandTimeout for a small value to
+// drive the deadline branch deterministically. The helper must return
+// promptly (well under any reasonable production wait) with
+// failedCmd="set_charge_limit" — proving the FIRST SendCommand call's
+// context honored its private 50ms deadline rather than the parent's
+// indefinite one. The parent context.Background() carries no deadline,
+// so any timeout that fires comes from the helper's own
+// context.WithTimeout call.
+func TestChargePlanner_ApplyWrapsSendCommandWithTimeout(t *testing.T) {
+	// release unblocks any in-flight handler at test teardown so
+	// httptest.Server.Close() can drain its handler WaitGroup even if
+	// the server-side detection of the client context cancellation
+	// has not yet propagated. Without this backstop the test process
+	// would hang in server.Close() after the assertions pass.
+	release := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Block until EITHER the request's own context cancels —
+		// which, with the per-call WithTimeout in place, fires
+		// after chargePlannerCommandTimeout — or the test releases
+		// us at teardown. The handler MUST drain on
+		// r.Context().Done() rather than time.Sleep — otherwise a
+		// missing per-call timeout would not surface as a test
+		// failure (the inbound conn would stay open until Sleep
+		// elapses, masking the bug).
+		select {
+		case <-r.Context().Done():
+		case <-release:
+		}
+	}))
+	t.Cleanup(func() {
+		close(release)
+		server.Close()
+	})
+
+	client := tesla.NewClient(config.TeslaConfig{
+		BaseURL:      server.URL,
+		AuthURL:      server.URL,
+		ClientID:     "test-client-id",
+		ClientSecret: "test-client-secret",
+		// Generous http.Client.Timeout so the failure path under
+		// test cannot be masked by the transport-level timeout —
+		// the only deadline that should ever fire here is the one
+		// the helper installs via context.WithTimeout.
+		Timeout: 30 * time.Second,
+	})
+	client.SetTokens("test-access-token", "test-refresh-token", time.Now().Add(1*time.Hour))
+
+	prevTimeout := chargePlannerCommandTimeout
+	chargePlannerCommandTimeout = 50 * time.Millisecond
+	defer func() { chargePlannerCommandTimeout = prevTimeout }()
+
+	h := &ChargePlannerHandler{teslaClient: client}
+
+	// Parent context with NO deadline — the timeout MUST come from
+	// the helper's own context.WithTimeout, never from the caller.
+	start := time.Now()
+	failedCmd, err := h.applyChargeScheduleToVehicle(context.Background(), "TESTVIN", 80, 1320)
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatalf("applyChargeScheduleToVehicle returned nil error; want context-deadline error (failedCmd=%q, elapsed=%v)", failedCmd, elapsed)
+	}
+	if failedCmd != "set_charge_limit" {
+		t.Fatalf("failedCmd = %q, want %q (the FIRST SendCommand should hit its private deadline first)", failedCmd, "set_charge_limit")
+	}
+	// Generous upper bound — well under any reasonable production
+	// Tesla timeout and well under the 30s http.Client.Timeout, but
+	// accommodates CI scheduler jitter. Anything substantially over
+	// chargePlannerCommandTimeout (50ms) means the per-call wrap is
+	// not in place.
+	if elapsed > 5*time.Second {
+		t.Fatalf("applyChargeScheduleToVehicle took %v with chargePlannerCommandTimeout=50ms — context.WithTimeout wrap is missing or not honored", elapsed)
 	}
 }

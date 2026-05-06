@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -16,6 +17,19 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
+
+// chargePlannerCommandTimeout caps each Tesla SendCommand invocation
+// issued by ChargePlannerHandler.Apply. Project rule: external Tesla API
+// calls must wrap with context.WithTimeout (Tesla API: 30s). Without a
+// per-call deadline a stalled Tesla API hangs the request goroutine for
+// as long as the inbound HTTP client is willing to wait (forever, by
+// default), starving the worker pool and any /charge-planner/apply
+// request queueing behind it.
+//
+// Declared as a package var rather than a const so unit tests can
+// substitute a short timeout to exercise the deadline branch
+// deterministically without sleeping for 30 seconds.
+var chargePlannerCommandTimeout = 30 * time.Second
 
 // ChargePlannerHandler provides smart charge scheduling optimization.
 //
@@ -343,23 +357,22 @@ func (h *ChargePlannerHandler) Apply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Set charge limit
-	if err := h.teslaClient.SendCommand(ctx, vehicle.VIN, "set_charge_limit", map[string]interface{}{
-		"percent": plan.TargetSOC,
-	}); err != nil {
-		log.Error().Err(err).Str("vin", vehicle.VIN).Msg("failed to set charge limit")
-		writeError(w, http.StatusInternalServerError, "failed to set charge limit")
-		return
-	}
-
-	// 2. Set scheduled charging time (minutes since midnight)
+	// 1+2. Apply the schedule via two Tesla commands, each wrapped in
+	// its own per-call context.WithTimeout (project rule: external
+	// Tesla API calls must wrap with context.WithTimeout — Tesla API:
+	// 30s). Each command runs under a fresh deadline derived from the
+	// parent so a stuck first call cannot starve the second's budget.
 	startMinutes := plan.ScheduledStart.Hour()*60 + plan.ScheduledStart.Minute()
-	if err := h.teslaClient.SendCommand(ctx, vehicle.VIN, "set_scheduled_charging", map[string]interface{}{
-		"enable": true,
-		"time":   startMinutes,
-	}); err != nil {
-		log.Error().Err(err).Str("vin", vehicle.VIN).Msg("failed to set scheduled charging")
-		writeError(w, http.StatusInternalServerError, "failed to set scheduled charging")
+	if failedCmd, err := h.applyChargeScheduleToVehicle(ctx, vehicle.VIN, plan.TargetSOC, startMinutes); err != nil {
+		log.Error().Err(err).Str("vin", vehicle.VIN).Str("command", failedCmd).Msg("failed to apply charge schedule")
+		switch failedCmd {
+		case "set_charge_limit":
+			writeError(w, http.StatusInternalServerError, "failed to set charge limit")
+		case "set_scheduled_charging":
+			writeError(w, http.StatusInternalServerError, "failed to set scheduled charging")
+		default:
+			writeError(w, http.StatusInternalServerError, "failed to apply charge schedule")
+		}
 		return
 	}
 
@@ -381,6 +394,40 @@ func (h *ChargePlannerHandler) Apply(w http.ResponseWriter, r *http.Request) {
 		"plan_id": plan.ID,
 		"message": fmt.Sprintf("Charging scheduled at %s", plan.ScheduledStart.Format("15:04")),
 	})
+}
+
+// applyChargeScheduleToVehicle issues the two Tesla commands required
+// to apply a charge plan: set_charge_limit followed by
+// set_scheduled_charging. Each command runs under its OWN
+// context.WithTimeout(parent, chargePlannerCommandTimeout) — neither
+// inherits the parent's lack of deadline, and a stuck first call cannot
+// starve the second's budget.
+//
+// Returns the canonical command name that failed (empty on success)
+// alongside the underlying error so the caller can map it to the
+// appropriate user-facing error message and structured log field
+// without re-parsing wrapped error strings.
+func (h *ChargePlannerHandler) applyChargeScheduleToVehicle(parent context.Context, vin string, targetSOC, startMinutes int) (string, error) {
+	limitCtx, limitCancel := context.WithTimeout(parent, chargePlannerCommandTimeout)
+	limitErr := h.teslaClient.SendCommand(limitCtx, vin, "set_charge_limit", map[string]interface{}{
+		"percent": targetSOC,
+	})
+	limitCancel()
+	if limitErr != nil {
+		return "set_charge_limit", limitErr
+	}
+
+	scheduleCtx, scheduleCancel := context.WithTimeout(parent, chargePlannerCommandTimeout)
+	scheduleErr := h.teslaClient.SendCommand(scheduleCtx, vin, "set_scheduled_charging", map[string]interface{}{
+		"enable": true,
+		"time":   startMinutes,
+	})
+	scheduleCancel()
+	if scheduleErr != nil {
+		return "set_scheduled_charging", scheduleErr
+	}
+
+	return "", nil
 }
 
 // ── History Endpoint ─────────────────────────────────────────
