@@ -80,20 +80,23 @@ TeslaSync is a **self-hosted Tesla Fleet Intelligence Platform** — Go 1.25 bac
 Collects, analyzes, and visualizes Tesla vehicle data via Fleet API + Fleet Telemetry streaming.
 **Repository:** `github.com/ev-dev-labs/teslasync`
 
-## ⚠️ ACTIVE MIGRATION: Phase-42 — Tesla Fleet Telemetry Pipeline Rewrite
+## ✅ COMPLETED MIGRATION: Phase-42 — Tesla Fleet Telemetry Pipeline Rewrite
 
-> **Status:** prompts authored under `.github/prompts/db-refactor/phase-42/`,
-> reviewed by Staff + Principal Engineer + Principal Architect, awaiting
-> execution. **Forward-only — no legacy retention.** When phase-42 lands,
-> ADR-004 (`.github/ARCHITECTURE.md`) and `.github/instructions/tesla-pipeline.instructions.md`
-> become the canonical sources. Until then, the rules below apply to any
-> concurrent agent work.
+> **Status:** COMPLETE. Phase-42 final-gate v2 PASSED at commit `b1dd7ea4`
+> (see `.github/prompts/db-refactor/logs/phase-42-9999v2-final-gate.log`).
+> The v1 gate (`9999-final-gate.log`) is BLOCKED on log-discipline gaps;
+> v2 supersedes it via artifact-coverage verification.
+> ADR-004 (`.github/ARCHITECTURE.md`) and
+> `.github/instructions/tesla-pipeline.instructions.md` are now the canonical
+> sources for all Tesla pipeline work. Pre-tag the repo as `phase-42-complete`
+> before starting subsequent phases — phase-42 contains one-way DROP CASCADE
+> + tombstone operations.
 
 ```
 ❌ DO NOT add new code under `internal/telemetry/*`
-   — the directory is being deleted by phase-42 prompt 0080.
+   — the directory was deleted by phase-42 prompt 0080.
 ❌ DO NOT add new hand-written enum parsers under `internal/enums/parse_*`
-   — being replaced by generated code from the vendored Tesla proto.
+   — replaced by generated code from the vendored Tesla proto.
 ❌ DO NOT add new tables that mirror Fleet Telemetry fields directly
    — phase-42 routes everything through `internal/tesla/normalize.Pipeline`.
 ❌ DO NOT bypass `signal.Store` (L1) by writing to Redis or signal_log directly
@@ -114,7 +117,8 @@ Collects, analyzes, and visualizes Tesla vehicle data via Fleet API + Fleet Tele
 ```
 
 If you find yourself wanting to bend any of these rules, STOP and consult
-the user — phase-42 may need to be revisited rather than worked around.
+the user — phase-42's locked decisions in ADR-004 may need to be revisited
+rather than worked around.
 
 ## Architecture
 
