@@ -1,0 +1,229 @@
+=== PREFLIGHT ===
+Phase: 42a
+Prompt: 0014 router/writers/tire_pressure_writer.go
+Date: 2026-05-06T11:35:24.4617372-07:00
+HEAD before: af8e51effdee2fbdf0f24d3ee539f3d87710cb72 feat(tesla/router): add motor writer (motor_snapshots, 36 fields)
+
+git status --short:
+?? internal/tesla/router/writers/tire_pressure_writer.go
+?? internal/tesla/router/writers/tire_pressure_writer_test.go
+
+Predecessor 0010 status (last 2 marker lines):
+EXIT=0
+STATUS=DONE
+
+Predecessor 0012 (climate writer; sibling pattern) status:
+EXIT=0
+STATUS=DONE
+
+Predecessor 0013 (motor writer; sibling pattern) status:
+EXIT=0
+STATUS=DONE
+
+=== AUDIT_EVIDENCE ===
+
+(1) routing.yaml routes with dest: tire_pressure_snapshot (count + per-entry field/column)
+
+Total dest: tire_pressure_snapshot routes = 8
+
+Walked routing.yaml lines 923-950 — extracted 8 field->column rows:
+TpmsLastSeenPressureTimeFl     -> front_left_last_seen_at
+TpmsLastSeenPressureTimeFr     -> front_right_last_seen_at
+TpmsLastSeenPressureTimeRl     -> rear_left_last_seen_at
+TpmsLastSeenPressureTimeRr     -> rear_right_last_seen_at
+TpmsPressureFl                 -> front_left_pa
+TpmsPressureFr                 -> front_right_pa
+TpmsPressureRl                 -> rear_left_pa
+TpmsPressureRr                 -> rear_right_pa
+
+(2) migrations/000183_snapshots_si.up.sql tire_pressure_snapshots schema (lines 232-250)
+
+CREATE TABLE tire_pressure_snapshots (
+  vehicle_id              BIGINT      NOT NULL,
+  ts                      TIMESTAMPTZ NOT NULL,
+  front_left_pa           DOUBLE PRECISION,
+  front_right_pa          DOUBLE PRECISION,
+  rear_left_pa            DOUBLE PRECISION,
+  rear_right_pa           DOUBLE PRECISION,
+  front_left_status       TEXT,
+  front_right_status      TEXT,
+  rear_left_status        TEXT,
+  rear_right_status       TEXT,
+  front_left_last_seen_at  TIMESTAMPTZ,
+  front_right_last_seen_at TIMESTAMPTZ,
+  rear_left_last_seen_at   TIMESTAMPTZ,
+  rear_right_last_seen_at  TIMESTAMPTZ,
+  hard_warnings           TEXT,
+  soft_warnings           TEXT,
+  PRIMARY KEY (vehicle_id, ts)
+);
+
+(3) Cross-check schema cols (count=16) vs routed cols (count=8)
+Schema cols present but NOT routed (status + warning columns owned downstream by signal_log roll-up per routing.yaml lines 889-895): front_left_status, front_right_status, rear_left_status, rear_right_status, hard_warnings, soft_warnings
+Routed cols MISSING from schema (must be empty): 
+
+(4) Prompt-vs-reality contradictions documented (precedent: phase-42a/0011)
+
+  Prompt 0014 problem statement: "8 routes: pressure (Pa, SI from raw psi or kPa via SettingTirePressureUnit) per corner, plus optional status/sensor-id columns."
+  Reality: 8 routes split as 4 pressure + 4 last_seen_at TIMESTAMPTZ (NOT status/sensor-id). routing.yaml lines 917-922 explicitly assign the epoch->TIMESTAMPTZ conversion to this writer. status/warning columns are populated downstream from signal_log per lines 889-895.
+
+  Prompt 0014 Decision #5: "1 positive (text status)" — IMPOSSIBLE because no *_status field is routed under dest: tire_pressure_snapshot. Substituted with "1 positive (epoch -> time.Time)" which exercises the actual writer-owned conversion path.
+
+  Prompt 0014 Decision #2: "Composition: snapshotWriter with table = ..., columnFor map" — preserved for the 4 pressure (DOUBLE PRECISION) routes; cannot apply to the 4 last_seen_at (TIMESTAMPTZ) routes because snapshotWriter.bindSnapshotValue rejects time.Time. Hybrid wrapper keeps SQL shape, identifier sanitisation, error-prefix, and PII-clean unknown-vehicle behaviour byte-for-byte identical to snapshot_base for log/classifier parity. Rubber-duck design review (sync) confirmed the hybrid is the minimal correct interpretation under the locked allowed-files scope (snapshot_base.go is NOT modifiable).
+
+  Prompt 0014 problem statement: "Per ADR-004 #9, the SI value arriving at this writer is ALREADY in Pascals (the unit conversion happened in normalize.toSI). The writer just persists; it does not re-convert." — CORRECT for the 4 pressure routes (UnitKindPressure -> normalize.toSI converts to Pa). The 4 last_seen_at routes are UnitKindNone so normalize.toSI is a pass-through; the writer owns the float64-epoch -> time.Time conversion as routing.yaml documents.
+
+(5) protomodel signal metadata for the 8 routed fields (verbatim from internal/tesla/protomodel/signal_metadata_gen.go)
+
+  TpmsPressure{Fl,Fr,Rl,Rr}              ValueKindFloat, UnitKindPressure   -> normalize.toSI emits float64 in Pa
+  TpmsLastSeenPressureTime{Fl,Fr,Rl,Rr}  ValueKindFloat, UnitKindNone       -> normalize.toSI pass-through; writer owns epoch->TIMESTAMPTZ
+
+=== IMPLEMENTATION ===
+
+Files added (allowed-files scope):
+  - internal/tesla/router/writers/tire_pressure_writer.go
+  - internal/tesla/router/writers/tire_pressure_writer_test.go
+
+Locked decisions applied (mirroring prompt 0012/0013, with documented adaptations for the timestamp branch):
+
+  #1 Constructor: NewTirePressureWriter(pool *pgxpool.Pool) router.Writer; nil pool panics with
+     "pool must be non-nil"; snapshot constructor errors panic with the wrapped error.
+  #2 Composition: newSnapshotWriter(pool, "tire_pressure_snapshots", tirePressureColumnFor) is
+     embedded as the .snap field; pressure writes delegate to it. The 4 last_seen_at routes
+     take a writeTimestamp branch that mirrors snapshot_base.go SQL/identifier/error contracts
+     byte-for-byte except for the time.Time bind. See AUDIT_EVIDENCE (4) for rationale.
+  #3 Map source-of-truth: static tirePressureColumnByField (8 entries) NOT runtime YAML re-read.
+     A second package-level set, tirePressureTimestampColumns (4 entries), drives the
+     writeTimestamp dispatch — keyed on column name so the dispatch is decoupled from the
+     producer-side proto field identifier.
+  #4 Reflective coverage: TestTirePressureWriter_ColumnMapMatchesRoutingYAML walks
+     router.LoadMap() and asserts (len==8) + (no missing) + (no extra) + (column matches) for
+     DestTirePressure. Secondary drift gate
+     TestTirePressureWriter_TimestampColumnsCoverTimestamptzColumns asserts every entry in
+     tirePressureTimestampColumns has a corresponding routed field.
+  #5 Tests (substituted per AUDIT_EVIDENCE #4):
+     - TestTirePressureWriter_TypeMatrix: float64 pressure (TpmsPressureFl=222000.0 Pa) +
+       float64 epoch (TpmsLastSeenPressureTimeFl=1746541200.0 -> time.Unix(1746541200,0).UTC()).
+     - TestTirePressureWriter_FractionalEpochPreserved: 1746541200.25 -> nanos preserved
+       (uses 0.25 because it has an exact binary float64 representation).
+     - TestTirePressureWriter_UnknownFieldReturnsError: VehicleSpeed -> "no column mapping",
+       zero db calls; field/table appear in error for log correlation.
+     - TestTirePressureWriter_TimestampUnsupportedValueType: string/int64/bool/nil at the
+       timestamp branch -> "unsupported value type" with the snapshotWriter[...]:< field>
+       prefix, zero db calls.
+     - TestTirePressureWriter_InvalidEpochValuesRejected: NaN, +Inf, -Inf, negative -> typed
+       error per branch; zero db calls; same prefix.
+     - TestTirePressureWriter_ZeroEpochAccepted: zero epoch is intentionally NOT rejected
+       (routing.yaml does not constrain it as a sentinel; rubber-duck Q5).
+     - TestTirePressureWriter_TimestampVehicleNotRegistered: RowsAffected==0 path for the
+       timestamp branch -> "vehicle not registered", VIN excluded (PII), table+field present.
+     - TestTirePressureWriter_TimestampDBExecErrorWrapped: errors.Is unwrap chain preserved.
+     - TestNewTirePressureWriter_NilPoolPanics: ctor fail-fast contract.
+
+Reasoning notes:
+
+  - Snapshot tables hard_warnings/soft_warnings columns are NOT routed by this writer because
+    the per-corner hard/soft warning bool atomics route to signal_log (routing.yaml lines
+    889-895): the snapshot writer reads the per-corner change stream from signal_log to
+    populate the per-corner *_status columns and the rolled-up *_warnings tokens. That
+    roll-up logic lives in a downstream materialiser, NOT this prompt's allowed files.
+    Schema columns intentionally not routed by this writer: front_left_status,
+    front_right_status, rear_left_status, rear_right_status, hard_warnings, soft_warnings.
+
+  - coerceEpochToTime uses math.Modf + math.Round + nsec==1e9 carry to preserve sub-second
+    precision and avoid systematic truncation when the float64 epoch is close to a second
+    boundary (rubber-duck issue #2). Rejects NaN, +/-Inf, negative, and overflow > MaxInt64.
+    Accepts zero (not a sentinel under routing.yaml).
+
+  - VIN-resolution contract inherited from snapshot_base (prompt 0010): codec.Atomic.VehicleID
+    is the VIN string, not numeric vehicles.id. Both the embedded snap (pressure path) and
+    the writeTimestamp branch use the same INSERT...SELECT FROM vehicles WHERE v.vin = $1
+    sub-query for the lookup. PII-clean RowsAffected==0 message preserved verbatim.
+
+  - Per-corner suffix convention Fl/Fr/Rl/Rr preserved in column names; Semi tractor's
+    dual-rear-axle per-tyre fields (Re1L0/Re1L1/Re2L0/... per routing.yaml lines 760-770)
+    are NOT routed here — they land in signal_log because tire_pressure_snapshots only
+    models the four passenger-car corners.
+
+  - Rubber-duck design review (sync; tire-pressure-writer-design): all 6 blocking +
+    non-blocking recommendations adopted: identifier sanitisation in writeTimestamp (#1),
+    math.Modf rounding (#2), byte-for-byte SQL parity with snapshot_base (#3), test
+    substitution documented in AUDIT_EVIDENCE (#4), reject only negatives/non-finite (#5),
+    add unsupported-type test for timestamp path (#6), add RowsAffected==0 test for
+    timestamp path (#7), fractional-seconds test (#8). Concurrency confirmed safe (#10):
+    only immutable fields after construction.
+
+=== GATE ===
+
+[g1] go build ./internal/tesla/router/writers/...
+  exit=0
+
+[g2] go vet ./internal/tesla/router/writers/...
+  exit=0
+
+[g3] go test -count=1 -race ./internal/tesla/router/writers/...
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router/writers	2.899s
+  exit=0
+
+[g4] go test -count=1 -run 'TestTirePressureWriter|TestNewTirePressureWriter' -v ./internal/tesla/router/writers/...
+=== RUN   TestTirePressureWriter_ColumnMapMatchesRoutingYAML
+--- PASS: TestTirePressureWriter_ColumnMapMatchesRoutingYAML (0.00s)
+=== RUN   TestTirePressureWriter_TimestampColumnsCoverTimestamptzColumns
+--- PASS: TestTirePressureWriter_TimestampColumnsCoverTimestamptzColumns (0.00s)
+=== RUN   TestTirePressureWriter_TypeMatrix
+=== RUN   TestTirePressureWriter_TypeMatrix/float64_TpmsPressureFl
+=== RUN   TestTirePressureWriter_TypeMatrix/epoch_TpmsLastSeenPressureTimeFl
+--- PASS: TestTirePressureWriter_TypeMatrix (0.00s)
+    --- PASS: TestTirePressureWriter_TypeMatrix/float64_TpmsPressureFl (0.00s)
+    --- PASS: TestTirePressureWriter_TypeMatrix/epoch_TpmsLastSeenPressureTimeFl (0.00s)
+=== RUN   TestTirePressureWriter_FractionalEpochPreserved
+--- PASS: TestTirePressureWriter_FractionalEpochPreserved (0.00s)
+=== RUN   TestTirePressureWriter_UnknownFieldReturnsError
+--- PASS: TestTirePressureWriter_UnknownFieldReturnsError (0.00s)
+=== RUN   TestTirePressureWriter_TimestampUnsupportedValueType
+=== RUN   TestTirePressureWriter_TimestampUnsupportedValueType/string
+=== RUN   TestTirePressureWriter_TimestampUnsupportedValueType/int64
+=== RUN   TestTirePressureWriter_TimestampUnsupportedValueType/bool
+=== RUN   TestTirePressureWriter_TimestampUnsupportedValueType/nil
+--- PASS: TestTirePressureWriter_TimestampUnsupportedValueType (0.00s)
+    --- PASS: TestTirePressureWriter_TimestampUnsupportedValueType/string (0.00s)
+    --- PASS: TestTirePressureWriter_TimestampUnsupportedValueType/int64 (0.00s)
+    --- PASS: TestTirePressureWriter_TimestampUnsupportedValueType/bool (0.00s)
+    --- PASS: TestTirePressureWriter_TimestampUnsupportedValueType/nil (0.00s)
+=== RUN   TestTirePressureWriter_InvalidEpochValuesRejected
+=== RUN   TestTirePressureWriter_InvalidEpochValuesRejected/NaN
+=== RUN   TestTirePressureWriter_InvalidEpochValuesRejected/PosInf
+=== RUN   TestTirePressureWriter_InvalidEpochValuesRejected/NegInf
+=== RUN   TestTirePressureWriter_InvalidEpochValuesRejected/negative
+--- PASS: TestTirePressureWriter_InvalidEpochValuesRejected (0.00s)
+    --- PASS: TestTirePressureWriter_InvalidEpochValuesRejected/NaN (0.00s)
+    --- PASS: TestTirePressureWriter_InvalidEpochValuesRejected/PosInf (0.00s)
+    --- PASS: TestTirePressureWriter_InvalidEpochValuesRejected/NegInf (0.00s)
+    --- PASS: TestTirePressureWriter_InvalidEpochValuesRejected/negative (0.00s)
+=== RUN   TestTirePressureWriter_ZeroEpochAccepted
+--- PASS: TestTirePressureWriter_ZeroEpochAccepted (0.00s)
+=== RUN   TestTirePressureWriter_TimestampVehicleNotRegistered
+--- PASS: TestTirePressureWriter_TimestampVehicleNotRegistered (0.00s)
+=== RUN   TestTirePressureWriter_TimestampDBExecErrorWrapped
+--- PASS: TestTirePressureWriter_TimestampDBExecErrorWrapped (0.00s)
+=== RUN   TestNewTirePressureWriter_NilPoolPanics
+--- PASS: TestNewTirePressureWriter_NilPoolPanics (0.00s)
+PASS
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router/writers	0.095s
+  exit=0
+
+[g5] git status --short (allowed-files: tire_pressure_writer.go, tire_pressure_writer_test.go, log)
+?? internal/tesla/router/writers/tire_pressure_writer.go
+?? internal/tesla/router/writers/tire_pressure_writer_test.go
+  allowed-files-only: OK
+
+Gate result: FAIL=0
+
+=== COMMIT ===
+
+HEAD after: 1ff6051a61151beee4daf6d0d8fe8879b890521b feat(tesla/router): add tire pressure writer (tire_pressure_snapshots, 8 fields)
+
+HEAD after amend (with log): 16b4d56e32996f4ecd7b4c2cf81e82cba942873d feat(tesla/router): add tire pressure writer (tire_pressure_snapshots, 8 fields)
+
+EXIT=0
+STATUS=DONE
