@@ -6,19 +6,32 @@ import { GlassPanel } from '@/components/ui';
 import { StatCard, KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useTrip } from '@/api/hooks/useTrips';
+import { useUnits } from '@/hooks/useUnits';
 import { useSettings } from '@/hooks/useSettings';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
+// Phase-43/0025 + 0026: Wh/km -> Wh/(display unit) conversion uses an
+// inline factor because @/lib/unitConversion does not yet expose a
+// convertEfficiencyFromSI helper. Same precedent as
+// FleetComparePage.whPerKmToDisplay.
+const KM_PER_MILE = 1.609344;
 
 export default function TripDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { data: trip, isLoading, error } = useTrip(id!);
-  const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  // useSettings retained for the legacy efficiencyUnit label string only;
+  // the numeric conversion runs through KM_PER_MILE per the locked-policy
+  // continuation from Phase-43/0025.
+  const { efficiencyUnit } = useSettings();
 
   const whPerKm = trip && trip.total_distance_km > 0
     ? (trip.total_energy_kwh / trip.total_distance_km) * 1000
     : 0;
+  const efficiencyDisplay = unitPrefs.distance === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
 
   return (
     <PageContainer
@@ -35,8 +48,8 @@ export default function TripDetailPage() {
           <Grid cols={{ default: 2, lg: 4 }} gap={4}>
             <StatCard
               label={t('trips.detail.distance', 'Distance')}
-              value={fmtInt(convertDistance(trip.total_distance_km))}
-              unit={distanceUnit}
+              value={fmtInt(convertDistanceFromSI(trip.total_distance_km * 1000, unitPrefs.distance))}
+              unit={unitPrefs.distance}
             />
             <StatCard
               label={t('trips.detail.energy', 'Energy Used')}
@@ -45,7 +58,7 @@ export default function TripDetailPage() {
             />
             <StatCard
               label={t('trips.detail.efficiency', 'Efficiency')}
-              value={fmtInt(convertEfficiency(whPerKm))}
+              value={fmtInt(efficiencyDisplay)}
               unit={efficiencyUnit}
             />
             <StatCard

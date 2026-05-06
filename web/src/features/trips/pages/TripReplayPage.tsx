@@ -18,7 +18,13 @@ import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Sparkline, ElevationProfile, type ElevationDataPoint } from '@/components/charts';
 import { useDrive } from '@/api/hooks/useDriving';
+import { useUnits } from '@/hooks/useUnits';
 import { useSettings } from '@/hooks/useSettings';
+import {
+  convertDistanceFromSI,
+  convertSpeedFromSI,
+  convertTempFromSI,
+} from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useTripReplay } from '@/hooks/useTripReplay';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
@@ -87,6 +93,16 @@ function fmtDriveTime(min: number): string {
  *
  * `prefers-reduced-motion: reduce` swaps the AnimatedMarker for a snap
  * CircleMarker and disables the underlying Leaflet pan/zoom animations.
+ *
+ * Phase-43 / Prompt 0026 — SI cutover:
+ *   Position-derived fields (speed, outsideTemp, ratedRange, cumulative
+ *   distance from haversine) are SI canonical. They go through
+ *   `convertXFromSI` from `@/lib/unitConversion` via `useUnits`.
+ *   Drive-level summary fields (`drive.distanceMi`, `maxSpeedMph`,
+ *   `avgSpeedMph`) are genuine miles/mph after the SQL adapter boundary
+ *   in `internal/database/drive_repo.go`, so they remain on the legacy
+ *   `useSettings` helpers (locked-policy continuation from Phase-43/0022
+ *   `useDriveDetailData`).
  */
 export default function TripReplayPage() {
   const { id } = useParams<{ id: string }>();
@@ -96,10 +112,12 @@ export default function TripReplayPage() {
   const { data: drive, isLoading, error } = useDrive(id ?? '');
   const { reduce } = useMotionPreference();
 
-  const {
-    convertDistance, convertSpeed, convertTemp,
-    distanceUnit, speedUnit, tempUnit,
-  } = useSettings();
+  // SI helpers + display preferences for position-derived fields.
+  const { unitPrefs } = useUnits();
+  // Legacy helpers retained for drive-level summary fields that are
+  // genuine miles / mph after the SQL adapter boundary
+  // (locked-policy continuation from Phase-43/0022).
+  const { convertDistance, convertSpeed, distanceUnit, speedUnit } = useSettings();
 
   /* ---- Normalize positions ---- */
   const positions: DrivePosition[] = useMemo(() => {
@@ -206,23 +224,29 @@ export default function TripReplayPage() {
   }, [replay.progress, replay.isPlaying, positions.length, setSearchParams]);
 
   /* ---- Elevation profile data ---- */
+  // PRE-EXISTING BUG fix: cumDist is meters from haversineDistance, but the
+  // legacy code did `convertDistance(cumDist / 1000)` which fed kilometres
+  // into a miles-based helper — same bug pattern Phase-43/0022 fixed in
+  // useDriveDetailData. Now we use convertDistanceFromSI on raw meters.
   const elevationData: ElevationDataPoint[] = useMemo(() => {
-    let cumDist = 0;
+    let cumDistMeters = 0;
     return positions.map((p, i) => {
       if (i > 0) {
-        cumDist += haversineDistance(
+        cumDistMeters += haversineDistance(
           positions[i - 1].latitude, positions[i - 1].longitude,
           p.latitude, p.longitude,
         );
       }
       return {
         index: i,
-        distance: Number((convertDistance(cumDist / 1000)).toFixed(2)),
+        distance: Number(
+          convertDistanceFromSI(cumDistMeters, unitPrefs.distance).toFixed(2),
+        ),
         elevation: p.elevation ?? 0,
-        speed: p.speed != null ? convertSpeed(p.speed) : 0,
+        speed: p.speed != null ? convertSpeedFromSI(p.speed, unitPrefs.speed) : 0,
       };
     });
-  }, [positions, convertDistance, convertSpeed]);
+  }, [positions, unitPrefs.distance, unitPrefs.speed]);
 
   /* ---- Speed + Power timeline data (shared with TripReplayCharts) ---- */
   const timelineData: TripReplayChartPoint[] = useMemo(() => {
@@ -233,11 +257,11 @@ export default function TripReplayPage() {
       return {
         index: i,
         time: Number(elapsedMin.toFixed(3)),
-        speed: p.speed != null ? convertSpeed(p.speed) : 0,
+        speed: p.speed != null ? convertSpeedFromSI(p.speed, unitPrefs.speed) : 0,
         power: p.power ?? 0,
       };
     });
-  }, [positions, convertSpeed]);
+  }, [positions, unitPrefs.speed]);
 
   /* ---- Hover preview sampler for the scrubber ---- */
   const getPreviewAt = useCallback(
@@ -258,13 +282,15 @@ export default function TripReplayPage() {
       if (!p) return null;
       return {
         at: normalized,
-        speed: p.speed != null ? `${fmtNumber(convertSpeed(p.speed))} ${speedUnit}` : undefined,
+        speed: p.speed != null
+          ? `${fmtNumber(convertSpeedFromSI(p.speed, unitPrefs.speed))} ${unitPrefs.speed}`
+          : undefined,
         power: p.power != null ? `${fmtNumber(p.power, 1)} kW` : undefined,
         soc: `${fmtInt(p.batteryLevel)}%`,
         elevation: p.elevation != null ? `${fmtInt(p.elevation)} m` : undefined,
       };
     },
-    [positions, replay.totalTime, convertSpeed, speedUnit],
+    [positions, replay.totalTime, unitPrefs.speed],
   );
 
   /* ---- Speed sparkline behind the scrubber ---- */
@@ -304,6 +330,8 @@ export default function TripReplayPage() {
   const cp = replay.currentPosition;
 
   /* ---- Drive summary stats ---- */
+  // Locked-policy: drive.distanceMi is genuine miles after the SQL adapter
+  // boundary; legacy convertDistance is correct for it. Same for speed.
   const distanceMi = drive?.distanceMi ?? 0;
   const durationMin = drive?.durationMin ?? 0;
   const efficiency = distanceMi > 0 && drive?.startBatteryPct != null && drive?.endBatteryPct != null
@@ -398,7 +426,9 @@ export default function TripReplayPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 <MetricCard
                   label={t('replay.stat.speed', 'Speed')}
-                  value={cp?.speed != null ? `${fmtNumber(convertSpeed(cp.speed))} ${speedUnit}` : '—'}
+                  value={cp?.speed != null
+                    ? `${fmtNumber(convertSpeedFromSI(cp.speed, unitPrefs.speed))} ${unitPrefs.speed}`
+                    : '—'}
                   icon={<Gauge className="h-4 w-4" />}
                   color="cyan"
                   className={cn(cardHighlight(['fast-segment']))}
@@ -436,7 +466,7 @@ export default function TripReplayPage() {
                 <MetricCard
                   label={t('replay.stat.range', 'Range')}
                   value={cp?.ratedRange != null
-                    ? `${fmtNumber(convertDistance(cp.ratedRange))} ${distanceUnit}`
+                    ? `${fmtNumber(convertDistanceFromSI(cp.ratedRange, unitPrefs.distance))} ${unitPrefs.distance}`
                     : '—'}
                   icon={<Navigation className="h-4 w-4" />}
                   color="cyan"
@@ -449,7 +479,7 @@ export default function TripReplayPage() {
                 <MetricCard
                   label={t('replay.stat.temp', 'Temperature')}
                   value={cp?.outsideTemp != null
-                    ? `${fmtNumber(convertTemp(cp.outsideTemp))} ${tempUnit}`
+                    ? `${fmtNumber(convertTempFromSI(cp.outsideTemp, unitPrefs.temperature))} ${unitPrefs.temperature}`
                     : '—'}
                   icon={<Thermometer className="h-4 w-4" />}
                   color="cyan"
@@ -467,7 +497,7 @@ export default function TripReplayPage() {
               currentIndex={replay.currentIndex}
               onClickIndex={handleSeekToIndex}
               height={200}
-              distanceUnit={distanceUnit}
+              distanceUnit={unitPrefs.distance}
             />
           </FadeIn>
 
@@ -478,7 +508,7 @@ export default function TripReplayPage() {
             <TripReplayCharts
               data={timelineData}
               currentIndex={replay.currentIndex}
-              speedUnit={speedUnit}
+              speedUnit={unitPrefs.speed}
               onSeekToIndex={handleSeekToIndex}
             />
           </FadeIn>
