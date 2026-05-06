@@ -4,7 +4,7 @@ import { Cog, Activity, Thermometer, Gauge, Settings, Zap } from 'lucide-react'
 import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
-import { useSettings } from '@/hooks/useSettings'
+import { useUnits } from '@/hooks/useUnits'
 import { fmtNumber, fmtInt } from '@/lib/numberFormat'
 import type { MotorSnapshot } from '@/api/types'
 
@@ -14,7 +14,7 @@ interface MotorSectionProps {
 
 export function MotorSection({ motorData }: MotorSectionProps) {
   const { t } = useTranslation()
-  const { convertTemp, tempUnit } = useSettings()
+  const { formatTemperature } = useUnits()
 
   const maxMotorTemp =
     motorData
@@ -81,7 +81,7 @@ export function MotorSection({ motorData }: MotorSectionProps) {
             label={t('vehicles.detail.motorTemp', 'Motor Temp (peak)')}
             value={
               maxMotorTemp != null && isFinite(maxMotorTemp)
-                ? `${fmtNumber(convertTemp(maxMotorTemp))}${tempUnit}`
+                ? formatTemperature(maxMotorTemp)
                 : '—'
             }
             icon={<Thermometer className="h-4 w-4" />}

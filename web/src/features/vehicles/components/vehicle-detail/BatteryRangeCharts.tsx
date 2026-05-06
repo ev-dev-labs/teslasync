@@ -12,6 +12,8 @@ import {
 } from '@/components/charts'
 import { EmptyState } from '@/components/feedback'
 import { useSettings } from '@/hooks/useSettings'
+import { useUnits } from '@/hooks/useUnits'
+import { convertDistanceFromSI } from '@/lib/unitConversion'
 import { formatDate } from '@/lib/dateFormat'
 import type { VehicleState, Drive } from '@/api/types'
 import { batteryColor } from './helpers'
@@ -23,7 +25,11 @@ interface BatteryRangeChartsProps {
 
 export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
   const { t } = useTranslation()
+  // Drive.distance_mi remains in miles after the SQL m→mi adapter (see drive_repo.go),
+  // so it still flows through the legacy useSettings converter.
   const { convertDistance, distanceUnit } = useSettings()
+  // VehicleState.rated_range is SI (meters) — use the SI-aware unit pref / formatter.
+  const { unitPrefs } = useUnits()
 
   const batteryChartData = useMemo(() => [
     { name: t('common.current', 'Current'), value: state.battery_level },
@@ -65,9 +71,9 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
             <GlassPanel className="p-3">
               <span className="text-xs text-[var(--text-muted)]">{t('common.range', 'Range')}</span>
               <AnimatedNumber
-                value={convertDistance(state.rated_range)}
+                value={convertDistanceFromSI(state.rated_range, unitPrefs.distance)}
                 decimals={0}
-                suffix={` ${distanceUnit}`}
+                suffix={` ${unitPrefs.distance}`}
                 className="block text-xl font-bold text-[var(--text-primary)]"
               />
             </GlassPanel>
@@ -108,7 +114,7 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
                 <Area
                   {...AREA_DEFAULTS}
                   dataKey="distance"
-                  name={t('common.distance', 'Distance')}
+                  name={`${t('common.distance', 'Distance')} (${distanceUnit})`}
                   stroke={CHART_COLORS[0]}
                   fill="url(#driveTrendDistGrad)"
                 />

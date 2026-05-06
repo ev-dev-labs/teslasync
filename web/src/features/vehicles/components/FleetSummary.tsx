@@ -3,7 +3,8 @@ import { Car, Battery, Gauge, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fetchVehicleState } from '@/api/hooks/useVehicles';
 import type { Vehicle } from '@/api/types';
 import type { VehicleState } from '@/api/types';
@@ -14,7 +15,7 @@ interface FleetSummaryProps {
 
 export function FleetSummary({ vehicles }: FleetSummaryProps) {
   const { t } = useTranslation('vehicles');
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
 
   const { data: allStates } = useQuery({
     queryKey: ['fleet-vehicle-states', vehicles.map(v => v.id).sort()],
@@ -42,7 +43,8 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
     states.length > 0
       ? states.reduce((sum, st) => sum + (st.battery_level ?? 0), 0) / states.length
       : 0;
-  const totalRange = states.reduce((sum, st) => sum + (st.rated_range ?? 0), 0);
+  // Sum is in SI metres (VehicleState.rated_range is metres). Convert at display.
+  const totalRangeMeters = states.reduce((sum, st) => sum + (st.rated_range ?? 0), 0);
   const chargingCount = states.filter(st => st.is_charging).length;
   const onlineCount = states.length;
 
@@ -71,10 +73,10 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
       <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-normal">
         <Gauge className="h-5 w-5 text-purple-400 mx-auto mb-2" />
         <p className="text-2xl font-bold text-gray-900 dark:text-white">
-          <AnimatedNumber value={Math.round(convertDistance(totalRange))} />
+          <AnimatedNumber value={Math.round(convertDistanceFromSI(totalRangeMeters, unitPrefs.distance))} />
         </p>
         <p className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
-          {t('fleet.totalRange', 'Total Range')} {distanceUnit}
+          {t('fleet.totalRange', 'Total Range')} {unitPrefs.distance}
         </p>
       </GlassPanel>
 

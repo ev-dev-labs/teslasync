@@ -4,7 +4,7 @@ import { cn } from '@/lib/cn'
 import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
-import { useSettings } from '@/hooks/useSettings'
+import { useUnits } from '@/hooks/useUnits'
 import { fmtNumber, fmtInt } from '@/lib/numberFormat'
 import type { MotorSnapshot } from '@/api/types'
 
@@ -14,7 +14,7 @@ interface PowertrainPanelProps {
 
 export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
   const { t } = useTranslation()
-  const { convertTemp, tempUnit } = useSettings()
+  const { formatTemperature } = useUnits()
 
   const maxMotorTemp =
     motorData
@@ -129,7 +129,7 @@ export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
               )}
             >
               {maxMotorTemp != null && isFinite(maxMotorTemp)
-                ? `${fmtNumber(convertTemp(maxMotorTemp))} ${tempUnit}`
+                ? formatTemperature(maxMotorTemp)
                 : '—'}
             </span>
           </div>
@@ -138,9 +138,7 @@ export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
               {t('telemetry.inverterTemp', 'Inverter Temp')}
             </span>
             <span className="text-sm font-mono text-[var(--text-primary)]">
-              {motorData.inverter_temp_c != null
-                ? `${fmtNumber(convertTemp(motorData.inverter_temp_c))} ${tempUnit}`
-                : '—'}
+              {formatTemperature(motorData.inverter_temp_c)}
             </span>
           </div>
 

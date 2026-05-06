@@ -1,8 +1,7 @@
 import { useTranslation } from 'react-i18next'
 
 import { Badge } from '@/components/ui'
-import { useSettings } from '@/hooks/useSettings'
-import { fmtInt } from '@/lib/numberFormat'
+import { useUnits } from '@/hooks/useUnits'
 import type { VehicleState } from '@/api/types'
 
 interface LiveStateIndicatorsProps {
@@ -11,12 +10,12 @@ interface LiveStateIndicatorsProps {
 
 export function LiveStateIndicators({ state }: LiveStateIndicatorsProps) {
   const { t } = useTranslation()
-  const { convertSpeed, speedUnit } = useSettings()
+  const { formatSpeed } = useUnits()
 
   return (
     <div className="flex flex-wrap gap-2">
       <Badge variant={state.speed > 0 ? 'success' : 'neutral'} dot size="lg">
-        {t('common.speed', 'Speed')}: {fmtInt(convertSpeed(state.speed))} {speedUnit}
+        {t('common.speed', 'Speed')}: {formatSpeed(state.speed, { precision: 0 })}
       </Badge>
       <Badge variant={state.is_locked ? 'success' : 'danger'} dot size="lg">
         {state.is_locked ? t('common.locked', 'Locked') : t('common.unlocked', 'Unlocked')}

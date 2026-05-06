@@ -3,10 +3,9 @@ import { CircleDot } from 'lucide-react'
 
 import { GlassPanel, Badge } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
-import { useSettings } from '@/hooks/useSettings'
-import { fmtNumber } from '@/lib/numberFormat'
+import { useUnits } from '@/hooks/useUnits'
 import type { TirePressureSnapshot } from '@/api/types'
-import { tirePressureVariant } from './helpers'
+import { TIRE_PRESSURE_PA, paToKpa, tirePressureVariant } from './helpers'
 
 interface TirePressureSectionProps {
   tireData: TirePressureSnapshot | null | undefined
@@ -14,7 +13,7 @@ interface TirePressureSectionProps {
 
 export function TirePressureSection({ tireData }: TirePressureSectionProps) {
   const { t } = useTranslation()
-  const { convertPressure, pressureUnit } = useSettings()
+  const { formatPressure } = useUnits()
 
   const tirePressures = tireData
     ? [
@@ -39,18 +38,17 @@ export function TirePressureSection({ tireData }: TirePressureSectionProps) {
             <GlassPanel key={tp.label} className="p-4 text-center">
               <p className="text-xs text-[var(--text-muted)] mb-1">{tp.label}</p>
               <p className="text-2xl font-bold text-[var(--text-primary)]">
-                {tp.value != null ? fmtNumber(convertPressure(tp.value)) : '—'}
+                {formatPressure(paToKpa(tp.value))}
               </p>
-              <p className="text-xs text-[var(--text-muted)]">{pressureUnit}</p>
               <Badge
                 variant={tirePressureVariant(tp.value)}
                 size="sm"
                 className="mt-2"
               >
                 {tp.value != null
-                  ? tp.value >= 2.5 && tp.value <= 3.5
+                  ? tp.value >= TIRE_PRESSURE_PA.LOW_WARNING && tp.value <= TIRE_PRESSURE_PA.HIGH_WARNING
                     ? t('common.normal', 'Normal')
-                    : tp.value >= 2.0
+                    : tp.value >= TIRE_PRESSURE_PA.LOW_CRITICAL && tp.value <= TIRE_PRESSURE_PA.HIGH_CRITICAL
                       ? t('common.low', 'Low')
                       : t('common.critical', 'Critical')
                   : t('common.noData', 'No Data')}
