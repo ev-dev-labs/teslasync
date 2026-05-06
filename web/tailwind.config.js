@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+import plugin from 'tailwindcss/plugin';
+
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   darkMode: 'class',
@@ -161,5 +163,26 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // Phase-46 / Prompt 11 — forced-colors variant.
+    //
+    // Tailwind v3.4 ships a built-in `forced-colors:` variant, but we
+    // register it explicitly so:
+    //   1. our intent ("the app supports Windows High Contrast / Aquatic
+    //      contrast themes") is documented in source rather than implicit
+    //      in a framework version, and
+    //   2. the `forced-colors:` token survives any future Tailwind
+    //      upgrade or downgrade without silently disappearing.
+    //
+    // Use it on critical components (Button, Card, GlassPanel, Modal,
+    // etc.) to map borders/backgrounds to system colors that survive
+    // forced-colors mode:
+    //   className="border border-transparent forced-colors:border-[CanvasText]"
+    //
+    // Audit: `npm run audit:forced-colors` checks every critical
+    // component file uses the variant at least once.
+    plugin(function forcedColorsVariant({ addVariant }) {
+      addVariant('forced-colors', '@media (forced-colors: active)');
+    }),
+  ],
 }

@@ -4,12 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Command, ArrowRight, Zap, ChevronLeft, Car, ArrowRightLeft,
   Route, BatteryCharging, Bell, BellRing, MapPin, Workflow, Compass, MapPinned,
+  FileText, CalendarDays,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { Input } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { navSearchKeywords, navSections } from '@/components/layout/Layout'
+import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand'
 import { COMMANDS, type CommandDef } from '@/features/system/commands'
@@ -17,6 +19,12 @@ import { useCommandRegistry, type ResolvedCommand } from '@/hooks/useCommandRegi
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import { scoreCommand } from '@/lib/commandRegistry'
 import { recordCommandUse, getAllCommandScores } from '@/lib/commandFrecency'
+import {
+  getRecentPages,
+  subscribeRecentPages,
+  type RecentEntry,
+  type RecentPageKind,
+} from '@/lib/recentPages'
 import { useGlobalSearch } from '@/api/hooks/useSearch'
 import type { SearchHitType } from '@/api/types'
 import { markCommandPaletteDiscovered } from '@/features/onboarding/checklist'
@@ -194,6 +202,40 @@ function searchSectionLabel(type: SearchHitType, t: TFunction): string {
   }
 }
 
+// ─── Recent-page helpers (Phase-46 / Prompt 51) ─────────────────────────────
+//
+// Pages visited via React Router are written to `lib/recentPages` by the
+// `RecentPagesRecorder` mounted in App.tsx. The palette surfaces the top
+// MOST_USED_MAX_DISPLAY entries in a "Recent" section directly under the
+// frecency-driven "Most Used" section when the input is empty. Items
+// share their underlying path id so a navigation away from the palette
+// re-bumps frecency in lockstep.
+
+const RECENT_PAGES_DISPLAY_LIMIT = MOST_USED_MAX_DISPLAY
+
+function recentPageIcon(kind: RecentPageKind): React.ReactNode {
+  switch (kind) {
+    case 'vehicle': return <Car className="h-4 w-4" />
+    case 'drive': return <Route className="h-4 w-4" />
+    case 'charging': return <BatteryCharging className="h-4 w-4" />
+    case 'trip': return <Compass className="h-4 w-4" />
+    case 'geofence': return <MapPinned className="h-4 w-4" />
+    case 'year-review': return <CalendarDays className="h-4 w-4" />
+    default: return <FileText className="h-4 w-4" />
+  }
+}
+
+function formatRecentVisitedAgo(t: TFunction, visitedAt: number, now: number): string {
+  const diffMs = Math.max(0, now - visitedAt)
+  const diffMin = Math.floor(diffMs / 60_000)
+  if (diffMin < 1) return t('palette.recent.justNow', 'Just now')
+  if (diffMin < 60) return t('palette.recent.minutesAgo', { count: diffMin, defaultValue: `${diffMin}m ago` })
+  const diffHr = Math.floor(diffMin / 60)
+  if (diffHr < 24) return t('palette.recent.hoursAgo', { count: diffHr, defaultValue: `${diffHr}h ago` })
+  const diffDay = Math.floor(diffHr / 24)
+  return t('palette.recent.daysAgo', { count: diffDay, defaultValue: `${diffDay}d ago` })
+}
+
 // ─── CommandPalette ─────────────────────────────────────────────────────────
 
 interface CommandPaletteProps {
@@ -284,26 +326,32 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
 
   // ── Build palette items ───────────────────────────────────────────────────
 
+  // Hide auth-gated nav items (e.g. /me/activity) from search when running in
+  // open mode — same policy as the sidebar nav.
+  const isForwardAuth = useIsForwardAuth()
+
   const navItems: PaletteItem[] = useMemo(() =>
     navSections.flatMap(section =>
-      section.items.map(item => {
-        const keywords = navSearchKeywords[item.to] ?? []
-        const sublabel = keywords.length > 0
-          ? `${section.title} · ${keywords.slice(0, 3).join(', ')}`
-          : section.title
-        return {
-          id: item.to,
-          label: item.label,
-          section: t('palette.section.pages', 'Pages'),
-          icon: <item.icon className="h-4 w-4" />,
-          action: () => go(item.to),
-          keywords,
-          sublabel,
-          type: 'navigate' as const,
-        }
-      })
+      section.items
+        .filter(item => !('requiresAuth' in item) || !(item as { requiresAuth?: boolean }).requiresAuth || isForwardAuth)
+        .map(item => {
+          const keywords = navSearchKeywords[item.to] ?? []
+          const sublabel = keywords.length > 0
+            ? `${section.title} · ${keywords.slice(0, 3).join(', ')}`
+            : section.title
+          return {
+            id: item.to,
+            label: item.label,
+            section: t('palette.section.pages', 'Pages'),
+            icon: <item.icon className="h-4 w-4" />,
+            action: () => go(item.to),
+            keywords,
+            sublabel,
+            type: 'navigate' as const,
+          }
+        })
     ),
-  [go, t])
+  [go, t, isForwardAuth])
 
   const commandItems: PaletteItem[] = useMemo(() => {
     if (vehicleList.length === 0) return []
@@ -409,6 +457,45 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
     }))
   }, [query, recentVersion, registryItems, vehicleSwitchItems, navItems, commandItems, t])
 
+  // ── Recent pages (Phase-46 / Prompt 51) ───────────────────────────────────
+  //
+  // Surfaces the user's most recently visited routes when the input is
+  // empty. Distinct from "Most Used" — that ranks by frecency of *actions*
+  // (palette commands, theme toggles, registry items); this one is a
+  // strict-recency view of *navigation*. The two complement each other:
+  // a power user who runs "Toggle theme" five times this week still wants
+  // their last-opened drive one click away.
+  //
+  // We bump `recentVersion` whenever the lib's same-tab/cross-tab event
+  // bus fires, so an active palette refreshes the list as the user
+  // navigates through the underlying app (e.g. via the sidebar) without
+  // closing the palette.
+  useEffect(() => {
+    return subscribeRecentPages(() => bumpRecent())
+  }, [bumpRecent])
+
+  const recentPageItems: PaletteItem[] = useMemo(() => {
+    if (query.trim()) return []
+    void recentVersion
+    const now = Date.now()
+    const sectionLabel = t('palette.section.recent', 'Recent')
+    return getRecentPages(RECENT_PAGES_DISPLAY_LIMIT).map(
+      (entry: RecentEntry): PaletteItem => ({
+        // Prefix the path so this row never collides with the matching
+        // nav/registry entry that may also be in `allItems`. Same trick
+        // as `most-used-…` above.
+        id: `recent-page-${entry.path}`,
+        label: entry.title,
+        sublabel: formatRecentVisitedAgo(t, entry.visited_at, now),
+        section: sectionLabel,
+        icon: recentPageIcon(entry.kind),
+        type: 'navigate' as const,
+        keywords: [entry.path, entry.kind],
+        action: () => go(entry.path),
+      }),
+    )
+  }, [query, recentVersion, t, go])
+
   // ── Vehicle selector items ────────────────────────────────────────────────
 
   const vehicleItems: PaletteItem[] = useMemo(() =>
@@ -465,10 +552,15 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
   // Order matters — recents render first when no query, registry/vehicles
   // surface above the long nav list when the query matches them, and the
   // PALETTE_COMMAND_CONFIGS items stay at the bottom (long list).
+  //
+  // Phase-46 / Prompt 51 — `recentPageItems` slot in directly after
+  // `mostUsedItems`. Both are empty when a query is present, so the
+  // ordering is irrelevant during search; it only matters in the empty
+  // state, where the user sees Most Used → Recent → Pages → … .
 
   const allItems = useMemo(
-    () => [...searchResultItems, ...mostUsedItems, ...registryItems, ...vehicleSwitchItems, ...navItems, ...commandItems],
-    [searchResultItems, mostUsedItems, registryItems, vehicleSwitchItems, navItems, commandItems],
+    () => [...searchResultItems, ...mostUsedItems, ...recentPageItems, ...registryItems, ...vehicleSwitchItems, ...navItems, ...commandItems],
+    [searchResultItems, mostUsedItems, recentPageItems, registryItems, vehicleSwitchItems, navItems, commandItems],
   )
 
   const filtered = useMemo(() => {
@@ -650,7 +742,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
                   <>
                     <button
                       onClick={goBack}
-                      className="flex-shrink-0 rounded-lg p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+                      className="flex-shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </button>

@@ -149,7 +149,7 @@ export default function SoftwareUpdatesPage() {
                                   href={`https://www.notateslaapp.com/software-updates/version/${encodeURIComponent(u.version)}/release-notes`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-[var(--text-muted)] hover:text-cyan-300 transition-colors"
+                                  className="touch-target-overlay text-[var(--text-muted)] hover:text-cyan-300 transition-colors"
                                   title={t('View release notes')}
                                 >
                                   <ExternalLink className="h-3.5 w-3.5" />

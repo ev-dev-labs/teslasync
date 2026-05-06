@@ -366,7 +366,16 @@ export default function TeslaChargingSessionsPage() {
 
       {/* Monthly cost chart */}
       <FadeIn delay={0.08}>
-        <ChartContainer title={t('tesla_sessions.monthlyCost', 'Monthly Charging Cost')} height={280}>
+        <ChartContainer
+          title={t('tesla_sessions.monthlyCost', 'Monthly Charging Cost')}
+          ariaLabel={t('tesla_sessions.monthlyCost.aria', 'Monthly Tesla charging cost bar chart')}
+          data={monthlyData.map((m) => ({ month: m.month, total: m.total }))}
+          dataColumns={[
+            { key: 'month', label: t('tesla_sessions.col.month', 'Month') },
+            { key: 'total', label: t('tesla_sessions.col.total', 'Total ($)') },
+          ]}
+          height={280}
+        >
           {monthlyData.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={monthlyData}>
@@ -424,9 +433,25 @@ export default function TeslaChargingSessionsPage() {
               onSort={handleSort}
               pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
               tableId="tesla-charging-sessions"
-              showColumnsMenu
+              columnVisibility
+              columnReorder
               stickyHeader
               maxHeight={600}
+              virtualized
+              rowHeight={56}
+              exportable
+              exportFilename={`tesla-fleet-sessions-${new Date().toISOString().slice(0, 10)}`}
+              exportRow={(row) => ({
+                date: row.charge_start_datetime,
+                location: row.site_location_name ?? '',
+                vin: row.vin ?? '',
+                energy: row.energy_added_kwh ?? null,
+                peakPower: row.peak_power_kw ?? null,
+                duration: row.charge_duration_s ?? null,
+                cost: row.total_cost ?? null,
+                rate: row.per_kwh_rate ?? null,
+                type: row.charger_type ?? '',
+              })}
               selectable="multi"
               selectedKeys={selectedKeys}
               onSelectionChange={setSelectedKeys}

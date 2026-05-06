@@ -13,6 +13,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
+import { PullToRefresh } from '@/components/mobile';
 import {
   HeroGauges,
   QuickMetrics,
@@ -152,6 +153,7 @@ export default function ChargingListPage() {
         </div>
       }
     >
+      <PullToRefresh onRefresh={async () => { await refetch(); }}>
       <FadeIn>
         <div data-tour="charging-filters">
           <DateRangeFilter
@@ -222,6 +224,7 @@ export default function ChargingListPage() {
         onBulkDelete={handleBulkDeleteCharging}
       />
       </div>
+      </PullToRefresh>
     </PageContainer>
   );
 }

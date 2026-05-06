@@ -266,6 +266,10 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
         <div className="flex flex-1 flex-wrap items-end gap-3">
           <UiSelect
             label={t('automations.builder.signal', 'Signal')}
+            help={{
+              i18nKey: 'help.fields.automations.signal',
+              content: 'The vehicle telemetry signal this condition reads. Booleans use true/false, "state" uses keywords like online/asleep, all others compare numeric values.',
+            }}
             options={SIGNAL_FIELD_OPTIONS}
             value={condition.signal}
             onChange={(event) => {
@@ -281,6 +285,10 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
           />
           <UiSelect
             label={t('automations.builder.operator', 'Operator')}
+            help={{
+              i18nKey: 'help.fields.automations.operator',
+              content: 'How the live signal value is compared to your typed value. "between" expects a Min and Max; "in" expects a comma-separated list.',
+            }}
             options={operatorOptions}
             value={condition.op}
             onChange={(event) => {
@@ -368,6 +376,10 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
           />
           <UiSelect
             label={t('automations.builder.timezone', 'Timezone')}
+            help={{
+              i18nKey: 'help.fields.automations.timezone',
+              content: 'IANA time zone used to interpret the start/end window. Defaults to your browser zone if left blank.',
+            }}
             options={timezoneOptions}
             value={condition.timezone}
             onChange={(event) => onChange({ ...condition, timezone: event.target.value })}
@@ -413,6 +425,10 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
         <div className="flex flex-1 flex-wrap items-end gap-3">
           <UiSelect
             label={t('automations.builder.geofence', 'Geofence')}
+            help={{
+              i18nKey: 'help.fields.automations.geofence',
+              content: 'The named place this condition checks. Define new places under Settings → Locations.',
+            }}
             options={geofenceOptions}
             value={condition.place_id > 0 ? String(condition.place_id) : ''}
             onChange={(event) => onChange({
@@ -442,6 +458,10 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
         <div className="flex flex-1 flex-wrap items-end gap-3">
           <UiInput
             label={t('automations.builder.otherAutomationId', 'Automation ID')}
+            help={{
+              i18nKey: 'help.fields.automations.otherAutomation',
+              content: 'Numeric ID of another automation whose state this condition tracks. Useful for chaining or guarding rules.',
+            }}
             type="number"
             min={1}
             value={condition.other_automation_id || ''}

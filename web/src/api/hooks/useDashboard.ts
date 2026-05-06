@@ -10,7 +10,7 @@ export const dashboardKeys = {
 export function useDashboardStats() {
   return useQuery({
     queryKey: dashboardKeys.stats,
-    queryFn: () => request<DashboardStats>('/dashboard/stats'),
+    queryFn: ({ signal }) => request<DashboardStats>('/dashboard/stats', { signal }),
     staleTime: STALE_TIMES.STANDARD,
   });
 }

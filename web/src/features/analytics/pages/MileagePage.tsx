@@ -242,6 +242,7 @@ export default function MileagePage() {
             {t('Monthly Summary')}
           </p>
           <DataTable<MonthRow>
+            tableId="analytics:mileage-monthly"
             columns={monthColumns}
             data={monthlyRows}
             keyExtractor={(r) => r.month}

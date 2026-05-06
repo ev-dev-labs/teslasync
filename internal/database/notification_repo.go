@@ -2,7 +2,10 @@ package database
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -11,6 +14,55 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
+
+// deriveNotificationLogGroupKey builds the deterministic group identifier
+// used to thread repeated deliveries of the same alert rule + severity
+// into a single inbox row (Phase-46 / Prompt 27).
+//
+// Returns nil — meaning "ungrouped singleton" — whenever either piece
+// of identifying information is missing. That covers:
+//
+//   - test sends and ad-hoc notifications (no alert_id).
+//   - legacy rows that pre-date the severity column (Phase-46 / Prompt 19).
+//
+// The hash input format is "<alert_id>|<severity>" with severity
+// lower-cased and whitespace-trimmed so accidental case differences
+// can't shard a group. The output is the lower-hex sha256 digest so it
+// fits comfortably in a 64-byte text column.
+func deriveNotificationLogGroupKey(alertID *int64, severity string) *string {
+	if alertID == nil {
+		return nil
+	}
+	sev := strings.ToLower(strings.TrimSpace(severity))
+	if sev == "" {
+		return nil
+	}
+	sum := sha256.Sum256([]byte(strconv.FormatInt(*alertID, 10) + "|" + sev))
+	out := hex.EncodeToString(sum[:])
+	return &out
+}
+
+// IsValidNotificationGroupKey returns true when s looks like a value that
+// could plausibly have been produced by deriveNotificationLogGroupKey
+// (lower-hex, exactly 64 chars). The handler uses this to validate the
+// `group_key` query / body parameter before reaching the database — a
+// malformed key can never match a real row, so failing fast keeps bad
+// input from inflating the query plan cache or surfacing as a 500.
+func IsValidNotificationGroupKey(s string) bool {
+	if len(s) != 64 {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c >= '0' && c <= '9':
+		case c >= 'a' && c <= 'f':
+		default:
+			return false
+		}
+	}
+	return true
+}
 
 // NotificationRepo provides notification channel and log data access.
 type NotificationRepo struct {
@@ -346,23 +398,84 @@ func (r *NotificationRepo) ToggleChannel(ctx context.Context, id int64, enabled 
 // --- Logs ---
 
 func (r *NotificationRepo) CreateLog(ctx context.Context, l *models.NotificationLog) error {
+	severity := strings.TrimSpace(strings.ToLower(l.Severity))
+	var sevArg any
+	if severity == "" {
+		sevArg = nil
+	} else {
+		sevArg = severity
+	}
+	// Derive the threading key off the same (alert_id, severity) tuple
+	// every dispatch path uses — keeps Phase-46 / Prompt 27 grouping
+	// intact even when callers don't know about it. Returns nil for
+	// singletons (test sends, NULL severity, etc.) which the
+	// inbox-grouping query treats as ungrouped.
+	var groupKeyArg any
+	if gk := deriveNotificationLogGroupKey(l.AlertID, severity); gk != nil {
+		groupKeyArg = *gk
+	} else {
+		groupKeyArg = nil
+	}
 	return r.db.Pool.QueryRow(ctx,
-		`INSERT INTO notification_logs (channel_id, alert_id, title, message, status, error, created_at, sent_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-		l.ChannelID, l.AlertID, l.Title, l.Message, l.Status, l.Error, time.Now().UTC(), l.SentAt,
+		`INSERT INTO notification_logs (channel_id, alert_id, title, message, status, severity, error, created_at, sent_at, group_key)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+		l.ChannelID, l.AlertID, l.Title, l.Message, l.Status, sevArg, l.Error, time.Now().UTC(), l.SentAt, groupKeyArg,
 	).Scan(&l.ID)
+}
+
+// MarkLogSent flips a deferred row to status='sent' and stamps the
+// supplied delivery timestamp / latency. Used by the quiet-hours
+// replay loop in cmd/notification-worker after the original Send call
+// succeeds (Phase-46 / Prompt 19).
+func (r *NotificationRepo) MarkLogSent(ctx context.Context, id int64, sentAt time.Time, latencyMs int) error {
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE notification_logs
+		 SET status = 'sent', sent_at = $1, error = '', latency_ms = $2
+		 WHERE id = $3`,
+		sentAt.UTC(), latencyMs, id,
+	)
+	if err != nil {
+		return fmt.Errorf("notification_logs mark_sent: %w", err)
+	}
+	return nil
+}
+
+// MarkLogFailed flips a deferred row to status='failed' with the
+// supplied error message — invoked when the replay loop exhausts its
+// retries (Phase-46 / Prompt 19).
+func (r *NotificationRepo) MarkLogFailed(ctx context.Context, id int64, errMsg string, latencyMs int) error {
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE notification_logs
+		 SET status = 'failed', error = $1, latency_ms = $2
+		 WHERE id = $3`,
+		errMsg, latencyMs, id,
+	)
+	if err != nil {
+		return fmt.Errorf("notification_logs mark_failed: %w", err)
+	}
+	return nil
 }
 
 // notificationLogColumns is the canonical SELECT list for notification_logs
 // rows, matching the field order used by scanNotificationLog. Centralized so
 // every read path returns the same shape (incl. read_at / archived_at added in
-// Phase 40 / Prompt 29).
-const notificationLogColumns = `id, channel_id, alert_id, title, message, status, error, created_at, sent_at, read_at, archived_at`
+// Phase 40 / Prompt 29, severity added in Phase-46 / Prompt 19, and the ack
+// columns added in Phase-46 / Prompt 20).
+//
+// IMPORTANT: any change here MUST also be applied to the aliased version used
+// by GetLogsFiltered below; both must stay in lockstep with scanNotificationLog
+// or one of the read paths will break at runtime.
+//
+// `severity` and `error` are nullable in the DB but the model uses non-pointer
+// `string` fields, so both columns must be COALESCEd to '' to avoid pgx
+// "cannot scan NULL into *string" failures on rows with no error message.
+const notificationLogColumns = `id, channel_id, alert_id, title, message, status, COALESCE(severity, ''), COALESCE(error, ''), created_at, sent_at, read_at, archived_at, acknowledged_at, acknowledged_by, acknowledgement_note`
 
 func scanNotificationLog(rows pgx.Row, l *models.NotificationLog) error {
 	return rows.Scan(
-		&l.ID, &l.ChannelID, &l.AlertID, &l.Title, &l.Message, &l.Status, &l.Error,
+		&l.ID, &l.ChannelID, &l.AlertID, &l.Title, &l.Message, &l.Status, &l.Severity, &l.Error,
 		&l.CreatedAt, &l.SentAt, &l.ReadAt, &l.ArchivedAt,
+		&l.AcknowledgedAt, &l.AcknowledgedBy, &l.AcknowledgementNote,
 	)
 }
 
@@ -408,7 +521,36 @@ func (r *NotificationRepo) GetLogsByChannel(ctx context.Context, channelID int64
 	return logs, rows.Err()
 }
 
-// NotificationLogFilters describes the inbox query the frontend can express
+// ListDeferred returns every notification_logs row currently held in the
+// 'deferred_dnd' state, oldest first. The replay loop in
+// cmd/notification-worker walks the result on every tick and tries to
+// dispatch each row whose causing window has ended (Phase-46 / Prompt 19).
+func (r *NotificationRepo) ListDeferred(ctx context.Context, limit int) ([]*models.NotificationLog, error) {
+	if limit <= 0 || limit > 1000 {
+		limit = 200
+	}
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT `+notificationLogColumns+`
+		 FROM notification_logs
+		 WHERE status = 'deferred_dnd' AND archived_at IS NULL
+		 ORDER BY created_at ASC
+		 LIMIT $1`, limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("notification_logs list_deferred: %w", err)
+	}
+	defer rows.Close()
+
+	var logs []*models.NotificationLog
+	for rows.Next() {
+		l := &models.NotificationLog{}
+		if err := scanNotificationLog(rows, l); err != nil {
+			return nil, err
+		}
+		logs = append(logs, l)
+	}
+	return logs, rows.Err()
+}
 // via GET /notifications query params. All fields are optional; zero values
 // mean "no constraint". The Archived field is a tri-state (nil = both, false
 // = inbox only, true = archived only) because the inbox view defaults to the
@@ -422,8 +564,79 @@ type NotificationLogFilters struct {
 	Read       *bool     // nil = both, false = unread only, true = read only
 	Archived   *bool     // nil = both, false = inbox only, true = archived only
 	Query      string    // ILIKE %query% across title and message
-	Limit      int
-	Offset     int
+	// GroupKey, when non-empty, restricts the result to rows whose
+	// group_key column equals exactly this value. Phase-46 / Prompt 27
+	// uses it to fetch the members of a single threaded group via the
+	// existing flat-list endpoint without having to add a new route.
+	GroupKey string
+	Limit    int
+	Offset   int
+}
+
+// notificationLogWhere holds the WHERE clauses + bind values produced
+// from a NotificationLogFilters. The same builder is used by both
+// GetLogsFiltered and ListGrouped (Phase-46 / Prompt 27) so the two
+// read paths cannot diverge on which combinations of filters are
+// supported. needsRuleJoin is true when at least one clause references
+// `ar.*` and therefore requires the LEFT JOIN on alert_rules.
+type notificationLogWhere struct {
+	clauses       []string
+	args          []any
+	needsRuleJoin bool
+}
+
+func buildNotificationLogWhere(f NotificationLogFilters) notificationLogWhere {
+	w := notificationLogWhere{
+		needsRuleJoin: len(f.Severities) > 0 || len(f.VehicleIDs) > 0,
+	}
+	addClause := func(clause string, vals ...any) {
+		w.clauses = append(w.clauses, clause)
+		w.args = append(w.args, vals...)
+	}
+	ph := func(offset int) string { return fmt.Sprintf("$%d", len(w.args)+offset) }
+
+	if len(f.RuleIDs) > 0 {
+		addClause("nl.alert_id = ANY("+ph(1)+")", f.RuleIDs)
+	}
+	if !f.From.IsZero() {
+		addClause("nl.created_at >= "+ph(1), f.From.UTC())
+	}
+	if !f.To.IsZero() {
+		addClause("nl.created_at <= "+ph(1), f.To.UTC())
+	}
+	if f.Read != nil {
+		if *f.Read {
+			w.clauses = append(w.clauses, "nl.read_at IS NOT NULL")
+		} else {
+			w.clauses = append(w.clauses, "nl.read_at IS NULL")
+		}
+	}
+	if f.Archived != nil {
+		if *f.Archived {
+			w.clauses = append(w.clauses, "nl.archived_at IS NOT NULL")
+		} else {
+			w.clauses = append(w.clauses, "nl.archived_at IS NULL")
+		}
+	}
+	if q := strings.TrimSpace(f.Query); q != "" {
+		pattern := "%" + q + "%"
+		// Reuse a single placeholder across both columns to avoid duplicating
+		// the bind value.
+		w.clauses = append(w.clauses, "(nl.title ILIKE "+ph(1)+" OR nl.message ILIKE "+ph(1)+")")
+		w.args = append(w.args, pattern)
+	}
+	if gk := strings.TrimSpace(f.GroupKey); gk != "" {
+		addClause("nl.group_key = "+ph(1), gk)
+	}
+	if w.needsRuleJoin {
+		if len(f.Severities) > 0 {
+			addClause("ar.severity = ANY("+ph(1)+")", f.Severities)
+		}
+		if len(f.VehicleIDs) > 0 {
+			addClause("ar.vehicle_id = ANY("+ph(1)+")", f.VehicleIDs)
+		}
+	}
+	return w
 }
 
 // GetLogsFiltered returns notification_logs matching the supplied filters.
@@ -438,65 +651,20 @@ func (r *NotificationRepo) GetLogsFiltered(ctx context.Context, f NotificationLo
 		f.Offset = 0
 	}
 
-	needsRuleJoin := len(f.Severities) > 0 || len(f.VehicleIDs) > 0
-	var (
-		clauses []string
-		args    []any
-	)
-	addClause := func(clause string, vals ...any) {
-		clauses = append(clauses, clause)
-		args = append(args, vals...)
-	}
+	w := buildNotificationLogWhere(f)
+	args := w.args
 	ph := func(offset int) string { return fmt.Sprintf("$%d", len(args)+offset) }
 
-	if len(f.RuleIDs) > 0 {
-		addClause("nl.alert_id = ANY("+ph(1)+")", f.RuleIDs)
-	}
-	if !f.From.IsZero() {
-		addClause("nl.created_at >= "+ph(1), f.From.UTC())
-	}
-	if !f.To.IsZero() {
-		addClause("nl.created_at <= "+ph(1), f.To.UTC())
-	}
-	if f.Read != nil {
-		if *f.Read {
-			clauses = append(clauses, "nl.read_at IS NOT NULL")
-		} else {
-			clauses = append(clauses, "nl.read_at IS NULL")
-		}
-	}
-	if f.Archived != nil {
-		if *f.Archived {
-			clauses = append(clauses, "nl.archived_at IS NOT NULL")
-		} else {
-			clauses = append(clauses, "nl.archived_at IS NULL")
-		}
-	}
-	if q := strings.TrimSpace(f.Query); q != "" {
-		pattern := "%" + q + "%"
-		// Reuse a single placeholder across both columns to avoid duplicating
-		// the bind value.
-		clauses = append(clauses, "(nl.title ILIKE "+ph(1)+" OR nl.message ILIKE "+ph(1)+")")
-		args = append(args, pattern)
-	}
-	if needsRuleJoin {
-		if len(f.Severities) > 0 {
-			addClause("ar.severity = ANY("+ph(1)+")", f.Severities)
-		}
-		if len(f.VehicleIDs) > 0 {
-			addClause("ar.vehicle_id = ANY("+ph(1)+")", f.VehicleIDs)
-		}
-	}
-
-	const aliasedCols = `nl.id, nl.channel_id, nl.alert_id, nl.title, nl.message, nl.status, nl.error,
-		nl.created_at, nl.sent_at, nl.read_at, nl.archived_at`
+	const aliasedCols = `nl.id, nl.channel_id, nl.alert_id, nl.title, nl.message, nl.status, COALESCE(nl.severity, ''), COALESCE(nl.error, ''),
+		nl.created_at, nl.sent_at, nl.read_at, nl.archived_at,
+		nl.acknowledged_at, nl.acknowledged_by, nl.acknowledgement_note`
 
 	query := "SELECT " + aliasedCols + " FROM notification_logs nl"
-	if needsRuleJoin {
+	if w.needsRuleJoin {
 		query += " LEFT JOIN alert_rules ar ON ar.id = nl.alert_id"
 	}
-	if len(clauses) > 0 {
-		query += " WHERE " + strings.Join(clauses, " AND ")
+	if len(w.clauses) > 0 {
+		query += " WHERE " + strings.Join(w.clauses, " AND ")
 	}
 	query += " ORDER BY nl.created_at DESC LIMIT " + ph(1)
 	args = append(args, f.Limit)
@@ -518,6 +686,125 @@ func (r *NotificationRepo) GetLogsFiltered(ctx context.Context, f NotificationLo
 		logs = append(logs, l)
 	}
 	return logs, rows.Err()
+}
+
+// ListGrouped returns the inbox collapsed into threaded groups where every
+// row sharing a non-NULL group_key is bucketed together (Phase-46 /
+// Prompt 27). Rows whose group_key IS NULL are returned as singletons
+// (one bucket per row) so the response shape stays uniform — the
+// frontend always sees a flat list of groups.
+//
+// Pagination applies to BUCKETS, not rows: limit=10 returns 10 groups
+// regardless of how many member rows each contains. The caller fetches
+// member rows separately via GetLogsFiltered with GroupKey set.
+//
+// Aggregates returned per group:
+//
+//   - Count       — total members in the FILTERED set.
+//   - UnreadCount — members in the filtered set whose read_at IS NULL.
+//   - VehicleIDs  — distinct alert_rules.vehicle_id values across the
+//     group's members; never nil (empty slice means every member's rule
+//     applies to all vehicles, i.e. ar.vehicle_id IS NULL).
+//   - Latest      — the most recent member by (created_at DESC, id DESC).
+//
+// Filter semantics match GetLogsFiltered exactly via the shared
+// buildNotificationLogWhere helper; the tie is enforced by routing both
+// methods through the same builder rather than duplicating the clause
+// list.
+func (r *NotificationRepo) ListGrouped(ctx context.Context, f NotificationLogFilters) ([]*models.NotificationLogGroup, error) {
+	if f.Limit <= 0 || f.Limit > 1000 {
+		f.Limit = 50
+	}
+	if f.Offset < 0 {
+		f.Offset = 0
+	}
+
+	w := buildNotificationLogWhere(f)
+	args := w.args
+	ph := func(offset int) string { return fmt.Sprintf("$%d", len(args)+offset) }
+
+	// The CTE buckets rows by COALESCE(group_key, 'singleton:'||id) so
+	// NULL-group rows each get their own bucket. We need the alert_rules
+	// JOIN unconditionally because vehicle_ids is part of the response
+	// shape — overrides the buildNotificationLogWhere flag, which only
+	// reflects WHERE-clause needs.
+	cte := `WITH agg AS (
+  SELECT
+    COALESCE(nl.group_key, 'singleton:' || nl.id::text) AS bucket,
+    nl.group_key                                        AS group_key,
+    MAX(nl.created_at)                                  AS latest_at,
+    COUNT(*)::bigint                                    AS total,
+    COUNT(*) FILTER (WHERE nl.read_at IS NULL)::bigint  AS unread,
+    COALESCE(
+      array_remove(array_agg(DISTINCT ar.vehicle_id), NULL),
+      ARRAY[]::bigint[]
+    )                                                   AS vehicle_ids,
+    (array_agg(nl.id ORDER BY nl.created_at DESC, nl.id DESC))[1] AS latest_id
+  FROM notification_logs nl
+  LEFT JOIN alert_rules ar ON ar.id = nl.alert_id`
+	if len(w.clauses) > 0 {
+		cte += " WHERE " + strings.Join(w.clauses, " AND ")
+	}
+	cte += `
+  GROUP BY bucket, nl.group_key
+  ORDER BY MAX(nl.created_at) DESC
+  LIMIT ` + ph(1) + ` OFFSET ` + ph(2) + `
+)`
+	args = append(args, f.Limit, f.Offset)
+
+	query := cte + `
+SELECT
+  agg.group_key,
+  agg.total,
+  agg.unread,
+  agg.vehicle_ids,
+  nl.id, nl.channel_id, nl.alert_id, nl.title, nl.message, nl.status,
+  COALESCE(nl.severity, ''), COALESCE(nl.error, ''),
+  nl.created_at, nl.sent_at, nl.read_at, nl.archived_at,
+  nl.acknowledged_at, nl.acknowledged_by, nl.acknowledgement_note
+FROM agg
+JOIN notification_logs nl ON nl.id = agg.latest_id
+ORDER BY agg.latest_at DESC, nl.id DESC`
+
+	rows, err := r.db.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query notification log groups: %w", err)
+	}
+	defer rows.Close()
+
+	groups := make([]*models.NotificationLogGroup, 0)
+	for rows.Next() {
+		g := &models.NotificationLogGroup{Latest: &models.NotificationLog{}}
+		var (
+			groupKey   *string
+			total      int64
+			unread     int64
+			vehicleIDs []int64
+		)
+		l := g.Latest
+		if err := rows.Scan(
+			&groupKey,
+			&total,
+			&unread,
+			&vehicleIDs,
+			&l.ID, &l.ChannelID, &l.AlertID, &l.Title, &l.Message, &l.Status, &l.Severity, &l.Error,
+			&l.CreatedAt, &l.SentAt, &l.ReadAt, &l.ArchivedAt,
+			&l.AcknowledgedAt, &l.AcknowledgedBy, &l.AcknowledgementNote,
+		); err != nil {
+			return nil, fmt.Errorf("scan notification log group: %w", err)
+		}
+		g.GroupKey = groupKey
+		g.Count = int(total)
+		g.UnreadCount = int(unread)
+		// Defensive: never propagate a nil slice up — the JSON contract
+		// is a non-null array (matches the frontend safeArray helper).
+		if vehicleIDs == nil {
+			vehicleIDs = []int64{}
+		}
+		g.VehicleIDs = vehicleIDs
+		groups = append(groups, g)
+	}
+	return groups, rows.Err()
 }
 
 // GetUnreadCount returns the number of non-archived, non-read notification
@@ -578,6 +865,39 @@ func (r *NotificationRepo) BulkSetReadAll(ctx context.Context) (int64, error) {
 	)
 	if err != nil {
 		return 0, fmt.Errorf("bulk set read all: %w", err)
+	}
+	return ct.RowsAffected(), nil
+}
+
+// BulkSetReadByGroupKey marks every currently-unread, non-archived row
+// whose group_key matches as read (Phase-46 / Prompt 27). Used by the
+// "Mark group read" action on a threaded inbox row so the user doesn't
+// have to expand the group and enumerate each member id.
+//
+// Empty / invalid group_key returns (0, nil) — refusing to dispatch to
+// the database with an unbounded match (group_key='' would catch any
+// row written before the column existed, which is NOT what the caller
+// wants). The handler validates shape via IsValidNotificationGroupKey
+// before reaching here; this is a defense-in-depth check.
+//
+// Idempotent: COALESCE preserves the original read_at on rows that
+// were already flipped by an earlier call. Archived rows are skipped
+// to match BulkSetReadAll's semantics.
+func (r *NotificationRepo) BulkSetReadByGroupKey(ctx context.Context, groupKey string) (int64, error) {
+	gk := strings.TrimSpace(groupKey)
+	if gk == "" {
+		return 0, nil
+	}
+	ct, err := r.db.Pool.Exec(ctx,
+		`UPDATE notification_logs
+		    SET read_at = COALESCE(read_at, $1)
+		  WHERE group_key = $2
+		    AND read_at IS NULL
+		    AND archived_at IS NULL`,
+		time.Now().UTC(), gk,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("bulk set read by group_key: %w", err)
 	}
 	return ct.RowsAffected(), nil
 }
@@ -653,6 +973,281 @@ func (r *NotificationRepo) GetStats(ctx context.Context) (map[string]interface{}
 	stats["enabled_channels"] = enabled
 
 	return stats, nil
+}
+
+// --- Acknowledgement + audit timeline (Phase-46 / Prompt 20) ---
+
+// GetLog returns a single notification_logs row by id, or nil if no row
+// exists. Errors other than "not found" are wrapped and returned.
+func (r *NotificationRepo) GetLog(ctx context.Context, id int64) (*models.NotificationLog, error) {
+	row := r.db.Pool.QueryRow(ctx,
+		`SELECT `+notificationLogColumns+`
+		 FROM notification_logs WHERE id = $1`, id,
+	)
+	l := &models.NotificationLog{}
+	if err := scanNotificationLog(row, l); err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("notification_logs get: %w", err)
+	}
+	return l, nil
+}
+
+// AcknowledgeLog flips the ack columns to (NOW, actor, note) iff the row
+// exists and is not yet acknowledged, then inserts a matching row into
+// notification_log_events. The whole operation runs in one transaction so a
+// partial failure cannot leave the row + audit timeline desynced.
+//
+// Returns:
+//   - the post-update row (always reloaded inside the tx so the caller sees
+//     either the just-set values or the existing-ack values),
+//   - true if a NEW acknowledgement was recorded (ack columns transitioned
+//     NULL → set, audit event written), false if the row was already
+//     acknowledged (idempotent no-op),
+//   - nil error if the row existed; (nil, false, nil) when id is missing so
+//     the caller can render a 404.
+//
+// `note` is stored verbatim; trim whitespace before calling. Pass empty
+// string to leave the acknowledgement_note column NULL.
+func (r *NotificationRepo) AcknowledgeLog(ctx context.Context, id int64, actor, note string) (*models.NotificationLog, bool, error) {
+	var (
+		updated *models.NotificationLog
+		newAck  bool
+	)
+	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		// Existence pre-read inside the tx so 404 is reliable even if a
+		// concurrent DELETE just removed the row.
+		existing := &models.NotificationLog{}
+		err := scanNotificationLog(
+			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs WHERE id = $1`, id),
+			existing,
+		)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return nil
+			}
+			return fmt.Errorf("notification_logs ack pre-read: %w", err)
+		}
+		if existing.AcknowledgedAt != nil {
+			updated = existing
+			return nil
+		}
+
+		var noteArg any
+		if note == "" {
+			noteArg = nil
+		} else {
+			noteArg = note
+		}
+		var actorArg any
+		if actor == "" {
+			actorArg = nil
+		} else {
+			actorArg = actor
+		}
+
+		ct, err := tx.Exec(ctx,
+			`UPDATE notification_logs
+			   SET acknowledged_at = NOW(),
+			       acknowledged_by = $2,
+			       acknowledgement_note = $3
+			 WHERE id = $1 AND acknowledged_at IS NULL`,
+			id, actorArg, noteArg,
+		)
+		if err != nil {
+			return fmt.Errorf("notification_logs ack update: %w", err)
+		}
+		if ct.RowsAffected() == 0 {
+			// Lost a race with a concurrent ack; reload to surface the
+			// winning state to the caller.
+			updated = existing
+			return nil
+		}
+
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO notification_log_events (notification_log_id, actor, kind, note)
+			 VALUES ($1, $2, $3, $4)`,
+			id, actorArg, models.NotificationLogEventKindAcknowledged, noteArg,
+		); err != nil {
+			return fmt.Errorf("notification_log_events ack insert: %w", err)
+		}
+
+		updated = &models.NotificationLog{}
+		if err := scanNotificationLog(
+			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs WHERE id = $1`, id),
+			updated,
+		); err != nil {
+			return fmt.Errorf("notification_logs ack reload: %w", err)
+		}
+		newAck = true
+		return nil
+	})
+	if err != nil {
+		return nil, false, err
+	}
+	return updated, newAck, nil
+}
+
+// ReopenLog clears the ack columns iff the row exists and is currently
+// acknowledged, then inserts a matching `reopened` event row. Idempotent:
+// reopening an already-reopened (or never-acked) row is a no-op that returns
+// the row unchanged with reopened=false. (nil, false, nil) signals "not
+// found" so the caller can render 404.
+func (r *NotificationRepo) ReopenLog(ctx context.Context, id int64, actor string) (*models.NotificationLog, bool, error) {
+	var (
+		updated  *models.NotificationLog
+		reopened bool
+	)
+	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		existing := &models.NotificationLog{}
+		err := scanNotificationLog(
+			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs WHERE id = $1`, id),
+			existing,
+		)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return nil
+			}
+			return fmt.Errorf("notification_logs reopen pre-read: %w", err)
+		}
+		if existing.AcknowledgedAt == nil {
+			updated = existing
+			return nil
+		}
+
+		ct, err := tx.Exec(ctx,
+			`UPDATE notification_logs
+			   SET acknowledged_at = NULL,
+			       acknowledged_by = NULL,
+			       acknowledgement_note = NULL
+			 WHERE id = $1 AND acknowledged_at IS NOT NULL`,
+			id,
+		)
+		if err != nil {
+			return fmt.Errorf("notification_logs reopen update: %w", err)
+		}
+		if ct.RowsAffected() == 0 {
+			updated = existing
+			return nil
+		}
+
+		var actorArg any
+		if actor == "" {
+			actorArg = nil
+		} else {
+			actorArg = actor
+		}
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO notification_log_events (notification_log_id, actor, kind)
+			 VALUES ($1, $2, $3)`,
+			id, actorArg, models.NotificationLogEventKindReopened,
+		); err != nil {
+			return fmt.Errorf("notification_log_events reopen insert: %w", err)
+		}
+
+		updated = &models.NotificationLog{}
+		if err := scanNotificationLog(
+			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs WHERE id = $1`, id),
+			updated,
+		); err != nil {
+			return fmt.Errorf("notification_logs reopen reload: %w", err)
+		}
+		reopened = true
+		return nil
+	})
+	if err != nil {
+		return nil, false, err
+	}
+	return updated, reopened, nil
+}
+
+// CommentOnLog inserts a `commented` audit event without touching the ack
+// columns. Returns the inserted event row with its server-assigned id and
+// occurred_at. Returns (nil, nil) when the parent notification_logs row is
+// missing so the caller can render 404.
+func (r *NotificationRepo) CommentOnLog(ctx context.Context, id int64, actor, note string) (*models.NotificationLogEvent, error) {
+	var event *models.NotificationLogEvent
+	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		var exists bool
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS(SELECT 1 FROM notification_logs WHERE id = $1)`, id,
+		).Scan(&exists); err != nil {
+			return fmt.Errorf("notification_logs comment pre-read: %w", err)
+		}
+		if !exists {
+			return nil
+		}
+		var actorArg any
+		if actor == "" {
+			actorArg = nil
+		} else {
+			actorArg = actor
+		}
+		var noteArg any
+		if note == "" {
+			noteArg = nil
+		} else {
+			noteArg = note
+		}
+		ev := &models.NotificationLogEvent{
+			NotificationLogID: id,
+			Actor:             nilOrPtr(actor),
+			Kind:              models.NotificationLogEventKindCommented,
+			Note:              nilOrPtr(note),
+		}
+		if err := tx.QueryRow(ctx,
+			`INSERT INTO notification_log_events (notification_log_id, actor, kind, note)
+			 VALUES ($1, $2, $3, $4)
+			 RETURNING id, occurred_at`,
+			id, actorArg, models.NotificationLogEventKindCommented, noteArg,
+		).Scan(&ev.ID, &ev.OccurredAt); err != nil {
+			return fmt.Errorf("notification_log_events comment insert: %w", err)
+		}
+		event = ev
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func nilOrPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+// ListLogEvents returns every persisted notification_log_events row for the
+// supplied notification_logs id, oldest first. The synthetic "created" entry
+// is reconstructed by the API layer from notification_logs.created_at and is
+// NOT returned by this method.
+func (r *NotificationRepo) ListLogEvents(ctx context.Context, logID int64) ([]*models.NotificationLogEvent, error) {
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT id, notification_log_id, occurred_at, actor, kind, note, metadata
+		   FROM notification_log_events
+		  WHERE notification_log_id = $1
+		  ORDER BY occurred_at ASC, id ASC`,
+		logID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("notification_log_events list: %w", err)
+	}
+	defer rows.Close()
+	var events []*models.NotificationLogEvent
+	for rows.Next() {
+		ev := &models.NotificationLogEvent{}
+		if err := rows.Scan(
+			&ev.ID, &ev.NotificationLogID, &ev.OccurredAt,
+			&ev.Actor, &ev.Kind, &ev.Note, &ev.Metadata,
+		); err != nil {
+			return nil, fmt.Errorf("notification_log_events scan: %w", err)
+		}
+		events = append(events, ev)
+	}
+	return events, rows.Err()
 }
 
 // --- Chatbot ---

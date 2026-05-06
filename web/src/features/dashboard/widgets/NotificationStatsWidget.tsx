@@ -205,6 +205,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
 
           {isWide && recentLogs.length > 0 && (
             <DataTable
+              tableId="dashboard:notification-stats-recent"
               columns={logColumns}
               data={recentLogs}
               keyExtractor={(log) => log.id}

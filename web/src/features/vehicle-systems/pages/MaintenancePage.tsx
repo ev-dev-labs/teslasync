@@ -680,6 +680,7 @@ export default function MaintenancePage() {
           ) : (
             <>
               <DataTable<ServiceRecord>
+                tableId="vehicle-systems:maintenance-records"
                 columns={serviceColumns}
                 data={records}
                 keyExtractor={(r) => r.id}

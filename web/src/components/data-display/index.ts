@@ -1,5 +1,20 @@
 export { StatCard } from './StatCard';
 export { KVList } from './KVList';
+export {
+  Avatar,
+  avatarColorIndex,
+  avatarInitials,
+  type AvatarProps,
+  type AvatarSize,
+  type AvatarShape,
+  type AvatarStatus,
+  type AvatarKind,
+} from './Avatar';
+export {
+  UserCell,
+  type UserCellProps,
+  type UserCellUser,
+} from './UserCell';
 export { StatusBadge } from './StatusBadge';
 export { ProgressRing } from './ProgressRing';
 export { AnimatedNumber } from './AnimatedNumber';

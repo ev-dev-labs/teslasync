@@ -1033,3 +1033,256 @@ select option:checked {
     margin: 12mm;
   }
 }
+
+
+/* === @media (forced-colors: active) (Phase-46 / Prompt 11) ====================
+ * Windows High Contrast / Aquatic / Contrast Themes support.
+ *
+ * In forced-colors mode the OS overrides foreground/background colours,
+ * suppresses `box-shadow`, suppresses background images, and treats
+ * `border-color: transparent` as invisible. The TeslaSync UI relies
+ * heavily on alpha-blended borders, glassmorphism backgrounds, and
+ * shadow-only button boundaries — all of which vanish unless we pin
+ * a system colour for low-vision users.
+ *
+ * Component overrides live with the components themselves via the
+ * Tailwind `forced-colors:` variant (registered in `tailwind.config.js`
+ * and audited by `scripts/audit-forced-colors.mjs`). This block covers
+ * what cannot be expressed as a class on a single element:
+ *
+ *   - `:focus-visible` outlines that need to win over component-level
+ *     `outline-none` + neon ring tokens (rings are box-shadow, which is
+ *     suppressed under forced-colors → keyboard users lose their focus
+ *     indicator entirely without an `outline` fallback).
+ *   - Recharts SVG axes, grid lines, ticks, legend, and default tooltip
+ *     (Recharts renders inline SVG with hardcoded fills/strokes that
+ *     forced-colors collapses to `CanvasText` for everything — making
+ *     overlapping series visually identical).
+ *   - `[data-print-card]` panels — covers GlassPanel and any other
+ *     surface that opted into the print-card marker.
+ *   - Leaflet polylines and circle markers used for drive paths and
+ *     geofences (raster tiles are unaffected; vector overlays need a
+ *     `CanvasText` stroke or they vanish into the map).
+ *
+ * Audit: `npm run audit:forced-colors` enforces that every critical
+ * component under `components/ui`, `components/feedback`,
+ * `components/charts`, and `components/maps` carries an explicit
+ * `forced-colors:` variant or `@media (forced-colors: active)` block.
+ * ============================================================================ */
+@media (forced-colors: active) {
+  /* Restore a visible focus ring for keyboard users. The neon focus rings
+   * across the app use `box-shadow` (Tailwind `ring-*`), which is
+   * suppressed entirely in forced-colors mode. Use `outline` instead so
+   * the OS Highlight system colour wins. */
+  *:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px !important;
+  }
+
+  /* GlassPanel / Card / any opted-in print-card surface. These are the
+   * primary content containers throughout the app — without an explicit
+   * border they're invisible against the OS Canvas. */
+  [data-print-card] {
+    border: 1px solid CanvasText !important;
+    background: Canvas !important;
+  }
+
+  /* Recharts: every SVG axis tick / grid line / legend label / ref-line
+   * shares the same `CanvasText` fill in forced-colors mode, so without
+   * explicit overrides nothing on the chart can be visually distinguished
+   * from anything else. The chart container itself is bordered above; the
+   * rules here keep at least the axes + grid + legend readable. The
+   * series themselves still render via SVG fills — phase-46 / 13 tracks
+   * a long-form `<NoColorChartFallback>` data-table for users who need
+   * tabular access to the values. */
+  .recharts-cartesian-grid line {
+    stroke: CanvasText !important;
+    opacity: 0.4 !important;
+  }
+  .recharts-cartesian-axis-line,
+  .recharts-cartesian-axis-tick-line {
+    stroke: CanvasText !important;
+  }
+  .recharts-text,
+  .recharts-cartesian-axis-tick-value,
+  .recharts-label,
+  .recharts-legend-item-text {
+    fill: CanvasText !important;
+  }
+  .recharts-default-tooltip {
+    background: Canvas !important;
+    border: 1px solid CanvasText !important;
+    color: CanvasText !important;
+  }
+  .recharts-reference-line line {
+    stroke: CanvasText !important;
+  }
+
+  /* Leaflet vector overlays: drive paths, geofence rings, marker outlines.
+   * Raster tile layers are unaffected (the OS does not remap raster
+   * pixels), but SVG overlays inherit `CanvasText` for stroke + fill,
+   * collapsing distinct overlays into a single colour. Force opacity so
+   * at least the path is perceivable; specific apps overlay legends
+   * where colour distinction matters. */
+  .leaflet-overlay-pane svg path {
+    stroke: CanvasText !important;
+    stroke-opacity: 1 !important;
+  }
+  .leaflet-marker-icon,
+  .leaflet-marker-shadow {
+    forced-color-adjust: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * Phase-46 / Prompt 48 — RTL (Arabic / Hebrew / Persian / Urdu).
+ *
+ * The bulk of layout flipping is handled by Tailwind logical
+ * utilities (ms-/me-/ps-/pe-/start-/end-) — see
+ * `scripts/audit-rtl-properties.mjs` for the migration tracker.
+ * The overrides below cover edge cases that cannot be expressed
+ * via utility classes:
+ *
+ *   - Inline icons inside text runs need their bidi state reset
+ *     so that LTR brand glyphs (lightning bolt, chart sparkline)
+ *     stay upright instead of being flipped along with the
+ *     surrounding paragraph.
+ *
+ *   - Numeric figures (e.g. `120 km`, `45 %`) should keep their
+ *     LTR digit order even when the parent block is RTL.
+ *
+ *   - Leaflet ships hard-coded LTR positioning on its zoom
+ *     control buttons; we don't override the control position
+ *     itself (consumers swap that via `position` prop) but we do
+ *     reset the inner button text so badges read correctly.
+ * ───────────────────────────────────────────────────────────── */
+[dir='rtl'] .keep-ltr,
+[dir='rtl'] .lucide,
+[dir='rtl'] svg[role='img'] {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+[dir='rtl'] .tabular-nums,
+[dir='rtl'] .font-mono {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Leaflet zoom control buttons — keep the +/- glyphs upright. */
+[dir='rtl'] .leaflet-control-zoom a {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * Phase-46 / Prompt 56 — Fullscreen primitive styles.
+ *
+ * The shared `<FullscreenButton>` triggers the browser's standard
+ * Fullscreen API on the chart `<figure>` or the leaflet
+ * `.leaflet-container`. The `:fullscreen` pseudo-class lets us
+ * upgrade the visual treatment ONLY while the element is actually
+ * in fullscreen — no JavaScript class swap, no flash, and the
+ * regular layout is restored automatically when the user presses
+ * Esc.
+ *
+ * We deliberately scope each rule to a specific marker
+ * (`figure[data-print-card]` / `.leaflet-container`) instead of
+ * a bare `:fullscreen` so other call sites (Modal full-screen,
+ * print preview) don't pick up these overrides.
+ * ───────────────────────────────────────────────────────────── */
+
+/* Chart figure in fullscreen mode.
+ *
+ * In normal layout the figure is a fixed-height card (~320 px).
+ * In fullscreen we want the inner chart canvas to fill the entire
+ * viewport so axis labels, tooltips, and legend chips become
+ * readable on a 27" monitor. We grow the figure to a flex column
+ * and force the inner `role="img"` chart wrapper to flex-grow
+ * (overriding its inline `style={{ height }}` via `!important` —
+ * the only way a stylesheet can beat an inline declaration). */
+figure[data-print-card]:fullscreen {
+  background-color: var(--bg-app);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+}
+
+figure[data-print-card]:fullscreen > div[role='img'] {
+  flex: 1 1 auto;
+  height: auto !important;
+  min-height: 0;
+}
+
+figure[data-print-card]:fullscreen h3 {
+  font-size: 1.125rem;
+  line-height: 1.5;
+}
+
+figure[data-print-card]:fullscreen p {
+  font-size: 0.95rem;
+}
+
+/* Leaflet container in fullscreen mode.
+ *
+ * Without these rules the map keeps its parent-derived width/height
+ * and the surrounding CSS (transparent backdrop) bleeds through.
+ * Pin to the viewport so leaflet's internal resize observer picks
+ * up the new size and re-tiles. */
+.leaflet-container:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--bg-app);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * Phase-46 / Prompt 69 — WCAG 2.5.5 touch-target utilities.
+ *
+ * `audit:touch-target` (web/scripts/audit-touch-target.mjs) blocks
+ * clickable controls below the WCAG 2.5.8 AA floor (24 × 24 CSS px)
+ * or the Apple HIG / WCAG 2.5.5 AAA recommendation (44 × 44).
+ *
+ *   • `.touch-target`         — direct minimum dimensions. Use on
+ *                                buttons that can grow visually
+ *                                (icon buttons in toolbars, action
+ *                                rows, dialog headers).
+ *
+ *   • `.touch-target-overlay` — invisible ::before hit-area extender.
+ *                                Use on visually-tiny clickable
+ *                                glyphs that MUST stay at icon size
+ *                                (chip-X dismiss buttons, timeline
+ *                                marker dots, density-packed table
+ *                                row toolbars). The visual element
+ *                                stays at its declared size; the
+ *                                pointer hit region grows to ≥ 44 ×
+ *                                44 around the centre.
+ *
+ * The audit recognises both variants as "safe" so callers can pick
+ * whichever matches the visual constraint without having to
+ * allowlist the call site.
+ * ───────────────────────────────────────────────────────────── */
+@layer utilities {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .touch-target-overlay {
+    position: relative;
+  }
+
+  .touch-target-overlay::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+    /* Transparent — the hit region sits invisibly over the visual
+       element and surrounding whitespace. */
+  }
+}

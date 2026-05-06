@@ -38,7 +38,7 @@ export function useCreateShareLink(driveId: string) {
 export function useShareLinks(driveId: string) {
   return useQuery({
     queryKey: sharingKeys.shares(driveId),
-    queryFn: () => request<ShareToken[]>(`/drives/${driveId}/shares`),
+    queryFn: ({ signal }) => request<ShareToken[]>(`/drives/${driveId}/shares`, { signal }),
     enabled: !!driveId,
   });
 }
@@ -68,7 +68,7 @@ export function useRevokeShareLink(driveId: string) {
 export function useSharedDrive(token: string) {
   return useQuery({
     queryKey: sharingKeys.shared(token),
-    queryFn: () => request<SharedDriveData>(`/share/${token}`),
+    queryFn: ({ signal }) => request<SharedDriveData>(`/share/${token}`, { signal }),
     enabled: !!token,
     retry: false,
     staleTime: STALE_TIMES.SLOW,

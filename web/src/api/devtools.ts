@@ -185,10 +185,11 @@ export const submitImportJob = (type: 'import_drives' | 'import_charging', file:
 export const sendChatMessage = (message: string, sessionId?: string) =>
   request<ChatResponse>('/chatbot', { method: 'POST', body: JSON.stringify({ message, session_id: sessionId }) })
 /** Fetches the full chat history for a given session. */
-export const getChatHistory = (sessionId: string) =>
-  request<ChatMessage[]>(`/chatbot/history?session_id=${sessionId}`)
+export const getChatHistory = (sessionId: string, opts?: { signal?: AbortSignal | null }) =>
+  request<ChatMessage[]>(`/chatbot/history?session_id=${sessionId}`, { signal: opts?.signal })
 /** Lists chat sessions with rich metadata (title, message count, timestamps). */
-export const getChatSessions = () => request<ChatSessionInfo[]>('/chatbot/sessions')
+export const getChatSessions = (opts?: { signal?: AbortSignal | null }) =>
+  request<ChatSessionInfo[]>('/chatbot/sessions', { signal: opts?.signal })
 /** Renames a chat session. Pass an empty `title` to clear the override. */
 export const renameChatSession = (sessionId: string, title: string) =>
   request<{ id: string; title: string }>(`/chatbot/sessions/${encodeURIComponent(sessionId)}`, {

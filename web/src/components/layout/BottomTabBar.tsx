@@ -1,4 +1,4 @@
-import { GuardedLink } from '../feedback/GuardedLink';
+import { PrefetchLink } from './PrefetchLink';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Home, Car, BatteryCharging, HeartPulse, MapPin } from 'lucide-react';
@@ -46,7 +46,7 @@ export function BottomTabBar() {
         const Icon = tab.icon;
 
         return (
-          <GuardedLink
+          <PrefetchLink
             key={tab.path}
             to={tab.path}
             aria-label={t(tab.i18nKey, tab.fallback)}
@@ -66,7 +66,7 @@ export function BottomTabBar() {
             {isActive && (
               <span className="absolute -bottom-0.5 h-0.5 w-4 rounded-full bg-[var(--theme-primary)] shadow-[0_0_6px_var(--theme-primary)]" />
             )}
-          </GuardedLink>
+          </PrefetchLink>
         );
       })}
     </nav>

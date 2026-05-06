@@ -679,6 +679,7 @@ export default function BatteryCellsPage() {
           </div>
           {sortedCells.length > 0 ? (
             <DataTable
+              tableId="battery:cells"
               columns={columns}
               data={sortedCells}
               keyExtractor={(r) => r.cell_id}
@@ -699,8 +700,10 @@ export default function BatteryCellsPage() {
 
       {/* ── Voltage Spread Trend ─── */}
       <FadeIn delay={0.3}>
+        {/* chart-a11y:no-table dense per-sample voltage trace; SR users get the latest spread via the cell summary above */}
         <ChartContainer
           title={t('battery.cells.chart.spreadTrend', 'Voltage Spread Trend')}
+          ariaLabel={t('battery.cells.chart.spreadTrend.aria', 'Battery cell voltage spread trend area chart over time')}
           annotations={{ vehicleId, scope: 'battery', chartId: 'battery-cells-spread-trend' }}
         >
           {({ annotations: chartAnnotations }) =>

@@ -6,7 +6,7 @@ import { Zap, Leaf, Fuel, Sun, Moon, ArrowRight, Activity } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Select, DataTable, type Column } from '@/components/ui';
 import {
-  RadialGauge, ChartContainer, ChartTooltip, ChartGradient,
+  RadialGauge, ChartContainer, ChartLegend, ChartTooltip, ChartGradient,
   chartGrid, axisTickSm, renderAnnotationLines,
   AreaChart, Area, BarChart, Bar, ComposedChart, Line, ReferenceLine,
   PieChart, Pie, Cell, Brush, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -25,6 +25,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
+import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
@@ -148,6 +149,10 @@ export default function EnergyPage() {
   const [startDate, setStartDate] = useUrlString('from', defaultStartDate);
   const [endDate, setEndDate] = useUrlString('to', defaultEndDate);
   const setRangeBatch = useUrlBatch();
+
+  /* Phase-46 / Prompt 67 — URL-persisted hidden-series state for the
+     two-series energy/efficiency composed chart. */
+  const energyCostHidden = useHiddenSeries('energy-cost-daily');
 
   /* ── Data fetching ────────────────────────────────────────────── */
   const {
@@ -455,10 +460,13 @@ export default function EnergyPage() {
       <ChartTimeRangeProvider syncId="energy.daily">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <FadeIn delay={0.1}>
+              {/* chart-a11y:no-table dual-axis composed chart with brush; SR users can use Download CSV via the chart export menu */}
               <ChartContainer
                 title={t('energy.chart.energyCostDaily', 'Energy & Cost Daily')}
+                ariaLabel={t('energy.chart.energyCostDaily.aria', 'Daily energy and efficiency composed chart with bars and a line')}
                 exportable
                 exportFilename="energy-cost-daily"
+                chartKey="energy-cost-daily"
                 annotations={{ vehicleId, scope: 'energy', chartId: 'energy-cost-daily' }}
               >
                 {({ annotations: chartAnnotations }) => (
@@ -481,6 +489,7 @@ export default function EnergyPage() {
                               <YAxis yAxisId="left" tick={axisTickSm} tickLine={false} axisLine={false} />
                               <YAxis yAxisId="right" orientation="right" tick={axisTickSm} tickLine={false} axisLine={false} />
                               <Tooltip content={<ChartTooltip />} />
+                              <ChartLegend state={energyCostHidden} />
                               {renderAnnotationLines(chartAnnotations, (ts) => ts)}
                               <Bar
                                 yAxisId="left"
@@ -490,6 +499,7 @@ export default function EnergyPage() {
                                 fillOpacity={0.6}
                                 radius={[3, 3, 0, 0]}
                                 animationDuration={800}
+                                hide={energyCostHidden.isHidden('energy_kwh')}
                               />
                               <Line
                                 {...AREA_DEFAULTS}
@@ -498,6 +508,7 @@ export default function EnergyPage() {
                                 name={efficiencyUnit}
                                 stroke="#10b981"
                                 animationDuration={800}
+                                hide={energyCostHidden.isHidden('efficiency_wh_per_mi')}
                               />
                               {syncedX != null && (
                                 <ReferenceLine
@@ -536,7 +547,13 @@ export default function EnergyPage() {
             </FadeIn>
 
             <FadeIn delay={0.15}>
-              <ChartContainer title={t('energy.chart.efficiencyTrend', 'Efficiency Trend')} exportable exportFilename="efficiency-trend">
+              {/* chart-a11y:no-table efficiency + distance two-area trend; same daily breakdown is exportable as CSV via the chart menu */}
+              <ChartContainer
+                title={t('energy.chart.efficiencyTrend', 'Efficiency Trend')}
+                ariaLabel={t('energy.chart.efficiencyTrend.aria', 'Daily efficiency and distance area chart')}
+                exportable
+                exportFilename="efficiency-trend"
+              >
                 <div className="h-48 sm:h-64">
                   {dailyEnergy.length > 0 ? (
                     <EnergyChartSync>
@@ -604,7 +621,13 @@ export default function EnergyPage() {
           {/* ── Charts Row 2: Time of Day + Charger Breakdown ──── */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <FadeIn delay={0.2}>
-              <ChartContainer title={t('energy.chart.chargingByTime', 'Charging by Time of Day')} exportable exportFilename="charging-by-time">
+              {/* chart-a11y:no-table aggregated time-of-day buckets bar chart; CSV download available */}
+              <ChartContainer
+                title={t('energy.chart.chargingByTime', 'Charging by Time of Day')}
+                ariaLabel={t('energy.chart.chargingByTime.aria', 'Charging energy and session count by time of day bar chart')}
+                exportable
+                exportFilename="charging-by-time"
+              >
                 {timeOfDayData.length > 0 ? (
                   <>
                     <div className="h-44 sm:h-60">
@@ -653,7 +676,13 @@ export default function EnergyPage() {
             </FadeIn>
 
             <FadeIn delay={0.25}>
-              <ChartContainer title={t('energy.chart.chargerBreakdown', 'Charger Type Breakdown')} exportable exportFilename="charger-breakdown">
+              {/* chart-a11y:no-table charger-type pie-chart aggregation; CSV download available */}
+              <ChartContainer
+                title={t('energy.chart.chargerBreakdown', 'Charger Type Breakdown')}
+                ariaLabel={t('energy.chart.chargerBreakdown.aria', 'Charger type share pie chart')}
+                exportable
+                exportFilename="charger-breakdown"
+              >
                 {chargerBreakdown.length > 0 ? (
                   <div className="flex items-center gap-6">
                     <div className="h-48 w-48">
@@ -719,6 +748,7 @@ export default function EnergyPage() {
               </h3>
               {sessions && sessions.length > 0 ? (
                 <DataTable
+                  tableId="battery:energy-sessions"
                   columns={sessionColumns}
                   data={sessions.slice(0, 15)}
                   keyExtractor={(s) => s.id}

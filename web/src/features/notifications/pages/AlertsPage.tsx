@@ -38,7 +38,7 @@ import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
-import { SearchInput, FilterBar } from '@/components/forms';
+import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -55,6 +55,14 @@ import {
 import { usePinned } from '@/api/hooks/usePinned';
 import type { Alert, NotificationLog } from '@/api/types';
 import { Icons } from '@/lib/icons';
+import { AcknowledgeAlertDialog } from '@/features/admin/components/AcknowledgeAlertDialog';
+import { AlertDetailTimeline } from '@/features/admin/components/AlertDetailTimeline';
+import { Modal } from '@/components/ui/Modal';
+import {
+  useAcknowledgeAlert as useAcknowledgeAlertHook,
+  useReopenAlert as useReopenAlertHook,
+  useAlertDetail as useAlertDetailHook,
+} from '@/api/hooks/useNotifications';
 
 // ─── Severity helpers ────────────────────────────────────────────────────────
 //
@@ -122,12 +130,20 @@ function loadDigestMode(): DigestMode {
 
 // ─── AlertCard sub-component ─────────────────────────────────────────────────
 
-function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => void; t: TFunction }) {
+function AlertCard({ alert, onMarkRead, onAcknowledge, onOpenDetail, onReopen, t }: {
+  alert: Alert;
+  onMarkRead: () => void;
+  onAcknowledge: () => void;
+  onOpenDetail: () => void;
+  onReopen: () => void;
+  t: TFunction;
+}) {
   const sev = normalizeSeverity(alert.severity);
   const tokens = severityTokens[sev];
   const Icon = typeIcons[alert.type] || Icons.notifications;
   const timeAgo = getTimeAgo(alert.created_at);
   const drillHref = getAlertDrillthroughHref(alert);
+  const isAcked = Boolean(alert.acknowledged_at);
 
   return (
     <GlassPanel
@@ -161,7 +177,7 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
             />
           )}
         </div>
-        <div className="flex items-center gap-3 mt-2">
+        <div className="flex items-center gap-3 mt-2 flex-wrap">
           <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-1">
             <Icons.clock className="h-2.5 w-2.5" />{timeAgo}
           </span>
@@ -169,6 +185,13 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
             {alert.severity}
           </SeverityBadge>
           <span className="text-[10px] text-[var(--text-muted)]">{(alert.type ?? 'notification').replace(/_/g, ' ')}</span>
+          {isAcked && (
+            <Badge variant="success" size="sm">
+              {alert.acknowledged_by
+                ? t('alerts.ack.ackedBy', 'Acknowledged by {{actor}}', { actor: alert.acknowledged_by })
+                : t('alerts.ack.ackedByAnonymous', 'Acknowledged')}
+            </Badge>
+          )}
           <Link
             to={drillHref}
             className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-cyan-300 hover:text-cyan-200 underline-offset-2 hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
@@ -176,6 +199,33 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
             {t('alerts.viewContext', 'View context')}
             <Icons.next className="h-3 w-3" />
           </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Icons.notifications className="h-3 w-3" />}
+            onClick={onOpenDetail}
+          >
+            {t('alerts.timeline.title', 'Audit timeline')}
+          </Button>
+          {isAcked ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Icons.refresh className="h-3 w-3" />}
+              onClick={onReopen}
+            >
+              {t('alerts.timeline.kindAnonymous.reopened', 'Reopened')}
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Icons.success className="h-3 w-3" />}
+              onClick={onAcknowledge}
+            >
+              {t('alerts.ack.button', 'Acknowledge')}
+            </Button>
+          )}
           {!alert.is_read && (
             <Button variant="ghost" size="sm" icon={<Icons.show className="h-3 w-3" />} onClick={onMarkRead}>
               {t('Mark read')}
@@ -189,7 +239,7 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
 
 // ─── NotificationHistory sub-component ───────────────────────────────────────
 
-function NotificationHistory({ t }: { t: (k: string) => string }) {
+function NotificationHistory({ t }: { t: TFunction }) {
 
   const { data: logs, isLoading: logsLoading } = useNotificationLogs();
   const { data: stats } = useNotificationStats();
@@ -230,7 +280,19 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
     { key: 'time', header: t('Time'), render: (log) => <span className="text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(log.created_at)}</span>, visibleOnMobile: true },
     { key: 'title', header: t('Title'), render: (log) => <span className="text-[var(--text-primary)] max-w-[200px] truncate block">{log.title}</span>, visibleOnMobile: true },
     { key: 'channel', header: t('Channel'), render: (log) => <span className="text-[var(--text-secondary)]">{channelMap[log.channel_id] || `#${log.channel_id}`}</span> },
-    { key: 'status', header: t('Status'), render: (log) => <Badge variant={log.status === 'sent' ? 'success' : log.status === 'failed' ? 'danger' : 'warning'} size="sm">{log.status}</Badge>, visibleOnMobile: true },
+    { key: 'status', header: t('Status'), render: (log) => {
+      // Phase-46 / Prompt 19 — surface DND-deferred rows distinctly so
+      // the user can tell their notification is held (not lost).
+      if (log.status === 'deferred_dnd') {
+        return (
+          <Badge variant="warning" size="sm" title={t('quietHours.deferredTooltip', 'Held until the active quiet-hours window ends.')}>
+            {t('quietHours.deferred', 'DND deferred')}
+          </Badge>
+        );
+      }
+      const variant = log.status === 'sent' ? 'success' : log.status === 'failed' ? 'danger' : 'warning';
+      return <Badge variant={variant} size="sm">{log.status}</Badge>;
+    }, visibleOnMobile: true },
   ], [channelMap, t]);
 
   return (
@@ -288,8 +350,25 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
             onChange={setLogSearch}
             placeholder={t('Search by title or channel…')}
             className="w-full sm:w-72"
+            historyScope="alerts:logs"
           />
         </FilterBar>
+        <ActiveFilterChips
+          className="mb-3"
+          filters={
+            (logSearch
+              ? [
+                  {
+                    key: 'q',
+                    label: t('notifications.log.filterLabel.search', 'Search'),
+                    value: logSearch,
+                    onRemove: () => setLogSearch(''),
+                  } satisfies FilterChipDescriptor,
+                ]
+              : []) as readonly FilterChipDescriptor[]
+          }
+          onClearAll={() => setLogSearch('')}
+        />
         {logsLoading ? (
           <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-10" />)}</div>
         ) : filteredLogs.length > 0 ? (
@@ -306,6 +385,14 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
                 showColumnsMenu
                 stickyHeader
                 maxHeight={520}
+                exportable
+                exportFilename={`notification-logs-${new Date().toISOString().slice(0, 10)}`}
+                exportRow={(log) => ({
+                  time: log.created_at,
+                  title: log.title,
+                  channel: channelMap[log.channel_id] || `#${log.channel_id}`,
+                  status: log.status,
+                })}
               />
             </div>
         ) : (
@@ -478,6 +565,12 @@ export default function AlertsPage() {
   const { data: alerts, isLoading, error } = alertsQuery;
   const { data: rules } = useAlertRules();
   const markReadMut = useMarkAlertRead();
+  const ackMut = useAcknowledgeAlertHook();
+  const reopenMut = useReopenAlertHook();
+  const [ackDialogId, setAckDialogId] = useState<number | null>(null);
+  const [detailId, setDetailId] = useState<number | null>(null);
+  const detailQuery = useAlertDetailHook(detailId, { enabled: detailId !== null });
+  const ackTarget = useMemo(() => alerts?.find((a) => a.id === ackDialogId) ?? null, [alerts, ackDialogId]);
   const { data: rulePins = [] } = usePinned('alert_rule');
   const pinnedRules = useMemo(() => {
     if (!rules || rulePins.length === 0) return [];
@@ -563,6 +656,34 @@ export default function AlertsPage() {
       onSuccess: () => toast.info(t('Alert marked as read')),
     });
   }, [markReadMut, toast, t]);
+
+  const handleAcknowledgeSubmit = useCallback((note: string) => {
+    if (ackDialogId === null) return;
+    const id = ackDialogId;
+    setAckDialogId(null);
+    ackMut.mutate(
+      { id, note },
+      {
+        onSuccess: () => {
+          toast.toast({
+            type: 'success',
+            title: t('alerts.ack.success', 'Alert acknowledged'),
+            duration: 5000,
+            action: {
+              label: t('alerts.ack.undo', 'Undo'),
+              onClick: () => {
+                reopenMut.mutate(id);
+              },
+            },
+          });
+        },
+      },
+    );
+  }, [ackDialogId, ackMut, reopenMut, toast, t]);
+
+  const handleReopen = useCallback((id: number) => {
+    reopenMut.mutate(id);
+  }, [reopenMut]);
 
   return (
     <PageContainer
@@ -777,6 +898,7 @@ export default function AlertsPage() {
                 onChange={(v) => { setAlertSearch(v); setAlertPage(1); }}
                 placeholder={t('alerts.searchPlaceholder', 'Search by title or message…')}
                 className="w-full sm:w-72"
+                historyScope="alerts"
               />
               <div className="flex items-center gap-2" data-tour="alerts-filters">
                 <Icons.filter className="h-4 w-4 text-[var(--text-muted)]" />
@@ -791,6 +913,37 @@ export default function AlertsPage() {
                 />
               </div>
             </FilterBar>
+            <ActiveFilterChips
+              className="mt-3"
+              filters={
+                ([
+                  alertSearch
+                    ? {
+                        key: 'q',
+                        label: t('alerts.filterLabel.search', 'Search'),
+                        value: alertSearch,
+                        onRemove: () => { setAlertSearch(''); setAlertPage(1); },
+                      } satisfies FilterChipDescriptor
+                    : null,
+                  filter !== 'all'
+                    ? {
+                        key: 'filter',
+                        label: t('alerts.filterLabel.status', 'Status'),
+                        value:
+                          filter === 'unread'
+                            ? t('Unread')
+                            : t('Critical'),
+                        onRemove: () => { setFilter('all'); setAlertPage(1); },
+                      } satisfies FilterChipDescriptor
+                    : null,
+                ].filter(Boolean) as FilterChipDescriptor[]) as readonly FilterChipDescriptor[]
+              }
+              onClearAll={() => {
+                setAlertSearch('');
+                setFilter('all');
+                setAlertPage(1);
+              }}
+            />
           </FadeIn>
 
           {isLoading ? (
@@ -803,7 +956,14 @@ export default function AlertsPage() {
             <StaggerContainer className="space-y-2">
               {pagedAlerts.map(a => (
                 <StaggerItem key={a.id}>
-                  <AlertCard alert={a} onMarkRead={() => handleMarkRead(a.id)} t={t} />
+                  <AlertCard
+                    alert={a}
+                    onMarkRead={() => handleMarkRead(a.id)}
+                    onAcknowledge={() => setAckDialogId(a.id)}
+                    onReopen={() => handleReopen(a.id)}
+                    onOpenDetail={() => setDetailId(a.id)}
+                    t={t}
+                  />
                 </StaggerItem>
               ))}
             </StaggerContainer>
@@ -846,6 +1006,45 @@ export default function AlertsPage() {
 
       {/* ── Preferences Tab ──────────────────────────────────────────── */}
       {tab === 'preferences' && <PreferencesSection t={t} />}
+
+      {/* Phase-46 / Prompt 20 — ack dialog + audit timeline modal */}
+      <AcknowledgeAlertDialog
+        open={ackDialogId !== null}
+        onClose={() => setAckDialogId(null)}
+        onSubmit={handleAcknowledgeSubmit}
+        submitting={ackMut.isPending}
+        alertTitle={ackTarget?.title}
+      />
+      <Modal
+        open={detailId !== null}
+        onClose={() => setDetailId(null)}
+        title={t('alerts.timeline.title', 'Audit timeline')}
+        size="md"
+      >
+        <div className="space-y-4">
+          {detailQuery.isLoading ? (
+            <Skeleton className="h-32" />
+          ) : detailQuery.data ? (
+            <>
+              <div className="space-y-1">
+                <span className="block text-sm font-medium text-[var(--text-primary)]">
+                  {detailQuery.data.title}
+                </span>
+                <span className="block text-xs text-[var(--text-muted)]">
+                  {detailQuery.data.message}
+                </span>
+              </div>
+              <AlertDetailTimeline events={detailQuery.data.events} />
+            </>
+          ) : (
+            <EmptyState /* no-action: detail load failed; reopening the modal will retry */
+              icon={<Icons.notifications className="h-6 w-6" />}
+              title={t('alerts.timeline.empty', 'No events yet')}
+              message={t('alerts.timeline.empty', 'No events yet')}
+            />
+          )}
+        </div>
+      </Modal>
     </PageContainer>
   );
 }

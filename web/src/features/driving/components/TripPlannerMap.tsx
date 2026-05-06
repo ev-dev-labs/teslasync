@@ -104,6 +104,7 @@ export function TripPlannerMap({ origin, destination, legs, chargeStops }: TripP
             )}
 
             {/* Charge stop markers */}
+            {/* marker-cluster:no waypoints — trip-specific charge stops with low cardinality (typically <10), each annotates a unique semantic waypoint and clustering would obscure the route narrative. */}
             {(chargeStops ?? []).map((stop, idx) => (
               <CircleMarker
                 key={`stop-${idx}`}

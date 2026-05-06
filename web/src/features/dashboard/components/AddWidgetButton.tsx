@@ -41,10 +41,15 @@ export function AddWidgetButton({ onClick, isEditing }: AddWidgetButtonProps) {
           variant="primary"
           size="lg"
           onClick={onClick}
-          className="h-14 w-14 rounded-full shadow-xl"
+          className="h-14 w-14 rounded-full p-0 shadow-xl"
           aria-label={label}
         >
-          <Icons.add className="h-6 w-6" aria-hidden="true" />
+          {/* h-8 w-8 + strokeWidth 2.5 — the default lucide stroke-width=2
+              at h-6 reads as a thin "+" floating in a 56px circle. The
+              bumped size + weight matches the Material FAB convention
+              (24-32px icon at ~50% of the FAB diameter) and stays visible
+              against the saturated primary fill. */}
+          <Icons.add className="h-8 w-8" strokeWidth={2.5} aria-hidden="true" />
         </Button>
       </Tooltip>
     </div>

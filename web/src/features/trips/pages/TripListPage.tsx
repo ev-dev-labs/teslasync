@@ -17,6 +17,7 @@ import { useUrlBatch, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
+import { PullToRefresh } from '@/components/mobile';
 import type { Trip } from '@/api/types';
 
 function formatDuration(startDate: string, endDate: string | null): string {
@@ -58,7 +59,7 @@ export default function TripListPage() {
     start: startDate,
     end: endDate,
   });
-  const { data: trips, isLoading } = tripsQuery;
+  const { data: trips, isLoading, refetch: refetchTrips } = tripsQuery;
 
   const allTrips = trips ?? [];
 
@@ -130,6 +131,7 @@ export default function TripListPage() {
         </div>
       }
     >
+      <PullToRefresh onRefresh={async () => { await refetchTrips(); }}>
       {/* Vehicle Selector */}
       {vehicleOptions.length > 1 && (
         <div className="flex justify-end mb-4">
@@ -207,6 +209,12 @@ export default function TripListPage() {
       <FadeIn delay={0.1}>
         <ChartContainer
           title={t('trips.chart.title', 'Top Trips by Distance')}
+          ariaLabel={t('trips.chart.title.aria', 'Top trips ranked by distance horizontal bar chart')}
+          data={chartData.map((c) => ({ name: c.name, distance: c.distance }))}
+          dataColumns={[
+            { key: 'name', label: t('trips.chart.col.trip', 'Trip') },
+            { key: 'distance', label: `${t('trips.chart.distance', 'Distance')} (${distanceUnit})` },
+          ]}
           height={280}
           className="mb-6"
           action={
@@ -284,6 +292,7 @@ export default function TripListPage() {
           }}
         />
       )}
+      </PullToRefresh>
     </PageContainer>
   );
 }

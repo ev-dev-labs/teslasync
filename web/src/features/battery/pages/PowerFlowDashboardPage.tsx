@@ -319,9 +319,11 @@ export default function PowerFlowDashboardPage() {
           </div>
 
           {/* Stacked Power Area Chart */}
+          {/* chart-a11y:no-table dense per-sample power flow trace; SR users see live numbers via the live tiles above */}
           <ChartContainer
             title={t('powerFlow.powerOverTime', 'Power Over Time')}
             subtitle={t('powerFlow.powerOverTimeDesc', 'Solar, battery, and grid power flow')}
+            ariaLabel={t('powerFlow.powerOverTime.aria', 'Solar, battery, grid, and home power flow stacked area chart over time')}
             loading={historyLoading}
             empty={chartData.length === 0}
             height={350}
@@ -383,9 +385,11 @@ export default function PowerFlowDashboardPage() {
       {/* Battery SOC Over Time */}
       <FadeIn delay={0.2}>
         <div className="mt-6">
+          {/* chart-a11y:no-table dense per-sample SOC trace; current SOC is on the live tile */}
           <ChartContainer
             title={t('powerFlow.socOverTime', 'Battery State of Charge')}
             subtitle={t('powerFlow.socOverTimeDesc', 'Battery percentage over time')}
+            ariaLabel={t('powerFlow.socOverTime.aria', 'Battery state of charge percentage over time line chart')}
             loading={historyLoading}
             empty={chartData.length === 0}
             height={250}

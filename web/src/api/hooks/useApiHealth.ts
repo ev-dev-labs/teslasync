@@ -42,10 +42,19 @@ const PROBE_TIMEOUT_MS = 5_000;
 const POLL_INTERVAL_MS = 15_000;
 const STALE_TIME_MS = 10_000;
 
-async function probe(): Promise<ProbeResult> {
+async function probe(externalSignal?: AbortSignal): Promise<ProbeResult> {
   const url = `${getApiBase()}/healthz`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+  // Forward an upstream cancel (e.g. component unmount) into our internal controller.
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort();
+    } else {
+      externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+    }
+  }
   const start = performance.now();
   try {
     const res = await fetch(url, {
@@ -63,6 +72,9 @@ async function probe(): Promise<ProbeResult> {
     return { ok: false, latencyMs, checkedAt: new Date().toISOString() };
   } finally {
     clearTimeout(timeout);
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onExternalAbort);
+    }
   }
 }
 
@@ -75,7 +87,7 @@ function bucket(result: ProbeResult): ApiHealthStatus {
 export function useApiHealth(): ApiHealthState {
   const { data } = useQuery({
     queryKey: ['api-health'],
-    queryFn: probe,
+    queryFn: ({ signal }) => probe(signal),
     refetchInterval: POLL_INTERVAL_MS,
     refetchIntervalInBackground: false,
     staleTime: STALE_TIME_MS,

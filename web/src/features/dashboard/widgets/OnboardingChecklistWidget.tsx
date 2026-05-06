@@ -108,7 +108,7 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
     <button
       type="button"
       onClick={dismiss}
-      className="rounded-md p-1 text-[var(--text-muted)] hover:bg-white/[0.06] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40 transition-colors"
+      className="rounded-md p-1.5 text-[var(--text-muted)] hover:bg-white/[0.06] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40 transition-colors"
       aria-label={t('checklist.dismiss', 'Dismiss')}
       title={t('checklist.dismiss', 'Dismiss')}
     >

@@ -1,6 +1,7 @@
 export { RadialGauge } from './RadialGauge';
 export { MiniChart } from './MiniChart';
 export { ChartContainer } from './ChartContainer';
+export { ChartExportMenu, type ChartExportMenuProps } from './ChartExportMenu';
 export { AreaChartWrapper } from './AreaChartWrapper';
 export { Sparkline } from './Sparkline';
 export { ChartTooltip, ChartTooltipBase, type ChartTooltipProps } from './ChartTooltip';
@@ -32,8 +33,13 @@ export {
   type CursorSyncValue,
 } from './cursorSync';
 export { ChartBrush, type ChartBrushProps } from './ChartBrush';
-export { ChartLegend, type ChartLegendProps } from './ChartLegend';
+export { ChartLegend, type ChartLegendProps, type ChartLegendToggleSource } from './ChartLegend';
 export { useChartLegendState, type ChartLegendState } from './useChartLegendState';
+export {
+  ChartHiddenSeriesContext,
+  ChartHiddenSeriesProvider,
+  useChartHiddenSeries,
+} from './ChartHiddenSeriesContext';
 
 // Re-export recharts through shared charts module
 export { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, Brush, ComposedChart, ScatterChart, Scatter, ReferenceLine, ReferenceArea, Legend, RadarChart, Radar, PolarGrid, PolarAngleAxis, ZAxis, Label } from 'recharts';

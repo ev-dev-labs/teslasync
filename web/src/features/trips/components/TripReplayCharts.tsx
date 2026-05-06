@@ -113,10 +113,12 @@ function TimelineChart({
     return data[currentIndex]?.time;
   }, [data, currentIndex]);
 
+  // chart-a11y:no-table dense per-sample replay timeline; per-segment summary appears in the trip overview panel
   return (
     <ChartContainer
       title={t('replay.timeline.title', 'Speed & Power Timeline')}
       subtitle={t('replay.timeline.subtitle', 'Click to seek replay position')}
+      ariaLabel={t('replay.timeline.aria', 'Trip replay speed and power timeline area chart')}
       height={height}
     >
       {data.length > 0 ? (

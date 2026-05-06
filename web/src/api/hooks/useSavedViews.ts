@@ -40,7 +40,7 @@ function buildQuery(route: string): string {
 export function useSavedViews(route: string) {
   return useQuery({
     queryKey: savedViewsKeys.list(route),
-    queryFn: () => request<SavedView[]>(`/saved-views${buildQuery(route)}`),
+    queryFn: ({ signal }) => request<SavedView[]>(`/saved-views${buildQuery(route)}`, { signal }),
     staleTime: STALE_TIMES.STANDARD,
   });
 }

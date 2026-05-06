@@ -65,9 +65,11 @@ export function FSMTimelineChart({ transitions, hours }: FSMTimelineChartProps) 
     return { buckets: result, fsmTypes: types };
   }, [transitions, hours]);
 
+  // chart-a11y:no-table dynamic per-FSM-type stacked series; transition list view holds the per-row detail
   return (
     <ChartContainer
       title={t('fsm.timelineChart', 'Transitions Over Time')}
+      ariaLabel={t('fsm.timelineChart.aria', 'FSM transitions over time stacked area chart')}
       height={260}
     >
       {buckets.length > 0 ? (

@@ -115,7 +115,7 @@ export type {
   BatteryDegradationData,
 } from './types'
 
-export { getAuthStatus, getAuthURL, refreshAuth, disconnectAuth } from './auth'
+export { getAuthStatus, getAuthURL, disconnectAuth } from './auth'
 
 export {
   getVehicleStatus,

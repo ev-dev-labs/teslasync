@@ -134,6 +134,7 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
           isEmpty={isEmpty}
           emptyMessage={t('widget.positionHeatmap.noData', 'No position data')}
         >
+          {/* marker-cluster:no heatmap — density visualization where intensity is encoded by circle radius and fill colour; clustering would collapse the spatial-density signal that is the entire purpose of this widget. */}
           {clusters.map((c, i) => (
             <CircleMarker
               key={i}
@@ -174,6 +175,7 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
         isEmpty={isEmpty}
         emptyMessage={t('widget.positionHeatmap.noData', 'No position data')}
       >
+        {/* marker-cluster:no heatmap — density visualization where intensity is encoded by circle radius and fill colour; clustering would collapse the spatial-density signal that is the entire purpose of this widget. */}
         {clusters.map((c, i) => (
           <CircleMarker
             key={i}

@@ -488,6 +488,7 @@ export default function TirePressurePage() {
               />
             ) : (
               <DataTable
+                tableId="vehicle-systems:tire-pressure-history"
                 columns={historyColumns}
                 data={history}
                 keyExtractor={(row) => row.id}

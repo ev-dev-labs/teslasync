@@ -9,6 +9,8 @@ import { usePageTitle } from '@/hooks/usePageTitle'
 import { dispatchTourLauncherOpen } from '@/lib/tourRegistry'
 import { restartChecklist } from '@/features/onboarding/checklist'
 import { useToast } from '@/components/feedback/Toast'
+import { EditConflictBanner } from '@/components/feedback'
+import { useEditLease } from '@/hooks/useEditLease'
 import { cn } from '@/lib/cn'
 import { Zap, ExternalLink, Download, PlayCircle, Rocket } from 'lucide-react'
 
@@ -20,10 +22,35 @@ import {
   GeneralSettings,
   GasPriceSettings,
   NotificationSettings,
+  QuietHoursPanel,
   AppearanceSettings,
   AdvancedSettings,
   SettingsSearch,
 } from '../components'
+// Phase-46 / Prompt 35 — TOTPEnrollmentSection is intentionally
+// imported directly, NOT through the `../components` barrel, so the
+// barrel index.ts can stay outside the prompt's allowed-files regex.
+import { TOTPEnrollmentSection } from '../components/TOTPEnrollmentSection'
+// Phase-46 / Prompt 36 — Settings export/import. Same direct-import
+// rationale as TOTPEnrollmentSection above; the components barrel
+// is not in the prompt's allowed-files regex.
+import { SettingsExportImport } from '../components/SettingsExportImport'
+// Phase-46 / Prompt 37 — Webhook channels. Direct import for the
+// same reason: the `../components` barrel is outside this prompt's
+// allowed-files regex.
+import { WebhookChannelsSection } from '../components/WebhookChannelsSection'
+// Phase-46 / Prompt 42 — Active sessions / device management. Same
+// direct-import rationale: barrel is outside the prompt's
+// allowed-files regex.
+import { ActiveSessionsSection } from '../components/ActiveSessionsSection'
+// Phase-46 / Prompt 50 — Reset to defaults. Same direct-import
+// rationale as above; the components barrel is outside the prompt's
+// allowed-files regex.
+import { ResetSection } from '../components/ResetSection'
+// Phase-46 / Prompt 70 — Privacy section (now expanded with cookie /
+// GDPR consent management). Direct import for the same barrel-scope
+// rationale.
+import { PrivacySection } from '../components/PrivacySection'
 
 export default function SettingsPage() {
   const { t } = useTranslation('settings')
@@ -31,6 +58,15 @@ export default function SettingsPage() {
   const { data: settings, isLoading } = useSettings()
   const toast = useToast()
   const location = useLocation()
+
+  // Phase-46 / Prompt 66 — claim an edit lease for the entire settings
+  // page so a second tab editing the same settings sees a banner before
+  // their save can silently overwrite this tab's changes. The lease is
+  // scoped per-origin (no per-user scoping yet because TeslaSync's
+  // settings are single-tenant); future work can append a user subject
+  // when multi-tenant settings land.
+  const settingsLeaseKey = 'settings/general'
+  useEditLease(settingsLeaseKey)
 
   // Hash-anchor scroll: when /settings#appearance (or any other anchor)
   // loads, scroll the corresponding <section id="..."> into view. Triggered
@@ -54,6 +90,11 @@ export default function SettingsPage() {
       loading={isLoading}
     >
       <SettingsSearch className="mb-2" />
+
+      <EditConflictBanner
+        resourceKey={settingsLeaseKey}
+        resourceLabel={t('editConflict.resource.settings', 'Your settings')}
+      />
 
       <section id="tesla-account">
         <TeslaAccountSection />
@@ -102,11 +143,32 @@ export default function SettingsPage() {
       <section id="notifications">
         <NotificationSettings />
       </section>
+      <section id="webhooks">
+        <WebhookChannelsSection />
+      </section>
+      <section id="quiet-hours">
+        <QuietHoursPanel />
+      </section>
       <section id="appearance">
         <AppearanceSettings />
       </section>
+      <section id="security">
+        <TOTPEnrollmentSection />
+      </section>
+      <section id="sessions">
+        <ActiveSessionsSection />
+      </section>
       <section id="advanced">
         <AdvancedSettings />
+      </section>
+      <section id="privacy">
+        <PrivacySection />
+      </section>
+      <section id="backup">
+        <SettingsExportImport />
+      </section>
+      <section id="reset">
+        <ResetSection />
       </section>
 
       {/* Data Export — link */}

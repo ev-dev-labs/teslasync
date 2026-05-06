@@ -236,6 +236,7 @@ export default function VampireDrainPage() {
             <Badge variant="neutral">{data?.entries?.length ?? 0} {t('sessions')}</Badge>
           </div>
           <DataTable<VampireDrainEntry>
+            tableId="battery:vampire-drain-sessions"
             columns={columns}
             data={sortedEntries}
             keyExtractor={(r) => r.id}

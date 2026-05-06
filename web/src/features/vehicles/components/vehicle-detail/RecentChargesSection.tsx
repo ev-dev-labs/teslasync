@@ -70,6 +70,7 @@ export function RecentChargesSection({ sessions }: RecentChargesSectionProps) {
       </div>
       {sessions && sessions.length > 0 ? (
         <DataTable
+          tableId="vehicles:detail-recent-charges"
           columns={chargeColumns}
           data={sessions}
           keyExtractor={(s) => s.id}

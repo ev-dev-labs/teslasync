@@ -14,6 +14,7 @@ import {
 import { Button, Input, Modal, Badge, ConfirmDialog } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
+import { useAnnouncer } from '@/hooks/useAnnouncer';
 import {
   useSavedViews,
   useCreateSavedView,
@@ -130,13 +131,18 @@ export function SavedViewMenu({
   const [deleteTarget, setDeleteTarget] = useState<SavedView | null>(null);
 
   // --- Handlers ---
+  const { announce } = useAnnouncer();
   const handleApply = (view: SavedView) => {
     onApply(view.query);
     setOpen(false);
+    announce(
+      t('savedViews.announceApplied', 'View {{name}} applied', { name: view.name }),
+    );
   };
 
   const handleClear = () => {
     onApply('');
+    announce(t('savedViews.announceCleared', 'Saved view cleared'));
   };
 
   const handleTogglePin = (view: SavedView) => {
@@ -252,7 +258,7 @@ export function SavedViewMenu({
                         <button
                           type="button"
                           onClick={() => handleToggleDefault(v)}
-                          className="rounded p-1 text-[var(--text-muted)] opacity-0 transition-opacity hover:text-amber-300 group-hover:opacity-100 focus-visible:opacity-100"
+                          className="rounded p-1.5 text-[var(--text-muted)] opacity-0 transition-opacity hover:text-amber-300 group-hover:opacity-100 focus-visible:opacity-100"
                           aria-label={
                             v.is_default
                               ? t('savedViews.unsetDefault', 'Clear default')
@@ -264,7 +270,7 @@ export function SavedViewMenu({
                         <button
                           type="button"
                           onClick={() => handleTogglePin(v)}
-                          className="rounded p-1 text-[var(--text-muted)] opacity-0 transition-opacity hover:text-cyan-300 group-hover:opacity-100 focus-visible:opacity-100"
+                          className="rounded p-1.5 text-[var(--text-muted)] opacity-0 transition-opacity hover:text-cyan-300 group-hover:opacity-100 focus-visible:opacity-100"
                           aria-label={v.is_pinned ? t('savedViews.unpin', 'Unpin') : t('savedViews.pin', 'Pin')}
                         >
                           {v.is_pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
@@ -275,7 +281,7 @@ export function SavedViewMenu({
                             setRenameTarget(v);
                             setOpen(false);
                           }}
-                          className="rounded p-1 text-[var(--text-muted)] opacity-0 transition-opacity hover:text-[var(--text-primary)] group-hover:opacity-100 focus-visible:opacity-100"
+                          className="rounded p-1.5 text-[var(--text-muted)] opacity-0 transition-opacity hover:text-[var(--text-primary)] group-hover:opacity-100 focus-visible:opacity-100"
                           aria-label={t('savedViews.renamePrompt', 'Rename view')}
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -286,7 +292,7 @@ export function SavedViewMenu({
                             setDeleteTarget(v);
                             setOpen(false);
                           }}
-                          className="rounded p-1 text-[var(--text-muted)] opacity-0 transition-opacity hover:text-rose-300 group-hover:opacity-100 focus-visible:opacity-100"
+                          className="rounded p-1.5 text-[var(--text-muted)] opacity-0 transition-opacity hover:text-rose-300 group-hover:opacity-100 focus-visible:opacity-100"
                           aria-label={t('common.delete', 'Delete')}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -322,7 +328,7 @@ export function SavedViewMenu({
           <button
             type="button"
             onClick={handleClear}
-            className="ml-1.5 rounded p-0.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-500"
+            className="touch-target-overlay ml-1.5 rounded p-0.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-500"
             aria-label={t('savedViews.clearApplied', 'Clear applied view')}
           >
             <X className="h-3 w-3" />
@@ -597,7 +603,7 @@ function SavedViewManageDialog({
                 <button
                   type="button"
                   onClick={() => onTogglePin(v)}
-                  className="rounded p-1 text-[var(--text-muted)] hover:text-cyan-300"
+                  className="rounded p-1.5 text-[var(--text-muted)] hover:text-cyan-300"
                   aria-label={v.is_pinned ? t('savedViews.unpin', 'Unpin') : t('savedViews.pin', 'Pin')}
                 >
                   {v.is_pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
@@ -605,7 +611,7 @@ function SavedViewManageDialog({
                 <button
                   type="button"
                   onClick={() => onRename(v)}
-                  className="rounded p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  className="rounded p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                   aria-label={t('savedViews.renamePrompt', 'Rename view')}
                 >
                   <Pencil className="h-4 w-4" />
@@ -613,7 +619,7 @@ function SavedViewManageDialog({
                 <button
                   type="button"
                   onClick={() => onDelete(v)}
-                  className="rounded p-1 text-[var(--text-muted)] hover:text-rose-300"
+                  className="rounded p-1.5 text-[var(--text-muted)] hover:text-rose-300"
                   aria-label={t('common.delete', 'Delete')}
                 >
                   <Trash2 className="h-4 w-4" />

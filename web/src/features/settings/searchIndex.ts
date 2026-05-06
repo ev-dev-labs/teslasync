@@ -261,6 +261,56 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       description: t('search.entries.notifications.criticalFlash.desc', 'Flash the browser tab title on critical alerts.'),
       keywords: ['flash', 'urgent', 'tab'],
     },
+    {
+      id: 'notifications.sound-master',
+      href: '/settings#notifications',
+      section: 'notifications',
+      title: t('search.entries.notifications.soundMaster.title', 'Notification sounds'),
+      description: t('search.entries.notifications.soundMaster.desc', 'Play short audio cues when alerts and completion events arrive.'),
+      keywords: ['audio', 'sound', 'chime', 'beep', 'noise', 'mute', 'volume'],
+    },
+    {
+      id: 'notifications.sound-channels',
+      href: '/settings#notifications',
+      section: 'notifications',
+      title: t('search.entries.notifications.soundChannels.title', 'Per-channel notification sounds'),
+      description: t('search.entries.notifications.soundChannels.desc', 'Toggle sound separately for critical, warning, and info alerts plus charge/drive/automation completions.'),
+      keywords: ['critical', 'warning', 'info', 'channel', 'category', 'audio', 'cue'],
+    },
+    {
+      id: 'notifications.sound-volume',
+      href: '/settings#notifications',
+      section: 'notifications',
+      title: t('search.entries.notifications.soundVolume.title', 'Notification sound volume'),
+      description: t('search.entries.notifications.soundVolume.desc', 'Adjust how loud notification cues play.'),
+      keywords: ['volume', 'loud', 'quiet', 'audio', 'level'],
+    },
+
+    // ── Quiet hours / Do-Not-Disturb (Phase-46 / Prompt 19) ──────────
+    {
+      id: 'quiet-hours.windows',
+      href: '/settings#quiet-hours',
+      section: 'quiet-hours',
+      title: t('search.entries.quietHours.windows.title', 'Quiet hours windows'),
+      description: t('search.entries.quietHours.windows.desc', 'Defer non-critical notifications during sleep, work meetings, or any time-of-day window.'),
+      keywords: ['dnd', 'do not disturb', 'sleep', 'mute', 'silence', 'night'],
+    },
+    {
+      id: 'quiet-hours.bypass-severities',
+      href: '/settings#quiet-hours',
+      section: 'quiet-hours',
+      title: t('search.entries.quietHours.bypass.title', 'Quiet hours bypass severities'),
+      description: t('search.entries.quietHours.bypass.desc', 'Choose which severities (e.g. critical) still ring through during quiet hours.'),
+      keywords: ['critical', 'override', 'bypass', 'severity'],
+    },
+    {
+      id: 'quiet-hours.timezone',
+      href: '/settings#quiet-hours',
+      section: 'quiet-hours',
+      title: t('search.entries.quietHours.timezone.title', 'Quiet hours timezone'),
+      description: t('search.entries.quietHours.timezone.desc', 'Pick the IANA timezone the start/end times are evaluated against.'),
+      keywords: ['tz', 'timezone', 'iana', 'utc'],
+    },
 
     // ── Appearance ──────────────────────────────────────────────────
     {
@@ -312,6 +362,64 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       keywords: ['confetti', 'sound', 'achievement', 'unlock'],
     },
 
+    // ── Security (TOTP) ─────────────────────────────────────────────
+    {
+      id: 'security.totp.enroll',
+      href: '/settings#security',
+      section: 'security',
+      title: t('search.entries.security.totpEnroll.title', 'Enable two-factor authentication'),
+      description: t(
+        'search.entries.security.totpEnroll.desc',
+        'Set up TOTP from your authenticator app to protect destructive admin actions.',
+      ),
+      keywords: ['totp', '2fa', 'mfa', 'authenticator', 'security', 'sudo', 'step-up'],
+    },
+    {
+      id: 'security.totp.backupCodes',
+      href: '/settings#security',
+      section: 'security',
+      title: t('search.entries.security.totpBackupCodes.title', 'TOTP backup codes'),
+      description: t(
+        'search.entries.security.totpBackupCodes.desc',
+        'Regenerate or download the backup codes used when you lose access to your authenticator.',
+      ),
+      keywords: ['backup', 'recovery', 'codes', 'totp', '2fa'],
+    },
+    {
+      id: 'security.totp.disable',
+      href: '/settings#security',
+      section: 'security',
+      title: t('search.entries.security.totpDisable.title', 'Disable two-factor authentication'),
+      description: t(
+        'search.entries.security.totpDisable.desc',
+        'Remove the TOTP credential and revoke all backup codes for the current subject.',
+      ),
+      keywords: ['disable', 'remove', 'totp', '2fa', 'unenroll'],
+    },
+    // Phase-46 / Prompt 42 — Active sessions / device management.
+    {
+      id: 'security.sessions.list',
+      href: '/settings#sessions',
+      section: 'security',
+      title: t('search.entries.security.sessionsList.title', 'Active sessions'),
+      description: t(
+        'search.entries.security.sessionsList.desc',
+        'See which browsers and devices are currently signed in to TeslaSync and revoke individual sessions.',
+      ),
+      keywords: ['session', 'device', 'browser', 'sign out', 'logout', 'revoke', 'cookie'],
+    },
+    {
+      id: 'security.sessions.revokeAll',
+      href: '/settings#sessions',
+      section: 'security',
+      title: t('search.entries.security.sessionsRevokeAll.title', 'Sign out all other devices'),
+      description: t(
+        'search.entries.security.sessionsRevokeAll.desc',
+        'Revoke every TeslaSync session except the current browser. Useful after a lost laptop or shared computer.',
+      ),
+      keywords: ['logout', 'revoke', 'session', 'everywhere', 'all devices', 'security'],
+    },
+
     // ── Advanced ────────────────────────────────────────────────────
     {
       id: 'advanced.restoreConfirms',
@@ -320,6 +428,107 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       title: t('search.entries.advanced.restoreConfirms.title', 'Restore confirmation prompts'),
       description: t('search.entries.advanced.restoreConfirms.desc', 'Re-enable “Don’t ask again” prompts you previously silenced.'),
       keywords: ['confirm', 'dialog', 'silence', 'dont ask', 'reset', 'restore'],
+    },
+
+    // ── Backup & Restore (Phase-46 / Prompt 36) ─────────────────────
+    {
+      id: 'backup.export',
+      href: '/settings#backup',
+      section: 'backup',
+      title: t('search.entries.backup.export.title', 'Export settings as JSON'),
+      description: t('search.entries.backup.export.desc', 'Download a portable bundle of general settings, alert rules, geofences, and quiet-hours windows.'),
+      keywords: ['backup', 'download', 'json', 'save', 'snapshot', 'configuration'],
+    },
+    {
+      id: 'backup.import',
+      href: '/settings#backup',
+      section: 'backup',
+      title: t('search.entries.backup.import.title', 'Import settings from JSON'),
+      description: t('search.entries.backup.import.desc', 'Restore alert rules, geofences, and quiet-hours windows from a previously exported bundle.'),
+      keywords: ['restore', 'upload', 'json', 'load', 'recover', 'configuration'],
+    },
+    // ── Webhook channels (Phase-46 / Prompt 37) ─────────────────────
+    {
+      id: 'webhooks.list',
+      href: '/settings#webhooks',
+      section: 'webhooks',
+      title: t('search.entries.webhooks.list.title', 'Webhook channels'),
+      description: t(
+        'search.entries.webhooks.list.desc',
+        'Forward TeslaSync notifications to Discord, Slack, n8n, Home Assistant, or any HTTP receiver.',
+      ),
+      keywords: [
+        'webhook',
+        'discord',
+        'slack',
+        'n8n',
+        'home assistant',
+        'http',
+        'integration',
+        'automation',
+      ],
+    },
+    {
+      id: 'webhooks.signing',
+      href: '/settings#webhooks',
+      section: 'webhooks',
+      title: t('search.entries.webhooks.signing.title', 'Webhook HMAC signing'),
+      description: t(
+        'search.entries.webhooks.signing.desc',
+        'Sign outbound webhooks with a shared secret so receivers can verify authenticity via the X-TeslaSync-Signature header.',
+      ),
+      keywords: ['hmac', 'sign', 'signature', 'sha256', 'secret', 'verify', 'authenticity'],
+    },
+    {
+      id: 'webhooks.test',
+      href: '/settings#webhooks',
+      section: 'webhooks',
+      title: t('search.entries.webhooks.test.title', 'Test a webhook channel'),
+      description: t(
+        'search.entries.webhooks.test.desc',
+        'Fire a test event at a configured webhook to verify your receiver and signature pipeline.',
+      ),
+      keywords: ['test', 'fire', 'verify', 'debug', 'try'],
+    },
+    // ── Reset to defaults (Phase-46 / Prompt 50) ────────────────────
+    {
+      id: 'reset.section',
+      href: '/settings#reset',
+      section: 'reset',
+      title: t('search.entries.reset.section.title', 'Reset a section to defaults'),
+      description: t(
+        'search.entries.reset.section.desc',
+        'Wipe one section at a time — alert rules, geofences, channels, automations, dashboard layouts, quiet hours, or general/appearance preferences.',
+      ),
+      keywords: [
+        'reset',
+        'defaults',
+        'wipe',
+        'clear',
+        'restore',
+        'factory',
+        'erase',
+      ],
+    },
+    {
+      id: 'reset.all',
+      href: '/settings#reset',
+      section: 'reset',
+      title: t('search.entries.reset.all.title', 'Reset ALL settings'),
+      description: t(
+        'search.entries.reset.all.desc',
+        'Danger zone — wipe every user-discoverable preference, alert rule, channel, geofence, automation, and dashboard layout in one transaction. Requires typing RESET to confirm.',
+      ),
+      keywords: [
+        'reset',
+        'all',
+        'danger',
+        'wipe',
+        'nuke',
+        'factory',
+        'erase',
+        'fresh start',
+      ],
     },
   ];
 }

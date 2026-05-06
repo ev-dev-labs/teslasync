@@ -37,7 +37,7 @@ function buildQuery(type: PinnedItemType, context?: string): string {
 export function usePinned(type: PinnedItemType, context?: string) {
   return useQuery({
     queryKey: pinnedKeys.list(type, context),
-    queryFn: () => request<PinnedItem[]>(`/pinned${buildQuery(type, context)}`),
+    queryFn: ({ signal }) => request<PinnedItem[]>(`/pinned${buildQuery(type, context)}`, { signal }),
     staleTime: STALE_TIMES.SLOW,
   });
 }

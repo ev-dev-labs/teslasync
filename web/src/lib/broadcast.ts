@@ -55,6 +55,12 @@ export type BroadcastMessage =
   | { type: 'changelog.seen'; version: string }
   | { type: 'tour.completed'; tourId: string; version: number }
   | { type: 'tour.reset'; tourId?: string }
+  // Phase-46 / Prompt 61 — Replay-requested by Settings UI / command palette.
+  // Same-tab callers MUST also dispatch the window CustomEvent
+  // `TOUR_START_EVENT` because the bus filters self-messages out by design;
+  // the broadcast variant exists so peer tabs that have Layout mounted can
+  // start the tour in lockstep without a page reload.
+  | { type: 'tour.replay-requested'; tourId: string }
   | { type: 'checklist.dismissed' }
   | { type: 'onboarded' }
   | { type: 'onboarding.skip.changed'; skipped: boolean }
@@ -68,6 +74,18 @@ export type BroadcastMessage =
   | { type: 'formDraft.acquired'; draftKey: string; tabId: string; ts: number }
   | { type: 'formDraft.released'; draftKey: string; tabId: string }
   | { type: 'formDraft.committed'; draftKey: string }
+  // ── Edit leases (Phase-46 / Prompt 66 — useEditLease) ────────────────────
+  // Coordinates "I am editing X" between tabs of the same origin so a tab
+  // that opened a stale view of a shared resource can warn the user before
+  // their save silently overwrites a peer tab's changes. The protocol is
+  // intentionally minimal: a `lease.request` asks any active owner to
+  // re-announce; `lease.granted` IS that announcement and carries
+  // `claimedAt` so a later (newer) claim can win a tiebreaker; a
+  // `lease.released` lets peer tabs re-elect immediately when the owner
+  // closes the form. `tabId` is the owning tab's stable `TAB_ID`.
+  | { type: 'lease.request'; resourceKey: string; tabId: string }
+  | { type: 'lease.granted'; resourceKey: string; tabId: string; claimedAt: number }
+  | { type: 'lease.released'; resourceKey: string; tabId: string }
   // ── TanStack Query ───────────────────────────────────────────────────────
   | { type: 'queryInvalidate'; keys: ReadonlyArray<ReadonlyArray<unknown>> }
   // ── Settings / preferences (Phase-45 / Prompt 06) ────────────────────────

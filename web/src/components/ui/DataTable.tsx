@@ -1,14 +1,27 @@
-import { type ReactNode, useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { type ReactNode, type MouseEvent as ReactMouseEvent, useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '../../lib/cn'
 import { tableTokens } from '../../lib/tokens'
-import { ChevronUp, ChevronDown, ChevronRight, AlertTriangle, Download, Loader2 } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronRight, AlertTriangle, Download, GripVertical, Loader2 } from 'lucide-react'
 import { Pagination } from './Pagination'
 import { SectionErrorBoundary } from '../feedback/SectionErrorBoundary'
-import { DataTableColumnsMenu } from './DataTableColumnsMenu'
+import { DataTableColumnMenu } from './DataTableColumnMenu'
 import { DataTableBulkBar } from './DataTableBulkBar'
 import { DataTableResizer } from './DataTableResizer'
+import { useContextMenu, type ContextMenuItem } from './ContextMenu'
+import {
+  applyColumnLayout,
+  defaultColumnLayout,
+  effectiveColumnOrder,
+  getColumnLayout,
+  moveColumn,
+  readLegacyVisibleLayout,
+  resetColumnLayout,
+  setColumnLayout,
+  writeLegacyVisibleArray,
+  type ColumnLayout,
+} from '../../lib/columnOrderStore'
 import {
   toCSV,
   downloadCSV,
@@ -103,7 +116,20 @@ interface DataTableProps<T> {
   // ── Phase-40 / Prompt 25 additions ────────────────────────────────────
   /** Stable identifier used to persist column visibility & widths in
    *  localStorage. Required when using `selectable`, `resizable`, or
-   *  the column-visibility menu. */
+   *  the column-visibility menu.
+   *
+   *  As of Phase-46 / Prompt 03 every `<DataTable>` caller under
+   *  `web/src/features/**` MUST set `tableId`. The
+   *  `audit:datatable-tableid` script (chained from `npm run lint`) fails
+   *  the build if a new caller forgets it. Without `tableId`, column
+   *  visibility / widths / sort / page-size silently reset on every
+   *  reload — which is the single biggest "the app forgot what I was
+   *  doing" complaint.
+   *
+   *  Choose a stable, descriptive id of the form `<feature>:<purpose>`
+   *  (e.g. `tableId="drives:list"`, `tableId="admin:audit-logs"`).
+   *  Renaming an existing id orphans every user's persisted layout, so
+   *  treat ids as part of the public contract once shipped. */
   tableId?: string
 
   // SELECTION
@@ -119,7 +145,10 @@ interface DataTableProps<T> {
   bulkActions?: (selected: T[]) => ReactNode
 
   // STICKY / SCROLL
-  /** Make the `<thead>` stick to the top of the wrapper while the body scrolls. */
+  /** Make the `<thead>` stick to the top of the wrapper while the body scrolls.
+   *  Defaults to `true` so every DataTable in the app has consistent sticky-
+   *  header behavior. Pass `false` to opt out (e.g. very short tables in
+   *  modals where a sticky header adds visual weight without value). */
   stickyHeader?: boolean
   /** Cap the wrapper height; combined with `stickyHeader` lets long tables
    *  scroll vertically inside their panel. */
@@ -144,8 +173,23 @@ interface DataTableProps<T> {
   // COLUMN VISIBILITY
   /** Render the "Columns" picker button above the table. Persists user choice
    *  in localStorage[`teslasync.table.${tableId}.visible`]. Requires
-   *  `tableId`. */
+   *  `tableId`.
+   *
+   *  @deprecated Use `columnVisibility` (Phase-46 / Prompt 45) — this prop
+   *    is preserved for back-compat and is now an alias. New callers should
+   *    pass `columnVisibility` so the intent is explicit. */
   showColumnsMenu?: boolean
+
+  // ── Phase-46 / Prompt 45 — column reorder + visibility ────────────────
+  /** Render the combined Columns popover (visibility checklist). Persists
+   *  in localStorage[`teslasync.table.${tableId}.columns`]. Requires
+   *  `tableId`. Equivalent to (and replaces) `showColumnsMenu`. */
+  columnVisibility?: boolean
+  /** Allow drag-to-reorder column headers and surface ↑/↓ keyboard
+   *  fallback in the column menu. Persists in
+   *  localStorage[`teslasync.table.${tableId}.columns`]. Requires
+   *  `tableId`. Implies `columnVisibility` (the same popover hosts both). */
+  columnReorder?: boolean
 
   // ── Phase-40 / Prompt 31 — per-table CSV export ───────────────────────
   /** Show a "Download CSV" button in the table toolbar. The CSV is generated
@@ -187,6 +231,15 @@ interface DataTableProps<T> {
    *  virtualized. Defaults to 8 — higher values smooth fast scrolling at
    *  the cost of slightly more DOM. */
   overscan?: number
+
+  // ── Phase-46 / Prompt 30 — per-row right-click context menu ───────────
+  /** Optional builder that returns a list of `ContextMenuItem`s to show
+   *  when the user right-clicks a body row. Returning an empty array (or
+   *  omitting this prop entirely) leaves the browser's native context
+   *  menu intact — no preventDefault, no shared menu. The shared
+   *  `<ContextMenuRoot/>` mounted in `App.tsx` renders the popup; this
+   *  prop only declares which actions belong to which row. */
+  rowContextMenu?: (row: T) => ContextMenuItem[]
 }
 
 const STORAGE_PREFIX = 'teslasync.table'
@@ -242,7 +295,7 @@ export function DataTable<T>({
   selectedKeys,
   onSelectionChange,
   bulkActions,
-  stickyHeader = false,
+  stickyHeader = true,
   maxHeight,
   expandable = false,
   expandedKeys,
@@ -250,6 +303,8 @@ export function DataTable<T>({
   renderExpanded,
   resizable = false,
   showColumnsMenu = false,
+  columnVisibility = false,
+  columnReorder = false,
   exportable = false,
   exportFilename,
   exportRow,
@@ -257,8 +312,13 @@ export function DataTable<T>({
   virtualized = false,
   rowHeight,
   overscan,
+  rowContextMenu,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
+  // Phase-46 / Prompt 30 — shared context menu host. We call this once per
+  // table render so the imperative `openMenu` reference stays stable
+  // across row renders.
+  const { openMenu } = useContextMenu()
   // Resolve effective density. Explicit `density` wins; otherwise the
   // legacy `compact` boolean maps to 'compact'; otherwise default to
   // 'auto' so the global setting flows through. Phase 40 / Prompt 44.
@@ -303,44 +363,57 @@ export function DataTable<T>({
   // Reset to page 1 when data length changes (e.g. filters applied).
   useEffect(() => { setPage(1) }, [data.length])
 
-  // ── Column visibility (persisted by tableId) ────────────────────────────
-  const visibilityStorageKey = tableId ? `${STORAGE_PREFIX}.${tableId}.visible` : null
-  const defaultVisibleKeys = useMemo(
-    () => columns.filter(c => c.defaultVisible !== false).map(c => c.key),
-    [columns],
-  )
-  const [visibleKeys, setVisibleKeys] = useState<string[]>(() => {
-    if (!visibilityStorageKey) return defaultVisibleKeys
-    const stored = readStored<string[]>(visibilityStorageKey)
-    if (!stored || stored.length === 0) return defaultVisibleKeys
-    // Drop keys that no longer exist in the current columns.
-    const colKeys = new Set(columns.map(c => c.key))
-    const filtered = stored.filter(k => colKeys.has(k))
-    return filtered.length > 0 ? filtered : defaultVisibleKeys
+  // ── Column layout (order + hidden, persisted by tableId) ───────────────
+  // Phase-46 / Prompt 45 unified the legacy `visibleKeys` state with a
+  // richer `{ order, hidden }` layout that also captures column position.
+  // The legacy `.visible` key is read once on mount as a one-shot
+  // migration so existing users don't lose their visibility prefs.
+  const columnKeys = useMemo(() => columns.map(c => c.key), [columns])
+  const [layout, setLayoutState] = useState<ColumnLayout | null>(() => {
+    if (!tableId) return null
+    const stored = getColumnLayout(tableId)
+    if (stored) return stored
+    return readLegacyVisibleLayout(tableId, columnKeys)
   })
-  // When the columns prop changes at runtime (e.g. a new column was added),
-  // drop any stale persisted keys but DO NOT auto-resurrect columns the user
-  // explicitly hid — leave that to the column-visibility menu.
-  useEffect(() => {
-    setVisibleKeys(prev => {
-      const knownKeys = new Set(columns.map(c => c.key))
-      const filtered = prev.filter(k => knownKeys.has(k))
-      return filtered.length === prev.length ? prev : filtered
-    })
-  }, [columns])
 
-  const updateVisibleKeys = useCallback(
-    (next: string[]) => {
-      setVisibleKeys(next)
-      if (visibilityStorageKey) writeStored(visibilityStorageKey, next)
+  // Drop stale order/hidden entries when the columns prop shrinks at
+  // runtime, but never resurrect a column the user explicitly hid.
+  useEffect(() => {
+    if (!layout) return
+    const known = new Set(columnKeys)
+    const filteredOrder = layout.order.filter(k => known.has(k))
+    const filteredHidden = layout.hidden.filter(k => known.has(k))
+    if (
+      filteredOrder.length !== layout.order.length ||
+      filteredHidden.length !== layout.hidden.length
+    ) {
+      setLayoutState({ order: filteredOrder, hidden: filteredHidden })
+    }
+  }, [layout, columnKeys])
+
+  const persistLayout = useCallback(
+    (next: ColumnLayout) => {
+      setLayoutState(next)
+      if (tableId) {
+        setColumnLayout(tableId, next)
+        // Mirror the visible-keys list to the legacy `.visible` storage key so
+        // any pre-Phase-46 reader (and the legacy assertion in
+        // DataTable.test.tsx) continues to work without modification.
+        const visibleKeys = applyColumnLayout(columns, next).map((c) => c.key)
+        writeLegacyVisibleArray(tableId, visibleKeys)
+      }
     },
-    [visibilityStorageKey],
+    [tableId, columns],
   )
 
-  const visibleSet = useMemo(() => new Set(visibleKeys), [visibleKeys])
+  const resetLayout = useCallback(() => {
+    setLayoutState(null)
+    if (tableId) resetColumnLayout(tableId)
+  }, [tableId])
+
   const visibleColumns = useMemo(
-    () => columns.filter(c => visibleSet.has(c.key)),
-    [columns, visibleSet],
+    () => applyColumnLayout(columns, layout),
+    [columns, layout],
   )
 
   // ── Mobile allow-list ───────────────────────────────────────────────────
@@ -589,6 +662,18 @@ export function DataTable<T>({
       tableTokens.row,
       selected && tableTokens.rowSelected,
     )
+    const handleRowContextMenu = rowContextMenu
+      ? (e: ReactMouseEvent<HTMLTableRowElement>) => {
+          // Allow right-clicks on form controls / links to keep their
+          // native menus (text-input copy/paste, link-context, etc.).
+          const target = e.target as HTMLElement
+          if (target.closest('input, textarea, select, a')) return
+          const items = rowContextMenu(row)
+          if (!items || items.length === 0) return
+          e.preventDefault()
+          openMenu(items, e.clientX, e.clientY)
+        }
+      : undefined
     const rows: ReactNode[] = [
       <tr
         key={rowKey}
@@ -596,6 +681,7 @@ export function DataTable<T>({
         data-selected={selected ? 'true' : undefined}
         data-expanded={expanded ? 'true' : undefined}
         aria-selected={isSelectable ? selected : undefined}
+        onContextMenu={handleRowContextMenu}
         onKeyDown={(e) => {
           if (e.key === ' ' && isSelectable) {
             e.preventDefault()
@@ -646,7 +732,7 @@ export function DataTable<T>({
                   : t('table.expand.expand', 'Expand row')
               }
               className={cn(
-                'inline-flex h-5 w-5 items-center justify-center rounded',
+                'touch-target-overlay inline-flex h-5 w-5 items-center justify-center rounded',
                 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
                 'transition-colors',
@@ -687,11 +773,11 @@ export function DataTable<T>({
   }
 
   // ── Render ──────────────────────────────────────────────────────────────
-  // When virtualized, the wrapper MUST be the scrollable element with a
-  // bounded height (otherwise the virtualizer can't compute the viewport).
-  // We default to maxHeight=600 and auto-enable a sticky header so the
-  // column titles stay visible while the user scrolls through thousands of
-  // rows.
+  // Sticky headers are on by default (see `stickyHeader` prop) so every
+  // DataTable in the app pins its column titles when the body scrolls.
+  // Virtualization additionally requires a bounded wrapper height so the
+  // virtualizer can compute the viewport — we default to maxHeight=600 in
+  // that case. Callers can opt out per-table with `stickyHeader={false}`.
   const effectiveMaxHeight = maxHeight ?? (virtualizationActive ? 600 : undefined)
   const effectiveStickyHeader = stickyHeader || virtualizationActive
 
@@ -709,10 +795,93 @@ export function DataTable<T>({
   const headRowClass = cn(
     tableTokens.head,
     effectiveStickyHeader && tableTokens.stickyHead,
+    // Phase-46 / Prompt 11 — Windows High Contrast / forced-colors mode.
+    // The default `border-b border-white/[0.06]` from `tableTokens.head`
+    // collapses to invisible against the OS Canvas background, leaving
+    // table headers indistinguishable from the body. Pin the bottom edge
+    // to a system colour so the column-header row stays a clear visual
+    // boundary for low-vision users.
+    'forced-colors:border-b forced-colors:border-[CanvasText]',
   )
 
+  // Phase-46 / Prompt 45 — `showColumnsMenu` is the back-compat alias for
+  // `columnVisibility`. When EITHER is true (or `columnReorder` is true,
+  // since reorder always implies the menu), we surface the new combined
+  // `<DataTableColumnMenu>` popover.
+  const visibilityRequested = showColumnsMenu || columnVisibility
+  const reorderRequested = columnReorder
+  const showColumnMenu = (visibilityRequested || reorderRequested) && Boolean(tableId)
+  const headerReorderEnabled = reorderRequested && Boolean(tableId)
+
+  // Drag state for HTML5 column reorder. Stored in refs because the
+  // values aren't read during render — they're consumed inside drag
+  // event handlers — and we don't want a re-render on every dragover.
+  const dragColumnKeyRef = useRef<string | null>(null)
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null)
+
+  const handleHeaderDragStart = useCallback(
+    (key: string, e: React.DragEvent<HTMLTableCellElement>) => {
+      if (!headerReorderEnabled) return
+      dragColumnKeyRef.current = key
+      // Some browsers refuse to fire `drop` without setData on dataTransfer.
+      try {
+        e.dataTransfer.setData('text/plain', key)
+        e.dataTransfer.effectAllowed = 'move'
+      } catch {
+        /* jsdom or a hardened CSP — drop will still fire from our handler. */
+      }
+    },
+    [headerReorderEnabled],
+  )
+
+  const handleHeaderDragOver = useCallback(
+    (key: string, e: React.DragEvent<HTMLTableCellElement>) => {
+      if (!headerReorderEnabled) return
+      if (!dragColumnKeyRef.current || dragColumnKeyRef.current === key) return
+      e.preventDefault()
+      try {
+        e.dataTransfer.dropEffect = 'move'
+      } catch {
+        /* ignore */
+      }
+      if (dragOverKey !== key) setDragOverKey(key)
+    },
+    [headerReorderEnabled, dragOverKey],
+  )
+
+  const handleHeaderDragLeave = useCallback(
+    (key: string) => {
+      if (!headerReorderEnabled) return
+      if (dragOverKey === key) setDragOverKey(null)
+    },
+    [headerReorderEnabled, dragOverKey],
+  )
+
+  const handleHeaderDrop = useCallback(
+    (targetKey: string, e: React.DragEvent<HTMLTableCellElement>) => {
+      if (!headerReorderEnabled) return
+      const sourceKey = dragColumnKeyRef.current
+      dragColumnKeyRef.current = null
+      setDragOverKey(null)
+      if (!sourceKey || sourceKey === targetKey) return
+      e.preventDefault()
+      const base: ColumnLayout = layout ?? defaultColumnLayout(columns)
+      const currentOrder = effectiveColumnOrder(columns, base)
+      const targetIndex = currentOrder.indexOf(targetKey)
+      if (targetIndex < 0) return
+      const nextOrder = moveColumn(currentOrder, sourceKey, targetIndex)
+      persistLayout({ order: nextOrder, hidden: base.hidden.slice() })
+    },
+    [headerReorderEnabled, layout, columns, persistLayout],
+  )
+
+  const handleHeaderDragEnd = useCallback(() => {
+    dragColumnKeyRef.current = null
+    setDragOverKey(null)
+  }, [])
+
   const showToolbar =
-    (showColumnsMenu && tableId) ||
+    showColumnMenu ||
     (isSelectable && selectedRows.length > 0) ||
     exportable
 
@@ -752,11 +921,18 @@ export function DataTable<T>({
                 <span>{t('table.export.csvButton', 'Download CSV')}</span>
               </button>
             )}
-            {showColumnsMenu && tableId && (
-              <DataTableColumnsMenu
-                columns={columns.map(c => ({ key: c.key, header: c.header }))}
-                visibleKeys={visibleKeys}
-                onChange={updateVisibleKeys}
+            {showColumnMenu && (
+              <DataTableColumnMenu
+                columns={columns.map(c => ({
+                  key: c.key,
+                  header: c.header,
+                  defaultVisible: c.defaultVisible,
+                }))}
+                layout={layout}
+                onChange={persistLayout}
+                onReset={resetLayout}
+                reorderable={reorderRequested}
+                toggleable={visibilityRequested}
               />
             )}
           </div>
@@ -799,42 +975,64 @@ export function DataTable<T>({
               )}
               {visibleColumns.map(col => {
                 const w = widthFor(col)
+                const isDragOverTarget = headerReorderEnabled && dragOverKey === col.key
                 return (
                   <th
                     key={col.key}
                     scope="col"
+                    draggable={headerReorderEnabled || undefined}
+                    onDragStart={headerReorderEnabled ? (e) => handleHeaderDragStart(col.key, e) : undefined}
+                    onDragOver={headerReorderEnabled ? (e) => handleHeaderDragOver(col.key, e) : undefined}
+                    onDragLeave={headerReorderEnabled ? () => handleHeaderDragLeave(col.key) : undefined}
+                    onDrop={headerReorderEnabled ? (e) => handleHeaderDrop(col.key, e) : undefined}
+                    onDragEnd={headerReorderEnabled ? handleHeaderDragEnd : undefined}
+                    data-column-key={col.key}
+                    data-drag-over={isDragOverTarget ? 'true' : undefined}
                     className={cn(
                       headCellPaddingClass,
                       colHiddenClass(col.key),
                       alignClass(col.align),
                       resizable && 'relative group/th',
+                      headerReorderEnabled && 'relative cursor-grab active:cursor-grabbing',
+                      isDragOverTarget && 'bg-cyan-500/10 outline outline-1 outline-cyan-400/40',
                       col.className,
                     )}
                     style={w != null ? { width: w, minWidth: w } : undefined}
                     aria-sort={col.sortable && sortKey === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
                   >
-                    {col.sortable ? (
-                      <button
-                        type="button"
-                        onClick={() => onSort?.(col.key)}
-                        className={cn(
-                          'inline-flex items-center gap-1 cursor-pointer select-none rounded',
-                          'hover:text-[var(--text-secondary)]',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
-                        )}
-                      >
-                        <span>{col.header}</span>
-                        {sortKey === col.key && (
-                          sortDir === 'asc'
-                            ? <ChevronUp className="h-3 w-3" aria-hidden="true" />
-                            : <ChevronDown className="h-3 w-3" aria-hidden="true" />
-                        )}
-                      </button>
-                    ) : (
-                      <span className="inline-flex items-center gap-1">
-                        {col.header}
-                      </span>
-                    )}
+                    <span className="inline-flex items-center gap-1">
+                      {headerReorderEnabled && (
+                        <span
+                          aria-hidden="true"
+                          data-testid={`datatable-column-grip-${col.key}`}
+                          className="inline-flex h-4 w-3 items-center justify-center text-[var(--text-muted)]/60 hover:text-[var(--text-muted)]"
+                        >
+                          <GripVertical className="h-3 w-3" />
+                        </span>
+                      )}
+                      {col.sortable ? (
+                        <button
+                          type="button"
+                          onClick={() => onSort?.(col.key)}
+                          className={cn(
+                            'inline-flex items-center gap-1 cursor-pointer select-none rounded',
+                            'hover:text-[var(--text-secondary)]',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
+                          )}
+                        >
+                          <span>{col.header}</span>
+                          {sortKey === col.key && (
+                            sortDir === 'asc'
+                              ? <ChevronUp className="h-3 w-3" aria-hidden="true" />
+                              : <ChevronDown className="h-3 w-3" aria-hidden="true" />
+                          )}
+                        </button>
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          {col.header}
+                        </span>
+                      )}
+                    </span>
                     {resizable && tableId && (
                       <DataTableResizer
                         columnKey={col.key}

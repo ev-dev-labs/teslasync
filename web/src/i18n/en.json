@@ -1,4 +1,7 @@
 {
+  "global": {
+    "loading": "Loading"
+  },
   "achievements": {
     "unlocked": "Achievement unlocked: {{name}}",
     "noneYet": "Drive, charge, and explore — achievements will appear here as you unlock them",
@@ -81,6 +84,60 @@
       "socRange": "The starting and ending state-of-charge percentages for this session. Wider ranges generally mean longer sessions and more taper.",
       "chargeCurve": "Power vs SoC curve for the session. Tapering — the gradual drop in power as the battery approaches full — is inherent to lithium chemistry and is not a fault. Sudden drops below the curve indicate derating: the charger or battery is throttling power because of cell or ambient temperature limits.",
       "kwhPerHour": "Average kWh added per hour across the session. Useful for estimating how long a future session will take at the same charger."
+    },
+    "fields": {
+      "settings": {
+        "region": "Tesla account region (NA, EU, CN). Determines which Fleet API endpoint TeslaSync calls. Refresh after changing your Tesla account country.",
+        "gasPriceAutoPoll": "When enabled, TeslaSync automatically fetches U.S. average gasoline prices from the EIA. Used to compute fuel-savings vs. driving an EV.",
+        "gasPricePollInterval": "How often the gas-price worker polls the EIA. Daily catches price spikes; weekly is plenty for most users and is gentler on the upstream feed.",
+        "notificationChannels": "Where alert messages are delivered. Add channels (Discord, Slack, email, webhook, ntfy, Pushover, Telegram) before alerts can fire.",
+        "appearanceDensity": "Controls row height, padding, and font sizes across tables and dashboards. Compact fits more on screen; comfortable is easier to read on large displays.",
+        "chartPalette": "Colour scheme used for chart series. Vivid is the default high-contrast palette; muted reduces visual noise; print is grayscale-friendly for exports.",
+        "timeFormat": "12-hour (1:30 PM) vs 24-hour (13:30) display across timestamps. Affects all surfaces — drives, charging, alerts, telemetry charts.",
+        "uiTheme": "Light / dark / system theme. System follows your OS preference and switches automatically when your OS toggles between modes.",
+        "language": "Display language for UI strings. TeslaSync ships English; community translations may be incomplete for newer features.",
+        "weekStart": "First day of the week in calendar pickers and weekly aggregations. ISO 8601 default is Monday; many U.S. users prefer Sunday.",
+        "electricityCost": "Cost per kWh used to compute charging spend across drives, charging sessions, and TCO analytics. Currency follows the Currency setting above."
+      },
+      "alertStudio": {
+        "cooldown": "Minimum minutes between repeat firings of this rule. Prevents the same condition from spamming your channels (e.g. battery at 19% triggering once per minute).",
+        "severity": "Visual / routing priority — info, warn, or critical. Channels can subscribe to specific severities to keep critical alerts from being drowned out by chatty info ones.",
+        "triggerMode": "Repeat fires every cooldown while the condition stays true; once fires the first time and waits for the condition to reset to false before it can fire again.",
+        "kind": "Signal threshold compares a single live telemetry value (e.g. BatteryLevel < 20). Computed metric aggregates over a time window (e.g. cost > $5 in last 24h).",
+        "vehicleId": "Restricts the rule to a single vehicle. Leave blank to apply across every vehicle on the account.",
+        "operator": "Comparison applied to the signal value: =, !=, <, <=, >, >=, between, any change. Some operators only apply to numeric signals.",
+        "testMessage": "Message body sent when the rule fires. Use {{SignalName}} placeholders to interpolate the current value into the notification."
+      },
+      "automations": {
+        "triggerType": "What kicks the automation off — a time schedule, a signal threshold crossing, a geofence enter/exit, or another automation completing.",
+        "operator": "How the trigger or condition value is compared (=, !=, <, >, between, etc.). Numeric operators are only available for numeric signals.",
+        "conditionLogic": "When multiple conditions are configured, ALL must pass (AND) or ANY must pass (OR) for the actions to run.",
+        "debounce": "Minimum milliseconds between consecutive runs of this automation. Protects against duplicate triggers when a signal flickers across the threshold.",
+        "geofence": "A named circular region defined in /locations. Automations can react when the vehicle enters or exits the region.",
+        "timeWindow": "Time-of-day range (e.g. 22:00–06:00) and timezone. The condition only passes during that window in the chosen timezone.",
+        "otherAutomation": "Make this automation depend on another automation's recent state — e.g. only run if 'Morning prep' has not run today.",
+        "signal": "The vehicle telemetry signal this condition reads. Booleans use true/false, 'state' uses keywords like online/asleep, all others compare numeric values.",
+        "cronExpr": "Standard 5-field cron syntax (minute hour day-of-month month day-of-week). Use the simple mode above for the most common schedules.",
+        "timezone": "IANA time zone used to interpret the start/end window. Defaults to your browser zone if left blank.",
+        "dwellMinutes": "How many minutes the vehicle must stay inside the geofence before this dwell trigger fires."
+      },
+      "channels": {
+        "webhookUrl": "Full HTTPS URL TeslaSync POSTs the JSON body to. Discord and Slack provide their own webhook endpoints; for custom services use the generic Webhook channel.",
+        "hmacSecret": "Optional shared secret. When set, TeslaSync signs every request with HMAC-SHA256 in the X-TeslaSync-Signature header so receivers can verify authenticity.",
+        "headersJson": "Extra HTTP headers as a JSON object — e.g. {\"Authorization\": \"Bearer XYZ\"}. Useful for receivers that require API keys outside the URL.",
+        "bodyTemplate": "Optional JSON template for the request body. Use {{message}}, {{severity}}, {{timestamp}} placeholders. If omitted, TeslaSync sends its default JSON envelope.",
+        "smtpHost": "Mail server hostname (e.g. smtp.gmail.com). Most providers use port 587 with STARTTLS; check your provider's docs for the right host + port pair.",
+        "smtpPort": "SMTP server port. 587 for STARTTLS (recommended), 465 for implicit TLS, 25 for plain (insecure — only on local relays).",
+        "smtpPassword": "SMTP password or app-specific password. Stored encrypted at rest. Many providers (Gmail, Microsoft 365) require an app password rather than your account password.",
+        "botToken": "Telegram BotFather token in the format `<id>:<secret>`. Create a bot via @BotFather on Telegram, then start a chat with it before TeslaSync can deliver.",
+        "chatId": "Numeric Telegram chat ID. For a private bot chat this is your user ID; for a group it's negative (e.g. -1001234567890).",
+        "ntfyServer": "Base URL of the ntfy server (e.g. https://ntfy.sh for the public server, or your self-hosted instance).",
+        "ntfyTopic": "Topic name on the ntfy server. Anyone with the topic name can subscribe — pick something hard to guess for sensitive alerts.",
+        "method": "HTTP method TeslaSync uses for outbound delivery. POST is universal; some receivers require PUT or PATCH.",
+        "nameLabel": "Friendly identifier shown in the channel list and on alert delivery logs. Has no functional impact — pick anything memorable.",
+        "configSection": "Provider-specific credentials and routing details. Required fields vary by channel type. All secrets are encrypted at rest.",
+        "testHint": "Use the \"Send Test\" button after saving to verify your configuration. Tests bypass severity filters but otherwise match real delivery."
+      }
     }
   },
   "date": {
@@ -324,7 +381,49 @@
     "saveError": "Failed to save changes"
   },
   "filters": {
-    "reset": "Reset filters"
+    "reset": "Reset filters",
+    "activeLabel": "Active filters",
+    "clearAll": "Clear all",
+    "clearedAll": "All filters cleared",
+    "moreCount": "+{{count}} more",
+    "moreLabel": "Additional active filters",
+    "removed": "Filter removed",
+    "removeAria": "Remove filter {{label}}"
+  },
+  "filter": {
+    "pending": "Filtering…"
+  },
+  "form": {
+    "required": "required"
+  },
+  "editableText": {
+    "saving": "Saving…",
+    "error": {
+      "empty": "Value cannot be empty",
+      "saveFailed": "Save failed"
+    },
+    "announce": {
+      "saved": "{{label}} saved"
+    },
+    "rename": {
+      "geofence": "Rename geofence {{name}}",
+      "alertRule": "Rename alert rule {{name}}"
+    }
+  },
+  "lightbox": {
+    "counter": "{{current}} / {{total}}",
+    "close": "Close image viewer",
+    "previous": "Previous image",
+    "next": "Next image",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset zoom",
+    "zoomPercent": "{{value}}%"
+  },
+  "mask": {
+    "reveal": "Reveal value",
+    "hide": "Hide value",
+    "copy": "Copy value"
   },
   "draft": {
     "restored": "Draft restored from {{when}}.",
@@ -338,6 +437,23 @@
       "rule": "Alert rule",
       "automation": "Automation",
       "settings": "Settings"
+    },
+    "recovery": {
+      "promptTitle": "Unsaved drafts restored",
+      "promptBody": "You have {{count}} unsaved drafts from a previous session.",
+      "promptBody_one": "You have {{count}} unsaved draft from a previous session.",
+      "promptBody_other": "You have {{count}} unsaved drafts from a previous session.",
+      "review": "Review",
+      "dismiss": "Dismiss",
+      "close": "Close",
+      "modalTitle": "Restore unsaved drafts",
+      "modalBody": "These drafts were saved in your browser before this session. Resume to continue editing or discard to clear them.",
+      "savedAt": "Saved {{when}}",
+      "resume": "Resume",
+      "discard": "Discard",
+      "discardAll": "Discard all",
+      "fallbackLabel": "Unsaved draft",
+      "empty": "No drafts to restore."
     }
   },
   "bulk": {
@@ -378,6 +494,95 @@
       "notification_other": "notifications"
     }
   },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode",
+    "body": "{{feature}} is only available when TeslaSync is configured behind an authentication provider (Authentik, Authelia, oauth2-proxy, Keycloak, or similar). Set FORWARD_AUTH_HEADER on the API service to enable it.",
+    "bodyWithHint": "{{feature}} is only available when TeslaSync is configured behind an authentication provider ({{provider}}). Set FORWARD_AUTH_HEADER on the API service to enable it.",
+    "featureName": {
+      "stepUpReauth": "Step-up reauthentication",
+      "totpEnrollment": "TOTP enrollment",
+      "sessionList": "Active sessions",
+      "impersonation": "User impersonation",
+      "rbac": "Role-based access control"
+    }
+  },
+  "compat": {
+    "banner": {
+      "title": "Your browser is missing required features",
+      "body": "TeslaSync needs {{features}} to work correctly. {{recommendation}}",
+      "recommendation": "Use Chrome ≥ 110, Edge ≥ 110, Firefox ≥ 109, or Safari ≥ 16.",
+      "dismiss": "Dismiss"
+    }
+  },
+  "timeMachine": {
+    "banner": {
+      "title": "Viewing data as of {{when}}",
+      "body": "Read-only point-in-time mode — current state, battery, and other live signals are reconstructed from history. Live actions stay disabled.",
+      "pickPrompt": "Open the time machine",
+      "pickBody": "Pick a date and time within the last 90 days to reconstruct what TeslaSync looked like at that moment.",
+      "pick": "Pick a date",
+      "returnToLive": "Return to live",
+      "submit": "View as of date",
+      "cancel": "Cancel",
+      "inputLabel": "Date and time"
+    }
+  },
+  "editConflict": {
+    "banner": {
+      "title": "Another browser tab is editing this",
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "takeOver": "Take over editing",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "saveBlocked": "Another tab is editing — take over or close that tab first."
+    },
+    "resource": {
+      "settings": "Your settings",
+      "automation": "This automation",
+      "alertRules": "Your alert rules"
+    }
+  },
+  "consent": {
+    "banner": {
+      "title": "Cookies & analytics",
+      "body": "TeslaSync uses strictly necessary storage to keep you signed in and to remember your preferences. With your consent, we also collect anonymous performance and error reports to improve the app. You can change your mind any time in Settings → Privacy.",
+      "manage": "Manage preferences",
+      "hideDetails": "Hide details",
+      "accept": "Accept all",
+      "decline": "Decline non-essential"
+    },
+    "category": {
+      "alwaysOn": "Always on",
+      "essential": {
+        "title": "Strictly necessary",
+        "body": "Authentication, session, theme, and saved drafts. Required for the app to work and exempt from consent under the ePrivacy directive."
+      },
+      "analytics": {
+        "title": "Performance & error reporting",
+        "body": "Anonymous Core Web Vitals (page-load timings) and uncaught error reports sent to this TeslaSync instance to help operators diagnose issues. No third parties involved."
+      }
+    },
+    "section": {
+      "title": "Cookies & analytics consent",
+      "bodyOn": "This deployment collects anonymous performance and error reports with your consent. Strictly necessary storage (auth, settings) is always on.",
+      "bodyOff": "This deployment does not require consent collection — these controls let you preview the user-facing flow."
+    },
+    "state": {
+      "accepted": "Accepted — performance & error reporting on",
+      "declined": "Declined — only essential storage in use",
+      "unknown": "Not decided — banner will appear on next visit"
+    },
+    "action": {
+      "accept": "Re-grant consent",
+      "decline": "Withdraw consent",
+      "reset": "Reset"
+    },
+    "toast": {
+      "accepted": "Consent granted",
+      "declined": "Consent withdrawn",
+      "reset": "Consent reset — banner will reappear"
+    }
+  },
   "common": {
     "loading": "Loading...",
     "noData": "No data available",
@@ -391,6 +596,10 @@
     "clear": "Clear",
     "export": "Export",
     "refresh": "Refresh",
+    "fullscreen": {
+      "enter": "Enter fullscreen",
+      "exit": "Exit fullscreen"
+    },
     "copyLink": {
       "action": "Copy link",
       "label": "Copy link to this view",
@@ -505,6 +714,20 @@
     "whkm": "Wh/km",
     "whmi": "Wh/mi",
     "psi": "PSI"
+  },
+  "mobile": {
+    "refresh": {
+      "pull": "Pull to refresh",
+      "release": "Release to refresh",
+      "refreshing": "Refreshing…"
+    },
+    "swipe": {
+      "archive": "Archive",
+      "restore": "Restore",
+      "delete": "Delete",
+      "ack": "Acknowledge",
+      "dismiss": "Dismiss"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -901,6 +1124,17 @@
     "common": {
       "error": "Something went wrong"
     },
+    "quietHours": {
+      "save": {
+        "created": "Quiet hours window created",
+        "updated": "Quiet hours window updated",
+        "error": "Failed to save quiet hours window"
+      },
+      "delete": {
+        "success": "Quiet hours window removed",
+        "error": "Failed to delete quiet hours window"
+      }
+    },
     "pin": {
       "pinned": {
         "success": "Pinned",
@@ -995,6 +1229,18 @@
         "success": "Rule snoozed",
         "cleared": "Snooze cleared",
         "error": "Failed to snooze rule"
+      },
+      "ack": {
+        "success": "Alert acknowledged",
+        "error": "Failed to acknowledge alert"
+      },
+      "comment": {
+        "success": "Comment added",
+        "error": "Failed to add comment"
+      },
+      "reopen": {
+        "success": "Alert reopened",
+        "error": "Failed to reopen alert"
       }
     },
     "channels": {
@@ -1142,6 +1388,10 @@
           "success": "Export job created",
           "error": "Failed to create export"
         }
+      },
+      "maintenance": {
+        "success": "Maintenance state updated",
+        "error": "Failed to update maintenance state"
       }
     },
     "vehicles": {
@@ -1351,6 +1601,18 @@
       "commands": "Vehicle Commands",
       "selectVehicle": "Select Vehicle"
     },
+    "recent": {
+      "justNow": "Just now",
+      "minutesAgo": "{{count}}m ago",
+      "minutesAgo_one": "{{count}}m ago",
+      "minutesAgo_other": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "hoursAgo_one": "{{count}}h ago",
+      "hoursAgo_other": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago",
+      "daysAgo_one": "{{count}}d ago",
+      "daysAgo_other": "{{count}}d ago"
+    },
     "cmd": {
       "selectVehicle": "Select vehicle…",
       "switchVehicle": "Switch to {{name}}",
@@ -1374,6 +1636,7 @@
       "securitySettings": "Open security & access",
       "systemStatus": "View system status",
       "apiPlayground": "Open API playground",
+      "timeMachineOpen": "Open time machine",
       "export": "Open data export",
       "settings": "Open settings",
       "shortcuts": "Show keyboard shortcuts",
@@ -1430,10 +1693,15 @@
       "automation": "Automations",
       "location": "Locations",
       "trip": "Trips"
+    },
+    "history": {
+      "title": "Recent searches",
+      "clear": "Clear history",
+      "removeAria": "Remove \"{{query}}\" from search history"
     }
   },
   "a11y": {
-    "skipToMain": "Skip to main content",
+    "skipToContent": "Skip to main content",
     "primaryNav": "Primary",
     "primaryHeader": "Site header",
     "footerStatus": "Status bar",
@@ -1448,7 +1716,8 @@
     "openCommandPalette": "Open command palette",
     "openSettings": "Open settings",
     "dataFreshness": "Data freshness: {{state}}",
-    "chartFigure": "Chart: {{title}}"
+    "chartFigure": "Chart: {{title}}",
+    "helpFor": "Help for {{field}}"
   },
   "table": {
     "selection": {
@@ -1460,8 +1729,14 @@
     "columns": {
       "button": "Columns",
       "menu": "Show or hide columns",
+      "menuReorder": "Reorder or hide columns",
       "heading": "Visible columns",
+      "headingReorder": "Columns",
       "showAll": "Show all",
+      "reset": "Reset",
+      "toggleColumn": "Show or hide {{col}}",
+      "moveUp": "Move {{col}} up",
+      "moveDown": "Move {{col}} down",
       "resizeLabel": "Resize column {{col}}"
     },
     "expand": {
@@ -1546,13 +1821,27 @@
     "markerRow": "Annotations on this chart"
   },
   "chart": {
-    "export": "Export as PNG",
+    "export": {
+      "menuLabel": "Export chart",
+      "disabledTooltip": "Chart not ready to export",
+      "csv": "Download data as CSV",
+      "png": "Save as PNG",
+      "svg": "Save as SVG",
+      "copy": "Copy image to clipboard",
+      "copySuccess": "Chart image copied to clipboard",
+      "copyFallback": "Clipboard not available — image downloaded instead",
+      "copyFailed": "Failed to copy chart image"
+    },
     "exportCsv": "Download data as CSV",
     "menu": {
       "label": "Chart actions",
       "open": "Open chart actions menu",
       "downloadCsv": "Download data as CSV",
       "downloadPng": "Download as PNG"
+    },
+    "a11y": {
+      "fallbackTableLabel": "{{title}} — data table",
+      "summary": "Chart: {{title}}"
     }
   },
   "replay": {
@@ -1738,7 +2027,45 @@
       "title": "Delete rule?",
       "message": "This cannot be undone."
     },
-    "signal": "Signal"
+    "signal": "Signal",
+    "ack": {
+      "button": "Acknowledge",
+      "buttonAcked": "Acknowledged",
+      "dialogTitle": "Acknowledge alert",
+      "noteLabel": "Note (optional)",
+      "notePlaceholder": "Optional: what's being done?",
+      "noteHint": "Up to {{max}} characters. Shared in the audit timeline.",
+      "submit": "Acknowledge",
+      "cancel": "Cancel",
+      "undo": "Undo",
+      "ackedBy": "Acknowledged by {{actor}}",
+      "ackedByAnonymous": "Acknowledged",
+      "ackedAt": "{{time}}"
+    },
+    "comment": {
+      "button": "Comment",
+      "dialogTitle": "Add comment",
+      "noteLabel": "Comment",
+      "notePlaceholder": "Add a note to the audit timeline…",
+      "submit": "Add comment",
+      "cancel": "Cancel"
+    },
+    "timeline": {
+      "title": "Audit timeline",
+      "anonymous": "Unknown",
+      "kind": {
+        "created": "Alert created",
+        "acknowledged": "Acknowledged by {{actor}}",
+        "reopened": "Reopened by {{actor}}",
+        "commented": "Comment by {{actor}}"
+      },
+      "kindAnonymous": {
+        "acknowledged": "Acknowledged",
+        "reopened": "Reopened",
+        "commented": "Comment added"
+      },
+      "empty": "No events yet"
+    }
   },
   "pagination": {
     "showing": "Showing {{start}}–{{end}} of {{total}}",
@@ -1977,6 +2304,14 @@
     "audit": {
       "searchPlaceholder": "Search by action, resource, or details…",
       "noMatches": "No audit entries match your search."
+    },
+    "errors": {
+      "title": "Frontend Errors (Last Hour)",
+      "subtitle": "Reported by browser sessions via /api/v1/web-errors. Exported as Prometheus counter teslasync_web_errors_total.",
+      "totalLastHour": "Errors in last hour",
+      "topOffenders": "Top error sources",
+      "noErrors": "No frontend errors reported in the last hour.",
+      "unableToLoad": "Unable to load error summary."
     }
   },
   "apiLogs": {
@@ -2129,6 +2464,23 @@
       "empty": {
         "title": "No signals cached for this vehicle",
         "body": "Both L1 and L2 are empty. If this vehicle is currently streaming, give the next batch a few seconds to arrive. Otherwise check the telemetry pipeline."
+      },
+      "cacheNotWired": {
+        "title": "Redis cache is not configured",
+        "body": "The TeslaSync API server started without a Redis connection. Set REDIS_ADDR (or REDIS_HOST + REDIS_PORT) in your environment, ensure the Redis service is reachable, and restart the API. This page reads exclusively from Redis and cannot function without it.",
+        "cta": "See cache configuration docs"
+      },
+      "unreachable": {
+        "title": "Redis is unreachable",
+        "body": "The API server is configured to use Redis, but the connection failed. Check that the Redis pod is running, that network policies allow the API to reach it, and review API server logs for \"redis signal cache: GetAll failed\"."
+      },
+      "requestFailed": {
+        "title": "Could not load Redis signals",
+        "body": "The server returned an error: {{status}} {{message}}. The Redis Signal Viewer cannot recover automatically — try refreshing, and if the error persists check the API server logs."
+      },
+      "networkError": {
+        "title": "Cannot reach the API server",
+        "body": "The browser failed to fetch /api/v1/dev-tools/redis-signals. Check that the API server is running, the proxy/ingress is healthy, and there are no CORS or network errors in DevTools."
       },
       "otherVehicles": "Other vehicles with cached signals",
       "meta": {
@@ -5478,7 +5830,13 @@
         "restore": "Restore",
         "delete": "Delete",
         "deleteConfirmTitle": "Delete notifications?",
-        "deleteConfirmBody": "These notifications will be permanently removed. Archive is usually the safer choice."
+        "deleteConfirmBody": "These notifications will be permanently removed. Archive is usually the safer choice.",
+        "announceArchived": "{{count}} items archived",
+        "announceArchived_one": "{{count}} item archived",
+        "announceArchived_other": "{{count}} items archived",
+        "announceRestored": "{{count}} items restored",
+        "announceRestored_one": "{{count}} item restored",
+        "announceRestored_other": "{{count}} items restored"
       },
       "empty": {
         "title": "No notifications",
@@ -5496,6 +5854,43 @@
     "markAllRead": {
       "action": "Mark all read",
       "success": "All notifications marked as read"
+    },
+    "bellPopover": {
+      "title": "Notifications",
+      "unreadCount": "{{count}} unread",
+      "allRead": "All caught up",
+      "loading": "Loading…",
+      "error": "Could not load notifications",
+      "emptyTitle": "You're all caught up",
+      "emptyMessage": "No unread notifications right now.",
+      "untitled": "Notification",
+      "markAllRead": "Mark all read",
+      "viewAll": "View all"
+    },
+    "view": {
+      "label": "View",
+      "grouped": "Grouped",
+      "flat": "Flat"
+    },
+    "group": {
+      "expand": "Show {{count}} similar",
+      "expand_one": "Show 1 similar",
+      "expand_other": "Show {{count}} similar",
+      "collapse": "Hide similar",
+      "similar": "+{{count}} similar",
+      "similar_one": "+1 similar",
+      "similar_other": "+{{count}} similar",
+      "markRead": "Mark group read",
+      "markReadSuccess": "Marked {{count}} thread members as read",
+      "markReadError": "Could not mark group as read",
+      "vehicleAffected": "{{count}} vehicle affected",
+      "vehicleAffected_one": "{{count}} vehicle affected",
+      "vehicleAffected_other": "{{count}} vehicles affected",
+      "loadingMembers": "Loading thread members…",
+      "membersError": "Could not load thread members",
+      "noMembers": "No thread members found",
+      "emptyTitle": "No notification threads",
+      "emptyMessage": "When alert rules fire repeatedly, related notifications will be grouped here."
     },
     "stats": {
       "sent": "Total Sent",
@@ -5841,7 +6236,36 @@
     "exportStatus": "Export completions",
     "hint": "Notifications only fire when the app tab is in the background."
   },
+  "notificationSounds": {
+    "title": "Notification sounds",
+    "subtitle": "Play a short cue when an alert or completion event arrives. Plays even while the tab is visible.",
+    "master": "Enable notification sounds",
+    "categoriesHeading": "Channels",
+    "volume": "Volume",
+    "test": "Test",
+    "testAria": "Test {{name}} sound",
+    "autoplayHint": "Some browsers require a click before audio is allowed. Use the Test buttons below once to authorise playback.",
+    "category": {
+      "critical_alert": "Critical alerts",
+      "warning_alert": "Warning alerts",
+      "info_alert": "Informational alerts",
+      "charge_complete": "Charge complete",
+      "drive_complete": "Drive complete",
+      "automation_run": "Automation runs",
+      "achievement": "Achievements"
+    }
+  },
   "settings": {
+    "tours": {
+      "label": "Product tours",
+      "title": "Product tours",
+      "body": "Re-run the guided walkthroughs that introduce major sections.",
+      "replayMain": "Replay dashboard tour",
+      "replayDebugger": "Debugger tour",
+      "replayAutomations": "Automations tour",
+      "resetAll": "Reset all tours",
+      "resetDone": "All tours reset — they will play next time you open the matching page"
+    },
     "tab": {
       "heading": "Browser tab signals",
       "badge": "Show unread count in browser tab",
@@ -5864,6 +6288,70 @@
           "discardDraft": "Discard unsaved draft",
           "unsavedNavigation": "Leave page with unsaved changes"
         }
+      }
+    },
+    "totp": {
+      "title": "Two-factor authentication",
+      "subtitle": "TOTP codes from your authenticator app are required for the sudo step-up before destructive admin actions.",
+      "loading": "Loading two-factor settings…",
+      "status": {
+        "active": "Active",
+        "notEnrolled": "Not enrolled"
+      },
+      "actions": {
+        "enroll": "Enable TOTP",
+        "enrollHint": "Compatible with Google Authenticator, 1Password, Bitwarden, Authy and other RFC 6238 clients.",
+        "regenerate": "Regenerate backup codes",
+        "disable": "Disable"
+      },
+      "lastUsed": {
+        "label": "Last used",
+        "never": "Never"
+      },
+      "backupCodesRemaining": {
+        "label": "Backup codes remaining"
+      },
+      "modal": {
+        "enrollTitle": "Enable TOTP",
+        "scanInstructions": "Scan the QR code with your authenticator app, or enter the secret manually.",
+        "qrAlt": "TOTP QR code",
+        "manualLabel": "Manual entry secret",
+        "codeLabel": "Enter the 6-digit code from your app",
+        "verify": "Verify and activate",
+        "cancel": "Cancel"
+      },
+      "backupCodes": {
+        "title": "Save your backup codes",
+        "warning": "These codes will not be shown again. Store them in a password manager. Each code can be used once if you lose access to your authenticator app.",
+        "download": "Download .txt",
+        "done": "I saved them",
+        "fileHeader": "# TeslaSync TOTP backup codes — keep secret."
+      },
+      "disable": {
+        "title": "Disable two-factor authentication?",
+        "message": "You will no longer be prompted for a TOTP code on the sudo step-up. Your backup codes will be invalidated.",
+        "confirm": "Disable",
+        "cancel": "Keep TOTP enabled",
+        "typedLabel": "Type DISABLE to confirm"
+      },
+      "openMode": {
+        "message": "Per-user TOTP requires forward-auth mode. Configure your reverse proxy to inject X-Forwarded-User then reload."
+      },
+      "errors": {
+        "codeLength": "Enter all 6 digits.",
+        "invalidCode": "Code did not match. Try the next one.",
+        "rateLimited": "Too many incorrect attempts. Try again in 15 minutes.",
+        "enrollmentExpired": "Enrollment expired. Close and start over.",
+        "verifyGeneric": "Verification failed.",
+        "enroll": "Failed to start TOTP enrollment",
+        "verify": "Verification failed",
+        "disable": "Failed to disable TOTP",
+        "regenerate": "Failed to regenerate backup codes"
+      },
+      "toasts": {
+        "verified": "TOTP enabled. Save your backup codes!",
+        "disabled": "TOTP disabled.",
+        "backupRegenerated": "Backup codes regenerated."
       }
     }
   },
@@ -5909,6 +6397,82 @@
   },
   "upstream": {
     "banner": "Tesla upstream unavailable — retry in {{n}}s"
+  },
+  "serviceMode": {
+    "banner": {
+      "degradedTitle": "Service is degraded",
+      "maintenanceTitle": "Scheduled maintenance",
+      "defaultDegraded": "Some features may be slow or unavailable while we work on it.",
+      "defaultMaintenance": "Maintenance is in progress. Live data may be paused.",
+      "endsIn": "Ends in {{time}}",
+      "endingNow": "Ending now",
+      "ended": "Window has ended; refresh to confirm."
+    },
+    "admin": {
+      "title": "Service Mode",
+      "subtitle": "Control the top-of-app banner shown to all users.",
+      "modeLabel": "Mode",
+      "messageLabel": "Banner message",
+      "messageHelp": "Up to 280 characters. Shown when mode is degraded or maintenance.",
+      "untilLabel": "Auto-clear at (optional)",
+      "untilHelp": "ISO 8601 timestamp; SPA renders a countdown until then.",
+      "save": "Save",
+      "saving": "Saving…",
+      "envOverride": "Environment variable TESLASYNC_SYSTEM_MODE={{mode}} is currently overriding the database value. Updates here will persist but won't affect users until the env override is cleared.",
+      "preview": "Preview",
+      "modes": {
+        "ok": "Ok (banner hidden)",
+        "degraded": "Degraded",
+        "maintenance": "Maintenance"
+      }
+    }
+  },
+  "session": {
+    "expiring": {
+      "title": "Your session is about to expire",
+      "body": "You will be signed out in {{countdown}}.",
+      "stay": "Stay signed in",
+      "staying": "Refreshing…",
+      "signOut": "Sign out now",
+      "unsavedTitle": "Unsaved drafts",
+      "unsavedBody": "Sign out will keep these drafts in your browser, but you must sign in again to finish them.",
+      "moreDrafts": "+{{count}} more"
+    },
+    "expired": {
+      "title": "Session expired",
+      "body": "For your security, your session has timed out. Sign in again to pick up where you left off.",
+      "signIn": "Sign in again"
+    }
+  },
+  "sudo": {
+    "title": "Confirm your identity",
+    "description": "For your security, please re-enter your password or authenticator code before this action runs.",
+    "passwordLabel": "Password",
+    "totpLabel": "Authenticator code",
+    "submit": "Confirm",
+    "cancel": "Cancel",
+    "helper": "Your reauth lasts 5 minutes; rapid follow-up actions will not re-prompt.",
+    "tabs": {
+      "label": "Reauth method",
+      "password": "Password",
+      "totp": "Authenticator"
+    },
+    "openMode": {
+      "title": "Confirm sensitive action",
+      "body": "This is a destructive action. Type {{token}} to continue.",
+      "submit": "Continue"
+    },
+    "typedConfirmationLabel": "Type {{token}} to confirm",
+    "errors": {
+      "passwordRequired": "Enter your password to continue.",
+      "totpRequired": "Enter the 6-digit code from your authenticator.",
+      "invalidPassword": "Password did not match.",
+      "invalidTotp": "Authenticator code was rejected.",
+      "totpRateLimit": "Too many failed authenticator attempts. Try again in 15 minutes.",
+      "notConfigured": "Step-up reauth is not configured on this server. Ask your administrator to set TESLASYNC_SUDO_PASSWORD or TESLASYNC_SUDO_TOTP_SECRET.",
+      "typedConfirmationMismatch": "Type {{token}} exactly to confirm.",
+      "unknown": "Reauthentication failed."
+    }
   },
   "commands": {
     "search": {
@@ -6114,6 +6678,14 @@
       "step3": "STEP 3 — Select Vehicle",
       "step4": "STEP 4 — Date Range"
     },
+    "columns": {
+      "title": "STEP 2½ — Columns",
+      "helperText": "Select which columns to include in the export. Required columns cannot be removed.",
+      "selectAll": "Select all",
+      "clear": "Clear",
+      "alwaysIncluded": "Required",
+      "none": "No columns selected"
+    },
     "allVehicles": "All Vehicles",
     "customRange": "Custom Range",
     "exportHistory": "Export History",
@@ -6133,6 +6705,56 @@
       "endDate": "End date (optional)",
       "warning": "Large signal histories are capped per table to keep the ZIP under control. Track progress in the floating widget that appears once your export starts.",
       "start": "Start full export"
+    },
+    "scheduled": {
+      "feature": "Scheduled exports",
+      "title": "Scheduled exports",
+      "subtitle": "Cron-driven recurring exports. The server runs each schedule on its cadence and delivers the result via download, email, or webhook.",
+      "newSchedule": "New schedule",
+      "empty": "No schedules yet",
+      "emptyMessage": "Create a schedule to receive recurring exports automatically.",
+      "table": {
+        "name": "Name",
+        "type": "Type",
+        "format": "Format",
+        "cron": "Cron",
+        "delivery": "Delivery",
+        "nextRun": "Next run",
+        "lastRun": "Last run",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "status": {
+        "ok": "OK",
+        "failed": "Failed",
+        "never": "Never"
+      },
+      "actions": {
+        "runNow": "Run now",
+        "edit": "Edit",
+        "delete": "Delete",
+        "enable": "Enable",
+        "disable": "Disable"
+      },
+      "form": {
+        "name": "Name",
+        "namePlaceholder": "Drives weekly",
+        "exportType": "Export type",
+        "format": "Format",
+        "vehicle": "Vehicle (optional)",
+        "scheduleCron": "Cron expression",
+        "scheduleCronHelp": "Standard 5-field cron, e.g. '0 9 * * 0' for 09:00 every Sunday.",
+        "rangeWindow": "Range window",
+        "rangeWindowHelp": "Relative window applied at run time. Format: number + m/h/d (e.g. 7d).",
+        "delivery": "Delivery",
+        "deliveryKind": "Delivery kind",
+        "deliveryTarget": "Delivery target",
+        "deliveryTargetHelp": "Email address (email kind) or HTTPS URL (webhook kind). Ignored for download.",
+        "submit": "Save schedule",
+        "cancel": "Cancel"
+      },
+      "deleteConfirmTitle": "Delete schedule?",
+      "deleteConfirmBody": "This will stop future runs of {{name}}. Past download artifacts are not affected."
     }
   },
   "dbHealth": {
@@ -6424,7 +7046,9 @@
     "unsetDefault": "Clear default",
     "defaultBadge": "Default",
     "pin": "Pin",
-    "unpin": "Unpin"
+    "unpin": "Unpin",
+    "announceApplied": "View {{name}} applied",
+    "announceCleared": "Saved view cleared"
   },
   "trips": {
     "detail": {
@@ -6540,6 +7164,29 @@
   },
   "vehicles": {
     "compareButton": "Compare vehicles",
+    "photos": {
+      "gallery": "Photo gallery",
+      "galleryNamed": "{{name}} photo gallery",
+      "openAt": "Open photo {{index}} of {{total}}",
+      "empty": "No photos uploaded yet.",
+      "emptyHelp": "Photos uploaded for this vehicle will appear here.",
+      "uploadSuccess": "Photo uploaded.",
+      "uploadFailed": "Photo upload failed.",
+      "deleteSuccess": "Photo removed.",
+      "deleteFailed": "Failed to remove photo.",
+      "upload": {
+        "title": "Vehicle photo",
+        "dropPrompt": "Drag a photo here or click to choose a file",
+        "constraints": "JPEG or PNG — up to {{max}} MB",
+        "previewAlt": "Vehicle photo preview",
+        "choose": "Choose photo",
+        "replace": "Replace photo",
+        "remove": "Remove photo",
+        "uploading": "Uploading…",
+        "confirmRemoveTitle": "Remove vehicle photo?",
+        "confirmRemoveMessage": "The hero card will fall back to the stock model render until a new photo is uploaded."
+      }
+    },
     "detail": {
       "batteryOverview": "Battery Overview",
       "driveTrend": "Drive Distance Trend",
@@ -6997,6 +7644,22 @@
     "charging": "Charging",
     "loading": "Loading"
   },
+  "combobox": {
+    "noResults": "No results",
+    "loading": "Loading",
+    "openListAria": "Show options",
+    "closeListAria": "Hide options",
+    "removeChip": "Remove {{label}}",
+    "removedChip": "Removed {{label}}",
+    "clearAria": "Clear selection",
+    "resultsCount": "{{count}} results",
+    "resultsCountOne": "1 result",
+    "moreHidden": "{{count}} more — refine search",
+    "maxReached": "Maximum reached"
+  },
+  "addressInput": {
+    "label": "Address"
+  },
   "signalQuery": {
     "from": "From",
     "to": "To",
@@ -7013,6 +7676,9 @@
       "range": "Range",
       "inside": "Inside",
       "outside": "Outside"
+    },
+    "photo": {
+      "alt": "{{name}} photo"
     },
     "stat": {
       "insideTemp": "Inside Temp",
@@ -7089,5 +7755,680 @@
       "thisDevice": "(this device)",
       "unknownAgent": "Unknown browser"
     }
+  },
+  "avatar": {
+    "unknown": "Unknown user",
+    "statusOnline": "Online",
+    "statusIdle": "Idle",
+    "statusOffline": "Offline"
+  },
+  "feedback": {
+    "title": "Report a bug / Send feedback",
+    "openShort": "Report bug",
+    "openAria": "Open feedback / bug report form",
+    "submitError": "Failed to submit feedback. Please try again.",
+    "category": {
+      "bug": "Bug report",
+      "feature": "Feature request",
+      "other": "Other / question"
+    },
+    "form": {
+      "category": {
+        "label": "What kind of feedback?"
+      },
+      "title": {
+        "label": "Title",
+        "placeholder": "Short summary (e.g. \"Battery widget shows NaN\")"
+      },
+      "body": {
+        "label": "Details",
+        "placeholder": "What happened? What did you expect to happen? Steps to reproduce help a lot."
+      },
+      "includeErrors": "Attach recent errors ({{count}})",
+      "includeErrorsHint": "Includes the most recent uncaught errors from this session. Helps reproduce the bug.",
+      "includeConsole": "Attach recent console messages",
+      "includeConsoleHint": "Privacy: console output may include URLs and data you saw. Off by default.",
+      "submit": "Send feedback",
+      "submitting": "Submitting…"
+    },
+    "context": {
+      "title": "Auto-attached context",
+      "page": "Page",
+      "appVersion": "App version",
+      "userAgent": "Browser",
+      "unknown": "unknown"
+    },
+    "queue": {
+      "title": "Feedback queue",
+      "empty": "No feedback yet",
+      "emptyMessage": "User-submitted bug reports and feature requests will appear here.",
+      "openIssue": "Open issue",
+      "pageOf": "Page {{page}} of {{total}} ({{count}} entries)",
+      "bridgeDisabled": "GitHub Issues bridge is not configured on this server (set TESLASYNC_GITHUB_REPO + TESLASYNC_GITHUB_TOKEN to enable forwarding).",
+      "filter": {
+        "status": "Status",
+        "category": "Category",
+        "allStatuses": "All statuses",
+        "allCategories": "All categories"
+      },
+      "col": {
+        "created": "Created",
+        "category": "Category",
+        "title": "Title",
+        "pageRoute": "Page",
+        "status": "Status",
+        "reporter": "Reporter",
+        "github": "GitHub"
+      },
+      "status": {
+        "new": "New",
+        "triaged": "Triaged",
+        "closed": "Closed"
+      },
+      "expand": {
+        "body": "Report body",
+        "appVersion": "App version",
+        "userAgent": "User agent",
+        "submitter": "Submitter",
+        "userEmail": "Email",
+        "recentErrors": "Recent frontend errors",
+        "consoleTail": "Console tail"
+      },
+      "action": {
+        "changeStatus": "Status",
+        "githubUrl": "GitHub issue URL",
+        "saveUrl": "Save URL",
+        "forward": "Forward to GitHub"
+      }
+    }
+  },
+  "quietHours": {
+    "title": "Quiet hours / Do-Not-Disturb",
+    "subtitle": "Defer non-critical notifications during sleep, meetings, or other time-of-day windows.",
+    "addWindow": "Add window",
+    "edit": "Edit",
+    "delete": "Delete",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "loading": "Loading quiet-hours windows…",
+    "empty": "No quiet-hours windows yet. Add one to defer non-critical notifications during sleep or meetings.",
+    "bypassLabel": "Always allow:",
+    "deferred": "DND deferred",
+    "deferredTooltip": "Held until the active quiet-hours window ends.",
+    "form": {
+      "addTitle": "New quiet-hours window",
+      "editTitle": "Edit window",
+      "enabled": "Enabled",
+      "start": "Start",
+      "end": "End",
+      "timezone": "Timezone (IANA)",
+      "weekdays": "Weekdays",
+      "bypass": "Always allow these severities through",
+      "create": "Create",
+      "update": "Update",
+      "cancel": "Cancel"
+    },
+    "weekday": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    },
+    "severity": {
+      "info": "Info",
+      "warn": "Warning",
+      "critical": "Critical"
+    },
+    "error": {
+      "startInvalid": "Start must be HH:MM (24-hour).",
+      "endInvalid": "End must be HH:MM (24-hour).",
+      "endEqual": "End must differ from start.",
+      "timezoneRequired": "Timezone is required.",
+      "weekdaysRequired": "Pick at least one weekday.",
+      "bypassRequired": "Pick at least one severity."
+    }
+  },
+  "diagnostic": {
+    "title": "System diagnostic",
+    "subtitle": "Run an aggregated self-test against the database, MQTT broker, Redis, Tesla API, and resilience monitors. Use this when telemetry is missing, charge sessions don't appear, or notifications stop firing.",
+    "run": "Run diagnostic",
+    "running": "Running diagnostic…",
+    "rerun": "Re-run diagnostic",
+    "lastRun": "Generated {{when}}",
+    "noReport": "No diagnostic has been run in this session yet. Click \"Run diagnostic\" to probe every dependency.",
+    "errorTitle": "Diagnostic failed to run",
+    "errorBody": "The diagnostic endpoint returned an error. Check API logs and try again.",
+    "checkCount": "{{count}} check",
+    "checkCount_other": "{{count}} checks",
+    "duration": "{{ms}}ms",
+    "remediationLabel": "Remediation",
+    "copyReport": "Copy report",
+    "copyReportSuccess": "Diagnostic report copied to clipboard",
+    "copyReportError": "Could not copy to clipboard. Use Download instead.",
+    "downloadReport": "Download .txt",
+    "filename": "teslasync-diagnostic-{{ts}}.txt",
+    "overall": {
+      "ok": "All systems healthy",
+      "degraded": "Degraded — some checks need attention",
+      "down": "One or more checks failed"
+    },
+    "status": {
+      "ok": "OK",
+      "warn": "Warning",
+      "fail": "Fail"
+    }
+  },
+  "liveLogs": {
+    "title": "Live logs",
+    "subtitle": "Stream the API server's structured log events in real time. Filter by severity and an optional regular expression. The connection is dropped when you navigate away.",
+    "filters": {
+      "level": "Minimum level",
+      "grep": "Grep (regular expression)",
+      "grepPlaceholder": "e.g. mqtt|signal_log",
+      "grepHelp": "Server-side filter. Maximum 256 characters. Invalid expressions are rejected before connecting.",
+      "vehicleId": "Vehicle ID",
+      "vehicleIdPlaceholder": "Numeric — applied client-side"
+    },
+    "controls": {
+      "pause": "Pause",
+      "resume": "Resume",
+      "autoscroll": "Auto-scroll",
+      "clear": "Clear buffer",
+      "download": "Download visible (.txt)",
+      "reconnect": "Reconnect"
+    },
+    "status": {
+      "connected": "Live",
+      "paused": "Paused (still receiving)",
+      "disconnected": "Disconnected",
+      "connecting": "Connecting…",
+      "error": "Connection error"
+    },
+    "stats": {
+      "buffered": "Buffered: {{count}}",
+      "received": "Received: {{count}}",
+      "drops": "Server drops: {{count}}"
+    },
+    "table": {
+      "time": "Time",
+      "level": "Level",
+      "message": "Message",
+      "fields": "Fields",
+      "noLevel": "—"
+    },
+    "empty": {
+      "noEvents": "No log events yet. Trigger activity (e.g. start a charging session) to see live output."
+    },
+    "error": {
+      "title": "Could not connect to log stream",
+      "hint": "Check your network and admin permissions, then click Reconnect."
+    },
+    "filename": "teslasync-logs-{{ts}}.txt",
+    "level": {
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warn",
+      "error": "Error"
+    }
+  },
+  "settingsBackup": {
+    "title": "Backup & Restore",
+    "subtitle": "Export your TeslaSync configuration as a JSON file you can stash in a backup folder or git repo, and import it on a fresh install.",
+    "export": {
+      "title": "Export settings",
+      "help": "Includes general settings, alert rules, geofences, and your quiet-hours windows. Tesla credentials and notification-channel secrets are NEVER exported.",
+      "cta": "Export JSON",
+      "busy": "Exporting…",
+      "successTitle": "Settings exported",
+      "successDetail": "Saved to your downloads folder."
+    },
+    "import": {
+      "title": "Import settings",
+      "help": "Drop or pick a previously exported bundle. Existing items with the same name are updated; nothing is deleted.",
+      "dropPrompt": "Drag a JSON bundle here, or",
+      "choose": "Choose a file",
+      "parsing": "Reading…",
+      "errorRead": "Failed to read the file.",
+      "errorJson": "File is not valid JSON: {{detail}}",
+      "errorTooLarge": "File is too large (max 1 MB).",
+      "errorPreview": "Failed to preview import.",
+      "previewHeader": "Previewing {{name}} ({{size}} bytes)",
+      "summary": "{{added}} added, {{updated}} updated, {{skipped}} unchanged",
+      "changeFile": "Change file",
+      "cancel": "Cancel",
+      "applyCount": "Apply {{count}} change(s)",
+      "applyNoChanges": "Nothing to apply",
+      "applying": "Applying…",
+      "appliedHeader": "Import complete",
+      "appliedTitle": "Settings imported",
+      "appliedDetail": "{{added}} added, {{updated}} updated, {{skipped}} skipped.",
+      "done": "Done"
+    },
+    "section": {
+      "settings": "General settings",
+      "alertRules": "Alert rules",
+      "geofences": "Geofences",
+      "quietHours": "Quiet hours"
+    }
+  },
+  "settingsReset": {
+    "title": "Reset to defaults",
+    "subtitle": "Restore an individual section to its default state. Each reset is destructive and cannot be undone — export your settings first if you want a backup.",
+    "deniedTitle": "Sections that aren’t user-resettable",
+    "deniedSubtitle": "These sections live outside this server’s preference store. The Settings page can’t reset them, but the linked instructions tell you where to go.",
+    "section": {
+      "general": {
+        "title": "General preferences",
+        "desc": "Units, language, currency, timezone, and energy/gas pricing defaults."
+      },
+      "appearance": {
+        "title": "Appearance",
+        "desc": "Theme, density, chart palette, and notification badge / flash preferences."
+      },
+      "alertRules": {
+        "title": "Alert rules",
+        "desc": "Delete every alert rule you have authored. Cannot be undone."
+      },
+      "geofences": {
+        "title": "Geofences",
+        "desc": "Delete every geofence and its electricity-rate overrides. Vehicle home assignments will be cleared."
+      },
+      "notificationChannels": {
+        "title": "Notification channels",
+        "desc": "Delete every webhook, Discord, Slack, email, and push channel along with their delivery history."
+      },
+      "dashboardLayout": {
+        "title": "Dashboard layouts",
+        "desc": "Delete every saved dashboard layout preset."
+      },
+      "automations": {
+        "title": "Automations",
+        "desc": "Delete every automation, including its triggers, conditions, actions, variables, and run history."
+      },
+      "quietHours": {
+        "title": "Quiet hours",
+        "desc": "Delete every quiet-hours window for your account."
+      }
+    },
+    "denied": {
+      "tariffs": {
+        "title": "Charge cost tariffs",
+        "reason": "Tariffs are stored per-vehicle. Reset the assignment from the Vehicle Settings page on the vehicle detail screen."
+      },
+      "soundPrefs": {
+        "title": "Notification sound preferences",
+        "reason": "Notification sound preferences are stored in your browser. Clear them via your browser’s site-data controls."
+      }
+    },
+    "actions": {
+      "reset": "Reset"
+    },
+    "dangerZone": {
+      "title": "Danger zone",
+      "subtitle": "Wipe every user-discoverable preference at once. Alert rules, geofences, channels, automations, dashboard layouts, and your typed preference rows are all deleted in a single transaction.",
+      "help": "You will be asked to type RESET to confirm.",
+      "cta": "Reset ALL settings"
+    },
+    "confirm": {
+      "sectionTitle": "Reset {{name}}?",
+      "sectionMessage": "{{description}} This action is permanent.",
+      "allTitle": "Reset every user-discoverable setting?",
+      "allMessage": "Every alert rule, geofence, channel, automation, dashboard layout preset, and preference row will be permanently deleted. This cannot be undone.",
+      "confirmLabel": "Reset",
+      "allConfirmLabel": "Reset everything",
+      "cancelLabel": "Cancel",
+      "typedLabel": "Type RESET to confirm"
+    },
+    "toasts": {
+      "successTitle": "Settings reset",
+      "successDetail": "{{count}} item(s) reset across {{sections}} section(s)."
+    }
+  },
+  "webhookChannels": {
+    "title": "Webhook channels",
+    "subtitle": "Forward TeslaSync notifications to Discord, Slack, n8n, Home Assistant, or any HTTP receiver. Each channel can be HMAC-signed so receivers can verify authenticity.",
+    "addButton": "Add webhook",
+    "loadError": "Failed to load webhook channels: {{error}}",
+    "savingAnnouncement": "Saving webhook…",
+    "empty": {
+      "title": "No webhooks yet",
+      "message": "Add a webhook to forward TeslaSync events to your favourite chat or automation tool.",
+      "action": "Add your first webhook"
+    },
+    "row": {
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "toggle": "Active",
+      "test": "Test webhook",
+      "edit": "Edit webhook",
+      "delete": "Delete webhook"
+    },
+    "test": {
+      "success": "Success",
+      "failure": "Failed",
+      "status": "Status {{status}}",
+      "latency": "{{ms}} ms",
+      "signature": "Signature:",
+      "body": "Response body",
+      "truncated": "… (truncated)"
+    },
+    "form": {
+      "addTitle": "Add webhook",
+      "editTitle": "Edit webhook",
+      "name": "Name",
+      "namePlaceholder": "Discord #alerts",
+      "nameRequired": "Name is required.",
+      "url": "URL",
+      "urlPlaceholder": "https://discord.com/api/webhooks/...",
+      "urlInvalid": "URL must start with http:// or https://.",
+      "urlHelp": "Compatible with Discord, Slack, n8n, Home Assistant, and any HTTP receiver.",
+      "method": "HTTP method",
+      "secret": "Signing secret",
+      "secretPlaceholder": "Optional — used for HMAC signing",
+      "secretPlaceholderEdit": "Leave blank to keep existing",
+      "secretHelp": "When set, every request includes X-TeslaSync-Signature: sha256=<hmac> so the receiver can verify authenticity.",
+      "showSecret": "Show secret",
+      "hideSecret": "Hide secret",
+      "enabled": "Enabled",
+      "cancel": "Cancel",
+      "save": "Add webhook",
+      "saveEdit": "Save changes",
+      "saving": "Saving…"
+    },
+    "signature": {
+      "label": "Signature preview",
+      "loading": "Computing signature…",
+      "error": "Failed to compute signature: {{error}}",
+      "empty": "Add a signing secret to preview the X-TeslaSync-Signature header.",
+      "help": "Send this header value with every webhook so receivers can verify authenticity."
+    },
+    "delete": {
+      "title": "Delete webhook?",
+      "message": "This will permanently remove the webhook. TeslaSync will stop sending notifications to it immediately.",
+      "confirm": "Delete webhook",
+      "cancel": "Cancel"
+    },
+    "docs": {
+      "title": "Available payload variables",
+      "intro": "Webhook receivers get a JSON envelope with these fields:"
+    }
+  },
+  "rateLimitStatus": {
+    "title": "Rate-limit budgets",
+    "subtitle": "Live view of every server-side throttle that affects this TeslaSync deployment. Bars climb as the window fills; colour switches from green to amber at 50% and to red at 80%.",
+    "loading": "Loading rate-limit status…",
+    "error": "Could not load rate-limit status. Check API logs and try again.",
+    "empty": "No rate-limited resources are currently observed. Counters appear here once the API has handled at least one request.",
+    "refresh": "Refresh",
+    "lastUpdated": "Updated {{when}}",
+    "windowSeconds": "Last {{seconds}}s window",
+    "windowInstant": "Live snapshot",
+    "resetIn": "Refills in {{duration}}",
+    "usage": "{{current}} / {{limit}}",
+    "severity": {
+      "ok": "Healthy",
+      "warn": "Warning",
+      "critical": "Critical"
+    }
+  },
+  "queueStatus": {
+    "title": "Background workers",
+    "subtitle": "Live view of the notification, export, and automation worker queues. Heartbeat colour switches from green to amber after 60 seconds and to red after 5 minutes of silence; \"down\" means the worker has never reported in.",
+    "loading": "Loading worker status…",
+    "error": "Could not load worker status. Check API logs and try again.",
+    "empty": "No workers are currently registered. The notification, export, and automation processes report here once they start.",
+    "refresh": "Refresh",
+    "lastUpdated": "Updated {{when}}",
+    "queueDepth": "Queue depth",
+    "queueDepthDetail": "{{pending}} pending · {{inProgress}} in progress",
+    "heartbeatRelative": "Last beat {{when}}",
+    "heartbeatNever": "No heartbeat recorded",
+    "oldestPending": "Oldest pending: {{duration}}",
+    "openDrawer": "Show recent {{worker}} jobs",
+    "hostVersion": "{{host}} · {{version}}",
+    "hostUnknown": "No host reported",
+    "versionUnknown": "unknown",
+    "metric": {
+      "succeeded24h": "Succeeded 24h",
+      "failed24h": "Failed 24h"
+    },
+    "severity": {
+      "ok": "Healthy",
+      "warn": "Lagging",
+      "critical": "Stale",
+      "down": "Down"
+    },
+    "drawer": {
+      "title": "Recent jobs",
+      "titleWithWorker": "Recent {{worker}} jobs",
+      "loading": "Loading recent jobs…",
+      "error": "Could not load recent jobs. Check API logs and try again.",
+      "empty": "No recent jobs to show. New jobs will appear here as the worker processes them."
+    },
+    "jobStarted": "Started {{at}}",
+    "jobDuration": "Took {{duration}}",
+    "jobStatus": {
+      "sent": "Sent",
+      "pending": "Pending",
+      "deferred_dnd": "Deferred (DND)",
+      "failed": "Failed",
+      "queued": "Queued",
+      "processing": "Processing",
+      "ready": "Ready",
+      "running": "Running",
+      "success": "Succeeded",
+      "partial": "Partial",
+      "cancelled": "Cancelled",
+      "skipped": "Skipped"
+    }
+  },
+  "settingsSessions": {
+    "title": "Active sessions",
+    "subtitle": "Devices currently signed in to TeslaSync. Revoking a session signs that browser out on its next request — your upstream identity provider's session is unaffected.",
+    "openMode": {
+      "title": "Active sessions",
+      "message": "Active session tracking requires forward-auth mode. Configure your reverse proxy to inject X-Forwarded-User then reload."
+    },
+    "empty": "No active sessions for this account.",
+    "loading": "Loading sessions…",
+    "current": "This device",
+    "columns": {
+      "device": "Device",
+      "ip": "IP address",
+      "createdAt": "Signed in",
+      "lastSeenAt": "Last seen"
+    },
+    "row": {
+      "revoke": "Sign out",
+      "revokeAria": "Sign out {{device}}"
+    },
+    "revokeAllOthers": "Sign out all other devices",
+    "revokeAllOthersBusy": "Signing out…",
+    "confirm": {
+      "revokeTitle": "Sign out this device?",
+      "revokeMessage": "{{device}} will be signed out on its next request. Your other devices will stay signed in.",
+      "revokeConfirm": "Sign out",
+      "revokeCancel": "Keep signed in",
+      "allOthersTitle": "Sign out all other devices?",
+      "allOthersMessage": "Every browser other than this one will be signed out on its next request. You can sign back in immediately.",
+      "allOthersConfirm": "Sign out all others",
+      "allOthersCancel": "Cancel"
+    },
+    "errors": {
+      "load": "Failed to load active sessions."
+    },
+    "toasts": {
+      "revoked": "Session signed out.",
+      "revokedAllOthers": "Signed out {{count}} other devices."
+    }
+  },
+  "vehicleSettings": {
+    "title": "Per-vehicle settings",
+    "subtitle": "Override individual settings for this vehicle. Resets fall back to your account-wide values.",
+    "loading": "Loading vehicle settings…",
+    "error": "Could not load vehicle settings.",
+    "source": {
+      "override": "Override",
+      "user": "User default",
+      "vehicle": "Vehicle name",
+      "default": "System default"
+    },
+    "actions": {
+      "save": "Save",
+      "saving": "Saving…",
+      "reset": "Reset to default",
+      "resetting": "Resetting…",
+      "cancel": "Cancel"
+    },
+    "keys": {
+      "nickname": {
+        "label": "Nickname",
+        "help": "Friendly name shown in the vehicle list and page title."
+      },
+      "mute_until": {
+        "label": "Mute alerts until",
+        "help": "Suppresses alerts for this vehicle until the chosen date and time. Clear to receive alerts immediately."
+      },
+      "charge_cost_tariff_id": {
+        "label": "Charge cost tariff",
+        "help": "Tariff identifier used when calculating per-session charge costs for this vehicle."
+      },
+      "units_distance": {
+        "label": "Distance unit",
+        "help": "Override the distance unit (mi or km) for this vehicle's panels."
+      },
+      "units_temperature": {
+        "label": "Temperature unit",
+        "help": "Override the temperature unit (°C or °F) for this vehicle's panels."
+      },
+      "units_energy": {
+        "label": "Energy unit",
+        "help": "Override the energy display unit (kWh) for this vehicle's panels."
+      }
+    },
+    "validation": {
+      "required": "Value is required.",
+      "invalid": "Value is not valid for this setting.",
+      "invalidDate": "Enter a valid date and time."
+    },
+    "toasts": {
+      "saved": "Setting saved.",
+      "reset": "Reverted to default."
+    },
+    "errors": {
+      "save": "Failed to save setting.",
+      "reset": "Failed to reset setting."
+    }
+  }
+,
+  "rbac": {
+    "title": "RBAC matrix",
+    "subtitle": "Provider-agnostic role-permission bindings",
+    "permissionColumn": "Permission",
+    "openMode": {
+      "title": "RBAC requires forward-auth mode",
+      "message": "The RBAC matrix is meaningful only when an upstream proxy (Authentik, Authelia, oauth2-proxy, Keycloak, etc.) injects an authenticated subject header. Configure FORWARD_AUTH_HEADER and TESLASYNC_RBAC_GROUPS_HEADER on the API service then reload."
+    },
+    "actions": {
+      "edit": "Edit",
+      "save": "Save ({{count}})",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "retry": "Retry"
+    },
+    "category": {
+      "fleet": "Fleet",
+      "commands": "Commands",
+      "automation": "Automation",
+      "notifications": "Notifications",
+      "admin": "Admin"
+    },
+    "cell": {
+      "allowed": "Allowed",
+      "denied": "Denied",
+      "toggle": "Toggle {{role}} / {{perm}}"
+    },
+    "effective": {
+      "count": "{{count}} / {{total}} effective",
+      "tooltip": "Permissions effective for your current roles"
+    },
+    "myRoles": {
+      "label": "My roles: {{roles}}",
+      "none": "No roles claimed"
+    },
+    "groupsHeader": {
+      "label": "Groups header: {{name}}"
+    },
+    "empty": {
+      "title": "No roles configured",
+      "message": "No roles have been forwarded by the upstream proxy and no bindings exist in the database. Configure TESLASYNC_RBAC_GROUPS_HEADER on the API service and reload."
+    },
+    "errors": {
+      "loadTitle": "Failed to load RBAC matrix",
+      "loadGeneric": "The matrix endpoint returned an error.",
+      "saveGeneric": "The matrix endpoint rejected the update."
+    },
+    "toasts": {
+      "saved": "RBAC matrix updated."
+    }
+  },
+  "impersonation": {
+    "banner": {
+      "title": "Impersonating {{target}}",
+      "body": "You are viewing TeslaSync as another subject. End impersonation to restore your session.",
+      "endsIn": "Expires in {{time}}",
+      "expired": "Session expired",
+      "end": "End impersonation",
+      "ending": "Ending…"
+    },
+    "button": {
+      "start": "Impersonate",
+      "starting": "Starting…",
+      "aria": "Impersonate {{subject}}"
+    },
+    "confirm": {
+      "title": "Start impersonation session?",
+      "message": "You will see TeslaSync as {{subject}} for up to 15 minutes. The action is logged to the audit log. End the session from the banner when you are done.",
+      "confirm": "Start impersonation",
+      "cancel": "Cancel"
+    },
+    "users": {
+      "title": "Subjects",
+      "subtitle": "Active subjects you can impersonate for support. Sessions are limited to 15 minutes and recorded in the audit log.",
+      "openMode": "Impersonation requires forward-auth mode. This install is in open mode, so per-user identity is not available.",
+      "emptyTitle": "No other subjects",
+      "emptyMessage": "No other subjects have an active session right now. Sign someone else in to enable impersonation."
+    },
+    "toast": {
+      "started": "Impersonation started",
+      "startFailed": "Failed to start impersonation",
+      "ended": "Impersonation ended",
+      "endFailed": "Failed to end impersonation"
+    }
+  },
+  "privacy": {
+    "title": "Privacy",
+    "subtitle": "Manage local browsing history surfaces. These settings only affect this browser."
+  },
+  "recentPages": {
+    "widgetTitle": "Recently Viewed",
+    "empty": "Pages you visit will appear here for quick access.",
+    "shortMinute": "m",
+    "shortHour": "h",
+    "shortDay": "d",
+    "justNow": "Just now",
+    "clearTitle": "Recently viewed pages",
+    "clearBody": "Wipe the list of pages used by the dashboard widget and the Recent section in the command palette.",
+    "clearButton": "Clear recent pages",
+    "clearConfirmTitle": "Clear recent pages?",
+    "clearConfirmBody": "This will wipe the list immediately. The dashboard widget and palette Recent section will be empty until you visit new pages.",
+    "clearConfirmCta": "Clear pages",
+    "cleared": "Recent pages cleared",
+    "storedCount_one": "{{count}} entry stored",
+    "storedCount_other": "{{count}} entries stored",
+    "storedCount": "{{count}} entries stored"
   }
 }

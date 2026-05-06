@@ -14,7 +14,7 @@ import { GlassPanel, Select, Pagination } from '@/components/ui';
 import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { SearchInput, FilterBar } from '@/components/forms';
+import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import {
@@ -183,8 +183,25 @@ export default function LocationsPage() {
               onChange={setSearch}
               placeholder={t('Search by address…')}
               className="w-full sm:w-72"
+              historyScope="locations"
             />
           </FilterBar>
+          <ActiveFilterChips
+            className="mb-3"
+            filters={
+              (search
+                ? [
+                    {
+                      key: 'q',
+                      label: t('locations.filterLabel.search', 'Search'),
+                      value: search,
+                      onRemove: () => setSearch(''),
+                    } satisfies FilterChipDescriptor,
+                  ]
+                : []) as readonly FilterChipDescriptor[]
+            }
+            onClearAll={() => setSearch('')}
+          />
           {isLoading ? (
             <div className="space-y-3">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
           ) : !locations?.length ? (

@@ -2,11 +2,11 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
 
 const variants = {
-  primary: 'bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-500',
-  secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100',
-  outline: 'border border-gray-300 bg-transparent hover:bg-gray-50 dark:border-gray-600',
-  danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500',
-  ghost: 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800',
+  primary: 'bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-500 forced-colors:border forced-colors:border-[ButtonBorder]',
+  secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 forced-colors:border forced-colors:border-[ButtonBorder]',
+  outline: 'border border-gray-300 bg-transparent hover:bg-gray-50 dark:border-gray-600 forced-colors:border-[ButtonBorder]',
+  danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500 forced-colors:border forced-colors:border-[ButtonBorder]',
+  ghost: 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 forced-colors:border forced-colors:border-[ButtonBorder]',
 } as const;
 
 const sizes = {

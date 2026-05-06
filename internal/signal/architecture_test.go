@@ -42,9 +42,18 @@ func TestNoSignalLogStateReadMethods(t *testing.T) {
 
 // TestHandlersDoNotCallDeletedSymbols ensures no internal/api OR cmd/ file references the legacy state-read names.
 // Walks both internal/api/ AND cmd/ (workers + main) so future workers can't re-introduce the bug class.
+//
+// Phase-46 / Prompt 64 — the bare `.SnapshotAt(` substring was tightened to the
+// receiver-qualified forms so the canonical phase-46/64 free function
+// `signal.SnapshotAt(...)` (asof.go) is not flagged. The test still bans the
+// deleted `*SignalLogReader.SnapshotAt` and `*SignalHistoryWriter.SnapshotAt`
+// receivers via the explicit qualifier strings below.
 func TestHandlersDoNotCallDeletedSymbols(t *testing.T) {
 	forbidden := []string{
-		".SnapshotAt(",
+		"signalLogReader.SnapshotAt(",
+		"signalHistoryWriter.SnapshotAt(",
+		"SignalLogReader.SnapshotAt(",
+		"SignalHistoryWriter.SnapshotAt(",
 		"signalLogReader.SignalAt(",
 		"signalHistoryWriter.SignalAt(",
 		"SignalTracePivot(",

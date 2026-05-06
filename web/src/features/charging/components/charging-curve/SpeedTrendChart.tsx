@@ -54,6 +54,16 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
         'charging.curve.speedTrendDesc',
         'Monthly average DC vs AC charge rate',
       )}
+      ariaLabel={t(
+        'charging.curve.speedTrend.aria',
+        'Monthly average DC and AC charging speed line chart',
+      )}
+      data={monthlyTrend.map((m) => ({ month: m.month, dcAvgKw: m.dcAvgKw, acAvgKw: m.acAvgKw }))}
+      dataColumns={[
+        { key: 'month', label: t('charging.curve.col.month', 'Month') },
+        { key: 'dcAvgKw', label: t('charging.curve.col.dcAvgKw', 'DC Avg kW') },
+        { key: 'acAvgKw', label: t('charging.curve.col.acAvgKw', 'AC Avg kW') },
+      ]}
       height={280}
       exportable
       exportFilename="charging-speed-trend"

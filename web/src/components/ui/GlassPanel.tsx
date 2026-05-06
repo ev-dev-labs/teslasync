@@ -38,6 +38,12 @@ export const GlassPanel = forwardRef<HTMLDivElement, GlassPanelProps>(
       data-print-card
       className={cn(
         'bg-[var(--surface-2)] backdrop-blur-sm border border-[var(--border-subtle)] rounded-xl',
+        // Phase-46 / Prompt 11 — Windows High Contrast / forced-colors mode.
+        // The `--border-subtle` rgba alpha collapses to near-transparent
+        // under forced-colors, making panels invisible against the OS
+        // Canvas background. Force a system-color border + Canvas bg so
+        // the surface is always perceivable for low-vision users.
+        'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
         padding ? paddingClasses[padding] : null,
         hover && 'transition-all duration-normal',
         hover && glowClasses[glow],

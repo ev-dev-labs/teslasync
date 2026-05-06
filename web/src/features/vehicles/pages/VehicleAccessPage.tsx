@@ -207,6 +207,7 @@ export default function VehicleAccessPage() {
           </div>
           {driversList.length > 0 ? (
             <DataTable
+              tableId="vehicles:access-drivers"
               columns={driverColumns}
               data={driversList}
               keyExtractor={(row) => row.id}
@@ -259,6 +260,7 @@ export default function VehicleAccessPage() {
           </div>
           {invitationsList.length > 0 ? (
             <DataTable
+              tableId="vehicles:access-invitations"
               columns={invitationColumns}
               data={invitationsList}
               keyExtractor={(row) => row.id}

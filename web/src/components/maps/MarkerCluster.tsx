@@ -30,12 +30,25 @@ export interface MarkerClusterProps {
   maxClusterRadius?: number;
   /** Disable clustering above this zoom level (default 18). */
   disableClusteringAtZoom?: number;
-  /** Custom cluster icon renderer. */
-  iconCreateFunction?: (count: number) => L.DivIcon;
+  /**
+   * Custom cluster icon renderer. Receives the child count plus the
+   * resolved `ClusterPoint` children that fell into this cluster, so
+   * callers can build colour breakdowns, dominant-category logic, or
+   * legend-aligned bubbles without re-deriving the points externally.
+   */
+  iconCreateFunction?: (count: number, children: ClusterPoint[]) => L.DivIcon;
   /** Default marker color when point.color is unset. Default '#22d3ee'. */
   defaultColor?: string;
   /** Marker click handler — receives the original point. */
   onMarkerClick?: (point: ClusterPoint) => void;
+  /**
+   * Optional override for the default cluster bubble's colour. Receives
+   * the children that fell into this cluster and returns a CSS colour
+   * (e.g. the dominant category's colour). When omitted, the default
+   * count-based palette is used. Ignored if a custom
+   * `iconCreateFunction` is provided.
+   */
+  getClusterColor?: (children: ClusterPoint[]) => string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -44,12 +57,17 @@ export interface MarkerClusterProps {
 
 /**
  * Default cluster icon — glass-style bubble whose color reflects density.
- * Severity thresholds mirror the project's neon palette.
+ * Severity thresholds mirror the project's neon palette. When a caller
+ * provides `getClusterColor` we use that colour instead of the count-based
+ * palette so cluster bubbles can match the dominant child's category.
  */
-function defaultIconCreate(count: number): L.DivIcon {
-  let bg = 'rgba(34, 211, 238, 0.85)'; // cyan
-  let glow = '#22d3ee';
-  if (count >= 100) {
+function defaultIconCreate(count: number, overrideColor?: string): L.DivIcon {
+  let bg: string;
+  let glow: string;
+  if (overrideColor) {
+    bg = overrideColor;
+    glow = overrideColor;
+  } else if (count >= 100) {
     bg = 'rgba(244, 63, 94, 0.85)'; // rose
     glow = '#f43f5e';
   } else if (count >= 25) {
@@ -58,6 +76,9 @@ function defaultIconCreate(count: number): L.DivIcon {
   } else if (count >= 10) {
     bg = 'rgba(168, 85, 247, 0.85)'; // purple
     glow = '#a855f7';
+  } else {
+    bg = 'rgba(34, 211, 238, 0.85)'; // cyan
+    glow = '#22d3ee';
   }
   const html = `
     <div style="
@@ -106,9 +127,10 @@ export function MarkerCluster({
   points,
   maxClusterRadius = 50,
   disableClusteringAtZoom = 18,
-  iconCreateFunction = defaultIconCreate,
+  iconCreateFunction,
   defaultColor = '#22d3ee',
   onMarkerClick,
+  getClusterColor,
 }: MarkerClusterProps) {
   const map = useMap();
   const groupRef = useRef<L.MarkerClusterGroup | null>(null);
@@ -116,17 +138,50 @@ export function MarkerCluster({
   // Cap rendered markers at 5000 to avoid leaflet performance cliff.
   const safePoints = useMemo(() => points.slice(0, 5000), [points]);
 
-  // Stable handler ref so the marker click closure doesn't churn on every render.
+  // Stable handler refs so closures captured at mount time always read the
+  // latest props without forcing a costly cluster-group remount.
   const onMarkerClickRef = useRef<MarkerClusterProps['onMarkerClick']>(onMarkerClick);
+  const iconCreateFunctionRef =
+    useRef<MarkerClusterProps['iconCreateFunction']>(iconCreateFunction);
+  const getClusterColorRef =
+    useRef<MarkerClusterProps['getClusterColor']>(getClusterColor);
   useEffect(() => {
     onMarkerClickRef.current = onMarkerClick;
   }, [onMarkerClick]);
+  useEffect(() => {
+    iconCreateFunctionRef.current = iconCreateFunction;
+  }, [iconCreateFunction]);
+  useEffect(() => {
+    getClusterColorRef.current = getClusterColor;
+  }, [getClusterColor]);
+
+  // Recover the original ClusterPoint that produced a given leaflet
+  // Marker. Stored in a WeakMap so markers GC normally — leaflet plugins
+  // sometimes attach random data to `marker.options`, so we keep our
+  // metadata out-of-band rather than risk a key collision.
+  const markerToPointRef = useRef<WeakMap<L.Marker, ClusterPoint>>(
+    new WeakMap(),
+  );
 
   useEffect(() => {
+    const markerToPoint = markerToPointRef.current;
     const group = L.markerClusterGroup({
       maxClusterRadius,
       disableClusteringAtZoom,
-      iconCreateFunction: (cluster) => iconCreateFunction(cluster.getChildCount()),
+      iconCreateFunction: (cluster) => {
+        const childMarkers = cluster.getAllChildMarkers() as L.Marker[];
+        const children: ClusterPoint[] = [];
+        for (const m of childMarkers) {
+          const p = markerToPoint.get(m);
+          if (p) children.push(p);
+        }
+        const count = cluster.getChildCount();
+        if (iconCreateFunctionRef.current) {
+          return iconCreateFunctionRef.current(count, children);
+        }
+        const overrideColor = getClusterColorRef.current?.(children);
+        return defaultIconCreate(count, overrideColor);
+      },
       chunkedLoading: true,
       showCoverageOnHover: false,
       spiderfyOnMaxZoom: true,
@@ -138,16 +193,17 @@ export function MarkerCluster({
       map.removeLayer(group);
       groupRef.current = null;
     };
-    // We intentionally don't depend on iconCreateFunction here — re-creating
-    // the entire group on every render of a parent that passes an inline
-    // function would be a perf cliff. The closure above captures the latest
-    // values via `iconCreateFunction` reference at mount time. Consumers that
-    // need a dynamic icon function should memoize it.
+    // We intentionally don't depend on iconCreateFunction / getClusterColor
+    // here — re-creating the entire group on every parent render would be
+    // a perf cliff. The closure above reads through refs that are kept
+    // current by the effects above, so the latest functions take effect on
+    // the next cluster icon refresh without forcing a full group rebuild.
   }, [map, maxClusterRadius, disableClusteringAtZoom]);
 
   useEffect(() => {
     const group = groupRef.current;
     if (!group) return;
+    const markerToPoint = markerToPointRef.current;
     group.clearLayers();
     const markers: L.Marker[] = [];
     for (const p of safePoints) {
@@ -164,6 +220,7 @@ export function MarkerCluster({
       marker.on('click', () => {
         onMarkerClickRef.current?.(p);
       });
+      markerToPoint.set(marker, p);
       markers.push(marker);
     }
     group.addLayers(markers);

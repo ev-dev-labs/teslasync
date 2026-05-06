@@ -36,7 +36,7 @@ export const onboardingKeys = {
 export function useOnboardingStatus() {
   return useQuery<OnboardingStatus>({
     queryKey: onboardingKeys.status,
-    queryFn: () => request<OnboardingStatus>('/onboarding/status'),
+    queryFn: ({ signal }) => request<OnboardingStatus>('/onboarding/status', { signal }),
     // Stop polling once setup is complete; the gate flips to "pass"
     // and re-checks only on full app reload.
     refetchInterval: (query) =>

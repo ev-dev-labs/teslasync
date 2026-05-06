@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { Check, Clock, Search } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Drawer, Badge, Button as UiButton, Input as UiInput } from '@/components/ui';
+import { VisuallyHidden } from '@/components/a11y';
 import { WIDGET_REGISTRY } from '../widgets/registry';
 import { DASHBOARD_PRESETS } from '../hooks/useDashboardLayout';
 import type { WidgetCategory, WidgetDef } from '../widgets/types';
@@ -362,9 +363,9 @@ export function WidgetPicker({
         </div>
       ) : undefined}
     >
-      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+      <VisuallyHidden as="div" liveRegion>
         {announcement}
-      </div>
+      </VisuallyHidden>
       <div className="space-y-4">
         {/* Search input — sticky at top */}
         <div className="sticky top-0 z-10 pb-3">

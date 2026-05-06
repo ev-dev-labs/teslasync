@@ -15,7 +15,7 @@ export const vehicleAccessKeys = {
 export function useVehicleDrivers(vehicleId?: string) {
   return useQuery({
     queryKey: vehicleAccessKeys.drivers(vehicleId ?? ''),
-    queryFn: () => request<VehicleDriver[]>(`/vehicles/${vehicleId}/drivers`),
+    queryFn: ({ signal }) => request<VehicleDriver[]>(`/vehicles/${vehicleId}/drivers`, { signal }),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.STANDARD,
     select: safeArray,
@@ -25,7 +25,7 @@ export function useVehicleDrivers(vehicleId?: string) {
 export function useVehicleInvitations(vehicleId?: string) {
   return useQuery({
     queryKey: vehicleAccessKeys.invitations(vehicleId ?? ''),
-    queryFn: () => request<VehicleInvitation[]>(`/vehicles/${vehicleId}/invitations`),
+    queryFn: ({ signal }) => request<VehicleInvitation[]>(`/vehicles/${vehicleId}/invitations`, { signal }),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.STANDARD,
     select: safeArray,

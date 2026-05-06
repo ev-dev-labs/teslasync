@@ -593,7 +593,12 @@ export default function FleetComparePage() {
 
       {/* ── Monthly Distance Chart (overlaid) ── */}
       <FadeIn delay={0.1}>
-        <ChartContainer title={t('comparison.monthlyDistance', 'Monthly Distance')} height={300}>
+        {/* chart-a11y:no-table multi-vehicle overlay — caller can compare via the underlying tables on each vehicle's page */}
+        <ChartContainer
+          title={t('comparison.monthlyDistance', 'Monthly Distance')}
+          ariaLabel={t('comparison.monthlyDistance.aria', 'Monthly distance comparison line chart between two vehicles')}
+          height={300}
+        >
           {monthlyChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={monthlyChartData} margin={chartMarginLabeled}>
@@ -635,7 +640,12 @@ export default function FleetComparePage() {
       {/* ── Drives per Month (bar chart) ── */}
       <FadeIn delay={0.15}>
         <div className="mt-6">
-          <ChartContainer title={t('comparison.drivesPerMonth', 'Drives per Month')} height={280}>
+          {/* chart-a11y:no-table multi-vehicle overlay — fleet rollup; SR users compare via per-vehicle pages */}
+          <ChartContainer
+            title={t('comparison.drivesPerMonth', 'Drives per Month')}
+            ariaLabel={t('comparison.drivesPerMonth.aria', 'Drives per month bar chart comparing two vehicles')}
+            height={280}
+          >
             {drivesChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={drivesChartData} margin={chartMarginLabeled}>
@@ -677,6 +687,7 @@ export default function FleetComparePage() {
               <Skeleton lines={8} />
             ) : (
               <DataTable
+                tableId="analytics:fleet-compare"
                 columns={tableColumns}
                 data={comparisonRows}
                 keyExtractor={(r) => r.metric}

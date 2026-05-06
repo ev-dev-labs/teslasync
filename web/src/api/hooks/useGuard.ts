@@ -53,7 +53,7 @@ export const guardKeys = {
 export function useGuardConfig(vehicleId: number) {
   return useQuery({
     queryKey: guardKeys.config(vehicleId),
-    queryFn: () => request<GuardConfig>(`/vehicles/${vehicleId}/guard`),
+    queryFn: ({ signal }) => request<GuardConfig>(`/vehicles/${vehicleId}/guard`, { signal }),
     enabled: vehicleId > 0,
     staleTime: STALE_TIMES.REALTIME,
     refetchInterval: INTERVALS.REALTIME,
@@ -63,7 +63,7 @@ export function useGuardConfig(vehicleId: number) {
 export function useGuardEvents(vehicleId: number) {
   return useQuery({
     queryKey: guardKeys.events(vehicleId),
-    queryFn: () => request<GuardEvent[]>(`/vehicles/${vehicleId}/guard/events`),
+    queryFn: ({ signal }) => request<GuardEvent[]>(`/vehicles/${vehicleId}/guard/events`, { signal }),
     enabled: vehicleId > 0,
     staleTime: STALE_TIMES.QUICK,
   });

@@ -15,6 +15,7 @@ import { PageContainer, Grid } from '@/components/layout';
 import {
   GlassPanel, Button as ControlButton, Select as ControlSelect, Input as ControlInput,
 } from '@/components/ui';
+import { UnitInput } from '@/components/forms';
 import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { EmptyState, Spinner } from '@/components/feedback';
@@ -193,13 +194,11 @@ export default function SmartChargePage() {
               onChange={e => setMaxAmps(Number(e.target.value))}
             />
 
-            <ControlInput
-              label={t('chargePlanner.batteryCapacity', 'Battery Capacity (kWh)')}
-              type="number"
-              min={40}
-              max={130}
-              value={String(batteryCapacity)}
-              onChange={e => setBatteryCapacity(Number(e.target.value))}
+            <UnitInput
+              label={t('chargePlanner.batteryCapacity', 'Battery Capacity')}
+              unit="energy"
+              value={batteryCapacity}
+              onChange={v => setBatteryCapacity(v ?? 0)}
             />
           </Grid>
 

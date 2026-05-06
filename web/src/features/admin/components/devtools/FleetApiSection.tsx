@@ -530,7 +530,14 @@ function FleetTelemetryConfigTool() {
         <ResultPanel title={t('Delete Config')} data={deleteMut.data?.error ? undefined : deleteMut.data} error={typeof deleteMut.data?.error === 'string' ? deleteMut.data.error : undefined} idle={!deleteMut.data} />
         {errorData.length > 0 && (
           <div className="space-y-2">
-            <DataTable columns={errorColumns} data={errorData} keyExtractor={(r) => r.id} compact pagination={{ defaultPageSize: 50 }} />
+            <DataTable
+              tableId="admin:fleet-api-errors"
+              columns={errorColumns}
+              data={errorData}
+              keyExtractor={(r) => r.id}
+              compact
+              pagination={{ defaultPageSize: 50 }}
+            />
             <Button
               variant="ghost"
               size="sm"

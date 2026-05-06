@@ -638,6 +638,7 @@ export default function EnergyFlowPage() {
 
           {sortedDailyRows.length > 0 ? (
             <DataTable
+              tableId="battery:energy-flow-history"
               columns={historyColumns}
               data={sortedDailyRows}
               keyExtractor={(row) => row.date}

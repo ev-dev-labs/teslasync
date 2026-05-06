@@ -1,12 +1,17 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, useEffect, useRef } from 'react'
 import { Navigate, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import { ScrollRestoration } from './components/layout/ScrollRestoration'
 import { PageLoadSkeleton } from './components/feedback/PageLoadSkeleton'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
+import { SuspenseProgressBoundary } from './components/feedback/SuspenseProgressBoundary'
 import { AuthExpiredOverlay } from '@/components/feedback'
 import { OnboardingGate } from '@/features/onboarding/components/OnboardingGate'
 import { DensityApplier } from '@/components/ui/DensityApplier'
+import { ContextMenuRoot } from '@/components/ui/ContextMenu'
+import { RouteAnnouncer } from '@/components/a11y'
+import { recordPageView, resolvePageLabel } from '@/lib/recentPages'
+import { getBaseTitle } from '@/lib/titleStore'
 
 // ── ALL pages live in features/ — zero imports from pages/ ──────────────
 
@@ -121,6 +126,7 @@ const SecurityAccess = lazy(() => import('./features/admin/pages/SecurityAccessP
 const BackupRestore = lazy(() => import('./features/admin/pages/BackupRestorePage'))
 const ApiPlayground = lazy(() => import('./features/admin/pages/ApiPlaygroundPage'))
 const RedisSignalViewer = lazy(() => import('./features/admin/pages/RedisSignalViewerPage'))
+const FeedbackQueue = lazy(() => import('./features/admin/pages/FeedbackQueuePage'))
 
 // System & Ops
 const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
@@ -160,7 +166,13 @@ const WatchFace = lazy(() => import('./features/watch/pages/WatchFacePage'))
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation.
  *  Uses PageLoadSkeleton (layout-shaped) instead of a plain spinner so the page
  *  doesn't reflow when the lazy chunk arrives — important for our CLS budget.
- *  See web/lighthouserc.json for the active assertions (Phase 40 / Prompt 35). */
+ *  See web/lighthouserc.json for the active assertions (Phase 40 / Prompt 35).
+ *
+ *  Phase-46 / Prompt 07 — wraps Suspense in SuspenseProgressBoundary so
+ *  every route-chunk download also activates the global <TopProgress>
+ *  bar mounted in <Layout>. The bar gives the user a visible "loading"
+ *  affordance during chunk download even before the layout-shaped
+ *  skeleton paints. */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
   const { pathname } = useLocation()
   // key={pathname} guarantees a fresh ErrorBoundary instance on every navigation,
@@ -169,9 +181,58 @@ function SafeRoute({ children, name }: { children: React.ReactNode; name: string
   // would otherwise reuse the boundary instance across path changes.
   return (
     <ErrorBoundary key={pathname} name={name} resetKey={pathname}>
-      <Suspense fallback={<PageLoadSkeleton />}>{children}</Suspense>
+      <SuspenseProgressBoundary fallback={<PageLoadSkeleton />}>{children}</SuspenseProgressBoundary>
     </ErrorBoundary>
   )
+}
+
+/**
+ * Phase-46 / Prompt 51 — Recent-pages recorder.
+ *
+ * Subscribes to React Router's `useLocation()` and, on every pathname
+ * change, schedules a {@link RECENT_PAGES_RECORD_DELAY_MS} timeout that
+ * reads the canonical page title (set by `usePageTitle` from inside the
+ * lazy-loaded page) and pushes a row into the {@link recordPageView}
+ * store.
+ *
+ * The delay exists for the same reason as RouteAnnouncer: at the
+ * instant `useLocation()` fires, the new page's chunk may still be
+ * downloading and `usePageTitle()` hasn't written to the title store
+ * yet. Waiting lets the React commit phase flush so the captured title
+ * reflects the page we actually landed on, not the previous one.
+ *
+ * Records the very first paint as well — a user who deep-links to
+ * `/vehicles/3` and immediately closes the tab still gets that visit
+ * captured the next time they open the palette.
+ */
+const RECENT_PAGES_RECORD_DELAY_MS = 250
+const TITLE_SUFFIX = ' — TeslaSync'
+
+function stripTitleSuffix(t: string): string {
+  if (t.endsWith(TITLE_SUFFIX)) return t.slice(0, -TITLE_SUFFIX.length)
+  return t
+}
+
+function RecentPagesRecorder() {
+  const { pathname } = useLocation()
+  // Refs over deps so the same timeout closure can be re-created on
+  // every pathname change without re-binding the listener.
+  const lastPathRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (lastPathRef.current === pathname) return
+    lastPathRef.current = pathname
+    const id = window.setTimeout(() => {
+      const stripped = stripTitleSuffix(getBaseTitle())
+      const fromStore = stripped && stripped !== 'TeslaSync' ? stripped : null
+      const fromRegistry = resolvePageLabel(pathname)
+      const title = fromStore ?? fromRegistry ?? pathname
+      recordPageView({ path: pathname, title })
+    }, RECENT_PAGES_RECORD_DELAY_MS)
+    return () => window.clearTimeout(id)
+  }, [pathname])
+
+  return null
 }
 
 export default function App() {
@@ -199,6 +260,17 @@ export default function App() {
       <OnboardingGate />
       <ScrollRestoration />
       <DensityApplier />
+      {/* Phase-46 / Prompt 21 — announces the new page title to screen
+          readers on every SPA navigation. WCAG 2.4.2. */}
+      <RouteAnnouncer />
+      {/* Phase-46 / Prompt 51 — records every route the user visits so
+          the command palette and dashboard widget can surface them. */}
+      <RecentPagesRecorder />
+      {/* Phase-46 / Prompt 30 — single portal host for the shared
+          right-click ContextMenu primitive. Subscribes to a module-level
+          store so any DataTable row, notification row, or future
+          adopter can open a menu without prop drilling. */}
+      <ContextMenuRoot />
       <Routes>
       <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
       <Route path="glance" element={<SafeRoute name="Glance"><GlancePage /></SafeRoute>} />
@@ -254,6 +326,7 @@ export default function App() {
         <Route path="compare" element={<Navigate to="/period-compare" replace />} />
         <Route path="period-compare" element={<SafeRoute name="PeriodCompare"><PeriodCompare /></SafeRoute>} />
         <Route path="admin" element={<SafeRoute name="Admin"><Admin /></SafeRoute>} />
+        <Route path="admin/feedback" element={<SafeRoute name="FeedbackQueue"><FeedbackQueue /></SafeRoute>} />
         <Route path="api-logs" element={<SafeRoute name="ApiLogs"><ApiLogs /></SafeRoute>} />
         <Route path="fleet-api" element={<SafeRoute name="FleetAPI"><FleetAPI /></SafeRoute>} />
         <Route path="dev-tools" element={<SafeRoute name="DevTools"><DevTools /></SafeRoute>} />

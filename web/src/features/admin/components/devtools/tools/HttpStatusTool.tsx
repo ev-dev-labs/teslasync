@@ -50,7 +50,14 @@ export function HttpStatusTool() {
           onChange={(e) => setSearch(e.target.value)}
           icon={<Network className="h-4 w-4" />}
         />
-        <DataTable columns={columns} data={filtered} keyExtractor={(r) => r.code} compact pagination />
+        <DataTable
+          tableId="admin:http-status-codes"
+          columns={columns}
+          data={filtered}
+          keyExtractor={(r) => r.code}
+          compact
+          pagination
+        />
       </div>
     </ToolCard>
   )

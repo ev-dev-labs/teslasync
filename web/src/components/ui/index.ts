@@ -8,8 +8,11 @@ export { Tabs, type TabsProps, type TabItem } from './Tabs';
 export { GlassPanel, type GlassPanelProps } from './GlassPanel';
 export { StatusPill, type StatusPillProps } from './StatusPill';
 export { Toggle, type ToggleProps } from './Toggle';
+export { Slider, type SliderProps } from './Slider';
+export { RangeSlider, type RangeSliderProps } from './RangeSlider';
 export { Tooltip, type TooltipProps } from './Tooltip';
 export { HelpTooltip, type HelpTooltipProps } from './HelpTooltip';
+export { HelpIcon, type HelpIconProps } from './HelpIcon';
 export { PinButton, type PinButtonProps } from './PinButton';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
 export { IconBox } from './IconBox';
@@ -24,11 +27,35 @@ export { DataTableResizer } from './DataTableResizer';
 export { DensityApplier } from './DensityApplier';
 export { Drawer } from './Drawer';
 export { CommandPalette } from './CommandPalette';
+export {
+  ContextMenuRoot,
+  useContextMenu,
+  openContextMenu,
+  closeContextMenu,
+  type ContextMenuItem,
+  type UseContextMenuReturn,
+} from './ContextMenu';
 export { ThemePicker, type ThemePickerProps } from './ThemePicker';
 export { Textarea } from './Textarea';
 export type { TextareaProps } from './Textarea';
 export { CopyButton, type CopyButtonProps } from './CopyButton';
+export { MaskedValue, type MaskedValueProps, type MaskedValueVariant } from './MaskedValue';
+export {
+  EditableText,
+  type EditableTextProps,
+  type EditableTextVariant,
+  type EditableTextDisplayProps,
+} from './EditableText';
 export { PrintButton, type PrintButtonProps } from './PrintButton';
+export { FullscreenButton, type FullscreenButtonProps } from './FullscreenButton';
+export {
+  Lightbox,
+  LIGHTBOX_MIN_ZOOM,
+  LIGHTBOX_MAX_ZOOM,
+  LIGHTBOX_ZOOM_STEP,
+  type LightboxImage,
+  type LightboxProps,
+} from './Lightbox';
 export { default as Logo } from './Logo';
 export { PlaybackControls } from '../data-display/PlaybackControls';
 export {

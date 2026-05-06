@@ -119,6 +119,7 @@ export function OperationsSection() {
 
               {notifLogs ? (
                 <DataTable
+                  tableId="system:operations-notifications"
                   columns={notifLogColumns}
                   data={notifLogs}
                   keyExtractor={(l) => l.id}
@@ -140,6 +141,7 @@ export function OperationsSection() {
             <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('Audit Log')}</h4>
             {auditLogs && auditLogs.length > 0 ? (
               <DataTable
+                tableId="system:operations-audit"
                 columns={auditColumns}
                 data={auditLogs}
                 keyExtractor={(l) => l.id}

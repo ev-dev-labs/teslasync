@@ -196,6 +196,45 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 	}
 	span.SetAttributes(attribute.String("vehicle.vin", vehicle.VIN))
 
+	// Phase-46 / Prompt 64 — point-in-time time-machine view.
+	// When the caller passes a valid `?as_of=` query parameter we
+	// reconstruct vehicle state from signal_log at that timestamp
+	// instead of returning live signal data. The branch is read-only:
+	// no writes to the L1 cache or any other store. Validation lives
+	// in signal.ParseAsOf so the bounds and lookback policy stay in
+	// one place across every handler that gains the same parameter.
+	asOf, hasAsOf, asOfErr := signal.ParseAsOf(r.URL.Query(), time.Now())
+	if asOfErr != nil {
+		writeError(w, http.StatusBadRequest, asOfErr.Error())
+		return
+	}
+	if hasAsOf && h.state != nil {
+		snapshot, snapErr := signal.SnapshotAt(ctx, h.state, vehicle.ID, asOf)
+		if snapErr != nil {
+			log.Error().Err(snapErr).Int64("vehicle_id", vehicle.ID).Time("as_of", asOf).Msg("vehicle current state: snapshot read failed")
+			writeError(w, http.StatusInternalServerError, "failed to read snapshot")
+			return
+		}
+		// signal.State is map[string]SignalValue (named alias of any) and
+		// signal.Store.Hydrate takes map[string]interface{}. The element
+		// types are identical at the runtime level but Go disallows the
+		// named-to-unnamed conversion without an element copy.
+		raw := make(map[string]interface{}, len(snapshot))
+		for k, v := range snapshot {
+			raw[k] = v
+		}
+		store := signal.New()
+		store.Hydrate(vehicle.ID, raw)
+		state := h.vehicleSvc.BuildStateFromSignalStore(store, vehicle)
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"state":       state,
+			"live":        false,
+			"data_source": "as_of",
+			"as_of":       asOf.Format(time.RFC3339),
+		})
+		return
+	}
+
 	// PRIMARY: Build state from the live signal boundary + DB fallbacks.
 	if h.telemetryHandler != nil {
 		store := signal.New()

@@ -52,6 +52,7 @@ func NewRegistry() *Registry {
 	} {
 		r.registerCategory(category)
 	}
+	r.registerBuiltins()
 	return r
 }
 
@@ -90,4 +91,19 @@ func (r *Registry) Get(id string) *Preset {
 
 func (r *Registry) registerCategory(c Category) {
 	r.categories[c.ID] = c
+}
+
+// register appends a preset to the in-memory registry. It panics on a
+// duplicate ID or unknown category — both indicate a programming error
+// in builtins.go that must surface at process start, not at request time.
+func (r *Registry) register(p Preset) {
+	if _, ok := r.categories[p.Category]; !ok {
+		panic("preset " + p.ID + " references unknown category " + p.Category)
+	}
+	for i := range r.presets {
+		if r.presets[i].ID == p.ID {
+			panic("duplicate preset id " + p.ID)
+		}
+	}
+	r.presets = append(r.presets, p)
 }

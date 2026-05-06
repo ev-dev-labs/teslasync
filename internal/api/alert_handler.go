@@ -51,6 +51,13 @@ type notificationRepository interface {
 	CreateLog(context.Context, *models.NotificationLog) error
 	GetChannel(context.Context, int64) (*models.NotificationChannel, error)
 	GetAllChannels(context.Context) ([]*models.NotificationChannel, error)
+
+	// Phase-46 / Prompt 20 — alert acknowledgement + audit timeline.
+	GetLog(context.Context, int64) (*models.NotificationLog, error)
+	AcknowledgeLog(context.Context, int64, string, string) (*models.NotificationLog, bool, error)
+	ReopenLog(context.Context, int64, string) (*models.NotificationLog, bool, error)
+	CommentOnLog(context.Context, int64, string, string) (*models.NotificationLogEvent, error)
+	ListLogEvents(context.Context, int64) ([]*models.NotificationLogEvent, error)
 }
 
 func NewAlertHandler(db *database.DB, hub *EventHub, mc pahomqtt.Client, store signal.LiveSignalStore) *AlertHandler {

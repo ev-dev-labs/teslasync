@@ -33,6 +33,18 @@ export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
     power: number;
     state?: string;
   } | null;
+  /**
+   * Phase-46 / Prompt 54 — optional URL to the user-uploaded
+   * hero photo. Built by `vehiclePhotoUrl()` from the
+   * `useVehiclePhoto` hook; passed in as a prop (rather than
+   * called inside the component) so dashboards rendering many
+   * hero cards don't trigger one query per card.
+   *
+   * When supplied AND non-null, the component renders the photo
+   * as the top banner above the gauges. When null/undefined the
+   * component falls back to the gauge-only layout.
+   */
+  photoUrl?: string | null;
   className?: string;
 }
 
@@ -41,7 +53,7 @@ function toStatus(state: string): VehicleStatus {
 }
 
 export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
-  ({ vehicle, vehicleState, className, ...props }, ref) => {
+  ({ vehicle, vehicleState, photoUrl, className, ...props }, ref) => {
     const { t } = useTranslation();
     const vs = vehicleState;
 
@@ -53,6 +65,21 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
         className={cn('p-6 space-y-6', className)}
         {...props}
       >
+        {/* Phase-46 / Prompt 54 — user-uploaded hero photo. Falls
+            back to the gauges-only layout when no photo is set so
+            existing dashboards keep their look. */}
+        {photoUrl ? (
+          <div className="overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)]">
+            <img
+              src={photoUrl}
+              alt={t('vehicleHero.photo.alt', '{{name}} photo', { name: vehicle.display_name })}
+              className="block w-full max-h-72 object-cover"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        ) : null}
+
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="space-y-1">

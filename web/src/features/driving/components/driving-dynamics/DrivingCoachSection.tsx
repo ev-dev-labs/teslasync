@@ -256,6 +256,7 @@ export default function DrivingCoachSection({ coachData }: DrivingCoachSectionPr
           </h3>
           {(coachData?.per_drive_scores ?? []).length > 0 ? (
             <DataTable
+              tableId="driving:coach-per-drive"
               columns={coachColumns}
               data={coachData?.per_drive_scores ?? []}
               keyExtractor={(row: CoachDriveScore) => String(row.drive_id)}

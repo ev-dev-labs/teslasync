@@ -9,24 +9,76 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	Port           int
-	LogLevel       string
-	CORSOrigins    string
-	Database       DatabaseConfig
-	Tesla          TeslaConfig
-	MQTT           MQTTConfig
-	Worker         WorkerConfig
-	Redis          RedisConfig
-	Auth           AuthConfig
-	Retention      RetentionConfig
-	FleetTelemetry FleetTelemetryConfig
-	MongoDB        MongoDBConfig
-	GasPrice       GasPriceConfig
-	OpenTelemetry  OpenTelemetryConfig
-	GoogleMaps     GoogleMapsConfig
-	AzureMaps      AzureMapsConfig
-	APILogs        APILogsConfig
-	WebPush        WebPushConfig
+	Port             int
+	LogLevel         string
+	CORSOrigins      string
+	VehiclePhotoDir  string
+	// RequireCookieConsent (Phase-46 / Prompt 70) opts the deployment
+	// into the GDPR / ePrivacy cookie-consent banner. Default false so
+	// the typical self-hosted single-user instance is unaffected — only
+	// fleet operators serving multiple EU drivers, or instances exposed
+	// publicly with analytics enabled, need to flip this to true.
+	//
+	// When true, the SPA renders a bottom-of-screen banner the first
+	// time a visitor lands on the page; client-side reporting (web
+	// vitals, error reporter) gates its POSTs on the user's stored
+	// consent. When false, all reporting flows unchanged and the
+	// banner never renders.
+	RequireCookieConsent bool
+	Database             DatabaseConfig
+	Tesla                TeslaConfig
+	MQTT                 MQTTConfig
+	Worker               WorkerConfig
+	Redis                RedisConfig
+	Auth                 AuthConfig
+	Retention            RetentionConfig
+	FleetTelemetry       FleetTelemetryConfig
+	MongoDB              MongoDBConfig
+	GasPrice             GasPriceConfig
+	OpenTelemetry        OpenTelemetryConfig
+	GoogleMaps           GoogleMapsConfig
+	AzureMaps            AzureMapsConfig
+	APILogs              APILogsConfig
+	WebPush              WebPushConfig
+	System               SystemConfig
+	GitHub               GitHubConfig
+}
+
+// GitHubConfig holds the credentials used by the optional GitHub Issues
+// bridge in the admin feedback queue (Phase-46 / Prompt 08). When Repo
+// or Token is empty the bridge is disabled — the admin endpoint
+// surfaces this in its response and the SPA hides the "Forward to
+// GitHub" action.
+type GitHubConfig struct {
+	// Repo is the target repository in "owner/name" form (e.g.
+	// "ev-dev-labs/teslasync"). Empty disables the bridge.
+	Repo string
+	// Token is a fine-grained Personal Access Token with the "Issues:
+	// write" scope on Repo. Empty disables the bridge.
+	Token string
+}
+
+// SystemConfig holds the operator-controlled service-mode banner state
+// (Phase-46 / Prompt 04). When Mode is empty, the effective state comes
+// from the system_state DB row; when Mode is non-empty (any of "ok",
+// "degraded", "maintenance"), the env values override the DB so an
+// operator can force-clear or force-set the banner without touching the
+// database (useful during deploy/rollback).
+type SystemConfig struct {
+	// Mode is the operator-supplied service mode override. Empty means
+	// "fall through to DB state". Valid non-empty values: "ok",
+	// "degraded", "maintenance". Other values are treated as empty
+	// (no override) by the resolver.
+	Mode string
+	// MaintenanceMessage is the banner text shown to users when Mode is
+	// "degraded" or "maintenance". Trimmed and truncated to 280 chars
+	// at write time. Ignored when Mode is empty or "ok".
+	MaintenanceMessage string
+	// MaintenanceUntil is an RFC3339 timestamp when the banner should
+	// auto-clear (informational; the SPA renders a countdown). Empty
+	// string means no scheduled end. Invalid values are passed through
+	// to the SPA as-is so misconfiguration surfaces in dev tools.
+	MaintenanceUntil string
 }
 
 // WebPushConfig holds VAPID credentials used to sign and deliver Web Push
@@ -210,6 +262,13 @@ type AuthConfig struct {
 	Enabled           bool
 	JWTSecret         string
 	ForwardAuthHeader string // Header set by reverse proxy auth (e.g. X-Forwarded-User)
+	// ProviderHint is operator-supplied free text surfaced verbatim by
+	// the /system/auth-mode endpoint. The SPA renders it as informative
+	// copy ("Sign in via Authentik / Authelia / oauth2-proxy / Keycloak
+	// / …"); TeslaSync NEVER routes off it or speaks to the upstream
+	// IdP's admin API. Empty by default — when unset the SPA falls back
+	// to a generic "your authentication provider" string.
+	ProviderHint string
 }
 
 type RetentionConfig struct {
@@ -234,9 +293,15 @@ type RetentionConfig struct {
 // these fields first or log only non-sensitive values.
 func Load() (*Config, error) {
 	cfg := &Config{
-		Port:        envInt("TESLASYNC_PORT", 4000),
-		LogLevel:    envStr("TESLASYNC_LOG_LEVEL", "info"),
-		CORSOrigins: envStr("CORS_ORIGINS", ""),
+		Port:            envInt("TESLASYNC_PORT", 4000),
+		LogLevel:        envStr("TESLASYNC_LOG_LEVEL", "info"),
+		CORSOrigins:     envStr("CORS_ORIGINS", ""),
+		VehiclePhotoDir: envStr("TESLASYNC_VEHICLE_PHOTO_DIR", "/var/lib/teslasync/photos"),
+		// Phase-46 / Prompt 70 — default OFF so self-hosted installs
+		// keep working without a banner. Set TESLASYNC_REQUIRE_COOKIE_CONSENT=true
+		// only on multi-user / public-facing deployments where GDPR /
+		// ePrivacy compliance applies.
+		RequireCookieConsent: envBool("TESLASYNC_REQUIRE_COOKIE_CONSENT", false),
 
 		Database: DatabaseConfig{
 			Host:              envStr("DATABASE_HOST", "localhost"),
@@ -293,6 +358,7 @@ func Load() (*Config, error) {
 			Enabled:           envBool("AUTH_ENABLED", false),
 			JWTSecret:         envStr("AUTH_JWT_SECRET", ""),
 			ForwardAuthHeader: envStr("FORWARD_AUTH_HEADER", ""),
+			ProviderHint:      envStr("TESLASYNC_AUTH_PROVIDER_HINT", ""),
 		},
 
 		Retention: RetentionConfig{
@@ -357,6 +423,17 @@ func Load() (*Config, error) {
 			PublicKey:  envStr("TESLASYNC_VAPID_PUBLIC_KEY", ""),
 			PrivateKey: envStr("TESLASYNC_VAPID_PRIVATE_KEY", ""),
 			Subject:    envStr("TESLASYNC_VAPID_SUBJECT", ""),
+		},
+
+		System: SystemConfig{
+			Mode:               envStr("TESLASYNC_SYSTEM_MODE", ""),
+			MaintenanceMessage: envStr("TESLASYNC_SYSTEM_MAINTENANCE_MESSAGE", ""),
+			MaintenanceUntil:   envStr("TESLASYNC_SYSTEM_MAINTENANCE_UNTIL", ""),
+		},
+
+		GitHub: GitHubConfig{
+			Repo:  envStr("TESLASYNC_GITHUB_REPO", ""),
+			Token: envStr("TESLASYNC_GITHUB_TOKEN", ""),
 		},
 	}
 

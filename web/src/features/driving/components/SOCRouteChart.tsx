@@ -52,15 +52,32 @@ export function SOCRouteChart({ socCurve, chargeStops, minArrivalSOC }: SOCRoute
   }, [socCurve, chargeStops]);
 
   if (chartData.length === 0) {
+    // chart-a11y:no-table empty-state branch wraps a placeholder, no series available to tabulate
     return (
-      <ChartContainer title={t('tripPlanner.socChart.title', 'Battery Along Route')} height={300}>
+      <ChartContainer
+        title={t('tripPlanner.socChart.title', 'Battery Along Route')}
+        ariaLabel={t('tripPlanner.socChart.aria', 'Planned route battery state-of-charge area chart')}
+        height={300}
+      >
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('tripPlanner.socChart.empty', 'Plan a trip to see the SOC curve')} />
       </ChartContainer>
     );
   }
 
   return (
-    <ChartContainer title={t('tripPlanner.socChart.title', 'Battery Along Route')} height={300}>
+    <ChartContainer
+      title={t('tripPlanner.socChart.title', 'Battery Along Route')}
+      ariaLabel={t('tripPlanner.socChart.aria', 'Planned route battery state-of-charge area chart')}
+      data={chartData.map((p) => ({
+        distance: p.distance,
+        soc: p.soc,
+      }))}
+      dataColumns={[
+        { key: 'distance', label: t('tripPlanner.socChart.col.distance', 'Distance') },
+        { key: 'soc', label: t('tripPlanner.socChart.col.soc', 'SOC %') },
+      ]}
+      height={300}
+    >
       <ResponsiveContainer width="100%" height={300}>
         <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <defs>

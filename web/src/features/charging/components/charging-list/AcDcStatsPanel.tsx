@@ -95,6 +95,7 @@ function AcDcTable({ ac, dc }: { ac: AcDcBucket; dc: AcDcBucket }) {
 
   return (
     <DataTable<AcDcTableRow>
+      tableId="charging:ac-dc-stats"
       columns={columns}
       data={data}
       keyExtractor={(r) => r.label}
