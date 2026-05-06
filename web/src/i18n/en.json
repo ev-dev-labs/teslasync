@@ -6669,6 +6669,12 @@
     "noFilterResults": "No commands match the current filters",
     "noCommands": "No commands have been sent yet"
   },
+  "dataRepair": {
+    "drive": {
+      "distanceMi": "Distance (mi)",
+      "maxSpeedMph": "Max Speed (mph)"
+    }
+  },
   "dataExport": {
     "csvPreview": "CSV Preview",
     "csvDesc": "Comma-separated values, compatible with Excel and Google Sheets",

@@ -6,7 +6,8 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui';
 import { Badge } from '@/components/ui';
 import { useToast } from '@/components/feedback/Toast';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import { request } from '@/api/client';
 import {
   Battery, Wifi, Thermometer, Power, CheckCircle, AlertTriangle, Clock,
@@ -51,7 +52,7 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
   const { t } = useTranslation();
   const qc = useQueryClient();
   const toast = useToast();
-  const { convertTemp, convertDistance, tempUnit, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
 
   const name = vehicle.display_name || vehicle.vin;
   const isAsleep = vehicle.state === 'asleep' || vehicle.state === 'offline';
@@ -267,12 +268,12 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
             </span>
             <span className="flex items-center gap-1">
               <Wifi className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-              <span className="text-[var(--text-secondary)]">{fmtNumber(convertDistance(state.rated_range), 0)} {distanceUnit}</span>
+              <span className="text-[var(--text-secondary)]">{fmtNumber(convertDistanceFromSI(state.rated_range, unitPrefs.distance), 0)} {unitPrefs.distance}</span>
             </span>
             {state.inside_temp != null && (
               <span className="flex items-center gap-1">
                 <Thermometer className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-                <span className="text-[var(--text-secondary)]">{fmtNumber(convertTemp(state.inside_temp), 0)}{tempUnit}</span>
+                <span className="text-[var(--text-secondary)]">{fmtNumber(convertTempFromSI(state.inside_temp, unitPrefs.temperature), 0)}{unitPrefs.temperature}</span>
               </span>
             )}
           </div>
