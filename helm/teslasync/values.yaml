@@ -883,6 +883,62 @@ mqtt:
     host: ""
     port: 1883
 
+  # ─── Phase-42 / ADR-004 #8 ───────────────────────────────────────────────
+  # Surfaced as TESLA_MQTT_MAX_REDELIVERIES in the configmap. Read by
+  # cmd/teslasync once the PipelineSubscriber is wired in (see
+  # internal/mqtt.PipelineSubscriberConfig). Default 5 matches the
+  # in-code default in `withDefaults()`.
+  maxRedeliveries: 5
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase-42 operator surface
+#
+# These knobs power the resubscribe + unit-drift workflows introduced in
+# Phase-42 (ADR-004 #5 + #9). Both cmd/resubscribe and cmd/unit-drift-validator
+# refuse to run without `operator.token` — leave it empty to keep them disabled.
+# ─────────────────────────────────────────────────────────────────────────────
+operator:
+  # -- Operator token used by cmd/resubscribe and cmd/unit-drift-validator.
+  # Rendered into the Secret as TESLASYNC_OPERATOR_TOKEN when non-empty.
+  # Generate with `openssl rand -hex 32` and store in your secret manager.
+  token: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Unit-drift validator (Phase-42 / ADR-004 #9)
+#
+# Nightly CronJob that runs cmd/unit-drift-validator against the live database.
+# Detects silent unit corruption — e.g., a US car whose Setting*Unit signals
+# stopped seeding `vehicle_unit_history` and is now emitting miles into a
+# field the pipeline assumes is metric. The job is read-only and emits two
+# Prometheus counters (tesla_unit_drift_suspected_total +
+# tesla_unit_history_canary_total). See docs/observability/phase-42-metrics.md.
+#
+# Disabled by default so existing installs are not surprised by a new
+# scheduled job. Enable on production deploys after seeding `operator.token`.
+# ─────────────────────────────────────────────────────────────────────────────
+unitDriftValidator:
+  enabled: false
+  # Cron schedule. Default 02:30 UTC daily — outside the typical nightly
+  # backup window but well after the midnight settlement boundary.
+  schedule: "30 2 * * *"
+  # Drop the job if it cannot start within this window (concurrent runs are
+  # already prevented by concurrencyPolicy: Forbid below).
+  startingDeadlineSeconds: 600
+  # successfulJobsHistoryLimit / failedJobsHistoryLimit: keep enough Job
+  # records to investigate a regression without polluting the namespace.
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  # Pass extra CLI flags to the validator binary (see cmd/unit-drift-validator).
+  # Common: --window=24h --max-vehicles=100 --dry-run
+  extraArgs: []
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Data Retention
 #

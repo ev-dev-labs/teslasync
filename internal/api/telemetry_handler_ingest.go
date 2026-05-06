@@ -91,11 +91,11 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	normalizeFleetUnits(signals)
 
 	// Phase-42 (prompt 0079a): the legacy telemetry.CanonicalizeMap alias
-	// rewrite was a no-op (SignalAliases was empty in internal/telemetry/
-	// signal_alias.go) and was removed alongside the internal/telemetry
-	// package retirement. Future Tesla signal renames belong in the
-	// generated protomodel/router layer (internal/tesla/protomodel +
-	// internal/tesla/router/routing.yaml), not in a parallel alias map.
+	// rewrite was a no-op (the SignalAliases map was empty in the old
+	// internal/telemetry package) and was removed alongside the
+	// internal/telemetry package retirement. Future Tesla signal renames
+	// belong in the generated protomodel/router layer (internal/tesla/protomodel
+	// + internal/tesla/router/routing.yaml), not in a parallel rename map.
 
 	// Find vehicle by VIN (needed for SignalStore keying and all downstream)
 	var vehicleID int64
