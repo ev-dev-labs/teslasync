@@ -51,7 +51,12 @@ export interface ApiRequestOptions extends RequestInit {
 }
 
 function normalizePath(path: string): string {
-  return path.startsWith('/') ? path : `/${path}`
+  const withSlash = path.startsWith('/') ? path : `/${path}`
+  // Defensive strip: hooks MUST pass paths WITHOUT the /api/v1 prefix
+  // (engineering rule #7; enforced by audit:rogue-prefix gate). Strip
+  // here so a stray `/api/v1/foo` does not concatenate downstream into
+  // `/api/v1/api/v1/foo`. Idempotent for the canonical `/foo` form.
+  return withSlash.replace(/^\/api\/v1\//, '/')
 }
 
 /** Builds a fully qualified API URL for browser-owned flows such as downloads. */
@@ -307,6 +312,13 @@ function expiresAtMsFromCredential(cred: SudoCredential): number {
 export async function request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   const { responseType = 'json', skipAuthRefresh = false, headers, ...fetchOptions } = options
 
+  // Normalise once at the entry point: ensures a leading slash AND
+  // defensively strips any stray `/api/v1` prefix the caller passed.
+  // Forward this canonical form to BOTH downstream paths so neither
+  // directRequest (via apiUrl) nor the resilientFetch fallback (which
+  // also concatenates `/api/v1` directly) can double-prefix.
+  const normalisedPath = normalizePath(path)
+
   const directResponseType: 'json' | 'text' = responseType
   const cached = getCachedSudoToken()
   const headersWithToken = withSudoToken(headers, cached?.token ?? null)
@@ -318,7 +330,7 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
   // resilient pipeline below.
   try {
     return await directRequest<T>(
-      path,
+      normalisedPath,
       { ...fetchOptions, headers: headersWithToken },
       directResponseType,
     )
@@ -326,7 +338,7 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
     if (isSudoRequired(err)) {
       let cred: SudoCredential
       try {
-        cred = await challengeForSudo(path)
+        cred = await challengeForSudo(normalisedPath)
       } catch (challengeErr) {
         if (challengeErr instanceof SudoCanceledError) throw challengeErr
         throw new SudoCanceledError(
@@ -341,7 +353,7 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
       // middleware is a passthrough in this mode.
       if (cred.mode === 'open') {
         return await directRequest<T>(
-          path,
+          normalisedPath,
           { ...fetchOptions, headers: withSudoToken(headers, null) },
           directResponseType,
         )
@@ -357,7 +369,7 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
       })
 
       return await directRequest<T>(
-        path,
+        normalisedPath,
         { ...fetchOptions, headers: withSudoToken(headers, cred.token) },
         directResponseType,
       )
@@ -374,6 +386,6 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
     // Fall through: rerun via resilientFetch so the original retry,
     // circuit-breaker, and 401-refresh policies still apply for
     // transient or non-sudo failures.
-    return resilientFetch<T>(path, { ...fetchOptions, headers: headersWithToken })
+    return resilientFetch<T>(normalisedPath, { ...fetchOptions, headers: headersWithToken })
   }
 }
