@@ -54,11 +54,12 @@ import {
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
 import { getErrorMessage } from '@/lib/errorMessage';
+import { convertSpeedFromSI, convertDistanceFromSI } from '@/lib/unitConversion';
 import { request } from '@/api/client';
 import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { normalizeGpsState } from '@/lib/signalCatalog';
@@ -202,7 +203,14 @@ function buildWaypoints(latest: LocationSnapshot): Waypoint[] {
 export default function NavigationRoutePage() {
   const { t } = useTranslation();
   usePageTitle(t('nav.pageTitle', 'Navigation & Route'));
-  const { convertDistance, distanceUnit } = useSettings();
+  /* Phase-43/0027: SI-floor display.
+     /location-snapshots emits speed_mph (m/s SI alias) and miles_to_arrival
+     (meters SI) — the legacy field names are kept for backward compat but
+     values are SI canonical. Pre-existing legacy bug: useSettings.convertDistance
+     was treating the meters value as miles, producing 1609x inflated output. */
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const speedUnit = unitPrefs.speed;
 
   /* ---- vehicle selector — Phase 40 / Prompt 16: header VehiclePicker is the source of truth ---- */
   const { vehicleId } = useSelectedVehicle();
@@ -276,19 +284,25 @@ export default function NavigationRoutePage() {
         )
         .map((s) => ({
           time: formatDateTime(s.created_at),
-          speed: s.speed_mph ?? 0,
-          miles: s.miles_to_arrival ?? 0,
+          /* speed_mph is m/s SI; convert to user pref for chart axis. */
+          speed: convertSpeedFromSI(s.speed_mph ?? 0, speedUnit),
+          /* miles_to_arrival is meters SI; convert to user pref. */
+          miles: convertDistanceFromSI(s.miles_to_arrival ?? 0, distanceUnit),
         })),
-    [history],
+    [history, speedUnit, distanceUnit],
   );
 
-  /* ---- avg speed ---- */
+  /* ---- avg speed (display units) ---- */
   const avgSpeed = useMemo(() => {
     if (!history?.length) return 0;
-    const speeds = history.map((s) => s.speed_mph).filter((v): v is number => v != null && v > 0);
-    if (!speeds.length) return 0;
-    return speeds.reduce((a, b) => a + b, 0) / speeds.length;
-  }, [history]);
+    /* speed_mph is m/s SI; average in SI then convert at the boundary. */
+    const speedsMps = history
+      .map((s) => s.speed_mph)
+      .filter((v): v is number => v != null && v > 0);
+    if (!speedsMps.length) return 0;
+    const avgMps = speedsMps.reduce((a, b) => a + b, 0) / speedsMps.length;
+    return convertSpeedFromSI(avgMps, speedUnit);
+  }, [history, speedUnit]);
 
   /* ---- recent destinations (unique, from history with active routes) ---- */
   const recentDestinations = useMemo(() => {
@@ -302,12 +316,13 @@ export default function NavigationRoutePage() {
       result.push({
         time: formatDateTime(s.created_at),
         destination: name,
-        distance: s.miles_to_arrival ?? 0,
+        /* miles_to_arrival is meters SI; convert to user pref. */
+        distance: convertDistanceFromSI(s.miles_to_arrival ?? 0, distanceUnit),
         eta: s.minutes_to_arrival ?? 0,
       });
     }
     return result.slice(0, 20);
-  }, [history]);
+  }, [history, distanceUnit]);
 
   /* ---- presence chart (home / work over time) ---- */
   const presenceChartData = useMemo(() => {
@@ -327,10 +342,10 @@ export default function NavigationRoutePage() {
     () => [
       { key: 'time', header: t('nav.col.time', 'Time'), render: (row) => <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">{row.time}</span> },
       { key: 'destination', header: t('nav.col.destination', 'Destination'), render: (row) => <span className="text-sm text-[var(--text-primary)]">{row.destination}</span> },
-      { key: 'distance', header: t('nav.col.distance', 'Distance'), render: (row) => <span className="text-xs text-[var(--text-muted)]">{fmtNumber(convertDistance(row.distance), 1)} {distanceUnit}</span> },
+      { key: 'distance', header: t('nav.col.distance', 'Distance'), render: (row) => <span className="text-xs text-[var(--text-muted)]">{fmtNumber(row.distance, 1)} {distanceUnit}</span> },
       { key: 'eta', header: t('nav.col.eta', 'ETA'), render: (row) => <span className="text-xs text-[var(--text-muted)]">{fmtNumber(row.eta, 0)} min</span> },
     ],
-    [t, convertDistance, distanceUnit],
+    [t, distanceUnit],
   );
 
   /* ---- table columns ---- */
@@ -440,12 +455,13 @@ export default function NavigationRoutePage() {
         header: t('nav.wp.distance', 'Distance'),
         render: (row: Waypoint) => (
           <span className="font-mono text-[var(--text-muted)]">
-            {fmtNumber(convertDistance(row.distance), 1)} {distanceUnit}
+            {/* row.distance is meters SI from buildWaypoints; convert to user pref. */}
+            {fmtNumber(convertDistanceFromSI(row.distance, distanceUnit), 1)} {distanceUnit}
           </span>
         ),
       },
     ],
-    [t, convertDistance, distanceUnit],
+    [t, distanceUnit],
   );
 
   /* ---- sort state ---- */
@@ -588,7 +604,8 @@ export default function NavigationRoutePage() {
                     {t('nav.distanceRemaining', 'Distance Remaining')}
                   </span>
                   <span className="block text-sm font-medium text-[var(--text-primary)]">
-                    {fmtNumber(convertDistance(latest.miles_to_arrival ?? 0), 1)}{' '}
+                    {/* miles_to_arrival is meters SI; convert to user pref. */}
+                    {fmtNumber(convertDistanceFromSI(latest.miles_to_arrival ?? 0, distanceUnit), 1)}{' '}
                     {distanceUnit}
                   </span>
                 </span>
@@ -695,7 +712,7 @@ export default function NavigationRoutePage() {
                 label={t('nav.metric.distance', 'Distance')}
                 value={
                   hasActiveRoute
-                    ? `${fmtNumber(convertDistance(latest?.miles_to_arrival ?? 0), 1)} ${distanceUnit}`
+                    ? `${fmtNumber(convertDistanceFromSI(latest?.miles_to_arrival ?? 0, distanceUnit), 1)} ${distanceUnit}`
                     : '—'
                 }
                 icon={<Route className="h-5 w-5" />}
@@ -723,7 +740,7 @@ export default function NavigationRoutePage() {
               />
               <MetricCard
                 label={t('nav.metric.avgSpeed', 'Avg Speed')}
-                value={`${fmtNumber(avgSpeed, 1)} mph`}
+                value={`${fmtNumber(avgSpeed, 1)} ${speedUnit}`}
                 icon={<Gauge className="h-5 w-5" />}
                 color="amber"
               />
@@ -784,7 +801,7 @@ export default function NavigationRoutePage() {
                       yAxisId="speed"
                       tick={axisTick}
                       label={{
-                        value: t('nav.chartSpeed', 'Speed (mph)'),
+                        value: t('nav.chartSpeedV2', { defaultValue: 'Speed ({{unit}})', unit: speedUnit }),
                         angle: -90,
                         position: 'insideLeft',
                         style: { fill: 'var(--text-muted)', fontSize: 10 },
@@ -795,7 +812,7 @@ export default function NavigationRoutePage() {
                       orientation="right"
                       tick={axisTick}
                       label={{
-                        value: t('nav.chartDistance', 'Miles to Arrival'),
+                        value: t('nav.chartDistanceV2', { defaultValue: 'Distance to Arrival ({{unit}})', unit: distanceUnit }),
                         angle: 90,
                         position: 'insideRight',
                         style: { fill: 'var(--text-muted)', fontSize: 10 },
@@ -813,7 +830,7 @@ export default function NavigationRoutePage() {
                       dataKey="speed"
                       stroke={CHART_COLORS[0]}
                       fill="url(#speedGrad)"
-                      name={t('nav.legendSpeed', 'Speed (mph)')}
+                      name={t('nav.legendSpeedV2', { defaultValue: 'Speed ({{unit}})', unit: speedUnit })}
                     />
                     <Area
                       {...AREA_DEFAULTS}
@@ -822,7 +839,7 @@ export default function NavigationRoutePage() {
                       stroke={CHART_COLORS[1]}
                       fill="url(#odoGrad)"
                       strokeWidth={1.5}
-                      name={t('nav.legendMilesToArrival', 'Miles to Arrival')}
+                      name={t('nav.legendDistanceToArrivalV2', { defaultValue: 'Distance to Arrival ({{unit}})', unit: distanceUnit })}
                     />
                   </AreaChart>
                 </ResponsiveContainer>

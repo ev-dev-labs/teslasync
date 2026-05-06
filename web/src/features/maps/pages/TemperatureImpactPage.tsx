@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -19,9 +19,9 @@ import {
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
-import { UNITS } from '@/lib/constants';
+import { convertTempFromSI } from '@/lib/unitConversion';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
@@ -53,6 +53,11 @@ interface BucketAvg {
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
+
+/* Wh/km -> Wh/mi conversion factor.
+   Per Phase-43/0025 precedent (no convertEfficiencyFromSI helper exists in
+   lib/unitConversion.ts), we keep the inline km-per-mile factor here. */
+const KM_PER_MILE = 1.609344;
 
 const TEMP_BUCKETS_C = [
   { min: -50, max: 0, color: '#3b82f6' },
@@ -86,12 +91,29 @@ export default function TemperatureImpactPage() {
   const { t } = useTranslation();
   usePageTitle(t('temperature.title', 'Temperature Impact'));
 
-  /* ---- unit conversion ---- */
-  const { convertTemp, tempUnit, isMiles, efficiencyUnit } = useSettings();
-  const effLabel = efficiencyUnit;
+  /* ---- unit conversion (Phase-43 SI-floor display) ----
+     Backend `/analytics/temperature-impact` emits points with:
+       outside_temp:      °C SI (from ambient_temp_c_avg)
+       efficiency_wh_km:  Wh/km (already derived in SQL)
+       distance_km:       km (already derived in SQL)
+     We convert outside_temp via convertTempFromSI (mathematically
+     identical to legacy convertTemp) and Wh/km -> Wh/mi inline using
+     KM_PER_MILE per Phase-43/0025 (no convertEfficiencyFromSI helper). */
+  const { unitPrefs } = useUnits();
+  const tempUnit = unitPrefs.temperature;
+  const isMiles = unitPrefs.distance === 'mi';
+  const effLabel = isMiles ? 'Wh/mi' : 'Wh/km';
+
+  const convertTemp = useCallback(
+    (c: number) => convertTempFromSI(c, tempUnit),
+    [tempUnit],
+  );
 
   /* Efficiency: API returns Wh/km — convert to Wh/mi if user prefers miles */
-  const toDispEff = (whKm: number): number => isMiles ? whKm * UNITS.MI_TO_KM : whKm;
+  const toDispEff = useCallback(
+    (whKm: number): number => isMiles ? whKm * KM_PER_MILE : whKm,
+    [isMiles],
+  );
 
   /* Build display bucket labels */
   const tempBuckets: BucketDef[] = useMemo(
