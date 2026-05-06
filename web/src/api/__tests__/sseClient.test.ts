@@ -218,7 +218,7 @@ describe('subscribeSignals', () => {
 
   afterEach(() => {
     if (originalEventSource) {
-      ;(globalThis as { EventSource: unknown }).EventSource = originalEventSource
+      (globalThis as { EventSource: unknown }).EventSource = originalEventSource
     } else {
       delete (globalThis as { EventSource?: unknown }).EventSource
     }

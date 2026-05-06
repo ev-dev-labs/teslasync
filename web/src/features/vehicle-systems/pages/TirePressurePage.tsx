@@ -234,7 +234,6 @@ export default function TirePressurePage() {
     // unitPrefs.pressure is the only relevant primitive dep — depending on
     // the closure-captured `toDisplayPressure` would also work but referencing
     // the primitive keeps the dep list stable for memo invalidation.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [history, unitPrefs.pressure]);
 
   /* ---- Table columns ---- */

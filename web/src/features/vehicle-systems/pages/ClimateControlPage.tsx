@@ -381,7 +381,6 @@ export default function ClimateControlPage() {
     })),
     // Track the primitive `tempUnit` instead of the closure `convertTemp`
     // so non-temperature settings churn doesn't invalidate the memo.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [chronoHistory, tempUnit],
   );
 

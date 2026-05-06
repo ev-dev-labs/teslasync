@@ -35,9 +35,10 @@ export const fleetTelemetryKeys = {
 export function useFleetTelemetryCoverage() {
   return useQuery({
     queryKey: fleetTelemetryKeys.coverage,
-    queryFn: async (): Promise<FleetTelemetryCoverageResponse> => {
+    queryFn: async ({ signal }): Promise<FleetTelemetryCoverageResponse> => {
       const raw = await request<FleetTelemetryCoverageResponse>(
         '/tesla/fleet-telemetry/coverage',
+        { signal },
       )
       return {
         categories: raw.categories ?? [],

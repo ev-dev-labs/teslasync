@@ -83,7 +83,7 @@ describe('useSignalChangeStream', () => {
   })
 
   afterEach(() => {
-    ;(global as { EventSource: unknown }).EventSource = originalEventSource
+    (global as { EventSource: unknown }).EventSource = originalEventSource
   })
 
   it('subscribes to the signal_change channel and surfaces typed events', () => {

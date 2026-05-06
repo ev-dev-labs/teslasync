@@ -210,8 +210,8 @@ function normalizeDescriptor(raw: RawAvailableResponse['signals'] extends (infer
 export function useAvailableSignals(vehicleId: number) {
   return useQuery({
     queryKey: signalKeys.available(vehicleId),
-    queryFn: async (): Promise<AvailableSignalsResponse> => {
-      const raw = await request<RawAvailableResponse>(`/signals/${vehicleId}/available`)
+    queryFn: async ({ signal }): Promise<AvailableSignalsResponse> => {
+      const raw = await request<RawAvailableResponse>(`/signals/${vehicleId}/available`, { signal })
       const signals = (raw.signals ?? []).map(normalizeDescriptor)
       return {
         vehicle_id: raw.vehicle_id,
@@ -242,8 +242,8 @@ interface RawLiveResponse {
 export function useLiveSignals(vehicleId: number) {
   return useQuery({
     queryKey: signalKeys.live(vehicleId),
-    queryFn: async (): Promise<LiveSignalsResponse> => {
-      const raw = await request<RawLiveResponse>(`/signals/${vehicleId}/live`)
+    queryFn: async ({ signal }): Promise<LiveSignalsResponse> => {
+      const raw = await request<RawLiveResponse>(`/signals/${vehicleId}/live`, { signal })
       const signals: Record<string, SignalEnvelope> = {}
       for (const [field, env] of Object.entries(raw.signals ?? {})) {
         signals[field] = normalizeEnvelope(env ?? null)
@@ -286,7 +286,7 @@ export function useSignalHistory(
   const hours = range.hours ?? 24
   return useQuery({
     queryKey: signalKeys.history(vehicleId, signalName, hours, range.from, range.to),
-    queryFn: async (): Promise<SignalHistoryResponseTyped> => {
+    queryFn: async ({ signal }): Promise<SignalHistoryResponseTyped> => {
       const usp = new URLSearchParams()
       if (range.from && range.to) {
         usp.set('from', range.from)
@@ -300,6 +300,7 @@ export function useSignalHistory(
       const qs = usp.toString()
       const raw = await request<RawHistoryResponse>(
         `/signals/${vehicleId}/${signalName}/history${qs ? `?${qs}` : ''}`,
+        { signal },
       )
       const data = (raw.data ?? []).map((row) => normalizeEnvelope(row))
       return {
