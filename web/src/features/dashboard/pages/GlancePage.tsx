@@ -20,7 +20,8 @@ import { FadeIn } from '@/components/motion';
 import { PageContainer } from '@/components/layout';
 import { useVehicles, useVehicleState, useLocationSnapshotLatest } from '@/api/hooks/useVehicles';
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber } from '@/lib/numberFormat';
 import { batteryColor, COLOR } from '@/lib/colors';
@@ -96,7 +97,7 @@ export default function GlancePage() {
 
   const { data: location } = useLocationSnapshotLatest(vehicleId, 30_000);
 
-  const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings();
+  const { unitPrefs } = useUnits();
   const sendCommand = useVehicleCommand();
 
   const isOnline = state?.state === 'online' || state?.state === 'parked';
@@ -158,7 +159,7 @@ export default function GlancePage() {
                 label={t('glance.range', 'Range')}
                 value={
                   state?.rated_range != null
-                    ? `${fmtNumber(convertDistance(state.rated_range), 0)} ${distanceUnit}`
+                    ? `${fmtNumber(convertDistanceFromSI(state.rated_range, unitPrefs.distance), 0)} ${unitPrefs.distance}`
                     : '—'
                 }
                 icon={<Battery className="h-4 w-4" />}
@@ -169,7 +170,7 @@ export default function GlancePage() {
                 label={t('glance.temp', 'Interior')}
                 value={
                   state?.inside_temp != null
-                    ? `${fmtNumber(convertTemp(state.inside_temp), 1)}${tempUnit}`
+                    ? `${fmtNumber(convertTempFromSI(state.inside_temp, unitPrefs.temperature), 1)}${unitPrefs.temperature}`
                     : '—'
                 }
                 icon={<Thermometer className="h-4 w-4" />}
