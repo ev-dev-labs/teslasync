@@ -239,6 +239,18 @@ export function useMQTTStatus() {
 
 // ─── Typed Signal Hooks (Phase 6 endpoints) ──────────────────────────────────
 
+/**
+ * Phase-42 / Prompt 0077 — DEPRECATED. The backend `/signals/catalog`
+ * route was deleted alongside `signal_catalog_handler.go`; the typed
+ * `signal_log` pipeline (migrations 000167+) plus
+ * `internal/api/signal_handler.go`'s `/signals/{vehicleID}/available`
+ * endpoint are now the authoritative catalog surface. This hook will
+ * reliably 404 in production. Kept (not removed) because the
+ * `features/dashboard` SignalCatalogWidget still imports it; its UI
+ * surfaces the resulting query error gracefully. A future replacement
+ * should source the catalog from `useSignals()` (via `/available`) or
+ * from `protomodel.Signals` exposed through a new endpoint.
+ */
 export function useSignalCatalog() {
   return useQuery({
     queryKey: ['signal-catalog'],
@@ -247,6 +259,17 @@ export function useSignalCatalog() {
   });
 }
 
+/**
+ * Phase-42 / Prompt 0077 — DEPRECATED. The backend `/signals/observations`
+ * route was deleted alongside `signal_catalog_handler.go`. See
+ * `useSignalCatalog` for the deletion rationale and migration plan. This
+ * hook will reliably 404 in production. Kept (not removed) because
+ * features outside the telemetry domain (charging PowersharePage,
+ * driving dynamics components, dashboard widgets) still call it; their
+ * UI surfaces the resulting query error gracefully. A future replacement
+ * should derive observations from `useSignalHistory` per-signal time-series
+ * queries against `signal_log`.
+ */
 export function useSignalObservations(
   vehicleId: number | string | undefined,
   opts?: { signal_name?: string; since?: string; until?: string; limit?: number },
