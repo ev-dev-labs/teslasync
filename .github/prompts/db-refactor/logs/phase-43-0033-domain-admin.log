@@ -1,0 +1,1068 @@
+=== PREFLIGHT ===
+Predecessor: phase-43-0032-domain-notifications.log
+Predecessor STATUS=DONE EXIT=0 — verified by tail.
+Scope: features/admin/** (16 .tsx pages incl. tests; 14 production pages),
+useAdmin.ts (~22 hooks), i18n/en.json (no new keys this prompt).
+Gate baseline page count: 9 (stale phase-43 plan figure); current count
+14 production + 4 test = 18 .tsx files recursive — well above the
+regression threshold, so the gate's "must NOT delete pages" check is
+satisfied with margin.
+
+Surface inventory (production pages):
+  AdminPage.tsx          (359 lines) — system health + audit + apikeys + maintenance
+  APIKeysPage.tsx        (242 lines) — API-key CRUD
+  ApiLogsPage.tsx        (490 lines) — API call log list + stats
+  ApiPlaygroundPage.tsx  (371 lines) — interactive request builder
+  BackupRestorePage.tsx  (930 lines) — backup configs + runs + restore
+  DevToolsPage.tsx        (63 lines) — dev tooling shell
+  FeedbackQueuePage.tsx  (400 lines) — admin feedback queue
+  FleetAPIPage.tsx       (330 lines) — Tesla Fleet API polling config
+  LiveLogsPage.tsx       (646 lines) — live SSE log tail
+  RbacMatrixPage.tsx     (467 lines) — RBAC matrix viewer
+  RedisSignalViewerPage  (380 lines) — raw Redis HSET signal viewer
+  SecurityAccessPage.tsx (173 lines) — security event timeline
+  SystemPage.tsx          (51 lines) — system page shell
+  UsersPage.tsx           (98 lines) — user list
+
+Backend route audit for useAdmin.ts URLs (router.go cross-reference):
+  /api-keys                                 router.go:1486   ALIVE
+  /api-keys/{id} (DELETE)                   router.go:1491   ALIVE (sudo)
+  /api-keys/{id}/revoke (POST)              router.go:1492   ALIVE (sudo)
+  /api-logs?page=&limit=                    router.go:1467   ALIVE
+  /api-logs/stats                           router.go:1469   ALIVE
+  /backup/configs                           router.go:1793   ALIVE
+  /backup/runs                              router.go:1801   ALIVE
+  /system/health                            router.go:543    ALIVE
+  /admin/maintenance (GET/POST)             router.go:1515   ALIVE
+  /system/audit                             router.go:1409   ALIVE
+  /admin/web-errors/summary                 router.go:1503   ALIVE
+  /security?vehicle_id=                     router.go:1223   ALIVE
+  /dev-tools/db-stats                       router.go:1608   ALIVE
+  /dev-tools/migration-status               router.go:1609   ALIVE
+  /dev-tools/runtime-info                   router.go:1612   ALIVE
+  /export/jobs                              router.go:1822   ALIVE
+  /exports (POST)                           router.go:1881   ALIVE
+  /vehicles/{vehicleID}/state               router.go:740    ALIVE
+  /vehicle-states/timeline?vehicle_id=&days= DELETED by Phase-42/0077 — DEAD
+
+SI-conversion audit across features/admin/**:
+  grep useSettings|convertDistance|convertTemp|convertSpeed|convertPressure|
+       convertEnergy|miles_to|temp_c|temp_f|speed_mph|battery_temp|
+       inside_temp|outside_temp|charge_rate|distance_mi|range_km|range_mi|
+       odometer
+  Hits — all FALSE POSITIVES on inspection:
+    AdminPage.tsx:26          useRefreshAuth from '@/api/hooks/useSettings'
+                              — admin auth-refresh helper from the API hook
+                              file, NOT user-pref `useSettings()` from
+                              '@/hooks/useSettings'. No SI conversion.
+    FleetAPIPage.tsx:22       `useSettings` from '@/api/hooks/useSettings'
+                              fetches system polling config (telemetry
+                              flags), not user-pref unit choices. The
+                              "odometer/locks/doors" strings on lines 77
+                              and 87 are i18n labels describing Tesla
+                              Fleet API endpoints — not actual rendering
+                              of vehicle telemetry values.
+    RedisSignalViewerPage.tsx:35  /^(vehicle|odometer|latitude|longitude|gps)/
+                              — categorises raw signal NAMES into
+                              "Driving" group; no value conversion.
+
+Conclusion: NO-OP port for SI conversion. Admin pages are infrastructure /
+control surfaces (system health, audit logs, API keys, backup configs,
+dev tools, request builder, log viewers, RBAC matrix, signal viewer,
+security events). They render bytes (file_size), milliseconds
+(duration_ms), HTTP counts, status enums, JSON payloads, and timestamps
+— none of which are physical-unit quantities that need °C↔°F or m↔mi
+conversion. Same outcome pattern as Phase-43/0024 (telemetry),
+Phase-43/0031 (automations), and Phase-43/0032 (notifications).
+
+=== HOOK_PORT ===
+useAdmin.ts (web/src/api/hooks/useAdmin.ts):
+
+CHANGE 1: useStateTimeline marked @deprecated.
+  Phase-42 / Prompt 0077 removed the `/vehicle-states/timeline` route
+  alongside the `vehicle_states` table drop. Endpoint now returns 404.
+  Hook retained because the out-of-scope dashboard widget
+  `features/dashboard/widgets/DashboardStatsWidget.tsx` still imports
+  it; useQuery surfaces the 404 gracefully via `error` per ADR-005 #1.
+  A future replacement should derive state-duration timelines from the
+  canonical `fsm_transitions` table instead.
+  Locked-policy continuation from Phase-43 prompts 0023 + 0024 + 0025 +
+  0026 + 0027 + 0029 + 0030 + 0031 + 0032.
+
+NO OTHER HOOK CHANGES. Justification:
+  - All other URLs verified ALIVE against router.go (see PREFLIGHT).
+  - All URLs already conform to no-`/api/v1/`-prefix rule (auto-prefixed
+    by request() in api/client.ts).
+  - All query params already snake_case (vehicle_id, page, limit, days).
+  - Hook return types use legacy interfaces from `@/types/admin` (not
+    `@/api/types`) because the api/types.ts variants are STRUCTURALLY
+    DIFFERENT shapes: legacy uses camelCase + Date|null while api/types
+    uses snake_case + different field sets (e.g. APICallLog gains `ts`,
+    `service`, `http_method`, `endpoint`, `status_code`, `duration_ms`,
+    `error_message`, `rate_limited` — vs legacy `id`, `method`, `url`,
+    `statusCode`, `durationMs`, `requestBody`, `responseBody`, `error`,
+    `createdAt`). Switching the hook to api/types would break every
+    in-scope page (AdminPage, APIKeysPage, ApiLogsPage, BackupRestore,
+    SecurityAccessPage, MaintenanceModePanel) AND every out-of-scope
+    consumer (12 dashboard widgets + system pages + MaintenanceBanner)
+    on field-access TS errors. The locked-policy precedent applies:
+    when api/types reconciliation would break runtime field access on
+    out-of-scope consumers, defer the type unification to a coordinated
+    cross-cutting prompt rather than break callers in this scope.
+  - At runtime, `camelCaseKeys` in lib/resilience.ts:19-34 retains BOTH
+    snake_case (Go JSON tag) AND camelCase variants on every response
+    object, so the legacy camelCase types match wire shape exactly.
+
+=== PAGE_PORT ===
+NO PAGE SOURCE EDITS. Justification per page (in-scope features/admin/):
+
+  AdminPage.tsx — Renders system health status, component count, DB
+    size string ("X MB"), table count, audit log search, API-key list,
+    maintenance panel. All values are infrastructure metadata. No SI
+    quantities. Imports `useRefreshAuth` from useSettings (admin-auth
+    helper) — NOT user-pref `useSettings()`. No SI conversion needed.
+
+  APIKeysPage.tsx — CRUD over /api-keys; renders name, permission
+    badges, masked key prefix, expires_at date. No SI quantities.
+
+  ApiLogsPage.tsx — Renders API call log entries (method, URL, status
+    code, duration_ms, request/response body) and stats (totals, error
+    rate, average duration). No SI quantities.
+
+  ApiPlaygroundPage.tsx — Interactive request builder; renders raw
+    JSON request/response payloads. No SI quantities.
+
+  BackupRestorePage.tsx — CRUD over /backup/configs and /backup/runs;
+    renders backup type, frequency days, retention count, file_size
+    in bytes, duration_ms. No SI quantities.
+
+  DevToolsPage.tsx — Tooling shell hosting per-tool sub-components
+    (HashCalculator, JsonFormatter, RegexTester, etc.). No SI
+    quantities at the page level.
+
+  FeedbackQueuePage.tsx — Renders admin feedback rows (subject, body,
+    submitter, status). No SI quantities.
+
+  FleetAPIPage.tsx — Polling-config toggles for Tesla Fleet API
+    endpoints. The "odometer/locks/doors" strings are i18n LABELS
+    describing endpoint coverage, not telemetry values. No SI
+    quantities.
+
+  LiveLogsPage.tsx — SSE log tail viewer. Renders log lines as raw
+    text. No SI quantities.
+
+  RbacMatrixPage.tsx — Permission matrix grid. No SI quantities.
+
+  RedisSignalViewerPage.tsx — Raw Redis HSET viewer for live signals.
+    The signal-NAME prefix regex categorises (Driving/Battery/Climate/
+    etc.) but does NOT convert signal VALUES — the viewer is a debug
+    tool that shows raw stored values verbatim. SI conversion would
+    actually be HARMFUL here (would obscure the wire data the operator
+    is debugging).
+
+  SecurityAccessPage.tsx — Renders security-event timeline (locked,
+    sentry_mode, door/window state, lights, etc.). All boolean / enum
+    values. No SI quantities.
+
+  SystemPage.tsx — Page shell. No SI quantities.
+
+  UsersPage.tsx — User list with email + ForwardAuth subject. No SI
+    quantities.
+
+NO `=== UNPORTABLE ===` block — every page is portable AS-IS because
+no SI conversion is applicable.
+
+=== I18N ===
+NO i18n CHANGES. No new strings introduced (no page edits). Existing
+i18n keys preserved per never-delete-keys rule from Phase-43 prompt
+0002.
+
+=== AUDIT ===
+Prohibited-pattern grep over the SOLE changed file
+(web/src/api/hooks/useAdmin.ts):
+  inline style with var(--…)        : 0 hits
+  raw HTML (button/input/textarea/select/table) : 0 hits (hook file)
+  direct recharts import            : 0 hits
+  direct react-leaflet import       : 0 hits
+  /api/v1/ in hook URL              : 0 hits
+Audit clean.
+
+=== GATE ===
+Page count baseline=9 current=17
+Changed files for audit:
+  - web/src/api/hooks/useAdmin.ts
+=== TSC ===
+TSC exit=0
+=== BUILD ===
+
+> teslasync-web@2.0.0 prebuild
+> node scripts/buildChangelog.mjs
+
+[buildChangelog] Wrote 6 release(s) (latest: 0.7.0) ΓåÆ .\web\src\generated\changelog.ts
+
+> teslasync-web@2.0.0 build
+> tsc && vite build
+
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 4100 modules transformed.
+Export "SearchInput" of module "src/components/forms/SearchInput.tsx" was reexported through module "src/components/forms/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/features/charging/components/charging-list/SessionListSection.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "SavedViewMenu" of module "src/components/data-display/SavedViewMenu.tsx" was reexported through module "src/components/data-display/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/features/charging/pages/ChargingListPage.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "SavedViewMenu" of module "src/components/data-display/SavedViewMenu.tsx" was reexported through module "src/components/data-display/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/features/charging/pages/CostAnalysisPage.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "SearchInput" of module "src/components/forms/SearchInput.tsx" was reexported through module "src/components/forms/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/features/charging/pages/TeslaChargingHistoryPage.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "UnitInput" of module "src/components/forms/UnitInput.tsx" was reexported through module "src/components/forms/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/features/charging/pages/SmartChargePage.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "SavedViewMenu" of module "src/components/data-display/SavedViewMenu.tsx" was reexported through module "src/components/data-display/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/features/trips/pages/TripListPage.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "SavedViewMenu" of module "src/components/data-display/SavedViewMenu.tsx" was reexported through module "src/components/data-display/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/features/battery/pages/EnergyPage.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "SavedViewMenu" of module "src/components/data-display/SavedViewMenu.tsx" was reexported through module "src/components/data-display/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/features/analytics/pages/StatisticsPage.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "SearchInput" of module "src/components/forms/SearchInput.tsx" was reexported through module "src/components/forms/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/features/maps/pages/LocationsPage.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "SearchInput" of module "src/components/forms/SearchInput.tsx" was reexported through module "src/components/forms/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/features/maps/pages/GeofencesPage.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "SearchInput" of module "src/components/forms/SearchInput.tsx" was reexported through module "src/components/forms/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/features/notifications/pages/AlertsPage.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "SearchInput" of module "src/components/forms/SearchInput.tsx" was reexported through module "src/components/forms/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/features/notifications/pages/AlertStudioPage.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "SearchInput" of module "src/components/forms/SearchInput.tsx" was reexported through module "src/components/forms/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/features/notifications/components/NotificationFilterBar.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "SavedViewMenu" of module "src/components/data-display/SavedViewMenu.tsx" was reexported through module "src/components/data-display/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/features/telemetry/pages/SignalDiffPage.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "SearchInput" of module "src/components/forms/SearchInput.tsx" was reexported through module "src/components/forms/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/features/admin/pages/AdminPage.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "CurrencyInput" of module "src/components/forms/CurrencyInput.tsx" was reexported through module "src/components/forms/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/features/settings/components/GeneralSettings.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+rendering chunks...
+[plugin:vite:reporter] [plugin vite:reporter] 
+(!) D:/repos/teslasync/web/src/lib/webVitalsReporter.ts is dynamically imported by D:/repos/teslasync/web/src/main.tsx but also statically imported by D:/repos/teslasync/web/src/components/feedback/CookieConsentBanner.tsx, dynamic import will not move module into another chunk.
+
+computing gzip size...
+[2mdist/[22m[32mmanifest.webmanifest                                 [39m[1m[2m  0.83 kB[22m[1m[22m
+[2mdist/[22m[32massets/spritesheet-DpIxuf5L.svg                      [39m[1m[2m  5.55 kB[22m[1m[22m[2m Γöé gzip:   1.67 kB[22m
+[2mdist/[22m[32mindex.html                                           [39m[1m[2m  5.82 kB[22m[1m[22m[2m Γöé gzip:   2.11 kB[22m
+[2mdist/[22m[35massets/DashboardPage-DULRuONn.css                    [39m[1m[2m  3.75 kB[22m[1m[22m[2m Γöé gzip:   0.97 kB[22m
+[2mdist/[22m[35massets/leaflet-DtiRVher.css                          [39m[1m[2m 28.65 kB[22m[1m[22m[2m Γöé gzip:  12.91 kB[22m
+[2mdist/[22m[35massets/index-021MGKUp.css                            [39m[1m[2m151.93 kB[22m[1m[22m[2m Γöé gzip:  24.81 kB[22m
+[2mdist/[22m[36massets/errorMessage-y8yGOCqp.js                      [39m[1m[2m  0.17 kB[22m[1m[22m[2m Γöé gzip:   0.16 kB[22m[2m Γöé map:     0.67 kB[22m
+[2mdist/[22m[36massets/usePageTitle-p2iR47Xq.js                      [39m[1m[2m  0.25 kB[22m[1m[22m[2m Γöé gzip:   0.23 kB[22m[2m Γöé map:     1.19 kB[22m
+[2mdist/[22m[36massets/useChartPalette-BiSm31Ef.js                   [39m[1m[2m  0.31 kB[22m[1m[22m[2m Γöé gzip:   0.25 kB[22m[2m Γöé map:     2.32 kB[22m
+[2mdist/[22m[36massets/useFilteredList-BvS6KSse.js                   [39m[1m[2m  0.33 kB[22m[1m[22m[2m Γöé gzip:   0.26 kB[22m[2m Γöé map:     2.08 kB[22m
+[2mdist/[22m[36massets/useAnomalies-vHh-_5KW.js                      [39m[1m[2m  0.34 kB[22m[1m[22m[2m Γöé gzip:   0.28 kB[22m[2m Γöé map:     1.51 kB[22m
+[2mdist/[22m[36massets/signalObservation-B7fm7VfI.js                 [39m[1m[2m  0.34 kB[22m[1m[22m[2m Γöé gzip:   0.19 kB[22m[2m Γöé map:     1.25 kB[22m
+[2mdist/[22m[36massets/types-q7bOeGD4.js                             [39m[1m[2m  0.36 kB[22m[1m[22m[2m Γöé gzip:   0.28 kB[22m[2m Γöé map:    86.38 kB[22m
+[2mdist/[22m[36massets/useCommands-D3O24iBO.js                       [39m[1m[2m  0.40 kB[22m[1m[22m[2m Γöé gzip:   0.31 kB[22m[2m Γöé map:     1.94 kB[22m
+[2mdist/[22m[36massets/StaggerContainer-DbLh9dz7.js                  [39m[1m[2m  0.41 kB[22m[1m[22m[2m Γöé gzip:   0.30 kB[22m[2m Γöé map:     1.36 kB[22m
+[2mdist/[22m[36massets/StaggerItem-DJtxhW-x.js                       [39m[1m[2m  0.42 kB[22m[1m[22m[2m Γöé gzip:   0.31 kB[22m[2m Γöé map:     1.40 kB[22m
+[2mdist/[22m[36massets/FadeIn-DtsCuQa1.js                            [39m[1m[2m  0.44 kB[22m[1m[22m[2m Γöé gzip:   0.32 kB[22m[2m Γöé map:     1.52 kB[22m
+[2mdist/[22m[36massets/chartDefaults-CFb3QXOr.js                     [39m[1m[2m  0.44 kB[22m[1m[22m[2m Γöé gzip:   0.32 kB[22m[2m Γöé map:     1.63 kB[22m
+[2mdist/[22m[36massets/IconBox-CMfsDctr.js                           [39m[1m[2m  0.44 kB[22m[1m[22m[2m Γöé gzip:   0.33 kB[22m[2m Γöé map:     1.41 kB[22m
+[2mdist/[22m[36massets/ChartBrush-BndEvL2Z.js                        [39m[1m[2m  0.44 kB[22m[1m[22m[2m Γöé gzip:   0.29 kB[22m[2m Γöé map:     2.38 kB[22m
+[2mdist/[22m[36massets/Currency-DDW9PntY.js                          [39m[1m[2m  0.44 kB[22m[1m[22m[2m Γöé gzip:   0.34 kB[22m[2m Γöé map:     2.47 kB[22m
+[2mdist/[22m[36massets/ChartAnnotationLayer-BcwvnXhS.js              [39m[1m[2m  0.44 kB[22m[1m[22m[2m Γöé gzip:   0.33 kB[22m[2m Γöé map:     1.59 kB[22m
+[2mdist/[22m[36massets/Grid-CLSVDA16.js                              [39m[1m[2m  0.47 kB[22m[1m[22m[2m Γöé gzip:   0.32 kB[22m[2m Γöé map:     1.55 kB[22m
+[2mdist/[22m[36massets/InlineMetric-DfXg1YtW.js                      [39m[1m[2m  0.48 kB[22m[1m[22m[2m Γöé gzip:   0.31 kB[22m[2m Γöé map:     1.21 kB[22m
+[2mdist/[22m[36massets/FormSection-Cpd7N8fU.js                       [39m[1m[2m  0.50 kB[22m[1m[22m[2m Γöé gzip:   0.32 kB[22m[2m Γöé map:     1.34 kB[22m
+[2mdist/[22m[36massets/parseEnums-BCxfx60s.js                        [39m[1m[2m  0.50 kB[22m[1m[22m[2m Γöé gzip:   0.29 kB[22m[2m Γöé map:     4.53 kB[22m
+[2mdist/[22m[36massets/routeMeta-1G_Hm1hh.js                         [39m[1m[2m  0.54 kB[22m[1m[22m[2m Γöé gzip:   0.33 kB[22m[2m Γöé map:     3.09 kB[22m
+[2mdist/[22m[36massets/Skeleton-DAh89og1.js                          [39m[1m[2m  0.57 kB[22m[1m[22m[2m Γöé gzip:   0.36 kB[22m[2m Γöé map:     1.67 kB[22m
+[2mdist/[22m[36massets/chartUtils-2ruGOeua.js                        [39m[1m[2m  0.59 kB[22m[1m[22m[2m Γöé gzip:   0.39 kB[22m[2m Γöé map:     1.70 kB[22m
+[2mdist/[22m[36massets/KVList-eUn5N9Cc.js                            [39m[1m[2m  0.61 kB[22m[1m[22m[2m Γöé gzip:   0.38 kB[22m[2m Γöé map:     1.40 kB[22m
+[2mdist/[22m[36massets/useDirtyForm-DvXTHWsO.js                      [39m[1m[2m  0.62 kB[22m[1m[22m[2m Γöé gzip:   0.39 kB[22m[2m Γöé map:     3.52 kB[22m
+[2mdist/[22m[36massets/AnimatedNumber-CE4Gg2Sl.js                    [39m[1m[2m  0.62 kB[22m[1m[22m[2m Γöé gzip:   0.43 kB[22m[2m Γöé map:     2.52 kB[22m
+[2mdist/[22m[36massets/useFSM-CEcaktNp.js                            [39m[1m[2m  0.65 kB[22m[1m[22m[2m Γöé gzip:   0.39 kB[22m[2m Γöé map:     2.35 kB[22m
+[2mdist/[22m[36massets/MiniChart-zQY9DNor.js                         [39m[1m[2m  0.68 kB[22m[1m[22m[2m Γöé gzip:   0.47 kB[22m[2m Γöé map:     2.32 kB[22m
+[2mdist/[22m[36massets/TabNav-C7efQ7F_.js                            [39m[1m[2m  0.74 kB[22m[1m[22m[2m Γöé gzip:   0.49 kB[22m[2m Γöé map:     1.58 kB[22m
+[2mdist/[22m[36massets/StatusBadge-hsHDwnB1.js                       [39m[1m[2m  0.74 kB[22m[1m[22m[2m Γöé gzip:   0.47 kB[22m[2m Γöé map:     1.91 kB[22m
+[2mdist/[22m[36massets/TimeStamp-C4d3Y7Wa.js                         [39m[1m[2m  0.74 kB[22m[1m[22m[2m Γöé gzip:   0.44 kB[22m[2m Γöé map:     3.83 kB[22m
+[2mdist/[22m[36massets/useTrips-awqoswIL.js                          [39m[1m[2m  0.76 kB[22m[1m[22m[2m Γöé gzip:   0.44 kB[22m[2m Γöé map:     3.04 kB[22m
+[2mdist/[22m[36massets/WidgetMapView-CnbEFhA_.js                     [39m[1m[2m  0.78 kB[22m[1m[22m[2m Γöé gzip:   0.49 kB[22m[2m Γöé map:     2.12 kB[22m
+[2mdist/[22m[36massets/useConfirm-BsLGpEGz.js                        [39m[1m[2m  0.79 kB[22m[1m[22m[2m Γöé gzip:   0.43 kB[22m[2m Γöé map:     5.29 kB[22m
+[2mdist/[22m[36massets/WidgetStatGrid-Bwaz_hxk.js                    [39m[1m[2m  0.80 kB[22m[1m[22m[2m Γöé gzip:   0.50 kB[22m[2m Γöé map:     2.89 kB[22m
+[2mdist/[22m[36massets/NoVehicleSelected-DtR0smMV.js                 [39m[1m[2m  0.81 kB[22m[1m[22m[2m Γöé gzip:   0.48 kB[22m[2m Γöé map:     2.99 kB[22m
+[2mdist/[22m[36massets/PrintButton-BL-oQo6B.js                       [39m[1m[2m  0.83 kB[22m[1m[22m[2m Γöé gzip:   0.55 kB[22m[2m Γöé map:     4.55 kB[22m
+[2mdist/[22m[36massets/Sparkline-Jcw_Bi13.js                         [39m[1m[2m  0.83 kB[22m[1m[22m[2m Γöé gzip:   0.52 kB[22m[2m Γöé map:     2.35 kB[22m
+[2mdist/[22m[36massets/useLocations-Brf1GyM7.js                      [39m[1m[2m  0.85 kB[22m[1m[22m[2m Γöé gzip:   0.49 kB[22m[2m Γöé map:     4.71 kB[22m
+[2mdist/[22m[36massets/MetricBar-CsdHFV--.js                         [39m[1m[2m  0.87 kB[22m[1m[22m[2m Γöé gzip:   0.53 kB[22m[2m Γöé map:     2.06 kB[22m
+[2mdist/[22m[36massets/vehicleIcon-b8l3fisK.js                       [39m[1m[2m  0.87 kB[22m[1m[22m[2m Γöé gzip:   0.46 kB[22m[2m Γöé map:     1.60 kB[22m
+[2mdist/[22m[36massets/SeverityBadge-Dpqddy_9.js                     [39m[1m[2m  0.87 kB[22m[1m[22m[2m Γöé gzip:   0.54 kB[22m[2m Γöé map:     3.44 kB[22m
+[2mdist/[22m[36massets/ChartLegend-BJpb-H3l.js                       [39m[1m[2m  0.91 kB[22m[1m[22m[2m Γöé gzip:   0.56 kB[22m[2m Γöé map:     5.01 kB[22m
+[2mdist/[22m[36massets/WidgetChartSummary-WoTiiOMq.js                [39m[1m[2m  0.94 kB[22m[1m[22m[2m Γöé gzip:   0.51 kB[22m[2m Γöé map:     2.70 kB[22m
+[2mdist/[22m[36massets/_ErrorState-DAnYKcpy.js                       [39m[1m[2m  0.97 kB[22m[1m[22m[2m Γöé gzip:   0.53 kB[22m[2m Γöé map:     3.57 kB[22m
+[2mdist/[22m[36massets/SectionErrorBoundary-DIaqd9ZN.js              [39m[1m[2m  0.99 kB[22m[1m[22m[2m Γöé gzip:   0.54 kB[22m[2m Γöé map:     3.53 kB[22m
+[2mdist/[22m[36massets/PageSkeleton-DDSrphOT.js                      [39m[1m[2m  1.01 kB[22m[1m[22m[2m Γöé gzip:   0.49 kB[22m[2m Γöé map:     5.12 kB[22m
+[2mdist/[22m[36massets/useSharing-CPO2iJxP.js                        [39m[1m[2m  1.04 kB[22m[1m[22m[2m Γöé gzip:   0.51 kB[22m[2m Γöé map:     4.03 kB[22m
+[2mdist/[22m[36massets/useBulkSelection-BtU_a9w1.js                  [39m[1m[2m  1.04 kB[22m[1m[22m[2m Γöé gzip:   0.53 kB[22m[2m Γöé map:     7.35 kB[22m
+[2mdist/[22m[36massets/WidgetGaugeHero-CFpiXHyA.js                   [39m[1m[2m  1.05 kB[22m[1m[22m[2m Γöé gzip:   0.55 kB[22m[2m Γöé map:     2.65 kB[22m
+[2mdist/[22m[36massets/WidgetDetailCard-D3Qd71gn.js                  [39m[1m[2m  1.08 kB[22m[1m[22m[2m Γöé gzip:   0.64 kB[22m[2m Γöé map:     3.46 kB[22m
+[2mdist/[22m[36massets/AnimatedMarker-Cq7ElZNn.js                    [39m[1m[2m  1.10 kB[22m[1m[22m[2m Γöé gzip:   0.65 kB[22m[2m Γöé map:     3.39 kB[22m
+[2mdist/[22m[36massets/MapLayerSwitcher-BHyLoKai.js                  [39m[1m[2m  1.11 kB[22m[1m[22m[2m Γöé gzip:   0.65 kB[22m[2m Γöé map:     2.99 kB[22m
+[2mdist/[22m[36massets/CopyButton-CNUYpl46.js                        [39m[1m[2m  1.14 kB[22m[1m[22m[2m Γöé gzip:   0.66 kB[22m[2m Γöé map:     5.78 kB[22m
+[2mdist/[22m[36massets/WidgetBigNumber-gD-ZPMEr.js                   [39m[1m[2m  1.18 kB[22m[1m[22m[2m Γöé gzip:   0.60 kB[22m[2m Γöé map:     3.03 kB[22m
+[2mdist/[22m[36massets/useUnits-CSnnDExK.js                          [39m[1m[2m  1.20 kB[22m[1m[22m[2m Γöé gzip:   0.63 kB[22m[2m Γöé map:     9.16 kB[22m
+[2mdist/[22m[36massets/csvExport-Z1QrD2fo.js                         [39m[1m[2m  1.22 kB[22m[1m[22m[2m Γöé gzip:   0.73 kB[22m[2m Γöé map:     7.02 kB[22m
+[2mdist/[22m[36massets/RadialGauge-DTLZOQCu.js                       [39m[1m[2m  1.24 kB[22m[1m[22m[2m Γöé gzip:   0.66 kB[22m[2m Γöé map:     3.81 kB[22m
+[2mdist/[22m[36massets/StatCard-BEa_5uCI.js                          [39m[1m[2m  1.25 kB[22m[1m[22m[2m Γöé gzip:   0.56 kB[22m[2m Γöé map:     3.12 kB[22m
+[2mdist/[22m[36massets/WidgetTipCards-CGxYn1un.js                    [39m[1m[2m  1.29 kB[22m[1m[22m[2m Γöé gzip:   0.71 kB[22m[2m Γöé map:     3.91 kB[22m
+[2mdist/[22m[36massets/Timeline-C3W4d37G.js                          [39m[1m[2m  1.34 kB[22m[1m[22m[2m Γöé gzip:   0.62 kB[22m[2m Γöé map:     3.25 kB[22m
+[2mdist/[22m[36massets/devtools-BPD6yttI.js                          [39m[1m[2m  1.37 kB[22m[1m[22m[2m Γöé gzip:   0.66 kB[22m[2m Γöé map:    10.91 kB[22m
+[2mdist/[22m[36massets/useWatch-BY540ttX.js                          [39m[1m[2m  1.39 kB[22m[1m[22m[2m Γöé gzip:   0.73 kB[22m[2m Γöé map:     5.46 kB[22m
+[2mdist/[22m[36massets/FreshnessIndicator-Dty7TL4n.js                [39m[1m[2m  1.39 kB[22m[1m[22m[2m Γöé gzip:   0.79 kB[22m[2m Γöé map:     6.42 kB[22m
+[2mdist/[22m[36massets/DateTime-CEFYsc-2.js                          [39m[1m[2m  1.43 kB[22m[1m[22m[2m Γöé gzip:   0.77 kB[22m[2m Γöé map:     9.12 kB[22m
+[2mdist/[22m[36massets/PinButton-B67Cfy5Y.js                         [39m[1m[2m  1.45 kB[22m[1m[22m[2m Γöé gzip:   0.83 kB[22m[2m Γöé map:     5.47 kB[22m
+[2mdist/[22m[36massets/WidgetStatusGrid-BOkdJ-LP.js                  [39m[1m[2m  1.49 kB[22m[1m[22m[2m Γöé gzip:   0.73 kB[22m[2m Γöé map:     4.38 kB[22m
+[2mdist/[22m[36massets/HelpTooltip-QcgwBJaT.js                       [39m[1m[2m  1.51 kB[22m[1m[22m[2m Γöé gzip:   0.78 kB[22m[2m Γöé map:     5.92 kB[22m
+[2mdist/[22m[36massets/Tabs-CjeaDE_X.js                              [39m[1m[2m  1.51 kB[22m[1m[22m[2m Γöé gzip:   0.85 kB[22m[2m Γöé map:     5.69 kB[22m
+[2mdist/[22m[36massets/MetricCard-DRvBtIVD.js                        [39m[1m[2m  1.53 kB[22m[1m[22m[2m Γöé gzip:   0.80 kB[22m[2m Γöé map:     5.00 kB[22m
+[2mdist/[22m[36massets/useGuard-BSSzbylz.js                          [39m[1m[2m  1.53 kB[22m[1m[22m[2m Γöé gzip:   0.64 kB[22m[2m Γöé map:     7.52 kB[22m
+[2mdist/[22m[36massets/WidgetRankedList-BQ8Z5ENE.js                  [39m[1m[2m  1.57 kB[22m[1m[22m[2m Γöé gzip:   0.87 kB[22m[2m Γöé map:     5.29 kB[22m
+[2mdist/[22m[36massets/DriveScoreWidget-D9vOe0P8.js                  [39m[1m[2m  1.79 kB[22m[1m[22m[2m Γöé gzip:   1.01 kB[22m[2m Γöé map:     3.84 kB[22m
+[2mdist/[22m[36massets/BatteryGaugeWidget-Bi7pUvtp.js                [39m[1m[2m  1.81 kB[22m[1m[22m[2m Γöé gzip:   1.00 kB[22m[2m Γöé map:     3.60 kB[22m
+[2mdist/[22m[36massets/Spinner-BRt3bxmE.js                           [39m[1m[2m  1.82 kB[22m[1m[22m[2m Γöé gzip:   0.87 kB[22m[2m Γöé map:     4.31 kB[22m
+[2mdist/[22m[36massets/RangeEstimateWidget-CbDkdEUR.js               [39m[1m[2m  1.84 kB[22m[1m[22m[2m Γöé gzip:   0.89 kB[22m[2m Γöé map:     3.96 kB[22m
+[2mdist/[22m[36massets/useVehicleSystems-DtfTXHoz.js                 [39m[1m[2m  1.92 kB[22m[1m[22m[2m Γöé gzip:   0.59 kB[22m[2m Γöé map:     7.11 kB[22m
+[2mdist/[22m[36massets/SourceLayerBadge-Dx3ozvs0.js                  [39m[1m[2m  1.97 kB[22m[1m[22m[2m Γöé gzip:   0.96 kB[22m[2m Γöé map:     5.70 kB[22m
+[2mdist/[22m[36massets/AlertFeedWidget-Mi3CZ2Kp.js                   [39m[1m[2m  2.03 kB[22m[1m[22m[2m Γöé gzip:   1.08 kB[22m[2m Γöé map:     4.46 kB[22m
+[2mdist/[22m[36massets/WidgetEventFeed-BynpzlIu.js                   [39m[1m[2m  2.05 kB[22m[1m[22m[2m Γöé gzip:   1.03 kB[22m[2m Γöé map:     6.65 kB[22m
+[2mdist/[22m[36massets/useAnalytics-ESZNEsoV.js                      [39m[1m[2m  2.11 kB[22m[1m[22m[2m Γöé gzip:   0.68 kB[22m[2m Γöé map:     9.94 kB[22m
+[2mdist/[22m[36massets/BulkActionsToolbar-xFmf3ohJ.js                [39m[1m[2m  2.12 kB[22m[1m[22m[2m Γöé gzip:   1.06 kB[22m[2m Γöé map:     8.79 kB[22m
+[2mdist/[22m[36massets/colors-C4-zC4vu.js                            [39m[1m[2m  2.12 kB[22m[1m[22m[2m Γöé gzip:   1.17 kB[22m[2m Γöé map:    15.94 kB[22m
+[2mdist/[22m[36massets/QuickNavWidget-BtdQm235.js                    [39m[1m[2m  2.14 kB[22m[1m[22m[2m Γöé gzip:   0.99 kB[22m[2m Γöé map:     4.01 kB[22m
+[2mdist/[22m[36massets/LiveStaleDataBanner-BAbLNuJj.js               [39m[1m[2m  2.14 kB[22m[1m[22m[2m Γöé gzip:   1.06 kB[22m[2m Γöé map:     8.84 kB[22m
+[2mdist/[22m[36massets/TripDetailPage-C8FsLwIt.js                    [39m[1m[2m  2.19 kB[22m[1m[22m[2m Γöé gzip:   1.03 kB[22m[2m Γöé map:     6.23 kB[22m
+[2mdist/[22m[36massets/MapTileLayer-BCo9CqAl.js                      [39m[1m[2m  2.26 kB[22m[1m[22m[2m Γöé gzip:   0.89 kB[22m[2m Γöé map:     8.97 kB[22m
+[2mdist/[22m[36massets/WidgetShell-htB-T4-t.js                       [39m[1m[2m  2.27 kB[22m[1m[22m[2m Γöé gzip:   1.16 kB[22m[2m Γöé map:     8.68 kB[22m
+[2mdist/[22m[36massets/RangeBarWidget-CtvASooe.js                    [39m[1m[2m  2.33 kB[22m[1m[22m[2m Γöé gzip:   1.15 kB[22m[2m Γöé map:     6.10 kB[22m
+[2mdist/[22m[36massets/RecentDrivesWidget-Dx-bBqc1.js                [39m[1m[2m  2.41 kB[22m[1m[22m[2m Γöé gzip:   1.23 kB[22m[2m Γöé map:     5.58 kB[22m
+[2mdist/[22m[36massets/WeatherAtCarWidget-D0QGBWym.js                [39m[1m[2m  2.42 kB[22m[1m[22m[2m Γöé gzip:   1.12 kB[22m[2m Γöé map:     5.81 kB[22m
+[2mdist/[22m[36massets/ClimateStatusWidget-RIPNHBzw.js               [39m[1m[2m  2.46 kB[22m[1m[22m[2m Γöé gzip:   1.14 kB[22m[2m Γöé map:     5.80 kB[22m
+[2mdist/[22m[36massets/ChargeHistoryWidget-DpWtVHa3.js               [39m[1m[2m  2.46 kB[22m[1m[22m[2m Γöé gzip:   1.23 kB[22m[2m Γöé map:     5.68 kB[22m
+[2mdist/[22m[36massets/Avatar-DULUGXDR.js                            [39m[1m[2m  2.46 kB[22m[1m[22m[2m Γöé gzip:   1.31 kB[22m[2m Γöé map:    12.40 kB[22m
+[2mdist/[22m[36massets/ErrorDisplay-CTYLT7JO.js                      [39m[1m[2m  2.47 kB[22m[1m[22m[2m Γöé gzip:   1.01 kB[22m[2m Γöé map:     7.73 kB[22m
+[2mdist/[22m[36massets/RecentlyUnlockedAchievements-BUHCd2nu.js      [39m[1m[2m  2.49 kB[22m[1m[22m[2m Γöé gzip:   1.27 kB[22m[2m Γöé map:     7.20 kB[22m
+[2mdist/[22m[36massets/useVehicleAccess-B3BkRNT6.js                  [39m[1m[2m  2.53 kB[22m[1m[22m[2m Γöé gzip:   0.71 kB[22m[2m Γöé map:     7.62 kB[22m
+[2mdist/[22m[36massets/EnergySiteInfoWidget-BW3XBXHj.js              [39m[1m[2m  2.57 kB[22m[1m[22m[2m Γöé gzip:   1.29 kB[22m[2m Γöé map:     6.60 kB[22m
+[2mdist/[22m[36massets/WidgetFlowDiagram-Bvk2g6_R.js                 [39m[1m[2m  2.60 kB[22m[1m[22m[2m Γöé gzip:   1.34 kB[22m[2m Γöé map:    10.16 kB[22m
+[2mdist/[22m[36massets/useUser-Cdvsthed.js                           [39m[1m[2m  2.65 kB[22m[1m[22m[2m Γöé gzip:   0.82 kB[22m[2m Γöé map:    10.37 kB[22m
+[2mdist/[22m[36massets/MediaHistoryWidget-CK2p871X.js                [39m[1m[2m  2.72 kB[22m[1m[22m[2m Γöé gzip:   1.40 kB[22m[2m Γöé map:     6.78 kB[22m
+[2mdist/[22m[36massets/FleetStatsBarWidget-DOuyDycU.js               [39m[1m[2m  2.73 kB[22m[1m[22m[2m Γöé gzip:   1.27 kB[22m[2m Γöé map:     6.39 kB[22m
+[2mdist/[22m[36massets/SleepEfficiencyWidget-iYYopuKq.js             [39m[1m[2m  2.74 kB[22m[1m[22m[2m Γöé gzip:   1.43 kB[22m[2m Γöé map:     6.22 kB[22m
+[2mdist/[22m[36massets/SecurityStatusWidget-DK0tfAvz.js              [39m[1m[2m  2.76 kB[22m[1m[22m[2m Γöé gzip:   1.24 kB[22m[2m Γöé map:     6.18 kB[22m
+[2mdist/[22m[36massets/TeslaAccountPage-DyC0jFtf.js                  [39m[1m[2m  2.78 kB[22m[1m[22m[2m Γöé gzip:   1.23 kB[22m[2m Γöé map:     6.66 kB[22m
+[2mdist/[22m[36massets/EnergyFlowWidget-DhIU4khY.js                  [39m[1m[2m  2.81 kB[22m[1m[22m[2m Γöé gzip:   1.32 kB[22m[2m Γöé map:     6.86 kB[22m
+[2mdist/[22m[36massets/DigitalTwinMiniWidget-CCIVTb38.js             [39m[1m[2m  2.82 kB[22m[1m[22m[2m Γöé gzip:   1.36 kB[22m[2m Γöé map:     7.19 kB[22m
+[2mdist/[22m[36massets/QueryError-BZUQmCwk.js                        [39m[1m[2m  2.83 kB[22m[1m[22m[2m Γöé gzip:   1.21 kB[22m[2m Γöé map:    11.23 kB[22m
+[2mdist/[22m[36massets/QuickStatsPage-DpTvKH1R.js                    [39m[1m[2m  2.84 kB[22m[1m[22m[2m Γöé gzip:   1.26 kB[22m[2m Γöé map:     6.83 kB[22m
+[2mdist/[22m[36massets/LocationMapWidget-qrD11sX8.js                 [39m[1m[2m  2.87 kB[22m[1m[22m[2m Γöé gzip:   1.32 kB[22m[2m Γöé map:     5.49 kB[22m
+[2mdist/[22m[36massets/Pagination-D_05xld-.js                        [39m[1m[2m  2.91 kB[22m[1m[22m[2m Γöé gzip:   1.00 kB[22m[2m Γöé map:     6.43 kB[22m
+[2mdist/[22m[36massets/BatteryRadialGaugeWidget-Blfkawej.js          [39m[1m[2m  2.91 kB[22m[1m[22m[2m Γöé gzip:   1.50 kB[22m[2m Γöé map:     7.81 kB[22m
+[2mdist/[22m[36massets/RegenEfficiencyWidget-CYkDTU9V.js             [39m[1m[2m  2.92 kB[22m[1m[22m[2m Γöé gzip:   1.39 kB[22m[2m Γöé map:     6.61 kB[22m
+[2mdist/[22m[36massets/DriveScoreGaugeWidget-DRlc_ou-.js             [39m[1m[2m  2.94 kB[22m[1m[22m[2m Γöé gzip:   1.36 kB[22m[2m Γöé map:     6.86 kB[22m
+[2mdist/[22m[36massets/SentryEventLogWidget-Buw1seAk.js              [39m[1m[2m  2.97 kB[22m[1m[22m[2m Γöé gzip:   1.49 kB[22m[2m Γöé map:     7.02 kB[22m
+[2mdist/[22m[36massets/ChargeStatusWidget-D6qu8mBH.js                [39m[1m[2m  3.00 kB[22m[1m[22m[2m Γöé gzip:   1.16 kB[22m[2m Γöé map:     6.46 kB[22m
+[2mdist/[22m[36massets/OdometerCounterWidget-C_uWZV4m.js             [39m[1m[2m  3.02 kB[22m[1m[22m[2m Γöé gzip:   1.35 kB[22m[2m Γöé map:     8.02 kB[22m
+[2mdist/[22m[36massets/MaskedValue-CtVY698f.js                       [39m[1m[2m  3.10 kB[22m[1m[22m[2m Γöé gzip:   1.47 kB[22m[2m Γöé map:    18.13 kB[22m
+[2mdist/[22m[36massets/APIUsageWidget-CrEIX14H.js                    [39m[1m[2m  3.13 kB[22m[1m[22m[2m Γöé gzip:   1.35 kB[22m[2m Γöé map:     7.43 kB[22m
+[2mdist/[22m[36massets/SignalLogWidget-Bdsz3HtZ.js                   [39m[1m[2m  3.15 kB[22m[1m[22m[2m Γöé gzip:   1.61 kB[22m[2m Γöé map:     8.66 kB[22m
+[2mdist/[22m[36massets/ChangelogPage-CW2oFaWd.js                     [39m[1m[2m  3.16 kB[22m[1m[22m[2m Γöé gzip:   1.29 kB[22m[2m Γöé map:     8.46 kB[22m
+[2mdist/[22m[36massets/CommandHistoryWidget-DK5OkXdl.js              [39m[1m[2m  3.17 kB[22m[1m[22m[2m Γöé gzip:   1.49 kB[22m[2m Γöé map:     7.98 kB[22m
+[2mdist/[22m[36massets/PositionHeatmapWidget-Bb8hwrl2.js             [39m[1m[2m  3.17 kB[22m[1m[22m[2m Γöé gzip:   1.51 kB[22m[2m Γöé map:     9.77 kB[22m
+[2mdist/[22m[36massets/BatteryHealthAnalyticsWidget-Bu7xJLiv.js      [39m[1m[2m  3.19 kB[22m[1m[22m[2m Γöé gzip:   1.38 kB[22m[2m Γöé map:     7.57 kB[22m
+[2mdist/[22m[36massets/MileageStatsWidget-BmhmoLQa.js                [39m[1m[2m  3.20 kB[22m[1m[22m[2m Γöé gzip:   1.44 kB[22m[2m Γöé map:     8.27 kB[22m
+[2mdist/[22m[36massets/PullToRefresh-tZYir1ig.js                     [39m[1m[2m  3.22 kB[22m[1m[22m[2m Γöé gzip:   1.59 kB[22m[2m Γöé map:    13.28 kB[22m
+[2mdist/[22m[36massets/RouteEfficiencyWidget-EXpPqu1i.js             [39m[1m[2m  3.22 kB[22m[1m[22m[2m Γöé gzip:   1.48 kB[22m[2m Γöé map:     8.43 kB[22m
+[2mdist/[22m[36massets/NotFoundPage-DDPSKRM1.js                      [39m[1m[2m  3.23 kB[22m[1m[22m[2m Γöé gzip:   1.48 kB[22m[2m Γöé map:    10.51 kB[22m
+[2mdist/[22m[36massets/CommandQuickActionsWidget-BfoykFN0.js         [39m[1m[2m  3.24 kB[22m[1m[22m[2m Γöé gzip:   1.43 kB[22m[2m Γöé map:     8.15 kB[22m
+[2mdist/[22m[36massets/DrivingCoachWidget-Bh5vUDEX.js                [39m[1m[2m  3.28 kB[22m[1m[22m[2m Γöé gzip:   1.43 kB[22m[2m Γöé map:     7.51 kB[22m
+[2mdist/[22m[36massets/DrivetrainHealthWidget-__sYOKrS.js            [39m[1m[2m  3.29 kB[22m[1m[22m[2m Γöé gzip:   1.49 kB[22m[2m Γöé map:     8.93 kB[22m
+[2mdist/[22m[36massets/BatteryDegradationTrendWidget-CA4xLRbO.js     [39m[1m[2m  3.33 kB[22m[1m[22m[2m Γöé gzip:   1.69 kB[22m[2m Γöé map:     8.03 kB[22m
+[2mdist/[22m[36massets/MQTTStatusWidget-D0wxQfic.js                  [39m[1m[2m  3.34 kB[22m[1m[22m[2m Γöé gzip:   1.41 kB[22m[2m Γöé map:     7.78 kB[22m
+[2mdist/[22m[36massets/SuperchargerHistoryWidget-feIXsHpw.js         [39m[1m[2m  3.35 kB[22m[1m[22m[2m Γöé gzip:   1.48 kB[22m[2m Γöé map:     7.66 kB[22m
+[2mdist/[22m[36massets/SoftwareUpdateHistoryWidget-Cs5aI30P.js       [39m[1m[2m  3.38 kB[22m[1m[22m[2m Γöé gzip:   1.51 kB[22m[2m Γöé map:     8.53 kB[22m
+[2mdist/[22m[36massets/BatteryCellsWidget-DMiJhfU2.js                [39m[1m[2m  3.45 kB[22m[1m[22m[2m Γöé gzip:   1.47 kB[22m[2m Γöé map:     8.97 kB[22m
+[2mdist/[22m[36massets/useDriving-Dq40P4tw.js                        [39m[1m[2m  3.48 kB[22m[1m[22m[2m Γöé gzip:   1.13 kB[22m[2m Γöé map:    13.26 kB[22m
+[2mdist/[22m[36massets/AnomalyDetectorWidget-DkOQLpBA.js             [39m[1m[2m  3.49 kB[22m[1m[22m[2m Γöé gzip:   1.64 kB[22m[2m Γöé map:     9.13 kB[22m
+[2mdist/[22m[36massets/LocationFavoritesWidget-M6rNx5PA.js           [39m[1m[2m  3.49 kB[22m[1m[22m[2m Γöé gzip:   1.59 kB[22m[2m Γöé map:     8.99 kB[22m
+[2mdist/[22m[36massets/WeeklyDigestWidget-CC03Jvx3.js                [39m[1m[2m  3.51 kB[22m[1m[22m[2m Γöé gzip:   1.62 kB[22m[2m Γöé map:     9.56 kB[22m
+[2mdist/[22m[36massets/MotorPerformanceWidget-BTdjDUGW.js            [39m[1m[2m  3.54 kB[22m[1m[22m[2m Γöé gzip:   1.48 kB[22m[2m Γöé map:     8.95 kB[22m
+[2mdist/[22m[36massets/LivePowerFlowWidget-DgTiKCIc.js               [39m[1m[2m  3.54 kB[22m[1m[22m[2m Γöé gzip:   1.49 kB[22m[2m Γöé map:    10.55 kB[22m
+[2mdist/[22m[36massets/VersionInfoWidget-IGXSGncz.js                 [39m[1m[2m  3.58 kB[22m[1m[22m[2m Γöé gzip:   1.65 kB[22m[2m Γöé map:     9.55 kB[22m
+[2mdist/[22m[36massets/SignalCatalogWidget-DkVWLtmP.js               [39m[1m[2m  3.61 kB[22m[1m[22m[2m Γöé gzip:   1.60 kB[22m[2m Γöé map:     9.64 kB[22m
+[2mdist/[22m[36massets/CostForecastWidget-DQ3hjgXo.js                [39m[1m[2m  3.63 kB[22m[1m[22m[2m Γöé gzip:   1.65 kB[22m[2m Γöé map:    10.32 kB[22m
+[2mdist/[22m[36massets/LifetimeStatsWidget-BMI1M0j2.js               [39m[1m[2m  3.66 kB[22m[1m[22m[2m Γöé gzip:   1.56 kB[22m[2m Γöé map:     9.44 kB[22m
+[2mdist/[22m[36massets/EditConflictBanner-BGJd5_uX.js                [39m[1m[2m  3.70 kB[22m[1m[22m[2m Γöé gzip:   1.48 kB[22m[2m Γöé map:    21.09 kB[22m
+[2mdist/[22m[36massets/UptimeMonitorWidget-BT3bLCNq.js               [39m[1m[2m  3.71 kB[22m[1m[22m[2m Γöé gzip:   1.54 kB[22m[2m Γöé map:     8.95 kB[22m
+[2mdist/[22m[36massets/MonthlyMileageWidget-Cz4rSO9-.js              [39m[1m[2m  3.76 kB[22m[1m[22m[2m Γöé gzip:   1.74 kB[22m[2m Γöé map:    10.97 kB[22m
+[2mdist/[22m[36massets/AnalyticsSummaryWidget-B8S0r5wO.js            [39m[1m[2m  3.80 kB[22m[1m[22m[2m Γöé gzip:   1.66 kB[22m[2m Γöé map:     9.94 kB[22m
+[2mdist/[22m[36massets/TripSummaryWidget-Bo1x14PS.js                 [39m[1m[2m  3.84 kB[22m[1m[22m[2m Γöé gzip:   1.52 kB[22m[2m Γöé map:     9.95 kB[22m
+[2mdist/[22m[36massets/LiveSignalSparklinesWidget-DjcT4_QN.js        [39m[1m[2m  3.85 kB[22m[1m[22m[2m Γöé gzip:   1.93 kB[22m[2m Γöé map:    11.44 kB[22m
+[2mdist/[22m[36massets/SystemHealthWidget-BXoGEEvJ.js                [39m[1m[2m  3.86 kB[22m[1m[22m[2m Γöé gzip:   1.70 kB[22m[2m Γöé map:     9.90 kB[22m
+[2mdist/[22m[36massets/EnergyFlowAnimatedWidget-B8Wv7SQQ.js          [39m[1m[2m  3.90 kB[22m[1m[22m[2m Γöé gzip:   1.61 kB[22m[2m Γöé map:     9.77 kB[22m
+[2mdist/[22m[36massets/AutomationHistoryWidget-BxwoOzvj.js           [39m[1m[2m  3.90 kB[22m[1m[22m[2m Γöé gzip:   1.66 kB[22m[2m Γöé map:     9.69 kB[22m
+[2mdist/[22m[36massets/RecentDrivesListWidget-813Rclqp.js            [39m[1m[2m  3.93 kB[22m[1m[22m[2m Γöé gzip:   1.60 kB[22m[2m Γöé map:    10.10 kB[22m
+[2mdist/[22m[36massets/WeeklySummaryCardWidget-fqN6H8og.js           [39m[1m[2m  3.94 kB[22m[1m[22m[2m Γöé gzip:   1.64 kB[22m[2m Γöé map:    11.39 kB[22m
+[2mdist/[22m[36massets/VampireDrainWidget-P4QwOLlw.js                [39m[1m[2m  3.98 kB[22m[1m[22m[2m Γöé gzip:   1.91 kB[22m[2m Γöé map:    11.10 kB[22m
+[2mdist/[22m[36massets/TelemetryErrorsWidget-Cou9Yz6i.js             [39m[1m[2m  3.99 kB[22m[1m[22m[2m Γöé gzip:   1.64 kB[22m[2m Γöé map:    10.87 kB[22m
+[2mdist/[22m[36massets/useAutomations-D2BMlxKN.js                    [39m[1m[2m  4.00 kB[22m[1m[22m[2m Γöé gzip:   1.22 kB[22m[2m Γöé map:    13.92 kB[22m
+[2mdist/[22m[36massets/DateRangeFilter-DymAURuc.js                   [39m[1m[2m  4.05 kB[22m[1m[22m[2m Γöé gzip:   1.45 kB[22m[2m Γöé map:    16.09 kB[22m
+[2mdist/[22m[36massets/SafetyFeaturesWidget-DRxhh3XE.js              [39m[1m[2m  4.09 kB[22m[1m[22m[2m Γöé gzip:   1.61 kB[22m[2m Γöé map:     9.45 kB[22m
+[2mdist/[22m[36massets/DashboardStatsWidget-BG0g07DO.js              [39m[1m[2m  4.10 kB[22m[1m[22m[2m Γöé gzip:   1.73 kB[22m[2m Γöé map:    10.24 kB[22m
+[2mdist/[22m[36massets/Delta-Cngglw_H.js                             [39m[1m[2m  4.10 kB[22m[1m[22m[2m Γöé gzip:   1.56 kB[22m[2m Γöé map:    17.07 kB[22m
+[2mdist/[22m[36massets/DigitalTwinWidget-Cld2M_Rp.js                 [39m[1m[2m  4.10 kB[22m[1m[22m[2m Γöé gzip:   1.76 kB[22m[2m Γöé map:    10.82 kB[22m
+[2mdist/[22m[36massets/ChargeCostTrackerWidget-Dccp2BAF.js           [39m[1m[2m  4.12 kB[22m[1m[22m[2m Γöé gzip:   1.73 kB[22m[2m Γöé map:    12.76 kB[22m
+[2mdist/[22m[36massets/AuditLogWidget-Cz9pPGqv.js                    [39m[1m[2m  4.13 kB[22m[1m[22m[2m Γöé gzip:   1.89 kB[22m[2m Γöé map:    12.10 kB[22m
+[2mdist/[22m[36massets/ChargeSessionChartWidget-DapQ6aH7.js          [39m[1m[2m  4.16 kB[22m[1m[22m[2m Γöé gzip:   1.96 kB[22m[2m Γöé map:    11.08 kB[22m
+[2mdist/[22m[36massets/ClimateHistoryWidget-B7z0Rc50.js              [39m[1m[2m  4.18 kB[22m[1m[22m[2m Γöé gzip:   1.84 kB[22m[2m Γöé map:    11.71 kB[22m
+[2mdist/[22m[36massets/VehicleSpecsWidget-BMfp9vsG.js                [39m[1m[2m  4.18 kB[22m[1m[22m[2m Γöé gzip:   1.77 kB[22m[2m Γöé map:    12.08 kB[22m
+[2mdist/[22m[36massets/ChargingTelemetryWidget-BOUTFHyg.js           [39m[1m[2m  4.19 kB[22m[1m[22m[2m Γöé gzip:   1.77 kB[22m[2m Γöé map:    11.79 kB[22m
+[2mdist/[22m[36massets/YearReviewWidget-CgsOYMd6.js                  [39m[1m[2m  4.20 kB[22m[1m[22m[2m Γöé gzip:   1.83 kB[22m[2m Γöé map:    11.17 kB[22m
+[2mdist/[22m[36massets/MediaNowPlayingWidget-CSJrsS3S.js             [39m[1m[2m  4.26 kB[22m[1m[22m[2m Γöé gzip:   1.47 kB[22m[2m Γöé map:     9.76 kB[22m
+[2mdist/[22m[36massets/useTelemetry-CU6PTkv_.js                      [39m[1m[2m  4.29 kB[22m[1m[22m[2m Γöé gzip:   1.43 kB[22m[2m Γöé map:    19.08 kB[22m
+[2mdist/[22m[36massets/FilterBar-D99rz1Sa.js                         [39m[1m[2m  4.31 kB[22m[1m[22m[2m Γöé gzip:   1.74 kB[22m[2m Γöé map:    17.26 kB[22m
+[2mdist/[22m[36massets/GeofenceWidget-wImIIae1.js                    [39m[1m[2m  4.33 kB[22m[1m[22m[2m Γöé gzip:   1.98 kB[22m[2m Γöé map:    12.89 kB[22m
+[2mdist/[22m[36massets/PowersharePage-BDXjaBGs.js                    [39m[1m[2m  4.35 kB[22m[1m[22m[2m Γöé gzip:   1.73 kB[22m[2m Γöé map:    12.48 kB[22m
+[2mdist/[22m[36massets/index-2x_v_kMB.js                             [39m[1m[2m  4.35 kB[22m[1m[22m[2m Γöé gzip:   1.93 kB[22m[2m Γöé map:    62.15 kB[22m
+[2mdist/[22m[36massets/WallConnectorWidget-CQ8Ge-Lw.js               [39m[1m[2m  4.39 kB[22m[1m[22m[2m Γöé gzip:   1.93 kB[22m[2m Γöé map:    13.58 kB[22m
+[2mdist/[22m[36massets/FleetStatsWidget-Cu9R-gn1.js                  [39m[1m[2m  4.40 kB[22m[1m[22m[2m Γöé gzip:   1.49 kB[22m[2m Γöé map:    10.55 kB[22m
+[2mdist/[22m[36massets/SolarProductionWidget-CJhlaDm9.js             [39m[1m[2m  4.43 kB[22m[1m[22m[2m Γöé gzip:   1.92 kB[22m[2m Γöé map:    13.40 kB[22m
+[2mdist/[22m[36massets/BackupHistoryWidget-LzsbyzA5.js               [39m[1m[2m  4.43 kB[22m[1m[22m[2m Γöé gzip:   1.70 kB[22m[2m Γöé map:    13.62 kB[22m
+[2mdist/[22m[36massets/SpeedProfileWidget-BsfsyGH8.js                [39m[1m[2m  4.45 kB[22m[1m[22m[2m Γöé gzip:   2.02 kB[22m[2m Γöé map:    14.17 kB[22m
+[2mdist/[22m[36massets/TeslaChargingSessionsMap-_Ihz_jcH.js          [39m[1m[2m  4.57 kB[22m[1m[22m[2m Γöé gzip:   2.16 kB[22m[2m Γöé map:    17.73 kB[22m
+[2mdist/[22m[36massets/StateTimelineWidget-ojQR262w.js               [39m[1m[2m  4.61 kB[22m[1m[22m[2m Γöé gzip:   1.87 kB[22m[2m Γöé map:    13.47 kB[22m
+[2mdist/[22m[36massets/EnergyStatsWidget-BFvK4TVx.js                 [39m[1m[2m  4.64 kB[22m[1m[22m[2m Γöé gzip:   2.03 kB[22m[2m Γöé map:    12.57 kB[22m
+[2mdist/[22m[36massets/TirePressureHistoryWidget-uRN2D3PR.js         [39m[1m[2m  4.64 kB[22m[1m[22m[2m Γöé gzip:   1.94 kB[22m[2m Γöé map:    13.21 kB[22m
+[2mdist/[22m[36massets/LiveSignalsWidget-w9qRI_h2.js                 [39m[1m[2m  4.66 kB[22m[1m[22m[2m Γöé gzip:   1.58 kB[22m[2m Γöé map:    13.50 kB[22m
+[2mdist/[22m[36massets/useCharging-CmpnaZt4.js                       [39m[1m[2m  4.70 kB[22m[1m[22m[2m Γöé gzip:   1.45 kB[22m[2m Γöé map:    19.67 kB[22m
+[2mdist/[22m[36massets/SubscriptionsWidget-BdYsW1rJ.js               [39m[1m[2m  4.77 kB[22m[1m[22m[2m Γöé gzip:   2.05 kB[22m[2m Γöé map:    13.40 kB[22m
+[2mdist/[22m[36massets/useNavigationGuard-Dl_x9_j9.js                [39m[1m[2m  4.79 kB[22m[1m[22m[2m Γöé gzip:   1.90 kB[22m[2m Γöé map:    29.31 kB[22m
+[2mdist/[22m[36massets/MaintenanceTrackerWidget-Dwifw4Ip.js          [39m[1m[2m  4.80 kB[22m[1m[22m[2m Γöé gzip:   1.90 kB[22m[2m Γöé map:    13.72 kB[22m
+[2mdist/[22m[36massets/ExportsPage-CH91DuT5.js                       [39m[1m[2m  4.82 kB[22m[1m[22m[2m Γöé gzip:   1.84 kB[22m[2m Γöé map:    12.68 kB[22m
+[2mdist/[22m[36massets/CostBreakdownWidget-DgaoQIYs.js               [39m[1m[2m  4.83 kB[22m[1m[22m[2m Γöé gzip:   2.11 kB[22m[2m Γöé map:    14.05 kB[22m
+[2mdist/[22m[36massets/WatchFacePage-DIhIhhQp.js                     [39m[1m[2m  4.86 kB[22m[1m[22m[2m Γöé gzip:   2.10 kB[22m[2m Γöé map:    14.54 kB[22m
+[2mdist/[22m[36massets/MotorHistoryWidget-nUxIV3X8.js                [39m[1m[2m  4.87 kB[22m[1m[22m[2m Γöé gzip:   2.07 kB[22m[2m Γöé map:    15.71 kB[22m
+[2mdist/[22m[36massets/VehicleAccessWidget-Df2PIviN.js               [39m[1m[2m  4.88 kB[22m[1m[22m[2m Γöé gzip:   1.94 kB[22m[2m Γöé map:    13.44 kB[22m
+[2mdist/[22m[36massets/AutomationStatusWidget-B8a0opSZ.js            [39m[1m[2m  4.88 kB[22m[1m[22m[2m Γöé gzip:   1.77 kB[22m[2m Γöé map:    12.89 kB[22m
+[2mdist/[22m[36massets/useEnergy-D5krx6qB.js                         [39m[1m[2m  4.90 kB[22m[1m[22m[2m Γöé gzip:   1.26 kB[22m[2m Γöé map:    21.31 kB[22m
+[2mdist/[22m[36massets/GuardModeWidget-BO6NP3At.js                   [39m[1m[2m  4.91 kB[22m[1m[22m[2m Γöé gzip:   1.95 kB[22m[2m Γöé map:    13.01 kB[22m
+[2mdist/[22m[36massets/ChargingSessionDetailWidget-DvNEH0If.js       [39m[1m[2m  4.97 kB[22m[1m[22m[2m Γöé gzip:   2.25 kB[22m[2m Γöé map:    14.04 kB[22m
+[2mdist/[22m[36massets/ChargingScheduleWidget-CKmb4KuK.js            [39m[1m[2m  5.05 kB[22m[1m[22m[2m Γöé gzip:   1.93 kB[22m[2m Γöé map:    14.15 kB[22m
+[2mdist/[22m[36massets/TirePressureVisualWidget-D-XaRMKE.js          [39m[1m[2m  5.06 kB[22m[1m[22m[2m Γöé gzip:   1.98 kB[22m[2m Γöé map:    14.07 kB[22m
+[2mdist/[22m[36massets/SpeedHeatmapWidget-CnC0W0b2.js                [39m[1m[2m  5.07 kB[22m[1m[22m[2m Γöé gzip:   2.27 kB[22m[2m Γöé map:    16.48 kB[22m
+[2mdist/[22m[36massets/DoorWindowStatusWidget-C6F9Fr8W.js            [39m[1m[2m  5.08 kB[22m[1m[22m[2m Γöé gzip:   1.86 kB[22m[2m Γöé map:    13.00 kB[22m
+[2mdist/[22m[36massets/AutomationListPage-BWlWX_-N.js                [39m[1m[2m  5.09 kB[22m[1m[22m[2m Γöé gzip:   1.85 kB[22m[2m Γöé map:    13.24 kB[22m
+[2mdist/[22m[36massets/SignalHealthWidget-Dnv4yAtS.js                [39m[1m[2m  5.10 kB[22m[1m[22m[2m Γöé gzip:   2.05 kB[22m[2m Γöé map:    14.49 kB[22m
+[2mdist/[22m[36massets/NotificationStatsWidget-Bu3GooAz.js           [39m[1m[2m  5.13 kB[22m[1m[22m[2m Γöé gzip:   2.06 kB[22m[2m Γöé map:    13.13 kB[22m
+[2mdist/[22m[36massets/OnboardingChecklistWidget-BeWpWz7a.js         [39m[1m[2m  5.14 kB[22m[1m[22m[2m Γöé gzip:   1.93 kB[22m[2m Γöé map:    13.30 kB[22m
+[2mdist/[22m[36massets/BackupMonitorWidget-C1LT5HcV.js               [39m[1m[2m  5.22 kB[22m[1m[22m[2m Γöé gzip:   1.91 kB[22m[2m Γöé map:    14.22 kB[22m
+[2mdist/[22m[36massets/SoftwareUpdateStatusWidget-C4FUMw-W.js        [39m[1m[2m  5.26 kB[22m[1m[22m[2m Γöé gzip:   1.86 kB[22m[2m Γöé map:    14.27 kB[22m
+[2mdist/[22m[36massets/APIKeysPage-CgBJpe9q.js                       [39m[1m[2m  5.32 kB[22m[1m[22m[2m Γöé gzip:   2.10 kB[22m[2m Γöé map:    16.01 kB[22m
+[2mdist/[22m[36massets/SafetyHistoryWidget-DYlzbNxU.js               [39m[1m[2m  5.34 kB[22m[1m[22m[2m Γöé gzip:   2.28 kB[22m[2m Γöé map:    14.79 kB[22m
+[2mdist/[22m[36massets/BatteryDegradationForecastWidget-BVa-8D-e.js  [39m[1m[2m  5.34 kB[22m[1m[22m[2m Γöé gzip:   2.11 kB[22m[2m Γöé map:    13.65 kB[22m
+[2mdist/[22m[36massets/DrivingDynamicsWidget-CxozsoLx.js             [39m[1m[2m  5.34 kB[22m[1m[22m[2m Γöé gzip:   2.05 kB[22m[2m Γöé map:    14.64 kB[22m
+[2mdist/[22m[36massets/VehicleHeroCardWidget-CPzPx9u6.js             [39m[1m[2m  5.40 kB[22m[1m[22m[2m Γöé gzip:   1.98 kB[22m[2m Γöé map:    14.91 kB[22m
+[2mdist/[22m[36massets/ExportStatusWidget-BcKvy0DA.js                [39m[1m[2m  5.46 kB[22m[1m[22m[2m Γöé gzip:   2.26 kB[22m[2m Γöé map:    16.64 kB[22m
+[2mdist/[22m[36massets/DestinationETAWidget-wE_YkujE.js              [39m[1m[2m  5.46 kB[22m[1m[22m[2m Γöé gzip:   1.86 kB[22m[2m Γöé map:    13.71 kB[22m
+[2mdist/[22m[36massets/SoftwareUpdatesPage-DgXDLiag.js               [39m[1m[2m  5.47 kB[22m[1m[22m[2m Γöé gzip:   2.22 kB[22m[2m Γöé map:    14.82 kB[22m
+[2mdist/[22m[36massets/WatchSummaryWidget-Cms3VvKY.js                [39m[1m[2m  5.53 kB[22m[1m[22m[2m Γöé gzip:   1.88 kB[22m[2m Γöé map:    13.68 kB[22m
+[2mdist/[22m[36massets/MileagePage-ZCMcgVj8.js                       [39m[1m[2m  5.55 kB[22m[1m[22m[2m Γöé gzip:   2.22 kB[22m[2m Γöé map:    16.77 kB[22m
+[2mdist/[22m[36massets/PowerFlowHistoryWidget-oMZzXy5g.js            [39m[1m[2m  5.63 kB[22m[1m[22m[2m Γöé gzip:   2.09 kB[22m[2m Γöé map:    16.84 kB[22m
+[2mdist/[22m[36massets/ClimateControlPanelWidget-e3jaTsZH.js         [39m[1m[2m  5.68 kB[22m[1m[22m[2m Γöé gzip:   1.90 kB[22m[2m Γöé map:    14.27 kB[22m
+[2mdist/[22m[36massets/LiveSignalMonitorPage-O9rgX1b2.js             [39m[1m[2m  5.70 kB[22m[1m[22m[2m Γöé gzip:   2.30 kB[22m[2m Γöé map:    16.98 kB[22m
+[2mdist/[22m[36massets/DriveEfficiencyChartWidget-CjjOqaCm.js        [39m[1m[2m  5.71 kB[22m[1m[22m[2m Γöé gzip:   2.52 kB[22m[2m Γöé map:    17.20 kB[22m
+[2mdist/[22m[36massets/GlancePage-lJHEF9la.js                        [39m[1m[2m  5.74 kB[22m[1m[22m[2m Γöé gzip:   2.26 kB[22m[2m Γöé map:    16.32 kB[22m
+[2mdist/[22m[36massets/WarrantyStatusWidget-DisK6ezs.js              [39m[1m[2m  5.78 kB[22m[1m[22m[2m Γöé gzip:   2.26 kB[22m[2m Γöé map:    17.51 kB[22m
+[2mdist/[22m[36massets/workbox-window.prod.es5-vqzQaGvo.js           [39m[1m[2m  5.78 kB[22m[1m[22m[2m Γöé gzip:   2.40 kB[22m[2m Γöé map:    13.64 kB[22m
+[2mdist/[22m[36massets/ChargePlansWidget-CQ2G3-_p.js                 [39m[1m[2m  5.85 kB[22m[1m[22m[2m Γöé gzip:   2.15 kB[22m[2m Γöé map:    16.51 kB[22m
+[2mdist/[22m[36massets/FSMDistributionWidget-DwK2kdGp.js             [39m[1m[2m  5.90 kB[22m[1m[22m[2m Γöé gzip:   2.30 kB[22m[2m Γöé map:    16.68 kB[22m
+[2mdist/[22m[36massets/VehicleUpgradesWidget-C26Abo7N.js             [39m[1m[2m  5.92 kB[22m[1m[22m[2m Γöé gzip:   2.13 kB[22m[2m Γöé map:    16.91 kB[22m
+[2mdist/[22m[36massets/ChargeStatusLiveWidget-CwYHBRJb.js            [39m[1m[2m  5.98 kB[22m[1m[22m[2m Γöé gzip:   2.05 kB[22m[2m Γöé map:    16.24 kB[22m
+[2mdist/[22m[36massets/ProjectedRangeWidget-DJfB0dDa.js              [39m[1m[2m  6.12 kB[22m[1m[22m[2m Γöé gzip:   2.16 kB[22m[2m Γöé map:    15.62 kB[22m
+[2mdist/[22m[36massets/PageContainer-C_JT4EZH.js                     [39m[1m[2m  6.14 kB[22m[1m[22m[2m Γöé gzip:   2.75 kB[22m[2m Γöé map:    31.48 kB[22m
+[2mdist/[22m[36massets/AlertRulesPage-DNrmV3YP.js                    [39m[1m[2m  6.33 kB[22m[1m[22m[2m Γöé gzip:   2.36 kB[22m[2m Γöé map:    17.21 kB[22m
+[2mdist/[22m[36massets/ChargingOptimizerWidget-D7nMAaB3.js           [39m[1m[2m  6.34 kB[22m[1m[22m[2m Γöé gzip:   2.20 kB[22m[2m Γöé map:    15.44 kB[22m
+[2mdist/[22m[36massets/SearchPage-BgYoDCTt.js                        [39m[1m[2m  6.39 kB[22m[1m[22m[2m Γöé gzip:   2.21 kB[22m[2m Γöé map:    17.72 kB[22m
+[2mdist/[22m[36massets/AnomalyDashboardPage-DhNr8s1f.js              [39m[1m[2m  6.53 kB[22m[1m[22m[2m Γöé gzip:   2.48 kB[22m[2m Γöé map:    17.35 kB[22m
+[2mdist/[22m[36massets/SignalGapDetectorPage-IvPGC7yx.js             [39m[1m[2m  6.63 kB[22m[1m[22m[2m Γöé gzip:   2.57 kB[22m[2m Γöé map:    18.01 kB[22m
+[2mdist/[22m[36massets/DriveTelemetryWidget-BbK7u9TW.js              [39m[1m[2m  6.64 kB[22m[1m[22m[2m Γöé gzip:   2.46 kB[22m[2m Γöé map:    18.44 kB[22m
+[2mdist/[22m[36massets/VehicleAccessPage-x3L1Li1Y.js                 [39m[1m[2m  6.81 kB[22m[1m[22m[2m Γöé gzip:   2.16 kB[22m[2m Γöé map:    18.12 kB[22m
+[2mdist/[22m[36massets/SignalLogViewerPage-CnfaeS3k.js               [39m[1m[2m  6.86 kB[22m[1m[22m[2m Γöé gzip:   2.89 kB[22m[2m Γöé map:    34.89 kB[22m
+[2mdist/[22m[36massets/OnboardingPage-CoUixw88.js                    [39m[1m[2m  6.95 kB[22m[1m[22m[2m Γöé gzip:   2.57 kB[22m[2m Γöé map:    20.88 kB[22m
+[2mdist/[22m[36massets/ChargingHeatmapPage-EHthcG6P.js               [39m[1m[2m  7.33 kB[22m[1m[22m[2m Γöé gzip:   2.69 kB[22m[2m Γöé map:    18.51 kB[22m
+[2mdist/[22m[36massets/TirePressurePage-D9USupwn.js                  [39m[1m[2m  7.49 kB[22m[1m[22m[2m Γöé gzip:   3.04 kB[22m[2m Γöé map:    27.60 kB[22m
+[2mdist/[22m[36massets/LocationsPage-vrlkXsmL.js                     [39m[1m[2m  7.50 kB[22m[1m[22m[2m Γöé gzip:   2.83 kB[22m[2m Γöé map:    20.41 kB[22m
+[2mdist/[22m[36massets/ComboboxMulti-DnWXZ2R1.js                     [39m[1m[2m  7.69 kB[22m[1m[22m[2m Γöé gzip:   2.99 kB[22m[2m Γöé map:    29.76 kB[22m
+[2mdist/[22m[36massets/VampireDrainPage-DUUPZiJS.js                  [39m[1m[2m  7.77 kB[22m[1m[22m[2m Γöé gzip:   2.99 kB[22m[2m Γöé map:    19.32 kB[22m
+[2mdist/[22m[36massets/MyActivityPage-BPPy7g6k.js                    [39m[1m[2m  7.83 kB[22m[1m[22m[2m Γöé gzip:   2.58 kB[22m[2m Γöé map:    23.86 kB[22m
+[2mdist/[22m[36massets/TimelinePage-C7XMg8nf.js                      [39m[1m[2m  7.92 kB[22m[1m[22m[2m Γöé gzip:   3.10 kB[22m[2m Γöé map:    23.60 kB[22m
+[2mdist/[22m[36massets/MQTTInspectorPage-9nSaHOEI.js                 [39m[1m[2m  7.94 kB[22m[1m[22m[2m Γöé gzip:   2.77 kB[22m[2m Γöé map:    20.49 kB[22m
+[2mdist/[22m[36massets/SharedDrivePage-BY1zzMGP.js                   [39m[1m[2m  8.08 kB[22m[1m[22m[2m Γöé gzip:   2.75 kB[22m[2m Γöé map:    21.62 kB[22m
+[2mdist/[22m[36massets/CommandHistoryPage-CuREevVX.js                [39m[1m[2m  8.09 kB[22m[1m[22m[2m Γöé gzip:   3.36 kB[22m[2m Γöé map:    22.36 kB[22m
+[2mdist/[22m[36massets/DigitalTwinPage-DAHMwOI6.js                   [39m[1m[2m  8.14 kB[22m[1m[22m[2m Γöé gzip:   2.85 kB[22m[2m Γöé map:    22.02 kB[22m
+[2mdist/[22m[36massets/PeriodComparePage-HZPDSJKr.js                 [39m[1m[2m  8.52 kB[22m[1m[22m[2m Γöé gzip:   3.34 kB[22m[2m Γöé map:    26.22 kB[22m
+[2mdist/[22m[36massets/VehicleHeroWidget-CePR9ijK.js                 [39m[1m[2m  8.62 kB[22m[1m[22m[2m Γöé gzip:   2.87 kB[22m[2m Γöé map:    22.70 kB[22m
+[2mdist/[22m[36massets/RouteEfficiencyPage-Ra6Wciwu.js               [39m[1m[2m  8.64 kB[22m[1m[22m[2m Γöé gzip:   2.82 kB[22m[2m Γöé map:    21.78 kB[22m
+[2mdist/[22m[36massets/SpeedProfilePage-JOllNM3k.js                  [39m[1m[2m  8.69 kB[22m[1m[22m[2m Γöé gzip:   2.92 kB[22m[2m Γöé map:    24.29 kB[22m
+[2mdist/[22m[36massets/TemperatureImpactPage-D09epjWZ.js             [39m[1m[2m  9.04 kB[22m[1m[22m[2m Γöé gzip:   3.43 kB[22m[2m Γöé map:    29.90 kB[22m
+[2mdist/[22m[36massets/TripListPage-D0BojQiq.js                      [39m[1m[2m  9.38 kB[22m[1m[22m[2m Γöé gzip:   3.60 kB[22m[2m Γöé map:    28.49 kB[22m
+[2mdist/[22m[36massets/PowerFlowDashboardPage-BbNmSRHg.js            [39m[1m[2m  9.55 kB[22m[1m[22m[2m Γöé gzip:   3.19 kB[22m[2m Γöé map:    26.47 kB[22m
+[2mdist/[22m[36massets/DBHealthPage-DHJQSQCk.js                      [39m[1m[2m  9.68 kB[22m[1m[22m[2m Γöé gzip:   3.31 kB[22m[2m Γöé map:    27.09 kB[22m
+[2mdist/[22m[36massets/TrueCostPage-hLw9ZrFH.js                      [39m[1m[2m  9.70 kB[22m[1m[22m[2m Γöé gzip:   2.87 kB[22m[2m Γöé map:    23.16 kB[22m
+[2mdist/[22m[36massets/StatisticsPage-DNN-t-GC.js                    [39m[1m[2m  9.73 kB[22m[1m[22m[2m Γöé gzip:   3.54 kB[22m[2m Γöé map:    28.45 kB[22m
+[2mdist/[22m[36massets/RegenEfficiencyPage-CQSRBUbO.js               [39m[1m[2m  9.84 kB[22m[1m[22m[2m Γöé gzip:   3.23 kB[22m[2m Γöé map:    25.23 kB[22m
+[2mdist/[22m[36massets/FleetAPIPage-itdNSpj6.js                      [39m[1m[2m  9.92 kB[22m[1m[22m[2m Γöé gzip:   2.93 kB[22m[2m Γöé map:    26.02 kB[22m
+[2mdist/[22m[36massets/SleepEfficiencyPage-DBOkaRma.js               [39m[1m[2m  9.93 kB[22m[1m[22m[2m Γöé gzip:   3.57 kB[22m[2m Γöé map:    24.94 kB[22m
+[2mdist/[22m[36massets/FeedbackQueuePage-B3zKe_DT.js                 [39m[1m[2m 10.51 kB[22m[1m[22m[2m Γöé gzip:   3.37 kB[22m[2m Γöé map:    27.26 kB[22m
+[2mdist/[22m[36massets/TeslaChargingHistoryPage-DN7sRR1T.js          [39m[1m[2m 10.57 kB[22m[1m[22m[2m Γöé gzip:   4.04 kB[22m[2m Γöé map:    29.61 kB[22m
+[2mdist/[22m[36massets/VehicleListPage-DjZYT_W3.js                   [39m[1m[2m 10.87 kB[22m[1m[22m[2m Γöé gzip:   3.76 kB[22m[2m Γöé map:    31.45 kB[22m
+[2mdist/[22m[36massets/DataRepairPage-C3GmMw8l.js                    [39m[1m[2m 10.99 kB[22m[1m[22m[2m Γöé gzip:   2.66 kB[22m[2m Γöé map:    28.74 kB[22m
+[2mdist/[22m[36massets/MediaPlayerPage-CHi72Df0.js                   [39m[1m[2m 11.33 kB[22m[1m[22m[2m Γöé gzip:   3.99 kB[22m[2m Γöé map:    34.10 kB[22m
+[2mdist/[22m[36massets/useVehicleLive-BcjHTmS-.js                    [39m[1m[2m 11.65 kB[22m[1m[22m[2m Γöé gzip:   3.18 kB[22m[2m Γöé map:    30.68 kB[22m
+[2mdist/[22m[36massets/RoadmapPage-D9qx2Wg0.js                       [39m[1m[2m 11.78 kB[22m[1m[22m[2m Γöé gzip:   4.86 kB[22m[2m Γöé map:    22.99 kB[22m
+[2mdist/[22m[36massets/SignalExplorerPage-BsfW6ZMV.js                [39m[1m[2m 11.80 kB[22m[1m[22m[2m Γöé gzip:   4.53 kB[22m[2m Γöé map:    37.33 kB[22m
+[2mdist/[22m[36massets/TeslaChargingSessionsPage-C70F5ZoF.js         [39m[1m[2m 11.84 kB[22m[1m[22m[2m Γöé gzip:   4.23 kB[22m[2m Γöé map:    28.60 kB[22m
+[2mdist/[22m[36massets/PlaybackControls-cXKXP6Sb.js                  [39m[1m[2m 12.64 kB[22m[1m[22m[2m Γöé gzip:   4.21 kB[22m[2m Γöé map:    48.25 kB[22m
+[2mdist/[22m[36massets/MaintenancePage-BpCeToJs.js                   [39m[1m[2m 12.70 kB[22m[1m[22m[2m Γöé gzip:   4.31 kB[22m[2m Γöé map:    39.59 kB[22m
+[2mdist/[22m[36massets/GuardModePage-iSjeNEt5.js                     [39m[1m[2m 12.81 kB[22m[1m[22m[2m Γöé gzip:   4.27 kB[22m[2m Γöé map:    36.31 kB[22m
+[2mdist/[22m[36massets/ApiLogsPage-BHO9Bho9.js                       [39m[1m[2m 12.85 kB[22m[1m[22m[2m Γöé gzip:   4.33 kB[22m[2m Γöé map:    39.79 kB[22m
+[2mdist/[22m[36massets/useSavedViewUrl-CuZ8iG3G.js                   [39m[1m[2m 12.86 kB[22m[1m[22m[2m Γöé gzip:   3.76 kB[22m[2m Γöé map:    44.57 kB[22m
+[2mdist/[22m[36massets/SmartChargePage-DNF1r1KJ.js                   [39m[1m[2m 13.17 kB[22m[1m[22m[2m Γöé gzip:   4.01 kB[22m[2m Γöé map:    34.31 kB[22m
+[2mdist/[22m[36massets/ProjectedRangePage-CbohxU3g.js                [39m[1m[2m 13.29 kB[22m[1m[22m[2m Γöé gzip:   4.17 kB[22m[2m Γöé map:    33.28 kB[22m
+[2mdist/[22m[36massets/SafetySettingsPage-B7oVYyLg.js                [39m[1m[2m 13.46 kB[22m[1m[22m[2m Γöé gzip:   4.33 kB[22m[2m Γöé map:    42.16 kB[22m
+[2mdist/[22m[36massets/LifetimeStatsPage-Q_P4PUXY.js                 [39m[1m[2m 13.70 kB[22m[1m[22m[2m Γöé gzip:   4.17 kB[22m[2m Γöé map:    38.04 kB[22m
+[2mdist/[22m[36massets/EnergyFlowPage-BSEQ38tg.js                    [39m[1m[2m 13.87 kB[22m[1m[22m[2m Γöé gzip:   3.82 kB[22m[2m Γöé map:    39.95 kB[22m
+[2mdist/[22m[36massets/RedisSignalViewerPage-BwwWg983.js             [39m[1m[2m 14.92 kB[22m[1m[22m[2m Γöé gzip:   5.24 kB[22m[2m Γöé map:    42.66 kB[22m
+[2mdist/[22m[36massets/EnergyProductsPage-B6CP_iGP.js                [39m[1m[2m 14.94 kB[22m[1m[22m[2m Γöé gzip:   4.55 kB[22m[2m Γöé map:    42.62 kB[22m
+[2mdist/[22m[36massets/SignalDiffPage-FQEeFBWu.js                    [39m[1m[2m 15.06 kB[22m[1m[22m[2m Γöé gzip:   5.40 kB[22m[2m Γöé map:    46.10 kB[22m
+[2mdist/[22m[36massets/MapOverviewPage-C4zlyiBt.js                   [39m[1m[2m 15.46 kB[22m[1m[22m[2m Γöé gzip:   5.24 kB[22m[2m Γöé map:    53.24 kB[22m
+[2mdist/[22m[36massets/FleetComparePage-4XL5rUJD.js                  [39m[1m[2m 15.92 kB[22m[1m[22m[2m Γöé gzip:   4.86 kB[22m[2m Γöé map:    46.59 kB[22m
+[2mdist/[22m[36massets/EfficiencyPage-axAx1JCd.js                    [39m[1m[2m 16.10 kB[22m[1m[22m[2m Γöé gzip:   4.27 kB[22m[2m Γöé map:    42.94 kB[22m
+[2mdist/[22m[36massets/AdminPage-BMIt5qIh.js                         [39m[1m[2m 16.90 kB[22m[1m[22m[2m Γöé gzip:   4.78 kB[22m[2m Γöé map:    43.40 kB[22m
+[2mdist/[22m[36massets/BatteryDegradationPage-TKCiMZHW.js            [39m[1m[2m 17.65 kB[22m[1m[22m[2m Γöé gzip:   5.41 kB[22m[2m Γöé map:    47.40 kB[22m
+[2mdist/[22m[36massets/DrivesListPage-B3keCS9e.js                    [39m[1m[2m 18.07 kB[22m[1m[22m[2m Γöé gzip:   6.32 kB[22m[2m Γöé map:    56.02 kB[22m
+[2mdist/[22m[36massets/TripPlannerPage-CwT28l34.js                   [39m[1m[2m 18.17 kB[22m[1m[22m[2m Γöé gzip:   5.72 kB[22m[2m Γöé map:    52.84 kB[22m
+[2mdist/[22m[36massets/ChargingDetailPage-CMtk0HXF.js                [39m[1m[2m 18.77 kB[22m[1m[22m[2m Γöé gzip:   5.33 kB[22m[2m Γöé map:    59.33 kB[22m
+[2mdist/[22m[36massets/EnergyPage-CNIQPtLj.js                        [39m[1m[2m 18.96 kB[22m[1m[22m[2m Γöé gzip:   5.84 kB[22m[2m Γöé map:    55.51 kB[22m
+[2mdist/[22m[36massets/GeofencesPage-B89ngfSQ.js                     [39m[1m[2m 19.26 kB[22m[1m[22m[2m Γöé gzip:   7.00 kB[22m[2m Γöé map:    71.41 kB[22m
+[2mdist/[22m[36massets/BackupRestorePage-DWTbvJVE.js                 [39m[1m[2m 19.56 kB[22m[1m[22m[2m Γöé gzip:   5.71 kB[22m[2m Γöé map:    57.16 kB[22m
+[2mdist/[22m[36massets/ChatbotPage-Dgpx0Iur.js                       [39m[1m[2m 20.35 kB[22m[1m[22m[2m Γöé gzip:   6.83 kB[22m[2m Γöé map:    73.05 kB[22m
+[2mdist/[22m[36massets/BatteryCellsPage-0tx4oSX3.js                  [39m[1m[2m 20.91 kB[22m[1m[22m[2m Γöé gzip:   5.87 kB[22m[2m Γöé map:    56.83 kB[22m
+[2mdist/[22m[36massets/WeeklyDigestPage-D257Xj6T.js                  [39m[1m[2m 21.15 kB[22m[1m[22m[2m Γöé gzip:   5.82 kB[22m[2m Γöé map:    71.20 kB[22m
+[2mdist/[22m[36massets/ChartTimeRangeContext-CE52NrS0.js             [39m[1m[2m 22.03 kB[22m[1m[22m[2m Γöé gzip:   7.77 kB[22m[2m Γöé map:   108.59 kB[22m
+[2mdist/[22m[36massets/ChargingCurvePage-ffBvHGjB.js                 [39m[1m[2m 22.56 kB[22m[1m[22m[2m Γöé gzip:   6.09 kB[22m[2m Γöé map:    70.34 kB[22m
+[2mdist/[22m[36massets/SecurityAccessPage-DJ9pBbqR.js                [39m[1m[2m 23.04 kB[22m[1m[22m[2m Γöé gzip:   6.25 kB[22m[2m Γöé map:    73.50 kB[22m
+[2mdist/[22m[36massets/ClimateControlPage-CX8i_ZbY.js                [39m[1m[2m 23.42 kB[22m[1m[22m[2m Γöé gzip:   5.63 kB[22m[2m Γöé map:    69.45 kB[22m
+[2mdist/[22m[36massets/TripReplayPage-BKRiOXqL.js                    [39m[1m[2m 23.61 kB[22m[1m[22m[2m Γöé gzip:   8.31 kB[22m[2m Γöé map:   104.14 kB[22m
+[2mdist/[22m[36massets/AutomationsListPage-XmehhE00.js               [39m[1m[2m 23.72 kB[22m[1m[22m[2m Γöé gzip:   7.38 kB[22m[2m Γöé map:    73.56 kB[22m
+[2mdist/[22m[36massets/CommandsPage-BtMoyBZv.js                      [39m[1m[2m 25.37 kB[22m[1m[22m[2m Γöé gzip:   7.31 kB[22m[2m Γöé map:    80.10 kB[22m
+[2mdist/[22m[36massets/DrivetrainHealthPage-0PHPTLoS.js              [39m[1m[2m 25.64 kB[22m[1m[22m[2m Γöé gzip:   7.00 kB[22m[2m Γöé map:    80.42 kB[22m
+[2mdist/[22m[36massets/YearReviewPage-CtwjUzO6.js                    [39m[1m[2m 26.49 kB[22m[1m[22m[2m Γöé gzip:   6.42 kB[22m[2m Γöé map:    71.90 kB[22m
+[2mdist/[22m[36massets/BatteryHealthPage-CvO_S-gG.js                 [39m[1m[2m 27.52 kB[22m[1m[22m[2m Γöé gzip:   7.68 kB[22m[2m Γöé map:    78.81 kB[22m
+[2mdist/[22m[36massets/SystemStatusPage-CvkYz4Gn.js                  [39m[1m[2m 27.98 kB[22m[1m[22m[2m Γöé gzip:   7.21 kB[22m[2m Γöé map:    84.46 kB[22m
+[2mdist/[22m[36massets/AnalyticsPage-DcbCzxKR.js                     [39m[1m[2m 29.89 kB[22m[1m[22m[2m Γöé gzip:   6.46 kB[22m[2m Γöé map:   100.65 kB[22m
+[2mdist/[22m[36massets/AlertsPage-PrPd94zt.js                        [39m[1m[2m 31.65 kB[22m[1m[22m[2m Γöé gzip:   9.31 kB[22m[2m Γöé map:    93.66 kB[22m
+[2mdist/[22m[36massets/DrivingDynamicsPage-B5RXflgK.js               [39m[1m[2m 33.73 kB[22m[1m[22m[2m Γöé gzip:   8.54 kB[22m[2m Γöé map:   103.94 kB[22m
+[2mdist/[22m[36massets/DriveScorePage-DqqnI8Gn.js                    [39m[1m[2m 35.63 kB[22m[1m[22m[2m Γöé gzip:   8.97 kB[22m[2m Γöé map:   108.68 kB[22m
+[2mdist/[22m[36massets/VehicleDetailPage-ii0ME4cE.js                 [39m[1m[2m 36.12 kB[22m[1m[22m[2m Γöé gzip:   8.81 kB[22m[2m Γöé map:   115.95 kB[22m
+[2mdist/[22m[36massets/CostAnalysisPage-BZmKEPya.js                  [39m[1m[2m 36.57 kB[22m[1m[22m[2m Γöé gzip:   8.92 kB[22m[2m Γöé map:   108.96 kB[22m
+[2mdist/[22m[36massets/vehicleState-CUXqMIcb.js                      [39m[1m[2m 38.10 kB[22m[1m[22m[2m Γöé gzip:  10.73 kB[22m[2m Γöé map:   124.96 kB[22m
+[2mdist/[22m[36massets/DataTable-BSVcMgto.js                         [39m[1m[2m 38.25 kB[22m[1m[22m[2m Γöé gzip:  12.16 kB[22m[2m Γöé map:   161.85 kB[22m
+[2mdist/[22m[36massets/StateMachineDebuggerPage-D7BMJci_.js          [39m[1m[2m 39.20 kB[22m[1m[22m[2m Γöé gzip:  11.60 kB[22m[2m Γöé map:   128.85 kB[22m
+[2mdist/[22m[36massets/index-COL7AACS.js                             [39m[1m[2m 39.28 kB[22m[1m[22m[2m Γöé gzip:  11.89 kB[22m[2m Γöé map:   235.11 kB[22m
+[2mdist/[22m[36massets/DataExportPage-ClSB7B5n.js                    [39m[1m[2m 41.41 kB[22m[1m[22m[2m Γöé gzip:  10.83 kB[22m[2m Γöé map:   125.73 kB[22m
+[2mdist/[22m[36massets/AutomationBuilderPage-D4etvvtN.js             [39m[1m[2m 41.50 kB[22m[1m[22m[2m Γöé gzip:  10.56 kB[22m[2m Γöé map:   128.83 kB[22m
+[2mdist/[22m[36massets/ChargingListPage-Qt7qFNlI.js                  [39m[1m[2m 42.85 kB[22m[1m[22m[2m Γöé gzip:  11.38 kB[22m[2m Γöé map:   123.95 kB[22m
+[2mdist/[22m[36massets/NavigationRoutePage-Bcslh0oy.js               [39m[1m[2m 44.93 kB[22m[1m[22m[2m Γöé gzip:  10.41 kB[22m[2m Γöé map:   106.81 kB[22m
+[2mdist/[22m[36massets/NotificationsPage-BuKuFbSu.js                 [39m[1m[2m 48.88 kB[22m[1m[22m[2m Γöé gzip:  14.64 kB[22m[2m Γöé map:   157.28 kB[22m
+[2mdist/[22m[36massets/vendor-query-bZXCAgMM.js                      [39m[1m[2m 50.52 kB[22m[1m[22m[2m Γöé gzip:  15.40 kB[22m[2m Γöé map:   176.29 kB[22m
+[2mdist/[22m[36massets/vendor-i18n-CJci-zcq.js                       [39m[1m[2m 51.37 kB[22m[1m[22m[2m Γöé gzip:  16.89 kB[22m[2m Γöé map:   168.48 kB[22m
+[2mdist/[22m[36massets/DriveDetailPage-VdtE0YSa.js                   [39m[1m[2m 53.25 kB[22m[1m[22m[2m Γöé gzip:  11.78 kB[22m[2m Γöé map:   154.01 kB[22m
+[2mdist/[22m[36massets/AlertStudioPage-DKxQUkuN.js                   [39m[1m[2m 55.05 kB[22m[1m[22m[2m Γöé gzip:  13.37 kB[22m[2m Γöé map:   150.42 kB[22m
+[2mdist/[22m[36massets/ApiPlaygroundPage--KtRBKqM.js                 [39m[1m[2m 59.40 kB[22m[1m[22m[2m Γöé gzip:  19.73 kB[22m[2m Γöé map:   235.79 kB[22m
+[2mdist/[22m[36massets/DevToolsPage-C30NB4Ir.js                      [39m[1m[2m 75.36 kB[22m[1m[22m[2m Γöé gzip:  18.40 kB[22m[2m Γöé map:   209.49 kB[22m
+[2mdist/[22m[36massets/leaflet.draw-Cfl3T7mi.js                      [39m[1m[2m101.62 kB[22m[1m[22m[2m Γöé gzip:  22.76 kB[22m[2m Γöé map:   262.41 kB[22m
+[2mdist/[22m[36massets/index-CsgIsuIL.js                             [39m[1m[2m114.17 kB[22m[1m[22m[2m Γöé gzip:  35.02 kB[22m[2m Γöé map:   657.63 kB[22m
+[2mdist/[22m[36massets/vendor-icons-DKdGHoEx.js                      [39m[1m[2m124.90 kB[22m[1m[22m[2m Γöé gzip:  22.29 kB[22m[2m Γöé map:   300.08 kB[22m
+[2mdist/[22m[36massets/vendor-motion-7BXFnDSs.js                     [39m[1m[2m128.02 kB[22m[1m[22m[2m Γöé gzip:  42.08 kB[22m[2m Γöé map:   706.85 kB[22m
+[2mdist/[22m[36massets/SettingsPage-BoaYtyQj.js                      [39m[1m[2m141.16 kB[22m[1m[22m[2m Γöé gzip:  35.14 kB[22m[2m Γöé map:   417.88 kB[22m
+[2mdist/[22m[36massets/vendor-map-CLQU6A8w.js                        [39m[1m[2m155.31 kB[22m[1m[22m[2m Γöé gzip:  45.39 kB[22m[2m Γöé map:   709.49 kB[22m
+[2mdist/[22m[36massets/vendor-react-BM8Jd35R.js                      [39m[1m[2m157.60 kB[22m[1m[22m[2m Γöé gzip:  51.65 kB[22m[2m Γöé map:   693.05 kB[22m
+[2mdist/[22m[36massets/DashboardPage-BIlSWxW6.js                     [39m[1m[2m214.31 kB[22m[1m[22m[2m Γöé gzip:  59.52 kB[22m[2m Γöé map:   698.86 kB[22m
+[2mdist/[22m[36massets/html2canvas-pro.esm-81Q1TmhQ.js               [39m[1m[2m229.77 kB[22m[1m[22m[2m Γöé gzip:  57.55 kB[22m[2m Γöé map:   754.96 kB[22m
+[2mdist/[22m[36massets/vendor-charts-BMKPL0rW.js                     [39m[1m[2m446.17 kB[22m[1m[22m[2m Γöé gzip: 116.91 kB[22m[2m Γöé map: 1,918.94 kB[22m
+[2mdist/[22m[36massets/index-Dmj7uKeV.js                             [39m[1m[33m838.53 kB[39m[22m[2m Γöé gzip: 250.84 kB[22m[2m Γöé map: 2,291.36 kB[22m
+
+(!) Some chunks are larger than 600 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[32mΓ£ô built in 16.84s[39m
+
+PWA v1.2.0
+Building src/sw/sw.ts service worker ("es" format)...
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 82 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[36msw.mjs  [39m[1m[2m25.13 kB[22m[1m[22m[2m Γöé gzip: 8.30 kB[22m[2m Γöé map: 206.54 kB[22m
+[32mΓ£ô built in 199ms[39m
+
+PWA v1.2.0
+mode      injectManifest
+format:   es
+precache  379 entries (7918.75 KiB)
+files generated
+  dist/sw.js
+  dist/sw.js.map
+
+> teslasync-web@2.0.0 postbuild
+> node scripts/check-bundle-size.mjs
+
+
+[bundle-size] per-chunk (sorted by gzipped size)
+  kind     gzip       raw        name
+  -------  ---------  ---------  ----------------------------------------
+  entry     245.0 KB   819.9 KB  index-Dmj7uKeV.js
+  vendor    114.2 KB   435.7 KB  vendor-charts-BMKPL0rW.js
+  route      58.1 KB   209.4 KB  DashboardPage-BIlSWxW6.js
+  route      56.2 KB   225.2 KB  html2canvas-pro.esm-81Q1TmhQ.js
+  vendor     50.4 KB   153.9 KB  vendor-react-BM8Jd35R.js
+  vendor     44.3 KB   151.7 KB  vendor-map-CLQU6A8w.js
+  vendor     41.1 KB   125.0 KB  vendor-motion-7BXFnDSs.js
+  route      34.3 KB   138.0 KB  SettingsPage-BoaYtyQj.js
+  entry      34.2 KB   111.5 KB  index-CsgIsuIL.js
+  route      22.2 KB    99.2 KB  leaflet.draw-Cfl3T7mi.js
+  vendor     21.8 KB   122.0 KB  vendor-icons-DKdGHoEx.js
+  route      19.3 KB    58.0 KB  ApiPlaygroundPage--KtRBKqM.js
+  route      18.0 KB    73.6 KB  DevToolsPage-C30NB4Ir.js
+  vendor     16.5 KB    50.2 KB  vendor-i18n-CJci-zcq.js
+  vendor     15.0 KB    49.3 KB  vendor-query-bZXCAgMM.js
+  route      14.3 KB    47.8 KB  NotificationsPage-BuKuFbSu.js
+  route      13.1 KB    53.8 KB  AlertStudioPage-DKxQUkuN.js
+  route      11.9 KB    37.4 KB  DataTable-BSVcMgto.js
+  entry      11.6 KB    38.4 KB  index-COL7AACS.js
+  route      11.5 KB    52.1 KB  DriveDetailPage-VdtE0YSa.js
+  route      11.3 KB    38.3 KB  StateMachineDebuggerPage-D7BMJci_.js
+  route      11.1 KB    41.9 KB  ChargingListPage-Qt7qFNlI.js
+  route      10.6 KB    40.5 KB  DataExportPage-ClSB7B5n.js
+  route      10.5 KB    37.2 KB  vehicleState-CUXqMIcb.js
+  route      10.3 KB    40.5 KB  AutomationBuilderPage-D4etvvtN.js
+  route      10.2 KB    43.9 KB  NavigationRoutePage-Bcslh0oy.js
+  route       9.1 KB    30.9 KB  AlertsPage-PrPd94zt.js
+  route       8.8 KB    34.8 KB  DriveScorePage-DqqnI8Gn.js
+  route       8.7 KB    35.7 KB  CostAnalysisPage-BZmKEPya.js
+  route       8.6 KB    35.3 KB  VehicleDetailPage-ii0ME4cE.js
+  route       8.3 KB    33.0 KB  DrivingDynamicsPage-B5RXflgK.js
+  route       8.1 KB    23.1 KB  TripReplayPage-BKRiOXqL.js
+  route       7.6 KB    21.5 KB  ChartTimeRangeContext-CE52NrS0.js
+  route       7.5 KB    26.9 KB  BatteryHealthPage-CvO_S-gG.js
+  route       7.2 KB    23.2 KB  AutomationsListPage-XmehhE00.js
+  route       7.1 KB    24.8 KB  CommandsPage-BtMoyBZv.js
+  route       7.0 KB    27.4 KB  SystemStatusPage-CvkYz4Gn.js
+  route       6.8 KB    25.1 KB  DrivetrainHealthPage-0PHPTLoS.js
+  route       6.8 KB    18.8 KB  GeofencesPage-B89ngfSQ.js
+  route       6.7 KB    19.9 KB  ChatbotPage-Dgpx0Iur.js
+  route       6.3 KB    29.2 KB  AnalyticsPage-DcbCzxKR.js
+  route       6.3 KB    25.9 KB  YearReviewPage-CtwjUzO6.js
+  route       6.2 KB    17.7 KB  DrivesListPage-B3keCS9e.js
+  route       6.1 KB    22.5 KB  SecurityAccessPage-DJ9pBbqR.js
+  route       5.9 KB    22.1 KB  ChargingCurvePage-ffBvHGjB.js
+  route       5.7 KB    20.4 KB  BatteryCellsPage-0tx4oSX3.js
+  route       5.7 KB    18.5 KB  EnergyPage-CNIQPtLj.js
+  route       5.7 KB    20.7 KB  WeeklyDigestPage-D257Xj6T.js
+  route       5.6 KB    17.8 KB  TripPlannerPage-CwT28l34.js
+  route       5.6 KB    19.1 KB  BackupRestorePage-DWTbvJVE.js
+  route       5.5 KB    22.9 KB  ClimateControlPage-CX8i_ZbY.js
+  route       5.3 KB    17.3 KB  BatteryDegradationPage-TKCiMZHW.js
+  route       5.3 KB    14.7 KB  SignalDiffPage-FQEeFBWu.js
+  route       5.2 KB    18.4 KB  ChargingDetailPage-CMtk0HXF.js
+  route       5.1 KB    15.1 KB  MapOverviewPage-C4zlyiBt.js
+  route       5.1 KB    14.6 KB  RedisSignalViewerPage-BwwWg983.js
+  route       4.7 KB    15.6 KB  FleetComparePage-4XL5rUJD.js
+  route       4.7 KB    11.5 KB  RoadmapPage-D9qx2Wg0.js
+  route       4.7 KB    16.5 KB  AdminPage-BMIt5qIh.js
+  route       4.4 KB    14.6 KB  EnergyProductsPage-B6CP_iGP.js
+  route       4.4 KB    11.5 KB  SignalExplorerPage-BsfW6ZMV.js
+  route       4.2 KB    12.6 KB  ApiLogsPage-BHO9Bho9.js
+  route       4.2 KB    13.2 KB  SafetySettingsPage-B7oVYyLg.js
+  route       4.2 KB    12.4 KB  MaintenancePage-BpCeToJs.js
+  route       4.2 KB    15.8 KB  EfficiencyPage-axAx1JCd.js
+  route       4.2 KB    12.5 KB  GuardModePage-iSjeNEt5.js
+  route       4.1 KB    11.6 KB  TeslaChargingSessionsPage-C70F5ZoF.js
+  route       4.1 KB    12.4 KB  PlaybackControls-cXKXP6Sb.js
+  route       4.1 KB    13.4 KB  LifetimeStatsPage-Q_P4PUXY.js
+  route       4.1 KB    13.0 KB  ProjectedRangePage-CbohxU3g.js
+  route       3.9 KB    10.3 KB  TeslaChargingHistoryPage-DN7sRR1T.js
+  route       3.9 KB    12.9 KB  SmartChargePage-DNF1r1KJ.js
+  route       3.9 KB    11.1 KB  MediaPlayerPage-CHi72Df0.js
+  route       3.7 KB    13.5 KB  EnergyFlowPage-BSEQ38tg.js
+  route       3.7 KB    12.6 KB  useSavedViewUrl-CuZ8iG3G.js
+  route       3.7 KB    10.6 KB  VehicleListPage-DjZYT_W3.js
+  route       3.5 KB     9.2 KB  TripListPage-D0BojQiq.js
+  route       3.5 KB     9.7 KB  SleepEfficiencyPage-DBOkaRma.js
+  route       3.5 KB     9.5 KB  StatisticsPage-DNN-t-GC.js
+  route       3.4 KB     8.8 KB  TemperatureImpactPage-D09epjWZ.js
+  route       3.3 KB    10.3 KB  FeedbackQueuePage-B3zKe_DT.js
+  route       3.3 KB     7.9 KB  CommandHistoryPage-CuREevVX.js
+  route       3.3 KB     8.3 KB  PeriodComparePage-HZPDSJKr.js
+  route       3.2 KB     9.5 KB  DBHealthPage-DHJQSQCk.js
+  route       3.2 KB     9.6 KB  RegenEfficiencyPage-CQSRBUbO.js
+  route       3.1 KB     9.3 KB  PowerFlowDashboardPage-BbNmSRHg.js
+  route       3.1 KB    11.4 KB  useVehicleLive-BcjHTmS-.js
+  route       3.0 KB     7.7 KB  TimelinePage-C7XMg8nf.js
+  route       3.0 KB     7.3 KB  TirePressurePage-D9USupwn.js
+  route       2.9 KB     7.6 KB  VampireDrainPage-DUUPZiJS.js
+  route       2.9 KB     7.5 KB  ComboboxMulti-DnWXZ2R1.js
+  route       2.9 KB     9.7 KB  FleetAPIPage-itdNSpj6.js
+  route       2.9 KB     8.5 KB  SpeedProfilePage-JOllNM3k.js
+  route       2.8 KB     6.7 KB  SignalLogViewerPage-CnfaeS3k.js
+  route       2.8 KB     8.4 KB  VehicleHeroWidget-CePR9ijK.js
+  route       2.8 KB     9.5 KB  TrueCostPage-hLw9ZrFH.js
+  route       2.8 KB     8.0 KB  DigitalTwinPage-DAHMwOI6.js
+  route       2.8 KB     7.3 KB  LocationsPage-vrlkXsmL.js
+  route       2.8 KB     8.4 KB  RouteEfficiencyPage-Ra6Wciwu.js
+  route       2.7 KB     7.8 KB  MQTTInspectorPage-9nSaHOEI.js
+  route       2.7 KB     7.9 KB  SharedDrivePage-BY1zzMGP.js
+  route       2.7 KB     6.0 KB  PageContainer-C_JT4EZH.js
+  route       2.6 KB     7.2 KB  ChargingHeatmapPage-EHthcG6P.js
+  route       2.6 KB    10.7 KB  DataRepairPage-C3GmMw8l.js
+  route       2.5 KB     7.6 KB  MyActivityPage-BPPy7g6k.js
+  route       2.5 KB     6.8 KB  OnboardingPage-CoUixw88.js
+  route       2.5 KB     6.5 KB  SignalGapDetectorPage-IvPGC7yx.js
+  route       2.5 KB     5.6 KB  DriveEfficiencyChartWidget-CjjOqaCm.js
+  route       2.4 KB     6.4 KB  AnomalyDashboardPage-DhNr8s1f.js
+  route       2.4 KB     6.5 KB  DriveTelemetryWidget-BbK7u9TW.js
+  route       2.3 KB     5.6 KB  workbox-window.prod.es5-vqzQaGvo.js
+  route       2.3 KB     6.2 KB  AlertRulesPage-DNrmV3YP.js
+  route       2.2 KB     5.6 KB  LiveSignalMonitorPage-O9rgX1b2.js
+  route       2.2 KB     5.8 KB  FSMDistributionWidget-DwK2kdGp.js
+  route       2.2 KB     5.2 KB  SafetyHistoryWidget-DYlzbNxU.js
+  route       2.2 KB     5.0 KB  SpeedHeatmapWidget-CnC0W0b2.js
+  route       2.2 KB     5.6 KB  GlancePage-lJHEF9la.js
+  route       2.2 KB     5.6 KB  WarrantyStatusWidget-DisK6ezs.js
+  route       2.2 KB     5.3 KB  ExportStatusWidget-BcKvy0DA.js
+  route       2.2 KB     4.9 KB  ChargingSessionDetailWidget-DvNEH0If.js
+  route       2.2 KB     5.3 KB  SoftwareUpdatesPage-DgXDLiag.js
+  route       2.2 KB     5.4 KB  MileagePage-ZCMcgVj8.js
+  route       2.2 KB     6.2 KB  SearchPage-BgYoDCTt.js
+  route       2.1 KB     6.2 KB  ChargingOptimizerWidget-D7nMAaB3.js
+  route       2.1 KB     4.5 KB  TeslaChargingSessionsMap-_Ihz_jcH.js
+  route       2.1 KB     6.0 KB  ProjectedRangeWidget-DJfB0dDa.js
+  route       2.1 KB     6.7 KB  VehicleAccessPage-x3L1Li1Y.js
+  route       2.1 KB     5.7 KB  ChargePlansWidget-CQ2G3-_p.js
+  route       2.1 KB     5.8 KB  VehicleUpgradesWidget-C26Abo7N.js
+  route       2.1 KB     5.2 KB  BatteryDegradationForecastWidget-BVa-8D-e.js
+  route       2.1 KB     4.7 KB  CostBreakdownWidget-DgaoQIYs.js
+  route       2.1 KB     5.2 KB  APIKeysPage-CgBJpe9q.js
+  route       2.1 KB     4.7 KB  WatchFacePage-DIhIhhQp.js
+  route       2.0 KB     5.5 KB  PowerFlowHistoryWidget-oMZzXy5g.js
+  route       2.0 KB     4.8 KB  MotorHistoryWidget-nUxIV3X8.js
+  route       2.0 KB     5.0 KB  NotificationStatsWidget-Bu3GooAz.js
+  route       2.0 KB     5.2 KB  DrivingDynamicsWidget-CxozsoLx.js
+  route       2.0 KB     4.7 KB  SubscriptionsWidget-BdYsW1rJ.js
+  route       2.0 KB     5.8 KB  ChargeStatusLiveWidget-CwYHBRJb.js
+  route       2.0 KB     5.0 KB  SignalHealthWidget-Dnv4yAtS.js
+  route       2.0 KB     4.5 KB  EnergyStatsWidget-BFvK4TVx.js
+  route       2.0 KB     4.4 KB  SpeedProfileWidget-BsfsyGH8.js
+  route       1.9 KB     4.2 KB  GeofenceWidget-wImIIae1.js
+  route       1.9 KB     5.3 KB  VehicleHeroCardWidget-CPzPx9u6.js
+  route       1.9 KB     5.0 KB  TirePressureVisualWidget-D-XaRMKE.js
+  route       1.9 KB     4.1 KB  ChargeSessionChartWidget-DapQ6aH7.js
+  route       1.9 KB     4.8 KB  GuardModeWidget-BO6NP3At.js
+  route       1.9 KB     4.5 KB  TirePressureHistoryWidget-uRN2D3PR.js
+  route       1.9 KB     4.8 KB  VehicleAccessWidget-Df2PIviN.js
+  entry       1.9 KB     4.3 KB  index-2x_v_kMB.js
+  route       1.9 KB     5.0 KB  OnboardingChecklistWidget-BeWpWz7a.js
+  route       1.9 KB     4.3 KB  WallConnectorWidget-CQ8Ge-Lw.js
+  route       1.9 KB     4.9 KB  ChargingScheduleWidget-CKmb4KuK.js
+  route       1.9 KB     3.8 KB  LiveSignalSparklinesWidget-DjcT4_QN.js
+  route       1.9 KB     4.3 KB  SolarProductionWidget-CJhlaDm9.js
+  route       1.9 KB     3.9 KB  VampireDrainWidget-P4QwOLlw.js
+  route       1.9 KB     5.1 KB  BackupMonitorWidget-C1LT5HcV.js
+  route       1.9 KB     4.7 KB  MaintenanceTrackerWidget-Dwifw4Ip.js
+  route       1.9 KB     5.5 KB  ClimateControlPanelWidget-e3jaTsZH.js
+  route       1.9 KB     4.7 KB  useNavigationGuard-Dl_x9_j9.js
+  route       1.8 KB     4.0 KB  AuditLogWidget-Cz9pPGqv.js
+  route       1.8 KB     5.4 KB  WatchSummaryWidget-Cms3VvKY.js
+  route       1.8 KB     4.5 KB  StateTimelineWidget-ojQR262w.js
+  route       1.8 KB     5.0 KB  DoorWindowStatusWidget-C6F9Fr8W.js
+  route       1.8 KB     5.3 KB  DestinationETAWidget-wE_YkujE.js
+  route       1.8 KB     5.1 KB  SoftwareUpdateStatusWidget-C4FUMw-W.js
+  route       1.8 KB     5.0 KB  AutomationListPage-BWlWX_-N.js
+  route       1.8 KB     4.7 KB  ExportsPage-CH91DuT5.js
+  route       1.8 KB     4.1 KB  ClimateHistoryWidget-B7z0Rc50.js
+  route       1.8 KB     4.1 KB  YearReviewWidget-CgsOYMd6.js
+  route       1.7 KB     4.8 KB  AutomationStatusWidget-B8a0opSZ.js
+  route       1.7 KB     4.1 KB  VehicleSpecsWidget-BMfp9vsG.js
+  route       1.7 KB     4.1 KB  ChargingTelemetryWidget-BOUTFHyg.js
+  route       1.7 KB     4.0 KB  DigitalTwinWidget-Cld2M_Rp.js
+  route       1.7 KB     3.7 KB  MonthlyMileageWidget-Cz4rSO9-.js
+  route       1.7 KB     4.2 KB  FilterBar-D99rz1Sa.js
+  route       1.7 KB     4.0 KB  ChargeCostTrackerWidget-Dccp2BAF.js
+  route       1.7 KB     4.0 KB  DashboardStatsWidget-BG0g07DO.js
+  route       1.7 KB     4.3 KB  PowersharePage-BDXjaBGs.js
+  route       1.7 KB     3.8 KB  SystemHealthWidget-BXoGEEvJ.js
+  route       1.7 KB     4.3 KB  BackupHistoryWidget-LzsbyzA5.js
+  route       1.6 KB     3.3 KB  BatteryDegradationTrendWidget-CA4xLRbO.js
+  route       1.6 KB     3.7 KB  AnalyticsSummaryWidget-B8S0r5wO.js
+  route       1.6 KB     3.8 KB  AutomationHistoryWidget-BxwoOzvj.js
+  route       1.6 KB     3.6 KB  CostForecastWidget-DQ3hjgXo.js
+  route       1.6 KB     3.5 KB  VersionInfoWidget-IGXSGncz.js
+  route       1.6 KB     3.9 KB  TelemetryErrorsWidget-Cou9Yz6i.js
+  route       1.6 KB     3.4 KB  AnomalyDetectorWidget-DkOQLpBA.js
+  route       1.6 KB     3.9 KB  WeeklySummaryCardWidget-fqN6H8og.js
+  route       1.6 KB     3.4 KB  WeeklyDigestWidget-CC03Jvx3.js
+  route       1.6 KB     4.0 KB  SafetyFeaturesWidget-DRxhh3XE.js
+  route       1.6 KB     3.8 KB  EnergyFlowAnimatedWidget-B8Wv7SQQ.js
+  route       1.6 KB     3.1 KB  SignalLogWidget-Bdsz3HtZ.js
+  route       1.6 KB     3.5 KB  SignalCatalogWidget-DkVWLtmP.js
+  route       1.6 KB     3.8 KB  RecentDrivesListWidget-813Rclqp.js
+  route       1.6 KB     3.1 KB  PullToRefresh-tZYir1ig.js
+  route       1.5 KB     3.4 KB  LocationFavoritesWidget-M6rNx5PA.js
+  route       1.5 KB     4.6 KB  LiveSignalsWidget-w9qRI_h2.js
+  route       1.5 KB     4.0 KB  Delta-Cngglw_H.js
+  route       1.5 KB     3.6 KB  LifetimeStatsWidget-BMI1M0j2.js
+  route       1.5 KB     3.6 KB  UptimeMonitorWidget-BT3bLCNq.js
+  route       1.5 KB     3.8 KB  TripSummaryWidget-Bo1x14PS.js
+  route       1.5 KB     3.1 KB  PositionHeatmapWidget-Bb8hwrl2.js
+  route       1.5 KB     3.3 KB  SoftwareUpdateHistoryWidget-Cs5aI30P.js
+  route       1.5 KB     2.8 KB  BatteryRadialGaugeWidget-Blfkawej.js
+  route       1.5 KB     4.3 KB  FleetStatsWidget-Cu9R-gn1.js
+  route       1.5 KB     3.5 KB  LivePowerFlowWidget-DgTiKCIc.js
+  route       1.5 KB     3.2 KB  DrivetrainHealthWidget-__sYOKrS.js
+  route       1.5 KB     3.1 KB  CommandHistoryWidget-DK5OkXdl.js
+  route       1.5 KB     2.9 KB  SentryEventLogWidget-Buw1seAk.js
+  route       1.4 KB     3.3 KB  SuperchargerHistoryWidget-feIXsHpw.js
+  route       1.4 KB     3.6 KB  EditConflictBanner-BGJd5_uX.js
+  route       1.4 KB     3.5 KB  MotorPerformanceWidget-BTdjDUGW.js
+  route       1.4 KB     3.2 KB  NotFoundPage-DDPSKRM1.js
+  route       1.4 KB     3.2 KB  RouteEfficiencyWidget-EXpPqu1i.js
+  route       1.4 KB     3.0 KB  MaskedValue-CtVY698f.js
+  route       1.4 KB     3.4 KB  BatteryCellsWidget-DMiJhfU2.js
+  route       1.4 KB     4.2 KB  MediaNowPlayingWidget-CSJrsS3S.js
+  route       1.4 KB     4.0 KB  DateRangeFilter-DymAURuc.js
+  route       1.4 KB     4.6 KB  useCharging-CmpnaZt4.js
+  route       1.4 KB     3.1 KB  MileageStatsWidget-BmhmoLQa.js
+  route       1.4 KB     4.2 KB  useTelemetry-CU6PTkv_.js
+  route       1.4 KB     3.2 KB  DrivingCoachWidget-Bh5vUDEX.js
+  route       1.4 KB     3.2 KB  CommandQuickActionsWidget-BfoykFN0.js
+  route       1.4 KB     2.7 KB  SleepEfficiencyWidget-iYYopuKq.js
+  route       1.4 KB     3.3 KB  MQTTStatusWidget-D0wxQfic.js
+  route       1.4 KB     2.7 KB  MediaHistoryWidget-CK2p871X.js
+  route       1.4 KB     2.9 KB  RegenEfficiencyWidget-CYkDTU9V.js
+  route       1.3 KB     3.1 KB  BatteryHealthAnalyticsWidget-Bu7xJLiv.js
+  route       1.3 KB     2.8 KB  DigitalTwinMiniWidget-CCIVTb38.js
+  route       1.3 KB     2.9 KB  DriveScoreGaugeWidget-DRlc_ou-.js
+  route       1.3 KB     3.0 KB  OdometerCounterWidget-C_uWZV4m.js
+  route       1.3 KB     3.1 KB  APIUsageWidget-CrEIX14H.js
+  route       1.3 KB     2.5 KB  WidgetFlowDiagram-Bvk2g6_R.js
+  route       1.3 KB     2.7 KB  EnergyFlowWidget-DhIU4khY.js
+  route       1.3 KB     2.8 KB  LocationMapWidget-qrD11sX8.js
+  route       1.3 KB     2.4 KB  Avatar-DULUGXDR.js
+  route       1.3 KB     3.1 KB  ChangelogPage-CW2oFaWd.js
+  route       1.3 KB     2.5 KB  EnergySiteInfoWidget-BW3XBXHj.js
+  route       1.2 KB     2.7 KB  FleetStatsBarWidget-DOuyDycU.js
+  route       1.2 KB     2.4 KB  RecentlyUnlockedAchievements-BUHCd2nu.js
+  route       1.2 KB     2.8 KB  QuickStatsPage-DpTvKH1R.js
+  route       1.2 KB     4.8 KB  useEnergy-D5krx6qB.js
+  route       1.2 KB     2.7 KB  SecurityStatusWidget-DK0tfAvz.js
+  route       1.2 KB     2.4 KB  RecentDrivesWidget-Dx-bBqc1.js
+  route       1.2 KB     2.4 KB  ChargeHistoryWidget-DpWtVHa3.js
+  route       1.2 KB     2.7 KB  TeslaAccountPage-DyC0jFtf.js
+  route       1.2 KB     3.9 KB  useAutomations-D2BMlxKN.js
+  route       1.2 KB     2.8 KB  QueryError-BZUQmCwk.js
+  route       1.1 KB     2.1 KB  colors-C4-zC4vu.js
+  route       1.1 KB     2.9 KB  ChargeStatusWidget-D6qu8mBH.js
+  route       1.1 KB     2.2 KB  WidgetShell-htB-T4-t.js
+  route       1.1 KB     2.3 KB  RangeBarWidget-CtvASooe.js
+  route       1.1 KB     2.4 KB  ClimateStatusWidget-RIPNHBzw.js
+  route       1.1 KB     3.4 KB  useDriving-Dq40P4tw.js
+  route       1.1 KB     2.4 KB  WeatherAtCarWidget-D0QGBWym.js
+  route       1.1 KB     2.0 KB  AlertFeedWidget-Mi3CZ2Kp.js
+  route       1.0 KB     2.1 KB  LiveStaleDataBanner-BAbLNuJj.js
+  route       1.0 KB     2.1 KB  BulkActionsToolbar-xFmf3ohJ.js
+  route       1.0 KB     2.0 KB  WidgetEventFeed-BynpzlIu.js
+  route       1.0 KB     2.1 KB  TripDetailPage-C8FsLwIt.js
+  route       1.0 KB     1.8 KB  DriveScoreWidget-D9vOe0P8.js
+  route       1.0 KB     2.4 KB  ErrorDisplay-CTYLT7JO.js
+  route       1.0 KB     1.8 KB  BatteryGaugeWidget-Bi7pUvtp.js
+  route       1.0 KB     2.8 KB  Pagination-D_05xld-.js
+  route       1.0 KB     2.1 KB  QuickNavWidget-BtdQm235.js
+  route       0.9 KB     1.9 KB  SourceLayerBadge-Dx3ozvs0.js
+  route       0.9 KB     2.2 KB  MapTileLayer-BCo9CqAl.js
+  route       0.9 KB     1.8 KB  RangeEstimateWidget-CbDkdEUR.js
+  route       0.8 KB     1.5 KB  WidgetRankedList-BQ8Z5ENE.js
+  route       0.8 KB     1.8 KB  Spinner-BRt3bxmE.js
+  route       0.8 KB     1.5 KB  Tabs-CjeaDE_X.js
+  route       0.8 KB     1.4 KB  PinButton-B67Cfy5Y.js
+  route       0.8 KB     2.6 KB  useUser-Cdvsthed.js
+  route       0.8 KB     1.5 KB  MetricCard-DRvBtIVD.js
+  route       0.8 KB     1.4 KB  FreshnessIndicator-Dty7TL4n.js
+  route       0.8 KB     1.5 KB  HelpTooltip-QcgwBJaT.js
+  route       0.8 KB     1.4 KB  DateTime-CEFYsc-2.js
+  route       0.7 KB     1.2 KB  csvExport-Z1QrD2fo.js
+  route       0.7 KB     1.4 KB  useWatch-BY540ttX.js
+  route       0.7 KB     1.5 KB  WidgetStatusGrid-BOkdJ-LP.js
+  route       0.7 KB     2.5 KB  useVehicleAccess-B3BkRNT6.js
+  route       0.7 KB     1.3 KB  WidgetTipCards-CGxYn1un.js
+  route       0.7 KB     2.1 KB  useAnalytics-ESZNEsoV.js
+  route       0.6 KB     1.3 KB  devtools-BPD6yttI.js
+  route       0.6 KB     1.2 KB  RadialGauge-DTLZOQCu.js
+  route       0.6 KB     1.1 KB  CopyButton-CNUYpl46.js
+  route       0.6 KB     1.1 KB  AnimatedMarker-Cq7ElZNn.js
+  route       0.6 KB     1.1 KB  MapLayerSwitcher-BHyLoKai.js
+  route       0.6 KB     1.1 KB  WidgetDetailCard-D3Qd71gn.js
+  route       0.6 KB     1.5 KB  useGuard-BSSzbylz.js
+  route       0.6 KB     1.2 KB  useUnits-CSnnDExK.js
+  route       0.6 KB     1.3 KB  Timeline-C3W4d37G.js
+  route       0.6 KB     1.2 KB  WidgetBigNumber-gD-ZPMEr.js
+  route       0.6 KB     1.9 KB  useVehicleSystems-DtfTXHoz.js
+  route       0.5 KB     1.2 KB  StatCard-BEa_5uCI.js
+  route       0.5 KB     0.9 KB  ChartLegend-BJpb-H3l.js
+  route       0.5 KB     1.0 KB  WidgetGaugeHero-CFpiXHyA.js
+  route       0.5 KB     0.8 KB  PrintButton-BL-oQo6B.js
+  route       0.5 KB     0.9 KB  SeverityBadge-Dpqddy_9.js
+  route       0.5 KB     1.0 KB  SectionErrorBoundary-DIaqd9ZN.js
+  route       0.5 KB     1.0 KB  useBulkSelection-BtU_a9w1.js
+  route       0.5 KB     0.8 KB  MetricBar-CsdHFV--.js
+  route       0.5 KB     0.9 KB  _ErrorState-DAnYKcpy.js
+  route       0.5 KB     0.8 KB  Sparkline-Jcw_Bi13.js
+  route       0.5 KB     0.9 KB  WidgetChartSummary-WoTiiOMq.js
+  route       0.5 KB     1.0 KB  useSharing-CPO2iJxP.js
+  route       0.5 KB     0.8 KB  WidgetStatGrid-Bwaz_hxk.js
+  route       0.5 KB     0.8 KB  WidgetMapView-CnbEFhA_.js
+  route       0.5 KB     1.0 KB  PageSkeleton-DDSrphOT.js
+  route       0.5 KB     0.8 KB  useLocations-Brf1GyM7.js
+  route       0.5 KB     0.7 KB  TabNav-C7efQ7F_.js
+  route       0.5 KB     0.8 KB  NoVehicleSelected-DtR0smMV.js
+  route       0.5 KB     0.7 KB  StatusBadge-hsHDwnB1.js
+  route       0.5 KB     0.7 KB  MiniChart-zQY9DNor.js
+  route       0.5 KB     0.8 KB  vehicleIcon-b8l3fisK.js
+  route       0.4 KB     0.7 KB  TimeStamp-C4d3Y7Wa.js
+  route       0.4 KB     0.7 KB  useTrips-awqoswIL.js
+  route       0.4 KB     0.6 KB  AnimatedNumber-CE4Gg2Sl.js
+  route       0.4 KB     0.8 KB  useConfirm-BsLGpEGz.js
+  route       0.4 KB     0.6 KB  chartUtils-2ruGOeua.js
+  route       0.4 KB     0.6 KB  useDirtyForm-DvXTHWsO.js
+  route       0.4 KB     0.6 KB  useFSM-CEcaktNp.js
+  route       0.4 KB     0.6 KB  KVList-eUn5N9Cc.js
+  route       0.4 KB     0.6 KB  Skeleton-DAh89og1.js
+  route       0.3 KB     0.4 KB  Currency-DDW9PntY.js
+  route       0.3 KB     0.4 KB  ChartAnnotationLayer-BcwvnXhS.js
+  route       0.3 KB     0.4 KB  IconBox-CMfsDctr.js
+  route       0.3 KB     0.5 KB  routeMeta-1G_Hm1hh.js
+  route       0.3 KB     0.5 KB  Grid-CLSVDA16.js
+  route       0.3 KB     0.4 KB  chartDefaults-CFb3QXOr.js
+  route       0.3 KB     0.4 KB  FadeIn-DtsCuQa1.js
+  route       0.3 KB     0.5 KB  FormSection-Cpd7N8fU.js
+  route       0.3 KB     0.5 KB  InlineMetric-DfXg1YtW.js
+  route       0.3 KB     0.4 KB  StaggerItem-DJtxhW-x.js
+  route       0.3 KB     0.4 KB  useCommands-D3O24iBO.js
+  route       0.3 KB     0.4 KB  StaggerContainer-DbLh9dz7.js
+  route       0.3 KB     0.4 KB  ChartBrush-BndEvL2Z.js
+  route       0.3 KB     0.5 KB  parseEnums-BCxfx60s.js
+  route       0.3 KB     0.3 KB  useAnomalies-vHh-_5KW.js
+  route       0.3 KB     0.4 KB  types-q7bOeGD4.js
+  route       0.3 KB     0.3 KB  useFilteredList-BvS6KSse.js
+  route       0.2 KB     0.3 KB  useChartPalette-BiSm31Ef.js
+  route       0.2 KB     0.2 KB  usePageTitle-p2iR47Xq.js
+  route       0.2 KB     0.3 KB  signalObservation-B7fm7VfI.js
+  route       0.2 KB     0.2 KB  errorMessage-y8yGOCqp.js
+  -------  ---------  ---------  ----------------------------------------
+  TOTAL              1591.8 KB  5215.3 KB  346 chunks
+    entry     292.7 KB
+    vendor    303.3 KB
+    route     995.8 KB
+
+[bundle-size] OK (entry Γëñ 350 KB, others Γëñ 600 KB)
+
+BUILD exit=0
+Working tree status (porcelain):
+   M web/src/api/hooks/useAdmin.ts
+All gate checks passed.
+EXIT=0
+STATUS=DONE
+
+=== NOTES ===
+1. NO-OP-PORT outcome: features/admin contains 14 production pages
+   that are infrastructure / control surfaces (system health, audit
+   logs, API keys, backup configs, dev tools, request builder, log
+   viewers, RBAC matrix, signal viewer, security events). Pages
+   render bytes (file_size), milliseconds (duration_ms), HTTP counts,
+   status enums, JSON payloads, and timestamps. None of these are
+   physical-unit quantities that need °C/°F or m/mi conversion.
+   Same outcome pattern as Phase-43/0024 (telemetry), Phase-43/0031
+   (automations), and Phase-43/0032 (notifications).
+
+2. ONLY HOOK CHANGE: useStateTimeline marked @deprecated because
+   `/vehicle-states/timeline` was deleted by Phase-42 / Prompt 0077
+   alongside the `vehicle_states` table drop. Hook retained for
+   graceful 404-via-error degradation in the out-of-scope dashboard
+   widget DashboardStatsWidget.tsx. Locked-policy continuation from
+   Phase-43 prompts 0023+0024+0025+0026+0027+0029+0030+0031+0032.
+
+3. NO PAGE EDITS: every in-scope page is portable as-is. Field
+   accesses go through camelCaseKeys (lib/resilience.ts:19-34) which
+   retains BOTH the snake_case wire form AND the camelCase variant on
+   every response object, so legacy `@/types/admin` interfaces
+   (camelCase) match runtime shape exactly. No `=== UNPORTABLE ===`
+   block needed.
+
+4. TYPE-SOURCE DECISION: kept hook signatures on legacy `@/types/admin`
+   instead of switching to the prompt-suggested `@/api/types`.
+   Rationale: api/types.ts variants have STRUCTURALLY DIFFERENT shapes
+   (e.g. APICallLog gains `ts/service/http_method/endpoint/status_code/
+   duration_ms/error_message/rate_limited` vs legacy `id/method/url/
+   statusCode/durationMs/requestBody/responseBody/error/createdAt`).
+   Switching the hook to api/types would break every in-scope page
+   (AdminPage, APIKeysPage, ApiLogsPage, BackupRestore, SecurityAccess,
+   MaintenanceModePanel) AND every out-of-scope consumer (12 dashboard
+   widgets + system pages + MaintenanceBanner) on field-access TS
+   errors. Defer the type unification to a coordinated cross-cutting
+   prompt that can update both consumers and types in lock-step.
+
+5. FALSE-POSITIVE WALK-DOWN of the SI-conversion grep (3 hits — all
+   ruled out on inspection):
+     AdminPage.tsx:26   `useRefreshAuth from '@/api/hooks/useSettings'`
+                        is the admin AUTH-REFRESH helper exported from
+                        the API hook file — NOT the user-pref
+                        `useSettings()` hook from `@/hooks/useSettings`.
+     FleetAPIPage.tsx:22 `useSettings from '@/api/hooks/useSettings'`
+                        fetches system polling config (telemetry-capture
+                        flags), not user-pref unit choices. The
+                        "odometer/locks/doors" strings on lines 77 and
+                        87 are i18n LABELS describing Tesla Fleet API
+                        endpoint coverage, not telemetry-value renders.
+     RedisSignalViewerPage.tsx:35 `/^(vehicle|odometer|latitude|...)/`
+                        categorises raw signal NAMES into a "Driving"
+                        group; the viewer renders raw stored values
+                        verbatim — SI conversion would obscure the
+                        wire data the operator is debugging.
+
+6. PAGE COUNT: gate baseline says 9 (stale phase-43 plan figure).
+   Current count is 14 production + 4 test = 17/18 .tsx files
+   recursive (depending on Get-ChildItem cwd quirks). Well above the
+   regression threshold, so the "must NOT delete pages" check passes
+   with margin.
+
+7. WINDOWS GATE QUIRKS reused (precedent: Phase-43/0021 + 0023 +
+   0029 + 0030 + 0031 + 0032):
+   (a) Resolve-Path absolute on $log BEFORE any Push-Location, else
+       Tee-Object loses the file under `web/.github/...` during BUILD.
+   (b) `.\node_modules\.bin\tsc.cmd` and `npm.cmd run build` instead
+       of `npx tsc` / `npm run build` to dodge npm 10's executable
+       resolution quirk under `pwsh -File` invocation.
+   (c) Self-deleting gate script via Remove-Item before the git-status
+       check, else `.tmp_gate_0033.ps1` trips the disallowed-file
+       check.
+   (d) git status --porcelain parsed by Substring(3) instead of regex
+       on the status line, because [regex]::Escape on a Windows-style
+       backslash path doesn't match git's forward-slash porcelain
+       output. `-like "$prefix*"` matches forward-slash paths.
+
+=== COMMIT ===
