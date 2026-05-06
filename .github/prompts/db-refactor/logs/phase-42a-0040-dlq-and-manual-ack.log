@@ -1,0 +1,216 @@
+phase-42a / 0040-dlq-and-manual-ack
+====================================
+
+Severity: Gate
+Atomic: yes
+Delegation: FORBIDDEN
+Predecessor: phase-42a-0030-normalize-observer.log (EXIT=0/STATUS=DONE)
+
+Allowed files to change:
+  - internal/mqtt/dlq_production.go
+  - internal/mqtt/dlq_production_test.go
+  - this log
+
+What this prompt does NOT do:
+  - Wire NewProductionPipelineMQTT into cmd/teslasync (deferred to 0050 cutover).
+  - Implement ack/nack logic — already implemented in phase-42 mqtt.go
+    (PipelineSubscriber.handlePayload). This prompt only ensures the client
+    is *configured* to permit manual ack.
+  - Spin up a real MQTT broker for connection-success tests (testcontainers
+    not available — see Decision #5 escape-hatch handling below).
+
+=== PREFLIGHT ===
+HEAD: 5de3570f4323c919ea9b577f72067ec7bb34935d
+git status --short (pre-prompt):
+  (clean working tree)
+Predecessor log exists: True
+Predecessor STATUS=DONE: True
+  (.github/prompts/db-refactor/logs/phase-42a-0030-normalize-observer.log:301
+   EXIT=0 / line 302 STATUS=DONE)
+
+=== AUDIT_EVIDENCE ===
+
+Check 1 — MQTTDLQPublisher constructor + struct (mqtt.go:831-882).
+  type MQTTDLQPublisher struct {
+      client       pahomqtt.Client
+      topicPrefix  string
+      publishQoS   byte
+      publishWait  time.Duration
+      publishRetry bool
+  }
+  func NewMQTTDLQPublisher(client pahomqtt.Client, topicPrefix string) *MQTTDLQPublisher
+  func (p *MQTTDLQPublisher) Publish(ctx context.Context, entry DLQEntry) error
+  Compile-time assertion: var _ DLQPublisher = (*MQTTDLQPublisher)(nil)
+
+Check 2 — Manual-ack contract documentation (mqtt.go:224-236).
+  Quoted verbatim:
+    "PipelineSubscriber relies on bounded MQTT redelivery: when the pipeline
+     returns ErrPayloadDrop AND the message has not yet hit MaxRedeliveries,
+     the handler returns WITHOUT calling msg.Ack(), expecting the broker to
+     redeliver at the next retry. For this to work the underlying paho client
+     MUST be constructed with SetAutoAckDisabled(true) (Paho v3 wire-default
+     is auto-ack AFTER the handler returns, which would silently break the
+     redelivery contract). The legacy NewClient constructor in this package
+     does NOT set that option because the legacy subscriber depends on
+     auto-ack semantics; the caller wiring PipelineSubscriber into
+     cmd/<server>/main.go is responsible for constructing a separate paho
+     client with SetAutoAckDisabled(true) before passing it in.
+     NewPipelineSubscriber documents but does not validate this requirement
+     (paho exposes no read-back for the option)."
+
+Check 3 — handlePayload + handlePipelineError ack/nack tree (mqtt.go:672-805).
+  - Line 678 (msg.Ack): topic-parse failure → ack-and-drop.
+  - Line 689 (msg.Ack): ErrUnknownVIN → ack-and-drop.
+  - Line 697-698 (NO ack): VIN resolver infra failure → broker redelivers.
+  - Line 707 (msg.Ack): pipeline returns nil → ack.
+  - Line 727 (NO ack): context.Canceled / DeadlineExceeded → no DLQ either.
+  - Line 744 (NO ack): codec drop below MaxRedeliveries → broker redelivers.
+  - Line 791-792 (NO ack): codec drop AT/over MaxRedeliveries but DLQ
+    publish failed → broker redelivers AND the next pass retries DLQ.
+  - Line 804 (msg.Ack): codec drop AT/over MaxRedeliveries AND DLQ publish
+    succeeded → poison-pill durably captured, ack.
+  - Line 752 (NO ack): non-retriable infra error → no DLQ either.
+  All four branches that DO NOT ack rely on broker redelivery — which only
+  works if the underlying paho client was constructed with
+  SetAutoAckDisabled(true). Without it paho auto-acks AFTER handlePayload
+  returns regardless of whether msg.Ack() was called.
+
+Check 4 — Existing legacy NewClient as anti-pattern (mqtt.go:34-71).
+  Legacy NewClient sets SetCleanSession(true) + SetAutoReconnect(true) and
+  does NOT set SetAutoAckDisabled. Manual-ack contract block above explicitly
+  notes this is intentional for the legacy subscriber. The new helper must
+  NOT reuse NewClient as a base; it builds its own ClientOptions from
+  pahomqtt.NewClientOptions() per Decision #2.
+
+Check 5 — paho ClientOptions field-level inspection feasibility.
+  Verified at GOMODCACHE/github.com/eclipse/paho.mqtt.golang@v1.5.0/options.go
+  L70-108: ClientOptions struct exports AutoAckDisabled (L107), CleanSession
+  (L76), Order (L77 — set via SetOrderMatters), KeepAlive (L86 — int64
+  seconds), PingTimeout (L87 — time.Duration), ConnectTimeout (L88 —
+  time.Duration), MaxReconnectInterval (L89 — time.Duration), AutoReconnect
+  (L90 — bool), ClientID (L72 — string), Username (L73 — string),
+  Password (L74 — string), Servers (L71 — []*url.URL via AddBroker).
+  Implication: Decision #5(a)'s direct field assertion is safe — no need
+  for the escape-hatch grep fallback. paho exposes the fields, just not a
+  readback from the *Client post-construction. The package-private
+  productionPipelineOptions helper IS the test seam.
+
+Check 6 — go.mod paho version (go.mod L13).
+  github.com/eclipse/paho.mqtt.golang v1.5.0
+  v1.5.0 has identical AutoAckDisabled / Order / CleanSession surface to
+  v1.4.3, so the ClientOptions field-level assertions in dlq_production_test
+  are stable across the patch range we expect from Renovate updates.
+
+Check 7 — testcontainers / in-memory paho test broker availability.
+  - go.mod has no `testcontainers` import (Select-String → 0 matches).
+  - paho v1.5.0 ships no in-memory test broker.
+  → Decision #5 escape-hatch (c) applies: tests skip the connect-success
+    path. The connect-failure path uses a closed local TCP port (offline)
+    to verify Decision #3's disconnect + wrap behavior.
+
+=== IMPLEMENTATION ===
+
+File 1 — internal/mqtt/dlq_production.go (8067 bytes / 195 lines).
+  - productionPipelineOptions(brokerURL, clientID, username, password)
+    *pahomqtt.ClientOptions — package-private helper exposing the
+    *ClientOptions for direct field inspection by the test. Encodes all
+    Decision #2 settings via Set*() chain on pahomqtt.NewClientOptions().
+  - Constants pipelineConnectTimeout=30s / pipelineKeepAlive=30s /
+    pipelinePingTimeout=10s / pipelineMaxReconnectInterval=5min — pulled
+    out as package-level consts so the test can re-use the same numeric
+    values without copy-pasting magic numbers.
+  - NewProductionPipelineMQTT(ctx, brokerURL, clientID, username, password,
+    dlqTopic, log) (paho.Client, *MQTTDLQPublisher, error):
+      * Three fail-fast guards on empty brokerURL / clientID / dlqTopic
+        before any network I/O.
+      * Attaches OnConnect / OnConnectionLost handlers that log against the
+        caller-supplied zerolog.Logger so reconnect/disconnect events show
+        up in production logs (legacy NewClient does the same at L46-50).
+      * Builds the paho client + initiates Connect(), then waits with the
+        select-on-three pattern: token-done / ctx.Done() / timer.C.
+      * Decision #3 — clamps the timeout to the lesser of 30s and the
+        ctx.Deadline() remaining time so a 5s ctx deadline takes precedence.
+      * Decision #3 — on ALL three failure paths (token error, ctx cancelled,
+        timer fired) calls client.Disconnect(0) BEFORE returning so the
+        caller is not expected to clean up a half-constructed client.
+      * Wraps the broker URL in every error message (Decision #5(b))
+        AND prefixes "NewProductionPipelineMQTT" so a single log line
+        identifies the broker AND the call site.
+      * On success, constructs the MQTTDLQPublisher via the existing
+        NewMQTTDLQPublisher(client, dlqTopic) and returns both.
+
+File 2 — internal/mqtt/dlq_production_test.go (9448 bytes / 223 lines).
+  - TestProductionPipelineOptions_ManualAckContract (Decision #5(a)):
+    pins all eleven settings from Decision #2 plus broker URL + clientID +
+    creds. KeepAlive asserted as int64 seconds (paho stores it that way).
+    The crown-jewel assertion is "AutoAckDisabled = true" — without that
+    PipelineSubscriber's no-ack branches silently lose data + drop poison
+    pills.
+  - TestProductionPipelineOptions_OmitsCredentialsWhenUsernameEmpty:
+    Documents that empty username + non-empty password is treated as
+    anonymous (the SetUsername+SetPassword calls are guarded by
+    `if username != ""`, mirroring legacy NewClient L52-55).
+  - TestNewProductionPipelineMQTT_RejectsEmptyArgs: 4 sub-cases pinning
+    the three fail-fast guards (brokerURL/clientID/dlqTopic) and a
+    whitespace-only brokerURL widening guard that prevents an operator
+    misconfiguration from passing the check via " ".
+  - TestNewProductionPipelineMQTT_ConnectionFailureWrapped (Decision #5(b)):
+    binds + immediately closes a local TCP port to obtain a guaranteed
+    connect-refused address, then asserts (1) err is non-nil, (2) returned
+    client + dlq are nil (no caller cleanup required), (3) err.Error()
+    contains the broker URL, (4) err.Error() contains
+    "NewProductionPipelineMQTT" so a single triage log line identifies
+    broker + call-site. Bounds the test wall-clock with a 5s ctx deadline
+    so a CI hang fails fast rather than waiting the full 30s.
+  - TestNewProductionPipelineMQTT_ContextCancelledDuringConnect: cancels
+    ctx BEFORE the call so ctx.Done() is already closed — exercises the
+    ctx.Done() branch of the select. Uses RFC 5737 TEST-NET-1 (192.0.2.1)
+    so the dialer hangs rather than completing concurrently. Asserts
+    errors.Is(err, context.Canceled) OR DeadlineExceeded (a slow runner
+    might observe the deadline branch first; both indicate the caller's
+    intent was honored without leaking).
+
+Test broker / connect-success path:
+  Decision #5(c) escape-hatch invoked. testcontainers is absent from
+  go.mod, paho v1.5.0 ships no in-memory test broker, and the existing
+  internal/mqtt test suite (mqtt_test.go) follows the same convention
+  of unit-testing handler behavior with fakes rather than spinning up a
+  real broker. The manual-ack contract is fully verified at the wire
+  level by TestProductionPipelineOptions_ManualAckContract — paho's
+  *Client copies the *ClientOptions in pahomqtt.NewClient() so what
+  the test asserts on the returned options struct IS what the client
+  will use on every subsequent connect/reconnect.
+
+=== GATE ===
+
+Gate 1: go build ./internal/mqtt/...
+  exit=0
+  PASS
+
+Gate 2: go vet ./internal/mqtt/...
+  exit=0
+  PASS
+
+Gate 3: go test -count=1 -race ./internal/mqtt/...
+  ok  	github.com/ev-dev-labs/teslasync/internal/mqtt	3.476s
+  exit=0
+  PASS
+
+Gate 4: git status --short -- only allowed files changed?
+  ?? internal/mqtt/dlq_production.go
+  ?? internal/mqtt/dlq_production_test.go
+  disallowed-files=0
+  (this log file is also a Decision-allowed change — staged immediately
+   before the commit so the post-commit `git status` is clean.)
+  PASS
+
+=== COMMIT ===
+HEAD-pre=5de3570f4
+HEAD=ded28449d
+branch=refactor/signals-rewrite
+files=3 (1 .go + 1 _test.go + 1 .log)  / 418 insertions
+message=feat(mqtt): production wiring helper for PipelineSubscriber + DLQ + manual-ack
+post-commit-status=clean
+
+EXIT=0
+STATUS=DONE
