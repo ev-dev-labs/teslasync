@@ -1,0 +1,186 @@
+=== PREFLIGHT ===
+Phase: 42a
+Prompt: 0015 router/writers/media_writer.go
+Date: 2026-05-06T11:40:37.5003396-07:00
+HEAD before: 43105497d0d2905d702270ce3f8c624e099665a7 feat(tesla/router): add tire pressure writer (tire_pressure_snapshots, 8 fields)
+
+git status --short:
+
+
+Predecessor 0010 (snapshot base) status (last 2 marker lines):
+EXIT=0
+STATUS=DONE
+
+Predecessor 0012 (climate writer; sibling pattern) status:
+EXIT=0
+STATUS=DONE
+
+Predecessor 0014 (tire pressure writer; most recent sibling) status:
+EXIT=0
+STATUS=DONE
+
+=== AUDIT_EVIDENCE ===
+
+(1) routing.yaml routes with dest: media_snapshot (count + per-entry field/column)
+
+Total dest: media_snapshot routes = 11
+
+Walked routing.yaml lines 563-595 — extracted 11 field->column rows:
+MediaAudioVolume               -> volume_pct
+MediaAudioVolumeIncrement      -> volume_increment
+MediaAudioVolumeMax            -> volume_max
+MediaNowPlayingAlbum           -> album
+MediaNowPlayingArtist          -> artist
+MediaNowPlayingDuration        -> duration_s
+MediaNowPlayingElapsed         -> elapsed_s
+MediaNowPlayingStation         -> station
+MediaNowPlayingTitle           -> track_name
+MediaPlaybackSource            -> source
+MediaPlaybackStatus            -> play_status
+
+(2) migrations/000183_snapshots_si.up.sql media_snapshots schema (lines 273-288)
+
+CREATE TABLE media_snapshots (
+  vehicle_id       BIGINT      NOT NULL,
+  ts               TIMESTAMPTZ NOT NULL,
+  track_name       TEXT,
+  artist           TEXT,
+  album            TEXT,
+  station          TEXT,
+  source           TEXT,
+  play_status      TEXT,
+  volume_pct       INTEGER,
+  volume_max       INTEGER,
+  volume_increment INTEGER,
+  duration_s       INTEGER,
+  elapsed_s        INTEGER,
+  PRIMARY KEY (vehicle_id, ts)
+);
+
+Cross-check: every routed column (11 entries) maps to a non-PK column on media_snapshots. The table has exactly 11 non-PK columns and the writer routes all 11 — zero unrouted columns, zero extra writer entries. No SI conversion (UnitKindNone per routing.yaml lines 554-562 preamble); the snapshotWriter's four-scalar contract (float64/int64/bool/string) is sufficient.
+
+(3) Routed-column ↔ Schema column-type alignment
+
+  TEXT (6 cols, codec emits string):
+    track_name, artist, album, station, source, play_status
+  INTEGER (5 cols, codec emits int64):
+    volume_pct, volume_max, volume_increment, duration_s, elapsed_s
+
+(4) Predecessor-pattern provenance
+
+  - File shape: NewMediaWriter(*pgxpool.Pool) router.Writer
+    mirrors NewClimateWriter (climate_writer.go) byte-for-byte except for
+    table name + column map + identifier names — locked by Decision #1+#2.
+  - Test shape: 4 top-level tests (Coverage / TypeMatrix /
+    UnknownFieldReturnsError / NilPoolPanics) mirror climate_writer_test.go.
+  - No hybrid wrapper needed (cf. tire_pressure_writer.go) because no
+    media column is TIMESTAMPTZ — snapshotWriter's bindSnapshotValue
+    accepts every scalar type the codec emits for media routes.
+
+
+=== IMPLEMENTATION ===
+
+Files created (allowed-files scope):
+  internal/tesla/router/writers/media_writer.go      (94 lines)
+  internal/tesla/router/writers/media_writer_test.go (209 lines)
+
+Decisions resolved:
+  #1 Constructor: NewMediaWriter(pool *pgxpool.Pool) router.Writer; nil pool panics.
+  #2 Composition: snapshotWriter with table = "media_snapshots", columnFor = mediaColumnFor.
+  #3 Map source: routing.yaml dest: media_snapshot (11 entries) → mediaColumnByField static map.
+  #4 Reflective coverage test: TestMediaWriter_ColumnMapMatchesRoutingYAML walks
+     router.LoadMap() and asserts entry-for-entry parity.
+  #5 Tests:
+     - Coverage (Decision #4 above)
+     - 2 positive text (track_name + play_status) + 1 int64 (volume_pct) [TypeMatrix]
+     - UnknownFieldReturnsError using VehicleSpeed (routed elsewhere — guards against widening)
+     - NilPoolPanics (constructor fail-fast contract)
+
+Drop-loud contract honoured: any future routing.yaml addition without a matching
+mediaColumnByField entry blocks CI on the reflective coverage test, never silently
+drops the atomic at runtime.
+
+
+=== GATE ===
+
+--- go test focused (media writer) -v ---
+=== RUN   TestMediaWriter_ColumnMapMatchesRoutingYAML
+--- PASS: TestMediaWriter_ColumnMapMatchesRoutingYAML (0.00s)
+=== RUN   TestMediaWriter_TypeMatrix
+=== RUN   TestMediaWriter_TypeMatrix/text_MediaNowPlayingTitle
+=== RUN   TestMediaWriter_TypeMatrix/text_MediaPlaybackStatus
+=== RUN   TestMediaWriter_TypeMatrix/int64_MediaAudioVolume
+--- PASS: TestMediaWriter_TypeMatrix (0.00s)
+    --- PASS: TestMediaWriter_TypeMatrix/text_MediaNowPlayingTitle (0.00s)
+    --- PASS: TestMediaWriter_TypeMatrix/text_MediaPlaybackStatus (0.00s)
+    --- PASS: TestMediaWriter_TypeMatrix/int64_MediaAudioVolume (0.00s)
+=== RUN   TestMediaWriter_UnknownFieldReturnsError
+--- PASS: TestMediaWriter_UnknownFieldReturnsError (0.00s)
+=== RUN   TestNewMediaWriter_NilPoolPanics
+--- PASS: TestNewMediaWriter_NilPoolPanics (0.00s)
+PASS
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router/writers	0.105s
+
+focused exit: 0
+
+
+--- go test ./internal/tesla/router/... -race ---
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router	2.587s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router/writers	2.823s
+
+race exit: 0
+
+
+--- go vet ./... ---
+
+
+vet exit: 0
+
+
+--- go build ./... ---
+
+
+build exit: 0
+
+
+GATE_SUMMARY: focused=PASS race=PASS vet=PASS build=PASS allowed_files_violations=0
+
+
+=== COMMIT ===
+HEAD after: 1a2b29323c61b7dbe029d7f53cd1617303c0acff feat(tesla/router): add media writer (media_snapshots, 11 fields)
+
+git show --stat HEAD:
+commit 1a2b29323c61b7dbe029d7f53cd1617303c0acff
+Author: Atul Gupta <iamatulmgupta@gmail.com>
+Date:   Wed May 6 11:44:20 2026 -0700
+
+    feat(tesla/router): add media writer (media_snapshots, 11 fields)
+    
+    Phase-42a/0015 ΓÇö adds NewMediaWriter(*pgxpool.Pool) router.Writer that
+    composes the snapshotWriter helper from snapshot_base.go (table =
+    "media_snapshots", columnFor = mediaColumnFor) for all 11 routed
+    Media* atomics from routing.yaml under dest: media_snapshot.
+    
+    Routes (6 TEXT + 5 INTEGER, all UnitKindNone ΓÇö pass-through):
+      MediaNowPlayingTitle    -> track_name
+      MediaNowPlayingArtist   -> artist
+      MediaNowPlayingAlbum    -> album
+      MediaNowPlayingStation  -> station
+      MediaPlaybackSource     -> source
+      MediaPlaybackStatus     -> play_status
+      MediaAudioVolume        -> volume_pct
+      MediaAudioVolumeMax     -> volume_max
+      MediaAudioVolumeIncrement -> volume_increment
+      MediaNowPlayingDuration -> duration_s
+      MediaNowPlayingElapsed  -> elapsed_s
+    
+    Tests:
+      - reflective coverage gate walks router.LoadMap() and asserts the
+        static mediaColumnByField map matches every dest: media_snapshot
+        entry in routing.yaml entry-for-entry (catches three drift
+        classes: missing-in-writer / extra-in-writer / column-mismatch).
+      - type matrix covers two TEXT positives (track_name, play_status)
+
+
+EXIT=0
+STATUS=DONE
