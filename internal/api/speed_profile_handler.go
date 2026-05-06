@@ -17,7 +17,7 @@ func NewSpeedProfileHandler(db *database.DB) *SpeedProfileHandler {
 	return &SpeedProfileHandler{db: db}
 }
 
-// speedBucket fields are SI-canonical per phase-42 migration 000172
+// speedBucket fields are SI-canonical per phase-42 migration 000185
 // (avg_power averaged in Watts at the SQL boundary). The frontend SpeedBucket
 // type currently reads the legacy kilowatt key; consumers will migrate to
 // avg_power_w in a follow-up frontend prompt — the typed widget falls back

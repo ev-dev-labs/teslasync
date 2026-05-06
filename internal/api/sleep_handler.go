@@ -15,7 +15,7 @@ import (
 //
 // Phase-42 (prompt 0077): vehicle_states and vampire_drain_events were
 // dropped without SI replacement. Vehicle-state distribution is now
-// derived from fsm_transitions (000174); the sentry-vs-vampire drain
+// derived from fsm_transitions (000187); the sentry-vs-vampire drain
 // comparison is preserved as zero-valued JSON keys so the frontend
 // contract is unchanged. The drain field is absent from typed signal_log
 // without per-park reconstruction; restoring sentry/drain analytics
@@ -47,7 +47,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 	// Look up vehicle-specific battery capacity
 	batteryCapacityKWh, capacitySource := lookupVehicleCapacity(ctx, h.db, vehicleID)
 
-	// Time in each vehicle state — derived from fsm_transitions (000174).
+	// Time in each vehicle state — derived from fsm_transitions (000187).
 	// Each row represents the count of transitions INTO a given state in
 	// the window; total_minutes is left at 0 because the legacy
 	// per-row dwell-time field has no direct counterpart in the

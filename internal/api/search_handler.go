@@ -384,7 +384,7 @@ func (p *pgSearcher) SearchVehicles(ctx context.Context, q string, idHint int64,
 }
 
 func (p *pgSearcher) SearchDrives(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
-	// Phase-42 (Prompt 0076): SI canonical drives schema (migration 000172).
+	// Phase-42 (Prompt 0076): SI canonical drives schema (migration 000185).
 	// start_address/end_address → start_place/end_place. start_ts → started_at.
 	// distance_mi → distance_m / 1609.344 (display still in miles).
 	const sql = `
@@ -432,7 +432,7 @@ func (p *pgSearcher) SearchDrives(ctx context.Context, q string, idHint int64, l
 
 func (p *pgSearcher) SearchCharging(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
 	// Phase-42 (Prompt 0076): SI canonical charging_sessions schema
-	// (migration 000171). charger_location → start_place. start_ts → started_at.
+	// (migration 000184). charger_location → start_place. start_ts → started_at.
 	const sql = `
 		SELECT id, vehicle_id, started_at, COALESCE(start_place, ''), COALESCE(charger_type, ''),
 		       (CASE WHEN id = $4 THEN 1.0 ELSE 0.0 END
@@ -682,7 +682,7 @@ func (p *pgSearcher) SearchLocations(ctx context.Context, q string, idHint int64
 
 func (p *pgSearcher) SearchTrips(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
 	// Phase-42 (Prompt 0076): trips description column was renamed to notes
-	// (migration 000172). start_ts → started_at.
+	// (migration 000185). start_ts → started_at.
 	const sql = `
 		SELECT id, name, COALESCE(notes, ''), started_at,
 		       (CASE WHEN id = $4 THEN 1.0 ELSE 0.0 END

@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Phase-42 SI canonical schema (migration 000169_positions_si). The
+// Phase-42 SI canonical schema (migration 000182_positions_si). The
 // positions hypertable is forward-only SI:
 //   - lat / lng (DOUBLE PRECISION, decimal degrees — angular)
 //   - altitude_m (DOUBLE PRECISION, meters above WGS84 ellipsoid)
@@ -50,7 +50,7 @@ var (
 )
 
 // PositionRepo provides typed access to the SI canonical `positions`
-// hypertable (migration 000169_positions_si).
+// hypertable (migration 000182_positions_si).
 type PositionRepo struct {
 	db *DB
 }
@@ -59,7 +59,7 @@ func NewPositionRepo(db *DB) *PositionRepo {
 	return &PositionRepo{db: db}
 }
 
-// positionColumns is the SI canonical SELECT column list (migration 000169).
+// positionColumns is the SI canonical SELECT column list (migration 000182).
 const positionColumns = `vehicle_id, ts, lat, lng, heading_deg, speed_mps, altitude_m, gps_state`
 
 // BulkInsert streams positions into the `positions` hypertable using

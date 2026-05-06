@@ -88,7 +88,7 @@ func isNotPopulated(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "has not been populated")
 }
 
-// Phase-42 (prompt 0077, migration 000175): cagg_fleet_stats now stores
+// Phase-42 (prompt 0077, migration 000188): cagg_fleet_stats now stores
 // energy in Wh (total_energy_wh) and distance in meters (total_distance_m).
 // We convert to legacy units (kWh / miles) at the SELECT boundary so the
 // downstream models.EnergyStatsRow contract (kWh / miles / Wh-per-mile) is

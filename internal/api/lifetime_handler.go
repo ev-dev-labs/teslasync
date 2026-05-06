@@ -136,7 +136,7 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	log.Info().Int64("vehicle_id", vehicleID).Msg("lifetime: computing stats")
 
 	// ── Driving aggregates ──
-	// Phase-42 SI canonical drives (000172): distance_m / duration_s /
+	// Phase-42 SI canonical drives (000185): distance_m / duration_s /
 	// max_speed_mps / started_at / ended_at. Aggregate in SI then convert
 	// to km / min / km/h at the response boundary so the JSON contract
 	// (totalDistKm, totalDrivingMin, longestDriveKm, highestSpeedKmh) is
@@ -193,7 +193,7 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	}
 
 	// ── Charging aggregates ──
-	// Phase-42 SI canonical charging_sessions (000171):
+	// Phase-42 SI canonical charging_sessions (000184):
 	// total_energy_added_wh, cost_decimal NUMERIC, started_at / ended_at.
 	// Duration computed from EXTRACT(EPOCH FROM (ended_at - started_at)) / 60.
 	chargeQuery := `

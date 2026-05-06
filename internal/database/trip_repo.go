@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Phase-42 SI canonical schema (migration 000172_drives_si). The trips and
+// Phase-42 SI canonical schema (migration 000185_drives_si). The trips and
 // trip_drives tables are forward-only:
 //   - trips: id, vehicle_id, name, started_at, ended_at, created_by_user,
 //            auto_generated, notes
@@ -21,7 +21,7 @@ import (
 //   - description (now `notes`; mapped at the repo boundary)
 //   - the total_distance / total_energy / total_duration columns are GONE;
 //     totals are recomputed on read from drives via trip_drives JOIN per
-//     migration 000172's "intentionally NOT denormalized" comment
+//     migration 000185's "intentionally NOT denormalized" comment
 //   - created_at / updated_at (derive from started_at / ended_at)
 //
 // trip_drives gained a mandatory `position INT` ordering column and lost
@@ -287,7 +287,7 @@ func (r *TripRepo) vehiclesWithDrivesInMonth(ctx context.Context, monthStart tim
 // UpsertMonthTrip creates or updates a trip summary for a given vehicle/month.
 // For in-progress months, it updates the existing trip with fresh aggregates.
 //
-// Phase-42 (migration 000172) eliminated the total_distance / total_energy /
+// Phase-42 (migration 000185) eliminated the total_distance / total_energy /
 // total_duration columns from trips entirely — those values are recomputed
 // from constituent drives on read (see tripSelectColumns). The writer now
 // only persists the columns that still exist on the SI schema (vehicle_id,

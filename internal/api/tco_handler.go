@@ -30,7 +30,7 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Total electricity cost from charging sessions. Phase-42 SI canonical
-	// charging_sessions (000171): cost_decimal NUMERIC, total_energy_added_wh
+	// charging_sessions (000184): cost_decimal NUMERIC, total_energy_added_wh
 	// BIGINT. Cast cost_decimal to float8 for pgx scan; convert Wh→kWh.
 	var totalChargingCost, totalKWh float64
 	var totalSessions int

@@ -54,7 +54,7 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Phase-42 SI canonical drives (migration 000172): ambient_temp_c_avg
+	// Phase-42 SI canonical drives (migration 000185): ambient_temp_c_avg
 	// (Celsius), distance_m (meters), duration_s (seconds),
 	// start_soc_pct/end_soc_pct (REAL). avg_distance_km computed in SQL,
 	// avg_duration_min computed by dividing duration_s by 60. The

@@ -48,7 +48,7 @@ func (t *TelemetrySessionTracker) CleanupStaleSessions(ctx context.Context, stal
 
 	// Close orphaned DB sessions — drives/charges with NULL ended_at that started
 	// more than staleTimeout ago and have no in-memory tracker (e.g. from pre-restart).
-	// Phase-42 SI canonical (000171/000172): started_at, ended_at, duration_s.
+	// Phase-42 SI canonical (000184/000185): started_at, ended_at, duration_s.
 	cutoff := now.Add(-staleTimeout)
 	_, err := t.db.Pool.Exec(ctx,
 		`UPDATE drives SET ended_at = $1,

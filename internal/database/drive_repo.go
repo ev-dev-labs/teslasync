@@ -11,7 +11,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
 
-// Phase-42 SI canonical schema (migration 000172_drives_si). The drives table
+// Phase-42 SI canonical schema (migration 000185_drives_si). The drives table
 // is forward-only SI:
 //   - duration_s (BIGINT, seconds)
 //   - distance_m (DOUBLE PRECISION, meters)
@@ -41,12 +41,12 @@ const (
 )
 
 // DriveRepo provides drive session data access against the SI canonical
-// drives table (migration 000172_drives_si).
+// drives table (migration 000185_drives_si).
 type DriveRepo struct {
 	db *DB
 }
 
-// driveColumns is the SI canonical SELECT column list (migration 000172).
+// driveColumns is the SI canonical SELECT column list (migration 000185).
 const driveColumns = `id, vehicle_id, started_at, ended_at, duration_s, distance_m,
 	start_place, end_place, start_lat, start_lng, end_lat, end_lng,
 	start_soc_pct, end_soc_pct,
@@ -104,7 +104,7 @@ func scanDrive(row interface{ Scan(dest ...any) error }) (*models.Drive, error) 
 	d.Score = nil
 	d.EndedStatus = nil
 
-	// Migration 000172 has no created_at / updated_at columns; derive from
+	// Migration 000185 has no created_at / updated_at columns; derive from
 	// started_at / ended_at so the model fields (non-pointer time.Time) stay
 	// populated for marshalers that emit them unconditionally.
 	d.CreatedAt = d.StartTs
@@ -177,7 +177,7 @@ func (r *DriveRepo) Create(ctx context.Context, d *models.Drive) error {
 }
 
 // completeArgsToSI converts the legacy display-unit Complete arguments to
-// SI canonical types matching the migration-000172 column types.
+// SI canonical types matching the migration-000185 column types.
 func completeArgsToSI(distanceMi, duration float64, endBatteryPct *int16,
 	maxSpeedMph, avgPowerKw *float64) (
 	distanceM float64, durationSec int64, endSoc *float32,
@@ -204,11 +204,11 @@ func completeArgsToSI(distanceMi, duration float64, endBatteryPct *int16,
 // remain legacy display (mi, min, kW, mph) for caller compatibility; values
 // are converted to SI before the UPDATE. The insideTempAvgC parameter is
 // accepted for compatibility but ignored — the inside cabin temperature
-// column was dropped in migration 000172 (forward-only).
+// column was dropped in migration 000185 (forward-only).
 func (r *DriveRepo) Complete(ctx context.Context, id int64, endTs time.Time,
 	distanceMi, duration float64, endBatteryPct *int16,
 	maxSpeedMph, avgPowerKw, insideTempAvgC, outsideTempAvgC *float64) error {
-	_ = insideTempAvgC // dropped column (migration 000172)
+	_ = insideTempAvgC // dropped column (migration 000185)
 	distanceM, durationSec, endSoc, maxSpeedMps, avgPowerW :=
 		completeArgsToSI(distanceMi, duration, endBatteryPct, maxSpeedMph, avgPowerKw)
 	query := `
@@ -476,7 +476,7 @@ func (r *DriveRepo) BulkDelete(ctx context.Context, ids []int64) (int64, error) 
 func (r *DriveRepo) CompleteWithTx(ctx context.Context, tx DBTX, id int64, endTs time.Time,
 	distanceMi, duration float64, endBatteryPct *int16,
 	maxSpeedMph, avgPowerKw, insideTempAvgC, outsideTempAvgC *float64) error {
-	_ = insideTempAvgC // dropped column (migration 000172)
+	_ = insideTempAvgC // dropped column (migration 000185)
 	distanceM, durationSec, endSoc, maxSpeedMps, avgPowerW :=
 		completeArgsToSI(distanceMi, duration, endBatteryPct, maxSpeedMph, avgPowerKw)
 	query := `

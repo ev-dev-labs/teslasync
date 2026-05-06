@@ -35,7 +35,7 @@ func (h *ChargingOptimizerHandler) GetOptimization(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
-	// Phase-42 (000171_charging_si): SI canonical columns. Convert
+	// Phase-42 (000184_charging_si): SI canonical columns. Convert
 	// total_energy_added_wh -> kWh and peak_power_w -> kW at the SQL boundary
 	// to keep sessionRow.kwh / .power semantics. cost reads from cost_decimal.
 	rows, err := h.db.Pool.Query(ctx, `

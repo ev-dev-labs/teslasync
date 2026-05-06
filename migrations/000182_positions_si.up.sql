@@ -16,11 +16,11 @@
 --
 -- Slot variance: prompt 0030 hardcodes slot 000162, but that slot is
 -- already occupied by 000162_pinned_items (a pre-phase-42 migration
--- committed long before this phase began). Slot 000169 is the next
+-- committed long before this phase began). Slot 000182 is the next
 -- free slot after the trailing edge of existing migrations
--- (000168_vehicle_unit_history is the prior phase-42 migration). This
+-- (000181_vehicle_unit_history is the prior phase-42 migration). This
 -- mirrors the slot-variance the predecessor phase-42 prompt 0022
--- applied (000160 -> 000168). The schema, semantics, and gate intent
+-- applied (000160 -> 000181). The schema, semantics, and gate intent
 -- are otherwise exactly as the prompt specifies.
 
 DROP TABLE IF EXISTS positions CASCADE;

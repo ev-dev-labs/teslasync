@@ -67,7 +67,7 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Phase-42 SI canonical drives (migration 000172): start_place/end_place
+	// Phase-42 SI canonical drives (migration 000185): start_place/end_place
 	// for grouping, distance_m/duration_s/avg_speed_mps for metrics,
 	// start_soc_pct/end_soc_pct for SoC, ambient_temp_c_avg for temperature.
 	// All conversions back to legacy display units (km/min/mph/°C) happen

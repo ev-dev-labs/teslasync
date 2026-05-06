@@ -26,12 +26,12 @@
 --
 -- Slot variance: prompt 0034 hardcodes slot 000166, but that slot is
 -- already occupied by 000166_chatbot_sessions (a pre-phase-42 migration
--- committed before this phase began). Slot 000173 is the next free slot
--- after the trailing edge of existing migrations (000172_drives_si is
+-- committed before this phase began). Slot 000186 is the next free slot
+-- after the trailing edge of existing migrations (000185_drives_si is
 -- the immediately prior phase-42 migration, created by prompt 0033).
 -- This mirrors the slot-variance the predecessor phase-42 prompts 0022
--- (000160 -> 000168), 0030 (000162 -> 000169), 0031 (000163 -> 000170),
--- 0032 (000164 -> 000171), and 0033 (000165 -> 000172) applied. The
+-- (000160 -> 000181), 0030 (000162 -> 000182), 0031 (000163 -> 000183),
+-- 0032 (000164 -> 000184), and 0033 (000165 -> 000185) applied. The
 -- schema, semantics, and gate intent are otherwise exactly as the
 -- prompt specifies.
 --

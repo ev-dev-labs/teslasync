@@ -273,7 +273,7 @@ func estimateChargeTime(startSOC, endSOC, capacityKWh, maxPowerKW float64) float
 // vehicleEfficiency returns the distance-weighted average Wh/km for the vehicle.
 //
 // Phase-42 (Prompt 0076): rewritten against the SI canonical drives schema
-// (migration 000172). distance_m and energy_used_wh are native units; the
+// (migration 000185). distance_m and energy_used_wh are native units; the
 // /1000 division is folded out and the result is naturally Wh/km because
 // SUM(energy_used_wh) / SUM(distance_m) gives Wh/m, which we then * 1000.
 // start_battery_pct / end_battery_pct are renamed to start_soc_pct /
@@ -334,7 +334,7 @@ func (h *TripPlannerHandler) batteryCapacity(ctx context.Context, vehicleID int6
 // estimateWeatherImpact returns a weather adjustment factor based on recent driving data.
 //
 // Phase-42 (Prompt 0076): renamed outside_temp_avg_c → ambient_temp_c_avg
-// (the canonical SI name on the drives schema after migration 000172) and
+// (the canonical SI name on the drives schema after migration 000185) and
 // start_ts → started_at.
 func (h *TripPlannerHandler) estimateWeatherImpact(ctx context.Context, vehicleID int64) tripWeatherImpact {
 	var avgTempC *float64

@@ -20,7 +20,7 @@
 // operator paged on the metric can triage without database access.
 //
 // Source of truth for SI units: ADR-004 #9 + internal/tesla/units.
-// Storage layout: migrations/000173_signal_log.up.sql columns:
+// Storage layout: migrations/000186_signal_log.up.sql columns:
 // (vehicle_id, ts, field, value_kind, str_value, bool_value, int_value,
 // float_value, time_value).
 package worker

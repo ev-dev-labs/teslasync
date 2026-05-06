@@ -98,7 +98,7 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 
 	var habits chargingHabits
 	if h.db != nil {
-		// Phase-42 SI charging_sessions (migration 000171): peak_power_w
+		// Phase-42 SI charging_sessions (migration 000184): peak_power_w
 		// (Watts; >50000W == DC fast charging), total_energy_added_wh
 		// (Watt-hours), start_soc_pct/end_soc_pct (DOUBLE PRECISION).
 		// Convert energy back to kWh at the response boundary so the
@@ -404,7 +404,7 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	// Charging habit stats. Phase-42 SI charging_sessions schema (000171):
+	// Charging habit stats. Phase-42 SI charging_sessions schema (000184):
 	// peak_power_w (Watts; 50000W == 50kW DC fast threshold), start_soc_pct
 	// and end_soc_pct (DOUBLE PRECISION).
 	var fastCount, slowCount, deepDischarge, fullCharge int
@@ -460,7 +460,7 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		degradationRate = (100 - latestSOH) / (float64(ageMonths) / 12)
 	}
 
-	// Avg depth of discharge — Phase-42 SI drives (000172): start_soc_pct/end_soc_pct.
+	// Avg depth of discharge — Phase-42 SI drives (000185): start_soc_pct/end_soc_pct.
 	var avgDoD *float64
 	if h.db != nil {
 		_ = h.db.Pool.QueryRow(ctx,

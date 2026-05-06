@@ -2,7 +2,7 @@ package queries
 
 // Charging session SQL queries.
 //
-// Phase-42 (migration 000171_charging_si) replaced the legacy charging_sessions
+// Phase-42 (migration 000184_charging_si) replaced the legacy charging_sessions
 // schema with SI-canonical columns. The domain model
 // (domain/charging.ChargingSession) keeps its legacy db: tag names
 // because that struct is consumed by adapter/postgres/charging_repository.go

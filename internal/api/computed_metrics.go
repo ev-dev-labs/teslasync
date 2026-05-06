@@ -281,7 +281,7 @@ func PreviousWindowBounds(window string, now time.Time) (start, end time.Time, e
 // ─── compute helpers ──────────────────────────────────────────────────────
 
 // Phase-42 (Prompt 0076): all aggregates below were rewritten to read from the
-// SI canonical drives + charging_sessions schemas (migrations 000171 / 000172).
+// SI canonical drives + charging_sessions schemas (migrations 000184 / 000185).
 // Conversions to legacy display units (mi, kWh, minutes) happen inside the
 // SQL so the public metric values returned to the alerting subsystem stay
 // numerically identical to the pre-migration registry.

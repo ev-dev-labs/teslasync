@@ -135,7 +135,7 @@ Never resubscribe the full fleet without a successful canary first.
   for the resubscribe window.
 
 - Phase-42 deploy AS A WHOLE is one-way (DROP CASCADE in migration
-  000161 from prompt 0078). Migrations 000161-000168 must apply as a
+  000180 from prompt 0078). Migrations 000180-000188 must apply as a
   single `migrate up` step BEFORE any application pod is rolled. Plan a
   maintenance window of at least 5 minutes for the migration sequence
   + rolling restart, and notify users via the customer status page if
@@ -228,7 +228,7 @@ the corresponding Tesla API errors in the resubscribe.end audit log.
 There is NO rollback path for resubscribe itself — Fleet Telemetry
 config is replace-only at the Tesla edge. The pre-deploy
 `phase-42-pre-drop` git tag + the database backup taken before
-migration 000161 are the ONLY rollback paths for the broader
+migration 000180 are the ONLY rollback paths for the broader
 phase-42 deploy. Resubscribe is a forward-only operation by design.
 
 If a resubscribe lands a broken subscription shape (wrong fields, wrong

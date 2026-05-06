@@ -41,7 +41,7 @@ func (h *PeriodStatsHandler) Get(w http.ResponseWriter, r *http.Request) {
 		dateFilter = " AND started_at > NOW() - interval '" + strconv.Itoa(days) + " days'"
 	}
 
-	// Total distance & drives. Phase-42 SI canonical drives (000172):
+	// Total distance & drives. Phase-42 SI canonical drives (000185):
 	// distance_m / duration_s. Convert to km/min at JSON-populate site.
 	var totalDistM, totalDurS *float64
 	var totalDrives int
@@ -56,7 +56,7 @@ func (h *PeriodStatsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Energy & cost from charging sessions. Phase-42 SI canonical
-	// charging_sessions (000171): total_energy_added_wh, cost_decimal.
+	// charging_sessions (000184): total_energy_added_wh, cost_decimal.
 	var energyAddedWh, totalCost *float64
 	chargeDateFilter := dateFilter
 	err = h.db.Pool.QueryRow(ctx,

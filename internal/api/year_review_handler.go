@@ -118,7 +118,7 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 	}
 
 	// ── Driving aggregates ──
-	// Phase-42 SI canonical drives (000172): distance_m, duration_s,
+	// Phase-42 SI canonical drives (000185): distance_m, duration_s,
 	// max_speed_mps, ambient_temp_c_avg, started_at / ended_at. Convert at
 	// the SELECT boundary so the in-memory totals carry display units.
 	var totalDrives int
@@ -166,7 +166,7 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 	}
 
 	// ── Charging aggregates ──
-	// Phase-42 SI canonical charging_sessions (000171): total_energy_added_wh,
+	// Phase-42 SI canonical charging_sessions (000184): total_energy_added_wh,
 	// cost_decimal NUMERIC, started_at / ended_at.
 	var totalChargeSessions int
 	var totalEnergyKwh, totalChargingCost float64
@@ -244,7 +244,7 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 		return &dh
 	}
 
-	// Phase-42 SI canonical drives (000172): start_place / end_place replace
+	// Phase-42 SI canonical drives (000185): start_place / end_place replace
 	// legacy address columns; distance_m / duration_s replace legacy units;
 	// started_at / ended_at replace legacy timestamps.
 	highlightBase := `

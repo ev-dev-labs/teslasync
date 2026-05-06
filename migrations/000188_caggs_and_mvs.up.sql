@@ -7,14 +7,14 @@
 -- ADR-004 / forward-only: the legacy versions of these rollups (over
 -- the pre-phase-42 schema with kWh / mph / mi columns) were dropped
 -- in cascade by the upstream phase-42 migrations:
---   * 000171_charging_si        dropped cagg_charging_summary (CASCADE
+--   * 000184_charging_si        dropped cagg_charging_summary (CASCADE
 --                               with charging_telemetry / charging_sessions
 --                               legacy variants).
---   * 000172_drives_si          dropped legacy cagg_fleet_stats and
+--   * 000185_drives_si          dropped legacy cagg_fleet_stats and
 --                               mv_energy_daily / mv_position_hourly /
 --                               mv_signal_stats (CASCADE with the legacy
 --                               drives / positions / signal_history).
---   * 000173_signal_log         dropped cagg_vehicle_daily,
+--   * 000186_signal_log         dropped cagg_vehicle_daily,
 --                               cagg_climate_hourly, cagg_battery_daily,
 --                               and cagg_signal_hourly (CASCADE with
 --                               signal_log / signal_observations /
@@ -24,15 +24,15 @@
 -- backfill from MQTT replay if needed (prompt 0090 runbook), and the
 -- caggs / MVs start empty.
 --
--- Slot variance: prompt 0036 hardcodes slot 000168, but that slot is
--- already occupied by 000168_vehicle_unit_history (phase-42 0022).
--- Slot 000175 is the next free slot after the trailing edge of existing
--- migrations (000174_fsm_live is the immediately prior phase-42
+-- Slot variance: prompt 0036 hardcodes slot 000181, but that slot is
+-- already occupied by 000181_vehicle_unit_history (phase-42 0022).
+-- Slot 000188 is the next free slot after the trailing edge of existing
+-- migrations (000187_fsm_live is the immediately prior phase-42
 -- migration, created by prompt 0035). This mirrors the slot-variance
--- the predecessor phase-42 prompts 0022 (000160 -> 000168), 0030
--- (000162 -> 000169), 0031 (000163 -> 000170), 0032 (000164 -> 000171),
--- 0033 (000165 -> 000172), 0034 (000166 -> 000173), and 0035
--- (000167 -> 000174) applied. The schema, semantics, and gate intent
+-- the predecessor phase-42 prompts 0022 (000160 -> 000181), 0030
+-- (000162 -> 000182), 0031 (000163 -> 000183), 0032 (000164 -> 000184),
+-- 0033 (000165 -> 000185), 0034 (000166 -> 000186), and 0035
+-- (000167 -> 000187) applied. The schema, semantics, and gate intent
 -- are otherwise exactly as the prompt specifies, with three pragmatic
 -- deviations from the prompt's literal wording (each documented inline
 -- below):
@@ -41,7 +41,7 @@
 --     the legacy contract that all in-tree consumers query
 --     (energy_repo.go, regen_handler.go, maintenance_worker.go) is a
 --     per-(vehicle_id, day) drive roll-up sourced from `drives`. The
---     `drives` table is a regular non-hypertable (see 000172), so a
+--     `drives` table is a regular non-hypertable (see 000185), so a
 --     real continuous aggregate is not available and the rollup is
 --     created as a regular MATERIALIZED VIEW. Sourcing from positions
 --     instead of drives would silently change semantics under the same
@@ -51,7 +51,7 @@
 --
 --   * `cagg_charging_summary` — the prompt writes "cagg over
 --     charging_sessions" but `charging_sessions` is a regular
---     non-hypertable (see 000171). We create it as a regular MV under
+--     non-hypertable (see 000184). We create it as a regular MV under
 --     the prompt's literal name. There is repository precedent for a
 --     regular MV named with the cagg_ prefix (000142_baseline_typed
 --     created `cagg_fleet_stats` as a regular MV with a comment
@@ -153,7 +153,7 @@ SELECT add_continuous_aggregate_policy('cagg_battery_daily',
 -- =========================================================================
 -- 2. cagg_climate_hourly — hourly per-(vehicle_id, hour) climate
 -- roll-up over climate_snapshots. Real continuous aggregate.
--- climate_snapshots is a hypertable per 000170 with inside_temp_c /
+-- climate_snapshots is a hypertable per 000183 with inside_temp_c /
 -- outside_temp_c / hvac_power columns in SI units (Celsius / boolean).
 --
 -- hvac_active_sample_count is the number of samples that recorded
@@ -238,7 +238,7 @@ SELECT add_continuous_aggregate_policy('cagg_signal_hourly',
 -- =========================================================================
 -- 4. cagg_fleet_stats — daily per-(vehicle_id, day) drive roll-up
 -- over `drives`. Regular materialized view (NOT a continuous aggregate)
--- because `drives` is a non-hypertable per 000172.
+-- because `drives` is a non-hypertable per 000185.
 --
 -- Column contract: matches the legacy MV created in
 -- 000142_baseline_typed.up.sql and the legacy consumers
@@ -336,7 +336,7 @@ SELECT add_continuous_aggregate_policy('cagg_vehicle_daily',
 -- 6. cagg_charging_summary — daily per-(vehicle_id, day) charging
 -- session roll-up over `charging_sessions`. Regular materialized view
 -- (NOT a continuous aggregate) because charging_sessions is a
--- non-hypertable per 000171.
+-- non-hypertable per 000184.
 --
 -- Naming compromise: the prompt requires the literal name
 -- `cagg_charging_summary` (the gate's substring check enforces this).

@@ -123,7 +123,7 @@ var _ StateReader = (*LogStateReader)(nil)
 // # Schema
 //
 // signal_log stores values in typed columns dictated by value_kind (per
-// migration 000173): str_value, bool_value, int_value, float_value,
+// migration 000186): str_value, bool_value, int_value, float_value,
 // time_value. State decodes each row into the typed Go primitive
 // (string, bool, int64, float64, time.Time) — callers do val.(float64)
 // etc. and receive the correct Go type, matching the typed-value contract
@@ -223,7 +223,7 @@ ORDER BY field, ts DESC`
 // # Schema
 //
 // signal_log stores values in typed columns dictated by value_kind (per
-// migration 000173): str_value, bool_value, int_value, float_value,
+// migration 000186): str_value, bool_value, int_value, float_value,
 // time_value. SignalAt selects value_kind plus all five typed columns and
 // decodes them via decodeSignalLogRow into the typed Go primitive
 // (string, bool, int64, float64, time.Time). Location is flattened by
@@ -373,7 +373,7 @@ LIMIT 1`
 // # Schema
 //
 // signal_log stores values in typed columns dictated by value_kind (per
-// migration 000173): str_value, bool_value, int_value, float_value,
+// migration 000186): str_value, bool_value, int_value, float_value,
 // time_value. Both the seed query and the window query select value_kind
 // plus all five typed columns and decode each row via decodeSignalLogRow.
 // Location compounds are flattened by the codec (prompt 0063) into
@@ -615,7 +615,7 @@ func assembleState(rows rowIterator) (State, error) {
 // directly (string/bool/int64/float64/time.Time) so callers receive the
 // correct Go type via the existing SignalValue=any contract.
 //
-// value_kind acts as the discriminator (per migration 000173):
+// value_kind acts as the discriminator (per migration 000186):
 //   - ValueKindString               -> str_value
 //   - ValueKindBool                 -> bool_value
 //   - ValueKindInt32/Int64/Enum     -> int_value (BIGINT widens int32/enum)
@@ -675,7 +675,7 @@ func decodeRow(kind int16, sv *string, bv *bool, iv *int64, fv *float64, tv *tim
 		return nil
 	default:
 		// ValueKindUnknown / ValueKindCompound / ValueKindInvalid never
-		// appear in signal_log per migration 000173. Defensive log +
+		// appear in signal_log per migration 000186. Defensive log +
 		// nil return rather than panic so a stray bad row doesn't take
 		// down the cold path.
 		if log != nil {

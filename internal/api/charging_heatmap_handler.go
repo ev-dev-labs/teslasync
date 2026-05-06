@@ -54,7 +54,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Phase-42 (000171_charging_si): SI canonical columns. We convert
+	// Phase-42 (000184_charging_si): SI canonical columns. We convert
 	// total_energy_added_wh -> kWh and peak_power_w -> kW at the SQL boundary
 	// so the JSON response keys (avg_energy in kWh, avg_power in kW) stay
 	// stable. The legacy duration column is derived from EXTRACT(EPOCH ...).
@@ -134,7 +134,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Summary stats — duration derived from ended_at - started_at since the
-	// legacy duration column was dropped by 000171.
+	// legacy duration column was dropped by 000184.
 	var summary chargingSummary
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*)                                                                      AS total_sessions,

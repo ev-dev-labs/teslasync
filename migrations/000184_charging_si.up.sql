@@ -34,9 +34,9 @@
 --
 -- Slot variance: prompt 0032 hardcodes slot 000164, but that slot is
 -- already occupied by 000164_saved_views (a pre-phase-42 migration
--- committed before this phase began). Slot 000171 is the next free
+-- committed before this phase began). Slot 000184 is the next free
 -- slot after the trailing edge of existing migrations
--- (000170_snapshots_si is the immediately prior phase-42 migration,
+-- (000183_snapshots_si is the immediately prior phase-42 migration,
 -- created by prompt 0031). This mirrors the slot-variance the
 -- predecessor phase-42 prompts 0022, 0030, and 0031 applied. The
 -- schema, semantics, and gate intent are otherwise exactly as the

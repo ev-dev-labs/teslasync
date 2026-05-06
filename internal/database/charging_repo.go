@@ -10,7 +10,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// Phase-42 SI canonical schema (migration 000171_charging_si). The
+// Phase-42 SI canonical schema (migration 000184_charging_si). The
 // charging_sessions table is forward-only SI:
 //   - started_at / ended_at (TIMESTAMPTZ)
 //   - start_soc_pct / end_soc_pct (DOUBLE PRECISION, percent of pack 0-100)
@@ -36,7 +36,7 @@ import (
 // as nil per ADR-004 forward-only.
 
 // ChargingRepo provides charging session data access against the SI canonical
-// charging_sessions table (migration 000171_charging_si).
+// charging_sessions table (migration 000184_charging_si).
 type ChargingRepo struct {
 	db *DB
 }
@@ -45,7 +45,7 @@ func NewChargingRepo(db *DB) *ChargingRepo {
 	return &ChargingRepo{db: db}
 }
 
-// chargingColumns is the SI canonical SELECT column list (migration 000171).
+// chargingColumns is the SI canonical SELECT column list (migration 000184).
 const chargingColumns = `id, vehicle_id, started_at, ended_at,
 	start_soc_pct, end_soc_pct, total_energy_added_wh,
 	charger_type, start_place, peak_power_w, avg_power_w,
@@ -110,7 +110,7 @@ func scanChargingSession(row interface{ Scan(dest ...any) error }) (*models.Char
 	c.ChargerPhases = nil
 	c.EndedStatus = nil
 
-	// Migration 000171 has no created_at / updated_at columns; derive from
+	// Migration 000184 has no created_at / updated_at columns; derive from
 	// started_at / ended_at so the model fields (non-pointer time.Time) stay
 	// populated for marshalers that emit them unconditionally.
 	c.CreatedAt = c.StartTs
@@ -150,7 +150,7 @@ func (r *ChargingRepo) Create(ctx context.Context, c *models.ChargingSession) er
 }
 
 // completeChargingArgsToSI converts the legacy display-unit Complete arguments
-// to SI canonical types matching the migration-000171 column types. The
+// to SI canonical types matching the migration-000184 column types. The
 // milesAdded, durationMin, and endedStatus arguments are accepted for caller
 // compatibility but produce no column writes — the corresponding SI columns
 // are derived (duration from ended_at-started_at, miles from odometer) or
@@ -188,9 +188,9 @@ func (r *ChargingRepo) Complete(ctx context.Context, id int64, endTs time.Time,
 	energyAddedKwh *float64, endBatteryPct *int16, milesAdded *float64,
 	chargerPowerKwMax, chargerPowerKwAvg *float64,
 	cost *float64, costCurrency *string, durationMin *float64, endedStatus *string) error {
-	_ = milesAdded   // dropped column (migration 000171)
-	_ = durationMin  // dropped column (migration 000171)
-	_ = endedStatus  // dropped column (migration 000171)
+	_ = milesAdded   // dropped column (migration 000184)
+	_ = durationMin  // dropped column (migration 000184)
+	_ = endedStatus  // dropped column (migration 000184)
 	totalEnergyAddedWh, endSoc, peakPowerW, avgPwrW :=
 		completeChargingArgsToSI(energyAddedKwh, endBatteryPct, chargerPowerKwMax, chargerPowerKwAvg)
 	query := `
@@ -427,9 +427,9 @@ func (r *ChargingRepo) CompleteWithTx(ctx context.Context, tx DBTX, id int64, en
 	energyAddedKwh *float64, endBatteryPct *int16, milesAdded *float64,
 	chargerPowerKwMax, chargerPowerKwAvg *float64,
 	cost *float64, costCurrency *string, durationMin *float64, endedStatus *string) error {
-	_ = milesAdded   // dropped column (migration 000171)
-	_ = durationMin  // dropped column (migration 000171)
-	_ = endedStatus  // dropped column (migration 000171)
+	_ = milesAdded   // dropped column (migration 000184)
+	_ = durationMin  // dropped column (migration 000184)
+	_ = endedStatus  // dropped column (migration 000184)
 	totalEnergyAddedWh, endSoc, peakPowerW, avgPwrW :=
 		completeChargingArgsToSI(energyAddedKwh, endBatteryPct, chargerPowerKwMax, chargerPowerKwAvg)
 	query := `

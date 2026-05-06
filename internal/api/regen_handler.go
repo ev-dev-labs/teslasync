@@ -38,7 +38,7 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	capacityKWh, capacitySource := lookupVehicleCapacity(ctx, h.db, vehicleID)
 
 	// Per-drive regen stats (last 90 days). Phase-42 SI canonical drives
-	// schema (migration 000172): distance_m, duration_s, avg_speed_mps,
+	// schema (migration 000185): distance_m, duration_s, avg_speed_mps,
 	// avg_power_w, start_soc_pct, end_soc_pct, started_at. JSON shape kept
 	// (now-SI-suffixed names: duration_s, avg_speed_mps, avg_power_w,
 	// start_soc_pct, end_soc_pct) — frontend already mismatched these field
@@ -166,7 +166,7 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 
 	// Lifetime regen/drive energy — not available in current schema, use
 	// aggregated cagg_fleet_stats regen totals when available.
-	// Phase-42 (prompt 0077, migration 000175): cagg_fleet_stats now stores
+	// Phase-42 (prompt 0077, migration 000188): cagg_fleet_stats now stores
 	// energy in Wh (total_regen_wh / total_energy_wh). Convert to kWh at
 	// the JSON-populate site (×0.001) to keep the API contract unchanged.
 	var totalRegenWh, totalDriveWh float64

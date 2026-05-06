@@ -109,7 +109,7 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 	since := time.Now().AddDate(0, 0, -days)
 
-	// Phase-42 SI canonical drives (migration 000172). Distance/speed/power
+	// Phase-42 SI canonical drives (migration 000185). Distance/speed/power
 	// are converted from SI back to legacy display units (mi/mph/kW) at the
 	// SQL boundary so the downstream coaching math (thresholds expressed in
 	// mph/kW/mi/°C) remains untouched per the covenant.

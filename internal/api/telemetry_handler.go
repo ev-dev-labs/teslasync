@@ -392,7 +392,7 @@ func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int
 
 // Phase-42 (prompt 0077): trackUserPreferences was deleted with the
 // vehicle_units table. Per-vehicle unit display preferences now live in
-// tesla_vehicle_unit_history (000168) populated by internal/tesla/unit_history.
+// tesla_vehicle_unit_history (000181) populated by internal/tesla/unit_history.
 
 // formatSignalName converts camelCase signal names to snake_case for MQTT topic consistency.
 var _ = formatSignalName // kept for potential future use

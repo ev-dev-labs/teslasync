@@ -17,9 +17,9 @@
 --
 -- Slot variance: prompt 0031 hardcodes slot 000163, but that slot is
 -- already occupied by 000163_audit_logs_actor_metadata (a pre-phase-42
--- migration committed before this phase began). Slot 000170 is the
+-- migration committed before this phase began). Slot 000183 is the
 -- next free slot after the trailing edge of existing migrations
--- (000169_positions_si is the immediately prior phase-42 migration,
+-- (000182_positions_si is the immediately prior phase-42 migration,
 -- created by prompt 0030). This mirrors the slot-variance the
 -- predecessor phase-42 prompts 0022 and 0030 applied. The schema,
 -- semantics, and gate intent are otherwise exactly as the prompt

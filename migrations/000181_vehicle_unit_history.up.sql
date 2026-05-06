@@ -17,7 +17,7 @@
 --
 -- NOTE on slot number: phase-42 prompt 0022 originally specified slot
 -- 000160, but that slot was occupied by 000160_settings_ui_density (a
--- pre-existing phase-40 migration) before this phase began. Slot 000168
+-- pre-existing phase-40 migration) before this phase began. Slot 000181
 -- is the next free slot after 000167_achievement_unlocks (slots 161 and
 -- 168+ are free, 168 chosen to follow the trailing edge of the existing
 -- run). The schema, semantics, and Go code references are otherwise

@@ -202,7 +202,7 @@ routes:
     dest: signal_log
   # Powertrain Drive-Inverter atomics (Category=="powertrain" in
   # protomodel.Signals). Every powertrain field maps to a motor_snapshots
-  # SI column from migrations/000170_snapshots_si.up.sql lines 125-166.
+  # SI column from migrations/000183_snapshots_si.up.sql lines 125-166.
   # Per-corner suffix convention: F=front, R=rear (single-motor or shared),
   # REL=rear-left, RER=rear-right (Plaid tri-motor / Cybertruck quad-motor).
   # Temperatures are UnitKindTemperature and pass through normalize.toSI;
@@ -554,7 +554,7 @@ routes:
   # Media-snapshot atomics (media). The infotainment now-playing UI
   # reads back the latest media_snapshots row; every Media* field
   # carries a hot column on media_snapshots from
-  # migrations/000170_snapshots_si.up.sql lines 268-302. Volumes are
+  # migrations/000183_snapshots_si.up.sql lines 268-302. Volumes are
   # stored as integer percent (volume_pct / volume_max /
   # volume_increment) — the head unit reports the fraction-of-max
   # already pre-scaled. Durations and elapsed positions are seconds
@@ -799,7 +799,7 @@ routes:
   - field: SentryMode
     dest: security_event
   # ServiceMode is the technician-unlock flag (vehicle_state, bool).
-  # safety_snapshots.service_mode (migrations/000170_snapshots_si.up.sql
+  # safety_snapshots.service_mode (migrations/000183_snapshots_si.up.sql
   # line 312) carries this as a continuous-value flag. State changes
   # are also surfaced on security_events by the writer; routing here
   # is for the hot-table snapshot read path.

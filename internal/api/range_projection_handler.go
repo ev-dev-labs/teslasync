@@ -135,7 +135,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Recent driving efficiency. Phase-42 SI canonical drives (000172):
+	// Recent driving efficiency. Phase-42 SI canonical drives (000185):
 	// energy_used_wh (Watt-hours), distance_m (meters), avg_speed_mps,
 	// ambient_temp_c_avg. avgEffWhKm is computed as Wh / km using the
 	// existing pre-existing-bug-preserving SQL shape (the AVG(...) ORDER BY

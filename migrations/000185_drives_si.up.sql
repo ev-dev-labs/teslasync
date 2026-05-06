@@ -42,13 +42,13 @@
 --
 -- Slot variance: prompt 0033 hardcodes slot 000165, but that slot is
 -- already occupied by 000165_push_subscriptions (a pre-phase-42
--- migration committed before this phase began). Slot 000172 is the
+-- migration committed before this phase began). Slot 000185 is the
 -- next free slot after the trailing edge of existing migrations
--- (000171_charging_si is the immediately prior phase-42 migration,
+-- (000184_charging_si is the immediately prior phase-42 migration,
 -- created by prompt 0032). This mirrors the slot-variance the
--- predecessor phase-42 prompts 0022 (000160 -> 000168), 0030
--- (000162 -> 000169), 0031 (000163 -> 000170), and 0032
--- (000164 -> 000171) applied. The schema, semantics, and gate intent
+-- predecessor phase-42 prompts 0022 (000160 -> 000181), 0030
+-- (000162 -> 000182), 0031 (000163 -> 000183), and 0032
+-- (000164 -> 000184) applied. The schema, semantics, and gate intent
 -- are otherwise exactly as the prompt specifies.
 --
 -- Tables created (all regular tables — none are hypertables; row

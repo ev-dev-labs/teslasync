@@ -36,7 +36,7 @@ type FSMHandler struct {
 // was removed. Vehicle current state is now sourced from the in-memory FSM
 // (machines map) populated by ProcessSignals + the periodic reconciler;
 // transitions are durably logged via transRepo.Insert into fsm_transitions
-// (000174 schema). Cold-start initial state defaults to fsm.Online and
+// (000187 schema). Cold-start initial state defaults to fsm.Online and
 // converges to the correct state within seconds of incoming telemetry.
 func NewFSMHandler(vehicleRepo *database.VehicleRepo, transRepo *database.FSMTransitionRepo) *FSMHandler {
 	return &FSMHandler{

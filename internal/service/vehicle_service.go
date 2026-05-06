@@ -85,7 +85,7 @@ func (s *VehicleService) SettingsRepo() *database.SettingsRepo {
 }
 
 // StateRepo returns a vehicleStateProvider that derives current vehicle state
-// + transition timestamp from fsm_transitions (000174). This replaces the
+// + transition timestamp from fsm_transitions (000187). This replaces the
 // legacy *database.VehicleStateRepo accessor that was removed when the
 // vehicle_states snapshot table was dropped (Phase-42 prompt 0077).
 func (s *VehicleService) StateRepo() *vehicleStateProvider {
@@ -93,7 +93,7 @@ func (s *VehicleService) StateRepo() *vehicleStateProvider {
 }
 
 // vehicleStateProvider derives the current vehicle state and the timestamp at
-// which that state began, sourced from fsm_transitions (000174 schema).
+// which that state began, sourced from fsm_transitions (000187 schema).
 //
 // It is the lightweight fsm_transitions-backed replacement for the legacy
 // *database.VehicleStateRepo.GetCurrentStateSince introduced when the

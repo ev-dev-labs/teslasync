@@ -105,7 +105,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Count charge cycles from charging sessions (sum of SOC deltas / 100).
-		// Phase-42 (000171_charging_si): use SI columns start_soc_pct/end_soc_pct
+		// Phase-42 (000184_charging_si): use SI columns start_soc_pct/end_soc_pct
 		// (DOUBLE PRECISION) instead of legacy smallint battery percent columns.
 		// The new schema also stores the server-computed delta_soc_pct directly,
 		// but we sum GREATEST(end-start, 0) inline to keep the same semantics

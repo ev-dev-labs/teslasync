@@ -32,7 +32,7 @@ func (h *DriveHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, drives)
 }
 
-// Constants used by the SI-canonical drives queries (migration 000172).
+// Constants used by the SI-canonical drives queries (migration 000185).
 // Defined once here so the SQL stays readable.
 const (
 	driveStatsMetersPerMile  = 1609.344
@@ -57,7 +57,7 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Phase-42 SI canonical drives schema (migration 000172): distance in
+	// Phase-42 SI canonical drives schema (migration 000185): distance in
 	// meters, duration in seconds, speeds in m/s, power in W. Convert to
 	// the legacy display units (mi, min, mph, kW) in Go before populating
 	// the response so the JSON shape consumed by the frontend is preserved.

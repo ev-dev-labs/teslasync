@@ -1,8 +1,8 @@
--- Phase-42 migration 000161 (DOWN): intentional no-op rollback.
+-- Phase-42 migration 000180 (DOWN): intentional no-op rollback.
 --
 -- The up migration drops 38 legacy telemetry tables in one CASCADE. Several
 -- names are reclaimed under new SI-canonical schemas in migrations
--- 000168-000175 (positions, drives, charging_sessions, trips, trip_drives,
+-- 000181-000188 (positions, drives, charging_sessions, trips, trip_drives,
 -- *_snapshots, fsm_transitions, vehicle_live_state). The remaining 17 tables
 -- are deleted with no replacement (see ADR-004 #4: forward-only, no backfill).
 --
@@ -14,7 +14,7 @@
 DO $$
 BEGIN
   RAISE EXCEPTION
-    'phase-42 migration 000161 has no rollback by design (ADR-004 #4). '
+    'phase-42 migration 000180 has no rollback by design (ADR-004 #4). '
     'Restore from a pre-phase-42 backup if you need the legacy schema.';
 END
 $$;

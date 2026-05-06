@@ -204,7 +204,7 @@ func (h *SignalHandler) queryHistory(ctx context.Context, vehicleID int64, signa
 
 // decodeTypedRow returns the typed scalar dictated by the row's
 // value_kind. The row's discriminator is the source of truth: per the
-// 000173 schema comment, exactly one typed column is non-null per row,
+// 000186 schema comment, exactly one typed column is non-null per row,
 // and the writer is expected to keep value_kind in sync with the
 // populated column. If the discriminator is one we don't recognise
 // (forward-compat with future ValueKind additions), we fall back to

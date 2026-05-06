@@ -90,7 +90,7 @@ func (h *CostForecastHandler) GetForecast(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 
 	// ── 1. Monthly cost aggregation ──────────────────────────
-	// Phase-42 (000171_charging_si): SI canonical columns. cost_decimal
+	// Phase-42 (000184_charging_si): SI canonical columns. cost_decimal
 	// replaces cost; total_energy_added_wh / 1000.0 yields kWh; started_at
 	// replaces the legacy timestamp column. The historicalMonth.KWh JSON shape (kWh, not Wh)
 	// is preserved by the conversion at the SQL boundary.
@@ -271,7 +271,7 @@ func (h *CostForecastHandler) computeBreakdown(ctx interface{ Deadline() (time.T
 	var homeCost, homekWh, scCost, sckWh float64
 	var homeCount, scCount int
 
-	// Phase-42 (000171_charging_si): SI canonical columns. The home/supercharger
+	// Phase-42 (000184_charging_si): SI canonical columns. The home/supercharger
 	// split previously bucketed by the legacy max-kW power column <= 22 (kW); under SI
 	// the same threshold becomes peak_power_w <= 22000 (W). Energy converted
 	// from total_energy_added_wh -> kWh at SQL boundary so home/sc kWh
@@ -333,7 +333,7 @@ func (h *CostForecastHandler) computeGasComparison(ctx interface{ Deadline() (ti
 	const defaultConsumption = 0.085 // L/km (gas car)
 
 	// Average km/month from drives
-	// Phase-42 (000172_drives_si): drives.distance_m and drives.started_at replace the legacy mileage and timestamp columns.
+	// Phase-42 (000185_drives_si): drives.distance_m and drives.started_at replace the legacy mileage and timestamp columns.
 	// Pre-existing bug preserved: the variable is named totalKm but treats the
 	// numeric value as miles downstream (defaultConsumption is L/km but is
 	// multiplied by mileage in miles). To keep the JSON output (avgKmPerMonth)

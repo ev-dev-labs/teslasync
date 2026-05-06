@@ -11,7 +11,7 @@ import (
 // Phase-42 / Prompt 0076 covenant #11: the legacy visited_locations and
 // addresses tables are dropped without a recreate (ADR-004 #4 forward-only).
 // All visited-location queries now derive on demand from the SI canonical
-// drives table (migration 000172_drives_si) by grouping on end_place
+// drives table (migration 000185_drives_si) by grouping on end_place
 // — the geocoded place name persisted at end-of-drive. Synthetic IDs come
 // from MIN(d.id) per (vehicle_id, end_place) so callers that round-trip
 // through the locations URL stay anchored to a stable underlying drive.

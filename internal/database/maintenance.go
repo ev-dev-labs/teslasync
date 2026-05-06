@@ -12,7 +12,7 @@ import (
 // Uses batched deletes to avoid long-running locks.
 // If days <= 0, cleanup is skipped (opt-in only — 0 means no automatic cleanup).
 //
-// Phase-42 (migration 000169_positions_si) recreated the positions hypertable
+// Phase-42 (migration 000182_positions_si) recreated the positions hypertable
 // with SI-canonical columns (lat, lng, altitude_m, speed_mps, odometer_m,
 // est_range_m). The retention pruning predicate keys on `ts` only, which is
 // the hypertable partitioning column and was preserved through the rewrite.
@@ -58,7 +58,7 @@ func (db *DB) CleanupOldPositions(ctx context.Context, days int) (int64, error) 
 //
 // Phase-42 / Prompt 0076 covenant #12: the legacy vehicle_states summary
 // table was dropped without a recreate (ADR-004 #4 forward-only). The new
-// FSM vehicle_live_state table (recreated by migration 000174_fsm_live)
+// FSM vehicle_live_state table (recreated by migration 000187_fsm_live)
 // supersedes it; live state is no longer materialized as a per-event
 // history that needs retention pruning. The function is preserved as a
 // no-op so the maintenance worker (out of allowed-files scope for this
@@ -104,7 +104,7 @@ type PositionStats struct {
 // GetPositionStats returns total position count and the number of
 // compressed (hourly-aggregated) rows older than 30 days.
 //
-// Phase-42 (migration 000169_positions_si) dropped the legacy created_at
+// Phase-42 (migration 000182_positions_si) dropped the legacy created_at
 // column from positions. Since `ts` is the canonical event timestamp on
 // the SI hypertable, the compression heuristic now buckets on `ts`.
 func (db *DB) GetPositionStats(ctx context.Context) (PositionStats, error) {

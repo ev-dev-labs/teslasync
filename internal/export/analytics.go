@@ -213,7 +213,7 @@ func (p *Processor) processAnalytics(ctx context.Context, req *models.ExportJobR
 		fleetSessions += len(allSessions)
 
 		// Battery trend from cagg_battery_daily.
-		// Phase-42 (prompt 0077, migration 000175): the legacy
+		// Phase-42 (prompt 0077, migration 000188): the legacy
 		// per-day charge-signal counter column was renamed to
 		// soc_sample_count.
 		const btNominalCap = 75.0
