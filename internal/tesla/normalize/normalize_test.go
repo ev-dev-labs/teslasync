@@ -352,17 +352,27 @@ func TestSettingUnitProcessedFirstInSamePayload(t *testing.T) {
 // the "two pipelines" regression. It scans every non-test .go file in
 // this package and asserts:
 //
-//   - the only exported method on *Pipeline that returns an error is
-//     Process; and
+//   - the only exported methods on *Pipeline that return an error are
+//     in the locked allow-set {Process, ProcessAtomics}; and
 //   - no other top-level exported function in the package returns an
 //     error.
 //
-// Either of those would constitute a second public ingest entry,
-// which ADR-004 #2 explicitly forbids. The test is reflective rather
-// than convention-only because text-grep gates can be defeated by a
-// rename (e.g. naming the second entry HandleBatch); reading the AST
-// catches the structural shape regardless of naming.
+// Either of those would constitute a third public ingest entry,
+// which ADR-004 #2 explicitly forbids. The two allowed entries are:
+// Process (bytes-in, MQTT path) and ProcessAtomics (atomics-in, HTTP
+// webhook path; added in Phase-42a/0060). The test is reflective
+// rather than convention-only because text-grep gates can be defeated
+// by a rename (e.g. naming the third entry HandleBatch); reading the
+// AST catches the structural shape regardless of naming.
 func TestSinglePipelineInvariant(t *testing.T) {
+	// LOCKED set of permitted public ingest methods on *Pipeline.
+	// Any new entry MUST be authored via an explicit ADR amendment +
+	// prompt; do NOT add to this set casually.
+	allowedPublicEntries := map[string]bool{
+		"Process":        true, // bytes-in, MQTT subscriber path
+		"ProcessAtomics": true, // atomics-in, HTTP webhook adapter path (Phase-42a/0060)
+	}
+
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, ".", func(fi fs.FileInfo) bool {
 		return !strings.HasSuffix(fi.Name(), "_test.go")
@@ -402,19 +412,19 @@ func TestSinglePipelineInvariant(t *testing.T) {
 						// out of scope for the single-ingest lock.
 						continue
 					}
-					if fn.Name.Name == "Process" {
+					if allowedPublicEntries[fn.Name.Name] {
 						continue
 					}
-					offenders = append(offenders, fmt.Sprintf("%s: (p *Pipeline).%s returns error (only Process is allowed)", filepath.Base(fname), fn.Name.Name))
+					offenders = append(offenders, fmt.Sprintf("%s: (p *Pipeline).%s returns error (only Process, ProcessAtomics are allowed)", filepath.Base(fname), fn.Name.Name))
 				} else {
-					offenders = append(offenders, fmt.Sprintf("%s: package-level %s returns error (no public ingest entries other than Pipeline.Process are allowed)", filepath.Base(fname), fn.Name.Name))
+					offenders = append(offenders, fmt.Sprintf("%s: package-level %s returns error (no public ingest entries other than Pipeline.Process / Pipeline.ProcessAtomics are allowed)", filepath.Base(fname), fn.Name.Name))
 				}
 			}
 		}
 	}
 
 	if len(offenders) > 0 {
-		t.Fatalf("normalize package has additional public ingest entries — only (p *Pipeline) Process may return error:\n  - %s", strings.Join(offenders, "\n  - "))
+		t.Fatalf("normalize package has additional public ingest entries — only (p *Pipeline) Process and (p *Pipeline) ProcessAtomics may return error:\n  - %s", strings.Join(offenders, "\n  - "))
 	}
 }
 

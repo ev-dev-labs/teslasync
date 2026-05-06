@@ -573,6 +573,15 @@ func main() {
 			// build if any other entry point appears.
 			normPipeline := normalize.New(unitRepo, pipelineRouter, pipelineLogger, sideEffects)
 
+			// Phase-42a/0060: wire the unified pipeline into the
+			// HTTP TelemetryHandler so its ProcessBatch entry can
+			// dispatch HTTP webhook batches through the same
+			// normalize.Pipeline.ProcessAtomics that the MQTT
+			// PipelineSubscriber uses. Without this call, HTTP
+			// webhook ingest returns "pipeline not wired" (HTTP
+			// 503) so a misconfigured deployment fails loud.
+			telemetryHandler.SetPipeline(normPipeline)
+
 			// (6) Production paho client + MQTTDLQPublisher. The
 			// underlying client is constructed with
 			// SetAutoAckDisabled(true) so PipelineSubscriber.handlePayload

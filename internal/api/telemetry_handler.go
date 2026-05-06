@@ -16,8 +16,24 @@ import (
 	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/normalize"
 	"github.com/rs/zerolog/log"
 )
+
+// pipelineDispatcher is the interface seam through which TelemetryHandler
+// dispatches pre-decoded telemetry batches to the unified normalize.Pipeline.
+// Production wiring substitutes the concrete *normalize.Pipeline (which
+// satisfies this interface via its public ProcessAtomics method, added in
+// Phase-42a/0060). Tests substitute a recording fake to assert dispatch
+// behaviour without standing up the full pipeline + writers + observers.
+//
+// The interface lives here (not in the normalize package) so the api
+// package owns the seam — normalize.Pipeline must not know about its
+// callers per ADR-004 #2's "single pipeline, two adapters" shape.
+type pipelineDispatcher interface {
+	ProcessAtomics(ctx context.Context, atomics []codec.Atomic, vehicleIntID int64) error
+}
 
 // TelemetryHandler receives and processes Tesla Fleet Telemetry data.
 type TelemetryHandler struct {
@@ -76,6 +92,34 @@ type TelemetryHandler struct {
 
 	// Redis cache used for SSE Pub/Sub and as L2 when attached to LiveSignalStore.
 	redisCache *signal.RedisSignalCache
+
+	// pipeline is THE unified ingest dispatcher (Phase-42a/0060). HTTP
+	// webhook batches and (post-0050) MQTT batches both terminate in
+	// normalize.Pipeline.ProcessAtomics so ADR-004 #2's "single pipeline,
+	// every value visited exactly once" invariant holds across both
+	// ingress paths. Wired by cmd/teslasync via SetPipeline AFTER
+	// normalize.New is constructed; nil while the dispatcher is being
+	// stood up at process start. ProcessBatch returns a "pipeline not
+	// wired" error if invoked before SetPipeline has run, so a
+	// misconfigured production deployment fails loud rather than
+	// silently swallowing batches.
+	pipeline pipelineDispatcher
+}
+
+// SetPipeline wires the unified ingest dispatcher used by ProcessBatch
+// (Phase-42a/0060). Accepting *normalize.Pipeline (rather than the
+// internal pipelineDispatcher interface) on the public seam preserves
+// Decision #1 of the prompt: only the canonical normalize.Pipeline is
+// allowed to satisfy the field on the production wire path. Passing
+// nil clears the dispatcher, which causes subsequent ProcessBatch
+// calls to fail with "pipeline not wired" — useful for shutdown
+// drains where new batches must be rejected.
+func (h *TelemetryHandler) SetPipeline(p *normalize.Pipeline) {
+	if p == nil {
+		h.pipeline = nil
+		return
+	}
+	h.pipeline = p
 }
 
 // VehicleStreamState tracks streaming health per vehicle.

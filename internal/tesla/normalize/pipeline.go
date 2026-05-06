@@ -16,10 +16,13 @@
 //	       router.Route        (dispatch to the typed writer)
 //
 // The package surface is intentionally tiny: one type (Pipeline),
-// one constructor (New), and one method (Process). Every other
+// one constructor (New), and exactly two public ingest methods —
+// Process (bytes-in, used by the MQTT path) and ProcessAtomics
+// (atomics-in, used by the HTTP webhook adapter only; codec.Decode
+// has already run on the JSON-decoded values upstream). Every other
 // helper is unexported. The reflective TestSinglePipelineInvariant
-// in normalize_test.go enforces this lock — adding a second
-// public ingest entry breaks the test and the gate.
+// in normalize_test.go enforces this lock — adding a third public
+// ingest entry breaks the test and the gate.
 //
 // Why the sort is correctness-critical, not a perf optimisation:
 // Tesla can pack a SettingDistanceUnit change and a VehicleSpeed
@@ -171,9 +174,12 @@ func New(histRepo unithistory.Repo, r Routable, log zerolog.Logger, observers ..
 	}
 }
 
-// Process is THE ONE ENTRY. The reflective
+// Process is THE ONE BYTES-IN ENTRY (the MQTT subscriber's path).
+// For the HTTP webhook adapter that already has decoded
+// []codec.Atomic in hand, see ProcessAtomics — it is the second and
+// only other public ingest method. The reflective
 // TestSinglePipelineInvariant in normalize_test.go fails the build
-// if any other public ingest method is added.
+// if any THIRD public ingest method is added.
 //
 // Return contract (LOCKED by ADR-004 #8):
 //
@@ -197,6 +203,34 @@ func (p *Pipeline) Process(ctx context.Context, payload []byte, vehicleIntID int
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrPayloadDrop, err)
 	}
+	return p.processAtomics(ctx, atomics, vehicleIntID)
+}
+
+// ProcessAtomics is the SECOND public ingest entry, added in
+// Phase-42a/0060 to unify the HTTP webhook path with the MQTT path.
+// It accepts pre-decoded []codec.Atomic — the JSON-decoded webhook
+// values are already past the codec.Decode boundary by the time the
+// HTTP handler has them in hand, so re-encoding to proto bytes just
+// to round-trip back through Process would waste CPU and (worse)
+// hide JSON-typing concerns under a fake codec.Decode success.
+//
+// The contract is the same as Process beyond the codec.Decode step:
+// nil on success regardless of per-atomic writer failures (which are
+// observable via ValuesProcessed and tesla_router_writer_failures_total),
+// and any returned error is reserved for unrecoverable infrastructure
+// failures (e.g. context cancelled mid-batch).
+//
+// Note: ErrPayloadDrop is NEVER returned from ProcessAtomics because
+// codec.Decode is not invoked here — there is no malformed-bytes
+// failure mode at this entry. HTTP-side input validation (e.g. JSON
+// schema) is the caller's responsibility BEFORE constructing the
+// []codec.Atomic.
+//
+// Per ADR-004 #2 + the reflective TestSinglePipelineInvariant, this
+// is the LAST public ingest entry that may be added to *Pipeline.
+// Any future "third entry" must instead route its bytes/atomics
+// through one of these two methods.
+func (p *Pipeline) ProcessAtomics(ctx context.Context, atomics []codec.Atomic, vehicleIntID int64) error {
 	return p.processAtomics(ctx, atomics, vehicleIntID)
 }
 

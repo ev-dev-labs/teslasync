@@ -10,6 +10,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
 )
@@ -94,6 +95,102 @@ func TestPipelineProcess_ObserverInvokedFromBytesEntry(t *testing.T) {
 	// Gear) — neither is a Setting*Unit so neither short-circuits.
 	if got := rt.routesCopy(); len(got) != 2 {
 		t.Errorf("router received %d routes, want 2: %+v", len(got), got)
+	}
+}
+
+// TestPipelineProcessAtomics_DelegatesToInternalDispatch is the unit
+// test for the SECOND public ingest entry added in Phase-42a/0060.
+// Whereas TestPipelineProcess_ObserverInvokedFromBytesEntry exercises
+// the bytes-in path (proto.Unmarshal -> codec.Decode -> processAtomics),
+// this test exercises the atomics-in path used by the HTTP webhook
+// adapter — Pipeline.ProcessAtomics(ctx, []codec.Atomic, vehicleID)
+// is a thin wrapper around the same processAtomics dispatch, so the
+// observer fan-out, router dispatch, and SI mutation contracts must
+// all be identical to Process beyond the codec.Decode step.
+func TestPipelineProcessAtomics_DelegatesToInternalDispatch(t *testing.T) {
+	t.Parallel()
+
+	const vehicleID int64 = 91
+	emittedAt := time.Date(2026, 5, 5, 13, 0, 0, 0, time.UTC)
+
+	// Two atomics fed directly: a unit-bearing field (VehicleSpeed
+	// in km/h) and a dimensionless string (Gear). The observer must
+	// see both post-route, mirroring the bytes-in test.
+	atomics := []codec.Atomic{
+		{
+			Field:     "VehicleSpeed",
+			Value:     float64(72.0), // 72 km/h
+			VehicleID: "5YJ3WEBHOOK00001",
+			EmittedAt: emittedAt,
+		},
+		{
+			Field:     "Gear",
+			Value:     "ShiftStateD",
+			VehicleID: "5YJ3WEBHOOK00001",
+			EmittedAt: emittedAt,
+		},
+	}
+
+	repo := &fakeRepo{}
+	repo.entries = append(repo.entries, unithistory.Entry{
+		VehicleID:     vehicleID,
+		Kind:          unithistory.KindDistance,
+		Value:         units.ActiveUnitKilometers,
+		EffectiveFrom: emittedAt.Add(-time.Hour),
+		Source:        unithistory.SourceTelemetry,
+	})
+
+	rt := &fakeRouter{}
+	obs := newRecordingObserver("from-atomics")
+	p := New(repo, rt, zerolog.Nop(), obs)
+
+	if err := p.ProcessAtomics(context.Background(), atomics, vehicleID); err != nil {
+		t.Fatalf("ProcessAtomics returned error: %v", err)
+	}
+
+	if got := obs.calls(); got != 1 {
+		t.Fatalf("observer call count = %d, want 1 (ProcessAtomics should fan out exactly once per batch)", got)
+	}
+	captured := obs.lastCapture()
+	if len(captured) != 2 {
+		t.Fatalf("observer captured %d atomics, want 2 (VehicleSpeed + Gear); got %+v", len(captured), captured)
+	}
+	if findAtomic(captured, "VehicleSpeed") == nil {
+		t.Errorf("observer slice missing VehicleSpeed; got %+v", captured)
+	}
+	if findAtomic(captured, "Gear") == nil {
+		t.Errorf("observer slice missing Gear; got %+v", captured)
+	}
+
+	// Router must have received both atomics — neither is a Setting*Unit
+	// so neither short-circuits via observeSettingUnit.
+	if got := rt.routesCopy(); len(got) != 2 {
+		t.Errorf("router received %d routes, want 2: %+v", len(got), got)
+	}
+}
+
+// TestPipelineProcessAtomics_EmptyBatchIsNoOp documents the contract
+// for an empty []codec.Atomic input: the observer is invoked exactly
+// once with an empty slice, the router is not called, and no error
+// is returned. The HTTP webhook can legitimately receive a payload
+// with zero signals (e.g. a heartbeat-only ping); the pipeline must
+// not error on it.
+func TestPipelineProcessAtomics_EmptyBatchIsNoOp(t *testing.T) {
+	t.Parallel()
+
+	repo := &fakeRepo{}
+	rt := &fakeRouter{}
+	obs := newRecordingObserver("empty-batch")
+	p := New(repo, rt, zerolog.Nop(), obs)
+
+	if err := p.ProcessAtomics(context.Background(), nil, 1); err != nil {
+		t.Fatalf("ProcessAtomics(nil) returned error: %v", err)
+	}
+	if got := obs.calls(); got != 1 {
+		t.Errorf("observer call count = %d, want 1 (observer must fire exactly once per batch even when empty)", got)
+	}
+	if got := rt.routesCopy(); len(got) != 0 {
+		t.Errorf("router received %d routes for empty batch, want 0: %+v", len(got), got)
 	}
 }
 
