@@ -58,6 +58,13 @@ func ToSI(field string, raw float64, active ActiveUnit) (float64, error) {
 		return fn(raw), nil
 	}
 
+	// TpmsPressure fields are always emitted in bar over the wire,
+	// independent of SettingTirePressureUnit. Apply the bar conversion
+	// directly so a Psi user-setting does not produce a 6.9× error.
+	if isFixedBarPressureField(field) {
+		return raw * 100000.0, nil
+	}
+
 	if meta.UnitKind == protomodel.UnitKindNone {
 		return 0, fmt.Errorf("%w: %q", ErrUnsupportedField, field)
 	}

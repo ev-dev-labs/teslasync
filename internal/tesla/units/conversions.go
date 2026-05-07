@@ -87,3 +87,29 @@ var speedFields = map[string]bool{
 func isSpeedField(field string) bool {
 	return speedFields[field]
 }
+
+// fixedBarPressureFields lists TpmsPressure proto fields whose raw
+// value is ALWAYS reported in bar by Tesla Fleet Telemetry, regardless
+// of the user's SettingTirePressureUnit (which only controls how the
+// in-car UI renders the value, not the wire format). Without this
+// override, ToSI would multiply a 3.15 bar reading by 6894.757 when
+// SettingTirePressureUnit=Psi, producing a 21,718 Pa value that is
+// 6.9× the true pressure (~315,000 Pa).
+//
+// Source: https://developer.tesla.com/docs/fleet-api/fleet-telemetry/available-data
+// (TpmsPressureFl/Fr/Rl/Rr unit: bar). The semi-truck variants
+// SemitruckTpmsPressureRe* are omitted here because TeslaSync does not
+// currently target semi-truck telemetry; if support is added they
+// follow the same fixed-bar contract.
+var fixedBarPressureFields = map[string]bool{
+	"TpmsPressureFl": true,
+	"TpmsPressureFr": true,
+	"TpmsPressureRl": true,
+	"TpmsPressureRr": true,
+}
+
+// isFixedBarPressureField reports whether the given field name is a
+// TpmsPressure field whose wire-format unit is fixed at bar.
+func isFixedBarPressureField(field string) bool {
+	return fixedBarPressureFields[field]
+}

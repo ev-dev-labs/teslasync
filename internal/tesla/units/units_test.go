@@ -69,15 +69,24 @@ func TestToSI(t *testing.T) {
 		{name: "OutsideTemp/F", field: "OutsideTemp", raw: -40, active: ActiveUnitFahrenheit, want: -40, eps: epsTight},
 		{name: "OutsideTemp/C", field: "OutsideTemp", raw: 0, active: ActiveUnitCelsius, want: 0, eps: epsTight},
 
-		// --- PRESSURE: 4 fields x {psi, bar} = 8 rows ---
-		{name: "TpmsPressureFl/psi", field: "TpmsPressureFl", raw: 32, active: ActiveUnitPSI, want: 32 * 6894.757, eps: epsLoose},
-		{name: "TpmsPressureFl/bar", field: "TpmsPressureFl", raw: 2.2, active: ActiveUnitBar, want: 220000, eps: epsTight},
-		{name: "TpmsPressureFr/psi", field: "TpmsPressureFr", raw: 33, active: ActiveUnitPSI, want: 33 * 6894.757, eps: epsLoose},
-		{name: "TpmsPressureFr/bar", field: "TpmsPressureFr", raw: 2.3, active: ActiveUnitBar, want: 230000, eps: epsTight},
-		{name: "TpmsPressureRl/psi", field: "TpmsPressureRl", raw: 30, active: ActiveUnitPSI, want: 30 * 6894.757, eps: epsLoose},
-		{name: "TpmsPressureRl/bar", field: "TpmsPressureRl", raw: 2.0, active: ActiveUnitBar, want: 200000, eps: epsTight},
-		{name: "TpmsPressureRr/psi", field: "TpmsPressureRr", raw: 31, active: ActiveUnitPSI, want: 31 * 6894.757, eps: epsLoose},
-		{name: "TpmsPressureRr/bar", field: "TpmsPressureRr", raw: 2.1, active: ActiveUnitBar, want: 210000, eps: epsTight},
+		// --- PRESSURE (TpmsPressure*): always bar over the wire,
+		// regardless of SettingTirePressureUnit (the user setting only
+		// controls the in-car display unit, not the wire format). The
+		// active arg is therefore ignored for these fields — both the
+		// "psi" user setting and the "bar" user setting must produce the
+		// same Pa output for the same raw value. See conversions.go's
+		// fixedBarPressureFields comment.
+		{name: "TpmsPressureFl/active=psi_treated_as_bar", field: "TpmsPressureFl", raw: 2.2, active: ActiveUnitPSI, want: 220000, eps: epsTight},
+		{name: "TpmsPressureFl/active=bar", field: "TpmsPressureFl", raw: 2.2, active: ActiveUnitBar, want: 220000, eps: epsTight},
+		{name: "TpmsPressureFr/active=psi_treated_as_bar", field: "TpmsPressureFr", raw: 2.3, active: ActiveUnitPSI, want: 230000, eps: epsTight},
+		{name: "TpmsPressureFr/active=bar", field: "TpmsPressureFr", raw: 2.3, active: ActiveUnitBar, want: 230000, eps: epsTight},
+		{name: "TpmsPressureRl/active=psi_treated_as_bar", field: "TpmsPressureRl", raw: 2.0, active: ActiveUnitPSI, want: 200000, eps: epsTight},
+		{name: "TpmsPressureRl/active=bar", field: "TpmsPressureRl", raw: 2.0, active: ActiveUnitBar, want: 200000, eps: epsTight},
+		{name: "TpmsPressureRr/active=psi_treated_as_bar", field: "TpmsPressureRr", raw: 2.1, active: ActiveUnitPSI, want: 210000, eps: epsTight},
+		{name: "TpmsPressureRr/active=bar", field: "TpmsPressureRr", raw: 2.1, active: ActiveUnitBar, want: 210000, eps: epsTight},
+		// Empty active is also fine for fixed-bar fields — they do not
+		// depend on unit-history context.
+		{name: "TpmsPressureFl/no_active_still_converts", field: "TpmsPressureFl", raw: 3.15, active: "", want: 315000, eps: epsTight},
 
 		// --- SPEED: VehicleSpeed x {mi, km} (prompt minimum) + CruiseSetSpeed for breadth ---
 		{name: "VehicleSpeed/mph_to_ms", field: "VehicleSpeed", raw: 60, active: ActiveUnitMiles, want: 60 * 0.44704, eps: epsLoose},
