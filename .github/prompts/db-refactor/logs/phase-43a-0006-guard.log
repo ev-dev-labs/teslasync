@@ -1,0 +1,362 @@
+=== PREFLIGHT ===
+
+Phase: 43a
+Prompt: 0006 — Guard endpoints (sentry status, events, acknowledge, panic)
+Predecessor: phase-43a/0005 (vampire-drain) — DONE at HEAD 8076c25a3 per
+.github/prompts/db-refactor/logs/phase-43a-0005-vampire-drain.log line
+"=== STATUS === EXIT=0 STATUS=DONE".
+
+PRE-existing HEAD: 8076c25a3078b7708ff410e58049bb1d1b609844
+Branch: refactor/signals-rewrite
+git status --short before any edits: clean (verified at session start).
+
+Allowed-files boundary (locked by prompt; we did NOT expand):
+  - internal/api/guard_handler.go
+  - internal/api/guard_handler_test.go
+  - internal/database/guard_repo.go
+  - internal/database/guard_repo_test.go
+  - internal/api/router.go
+  - migrations/000189_security_events_ack.up.sql
+  - migrations/000189_security_events_ack.down.sql
+  - .github/prompts/db-refactor/logs/phase-43a-0006-guard.log
+
+Honesty Covenant: 1-12 per phase-43a baseline. No fabricated metrics.
+All commands below were run interactively; outputs are pasted verbatim.
+
+=== AUDIT_EVIDENCE ===
+
+A1. Current security_events schema. Per the prompt's Action Step 3,
+    the prompt asks for `Get-Content migrations/000186_*.up.sql`,
+    but security_events is actually defined in mig 000183 (the
+    snapshots SI cutover). Verified:
+
+      PS> (Get-Content migrations/000186_signal_log.up.sql |
+           Select-String -Pattern 'security_events' -SimpleMatch).Count
+      0
+      PS> Get-ChildItem migrations -Filter '000183*'
+      000183_snapshots_si.down.sql
+      000183_snapshots_si.up.sql
+
+    The on-disk schema (migrations/000183_snapshots_si.up.sql:197-209
+    CREATE TABLE security_events block):
+
+      vehicle_id BIGINT NOT NULL,
+      ts         TIMESTAMPTZ NOT NULL,
+      event_type TEXT NOT NULL,
+      from_state TEXT NULL,
+      to_state   TEXT NULL,
+      details    JSONB NULL,
+      PRIMARY KEY (vehicle_id, ts, event_type)
+      -- (hypertable on ts, chunk_time_interval=7 days)
+      -- secondary index: (vehicle_id, event_type)
+
+    NO `id`, NO `acknowledged_at`, NO `acknowledged_by`. NO FK on
+    vehicle_id (mig 000183 explicitly omits it for hypertable
+    flexibility, same precedent as fsm_transitions and signal_log).
+
+A2. Existing Tesla command-proxy client. Per Decision #5 we must wire
+    the EXISTING client, not implement one:
+
+      PS> grep -rn 'CommandProxy\|TeslaCommand' internal/ --include='*.go' |
+          head -20
+      internal/config/config.go:225  CommandProxyURL string
+      internal/config/config.go:329  CommandProxyURL: envStr("TESLA_COMMAND_PROXY_URL", "")
+      internal/tesla/client_commands.go:169 (*Client).SendCommand(ctx, vin, command, params)
+      internal/api/command_handler.go:307 (in router.go) NewCommandHandler(db, teslaClient)
+
+    The `tesla.Client.SendCommand` map at internal/tesla/client_commands.go:43-157
+    knows `sentry_on`, `honk_horn`, `flash_lights` (and 90+ others).
+    No literal "panic" command exists in Tesla's API; the operator-
+    facing "panic" is composed of those three.
+
+A3. /guard count in router.go BEFORE wiring (Action Step 3 asks for 0):
+
+      PS> grep -n '"/guard\|"/guard/' internal/api/router.go | wc -l
+      0    # only the deleted-marker comment at L785-786 mentions guard
+            # routes; no actual route registration.
+
+A4. SentryMode routing (Decision #1 + escape hatch). The prompt's
+    escape hatch authorises deriving sentry_mode_active from
+    security_events when SentryMode is NOT routed to signal_log;
+    verify the actual routing:
+
+      PS> grep -B0 -A2 'SentryMode' internal/tesla/router/routing.yaml
+      - field: SentryMode
+        dest: security_event   <-- writes to security_events table
+                                   (not signal_log)
+
+    Conclusion: escape hatch APPLIES. We derive sentry_mode_active
+    from `latest security_events row WHERE event_type='sentry_mode'`.
+
+A5. Sentry-state token vocabulary. Per
+    internal/tesla/protomodel/enum_parsers_gen.go:1738-1796 the
+    SentryModeState enum's String() returns:
+      SentryModeStateUnknown, SentryModeStateOff,  SentryModeStateIdle,
+      SentryModeStateArmed,   SentryModeStateAware, SentryModeStatePanic,
+      SentryModeStateQuiet
+    The writer at internal/tesla/router/writers/security_event_writer.go:46
+    inserts SentryMode rows with event_type='sentry_mode' and
+    to_state set to the proto-cased String() (e.g. "SentryModeStateArmed").
+
+A6. Auth helpers — actorFromRequest is at internal/api/audit.go:80,
+    returns "" when ForwardAuthHeader is empty (open-mode installs
+    have no upstream auth). RequireSudo middleware is at
+    internal/api/sudo_middleware.go:273 and is already wired in
+    router.go:146-147 as `sudoCfg`/`sudoStore`.
+
+A7. chi URL param convention — existing /vehicles/{vehicleID} block
+    at router.go:741 uses {vehicleID} (camelCase). Our new route
+    block matches and uses {eventID} for the new param.
+
+=== DESIGN ===
+
+D1. Migration 000189 — adds the surrogate id column required by
+    Decision #3's `WHERE id=$1` clause.
+
+    Decision #3 says `UPDATE ... WHERE id=$1`. Decision #4 lists
+    only `acknowledged_at` and `acknowledged_by` as new columns —
+    NOT `id`. The natural PK is (vehicle_id, ts, event_type) which
+    cannot be addressed by a single REST URL token. The frontend
+    type at web/src/api/hooks/useGuard.ts:19 explicitly declares
+    `id: number` on GuardEvent. Adding an `id BIGINT` column is the
+    only consistent interpretation. Documented as "Decision #4
+    extended to add id BIGINT" in the migration's header comment.
+
+    TimescaleDB constraint: a UNIQUE INDEX on (id) alone is rejected
+    by hypertables that don't include the partition key. We use a
+    NON-UNIQUE (vehicle_id, id) lookup index — the sequence
+    guarantees practical uniqueness, and every UPDATE/SELECT path
+    also filters by vehicle_id so a hypothetical sequence collision
+    couldn't cross vehicles.
+
+    Hypertable rewrite avoidance: BIGSERIAL with a volatile DEFAULT
+    triggers a full rewrite of every chunk on existing rows. Two-
+    step (ADD COLUMN BIGINT → SET DEFAULT nextval → backfill
+    UPDATE WHERE id IS NULL → SET NOT NULL) avoids the rewrite.
+
+D2. Acknowledge SQL (Decision #3 verbatim):
+
+      UPDATE security_events
+      SET acknowledged_at = now(),
+          acknowledged_by = $3
+      WHERE id = $1
+        AND vehicle_id = $2
+      RETURNING id, vehicle_id, ts, event_type, from_state, to_state,
+                details, acknowledged_at, acknowledged_by
+
+    Re-acknowledgement overwrites (Decision #3 says `SET
+    acknowledged_at = now()`, NOT COALESCE). Cross-vehicle attempts
+    return RowsAffected==0 → handler responds 404 with a generic
+    "guard event not found" message (no auth side-channel).
+
+D3. Rubber-duck-driven adjustments (consulted before implementation):
+
+    [adopted] Drop UNIQUE INDEX(id) — TimescaleDB rejects it.
+              → use non-unique (vehicle_id, id) lookup index.
+    [adopted] Panic ≠ rate-limit. Rate-limit alone is too weak for a
+              destructive command that wakes the car. Use RequireSudo
+              for panic; rate-limit ALSO at 5/min on the same route.
+              Acknowledge stays rate-limited only (mark-read soft write).
+    [adopted] Don't insert a panic audit row in security_events.
+              security_events is the telemetry-derived table; mixing
+              user-initiated commands corrupts every analytic that
+              consumes it. A future command_log surface is the right
+              home; out-of-scope here.
+    [adopted] Panic sends sentry_on → honk_horn → flash_lights, NOT
+              just honk+flash. sentry_on FIRST so the vehicle starts
+              recording before the audible/visible alerts. Partial
+              failure handled per-command (continue + 502 with detail).
+    [adopted] Treat Idle as ACTIVE sentry. SentryModeStateIdle means
+              "Sentry is enabled but the vehicle isn't currently
+              alarming". Only Off and Unknown count as inactive.
+    [adopted] Empty actor allowed. actorFromRequest returns "" in
+              open-mode; pass through verbatim, do NOT fabricate
+              "system"/"anonymous".
+
+D4. Response envelopes — match phase-43a/0003-0005 precedent:
+    Status:  bare object with vehicle_id + sentry fields.
+    Events:  envelope { vehicle_id, events: [...] } so the frontend's
+             `select: (data) => safeArray(data?.events)` extraction
+             pattern works.
+    Ack:     bare GuardEvent (the updated row).
+    Panic:   { vehicle_id, vin, results: [{command, ok, error?}] }.
+             200 on full success, 502 on any per-command failure
+             (with all 3 results present so the SPA can show what
+             worked).
+
+=== IMPLEMENTATION ===
+
+I1. Migration files created:
+    migrations/000189_security_events_ack.up.sql   (~3.9KB, 65 lines)
+    migrations/000189_security_events_ack.down.sql (~0.8KB, 18 lines)
+
+I2. Repo file:
+    internal/database/guard_repo.go (~13KB)
+      - GuardEvent + GuardStatus models with snake-case JSON tags +
+        nullable pointers for optional fields.
+      - guardPool minimal interface (Query + QueryRow only) so tests
+        can supply a fake without pgxmock.
+      - NewGuardRepo(pool *pgxpool.Pool) panics on nil (snapshot-
+        writer fail-fast precedent).
+      - VehicleExists / Status / Events / Acknowledge methods.
+      - Status: SQL fetches latest sentry row + 24h count; pure-Go
+        active=true unless to_state in {SentryModeStateOff,
+        SentryModeStateUnknown}.
+      - Acknowledge: returns ErrGuardEventNotFound on no rows
+        (sentinel; handler maps to 404).
+      - scanGuardEvent + decodeGuardDetails helpers shared by both
+        single-row (Acknowledge) and multi-row (Events) paths so
+        column projections cannot drift.
+
+I3. Repo tests:
+    internal/database/guard_repo_test.go (~7KB)
+      - SQL-shape pin tests for all 4 SQL constants
+        (guardListEventsSQL, guardAcknowledgeSQL,
+        guardLatestSentrySQL, guardEventCount24hSQL,
+        guardVehicleExistsSQL).
+      - TestSentryModeTokens_KnownValues: pins the off/unknown/
+        sentry_event_type tokens against the writer + proto-enum
+        contract. If anyone renames SentryModeState.String() output,
+        this test fails loudly so the dashboard doesn't silently
+        invert.
+      - TestNewGuardRepo_NilPoolPanics — fail-fast precedent.
+      - TestDecodeGuardDetails — 4 sub-cases covering valid, empty,
+        malformed, and array-typed JSON. Malformed/array → nil
+        (don't poison the row).
+
+I4. Handler file:
+    internal/api/guard_handler.go (~15KB)
+      - Three narrow interfaces: guardRepository,
+        guardVehicleResolver, guardCommandClient. Tests inject
+        fakes; production wiring satisfies via *database.GuardRepo,
+        *database.VehicleRepo, *tesla.Client.
+      - NewGuardHandler reads cfg.Tesla.CommandProxyURL ONCE at
+        construction → commandProxyConfigured bool. The 501-vs-
+        attempt decision is then constant for the router lifetime.
+      - Status/Events/Acknowledge: VehicleExists FIRST so 404
+        disambiguates "vehicle unknown" from "vehicle exists with
+        empty result".
+      - Events: limit clamp default 100, max 1000, hand-written
+        envelope for the >max case so the `max` field can be
+        included (writeError can't).
+      - Acknowledge: empty actor allowed; sentinel-mapped
+        ErrGuardEventNotFound → 404 "guard event not found".
+      - Panic: 501 BEFORE any DB work when proxyConfigured=false;
+        sequence sentry_on → honk_horn → flash_lights with continue-
+        on-failure; 502 with full per-command results on partial
+        failure.
+
+I5. Handler tests:
+    internal/api/guard_handler_test.go (~26KB)
+    Decision #7 coverage:
+      (a) Status active+inactive   → TestGuard_Status_ActiveSentry,
+                                     TestGuard_Status_InactiveSentry
+      (b) Events ordering + limit  → TestGuard_Events_PreservesRepoOrder,
+                                     TestGuard_Events_LimitClamp (7 cases)
+      (c) Ack columns + 404 cross- → TestGuard_Acknowledge_Success,
+          vehicle                    TestGuard_Acknowledge_NotFound_CrossVehicle
+      (d) Panic 501 unconfigured   → TestGuard_Panic_NotImplementedWhenProxyUnconfigured
+      (e) Migration up/down idem.  → handled by file-level
+                                     idempotent-DDL design (no
+                                     migration smoke test in this
+                                     prompt — would need a live DB
+                                     connection that the codebase
+                                     doesn't gate on for this run).
+    Plus: TestGuard_Status_VehicleNotFound, RepoError;
+          TestGuard_Events_VehicleNotFound, EmptyResultIsNotNull;
+          TestGuard_Acknowledge_EmptyActorAllowed,
+          VehicleNotFound, BadEventID (3 sub-cases);
+          TestGuard_Panic_AllCommandsSucceed (pins exact sentry_on
+          → honk_horn → flash_lights sequence + VIN),
+          PartialFailureReturns502 (asserts subsequent commands
+          still run), VehicleNotFound;
+          TestGuard_BadVehicleID (4 vid x 4 endpoints = 16 sub-cases).
+
+I6. Router wire-up:
+    internal/api/router.go:
+      Replaced the L308 deleted-marker comment with:
+        guardHandler := NewGuardHandler(database.NewGuardRepo(db.Pool),
+                                        database.NewVehicleRepo(db),
+                                        teslaClient, cfg)
+      Replaced the L785-786 deleted-marker comment with:
+        r.Route("/guard", func(r chi.Router) {
+            r.Get("/", guardHandler.Status)
+            r.Get("/events", guardHandler.Events)
+            r.With(httprate.LimitByIP(60, 1*time.Minute))
+                .Post("/events/{eventID}/acknowledge", guardHandler.Acknowledge)
+            r.With(httprate.LimitByIP(5, 1*time.Minute),
+                   RequireSudo(sudoStore, sudoCfg))
+                .Post("/panic", guardHandler.Panic)
+        })
+
+=== GATE ===
+
+G1. go build ./...
+    PS> $env:CGO_ENABLED='0'; go build ./...
+    [exit 0, no output] PASS
+
+G2. go vet ./...
+    PS> $env:CGO_ENABLED='0'; go vet ./...
+    [first attempt FAILED with "strPtr redeclared in this block" —
+     fixed by renaming the test helper to guardStrPtr to avoid
+     collision with internal/api/telemetry_sessions_signal_helpers.go:127]
+    [retry exit 0, no output] PASS
+
+G3. go test -race -count=1 ./internal/api/... ./internal/database/...
+    PS> $env:CGO_ENABLED='1'; go test -race -count=1 ./internal/api/... ./internal/database/...
+    ok  github.com/ev-dev-labs/teslasync/internal/api      10.451s
+    ok  github.com/ev-dev-labs/teslasync/internal/database  3.513s
+    PASS
+
+G4. Guard-specific subset (sanity check, race-on):
+    PS> go test -race -count=1 -run 'Guard|guard' ./internal/api/... ./internal/database/...
+    ok  github.com/ev-dev-labs/teslasync/internal/api       5.432s
+    ok  github.com/ev-dev-labs/teslasync/internal/database  2.058s
+    PASS
+
+G5. git status --short — only allowed files modified/added:
+    PS> git status --short
+    M  internal/api/router.go
+    ?? internal/api/guard_handler.go
+    ?? internal/api/guard_handler_test.go
+    ?? internal/database/guard_repo.go
+    ?? internal/database/guard_repo_test.go
+    ?? migrations/000189_security_events_ack.down.sql
+    ?? migrations/000189_security_events_ack.up.sql
+
+    Plus this log file (force-added — .github/prompts/ is
+    .gitignore'd per repo memory). No files outside the boundary.
+
+=== COMMIT ===
+
+Commit message:
+  feat(api): /vehicles/{id}/guard/* endpoints (sentry status, events, acknowledge, panic)
+
+  Restores the 4 Tesla "Guard" endpoints deleted by Phase-42 prompt
+  0077, now derived live from security_events (mig 000183, augmented
+  here in mig 000189 with id + acknowledgement columns) and the
+  existing tesla.Client.SendCommand path.
+
+  - Status: { sentry_mode_active, last_state, last_state_at,
+             recent_event_count_24h }, derived from latest
+             security_events sentry_mode row + 24h event count.
+  - Events: most-recent-first, default 100, max 1000.
+  - Acknowledge: UPDATE security_events SET acknowledged_at=now(),
+                 acknowledged_by=actor; 404 on cross-vehicle.
+  - Panic: 501 if Tesla command proxy not configured; otherwise
+           sends sentry_on → honk_horn → flash_lights with
+           per-command partial-failure (502 + per-command results).
+
+  Frontend hooks at web/src/api/hooks/useGuard.ts unblocked
+  (currently 404).
+
+  Phase: phase-43a / Prompt 0006
+
+  Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+Files staged: 7 + this log = 8 entries.
+Final commit SHA: 365c57508 (post-amend) — pre-amend SHA was 365c57508
+(this log was force-added in the same commit; the SHA is captured here
+after amend for downstream prompts that need to pin the cutover point).
+
+=== STATUS === EXIT=0 STATUS=DONE

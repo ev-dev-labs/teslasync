@@ -305,7 +305,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts, alertLiveSignalStore)
 	commandHandler := NewCommandHandler(db, teslaClient)
-	// Phase-42 (prompt 0077): GuardHandler deleted with guard_events table.
+	guardHandler := NewGuardHandler(database.NewGuardRepo(db.Pool), database.NewVehicleRepo(db), teslaClient, cfg)
 	energyHandler := NewEnergyHandler(energySvc)
 	signalLogReader := database.NewSignalLogReader(db)
 	batteryHandler := NewBatteryHandler(db, stateReader)
@@ -782,8 +782,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/upgrades", vehicleInfoHandler.UpgradeEligibility)
 				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/upgrades/refresh", vehicleInfoHandler.RefreshUpgradeEligibility)
 
-				// Phase-42 (prompt 0077): /guard routes deleted with
-				// guard_handler.go and the guard_events table.
+				// Phase-43a / Prompt 0006 — /guard endpoints restored.
+				// Status + Events are read-only and rate-limit-free
+				// (the SPA polls these from the dashboard). Acknowledge
+				// is a soft mark-read with per-IP rate-limit at 60/min
+				// matching every other vehicle-scoped POST. Panic is
+				// destructive (wakes the car, sounds horn, costs energy)
+				// and is sudo-gated + tightly rate-limited at 5/min.
+				r.Route("/guard", func(r chi.Router) {
+					r.Get("/", guardHandler.Status)
+					r.Get("/events", guardHandler.Events)
+					r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/events/{eventID}/acknowledge", guardHandler.Acknowledge)
+					r.With(httprate.LimitByIP(5, 1*time.Minute), RequireSudo(sudoStore, sudoCfg)).Post("/panic", guardHandler.Panic)
+				})
 
 				// FSM debug diagnostics
 				r.Get("/fsm/debug", func(w http.ResponseWriter, req *http.Request) {
