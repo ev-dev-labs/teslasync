@@ -1772,11 +1772,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		}
 
-		// Phase-42 (prompt 0077): /signals/catalog and /signals/observations
-		// were deleted with signal_catalog_handler.go. The typed signal_log
-		// pipeline (000167+) plus internal/api/signal_handler.go's
-		// /available endpoint (which sources from protomodel.Signals) are
-		// the authoritative catalog/observation surface.
+		// Phase-43a / Prompt 0007: /signals/catalog and /signals/observations
+		// restored after Phase-42 prompt 0077 deleted the legacy
+		// signal_catalog_handler.go. The catalog spine is parsed from
+		// routing.yaml (router.Load) at handler construction; aggregates
+		// + observations come from signal_log (mig 000186). Frontend hooks
+		// useSignalCatalog / useSignalObservations stop returning 404. Same
+		// admin-style rate limit as /vehicle-states + /system/queues
+		// (Phase-43a / Prompt 0003 + Phase-46 / Prompt 41 precedent).
+		// Mounted BEFORE /signals/{vehicleID} so the static paths take
+		// precedence under chi v5's longest-static-prefix matching.
+		signalsCatalogHandler := NewSignalsCatalogHandler(database.NewSignalsCatalogRepo(db.Pool))
+		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/signals/catalog", signalsCatalogHandler.Catalog)
+		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/signals/observations", signalsCatalogHandler.Observations)
 
 		// Signal routes
 		r.Route("/signals/{vehicleID}", func(r chi.Router) {
