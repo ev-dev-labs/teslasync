@@ -138,13 +138,14 @@ func TestWrite_TypeMatrix(t *testing.T) {
 	dst := router.Entry{Field: field, Destination: router.DestClimateSnapshot, Column: col}
 
 	cases := []struct {
-		name string
-		val  any
+		name    string
+		val     any
+		wantArg any
 	}{
-		{name: "float64", val: float64(22.5)},
-		{name: "int64", val: int64(42)},
-		{name: "bool", val: true},
-		{name: "string", val: "auto"},
+		{name: "float64", val: float64(22.5), wantArg: float64(22.5)},
+		{name: "int64", val: int64(42), wantArg: float64(42)},
+		{name: "bool", val: true, wantArg: true},
+		{name: "string", val: "auto", wantArg: "auto"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -161,9 +162,67 @@ func TestWrite_TypeMatrix(t *testing.T) {
 			}
 			call := rec.calls[0]
 			assertCallShape(t, call, tableName, col)
-			wantArgs := []any{vin, ts, tc.val}
+			wantArgs := []any{vin, ts, tc.wantArg}
 			if !reflect.DeepEqual(call.Args, wantArgs) {
 				t.Errorf("args=%v, want %v", call.Args, wantArgs)
+			}
+		})
+	}
+}
+
+// TestWrite_NumericKindCoercion pins Phase-42 / Rule 12 contract:
+// numeric values from the codec (int, int8, int16, int32, int64,
+// uint variants, and float32) are coerced to float64 via the
+// canonical signal.Float64 converter before SQL binding. The codec
+// emits Float5 fields as float32 and Int3/Int4 as int32 (per the
+// proto schema's `int32 int_value` / `float float_value`); without
+// this coercion every snapshot write for those fields silently fails
+// with "unsupported value type" — which is exactly the bug that
+// Phase-42a prompt 0010 missed and the panel-by-panel UI audit
+// caught for /vehicles/state (commit 30bd16a1).
+func TestWrite_NumericKindCoercion(t *testing.T) {
+	const (
+		vin       = "5YJ3E1EA0KF000001"
+		field     = "InsideTemp"
+		col       = "inside_temp_c"
+		tableName = "test_snapshots"
+	)
+	ts := time.Date(2026, 5, 6, 12, 34, 56, 0, time.UTC)
+	dst := router.Entry{Field: field, Destination: router.DestClimateSnapshot, Column: col}
+
+	cases := []struct {
+		name string
+		in   any
+		want float64
+	}{
+		{name: "int", in: int(42), want: 42.0},
+		{name: "int8", in: int8(-7), want: -7.0},
+		{name: "int16", in: int16(1234), want: 1234.0},
+		{name: "int32", in: int32(987654), want: 987654.0},
+		{name: "uint", in: uint(99), want: 99.0},
+		{name: "uint32", in: uint32(4_000_000_000), want: 4_000_000_000.0},
+		{name: "float32", in: float32(22.5), want: 22.5},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := &recorder{rows: 1}
+			w := newTestWriter(t, rec, staticColumnFor(field, col))
+			err := w.Write(context.Background(), codec.Atomic{
+				Field: field, Value: tc.in, EmittedAt: ts, VehicleID: vin,
+			}, dst)
+			if err != nil {
+				t.Fatalf("Write: %v", err)
+			}
+			if got := len(rec.calls); got != 1 {
+				t.Fatalf("calls=%d, want 1", got)
+			}
+			gotVal := rec.calls[0].Args[2]
+			gotFloat, ok := gotVal.(float64)
+			if !ok {
+				t.Fatalf("bound value type=%T, want float64 (Rule 12 canonical converter must widen to float64 before SQL bind)", gotVal)
+			}
+			if gotFloat != tc.want {
+				t.Errorf("bound value=%v, want %v", gotFloat, tc.want)
 			}
 		})
 	}
@@ -227,11 +286,9 @@ func TestWrite_UnsupportedValueTypeReturnsError(t *testing.T) {
 		name string
 		val  any
 	}{
-		{name: "int", val: int(7)},
-		{name: "int32", val: int32(7)},
-		{name: "float32", val: float32(1.5)},
 		{name: "time.Time", val: time.Now()},
 		{name: "byte_slice", val: []byte("hello")},
+		{name: "struct", val: struct{ X int }{X: 1}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

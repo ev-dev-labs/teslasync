@@ -120,15 +120,16 @@ func TestChargingTelemetryWriter_TypeMatrix(t *testing.T) {
 	ts := time.Date(2026, 5, 6, 12, 34, 56, 0, time.UTC)
 
 	cases := []struct {
-		name  string
-		field string
-		col   string
-		val   any
+		name    string
+		field   string
+		col     string
+		val     any
+		wantArg any
 	}{
-		{name: "float64_ACChargingPower", field: "ACChargingPower", col: "ac_charging_power_w", val: float64(11000.5)},
-		{name: "int64_ChargerPhases", field: "ChargerPhases", col: "charger_phases", val: int64(3)},
-		{name: "bool_BatteryHeaterOn", field: "BatteryHeaterOn", col: "battery_heater_on", val: true},
-		{name: "text_FastChargerType", field: "FastChargerType", col: "fast_charger_type", val: "Combo"},
+		{name: "float64_ACChargingPower", field: "ACChargingPower", col: "ac_charging_power_w", val: float64(11000.5), wantArg: float64(11000.5)},
+		{name: "int64_ChargerPhases", field: "ChargerPhases", col: "charger_phases", val: int64(3), wantArg: float64(3)},
+		{name: "bool_BatteryHeaterOn", field: "BatteryHeaterOn", col: "battery_heater_on", val: true, wantArg: true},
+		{name: "text_FastChargerType", field: "FastChargerType", col: "fast_charger_type", val: "Combo", wantArg: "Combo"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -152,7 +153,7 @@ func TestChargingTelemetryWriter_TypeMatrix(t *testing.T) {
 			}
 			call := rec.calls[0]
 			assertCallShape(t, call, "charging_telemetry", tc.col)
-			wantArgs := []any{vin, ts, tc.val}
+			wantArgs := []any{vin, ts, tc.wantArg}
 			if !reflect.DeepEqual(call.Args, wantArgs) {
 				t.Errorf("args=%v, want %v", call.Args, wantArgs)
 			}

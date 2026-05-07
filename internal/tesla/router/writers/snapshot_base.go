@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
 )
@@ -176,13 +177,34 @@ func (w *snapshotWriter) Write(ctx context.Context, atom codec.Atomic, dst route
 	return nil
 }
 
-// bindSnapshotValue narrows codec.Atomic.Value to the four scalar
-// types LOCKED by phase-42a prompt 0010 decision #4. Compound
-// atomics (Location lat/lng pairs, Doors flags, TireLocation per-
-// corner values) are NOT routed to snapshot tables — they go to
-// positions / signal_log via different writers — so the helper
-// deliberately rejects everything outside the four types instead of
-// silently coercing.
+// bindSnapshotValue narrows codec.Atomic.Value to a SQL-bindable
+// scalar suitable for the snapshot tables' (vehicle_id, ts, <col>)
+// INSERT shape. Compound atomics (Location lat/lng pairs, Doors flags,
+// TireLocation per-corner values) are NOT routed to snapshot tables —
+// they go to positions / signal_log via different writers.
+//
+// Per Phase-42 / Rule 12 (.github/instructions/tesla-pipeline.instructions.md
+// §12) ALL numeric narrowing of signal-derived values goes through
+// signal.Float64 — the SINGLE canonical converter. The helper covers
+// every numeric kind the codec emits (float64, float32, int, int8,
+// int16, int32, int64 plus unsigned counterparts) so this writer does
+// not duplicate the type switch. Adding fresh `case float32:` /
+// `case int32:` arms here would re-introduce the
+// type-switch-divergence bug that Rule 12 was created to eliminate.
+//
+// Numeric snapshot columns are uniformly DOUBLE PRECISION (per
+// migrations 000003 / 000016 / 000017 / 000183) so the canonical
+// converter's float64 output binds correctly for every routed numeric
+// destination. The lone integer column today is the gear TEXT field
+// on drive_telemetry, which is intercepted by drive_telemetry_writer's
+// coerceProtoEnumToText BEFORE delegation and arrives here as a
+// string — the helper therefore never needs to bind raw int64 to
+// snapshot columns.
+//
+// Bool and string are kept as explicit non-numeric arms because
+// signal.Float64 deliberately treats bool as a legacy 1/0 envelope
+// (signal/coerce.go:94-101) — promoting an unrelated boolean snapshot
+// column to a numeric 1.0 binding would silently corrupt the column.
 //
 // nil values are rejected loudly because the snapshot tables'
 // per-column upsert would happily write SQL NULL and overwrite a
@@ -193,17 +215,15 @@ func (w *snapshotWriter) Write(ctx context.Context, atom codec.Atomic, dst route
 // the shared helper.
 func bindSnapshotValue(v any) (any, error) {
 	switch t := v.(type) {
-	case float64:
-		return t, nil
-	case int64:
-		return t, nil
+	case nil:
+		return nil, fmt.Errorf("nil value not allowed in snapshot write")
 	case bool:
 		return t, nil
 	case string:
 		return t, nil
-	case nil:
-		return nil, fmt.Errorf("nil value not allowed in snapshot write")
-	default:
-		return nil, fmt.Errorf("unsupported value type %T (snapshot helper accepts float64, int64, bool, string)", v)
 	}
+	if f, ok := signal.Float64(v); ok {
+		return f, nil
+	}
+	return nil, fmt.Errorf("unsupported value type %T (snapshot helper accepts bool, string, and any signal.Float64-coercible numeric)", v)
 }

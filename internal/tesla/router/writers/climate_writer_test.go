@@ -114,15 +114,16 @@ func TestClimateWriter_TypeMatrix(t *testing.T) {
 	ts := time.Date(2026, 5, 6, 12, 34, 56, 0, time.UTC)
 
 	cases := []struct {
-		name  string
-		field string
-		col   string
-		val   any
+		name    string
+		field   string
+		col     string
+		val     any
+		wantArg any
 	}{
-		{name: "float64_InsideTemp", field: "InsideTemp", col: "inside_temp_c", val: float64(22.5)},
-		{name: "int64_HvacFanSpeed", field: "HvacFanSpeed", col: "hvac_fan_speed", val: int64(7)},
-		{name: "bool_HvacACEnabled", field: "HvacACEnabled", col: "hvac_ac_enabled", val: true},
-		{name: "text_DefrostMode", field: "DefrostMode", col: "defrost_mode", val: "auto"},
+		{name: "float64_InsideTemp", field: "InsideTemp", col: "inside_temp_c", val: float64(22.5), wantArg: float64(22.5)},
+		{name: "int64_HvacFanSpeed", field: "HvacFanSpeed", col: "hvac_fan_speed", val: int64(7), wantArg: float64(7)},
+		{name: "bool_HvacACEnabled", field: "HvacACEnabled", col: "hvac_ac_enabled", val: true, wantArg: true},
+		{name: "text_DefrostMode", field: "DefrostMode", col: "defrost_mode", val: "auto", wantArg: "auto"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -146,7 +147,7 @@ func TestClimateWriter_TypeMatrix(t *testing.T) {
 			}
 			call := rec.calls[0]
 			assertCallShape(t, call, "climate_snapshots", tc.col)
-			wantArgs := []any{vin, ts, tc.val}
+			wantArgs := []any{vin, ts, tc.wantArg}
 			if !reflect.DeepEqual(call.Args, wantArgs) {
 				t.Errorf("args=%v, want %v", call.Args, wantArgs)
 			}

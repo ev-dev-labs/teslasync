@@ -112,13 +112,14 @@ func TestMediaWriter_TypeMatrix(t *testing.T) {
 
 	cases := []struct {
 		name  string
-		field string
-		col   string
-		val   any
+		field   string
+		col     string
+		val     any
+		wantArg any
 	}{
-		{name: "text_MediaNowPlayingTitle", field: "MediaNowPlayingTitle", col: "track_name", val: "Bohemian Rhapsody"},
-		{name: "text_MediaPlaybackStatus", field: "MediaPlaybackStatus", col: "play_status", val: "playing"},
-		{name: "int64_MediaAudioVolume", field: "MediaAudioVolume", col: "volume_pct", val: int64(75)},
+		{name: "text_MediaNowPlayingTitle", field: "MediaNowPlayingTitle", col: "track_name", val: "Bohemian Rhapsody", wantArg: "Bohemian Rhapsody"},
+		{name: "text_MediaPlaybackStatus", field: "MediaPlaybackStatus", col: "play_status", val: "playing", wantArg: "playing"},
+		{name: "int64_MediaAudioVolume", field: "MediaAudioVolume", col: "volume_pct", val: int64(75), wantArg: float64(75)},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -142,7 +143,7 @@ func TestMediaWriter_TypeMatrix(t *testing.T) {
 			}
 			call := rec.calls[0]
 			assertCallShape(t, call, "media_snapshots", tc.col)
-			wantArgs := []any{vin, ts, tc.val}
+			wantArgs := []any{vin, ts, tc.wantArg}
 			if !reflect.DeepEqual(call.Args, wantArgs) {
 				t.Errorf("args=%v, want %v", call.Args, wantArgs)
 			}
