@@ -10,16 +10,11 @@ import { GlassPanel, Badge, Button, Select, DataTable, type Column } from '@/com
 import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import {
-  ChartTooltip,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
-} from '@/components/charts';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUrlString } from '@/hooks/useUrlState';
-import { formatDateTime, formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { formatDateTime } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
@@ -27,44 +22,35 @@ import { request } from '@/api/client';
 
 /* ─── Types matching actual API responses ────────────────── */
 
-/** GET /vehicle-states/timeline → { transitions: StateRecord[] } */
-interface StateRecord {
-  state: string;
-  started_at: string;
-  ended_at: string | null;
-  duration_seconds: number;
-}
-
-/** Derived row for the transitions table (computed from consecutive StateRecords) */
-interface TransitionRow {
-  index: number;
+/** GET /vehicle-states/timeline → { vehicle_id, days, transitions: TransitionRecord[] }.
+ *  Each record is a single FSM transition event — point-in-time, NOT a state with
+ *  duration. To compute "time spent in state X" we use the summary endpoint instead. */
+interface TransitionRecord {
+  ts: string;
   from_state: string;
   to_state: string;
-  timestamp: string;
-  duration_seconds: number;
+  trigger_field: string | null;
+  trigger_value: string | null;
 }
 
-/** GET /vehicle-states/summary → StateSummaryRow[] */
-interface StateSummaryRow {
+/** Indexed transition row for the table. */
+interface TransitionRow extends TransitionRecord {
+  index: number;
+}
+
+/** GET /vehicle-states/summary → { vehicle_id, days, total_seconds, by_state: ByStateRow[] }. */
+interface ByStateRow {
   state: string;
-  count: number;
-  total_min: number;
+  total_seconds: number;
+  percentage: number;
+  transition_count: number;
 }
 
-/** GET /vehicle-states/daily → DailyRow[] (one row per state per day) */
-interface DailyRow {
-  day: string;
-  state: string;
-  total_min: number;
-}
-
-/** Pivoted daily breakdown for stacked chart */
-interface DailyPivoted {
-  date: string;
-  driving_hours: number;
-  charging_hours: number;
-  idle_hours: number;
-  sleeping_hours: number;
+interface SummaryResponse {
+  vehicle_id: number;
+  days: number;
+  total_seconds: number;
+  by_state: ByStateRow[];
 }
 
 /* ─── Constants ──────────────────────────────────────────── */
@@ -91,7 +77,8 @@ const STATE_BADGE: Record<string, 'success' | 'info' | 'warning' | 'neutral' | '
   asleep: 'neutral',
 };
 
-function formatHours(minutes: number): string {
+function formatHoursFromSeconds(seconds: number): string {
+  const minutes = seconds / 60;
   const hours = minutes / 60;
   const h = Math.floor(hours);
   const m = (hours - h) * 60;
@@ -99,24 +86,9 @@ function formatHours(minutes: number): string {
   return m >= 0.5 ? `${h}h ${fmtInt(m)}m` : `${h}h`;
 }
 
-/** Pivot per-state-per-day rows into one row per day with columns per state */
-function pivotDaily(rows: DailyRow[]): DailyPivoted[] {
-  const byDay = new Map<string, DailyPivoted>();
-  for (const r of rows) {
-    let entry = byDay.get(r.day);
-    if (!entry) {
-      entry = { date: r.day, driving_hours: 0, charging_hours: 0, idle_hours: 0, sleeping_hours: 0 };
-      byDay.set(r.day, entry);
-    }
-    const hours = r.total_min / 60;
-    switch (r.state) {
-      case 'driving': entry.driving_hours += hours; break;
-      case 'charging': entry.charging_hours += hours; break;
-      case 'online': case 'parked': case 'idle': entry.idle_hours += hours; break;
-      case 'asleep': case 'sleeping': case 'offline': entry.sleeping_hours += hours; break;
-    }
-  }
-  return Array.from(byDay.values()).sort((a, b) => a.date.localeCompare(b.date));
+function formatDurationFromSeconds(seconds: number): string {
+  if (seconds < 60) return `${fmtInt(seconds)}s`;
+  return formatHoursFromSeconds(seconds);
 }
 
 /* ─── Component ──────────────────────────────────────────── */
@@ -135,7 +107,7 @@ export default function TimelinePage() {
   const timelineQuery = useQuery({
     queryKey: ['vehicle-timeline', activeId],
     queryFn: () =>
-      request<{ transitions: StateRecord[] }>(
+      request<{ transitions: TransitionRecord[] }>(
         `/vehicle-states/timeline?vehicle_id=${activeId}`,
       ),
     enabled,
@@ -145,71 +117,66 @@ export default function TimelinePage() {
   const { data: summaryData, isLoading: sumLoading, error: summaryError } = useQuery({
     queryKey: ['vehicle-summary', activeId],
     queryFn: () =>
-      request<StateSummaryRow[]>(
+      request<SummaryResponse>(
         `/vehicle-states/summary?vehicle_id=${activeId}`,
       ),
     enabled,
   });
 
-  const { data: dailyData, isLoading: dayLoading, error: dailyError } = useQuery({
-    queryKey: ['vehicle-daily', activeId],
-    queryFn: () => request<DailyRow[]>(`/vehicle-states/daily?vehicle_id=${activeId}`),
-    enabled,
-  });
+  /* Defensive coercion — even with TanStack handling network errors, an
+   * unexpected response shape (e.g. backend returns an array, or an error
+   * envelope object) would otherwise crash with "X is not iterable" inside
+   * the for/of loops below. */
+  const transitionsRaw = Array.isArray(timelineData?.transitions)
+    ? (timelineData!.transitions as TransitionRecord[])
+    : [];
+  const summaryRows: ByStateRow[] = Array.isArray(summaryData?.by_state)
+    ? (summaryData!.by_state as ByStateRow[])
+    : [];
+  const totalSeconds = summaryData?.total_seconds ?? 0;
 
-  const stateRecords = timelineData?.transitions ?? [];
-  const summaryRows = summaryData ?? [];
-  const daily = useMemo(() => pivotDaily(dailyData ?? []), [dailyData]);
-  const anyError = [vehiclesError, timelineError, summaryError, dailyError].find(Boolean);
-  const isLoading = tlLoading || sumLoading || dayLoading;
+  const anyError = [vehiclesError, timelineError, summaryError].find(Boolean);
+  const isLoading = tlLoading || sumLoading;
 
-  // Derive transition rows from consecutive state records
+  // Indexed transition rows for the table
   const transitions = useMemo<TransitionRow[]>(
-    () =>
-      stateRecords.map((rec, i, arr) => ({
-        index: i,
-        from_state: i > 0 ? arr[i - 1].state : '—',
-        to_state: rec.state,
-        timestamp: rec.started_at,
-        duration_seconds: rec.duration_seconds,
-      })),
-    [stateRecords],
-  );
-
-  const totalDuration = useMemo(
-    () => stateRecords.reduce((s, rec) => s + rec.duration_seconds, 0),
-    [stateRecords],
+    () => transitionsRaw.map((rec, i) => ({ index: i, ...rec })),
+    [transitionsRaw],
   );
 
   // Derive summary metrics from the raw summary rows
   const summaryByState = useMemo(() => {
-    const m: Record<string, { count: number; totalMin: number }> = {};
+    const m: Record<string, { transitionCount: number; totalSeconds: number; percentage: number }> = {};
     for (const row of summaryRows) {
-      m[row.state] = { count: row.count, totalMin: row.total_min };
+      m[row.state] = {
+        transitionCount: row.transition_count,
+        totalSeconds: row.total_seconds,
+        percentage: row.percentage,
+      };
     }
     return m;
   }, [summaryRows]);
 
-  const totalTransitions = summaryRows.reduce((s, r) => s + r.count, 0);
-  const drivingMin = summaryByState.driving?.totalMin ?? 0;
-  const chargingMin = summaryByState.charging?.totalMin ?? 0;
-  const idleMin = (summaryByState.online?.totalMin ?? 0) +
-    (summaryByState.parked?.totalMin ?? 0) +
-    (summaryByState.idle?.totalMin ?? 0);
-  const sleepingMin = (summaryByState.asleep?.totalMin ?? 0) +
-    (summaryByState.sleeping?.totalMin ?? 0) +
-    (summaryByState.offline?.totalMin ?? 0);
+  const totalTransitions = summaryRows.reduce((s, r) => s + (r.transition_count ?? 0), 0);
+  const drivingSec = summaryByState.driving?.totalSeconds ?? 0;
+  const chargingSec = summaryByState.charging?.totalSeconds ?? 0;
+  const idleSec = (summaryByState.online?.totalSeconds ?? 0) +
+    (summaryByState.parked?.totalSeconds ?? 0) +
+    (summaryByState.idle?.totalSeconds ?? 0);
+  const sleepingSec = (summaryByState.asleep?.totalSeconds ?? 0) +
+    (summaryByState.sleeping?.totalSeconds ?? 0) +
+    (summaryByState.offline?.totalSeconds ?? 0);
 
   /* ─── Table columns ─── */
 
   const columns = useMemo<Column<TransitionRow>[]>(
     () => [
       {
-        key: 'timestamp',
+        key: 'ts',
         header: t('timeline.time', 'Time'),
         sortable: true,
         render: (row) => (
-          <span className="text-sm">{formatDateTime(row.timestamp)}</span>
+          <span className="text-sm">{formatDateTime(row.ts)}</span>
         ),
       },
       {
@@ -233,12 +200,12 @@ export default function TimelinePage() {
         ),
       },
       {
-        key: 'duration',
-        header: t('timeline.duration', 'Duration'),
+        key: 'trigger_field',
+        header: t('timeline.trigger', 'Trigger'),
         sortable: true,
         render: (row) => (
-          <span className="text-sm font-medium">
-            {formatDurationSecondsAsMinutes(row.duration_seconds)}
+          <span className="text-xs text-[var(--text-secondary)]">
+            {row.trigger_field ?? '—'}
           </span>
         ),
       },
@@ -275,7 +242,7 @@ export default function TimelinePage() {
       title={t('timeline.title', 'Timeline')}
       subtitle={t('timeline.subtitle', 'Vehicle state history and transitions')}
       actions={actions}
-      loading={isLoading && stateRecords.length === 0}
+      loading={isLoading && transitions.length === 0}
     >
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
@@ -293,49 +260,56 @@ export default function TimelinePage() {
           />
           <MetricCard
             label={t('timeline.drivingTime', 'Driving Time')}
-            value={formatHours(drivingMin)}
+            value={formatHoursFromSeconds(drivingSec)}
             icon={<Car className="h-5 w-5" />}
             color="green"
           />
           <MetricCard
             label={t('timeline.chargingTime', 'Charging Time')}
-            value={formatHours(chargingMin)}
+            value={formatHoursFromSeconds(chargingSec)}
             icon={<BatteryCharging className="h-5 w-5" />}
             color="cyan"
           />
           <MetricCard
             label={t('timeline.idleSleepTime', 'Idle / Sleep Time')}
-            value={formatHours(idleMin + sleepingMin)}
+            value={formatHoursFromSeconds(idleSec + sleepingSec)}
             icon={<Moon className="h-5 w-5" />}
           />
         </div>
       </FadeIn>
 
-      {/* State timeline bar */}
+      {/* State timeline bar — proportional state distribution from summary */}
       <FadeIn delay={0.1}>
         <GlassPanel className="mb-6 p-4">
           <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-            {t('timeline.stateTimeline', 'State Timeline')}
+            {t('timeline.stateTimeline', 'State Distribution')}
           </p>
-          {stateRecords.length === 0 ? (
-            <Skeleton height={32} />
+          {summaryRows.length === 0 || totalSeconds === 0 ? (
+            sumLoading ? (
+              <Skeleton height={32} />
+            ) : (
+              <EmptyState /* no-action: transient empty state — surfaces when no recent state activity exists for the vehicle */
+                icon={<Clock className="h-8 w-8" />}
+                message={t('timeline.noStateData', 'No state distribution available yet')}
+              />
+            )
           ) : (
             <div className="flex h-8 overflow-hidden rounded-full">
-              {stateRecords.map((rec, i) => {
-                const pct = totalDuration > 0
-                  ? (rec.duration_seconds / totalDuration) * 100
+              {summaryRows.map((row) => {
+                const pct = totalSeconds > 0
+                  ? (row.total_seconds / totalSeconds) * 100
                   : 0;
                 if (pct < 0.3) return null;
                 return (
                   <div
-                    key={`${rec.started_at}-${i}`}
+                    key={row.state}
                     className={cn('relative transition-all')}
                     style={{
                       width: `${pct}%`,
                       backgroundColor:
-                        STATE_COLORS[rec.state] ?? STATE_COLORS.offline,
+                        STATE_COLORS[row.state] ?? STATE_COLORS.offline,
                     }}
-                    title={`${rec.state}: ${formatDurationSecondsAsMinutes(rec.duration_seconds)}`}
+                    title={`${row.state}: ${formatDurationFromSeconds(row.total_seconds)} (${row.percentage.toFixed(1)}%)`}
                   />
                 );
               })}
@@ -354,44 +328,6 @@ export default function TimelinePage() {
               </div>
             ))}
           </div>
-        </GlassPanel>
-      </FadeIn>
-
-      {/* Daily breakdown stacked chart */}
-      <FadeIn delay={0.2}>
-        <GlassPanel className="mb-6 p-4">
-          <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-            {t('timeline.dailyBreakdown', 'Daily Breakdown')}
-          </p>
-          {dayLoading ? (
-            <Skeleton height={280} />
-          ) : daily.length === 0 ? (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-              icon={<Clock className="h-8 w-8" />}
-              message={t('timeline.noDailyData', 'No daily data available yet')}
-            />
-          ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={daily}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="rgba(255,255,255,0.06)"
-                  strokeOpacity={0.5}
-                />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.5)' }}
-                />
-                <YAxis tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.5)' }} />
-                <Tooltip content={<ChartTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="driving_hours" stackId="s" fill={STATE_COLORS.driving} name={t('timeline.driving', 'Driving')} />
-                <Bar dataKey="charging_hours" stackId="s" fill={STATE_COLORS.charging} name={t('timeline.charging', 'Charging')} />
-                <Bar dataKey="idle_hours" stackId="s" fill={STATE_COLORS.idle ?? '#f59e0b'} name={t('timeline.idle', 'Idle')} />
-                <Bar dataKey="sleeping_hours" stackId="s" fill={STATE_COLORS.sleeping ?? '#64748b'} name={t('timeline.sleeping', 'Sleeping')} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
         </GlassPanel>
       </FadeIn>
 
