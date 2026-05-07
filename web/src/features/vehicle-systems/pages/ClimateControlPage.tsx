@@ -493,42 +493,69 @@ export default function ClimateControlPage() {
       <FadeIn delay={0.1}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <GlassPanel className="flex flex-col items-center gap-2 p-6">
-            <RadialGauge
-              value={convertTemp(latest?.insideTemp ?? 0)}
-              max={tempGaugeMax}
-              label={t('Inside Temp')}
-              unit={tempUnit}
-              color={CHART_COLORS[0]}
-            />
-            <span className="text-lg font-bold text-[var(--text-primary)]">
-              {fmtNumber(convertTemp(latest?.insideTemp ?? 0), 1)}{tempUnit}
-            </span>
+            {latest?.insideTemp != null ? (
+              <>
+                <RadialGauge
+                  value={convertTemp(latest.insideTemp)}
+                  max={tempGaugeMax}
+                  label={t('Inside Temp')}
+                  unit={tempUnit}
+                  color={CHART_COLORS[0]}
+                />
+                <span className="text-lg font-bold text-[var(--text-primary)]">
+                  {fmtNumber(convertTemp(latest.insideTemp), 1)}{tempUnit}
+                </span>
+              </>
+            ) : (
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+                icon={<Thermometer className="h-6 w-6" />}
+                message={t('Inside Temp')}
+              />
+            )}
           </GlassPanel>
 
           <GlassPanel className="flex flex-col items-center gap-2 p-6">
-            <RadialGauge
-              value={convertTemp(latest?.outsideTemp ?? 0)}
-              max={tempGaugeMax}
-              label={t('Outside Temp')}
-              unit={tempUnit}
-              color={CHART_COLORS[1]}
-            />
-            <span className="text-lg font-bold text-[var(--text-primary)]">
-              {fmtNumber(convertTemp(latest?.outsideTemp ?? 0), 1)}{tempUnit}
-            </span>
+            {latest?.outsideTemp != null ? (
+              <>
+                <RadialGauge
+                  value={convertTemp(latest.outsideTemp)}
+                  max={tempGaugeMax}
+                  label={t('Outside Temp')}
+                  unit={tempUnit}
+                  color={CHART_COLORS[1]}
+                />
+                <span className="text-lg font-bold text-[var(--text-primary)]">
+                  {fmtNumber(convertTemp(latest.outsideTemp), 1)}{tempUnit}
+                </span>
+              </>
+            ) : (
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+                icon={<Thermometer className="h-6 w-6" />}
+                message={t('Outside Temp')}
+              />
+            )}
           </GlassPanel>
 
           <GlassPanel className="flex flex-col items-center gap-2 p-6">
-            <RadialGauge
-              value={convertTemp(latest?.driverTempSetting ?? 0)}
-              max={tempGaugeMax}
-              label={t('Driver Set Temp')}
-              unit={tempUnit}
-              color={CHART_COLORS[2]}
-            />
-            <span className="text-lg font-bold text-[var(--text-primary)]">
-              {fmtNumber(convertTemp(latest?.driverTempSetting ?? 0), 1)}{tempUnit}
-            </span>
+            {latest?.driverTempSetting != null ? (
+              <>
+                <RadialGauge
+                  value={convertTemp(latest.driverTempSetting)}
+                  max={tempGaugeMax}
+                  label={t('Driver Set Temp')}
+                  unit={tempUnit}
+                  color={CHART_COLORS[2]}
+                />
+                <span className="text-lg font-bold text-[var(--text-primary)]">
+                  {fmtNumber(convertTemp(latest.driverTempSetting), 1)}{tempUnit}
+                </span>
+              </>
+            ) : (
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+                icon={<ThermometerSun className="h-6 w-6" />}
+                message={t('Driver Set Temp')}
+              />
+            )}
           </GlassPanel>
         </div>
       </FadeIn>
