@@ -1284,9 +1284,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Visited Locations
 		r.Get("/locations", visitedLocationHandler.List)
 
-		// Phase-42 (prompt 0077): /mileage routes deleted with
-		// mileage_handler.go (daily_mileage table dropped); per-period
-		// distance is now derived via SUM(distance_m) FROM drives.
+		// Phase-43a / Prompt 0004: /mileage/{monthly,stats} restored after
+		// Phase-42 prompt 0077 removed them with the daily_mileage table.
+		// Both shapes are now derived live from the SI-canonical drives
+		// table (mig 000185) — distance_m / 1000 → km, energy_used_wh /
+		// 1000 → kWh. Frontend hooks useMonthlyMileage / useMileageStats
+		// stop returning 404. Same admin-style rate limit as
+		// /vehicle-states (Phase-43a / Prompt 0003 precedent).
+		mileageHandler := NewMileageHandler(database.NewMileageRepo(db.Pool))
+		r.Route("/mileage", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/monthly", mileageHandler.Monthly)
+			r.Get("/stats", mileageHandler.Stats)
+		})
 
 		// Trips
 		r.Get("/trips", tripHandler.List)

@@ -1,0 +1,360 @@
+=== PREFLIGHT ===
+
+Phase-43a / Prompt 0004 — Mileage endpoints (/mileage/monthly + /mileage/stats).
+
+PRE-EXEC HEAD: 1d62311563c0d9030e1101116d5fdff33d2a2075
+Predecessor:  phase-43a-0003-state-timeline.log  (EXIT=0 STATUS=DONE) at HEAD
+              1d62311563 ("feat(api): GET /vehicle-states/timeline + /vehicle-states/summary
+              (FSM transitions)") — verified by HEAD == predecessor's COMMIT line.
+
+git status --short before edits: clean (no tracked or untracked changes).
+
+Allowed-files boundary (verbatim from prompt):
+  internal/api/mileage_handler.go         — NEW
+  internal/api/mileage_handler_test.go    — NEW
+  internal/database/mileage_repo.go       — NEW
+  internal/database/mileage_repo_test.go  — NEW
+  internal/api/router.go                  — MODIFIED (route wire-up + comment update)
+  this output log                         — NEW
+
+No expansion required; every artifact lives inside the prompt's set.
+
+Honesty Covenant 8 declarations:
+  - The prompt's Decision #1 / Decision #2 / Decision #4 reference
+    `drives.distance_km` and `drives.energy_used_kwh`. The actual mig
+    000185 schema uses SI-canonical column names: `distance_m`
+    (DOUBLE PRECISION, meters) and `energy_used_wh` (DOUBLE PRECISION,
+    Watt-hours). Per the prompt's escape hatch ("If `drives` table
+    column names differ ..., use the actual names + document the
+    variance"), this prompt uses the real names and converts to km /
+    kWh in the SQL SELECT list and the handler. Documented under
+    AUDIT_EVIDENCE A1.
+  - Decision #5 says "If `drives.energy_used_kwh` column exists ...,
+    include `total_kwh_consumed` + `avg_efficiency_wh_per_km`. If not,
+    omit those fields (don't fabricate)." The energy column EXISTS as
+    `energy_used_wh`, so per Decision #5 both fields are included
+    (renamed only to keep the SI-vs-presentation contract honest:
+    `total_kwh_consumed` is correct for the unit conversion done in
+    the SELECT list; `avg_efficiency_wh_per_km` already names its own
+    units). Documented under AUDIT_EVIDENCE A1.
+  - Frontend type updates (`MileageStats`, `MonthlyStat` in
+    `web/src/types/analytics.ts` use camelCase fields from the deleted
+    legacy handler) are out-of-scope per allowed-files boundary. The
+    new responses use snake_case keys per the prompt-locked Decisions
+    #1 and #2; the project convention noted in `.github/copilot-instructions.md`
+    Architecture-Conventions #API-Response-Type-Validation §3 already
+    documents that "after `camelCaseKeys`, both `field_name` AND
+    `fieldName` exist in the response" — i.e. the frontend will see
+    both forms, and a follow-up prompt updates the type aliases.
+    Documented under AUDIT_EVIDENCE A4.
+
+=== AUDIT_EVIDENCE ===
+
+A1. drives schema (mig 000185):
+
+  Get-Content migrations\000185_drives_si.up.sql -ReadCount 0 |
+    Select-String -Pattern '^  [a-z_]+\s' | Select-Object -First 25
+  ⇒ The CREATE TABLE drives block at L93-117 declares:
+       id                  BIGSERIAL PRIMARY KEY
+       vehicle_id          BIGINT       NOT NULL
+       started_at          TIMESTAMPTZ  NOT NULL
+       ended_at            TIMESTAMPTZ
+       start_lat / start_lng / end_lat / end_lng  DOUBLE PRECISION
+       start_place / end_place                    TEXT
+       start_odometer_m / end_odometer_m          DOUBLE PRECISION
+       distance_m          DOUBLE PRECISION       <-- meters, NOT distance_km
+       duration_s          BIGINT
+       start_soc_pct / end_soc_pct                REAL
+       energy_used_wh      DOUBLE PRECISION       <-- Watt-hours, NOT energy_used_kwh
+       regen_energy_wh     DOUBLE PRECISION
+       avg_speed_mps / max_speed_mps              DOUBLE PRECISION
+       avg_power_w / peak_power_w                 DOUBLE PRECISION
+       ambient_temp_c_avg                         DOUBLE PRECISION
+  ⇒ Index: drives_vehicle_started ON drives (vehicle_id, started_at DESC)
+  ⇒ Per the comment block at L125-127 (mig 000185), drives.vehicle_id
+    has NO foreign-key constraint to vehicles. This matches the same
+    no-FK precedent on fsm_transitions documented in
+    vehicle_states_repo.go and motivates the same VehicleExists-runs-
+    first 404-vs-200 disambiguation in MileageHandler.
+
+A2. /mileage routes are not registered in router.go before this
+    prompt:
+
+  grep -n 'mileage' internal/api/router.go
+  ⇒ Pre-edit: 3 matches at L333 (deleted-handler comment), L1287, L1288
+              (deleted-routes comment block). Zero `r.Get("/mileage/...")`
+              or `r.Route("/mileage", ...)` registrations.
+
+A3. Frontend hooks pointed at the missing routes:
+
+  grep -n 'mileage' web/src/api/hooks/useAnalytics.ts
+  ⇒ analyticsKeys.mileage / analyticsKeys.monthlyMileage
+  ⇒ useMileageStats   -> request<MileageStats>(`/mileage/stats?vehicle_id=...`)
+  ⇒ useMonthlyMileage -> request<MonthlyStat[]>(`/mileage/monthly?vehicle_id=...`)
+  ⇒ Both hooks carry @deprecated JSDoc citing Phase-42 / Prompt 0077
+    deletion. After this prompt the deprecation note will be stale —
+    a follow-up frontend prompt clears the deprecation and migrates
+    the type aliases to the new snake_case envelope shape.
+
+A4. Frontend type drift (out-of-scope):
+
+  Get-Content web/src/types/analytics.ts -TotalCount 35
+  ⇒ MileageStats { totalDistance, avgDaily, maxDaily, totalEnergy,
+                   totalDrives, daysTracked }   (legacy camelCase)
+  ⇒ MonthlyStat  { month, distance, drives }     (legacy camelCase)
+  ⇒ The new handler returns the snake_case envelope per Decisions #1
+    and #2. Both shapes differ from the legacy types — frontend type
+    updates are out of allowed-files for this prompt.
+
+A5. Pattern precedent (no fabrication):
+
+  - VehicleExists pattern: internal/database/vehicle_states_repo.go:115
+  - 404-vs-200 disambiguation: internal/api/vehicle_states_handler.go:151
+  - structured "max" 400 envelope: internal/api/vehicle_states_handler.go:101
+  - chi.Route + httprate.LimitByIP(60, 1*time.Minute) admin tier:
+    internal/api/router.go:1303 (Phase-43a / Prompt 0003 vehicle-states block)
+  - SI-canonical drives SUM/1000 conversion: internal/api/tco_handler.go:56-59
+    (`COALESCE(SUM(distance_m) / 1000.0, 0) ... FROM drives WHERE vehicle_id = $1
+      AND distance_m > 0`)
+
+=== DESIGN ===
+
+D1. Worked example (Decision #1 monthly grouping).
+
+  Suppose vehicle_id=42 has 3 drives in 2026-04 (distance_m =
+  50000 / 80000 / 120000) and 1 drive in 2026-05 (distance_m = 90000):
+
+  SELECT date_trunc('month', started_at AT TIME ZONE 'UTC'),
+         COUNT(*),
+         SUM(distance_m) / 1000.0,
+         SUM(energy_used_wh) / 1000.0
+    FROM drives
+   WHERE vehicle_id = 42
+     AND started_at >= '2024-05-01T00:00:00Z'
+     AND distance_m IS NOT NULL AND distance_m > 0
+   GROUP BY 1 ORDER BY 1 ASC;
+
+  produces (bucket, drive_count, total_km, total_kwh):
+    (2026-04-01, 3, 250.0, 40.0)
+    (2026-05-01, 1, 90.0, 14.4)
+
+  The handler renders bucket as 'YYYY-MM' (2026-04, 2026-05).
+  avg_efficiency_wh_per_km is computed in Go from SUM(energy_used_wh)
+  and SUM(distance_m) — keeping the unit conversion in one place and
+  avoiding a SQL CASE WHEN ... 0 / NULLIF(...,0) END for divide-by-
+  zero protection (the WHERE filter already excludes distance_m <= 0,
+  but the Go side defends against a future schema relaxation).
+
+D2. Worked example (Decision #2 stats rollups).
+
+  Single round-trip with FILTER aggregates so the planner scans drives
+  exactly once. Same vehicle_id=42 dataset:
+
+    lifetime_km          = SUM(distance_m) / 1000                 = 340.0
+    last_7d_km           = SUM(distance_m) FILTER (started_at >= now-7d)  / 1000
+    last_30d_km          = SUM(distance_m) FILTER (started_at >= now-30d) / 1000
+    last_365d_km         = SUM(distance_m) FILTER (started_at >= now-365d)/ 1000
+    drive_count_lifetime = COUNT(*) FILTER (distance_m IS NOT NULL AND distance_m > 0)
+    drive_count_30d      = COUNT(*) FILTER (..._30d AND distance_m > 0)
+    first_drive_at       = MIN(started_at) FILTER (distance_m > 0)
+    last_drive_at        = MAX(started_at) FILTER (distance_m > 0)
+
+  The three window cut-offs are computed once per request from the
+  injected clock (h.now()) and passed to the SQL as $2/$3/$4. This
+  guarantees the response cannot race the wall clock mid-query — the
+  same now is used to derive every windowed field.
+
+D3. monthsAgo design.
+
+  The handler uses time.AddDate(0, -months, 0) and then snaps the
+  result to the first day of that month at 00:00:00 UTC. Snapping to
+  day-1 ensures the earliest bucket includes the FULL earliest month
+  rather than clipping at now.Day() of that month — otherwise the
+  caller asking for "12 months" mid-month would actually get 11 full
+  months + one partial.
+
+  A unit test (TestMonthsAgo_SnapsToFirstOfMonth) pins the snap behavior
+  including the leap-safe edge case (Mar 31 minus 12 months —
+  AddDate's overflow normalizes to Mar 3 in non-leap years, but our
+  snap-to-day-1 sidesteps that gotcha entirely).
+
+D4. 404 vs 200 disambiguation (Decision #6).
+
+  drives has no FK to vehicles, so dangling drives rows for a deleted
+  vehicle would otherwise produce 200 with stale aggregates. The
+  handler runs VehicleExists FIRST and returns 404 for unknown
+  vehicles; an existing vehicle with zero drives returns 200 with
+  {months: []} or zero-rollups stats per Decision #6.
+
+  Tests pin both branches:
+    - TestMileage_Monthly_UnknownVehicle_404 / TestMileage_Stats_UnknownVehicle_404
+    - TestMileage_Monthly_EmptyVehicle_200 / TestMileage_Stats_EmptyVehicle_200
+
+D5. Energy-field nilness contract.
+
+  total_kwh_consumed and avg_efficiency_wh_per_km are *float64 in both
+  the repo row and the response bucket — JSON null when either
+  SUM(energy_used_wh) or SUM(distance_m) is NULL/zero. The repo's
+  Scan unmarshals SUM(NULL...) into a *float64 (nil), and the
+  handler passes the pointer through unchanged. We never fabricate a
+  zero kWh value.
+
+  In the stats response, first_drive_at and last_drive_at follow the
+  same pattern: *time.Time so a vehicle with zero recorded drives
+  reports JSON null rather than Go's zero time.Time
+  ("0001-01-01T00:00:00Z" — confusing for downstream date renderers).
+  TestMileage_Stats_EmptyVehicle_200 pins both null-emission cases.
+
+D6. Test surface (Decision #7 mapping).
+
+  (a) Monthly grouping correctness    -> TestMileage_Monthly_GroupingPassThrough
+  (b) Months clamp 24/120/121 -> 400  -> TestMileage_Monthly_MonthsClamp
+  (c) Stats lifetime = sum of monthly -> TestMileage_Stats_LifetimeMatchesMonthlySum
+  (d) Stats last_7d = drives in last 7 days -> TestMileage_Stats_WindowsPassThrough
+  (e) NULL distance_km handled (skipped not erroring) -> SQL filter
+      `distance_m IS NOT NULL AND distance_m > 0` documented in repo;
+      handler tests TestMileage_Monthly_EmptyVehicle_200 +
+      TestMileage_Stats_EmptyVehicle_200 confirm zero-row contract;
+      repo SQL-shape test TestMonthlySelectSQL_Shape pins the literal
+      filter fragment so a future regression that drops the filter
+      and starts erroring on NULL distance fails at -race -count=1.
+
+  Plus extras:
+    - vehicle_id missing / non-numeric / zero / negative (TestMileage_BadVehicleID)
+    - VehicleExists-FIRST gating (assertions inside *_UnknownVehicle_404)
+    - monthsAgo snap-to-first-of-month (TestMonthsAgo_SnapsToFirstOfMonth)
+    - Default window = 24 months (TestMileage_Monthly_DefaultWindowIs24Months)
+    - Repo error -> 500 (TestMileage_{Monthly,Stats}_RepoError_500)
+    - VehicleExists error -> 500 (TestMileage_VehicleExistsError_500)
+    - JSON shape pin: snake_case keys + literal `"months":[]` +
+      literal `"first_drive_at":null` / `"last_drive_at":null`
+    - Repo SQL-shape pins (Mig 000185 column names; reject
+      `distance_km`, `energy_used_kwh`, `daily_mileage`, ORDER BY DESC)
+    - VehicleExists SQL EXISTS-form pin
+    - NewMileageRepo nil-pool panics
+
+=== IMPLEMENTATION ===
+
+I1. internal/database/mileage_repo.go (NEW, 215 lines):
+    - MileageMonthlyRow {Bucket, DriveCount, TotalKm,
+      TotalKwhConsumed *float64, AvgEfficiencyWhPerKm *float64}
+    - MileageStats {LifetimeKm, Last7dKm, Last30dKm, Last365dKm,
+      DriveCountLifetime, DriveCount30d,
+      FirstDriveAt *time.Time, LastDriveAt *time.Time}
+    - mileagePool minimal interface (Query + QueryRow) — no pgxmock
+    - NewMileageRepo(*pgxpool.Pool) — panics on nil pool (mirror
+      of NewVehicleStatesRepo precedent)
+    - monthlySelectSQL constant — date_trunc('month', started_at AT
+      TIME ZONE 'UTC') GROUP BY bucket; SUM(distance_m)/1000.0 AS
+      total_km; SUM(energy_used_wh)/1000.0 AS total_kwh; raw SUMs
+      passed through for Go-side avg_efficiency_wh_per_km computation
+    - statsSelectSQL constant — single-statement FILTER aggregates
+      keyed on $2/$3/$4 for 7d/30d/365d windows
+    - mileageVehicleExistsSQL constant — EXISTS form
+    - VehicleExists / Monthly / Stats methods with %w-wrapped errors
+
+I2. internal/api/mileage_handler.go (NEW, 266 lines):
+    - mileageRepository interface for fake-repo testability
+    - mileageClock injection (production: time.Now().UTC())
+    - mileageDefaultMonths=24, mileageMaxMonths=120 (Decision #3)
+    - parseMonthlyParams + parseStatsParams — vehicle_id required,
+      months optional with structured "max" 400 envelope
+    - MileageMonthlyBucket + MileageMonthlyResponse +
+      MileageStatsResponse — snake_case JSON tags, *float64 / *time.Time
+      where JSON null is the correct empty signal (Decision #5)
+    - Monthly + Stats handlers — VehicleExists FIRST (Decision #6),
+      then per-handler query, then snake_case JSON envelope
+    - monthsAgo helper — AddDate(0, -months, 0) + snap to day 1 of
+      the resulting UTC month (D3 above)
+    - now helper — clock injection for tests
+
+I3. internal/api/router.go (MODIFIED, +13 -3 net):
+    - Replaced the L1287-1289 "Phase-42 prompt 0077: /mileage routes
+      deleted" comment block with the wire-up:
+
+        mileageHandler := NewMileageHandler(database.NewMileageRepo(db.Pool))
+        r.Route("/mileage", func(r chi.Router) {
+            r.Use(httprate.LimitByIP(60, 1*time.Minute))
+            r.Get("/monthly", mileageHandler.Monthly)
+            r.Get("/stats", mileageHandler.Stats)
+        })
+
+    - Rate limit matches /vehicle-states (Phase-43a / Prompt 0003)
+      and /system/queues (Phase-46 / Prompt 41) for read-only admin
+      endpoints.
+
+I4. internal/database/mileage_repo_test.go (NEW, 121 lines):
+    - TestMonthlySelectSQL_Shape — must contain SI column names + WHERE
+      filters + GROUP BY bucket + ORDER BY bucket ASC; must NOT contain
+      distance_km, energy_used_kwh, daily_mileage, ORDER BY bucket DESC
+    - TestStatsSelectSQL_Shape — must contain $2/$3/$4 FILTER + at
+      least 2 references to $3 (last_30d_km sum + drive_count_30d)
+    - TestMileageVehicleExistsSQL_Shape — EXISTS form pin
+    - TestNewMileageRepo_NilPoolPanics — fail-fast pin
+
+I5. internal/api/mileage_handler_test.go (NEW, 592 lines):
+    - 14 top-level tests; sub-cases via t.Run for table-driven cases
+    - All decision-#7 coverage points + extras enumerated in D6 above
+    - fakeMileageRepo records every call so the tests can assert
+      VehicleExists-FIRST gating (zero Monthly/Stats calls when
+      vehicle is unknown or VehicleExists errored)
+
+=== GATE ===
+
+G1. go build (CGO_ENABLED=0):
+    cd D:\repos\teslasync; $env:CGO_ENABLED=0; go build ./...
+    ⇒ exit 0 (no output, all packages compile)
+
+G2. go vet:
+    cd D:\repos\teslasync; go vet ./...
+    ⇒ exit 0 (no output, no vet warnings)
+
+G3. go test -race (CGO_ENABLED=1):
+    cd D:\repos\teslasync; $env:CGO_ENABLED=1;
+      go test -race ./internal/api/... ./internal/database/...
+    ⇒ ok  github.com/ev-dev-labs/teslasync/internal/api      12.363s
+    ⇒ ok  github.com/ev-dev-labs/teslasync/internal/database  4.464s
+    Both packages PASS under race detector. New tests added by this
+    prompt:
+      - TestMileage_Monthly_MonthsClamp (7 sub-cases)
+      - TestMileage_BadVehicleID (10 sub-cases — 5 monthly + 5 stats)
+      - TestMileage_Monthly_UnknownVehicle_404
+      - TestMileage_Stats_UnknownVehicle_404
+      - TestMileage_Monthly_EmptyVehicle_200
+      - TestMileage_Stats_EmptyVehicle_200
+      - TestMileage_Monthly_GroupingPassThrough
+      - TestMileage_Monthly_DefaultWindowIs24Months
+      - TestMileage_Stats_LifetimeMatchesMonthlySum
+      - TestMileage_Stats_WindowsPassThrough
+      - TestMileage_Monthly_RepoError_500
+      - TestMileage_Stats_RepoError_500
+      - TestMileage_VehicleExistsError_500 (2 sub-cases)
+      - TestMonthsAgo_SnapsToFirstOfMonth (4 sub-cases)
+      - TestMonthlySelectSQL_Shape
+      - TestStatsSelectSQL_Shape
+      - TestMileageVehicleExistsSQL_Shape
+      - TestNewMileageRepo_NilPoolPanics
+    All tests pass under -race; no flakes observed across the run.
+
+G4. git status --short:
+    M internal/api/router.go
+    ?? internal/api/mileage_handler.go
+    ?? internal/api/mileage_handler_test.go
+    ?? internal/database/mileage_repo.go
+    ?? internal/database/mileage_repo_test.go
+    Exactly the 4 NEW files + 1 MODIFIED file declared in the
+    allowed-files boundary. No unrelated drift. The output log is
+    added at COMMIT time.
+
+=== COMMIT ===
+
+Subject:  feat(api): GET /mileage/monthly + /mileage/stats
+Trailer:  Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+Files:    6 (1 modified, 5 created — including this log).
+Pre-commit HEAD:   1d62311563c0d9030e1101116d5fdff33d2a2075
+Post-commit HEAD:  0f5108b3388b171f6de0afbfef11f04656d64ba3 (pre-amend);
+                   log was amended into the commit so the actual HEAD
+                   after amend differs from the value above per the
+                   Phase-42a / Phase-43a precedent for cosmetic accuracy.
+
+=== STATUS === EXIT=0 STATUS=DONE
