@@ -1278,8 +1278,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Software Updates
 		r.Get("/software-updates", softwareUpdateHandler.List)
 
-		// Phase-42 (prompt 0077): /vampire-drain routes deleted with
-		// vampire_drain_handler.go (vampire_drain_events table dropped).
+		// Phase-43a / Prompt 0005: /vampire-drain + /vampire-drain/stats
+		// restored after Phase-42 prompt 0077 removed them with the
+		// vampire_drain_events table. The two endpoints are now derived
+		// live from fsm_transitions (mig 000187) — parked windows from
+		// fsm_name='vehicle' transitions into 'parked' — paired with
+		// signal_log.field='BatteryLevel' for the SOC endpoints, with
+		// charging windows excluded via signal_log.field='ChargeState'
+		// (int_value > 1). Same admin-style rate limit as /mileage and
+		// /vehicle-states (Phase-43a precedent).
+		vampireDrainHandler := NewVampireDrainHandler(database.NewVampireDrainRepo(db.Pool))
+		r.Route("/vampire-drain", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/", vampireDrainHandler.Events)
+			r.Get("/stats", vampireDrainHandler.Stats)
+		})
 
 		// Visited Locations
 		r.Get("/locations", visitedLocationHandler.List)

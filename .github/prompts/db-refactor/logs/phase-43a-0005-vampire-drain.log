@@ -1,0 +1,377 @@
+=== PREFLIGHT ===
+Phase-43a / Prompt 0005 — Vampire drain endpoints
+Pre-state HEAD: 9e43177cd75a0dff55d6c3cb680afba7f76a8952
+  (Phase-43a/0004 — mileage endpoints — DONE; predecessor satisfied.)
+Branch: copilot/vscode1762896108988
+git status (pre-edit): clean except untracked session files outside repo allowed-files set.
+
+Allowed-files boundary (verbatim from prompt):
+  - internal/api/vampire_drain_handler.go
+  - internal/api/vampire_drain_handler_test.go
+  - internal/database/vampire_drain_repo.go
+  - internal/database/vampire_drain_repo_test.go
+  - internal/api/router.go
+  - the output log (.github/prompts/db-refactor/logs/phase-43a-0005-vampire-drain.log)
+
+Final post-edit `git status --short`:
+  M internal/api/router.go
+  ?? internal/api/vampire_drain_handler.go
+  ?? internal/api/vampire_drain_handler_test.go
+  ?? internal/database/vampire_drain_repo.go
+  ?? internal/database/vampire_drain_repo_test.go
+(Output log lives under .github/prompts/ which is .gitignore-d; will be force-added per
+ the "prompts" repo memory.)
+
+
+=== AUDIT_EVIDENCE ===
+
+A1. fsm_transitions schema (migrations/000187_fsm_live.up.sql)
+    CREATE TABLE fsm_transitions (
+        id          BIGSERIAL,
+        vehicle_id  BIGINT     NOT NULL,
+        ts          TIMESTAMPTZ NOT NULL,
+        fsm_name    TEXT       NOT NULL,         -- 'vehicle' | 'driving' | 'charging' ...
+        from_state  TEXT,                          -- nullable on initial seed
+        to_state    TEXT       NOT NULL,
+        trigger     TEXT,
+        details     JSONB
+    );
+    No FK on fsm_transitions.vehicle_id (Phase-43a/0003 memory + table COMMENT).
+
+A2. signal_log schema (migrations/000186_signal_log.up.sql)
+    9 columns: id BIGSERIAL, vehicle_id BIGINT, ts TIMESTAMPTZ, field TEXT,
+    value_kind SMALLINT, str_value TEXT, bool_value BOOLEAN, int_value BIGINT,
+    float_value DOUBLE PRECISION, time_value TIMESTAMPTZ.
+    Hypertable on ts with chunk_time_interval = 7 days.
+    PK (vehicle_id, ts, field). value_kind discriminates which typed column is non-null.
+    No FK on signal_log.vehicle_id (per memory: phase-42a/0021 signal_log writer).
+    value_kind constants:
+      1=String -> str_value      2=Bool -> bool_value      3=Int32 -> int_value
+      4=Int64  -> int_value      5=Float -> float_value    6=Double -> float_value
+      7=Enum   -> int_value      9=Time  -> time_value
+
+A3. BatteryLevel routing (internal/tesla/router/routing.yaml)
+    Line 60: `- field: BatteryLevel` -> dest: signal_log
+    protomodel.SignalsByName["BatteryLevel"]: ValueKind = Float (5),
+      UnitKind = Charge -> float_value carries the SOC %.
+
+A4. ChargeState routing (DECISION #5 ESCAPE HATCH TRIGGERED)
+    Prompt names the field "ChargingState" but the actual routed field is
+    "ChargeState" — the proto enum *type* is named ChargingState but the
+    field in routing.yaml is ChargeState.
+    Line 124: `- field: ChargeState` -> dest: signal_log
+    protomodel.SignalsByName["ChargeState"]: ValueKind = Enum (7),
+      int_value carries proto enum number:
+        ChargingState_ChargeStateUnknown      = 0
+        ChargingState_ChargeStateDisconnected = 1   <- "not plugged in"
+        ChargingState_ChargeStateNoPower      = 2   <- plugged in, no power
+        ChargingState_ChargeStateStarting     = 3
+        ChargingState_ChargeStateCharging     = 4
+        ChargingState_ChargeStateComplete     = 5
+        ChargingState_ChargeStateStopped      = 6
+    Charging-window exclusion = `int_value > 1` (drops Disconnected + Unknown,
+    leaves NoPower/Starting/Charging/Complete/Stopped as "do not count this
+    parked window as a vampire-drain event").
+
+A5. Pre-implementation grep — must be zero
+    `Select-String -Path internal/api/router.go -Pattern '\\bvampire'` (PRE) -> 1 line:
+      L331: "// Phase-42 (prompt 0077): VampireDrainHandler deleted (vampire_drain_events)."
+    Confirms: no live route, only an intentional tombstone comment.
+    Confirms problem statement: useEnergy.ts hits 404.
+
+
+=== DESIGN ===
+
+Goal: derive vampire-drain events live (no per-row table) from
+fsm_transitions + signal_log.
+
+CTE pipeline (vampireDrainSelectSQL — pinned in repo file):
+
+  1. ordered_transitions
+     SELECT vehicle_id, ts, to_state,
+            LEAD(ts) OVER (PARTITION BY vehicle_id ORDER BY ts) AS next_ts
+     FROM fsm_transitions
+     WHERE vehicle_id = $1 AND fsm_name = 'vehicle' AND ts >= $2.
+
+  2. parked_windows
+     Filter ordered_transitions WHERE to_state = 'parked' AND next_ts IS NOT NULL.
+     `(ts, next_ts)` = (started_at, ended_at).
+
+  3. non_charging_windows
+     Filter parked_windows by NOT EXISTS (SELECT 1 FROM signal_log s
+       WHERE s.vehicle_id = pw.vehicle_id AND s.field = 'ChargeState'
+         AND s.ts >= pw.ts AND s.ts < pw.next_ts AND s.int_value > 1).
+     This is the Decision #1 + #5 charging-window exclusion. It uses
+     int_value (kind=7=Enum stores int) and the >1 boundary set by A4.
+
+  4. battery_samples
+     For each surviving window, JOIN signal_log s ON s.vehicle_id =
+     window.vehicle_id AND s.field = 'BatteryLevel' AND s.ts >= window.ts
+     AND s.ts < window.next_ts. Use ROW_NUMBER() OVER (PARTITION BY window
+     ORDER BY ts ASC) and ROW_NUMBER() ... ORDER BY ts DESC to project
+     first/last samples.
+
+  5. window_endpoints
+     SELECT started_at, ended_at, MIN(s.float_value) FILTER (rn_asc=1)
+     AS start_battery_pct, MIN(s.float_value) FILTER (rn_desc=1)
+     AS end_battery_pct GROUP BY started_at, ended_at HAVING
+     start_battery_pct - end_battery_pct >= 0  -- exclude charging gain
+     ORDER BY started_at DESC LIMIT $3.
+
+Pure-Go layer (computeDrainEvents):
+  - duration_hours = ended_at.Sub(started_at).Hours()
+  - drain_pct = start_battery_pct - end_battery_pct
+  - drain_pct_per_day = drain_pct * (24 / duration_hours)  (per Decision #8d)
+  - duration_hours <= 0 -> drain_pct_per_day = 0 (no ±Inf)
+
+Stats (computeStats — Decision #6 ESCAPE HATCH TRIGGERED):
+  Repo mocking via DB-side percentile_disc/percentile_cont would require
+  pgxmock which the repo memories confirm is not vendored. Pure-Go is
+  more testable and the bounded result set (vampireDrainStatsLimit=5000)
+  keeps the cost negligible vs the DB round-trip. percentileCont uses
+  linear interpolation matching PostgreSQL percentile_cont semantics
+  (verified by table-driven TestPercentileCont_KnownValues).
+  Avg/median/p95 stored as *float64 so JSON emits null vs 0 for the
+  empty case (real "0 drain rate" is allowed too).
+
+Worked example (real numbers used in the test fixtures + plan.md):
+  Vehicle 42, 2 parked windows in last 7 days:
+    W1: 09:00 -> 17:55 (8h55m = 8.917h);  85% -> 83% drain 2pp
+        drain_pct_per_day = 2 * (24 / 8.917) = 5.382...
+    W2: 19:00 -> 06:55 (11h55m = 11.917h); 82% -> 78% drain 4pp
+        drain_pct_per_day = 4 * (24 / 11.917) = 8.056...
+  Stats:
+    event_count           = 2
+    total_observed_hours  = 20.833
+    avg_drain_pct_per_day = 6.719
+    median (p_disc 0.5)   = 6.719  (avg of 2 values via cont interp)
+    p95   (p_cont 0.95)   = 7.922
+  These satisfy Decision #8e: avg >= median (true with equality);
+  p95 >= avg (8.06 ... >= 6.72 ... -> true).
+
+Endpoints + envelopes (Decision #2/#3/#4):
+  GET /vampire-drain?vehicle_id=N[&limit=50]
+    -> 200 { vehicle_id, events: [ { started_at, ended_at, duration_hours,
+            start_battery_pct, end_battery_pct, drain_pct,
+            drain_pct_per_day, ambient_temp_c_avg } ] }
+  GET /vampire-drain/stats?vehicle_id=N
+    -> 200 { vehicle_id, event_count, total_observed_hours,
+             avg_drain_pct_per_day, median_drain_pct_per_day,
+             p95_drain_pct_per_day, sample_window_days }
+
+Limits/windows (locked in handler constants):
+  vampireDrainDefaultLimit       = 50
+  vampireDrainMaxLimit           = 500
+  vampireDrainEventsWindowDays   = 365   # most-recent-N pagination horizon
+  vampireDrainStatsWindowDays    = 90    # echoed back in sample_window_days
+  vampireDrainStatsLimit         = 5000  # internal cap on raw windows for stats
+
+Validation order (defends 404/200/500 disambiguation):
+  1. Parse + validate vehicle_id (>0, integer).
+  2. Parse + clamp limit (1..500); 501+ returns 400 with `{error,max,code}`
+     envelope mirroring Phase-43a/0003+0004 precedent for days/months clamps.
+  3. VehicleExists FIRST (no FK -> dangling-rows defence per Phase-43a/0003+0004).
+     -> 404 if absent.
+  4. Repo query.
+     -> 500 on err (repo bubbles up wrapped with %w).
+  5. Marshal envelope + writeJSON 200.
+
+ambient_temp_c_avg is kept as a forward-compat field always nil. Joining
+climate_snapshots per-window adds a query cost the prompt's 50-event
+default doesn't justify, and the SQL contract surfaces the field shape
+for a future /climate-aware iteration.
+
+
+=== IMPLEMENTATION ===
+
+I1. internal/database/vampire_drain_repo.go (NEW, 390 lines)
+    - VampireDrainRawWindow struct: started_at, ended_at, start_pct, end_pct.
+    - VampireDrainEvent struct: snake_case JSON tags matching Decision #2.
+      ambient_temp_c_avg uses *float64 + omitempty? -- we keep it as
+      explicit JSON null so the contract is stable; handler envelope
+      shape test asserts the key is always present.
+    - VampireDrainStats struct: snake_case per Decision #3, *float64 for
+      avg/median/p95 (nullable when event_count == 0).
+    - vampireDrainSelectSQL constant — the 5-CTE pipeline above. Bind
+      params $1=vehicle_id, $2=window_start, $3=limit.
+    - vampireDrainExistsSQL constant: `SELECT EXISTS (SELECT 1 FROM
+      vehicles WHERE id = $1)`.
+    - VampireDrainRepo + NewVampireDrainRepo(*pgxpool.Pool).
+    - Public methods:
+        VehicleExists(ctx, vehicleID) (bool, error)
+        RawWindows(ctx, vehicleID, windowStart, limit) ([]RawWindow, error)
+        Events(ctx, vehicleID, windowStart, limit) ([]VampireDrainEvent, error)
+          -- thin wrapper: RawWindows -> computeDrainEvents.
+        Stats(ctx, vehicleID, windowStart, sampleWindowDays, limit) (Stats, error)
+          -- RawWindows -> computeDrainEvents -> computeStats.
+    - Pure-Go helpers (unexported):
+        computeDrainEvents([]RawWindow) []Event
+        computeStats(events, sampleWindowDays) Stats
+        percentileCont([]float64 sorted, p) float64
+
+I2. internal/database/vampire_drain_repo_test.go (NEW, 364 lines)
+    Coverage map vs Decision #8:
+      (a) Window pairing correctness        TestComputeDrainEvents_WorkedExample
+      (b) Charging-window exclusion         TestVampireDrainSelectSQL_Shape
+                                            TestVampireDrainSelectSQL_NeverIncludesPositiveBatteryGain
+      (d) drain_pct_per_day formula         TestComputeDrainEvents_DrainPerDayFormula (6 sub-cases)
+                                            TestComputeDrainEvents_ZeroDurationClampsRate
+                                            TestComputeDrainEvents_Empty
+      (e) Stats invariants                  TestComputeStats_RightSkewedAvgGeMedian
+                                            TestComputeStats_EmptyEventsAllNullPointers
+                                            TestComputeStats_SingleEvent
+                                            TestComputeStats_TotalObservedHoursIsSum
+      Plus:
+        TestPercentileCont_KnownValues (12 sub-cases, table-driven)
+        TestVampireDrainExistsSQL_Shape (pins WHERE id = $1)
+
+I3. internal/api/vampire_drain_handler.go (NEW, 241 lines)
+    - vampireDrainRepository interface (3 methods) for fake-without-DB tests.
+    - VampireDrainHandler{repo, clock}.
+    - Constants per DESIGN above.
+    - Events handler: parseEventsParams (limit clamp with `max` envelope
+      via writeJSON because writeError can't add a `max` field, mirroring
+      Phase-43a/0003+0004 precedent). Vehicle exists FIRST.
+    - Stats handler: parseStatsParams (vehicle_id only). 90-day fixed
+      window. Vehicle exists FIRST.
+    - Response envelopes: VampireDrainEventsResponse / VampireDrainStatsResponse
+      with snake_case JSON tags.
+
+I4. internal/api/vampire_drain_handler_test.go (NEW, 477 lines)
+    Coverage map vs Decision #8:
+      (c) limit clamp 50/500/501 -> 400     TestVampireDrain_Events_LimitClamp (8 cases)
+    Plus:
+      vehicle_id missing/empty/non-numeric/zero/negative for BOTH endpoints
+        -> TestVampireDrain_BadVehicleID (10 sub-cases)
+      404 unknown vehicle for both endpoints
+      200 + empty for known vehicle with no events
+      200 + populated payload (JSON shape pin: snake_case envelope keys)
+      500 for repo error / VehicleExists error
+      Window math: events 365d, stats 90d; stats sampleWindowDays + limit echoed
+    fakeVampireDrainRepo with capture slices proves the ordering invariants
+    (VehicleExists before query; never called for invalid vehicle_id).
+
+I5. internal/api/router.go (MODIFIED, +12 lines)
+    Replaced existing `// Phase-42 (prompt 0077): VampireDrainHandler
+    deleted` tombstone-only block with live wiring:
+
+        // Phase-43a / Prompt 0005: /vampire-drain + /vampire-drain/stats
+        // restored after Phase-42 prompt 0077 removed them with the
+        // vampire_drain_events table. The two endpoints are now derived
+        // live from fsm_transitions (mig 000187) — parked windows from
+        // fsm_name='vehicle' transitions into 'parked' — paired with
+        // signal_log.field='BatteryLevel' for the SOC endpoints, with
+        // charging windows excluded via signal_log.field='ChargeState'
+        // (int_value > 1). Same admin-style rate limit as /mileage and
+        // /vehicle-states (Phase-43a precedent).
+        vampireDrainHandler := NewVampireDrainHandler(database.NewVampireDrainRepo(db.Pool))
+        r.Route("/vampire-drain", func(r chi.Router) {
+            r.Use(httprate.LimitByIP(60, 1*time.Minute))
+            r.Get("/", vampireDrainHandler.Events)
+            r.Get("/stats", vampireDrainHandler.Stats)
+        })
+
+    httprate.LimitByIP(60, 1*time.Minute) matches /vehicle-states and
+    /mileage admin-tier precedent (Phase-43a/0003 + 0004 memories).
+
+Decision-pivot summary:
+  - Decision #5: ESCAPE HATCH — actual field name is ChargeState, not
+    ChargingState. Documented in A4. Implementation uses ChargeState.
+  - Decision #6: ESCAPE HATCH — pure-Go percentile math instead of
+    SQL percentile_cont/percentile_disc. Justified by lack of pgxmock
+    (per memories) and bounded result-set cost.
+
+
+=== GATE ===
+
+G1. go build CGO_ENABLED=0 ./...
+    Output: <empty> (PASS, exit 0)
+
+G2. go vet ./...
+    Output: <empty> (PASS, exit 0)
+
+G3. go test -race -count=1 ./internal/api/... ./internal/database/...
+    Output (last lines):
+      ok  github.com/ev-dev-labs/teslasync/internal/api      12.450s
+      ok  github.com/ev-dev-labs/teslasync/internal/database  4.430s
+    Exit 0. PASS.
+
+G3 detail (vampire-only -v -run filter, all PASS):
+    internal/api:
+      - TestVampireDrain_Events_LimitClamp              (8 sub-cases)
+      - TestVampireDrain_BadVehicleID                   (10 sub-cases)
+      - TestVampireDrain_Events_UnknownVehicle_404
+      - TestVampireDrain_Stats_UnknownVehicle_404
+      - TestVampireDrain_Events_EmptyVehicle_200
+      - TestVampireDrain_Stats_EmptyVehicle_200
+      - TestVampireDrain_Events_HappyPath_PayloadShape
+      - TestVampireDrain_Stats_HappyPath_PayloadShape
+      - TestVampireDrain_Events_RepoError_500
+      - TestVampireDrain_Stats_RepoError_500
+      - TestVampireDrain_Events_ExistsProbeError_500
+      - TestVampireDrain_Events_WindowIs365Days
+      - TestVampireDrain_Stats_WindowIs90Days
+    internal/database:
+      - TestComputeDrainEvents_WorkedExample
+      - TestComputeDrainEvents_DrainPerDayFormula      (6 sub-cases)
+      - TestComputeDrainEvents_ZeroDurationClampsRate
+      - TestComputeDrainEvents_Empty
+      - TestComputeStats_RightSkewedAvgGeMedian
+      - TestComputeStats_EmptyEventsAllNullPointers
+      - TestComputeStats_SingleEvent
+      - TestComputeStats_TotalObservedHoursIsSum
+      - TestPercentileCont_KnownValues                 (12 sub-cases)
+      - TestVampireDrainSelectSQL_Shape
+      - TestVampireDrainSelectSQL_NeverIncludesPositiveBatteryGain
+      - TestVampireDrainExistsSQL_Shape
+
+G4. git status --short (final, before commit):
+      M internal/api/router.go
+      ?? internal/api/vampire_drain_handler.go
+      ?? internal/api/vampire_drain_handler_test.go
+      ?? internal/database/vampire_drain_repo.go
+      ?? internal/database/vampire_drain_repo_test.go
+    Within allowed-files set. PASS.
+
+G5. Mandatory grep — confirm route is now live, not dead:
+      Select-String -Path internal/api/router.go -Pattern 'vampire|VampireDrain'
+    yields 7 lines (was 1 pre-implementation). PASS.
+
+
+=== COMMIT ===
+
+Files (5 source + 1 log):
+    internal/api/vampire_drain_handler.go         (new, 241 lines)
+    internal/api/vampire_drain_handler_test.go    (new, 477 lines)
+    internal/database/vampire_drain_repo.go       (new, 390 lines)
+    internal/database/vampire_drain_repo_test.go  (new, 364 lines)
+    internal/api/router.go                        (+12 lines wiring,
+                                                   replaces 1-line tombstone)
+    .github/prompts/db-refactor/logs/phase-43a-0005-vampire-drain.log (force-add per
+       "prompts" memory: .github/prompts is gitignored)
+
+Commit message:
+    feat(api): GET /vampire-drain + /vampire-drain/stats
+
+    Restores the two endpoints removed by Phase-42 prompt 0077 when
+    the vampire_drain_events table was dropped. Both shapes are now
+    derived live from fsm_transitions (parked windows) + signal_log
+    (BatteryLevel samples; ChargeState filter to exclude charging
+    windows).
+
+    - GET /vampire-drain?vehicle_id=N[&limit=50]
+        -> { vehicle_id, events: [...] }
+    - GET /vampire-drain/stats?vehicle_id=N
+        -> { vehicle_id, event_count, total_observed_hours,
+             avg/median/p95_drain_pct_per_day, sample_window_days }
+
+    Decision #5 escape hatch: actual routed field is ChargeState (the
+    proto enum *type* is named ChargingState; the field is not).
+    int_value > 1 excludes Disconnected(1)+Unknown(0) windows.
+    Decision #6 escape hatch: pure-Go percentile math, no pgxmock.
+
+    Same admin-style rate limit (60/min) as /vehicle-states + /mileage.
+
+    Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+=== STATUS === EXIT=0 STATUS=DONE
