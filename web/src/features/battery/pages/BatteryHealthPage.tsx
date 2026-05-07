@@ -268,6 +268,22 @@ export default function BatteryHealthPage() {
     [health, t],
   );
 
+  /* ── Derived: degradation projection sanity ────────────────────────
+   * Backend regression on a short history window can produce absurd
+   * slopes (>50 %/yr) and project health to 0 within a month. Treat
+   * those as "not enough data" so we don't surface misleading "0 years
+   * to 80 %" or a predicted line collapsing to the X-axis.
+   */
+  const projectionTrustworthy = useMemo(() => {
+    const pred = degradation?.prediction;
+    if (!pred?.has_enough_data) return false;
+    const slope = Math.abs(pred.slope_per_year ?? 0);
+    if (!Number.isFinite(slope) || slope > 50) return false;
+    const yrs = pred.years_to_80_pct;
+    if (yrs == null || !Number.isFinite(yrs) || yrs <= 0) return false;
+    return true;
+  }, [degradation]);
+
   /* ── Derived: prediction chart ─────────────────────────────────── */
   const predictionChartData = useMemo(() => {
     const hist = (health?.history ?? []).map((h) => ({
@@ -275,27 +291,31 @@ export default function BatteryHealthPage() {
       actual: h.soh_pct,
       predicted: undefined as number | undefined,
     }));
-    const proj = (degradation?.prediction?.projection_points ?? []).map((p) => ({
-      label: p.month.slice(0, 7),
-      actual: undefined as number | undefined,
-      predicted: p.health,
-    }));
+    const proj = projectionTrustworthy
+      ? (degradation?.prediction?.projection_points ?? []).map((p) => ({
+          label: p.month.slice(0, 7),
+          actual: undefined as number | undefined,
+          predicted: p.health,
+        }))
+      : [];
     // Overlap last actual point into prediction for continuity
     if (hist.length > 0 && proj.length > 0) {
       proj[0] = { ...proj[0], actual: hist[hist.length - 1].actual };
     }
     return [...hist, ...proj];
-  }, [health, degradation]);
+  }, [health, degradation, projectionTrustworthy]);
 
   /* ── Derived: range trend ──────────────────────────────────────── */
-  const rangeTrend = useMemo(
-    () =>
-      (health?.history ?? []).map((h) => ({
-        label: formatDateShort(h.date),
-        range: Math.round(fromKm(h.range_km)),
-      })),
-    [health, fromKm],
-  );
+  const rangeTrend = useMemo(() => {
+    const points = (health?.history ?? []).map((h) => ({
+      label: formatDateShort(h.date),
+      range: Math.round(fromKm(h.range_km)),
+    }));
+    // Backend may emit history rows with range_km=0 when no derivation
+    // path is available — render empty state instead of a flat-zero chart.
+    if (points.length === 0 || points.every((p) => p.range <= 0)) return [];
+    return points;
+  }, [health, fromKm]);
 
   /* ── Derived: charge level distribution ────────────────────────── */
   const chargeLevelDist = useMemo(() => {
@@ -355,8 +375,8 @@ export default function BatteryHealthPage() {
     };
   }, [sessions]);
 
-  const yearsTo80 = degradation?.prediction?.has_enough_data
-    ? fmtNumber(degradation.prediction.years_to_80_pct, 1)
+  const yearsTo80 = projectionTrustworthy
+    ? fmtNumber(degradation!.prediction!.years_to_80_pct, 1)
     : '—';
 
   /* ── No vehicle: defensive guard (Phase 40 / Prompt 18) ───────── */
@@ -416,7 +436,14 @@ export default function BatteryHealthPage() {
               </Badge>
             </div>
             <RadialGauge
-              value={100 - (health.estimated_capacity / health.original_capacity * 100 - 100 + 100)}
+              value={
+                health.original_capacity > 0
+                  ? Math.max(
+                      0,
+                      Math.min(100, (health.estimated_capacity / health.original_capacity) * 100),
+                    )
+                  : 0
+              }
               max={100}
               label={t('battery.gauge.capacity', 'Capacity')}
               unit="%"
@@ -529,7 +556,11 @@ export default function BatteryHealthPage() {
           />
           <MetricCard
             label={t('battery.metric.age', 'Battery Age')}
-            value={`${health.battery_age_months} ${t('battery.months', 'months')}`}
+            value={
+              health.battery_age_months > 0
+                ? `${health.battery_age_months} ${t('battery.months', 'months')}`
+                : '—'
+            }
             icon={<Clock className="h-5 w-5" />}
             color="red"
           />
