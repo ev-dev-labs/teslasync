@@ -45,7 +45,10 @@ describe('useFleetTelemetryCoverage', () => {
 
     const { result } = renderHook(() => useFleetTelemetryCoverage(), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(requestMock).toHaveBeenCalledWith('/tesla/fleet-telemetry/coverage')
+    expect(requestMock).toHaveBeenCalledWith(
+      '/tesla/fleet-telemetry/coverage',
+      expect.objectContaining({ signal: expect.any(Object) }),
+    )
     expect(result.current.data?.categories?.[0]?.fields?.[0]?.field).toBe('VehicleSpeed')
     expect(result.current.data?.destination_totals?.signal_log).toBe(1)
   })

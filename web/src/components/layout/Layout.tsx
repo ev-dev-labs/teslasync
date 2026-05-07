@@ -404,6 +404,7 @@ export const navSections = [
       { to: '/state-debugger', icon: Icons.bug, label: 'State Machine', color: 'text-purple-400' },
       { to: '/mqtt-inspector', icon: Icons.radio, label: 'MQTT Inspector', color: 'text-blue-400' },
       { to: '/redis-signals', icon: Icons.server, label: 'Redis Signals', color: 'text-orange-400' },
+      { to: '/admin/telemetry/coverage', icon: Icons.cloud, label: 'Telemetry Coverage', color: 'text-sky-400' },
     ],
   },
   {

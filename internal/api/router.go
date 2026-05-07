@@ -370,6 +370,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaEnergyLiveStatusHandler := NewTeslaEnergyLiveStatusHandler(teslaClient, db)
 	energySiteHandler := NewEnergySiteHandler(teslaClient, db)
 	fleetTelemetryErrorHandler := NewFleetTelemetryErrorHandler(teslaClient, db)
+	// Phase-43a/0002 — wire the package-derived Fleet Telemetry coverage
+	// handler authored by Phase-42 prompt 0068. It is intentionally
+	// DB-free: the routing snapshot comes from the embedded routing.yaml
+	// via router.LoadMap() and the subscription view comes from
+	// teslaconfig.Builder. The handler is mounted inside the existing
+	// /tesla/fleet-telemetry route block below.
+	fleetTelemetryHandler := NewFleetTelemetryHandler(cfg)
 	teslaUserConfigHandler := NewTeslaUserConfigHandler(teslaClient, db)
 	teslaUserOrderHandler := NewTeslaUserOrderHandler(teslaClient, db)
 	teslaUserProfileHandler := NewTeslaUserProfileHandler(teslaClient, db)
@@ -899,6 +906,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/error-vins/refresh", fleetTelemetryErrorHandler.RefreshErrorVINs)
 			r.Get("/errors", fleetTelemetryErrorHandler.Errors)
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/errors/refresh", fleetTelemetryErrorHandler.RefreshErrors)
+			// Phase-43a/0002 — package-derived routing snapshot for the
+			// admin Fleet Telemetry Coverage page. Read-only, DB-free.
+			// Rate limiting matches the admin /system endpoints' 60/min
+			// ceiling. The sibling /subscription endpoint owned by the
+			// same handler is intentionally NOT mounted here — no
+			// frontend caller exists today and the prompt allows only
+			// one new route.
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/coverage", fleetTelemetryHandler.Coverage)
 		})
 
 		// Tesla User Config (feature flags, region) and Orders
