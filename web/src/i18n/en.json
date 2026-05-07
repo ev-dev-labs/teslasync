@@ -5449,6 +5449,8 @@
     "usableSoc": "Usable SOC",
     "power": "Power",
     "noChartData": "No telemetry data available",
+    "noTelemetryTitle": "No telemetry recorded for this drive",
+    "noTelemetryBody": "Only the start/end timestamps and battery levels are available. Distance, speed, energy and route data require live telemetry samples — none were captured during this drive.",
     "distance": "Distance",
     "duration": "Duration",
     "maxSpeed": "Max Speed",
