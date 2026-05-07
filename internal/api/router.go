@@ -1325,6 +1325,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Trips
 		r.Get("/trips", tripHandler.List)
 
+		// Phase-43a / Prompt 0008: GET /trips/{trip_id} restores the
+		// per-trip detail endpoint that the frontend useTrip hook
+		// (web/src/api/hooks/useTrips.ts) calls to populate
+		// TripDetailPage. Aggregates the trip header + constituent
+		// drives (via trip_drives) + a vehicle-scoped time-window
+		// charging_sessions overlap to surface drive_count /
+		// charge_count / total_cost. Same admin-style rate limit
+		// (60/min) as the rest of the Phase-43a admin reads.
+		tripsDetailHandler := NewTripsDetailHandler(database.NewTripsDetailRepo(db.Pool))
+		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/trips/{trip_id}", tripsDetailHandler.Get)
+
 		// Phase-43a / Prompt 0003: /vehicle-states/{timeline,summary} restored
 		// after Phase-42 prompt 0077 removed them with the vehicle_states
 		// snapshot table. The two endpoints are now derived from

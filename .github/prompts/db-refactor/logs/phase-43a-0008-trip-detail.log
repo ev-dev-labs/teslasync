@@ -1,0 +1,392 @@
+=== STATUS === EXIT=0 STATUS=DONE
+
+# Phase-43a / Prompt 0008 — GET /trips/{id}
+
+## Honesty Covenant declaration
+
+| # | Item | Status |
+|---|---|---|
+| 1 | I will not invent missing data | ack |
+| 2 | I will document every escape-hatch / decision drift | ack |
+| 3 | I will not modify files outside the allowed list | ack |
+| 4 | I will not skip gates or fabricate gate output | ack |
+| 5 | I will not exceed 1 commit / 1 prompt | ack |
+| 6 | If gates fail and remediation is impossible inside the file budget, I will BLOCK | ack |
+| 7 | If a prompt-locked decision conflicts with reality, I will BLOCK and surface the conflict | ack |
+| 8 | I will note every implementation choice that diverges from the prompt's worded suggestion | ack |
+| 9 | I will not paper over a baseline failure to make a gate pass | ack |
+| 10 | I will reproduce baseline-failures honestly in PREFLIGHT | ack |
+| 11 | I will surface known-broken consumers (frontend hooks etc.) as follow-up | ack |
+| 12 | I will not hide a workaround behind a comment that no one will read | ack |
+
+=== PREFLIGHT ===
+
+P1. Working tree before:
+
+    PS> git status --short
+    (clean)
+
+    PS> git log --oneline -1
+    f1a1b8401 (HEAD -> refactor/signals-rewrite) feat(api): GET /signals/catalog + /signals/observations
+
+P2. Predecessor 0007 DONE:
+
+    PS> Select-String -Path ".github/prompts/db-refactor/logs/phase-43a-0007-signal-catalog.log" -Pattern "STATUS=DONE|EXIT=0" | Select-Object -Last 5
+    .github\prompts\db-refactor\logs\phase-43a-0007-signal-catalog.log:12:    === STATUS === EXIT=0 STATUS=DONE
+    .github\prompts\db-refactor\logs\phase-43a-0007-signal-catalog.log:335:        EXIT=0  PASS
+    .github\prompts\db-refactor\logs\phase-43a-0007-signal-catalog.log:339:        EXIT=0  PASS
+    .github\prompts\db-refactor\logs\phase-43a-0007-signal-catalog.log:345:        EXIT=0  PASS
+    .github\prompts\db-refactor\logs\phase-43a-0007-signal-catalog.log:410:=== STATUS === EXIT=0 STATUS=DONE
+
+P3. Allowed-files audit:
+    - internal/api/trips_detail_handler.go            (NEW)
+    - internal/api/trips_detail_handler_test.go       (NEW)
+    - internal/database/trips_detail_repo.go          (NEW)
+    - internal/database/trips_detail_repo_test.go     (NEW)
+    - internal/api/router.go                          (EDIT, ~3 lines added)
+    - .github/prompts/db-refactor/logs/phase-43a-0008-trip-detail.log (NEW)
+
+=== AUDIT_EVIDENCE ===
+
+A1. Trips migration exists (case (a) confirmed):
+
+    PS> Get-ChildItem migrations/_baseline_source/13-trips.sql
+    Mode  LastWriteTime         Length Name
+    ----  -------------         ------ ----
+    -a--- 4/29/2026  5:26 PM     1874  13-trips.sql
+
+    PS> grep "CREATE TABLE trips" migrations/000185_drives_si.up.sql
+    matches at line ~175 — schema:
+        trips(id BIGSERIAL, vehicle_id, name, started_at, ended_at,
+              created_by_user, auto_generated, notes)
+        — NO created_at column (per schema comment, totals are
+          intentionally NOT denormalized here; they are recomputed
+          from constituent drives on read)
+
+    PS> grep "CREATE TABLE trip_drives" migrations/000185_drives_si.up.sql
+        trip_drives(trip_id, drive_id, position INT NOT NULL,
+                    PK(trip_id, drive_id))
+
+    PS> grep "CREATE TABLE drives" migrations/000185_drives_si.up.sql
+        drives(id BIGSERIAL, vehicle_id, started_at, ended_at,
+               start_lat, start_lng, end_lat, end_lng,
+               start_place, end_place,
+               start_odometer_m, end_odometer_m,
+               distance_m, duration_s,
+               start_soc_pct, end_soc_pct,
+               energy_used_wh, regen_energy_wh,
+               avg_speed_mps, max_speed_mps,
+               avg_power_w, peak_power_w,
+               ambient_temp_c_avg)
+        — distance_m / energy_used_wh / duration_s are nullable
+          DOUBLE PRECISION + BIGINT (not constrained NOT NULL)
+
+A2. Existing trip handlers / repo:
+
+    PS> grep -rn "trips" internal/database/ --include="*.go" | head
+    internal/database/trip_repo.go                — TripRepo (List, GetByVehicle, GetAll, GetDriveIDs, GenerateMonthlyTrips, UpsertMonthTrip)
+    internal/database/charging_repo.go             — references "cost_decimal"
+
+    PS> grep -n "/trips" internal/api/router.go
+    1326:		r.Get("/trips", tripHandler.List)
+    — only LIST endpoint; no detail route exists today
+
+A3. Drive detail handler reference (auth pattern):
+
+    PS> grep -n "func \(h \*driveDetailHandler\)" internal/api/drive_handler_detail.go
+    140: func (h *driveDetailHandler) Get(...)
+    — uses urlParamInt64(r, "driveID") + writeError on 400/404/500
+    — no per-vehicle ownership check at handler layer; relies on
+      router-level auth middleware. Decision #5 in the prompt says
+      "same as /drives/{id}" — so we mirror this: rely on router auth.
+
+A4. Frontend consumer expectations:
+
+    web/src/api/hooks/useTrips.ts L48-54:
+      export function useTrip(id: string) {
+        return useQuery({
+          queryKey: tripKeys.detail(id),
+          queryFn: ({ signal }) => request<Trip>(`/trips/${id}`, { signal }),
+          enabled: !!id,
+        });
+      }
+      — currently @deprecated because backend has no route
+
+    web/src/api/types.ts:1081-1095 Trip interface:
+      id, vehicle_id, name, start_date, end_date,
+      total_distance_km, total_energy_kwh, total_cost,
+      drive_count, charge_count, created_at
+
+    web/src/features/trips/pages/TripDetailPage.tsx (consumer):
+      Reads: trip.id, trip.name, trip.total_distance_km,
+             trip.total_energy_kwh, trip.total_cost,
+             trip.drive_count, trip.charge_count,
+             trip.start_date, trip.end_date.
+      Does NOT render charts → per-tick telemetry NOT NEEDED
+        (Decision #4 N/A).
+
+A5. Charging session schema for cost derivation:
+
+    grep "started_at|ended_at|cost" migrations/000184_charging_si.up.sql:
+      charging_sessions has started_at TIMESTAMPTZ NOT NULL,
+                            ended_at TIMESTAMPTZ NULL,
+                            cost_decimal NUMERIC(12,4) NULL,
+                            cost_currency CHAR(3),
+                            vehicle_id BIGINT NOT NULL.
+      — no FK to trips; trip→charge linkage must be derived by
+        time window overlap on vehicle_id.
+
+A6. Helpers / patterns reused:
+
+    internal/api/helpers.go:
+      writeJSON, writeError, urlParamInt64, pagination, parseDateRange.
+      All snake_case query params per project convention.
+
+=== DESIGN ===
+
+D1. **Case selection: (a) real trips table exists.**
+
+    Evidence in A1: trips + trip_drives + drives schema is real
+    (migration 000185_drives_si.up.sql). The route /trips/{id}
+    must aggregate the trip + its constituent drives + a
+    time-windowed view of charging_sessions.
+
+D2. **Response shape (SUPERSET to satisfy frontend + prompt Decision #3).**
+
+    Per rubber-duck guidance (issues #1, #3, #7, #11):
+      - frontend Trip interface drives field choice (start_date,
+        end_date, total_distance_km, total_energy_kwh, total_cost,
+        drive_count, charge_count, created_at);
+      - prompt Decision #3 adds {started_at, ended_at,
+        total_duration_seconds, energy_used_kwh, drives:[...]};
+      - DO NOT fabricate route_polyline — schema does not provide
+        it (rubber-duck issue #11);
+      - in-progress trip returns end_date: null AND ended_at: null
+        (rubber-duck issue #7).
+
+    Final shape:
+
+        {
+          "id": int64,
+          "vehicle_id": int64,
+          "name": string|null,
+          "start_date": time,
+          "started_at": time,
+          "end_date": time|null,
+          "ended_at": time|null,
+          "total_distance_km": float64,
+          "total_energy_kwh": float64,
+          "energy_used_kwh": float64,         // alias for prompt
+          "total_duration_seconds": int64,
+          "total_cost": float64,
+          "drive_count": int64,
+          "charge_count": int64,
+          "drives": [
+            { "id", "started_at", "ended_at",
+              "distance_km", "energy_used_kwh", "duration_s",
+              "start_place", "end_place" }
+          ],
+          "created_at": time   // derived from started_at
+        }
+
+    Note: created_at = started_at because trips table has no
+    audit column (rubber-duck issue #4).
+
+D3. **Charge derivation: time-window OVERLAP, not start-only**
+    (rubber-duck issue #2).
+
+        cs.vehicle_id = t.vehicle_id
+        AND cs.started_at < COALESCE(t.ended_at, NOW())
+        AND COALESCE(cs.ended_at, cs.started_at) >= t.started_at
+
+D4. **Nullable aggregates: COALESCE at SUM and inside SUM**
+    (rubber-duck issue #6).
+
+        COALESCE(SUM(COALESCE(d.distance_m, 0)),     0) / 1000.0
+        COALESCE(SUM(COALESCE(d.energy_used_wh, 0)), 0) / 1000.0
+        COALESCE(SUM(COALESCE(d.duration_s, 0)),     0)
+
+D5. **Two queries (rubber-duck issue #8)**: header + drives list.
+
+    Q1 (header): trips + LEFT JOIN trip_drives → drives aggregates
+                + LEFT JOIN charging_sessions overlap aggregates.
+    Q2 (drives list): trip_drives JOIN drives ORDER BY position ASC.
+
+D6. **Dedicated TripDetailResponse DTO**, not models.Trip
+    (rubber-duck issue #3).
+
+    Lives in internal/api/trips_detail_handler.go. The new repo
+    returns an internal struct (TripDetail) with raw SI columns;
+    handler converts to wire DTO with the alias fields.
+
+D7. **Repo errors**: sentinel `ErrTripNotFound` (mirrors
+    Phase-43a/0006 ErrGuardEventNotFound precedent). Handler maps
+    errors.Is(err, ErrTripNotFound) → 404; other errors → 500
+    with "failed to load trip" message.
+
+D8. **URL param validation**: handler rejects non-numeric / <= 0
+    with 400 BEFORE calling repo (rubber-duck issue #10).
+
+D9. **Auth**: rely on router-level auth middleware (matches
+    /drives/{id}). No per-vehicle ownership at handler layer
+    per Decision #5. ForwardAuth + bearer-token fallback already
+    apply to the entire /api/v1/* tree.
+
+D10. **httprate**: 60/min (admin-tier read precedent from
+    Phase-43a/0003-0007). Documented in router comment.
+
+D11. **trip_id route param** keyed under `/trips/{trip_id}` to
+    avoid collision with the existing `r.Get("/trips", ...)`
+    handler. chi v5 does longest-static-match so both routes
+    resolve correctly.
+
+=== IMPLEMENTATION ===
+
+I1. internal/database/trips_detail_repo.go (NEW, 8018 bytes)
+
+    - tripsDetailPool minimal interface (Query + QueryRow only) so
+      tests can use trivial fakes without pgxmock; *pgxpool.Pool
+      satisfies it (compile-time guard at L33).
+    - ErrTripNotFound sentinel mapped by handler to HTTP 404.
+    - TripDetail + TripDriveSummary structs hold raw SI columns
+      (meters, watt-hours, seconds). Conversion to km / kWh happens
+      in the handler so the repo stays unit-agnostic.
+    - tripHeaderSelectSQL (single round-trip):
+        * LEFT JOIN trip_drives + drives so trips with zero drives
+          still surface;
+        * Double COALESCE per Decision D4 (rubber-duck issue #6);
+        * Charge aggregate uses correlated subqueries with overlap
+          semantics: cs.started_at < COALESCE(t.ended_at, NOW())
+          AND COALESCE(cs.ended_at, cs.started_at) >= t.started_at
+          (rubber-duck issue #2);
+        * Single bind parameter $1 = trip id; same SQL works for
+          in-progress and completed trips (no branching).
+    - tripDrivesSelectSQL: ORDER BY td.position ASC honours the
+      mig 000185 trip_drives.position contract.
+    - GetTrip returns ErrTripNotFound on pgx.ErrNoRows from the
+      header query; never on the drives query (an empty drives slice
+      is normal for a freshly created trip).
+
+I2. internal/database/trips_detail_repo_test.go (NEW, 4299 bytes)
+
+    - TestTripHeaderSelectSQL_Shape pins 14 mandatory substrings
+      (FROM/JOIN/COALESCE/overlap predicates) + 6 forbidden
+      substrings (INNER JOIN, BETWEEN, DELETE/INSERT/UPDATE).
+    - TestTripDrivesSelectSQL_Shape pins ORDER BY td.position ASC
+      and rejects ORDER BY d.started_at + LEFT JOIN drives.
+    - TestNewTripsDetailRepo_NilPoolPanics fail-fast contract.
+    - TestErrTripNotFound_IsSentinel guards message drift.
+
+I3. internal/api/trips_detail_handler.go (NEW, 7025 bytes)
+
+    - tripsDetailRepository interface for fake injection (dep-inversion
+      so handler tests don't pull in pgx).
+    - tripDriveSummaryDTO with *float64 / *int64 / *string for
+      nullable fields → JSON null vs "0" preserved per drive.
+    - tripDetailResponse SUPERSET shape:
+        * frontend Trip fields (start_date, end_date, total_*)
+        * prompt Decision #3 fields (started_at, ended_at,
+          total_duration_seconds, energy_used_kwh alias, drives:[...])
+        * created_at = started_at (compatibility, documented inline)
+        * route_polyline OMITTED (rubber-duck issue #11 — no schema source)
+    - Get handler:
+        * urlParamInt64 + tripID <= 0 reject → 400 BEFORE repo call;
+        * errors.Is(err, ErrTripNotFound) → 404;
+        * other errors → 500 with structured log line.
+    - buildTripDetailResponse extracted as free function so the SI
+      conversion math is testable in isolation.
+
+I4. internal/api/trips_detail_handler_test.go (NEW, 10609 bytes)
+
+    - TestTripsDetailHandler_Get_HappyPath end-to-end: chi router
+      + httptest.NewRequest, asserts every superset field, drive
+      list rendering, SI conversion (1234500m → 1234.5km, 250000Wh
+      → 250.0kWh), created_at = started_at alias.
+    - TestTripsDetailHandler_Get_InProgressTrip_NullEndFields uses
+      raw map[string]any decode to confirm end_date AND ended_at
+      both serialise as JSON null when EndedAt is nil
+      (rubber-duck issue #7 enforcement).
+    - TestTripsDetailHandler_Get_ZeroDrivesEmptyArray pins drives:[]
+      not drives:null when a trip has no constituent drives.
+    - TestTripsDetailHandler_Get_NotFound 404 path.
+    - TestTripsDetailHandler_Get_RepoError 500 path.
+    - TestTripsDetailHandler_Get_BadID 3 sub-cases (non_numeric,
+      zero, negative); asserts repo NOT called for invalid id.
+    - TestNewTripsDetailHandler_NilRepoPanics fail-fast contract.
+    - TestBuildTripDetailResponse_PreservesNullDriveFields exercises
+      the conversion helpers with all-nil drive optional fields.
+
+I5. internal/api/router.go (EDIT, +13 lines after the existing
+    /trips list route at L1326)
+
+    + tripsDetailHandler := NewTripsDetailHandler(database.NewTripsDetailRepo(db.Pool))
+    + r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/trips/{trip_id}", tripsDetailHandler.Get)
+
+    Mounted at the same indentation as the existing
+    `r.Get("/trips", tripHandler.List)` so chi's longest-static-prefix
+    matching dispatches the bare `/trips` to the list handler and
+    `/trips/{id}` to the new detail handler. Documented in the
+    inline comment above the wiring.
+
+=== GATE ===
+
+G1. go build ./... (CGO_ENABLED=0)
+
+    PS> $env:CGO_ENABLED='0'; go build ./... 2>&1 | Select-Object -Last 50
+    (no output)
+    EXIT=0  PASS
+
+G2. go vet ./... (CGO_ENABLED=0)
+
+    PS> $env:CGO_ENABLED='0'; go vet ./... 2>&1 | Select-Object -Last 30
+    (no output)
+    EXIT=0  PASS
+
+G3. go test -race ./internal/api/... ./internal/database/... (CGO_ENABLED=1)
+
+    PS> $env:CGO_ENABLED='1'; go test -race ./internal/api/... ./internal/database/... 2>&1 | Select-Object -Last 80
+    ok  github.com/ev-dev-labs/teslasync/internal/api      12.156s
+    ok  github.com/ev-dev-labs/teslasync/internal/database  4.443s
+    EXIT=0  PASS
+
+G4. cd web && npx tsc --noEmit
+
+    PS> cd web; npx tsc --noEmit 2>&1 | Select-Object -Last 30
+    (no output)
+    EXIT=0  PASS
+
+G5. git status --short — only allowed paths
+
+    PS> git status --short
+     M internal/api/router.go
+    ?? internal/api/trips_detail_handler.go
+    ?? internal/api/trips_detail_handler_test.go
+    ?? internal/database/trips_detail_repo.go
+    ?? internal/database/trips_detail_repo_test.go
+
+    All five paths are within the prompt's allowed-files list. The log
+    file under .github/prompts/db-refactor/logs/ is gitignored per
+    repo memory and added with `git add -f` at COMMIT time.
+    EXIT=0  PASS
+
+=== COMMIT ===
+
+    PS> git add -A
+    PS> git add -f .github/prompts/db-refactor/logs/phase-43a-0008-trip-detail.log
+    PS> git commit -F <tempfile>
+
+    Commit subject: feat(api): GET /trips/{trip_id} (case a — real trips table)
+
+    Body summarises:
+      - case (a) selected per AUDIT_EVIDENCE A1 (real trips table in
+        mig 000185_drives_si.up.sql; not the prompt's case (b) alias
+        approach);
+      - SUPERSET response shape satisfies both the frontend Trip
+        interface AND the prompt's Decision #3 fields;
+      - charge derivation uses interval-overlap semantics
+        (rubber-duck issue #2);
+      - in-progress trips return null end fields (rubber-duck issue #7);
+      - route_polyline intentionally omitted (rubber-duck issue #11);
+      - 4 new files + 1 router.go edit; all 5 paths within allowed list.
+
+=== STATUS === EXIT=0 STATUS=DONE
