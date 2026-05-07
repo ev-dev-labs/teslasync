@@ -4,7 +4,8 @@ import { Car, Check, ChevronUp } from 'lucide-react';
 import { Tooltip } from '@/components/ui';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicleState } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { cn } from '@/lib/cn';
 
 /**
@@ -33,10 +34,15 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
   // The full-vehicle state hook is shared via TanStack Query dedup with any
   // page-tier consumer, so this just lengthens the safety-net interval.
   const { data: stateData } = useVehicleState(vehicleId ?? 0, { refetchInterval: 60_000 });
-  const { convertDistance, distanceUnit } = useSettings();
+  /* Phase-43 SI-floor: state.rated_range arrives in METERS, not miles. The
+   * legacy useSettings.convertDistance() expected miles-in / user-unit-out and
+   * blew up by 1000× on SI input. Use the SI-aware converter + label from
+   * useUnits() so the value tracks the user's distance preference. */
+  const { unitPrefs } = useUnits();
+  const distanceLabel = unitPrefs.distance;
   const liveState = stateData?.state;
   const metricsLabel = liveState
-    ? `${liveState.battery_level ?? 0}% · ${Math.round(convertDistance(liveState.rated_range ?? 0))}${distanceUnit}`
+    ? `${liveState.battery_level ?? 0}% · ${Math.round(convertDistanceFromSI(liveState.rated_range ?? 0, distanceLabel))} ${distanceLabel}`
     : null;
 
   // Close popover on outside click / Escape so it behaves like a real menu.

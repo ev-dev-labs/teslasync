@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -12,7 +13,9 @@ export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
-  const { convertDistance, distanceUnit } = useSettings();
+  /* SI-floor: state.rated_range / state.ideal_range arrive in METERS. */
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
   const state = stateData?.state;
 
   return (
@@ -25,7 +28,7 @@ export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
                 {t('widget.ratedRange', 'Rated Range')}
               </p>
               <p className="text-xl font-bold text-cyan-300">
-                {fmtNumber(convertDistance(state.rated_range), 0)} {distanceUnit}
+                {fmtNumber(convertDistanceFromSI(state.rated_range ?? 0, distanceUnit), 0)} {distanceUnit}
               </p>
             </div>
             <div>
@@ -33,7 +36,7 @@ export default function RangeEstimateWidget({ vehicleId }: WidgetProps) {
                 {t('widget.idealRange', 'Ideal Range')}
               </p>
               <p className="text-lg font-semibold text-[var(--text-primary)]">
-                {fmtNumber(convertDistance(state.ideal_range), 0)} {distanceUnit}
+                {fmtNumber(convertDistanceFromSI(state.ideal_range ?? 0, distanceUnit), 0)} {distanceUnit}
               </p>
             </div>
           </div>
