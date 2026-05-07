@@ -123,7 +123,7 @@ type streamingCharge struct {
 	state signal.StateReader
 }
 
-func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
+func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}, payloadTs time.Time, fieldTs map[string]time.Time) {
 	chargeState, hasChargeState := signalStr(signals, "DetailedChargeState", "ChargeState")
 	if !hasChargeState {
 		// Even without charge state, accumulate signals for active charge
@@ -153,9 +153,23 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		lat, lon, hasLoc := t.resolveLatLon(vehicleID, signals, accumulatedSignals)
 		startRange, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "RatedRange")
 
+		// Phase-42a/0030.bis: prefer the charge-state field's
+		// EmittedAt for the start timestamp; fall back to payloadTs
+		// (batch high-water) then wall-clock.
+		startTs := time.Time{}
+		if ts, ok := fieldTs["DetailedChargeState"]; ok && !ts.IsZero() {
+			startTs = ts
+		} else if ts, ok := fieldTs["ChargeState"]; ok && !ts.IsZero() {
+			startTs = ts
+		}
+		if startTs.IsZero() {
+			startTs = payloadTs
+		}
+		startTs = eventTimeOrNow(startTs)
+
 		session := &models.ChargingSession{
 			VehicleID:       vehicleID,
-			StartTs:         time.Now().UTC(),
+			StartTs:         startTs,
 			StartBatteryPct: int16Ptr(batteryLevel),
 		}
 
@@ -167,7 +181,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		sc := &streamingCharge{
 			SessionID:          session.ID,
 			VehicleID:          vehicleID,
-			StartTime:          time.Now().UTC(),
+			StartTime:          startTs,
 			LastSeen:           time.Now().UTC(),
 			StartBatteryLevel:  batteryLevel,
 			accumulatedSignals: make(map[string]interface{}),
@@ -252,7 +266,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 
 	} else if !isCharging && hasCharge {
 		// === CHARGE ENDED ===
-		t.completeChargeLocked(ctx, vehicleID, active, signals)
+		t.completeChargeLocked(ctx, vehicleID, active, signals, payloadTs)
 	}
 }
 
@@ -331,12 +345,17 @@ func (t *TelemetrySessionTracker) recordChargeTelemetry(ctx context.Context, cha
 	_ = reading
 }
 
-func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehicleID int64, active *streamingCharge, signals map[string]interface{}) {
+func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehicleID int64, active *streamingCharge, signals map[string]interface{}, payloadTs time.Time) {
 	// Guard: prevent double-completion race between cleanup and normal end
 	if active.Completing {
 		return
 	}
 	active.Completing = true
+
+	// Phase-42a/0030.bis: end timestamp resolved from payloadTs
+	// (batch high-water EmittedAt) with wall-clock fallback for legacy
+	// callers (recovery / flush paths that pass time.Time{}).
+	endTs := eventTimeOrNow(payloadTs)
 
 	// Flush remaining accumulated signals
 	if signals != nil {
@@ -353,7 +372,10 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	if bl, ok := t.resolveInt(vehicleID, finalSignals, active.accumulatedSignals, "BatteryLevel", "Soc"); ok {
 		endBattery = bl
 	}
-	duration := time.Since(active.StartTime).Minutes()
+	duration := endTs.Sub(active.StartTime).Minutes()
+	if duration < 0 {
+		duration = 0
+	}
 
 	// Phase-42 (prompt 0077): the legacy charge-telemetry MAX-rollup
 	// backfill block was removed. The StateReader path immediately below is
@@ -397,7 +419,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	// so a transient signal_log query failure does not abort charge-session
 	// completion (the unenriched `charging_sessions` row is still committed).
 	if t.signalLogReader != nil {
-		endTs := time.Now().UTC()
+		// endTs already computed at function entry (Phase-42a/0030.bis).
 		var startSnap, endSnap map[string]interface{}
 		if active.state != nil {
 			s, startErr := active.state.State(ctx, vehicleID, active.StartTime)
@@ -515,7 +537,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 				log.Warn().Err(startErr).Int64("vehicle_id", vehicleID).
 					Msg("telemetry: state.State (history-writer fallback) charge start snapshot failed")
 			}
-			endSnap, endErr := active.state.State(ctx, vehicleID, time.Now().UTC())
+			endSnap, endErr := active.state.State(ctx, vehicleID, endTs)
 			if endErr != nil {
 				log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
 					Msg("telemetry: state.State (history-writer fallback) charge end snapshot failed")
@@ -572,7 +594,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 		if active.EnergyAdded > 0 {
 			energyAdded = &active.EnergyAdded
 		}
-		if err := t.chargeRepo.CompleteWithTx(ctx, tx, active.SessionID, time.Now().UTC(),
+		if err := t.chargeRepo.CompleteWithTx(ctx, tx, active.SessionID, endTs,
 			energyAdded, endBatteryPct, endRange,
 			active.Power, active.Power,
 			nil, nil, &duration, nil); err != nil {

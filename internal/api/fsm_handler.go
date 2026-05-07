@@ -231,7 +231,23 @@ func (h *FSMHandler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.Vehi
 }
 
 // ProcessSignals runs the FSM on a signal batch and forwards to active sub-FSMs.
+// Legacy entry point for callers without event-time information; defers to
+// ProcessSignalsAt with empty payloadTs/fieldTs (wall-clock fallback).
 func (h *FSMHandler) ProcessSignals(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	h.ProcessSignalsAt(ctx, vehicleID, signals, time.Time{}, nil)
+}
+
+// ProcessSignalsAt is the event-time-aware variant. payloadTs is the
+// largest EmittedAt across the batch (provided by the AtomicsObserver
+// pipeline); fieldTs is the per-Field EmittedAt map (currently unused
+// at this layer but accepted to keep the bridge interface symmetric
+// with SessionTracker.ProcessSignalsAt where per-field stamps drive
+// drive-start/end attribution). A zero payloadTs preserves wall-clock
+// behavior — required for the reconciler tick at line 427 below
+// which fires from a wall-clock timer with no signal payload.
+//
+// Phase-42a/0030.bis (commit C2 of v3.4 prod-replay accuracy fix).
+func (h *FSMHandler) ProcessSignalsAt(ctx context.Context, vehicleID int64, signals map[string]interface{}, payloadTs time.Time, _ map[string]time.Time) {
 	signalNames := make([]string, 0, len(signals))
 	for k := range signals {
 		signalNames = append(signalNames, k)
@@ -260,7 +276,7 @@ func (h *FSMHandler) ProcessSignals(ctx context.Context, vehicleID int64, signal
 	}
 
 	// Run vehicle FSM (may trigger sub-FSM creation/finalization via fsmAction)
-	if err := m.ProcessSignals(ctx, vehicleID, signals); err != nil {
+	if err := m.ProcessSignalsAt(ctx, vehicleID, signals, payloadTs); err != nil {
 		outcome := "error"
 		if ctx.Err() == context.DeadlineExceeded {
 			outcome = "timeout"
@@ -272,8 +288,16 @@ func (h *FSMHandler) ProcessSignals(ctx context.Context, vehicleID int64, signal
 			Msg("fsm: ProcessSignals error")
 	}
 
-	// Check pending debounced transitions
-	sctx := &fsm.SignalContext{Now: time.Now().UTC()}
+	// Check pending debounced transitions. Use payloadTs so a replay
+	// batch's pending Driving→Parked debounce confirms based on
+	// signal event-time, not the replay-runner's wall-clock — the
+	// legacy time.Now().UTC() here was the second source of the
+	// micro-drive bug fixed in v3.4.
+	checkTs := payloadTs
+	if checkTs.IsZero() {
+		checkTs = time.Now().UTC()
+	}
+	sctx := &fsm.SignalContext{Now: checkTs}
 	if err := m.CheckPending(ctx, vehicleID, sctx); err != nil {
 		outcome := "error"
 		if ctx.Err() == context.DeadlineExceeded {
@@ -299,7 +323,9 @@ func (h *FSMHandler) ProcessSignals(ctx context.Context, vehicleID int64, signal
 		activeCharge.ProcessSignals(signals)
 	}
 
-	// Track last-processed time for reconciliation staleness checks
+	// Track last-processed time for reconciliation staleness checks.
+	// Wall-clock by design — this is a health/staleness clock, not a
+	// state-math clock (see PE non-blocking note in plan v3.4).
 	h.mu.Lock()
 	h.lastProcessed[vehicleID] = time.Now()
 	h.mu.Unlock()

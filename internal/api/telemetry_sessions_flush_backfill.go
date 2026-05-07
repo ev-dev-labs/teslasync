@@ -35,14 +35,14 @@ func (t *TelemetrySessionTracker) CleanupStaleSessions(ctx context.Context, stal
 		if now.Sub(drive.LastSeen) > staleTimeout {
 			log.Warn().Int64("vehicle_id", vehicleID).Int64("drive_id", drive.DriveID).
 				Dur("idle", now.Sub(drive.LastSeen)).Msg("telemetry: closing stale drive session")
-			t.completeDriveLocked(ctx, vehicleID, drive, nil)
+			t.completeDriveLocked(ctx, vehicleID, drive, nil, time.Time{}, nil)
 		}
 	}
 	for vehicleID, charge := range t.activeCharges {
 		if now.Sub(charge.LastSeen) > staleTimeout {
 			log.Warn().Int64("vehicle_id", vehicleID).Int64("session_id", charge.SessionID).
 				Dur("idle", now.Sub(charge.LastSeen)).Msg("telemetry: closing stale charge session")
-			t.completeChargeLocked(ctx, vehicleID, charge, nil)
+			t.completeChargeLocked(ctx, vehicleID, charge, nil, time.Time{})
 		}
 	}
 

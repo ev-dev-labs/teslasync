@@ -105,14 +105,14 @@ func (t *TelemetrySessionTracker) ValidateRecoveredSessions(ctx context.Context)
 		// Auto-close drives open > 4 hours with no new telemetry
 		if time.Since(drive.StartTime) > 4*time.Hour {
 			log.Info().Int64("drive_id", drive.DriveID).Msg("session recovery: auto-closing stale drive (>4h)")
-			t.completeDriveLocked(ctx, vehicleID, drive, nil)
+			t.completeDriveLocked(ctx, vehicleID, drive, nil, time.Time{}, nil)
 			continue
 		}
 		// If SignalStore shows Gear=P and Speed=0, close the drive
 		if t.localSignals != nil {
 			if gear, ok := t.localSignals.GetString(vehicleID, "Gear"); ok && gear == enums.GearPark {
 				log.Info().Int64("drive_id", drive.DriveID).Msg("session recovery: closing drive (Gear=P)")
-				t.completeDriveLocked(ctx, vehicleID, drive, nil)
+				t.completeDriveLocked(ctx, vehicleID, drive, nil, time.Time{}, nil)
 			}
 		}
 	}
@@ -121,7 +121,7 @@ func (t *TelemetrySessionTracker) ValidateRecoveredSessions(ctx context.Context)
 		// Auto-close charges open > 24 hours
 		if time.Since(charge.StartTime) > 24*time.Hour {
 			log.Info().Int64("session_id", charge.SessionID).Msg("session recovery: auto-closing stale charge (>24h)")
-			t.completeChargeLocked(ctx, vehicleID, charge, nil)
+			t.completeChargeLocked(ctx, vehicleID, charge, nil, time.Time{})
 			continue
 		}
 		// If SignalStore shows charge complete, close
@@ -129,7 +129,7 @@ func (t *TelemetrySessionTracker) ValidateRecoveredSessions(ctx context.Context)
 			if state, ok := t.localSignals.GetString(vehicleID, "DetailedChargeState"); ok {
 				if enums.IsChargeComplete(state) {
 					log.Info().Int64("session_id", charge.SessionID).Msg("session recovery: closing charge (Complete)")
-					t.completeChargeLocked(ctx, vehicleID, charge, nil)
+					t.completeChargeLocked(ctx, vehicleID, charge, nil, time.Time{})
 				}
 			}
 		}

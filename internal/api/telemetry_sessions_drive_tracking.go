@@ -139,7 +139,7 @@ type streamingDrive struct {
 	state signal.StateReader
 }
 
-func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
+func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}, payloadTs time.Time, fieldTs map[string]time.Time) {
 	speed, hasSpeed := signalFloat(signals, "VehicleSpeed")
 	gear, hasGear := signalStr(signals, "Gear")
 
@@ -159,9 +159,9 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 			if activeCharge, hasCharge := t.activeCharges[vehicleID]; hasCharge {
 				log.Info().Int64("vehicle_id", vehicleID).Int64("charge_id", activeCharge.SessionID).
 					Msg("telemetry: drive starting while charge active — force-completing charge")
-				t.completeChargeLocked(ctx, vehicleID, activeCharge, signals)
+				t.completeChargeLocked(ctx, vehicleID, activeCharge, signals, payloadTs)
 			}
-			t.startDriveLocked(ctx, vehicleID, vin, signals, accumulatedSignals, speed, true)
+			t.startDriveLocked(ctx, vehicleID, vin, signals, accumulatedSignals, speed, true, payloadTs, fieldTs)
 			return
 		}
 
@@ -177,7 +177,7 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 			// Gear→P with active drive → END DRIVE immediately
 			log.Info().Int64("vehicle_id", vehicleID).Int64("drive_id", active.DriveID).
 				Str("gear", gear).Msg("telemetry: gear→P, ending drive")
-			t.completeDriveLocked(ctx, vehicleID, active, signals)
+			t.completeDriveLocked(ctx, vehicleID, active, signals, payloadTs, fieldTs)
 			return
 		}
 
@@ -205,9 +205,9 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		if activeCharge, hasCharge := t.activeCharges[vehicleID]; hasCharge {
 			log.Info().Int64("vehicle_id", vehicleID).Int64("charge_id", activeCharge.SessionID).
 				Msg("telemetry: drive starting (speed) while charge active — force-completing charge")
-			t.completeChargeLocked(ctx, vehicleID, activeCharge, signals)
+			t.completeChargeLocked(ctx, vehicleID, activeCharge, signals, payloadTs)
 		}
-		t.startDriveLocked(ctx, vehicleID, vin, signals, accumulatedSignals, speed, false)
+		t.startDriveLocked(ctx, vehicleID, vin, signals, accumulatedSignals, speed, false, payloadTs, fieldTs)
 
 	} else if speed > 0 && hasDrive {
 		// Speed > 0, active drive → UPDATE
@@ -242,13 +242,20 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 					}
 				}
 			}
-			t.completeDriveLocked(ctx, vehicleID, active, signals)
+			t.completeDriveLocked(ctx, vehicleID, active, signals, payloadTs, fieldTs)
 		}
 	}
 }
 
 // startDriveLocked creates a new drive session. Must be called with t.mu held.
-func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}, speed float64, gearBased bool) {
+//
+// payloadTs is the batch high-water EmittedAt; fieldTs is the per-Field
+// EmittedAt map. The drive's StartTs/StartTime are stamped using the Gear
+// field's EmittedAt when available (gear-based drives) or VehicleSpeed's
+// EmittedAt (speed-fallback drives), falling back to payloadTs, then
+// wall-clock if neither is set. Phase-42a/0030.bis (commit C2 of v3.4
+// prod-replay accuracy fix).
+func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}, speed float64, gearBased bool, payloadTs time.Time, fieldTs map[string]time.Time) {
 	batteryLevel, hasBat := t.resolveInt(vehicleID, signals, accumulatedSignals, "BatteryLevel", "Soc")
 	odometer, hasOdo := t.resolveFloat(vehicleID, signals, accumulatedSignals, "Odometer")
 	lat, lon, hasLoc := t.resolveLatLon(vehicleID, signals, accumulatedSignals)
@@ -259,9 +266,28 @@ func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleI
 	soc, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "Soc", "BatteryLevel")
 	usableSoc, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "UsableSoc")
 
+	// Prefer the originating signal's EmittedAt for the drive's start
+	// timestamp. Gear-based drives use Gear's EmittedAt; speed-fallback
+	// drives use VehicleSpeed's EmittedAt. Falls back to payloadTs (batch
+	// high-water mark) and ultimately wall-clock.
+	startTs := time.Time{}
+	if gearBased {
+		if ts, ok := fieldTs["Gear"]; ok && !ts.IsZero() {
+			startTs = ts
+		}
+	} else {
+		if ts, ok := fieldTs["VehicleSpeed"]; ok && !ts.IsZero() {
+			startTs = ts
+		}
+	}
+	if startTs.IsZero() {
+		startTs = payloadTs
+	}
+	startTs = eventTimeOrNow(startTs)
+
 	drive := &models.Drive{
 		VehicleID: vehicleID,
-		StartTs:   time.Now().UTC(),
+		StartTs:   startTs,
 	}
 	if hasBat {
 		drive.StartBatteryPct = int16Ptr(batteryLevel)
@@ -279,7 +305,7 @@ func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleI
 	sd := &streamingDrive{
 		DriveID:            drive.ID,
 		VehicleID:          vehicleID,
-		StartTime:          time.Now().UTC(),
+		StartTime:          startTs,
 		LastSpeed:          speed,
 		LastSeen:           time.Now().UTC(),
 		GearBased:          gearBased,
@@ -685,12 +711,29 @@ func (t *TelemetrySessionTracker) recordDriveTelemetry(ctx context.Context, driv
 	_ = reading
 }
 
-func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehicleID int64, active *streamingDrive, signals map[string]interface{}) {
+func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehicleID int64, active *streamingDrive, signals map[string]interface{}, payloadTs time.Time, fieldTs map[string]time.Time) {
 	// Guard: prevent double-completion race between cleanup and normal end
 	if active.Completing {
 		return
 	}
 	active.Completing = true
+
+	// Resolve end timestamp from event-time first (Phase-42a/0030.bis):
+	// prefer Gear=P / Gear=N's EmittedAt for gear-based ends, then
+	// VehicleSpeed for speed-fallback ends, then payloadTs (batch
+	// high-water), then wall-clock. Without this, replaying a 24-min
+	// historical batch produces an end timestamp at the replay clock
+	// rather than the original signal's event-time.
+	endTs := time.Time{}
+	if ts, ok := fieldTs["Gear"]; ok && !ts.IsZero() {
+		endTs = ts
+	} else if ts, ok := fieldTs["VehicleSpeed"]; ok && !ts.IsZero() {
+		endTs = ts
+	}
+	if endTs.IsZero() {
+		endTs = payloadTs
+	}
+	endTs = eventTimeOrNow(endTs)
 
 	// Flush any remaining accumulated signals before closing
 	if signals != nil {
@@ -713,7 +756,10 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		endBattery = int(*active.StartSoc)
 	}
 
-	duration := time.Since(active.StartTime).Minutes()
+	duration := endTs.Sub(active.StartTime).Minutes()
+	if duration < 0 {
+		duration = 0
+	}
 	maxSpeed := active.MaxSpeed
 
 	// Compute distance from odometer
@@ -802,7 +848,8 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	// so a transient signal_log query failure does not abort drive-session
 	// completion (the unenriched `drives` row is still committed).
 	if t.signalLogReader != nil {
-		endTs := time.Now().UTC()
+		// endTs already computed at function entry from per-field
+		// EmittedAt + payloadTs fallback (Phase-42a/0030.bis).
 		var startSnap, endSnap map[string]interface{}
 		if active.state != nil {
 			s, startErr := active.state.State(ctx, vehicleID, active.StartTime)
@@ -936,7 +983,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			} else {
 				startSnapshot = stateToLegacyMap(s)
 			}
-			s2, endErr := active.state.State(ctx, vehicleID, time.Now().UTC())
+			s2, endErr := active.state.State(ctx, vehicleID, endTs)
 			if endErr != nil {
 				log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
 					Msg("telemetry: state.State (history-writer fallback) drive end snapshot failed")
@@ -1038,7 +1085,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		if endBattery := int16(endBattery); endBattery > 0 {
 			endBatteryPct = &endBattery
 		}
-		if err := t.driveRepo.CompleteWithTx(ctx, tx, active.DriveID, time.Now().UTC(),
+		if err := t.driveRepo.CompleteWithTx(ctx, tx, active.DriveID, endTs,
 			distance, duration, endBatteryPct, &maxSpeed, powerMax, insideAvg, outsideAvg); err != nil {
 			return err
 		}

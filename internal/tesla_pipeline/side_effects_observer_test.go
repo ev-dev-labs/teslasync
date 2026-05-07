@@ -72,12 +72,14 @@ func (w *fakeHistoryWriter) Append(vehicleID int64, signals map[string]any) {
 }
 
 type fakeFSMHandler struct {
-	mu        sync.Mutex
-	calls     int
-	lastVeh   int64
-	lastSigs  map[string]any
-	rec       *callRecorder
-	orderTick int64
+	mu             sync.Mutex
+	calls          int
+	lastVeh        int64
+	lastSigs       map[string]any
+	lastPayloadTs  time.Time
+	lastFieldTs    map[string]time.Time
+	rec            *callRecorder
+	orderTick      int64
 }
 
 func (f *fakeFSMHandler) ProcessSignals(_ context.Context, vehicleID int64, signals map[string]any) {
@@ -91,15 +93,37 @@ func (f *fakeFSMHandler) ProcessSignals(_ context.Context, vehicleID int64, sign
 	}
 }
 
+func (f *fakeFSMHandler) ProcessSignalsAt(_ context.Context, vehicleID int64, signals map[string]any, payloadTs time.Time, fieldTs map[string]time.Time) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls++
+	f.lastVeh = vehicleID
+	f.lastSigs = signals
+	f.lastPayloadTs = payloadTs
+	if fieldTs != nil {
+		f.lastFieldTs = make(map[string]time.Time, len(fieldTs))
+		for k, v := range fieldTs {
+			f.lastFieldTs[k] = v
+		}
+	} else {
+		f.lastFieldTs = nil
+	}
+	if f.rec != nil {
+		f.orderTick = f.rec.next()
+	}
+}
+
 type fakeSessionTracker struct {
-	mu         sync.Mutex
-	calls      int
-	lastVeh    int64
-	lastVin    string
-	lastSigs   map[string]any
-	lastAccum  map[string]any
-	rec        *callRecorder
-	orderTick  int64
+	mu             sync.Mutex
+	calls          int
+	lastVeh        int64
+	lastVin        string
+	lastSigs       map[string]any
+	lastAccum      map[string]any
+	lastPayloadTs  time.Time
+	lastFieldTs    map[string]time.Time
+	rec            *callRecorder
+	orderTick      int64
 }
 
 func (s *fakeSessionTracker) ProcessSignals(_ context.Context, vehicleID int64, vin string, signals, accumulated map[string]any) {
@@ -110,6 +134,28 @@ func (s *fakeSessionTracker) ProcessSignals(_ context.Context, vehicleID int64, 
 	s.lastVin = vin
 	s.lastSigs = signals
 	s.lastAccum = accumulated
+	if s.rec != nil {
+		s.orderTick = s.rec.next()
+	}
+}
+
+func (s *fakeSessionTracker) ProcessSignalsAt(_ context.Context, vehicleID int64, vin string, signals, accumulated map[string]any, payloadTs time.Time, fieldTs map[string]time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.calls++
+	s.lastVeh = vehicleID
+	s.lastVin = vin
+	s.lastSigs = signals
+	s.lastAccum = accumulated
+	s.lastPayloadTs = payloadTs
+	if fieldTs != nil {
+		s.lastFieldTs = make(map[string]time.Time, len(fieldTs))
+		for k, v := range fieldTs {
+			s.lastFieldTs[k] = v
+		}
+	} else {
+		s.lastFieldTs = nil
+	}
 	if s.rec != nil {
 		s.orderTick = s.rec.next()
 	}
@@ -239,6 +285,92 @@ func TestSideEffectsObserver_AtomicsConvertedToSignalsMap(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Phase-42a/0030.bis (commit C2 of v3.4 prod-replay accuracy fix):
+// per-field event-time threading. The observer reduces []codec.Atomic →
+// map[Field]Value but MUST also expose two timing channels:
+//
+//   - payloadTs = max(EmittedAt) across the batch (high-water mark)
+//   - fieldTs   = per-Field EmittedAt of the surviving (last-write-wins)
+//                 Value
+//
+// These are forwarded to ProcessSignalsAt on FSM + SessionTracker so that
+// drives stamped from a replay batch reflect the original event-time
+// (e.g. 2026-04-18 00:22 UTC) instead of wall-clock at replay time.
+// Without this, a 24-min replay batch collapses to one wall-clock instant
+// and produces 11s "drives" 24min after replay (the prod bug this fix
+// addresses).
+// ---------------------------------------------------------------------------
+
+func TestSideEffectsObserver_ThreadsPerFieldEventTimeToFSMAndSessions(t *testing.T) {
+	t.Parallel()
+
+	obs, _, _, fsm, sess, _, _, _ := newDefaultObserver(t)
+
+	gearTs := time.Date(2026, 4, 18, 0, 22, 13, 0, time.UTC)
+	speedTs := time.Date(2026, 4, 18, 0, 22, 14, 0, time.UTC)
+	batteryTs := time.Date(2026, 4, 18, 0, 22, 12, 0, time.UTC)
+
+	atomics := []codec.Atomic{
+		{Field: "Gear", Value: "D", EmittedAt: gearTs, VehicleID: "VIN-EVENT"},
+		{Field: "VehicleSpeed", Value: 12.5, EmittedAt: speedTs, VehicleID: "VIN-EVENT"},
+		{Field: "BatteryLevel", Value: 78.0, EmittedAt: batteryTs, VehicleID: "VIN-EVENT"},
+	}
+	obs.OnPayloadProcessed(context.Background(), 7, atomics)
+
+	// payloadTs == max(EmittedAt) == speedTs
+	if !fsm.lastPayloadTs.Equal(speedTs) {
+		t.Errorf("fsm.lastPayloadTs = %v, want %v (max EmittedAt)", fsm.lastPayloadTs, speedTs)
+	}
+	if !sess.lastPayloadTs.Equal(speedTs) {
+		t.Errorf("sessions.lastPayloadTs = %v, want %v (max EmittedAt)", sess.lastPayloadTs, speedTs)
+	}
+
+	// fieldTs preserves per-atomic EmittedAt
+	if got := fsm.lastFieldTs["Gear"]; !got.Equal(gearTs) {
+		t.Errorf("fsm.lastFieldTs[Gear] = %v, want %v", got, gearTs)
+	}
+	if got := fsm.lastFieldTs["VehicleSpeed"]; !got.Equal(speedTs) {
+		t.Errorf("fsm.lastFieldTs[VehicleSpeed] = %v, want %v", got, speedTs)
+	}
+	if got := fsm.lastFieldTs["BatteryLevel"]; !got.Equal(batteryTs) {
+		t.Errorf("fsm.lastFieldTs[BatteryLevel] = %v, want %v", got, batteryTs)
+	}
+	if got := sess.lastFieldTs["Gear"]; !got.Equal(gearTs) {
+		t.Errorf("sessions.lastFieldTs[Gear] = %v, want %v", got, gearTs)
+	}
+
+	// Field count must equal atomic count (no fields silently dropped)
+	if len(fsm.lastFieldTs) != 3 {
+		t.Errorf("len(fsm.lastFieldTs) = %d, want 3", len(fsm.lastFieldTs))
+	}
+}
+
+// Duplicate Field with later EmittedAt wins (last-write-wins on the value)
+// AND its EmittedAt is the one preserved in fieldTs.
+func TestSideEffectsObserver_DuplicateFieldKeepsLatestEmittedAtInFieldTs(t *testing.T) {
+	t.Parallel()
+
+	obs, _, _, fsm, _, _, _, _ := newDefaultObserver(t)
+
+	first := time.Date(2026, 4, 18, 0, 22, 10, 0, time.UTC)
+	second := time.Date(2026, 4, 18, 0, 22, 11, 0, time.UTC)
+
+	atomics := []codec.Atomic{
+		{Field: "Gear", Value: "D", EmittedAt: first, VehicleID: "VIN-DUP"},
+		{Field: "Gear", Value: "P", EmittedAt: second, VehicleID: "VIN-DUP"},
+	}
+	obs.OnPayloadProcessed(context.Background(), 9, atomics)
+
+	// last-write-wins on value
+	if v, ok := fsm.lastSigs["Gear"].(string); !ok || v != "P" {
+		t.Errorf("fsm.lastSigs[Gear] = %v, want P", fsm.lastSigs["Gear"])
+	}
+	// fieldTs reflects the surviving atomic's EmittedAt
+	if got := fsm.lastFieldTs["Gear"]; !got.Equal(second) {
+		t.Errorf("fsm.lastFieldTs[Gear] = %v, want %v (latest)", got, second)
+	}
+}
 // ---------------------------------------------------------------------------
 // Decision #10 (b): all 5 callbacks invoked exactly once per payload
 // (live, history, fsm, sessions, alerts). SSE counts as a 6th callback

@@ -77,9 +77,30 @@ func (m *VehicleFSM) LastTransitionAt() time.Time {
 	return m.lastTransitionAt
 }
 
-// ProcessSignals is the single entry point for telemetry signal batches.
-// It detects triggers, evaluates the transition table, and commits valid transitions.
+// ProcessSignals is the single entry point for telemetry signal batches
+// driven by callers that have no event-time information (legacy poll
+// path, tests). It defers to ProcessSignalsAt with a zero payloadTs
+// which falls back to wall-clock inside buildSignalContextAt.
 func (m *VehicleFSM) ProcessSignals(ctx context.Context, vehicleID int64, signals map[string]interface{}) error {
+	return m.ProcessSignalsAt(ctx, vehicleID, signals, time.Time{})
+}
+
+// ProcessSignalsAt is the event-time-aware variant. payloadTs is the
+// signal-batch timestamp threaded down from the AtomicsObserver
+// pipeline (max EmittedAt across the batch's atomics). When non-zero
+// it stamps both the SignalContext.Now used by transition guards and
+// the ts persisted to fsm_transitions via fsmAction.Execute. A zero
+// payloadTs preserves the legacy wall-clock behavior — required for
+// non-pipeline callers that have no event-time (HandleTimeout-driven
+// reconciler ticks, test fixtures).
+//
+// Phase-42a/0030.bis (commit C2 of v3.4 prod-replay accuracy fix)
+// — replaying a 24-minute window of historical signals with the
+// legacy buildSignalContext stamped every transition with the
+// replay-runner's wall-clock, producing micro-drives at the runner's
+// time rather than the original event window. Rule: any caller that
+// has the originating signal's EmittedAt MUST pass it through.
+func (m *VehicleFSM) ProcessSignalsAt(ctx context.Context, vehicleID int64, signals map[string]interface{}, payloadTs time.Time) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -88,7 +109,7 @@ func (m *VehicleFSM) ProcessSignals(ctx context.Context, vehicleID int64, signal
 		m.isGearCapable = true
 	}
 
-	sctx := m.buildSignalContext(signals)
+	sctx := m.buildSignalContextAt(signals, payloadTs)
 
 	m.logger.Debug().
 		Int64("vehicle_id", vehicleID).
@@ -296,11 +317,27 @@ func (m *VehicleFSM) commit(ctx context.Context, vehicleID int64, tr Transition,
 }
 
 func (m *VehicleFSM) buildSignalContext(signals map[string]interface{}) *SignalContext {
+	return m.buildSignalContextAt(signals, time.Time{})
+}
+
+// buildSignalContextAt is the event-time-aware constructor. When
+// payloadTs is zero it falls back to wall-clock so non-pipeline
+// callers (HandleTimeout, HandleSignalReceived, tests) keep their
+// existing semantics. When non-zero it stamps SignalContext.Now with
+// payloadTs so transition guards (Debounced timers, CheckPending) and
+// the persisted fsm_transitions row reflect the originating signal's
+// event-time. Per Phase-42a/0030.bis (commit C2 of v3.4 prod-replay
+// accuracy fix), any caller threading EmittedAt MUST pass it here.
+func (m *VehicleFSM) buildSignalContextAt(signals map[string]interface{}, payloadTs time.Time) *SignalContext {
+	now := payloadTs
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
 	sctx := &SignalContext{
-		CurrentState: m.current,
+		CurrentState:  m.current,
 		IsGearCapable: m.isGearCapable,
 		Signals:       signals,
-		Now:           time.Now().UTC(),
+		Now:           now,
 	}
 
 	// Gear

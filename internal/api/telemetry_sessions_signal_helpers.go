@@ -1,5 +1,22 @@
 package api
 
+import "time"
+
+// eventTimeOrNow returns ts if non-zero (in UTC), else falls back to
+// wall-clock time.Now().UTC(). Phase-42a/0030.bis (commit C2 of v3.4
+// prod-replay accuracy fix): drive/charge session helpers thread a
+// payloadTs from the AtomicsObserver pipeline so start/end timestamps
+// reflect the originating signal event-time. Callers without
+// event-time (legacy ProcessSignals wrapper, recovery / flush paths,
+// reconciler ticks) pass time.Time{} and get the historical
+// wall-clock behavior.
+func eventTimeOrNow(ts time.Time) time.Time {
+	if ts.IsZero() {
+		return time.Now().UTC()
+	}
+	return ts.UTC()
+}
+
 // resolveFloat gets a float signal from batch → accumulated → SignalStore (last-known).
 func (t *TelemetrySessionTracker) resolveFloat(vehicleID int64, signals, accum map[string]interface{}, keys ...string) (float64, bool) {
 	if v, ok := signalFloat(signals, keys...); ok {

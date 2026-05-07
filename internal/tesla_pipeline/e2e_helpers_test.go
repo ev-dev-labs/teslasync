@@ -327,6 +327,10 @@ func (f *e2eFSM) ProcessSignals(_ context.Context, vehicleID int64, signals map[
 	f.calls = append(f.calls, e2eFSMCall{VehicleID: vehicleID, Signals: copyAnyMapE2E(signals)})
 }
 
+func (f *e2eFSM) ProcessSignalsAt(ctx context.Context, vehicleID int64, signals map[string]any, _ time.Time, _ map[string]time.Time) {
+	f.ProcessSignals(ctx, vehicleID, signals)
+}
+
 func (f *e2eFSM) callCount() int {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -355,6 +359,10 @@ func (s *e2eSessions) ProcessSignals(_ context.Context, vehicleID int64, vin str
 		Signals:     copyAnyMapE2E(signals),
 		Accumulated: copyAnyMapE2E(accumulated),
 	})
+}
+
+func (s *e2eSessions) ProcessSignalsAt(ctx context.Context, vehicleID int64, vin string, signals, accumulated map[string]any, _ time.Time, _ map[string]time.Time) {
+	s.ProcessSignals(ctx, vehicleID, vin, signals, accumulated)
 }
 
 func (s *e2eSessions) callCount() int {

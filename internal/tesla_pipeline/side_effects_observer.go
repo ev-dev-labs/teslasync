@@ -79,8 +79,19 @@ type SignalHistoryWriter interface {
 // processes asynchronously and surfaces failures via its own
 // per-FSM metrics. Bridging at the same shape keeps the production
 // adapter trivial.
+//
+// ProcessSignalsAt is the event-time-aware variant added by Phase-42a
+// prompt 0030.bis (commit C2 of v3.4 prod-replay accuracy fix).
+// payloadTs is the largest EmittedAt across the batch's atomics
+// (see OnPayloadProcessed below); fieldTs maps each Field name to
+// its per-atomic EmittedAt so downstream consumers can stamp
+// per-field-derived state (gear timestamp, charge-state timestamp)
+// at the originating signal's event-time rather than wall-clock.
+// A zero payloadTs (or nil/empty fieldTs) signals the legacy code
+// path — implementations fall back to time.Now().UTC().
 type FSMHandler interface {
 	ProcessSignals(ctx context.Context, vehicleID int64, signals map[string]any)
+	ProcessSignalsAt(ctx context.Context, vehicleID int64, signals map[string]any, payloadTs time.Time, fieldTs map[string]time.Time)
 }
 
 // SessionTracker mirrors
@@ -94,8 +105,16 @@ type FSMHandler interface {
 // therefore narrowed to "use the values present in the current
 // batch", which is acceptable while the new pipeline runs in
 // shadow alongside the legacy path.
+//
+// ProcessSignalsAt is the event-time-aware variant. payloadTs +
+// fieldTs are forwarded so drive/charge session start/end timestamps
+// reflect the underlying signal event-time instead of wall-clock —
+// without this, replaying a 24-minute batch of historical signals
+// produces a single "drive" stamped with the replay-runner's clock
+// rather than the original event window.
 type SessionTracker interface {
 	ProcessSignals(ctx context.Context, vehicleID int64, vin string, signals map[string]any, accumulated map[string]any)
+	ProcessSignalsAt(ctx context.Context, vehicleID int64, vin string, signals map[string]any, accumulated map[string]any, payloadTs time.Time, fieldTs map[string]time.Time)
 }
 
 // AlertEvaluator mirrors
@@ -247,8 +266,25 @@ func New(cfg Config) *SideEffectsObserver {
 // write back.
 func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID int64, atomics []codec.Atomic) {
 	signals := make(map[string]any, len(atomics))
+	// fieldTs preserves per-atomic EmittedAt across the map-reduction.
+	// Reducing []codec.Atomic → map[Field]Value collapses duplicate
+	// fields to last-write-wins; fieldTs tracks the EmittedAt of the
+	// surviving Value for each Field so downstream consumers can stamp
+	// per-field-derived state at the originating signal's event-time.
+	// payloadTs is the latest EmittedAt across all atomics — the
+	// "high-water mark" used as the sctx.Now for FSM/session
+	// start/end decisions when no field-specific time is available.
+	// Per Phase-42a/0030.bis (commit C2 of v3.4 prod-replay accuracy
+	// fix) max(EmittedAt) alone is INSUFFICIENT for replay batches
+	// spanning multiple minutes — fieldTs is the canonical thread.
+	fieldTs := make(map[string]time.Time, len(atomics))
+	var payloadTs time.Time
 	for _, a := range atomics {
 		signals[a.Field] = a.Value
+		fieldTs[a.Field] = a.EmittedAt
+		if a.EmittedAt.After(payloadTs) {
+			payloadTs = a.EmittedAt
+		}
 	}
 
 	// Step 1: live store FIRST so FSM may read live state.
@@ -266,7 +302,7 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 	// Step 3: FSM dispatch. The FSM may read live state populated by
 	// step 1 — calling FSM before live is the regression that
 	// Decision #10(e) explicitly guards against.
-	o.fsm.ProcessSignals(ctx, vehicleID, signals)
+	o.fsm.ProcessSignalsAt(ctx, vehicleID, signals, payloadTs, fieldTs)
 
 	// Step 4: VIN-keyed sessions + alerts. A VIN lookup failure
 	// SKIPS this pair only; live / history / FSM / SSE proceed.
@@ -280,7 +316,7 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 		// Both sessions and alerts receive the SAME per-payload map
 		// for both the current and accumulated arguments
 		// (Decision #8). The cross-batch accumulator is deferred.
-		o.sessions.ProcessSignals(ctx, vehicleID, vin, signals, signals)
+		o.sessions.ProcessSignalsAt(ctx, vehicleID, vin, signals, signals, payloadTs, fieldTs)
 		o.alerts.Evaluate(ctx, vehicleID, vin, signals, signals)
 	}
 
