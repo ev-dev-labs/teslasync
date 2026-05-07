@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/service"
@@ -136,7 +137,19 @@ func (h *VehicleHandler) Positions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	limit, _ := pagination(r)
-	from := time.Now().AddDate(0, 0, -7) // default to last 7 days
+	// Default to last 30 days so the Live Map shows the latest known location
+	// even when the vehicle has been offline for a while. The page already
+	// surfaces freshness via the `Xs ago` indicator and `LiveStaleDataBanner`,
+	// so showing a stale-but-real position is better than an empty map.
+	// Allow `?days=N` (1..365) to override the window when callers need a
+	// shorter or longer reach.
+	days := 30
+	if v := r.URL.Query().Get("days"); v != "" {
+		if d, perr := strconv.Atoi(v); perr == nil && d >= 1 && d <= 365 {
+			days = d
+		}
+	}
+	from := time.Now().AddDate(0, 0, -days)
 	to := time.Now()
 
 	// Chart mode: empty CollapseBy so every change-feed emission becomes a
