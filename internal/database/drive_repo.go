@@ -566,3 +566,34 @@ func (r *DriveRepo) PartialUpdateWithTx(ctx context.Context, tx DBTX, id int64, 
 	_, err := tx.Exec(ctx, query, args...)
 	return err
 }
+
+// BackfillDriveTelemetryDriveIDInTx attaches the supplied driveID to every
+// drive_telemetry row whose (vehicle_id, ts) falls within the inclusive
+// [startTs, endTs] window AND whose drive_id is currently NULL.
+//
+// Idempotent: rows already attributed to a different drive are NOT
+// overwritten — the WHERE clause skips them via `drive_id IS NULL`.
+//
+// Per Phase-41 v3.4 commit C4 (PE-blocking issue B5): this MUST be invoked
+// inside the same transaction as DriveRepo.CompleteWithTx so a partial
+// failure cannot leave a drive marked complete with orphaned per-tick rows
+// (the bug reproduced as drive_telemetry.drive_id IS NULL on every row).
+//
+// The startTs/endTs bound MUST be the canonical-leg start (in particular,
+// when a merge has resumed an earlier drive via tryMergeDriveLocked the
+// bound is the ORIGINAL start, not the resume point) so all per-tick
+// readings within the merged window get attributed.
+func (r *DriveRepo) BackfillDriveTelemetryDriveIDInTx(ctx context.Context, tx DBTX, driveID, vehicleID int64, startTs, endTs time.Time) (int64, error) {
+	const sql = `
+		UPDATE drive_telemetry
+		   SET drive_id = $1
+		 WHERE vehicle_id = $2
+		   AND ts >= $3
+		   AND ts <= $4
+		   AND drive_id IS NULL`
+	tag, err := tx.Exec(ctx, sql, driveID, vehicleID, startTs, endTs)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
+}

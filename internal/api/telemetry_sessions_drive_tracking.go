@@ -1106,6 +1106,30 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			distance, duration, endBatteryPct, &maxSpeed, powerMax, insideAvg, outsideAvg); err != nil {
 			return err
 		}
+		// C4 (Phase-41 v3.4): attach unattributed drive_telemetry rows to
+		// this drive in the same tx as the completion update. Window is
+		// [active.StartTime, endTs] which already accounts for drive-merge
+		// (active.StartTime equals the original leg-1 start when merged via
+		// tryMergeDriveLocked). Failure inside this call rolls back the
+		// completion too — partial-failure window must not exist.
+		if affected, err := t.driveRepo.BackfillDriveTelemetryDriveIDInTx(
+			ctx, tx, active.DriveID, vehicleID, active.StartTime, endTs); err != nil {
+			log.Error().Err(err).
+				Int64("drive_id", active.DriveID).
+				Int64("vehicle_id", vehicleID).
+				Time("start_ts", active.StartTime).
+				Time("end_ts", endTs).
+				Msg("telemetry: drive_telemetry drive_id backfill failed; rolling back completion")
+			return err
+		} else if affected > 0 {
+			log.Info().
+				Int64("drive_id", active.DriveID).
+				Int64("vehicle_id", vehicleID).
+				Int64("rows_attributed", affected).
+				Time("start_ts", active.StartTime).
+				Time("end_ts", endTs).
+				Msg("telemetry: backfilled drive_telemetry.drive_id for completed drive")
+		}
 		if len(enhancedFields) > 0 {
 			if err := t.driveRepo.PartialUpdateWithTx(ctx, tx, active.DriveID, enhancedFields); err != nil {
 				return err
