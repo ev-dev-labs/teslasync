@@ -105,6 +105,12 @@ func (h *ChargingHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusInternalServerError, "failed to list charging sessions")
 		return
 	}
+	// Guarantee a JSON array response (`[]`) instead of `null` when there
+	// are no sessions; the SPA charging hooks crash on null when calling
+	// `.map`/`.length` and prefer the canonical empty-array shape.
+	if sessions == nil {
+		sessions = []*models.ChargingSession{}
+	}
 	writeJSON(w, http.StatusOK, sessions)
 }
 

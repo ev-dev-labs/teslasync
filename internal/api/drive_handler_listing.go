@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
 )
 
@@ -28,6 +29,11 @@ func (h *DriveHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to list drives")
 		writeError(w, http.StatusInternalServerError, "failed to list drives")
 		return
+	}
+	// Guarantee a JSON array (`[]`) instead of `null` so SPA hooks that
+	// call `.map`/`.length` on the response don't crash on empty results.
+	if drives == nil {
+		drives = []*models.Drive{}
 	}
 	writeJSON(w, http.StatusOK, drives)
 }
