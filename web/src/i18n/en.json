@@ -3352,7 +3352,10 @@
       "hint": "One-click install",
       "actionCount": "{{count}} actions",
       "install": "Install",
-      "empty": "No preset templates available"
+      "empty": "No preset templates available",
+      "expand": "Click to expand",
+      "collapse": "Click to collapse",
+      "toggleAria": "Show or hide quick start templates"
     },
     "empty": "No automations yet. Create a typed automation to get started!",
     "noMatch": "No automations match your filters"

@@ -30,7 +30,7 @@ import { AutomationCard } from './AutomationCard';
 import { AutomationActivityFeed } from './AutomationActivityFeed';
 import {
   Zap, Plus, Upload, ListFilter, AlertTriangle,
-  Pause, Power, ShieldOff, Sparkles,
+  Pause, Power, ShieldOff, Sparkles, ChevronRight,
 } from 'lucide-react';
 import type { Automation } from '@/api/types';
 import { PresetGallery } from './PresetGallery';
@@ -344,11 +344,24 @@ export default function AutomationsListPage() {
       <FadeIn delay={0.045}>
         <GlassPanel className="p-5">
           <details className="group">
-            <summary className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-[var(--text-primary)] select-none">
-              <Sparkles className="h-4 w-4 text-cyan-400" />
-              {t('automations.presets.title', 'Quick Start Templates')}
+            <summary
+              className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-[var(--text-primary)] select-none rounded-md -m-1 p-1 transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 [&::-webkit-details-marker]:hidden [&::marker]:content-none"
+              aria-label={t('automations.presets.toggleAria', 'Show or hide quick start templates')}
+            >
+              <ChevronRight
+                className="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200 group-open:rotate-90 shrink-0"
+                aria-hidden="true"
+              />
+              <Sparkles className="h-4 w-4 text-cyan-400 shrink-0" aria-hidden="true" />
+              <span>{t('automations.presets.title', 'Quick Start Templates')}</span>
               <span className="text-xs font-normal text-[var(--text-muted)] ml-1">
                 {t('automations.presets.hint', 'One-click install')}
+              </span>
+              <span className="ml-auto text-xs font-normal text-[var(--text-muted)] group-open:hidden">
+                {t('automations.presets.expand', 'Click to expand')}
+              </span>
+              <span className="ml-auto text-xs font-normal text-[var(--text-muted)] hidden group-open:inline">
+                {t('automations.presets.collapse', 'Click to collapse')}
               </span>
             </summary>
             <div className="mt-4">
