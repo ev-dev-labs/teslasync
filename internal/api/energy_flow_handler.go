@@ -28,10 +28,11 @@ import (
 type EnergyFlowHandler struct {
 	db    *database.DB
 	state signal.StateReader
+	live  signal.LiveStateReader
 }
 
-func NewEnergyFlowHandler(db *database.DB, state signal.StateReader) *EnergyFlowHandler {
-	return &EnergyFlowHandler{db: db, state: state}
+func NewEnergyFlowHandler(db *database.DB, state signal.StateReader, live signal.LiveStateReader) *EnergyFlowHandler {
+	return &EnergyFlowHandler{db: db, state: state, live: live}
 }
 
 func (h *EnergyFlowHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +48,7 @@ func (h *EnergyFlowHandler) Get(w http.ResponseWriter, r *http.Request) {
 	var dcPower, acPower, energyRemaining, packVoltage, packCurrent, soc *float64
 	var chargeState *string
 
-	snap, err := h.state.State(ctx, vehicleID, time.Now())
+	snap, err := h.live.LiveState(ctx, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to read energy flow state")
 		writeError(w, http.StatusInternalServerError, "failed to read energy flow state")

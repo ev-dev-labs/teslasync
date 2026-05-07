@@ -33,6 +33,7 @@ import (
 // car as missing from the map.
 type LocationSnapshotHandler struct {
 	state signal.StateReader
+	live  signal.LiveStateReader
 }
 
 // Signal → JSON field mappings for the location timeline + state
@@ -68,8 +69,8 @@ var locationMappings = []signal.FieldMapping{
 	{Signal: "HomelinkNearby", Field: "homelink_nearby"},
 }
 
-func NewLocationSnapshotHandler(state signal.StateReader) *LocationSnapshotHandler {
-	return &LocationSnapshotHandler{state: state}
+func NewLocationSnapshotHandler(state signal.StateReader, live signal.LiveStateReader) *LocationSnapshotHandler {
+	return &LocationSnapshotHandler{state: state, live: live}
 }
 
 // List returns location history from the signal-log change feed via
@@ -126,7 +127,7 @@ func (h *LocationSnapshotHandler) Latest(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	snap, err := h.state.State(r.Context(), vehicleID, time.Now())
+	snap, err := h.live.LiveState(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest location data")
 		writeError(w, http.StatusInternalServerError, "failed to get latest location data")

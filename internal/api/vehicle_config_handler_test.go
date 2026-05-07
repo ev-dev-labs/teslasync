@@ -90,7 +90,7 @@ func TestVehicleConfig_History_CarriesForwardModel(t *testing.T) {
 			return folded, nil
 		},
 	}
-	h := NewVehicleConfigHandler(fake)
+	h := NewVehicleConfigHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	h.List(rec, newVehicleConfigRequest("42", ""))
@@ -203,7 +203,7 @@ func TestVehicleConfig_Latest_UsesNow(t *testing.T) {
 			}, nil
 		},
 	}
-	h := NewVehicleConfigHandler(fake)
+	h := NewVehicleConfigHandler(fake, newTestLiveStateReader(fake))
 
 	before := time.Now()
 	rec := httptest.NewRecorder()
@@ -276,7 +276,7 @@ func TestVehicleConfig_PropagatesError(t *testing.T) {
 				return nil, wantErr
 			},
 		}
-		h := NewVehicleConfigHandler(fake)
+		h := NewVehicleConfigHandler(fake, newTestLiveStateReader(fake))
 
 		rec := httptest.NewRecorder()
 		h.List(rec, newVehicleConfigRequest("42", ""))
@@ -293,7 +293,7 @@ func TestVehicleConfig_PropagatesError(t *testing.T) {
 				return nil, wantErr
 			},
 		}
-		h := NewVehicleConfigHandler(fake)
+		h := NewVehicleConfigHandler(fake, newTestLiveStateReader(fake))
 
 		rec := httptest.NewRecorder()
 		h.Latest(rec, newVehicleConfigRequest("42", "/vehicle-config/latest?vehicle_id=42"))

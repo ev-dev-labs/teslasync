@@ -26,7 +26,7 @@ type ChargingHandler struct {
 	chargingRepo      *database.ChargingRepo
 	charging          chargingByIDFetcher
 	state             signal.StateReader
-	redisCache        *signal.RedisSignalCache
+	live              signal.LiveStateReader
 	forwardAuthHeader string
 	// bulkOverride lets tests substitute the bulk store without standing up a
 	// real *database.ChargingRepo. Always nil in production.
@@ -41,20 +41,15 @@ type chargingByIDFetcher interface {
 	GetByID(ctx context.Context, id int64) (*models.ChargingSession, error)
 }
 
-func NewChargingHandler(db *database.DB, state signal.StateReader) *ChargingHandler {
+func NewChargingHandler(db *database.DB, state signal.StateReader, live signal.LiveStateReader) *ChargingHandler {
 	repo := database.NewChargingRepo(db)
 	return &ChargingHandler{
 		db:           db,
 		chargingRepo: repo,
 		charging:     repo,
 		state:        state,
+		live:         live,
 	}
-}
-
-// WithRedisCache sets the Redis signal cache for computing live in-progress charge values.
-func (h *ChargingHandler) WithRedisCache(cache *signal.RedisSignalCache) *ChargingHandler {
-	h.redisCache = cache
-	return h
 }
 
 // WithForwardAuthHeader wires the auth header used to attribute audit log
@@ -222,21 +217,14 @@ func (h *ChargingHandler) enrichLiveCharge(ctx context.Context, session *models.
 	return nil
 }
 
-// currentSignals returns the latest signal values for a vehicle, preferring
-// Redis (sub-ms) with StateReader.State(time.Now()) as fallback. A
-// StateReader transport failure on the fallback path propagates so the Get
-// handler can respond 500 instead of silently degrading to wrong live
-// numbers (an empty current snapshot would zero-out battery / power without
-// signaling the failure).
+// currentSignals returns the latest signal values for a vehicle via the
+// LiveStateReader boundary (L1 in-process Store + L2 Redis HSET, with
+// signal_log fallback for keys not present in either layer). A reader
+// transport failure propagates so the Get handler can respond 500 instead
+// of silently degrading to wrong live numbers (an empty current snapshot
+// would zero-out battery / power without signaling the failure).
 func (h *ChargingHandler) currentSignals(ctx context.Context, vehicleID int64) (map[string]interface{}, error) {
-	if h.redisCache != nil {
-		snap, err := h.redisCache.GetAll(ctx, vehicleID)
-		if err == nil && snap != nil {
-			return snap, nil
-		}
-		log.Debug().Err(err).Int64("vehicleID", vehicleID).Msg("live charge: Redis unavailable, falling back to signal_log")
-	}
-	state, err := h.state.State(ctx, vehicleID, time.Now().UTC())
+	state, err := h.live.LiveState(ctx, vehicleID)
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/service"
@@ -36,21 +35,23 @@ type ChatbotHandler struct {
 	db         *database.DB
 	vehicleSvc *service.VehicleService
 	state      signal.StateReader
+	live       signal.LiveStateReader
 }
 
-func NewChatbotHandler(db *database.DB, vehicleSvc *service.VehicleService, state signal.StateReader) *ChatbotHandler {
+func NewChatbotHandler(db *database.DB, vehicleSvc *service.VehicleService, state signal.StateReader, live signal.LiveStateReader) *ChatbotHandler {
 	return &ChatbotHandler{
 		chat:       database.NewChatRepo(db),
 		db:         db,
 		vehicleSvc: vehicleSvc,
 		state:      state,
+		live:       live,
 	}
 }
 
 // vehicleLocationLine renders one markdown line summarising the most recent
-// known location for vehicleID. The values are read via
-// signal.StateReader.State at time.Now() so a parked car that has not
-// re-emitted Latitude / Longitude in hours still reports its real
+// known location for vehicleID. The values are read via the layered
+// LiveStateReader (L1+L2 with signal_log fallback) so a parked car that
+// has not re-emitted Latitude / Longitude in hours still reports its real
 // last-known coordinates — the absence of a recent emission must NEVER be
 // confused with "no location" (which would cause the chatbot to falsely
 // answer "I don't know where your car is" for a vehicle in the driveway).
@@ -59,10 +60,10 @@ func NewChatbotHandler(db *database.DB, vehicleSvc *service.VehicleService, stat
 // caller can present a single user-facing failure message instead of
 // silently skipping the row.
 func (h *ChatbotHandler) vehicleLocationLine(ctx context.Context, vehicleID int64, name string) (string, error) {
-	if h.state == nil {
-		return "", errors.New("chatbot: state reader not configured")
+	if h.live == nil {
+		return "", errors.New("chatbot: live state reader not configured")
 	}
-	snap, err := h.state.State(ctx, vehicleID, time.Now())
+	snap, err := h.live.LiveState(ctx, vehicleID)
 	if err != nil {
 		return "", err
 	}
@@ -77,11 +78,11 @@ func (h *ChatbotHandler) vehicleLocationLine(ctx context.Context, vehicleID int6
 // queryVehicleLocation answers "where is my car?" / "show me the location"
 // fleet-wide. For every vehicle owned by the user it derives the most
 // recent Latitude/Longitude pair via vehicleLocationLine (which itself
-// goes through signal.StateReader.State) — never via a raw snapshot-table
+// goes through signal.LiveStateReader) — never via a raw snapshot-table
 // lookup against `positions`, which would miss the last-known coordinates
 // for a vehicle that has been parked beyond the snapshot lookback window.
 func (h *ChatbotHandler) queryVehicleLocation(ctx context.Context) string {
-	if h.vehicleSvc == nil || h.state == nil {
+	if h.vehicleSvc == nil || h.live == nil {
 		return "I couldn't retrieve location info right now."
 	}
 	vehicles, err := h.vehicleSvc.VehicleRepo().GetAll(ctx)

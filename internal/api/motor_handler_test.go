@@ -77,7 +77,7 @@ func TestMotorHandler_History_ChartMode(t *testing.T) {
 			return folded, nil
 		},
 	}
-	h := NewMotorHandler(fake)
+	h := NewMotorHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	h.List(rec, newMotorRequest("42", ""))
@@ -158,7 +158,7 @@ func TestMotorHandler_Latest_UsesNow(t *testing.T) {
 			}, nil
 		},
 	}
-	h := NewMotorHandler(fake)
+	h := NewMotorHandler(fake, newTestLiveStateReader(fake))
 
 	before := time.Now()
 	rec := httptest.NewRecorder()
@@ -232,7 +232,7 @@ func TestMotorHandler_PropagatesError(t *testing.T) {
 				return nil, wantErr
 			},
 		}
-		h := NewMotorHandler(fake)
+		h := NewMotorHandler(fake, newTestLiveStateReader(fake))
 
 		rec := httptest.NewRecorder()
 		h.List(rec, newMotorRequest("42", ""))
@@ -249,7 +249,7 @@ func TestMotorHandler_PropagatesError(t *testing.T) {
 				return nil, wantErr
 			},
 		}
-		h := NewMotorHandler(fake)
+		h := NewMotorHandler(fake, newTestLiveStateReader(fake))
 
 		rec := httptest.NewRecorder()
 		h.Latest(rec, newMotorRequest("42", "/motor/latest?vehicle_id=42"))

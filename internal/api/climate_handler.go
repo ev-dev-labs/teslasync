@@ -25,6 +25,7 @@ import (
 // fixing the "blank cabin temp" rendering bug across long stable runs.
 type ClimateHandler struct {
 	state signal.StateReader
+	live  signal.LiveStateReader
 }
 
 // Signal → JSON field mappings for climate timeline / state projection.
@@ -70,8 +71,8 @@ var climateMappings = []signal.FieldMapping{
 	{Signal: "SeatVentEnabled", Field: "seat_vent_enabled"},
 }
 
-func NewClimateHandler(state signal.StateReader) *ClimateHandler {
-	return &ClimateHandler{state: state}
+func NewClimateHandler(state signal.StateReader, live signal.LiveStateReader) *ClimateHandler {
+	return &ClimateHandler{state: state, live: live}
 }
 
 // List returns climate history from the signal-log change feed via
@@ -125,7 +126,7 @@ func (h *ClimateHandler) Latest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	snap, err := h.state.State(r.Context(), vehicleID, time.Now())
+	snap, err := h.live.LiveState(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest climate data")
 		writeError(w, http.StatusInternalServerError, "failed to get latest climate data")

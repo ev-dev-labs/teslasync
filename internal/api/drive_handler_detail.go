@@ -36,9 +36,10 @@ type driveByIDFetcher interface {
 
 // NewDriveDetail constructs the migrated drive handler. It internally
 // composes the legacy *DriveHandler (so listing / stats / score routes still
-// resolve via promotion) and wires the cold-path StateReader. See ADR-002.
-func NewDriveDetail(db *database.DB, state signal.StateReader) *driveDetailHandler {
-	base := NewDriveHandler(db)
+// resolve via promotion) and wires both the cold-path StateReader and the
+// layered LiveStateReader. See ADR-002 / ADR-007.
+func NewDriveDetail(db *database.DB, state signal.StateReader, live signal.LiveStateReader) *driveDetailHandler {
+	base := NewDriveHandler(db, live)
 	return &driveDetailHandler{
 		DriveHandler: base,
 		state:        state,
@@ -312,21 +313,18 @@ func (h *driveDetailHandler) enrichLiveDrive(ctx context.Context, drive *models.
 	return nil
 }
 
-// currentSignals returns the latest signal values for a vehicle, preferring
-// Redis (sub-ms) with StateReader.State(time.Now()) as fallback. A failed
-// fallback degrades to an empty map rather than blocking the live-drive
+// currentSignals returns the latest signal values for a vehicle via the
+// LiveStateReader boundary (L1 in-process Store + L2 Redis HSET, with
+// signal_log fallback for keys not present in either layer). A reader
+// failure degrades to an empty map rather than blocking the live-drive
 // derivation; the caller treats missing signals as "no current sample".
 func (h *driveDetailHandler) currentSignals(ctx context.Context, vehicleID int64) map[string]interface{} {
-	if h.redisCache != nil {
-		snap, err := h.redisCache.GetAll(ctx, vehicleID)
-		if err == nil && snap != nil {
-			return snap
-		}
-		log.Debug().Err(err).Int64("vehicleID", vehicleID).Msg("live drive: Redis unavailable, falling back to signal_log")
+	if h.live == nil {
+		return map[string]interface{}{}
 	}
-	state, err := h.state.State(ctx, vehicleID, time.Now().UTC())
+	state, err := h.live.LiveState(ctx, vehicleID)
 	if err != nil {
-		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("live drive: failed to get current snapshot from signal_log")
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("live drive: failed to get current snapshot from live signal layer")
 		return map[string]interface{}{}
 	}
 	return stateToSignalMap(state)

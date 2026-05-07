@@ -131,10 +131,31 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	vehicleSvc := service.NewVehicleService(db)
 	energySvc := service.NewEnergyService(db)
 
+	// Layered live-state reader (ADR-002 / ADR-007). Composes the in-process
+	// L1 signal.Store + L2 Redis HSET (LiveSignalStore) with the cold-path
+	// signal_log StateReader as fallback. /latest handlers and any "current
+	// state" code path MUST go through this boundary so that:
+	//   * fields routed to typed snapshot tables (climate, motor, tire
+	//     pressure, media, security, vehicle_config, safety, etc.) are
+	//     served from L1+L2 instead of returning empty maps from
+	//     signal_log; and
+	//   * infrequent fields like Latitude / Longitude on a parked vehicle
+	//     still surface from signal_log when L1+L2 has no entry.
+	// When TelemetryHandler is nil (test wiring), a NoopLiveSignalStore is
+	// used so the StateReader fallback alone serves the request.
+	var liveSignalStore signal.LiveSignalStore
+	if opt.TelemetryHandler != nil {
+		liveSignalStore = opt.TelemetryHandler.GetLiveSignalStore()
+	}
+	if liveSignalStore == nil {
+		liveSignalStore = signal.NewNoopLiveSignalStore()
+	}
+	liveStateReader := signal.MustNewLiveStateReader(liveSignalStore, stateReader)
+
 	// Handlers
 	vehicleHandler := NewVehicleHandler(vehicleSvc, teslaClient, stateReader)
-	driveHandler := NewDriveDetail(db, stateReader)
-	chargingHandler := NewChargingHandler(db, stateReader)
+	driveHandler := NewDriveDetail(db, stateReader, liveStateReader)
+	chargingHandler := NewChargingHandler(db, stateReader, liveStateReader)
 	geofenceHandler := NewGeofenceHandler(db)
 	authHandler := NewAuthHandler(db, teslaClient, opt.Encryptor)
 	// Phase-46 / Prompt 31 — Sudo step-up. Construct the in-memory
@@ -299,10 +320,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if mqttClient != nil {
 		pahoForAlerts = mqttClient.Underlying()
 	}
-	var alertLiveSignalStore signal.LiveSignalStore
-	if opt.TelemetryHandler != nil {
-		alertLiveSignalStore = opt.TelemetryHandler.GetLiveSignalStore()
-	}
+	// alertLiveSignalStore is the same concrete store as liveSignalStore
+	// (above) when TelemetryHandler is set; we keep the local for clarity
+	// at the AlertHandler call site, which has its own narrow contract.
+	alertLiveSignalStore := liveSignalStore
 	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts, alertLiveSignalStore)
 	commandHandler := NewCommandHandler(db, teslaClient)
 	guardHandler := NewGuardHandler(database.NewGuardRepo(db.Pool), database.NewVehicleRepo(db), teslaClient, cfg)
@@ -314,17 +335,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	notificationChannelHandler := NewNotificationChannelHandler(db)
 	notifScheduleHandler := NewNotificationScheduleHandler(db)
 	quietHoursHandler := NewQuietHoursHandler(database.NewQuietHoursRepo(db), cfg)
-	chatbotHandler := NewChatbotHandler(db, vehicleSvc, stateReader)
-	tirePressureHandler := NewTirePressureHandler(stateReader)
-	motorHandler := NewMotorHandler(stateReader)
-	climateHandler := NewClimateHandler(stateReader)
-	securityHandler := NewSecurityHandler(stateReader)
-	chargingTelemetryHandler := NewChargingTelemetryHandler(stateReader)
-	mediaHandler := NewMediaHandler(stateReader)
-	vehicleConfigHandler := NewVehicleConfigHandler(stateReader)
-	locationSnapshotHandler := NewLocationSnapshotHandler(stateReader)
-	safetyHandler := NewSafetyHandler(stateReader)
-	userPreferenceHandler := NewUserPreferenceHandler(stateReader)
+	chatbotHandler := NewChatbotHandler(db, vehicleSvc, stateReader, liveStateReader)
+	tirePressureHandler := NewTirePressureHandler(stateReader, liveStateReader)
+	motorHandler := NewMotorHandler(stateReader, liveStateReader)
+	climateHandler := NewClimateHandler(stateReader, liveStateReader)
+	securityHandler := NewSecurityHandler(stateReader, liveStateReader)
+	chargingTelemetryHandler := NewChargingTelemetryHandler(stateReader, liveStateReader)
+	mediaHandler := NewMediaHandler(stateReader, liveStateReader)
+	vehicleConfigHandler := NewVehicleConfigHandler(stateReader, liveStateReader)
+	locationSnapshotHandler := NewLocationSnapshotHandler(stateReader, liveStateReader)
+	safetyHandler := NewSafetyHandler(stateReader, liveStateReader)
+	userPreferenceHandler := NewUserPreferenceHandler(stateReader, liveStateReader)
 	softwareUpdateHandler := NewSoftwareUpdateHandler(db)
 	tcoHandler := NewTCOHandler(db)
 	sleepHandler := NewSleepHandler(db)
@@ -362,7 +383,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	lifetimeHandler := NewLifetimeHandler(db, eventHub)
 	yearReviewHandler := NewYearReviewHandler(db)
 	chargePlannerHandler := NewChargePlannerHandler(db, teslaClient, cfg, stateReader)
-	energyFlowHandler := NewEnergyFlowHandler(db, stateReader)
+	energyFlowHandler := NewEnergyFlowHandler(db, stateReader, liveStateReader)
 	weeklyDigestHandler := NewWeeklyDigestHandler(db)
 	teslaChargingHistoryHandler := NewTeslaChargingHistoryHandler(teslaClient, db)
 	teslaChargingSessionHandler := NewTeslaChargingSessionHandler(teslaClient, db)
@@ -389,15 +410,20 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	onboardingHandler := NewOnboardingHandler(db, opt.Encryptor)
 	searchHandler := NewSearchHandler(db)
 
-	// Wire Redis signal cache to handlers that read live vehicle state
+	// Wire Redis signal cache to handlers that read live vehicle state.
+	// driveHandler + chargingHandler now read live state via the
+	// LiveStateReader boundary (composed once at the top of NewRouter), so
+	// they no longer need a direct Redis cache injection. The remaining
+	// handlers in this block still read raw Redis for their own narrow
+	// purposes (wake state, command pre-checks, watch streams, range
+	// projection short-cuts, signal-key listing) and keep the legacy
+	// fluent setter until they migrate to LiveStateReader.
 	if opt.CacheStore != nil {
 		if rdb := opt.CacheStore.Underlying(); rdb != nil {
 			redisSignalCache := signal.NewRedisSignalCache(rdb)
 			maintenanceHandler.WithRedisCache(redisSignalCache)
 			commandHandler.WithRedisCache(redisSignalCache)
 			watchHandler.WithRedisCache(redisSignalCache)
-			driveHandler.WithRedisCache(redisSignalCache)
-			chargingHandler.WithRedisCache(redisSignalCache)
 			rangeProjectionHandler.WithRedisCache(redisSignalCache)
 		}
 	}

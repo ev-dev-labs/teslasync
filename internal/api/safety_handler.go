@@ -33,6 +33,7 @@ import (
 // misread as the feature being disabled.
 type SafetyHandler struct {
 	state signal.StateReader
+	live  signal.LiveStateReader
 }
 
 // Signal → JSON field mappings for safety / ADAS timeline + state
@@ -53,8 +54,8 @@ var safetyMappings = []signal.FieldMapping{
 	{Signal: "SelfDrivingMilesSinceReset", Field: "self_driving_miles_since_reset"},
 }
 
-func NewSafetyHandler(state signal.StateReader) *SafetyHandler {
-	return &SafetyHandler{state: state}
+func NewSafetyHandler(state signal.StateReader, live signal.LiveStateReader) *SafetyHandler {
+	return &SafetyHandler{state: state, live: live}
 }
 
 // List returns safety / ADAS history from the signal-log change feed via
@@ -107,7 +108,7 @@ func (h *SafetyHandler) Latest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	snap, err := h.state.State(r.Context(), vehicleID, time.Now())
+	snap, err := h.live.LiveState(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest safety data")
 		writeError(w, http.StatusInternalServerError, "failed to get latest safety data")

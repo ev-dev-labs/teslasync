@@ -77,7 +77,7 @@ func TestLocationSnapshot_History_ChartMode(t *testing.T) {
 			return folded, nil
 		},
 	}
-	h := NewLocationSnapshotHandler(fake)
+	h := NewLocationSnapshotHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	h.List(rec, newLocationRequest("42", ""))
@@ -205,7 +205,7 @@ func TestLocationSnapshot_Latest_ReturnsParkedPosition(t *testing.T) {
 			}, nil
 		},
 	}
-	h := NewLocationSnapshotHandler(fake)
+	h := NewLocationSnapshotHandler(fake, newTestLiveStateReader(fake))
 
 	before := time.Now()
 	rec := httptest.NewRecorder()
@@ -304,7 +304,7 @@ func TestLocationSnapshot_PropagatesError(t *testing.T) {
 				return nil, wantErr
 			},
 		}
-		h := NewLocationSnapshotHandler(fake)
+		h := NewLocationSnapshotHandler(fake, newTestLiveStateReader(fake))
 
 		rec := httptest.NewRecorder()
 		h.List(rec, newLocationRequest("42", ""))
@@ -321,7 +321,7 @@ func TestLocationSnapshot_PropagatesError(t *testing.T) {
 				return nil, wantErr
 			},
 		}
-		h := NewLocationSnapshotHandler(fake)
+		h := NewLocationSnapshotHandler(fake, newTestLiveStateReader(fake))
 
 		rec := httptest.NewRecorder()
 		h.Latest(rec, newLocationRequest("42", "/location/latest?vehicle_id=42"))

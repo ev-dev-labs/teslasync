@@ -68,7 +68,7 @@ func TestTirePressure_History_CarriesForwardPressures(t *testing.T) {
 			return folded, nil
 		},
 	}
-	h := NewTirePressureHandler(fake)
+	h := NewTirePressureHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	h.List(rec, newTirePressureRequest("42", ""))
@@ -146,7 +146,7 @@ func TestTirePressure_Latest_UsesNow(t *testing.T) {
 			}, nil
 		},
 	}
-	h := NewTirePressureHandler(fake)
+	h := NewTirePressureHandler(fake, newTestLiveStateReader(fake))
 
 	before := time.Now()
 	rec := httptest.NewRecorder()
@@ -201,7 +201,7 @@ func TestTirePressure_PropagatesError(t *testing.T) {
 				return nil, wantErr
 			},
 		}
-		h := NewTirePressureHandler(fake)
+		h := NewTirePressureHandler(fake, newTestLiveStateReader(fake))
 
 		rec := httptest.NewRecorder()
 		h.List(rec, newTirePressureRequest("42", ""))
@@ -218,7 +218,7 @@ func TestTirePressure_PropagatesError(t *testing.T) {
 				return nil, wantErr
 			},
 		}
-		h := NewTirePressureHandler(fake)
+		h := NewTirePressureHandler(fake, newTestLiveStateReader(fake))
 
 		rec := httptest.NewRecorder()
 		h.Latest(rec, newTirePressureRequest("42", "/tire-pressure/latest?vehicle_id=42"))

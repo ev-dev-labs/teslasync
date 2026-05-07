@@ -56,7 +56,7 @@ func TestChargingTelemetry_Chart_NoCollapse(t *testing.T) {
 			return rows, nil
 		},
 	}
-	h := NewChargingTelemetryHandler(fake)
+	h := NewChargingTelemetryHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	h.List(rec, newChargingTelemetryRequest("42", ""))
@@ -115,7 +115,7 @@ func TestChargingTelemetry_Latest_UsesNow(t *testing.T) {
 			}, nil
 		},
 	}
-	h := NewChargingTelemetryHandler(fake)
+	h := NewChargingTelemetryHandler(fake, newTestLiveStateReader(fake))
 
 	before := time.Now()
 	rec := httptest.NewRecorder()
@@ -163,7 +163,7 @@ func TestChargingTelemetry_PropagatesError(t *testing.T) {
 			return nil, wantErr
 		},
 	}
-	h := NewChargingTelemetryHandler(fake)
+	h := NewChargingTelemetryHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	h.List(rec, newChargingTelemetryRequest("42", ""))

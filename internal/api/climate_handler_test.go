@@ -62,7 +62,7 @@ func TestClimateHandler_History_CarriesForwardCabinTemp(t *testing.T) {
 			return folded, nil
 		},
 	}
-	h := NewClimateHandler(fake)
+	h := NewClimateHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	h.List(rec, newClimateRequest("42", ""))
@@ -142,7 +142,7 @@ func TestClimateHandler_Latest_UsesNow(t *testing.T) {
 			}, nil
 		},
 	}
-	h := NewClimateHandler(fake)
+	h := NewClimateHandler(fake, newTestLiveStateReader(fake))
 
 	before := time.Now()
 	rec := httptest.NewRecorder()
@@ -201,7 +201,7 @@ func TestClimateHandler_History_PropagatesError(t *testing.T) {
 			return nil, wantErr
 		},
 	}
-	h := NewClimateHandler(fake)
+	h := NewClimateHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	h.List(rec, newClimateRequest("42", ""))
@@ -223,7 +223,7 @@ func TestClimateHandler_Latest_PropagatesError(t *testing.T) {
 			return nil, wantErr
 		},
 	}
-	h := NewClimateHandler(fake)
+	h := NewClimateHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	h.Latest(rec, newClimateRequest("42", "/climate/latest?vehicle_id=42"))

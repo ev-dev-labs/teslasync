@@ -35,6 +35,7 @@ import (
 // be alarming false negatives in a security history view.
 type SecurityHandler struct {
 	state signal.StateReader
+	live  signal.LiveStateReader
 }
 
 // Signal → JSON field mappings for security timeline + state projection.
@@ -66,8 +67,8 @@ var securityMappings = []signal.FieldMapping{
 	{Signal: "PassengerSeatBelt", Field: "passenger_seat_belt"},
 }
 
-func NewSecurityHandler(state signal.StateReader) *SecurityHandler {
-	return &SecurityHandler{state: state}
+func NewSecurityHandler(state signal.StateReader, live signal.LiveStateReader) *SecurityHandler {
+	return &SecurityHandler{state: state, live: live}
 }
 
 // List returns security / access history from the signal-log change feed
@@ -122,7 +123,7 @@ func (h *SecurityHandler) Latest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	snap, err := h.state.State(r.Context(), vehicleID, time.Now())
+	snap, err := h.live.LiveState(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest security data")
 		writeError(w, http.StatusInternalServerError, "failed to get latest security data")

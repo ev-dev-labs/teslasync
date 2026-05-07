@@ -32,6 +32,7 @@ import (
 // carry-forward gap end-to-end.
 type MotorHandler struct {
 	state signal.StateReader
+	live  signal.LiveStateReader
 }
 
 // Signal → JSON field mappings for motor / powertrain timeline + state
@@ -59,8 +60,8 @@ var motorMappings = []signal.FieldMapping{
 	{Signal: "Gear", Field: "shift_state"},
 }
 
-func NewMotorHandler(state signal.StateReader) *MotorHandler {
-	return &MotorHandler{state: state}
+func NewMotorHandler(state signal.StateReader, live signal.LiveStateReader) *MotorHandler {
+	return &MotorHandler{state: state, live: live}
 }
 
 // List returns motor / powertrain history from the signal-log change feed
@@ -113,7 +114,7 @@ func (h *MotorHandler) Latest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	snap, err := h.state.State(r.Context(), vehicleID, time.Now())
+	snap, err := h.live.LiveState(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest motor data")
 		writeError(w, http.StatusInternalServerError, "failed to get latest motor data")
