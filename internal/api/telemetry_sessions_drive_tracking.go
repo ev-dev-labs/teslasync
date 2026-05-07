@@ -908,6 +908,41 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			}
 		}
 
+		// C5 (Phase-41 v3.4 PE-blocking issue B4): if odometer never landed
+		// (codec did not populate Odometer at boundary times — common in
+		// short trips and prod-replay where samples may not align with
+		// drive-end), integrate VehicleSpeed (m/s) over the window from
+		// signal_log. Returned value is METERS (SI canonical) so it MUST go
+		// straight into enhancedFields["distance_m"] — NEVER through the
+		// distance_mi alias path which would multiply by 1609.344 again
+		// inside translatePartialFieldsToSI.
+		//
+		// Local `distance` (miles) is also updated so the ended_status
+		// classifier below (`distance < 0.1` -> "aborted") and the
+		// CompleteWithTx call site (which still receives miles via
+		// completeArgsToSI) reflect the integrated estimate. The
+		// PartialUpdateWithTx that runs INSIDE the same tx after
+		// CompleteWithTx will overwrite distance_m with the SI value, so
+		// no double-conversion occurs in the final stored row.
+		if distance == 0 {
+			meters, intErr := t.signalLogReader.IntegrateDriveDistanceMeters(ctx, vehicleID, active.StartTime, endTs)
+			if intErr != nil {
+				log.Warn().Err(intErr).
+					Int64("vehicle_id", vehicleID).
+					Int64("drive_id", active.DriveID).
+					Msg("telemetry: SI distance integration failed; drive completes with distance=0")
+			} else if meters > 0 {
+				enhancedFields["distance_m"] = meters
+				distance = meters / metersPerMileForFallback
+				log.Info().
+					Int64("vehicle_id", vehicleID).
+					Int64("drive_id", active.DriveID).
+					Float64("integrated_meters", meters).
+					Float64("derived_miles", distance).
+					Msg("telemetry: distance integrated from VehicleSpeed signal_log")
+			}
+		}
+
 		// Battery from snapshots
 		if bl, ok := snapFloat(startSnap, "BatteryLevel"); ok && bl > 0 {
 			enhancedFields["start_battery_pct"] = int16(bl)
@@ -1348,6 +1383,13 @@ func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 // fsm.StateConfirmDuration (30s) plus a small grace so two genuinely
 // separate trips made minutes apart never get merged.
 const driveMergeWindow = 90 * time.Second
+
+// metersPerMileForFallback is the SI-canonical meters→miles conversion
+// constant used by C5's distance integration fallback to back-derive a
+// miles value for the local `distance` variable (which feeds CompleteWithTx
+// and the ended_status classifier). The authoritative SI write goes through
+// enhancedFields["distance_m"] -> PartialUpdateWithTx in the same tx.
+const metersPerMileForFallback = 1609.344
 
 // tryMergeDriveLocked attempts to extend a recently-ended drive instead of
 // creating a new one. Returns true when a merge happened (caller should
