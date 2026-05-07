@@ -24,6 +24,24 @@ BEGIN;
 SET LOCAL lock_timeout      = '30s';
 SET LOCAL statement_timeout = '5min';
 
+-- Materialised views (incl. TimescaleDB continuous aggregates) MUST be dropped
+-- with DROP MATERIALIZED VIEW; DROP TABLE rejects them with
+-- '"X" is not a table'. TimescaleDB additionally requires each continuous
+-- aggregate be dropped in its OWN statement (cannot mix CAGGs with other
+-- objects in a multi-name DROP, raises 'mixing continuous aggregates and
+-- other objects not allowed'). Created by migrations 000052-000054 (mv_*)
+-- and 000142/000147 (cagg_*). Recreated by 000188 with new SI-canonical
+-- schema.
+DROP MATERIALIZED VIEW IF EXISTS cagg_battery_daily    CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS cagg_climate_hourly   CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS cagg_signal_hourly    CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS cagg_fleet_stats      CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS cagg_vehicle_daily    CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS cagg_charging_summary CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS mv_energy_daily       CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS mv_position_hourly    CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS mv_signal_stats       CASCADE;
+
 DROP TABLE IF EXISTS positions, positions_default,
   battery_snapshots, climate_snapshots, motor_snapshots,
   security_events, tire_pressure_snapshots, media_snapshots,
@@ -32,9 +50,6 @@ DROP TABLE IF EXISTS positions, positions_default,
   charging_telemetry, charge_telemetry_readings, drive_telemetry_readings,
   signal_observations, signal_history, signal_catalog, vehicle_live_state,
   vehicle_units, fsm_transitions, fleet_telemetry_subscriptions,
-  mv_energy_daily, mv_position_hourly, mv_signal_stats,
-  cagg_battery_daily, cagg_climate_hourly, cagg_signal_hourly,
-  cagg_fleet_stats, cagg_vehicle_daily, cagg_charging_summary,
   drives, charging_sessions, trips, trip_drives,
   vampire_drain_events, daily_mileage, visited_locations,
   vehicle_states, guard_events
