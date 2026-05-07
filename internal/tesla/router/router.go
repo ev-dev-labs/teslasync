@@ -132,22 +132,54 @@ func New(writers map[Destination]Writer) (*Router, error) {
 }
 
 // Route dispatches a single Atomic to the writer for its routed
-// destination.
+// destination AND, per ADR-001 / Phase-42 intent, also dual-writes
+// the atomic to signal_log so that signal_log remains the universal
+// durable history of every non-drop signal (see ARCHITECTURE.md
+// ADR-001: "All vehicle telemetry data lives in ONE table:
+// signal_log... READ from signal_log for any historical telemetry
+// query"). Hot tables (positions, drive_telemetry, climate_snapshot,
+// etc.) remain the fast-path projection for "current state" reads;
+// signal_log carries the full change feed for charts, point-in-time
+// reconstruction, drive/charge completion, analytics, and replay.
+//
+// The dual-write is the SECONDARY operation; the primary destination
+// remains authoritative for the hot-table contract. Skipped when:
+//
+//   - the primary destination IS signal_log (no double-write);
+//   - the primary destination is unit_history (Setting*Unit atomics
+//     are unit-context only, not telemetry — and Pipeline.Process
+//     short-circuits these before Route in any case, so this branch
+//     is defence in depth);
+//   - no signal_log writer is registered in the writers map (graceful
+//     for tests that intentionally omit it; production wiring in
+//     cmd/teslasync/main.go always registers it).
+//
+// The legacy `also_signal_log: true` flag in routing.yaml entries is
+// preserved for backward compatibility but no longer required — the
+// dual-write is now the default for every hot-routed atomic. The
+// flag still parses (Entry.ToColdLogToo) and tooling/tests may use
+// it for documentation, but the router does not branch on it.
+//
+// Error semantics (both failure paths increment
+// tesla_router_writer_failures_total{dest, reason} independently):
+//
+//   - Primary write failure is returned to the caller verbatim. The
+//     caller (normalize.Pipeline.Process) logs and continues; per
+//     ADR-004 #8 the error MUST NOT propagate to MQTT redelivery.
+//   - Secondary (signal_log) write failure is logged + counted but
+//     NOT returned. signal_log durability is best-effort from the
+//     router's perspective; a transient blip on the cold path must
+//     not mask a successful primary write at the API layer.
+//   - Both failures: primary error is returned (most informative for
+//     the caller); secondary failure is observable only via the
+//     metric.
 //
 // Returns ErrNoRoute (wrapped with the offending Field name) when
-// atomic.Field has no entry in routing.yaml. The caller — typically
-// normalize.Pipeline.Process — is expected to log + count this and
-// continue with the next atomic in the payload.
-//
-// Returns the writer's error verbatim when Write fails. The router
-// has already incremented tesla_router_writer_failures_total{dest,
-// reason} by the time the error is returned, so the caller only
-// needs to log + continue; per ADR-004 #8 the error MUST NOT be
-// propagated up to MQTT redelivery (only codec failures do that).
+// atomic.Field has no entry in routing.yaml. The caller is expected
+// to log + count this and continue with the next atomic.
 //
 // Returns nil for entries whose Destination is DestDrop — that is
-// the explicit "discard" path and is a successful outcome, not an
-// error.
+// the explicit "discard" path and is a successful outcome.
 func (r *Router) Route(ctx context.Context, atomic codec.Atomic) error {
 	e, ok := r.entries[atomic.Field]
 	if !ok {
@@ -164,11 +196,29 @@ func (r *Router) Route(ctx context.Context, atomic codec.Atomic) error {
 		// fails loudly rather than nil-dereferencing.
 		return fmt.Errorf("router: no writer for destination %q (field %s)", e.Destination, atomic.Field)
 	}
-	if err := w.Write(ctx, atomic, e); err != nil {
-		writerFailuresTotal.WithLabelValues(string(e.Destination), classifyError(err)).Inc()
-		return err
+
+	primaryErr := w.Write(ctx, atomic, e)
+	if primaryErr != nil {
+		writerFailuresTotal.WithLabelValues(string(e.Destination), classifyError(primaryErr)).Inc()
 	}
-	return nil
+
+	// Secondary: dual-write to signal_log so cold-path history is
+	// universal. Independent of primary outcome — see godoc above for
+	// the reasoning. Synthesises a fresh Entry with Destination =
+	// DestSignalLog so the signal_log writer's compile-time contract
+	// (dst.Destination == its registered destination) is preserved.
+	if e.Destination != DestSignalLog && e.Destination != DestUnitHistory {
+		if logWriter, ok := r.writers[DestSignalLog]; ok {
+			logEntry := Entry{Field: e.Field, Destination: DestSignalLog}
+			if logErr := logWriter.Write(ctx, atomic, logEntry); logErr != nil {
+				writerFailuresTotal.WithLabelValues(string(DestSignalLog), classifyError(logErr)).Inc()
+				// Best-effort: do not surface to caller. Observable
+				// via the metric. See godoc for reasoning.
+			}
+		}
+	}
+
+	return primaryErr
 }
 
 // classifyError reduces a writer error to a short bounded label for

@@ -54,6 +54,19 @@ func NewDriveDetail(db *database.DB, state signal.StateReader, live signal.LiveS
 // NOTE: per-row "power" is NOT mapped from a Tesla signal — Fleet Telemetry
 // does not emit PackPower. Power is computed from PackVoltage × PackCurrent
 // by derivePowerKw() AFTER projection. See enrichLiveDrive (same formula).
+//
+// Elevation is intentionally absent: Tesla Fleet Telemetry does not emit
+// an Elevation atomic (see internal/tesla/codec/flatten.go and the
+// protomodel signal catalogue). Re-adding the mapping would silently
+// produce a flat-zero chart and mislead operators into expecting data
+// that does not flow.
+//
+// Latitude/Longitude use the codec's compound-flatten names
+// (LocationLatitude / LocationLongitude). The bare "Latitude" / "Longitude"
+// names from the legacy ingest path no longer flow through the Phase-42
+// pipeline (see internal/tesla/codec/flatten.go:11-23 — flattenLocation
+// emits "{fieldName}Latitude" prefixed with the source field, and the
+// Location compound's source field is "Location").
 var driveTelemetryFieldMappings = []signal.FieldMapping{
 	{Signal: "VehicleSpeed", Field: "speed"},
 	{Signal: "PackCurrent", Field: "pack_current"},
@@ -64,7 +77,6 @@ var driveTelemetryFieldMappings = []signal.FieldMapping{
 	{Signal: "IdealBatteryRange", Field: "ideal_range"},
 	{Signal: "RatedRange", Field: "rated_range"},
 	{Signal: "EstBatteryRange", Field: "est_range"},
-	{Signal: "Elevation", Field: "elevation"},
 	{Signal: "InsideTemp", Field: "inside_temp"},
 	{Signal: "OutsideTemp", Field: "outside_temp"},
 	{Signal: "HvacLeftTemperatureRequest", Field: "driver_temp"},
@@ -74,8 +86,8 @@ var driveTelemetryFieldMappings = []signal.FieldMapping{
 	{Signal: "TpmsPressureFr", Field: "tire_pressure_fr"},
 	{Signal: "TpmsPressureRl", Field: "tire_pressure_rl"},
 	{Signal: "TpmsPressureRr", Field: "tire_pressure_rr"},
-	{Signal: "Latitude", Field: "latitude"},
-	{Signal: "Longitude", Field: "longitude"},
+	{Signal: "LocationLatitude", Field: "latitude"},
+	{Signal: "LocationLongitude", Field: "longitude"},
 }
 
 // derivePowerKw populates a "power" field on each telemetry row by
@@ -98,12 +110,21 @@ func derivePowerKw(rows []map[string]interface{}) {
 
 // drivePositionFieldMappings projects the signal_log change feed into the
 // legacy Position model JSON tags so the frontend contract is unchanged.
+//
+// LocationLatitude / LocationLongitude are the codec's compound-flatten
+// names (see flatten.go:11-23 — flattenLocation prefixes children with
+// the source field name, and the Location compound's source field is
+// "Location"). VehicleSpeed and Elevation are kept here as the legacy
+// position projection contract — speed populates Position.SpeedMph (the
+// position track's per-fix speed); Elevation is currently a no-op in
+// Phase-42 (no codec atomic emits it) but remains in the mapping so a
+// future Elevation source (e.g. derived from positions writer's GPS
+// fix) can populate it without changing the handler.
 var drivePositionFieldMappings = []signal.FieldMapping{
-	{Signal: "Latitude", Field: "latitude"},
-	{Signal: "Longitude", Field: "longitude"},
+	{Signal: "LocationLatitude", Field: "latitude"},
+	{Signal: "LocationLongitude", Field: "longitude"},
 	{Signal: "GpsHeading", Field: "heading"},
 	{Signal: "VehicleSpeed", Field: "speed_mph"},
-	{Signal: "Elevation", Field: "elevation_m"},
 }
 
 // timelineRowsToFlat converts ordered TimelineRows into the legacy
@@ -288,10 +309,14 @@ func (h *driveDetailHandler) enrichLiveDrive(ctx context.Context, drive *models.
 	}
 
 	// Current position as end position.
-	if lat, ok := signalFloat(currentSnap, "Latitude"); ok {
+	// LocationLatitude / LocationLongitude are the codec's compound-
+	// flatten names (Phase-42); the legacy "Latitude" / "Longitude"
+	// reads no longer match what the L1 signal store carries because
+	// codec/flatten.go:18-22 emits the prefixed names.
+	if lat, ok := signalFloat(currentSnap, "LocationLatitude"); ok {
 		drive.EndLat = &lat
 	}
-	if lon, ok := signalFloat(currentSnap, "Longitude"); ok {
+	if lon, ok := signalFloat(currentSnap, "LocationLongitude"); ok {
 		drive.EndLon = &lon
 	}
 

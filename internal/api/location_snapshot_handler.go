@@ -41,12 +41,12 @@ type LocationSnapshotHandler struct {
 // (snake_case; the frontend camelCaseKeys transform produces matching
 // camelCase keys on the wire).
 var locationMappings = []signal.FieldMapping{
-	// Position & GPS
-	{Signal: "Latitude", Field: "latitude"},
-	{Signal: "Longitude", Field: "longitude"},
+	// Position & GPS — Phase-42 codec compound-flatten names. Elevation
+	// is intentionally absent (Tesla Fleet Telemetry does not emit it).
+	{Signal: "LocationLatitude", Field: "latitude"},
+	{Signal: "LocationLongitude", Field: "longitude"},
 	{Signal: "GpsHeading", Field: "heading"},
 	{Signal: "GpsState", Field: "gps_state"},
-	{Signal: "Elevation", Field: "elevation_m"},
 	{Signal: "VehicleSpeed", Field: "speed_mph"},
 	// Navigation & route
 	{Signal: "DestinationName", Field: "destination_name"},

@@ -434,6 +434,11 @@ func (t *TelemetrySessionTracker) updateActiveDriveLocked(ctx context.Context, a
 		if odo, ok := signalFloat(signals, "Odometer"); ok {
 			active.StartOdometer = floatPtr(odo)
 			active.LastOdometer = floatPtr(odo)
+			// C7 (Phase-41 v3.4): persist SI-canonical start odometer to
+			// the drives row so the boundary value survives even if the
+			// snapshot path can't recover it at completion time. Mirrors
+			// the start_battery_pct / start_lat backfill pattern below.
+			startBackfill["start_odometer_m"] = odo
 		}
 	}
 	if active.StartSoc == nil {
@@ -779,12 +784,30 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	}
 	maxSpeed := active.MaxSpeed
 
-	// Compute distance from odometer
+	// Compute distance from odometer.
+	//
+	// C6 (Phase-41 v3.4): post-Phase-42 the codec emits Odometer in SI
+	// canonical meters (after normalize.toSI applies the unit-history
+	// distance unit). The in-memory active.{Start,Last}Odometer are
+	// populated from `signalFloat(signals, "Odometer")` and `signals`
+	// are the post-toSI atomics, so the subtraction yields METERS, not
+	// miles. Local `distance` is back-derived to miles for the legacy
+	// CompleteWithTx interface (which still accepts miles via
+	// completeArgsToSI -> distance_mi * 1609.344) and the ended_status
+	// classifier; the SI-canonical meters value is forwarded through
+	// enhancedFields["distance_m"] in the same tx so PartialUpdateWithTx
+	// overwrites the back-converted distance_m with the correct value.
+	// distanceMeters carries the SI value across the enhancedFields
+	// init point (line ~826) where it can be inserted into the map.
 	var distance float64
+	var distanceMeters float64
 	if active.StartOdometer != nil && active.LastOdometer != nil {
-		distance = *active.LastOdometer - *active.StartOdometer
-		if distance < 0 {
-			distance = 0
+		distanceMeters = *active.LastOdometer - *active.StartOdometer
+		if distanceMeters < 0 {
+			distanceMeters = 0
+		}
+		if distanceMeters > 0 {
+			distance = distanceMeters / metersPerMileForFallback
 		}
 	}
 
@@ -824,8 +847,37 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 
 	// Build enhanced fields map (only columns in drivePartialAllowed)
 	enhancedFields := map[string]interface{}{}
+	// C6 (Phase-41 v3.4): forward SI-canonical odometer-derived distance
+	// in meters through the partial-update path (drivePartialAllowed
+	// permits distance_m as direct passthrough). PartialUpdateWithTx
+	// runs INSIDE the same tx after CompleteWithTx so the SI value
+	// authoritatively overwrites the back-converted distance from
+	// completeArgsToSI(distance_mi). Snapshot-odometer (line ~898) and
+	// C5 integration fallback (line ~927) further overwrite this when
+	// they yield a positive value.
+	if distanceMeters > 0 {
+		enhancedFields["distance_m"] = distanceMeters
+	}
+	// C7 (Phase-41 v3.4): persist SI-canonical drive boundary odometer
+	// (meters) when known. drivePartialAllowed now passes start_odometer_m
+	// and end_odometer_m through translatePartialFieldsToSI without
+	// conversion. Snapshot path below may overwrite with more accurate
+	// boundary values reconstructed from signal_log.
+	if active.StartOdometer != nil {
+		enhancedFields["start_odometer_m"] = *active.StartOdometer
+	}
+	if active.LastOdometer != nil {
+		enhancedFields["end_odometer_m"] = *active.LastOdometer
+	}
 	if speedAvg != nil {
-		enhancedFields["avg_speed_mph"] = *speedAvg
+		// C7 (Phase-41 v3.4): speedAvg is m/s post-Phase-42 codec. Writing
+		// to avg_speed_mph would trigger translatePartialFieldsToSI to
+		// multiply by mpsPerMph (0.44704) producing a 0.44× understatement.
+		// Write SI-direct via avg_speed_mps which the SI passthrough in
+		// translate now permits. signal_log-derived avg below (~line 1050)
+		// overwrites this with a more accurate time-weighted figure when
+		// the reader is wired.
+		enhancedFields["avg_speed_mps"] = *speedAvg
 	}
 	if active.StartLatitude != nil {
 		enhancedFields["start_lat"] = *active.StartLatitude
@@ -890,21 +942,43 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			endSnap = map[string]interface{}{}
 		}
 
-		// Unit preferences at start and end (may differ if user changed mid-drive)
-		startDistUnit := units.GetUnitFromSnapshot(startSnap, "SettingDistanceUnit")
-		endDistUnit := units.GetUnitFromSnapshot(endSnap, "SettingDistanceUnit")
+		// Unit preferences at start and end (may differ if user changed mid-drive).
+		// startDistUnit dropped per C6: snapshot Odometer is now SI meters
+		// (post-Phase-42 normalize.toSI) so no per-snapshot unit lookup is
+		// needed for the odometer-difference path.
+		// endDistUnit dropped per C7: signal_log stores SI m/s so the speed
+		// aggregates are written SI-direct via avg_speed_mps/max_speed_mps
+		// and need no per-snapshot unit lookup either.
 		endTempUnit := units.GetUnitFromSnapshot(endSnap, "SettingTemperatureUnit")
 
-		// Distance from odometer (unit-aware, normalized to miles)
+		// Distance from snapshot odometer.
+		//
+		// C6 (Phase-41 v3.4): post-Phase-42 the codec emits Odometer in SI
+		// canonical meters via normalize.toSI; signal_log stores SI; the
+		// state.State() snapshot reconstructs from signal_log so
+		// snapFloat(snap, "Odometer") returns METERS, not the wire-format
+		// raw value. units.NormalizeDistance is therefore wrong here — it
+		// would treat the meters value as miles (DistMiles default) and
+		// pass it through unchanged, leaving distance in meters but the
+		// downstream code (CompleteWithTx via completeArgsToSI's mi→m
+		// conversion) treating it as miles, producing a 1609x overstatement.
+		// Drop the NormalizeDistance call and forward the SI meters value
+		// straight to enhancedFields["distance_m"]; back-derive miles for
+		// the legacy completeArgsToSI/ended_status interface.
 		if startOdoRaw, ok := snapFloat(startSnap, "Odometer"); ok {
 			if endOdoRaw, ok := snapFloat(endSnap, "Odometer"); ok {
-				startOdo := units.NormalizeDistance(startOdoRaw, startDistUnit)
-				endOdo := units.NormalizeDistance(endOdoRaw, endDistUnit)
-				sDist := endOdo - startOdo
-				if sDist > 0 {
-					distance = sDist
-					enhancedFields["distance_mi"] = distance
+				sDistMeters := endOdoRaw - startOdoRaw
+				if sDistMeters > 0 {
+					distanceMeters = sDistMeters
+					enhancedFields["distance_m"] = sDistMeters
+					distance = sDistMeters / metersPerMileForFallback
 				}
+				// C7 (Phase-41 v3.4): persist boundary odometer regardless
+				// of distance sign — even if the snapshot delta is negative
+				// (rare reorder edge case) the boundary values themselves
+				// are still authoritative for display.
+				enhancedFields["start_odometer_m"] = startOdoRaw
+				enhancedFields["end_odometer_m"] = endOdoRaw
 			}
 		}
 
@@ -951,24 +1025,27 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			endBattery = int(bl)
 		}
 
-		// Position from snapshots (fill if missing)
+		// Position from snapshots (fill if missing).
+		// Dual-key tolerance: Phase-42 codec emits LocationLatitude /
+		// LocationLongitude (codec/flatten.go:18-22); legacy JSON ingest
+		// still emits "Latitude" / "Longitude". snapFloat accepts both.
 		if _, exists := enhancedFields["start_lat"]; !exists {
-			if lat, ok := snapFloat(startSnap, "Latitude"); ok {
+			if lat, ok := snapFloat(startSnap, "LocationLatitude", "Latitude"); ok {
 				enhancedFields["start_lat"] = lat
 			}
 		}
 		if _, exists := enhancedFields["start_lon"]; !exists {
-			if lon, ok := snapFloat(startSnap, "Longitude"); ok {
+			if lon, ok := snapFloat(startSnap, "LocationLongitude", "Longitude"); ok {
 				enhancedFields["start_lon"] = lon
 			}
 		}
 		if _, exists := enhancedFields["end_lat"]; !exists {
-			if lat, ok := snapFloat(endSnap, "Latitude"); ok {
+			if lat, ok := snapFloat(endSnap, "LocationLatitude", "Latitude"); ok {
 				enhancedFields["end_lat"] = lat
 			}
 		}
 		if _, exists := enhancedFields["end_lon"]; !exists {
-			if lon, ok := snapFloat(endSnap, "Longitude"); ok {
+			if lon, ok := snapFloat(endSnap, "LocationLongitude", "Longitude"); ok {
 				enhancedFields["end_lon"] = lon
 			}
 		}
@@ -997,15 +1074,21 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 
 		// Aggregates from signal_log during the drive window
 		slAvgSpeed, slMaxSpeed, slAvgPower := t.signalLogReader.DriveAggregates(ctx, vehicleID, active.StartTime, endTs)
+		// C7 (Phase-41 v3.4): signal_log stores SI (m/s) post-Phase-42
+		// codec. Writing to *_mph would trigger translatePartialFieldsToSI
+		// to multiply by mpsPerMph (0.44704) producing a 0.44× understatement
+		// of both avg and max speed. Write SI-direct via *_mps which the
+		// SI passthrough in translate now permits. endDistUnit is no longer
+		// consulted because the signal_log values are unit-canonical SI.
 		if slAvgSpeed > 0 {
-			// Normalize speed: signal_log stores raw values in car's unit
-			normalizedAvg := units.NormalizeSpeed(slAvgSpeed, endDistUnit)
-			enhancedFields["avg_speed_mph"] = normalizedAvg
+			enhancedFields["avg_speed_mps"] = slAvgSpeed
 		}
 		if slMaxSpeed > 0 {
-			normalizedMax := units.NormalizeSpeed(slMaxSpeed, endDistUnit)
-			enhancedFields["max_speed_mph"] = normalizedMax
-			maxSpeed = normalizedMax
+			enhancedFields["max_speed_mps"] = slMaxSpeed
+			// maxSpeed (legacy m/s passed to CompleteWithTx as if mph)
+			// is left at zero so completeArgsToSI's max_speed_mph * 0.44704
+			// yields zero. PartialUpdateWithTx then writes the correct
+			// SI-direct value. Avoids the historical mph↔mps double convert.
 		}
 		if slAvgPower != 0 {
 			enhancedFields["avg_power_kw"] = math.Abs(slAvgPower)
@@ -1048,34 +1131,47 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			endSnapshot = map[string]interface{}{}
 		}
 
-		// Fill missing start position
+		// Fill missing start position. Dual-key tolerance — see
+		// codec/flatten.go for the Phase-42 LocationLatitude name.
 		if _, exists := enhancedFields["start_lat"]; !exists {
-			if v, ok := startSnapshot["Latitude"]; ok {
-				if lat, fOk := v.(float64); fOk {
-					enhancedFields["start_lat"] = lat
+			for _, k := range []string{"LocationLatitude", "Latitude"} {
+				if v, ok := startSnapshot[k]; ok {
+					if lat, fOk := v.(float64); fOk {
+						enhancedFields["start_lat"] = lat
+						break
+					}
 				}
 			}
 		}
 		if _, exists := enhancedFields["start_lon"]; !exists {
-			if v, ok := startSnapshot["Longitude"]; ok {
-				if lon, fOk := v.(float64); fOk {
-					enhancedFields["start_lon"] = lon
+			for _, k := range []string{"LocationLongitude", "Longitude"} {
+				if v, ok := startSnapshot[k]; ok {
+					if lon, fOk := v.(float64); fOk {
+						enhancedFields["start_lon"] = lon
+						break
+					}
 				}
 			}
 		}
 
 		// Fill missing end position
 		if _, exists := enhancedFields["end_lat"]; !exists {
-			if v, ok := endSnapshot["Latitude"]; ok {
-				if lat, fOk := v.(float64); fOk {
-					enhancedFields["end_lat"] = lat
+			for _, k := range []string{"LocationLatitude", "Latitude"} {
+				if v, ok := endSnapshot[k]; ok {
+					if lat, fOk := v.(float64); fOk {
+						enhancedFields["end_lat"] = lat
+						break
+					}
 				}
 			}
 		}
 		if _, exists := enhancedFields["end_lon"]; !exists {
-			if v, ok := endSnapshot["Longitude"]; ok {
-				if lon, fOk := v.(float64); fOk {
-					enhancedFields["end_lon"] = lon
+			for _, k := range []string{"LocationLongitude", "Longitude"} {
+				if v, ok := endSnapshot[k]; ok {
+					if lon, fOk := v.(float64); fOk {
+						enhancedFields["end_lon"] = lon
+						break
+					}
 				}
 			}
 		}
@@ -1249,7 +1345,12 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 			backfill["end_battery_pct"] = int16(endPos.BatteryLvl)
 		}
 		if active.LastOdometer == nil && endPos.Odometer > 0 {
-			// Recompute distance if we now have both start and end odometer
+			// Recompute distance if we now have both start and end odometer.
+			// TODO(C6 follow-up): once the positions writer lands and supplies
+			// SI-canonical Odometer values, mirror the meters→miles conversion
+			// + distance_m partial-update done in completeDriveLocked. Today
+			// this branch is unreachable (positions table is empty pending
+			// the writer) so the legacy miles assumption is harmless.
 			startOdo := 0.0
 			if active.StartOdometer != nil {
 				startOdo = *active.StartOdometer

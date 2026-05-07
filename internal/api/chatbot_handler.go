@@ -67,8 +67,18 @@ func (h *ChatbotHandler) vehicleLocationLine(ctx context.Context, vehicleID int6
 	if err != nil {
 		return "", err
 	}
-	lat, latOk := toFloat64(snap["Latitude"])
-	lon, lonOk := toFloat64(snap["Longitude"])
+	// Phase-42 codec emits LocationLatitude / LocationLongitude
+	// (codec/flatten.go); legacy ingest path uses bare names. Try the
+	// codec name first and fall back so both paths work during the
+	// migration.
+	lat, latOk := toFloat64(snap["LocationLatitude"])
+	if !latOk {
+		lat, latOk = toFloat64(snap["Latitude"])
+	}
+	lon, lonOk := toFloat64(snap["LocationLongitude"])
+	if !lonOk {
+		lon, lonOk = toFloat64(snap["Longitude"])
+	}
 	if !latOk || !lonOk {
 		return fmt.Sprintf("- **%s**: Location unknown", name), nil
 	}

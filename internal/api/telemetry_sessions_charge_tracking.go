@@ -479,14 +479,15 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			}
 		}
 
-		// Location from snapshots (for geocoding — not written to DB)
+		// Location from snapshots (for geocoding — not written to DB).
+		// Dual-key tolerance — Phase-42 codec emits LocationLatitude.
 		if active.Latitude == nil {
-			if lat, ok := snapFloat(endSnap, "Latitude"); ok {
+			if lat, ok := snapFloat(endSnap, "LocationLatitude", "Latitude"); ok {
 				active.Latitude = floatPtr(lat)
 			}
 		}
 		if active.Longitude == nil {
-			if lon, ok := snapFloat(endSnap, "Longitude"); ok {
+			if lon, ok := snapFloat(endSnap, "LocationLongitude", "Longitude"); ok {
 				active.Longitude = floatPtr(lon)
 			}
 		}
@@ -543,18 +544,25 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 					Msg("telemetry: state.State (history-writer fallback) charge end snapshot failed")
 			} else {
 				endSnapshot := stateToLegacyMap(endSnap)
-				// Fill missing location (for geocoding — not written to DB)
+				// Fill missing location (for geocoding — not written to DB).
+				// Dual-key tolerance — Phase-42 codec emits LocationLatitude.
 				if active.Latitude == nil {
-					if v, ok := endSnapshot["Latitude"]; ok {
-						if f, fOk := v.(float64); fOk {
-							active.Latitude = &f
+					for _, k := range []string{"LocationLatitude", "Latitude"} {
+						if v, ok := endSnapshot[k]; ok {
+							if f, fOk := v.(float64); fOk {
+								active.Latitude = &f
+								break
+							}
 						}
 					}
 				}
 				if active.Longitude == nil {
-					if v, ok := endSnapshot["Longitude"]; ok {
-						if f, fOk := v.(float64); fOk {
-							active.Longitude = &f
+					for _, k := range []string{"LocationLongitude", "Longitude"} {
+						if v, ok := endSnapshot[k]; ok {
+							if f, fOk := v.(float64); fOk {
+								active.Longitude = &f
+								break
+							}
 						}
 					}
 				}

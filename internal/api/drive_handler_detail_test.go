@@ -418,11 +418,15 @@ func TestDriveDetail_Telemetry_DerivesPowerKw(t *testing.T) {
 // these mappings the Odometer From→To, Range Start→End, fan/climate, and
 // driver/passenger temperature panels render blank even though the drive
 // has valid telemetry.
+//
+// Phase-42 / PA package note: "elevation" intentionally NOT required —
+// Tesla Fleet Telemetry does not emit elevation; the codec has no
+// Elevation field. The Drive Detail page tolerates its absence.
 func TestDriveDetail_Telemetry_FieldMappingsCoverPageFields(t *testing.T) {
 	required := []string{
 		"speed", "pack_current", "pack_voltage", "battery_level",
 		"soc", "odometer", "ideal_range", "rated_range", "est_range",
-		"elevation", "inside_temp", "outside_temp",
+		"inside_temp", "outside_temp",
 		"driver_temp", "passenger_temp", "fan_status",
 		"tire_pressure_fl", "tire_pressure_fr", "tire_pressure_rl", "tire_pressure_rr",
 		"latitude", "longitude",

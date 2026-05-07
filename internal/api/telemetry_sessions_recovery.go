@@ -358,17 +358,18 @@ func (t *TelemetrySessionTracker) completeRecoveredDrive(ctx context.Context, dr
 		endBattery = int(bl)
 	}
 
-	// Position from snapshots
-	if lat, ok := snapFloat(startSnap, "Latitude"); ok {
+	// Position from snapshots. Dual-key tolerance for Phase-42
+	// codec ("LocationLatitude") + legacy ingest ("Latitude").
+	if lat, ok := snapFloat(startSnap, "LocationLatitude", "Latitude"); ok {
 		enhancedFields["start_lat"] = lat
 	}
-	if lon, ok := snapFloat(startSnap, "Longitude"); ok {
+	if lon, ok := snapFloat(startSnap, "LocationLongitude", "Longitude"); ok {
 		enhancedFields["start_lon"] = lon
 	}
-	if lat, ok := snapFloat(endSnap, "Latitude"); ok {
+	if lat, ok := snapFloat(endSnap, "LocationLatitude", "Latitude"); ok {
 		enhancedFields["end_lat"] = lat
 	}
-	if lon, ok := snapFloat(endSnap, "Longitude"); ok {
+	if lon, ok := snapFloat(endSnap, "LocationLongitude", "Longitude"); ok {
 		enhancedFields["end_lon"] = lon
 	}
 
@@ -510,10 +511,10 @@ func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, c
 	}
 
 	// Location from snapshots
-	if lat, ok := snapFloat(endSnap, "Latitude"); ok {
+	if lat, ok := snapFloat(endSnap, "LocationLatitude", "Latitude"); ok {
 		enhancedFields["latitude"] = lat
 	}
-	if lon, ok := snapFloat(endSnap, "Longitude"); ok {
+	if lon, ok := snapFloat(endSnap, "LocationLongitude", "Longitude"); ok {
 		enhancedFields["longitude"] = lon
 	}
 

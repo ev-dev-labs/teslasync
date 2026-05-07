@@ -345,6 +345,18 @@ func topReasons(m map[string]int, n int) []reasonCount {
 
 // buildCSVPayload converts a group of csvRows that share a timestamp into
 // an ftproto.Payload, dispatching each signal's value via SignalMeta.ValueKind.
+//
+// SPECIAL CASE — Tesla Location compound: prod CSVs captured pre-Phase-42
+// store the Tesla Location compound DECOMPOSED into bare scalar
+// "Latitude" / "Longitude" rows (legacy ingest path). The new codec has
+// only Field_Location (compound, ID 21) — there is no Field_Latitude or
+// Field_Longitude enum. This function therefore detects paired
+// Latitude+Longitude rows in the same group and emits a single
+// Field_Location protobuf datum carrying a LocationValue{Latitude,Longitude}.
+// Codec-side flatten then re-emits LocationLatitude / LocationLongitude
+// scalars into signal.Store, the router dual-writes them to signal_log,
+// and the drive-detail handler reads them via state.Timeline. End-to-end
+// the result is identical to a live Tesla emitting the compound directly.
 func buildCSVPayload(vin string, group []csvRow) (*ftproto.Payload, replayStats) {
 	stats := replayStats{
 		skipReasons:    map[string]int{},
@@ -354,8 +366,55 @@ func buildCSVPayload(vin string, group []csvRow) (*ftproto.Payload, replayStats)
 		return nil, stats
 	}
 
+	// First pass: detect Latitude / Longitude rows so we can pair them
+	// into a Field_Location compound. We do this BEFORE the per-row
+	// dispatch loop because the bare scalar names have no proto enum
+	// of their own and would otherwise be skipped with "no Field_value".
+	var latRow, lonRow *csvRow
+	for i := range group {
+		switch group[i].signal {
+		case "Latitude":
+			latRow = &group[i]
+		case "Longitude":
+			lonRow = &group[i]
+		}
+	}
+
 	data := make([]*ftproto.Datum, 0, len(group))
+
+	// Emit Field_Location once if we have both halves of the pair.
+	if latRow != nil && lonRow != nil {
+		lat, latErr := strconv.ParseFloat(latRow.valueNum, 64)
+		lon, lonErr := strconv.ParseFloat(lonRow.valueNum, 64)
+		if latErr == nil && lonErr == nil {
+			data = append(data, &ftproto.Datum{
+				Key: ftproto.Field_Location,
+				Value: &ftproto.Value{Value: &ftproto.Value_LocationValue{
+					LocationValue: &ftproto.LocationValue{
+						Latitude:  lat,
+						Longitude: lon,
+					},
+				}},
+			})
+			stats.datumsEncoded++
+		} else {
+			stats.datumsSkipped++
+			stats.skipReasons["location pair: parse error"]++
+		}
+	} else if latRow != nil || lonRow != nil {
+		// Half a pair — can't synthesise the compound. Count it so it
+		// shows up in the replay summary; the next group containing a
+		// matching half will succeed.
+		stats.datumsSkipped++
+		stats.skipReasons["location: half-pair (lat or lon only in group)"]++
+	}
+
 	for _, row := range group {
+		// Skip the bare scalars — already consumed above (or were
+		// half-pairs that have no representable proto enum).
+		if row.signal == "Latitude" || row.signal == "Longitude" {
+			continue
+		}
 		meta, ok := protomodel.SignalsByName[row.signal]
 		if !ok {
 			stats.datumsSkipped++

@@ -178,13 +178,15 @@ func TestLocationSnapshot_Latest_ReturnsParkedPosition(t *testing.T) {
 			return signal.State{
 				// Stable parked coordinates forward-folded from an
 				// emission hours ago — the canonical reason this
-				// migration matters.
-				"Latitude":    37.7749,
-				"Longitude":   -122.4194,
-				"GpsHeading":  90.0,
-				"Elevation":   16.0,
-				"GpsState":    "Stopped",
-				"VehicleSpeed": 0.0,
+				// migration matters. Phase-42 codec emits the compound
+				// flatten names LocationLatitude / LocationLongitude
+				// (codec/flatten.go); legacy ingest path emits the bare
+				// names — both are projected to the same JSON field.
+				"LocationLatitude":  37.7749,
+				"LocationLongitude": -122.4194,
+				"GpsHeading":        90.0,
+				"GpsState":          "Stopped",
+				"VehicleSpeed":      0.0,
 				// Compound-unpacked destination coordinates (Prompt 05
 				// unpacks Tesla's Location compound into these scalars).
 				"DestinationLatitude":  40.7128,
@@ -233,10 +235,11 @@ func TestLocationSnapshot_Latest_ReturnsParkedPosition(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatalf("decode: %v; body=%s", err, rec.Body.String())
 	}
-	// CRITICAL location contract: lat / lon / heading / elevation
-	// MUST round-trip even when forward-folded from an emission hours
-	// ago. A NULL or missing lat/lon here would render the dashboard
-	// map pin as missing and break geofence checks.
+	// CRITICAL location contract: lat / lon / heading MUST round-trip
+	// even when forward-folded from an emission hours ago. A NULL or
+	// missing lat/lon here would render the dashboard map pin as
+	// missing and break geofence checks. Elevation is deliberately
+	// absent — Tesla Fleet Telemetry does not emit it.
 	if v, ok := got["latitude"].(float64); !ok || v != 37.7749 {
 		t.Fatalf("latitude = %#v, want 37.7749 (forward-folded parked position)", got["latitude"])
 	}
@@ -246,8 +249,8 @@ func TestLocationSnapshot_Latest_ReturnsParkedPosition(t *testing.T) {
 	if v, ok := got["heading"].(float64); !ok || v != 90.0 {
 		t.Fatalf("heading = %#v, want 90.0 (forward-folded parked position)", got["heading"])
 	}
-	if v, ok := got["elevation_m"].(float64); !ok || v != 16.0 {
-		t.Fatalf("elevation_m = %#v, want 16.0 (forward-folded parked position)", got["elevation_m"])
+	if _, present := got["elevation_m"]; present {
+		t.Fatalf("elevation_m unexpectedly present in response; codec does not emit Elevation; got=%v", got["elevation_m"])
 	}
 	if v, ok := got["gps_state"].(string); !ok || v != "Stopped" {
 		t.Fatalf("gps_state = %#v, want \"Stopped\"", got["gps_state"])
@@ -281,11 +284,11 @@ func TestLocationSnapshot_Latest_ReturnsParkedPosition(t *testing.T) {
 	}
 	// Raw signal names (the Signal side of locationMappings) must NOT
 	// leak into the response — only the projected Field names.
-	if _, present := got["Latitude"]; present {
-		t.Fatalf("raw signal Latitude unexpectedly present in response; got=%v", got)
+	if _, present := got["LocationLatitude"]; present {
+		t.Fatalf("raw signal LocationLatitude unexpectedly present in response; got=%v", got)
 	}
-	if _, present := got["Longitude"]; present {
-		t.Fatalf("raw signal Longitude unexpectedly present in response; got=%v", got)
+	if _, present := got["LocationLongitude"]; present {
+		t.Fatalf("raw signal LocationLongitude unexpectedly present in response; got=%v", got)
 	}
 }
 

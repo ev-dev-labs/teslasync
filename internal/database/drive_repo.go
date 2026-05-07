@@ -353,6 +353,13 @@ var drivePartialAllowed = map[string]string{
 	"start_lng":          "start_lng",
 	"end_lat":            "end_lat",
 	"end_lng":            "end_lng",
+	// C7 (Phase-41 v3.4): SI-canonical odometer columns now persistable
+	// via PartialUpdate. Required so completeDriveLocked can write the
+	// authoritative drive boundary odometer (meters) directly without
+	// going through legacy distance_mi → distance_m conversion paths
+	// that cause unit confusion with the Phase-42 codec emitting SI.
+	"start_odometer_m": "start_odometer_m",
+	"end_odometer_m":   "end_odometer_m",
 }
 
 // translatePartialFieldsToSI rewrites a partial-update fields map keyed by
@@ -423,6 +430,19 @@ func translatePartialFieldsToSI(in map[string]interface{}) map[string]interface{
 			out["end_lng"] = v
 		// Phase-42 dropped columns (forward-only ADR-004 #2): silently
 		// ignored — inside_temp_avg_c, score, ended_status no longer exist.
+		default:
+			// C7 (Phase-41 v3.4): SI-canonical passthrough. If the caller
+			// already provides an SI canonical column key (distance_m,
+			// avg_speed_mps, max_speed_mps, start_odometer_m, etc.),
+			// pass it through unchanged. Required so completeDriveLocked
+			// can write authoritative SI values from Phase-42 codec data
+			// (signal_log stores SI) without round-tripping through the
+			// legacy display-unit aliases that cause m/s↔mph and m↔mi
+			// double-conversions. drivePartialAllowed below filters keys
+			// that don't correspond to real columns.
+			if _, ok := drivePartialAllowed[k]; ok {
+				out[k] = v
+			}
 		}
 	}
 	return out

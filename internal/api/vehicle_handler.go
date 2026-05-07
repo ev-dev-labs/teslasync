@@ -31,12 +31,15 @@ type VehicleHandler struct {
 // vehiclePositionMappings projects the signal_log change feed into the
 // Position JSON shape consumed by the frontend. Field names match the
 // legacy Position model JSON tags so the wire contract is unchanged.
+//
+// Phase-42 codec uses LocationLatitude / LocationLongitude (compound
+// flatten — see codec/flatten.go); Elevation is intentionally absent
+// because Tesla Fleet Telemetry does not emit it.
 var vehiclePositionMappings = []signal.FieldMapping{
-	{Signal: "Latitude", Field: "latitude"},
-	{Signal: "Longitude", Field: "longitude"},
+	{Signal: "LocationLatitude", Field: "latitude"},
+	{Signal: "LocationLongitude", Field: "longitude"},
 	{Signal: "GpsHeading", Field: "heading"},
 	{Signal: "VehicleSpeed", Field: "speed_mph"},
-	{Signal: "Elevation", Field: "elevation_m"},
 }
 
 func NewVehicleHandler(vehicleSvc *service.VehicleService, tc *tesla.Client, state signal.StateReader) *VehicleHandler {
