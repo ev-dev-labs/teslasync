@@ -604,7 +604,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		queueHeartbeatStore = database.NewMemoryWorkerStatusStore()
 	}
 
-
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
 		// Phase-46 / Prompt 40 — count every /api/v1 request and every
@@ -1292,10 +1291,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Trips
 		r.Get("/trips", tripHandler.List)
 
-		// Phase-42 (prompt 0077): /vehicle-states routes deleted with
-		// vehicle_state_handler.go (vehicle_states table dropped); current
-		// state is sourced from the in-memory FSM and durably logged via
-		// fsm_transitions.
+		// Phase-43a / Prompt 0003: /vehicle-states/{timeline,summary} restored
+		// after Phase-42 prompt 0077 removed them with the vehicle_states
+		// snapshot table. The two endpoints are now derived from
+		// fsm_transitions (mig 000187) filtered to fsm_name='vehicle' so
+		// frontend hooks useStateTimeline / useTimeline / useStateSummary
+		// stop returning 404. Same admin-style rate limit as /system/queues
+		// (Phase-46 / Prompt 41 precedent).
+		vehicleStatesHandler := NewVehicleStatesHandler(database.NewVehicleStatesRepo(db.Pool))
+		r.Route("/vehicle-states", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/timeline", vehicleStatesHandler.Timeline)
+			r.Get("/summary", vehicleStatesHandler.Summary)
+		})
 
 		// FSM shadow mode stats + transition log
 		r.Route("/fsm", func(r chi.Router) {
@@ -2047,21 +2055,21 @@ func installAdminLogStreamTap(reg *platform.LogSubscriberRegistry) {
 // for photo uploads — a wrapped http.MaxBytesReader can't be
 // loosened later, so the bypass MUST happen at the global layer.
 func isVehiclePhotoUploadPath(method, path string) bool {
-if method != http.MethodPost {
-return false
-}
-const prefix = "/api/v1/vehicles/"
-if !strings.HasPrefix(path, prefix) {
-return false
-}
-rest := path[len(prefix):]
-idx := strings.Index(rest, "/")
-if idx <= 0 {
-return false
-}
-tail := rest[idx:]
-// Accept exactly /photo (no trailing slash, no sub-path) so
-// future endpoints under /vehicles/{id}/photo/X don't
-// inherit the 12 MB limit.
-return tail == "/photo"
+	if method != http.MethodPost {
+		return false
+	}
+	const prefix = "/api/v1/vehicles/"
+	if !strings.HasPrefix(path, prefix) {
+		return false
+	}
+	rest := path[len(prefix):]
+	idx := strings.Index(rest, "/")
+	if idx <= 0 {
+		return false
+	}
+	tail := rest[idx:]
+	// Accept exactly /photo (no trailing slash, no sub-path) so
+	// future endpoints under /vehicles/{id}/photo/X don't
+	// inherit the 12 MB limit.
+	return tail == "/photo"
 }

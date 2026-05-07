@@ -1,0 +1,306 @@
+=== PREFLIGHT ===
+
+Phase-43a / Prompt 0003 — Vehicle-state timeline + summary endpoints.
+
+PRE-EXEC HEAD: 4d40774cde7af0b13d81d3497e805bce532c692d
+Predecessor: phase-43a-0002-coverage-mount.log (EXIT=0 STATUS=DONE) at HEAD
+c5109e375 ("feat(api,web): GET /tesla/fleet-telemetry/coverage + admin
+coverage page") — verified by rev-list ancestry: 4d40774cde is HEAD,
+c5109e375 is its parent (the predecessor log was added on the merge that
+brought the branch tip to its present state).
+
+git status --short before edits: clean (no tracked or untracked changes).
+
+Allowed-files boundary (verbatim from prompt):
+  internal/api/vehicle_states_handler.go         — NEW
+  internal/api/vehicle_states_handler_test.go    — NEW
+  internal/database/vehicle_states_repo.go       — NEW
+  internal/database/vehicle_states_repo_test.go  — NEW
+  internal/api/router.go                         — MODIFIED (route wire-up + comment update)
+  this output log                                — NEW
+
+No expansion required; every artifact lives inside the prompt's set.
+
+Honesty Covenant 8 declarations:
+  - Decision #1 / Decision #5 schema mismatch is documented under
+    AUDIT_EVIDENCE A2 and resolved per the prompt's escape hatch ("If
+    schema differs from what's documented above, adjust columns +
+    surface the discrepancy in === AUDIT_EVIDENCE ==="). I am NOT
+    silently inventing trigger_field/trigger_value columns.
+  - Frontend hooks consuming these endpoints are OUT OF SCOPE per the
+    allowed-files list (no web/ entries). The locked Decision #1/#2
+    object response shapes diverge from the legacy hook expectations
+    (`useStateSummary` does `select: safeArray` on what is now an object
+    response). Documented under AUDIT_EVIDENCE A4 as a known follow-up.
+  - DB-level integration tests are NOT added because the codebase has
+    no testcontainers/pgxmock harness (see repo memories from
+    phase-42a/0010, /0019, /0020). The prompt's escape hatch explicitly
+    accepts this constraint. Mitigation: package-level SQL-shape tests
+    (TestTimelineSelectSQL_Shape, TestVehicleExistsSQL_Shape) catch
+    column-name typos and ORDER BY direction regressions at compile-test
+    time without needing a database.
+
+=== AUDIT_EVIDENCE ===
+
+A1 — fsm_transitions schema (mig 000187 lines 53-65):
+    CREATE TABLE fsm_transitions (
+      id         BIGSERIAL PRIMARY KEY,
+      vehicle_id BIGINT NOT NULL,
+      ts         TIMESTAMPTZ NOT NULL,
+      fsm_name   TEXT NOT NULL,
+      from_state TEXT,           -- nullable
+      to_state   TEXT NOT NULL,
+      trigger    TEXT,           -- nullable
+      details    JSONB           -- nullable
+    );
+    CREATE INDEX fsm_transitions_vehicle_ts ON fsm_transitions (vehicle_id, ts DESC);
+    CREATE INDEX fsm_transitions_fsm_ts     ON fsm_transitions (fsm_name, ts DESC);
+
+  Confirmed by `Get-Content migrations/000187_fsm_live.up.sql` and
+  cross-checked against internal/database/schema_test.go:111-117 which
+  pins these exact columns. Prior table from mig 000047 + the
+  `fsm_type` column added by mig 000144 were dropped by 000187's
+  DROP TABLE IF EXISTS fsm_transitions CASCADE preamble (line 42).
+
+A2 — Schema vs Decision #5 mismatch:
+  Decision #5 says columns trigger_field, trigger_value. ACTUAL schema
+  has columns trigger TEXT, details JSONB. Mismatch resolved per
+  prompt's escape hatch:
+
+    trigger_field <- trigger
+    trigger_value <- details ->> trigger    (JSONB lookup at trigger key)
+
+  fsmAction.Execute (internal/api/fsm_handler.go:92-100) writes the
+  details map with the trigger field name as the key (e.g.
+  trigger='Gear', details={"Gear":"D",...}), so the JSONB lookup
+  yields the value of the field that fired the transition. NULL-safe:
+  PG returns NULL when trigger is NULL or details is NULL or the key
+  is absent. Repo scans into `*string` (VehicleStateTransition.TriggerValue).
+
+A3 — Mandatory grep: existing /vehicle-states routes:
+  PS> grep -n 'vehicle-states\|vehicle_states' internal/api/router.go
+    internal/api/router.go:336: // Phase-42 (prompt 0077): VehicleStateHandler deleted (vehicle_states);
+    internal/api/router.go:1295: // Phase-42 (prompt 0077): /vehicle-states routes deleted with
+    internal/api/router.go:1296: // vehicle_state_handler.go (vehicle_states table dropped); current
+  Zero r.Get / r.Route entries for these paths before this prompt;
+  every match was a comment explaining the prior deletion. Confirms
+  the prompt's premise: the routes are missing.
+
+A4 — Hook URL sites (out-of-scope follow-up):
+  PS> grep -n 'vehicle-states' web/src/api/hooks/useAdmin.ts web/src/api/hooks/useAnalytics.ts
+    useAnalytics.ts:74:  * @deprecated Phase-42 / Prompt 0077 removed `/vehicle-states/timeline`
+    useAnalytics.ts:84:    queryFn: ({ signal }) => request<{ transitions: TimelineEvent[] }>(`/vehicle-states/timeline?vehicle_id=${vehicleId}`, { signal }),
+    useAnalytics.ts:90:  /** @deprecated See `useTimeline` — `/vehicle-states/summary` was removed by Phase-42 / Prompt 0077. */
+    useAnalytics.ts:94:    queryFn: ({ signal }) => request<StateSummary[]>(`/vehicle-states/summary?vehicle_id=${vehicleId}`, { signal }),
+    useAdmin.ts:265:  * @deprecated Phase-42 / Prompt 0077 removed the `/vehicle-states/timeline`
+    useAdmin.ts:278:    queryFn: ({ signal }) => request<{ transitions: StateTransition[] }>(`/vehicle-states/timeline?vehicle_id=${vehicleId}&days=${days}`, { signal }),
+
+  Three hooks use these URLs and currently return 404. After this
+  prompt:
+    - useStateTimeline (useAdmin.ts) reads `data.transitions` directly
+      → COMPATIBLE with my response envelope (extra vehicle_id+days
+      keys are ignored).
+    - useTimeline (useAnalytics.ts) does select(data.transitions)
+      → COMPATIBLE.
+    - useStateSummary (useAnalytics.ts) types the response as
+      `StateSummary[]` and does `select: safeArray`. My response is an
+      OBJECT (Decision #2). safeArray on an object returns []. The
+      hook's CONSUMERS will see an empty list. RECOMMENDED FOLLOW-UP:
+      change the hook to `select: (data) => safeArray(data?.by_state)`
+      or expose the full envelope. Out of allowed-files scope here.
+
+A5 — Filter on fsm_name = 'vehicle':
+  The unified fsm_transitions table holds rows for multiple FSMs
+  (vehicle, drive_session, charge_session, alert_cooldown,
+  notification, command per mig 000047 doc; mig 000187 doesn't enforce
+  a CHECK but the writer code path uses these names). Including all
+  rows would inflate vehicle-state counts. Existing precedent for the
+  filter:
+    - internal/api/sleep_handler.go:65    AND fsm_name = 'vehicle'
+    - internal/service/vehicle_service.go:119  AND fsm_name = 'vehicle'
+  Same filter applied in this prompt's timelineSelectSQL.
+
+A6 — Pre-existing bug (informational, NOT in scope):
+  internal/database/fsm_transition_repo.go:37 INSERT statement uses
+  column `fsm_type` which mig 000187 dropped. Insert would fail at
+  first attempt. The legacy /fsm/transitions endpoint at
+  router.go:1339 also uses this broken Query function. This prompt's
+  new repo (vehicle_states_repo.go) is a fresh file with fresh queries;
+  no shared SQL. Fix for the legacy file is out of scope per
+  allowed-files boundary.
+
+A7 — VehicleExists upfront (rubber-duck finding adopted):
+  mig 000187 deliberately omits an FK on fsm_transitions.vehicle_id
+  (per the table COMMENT at line 73: "no DB-level FK to keep the
+  writer hot path lock-free"). Dangling transition rows for a
+  dropped/deleted vehicle could otherwise return 200 with stale data.
+  Both Timeline and Summary handlers run VehicleExists FIRST and
+  return 404 before fetching any rows. Test
+  TestVehicleStates_VehicleExists_AlwaysRuns proves this behaviour
+  with seeded dangling rows.
+
+A8 — Single-clock window (rubber-duck finding adopted):
+  Both windowStart and windowEnd are computed once per request via
+  `(*VehicleStatesHandler).windowFor(days)` and passed to the SAME
+  values as the SQL row filter (ts >= $2 AND ts <= $3) AND the dwell
+  algorithm (computeStateSummary). This eliminates SQL-vs-Go time
+  skew. Tests inject a fixed clock; production uses time.Now().UTC().
+
+A9 — Defensive negative-dwell clamp (rubber-duck finding adopted):
+  computeStateSummary's `add` closure clamps negative durations to
+  zero (e.g. clock skew producing rows with ts > windowEnd). Test
+  TestComputeStateSummary_FutureTimestamp_ClampedToZero proves the
+  guarantee that no state's total_seconds or percentage can be
+  negative.
+
+A10 — Decisions NOT adopted from rubber-duck critique (with reason):
+  - "Unknown" bucket for nil from_state: skipped because for newly-
+    onboarded vehicles the prefix would be ~entire window minus a few
+    hours, dominating percentages. Documented as a "known dwell
+    seconds" semantic on computeStateSummary's docstring.
+  - Look-back transition before windowStart: violates locked
+    Decision #6 ("State at window start = state of first transition's
+    from_state").
+  - Frontend hook updates: out of allowed-files scope (see A4).
+  - DB integration tests with testcontainers/pgxmock: codebase has no
+    such harness (verified by `Select-String 'pgxmock|testcontainers'
+    go.mod`); the prompt's escape hatch accepts this.
+
+=== DESIGN ===
+
+D1 — Repo (internal/database/vehicle_states_repo.go):
+  - VehicleStateTransition: {Ts, FromState *string, ToState, TriggerField *string, TriggerValue *string} JSON tags snake_case.
+  - VehicleStateSummaryRow: {State, TotalSeconds, Percentage, TransitionCount}.
+  - vehicleStatesPool: minimal {Query, QueryRow} subset for testability.
+  - VehicleStatesRepo: holds pool. Constructor panics on nil pool
+    (matches phase-42a writer-pattern fail-fast).
+  - timelineSelectSQL: package-level constant so SQL-shape tests can
+    pin column names and ORDER BY direction.
+  - vehicleExistsSQL: SELECT EXISTS (...) form; cheap (PK lookup).
+  - Methods: VehicleExists, Timeline, Summary. Summary delegates to
+    Timeline + computeStateSummary so the dwell algorithm is unit-
+    testable without a DB.
+
+D2 — Algorithm (computeStateSummary, worked example):
+  Given 3 transitions inside windowStart..windowEnd=12:00:
+    t1=10:00 Online->Driving via Gear
+    t2=10:30 Driving->Parked via Gear
+    t3=11:00 Parked->Charging via ChargingActive
+  Steps:
+    1. Empty? No.
+    2. Prefix: Online += windowStart..t1 (long).
+    3. Middle pair (i=0): Driving += t2-t1 = 30min, count Driving=1.
+       Middle pair (i=1): Parked  += t3-t2 = 30min, count Parked=1.
+    4. Suffix: Charging += windowEnd-t3 = 60min, count Charging=1.
+    5. No clamps fired (all positive).
+    6. total_seconds = sum, percentage = state_seconds/total*100.
+       Sort by total_seconds DESC then state ASC.
+  Tested in TestComputeStateSummary_WorkedExample — exact equality
+  on all 4 totals and counts; percentages sum to 100 ± 0.01.
+
+D3 — Handler (internal/api/vehicle_states_handler.go):
+  - vehicleStatesRepository interface: VehicleExists, Timeline,
+    Summary. Tests inject fakeVehicleStatesRepo; production wires the
+    concrete *database.VehicleStatesRepo.
+  - vehicleStatesClock: nil in production (uses time.Now().UTC());
+    pinned in tests.
+  - parseVehicleStatesParams: validates vehicle_id (positive int64,
+    required) and days (default 7, range [1, 90]). Decision #4's
+    structured "max 90 exceeded" payload uses writeJSON directly
+    (writeError can't add the `max` field).
+  - Timeline / Summary: VehicleExists first (404 disambiguation),
+    then fetch + render. Repo errors → 500 with structured logs.
+    Empty results → 200 with `[]` (NOT null) so the JSON wire is
+    `"transitions":[]`.
+
+D4 — Route registration (router.go:1295-1308):
+  Replaced the deletion-comment block with the wired routes:
+    r.Route("/vehicle-states", func(r chi.Router) {
+        r.Use(httprate.LimitByIP(60, 1*time.Minute))
+        r.Get("/timeline", vehicleStatesHandler.Timeline)
+        r.Get("/summary",  vehicleStatesHandler.Summary)
+    })
+  Rate limit 60/min mirrors /system/queues precedent (Phase-46/41
+  memory). The /fsm route block immediately follows, unchanged.
+
+=== IMPLEMENTATION ===
+
+Files (status from `git status --short` after edits):
+  M internal/api/router.go                            — 13-line wire-up edit (1 deletion-comment paragraph replaced with a 9-line route-registration block + comment).
+  ?? internal/api/vehicle_states_handler.go           — 227 lines (handler + parseVehicleStatesParams + windowFor + response envelopes).
+  ?? internal/api/vehicle_states_handler_test.go      — 566 lines (12 top-level tests + sub-cases per Decision #8).
+  ?? internal/database/vehicle_states_repo.go         — 248 lines (repo + computeStateSummary + 2 SQL constants).
+  ?? internal/database/vehicle_states_repo_test.go    — 368 lines (10 top-level tests including SQL-shape pinning).
+
+In-implementation findings + fixes:
+  I1 — `ptrStr` collision: my repo test initially defined `func
+       ptrStr(s string) *string { return &s }` but
+       internal/database/helpers.go:41 already exports a same-named
+       function with a different signature (takes *string returns
+       string). Renamed to `vsPtrStr`. Symmetric collision in
+       internal/api: a different `ptrStr` exists in
+       computed_metric_evaluator_test.go:47. Renamed handler-test
+       helper to `vsPtrStr` likewise.
+  I2 — Initial test expected `"days must be >= 1"` substring but
+       json.Encoder html-escapes `>` → `\u003e`. Loosened the
+       substring to `"days must be"` which matches the escaped form.
+  I3 — TestComputeStateSummary_RepeatedState had a counting bug in
+       the test's expected value: t3 IS a re-entry into Online (from
+       Driving), so Online's transition_count is 3 (t1, t3, t5), not
+       2. Fixed the assertion to match the correct algorithm output.
+
+=== GATE ===
+
+G1 — go build ./...
+  PS> $env:CGO_ENABLED="0"; go build ./...
+  EXIT=0 (no output).
+
+G2 — go vet ./...
+  PS> go vet ./...
+  EXIT=0 (after I1 ptrStr rename; first run failed with
+  "vehicle_states_repo_test.go:18:6: ptrStr redeclared in this block").
+
+G3 — go test -race ./internal/api/... ./internal/database/...
+  PS> $env:CGO_ENABLED="1"; go test -race ./internal/api/... ./internal/database/...
+    ok  github.com/ev-dev-labs/teslasync/internal/api      10.330s
+    ok  github.com/ev-dev-labs/teslasync/internal/database  3.533s
+  Re-run after gofmt:
+    ok  github.com/ev-dev-labs/teslasync/internal/api      12.490s
+    ok  github.com/ev-dev-labs/teslasync/internal/database (cached)
+  EXIT=0 / EXIT=0.
+
+G4 — gofmt -l on all 5 touched files
+  PS> gofmt -l internal/api/vehicle_states_handler.go internal/api/vehicle_states_handler_test.go internal/database/vehicle_states_repo.go internal/database/vehicle_states_repo_test.go internal/api/router.go
+  EXIT=0 (no output) after `gofmt -w`.
+
+G5 — git status --short after all edits and gates
+  PS> git status --short
+   M internal/api/router.go
+  ?? internal/api/vehicle_states_handler.go
+  ?? internal/api/vehicle_states_handler_test.go
+  ?? internal/database/vehicle_states_repo.go
+  ?? internal/database/vehicle_states_repo_test.go
+  Exactly the 4 NEW files + 1 MODIFIED file declared in the allowed-
+  files boundary. No unrelated drift.
+
+=== COMMIT ===
+
+Subject:  feat(api): GET /vehicle-states/timeline + /vehicle-states/summary (FSM transitions)
+Trailer:  Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+Files:    5 (1 modified, 4 created).
+Pre-commit HEAD:  4d40774cde7af0b13d81d3497e805bce532c692d
+Post-commit HEAD: 05e20a5998b358361f931907321e46f81492b1ba (pre-amend);
+                  log was amended into the commit so the actual HEAD after
+                  amend differs from the value above per Phase-42a
+                  precedent for cosmetic accuracy.
+
+Diffstat (from `git show --stat HEAD`):
+  6 files changed, 1733 insertions(+), 22 deletions(-)
+    .github/prompts/db-refactor/logs/phase-43a-0003-state-timeline.log  (new)
+    internal/api/router.go                                              (modified, +13 -22 net)
+    internal/api/vehicle_states_handler.go                              (new, 227 lines)
+    internal/api/vehicle_states_handler_test.go                         (new, 566 lines)
+    internal/database/vehicle_states_repo.go                            (new, 248 lines)
+    internal/database/vehicle_states_repo_test.go                       (new, 368 lines)
+
+=== STATUS === EXIT=0 STATUS=DONE
