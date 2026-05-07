@@ -285,6 +285,23 @@ func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleI
 	}
 	startTs = eventTimeOrNow(startTs)
 
+	// C3 (v3.4 prod-replay accuracy fix): drive-merge.
+	// Before creating a new drive row, look up the most recent ended drive
+	// for this vehicle whose ended_at is within driveMergeWindow of the
+	// candidate startTs. If found, RESUME that drive (clear ended_at) and
+	// seed the in-memory streamingDrive from the prior drive's start
+	// values so completeDriveLocked extends it to the true end time.
+	//
+	// This compensates for spurious mid-trip Gear=P transients that the
+	// FSM's debounce window cannot fully prevent (e.g. when a Park frame
+	// is the last gear signal before a long silent stretch and CheckPending
+	// fires before another gear arrives). The merge window MUST be smaller
+	// than the FSM debounce + a small grace so we don't accidentally
+	// merge two genuinely separate trips made minutes apart.
+	if merged := t.tryMergeDriveLocked(ctx, vehicleID, vin, signals, accumulatedSignals, speed, gearBased, startTs, payloadTs); merged {
+		return
+	}
+
 	drive := &models.Drive{
 		VehicleID: vehicleID,
 		StartTs:   startTs,
@@ -1298,4 +1315,121 @@ func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 		}
 	}
 	log.Info().Int("resolved", filled).Int("total_drives", len(drives)).Msg("backfill: address geocoding complete")
+}
+
+
+// driveMergeWindow is the maximum gap between an ended drive's ended_at and
+// a new candidate drive's startTs that triggers a merge instead of a new
+// drive row. C3 (v3.4 prod-replay accuracy fix). MUST stay smaller than
+// fsm.StateConfirmDuration (30s) plus a small grace so two genuinely
+// separate trips made minutes apart never get merged.
+const driveMergeWindow = 90 * time.Second
+
+// tryMergeDriveLocked attempts to extend a recently-ended drive instead of
+// creating a new one. Returns true when a merge happened (caller should
+// return without proceeding to the create path), false otherwise. Must be
+// called with t.mu held.
+//
+// On merge, the prior drive's ended_at is cleared via DriveRepo.ResumeForMerge,
+// the in-memory streamingDrive is seeded from the prior drive's start values
+// (StartTs, StartOdometer, StartLat/Lng, StartBatteryPct) so completeDriveLocked
+// extends the original drive's distance/duration window. In-memory aggregate
+// scratch (MaxSpeed, SpeedSum, …) starts fresh; signal_log enrichment in
+// completeDriveLocked recomputes max/avg over the full original-start →
+// new-end window via DriveAggregates.
+func (t *TelemetrySessionTracker) tryMergeDriveLocked(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}, speed float64, gearBased bool, startTs time.Time, payloadTs time.Time) bool {
+if t.driveRepo == nil {
+return false
+}
+prev, err := t.driveRepo.FindRecentEndedForMerge(ctx, vehicleID, startTs, driveMergeWindow)
+if err != nil {
+log.Warn().Err(err).Int64("vehicle_id", vehicleID).
+Msg("telemetry: drive-merge lookup failed; falling back to new drive")
+return false
+}
+if prev == nil {
+return false
+}
+
+// Re-open the prior drive: clear ended_at so a subsequent Complete() extends it.
+if err := t.driveRepo.ResumeForMerge(ctx, prev.ID); err != nil {
+log.Warn().Err(err).Int64("vehicle_id", vehicleID).Int64("drive_id", prev.ID).
+Msg("telemetry: drive-merge resume failed; falling back to new drive")
+return false
+}
+
+// Resolve current-batch values for live tracking (Last* fields used during the resumed leg).
+odometer, hasOdo := t.resolveFloat(vehicleID, signals, accumulatedSignals, "Odometer")
+lat, lon, hasLoc := t.resolveLatLon(vehicleID, signals, accumulatedSignals)
+elevation, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "Elevation")
+
+sd := &streamingDrive{
+DriveID:            prev.ID,
+VehicleID:          vehicleID,
+StartTime:          prev.StartTs, // canonical leg-1 start preserved
+LastSpeed:          speed,
+LastSeen:           time.Now().UTC(),
+GearBased:          gearBased,
+PowerMin:           math.MaxFloat64,
+RatedRangeMin:      math.MaxFloat64,
+IdealRangeMin:      math.MaxFloat64,
+EstRangeMin:        math.MaxFloat64,
+SocMin:             math.MaxFloat64,
+UsableSocMin:       math.MaxFloat64,
+accumulatedSignals: make(map[string]interface{}),
+lastTelemetryWrite: time.Now().UTC(),
+state:              t.driveStateReader(),
+}
+if speed > 0 {
+sd.MaxSpeed = speed
+sd.MinSpeed = speed
+sd.SpeedSum = speed
+sd.SpeedCount = 1
+}
+
+// Seed start values from the prior drive row so completeDriveLocked
+// reports start-of-original-trip values and not start-of-second-leg.
+if prev.StartLat != nil {
+sd.StartLatitude = floatPtr(*prev.StartLat)
+}
+if prev.StartLon != nil {
+sd.StartLongitude = floatPtr(*prev.StartLon)
+}
+// Seed Last* from the current batch so subsequent samples extend continuously.
+if hasOdo {
+sd.LastOdometer = floatPtr(odometer)
+}
+if hasLoc {
+sd.LastLatitude = floatPtr(lat)
+sd.LastLongitude = floatPtr(lon)
+}
+sd.LastElevation = floatPtr(elevation)
+
+t.activeDrives[vehicleID] = sd
+DriveSessionsActive.Inc()
+
+// Accumulate this batch and flush so the resumed leg's first telemetry sample lands.
+sd.accumulatedSignals = accumulateSignals(sd.accumulatedSignals, signals)
+t.flushDriveTelemetry(ctx, sd)
+
+gap := startTs.Sub(*prev.EndTs)
+log.Info().
+Int64("vehicle_id", vehicleID).
+Int64("drive_id", prev.ID).
+Time("original_start", prev.StartTs).
+Time("merge_resume_at", startTs).
+Dur("gap", gap).
+Bool("gear_based", gearBased).
+Msg("telemetry: drive-merge — resumed prior drive instead of starting new one")
+
+if t.eventBus != nil {
+t.eventBus.Publish(events.Event{Type: events.DriveStarted, VehicleID: vehicleID, VIN: vin,
+Data: map[string]interface{}{
+"drive_id": prev.ID,
+"merged":   true,
+"gap_sec":  gap.Seconds(),
+"source":   "fleet_telemetry",
+}})
+}
+return true
 }

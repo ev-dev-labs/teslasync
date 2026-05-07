@@ -44,7 +44,14 @@ var TransitionTable = []Transition{
 	{Online, Asleep, TriggerTimeout, nil, Immediate, ""},
 
 	// ─── DRIVING ────────────────────────────────────────────────────────────
-	{Driving, Parked, TriggerGearParked, GuardNoCharge, Immediate, "GuardNoCharge"},
+	// C3 (v3.4 prod-replay accuracy fix): Gear=P transients during a real
+	// drive (single-frame Park while shifting through R/N, or Tesla codec
+	// momentarily decoding gear as P at low speed) used to immediately end
+	// the drive and synthesize a new one when speed picked back up. With
+	// Debounced mode + StateConfirmDuration the FSM requires Park to be
+	// confirmed by a second matching signal at least StateConfirmDuration
+	// later, eliminating the per-replay double-drive-from-one-trip bug.
+	{Driving, Parked, TriggerGearParked, GuardNoCharge, Debounced, "GuardNoCharge"},
 	{Driving, Charging, TriggerChargeStarted, nil, Immediate, ""},
 	{Driving, Online, TriggerSpeedZero, GuardNoGear, Debounced, "GuardNoGear"},
 	{Driving, Offline, TriggerTimeout, nil, Immediate, ""},

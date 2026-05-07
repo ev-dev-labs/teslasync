@@ -290,6 +290,48 @@ func (r *DriveRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*models.D
 	return drives, rows.Err()
 }
 
+// FindRecentEndedForMerge returns the most recent ended drive for a vehicle
+// whose ended_at falls within `window` before the candidate startTs. Returns
+// (nil, nil) when no eligible drive is found. C3 (v3.4 prod-replay accuracy
+// fix): used to merge spurious back-to-back drives caused by transient
+// Gear=P frames within a longer trip. The merge target's ended_at is
+// cleared by ResumeForMerge so the live tracker can extend it to the true
+// end timestamp.
+func (r *DriveRepo) FindRecentEndedForMerge(ctx context.Context, vehicleID int64, startTs time.Time, window time.Duration) (*models.Drive, error) {
+	if window <= 0 {
+		return nil, nil
+	}
+	query := `SELECT ` + driveColumns + `
+		FROM drives
+		WHERE vehicle_id = $1
+		  AND ended_at IS NOT NULL
+		  AND ended_at <= $2
+		  AND ended_at >= $3
+		ORDER BY ended_at DESC
+		LIMIT 1`
+	cutoff := startTs.Add(-window)
+	d, err := scanDrive(r.db.Pool.QueryRow(ctx, query, vehicleID, startTs, cutoff))
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
+// ResumeForMerge clears ended_at + drive-end aggregate columns on an
+// already-completed drive so a subsequent Complete() call extends it
+// instead of treating it as a new drive. Distance, duration and end_*
+// aggregates are NOT zeroed — they will be overwritten by the next
+// Complete() with values that include the gap+continuation segment.
+// C3 (v3.4 prod-replay accuracy fix).
+func (r *DriveRepo) ResumeForMerge(ctx context.Context, id int64) error {
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE drives SET ended_at = NULL WHERE id = $1`, id)
+	return err
+}
+
 // drivePartialAllowed maps SI canonical column names to themselves. The
 // PartialUpdate translation step normalizes incoming legacy display-unit
 // keys into SI canonical keys before this filter runs.

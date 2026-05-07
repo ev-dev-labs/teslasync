@@ -18,8 +18,9 @@ const (
 )
 
 type pendingTransition struct {
-	To    State
-	Since time.Time
+	To      State
+	Trigger Trigger
+	Since   time.Time
 }
 
 // VehicleFSM is the top-level state machine for a single vehicle.
@@ -110,6 +111,35 @@ func (m *VehicleFSM) ProcessSignalsAt(ctx context.Context, vehicleID int64, sign
 	}
 
 	sctx := m.buildSignalContextAt(signals, payloadTs)
+
+	// C3 (v3.4 prod-replay accuracy fix): cancel any pending Park-debounce
+	// when the same batch carries contradicting evidence (Gear=D/R or
+	// VehicleSpeed > 1.0). Without this, a spurious single-frame Gear=P
+	// would silently arm the debounce and CheckPending would later commit
+	// Driving→Parked even though the vehicle had been moving the entire
+	// 30s window. Holding the lock through this block is safe because
+	// m.mu is already acquired at function entry.
+	if m.pending != nil && m.pending.To == Parked {
+		contradicts := false
+		if sctx.HasGearInBatch {
+			switch sctx.Gear {
+			case enums.GearDrive, enums.GearReverse:
+				contradicts = true
+			}
+		}
+		if !contradicts && sctx.Speed > 1.0 {
+			contradicts = true
+		}
+		if contradicts {
+			m.logger.Debug().
+				Int64("vehicle_id", vehicleID).
+				Str("pending_to", string(m.pending.To)).
+				Str("gear", sctx.Gear).
+				Float64("speed", sctx.Speed).
+				Msg("fsm: cancelling pending Park (contradicting evidence)")
+			m.pending = nil
+		}
+	}
 
 	m.logger.Debug().
 		Int64("vehicle_id", vehicleID).
@@ -207,8 +237,14 @@ func (m *VehicleFSM) handleDebounced(_ context.Context, vehicleID int64, tr Tran
 	}
 
 	if m.pending == nil || m.pending.To != tr.To {
-		// New candidate — start the debounce timer
-		m.pending = &pendingTransition{To: tr.To, Since: now}
+		// New candidate — start the debounce timer.
+		// C3 (v3.4): preserve the originating Trigger so CheckPending
+		// commits with the same trigger semantics. Without this,
+		// debounced Gear=P transitions would commit with TriggerSpeedZero
+		// in the persisted fsm_transitions row — useless for audit and
+		// silently breaks any downstream consumer that reads the trigger
+		// (e.g. drive-merge logic in C3 below).
+		m.pending = &pendingTransition{To: tr.To, Trigger: tr.Trigger, Since: now}
 		m.logger.Debug().
 			Int64("vehicle_id", vehicleID).
 			Str("to", string(tr.To)).
@@ -252,16 +288,18 @@ func (m *VehicleFSM) CheckPending(ctx context.Context, vehicleID int64, sctx *Si
 
 	// Confirmed — commit
 	to := m.pending.To
+	trigger := m.pending.Trigger
 	m.logger.Debug().
 		Int64("vehicle_id", vehicleID).
 		Str("to", string(to)).
+		Str("trigger", trigger.String()).
 		Msg("fsm: committing confirmed debounced transition")
 	m.pending = nil
 
 	tr := Transition{
 		From:    m.current,
 		To:      to,
-		Trigger: TriggerSpeedZero, // debounced transitions are always speed-based
+		Trigger: trigger,
 		Mode:    Immediate,
 	}
 	return m.commit(ctx, vehicleID, tr, sctx)

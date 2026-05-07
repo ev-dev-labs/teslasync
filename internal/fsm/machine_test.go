@@ -3,6 +3,7 @@ package fsm
 import (
 	"context"
 	"testing"
+	"time"
 )
 
 // testAction records transitions for verification.
@@ -108,11 +109,45 @@ func TestOnline_InvalidTrigger_NoTransition(t *testing.T) {
 
 // ─── State: Driving ─────────────────────────────────────────
 
-func TestDriving_GearPark_TransitionsToParked(t *testing.T) {
+// C3 (v3.4 prod-replay accuracy fix): the Driving→Parked rule is now
+// Debounced (was Immediate) to suppress single-frame Gear=P transients
+// that show up mid-trip in fleet-telemetry CSV replay (e.g. as Tesla's
+// codec momentarily decodes gear as P at low speed). A single Park
+// frame must NOT immediately end the drive; commitment requires either
+// a confirming Park frame after StateConfirmDuration or a CheckPending
+// tick after the same duration.
+func TestDriving_GearPark_DoesNotImmediatelyTransition(t *testing.T) {
 	m, _ := newTestFSM(Driving)
 	m.ProcessSignals(context.Background(), 1, map[string]interface{}{"Gear": "P"})
-	if m.Current() != Parked {
-		t.Fatalf("expected Parked, got %s", m.Current())
+	if m.Current() != Driving {
+		t.Fatalf("expected Driving (debounced), got %s", m.Current())
+	}
+}
+
+// Debounce timer fires only after StateConfirmDuration of confirmed
+// Park signals (no contradicting D/R or speed > 1.0). The simplest
+// confirming path uses ProcessSignalsAt with a payloadTs in the future
+// and a second Park frame, mirroring how the prod pipeline threads
+// event-time post-C2.
+func TestDriving_GearPark_TransitionsToParkedAfterDebounce(t *testing.T) {
+	m, _ := newTestFSM(Driving)
+	t0 := time.Date(2026, 5, 7, 12, 0, 0, 0, time.UTC)
+	m.ProcessSignalsAt(context.Background(), 1, map[string]interface{}{"Gear": "P"}, t0)
+	if m.Current() != Driving {
+		t.Fatalf("expected Driving after first Park frame, got %s", m.Current())
+	}
+	// Second Park frame StateConfirmDuration later — debounce confirms,
+	// commit lands on next batch (or via CheckPending).
+	t1 := t0.Add(StateConfirmDuration + time.Second)
+	m.ProcessSignalsAt(context.Background(), 1, map[string]interface{}{"Gear": "P"}, t1)
+	// handleDebounced clears m.pending on confirm but commits on the NEXT
+	// batch — feed one more no-op batch (or invoke CheckPending) to land it.
+	if m.Current() == Parked {
+		return
+	}
+	sctx := &SignalContext{CurrentState: m.Current(), Now: t1.Add(time.Second)}
+	if err := m.CheckPending(context.Background(), 1, sctx); err != nil {
+		t.Fatalf("CheckPending error: %v", err)
 	}
 }
 
@@ -187,6 +222,77 @@ func TestDriving_LongHighwayDrive_NoGearFor2Hours_StaysDriving(t *testing.T) {
 	}
 	if !m.IsGearCapable() {
 		t.Fatal("expected isGearCapable to be true")
+	}
+}
+
+// ─── C3 (v3.4 prod-replay accuracy fix): Gear=P debounce ────────────────
+// These tests pin the new behaviour where a single mid-trip Gear=P frame
+// no longer immediately ends the drive. The transition table now marks
+// Driving→Parked as Debounced, and ProcessSignalsAt cancels the pending
+// transition when contradicting evidence (Gear=D/R or VehicleSpeed > 1.0)
+// arrives within the StateConfirmDuration window.
+
+// A spurious single-frame Gear=P at low speed must not commit Driving→Parked
+// when a subsequent batch (within the debounce window) shows Gear=D again.
+func TestDriving_SpuriousGearP_FollowedByGearD_DoesNotTransitionToParked(t *testing.T) {
+	m, _ := newTestFSM(Driving)
+	t0 := time.Date(2026, 5, 7, 12, 0, 0, 0, time.UTC)
+	m.ProcessSignalsAt(context.Background(), 1, map[string]interface{}{"Gear": "P"}, t0)
+	if m.Current() != Driving {
+		t.Fatalf("after Gear=P expected Driving (debounced), got %s", m.Current())
+	}
+	// 5s later: Gear=D arrives (driver was rolling through R/N to D, codec briefly read P)
+	t1 := t0.Add(5 * time.Second)
+	m.ProcessSignalsAt(context.Background(), 1, map[string]interface{}{"Gear": "D", "VehicleSpeed": 8.5}, t1)
+	if m.Current() != Driving {
+		t.Fatalf("after Gear=D expected Driving (pending Park cancelled), got %s", m.Current())
+	}
+	// Push past StateConfirmDuration to confirm the pending was actually cancelled.
+	t2 := t1.Add(StateConfirmDuration + time.Second)
+	sctx := &SignalContext{CurrentState: m.Current(), Now: t2}
+	if err := m.CheckPending(context.Background(), 1, sctx); err != nil {
+		t.Fatalf("CheckPending error: %v", err)
+	}
+	if m.Current() != Driving {
+		t.Fatalf("after window expired expected still Driving (pending was cancelled), got %s", m.Current())
+	}
+}
+
+// VehicleSpeed > 1.0 in the same batch as a pending Park also cancels the debounce.
+func TestDriving_PendingPark_SpeedAbove1_CancelsDebounce(t *testing.T) {
+	m, _ := newTestFSM(Driving)
+	t0 := time.Date(2026, 5, 7, 12, 0, 0, 0, time.UTC)
+	m.ProcessSignalsAt(context.Background(), 1, map[string]interface{}{"Gear": "P"}, t0)
+	// 2s later: speed picks up (e.g. car was rolling, codec misread gear)
+	t1 := t0.Add(2 * time.Second)
+	m.ProcessSignalsAt(context.Background(), 1, map[string]interface{}{"VehicleSpeed": 12.0}, t1)
+	// Force a CheckPending past the debounce window — should not commit.
+	t2 := t1.Add(StateConfirmDuration + time.Second)
+	sctx := &SignalContext{CurrentState: m.Current(), Now: t2}
+	if err := m.CheckPending(context.Background(), 1, sctx); err != nil {
+		t.Fatalf("CheckPending error: %v", err)
+	}
+	if m.Current() != Driving {
+		t.Fatalf("expected Driving (speed > 1.0 cancelled pending Park), got %s", m.Current())
+	}
+}
+
+// Confirmed Gear=P (no contradicting signal) DOES commit Driving→Parked
+// after StateConfirmDuration via CheckPending.
+func TestDriving_ConfirmedGearP_CommitsParkedViaCheckPending(t *testing.T) {
+	m, _ := newTestFSM(Driving)
+	t0 := time.Date(2026, 5, 7, 12, 0, 0, 0, time.UTC)
+	m.ProcessSignalsAt(context.Background(), 1, map[string]interface{}{"Gear": "P"}, t0)
+	if m.Current() != Driving {
+		t.Fatalf("expected Driving after first Park frame, got %s", m.Current())
+	}
+	t1 := t0.Add(StateConfirmDuration + time.Second)
+	sctx := &SignalContext{CurrentState: m.Current(), Now: t1}
+	if err := m.CheckPending(context.Background(), 1, sctx); err != nil {
+		t.Fatalf("CheckPending error: %v", err)
+	}
+	if m.Current() != Parked {
+		t.Fatalf("expected Parked after debounce window, got %s", m.Current())
 	}
 }
 
