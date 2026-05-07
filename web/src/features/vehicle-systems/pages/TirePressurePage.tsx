@@ -68,6 +68,38 @@ const SOFT_LOW_PA = 200_000; // 2.0 bar
 const SOFT_HIGH_PA = 400_000; // 4.0 bar
 const GAUGE_MAX_PA = 500_000; // 5.0 bar
 
+/**
+ * Interim adapter that coerces a raw TPMS value to Pa.
+ *
+ * Background: when `vehicle_unit_history` lacks a row for a vehicle, the
+ * Phase-42 codec cannot run `units.ToSI` on TpmsPressure* atomics — the
+ * raw codec value (bar for metric vehicles, psi for imperial) lands in
+ * `signal.Store` and the `/tire-pressure/latest` handler echoes it back
+ * verbatim. Pre-Phase-42 the bug surfaced as gauges showing ~0 with all-
+ * critical badges, which reads as "vehicle is broken" rather than
+ * "vehicle unit context is missing".
+ *
+ * Until the cross-cutting fix lands (see ui_audit
+ * `vd-tire-pressure-units-wrong`, blocked on user decision Option A/B/C
+ * — re-seed unit history vs. FE band-aid vs. codec-side SI emission),
+ * this helper detects the three plausible source units by value range
+ * and normalises to Pa so the page renders accurate readings today.
+ *
+ * Ranges (typical passenger car tire pressures):
+ *   - Pa     : 150_000–500_000   → return as-is
+ *   - kPa    : 150–500           → multiply by 1_000
+ *   - psi    : 20–60             → multiply by 6_894.757
+ *   - bar    : 1.5–5             → multiply by 100_000
+ *   - 0/null : missing reading   → return 0
+ */
+function normaliseTpmsToPa(raw: number | null | undefined): number {
+  if (raw == null || !Number.isFinite(raw) || raw <= 0) return 0;
+  if (raw >= 50_000) return raw; // already Pa
+  if (raw >= 100) return raw * 1_000; // kPa
+  if (raw >= 10) return raw * 6_894.757; // psi
+  return raw * 100_000; // bar (covers 0.5..10)
+}
+
 const TIRE_POSITIONS = ['fl', 'fr', 'rl', 'rr'] as const;
 type TirePosition = (typeof TIRE_POSITIONS)[number];
 
@@ -102,7 +134,7 @@ function getTirePressureValue(
     rl: reading.rear_left,
     rr: reading.rear_right,
   };
-  return map[pos] ?? 0;
+  return normaliseTpmsToPa(map[pos]);
 }
 
 type PressureStatus = 'normal' | 'low' | 'high' | 'critical';
@@ -226,10 +258,10 @@ export default function TirePressurePage() {
     if (!history?.length) return [];
     return [...history].reverse().map((r) => ({
       time: formatDateTime(r.created_at),
-      fl: toDisplayPressure(r.front_left),
-      fr: toDisplayPressure(r.front_right),
-      rl: toDisplayPressure(r.rear_left),
-      rr: toDisplayPressure(r.rear_right),
+      fl: toDisplayPressure(normaliseTpmsToPa(r.front_left)),
+      fr: toDisplayPressure(normaliseTpmsToPa(r.front_right)),
+      rl: toDisplayPressure(normaliseTpmsToPa(r.rear_left)),
+      rr: toDisplayPressure(normaliseTpmsToPa(r.rear_right)),
     }));
     // unitPrefs.pressure is the only relevant primitive dep — depending on
     // the closure-captured `toDisplayPressure` would also work but referencing
