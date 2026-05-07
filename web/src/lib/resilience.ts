@@ -16,7 +16,7 @@ function snakeToCamel(s: string): string {
   return s.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase())
 }
 
-function camelCaseKeys(obj: unknown): unknown {
+export function camelCaseKeys(obj: unknown): unknown {
   if (Array.isArray(obj)) return obj.map(camelCaseKeys)
   if (obj !== null && typeof obj === 'object' && !(obj instanceof Date)) {
     const result: Record<string, unknown> = {}

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	ftproto "github.com/teslamotors/fleet-telemetry/protos"
 
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -26,6 +25,12 @@ func setSignal(t *testing.T, store *signal.Store, field string, value any) {
 	store.Set(testVehicleID, field, value, time.Now().UTC())
 }
 
+// All store seeds in this file use canonical short strings ("D", "Charging",
+// "Disconnected", ...). This mirrors what protomodel.DecodeValue produces
+// in production after the codec canonicalization change — typed ftproto.*
+// enum values never reach the L1 store. See the doc comment on
+// protomodel.DecodeValue for the contract.
+
 func TestSignalAdapter_Last(t *testing.T) {
 	adapter, store := newTestAdapter(t)
 
@@ -33,7 +38,7 @@ func TestSignalAdapter_Last(t *testing.T) {
 		t.Fatal("Last on missing field should return ok=false")
 	}
 
-	setSignal(t, store, "Gear", ftproto.ShiftState_ShiftStateD)
+	setSignal(t, store, "Gear", "D")
 	v, ok := adapter.Last(testVehicleID, "Gear")
 	if !ok {
 		t.Fatal("Last on present field should return ok=true")
@@ -45,10 +50,10 @@ func TestSignalAdapter_Last(t *testing.T) {
 
 func TestSignalAdapter_Gear(t *testing.T) {
 	tests := []struct {
-		name      string
-		setup     func(*signal.Store)
-		want      string
-		wantOK    bool
+		name   string
+		setup  func(*signal.Store)
+		want   string
+		wantOK bool
 	}{
 		{
 			name:   "missing",
@@ -56,49 +61,48 @@ func TestSignalAdapter_Gear(t *testing.T) {
 			wantOK: false,
 		},
 		{
-			name: "ftproto enum D",
+			name: "canonical D",
 			setup: func(s *signal.Store) {
-				s.Set(testVehicleID, "Gear", ftproto.ShiftState_ShiftStateD, time.Now().UTC())
+				s.Set(testVehicleID, "Gear", "D", time.Now().UTC())
 			},
 			want:   "D",
 			wantOK: true,
 		},
 		{
-			name: "ftproto enum P",
+			name: "canonical P",
 			setup: func(s *signal.Store) {
-				s.Set(testVehicleID, "Gear", ftproto.ShiftState_ShiftStateP, time.Now().UTC())
+				s.Set(testVehicleID, "Gear", "P", time.Now().UTC())
 			},
 			want:   "P",
 			wantOK: true,
 		},
 		{
-			name: "ftproto enum R",
+			name: "canonical R",
 			setup: func(s *signal.Store) {
-				s.Set(testVehicleID, "Gear", ftproto.ShiftState_ShiftStateR, time.Now().UTC())
+				s.Set(testVehicleID, "Gear", "R", time.Now().UTC())
 			},
 			want:   "R",
 			wantOK: true,
 		},
 		{
-			name: "ftproto enum N",
+			name: "canonical N",
 			setup: func(s *signal.Store) {
-				s.Set(testVehicleID, "Gear", ftproto.ShiftState_ShiftStateN, time.Now().UTC())
+				s.Set(testVehicleID, "Gear", "N", time.Now().UTC())
 			},
 			want:   "N",
 			wantOK: true,
 		},
 		{
-			name: "long-form Park stripped to P",
+			name: "non-canonical Unknown is rejected",
 			setup: func(s *signal.Store) {
-				s.Set(testVehicleID, "Gear", "ShiftStatePark", time.Now().UTC())
+				s.Set(testVehicleID, "Gear", "Unknown", time.Now().UTC())
 			},
-			want:   "P",
-			wantOK: true,
+			wantOK: false,
 		},
 		{
-			name: "ShiftStateUnknown drops",
+			name: "non-canonical SNA is rejected",
 			setup: func(s *signal.Store) {
-				s.Set(testVehicleID, "Gear", ftproto.ShiftState_ShiftStateUnknown, time.Now().UTC())
+				s.Set(testVehicleID, "Gear", "SNA", time.Now().UTC())
 			},
 			wantOK: false,
 		},
@@ -162,7 +166,7 @@ func TestSignalAdapter_IsCharging(t *testing.T) {
 		{
 			name: "ChargeState=Charging",
 			setup: func(s *signal.Store) {
-				s.Set(testVehicleID, "ChargeState", ftproto.ChargingState_ChargeStateCharging, time.Now().UTC())
+				s.Set(testVehicleID, "ChargeState", "Charging", time.Now().UTC())
 			},
 			want:   true,
 			wantOK: true,
@@ -170,7 +174,7 @@ func TestSignalAdapter_IsCharging(t *testing.T) {
 		{
 			name: "ChargeState=Starting",
 			setup: func(s *signal.Store) {
-				s.Set(testVehicleID, "ChargeState", ftproto.ChargingState_ChargeStateStarting, time.Now().UTC())
+				s.Set(testVehicleID, "ChargeState", "Starting", time.Now().UTC())
 			},
 			want:   true,
 			wantOK: true,
@@ -178,7 +182,7 @@ func TestSignalAdapter_IsCharging(t *testing.T) {
 		{
 			name: "ChargeState=Disconnected",
 			setup: func(s *signal.Store) {
-				s.Set(testVehicleID, "ChargeState", ftproto.ChargingState_ChargeStateDisconnected, time.Now().UTC())
+				s.Set(testVehicleID, "ChargeState", "Disconnected", time.Now().UTC())
 			},
 			want:   false,
 			wantOK: true,
@@ -186,7 +190,7 @@ func TestSignalAdapter_IsCharging(t *testing.T) {
 		{
 			name: "ChargeState=Stopped is not active",
 			setup: func(s *signal.Store) {
-				s.Set(testVehicleID, "ChargeState", ftproto.ChargingState_ChargeStateStopped, time.Now().UTC())
+				s.Set(testVehicleID, "ChargeState", "Stopped", time.Now().UTC())
 			},
 			want:   false,
 			wantOK: true,
@@ -194,7 +198,7 @@ func TestSignalAdapter_IsCharging(t *testing.T) {
 		{
 			name: "ChargeState=Complete is not active",
 			setup: func(s *signal.Store) {
-				s.Set(testVehicleID, "ChargeState", ftproto.ChargingState_ChargeStateComplete, time.Now().UTC())
+				s.Set(testVehicleID, "ChargeState", "Complete", time.Now().UTC())
 			},
 			want:   false,
 			wantOK: true,
@@ -202,7 +206,7 @@ func TestSignalAdapter_IsCharging(t *testing.T) {
 		{
 			name: "fallback to DetailedChargeState when ChargeState absent",
 			setup: func(s *signal.Store) {
-				s.Set(testVehicleID, "DetailedChargeState", ftproto.DetailedChargeStateValue_DetailedChargeStateCharging, time.Now().UTC())
+				s.Set(testVehicleID, "DetailedChargeState", "Charging", time.Now().UTC())
 			},
 			want:   true,
 			wantOK: true,
@@ -246,7 +250,7 @@ func TestSignalAdapter_IsDriving(t *testing.T) {
 			name: "Gear=D + Speed>0 -> driving",
 			setup: func(s *signal.Store) {
 				now := time.Now().UTC()
-				s.Set(testVehicleID, "Gear", ftproto.ShiftState_ShiftStateD, now)
+				s.Set(testVehicleID, "Gear", "D", now)
 				s.Set(testVehicleID, "VehicleSpeed", 12.0, now)
 			},
 			want:   true,
@@ -256,7 +260,7 @@ func TestSignalAdapter_IsDriving(t *testing.T) {
 			name: "Gear=R + Speed>0 -> driving",
 			setup: func(s *signal.Store) {
 				now := time.Now().UTC()
-				s.Set(testVehicleID, "Gear", ftproto.ShiftState_ShiftStateR, now)
+				s.Set(testVehicleID, "Gear", "R", now)
 				s.Set(testVehicleID, "VehicleSpeed", 1.0, now)
 			},
 			want:   true,
@@ -266,7 +270,7 @@ func TestSignalAdapter_IsDriving(t *testing.T) {
 			name: "Gear=D + Speed=0 -> not driving but ok",
 			setup: func(s *signal.Store) {
 				now := time.Now().UTC()
-				s.Set(testVehicleID, "Gear", ftproto.ShiftState_ShiftStateD, now)
+				s.Set(testVehicleID, "Gear", "D", now)
 				s.Set(testVehicleID, "VehicleSpeed", 0.0, now)
 			},
 			want:   false,
@@ -275,7 +279,7 @@ func TestSignalAdapter_IsDriving(t *testing.T) {
 		{
 			name: "Gear=P -> not driving regardless of speed",
 			setup: func(s *signal.Store) {
-				s.Set(testVehicleID, "Gear", ftproto.ShiftState_ShiftStateP, time.Now().UTC())
+				s.Set(testVehicleID, "Gear", "P", time.Now().UTC())
 			},
 			want:   false,
 			wantOK: true,
@@ -283,7 +287,7 @@ func TestSignalAdapter_IsDriving(t *testing.T) {
 		{
 			name: "Gear=D but speed missing -> ok=false",
 			setup: func(s *signal.Store) {
-				s.Set(testVehicleID, "Gear", ftproto.ShiftState_ShiftStateD, time.Now().UTC())
+				s.Set(testVehicleID, "Gear", "D", time.Now().UTC())
 			},
 			wantOK: false,
 		},
@@ -392,21 +396,21 @@ func TestSignalAdapter_Position(t *testing.T) {
 	}
 }
 
-func TestSignalAdapter_chargeStateName_StripsBothPrefixes(t *testing.T) {
+// TestSignalAdapter_chargeStateName_CanonicalShortForm pins the
+// post-codec-canonicalization contract: the adapter is a thin GetString
+// wrapper. There are no prefixes to strip; the codec already emits
+// "Charging" / "Disconnected" / "Complete" etc.
+func TestSignalAdapter_chargeStateName_CanonicalShortForm(t *testing.T) {
 	adapter, store := newTestAdapter(t)
 	now := time.Now().UTC()
 
-	// ChargeState enum -> "Charging"
-	store.Set(testVehicleID, "ChargeState", ftproto.ChargingState_ChargeStateCharging, now)
+	store.Set(testVehicleID, "ChargeState", "Charging", now)
 	got, ok := adapter.chargeStateName(testVehicleID, "ChargeState")
 	if !ok || got != "Charging" {
 		t.Errorf("ChargeState chargeStateName = (%q, %v), want (\"Charging\", true)", got, ok)
 	}
 
-	// DetailedChargeState enum -> "Charging" (DetailedChargeState
-	// prefix stripped first, then ChargeState would also trim if
-	// remaining)
-	store.Set(testVehicleID, "DetailedChargeState", ftproto.DetailedChargeStateValue_DetailedChargeStateCharging, now)
+	store.Set(testVehicleID, "DetailedChargeState", "Charging", now)
 	got, ok = adapter.chargeStateName(testVehicleID, "DetailedChargeState")
 	if !ok || got != "Charging" {
 		t.Errorf("DetailedChargeState chargeStateName = (%q, %v), want (\"Charging\", true)", got, ok)

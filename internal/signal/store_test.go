@@ -181,16 +181,18 @@ func TestGetFloat_ValueKindMismatchOnDeclaredField(t *testing.T) {
 	}
 }
 
-// TestGetString_ValueKindMismatchOnEnum verifies that GetString rejects
-// declared enum fields. Gear is declared as ValueKindEnum (EnumTypeName
-// "ShiftState") so even when stored as a string it must NOT satisfy
-// GetString — callers should use a dedicated enum getter.
-func TestGetString_ValueKindMismatchOnEnum(t *testing.T) {
+// TestGetString_OnEnumField pins the post-codec-canonicalization
+// contract: enum fields hold canonical short strings (per
+// protomodel.DecodeValue). Gear stores "D" / "P" / "R" / "N" — GetString
+// must return the string verbatim. The legacy reject-enum behaviour
+// was removed when the codec became the SINGLE conversion point for
+// proto-enum → string translation.
+func TestGetString_OnEnumField(t *testing.T) {
 	s := New()
 	s.Set(1, "Gear", "D", time.Now().UTC())
 
-	if str, ok := s.GetString(1, "Gear"); ok || str != "" {
-		t.Errorf("GetString(Gear) = (%q, %v), want (\"\", false) — Gear is ValueKindEnum", str, ok)
+	if str, ok := s.GetString(1, "Gear"); !ok || str != "D" {
+		t.Errorf("GetString(Gear) = (%q, %v), want (\"D\", true) — codec emits canonical short string for ValueKindEnum", str, ok)
 	}
 }
 

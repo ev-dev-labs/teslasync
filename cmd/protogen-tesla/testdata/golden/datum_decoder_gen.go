@@ -26,6 +26,7 @@ package protomodel
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	ftproto "github.com/teslamotors/fleet-telemetry/protos"
 )
@@ -55,19 +56,32 @@ var ErrUnsetValue = errors.New("protomodel: oneof value is unset")
 //   - (typed value, nil)    for any populated scalar/enum/compound variant.
 //
 // The returned `any` is one of:
-//   - string  (string_value)
+//   - string  (string_value, AND every named-enum variant — see below)
 //   - int32   (int_value)
 //   - int64   (long_value)
 //   - float32 (float_value)
 //   - float64 (double_value)
 //   - bool    (boolean_value)
 //   - Location, Doors, TireLocation, Time (the four compound message variants)
-//   - a typed ftproto enum (e.g. ftproto.ChargingState, ftproto.ShiftState,
-//     ftproto.SentryModeState, ...) for every named-enum variant.
 //
-// The caller MUST type-switch on the returned `any` to handle each kind; the
-// concrete Go type is documented per variant above and locked in by the
-// reflect-based table tests in datum_decoder_test.go.
+// **Enum variants are returned as canonical short strings**, NOT as typed
+// ftproto enum values. The decoder calls .String() on the typed proto enum
+// then strips the per-enum value-name prefix so the result is the human-
+// readable short form (e.g. "D", "Charging", "Disconnected", "Armed",
+// "Idle"). This is the SINGLE conversion point for proto-enum -> internal-
+// representation translation in the entire pipeline; no downstream code
+// (FSM, sessions, alerts, signal store, REST handlers, SSE, signal_log
+// writer) is permitted to type-assert against ftproto.* enum values.
+// Adding a new conversion site duplicates this contract and is a code-
+// review block.
+//
+// Rationale: every serialization edge in the system (Postgres TEXT, Redis
+// HSET, REST/SSE JSON) requires strings anyway. Making the codec's internal
+// representation also string keeps the entire pipeline uniform on
+// primitives, localizes the ftproto SDK coupling to this package, and
+// matches the canonical-short-form constants in internal/enums (GearDrive=
+// "D", ChargeStateCharging="Charging", etc.) that consumers compare
+// against.
 func DecodeValue(v *ftproto.Value) (any, error) {
 	if v == nil {
 		return nil, ErrUnsetValue
@@ -95,7 +109,7 @@ func DecodeValue(v *ftproto.Value) (any, error) {
 		}
 		return Location{Latitude: lv.GetLatitude(), Longitude: lv.GetLongitude()}, nil
 	case *ftproto.Value_ShiftStateValue:
-		return x.ShiftStateValue, nil
+		return strings.TrimPrefix(x.ShiftStateValue.String(), "ShiftState"), nil
 	case *ftproto.Value_Invalid:
 		// v.GetInvalid() above already short-circuited the populated case;
 		// reaching here means Invalid==false, which is treated as unset.

@@ -24,12 +24,12 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
     let latestTime = 0;
 
     for (const tr of transitions) {
-      if (fsmType !== 'all' && tr.fsm_type !== fsmType) continue;
+      if (fsmType !== 'all' && tr.fsm_name !== fsmType) continue;
       sc.set(tr.to_state, (sc.get(tr.to_state) ?? 0) + 1);
       sc.set(tr.from_state, (sc.get(tr.from_state) ?? 0) + 1);
       const edgeKey = `${tr.from_state}->${tr.to_state}`;
       ec.set(edgeKey, (ec.get(edgeKey) ?? 0) + 1);
-      const t = new Date(tr.created_at).getTime();
+      const t = new Date(tr.ts).getTime();
       if (t > latestTime) {
         latestTime = t;
         latest = tr.to_state;

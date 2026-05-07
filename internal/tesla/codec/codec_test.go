@@ -30,9 +30,12 @@ func makeMixedPayload() *ftproto.Payload {
 				Value: &ftproto.Value{Value: &ftproto.Value_FloatValue{FloatValue: 42.5}},
 			},
 			{
-				// happy enum: the Field key is "Gear" but its value type is
-				// the typed ftproto.ShiftState enum (per
-				// SignalMeta{Field:"Gear", EnumTypeName:"ShiftState"}).
+				// happy enum: the Field key is "Gear". The proto wire
+				// value is the typed ftproto.ShiftState enum, but the
+				// codec canonicalizes it to a short string ("D") at
+				// the SINGLE conversion point — see protomodel.DecodeValue.
+				// The atomic carries the canonical short string, NOT
+				// the typed ftproto.* value.
 				Key:   ftproto.Field_Gear,
 				Value: &ftproto.Value{Value: &ftproto.Value_ShiftStateValue{ShiftStateValue: ftproto.ShiftState_ShiftStateD}},
 			},
@@ -125,8 +128,8 @@ func TestDecode_MixedPayload(t *testing.T) {
 				t.Errorf("VehicleSpeed = %v (%T), want float32(42.5)", a.Value, a.Value)
 			}
 		case "Gear":
-			if v, ok := a.Value.(ftproto.ShiftState); !ok || v != ftproto.ShiftState_ShiftStateD {
-				t.Errorf("Gear = %v (%T), want ftproto.ShiftState_ShiftStateD", a.Value, a.Value)
+			if v, ok := a.Value.(string); !ok || v != "D" {
+				t.Errorf("Gear = %v (%T), want string \"D\" (codec canonicalizes ShiftState_ShiftStateD)", a.Value, a.Value)
 			}
 		case "LocationLatitude":
 			if v, ok := a.Value.(float64); !ok || v != 37.7749 {

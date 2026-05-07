@@ -26,7 +26,7 @@
  * first; only on non-sudo failures do we fall through to the resilient
  * pipeline.
  */
-import { resilientFetch, ApiError, getApiBase, isApiError } from '../lib/resilience'
+import { resilientFetch, ApiError, getApiBase, isApiError, camelCaseKeys } from '../lib/resilience'
 
 export { ApiError, getApiBase, isApiError }
 
@@ -245,7 +245,12 @@ async function directRequest<T>(
     return undefined as T
   }
 
-  return await res.json() as T
+  // Mirror resilientFetch: backend returns snake_case JSON; TS types expect
+  // camelCase. camelCaseKeys() exposes BOTH forms so consumers can read either,
+  // matching the contract every hook & page is built against. Without this,
+  // every successful directRequest returns raw snake_case and camelCase reads
+  // resolve to undefined (rendered as 0/—).
+  return camelCaseKeys(await res.json()) as T
 }
 
 /**

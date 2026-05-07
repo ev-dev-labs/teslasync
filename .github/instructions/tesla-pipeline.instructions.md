@@ -110,3 +110,69 @@ Source of truth: ADR-004 in `.github/ARCHITECTURE.md`. Read it before making any
 - Pipeline contract: `go test ./internal/tesla/normalize/`
 - Unit conversions: `go test ./internal/tesla/units/`
 - Drift detection: `go run ./cmd/unit-drift-validator/ --once`
+
+## ⛔ 11. DUPLICATING THE PROTO-ENUM CONVERSION
+
+The codec is the **single conversion point** for proto enum →
+internal-representation translation in the entire pipeline. The
+generator (`cmd/protogen-tesla/emit.go`) emits, for every typed proto
+enum, a default-case branch that calls
+`strings.TrimPrefix(x.<Field>.String(), "<LCP>")` so the value lands
+in `signal.Store` as a **canonical short string** (e.g. `"D"`, `"P"`,
+`"R"`, `"N"`, `"Charging"`, `"Complete"`, `"Disconnected"`,
+`"Kilometers"`, `"Miles"`, `"Fahrenheit"`, `"Celsius"`, `"Psi"`,
+`"Bar"`, `"Distance"`, `"Percent"`).
+
+No downstream code — FSM, sessions, alerts, router writers,
+`signal.Store`, `internal/tesla/normalize` observers, REST handlers,
+SSE, `signal_log` writer, Redis cache reader — is permitted to:
+
+```
+❌ type-assert against ftproto.* enum values:
+     v, ok := raw.(ftproto.ShiftState)               // forbidden
+     u, ok := value.(ftproto.DistanceUnit)           // forbidden
+
+❌ add a new "ParseFooEnum" / "stringerName" / "stripPrefix" helper
+   that re-runs the codec's prefix-trim:
+     func ParseGear(raw string) string { ... }       // forbidden
+     func chargeStateName(s string) string { ... }   // forbidden
+
+❌ accept BOTH long-form and canonical short form in a switch:
+     switch v {                                       // forbidden
+     case "ShiftStateD", "Drive", "D":                //   pick ONE form
+       return GearDrive                               //   (the canonical
+     }                                                //    short form)
+```
+
+Instead:
+
+```
+✅ Compare canonical short strings directly via store.GetString:
+     g, ok := store.GetString(vehicleID, signalmeta.SigShiftState)
+     if ok && g == "D" { ... }
+
+✅ Trust the canonical-string contract — if a field value is missing
+   from the codec's set, fix it by extending
+   cmd/protogen-tesla/emit.go's longestCommonPrefix mapping so the
+   codec emits the right short form. Then re-run
+   `go generate ./internal/tesla/protomodel/...`.
+
+✅ Read the contract: see the doc comment on
+   `internal/tesla/protomodel.DecodeValue` and the per-enum LCP outputs
+   in `cmd/protogen-tesla/emit.go`.
+```
+
+**Code-review block:** any new file under `internal/{fsm,signal,api,
+alerts,automation,tesla/normalize,tesla/router}/` that imports
+`api/proto/tesla/...` solely to type-assert against an enum value, OR
+re-implements per-enum prefix-stripping, is rejected. The codec
+already did the work.
+
+**Permitted exceptions:**
+- `cmd/pub-test-signal/` and other wire-format producers — they
+  encode payloads, so typed `ftproto.*` enums on the **outgoing**
+  side are correct.
+- `cmd/protogen-tesla/` itself — it owns the contract.
+- Codec test files — wire-format inputs use typed enums, only the
+  decoded outputs assert canonical short strings.
+

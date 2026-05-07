@@ -65,7 +65,7 @@ func (r *OnboardingRepo) Get(ctx context.Context) (*OnboardingStatus, error) {
 	err := r.db.Pool.QueryRow(ctx,
 		`SELECT EXISTS(
 			SELECT 1 FROM signal_log
-			WHERE created_at > NOW() - INTERVAL '24 hours'
+			WHERE ts > NOW() - INTERVAL '24 hours'
 			LIMIT 1
 		)`,
 	).Scan(&dataFlowing)
@@ -86,7 +86,7 @@ func (r *OnboardingRepo) Get(ctx context.Context) (*OnboardingStatus, error) {
 func (r *OnboardingRepo) LastSignalAt(ctx context.Context) (*time.Time, error) {
 	var ts time.Time
 	err := r.db.Pool.QueryRow(ctx,
-		`SELECT created_at FROM signal_log ORDER BY created_at DESC LIMIT 1`,
+		`SELECT ts FROM signal_log ORDER BY ts DESC LIMIT 1`,
 	).Scan(&ts)
 	if err == pgx.ErrNoRows {
 		return nil, nil

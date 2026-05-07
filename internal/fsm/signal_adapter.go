@@ -1,9 +1,6 @@
 package fsm
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/rs/zerolog"
 
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -25,18 +22,16 @@ const (
 )
 
 // SignalAdapter centralizes typed signal.Store lookups for the FSM rule
-// layer. Each method returns an FSM-friendly Go primitive (short
-// suffixes for enums, SI floats for numerics, plain bool for flags)
-// alongside an "ok" indicator. When the underlying value is missing,
-// declared with the wrong ValueKind, or fails to type-assert, the
-// adapter logs at debug and returns the zero value with ok == false so
-// guards stay branch-free at the call site.
+// layer. Each method returns an FSM-friendly Go primitive (canonical short
+// strings for enums, SI floats for numerics, plain bool for flags)
+// alongside an "ok" indicator.
 //
-// The adapter intentionally mediates ALL FSM access to the typed store
-// so the proto-vs-runtime translation (e.g. "ftproto.ShiftState_ShiftStateD"
-// -> "D") lives in exactly one place. Domain rules consume short string
-// suffixes and SI numerics — they MUST NOT type-assert against ftproto
-// enums directly.
+// After the codec canonicalization change (see protomodel.DecodeValue),
+// enum fields are stored as canonical short strings in signal.Store ("D",
+// "Charging", "Disconnected", etc.). The adapter is now a thin typed
+// facade — it does NOT translate ftproto.* values; that work happens
+// once at the codec boundary. Domain rules MUST consume short strings
+// and SI numerics and MUST NOT type-assert against ftproto enum values.
 type SignalAdapter struct {
 	store *signal.Store
 	log   zerolog.Logger
@@ -62,46 +57,25 @@ func (a *SignalAdapter) Last(vehicleID int64, field string) (signal.Value, bool)
 
 // Gear returns the canonical short shift suffix ("P", "R", "N", "D").
 //
-// The codec stores Gear as a typed proto enum (e.g.
-// ftproto.ShiftState_ShiftStateD) so we go through fmt.Stringer rather
-// than Store.GetString — the latter warns when the field is declared as
-// ValueKindEnum. Both the bare suffix form ("P") and the legacy
-// long-form ("ShiftStatePark") are accepted to stay forward-compatible
-// with any future producer that emits the symbolic name verbatim.
+// The codec canonicalizes Gear to its single-letter short form so the
+// adapter is a thin GetString wrapper plus a guard that filters out
+// non-canonical variants ("Unknown", "Invalid", "SNA").
 func (a *SignalAdapter) Gear(vehicleID int64) (string, bool) {
-	raw := a.store.Get(vehicleID, fieldGear)
-	if raw == nil {
-		return "", false
-	}
 	if !a.expectKind(vehicleID, fieldGear, protomodel.ValueKindEnum) {
 		return "", false
 	}
-	name, ok := stringerName(raw.Raw)
+	g, ok := a.store.GetString(vehicleID, fieldGear)
 	if !ok {
-		a.log.Debug().
-			Int64("vehicle_id", vehicleID).
-			Str("field", fieldGear).
-			Str("got_type", fmt.Sprintf("%T", raw.Raw)).
-			Msg("fsm signal adapter: Gear value is not a Stringer")
 		return "", false
 	}
-	short := strings.TrimPrefix(name, "ShiftState")
-	switch short {
+	switch g {
 	case "P", "R", "N", "D":
-		return short, true
-	case "Park":
-		return "P", true
-	case "Reverse":
-		return "R", true
-	case "Neutral":
-		return "N", true
-	case "Drive":
-		return "D", true
+		return g, true
 	}
 	a.log.Debug().
 		Int64("vehicle_id", vehicleID).
 		Str("field", fieldGear).
-		Str("name", name).
+		Str("value", g).
 		Msg("fsm signal adapter: Gear value not in {P,R,N,D}")
 	return "", false
 }
@@ -218,49 +192,19 @@ func (a *SignalAdapter) expectKind(vehicleID int64, field string, want protomode
 	return true
 }
 
-// chargeStateName returns the bare suffix name (e.g. "Charging") for
-// an enum-typed charge-state field. Both the "ChargeState*" and
-// "DetailedChargeState*" prefixes are stripped so callers can branch on
-// a single set of short suffixes.
+// chargeStateName returns the canonical short suffix (e.g. "Charging")
+// for a ChargeState / DetailedChargeState field. The codec already
+// emits the short form, so the adapter is a thin GetString wrapper plus
+// the ValueKind guard.
 func (a *SignalAdapter) chargeStateName(vehicleID int64, field string) (string, bool) {
-	raw := a.store.Get(vehicleID, field)
-	if raw == nil {
-		return "", false
-	}
 	if !a.expectKind(vehicleID, field, protomodel.ValueKindEnum) {
 		return "", false
 	}
-	name, ok := stringerName(raw.Raw)
-	if !ok {
-		a.log.Debug().
-			Int64("vehicle_id", vehicleID).
-			Str("field", field).
-			Str("got_type", fmt.Sprintf("%T", raw.Raw)).
-			Msg("fsm signal adapter: charge state value is not a Stringer")
-		return "", false
-	}
-	name = strings.TrimPrefix(name, "DetailedChargeState")
-	name = strings.TrimPrefix(name, "ChargeState")
-	return name, true
+	return a.store.GetString(vehicleID, field)
 }
 
-// stringerName returns the result of calling .String() on the value if
-// it implements fmt.Stringer (which all protobuf-generated Go enums
-// do). Falls back to a direct string assertion to keep ad-hoc test
-// fixtures and any future producer that emits the symbolic name
-// verbatim working.
-func stringerName(v any) (string, bool) {
-	if s, ok := v.(fmt.Stringer); ok {
-		return s.String(), true
-	}
-	if s, ok := v.(string); ok {
-		return s, true
-	}
-	return "", false
-}
-
-// chargeStateIsActive returns true when the bare charge-state suffix
-// represents an active charging session.
+// chargeStateIsActive returns true when the canonical charge-state
+// short form represents an active charging session.
 func chargeStateIsActive(suffix string) bool {
 	switch suffix {
 	case "Charging", "Starting":

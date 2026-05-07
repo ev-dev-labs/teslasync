@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	ftproto "github.com/teslamotors/fleet-telemetry/protos"
-
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
@@ -16,24 +14,24 @@ import (
 // four IsSettingUnit signals; per ADR-004 #8 those signals are NOT
 // also routed to a hot table.
 //
-// The mapping table (proto enum -> unit_history.Kind, ActiveUnit) is
-// derived from the four ftproto enum families (DistanceUnit,
-// TemperatureUnit, PressureUnit, ChargeUnitPreference) declared in
-// the vendored vehicle_data.proto. The codegen in
-// internal/tesla/protomodel emits SignalMeta entries that mark
-// these four Fields as IsSettingUnit=true; the SignalMeta carries
-// the UnitKind so the dispatcher knows which Kind to record without
-// an additional lookup table here.
+// Per the codec canonical-string contract (see protomodel.DecodeValue),
+// proto enum variants reach this observer as canonical short strings
+// ("Miles" / "Kilometers" / "Fahrenheit" / "Celsius" / "Psi" / "Bar" /
+// "Distance" / "Percent"); the observer is the SINGLE downstream
+// site that maps those strings to (Kind, ActiveUnit) tuples for the
+// hot persistence path. It MUST NOT type-assert against ftproto.*
+// enum values — adding such an assertion duplicates the conversion
+// contract and is a code-review block.
 //
 // Errors:
 //
-//   - the atomic's Value is not the expected ftproto.<EnumType>
-//     variant for its Field: returns a wrapped
+//   - the atomic's Value is not a string (a producer bug — the codec
+//     guarantees string for ValueKindEnum): returns a wrapped
 //     units.ErrUnsupportedField. Caller surfaces this via
 //     ValuesProcessed{outcome="error"}.
 //
-//   - the proto enum value is the *Unknown sentinel (e.g.
-//     DistanceUnitUnknown): returns a wrapped units.ErrUnsupportedUnit.
+//   - the canonical string is the *Unknown sentinel (e.g. "Unknown"
+//     for DistanceUnit): returns a wrapped units.ErrUnsupportedUnit.
 //     Per ADR-004 we MUST NOT silently substitute mi/km/F/C/etc.;
 //     the producer is explicitly telling us it does not know the
 //     unit, and persisting an "unknown" row would corrupt every
@@ -66,79 +64,67 @@ func (p *Pipeline) observeSettingUnit(ctx context.Context, atomic codec.Atomic, 
 	return nil
 }
 
-// settingUnitKindAndValue resolves a (Field, decoded enum value)
-// pair to the (Kind, ActiveUnit) the unit-history table indexes
-// against. The mapping is hand-rolled because the generator does
-// not emit it directly — the four enum families are declared in
-// the vendored proto, but the (Field -> Kind) and
-// (enum-value -> ActiveUnit) projections are normalize-package
-// concerns rather than protomodel concerns.
+// settingUnitKindAndValue resolves a (Field, codec-canonicalized
+// short string) pair to the (Kind, ActiveUnit) the unit-history table
+// indexes against.
 //
-// The four cases mirror the prompt's mapping table verbatim:
+// The four cases mirror the protomodel.DecodeValue prefix-stripping
+// output (see longestCommonPrefix in cmd/protogen-tesla/emit.go):
 //
-//	SettingDistanceUnit     -> distance:    DistanceUnitMiles=mi,
-//	                            DistanceUnitKilometers=km
-//	SettingTemperatureUnit  -> temperature: TemperatureUnitFahrenheit=F,
-//	                            TemperatureUnitCelsius=C
-//	SettingTirePressureUnit -> pressure:    PressureUnitPsi=psi,
-//	                            PressureUnitBar=bar
-//	SettingChargeUnit       -> charge:      ChargeUnitDistance=charge_distance,
-//	                            ChargeUnitPercent=charge_percent
+//	Field                    Codec output ("Miles"/"Bar"/etc.)
+//	-----------------------  ----------------------------------
+//	SettingDistanceUnit      "Miles" | "Kilometers" | "Unknown"
+//	SettingTemperatureUnit   "Fahrenheit" | "Celsius" | "Unknown"
+//	SettingTirePressureUnit  "Psi" | "Bar" | "Unknown"
+//	SettingChargeUnit        "Distance" | "Percent" | "Unknown"
+//
+// Any other string (including "Unknown") yields ErrUnsupportedUnit.
+// Anything that's not a string at all yields ErrUnsupportedField (a
+// producer-side contract violation).
 func settingUnitKindAndValue(field string, value any) (unithistory.Kind, units.ActiveUnit, error) {
+	str, ok := value.(string)
+	if !ok {
+		return "", "", fmt.Errorf("%w: %s value of type %T (want string from codec)", units.ErrUnsupportedField, field, value)
+	}
 	switch field {
 	case "SettingDistanceUnit":
-		v, ok := value.(ftproto.DistanceUnit)
-		if !ok {
-			return "", "", fmt.Errorf("%w: SettingDistanceUnit value of type %T (want ftproto.DistanceUnit)", units.ErrUnsupportedField, value)
-		}
-		switch v {
-		case ftproto.DistanceUnit_DistanceUnitMiles:
+		switch str {
+		case "Miles":
 			return unithistory.KindDistance, units.ActiveUnitMiles, nil
-		case ftproto.DistanceUnit_DistanceUnitKilometers:
+		case "Kilometers":
 			return unithistory.KindDistance, units.ActiveUnitKilometers, nil
 		default:
-			return "", "", fmt.Errorf("%w: SettingDistanceUnit=%s", units.ErrUnsupportedUnit, v)
+			return "", "", fmt.Errorf("%w: SettingDistanceUnit=%s", units.ErrUnsupportedUnit, str)
 		}
 	case "SettingTemperatureUnit":
-		v, ok := value.(ftproto.TemperatureUnit)
-		if !ok {
-			return "", "", fmt.Errorf("%w: SettingTemperatureUnit value of type %T (want ftproto.TemperatureUnit)", units.ErrUnsupportedField, value)
-		}
-		switch v {
-		case ftproto.TemperatureUnit_TemperatureUnitFahrenheit:
+		switch str {
+		case "Fahrenheit":
 			return unithistory.KindTemperature, units.ActiveUnitFahrenheit, nil
-		case ftproto.TemperatureUnit_TemperatureUnitCelsius:
+		case "Celsius":
 			return unithistory.KindTemperature, units.ActiveUnitCelsius, nil
 		default:
-			return "", "", fmt.Errorf("%w: SettingTemperatureUnit=%s", units.ErrUnsupportedUnit, v)
+			return "", "", fmt.Errorf("%w: SettingTemperatureUnit=%s", units.ErrUnsupportedUnit, str)
 		}
 	case "SettingTirePressureUnit":
-		v, ok := value.(ftproto.PressureUnit)
-		if !ok {
-			return "", "", fmt.Errorf("%w: SettingTirePressureUnit value of type %T (want ftproto.PressureUnit)", units.ErrUnsupportedField, value)
-		}
-		switch v {
-		case ftproto.PressureUnit_PressureUnitPsi:
+		switch str {
+		case "Psi":
 			return unithistory.KindPressure, units.ActiveUnitPSI, nil
-		case ftproto.PressureUnit_PressureUnitBar:
+		case "Bar":
 			return unithistory.KindPressure, units.ActiveUnitBar, nil
 		default:
-			return "", "", fmt.Errorf("%w: SettingTirePressureUnit=%s", units.ErrUnsupportedUnit, v)
+			return "", "", fmt.Errorf("%w: SettingTirePressureUnit=%s", units.ErrUnsupportedUnit, str)
 		}
 	case "SettingChargeUnit":
-		v, ok := value.(ftproto.ChargeUnitPreference)
-		if !ok {
-			return "", "", fmt.Errorf("%w: SettingChargeUnit value of type %T (want ftproto.ChargeUnitPreference)", units.ErrUnsupportedField, value)
-		}
-		switch v {
-		case ftproto.ChargeUnitPreference_ChargeUnitDistance:
+		switch str {
+		case "Distance":
 			return unithistory.KindCharge, units.ActiveUnitDistance, nil
-		case ftproto.ChargeUnitPreference_ChargeUnitPercent:
+		case "Percent":
 			return unithistory.KindCharge, units.ActiveUnitPercent, nil
 		default:
-			return "", "", fmt.Errorf("%w: SettingChargeUnit=%s", units.ErrUnsupportedUnit, v)
+			return "", "", fmt.Errorf("%w: SettingChargeUnit=%s", units.ErrUnsupportedUnit, str)
 		}
 	default:
 		return "", "", fmt.Errorf("%w: %q is not a Setting*Unit field", units.ErrUnsupportedField, field)
 	}
 }
+

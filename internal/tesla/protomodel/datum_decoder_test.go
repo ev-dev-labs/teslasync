@@ -15,6 +15,12 @@ import (
 // asserts the EXACT returned Go type via reflect.TypeOf so a future codegen
 // change that silently widens or narrows a return type cannot land
 // unnoticed.
+//
+// Enum variants assert the canonical short-string form (e.g. "D" for
+// ShiftState_ShiftStateD) — the codec is the SINGLE conversion point
+// for proto-enum → internal-representation translation; downstream
+// consumers receive plain Go strings, NEVER typed ftproto.* enum
+// values. See the doc comment on DecodeValue for the rationale.
 func TestDecodeValue_Variants(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -60,12 +66,12 @@ func TestDecodeValue_Variants(t *testing.T) {
 			wantType:  reflect.TypeOf(false),
 		},
 		{
-			name: "enum variant (ShiftState) returns typed proto enum",
+			name: "enum variant (ShiftState) returns canonical short string",
 			input: &ftproto.Value{
 				Value: &ftproto.Value_ShiftStateValue{ShiftStateValue: ftproto.ShiftState_ShiftStateD},
 			},
-			wantValue: ftproto.ShiftState_ShiftStateD,
-			wantType:  reflect.TypeOf(ftproto.ShiftState(0)),
+			wantValue: "D",
+			wantType:  reflect.TypeOf(""),
 		},
 		{
 			name: "compound variant (Location) returns typed Location struct",

@@ -27,26 +27,26 @@ export function FSMHealthPanel({ transitions }: FSMHealthPanelProps) {
     // ── Flap detection: >5 transitions of same FSM within any 1-min window ──
     const byType = new Map<string, FSMTransition[]>();
     for (const tr of transitions) {
-      const list = byType.get(tr.fsm_type) ?? [];
+      const list = byType.get(tr.fsm_name) ?? [];
       list.push(tr);
-      byType.set(tr.fsm_type, list);
+      byType.set(tr.fsm_name, list);
     }
 
     for (const [, list] of byType) {
       const sorted = [...list].sort(
-        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        (a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime(),
       );
       for (let i = 0; i < sorted.length; i++) {
-        const windowEnd = new Date(sorted[i].created_at).getTime() + 60_000;
+        const windowEnd = new Date(sorted[i].ts).getTime() + 60_000;
         let count = 0;
         for (let j = i; j < sorted.length; j++) {
-          if (new Date(sorted[j].created_at).getTime() <= windowEnd) {
+          if (new Date(sorted[j].ts).getTime() <= windowEnd) {
             count++;
           } else break;
         }
         if (count > 5) {
           for (let j = i; j < sorted.length; j++) {
-            if (new Date(sorted[j].created_at).getTime() <= windowEnd) {
+            if (new Date(sorted[j].ts).getTime() <= windowEnd) {
               flapped.add(sorted[j].id);
             } else break;
           }
@@ -70,16 +70,16 @@ export function FSMHealthPanel({ transitions }: FSMHealthPanelProps) {
     // Group by instance to find latest state
     const instanceLatest = new Map<string, FSMTransition>();
     for (const tr of transitions) {
-      if (!sessionTypes.includes(tr.fsm_type)) continue;
-      const key = `${tr.fsm_type}:${tr.fsm_instance_id ?? tr.vehicle_id}`;
+      if (!sessionTypes.includes(tr.fsm_name)) continue;
+      const key = `${tr.fsm_name}:${tr.vehicle_id ?? tr.vehicle_id}`;
       const existing = instanceLatest.get(key);
-      if (!existing || new Date(tr.created_at).getTime() > new Date(existing.created_at).getTime()) {
+      if (!existing || new Date(tr.ts).getTime() > new Date(existing.ts).getTime()) {
         instanceLatest.set(key, tr);
       }
     }
     let stuckCount = 0;
     for (const [, tr] of instanceLatest) {
-      if (stuckStates.includes(tr.to_state) && (now - new Date(tr.created_at).getTime()) > FOUR_HOURS) {
+      if (stuckStates.includes(tr.to_state) && (now - new Date(tr.ts).getTime()) > FOUR_HOURS) {
         stuckCount++;
       }
     }
@@ -154,25 +154,25 @@ export function computeFlapIds(transitions: FSMTransition[]): Set<number> {
   const flapped = new Set<number>();
   const byType = new Map<string, FSMTransition[]>();
   for (const tr of transitions) {
-    const list = byType.get(tr.fsm_type) ?? [];
+    const list = byType.get(tr.fsm_name) ?? [];
     list.push(tr);
-    byType.set(tr.fsm_type, list);
+    byType.set(tr.fsm_name, list);
   }
   for (const [, list] of byType) {
     const sorted = [...list].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      (a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime(),
     );
     for (let i = 0; i < sorted.length; i++) {
-      const windowEnd = new Date(sorted[i].created_at).getTime() + 60_000;
+      const windowEnd = new Date(sorted[i].ts).getTime() + 60_000;
       let count = 0;
       for (let j = i; j < sorted.length; j++) {
-        if (new Date(sorted[j].created_at).getTime() <= windowEnd) {
+        if (new Date(sorted[j].ts).getTime() <= windowEnd) {
           count++;
         } else break;
       }
       if (count > 5) {
         for (let j = i; j < sorted.length; j++) {
-          if (new Date(sorted[j].created_at).getTime() <= windowEnd) {
+          if (new Date(sorted[j].ts).getTime() <= windowEnd) {
             flapped.add(sorted[j].id);
           } else break;
         }

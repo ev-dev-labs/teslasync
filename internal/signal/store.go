@@ -207,27 +207,19 @@ func (s *Store) GetInt(vehicleID int64, field string) (int, bool) {
 	return int(f), true
 }
 
-// GetString returns a string signal value. When the field is declared in
-// protomodel.SignalsByName, the declared ValueKind must be String; a
-// mismatch returns ("", false) and logs a warn. Enums are typed at the
-// codec boundary (ftproto.* enum values) and thus do NOT satisfy
-// GetString — callers that need the symbolic enum name should fmt.Sprint
-// or use a dedicated enum getter when one is added. Unannotated fields
-// fall back to best-effort string assertion.
+// GetString returns the field's value as a string. After the codec change
+// that canonicalizes proto-enum variants to short strings (see
+// protomodel.DecodeValue), both ValueKindString AND ValueKindEnum fields
+// hold native Go strings in the store, so a single accessor serves both.
+//
+// Returns ("", false) when the field is missing OR the stored value is
+// not a string (a producer bug — the codec contract guarantees string
+// for both kinds; a non-string here means an upstream layer wrote a
+// typed value directly without going through the codec).
 func (s *Store) GetString(vehicleID int64, field string) (string, bool) {
 	v := s.Get(vehicleID, field)
 	if v == nil {
 		return "", false
-	}
-	if meta, ok := protomodel.SignalsByName[field]; ok {
-		if meta.ValueKind != protomodel.ValueKindString {
-			log.Warn().
-				Int64("vehicle_id", vehicleID).
-				Str("field", field).
-				Stringer("value_kind", meta.ValueKind).
-				Msg("signal store: GetString called on non-string ValueKind")
-			return "", false
-		}
 	}
 	if str, ok := v.Raw.(string); ok {
 		return str, true

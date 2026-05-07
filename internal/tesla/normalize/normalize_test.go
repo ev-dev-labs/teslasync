@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	ftproto "github.com/teslamotors/fleet-telemetry/protos"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
@@ -172,7 +171,7 @@ func TestPipelineHappyPath(t *testing.T) {
 	tValues := tNow.Add(1 * time.Second)
 
 	atomics := []codec.Atomic{
-		{Field: "SettingDistanceUnit", Value: ftproto.DistanceUnit_DistanceUnitKilometers, EmittedAt: tSetting, VehicleID: "VIN-HAPPY"},
+		{Field: "SettingDistanceUnit", Value: "Kilometers", EmittedAt: tSetting, VehicleID: "VIN-HAPPY"},
 		{Field: "Odometer", Value: float64(100), EmittedAt: tValues, VehicleID: "VIN-HAPPY"},
 		{Field: "BatteryHeaterOn", Value: true, EmittedAt: tValues, VehicleID: "VIN-HAPPY"},
 	}
@@ -289,7 +288,7 @@ func TestSettingUnitProcessedFirstInSamePayload(t *testing.T) {
 	// processed first.
 	atomics := []codec.Atomic{
 		{Field: "VehicleSpeed", Value: float64(27.7), EmittedAt: tBoth, VehicleID: "VIN-ORDER"},
-		{Field: "SettingDistanceUnit", Value: ftproto.DistanceUnit_DistanceUnitKilometers, EmittedAt: tBoth, VehicleID: "VIN-ORDER"},
+		{Field: "SettingDistanceUnit", Value: "Kilometers", EmittedAt: tBoth, VehicleID: "VIN-ORDER"},
 	}
 
 	repo := &fakeRepo{}

@@ -258,7 +258,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
                   key={tr.id}
                   from={tr.from_state ?? '—'}
                   to={tr.to_state ?? '—'}
-                  timestamp={tr.created_at ?? ''}
+                  timestamp={tr.ts ?? ''}
                   t={t}
                 />
               ))}

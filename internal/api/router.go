@@ -1396,7 +1396,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					writeError(w, http.StatusBadRequest, "vehicle_id required")
 					return
 				}
-				fsmType := req.URL.Query().Get("fsm_type")
+				fsmName := req.URL.Query().Get("fsm_name")
 				hours := 1
 				if h := req.URL.Query().Get("hours"); h != "" {
 					if v, err := strconv.Atoi(h); err == nil && v >= 0 {
@@ -1422,7 +1422,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 						perPage = v
 					}
 				}
-				records, total, err := fsmTransRepo.Query(req.Context(), vehicleID, fsmType, nil, from, to, perPage, (page-1)*perPage)
+				records, total, err := fsmTransRepo.Query(req.Context(), vehicleID, fsmName, from, to, perPage, (page-1)*perPage)
 				if err != nil {
 					writeError(w, http.StatusInternalServerError, "query failed")
 					return

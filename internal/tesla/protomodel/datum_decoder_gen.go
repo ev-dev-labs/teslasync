@@ -26,6 +26,7 @@ package protomodel
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	ftproto "github.com/teslamotors/fleet-telemetry/protos"
 )
@@ -55,19 +56,32 @@ var ErrUnsetValue = errors.New("protomodel: oneof value is unset")
 //   - (typed value, nil)    for any populated scalar/enum/compound variant.
 //
 // The returned `any` is one of:
-//   - string  (string_value)
+//   - string  (string_value, AND every named-enum variant — see below)
 //   - int32   (int_value)
 //   - int64   (long_value)
 //   - float32 (float_value)
 //   - float64 (double_value)
 //   - bool    (boolean_value)
 //   - Location, Doors, TireLocation, Time (the four compound message variants)
-//   - a typed ftproto enum (e.g. ftproto.ChargingState, ftproto.ShiftState,
-//     ftproto.SentryModeState, ...) for every named-enum variant.
 //
-// The caller MUST type-switch on the returned `any` to handle each kind; the
-// concrete Go type is documented per variant above and locked in by the
-// reflect-based table tests in datum_decoder_test.go.
+// **Enum variants are returned as canonical short strings**, NOT as typed
+// ftproto enum values. The decoder calls .String() on the typed proto enum
+// then strips the per-enum value-name prefix so the result is the human-
+// readable short form (e.g. "D", "Charging", "Disconnected", "Armed",
+// "Idle"). This is the SINGLE conversion point for proto-enum -> internal-
+// representation translation in the entire pipeline; no downstream code
+// (FSM, sessions, alerts, signal store, REST handlers, SSE, signal_log
+// writer) is permitted to type-assert against ftproto.* enum values.
+// Adding a new conversion site duplicates this contract and is a code-
+// review block.
+//
+// Rationale: every serialization edge in the system (Postgres TEXT, Redis
+// HSET, REST/SSE JSON) requires strings anyway. Making the codec's internal
+// representation also string keeps the entire pipeline uniform on
+// primitives, localizes the ftproto SDK coupling to this package, and
+// matches the canonical-short-form constants in internal/enums (GearDrive=
+// "D", ChargeStateCharging="Charging", etc.) that consumers compare
+// against.
 func DecodeValue(v *ftproto.Value) (any, error) {
 	if v == nil {
 		return nil, ErrUnsetValue
@@ -103,31 +117,31 @@ func DecodeValue(v *ftproto.Value) (any, error) {
 		}
 		return Location{Latitude: lv.GetLatitude(), Longitude: lv.GetLongitude()}, nil
 	case *ftproto.Value_ChargingValue:
-		return x.ChargingValue, nil
+		return strings.TrimPrefix(x.ChargingValue.String(), "ChargeState"), nil
 	case *ftproto.Value_ShiftStateValue:
-		return x.ShiftStateValue, nil
+		return strings.TrimPrefix(x.ShiftStateValue.String(), "ShiftState"), nil
 	case *ftproto.Value_Invalid:
 		// v.GetInvalid() above already short-circuited the populated case;
 		// reaching here means Invalid==false, which is treated as unset.
 		return nil, ErrUnsetValue
 	case *ftproto.Value_LaneAssistLevelValue:
-		return x.LaneAssistLevelValue, nil
+		return strings.TrimPrefix(x.LaneAssistLevelValue.String(), "LaneAssistLevel"), nil
 	case *ftproto.Value_ScheduledChargingModeValue:
-		return x.ScheduledChargingModeValue, nil
+		return strings.TrimPrefix(x.ScheduledChargingModeValue.String(), "ScheduledChargingMode"), nil
 	case *ftproto.Value_SentryModeStateValue:
-		return x.SentryModeStateValue, nil
+		return strings.TrimPrefix(x.SentryModeStateValue.String(), "SentryModeState"), nil
 	case *ftproto.Value_SpeedAssistLevelValue:
-		return x.SpeedAssistLevelValue, nil
+		return strings.TrimPrefix(x.SpeedAssistLevelValue.String(), "SpeedAssistLevel"), nil
 	case *ftproto.Value_BmsStateValue:
-		return x.BmsStateValue, nil
+		return strings.TrimPrefix(x.BmsStateValue.String(), "BMSState"), nil
 	case *ftproto.Value_BuckleStatusValue:
-		return x.BuckleStatusValue, nil
+		return strings.TrimPrefix(x.BuckleStatusValue.String(), "BuckleStatus"), nil
 	case *ftproto.Value_CarTypeValue:
-		return x.CarTypeValue, nil
+		return strings.TrimPrefix(x.CarTypeValue.String(), "CarType"), nil
 	case *ftproto.Value_ChargePortValue:
-		return x.ChargePortValue, nil
+		return strings.TrimPrefix(x.ChargePortValue.String(), "ChargePort"), nil
 	case *ftproto.Value_ChargePortLatchValue:
-		return x.ChargePortLatchValue, nil
+		return strings.TrimPrefix(x.ChargePortLatchValue.String(), "ChargePortLatch"), nil
 	case *ftproto.Value_DoorValue:
 		d := x.DoorValue
 		if d == nil {
@@ -142,23 +156,23 @@ func DecodeValue(v *ftproto.Value) (any, error) {
 			TrunkRear:      d.GetTrunkRear(),
 		}, nil
 	case *ftproto.Value_DriveInverterStateValue:
-		return x.DriveInverterStateValue, nil
+		return strings.TrimPrefix(x.DriveInverterStateValue.String(), "DriveInverterState"), nil
 	case *ftproto.Value_HvilStatusValue:
-		return x.HvilStatusValue, nil
+		return strings.TrimPrefix(x.HvilStatusValue.String(), "HvilStatus"), nil
 	case *ftproto.Value_WindowStateValue:
-		return x.WindowStateValue, nil
+		return strings.TrimPrefix(x.WindowStateValue.String(), "WindowState"), nil
 	case *ftproto.Value_SeatFoldPositionValue:
-		return x.SeatFoldPositionValue, nil
+		return strings.TrimPrefix(x.SeatFoldPositionValue.String(), "SeatFoldPosition"), nil
 	case *ftproto.Value_TractorAirStatusValue:
-		return x.TractorAirStatusValue, nil
+		return strings.TrimPrefix(x.TractorAirStatusValue.String(), "TractorAirStatus"), nil
 	case *ftproto.Value_FollowDistanceValue:
-		return x.FollowDistanceValue, nil
+		return strings.TrimPrefix(x.FollowDistanceValue.String(), "FollowDistance"), nil
 	case *ftproto.Value_ForwardCollisionSensitivityValue:
-		return x.ForwardCollisionSensitivityValue, nil
+		return strings.TrimPrefix(x.ForwardCollisionSensitivityValue.String(), "ForwardCollisionSensitivity"), nil
 	case *ftproto.Value_GuestModeMobileAccessValue:
-		return x.GuestModeMobileAccessValue, nil
+		return strings.TrimPrefix(x.GuestModeMobileAccessValue.String(), "GuestModeMobileAccess"), nil
 	case *ftproto.Value_TrailerAirStatusValue:
-		return x.TrailerAirStatusValue, nil
+		return strings.TrimPrefix(x.TrailerAirStatusValue.String(), "TrailerAirStatus"), nil
 	case *ftproto.Value_TimeValue:
 		tv := x.TimeValue
 		if tv == nil {
@@ -166,19 +180,19 @@ func DecodeValue(v *ftproto.Value) (any, error) {
 		}
 		return Time{Hour: tv.GetHour(), Minute: tv.GetMinute(), Second: tv.GetSecond()}, nil
 	case *ftproto.Value_DetailedChargeStateValue:
-		return x.DetailedChargeStateValue, nil
+		return strings.TrimPrefix(x.DetailedChargeStateValue.String(), "DetailedChargeState"), nil
 	case *ftproto.Value_HvacAutoModeValue:
-		return x.HvacAutoModeValue, nil
+		return strings.TrimPrefix(x.HvacAutoModeValue.String(), "HvacAutoModeState"), nil
 	case *ftproto.Value_CabinOverheatProtectionModeValue:
-		return x.CabinOverheatProtectionModeValue, nil
+		return strings.TrimPrefix(x.CabinOverheatProtectionModeValue.String(), "CabinOverheatProtectionModeState"), nil
 	case *ftproto.Value_CabinOverheatProtectionTemperatureLimitValue:
-		return x.CabinOverheatProtectionTemperatureLimitValue, nil
+		return strings.TrimPrefix(x.CabinOverheatProtectionTemperatureLimitValue.String(), "ClimateOverheatProtectionTempLimit"), nil
 	case *ftproto.Value_DefrostModeValue:
-		return x.DefrostModeValue, nil
+		return strings.TrimPrefix(x.DefrostModeValue.String(), "DefrostModeState"), nil
 	case *ftproto.Value_ClimateKeeperModeValue:
-		return x.ClimateKeeperModeValue, nil
+		return strings.TrimPrefix(x.ClimateKeeperModeValue.String(), "ClimateKeeperModeState"), nil
 	case *ftproto.Value_HvacPowerValue:
-		return x.HvacPowerValue, nil
+		return strings.TrimPrefix(x.HvacPowerValue.String(), "HvacPowerState"), nil
 	case *ftproto.Value_TireLocationValue:
 		tl := x.TireLocationValue
 		if tl == nil {
@@ -197,35 +211,35 @@ func DecodeValue(v *ftproto.Value) (any, error) {
 			SemiRearAxleRight2:   tl.GetSemiRearAxleRight_2(),
 		}, nil
 	case *ftproto.Value_FastChargerValue:
-		return x.FastChargerValue, nil
+		return strings.TrimPrefix(x.FastChargerValue.String(), "FastCharger"), nil
 	case *ftproto.Value_CableTypeValue:
-		return x.CableTypeValue, nil
+		return strings.TrimPrefix(x.CableTypeValue.String(), "CableType"), nil
 	case *ftproto.Value_TonneauTentModeValue:
-		return x.TonneauTentModeValue, nil
+		return strings.TrimPrefix(x.TonneauTentModeValue.String(), "TonneauTentModeState"), nil
 	case *ftproto.Value_TonneauPositionValue:
-		return x.TonneauPositionValue, nil
+		return strings.TrimPrefix(x.TonneauPositionValue.String(), "TonneauPositionState"), nil
 	case *ftproto.Value_PowershareTypeValue:
-		return x.PowershareTypeValue, nil
+		return strings.TrimPrefix(x.PowershareTypeValue.String(), "PowershareTypeStatus"), nil
 	case *ftproto.Value_PowershareStateValue:
-		return x.PowershareStateValue, nil
+		return strings.TrimPrefix(x.PowershareStateValue.String(), "PowershareState"), nil
 	case *ftproto.Value_PowershareStopReasonValue:
-		return x.PowershareStopReasonValue, nil
+		return strings.TrimPrefix(x.PowershareStopReasonValue.String(), "PowershareStopReasonStatus"), nil
 	case *ftproto.Value_DisplayStateValue:
-		return x.DisplayStateValue, nil
+		return strings.TrimPrefix(x.DisplayStateValue.String(), "DisplayState"), nil
 	case *ftproto.Value_DistanceUnitValue:
-		return x.DistanceUnitValue, nil
+		return strings.TrimPrefix(x.DistanceUnitValue.String(), "DistanceUnit"), nil
 	case *ftproto.Value_TemperatureUnitValue:
-		return x.TemperatureUnitValue, nil
+		return strings.TrimPrefix(x.TemperatureUnitValue.String(), "TemperatureUnit"), nil
 	case *ftproto.Value_PressureUnitValue:
-		return x.PressureUnitValue, nil
+		return strings.TrimPrefix(x.PressureUnitValue.String(), "PressureUnit"), nil
 	case *ftproto.Value_ChargeUnitPreferenceValue:
-		return x.ChargeUnitPreferenceValue, nil
+		return strings.TrimPrefix(x.ChargeUnitPreferenceValue.String(), "ChargeUnit"), nil
 	case *ftproto.Value_TurnSignalStateValue:
-		return x.TurnSignalStateValue, nil
+		return strings.TrimPrefix(x.TurnSignalStateValue.String(), "TurnSignalState"), nil
 	case *ftproto.Value_MediaStatusValue:
-		return x.MediaStatusValue, nil
+		return strings.TrimPrefix(x.MediaStatusValue.String(), "MediaStatus"), nil
 	case *ftproto.Value_SunroofInstalledStateValue:
-		return x.SunroofInstalledStateValue, nil
+		return strings.TrimPrefix(x.SunroofInstalledStateValue.String(), "SunroofInstalledState"), nil
 	default:
 		// A type the upstream ftproto package added that this codegen has
 		// not yet classified. Returning a descriptive error keeps the

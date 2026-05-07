@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	ftproto "github.com/teslamotors/fleet-telemetry/protos"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 )
@@ -100,7 +99,7 @@ func TestPipelineObserver_InvokedWithPostRouteAtomicsSlice(t *testing.T) {
 		// the unit context. The dispatcher's stable sort would also do
 		// this, but spelling it out makes the test independent of sort
 		// behaviour.
-		{Field: "SettingDistanceUnit", Value: ftproto.DistanceUnit_DistanceUnitKilometers, EmittedAt: tNow, VehicleID: "VIN-OBS-A"},
+		{Field: "SettingDistanceUnit", Value: "Kilometers", EmittedAt: tNow, VehicleID: "VIN-OBS-A"},
 		// Unit-bearing field that converts: 100 km -> 100000 m.
 		{Field: "Odometer", Value: float64(100), EmittedAt: tNow.Add(time.Second), VehicleID: "VIN-OBS-A"},
 		// Pass-through (dimensionless) atomic — observer should see the
@@ -148,15 +147,16 @@ func TestPipelineObserver_InvokedWithPostRouteAtomicsSlice(t *testing.T) {
 		t.Errorf("observer BatteryHeaterOn Value = %v (%T), want true (bool)", heater.Value, heater.Value)
 	}
 
-	// Setting*Unit atomic must retain its proto enum Value (the
-	// observer is informational here; the unit history side-effect
-	// is owned by observeSettingUnit, not by this observer fan-out).
+	// Setting*Unit atomic must retain its codec-canonicalized short
+	// string ("Kilometers"). The observer is informational here; the
+	// unit history side-effect is owned by observeSettingUnit, not
+	// by this observer fan-out.
 	sdu := findAtomic(captured, "SettingDistanceUnit")
 	if sdu == nil {
 		t.Fatalf("observer slice missing SettingDistanceUnit; got %+v", captured)
 	}
-	if _, ok := sdu.Value.(ftproto.DistanceUnit); !ok {
-		t.Errorf("observer SettingDistanceUnit Value type = %T, want ftproto.DistanceUnit (codec-original)", sdu.Value)
+	if v, ok := sdu.Value.(string); !ok || v != "Kilometers" {
+		t.Errorf("observer SettingDistanceUnit Value = %v (%T), want \"Kilometers\" (string, codec-canonicalized)", sdu.Value, sdu.Value)
 	}
 
 	// vehicleID is propagated verbatim.

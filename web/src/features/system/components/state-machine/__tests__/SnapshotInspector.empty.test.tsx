@@ -25,14 +25,11 @@ function makeTransition(overrides: Partial<FSMTransition>): FSMTransition {
   return {
     id: 1,
     vehicle_id: 1,
-    fsm_type: 'vehicle',
+    fsm_name: 'vehicle',
     from_state: 'parked',
     to_state: 'driving',
     trigger: 'speed_changed',
-    guard: '',
-    mode: 'auto',
-    duration_in_state_ms: 1000,
-    created_at: new Date().toISOString(),
+    ts: new Date().toISOString(),
     ...overrides,
   };
 }
@@ -41,7 +38,7 @@ describe('SnapshotInspector empty state (Phase 45 / Prompt 35)', () => {
   it('renders the "outside window" hint + Jump button when nothing is in the window but a last transition exists', () => {
     const last = makeTransition({
       id: 7,
-      created_at: new Date(Date.now() - 10 * 60_000).toISOString(),
+      ts: new Date(Date.now() - 10 * 60_000).toISOString(),
     });
     const onJump = vi.fn();
     render(
@@ -69,7 +66,7 @@ describe('SnapshotInspector empty state (Phase 45 / Prompt 35)', () => {
   it('falls back to the original "select a transition" message when selectable data is in the window', () => {
     const last = makeTransition({
       id: 7,
-      created_at: new Date(Date.now() - 60_000).toISOString(),
+      ts: new Date(Date.now() - 60_000).toISOString(),
     });
     render(
       <SnapshotInspector
@@ -93,7 +90,7 @@ describe('SnapshotInspector empty state (Phase 45 / Prompt 35)', () => {
   it('renders the loading state regardless of last-transition / in-window props', () => {
     const last = makeTransition({
       id: 7,
-      created_at: new Date(Date.now() - 60_000).toISOString(),
+      ts: new Date(Date.now() - 60_000).toISOString(),
     });
     render(
       <SnapshotInspector

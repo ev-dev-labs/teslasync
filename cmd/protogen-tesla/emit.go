@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"text/template"
 )
@@ -1189,6 +1190,7 @@ package {{.Package}}
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	ftproto "github.com/teslamotors/fleet-telemetry/protos"
 )
@@ -1218,19 +1220,32 @@ var ErrUnsetValue = errors.New("protomodel: oneof value is unset")
 //   - (typed value, nil)    for any populated scalar/enum/compound variant.
 //
 // The returned ` + "`any`" + ` is one of:
-//   - string  (string_value)
+//   - string  (string_value, AND every named-enum variant — see below)
 //   - int32   (int_value)
 //   - int64   (long_value)
 //   - float32 (float_value)
 //   - float64 (double_value)
 //   - bool    (boolean_value)
 //   - Location, Doors, TireLocation, Time (the four compound message variants)
-//   - a typed ftproto enum (e.g. ftproto.ChargingState, ftproto.ShiftState,
-//     ftproto.SentryModeState, ...) for every named-enum variant.
 //
-// The caller MUST type-switch on the returned ` + "`any`" + ` to handle each kind; the
-// concrete Go type is documented per variant above and locked in by the
-// reflect-based table tests in datum_decoder_test.go.
+// **Enum variants are returned as canonical short strings**, NOT as typed
+// ftproto enum values. The decoder calls .String() on the typed proto enum
+// then strips the per-enum value-name prefix so the result is the human-
+// readable short form (e.g. "D", "Charging", "Disconnected", "Armed",
+// "Idle"). This is the SINGLE conversion point for proto-enum -> internal-
+// representation translation in the entire pipeline; no downstream code
+// (FSM, sessions, alerts, signal store, REST handlers, SSE, signal_log
+// writer) is permitted to type-assert against ftproto.* enum values.
+// Adding a new conversion site duplicates this contract and is a code-
+// review block.
+//
+// Rationale: every serialization edge in the system (Postgres TEXT, Redis
+// HSET, REST/SSE JSON) requires strings anyway. Making the codec's internal
+// representation also string keeps the entire pipeline uniform on
+// primitives, localizes the ftproto SDK coupling to this package, and
+// matches the canonical-short-form constants in internal/enums (GearDrive=
+// "D", ChargeStateCharging="Charging", etc.) that consumers compare
+// against.
 func DecodeValue(v *ftproto.Value) (any, error) {
 	if v == nil {
 		return nil, ErrUnsetValue
@@ -1288,6 +1303,24 @@ func renderDatumDecoder(pf *ProtoFile, packageName string) (string, error) {
 		return "", fmt.Errorf("Value message must have exactly one oneof, got %d", len(valueMsg.Oneofs))
 	}
 
+	// Build per-enum value-name longest-common-prefix table. The decoder
+	// strips this prefix from .String() output to produce the canonical
+	// short form (e.g. ShiftState's values share "ShiftState" prefix, so
+	// "ShiftStateD".String() -> "ShiftStateD" -> TrimPrefix -> "D"). Same
+	// computation as renderEnumParsers; kept local so the two emitters
+	// stay independently auditable.
+	enumPrefix := make(map[string]string, len(pf.Enums))
+	for _, e := range pf.Enums {
+		if e.Name == "Field" {
+			continue
+		}
+		names := make([]string, len(e.Values))
+		for i, v := range e.Values {
+			names[i] = v.Name
+		}
+		enumPrefix[e.Name] = longestCommonPrefix(names)
+	}
+
 	// Sort variants by proto field number for stable output.
 	oneofVariants := append([]FieldDef(nil), valueMsg.Oneofs[0].Variants...)
 	sort.SliceStable(oneofVariants, func(i, j int) bool { return oneofVariants[i].Number < oneofVariants[j].Number })
@@ -1311,10 +1344,22 @@ func renderDatumDecoder(pf *ProtoFile, packageName string) (string, error) {
 		case compoundNames[vrnt.Type]:
 			body = compoundDecoderBody(vrnt.Type, goField)
 		default:
-			// Treat any other named type as an enum (defined in
-			// enum_parsers_gen.go). The proto Value oneof only references
-			// scalars, the four compounds, and named enums.
-			body = "\t\treturn x." + goField + ", nil"
+			// Named enum variant. Convert to canonical short string by
+			// calling .String() (every protoc-gen-go enum implements
+			// fmt.Stringer via its *_name map) then stripping the per-enum
+			// value-name prefix. This is the SINGLE conversion point for
+			// proto-enum -> internal-representation in the pipeline; see
+			// the doc comment on DecodeValue for the architectural rule.
+			//
+			// strings.TrimPrefix is well-defined to return the input
+			// unchanged when the prefix is empty, so the emitted body
+			// shape is uniform across all enum variants regardless of
+			// whether their values share a common prefix.
+			prefix, ok := enumPrefix[vrnt.Type]
+			if !ok {
+				return "", fmt.Errorf("enum %q referenced by Value oneof variant %q not found in proto", vrnt.Type, vrnt.Name)
+			}
+			body = "\t\treturn strings.TrimPrefix(x." + goField + ".String(), " + strconv.Quote(prefix) + "), nil"
 		}
 		rendered = append(rendered, decoderVariantTpl{
 			GoFieldName: goField,

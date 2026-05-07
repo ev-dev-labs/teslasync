@@ -138,14 +138,11 @@ function makeTransition(overrides: Partial<FSMTransition>): FSMTransition {
   return {
     id: 1,
     vehicle_id: 1,
-    fsm_type: 'vehicle',
+    fsm_name: 'vehicle',
     from_state: 'parked',
     to_state: 'driving',
     trigger: 'speed_changed',
-    guard: '',
-    mode: 'auto',
-    duration_in_state_ms: 1000,
-    created_at: new Date().toISOString(),
+    ts: new Date().toISOString(),
     ...overrides,
   };
 }
@@ -172,7 +169,7 @@ describe('StateMachineDebuggerPage — windowing reconciliation (Phase 45 / Prom
     transitionsRef.current = Array.from({ length: 23 }, (_, i) =>
       makeTransition({
         id: 100 + i,
-        created_at: new Date(Date.now() - (60 + i) * 60_000).toISOString(),
+        ts: new Date(Date.now() - (60 + i) * 60_000).toISOString(),
       }),
     );
 
@@ -197,7 +194,7 @@ describe('StateMachineDebuggerPage — windowing reconciliation (Phase 45 / Prom
     transitionsRef.current = Array.from({ length: 23 }, (_, i) =>
       makeTransition({
         id: 100 + i,
-        created_at: new Date(Date.now() - (60 + i) * 60_000).toISOString(),
+        ts: new Date(Date.now() - (60 + i) * 60_000).toISOString(),
       }),
     );
 
@@ -221,7 +218,7 @@ describe('StateMachineDebuggerPage — windowing reconciliation (Phase 45 / Prom
     transitionsRef.current = Array.from({ length: 5 }, (_, i) =>
       makeTransition({
         id: 200 + i,
-        created_at: new Date(Date.now() - i * 30_000).toISOString(),
+        ts: new Date(Date.now() - i * 30_000).toISOString(),
       }),
     );
 

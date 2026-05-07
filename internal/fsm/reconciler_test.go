@@ -73,8 +73,8 @@ func TestDeriveExpectedState(t *testing.T) {
 			wantReason: "Gear=P + not charging",
 		},
 		{
-			name:       "no Gear + DetailedChargeState=ChargeStateCharging → Charging medium",
-			signals:    map[string]interface{}{"DetailedChargeState": "ChargeStateCharging"},
+			name:       "no Gear + DetailedChargeState=Charging → Charging medium",
+			signals:    map[string]interface{}{"DetailedChargeState": "Charging"},
 			now:        fresh,
 			wantState:  Charging,
 			wantConf:   ConfidenceMedium,
@@ -145,8 +145,18 @@ func TestDeriveExpectedState(t *testing.T) {
 			wantReason: "Gear=D",
 		},
 		{
-			name:       "DetailedChargeState=DetailedChargeStateCharging → Charging medium",
-			signals:    map[string]interface{}{"DetailedChargeState": "DetailedChargeStateCharging"},
+			// Phase-42a: codec canonicalizes proto enum variants to
+			// the short form ("Charging", "Starting", ...). The legacy
+			// long-form ("DetailedChargeStateCharging") is no longer
+			// a valid producer output — protomodel.DecodeValue strips
+			// the per-enum prefix at the SINGLE conversion point
+			// before the value reaches signal.Store.
+			//
+			// This case verifies the reconciler treats the canonical
+			// short form via the adapter the same way as the
+			// ChargeState path above.
+			name:       "DetailedChargeState=Charging (canonical) → Charging medium",
+			signals:    map[string]interface{}{"DetailedChargeState": "Charging"},
 			now:        fresh,
 			wantState:  Charging,
 			wantConf:   ConfidenceMedium,

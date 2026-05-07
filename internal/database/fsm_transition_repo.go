@@ -2,10 +2,22 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 )
 
 // FSMTransitionRepo handles persistence of FSM transition logs.
+//
+// Schema (migration 000187_fsm_live):
+//
+//	fsm_transitions(id, vehicle_id, ts, fsm_name, from_state, to_state,
+//	                 trigger, details JSONB)
+//
+// One row per state transition per FSM per vehicle. The legacy
+// pre-Phase-42 column name `fsm_type` was retired by 000187 (which
+// dropped and recreated the table); the canonical column name is
+// `fsm_name`. There is NO compatibility layer — callers pass the
+// canonical name directly.
 type FSMTransitionRepo struct {
 	db *DB
 }
@@ -17,32 +29,52 @@ func NewFSMTransitionRepo(db *DB) *FSMTransitionRepo {
 
 // FSMTransitionRecord represents a single FSM transition log entry.
 type FSMTransitionRecord struct {
-	ID        int64     `json:"id"`
-	VehicleID int64     `json:"vehicle_id"`
-	FSMType   string    `json:"fsm_type"`
-	FromState string    `json:"from_state"`
-	ToState   string    `json:"to_state"`
-	Trigger   string    `json:"trigger"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        int64                  `json:"id"`
+	VehicleID int64                  `json:"vehicle_id"`
+	TS        time.Time              `json:"ts"`
+	FSMName   string                 `json:"fsm_name"`
+	FromState string                 `json:"from_state"`
+	ToState   string                 `json:"to_state"`
+	Trigger   string                 `json:"trigger"`
+	Details   map[string]interface{} `json:"details,omitempty"`
 }
 
-// Insert logs a single FSM transition.
-func (r *FSMTransitionRepo) Insert(ctx context.Context, vehicleID int64, fsmType string, instanceID *int64,
-	fromState, toState, trigger, guard, mode string, snapshot map[string]interface{}, durationMs int64) error {
+// Insert logs a single FSM transition. ts MUST be the wall-clock
+// timestamp of the transition (caller-controlled, NOT Now() inside the
+// repo) so callers driving from event time (replay, backfill) and
+// callers driving from the real clock get identical write semantics.
+// details is optional — pass nil for transitions with no structured
+// context.
+func (r *FSMTransitionRepo) Insert(ctx context.Context,
+	vehicleID int64, ts time.Time, fsmName, fromState, toState, trigger string,
+	details map[string]interface{}) error {
 
-	if fsmType == "" {
-		fsmType = "vehicle"
+	if fsmName == "" {
+		fsmName = "vehicle"
 	}
+	if ts.IsZero() {
+		ts = time.Now()
+	}
+
+	var detailsJSON []byte
+	if len(details) > 0 {
+		var err error
+		detailsJSON, err = json.Marshal(details)
+		if err != nil {
+			return err
+		}
+	}
+
 	_, err := r.db.Pool.Exec(ctx,
-		`INSERT INTO fsm_transitions (vehicle_id, fsm_type, from_state, to_state, trigger)
-		 VALUES ($1, $2, $3, $4, $5)`,
-		vehicleID, fsmType, fromState, toState, trigger)
+		`INSERT INTO fsm_transitions (vehicle_id, ts, fsm_name, from_state, to_state, trigger, details)
+		 VALUES ($1, $2, $3, NULLIF($4, ''), $5, NULLIF($6, ''), $7)`,
+		vehicleID, ts, fsmName, fromState, toState, trigger, detailsJSON)
 	return err
 }
 
 // Query retrieves FSM transitions with filters.
-func (r *FSMTransitionRepo) Query(ctx context.Context, vehicleID int64, fsmType string,
-	instanceID *int64, from, to time.Time, limit, offset int) ([]FSMTransitionRecord, int64, error) {
+func (r *FSMTransitionRepo) Query(ctx context.Context, vehicleID int64, fsmName string,
+	from, to time.Time, limit, offset int) ([]FSMTransitionRecord, int64, error) {
 
 	if limit <= 0 {
 		limit = 50
@@ -51,26 +83,23 @@ func (r *FSMTransitionRepo) Query(ctx context.Context, vehicleID int64, fsmType 
 		limit = 100
 	}
 
-	// Build WHERE clause with optional fsm_type filter
-	whereType := ""
+	whereName := ""
 	args := []interface{}{vehicleID, from, to}
-	if fsmType != "" && fsmType != "all" {
-		whereType = " AND fsm_type = $4"
-		args = append(args, fsmType)
+	if fsmName != "" && fsmName != "all" {
+		whereName = " AND fsm_name = $4"
+		args = append(args, fsmName)
 	}
 
-	// Count
 	var total int64
-	countSQL := `SELECT COUNT(*) FROM fsm_transitions WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3` + whereType
+	countSQL := `SELECT COUNT(*) FROM fsm_transitions WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3` + whereName
 	if err := r.db.Pool.QueryRow(ctx, countSQL, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
-	// Fetch
 	limitIdx := len(args) + 1
 	offsetIdx := len(args) + 2
-	fetchSQL := `SELECT id, vehicle_id, COALESCE(fsm_type, 'vehicle'), from_state, to_state, COALESCE(trigger, ''), ts
-		 FROM fsm_transitions WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3` + whereType +
+	fetchSQL := `SELECT id, vehicle_id, ts, fsm_name, COALESCE(from_state, ''), to_state, COALESCE(trigger, ''), details
+		 FROM fsm_transitions WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3` + whereName +
 		` ORDER BY ts DESC LIMIT $` + itoa(limitIdx) + ` OFFSET $` + itoa(offsetIdx)
 	fetchArgs := append(args, limit, offset)
 
@@ -83,9 +112,13 @@ func (r *FSMTransitionRepo) Query(ctx context.Context, vehicleID int64, fsmType 
 	records := make([]FSMTransitionRecord, 0)
 	for rows.Next() {
 		var rec FSMTransitionRecord
-		if err := rows.Scan(&rec.ID, &rec.VehicleID, &rec.FSMType, &rec.FromState, &rec.ToState,
-			&rec.Trigger, &rec.CreatedAt); err != nil {
+		var detailsRaw []byte
+		if err := rows.Scan(&rec.ID, &rec.VehicleID, &rec.TS, &rec.FSMName,
+			&rec.FromState, &rec.ToState, &rec.Trigger, &detailsRaw); err != nil {
 			return nil, 0, err
+		}
+		if len(detailsRaw) > 0 {
+			_ = json.Unmarshal(detailsRaw, &rec.Details)
 		}
 		records = append(records, rec)
 	}

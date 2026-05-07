@@ -29,9 +29,9 @@ export function FSMTimelineChart({ transitions, hours }: FSMTimelineChartProps) 
     const now = Date.now();
     const start = now - hours * 60 * 60_000;
 
-    // Collect FSM types
+    // Collect FSM names
     const typeSet = new Set<string>();
-    for (const tr of transitions) typeSet.add(tr.fsm_type);
+    for (const tr of transitions) typeSet.add(tr.fsm_name);
     const types = Array.from(typeSet).sort();
 
     // Create buckets
@@ -45,11 +45,11 @@ export function FSMTimelineChart({ transitions, hours }: FSMTimelineChartProps) 
 
     // Fill buckets
     for (const tr of transitions) {
-      const ts = new Date(tr.created_at).getTime();
+      const ts = new Date(tr.ts).getTime();
       const key = Math.floor(ts / bucketMs) * bucketMs;
       const bucket = bucketMap.get(key);
       if (bucket) {
-        bucket[tr.fsm_type] = (bucket[tr.fsm_type] ?? 0) + 1;
+        bucket[tr.fsm_name] = (bucket[tr.fsm_name] ?? 0) + 1;
       }
     }
 

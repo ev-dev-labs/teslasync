@@ -89,18 +89,28 @@ func (a *fsmAction) Execute(ctx context.Context, vehicleID int64, from, to fsm.S
 
 	// 3. Log transition to fsm_transitions
 	if a.transRepo != nil {
-		snapshot := map[string]interface{}{}
+		details := map[string]interface{}{
+			"is_gear_capable": sctx.IsGearCapable,
+			"is_charging":     sctx.IsCharging,
+		}
 		if sctx.Gear != "" {
-			snapshot["Gear"] = sctx.Gear
+			details["gear"] = sctx.Gear
 		}
 		if sctx.Speed > 0 {
-			snapshot["Speed"] = sctx.Speed
+			details["speed"] = sctx.Speed
 		}
-		snapshot["IsGearCapable"] = sctx.IsGearCapable
-		snapshot["IsCharging"] = sctx.IsCharging
-		if err := a.transRepo.Insert(ctx, vehicleID, "vehicle", nil,
-			string(from), string(to), sctx.MatchedTrigger, sctx.MatchedGuard,
-			sctx.TransitionMode, snapshot, 0); err != nil {
+		if sctx.MatchedGuard != "" {
+			details["guard"] = sctx.MatchedGuard
+		}
+		if sctx.TransitionMode != "" {
+			details["mode"] = sctx.TransitionMode
+		}
+		ts := sctx.Now
+		if ts.IsZero() {
+			ts = time.Now()
+		}
+		if err := a.transRepo.Insert(ctx, vehicleID, ts, "vehicle",
+			string(from), string(to), sctx.MatchedTrigger, details); err != nil {
 			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: failed to log transition")
 		}
 	}
