@@ -176,3 +176,79 @@ already did the work.
 - Codec test files — wire-format inputs use typed enums, only the
   decoded outputs assert canonical short strings.
 
+
+
+## ⛔ 12. NARROWING signal.Value.Raw TO A SPECIFIC NUMERIC TYPE
+
+`internal/signal/coerce.go` exposes the **single canonical converter**
+for any signal-derived value to a Go `float64`:
+
+```go
+signal.Float64(v any) (float64, bool)         // primary entry; mirrors codec value-kind surface
+signal.Float64Value(v *signal.Value) (float64, bool)   // nil-safe wrapper for *signal.Value
+```
+
+The converter covers every numeric kind the Phase-42 codec emits
+(float64, float32, int, int8, int16, int32, int64, uint and unsigned
+counterparts) plus the JSON-decode artefacts (`json.Number`, numeric
+strings parsed via `strconv.ParseFloat`, bool 1/0 — legacy envelope
+only) and the legacy `{invalid,value}` envelope unwrap.
+
+No downstream code — service layer, API handlers, FSM adapters,
+session trackers, snapshot writers — is permitted to:
+
+```
+❌ narrow signal.Value.Raw with a single-type assertion:
+     if f, ok := v.Raw.(float64); ok { ... }       // forbidden
+     if i, ok := v.Raw.(int); ok { ... }           // forbidden
+
+❌ duplicate the type switch with a fresh helper (snapFloat,
+   coerceFloat, asFloat64, etc.) that re-implements coverage:
+     func snapFloat(...) (float64, bool) {
+         switch n := v.(type) {
+         case float64: ...
+         case float32: ...     // forbidden — call signal.Float64
+         }
+     }
+
+❌ assume Float5 codec fields land as float64 in signal.Store —
+   the codec stores them as **float32**, and Int3/Int4 as **int32**.
+   A `.(float64)` assertion silently drops every codec value.
+```
+
+```
+✅ Use the canonical converter at every callsite:
+     if f, ok := signal.Float64Value(all["RatedRange"]); ok {
+         state.RatedRange = f
+     }
+
+✅ For nested map members (e.g. composite Location.latitude),
+   call signal.Float64 on the unwrapped element:
+     if lat, ok := signal.Float64(loc["latitude"]); ok { ... }
+
+✅ Extending the codec with a new numeric value-kind? Update
+   internal/signal/coerce.go ONCE; every consumer inherits the
+   coverage automatically.
+```
+
+**Why this rule exists:** every post-Phase-42 dashboard regression
+discovered during the panel-by-panel UI audit (commits b3cdd51eb,
+30bd16a1) traced to a fresh `Raw.(float64)` narrowing assertion that
+silently dropped float32 codec values. The user explicitly forbids
+"creating multiple logics for signals conversions" — the canonical
+converter is the enforcement point.
+
+**Code-review block:** any new file under `internal/{api,service,fsm,
+alerts,automation,tesla/normalize,tesla/router}/` that contains
+`v.Raw.(float64)` or `v.Raw.(int)` (or any other single-numeric-type
+assertion against a signal-derived value) is rejected. Use
+`signal.Float64Value` / `signal.Float64`.
+
+**Permitted exceptions:**
+- `internal/signal/coerce.go` — the converter itself.
+- `internal/signal/store.go:GetFloat` — the boundary that owns the
+  `protomodel.SignalsByName` ValueKind meta check before delegating
+  primitive conversion to `Float64`.
+- `internal/tesla/codec/` — owns the wire-format → typed Go conversion;
+  may use typed assertions on `ftproto.Value_*` variants.
+- Test files asserting raw codec output shape.
