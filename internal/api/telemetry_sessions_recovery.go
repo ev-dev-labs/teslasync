@@ -577,6 +577,27 @@ func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, c
 			nil, nil, &duration, &endedStatus); err != nil {
 			return err
 		}
+		// Backfill session_id on charging_telemetry rows in the same tx
+		// as completion (pattern parity with C4 drive backfill). Recovery
+		// sessions are particularly likely to have orphaned per-tick rows
+		// because the api may have crashed between session-create and
+		// session-complete, leaving every reading session_id=NULL.
+		if affected, err := t.chargeRepo.BackfillChargingTelemetrySessionIDInTx(
+			ctx, tx, charge.ID, charge.VehicleID, charge.StartTs, endTs); err != nil {
+			log.Error().Err(err).
+				Int64("session_id", charge.ID).
+				Int64("vehicle_id", charge.VehicleID).
+				Time("start_ts", charge.StartTs).
+				Time("end_ts", endTs).
+				Msg("recovery: charging_telemetry session_id backfill failed; rolling back completion")
+			return err
+		} else if affected > 0 {
+			log.Info().
+				Int64("session_id", charge.ID).
+				Int64("vehicle_id", charge.VehicleID).
+				Int64("rows_attributed", affected).
+				Msg("recovery: backfilled charging_telemetry.session_id for completed session")
+		}
 		if len(enhancedFields) > 0 {
 			if err := t.chargeRepo.PartialUpdateWithTx(ctx, tx, charge.ID, enhancedFields); err != nil {
 				return err

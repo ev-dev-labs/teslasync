@@ -453,3 +453,36 @@ func (r *ChargingRepo) PartialUpdateWithTx(ctx context.Context, tx DBTX, id int6
 	_, err := tx.Exec(ctx, query, args...)
 	return err
 }
+
+// BackfillChargingTelemetrySessionIDInTx attaches the supplied sessionID to
+// every charging_telemetry row whose (vehicle_id, ts) falls within the
+// inclusive [startTs, endTs] window AND whose session_id is currently NULL.
+//
+// Idempotent: rows already attributed to a different session are NOT
+// overwritten — the WHERE clause skips them via `session_id IS NULL`.
+//
+// Mirrors DriveRepo.BackfillDriveTelemetryDriveIDInTx (Phase-41 v3.4 commit
+// C4). Without this call, completed charging_sessions point at zero
+// charging_telemetry rows because the per-tick writer streams readings before
+// the session row exists, and historically nobody back-stamped session_id
+// after the FSM finalized the session. UI session-detail charts (voltage,
+// power curve, amps over time) read WHERE session_id = $1 and therefore
+// returned empty until this backfill runs.
+//
+// MUST be invoked inside the same transaction as ChargingRepo.CompleteWithTx
+// so a partial failure cannot leave a session marked complete with orphaned
+// per-tick rows.
+func (r *ChargingRepo) BackfillChargingTelemetrySessionIDInTx(ctx context.Context, tx DBTX, sessionID, vehicleID int64, startTs, endTs time.Time) (int64, error) {
+	const sql = `
+		UPDATE charging_telemetry
+		   SET session_id = $1
+		 WHERE vehicle_id = $2
+		   AND ts >= $3
+		   AND ts <= $4
+		   AND session_id IS NULL`
+	tag, err := tx.Exec(ctx, sql, sessionID, vehicleID, startTs, endTs)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
+}

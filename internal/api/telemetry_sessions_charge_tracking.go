@@ -602,11 +602,59 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 		if active.EnergyAdded > 0 {
 			energyAdded = &active.EnergyAdded
 		}
+		// Power aggregation: derive max + avg from signal_log over the
+		// session window (kW). Using ChargeAggregates here mirrors the
+		// recovery path (telemetry_sessions_recovery.go) which has
+		// always done this. The previous code passed `active.Power,
+		// active.Power` — i.e. the LAST observed sample for both peak
+		// AND avg — producing nonsense aggregates (e.g. peak=avg=last
+		// trickle value) on every completed session. signalLogReader
+		// is the same handle used by the start/end snapshot enrichment
+		// above so it's expected to be wired in production; if it
+		// isn't, peak/avg fall through as nil and the columns remain
+		// NULL rather than being polluted with a stale single sample.
+		var maxPowerKW, avgPowerKW *float64
+		if t.signalLogReader != nil {
+			slMaxPower, slAvgPower := t.signalLogReader.ChargeAggregates(ctx, vehicleID, active.StartTime, endTs)
+			if slMaxPower > 0 {
+				maxPowerKW = &slMaxPower
+			}
+			if slAvgPower > 0 {
+				avgPowerKW = &slAvgPower
+			}
+		}
 		if err := t.chargeRepo.CompleteWithTx(ctx, tx, active.SessionID, endTs,
 			energyAdded, endBatteryPct, endRange,
-			active.Power, active.Power,
+			maxPowerKW, avgPowerKW,
 			nil, nil, &duration, nil); err != nil {
 			return err
+		}
+
+		// Attach unattributed charging_telemetry rows to this session
+		// in the same tx as the completion update. Pattern parity with
+		// the C4 fix on DriveRepo.BackfillDriveTelemetryDriveIDInTx —
+		// without this, the UI session-detail charts (voltage / power
+		// curves) read WHERE session_id = $1 and come up empty because
+		// the per-tick writer streams readings before the session row
+		// exists. Failure here rolls back the completion too — partial
+		// state must not exist.
+		if affected, err := t.chargeRepo.BackfillChargingTelemetrySessionIDInTx(
+			ctx, tx, active.SessionID, vehicleID, active.StartTime, endTs); err != nil {
+			log.Error().Err(err).
+				Int64("session_id", active.SessionID).
+				Int64("vehicle_id", vehicleID).
+				Time("start_ts", active.StartTime).
+				Time("end_ts", endTs).
+				Msg("telemetry: charging_telemetry session_id backfill failed; rolling back completion")
+			return err
+		} else if affected > 0 {
+			log.Info().
+				Int64("session_id", active.SessionID).
+				Int64("vehicle_id", vehicleID).
+				Int64("rows_attributed", affected).
+				Time("start_ts", active.StartTime).
+				Time("end_ts", endTs).
+				Msg("telemetry: backfilled charging_telemetry.session_id for completed session")
 		}
 
 		// Synchronous enhanced fields (non-geocoded) in same tx

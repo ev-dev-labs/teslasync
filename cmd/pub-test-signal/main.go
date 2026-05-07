@@ -569,7 +569,35 @@ func encodeTypedEnum(meta *protomodel.SignalMeta, row csvRow) (*ftproto.Value, s
 		if num, ok := ftproto.ChargingState_value["ChargeState"+s]; ok {
 			return &ftproto.Value{Value: &ftproto.Value_ChargingValue{ChargingValue: ftproto.ChargingState(num)}}, ""
 		}
+		// Legacy Tesla Fleet API JSON poll path emitted values that the
+		// modern ftproto ChargingState enum doesn't define ("Idle",
+		// "WaitForLineVoltage", "Authorizing"). Map them to the closest
+		// proto-canonical state so downstream consumers (signal_adapter
+		// expects ValueKindEnum, not ValueKindString) still see a typed
+		// enum and the FSM can fire TriggerChargeEnded / TriggerChargeStarted.
+		switch s {
+		case "Idle", "Authorizing":
+			return &ftproto.Value{Value: &ftproto.Value_ChargingValue{ChargingValue: ftproto.ChargingState_ChargeStateStopped}}, ""
+		case "WaitForLineVoltage":
+			return &ftproto.Value{Value: &ftproto.Value_ChargingValue{ChargingValue: ftproto.ChargingState_ChargeStateStarting}}, ""
+		}
 		return nil, "enum ChargingState: unknown value " + s
+
+	case "DetailedChargeStateValue":
+		if num, ok := ftproto.DetailedChargeStateValue_value[s]; ok {
+			return &ftproto.Value{Value: &ftproto.Value_DetailedChargeStateValue{DetailedChargeStateValue: ftproto.DetailedChargeStateValue(num)}}, ""
+		}
+		if num, ok := ftproto.DetailedChargeStateValue_value["DetailedChargeState"+s]; ok {
+			return &ftproto.Value{Value: &ftproto.Value_DetailedChargeStateValue{DetailedChargeStateValue: ftproto.DetailedChargeStateValue(num)}}, ""
+		}
+		// Same legacy-poll fallback as ChargingState.
+		switch s {
+		case "Idle", "Authorizing":
+			return &ftproto.Value{Value: &ftproto.Value_DetailedChargeStateValue{DetailedChargeStateValue: ftproto.DetailedChargeStateValue_DetailedChargeStateStopped}}, ""
+		case "WaitForLineVoltage":
+			return &ftproto.Value{Value: &ftproto.Value_DetailedChargeStateValue{DetailedChargeStateValue: ftproto.DetailedChargeStateValue_DetailedChargeStateStarting}}, ""
+		}
+		return nil, "enum DetailedChargeStateValue: unknown value " + s
 
 	default:
 		// Fall back to StringValue for typed enums we haven't wired
