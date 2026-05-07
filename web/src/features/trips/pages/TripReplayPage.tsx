@@ -120,31 +120,80 @@ export default function TripReplayPage() {
   const { convertDistance, convertSpeed, distanceUnit, speedUnit } = useSettings();
 
   /* ---- Normalize positions ---- */
+  // The /drives/{id} positions array carries only lat/lon/heading/speed
+  // (see internal/api/drive_handler_detail.go drivePositionFieldMappings).
+  // Power, battery, elevation, range, temperature etc. live on the parallel
+  // telemetry array. Build a sorted index of telemetry by timestamp so we
+  // can join each position to its nearest-by-ts telemetry row in O(log n).
+  // Without this merge, the "Current Position Stats" panel renders 0% / —
+  // for every metric except speed.
+  const telemetryByTs = useMemo(() => {
+    if (!drive) return [] as Array<{ ts: number; row: Record<string, unknown> }>;
+    const tel = (drive as unknown as { telemetry?: Array<Record<string, unknown>> }).telemetry ?? [];
+    return tel
+      .map((row) => {
+        const tsStr = (row.created_at as string) ?? (row.createdAt as string) ?? (row.timestamp as string) ?? '';
+        const ts = tsStr ? new Date(tsStr).getTime() : NaN;
+        return { ts, row };
+      })
+      .filter((x) => Number.isFinite(x.ts))
+      .sort((a, b) => a.ts - b.ts);
+  }, [drive]);
+
+  const nearestTelemetry = useCallback(
+    (positionTs: number): Record<string, unknown> | null => {
+      if (telemetryByTs.length === 0 || !Number.isFinite(positionTs)) return null;
+      let lo = 0;
+      let hi = telemetryByTs.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (telemetryByTs[mid].ts < positionTs) lo = mid + 1;
+        else hi = mid;
+      }
+      // lo is now the first index with ts >= positionTs; check predecessor too.
+      if (lo > 0 && Math.abs(telemetryByTs[lo - 1].ts - positionTs) < Math.abs(telemetryByTs[lo].ts - positionTs)) {
+        return telemetryByTs[lo - 1].row;
+      }
+      return telemetryByTs[lo].row;
+    },
+    [telemetryByTs],
+  );
+
   const positions: DrivePosition[] = useMemo(() => {
     if (!drive) return [];
     const pos = drive.positions ?? [];
     return pos
       .map((raw: unknown) => {
         const p = raw as Record<string, unknown>;
+        const tsStr = (p.timestamp as string) ?? (p.created_at as string) ?? (p.createdAt as string) ?? '';
+        const positionTs = tsStr ? new Date(tsStr).getTime() : NaN;
+        // Merge nearest telemetry row to fill power/battery/elevation/etc.
+        const t = nearestTelemetry(positionTs) ?? {};
+        const pick = <V,>(k: string, snake?: string): V | null => {
+          const fromPos = (p[k] as V | null | undefined) ?? (snake ? (p[snake] as V | null | undefined) : undefined);
+          if (fromPos !== undefined && fromPos !== null) return fromPos as V;
+          const fromTel = (t[k] as V | null | undefined) ?? (snake ? (t[snake] as V | null | undefined) : undefined);
+          return (fromTel ?? null) as V | null;
+        };
         return {
           latitude: (p.latitude as number) ?? 0,
           longitude: (p.longitude as number) ?? 0,
-          speed: (p.speed as number | null) ?? null,
-          power: (p.power as number | null) ?? null,
-          batteryLevel: (p.batteryLevel as number) ?? (p.battery_level as number) ?? 0,
-          timestamp: (p.timestamp as string) ?? (p.created_at as string) ?? (p.createdAt as string) ?? '',
-          elevation: (p.elevation as number | null) ?? null,
-          insideTemp: (p.insideTemp as number | null) ?? (p.inside_temp as number | null) ?? null,
-          outsideTemp: (p.outsideTemp as number | null) ?? (p.outside_temp as number | null) ?? null,
-          idealRange: (p.idealRange as number | null) ?? (p.ideal_range as number | null) ?? null,
-          ratedRange: (p.ratedRange as number | null) ?? (p.rated_range as number | null) ?? null,
-          odometer: (p.odometer as number | null) ?? null,
-          fanStatus: (p.fanStatus as number | null) ?? (p.fan_status as number | null) ?? null,
-          isClimateOn: p.isClimateOn ?? p.is_climate_on ?? null,
+          speed: (p.speed as number | null) ?? (t.speed as number | null) ?? null,
+          power: pick<number>('power'),
+          batteryLevel: pick<number>('batteryLevel', 'battery_level') ?? 0,
+          timestamp: tsStr,
+          elevation: pick<number>('elevation'),
+          insideTemp: pick<number>('insideTemp', 'inside_temp'),
+          outsideTemp: pick<number>('outsideTemp', 'outside_temp'),
+          idealRange: pick<number>('idealRange', 'ideal_range'),
+          ratedRange: pick<number>('ratedRange', 'rated_range'),
+          odometer: pick<number>('odometer'),
+          fanStatus: pick<number>('fanStatus', 'fan_status'),
+          isClimateOn: (p.isClimateOn ?? p.is_climate_on ?? t.isClimateOn ?? t.is_climate_on) as DrivePosition['isClimateOn'],
         } as DrivePosition;
       })
       .filter((p) => p.latitude !== 0 || p.longitude !== 0);
-  }, [drive]);
+  }, [drive, nearestTelemetry]);
 
   /* ---- Replay hook ---- */
   const [replay, controls] = useTripReplay(positions);

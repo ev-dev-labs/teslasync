@@ -137,7 +137,12 @@ export function useDriveDetailData(id: string) {
     if (!drive) return null;
     const maxSpd = drive.maxSpeedMph != null ? convertSpeed(drive.maxSpeedMph) : 0;
     const avgSpd = drive.avgSpeedMph != null ? convertSpeed(drive.avgSpeedMph) : 0;
-    const minSpd = 0; // speedMin removed from API; compute from telemetry if available
+    // speedMin removed from API contract; compute from per-row chart data.
+    // We want the minimum *non-zero* speed during the actual moving portion of
+    // the drive — pure zeroes mean parked/stopped at a light and don't tell
+    // the user anything useful. Falls back to 0 only if every sample is zero.
+    const movingSpeeds = chartData.map((d) => d.speed).filter((s) => s > 0);
+    const minSpd = movingSpeeds.length > 0 ? Math.min(...movingSpeeds) : 0;
     // Compute power max (drive) and min (regen) from per-row chart data.
     // Backend derives power = pack_voltage * pack_current / 1000 per row;
     // sign is preserved (positive = drive, negative = regen).
@@ -190,8 +195,14 @@ export function useDriveDetailData(id: string) {
     const startRange = firstWithRange ? (firstWithRange.idealRange ?? firstWithRange.ratedRange) : null;
     const endRange = lastWithRange ? (lastWithRange.idealRange ?? lastWithRange.ratedRange) : null;
 
-    const odometerStart = chartData.length > 0 ? (chartData[0].odometer ?? 0) : 0;
-    const odometerEnd = chartData.length > 0 ? (chartData[chartData.length - 1].odometer ?? 0) : 0;
+    // Odometer: signal_log emits Odometer sparsely (Tesla "emit on change"),
+    // so chartData[0].odometer is usually null for the first ~10 seconds while
+    // VehicleSpeed/PackVoltage etc. are streaming. Scan for the first/last
+    // non-null odometer reading so the panel shows real start→end values.
+    const firstOdometer = chartData.find((d) => d.odometer != null && d.odometer > 0)?.odometer ?? null;
+    const lastOdometer = [...chartData].reverse().find((d) => d.odometer != null && d.odometer > 0)?.odometer ?? null;
+    const odometerStart = firstOdometer ?? 0;
+    const odometerEnd = lastOdometer ?? 0;
 
     const hasTirePressure = chartData.some((d) => d.tireFl !== null || d.tireFr !== null || d.tireRl !== null || d.tireRr !== null);
 
