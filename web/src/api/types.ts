@@ -895,10 +895,15 @@ export interface ClimateSnapshot {
   // compile; values are undefined when reading the typed column set.
   inside_temp?: number | null
   outside_temp?: number | null
+  driver_temp_setting?: number | null
+  passenger_temp_setting?: number | null
   hvac_power?: number | null
+  is_ac_on?: boolean | null
   hvac_ac_enabled?: boolean | null
+  hvac_fan_status?: number | null
   hvac_fan_speed?: number | null
   hvac_steering_wheel_heat_level?: number | null
+  battery_heater?: boolean | null
   battery_heater_on?: boolean | null
   seat_heater_rear_center?: number | null
 }

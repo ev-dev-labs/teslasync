@@ -27,25 +27,31 @@ export function ClimateSection({ climateData }: ClimateSectionProps) {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           <MetricCard
             label={t('common.insideTemp', 'Inside Temp')}
-            value={formatTemperature(climateData.inside_temp_c)}
+            value={formatTemperature(climateData.inside_temp ?? climateData.inside_temp_c)}
             icon={<Thermometer className="h-4 w-4" />}
             color="green"
           />
           <MetricCard
             label={t('common.outsideTemp', 'Outside Temp')}
-            value={formatTemperature(climateData.outside_temp_c)}
+            value={formatTemperature(climateData.outside_temp ?? climateData.outside_temp_c)}
             icon={<Thermometer className="h-4 w-4" />}
             color="cyan"
           />
           <MetricCard
             label={t('vehicles.detail.driverSetpoint', 'Driver Setpoint')}
-            value={formatTemperature(climateData.driver_setpoint_c)}
+            value={formatTemperature(climateData.driver_temp_setting ?? climateData.driver_setpoint_c)}
             icon={<Thermometer className="h-4 w-4" />}
             color="purple"
           />
           <MetricCard
             label={t('vehicles.detail.fanSpeed', 'Fan Speed')}
-            value={climateData.fan_status != null ? String(climateData.fan_status) : '—'}
+            value={
+              climateData.hvac_fan_status != null
+                ? String(climateData.hvac_fan_status)
+                : climateData.fan_status != null
+                  ? String(climateData.fan_status)
+                  : '—'
+            }
             icon={<Wind className="h-4 w-4" />}
             color="cyan"
           />
@@ -81,9 +87,13 @@ export function ClimateSection({ climateData }: ClimateSectionProps) {
           />
           <MetricCard
             label={t('vehicles.detail.climateOn', 'Climate On')}
-            value={climateData.is_climate_on ? t('common.on', 'On') : t('common.off', 'Off')}
+            value={
+              (climateData.is_ac_on ?? climateData.is_climate_on)
+                ? t('common.on', 'On')
+                : t('common.off', 'Off')
+            }
             icon={<Flame className="h-4 w-4" />}
-            color={climateData.is_climate_on ? 'green' : 'cyan'}
+            color={(climateData.is_ac_on ?? climateData.is_climate_on) ? 'green' : 'cyan'}
           />
         </div>
       ) : (
