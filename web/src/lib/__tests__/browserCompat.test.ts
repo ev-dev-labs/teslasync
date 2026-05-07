@@ -96,9 +96,14 @@ describe('detectMissingFeatures', () => {
     expect(detectMissingFeatures()).toContain('Intl.RelativeTimeFormat')
   })
 
-  it('flags missing crypto.randomUUID', () => {
+  it('does not flag a missing crypto.randomUUID — it is no longer required', () => {
+    /* crypto.randomUUID is restricted to secure contexts and undefined
+     * over LAN IPs / custom HTTP hostnames. The app routes UUID
+     * generation through @/lib/safeUUID#safeRandomUUID which falls
+     * back to crypto.getRandomValues / Math.random, so its absence
+     * must not block the boot sequence. */
     setGlobal('crypto', {})
-    expect(detectMissingFeatures()).toContain('crypto.randomUUID')
+    expect(detectMissingFeatures()).not.toContain('crypto.randomUUID')
   })
 
   it('flags missing CSS @supports', () => {
@@ -132,14 +137,17 @@ describe('detectMissingFeatures', () => {
     expect(detectMissingFeatures()).toContain('CSS @supports')
   })
 
-  it('treats a thrown crypto access as evidence of incompatibility', () => {
+  it('does not crash when crypto access throws (ITP / locked iframe)', () => {
+    /* crypto.randomUUID is no longer required (see safeUUID.ts), but
+     * a thrown property access must still not crash detection. */
     Object.defineProperty(globalThis, 'crypto', {
       configurable: true,
       get() {
         throw new Error('blocked by ITP')
       },
     })
-    expect(detectMissingFeatures()).toContain('crypto.randomUUID')
+    expect(() => detectMissingFeatures()).not.toThrow()
+    expect(detectMissingFeatures()).not.toContain('crypto.randomUUID')
   })
 })
 

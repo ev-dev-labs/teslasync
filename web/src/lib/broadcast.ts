@@ -102,15 +102,12 @@ interface Envelope {
   msg: BroadcastMessage
 }
 
+import { safeRandomUUID } from './safeUUID'
+
 const CHANNEL_NAME = 'teslasync'
 
 /** Stable per-tab identifier used to filter self-broadcasts. */
-export const TAB_ID: string = (() => {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID()
-  }
-  return `tab-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`
-})()
+export const TAB_ID: string = safeRandomUUID()
 
 let chan: BroadcastChannel | null = null
 

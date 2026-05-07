@@ -4,13 +4,16 @@ import { Fingerprint, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
 import { CopyButton } from '@/components/ui'
+import { safeRandomUUID } from '@/lib/safeUUID'
 
 export function UuidGeneratorTool() {
   const { t } = useTranslation()
   const [uuids, setUuids] = useState<string[]>([])
 
   const generate = useCallback(() => {
-    const uuid = crypto.randomUUID()
+    /* safeRandomUUID covers non-secure-context deployments (LAN IP /
+     * custom HTTP hostname) where crypto.randomUUID is undefined. */
+    const uuid = safeRandomUUID()
     setUuids((prev) => [uuid, ...prev].slice(0, 10))
   }, [])
 

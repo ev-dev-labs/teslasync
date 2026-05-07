@@ -14,7 +14,7 @@ import {
  * Renders a one-time, sticky top-of-page warning when the host browser
  * is missing one or more web-platform features TeslaSync depends on
  * (BroadcastChannel, ResizeObserver, Intl.RelativeTimeFormat,
- * crypto.randomUUID, CSS `:has()`, structuredClone). On unsupported
+ * CSS `:has()`, structuredClone). On unsupported
  * browsers the SPA otherwise renders a white page or partial UI with
  * no diagnostic — this banner exists so the user gets a coherent
  * "update your browser" message instead of an opaque break.
