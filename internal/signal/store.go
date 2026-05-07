@@ -178,24 +178,16 @@ func (s *Store) GetFloat(vehicleID int64, field string) (float64, bool) {
 			return 0, false
 		}
 	}
-	switch val := v.Raw.(type) {
-	case float64:
-		return val, true
-	case float32:
-		return float64(val), true
-	case int:
-		return float64(val), true
-	case int32:
-		return float64(val), true
-	case int64:
-		return float64(val), true
+	f, ok := Float64(v.Raw)
+	if !ok {
+		log.Warn().
+			Int64("vehicle_id", vehicleID).
+			Str("field", field).
+			Str("got_type", fmt.Sprintf("%T", v.Raw)).
+			Msg("signal store: GetFloat type mismatch on stored value")
+		return 0, false
 	}
-	log.Warn().
-		Int64("vehicle_id", vehicleID).
-		Str("field", field).
-		Str("got_type", fmt.Sprintf("%T", v.Raw)).
-		Msg("signal store: GetFloat type mismatch on stored value")
-	return 0, false
+	return f, true
 }
 
 // GetInt returns an integer signal value. Returns (0, false) if not found.

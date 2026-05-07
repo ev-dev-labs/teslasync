@@ -146,97 +146,76 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 	}
 
 	// --- Phase 1: Read every field from SignalStore ---
+	//
+	// Every numeric extraction below MUST go through signal.Float64Value
+	// (or signal.Float64 for nested map members). Phase-42 codec stores
+	// Float5 as float32 and Int3/Int4 as int32; a direct `.(float64)`
+	// assertion silently drops every such value. See coerce.go contract.
 
-	if v := all["VehicleSpeed"]; v != nil {
-		if f, ok := v.Raw.(float64); ok {
-			state.Speed = f
-		}
+	if f, ok := signal.Float64Value(all["VehicleSpeed"]); ok {
+		state.Speed = f
 	}
-	if v := all["Odometer"]; v != nil {
-		if f, ok := v.Raw.(float64); ok {
-			state.Odometer = f
-		}
+	if f, ok := signal.Float64Value(all["Odometer"]); ok {
+		state.Odometer = f
 	}
-	if v := all["BatteryLevel"]; v != nil {
-		switch bv := v.Raw.(type) {
-		case float64:
-			state.BatteryLevel = int(bv)
-		case int:
-			state.BatteryLevel = bv
-		}
+	if f, ok := signal.Float64Value(all["BatteryLevel"]); ok {
+		state.BatteryLevel = int(f)
 	}
-	if v := all["Soc"]; v != nil && state.BatteryLevel == 0 {
-		if f, ok := v.Raw.(float64); ok {
+	if state.BatteryLevel == 0 {
+		if f, ok := signal.Float64Value(all["Soc"]); ok {
 			state.BatteryLevel = int(f)
 		}
 	}
-	if v := all["IdealBatteryRange"]; v != nil {
-		if f, ok := v.Raw.(float64); ok {
-			state.IdealRange = f
-		}
+	if f, ok := signal.Float64Value(all["IdealBatteryRange"]); ok {
+		state.IdealRange = f
 	}
-	if v := all["RatedRange"]; v != nil {
-		if f, ok := v.Raw.(float64); ok {
+	if f, ok := signal.Float64Value(all["RatedRange"]); ok {
+		state.RatedRange = f
+	}
+	if state.RatedRange == 0 {
+		if f, ok := signal.Float64Value(all["EstBatteryRange"]); ok {
 			state.RatedRange = f
 		}
 	}
-	if v := all["EstBatteryRange"]; v != nil && state.RatedRange == 0 {
-		if f, ok := v.Raw.(float64); ok {
-			state.RatedRange = f
-		}
+	if f, ok := signal.Float64Value(all["InsideTemp"]); ok {
+		state.InsideTemp = f
 	}
-	if v := all["InsideTemp"]; v != nil {
-		if f, ok := v.Raw.(float64); ok {
-			state.InsideTemp = f
-		}
-	}
-	if v := all["OutsideTemp"]; v != nil {
-		if f, ok := v.Raw.(float64); ok {
-			state.OutsideTemp = f
-		}
+	if f, ok := signal.Float64Value(all["OutsideTemp"]); ok {
+		state.OutsideTemp = f
 	}
 
-	// Location from Location map
+	// Location: codec emits a composite map[string]any with float32/float64
+	// latitude+longitude members. Use signal.Float64 on the unwrapped
+	// elements so float32 lat/lon survives the projection.
 	if v := all["Location"]; v != nil {
 		if loc, ok := v.Raw.(map[string]interface{}); ok {
-			if lat, ok := loc["latitude"].(float64); ok {
+			if lat, ok := signal.Float64(loc["latitude"]); ok {
 				state.Latitude = lat
 			}
-			if lon, ok := loc["longitude"].(float64); ok {
+			if lon, ok := signal.Float64(loc["longitude"]); ok {
 				state.Longitude = lon
 			}
 		}
 	}
-	if v := all["Latitude"]; v != nil {
-		if f, ok := v.Raw.(float64); ok {
-			state.Latitude = f
-		}
+	if f, ok := signal.Float64Value(all["Latitude"]); ok {
+		state.Latitude = f
 	}
-	if v := all["Longitude"]; v != nil {
-		if f, ok := v.Raw.(float64); ok {
-			state.Longitude = f
-		}
+	if f, ok := signal.Float64Value(all["Longitude"]); ok {
+		state.Longitude = f
 	}
-	if v := all["GpsHeading"]; v != nil {
-		switch hv := v.Raw.(type) {
-		case float64:
-			state.Heading = &hv
-		case int:
-			f := float64(hv)
-			state.Heading = &f
-		}
+	if f, ok := signal.Float64Value(all["GpsHeading"]); ok {
+		fc := f
+		state.Heading = &fc
 	}
 
 	// Power (computed or direct)
-	if v := all["Power"]; v != nil {
-		if f, ok := v.Raw.(float64); ok {
-			state.Power = f
-		}
-	} else if pv, pcv := all["PackVoltage"], all["PackCurrent"]; pv != nil && pcv != nil {
-		if voltage, ok := pv.Raw.(float64); ok {
-			if current, ok := pcv.Raw.(float64); ok {
-				state.Power = voltage * current / 1000.0
-			}
+	if f, ok := signal.Float64Value(all["Power"]); ok {
+		state.Power = f
+	} else {
+		voltage, vok := signal.Float64Value(all["PackVoltage"])
+		current, cok := signal.Float64Value(all["PackCurrent"])
+		if vok && cok {
+			state.Power = voltage * current / 1000.0
 		}
 	}
 
@@ -246,30 +225,22 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 			state.IsCharging = enums.IsCharging(cs)
 		}
 	}
-	if v := all["ChargeAmps"]; v != nil && !state.IsCharging {
-		if f, ok := v.Raw.(float64); ok {
+	if !state.IsCharging {
+		if f, ok := signal.Float64Value(all["ChargeAmps"]); ok {
 			state.IsCharging = f > 1.0
 		}
 	}
-	if v := all["ACChargingPower"]; v != nil {
-		if f, ok := v.Raw.(float64); ok {
-			state.ChargerPower = f
-		}
+	if f, ok := signal.Float64Value(all["ACChargingPower"]); ok {
+		state.ChargerPower = f
 	}
-	if v := all["DCChargingPower"]; v != nil {
-		if f, ok := v.Raw.(float64); ok && f > 0 {
-			state.ChargerPower = f
-		}
+	if f, ok := signal.Float64Value(all["DCChargingPower"]); ok && f > 0 {
+		state.ChargerPower = f
 	}
-	if v := all["ChargeRateMilePerHour"]; v != nil {
-		if f, ok := v.Raw.(float64); ok {
-			state.ChargeRate = f
-		}
+	if f, ok := signal.Float64Value(all["ChargeRateMilePerHour"]); ok {
+		state.ChargeRate = f
 	}
-	if v := all["TimeToFullCharge"]; v != nil {
-		if f, ok := v.Raw.(float64); ok {
-			state.TimeToFullChg = f
-		}
+	if f, ok := signal.Float64Value(all["TimeToFullCharge"]); ok {
+		state.TimeToFullChg = f
 	}
 
 	// Security
@@ -306,8 +277,12 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 			state.IsClimateOn = hv
 		case string:
 			state.IsClimateOn = enums.ParseHvacPower(hv)
-		case float64:
-			state.IsClimateOn = hv > 0
+		default:
+			// Phase-42 codec stores numeric HvacPower variants as
+			// float32/int32 — route through the canonical converter.
+			if f, ok := signal.Float64(v.Raw); ok {
+				state.IsClimateOn = f > 0
+			}
 		}
 	}
 
@@ -443,20 +418,10 @@ func fillStateFromSnapshot(state *models.VehicleState, live map[string]*signal.V
 // in case the test fake or future readers produce them.
 func snapFloat(snap signal.State, key string) (float64, bool) {
 	v, ok := snap[key]
-	if !ok || v == nil {
+	if !ok {
 		return 0, false
 	}
-	switch n := v.(type) {
-	case float64:
-		return n, true
-	case float32:
-		return float64(n), true
-	case int:
-		return float64(n), true
-	case int64:
-		return float64(n), true
-	}
-	return 0, false
+	return signal.Float64(v)
 }
 
 // snapString extracts a string value from a signal_log snapshot map.
