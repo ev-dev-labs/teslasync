@@ -229,6 +229,20 @@ export default function DrivesListPage() {
   const { data: drives, isLoading: isDrivesLoading, error: drivesError, refetch: refetchDrives } = drivesQuery;
   const { data: stats } = useDrivingStats(vehicleIdStr);
 
+  /**
+   * Treat a stats payload as effectively empty when the backend returned
+   * an envelope with all-zero aggregates. Without this guard the hero
+   * gauges show "0 km / 0 wh-km / 0 km/h" which reads as "broken vehicle"
+   * rather than "no telemetry yet".
+   */
+  const hasMeaningfulStats =
+    stats != null &&
+    (
+      (stats.totalDistanceKm ?? 0) > 0 ||
+      (stats.topSpeedKmh ?? 0) > 0 ||
+      (stats.avgEfficiencyWhKm ?? 0) > 0
+    );
+
   /* Unit conversion */
   const {
     convertDistance, convertSpeed, convertEfficiency,
@@ -490,7 +504,7 @@ export default function DrivesListPage() {
       {/* Hero gauges */}
       <FadeIn>
         <GlassPanel className="p-4 sm:p-6">
-          {stats ? (
+          {hasMeaningfulStats ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-6 items-center">
               <RadialGauge
                 value={stats.totalDrives}
