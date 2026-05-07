@@ -54,8 +54,25 @@ export interface BackupRun {
   durationMs: number | null;
 }
 
+/**
+ * Backend emits the following per-component status values:
+ *   - 'healthy' (current canonical for live components)
+ *   - 'ok' (legacy probe responses + buffer health)
+ *   - 'degraded' / 'warning' (recoverable issues)
+ *   - 'unhealthy' / 'offline' / 'down' / 'failed' (broken)
+ *   - 'unknown' (e.g. tesla_api never polled, last_check is zero)
+ * Kept as a string-literal union (with `string` fallback) because new
+ * status keys are added without coordinated FE/BE migrations.
+ */
+export type ComponentStatus =
+  | 'healthy' | 'ok'
+  | 'degraded' | 'warning'
+  | 'unhealthy' | 'offline' | 'down' | 'failed'
+  | 'unknown'
+  | (string & {});
+
 export interface SystemHealthComponent {
-  status: 'ok' | 'degraded' | 'unhealthy';
+  status: ComponentStatus;
   consecutiveFailures: number;
   lastError: string | null;
   details: Record<string, unknown>;
