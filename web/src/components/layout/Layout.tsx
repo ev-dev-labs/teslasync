@@ -47,7 +47,10 @@ import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner } from '../data-display/ServiceStatus'
 import Logo from '../ui/Logo'
 import { Button, ThemePicker } from '@/components/ui'
-import { Breadcrumbs } from './Breadcrumbs'
+import {
+  BreadcrumbOverridesProvider,
+} from './BreadcrumbOverridesContext'
+import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
 import { NavSectionHeader } from './sidebar/NavSectionHeader'
 import { request } from '@/api/client'
@@ -935,14 +938,6 @@ export default function Layout() {
   const unpinNavPath = useCallback((to: string) => {
     setPinnedNavPaths(prev => prev.filter(path => path !== to))
   }, [])
-  const currentPageTitle = activeNavEntry ? navLabel(activeNavEntry.item.label) : t('nav.currentPage', 'Current page')
-  const breadcrumbItems = activeNavEntry
-    ? [
-        { label: activeNavEntry.section.title },
-        { label: currentPageTitle },
-      ]
-    : []
-
   const mainRef = useRef<HTMLElement>(null)
   const renderNavLink = (item: NavItem, compact = false, activeScope = 'main') => {
     const { to, icon: Icon, label, color, ...rest } = item
@@ -1016,6 +1011,7 @@ export default function Layout() {
           Prompt 60 — supersedes the previous `a11y.skipToMain` link.
           Audit anchor: skipToContent|skip.to.content */}
       <SkipToContent />
+      <BreadcrumbOverridesProvider>
       <div className="flex h-dvh bg-[var(--bg)] text-[var(--text-primary)]">
       {/* Phase-46 / Prompt 12 — global SR announcer. Mounted once here
           so any component can fire imperative live-region messages via
@@ -1388,7 +1384,7 @@ export default function Layout() {
           <div className="mx-auto max-w-[1600px] px-3 py-4 pb-safe sm:px-5 sm:py-5 lg:px-8 lg:py-8">
             {activeNavEntry && (
               <div className="mb-3 flex min-h-8 items-center justify-between gap-3 border-b border-white/[0.06] pb-2">
-                <Breadcrumbs items={breadcrumbItems} className="min-w-0 text-xs" />
+                <LayoutBreadcrumbs className="min-w-0 text-xs" />
                 <p className="hidden shrink-0 text-[10px] text-[var(--text-muted)] lg:block">
                   {t('nav.quickSearchHint', 'Ctrl+K to jump')}
                 </p>
@@ -1514,6 +1510,7 @@ export default function Layout() {
           dialogs the user is interacting with. */}
       <CookieConsentBanner />
       </div>
+      </BreadcrumbOverridesProvider>
     </>
   )
 }
