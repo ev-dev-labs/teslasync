@@ -1,8 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
 import {
-  ChartTooltip, AREA_DEFAULTS,
+  ChartContainer, ChartTooltip, AREA_DEFAULTS,
   LineChart, Line, Legend,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
@@ -35,13 +34,15 @@ export function TirePressureSection({ chartData, stats }: TirePressureSectionPro
 
   return (
     <FadeIn>
-      <GlassPanel className="p-6">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-          <Activity className="h-4 w-4 text-cyan-400" /> {t('driveDetail.tirePressure', 'Tire Pressure During Drive')}
-        </h3>
+      {/* chart-a11y:no-table dense per-sample tire pressure trace; min/max stats appear above the chart in the per-wheel tiles */}
+      <ChartContainer
+        title={t('driveDetail.tirePressure', 'Tire Pressure During Drive')}
+        ariaLabel={t('driveDetail.tirePressure.aria', 'Front and rear tire pressure lines over the drive timeline')}
+        height={310}
+      >
         {stats.hasTirePressure ? (
           <>
-            <div className="grid grid-cols-4 gap-3 mb-4">
+            <div className="grid grid-cols-4 gap-3 mb-3">
               {tpStats.map((tp) => (
                 <div key={tp.label} className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
                   <p className="text-[9px] text-[var(--text-muted)]">{tp.label}</p>
@@ -51,37 +52,35 @@ export function TirePressureSection({ chartData, stats }: TirePressureSectionPro
                 </div>
               ))}
             </div>
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                  <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
-                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Legend wrapperStyle={LEGEND_STYLE} />
-                  {chartData.some((d) => d.tireFl !== null) && (
-                    <Line {...AREA_DEFAULTS} dataKey="tireFl" stroke="#3b82f6" name={`FL (${pressureUnit})`} />
-                  )}
-                  {chartData.some((d) => d.tireFr !== null) && (
-                    <Line {...AREA_DEFAULTS} dataKey="tireFr" stroke="#10b981" name={`FR (${pressureUnit})`} />
-                  )}
-                  {chartData.some((d) => d.tireRl !== null) && (
-                    <Line {...AREA_DEFAULTS} dataKey="tireRl" stroke="#f59e0b" name={`RL (${pressureUnit})`} />
-                  )}
-                  {chartData.some((d) => d.tireRr !== null) && (
-                    <Line {...AREA_DEFAULTS} dataKey="tireRr" stroke="#ef4444" name={`RR (${pressureUnit})`} />
-                  )}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
+                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                <Tooltip content={<ChartTooltip />} />
+                <Legend wrapperStyle={LEGEND_STYLE} />
+                {chartData.some((d) => d.tireFl !== null) && (
+                  <Line {...AREA_DEFAULTS} dataKey="tireFl" stroke="#3b82f6" name={`FL (${pressureUnit})`} />
+                )}
+                {chartData.some((d) => d.tireFr !== null) && (
+                  <Line {...AREA_DEFAULTS} dataKey="tireFr" stroke="#10b981" name={`FR (${pressureUnit})`} />
+                )}
+                {chartData.some((d) => d.tireRl !== null) && (
+                  <Line {...AREA_DEFAULTS} dataKey="tireRl" stroke="#f59e0b" name={`RL (${pressureUnit})`} />
+                )}
+                {chartData.some((d) => d.tireRr !== null) && (
+                  <Line {...AREA_DEFAULTS} dataKey="tireRr" stroke="#ef4444" name={`RR (${pressureUnit})`} />
+                )}
+              </LineChart>
+            </ResponsiveContainer>
           </>
         ) : (
-          <div className="h-56 flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+          <div className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
             <Activity className="h-8 w-8 opacity-20" />
             <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
           </div>
         )}
-      </GlassPanel>
+      </ChartContainer>
     </FadeIn>
   );
 }
