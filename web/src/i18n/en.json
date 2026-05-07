@@ -783,6 +783,12 @@
     "catalogue": {
       "title": "Widget catalogue",
       "subtitle": "Pick a widget to add to your dashboard. {{added}} of {{total}} widgets are already on your layout.",
+      "searchPlaceholder": "Search widgets by name, description, or category…",
+      "searchLabel": "Search widgets",
+      "resultCount": "{{count}} of {{total}} widgets match",
+      "emptyTitle": "No widgets match your search",
+      "emptyBody": "Try a different keyword, or clear the search to browse all {{total}} widgets.",
+      "clearSearch": "Clear search",
       "add": "Add",
       "addLabel": "Add {{name}} widget",
       "category": {

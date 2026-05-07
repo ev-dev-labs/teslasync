@@ -128,4 +128,68 @@ describe('WidgetCatalogueDialog — Phase-45 / Prompt 25', () => {
     expect(onAdd).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it('renders a search input that filters entries by name', () => {
+    render(
+      <WidgetCatalogueDialog
+        open
+        onClose={() => {}}
+        onAdd={() => {}}
+        activeWidgetIds={[]}
+      />,
+    );
+    const search = screen.getByTestId('widget-catalogue-search') as HTMLInputElement;
+    expect(search).toBeInTheDocument();
+
+    // Before filtering, both well-known categories are present.
+    expect(screen.queryByTestId('widget-catalogue-category-vehicle')).not.toBeNull();
+    expect(screen.queryByTestId('widget-catalogue-category-battery')).not.toBeNull();
+
+    fireEvent.change(search, { target: { value: 'battery' } });
+
+    // Battery widgets remain; categories that have no battery match are
+    // dropped from the visible tree (e.g. the Maps category).
+    expect(screen.queryByTestId('widget-catalogue-category-battery')).not.toBeNull();
+    expect(screen.queryByTestId('widget-catalogue-category-maps')).toBeNull();
+    expect(screen.getByTestId('widget-catalogue-result-count')).toBeInTheDocument();
+  });
+
+  it('shows an empty state with a clear-search action when no widgets match', () => {
+    render(
+      <WidgetCatalogueDialog
+        open
+        onClose={() => {}}
+        onAdd={() => {}}
+        activeWidgetIds={[]}
+      />,
+    );
+    const search = screen.getByTestId('widget-catalogue-search') as HTMLInputElement;
+    fireEvent.change(search, { target: { value: 'zzzzznope-no-widget' } });
+
+    const empty = screen.getByTestId('widget-catalogue-empty');
+    expect(empty).toBeInTheDocument();
+    expect(screen.queryByTestId('widget-catalogue-category-vehicle')).toBeNull();
+
+    // Clearing the search restores the full catalogue.
+    fireEvent.click(screen.getByTestId('widget-catalogue-clear-search'));
+    expect(screen.queryByTestId('widget-catalogue-empty')).toBeNull();
+    expect(screen.getByTestId('widget-catalogue-category-vehicle')).toBeInTheDocument();
+    expect(search.value).toBe('');
+  });
+
+  it('matches by category label so users can search a topic', () => {
+    render(
+      <WidgetCatalogueDialog
+        open
+        onClose={() => {}}
+        onAdd={() => {}}
+        activeWidgetIds={[]}
+      />,
+    );
+    const search = screen.getByTestId('widget-catalogue-search') as HTMLInputElement;
+    // "tires" is a category label — every tire widget should be retained
+    // even if the word "tire" isn't in their description.
+    fireEvent.change(search, { target: { value: 'tires' } });
+    expect(screen.queryByTestId('widget-catalogue-category-tires')).not.toBeNull();
+  });
 });

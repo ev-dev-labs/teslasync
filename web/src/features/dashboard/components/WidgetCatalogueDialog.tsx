@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Button, Badge } from '@/components/ui';
+import { Search } from 'lucide-react';
+import { Modal, Button, Badge, Input } from '@/components/ui';
 import { WIDGET_REGISTRY } from '../widgets/registry';
 import type { WidgetCategory, WidgetDef } from '../widgets/types';
 
@@ -97,6 +98,21 @@ export function WidgetCatalogueDialog({
 }: WidgetCatalogueDialogProps) {
   const { t } = useTranslation();
 
+  const [query, setQuery] = useState('');
+  const searchRef = useRef<HTMLInputElement | null>(null);
+
+  // Reset the filter every time the dialog re-opens so a stale search from
+  // a prior session never hides the full catalogue on the next open.
+  useEffect(() => {
+    if (open) {
+      setQuery('');
+      // Defer focus until after the modal portal mounts so the input is
+      // actually in the DOM when we call .focus().
+      const id = window.setTimeout(() => searchRef.current?.focus(), 50);
+      return () => window.clearTimeout(id);
+    }
+  }, [open]);
+
   const activeSet = useMemo(() => new Set(activeWidgetIds), [activeWidgetIds]);
 
   const groupedEntries = useMemo<[WidgetCategory, WidgetDef[]][]>(() => {
@@ -126,6 +142,37 @@ export function WidgetCatalogueDialog({
   const totalCount = WIDGET_REGISTRY.length;
   const addedCount = activeSet.size;
 
+  const trimmedQuery = query.trim().toLowerCase();
+  const isFiltering = trimmedQuery.length > 0;
+
+  // Filter by name + description + category label so users can search either
+  // a widget by name ("range") or a topic by category ("battery").
+  const filteredEntries = useMemo<[WidgetCategory, WidgetDef[]][]>(() => {
+    if (!isFiltering) return groupedEntries;
+    const out: [WidgetCategory, WidgetDef[]][] = [];
+    for (const [category, widgets] of groupedEntries) {
+      const categoryLabel = (
+        t(
+          `dashboard.catalogue.category.${category}`,
+          CATEGORY_FALLBACK_LABELS[category],
+        ) ?? CATEGORY_FALLBACK_LABELS[category]
+      ).toLowerCase();
+      const categoryHit = categoryLabel.includes(trimmedQuery);
+      const matches = widgets.filter((w) => {
+        if (categoryHit) return true;
+        const haystack = `${w.name ?? ''} ${w.description ?? ''} ${w.id ?? ''}`.toLowerCase();
+        return haystack.includes(trimmedQuery);
+      });
+      if (matches.length > 0) out.push([category, matches]);
+    }
+    return out;
+  }, [groupedEntries, isFiltering, trimmedQuery, t]);
+
+  const visibleCount = useMemo(
+    () => filteredEntries.reduce((acc, [, widgets]) => acc + widgets.length, 0),
+    [filteredEntries],
+  );
+
   const handleAdd = (widgetId: string) => {
     if (activeSet.has(widgetId)) return;
     onAdd(widgetId);
@@ -140,15 +187,69 @@ export function WidgetCatalogueDialog({
       title={t('dashboard.catalogue.title', 'Widget catalogue')}
     >
       <div className="space-y-6">
-        <p className="text-sm text-[var(--text-secondary)]">
-          {t(
-            'dashboard.catalogue.subtitle',
-            'Pick a widget to add to your dashboard. {{added}} of {{total}} widgets are already on your layout.',
-            { added: addedCount, total: totalCount },
+        <div className="space-y-3">
+          <p className="text-sm text-[var(--text-secondary)]">
+            {t(
+              'dashboard.catalogue.subtitle',
+              'Pick a widget to add to your dashboard. {{added}} of {{total}} widgets are already on your layout.',
+              { added: addedCount, total: totalCount },
+            )}
+          </p>
+          <Input
+            ref={searchRef}
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t(
+              'dashboard.catalogue.searchPlaceholder',
+              'Search widgets by name, description, or category…',
+            )}
+            aria-label={t('dashboard.catalogue.searchLabel', 'Search widgets')}
+            data-testid="widget-catalogue-search"
+            icon={<Search className="h-4 w-4" aria-hidden="true" />}
+          />
+          {isFiltering && (
+            <p
+              className="text-xs text-[var(--text-muted)]"
+              data-testid="widget-catalogue-result-count"
+              aria-live="polite"
+            >
+              {t(
+                'dashboard.catalogue.resultCount',
+                '{{count}} of {{total}} widgets match',
+                { count: visibleCount, total: totalCount },
+              )}
+            </p>
           )}
-        </p>
+        </div>
 
-        {groupedEntries.map(([category, widgets]) => (
+        {isFiltering && visibleCount === 0 ? (
+          <div
+            className="rounded-xl border border-[var(--border-subtle)] bg-white/[0.02] p-8 text-center"
+            data-testid="widget-catalogue-empty"
+          >
+            <p className="text-sm font-medium text-[var(--text-primary)]">
+              {t('dashboard.catalogue.emptyTitle', 'No widgets match your search')}
+            </p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
+              {t(
+                'dashboard.catalogue.emptyBody',
+                'Try a different keyword, or clear the search to browse all {{total}} widgets.',
+                { total: totalCount },
+              )}
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setQuery('')}
+              className="mt-3"
+              data-testid="widget-catalogue-clear-search"
+            >
+              {t('dashboard.catalogue.clearSearch', 'Clear search')}
+            </Button>
+          </div>
+        ) : (
+          filteredEntries.map(([category, widgets]) => (
           <section
             key={category}
             data-testid={`widget-catalogue-category-${category}`}
@@ -214,7 +315,8 @@ export function WidgetCatalogueDialog({
               })}
             </div>
           </section>
-        ))}
+          ))
+        )}
       </div>
     </Modal>
   );
