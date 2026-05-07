@@ -25,12 +25,13 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
   const syncedX = useSyncedReferenceLineX();
 
   return (
-    <FadeIn>
+    <FadeIn className="h-full">
       {/* chart-a11y:no-table dense per-sample elevation+speed trace; gain/loss/net stats appear above the chart */}
       <ChartContainer
         title={t('driveDetail.elevProfile', 'Elevation Profile')}
         ariaLabel={t('driveDetail.elevProfile.aria', 'Elevation and speed area+line chart over the drive timeline')}
         height={220}
+        className="h-full"
       >
         {chartData.length > 1 ? (
           <>

@@ -28,8 +28,8 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
   const syncedX = useSyncedReferenceLineX();
 
   return (
-    <FadeIn>
-      <GlassPanel className="p-6">
+    <FadeIn className="h-full">
+      <GlassPanel className="p-6 h-full">
         <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
           <Thermometer className="h-4 w-4 text-orange-400" /> {t('driveDetail.temperatures', 'Temperatures')}
         </h3>
