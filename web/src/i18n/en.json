@@ -6986,6 +6986,7 @@
     "timelineTitle": "Transition Log",
     "total": "total",
     "noTimeline": "No transitions in selected time range",
+    "noTransitionsInRange": "No transitions in {{range}}. Try expanding the time range.",
     "detailTitle": "Transition Detail",
     "detail": {
       "id": "Transition ID",

@@ -10,6 +10,7 @@ import type { FSMTransition } from '@/types/fsm';
 interface FSMTimelineChartProps {
   transitions: FSMTransition[];
   hours: number;
+  emptyMessage?: string;
 }
 
 interface TimelineBucket {
@@ -17,7 +18,7 @@ interface TimelineBucket {
   [fsmType: string]: string | number;
 }
 
-export function FSMTimelineChart({ transitions, hours }: FSMTimelineChartProps) {
+export function FSMTimelineChart({ transitions, hours, emptyMessage }: FSMTimelineChartProps) {
   const { t } = useTranslation();
 
   const { buckets, fsmTypes } = useMemo(() => {
@@ -93,7 +94,7 @@ export function FSMTimelineChart({ transitions, hours }: FSMTimelineChartProps) 
           </AreaChart>
         </ResponsiveContainer>
       ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noTimelineData', 'No transition data for timeline')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyMessage ?? t('fsm.noTimelineData', 'No transition data for timeline')} />
       )}
     </ChartContainer>
   );
