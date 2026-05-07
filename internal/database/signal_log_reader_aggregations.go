@@ -10,18 +10,24 @@ import (
 // a time window from signal_log entries. Speed is filtered to >0 samples only
 // for the average (excluding stationary readings). Power is computed from
 // AVG(PackVoltage) × AVG(PackCurrent) / 1000.
+//
+// Phase-42 schema: ts/field/float_value/int_value (the legacy
+// created_at/signal/value_num columns no longer exist). Numeric kinds in
+// signal_log can be Float64 (kind=5) or Int64 (kind=4); the COALESCE
+// resolves to whichever is populated for a given row.
 func (r *SignalLogReader) DriveAggregates(ctx context.Context, vehicleID int64, from, to time.Time) (avgSpeed, maxSpeed, avgPower float64) {
 	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()
 
+	const numCol = "COALESCE(float_value, int_value::float8)"
 	query := `SELECT
-		AVG(value_num) FILTER (WHERE signal = 'VehicleSpeed' AND value_num > 0),
-		MAX(value_num) FILTER (WHERE signal = 'VehicleSpeed'),
-		AVG(value_num) FILTER (WHERE signal = 'PackCurrent'),
-		AVG(value_num) FILTER (WHERE signal = 'PackVoltage')
+		AVG(` + numCol + `) FILTER (WHERE field = 'VehicleSpeed' AND ` + numCol + ` > 0),
+		MAX(` + numCol + `) FILTER (WHERE field = 'VehicleSpeed'),
+		AVG(` + numCol + `) FILTER (WHERE field = 'PackCurrent'),
+		AVG(` + numCol + `) FILTER (WHERE field = 'PackVoltage')
 	FROM signal_log
-	WHERE vehicle_id = $1 AND created_at >= $2 AND created_at <= $3
-	  AND signal IN ('VehicleSpeed', 'PackCurrent', 'PackVoltage')`
+	WHERE vehicle_id = $1 AND ts >= $2 AND ts <= $3
+	  AND field IN ('VehicleSpeed', 'PackCurrent', 'PackVoltage')`
 
 	var pAvgSpeed, pMaxSpeed, pAvgCurrent, pAvgVoltage *float64
 	err := r.db.Pool.QueryRow(ctx, query, vehicleID, from, to).Scan(
@@ -54,14 +60,17 @@ func (r *SignalLogReader) RegenEnergy(ctx context.Context, vehicleID int64, from
 	// Estimate regen energy: sum of (|negative current| × avg voltage) × avg sample interval.
 	// We approximate by using AVG(|negative current|) × AVG(voltage) × duration.
 	// More accurate would be per-sample integration, but this is sufficient for drive summary.
+	//
+	// Phase-42 schema: ts/field/float_value/int_value.
+	const numCol = "COALESCE(float_value, int_value::float8)"
 	query := `SELECT
-		AVG(ABS(value_num)) FILTER (WHERE signal = 'PackCurrent' AND value_num < 0),
-		COUNT(*) FILTER (WHERE signal = 'PackCurrent' AND value_num < 0),
-		COUNT(*) FILTER (WHERE signal = 'PackCurrent'),
-		AVG(value_num) FILTER (WHERE signal = 'PackVoltage')
+		AVG(ABS(` + numCol + `)) FILTER (WHERE field = 'PackCurrent' AND ` + numCol + ` < 0),
+		COUNT(*) FILTER (WHERE field = 'PackCurrent' AND ` + numCol + ` < 0),
+		COUNT(*) FILTER (WHERE field = 'PackCurrent'),
+		AVG(` + numCol + `) FILTER (WHERE field = 'PackVoltage')
 	FROM signal_log
-	WHERE vehicle_id = $1 AND created_at >= $2 AND created_at <= $3
-	  AND signal IN ('PackCurrent', 'PackVoltage')`
+	WHERE vehicle_id = $1 AND ts >= $2 AND ts <= $3
+	  AND field IN ('PackCurrent', 'PackVoltage')`
 
 	var pAvgRegenCurrent *float64
 	var regenCount, totalCount int64
@@ -88,18 +97,21 @@ func (r *SignalLogReader) RegenEnergy(ctx context.Context, vehicleID int64, from
 // ChargeAggregates computes max and average charger power during a charge
 // window. Checks both ACChargingPower and DCChargingPower, returns whichever
 // is active (DC takes precedence when present).
+//
+// Phase-42 schema: ts/field/float_value/int_value.
 func (r *SignalLogReader) ChargeAggregates(ctx context.Context, vehicleID int64, from, to time.Time) (maxPower, avgPower float64) {
 	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()
 
+	const numCol = "COALESCE(float_value, int_value::float8)"
 	query := `SELECT
-		MAX(value_num) FILTER (WHERE signal = 'ACChargingPower'),
-		AVG(value_num) FILTER (WHERE signal = 'ACChargingPower' AND value_num > 0),
-		MAX(value_num) FILTER (WHERE signal = 'DCChargingPower'),
-		AVG(value_num) FILTER (WHERE signal = 'DCChargingPower' AND value_num > 0)
+		MAX(` + numCol + `) FILTER (WHERE field = 'ACChargingPower'),
+		AVG(` + numCol + `) FILTER (WHERE field = 'ACChargingPower' AND ` + numCol + ` > 0),
+		MAX(` + numCol + `) FILTER (WHERE field = 'DCChargingPower'),
+		AVG(` + numCol + `) FILTER (WHERE field = 'DCChargingPower' AND ` + numCol + ` > 0)
 	FROM signal_log
-	WHERE vehicle_id = $1 AND created_at >= $2 AND created_at <= $3
-	  AND signal IN ('ACChargingPower', 'DCChargingPower')`
+	WHERE vehicle_id = $1 AND ts >= $2 AND ts <= $3
+	  AND field IN ('ACChargingPower', 'DCChargingPower')`
 
 	var pACMax, pACAvg, pDCMax, pDCAvg *float64
 	err := r.db.Pool.QueryRow(ctx, query, vehicleID, from, to).Scan(
@@ -137,20 +149,23 @@ type BrickVoltageHistoryEntry struct {
 
 // BrickVoltageHistory returns hourly brick voltage aggregates from signal_log
 // for the given vehicle since the provided timestamp.
+//
+// Phase-42 schema: ts/field/float_value (BrickVoltage* signals are
+// ValueKindFloat so float_value is always populated; no COALESCE needed).
 func (r *SignalLogReader) BrickVoltageHistory(ctx context.Context, vehicleID int64, since time.Time) ([]BrickVoltageHistoryEntry, error) {
 	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()
 
 	query := `SELECT
-		time_bucket('1 hour', created_at) AS bucket,
-		MIN(value_num) FILTER (WHERE signal = 'BrickVoltageMin') AS min_voltage,
-		MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMax') AS max_voltage,
-		AVG(value_num) FILTER (WHERE signal = 'BrickVoltageMax') AS avg_max,
-		AVG(value_num) FILTER (WHERE signal = 'BrickVoltageMin') AS avg_min
+		time_bucket('1 hour', ts) AS bucket,
+		MIN(float_value) FILTER (WHERE field = 'BrickVoltageMin') AS min_voltage,
+		MAX(float_value) FILTER (WHERE field = 'BrickVoltageMax') AS max_voltage,
+		AVG(float_value) FILTER (WHERE field = 'BrickVoltageMax') AS avg_max,
+		AVG(float_value) FILTER (WHERE field = 'BrickVoltageMin') AS avg_min
 	FROM signal_log
 	WHERE vehicle_id = $1
-	  AND signal IN ('BrickVoltageMin', 'BrickVoltageMax')
-	  AND created_at >= $2
+	  AND field IN ('BrickVoltageMin', 'BrickVoltageMax')
+	  AND ts >= $2
 	GROUP BY bucket
 	ORDER BY bucket`
 
