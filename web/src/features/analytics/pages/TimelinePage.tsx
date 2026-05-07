@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
   Clock, ArrowRightLeft, Car, BatteryCharging, Moon, RefreshCw, AlertCircle,
+  BarChart3,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
@@ -10,6 +11,10 @@ import { GlassPanel, Badge, Button, Select, DataTable, type Column } from '@/com
 import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  ChartTooltip,
+} from '@/components/charts';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -33,9 +38,14 @@ interface TransitionRecord {
   trigger_value: string | null;
 }
 
-/** Indexed transition row for the table. */
+/** Indexed transition row for the table. Adds the timestamp of the
+ *  *next* transition so the table can compute "duration spent in
+ *  to_state" without extra hooks. The newest row has no successor —
+ *  its duration is computed from `now` so the user sees how long the
+ *  vehicle has been in the current state. */
 interface TransitionRow extends TransitionRecord {
   index: number;
+  next_ts: string | null;
 }
 
 /** GET /vehicle-states/summary → { vehicle_id, days, total_seconds, by_state: ByStateRow[] }. */
@@ -138,11 +148,53 @@ export default function TimelinePage() {
   const anyError = [vehiclesError, timelineError, summaryError].find(Boolean);
   const isLoading = tlLoading || sumLoading;
 
-  // Indexed transition rows for the table
-  const transitions = useMemo<TransitionRow[]>(
-    () => transitionsRaw.map((rec, i) => ({ index: i, ...rec })),
-    [transitionsRaw],
-  );
+  // Indexed transition rows for the table — sorted ASC by ts so duration
+  // computations point to the correct neighbour. The DataTable's own
+  // "Time" column is sortable so the user can still flip the display
+  // order without affecting duration math.
+  const transitions = useMemo<TransitionRow[]>(() => {
+    if (transitionsRaw.length === 0) return [];
+    const ordered = [...transitionsRaw].sort(
+      (a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime(),
+    );
+    return ordered.map((rec, i) => ({
+      ...rec,
+      index: i,
+      next_ts: i + 1 < ordered.length ? ordered[i + 1].ts : null,
+    }));
+  }, [transitionsRaw]);
+
+  /* Daily breakdown — bin transitions by YYYY-MM-DD of `ts`, count by
+   * the *destination* state (to_state) since that is what the original
+   * pre-refactor chart visualised. We collapse the 8 raw FSM states
+   * into the 4 user-facing buckets shown in the legend (driving /
+   * charging / idle / sleeping) so the chart stays readable. */
+  const dailyBreakdown = useMemo(() => {
+    if (transitions.length === 0) return [];
+    const buckets = new Map<
+      string,
+      { day: string; driving: number; charging: number; idle: number; sleeping: number }
+    >();
+    for (const row of transitions) {
+      const date = new Date(row.ts);
+      if (Number.isNaN(date.getTime())) continue;
+      const day = date.toISOString().slice(0, 10);
+      const bucket = buckets.get(day) ?? {
+        day,
+        driving: 0,
+        charging: 0,
+        idle: 0,
+        sleeping: 0,
+      };
+      const target = row.to_state;
+      if (target === 'driving') bucket.driving += 1;
+      else if (target === 'charging') bucket.charging += 1;
+      else if (target === 'idle' || target === 'online' || target === 'parked') bucket.idle += 1;
+      else if (target === 'sleeping' || target === 'asleep' || target === 'offline') bucket.sleeping += 1;
+      buckets.set(day, bucket);
+    }
+    return Array.from(buckets.values()).sort((a, b) => a.day.localeCompare(b.day));
+  }, [transitions]);
 
   // Derive summary metrics from the raw summary rows
   const summaryByState = useMemo(() => {
@@ -198,6 +250,26 @@ export default function TimelinePage() {
             {row.to_state}
           </Badge>
         ),
+      },
+      {
+        key: 'duration',
+        header: t('timeline.duration', 'Duration'),
+        sortable: false,
+        render: (row) => {
+          /* Duration in row.to_state = (next transition or now) - row.ts.
+           * The newest row uses `now` so the user sees the live age of
+           * the current state. */
+          const start = new Date(row.ts).getTime();
+          const end = row.next_ts ? new Date(row.next_ts).getTime() : Date.now();
+          if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
+            return <span className="text-xs text-[var(--text-muted)]">—</span>;
+          }
+          return (
+            <span className="text-sm tabular-nums text-[var(--text-primary)]">
+              {formatDurationFromSeconds((end - start) / 1000)}
+            </span>
+          );
+        },
       },
       {
         key: 'trigger_field',
@@ -328,6 +400,43 @@ export default function TimelinePage() {
               </div>
             ))}
           </div>
+        </GlassPanel>
+      </FadeIn>
+
+      {/* Daily breakdown — stacked transition counts per day, grouped
+          into the four high-level state buckets shown in the legend. */}
+      <FadeIn delay={0.2}>
+        <GlassPanel className="mb-6 p-4">
+          <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+            <BarChart3 className="h-4 w-4 text-cyan-300" />
+            {t('timeline.dailyBreakdown', 'Daily Breakdown')}
+          </p>
+          {dailyBreakdown.length === 0 ? (
+            tlLoading ? (
+              <Skeleton height={220} />
+            ) : (
+              <EmptyState /* no-action: transient empty state — surfaces when no transitions exist in the lookback window */
+                icon={<BarChart3 className="h-8 w-8" />}
+                message={t('timeline.noDailyData', 'No daily transition activity yet')}
+              />
+            )
+          ) : (
+            <div className="h-56 sm:h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dailyBreakdown}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                  <XAxis dataKey="day" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} allowDecimals={false} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="driving" name={t('timeline.driving', 'Driving')} stackId="a" fill={STATE_COLORS.driving} fillOpacity={0.85} />
+                  <Bar dataKey="charging" name={t('timeline.charging', 'Charging')} stackId="a" fill={STATE_COLORS.charging} fillOpacity={0.85} />
+                  <Bar dataKey="idle" name={t('timeline.idle', 'Idle')} stackId="a" fill={STATE_COLORS.idle} fillOpacity={0.85} />
+                  <Bar dataKey="sleeping" name={t('timeline.sleeping', 'Sleeping')} stackId="a" fill={STATE_COLORS.sleeping} fillOpacity={0.85} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </GlassPanel>
       </FadeIn>
 
