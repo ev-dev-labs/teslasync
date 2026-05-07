@@ -226,7 +226,6 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
 
   const renderTile = useCallback((def: CommandDef) => {
     const common = {
-      key: def.id,
       lastStatus: cmdStatus(def.command) ?? (def.commandOff ? cmdStatus(def.commandOff) : undefined),
       loading: isLoading,
       isFavorite: favorites.includes(def.id),
@@ -236,11 +235,11 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
 
     switch (def.type) {
       case 'toggle':
-        return <ToggleCommandTile {...common} def={def} state={state} onExecute={executeCommand} />;
+        return <ToggleCommandTile key={def.id} {...common} def={def} state={state} onExecute={executeCommand} />;
       case 'input':
-        return <InputCommandTile {...common} def={def} />;
+        return <InputCommandTile key={def.id} {...common} def={def} />;
       default:
-        return <CommandTile {...common} def={def} onExecute={executeCommand} />;
+        return <CommandTile key={def.id} {...common} def={def} onExecute={executeCommand} />;
     }
   }, [cmdStatus, isLoading, favorites, toggleFavorite, state, executeCommand, requestDialog]);
 
