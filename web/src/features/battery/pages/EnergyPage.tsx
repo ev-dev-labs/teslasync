@@ -184,6 +184,22 @@ export default function EnergyPage() {
 
   const dailyEnergy = stats?.daily_breakdown ?? [];
 
+  /* ── No-data banner gate ───────────────────────────────────────────
+   * Replay vehicles + brand-new accounts have no charging sessions and
+   * no computed energy stats. Showing 4 RadialGauges all at 0 looks
+   * like a perfectly efficient car using zero energy. Render an
+   * honest empty hero instead of misleading zeros.
+   */
+  const hasNoEnergyData = useMemo(() => {
+    const noSessions = !sessions || sessions.length === 0;
+    const noStats = !stats || (
+      (stats.total_kwh ?? 0) === 0 &&
+      (stats.total_energy_used_kwh ?? 0) === 0 &&
+      (stats.total_distance_mi ?? 0) === 0
+    );
+    return noSessions && noStats;
+  }, [sessions, stats]);
+
   /* ── Time-of-day analysis ─────────────────────────────────────── */
   const timeOfDayData = useMemo(() => {
     if (!sessions || sessions.length === 0) return [];
@@ -338,36 +354,43 @@ export default function EnergyPage() {
       {/* ── Hero Gauges ─────────────────────────────────────────── */}
       <FadeIn>
         <GlassPanel className="p-4 sm:p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 items-center">
-            <RadialGauge
-              value={totalEnergy}
-              max={Math.max(totalEnergy * 1.3, 100)}
-              label={t('energy.gauge.energyUsed', 'Energy Used')}
-              unit="kWh"
-              color="#00f0ff"
+          {hasNoEnergyData ? (
+            <EmptyState /* no-action: surfaces when no energy data exists yet — user must drive/charge to populate */
+              icon={<Zap className="h-10 w-10" />}
+              message={t('energy.empty.hero', 'No energy data yet — connect your vehicle and complete a drive or charging session to see efficiency, cost, and CO₂ savings.')}
             />
-            <RadialGauge
-              value={convertEfficiency(avgEfficiency || (totalDistance > 0 ? (totalEnergy * 1000) / totalDistance : 0))}
-              max={convertEfficiency(300)}
-              label={t('energy.gauge.efficiency', 'Efficiency')}
-              unit={efficiencyUnit}
-              color="#10b981"
-            />
-            <RadialGauge
-              value={co2Saved}
-              max={Math.max(co2Saved * 1.5, 50)}
-              label={t('energy.gauge.co2Saved', 'CO₂ Saved')}
-              unit="kg"
-              color="#a855f7"
-            />
-            <RadialGauge
-              value={totalCost}
-              max={Math.max(totalCost * 1.5, 50)}
-              label={t('energy.gauge.totalCost', 'Total Cost')}
-              unit="$"
-              color="#f59e0b"
-            />
-          </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 items-center">
+              <RadialGauge
+                value={totalEnergy}
+                max={Math.max(totalEnergy * 1.3, 100)}
+                label={t('energy.gauge.energyUsed', 'Energy Used')}
+                unit="kWh"
+                color="#00f0ff"
+              />
+              <RadialGauge
+                value={convertEfficiency(avgEfficiency || (totalDistance > 0 ? (totalEnergy * 1000) / totalDistance : 0))}
+                max={convertEfficiency(300)}
+                label={t('energy.gauge.efficiency', 'Efficiency')}
+                unit={efficiencyUnit}
+                color="#10b981"
+              />
+              <RadialGauge
+                value={co2Saved}
+                max={Math.max(co2Saved * 1.5, 50)}
+                label={t('energy.gauge.co2Saved', 'CO₂ Saved')}
+                unit="kg"
+                color="#a855f7"
+              />
+              <RadialGauge
+                value={totalCost}
+                max={Math.max(totalCost * 1.5, 50)}
+                label={t('energy.gauge.totalCost', 'Total Cost')}
+                unit="$"
+                color="#f59e0b"
+              />
+            </div>
+          )}
         </GlassPanel>
       </FadeIn>
 
