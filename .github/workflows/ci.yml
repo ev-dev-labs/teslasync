@@ -57,6 +57,14 @@ jobs:
           DATABASE_NAME: teslasync_test
         run: go test -race -coverprofile=coverage.out ./...
 
+      - name: Architecture test (no forbidden import edges)
+        run: |
+          go test -v ./internal/arch/...
+
+      - name: Architecture metrics regression check
+        run: |
+          go run ./tools/archmetrics -compare tools/archmetrics/baseline.json
+
       - name: Integration test (telemetry replay)
         env:
           DATABASE_HOST: localhost

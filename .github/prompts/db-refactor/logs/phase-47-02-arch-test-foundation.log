@@ -1,0 +1,41 @@
+=== PHASE-47 / 02 arch-test-foundation — 2026-05-08T12:35:45.7902178-07:00 ===
+=== STEP 1: GO_MOD_TIDY ===
+=== STEP 2: GO_VET ===
+=== STEP 3: ARCH_TEST_AFTER_EXCEPTIONS ===
+=== RUN   TestForbiddenEdges
+--- PASS: TestForbiddenEdges (5.51s)
+=== RUN   TestBaselineHonoured
+--- PASS: TestBaselineHonoured (0.01s)
+PASS
+ok  	github.com/ev-dev-labs/teslasync/internal/arch	(cached)
+STEP3_OK
+=== STEP 4: NEGATIVE_TEST ===
+--- FAIL: TestForbiddenEdges (6.81s)
+    arch_test.go:63: FORBIDDEN: internal/handler/v1 -> internal/database :: handlers must call internal/app/* services, not the database directly (advisory until prompt 10)
+FAIL
+FAIL	github.com/ev-dev-labs/teslasync/internal/arch	7.617s
+FAIL
+OK: negative test detected the violation (exit=1)
+=== STEP 5: GIT_STATUS ===
+ M .github/prompts/db-refactor/logs/phase-47-01-baseline-metrics.log
+A  .github/prompts/db-refactor/logs/phase-47-02-arch-test-foundation.log
+M  .github/workflows/ci.yml
+M  go.mod
+M  go.sum
+A  internal/arch/arch_test.go
+A  internal/arch/doc.go
+A  internal/arch/rules.go
+FAIL: unexpected files
+ M .github/prompts/db-refactor/logs/phase-47-01-baseline-metrics.log
+EXIT=1
+STATUS=BLOCKED
+=== STEP 5: GIT_STATUS (re-run) ===
+AM .github/prompts/db-refactor/logs/phase-47-02-arch-test-foundation.log
+M  .github/workflows/ci.yml
+M  go.mod
+M  go.sum
+A  internal/arch/arch_test.go
+A  internal/arch/doc.go
+A  internal/arch/rules.go
+EXIT=0
+STATUS=DONE
