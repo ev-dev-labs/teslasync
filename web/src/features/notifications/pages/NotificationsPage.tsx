@@ -747,8 +747,11 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
                   vehicleMap={vehicleMap}
                   filters={filters}
                   archived={archived}
+                  selectedIds={selected}
+                  onSelectionChange={toggleSelected}
                   onActivate={handleRowActivate}
                   onArchive={(id) => archiveMut.mutate([id])}
+                  onUnarchive={archived ? (id) => unarchiveMut.mutate([id]) : undefined}
                   onMarkRead={(id) => markReadMut.mutate([id])}
                   onMarkUnread={(id) => markUnreadMut.mutate([id])}
                 />

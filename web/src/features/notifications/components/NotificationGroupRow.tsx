@@ -35,6 +35,16 @@ export interface NotificationGroupRowProps {
   vehicleMap: Record<number, Vehicle>;
   /** Filters from the parent inbox so members fetch with the same window. */
   filters: NotificationFilters;
+  /**
+   * Per-row selection set (member ids). The latest row and any expanded
+   * member rows look themselves up in this set to render their checkbox
+   * state, so a click on the visible checkbox cleanly maps to a single
+   * id even though the group itself does not. Optional for callers that
+   * still want a read-only group display.
+   */
+  selectedIds?: Set<number>;
+  /** Per-row selection toggle fired by the checkbox in any member row. */
+  onSelectionChange?: (id: number, selected: boolean) => void;
   /** Per-row activate (used to mark single rows read on click). */
   onActivate?: (log: NotificationLog) => void;
   /** Per-row archive/restore. */
@@ -52,6 +62,8 @@ export function NotificationGroupRow({
   ruleMap,
   vehicleMap,
   filters,
+  selectedIds,
+  onSelectionChange,
   onActivate,
   onArchive,
   onUnarchive,
@@ -106,14 +118,21 @@ export function NotificationGroupRow({
     }
   }, [bulkMarkRead, group.group_key, toast, t]);
 
-  // Selection is intentionally NOT supported on the group-row affordances:
-  // the toolbar selection model is row-based (number ids) and groups don't
-  // map cleanly to a single id. Members render inside the expanded body
-  // with full per-row controls including selection so power users can
-  // still cherry-pick from a thread.
+  // Selection is per-member (a group has many ids; the visible row IS one
+  // member). When the parent doesn't wire a handler we fall back to a
+  // no-op so the checkbox simply renders unchecked and inert — but in the
+  // primary inbox flow `selectedIds` + `onSelectionChange` ARE wired so a
+  // click on the visible checkbox toggles that latest member, exactly the
+  // way it does in the flat view. The "Mark group read" affordance below
+  // is the only group-scoped action we offer.
   const noopSelection = useCallback((_id: number, _on: boolean) => {
-    // intentionally empty — group-level selection is out of scope
+    // intentional fallback when the parent doesn't wire selection
   }, []);
+  const rowSelectionHandler = onSelectionChange ?? noopSelection;
+  const isMemberSelected = useCallback(
+    (id: number) => (selectedIds ? selectedIds.has(id) : false),
+    [selectedIds],
+  );
 
   const expandLabel = expanded
     ? t('notifications.group.collapse', 'Hide similar')
@@ -127,8 +146,8 @@ export function NotificationGroupRow({
             log={latest}
             rule={latestRule}
             vehicle={latestVehicle}
-            selected={false}
-            onSelectionChange={noopSelection}
+            selected={isMemberSelected(latest.id)}
+            onSelectionChange={rowSelectionHandler}
             onActivate={onActivate}
             onArchive={onArchive}
             onUnarchive={onUnarchive}
@@ -238,8 +257,8 @@ export function NotificationGroupRow({
                 log={m}
                 rule={rule}
                 vehicle={vehicle}
-                selected={false}
-                onSelectionChange={noopSelection}
+                selected={isMemberSelected(m.id)}
+                onSelectionChange={rowSelectionHandler}
                 onActivate={onActivate}
                 onArchive={onArchive}
                 onUnarchive={onUnarchive}
