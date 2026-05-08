@@ -44,7 +44,14 @@ import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useUrlString } from '@/hooks/useUrlState'
 import { alertRuleSchema } from '../schemas/alertRule'
 import { ComputedMetricEditor } from '../components/ComputedMetricEditor'
+import { recommendedTriggerMode } from '../lib/recommendedTriggerMode'
 import { Icons } from '@/lib/icons';
+
+// Phase-49 / Slice 0008 — editor-only tri-state. Backend column stays
+// strict ('once' | 'repeat'); 'unset' exists purely so a brand-new
+// rule can be in the "user hasn't decided yet" state and the Save
+// button can block until they do (Decision D3 "force-choose").
+type TriggerModeOrUnset = AlertRuleTriggerMode | 'unset'
 
 type Severity = NonNullable<AlertRuleInput['severity']>
 type RuleOp = NonNullable<AlertRuleInput['op']>
@@ -160,7 +167,10 @@ interface EditorState {
   value_max: string
   severity: Severity
   cooldown_min: number
-  trigger_mode: AlertRuleTriggerMode
+  // Phase-49 / Slice 0008 — see `TriggerModeOrUnset`. Existing rules
+  // hydrated from the server are always 'once' | 'repeat'; only the
+  // initial freshEditor() / templateToEditor() result starts as 'unset'.
+  trigger_mode: TriggerModeOrUnset
   /**
    * Empty string means "no cap" (NULL on the wire). Stored as a string
    * because <UiInput type="number"> emits a string and the form lets the
@@ -196,7 +206,11 @@ function freshEditor(): EditorState {
     value_max: '',
     severity: 'warn',
     cooldown_min: 15,
-    trigger_mode: 'repeat',
+    // Phase-49 / Slice 0008 / Decision D2 + D3 — was 'repeat'. The
+    // user-reported "locked vehicle alert spam" was caused by every
+    // new rule silently inheriting 'repeat'. Now the editor opens
+    // in tri-state and the Save button blocks until the user picks.
+    trigger_mode: 'unset',
     max_fires_per_resolution: '',
     message: '',
     kind: 'signal',
@@ -406,6 +420,14 @@ function templateToEditor(template: RuleTemplate, name: string, message: string)
 
 function buildSavePayload(state: EditorState): AlertRuleInput {
   const vehiclePayload = buildVehiclePayload(state.vehicle_selection)
+  // Phase-49 / Slice 0008 — defence-in-depth narrowing. `canSave`
+  // already blocks the Save button when trigger_mode is 'unset', so
+  // this branch is unreachable from the UI; we throw to keep the
+  // backend contract honest in case a future caller bypasses canSave.
+  if (state.trigger_mode === 'unset') {
+    throw new Error('buildSavePayload: trigger_mode must be chosen before save')
+  }
+  const triggerMode: AlertRuleTriggerMode = state.trigger_mode
 
   if (state.kind === 'computed_metric') {
     const threshold = parseOptionalNumber(state.metric_threshold)
@@ -415,7 +437,7 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
       ...vehiclePayload,
       severity: state.severity,
       cooldown_min: state.cooldown_min,
-      trigger_mode: state.trigger_mode,
+      trigger_mode: triggerMode,
       max_fires_per_resolution: parseOptionalMaxFires(state.max_fires_per_resolution),
       kind: 'computed_metric',
       metric_id: state.metric_id || null,
@@ -439,7 +461,7 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
     value_max: null,
     severity: state.severity,
     cooldown_min: state.cooldown_min,
-    trigger_mode: state.trigger_mode,
+    trigger_mode: triggerMode,
     max_fires_per_resolution: parseOptionalMaxFires(state.max_fires_per_resolution),
     kind: 'signal',
   }
@@ -553,10 +575,13 @@ export default function AlertStudio() {
     draftSavedAt,
     discardDraft,
   } = useFormDraft<EditorState>(draftKey, freshEditor(), {
-    // Phase-49 / Slice 0006 / Decision D6 — vehicle_id: string was
-    // replaced with vehicle_selection: discriminated_union. Bump
-    // version so old (incompatible) drafts are silently discarded.
-    version: 2,
+    // Phase-49 / Slice 0008 / Decision D3 — bumped from 2 to 3.
+    // Pre-slice-0008 new-rule drafts contain `trigger_mode: 'repeat'`
+    // (the implicit default before this slice). Restoring such a draft
+    // would silently bypass the new force-choose gate. Bumping the
+    // version forces those drafts to be discarded so the user lands
+    // on the proper 'unset' state and is asked to choose.
+    version: 3,
     debounceMs: 800,
     skipPersist: v =>
       saveRuleMut.isPending
@@ -715,9 +740,55 @@ export default function AlertStudio() {
   ], [t])
 
   const alertBehaviorOptions = useMemo(() => [
+    // Phase-49 / Slice 0008 — disabled placeholder option pinned at the
+    // top so brand-new rules render in the explicit "user hasn't decided
+    // yet" state. Disabled prevents the user from re-selecting unset
+    // after they've committed to once/repeat.
+    {
+      value: '',
+      label: t('notifications.alertStudio.editor.alertBehaviorPlaceholder', '— Choose one —'),
+      disabled: true,
+    },
     { value: 'repeat', label: t('notifications.alertStudio.editor.alertBehavior.repeatLabel', 'Re-alert until resolved') },
     { value: 'once', label: t('notifications.alertStudio.editor.alertBehavior.onceLabel', 'Notify on event') },
   ], [t])
+
+  // Phase-49 / Slice 0008 — derived recommendation. Pure derivation, no
+  // setState side effect: changing op recomputes the banner copy on the
+  // next render without ever mutating editor.trigger_mode (the user
+  // remains in control of the actual choice).
+  const recommendedMode = useMemo(
+    () => recommendedTriggerMode(editor.op),
+    [editor.op],
+  )
+  const recommendedLabel = useMemo(
+    () => (
+      recommendedMode === 'once'
+        ? t('notifications.alertStudio.editor.alertBehavior.onceLabel', 'Notify on event')
+        : t('notifications.alertStudio.editor.alertBehavior.repeatLabel', 'Re-alert until resolved')
+    ),
+    [recommendedMode, t],
+  )
+  const alternativeLabel = useMemo(
+    () => (
+      recommendedMode === 'once'
+        ? t('notifications.alertStudio.editor.alertBehavior.repeatLabel', 'Re-alert until resolved')
+        : t('notifications.alertStudio.editor.alertBehavior.onceLabel', 'Notify on event')
+    ),
+    [recommendedMode, t],
+  )
+  // Banner is signal-rule only — computed_metric uses metric_op which
+  // has its own semantics not yet covered by `recommendedTriggerMode`.
+  // Force-choose still applies to computed_metric (canSave blocks),
+  // but the recommendation hint is suppressed to avoid showing a
+  // signal-operator suggestion next to a metric editor.
+  const showRecommendBanner = (
+    isNewRule
+    && editor.trigger_mode === 'unset'
+    && editor.kind === 'signal'
+    && editor.signal_name.trim().length > 0
+  )
+  const triggerModeBlocked = isNewRule && editor.trigger_mode === 'unset'
 
   const signalTypeLabels = useMemo<Record<SignalValueType, string>>(() => ({
     numeric: t('notifications.alertStudio.signalTypes.numeric', 'Numeric'),
@@ -786,6 +857,10 @@ export default function AlertStudio() {
   const canSave = useMemo(() => {
     if (editor.name.trim().length === 0) return false
     if (editor.cooldown_min <= 0) return false
+    // Phase-49 / Slice 0008 / Decision D3 — force-choose at create
+    // time. Editing an existing rule preserves whichever value the
+    // server already stored (R7: existing rules are never tri-state).
+    if (isNewRule && editor.trigger_mode === 'unset') return false
     // Phase-49 / Slice 0006 — sticky-all is always valid; specific
     // requires at least one selected vehicle. The new picker prevents
     // any other invalid intermediate state by construction.
@@ -809,7 +884,7 @@ export default function AlertStudio() {
       && isOperatorAllowedForState(editor)
       && hasRequiredTypedValue(editor)
     )
-  }, [computedMetrics, editor])
+  }, [computedMetrics, editor, isNewRule])
 
   const handleSelectRule = useCallback((rule: AlertRule) => {
     guardSwitch(() => {
@@ -1359,10 +1434,11 @@ export default function AlertStudio() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-name">
                   {t('notifications.alertStudio.editor.nameLabel', 'Name')}
                 </label>
                 <UiInput
+                  id="alert-name"
                   className="w-full"
                   placeholder={t('notifications.alertStudio.editor.namePlaceholder', 'My alert rule')}
                   value={editor.name}
@@ -1475,10 +1551,11 @@ export default function AlertStudio() {
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                    <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-signal">
                       {t('notifications.alertStudio.editor.signalNameLabel', 'Signal')}
                     </label>
                     <UiSelect
+                      id="alert-signal"
                       className="w-full"
                       value={editor.signal_name}
                       onChange={e => handleSignalChange(e.target.value)}
@@ -1564,30 +1641,77 @@ export default function AlertStudio() {
                   onChange={e => setEditor(s => ({ ...s, cooldown_min: Number(e.target.value) }))}
                 />
               </div>
-              <div>
+              <div data-testid="alert-behavior-block">
                 <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-trigger-mode">
                   {t('notifications.alertStudio.editor.alertBehaviorLabel', 'Alert Behavior')}
                   <HelpIcon i18nKey="help.fields.alertStudio.alertBehavior" content="Pick 'Notify on event' for one-time confirmations like 'vehicle locked' or 'charging done'. Pick 'Re-alert until resolved' for ongoing safety concerns like 'vehicle unlocked' or 'door open'." for="alert-trigger-mode" />
                 </label>
+                {showRecommendBanner && (
+                  <AlertBanner
+                    variant="info"
+                    className="mb-2"
+                    role="status"
+                    data-testid="alert-behavior-recommend-banner"
+                  >
+                    <span>
+                      {t(
+                        'notifications.alertStudio.editor.alertBehavior.recommendBanner',
+                        'Recommended for "{{op}}" comparisons: {{recommended}}.',
+                        { op: editor.op, recommended: recommendedLabel },
+                      )}
+                    </span>
+                    <span className="ml-1">
+                      {t(
+                        'notifications.alertStudio.editor.alertBehavior.recommendBannerAlt',
+                        '{{alternative}} is also valid — pick whatever fits.',
+                        { alternative: alternativeLabel },
+                      )}
+                    </span>
+                  </AlertBanner>
+                )}
                 <UiSelect
                   id="alert-trigger-mode"
                   className="w-full"
-                  value={editor.trigger_mode}
-                  onChange={e => setEditor(s => ({ ...s, trigger_mode: normalizeTriggerMode(e.target.value) }))}
+                  value={editor.trigger_mode === 'unset' ? '' : editor.trigger_mode}
+                  // Phase-49 / Slice 0008 — placeholder option is
+                  // disabled, so this branch only ever sees 'once' or
+                  // 'repeat' from real user interaction. Defensive
+                  // guard kept for type-narrowing.
+                  onChange={e => {
+                    const v = e.target.value
+                    if (v !== 'once' && v !== 'repeat') return
+                    setEditor(s => ({ ...s, trigger_mode: v }))
+                  }}
                   options={alertBehaviorOptions}
+                  aria-invalid={triggerModeBlocked ? 'true' : undefined}
+                  aria-describedby={triggerModeBlocked ? 'alert-trigger-mode-error' : undefined}
                 />
-                <p className="mt-1 text-[10px] text-[var(--text-muted)]">
-                  {editor.trigger_mode === 'once'
-                    ? t(
-                        'notifications.alertStudio.editor.alertBehavior.onceDesc',
-                        'Fires when the condition is first met. Stays quiet until it resets.',
-                      )
-                    : t(
-                        'notifications.alertStudio.editor.alertBehavior.repeatDesc',
-                        'Keeps firing every {{cooldown}} minutes while the condition stays true.',
-                        { cooldown: editor.cooldown_min },
-                      )}
-                </p>
+                {triggerModeBlocked && (
+                  <p
+                    id="alert-trigger-mode-error"
+                    className="mt-1 text-[10px] text-red-500"
+                    data-testid="alert-behavior-force-choose"
+                  >
+                    {t(
+                      'notifications.alertStudio.editor.alertBehavior.forceChoose',
+                      'Pick how this alert should behave.',
+                    )}
+                  </p>
+                )}
+                {!triggerModeBlocked && editor.trigger_mode !== 'unset' && (
+                  <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                    {editor.trigger_mode === 'once'
+                      ? t(
+                          'notifications.alertStudio.editor.alertBehavior.onceDesc',
+                          'Fires when the condition is first met. Stays quiet until it resets.',
+                        )
+                      : t(
+                          'notifications.alertStudio.editor.alertBehavior.repeatDesc',
+                          'Keeps firing every {{cooldown}} minutes while the condition stays true.',
+                          { cooldown: editor.cooldown_min },
+                        )}
+                  </p>
+                )}
               </div>
               {editor.trigger_mode === 'repeat' && (
                 <div className="sm:col-span-2">

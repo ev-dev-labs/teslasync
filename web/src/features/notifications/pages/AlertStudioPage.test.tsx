@@ -25,7 +25,6 @@ import AlertStudioPage from './AlertStudioPage';
 import type { AlertRule, AlertRuleInput } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import { ToastProvider } from '@/components/feedback/Toast';
-
 vi.mock('framer-motion', () => ({
   motion: new Proxy(
     {},
@@ -198,5 +197,174 @@ describe('AlertStudioPage — multi-vehicle picker integration (Phase-49 / Slice
     expect(payload.all_vehicles).toBe(false);
     expect(payload.vehicle_ids).toEqual([1]);
     expect('vehicle_id' in payload).toBe(false);
+  });
+});
+
+/**
+ * Phase-49 / Slice 0008 — Smart Defaults + Force-Choose for Alert Behavior.
+ *
+ * Decisions covered:
+ *   D2: smart default by op (recommendedTriggerMode)
+ *   D3: force user to choose at create time (no implicit 'repeat')
+ *   R7: existing rules preserve their stored trigger_mode (no force-choose)
+ */
+describe('AlertStudioPage — alert-behavior force-choose + recommendation (Phase-49 / Slice 0008)', () => {
+  beforeEach(() => {
+    RULES = [];
+    recordedSavePayloads.length = 0;
+    window.localStorage.clear();
+  });
+
+  function getTriggerSelect(): HTMLSelectElement {
+    const el = document.getElementById('alert-trigger-mode')
+    if (!el) throw new Error('alert-trigger-mode select not rendered')
+    return el as HTMLSelectElement
+  }
+
+  function getOperatorSelect(): HTMLSelectElement {
+    const el = document.getElementById('alert-operator')
+    if (!el) throw new Error('alert-operator select not rendered')
+    return el as HTMLSelectElement
+  }
+
+  function getSignalSelect(): HTMLSelectElement {
+    const el = document.getElementById('alert-signal')
+    if (!el) throw new Error('alert-signal select not rendered')
+    return el as HTMLSelectElement
+  }
+
+  function getSaveButton(): HTMLButtonElement {
+    // Brand-new rule: button is "Create Rule" (i18n
+    // notifications.alertStudio.actions.createRule).
+    // Existing rule: "Update Rule".
+    const btn = screen.queryByRole('button', { name: /create rule|update rule/i })
+    if (!btn) throw new Error('Save button not rendered')
+    return btn as HTMLButtonElement
+  }
+
+  function pickSignal(name: string) {
+    fireEvent.change(getSignalSelect(), { target: { value: name } })
+  }
+
+  function pickOperator(op: string) {
+    fireEvent.change(getOperatorSelect(), { target: { value: op } })
+  }
+
+  function fillName(name: string) {
+    fireEvent.change(screen.getByPlaceholderText('My alert rule'), { target: { value: name } })
+  }
+
+  it('new rule defaults trigger_mode to "unset" (placeholder shown, Save disabled)', () => {
+    renderPage()
+    expect(getTriggerSelect().value).toBe('')
+    expect(getSaveButton()).toBeDisabled()
+  });
+
+  it('new rule with op="=" recommends "Notify on event"', async () => {
+    renderPage()
+    fillName('Test rule')
+    pickSignal('BatteryLevel')
+    pickOperator('=')
+    await waitFor(() => {
+      const banner = screen.queryByTestId('alert-behavior-recommend-banner')
+      expect(banner).not.toBeNull()
+      expect(banner!.textContent).toMatch(/Notify on event/)
+    })
+  });
+
+  it('new rule with op=">" recommends "Re-alert until resolved"', async () => {
+    renderPage()
+    fillName('Test rule')
+    pickSignal('BatteryLevel')
+    pickOperator('>')
+    await waitFor(() => {
+      const banner = screen.queryByTestId('alert-behavior-recommend-banner')
+      expect(banner).not.toBeNull()
+      expect(banner!.textContent).toMatch(/Re-alert until resolved/)
+    })
+  });
+
+  it('changing op while still unset updates the recommendation banner', async () => {
+    renderPage()
+    fillName('Test rule')
+    pickSignal('BatteryLevel')
+    pickOperator('=')
+    await waitFor(() => {
+      const b = screen.getByTestId('alert-behavior-recommend-banner')
+      expect(b.textContent).toMatch(/Notify on event/)
+    })
+    pickOperator('>')
+    await waitFor(() => {
+      const b = screen.getByTestId('alert-behavior-recommend-banner')
+      expect(b.textContent).toMatch(/Re-alert until resolved/)
+    })
+  });
+
+  it('after picking a value, the recommendation banner disappears', async () => {
+    renderPage()
+    fillName('Test rule')
+    pickSignal('BatteryLevel')
+    pickOperator('=')
+    await waitFor(() => expect(screen.queryByTestId('alert-behavior-recommend-banner')).not.toBeNull())
+    fireEvent.change(getTriggerSelect(), { target: { value: 'once' } })
+    await waitFor(() => expect(screen.queryByTestId('alert-behavior-recommend-banner')).toBeNull())
+  });
+
+  it('Save stays disabled until the user picks a trigger mode (force-choose)', async () => {
+    renderPage()
+    fillName('Test rule')
+    pickSignal('BatteryLevel')
+    pickOperator('<')
+    fireEvent.change(document.querySelector('input[type="number"]')!, { target: { value: '20' } })
+    // Form is otherwise complete (name + signal + op + value), so the
+    // ONLY thing blocking Save now is the unset trigger_mode.
+    expect(getSaveButton()).toBeDisabled()
+    expect(screen.queryByTestId('alert-behavior-force-choose')).not.toBeNull()
+  });
+
+  it('picking a trigger mode enables Save (once form is otherwise complete)', async () => {
+    renderPage()
+    fillName('Test rule')
+    pickSignal('BatteryLevel')
+    pickOperator('<')
+    fireEvent.change(document.querySelector('input[type="number"]')!, { target: { value: '20' } })
+    fireEvent.change(getTriggerSelect(), { target: { value: 'once' } })
+    await waitFor(() => expect(getSaveButton()).not.toBeDisabled())
+    expect(screen.queryByTestId('alert-behavior-force-choose')).toBeNull()
+  });
+
+  it('existing rule with trigger_mode="repeat" renders selected, no banner, Save enabled', async () => {
+    RULES = [
+      {
+        id: 60, name: 'Existing', enabled: true, severity: 'warn',
+        all_vehicles: true, vehicle_ids: [], vehicle_id: null,
+        signal_name: 'BatteryLevel', op: '<', value_num: 20,
+        cooldown_min: 15, trigger_mode: 'repeat', kind: 'signal',
+        created_at: '', updated_at: '',
+      } as AlertRule,
+    ];
+    renderPage()
+    selectRule('Existing')
+    await waitFor(() => expect(getTriggerSelect().value).toBe('repeat'))
+    expect(screen.queryByTestId('alert-behavior-recommend-banner')).toBeNull()
+    expect(screen.queryByTestId('alert-behavior-force-choose')).toBeNull()
+    const saveBtn = await screen.findByRole('button', { name: /update rule/i })
+    expect(saveBtn).not.toBeDisabled()
+  });
+
+  it('existing rule does NOT show recommendation banner even with op="="', async () => {
+    RULES = [
+      {
+        id: 61, name: 'EqExisting', enabled: true, severity: 'warn',
+        all_vehicles: true, vehicle_ids: [], vehicle_id: null,
+        signal_name: 'Locked', op: '=', value_bool: true,
+        cooldown_min: 15, trigger_mode: 'once', kind: 'signal',
+        created_at: '', updated_at: '',
+      } as AlertRule,
+    ];
+    renderPage()
+    selectRule('EqExisting')
+    await waitFor(() => expect(getTriggerSelect().value).toBe('once'))
+    expect(screen.queryByTestId('alert-behavior-recommend-banner')).toBeNull()
   });
 });

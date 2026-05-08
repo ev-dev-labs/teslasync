@@ -6391,7 +6391,10 @@
           "onceLabel": "Notify on event",
           "onceDesc": "Fires when the condition is first met. Stays quiet until it resets.",
           "repeatLabel": "Re-alert until resolved",
-          "repeatDesc": "Keeps firing every {{cooldown}} minutes while the condition stays true."
+          "repeatDesc": "Keeps firing every {{cooldown}} minutes while the condition stays true.",
+          "recommendBanner": "Recommended for \"{{op}}\" comparisons: {{recommended}}.",
+          "recommendBannerAlt": "{{alternative}} is also valid — pick whatever fits.",
+          "forceChoose": "Pick how this alert should behave."
         },
         "noSignalTitle": "Choose a signal",
         "noSignalDescription": "Select a telemetry signal before entering a comparison value.",
@@ -6432,6 +6435,7 @@
         "typedValueLabel": "Typed Value",
         "cooldownLabel": "Cooldown (minutes)",
         "alertBehaviorLabel": "Alert Behavior",
+        "alertBehaviorPlaceholder": "— Choose one —",
         "maxFiresLabel": "Max alerts before condition resolves",
         "maxFiresPlaceholder": "Leave blank for unlimited",
         "maxFiresHint": "Only applies to repeat-mode rules. Once-mode already caps at 1 per resolution.",
