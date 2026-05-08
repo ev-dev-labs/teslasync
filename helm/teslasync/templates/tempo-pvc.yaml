@@ -1,0 +1,18 @@
+{{- if and .Values.observability.tempo.enabled .Values.observability.tempo.persistence.enabled (not .Values.observability.tempo.persistence.useStatefulSetVolumeClaimTemplate) -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "teslasync.fullname" . }}-tempo
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: tempo
+spec:
+  accessModes:
+    - {{ .Values.observability.tempo.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.observability.tempo.persistence.size | default "10Gi" }}
+  {{- with .Values.observability.tempo.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+{{- end }}

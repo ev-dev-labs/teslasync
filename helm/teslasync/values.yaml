@@ -1085,3 +1085,31 @@ observability:
       requests:
         cpu: 100m
         memory: 128Mi
+
+  # Self-hosted Tempo backend for trace storage. The OTel collector
+  # forwards sampled traces here over OTLP. Single-binary mode + local
+  # filesystem storage; PV-backed for durability across pod restarts.
+  tempo:
+    enabled: false
+    image:
+      repository: grafana/tempo
+      tag: 2.7.0
+      pullPolicy: IfNotPresent
+    # Block retention window. Tempo's compactor enforces this.
+    retention: "168h"
+    persistence:
+      enabled: true
+      # When true, use the StatefulSet volumeClaimTemplate (recommended for
+      # production) rather than a separate PVC. False uses a manual PVC,
+      # which is easier to clean up on a single-node dev cluster.
+      useStatefulSetVolumeClaimTemplate: false
+      accessMode: ReadWriteOnce
+      size: 10Gi
+      storageClass: ""
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 256Mi
