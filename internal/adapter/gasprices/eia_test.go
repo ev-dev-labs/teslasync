@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // validEIAResponse returns a realistic EIA API response body.
@@ -99,7 +101,10 @@ func TestGetCurrentPrice_Timeout(t *testing.T) {
 
 	adapter := NewEIAAdapter("key",
 		WithBaseURL(srv.URL+"/"),
-		WithHTTPClient(&http.Client{Timeout: 100 * time.Millisecond}),
+		WithHTTPClient(&http.Client{
+			Timeout:   100 * time.Millisecond,
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		}),
 	)
 
 	_, err := adapter.GetCurrentPrice(context.Background(), "US")

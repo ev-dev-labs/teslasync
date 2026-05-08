@@ -13,6 +13,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/rs/zerolog/log"
 	"github.com/sony/gobreaker"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/time/rate"
 )
 
@@ -66,11 +67,11 @@ func NewClient(cfg config.TeslaConfig) *Client {
 	}
 	proxyClient := &http.Client{
 		Timeout:   cfg.Timeout,
-		Transport: proxyTransport,
+		Transport: otelhttp.NewTransport(proxyTransport),
 	}
 
 	c := &Client{
-		httpClient:      &http.Client{Timeout: cfg.Timeout},
+		httpClient:      &http.Client{Timeout: cfg.Timeout, Transport: otelhttp.NewTransport(http.DefaultTransport)},
 		proxyClient:     proxyClient,
 		baseURL:         cfg.BaseURL,
 		commandProxyURL: cfg.CommandProxyURL,

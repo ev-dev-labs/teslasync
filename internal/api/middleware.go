@@ -11,6 +11,14 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
+// Observability contract:
+//   - Inbound API requests are traced once at the global chi middleware boundary
+//     by TracingMiddleware via otelhttp.NewHandler.
+//   - Outbound HTTP clients must wrap their RoundTripper with
+//     otelhttp.NewTransport. Exceptions must be documented at the call site and
+//     are limited to non-request operational probes such as local healthchecks
+//     and Prometheus scrape clients.
+
 // LoggerMiddleware logs HTTP requests using zerolog.
 func LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -75,4 +83,11 @@ func TracingMiddleware(next http.Handler) http.Handler {
 			return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
 		}),
 	)
+}
+
+func tracedTransport(base http.RoundTripper) http.RoundTripper {
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	return otelhttp.NewTransport(base)
 }

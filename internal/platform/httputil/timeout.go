@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // TimeoutConfig configures call timeout behavior.
@@ -40,10 +41,10 @@ func WithTimeout[T any](ctx context.Context, cfg TimeoutConfig, fn func(ctx cont
 func NewHTTPClient(timeout time.Duration) *http.Client {
 	return &http.Client{
 		Timeout: timeout,
-		Transport: &http.Transport{
+		Transport: otelhttp.NewTransport(&http.Transport{
 			MaxIdleConns:        100,
 			MaxIdleConnsPerHost: 10,
 			IdleConnTimeout:     90 * time.Second,
-		},
+		}),
 	}
 }

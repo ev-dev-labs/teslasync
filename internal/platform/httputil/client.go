@@ -3,6 +3,8 @@ package httputil
 import (
 	"net/http"
 	"time"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // ClientConfig combines timeout, retry, circuit breaker, rate limit, logging
@@ -64,6 +66,8 @@ func NewClient(cfg ClientConfig) *http.Client {
 			Sink: cfg.Sink,
 		}
 	}
+
+	transport = otelhttp.NewTransport(transport)
 
 	return &http.Client{
 		Timeout:   timeout,

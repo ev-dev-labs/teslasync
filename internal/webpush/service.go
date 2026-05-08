@@ -24,6 +24,7 @@ import (
 
 	gowebpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -35,12 +36,12 @@ import (
 // closer to 3 KB), so anything beyond a title, body, drill-through URL,
 // and a couple of icon hints would be wasted budget.
 type Payload struct {
-	Title    string `json:"title"`
-	Body     string `json:"body,omitempty"`
-	URL      string `json:"url,omitempty"`
-	Icon     string `json:"icon,omitempty"`
-	Badge    string `json:"badge,omitempty"`
-	Tag      string `json:"tag,omitempty"`
+	Title string `json:"title"`
+	Body  string `json:"body,omitempty"`
+	URL   string `json:"url,omitempty"`
+	Icon  string `json:"icon,omitempty"`
+	Badge string `json:"badge,omitempty"`
+	Tag   string `json:"tag,omitempty"`
 	// Severity drives `requireInteraction` in the SW (critical sticks
 	// until tapped). Allowed values mirror the alert-rule severities:
 	// "info", "warn", "critical".
@@ -80,7 +81,10 @@ type Service struct {
 // stall the whole fan-out for minutes).
 func NewService(repo SubscriptionRepo, publicKey, privateKey, subject string) *Service {
 	return NewServiceWithClient(repo, publicKey, privateKey, subject,
-		&http.Client{Timeout: 10 * time.Second})
+		&http.Client{
+			Timeout:   10 * time.Second,
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		})
 }
 
 // NewServiceWithClient is the test seam. The `client` parameter is typed as

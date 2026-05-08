@@ -25,6 +25,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // SignatureHeader is the HTTP header name used to convey the HMAC SHA-256
@@ -180,7 +182,10 @@ func Send(ctx context.Context, opts Options) (Result, error) {
 
 	client := opts.Client
 	if client == nil {
-		client = &http.Client{Timeout: timeout}
+		client = &http.Client{
+			Timeout:   timeout,
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		}
 	}
 
 	reqCtx, cancel := context.WithTimeout(ctx, timeout)
