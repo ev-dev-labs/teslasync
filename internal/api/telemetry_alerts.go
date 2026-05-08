@@ -87,7 +87,7 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 		if !rule.Enabled {
 			continue
 		}
-		if rule.VehicleID != nil && *rule.VehicleID != vehicleID {
+		if !rule.AppliesTo(vehicleID) {
 			continue
 		}
 		enabledCount++

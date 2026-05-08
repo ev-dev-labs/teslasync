@@ -7,6 +7,12 @@ type createAlertRuleRequest struct {
 	Description  *string    `json:"description"`
 	Enabled      *bool      `json:"enabled"`
 	VehicleID    *int64     `json:"vehicle_id"`
+	// AllVehicles + VehicleIDs are the new canonical multi-select shape
+	// (Phase-49 / Slice 0005). On write the handler coalesces all three
+	// spellings via coalesceVehicleSelection. Legacy clients that only
+	// send `vehicle_id` continue to work for one release per Decision D7.
+	AllVehicles  *bool      `json:"all_vehicles"`
+	VehicleIDs   []int64    `json:"vehicle_ids"`
 	SignalName   *string    `json:"signal_name"`
 	Op           *string    `json:"op"`
 	ValueNum     *float64   `json:"value_num"`
@@ -39,6 +45,12 @@ type updateAlertRuleRequest struct {
 	Description  *string    `json:"description"`
 	Enabled      *bool      `json:"enabled"`
 	VehicleID    *int64     `json:"vehicle_id"`
+	// AllVehicles + VehicleIDs — see createAlertRuleRequest. Update
+	// semantics: omitting all three vehicle keys preserves the existing
+	// rule's vehicle assignment; sending any of them switches the rule
+	// to the resolved selection. Phase-49 / Slice 0005.
+	AllVehicles  *bool      `json:"all_vehicles"`
+	VehicleIDs   []int64    `json:"vehicle_ids"`
 	SignalName   *string    `json:"signal_name"`
 	Op           *string    `json:"op"`
 	ValueNum     *float64   `json:"value_num"`

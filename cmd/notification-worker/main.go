@@ -351,14 +351,26 @@ dispatchComputedMetricNotification(rule, vid, result, channels, mqttClient)
 }
 
 func vehiclesForRule(rule *models.AlertRule, all []*models.Vehicle) []int64 {
-if rule.VehicleID != nil {
-return []int64{*rule.VehicleID}
-}
-out := make([]int64, 0, len(all))
-for _, v := range all {
-out = append(out, v.ID)
-}
-return out
+	// Phase-49 / Slice 0005: multi-vehicle picker. Honour the new
+	// sticky-all flag + explicit subset hydrated by the repo.
+	if rule.AllVehicles {
+		out := make([]int64, 0, len(all))
+		for _, v := range all {
+			out = append(out, v.ID)
+		}
+		return out
+	}
+	if len(rule.VehicleIDs) > 0 {
+		out := make([]int64, len(rule.VehicleIDs))
+		copy(out, rule.VehicleIDs)
+		return out
+	}
+	// Legacy fallback: a rule that somehow has neither all_vehicles nor
+	// any junction entries (malformed migration data) targets nothing.
+	if rule.VehicleID != nil {
+		return []int64{*rule.VehicleID}
+	}
+	return nil
 }
 
 func dispatchComputedMetricNotification(

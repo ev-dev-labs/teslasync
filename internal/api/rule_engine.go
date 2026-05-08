@@ -431,19 +431,39 @@ func (e *RuleEngine) SetLastFired(ruleID, vehicleID int64, t time.Time) {
 // LoadCooldownFromDB restores cooldown state from the database (pod restart recovery).
 // LastFiredAt is now tracked in-memory only; this method initializes state entries
 // for rules scoped to specific vehicles so cooldown tracking begins immediately.
+//
+// Phase-49 / Slice 0005: iterates `rule.VehicleIDs` for multi-select rules
+// instead of the deprecated single `rule.VehicleID`. Sticky-all rules
+// (`rule.AllVehicles=true`) get a single fleet-baseline entry keyed on
+// vehicleID=0; per-vehicle state rows materialise organically as fires
+// happen against specific vehicles.
 func (e *RuleEngine) LoadCooldownFromDB(ctx context.Context, rules []*models.AlertRule) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	for _, rule := range rules {
-		vid := int64(0)
-		if rule.VehicleID != nil {
-			vid = *rule.VehicleID
-		}
-		key := ruleKey{RuleID: rule.ID, VehicleID: vid}
-		if _, ok := e.state[key]; !ok {
-			e.state[key] = &ruleState{}
+		vids := vehicleIDsForState(rule)
+		for _, vid := range vids {
+			key := ruleKey{RuleID: rule.ID, VehicleID: vid}
+			if _, ok := e.state[key]; !ok {
+				e.state[key] = &ruleState{}
+			}
 		}
 	}
+}
+
+// vehicleIDsForState returns the set of vehicle IDs to seed in the rule
+// state map. Sticky-all rules use the fleet-baseline key (vehicleID=0);
+// explicit-subset rules use each junction entry. Phase-49 / Slice 0005.
+func vehicleIDsForState(rule *models.AlertRule) []int64 {
+	if rule == nil {
+		return nil
+	}
+	if rule.AllVehicles || len(rule.VehicleIDs) == 0 {
+		return []int64{0}
+	}
+	out := make([]int64, len(rule.VehicleIDs))
+	copy(out, rule.VehicleIDs)
+	return out
 }
 
 // LoadPrevSignalsFromStore populates prevSignals for all rules from the SignalStore.

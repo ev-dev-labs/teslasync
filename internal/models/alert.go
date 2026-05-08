@@ -10,14 +10,33 @@ import (
 // rule_def, conditions, threshold, msg_template, and notify_channels.
 //
 // Schema source: .github/prompts/db-refactor/schema/18-alert-rules.sql
+// Multi-select extension: migration 000195 (Phase-49 / Slice 0005) adds
+// `all_vehicles` + the `alert_rule_vehicles` junction table; the legacy
+// `vehicle_id` column is kept for one release for rolling-deploy safety.
 type AlertRule struct {
 	ID          int64   `db:"id"           json:"id"`
 	Name        string  `db:"name"         json:"name"`
 	Description *string `db:"description"  json:"description,omitempty"`
 	Enabled     bool    `db:"enabled"      json:"enabled"`
-	// VehicleID is NULL when the rule applies to all vehicles owned by the user.
-	VehicleID  *int64 `db:"vehicle_id"   json:"vehicle_id,omitempty"`
-	SignalName string `db:"signal_name"  json:"signal_name"`
+	// VehicleID is DEPRECATED. Reads return MIN(VehicleIDs) when
+	// AllVehicles=false, NULL when AllVehicles=true. Writes mirror this:
+	// the repo Create/Update writes vehicle_id = MIN(VehicleIDs) so that
+	// a downgraded API binary still sees a sensible value during a
+	// rolling deploy. Removed in a future phase. See Phase-49 / Slice
+	// 0005 / Decision D7.
+	VehicleID *int64 `db:"vehicle_id"   json:"vehicle_id,omitempty"`
+	// AllVehicles is the sticky-all flag. TRUE means the rule applies
+	// to every current AND future vehicle owned by the user; the
+	// alert_rule_vehicles junction is empty for such rules. FALSE means
+	// the explicit subset in alert_rule_vehicles applies. Default for
+	// new rules is TRUE. Phase-49 / Slice 0005.
+	AllVehicles bool `db:"all_vehicles" json:"all_vehicles"`
+	// VehicleIDs is the explicit (rule, vehicle) subset hydrated from the
+	// alert_rule_vehicles junction table. Always non-nil after a repo
+	// read (empty slice when AllVehicles=true). Sorted ascending for
+	// deterministic equality comparison + JSON output. Phase-49 / Slice 0005.
+	VehicleIDs []int64    `db:"-"            json:"vehicle_ids"`
+	SignalName string     `db:"signal_name"  json:"signal_name"`
 	// Op is one of: '=','!=','<','<=','>','>=','changed','between','outside'.
 	Op string `db:"op" json:"op"`
 	// Value* columns hold the comparison operand for the rule. Exactly which
@@ -66,6 +85,30 @@ type AlertRule struct {
 
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+}
+
+// AppliesTo reports whether this rule should be evaluated against the
+// given vehicle. Sticky-all rules (AllVehicles=true) match every
+// vehicle including ones inserted AFTER the rule was created (D7
+// proof: this method never enumerates a known-vehicle list, so future
+// vehicles inherit automatically). Multi-select rules
+// (AllVehicles=false) match only vehicles in the hydrated VehicleIDs
+// slice. Callers MUST ensure VehicleIDs is hydrated by the repo before
+// calling — `internal/database.AlertRuleRepo` populates it on every
+// read path. A nil receiver returns false. Phase-49 / Slice 0005.
+func (r *AlertRule) AppliesTo(vehicleID int64) bool {
+	if r == nil {
+		return false
+	}
+	if r.AllVehicles {
+		return true
+	}
+	for _, vid := range r.VehicleIDs {
+		if vid == vehicleID {
+			return true
+		}
+	}
+	return false
 }
 
 // Kind constants. See migration 000158_alert_rule_kinds.up.sql.

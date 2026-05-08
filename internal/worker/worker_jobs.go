@@ -179,8 +179,11 @@ func (w *Worker) evaluateAlerts(ctx context.Context, vehicle *models.Vehicle, da
 		if !rule.Enabled {
 			continue
 		}
-		// If rule is vehicle-specific, skip other vehicles
-		if rule.VehicleID != nil && *rule.VehicleID != vehicle.ID {
+		// Phase-49 / Slice 0005: multi-vehicle picker. AppliesTo
+		// honours both the sticky-all flag and the explicit subset
+		// hydrated by the repo; replaces the legacy single-VehicleID
+		// nil/match check.
+		if !rule.AppliesTo(vehicle.ID) {
 			continue
 		}
 

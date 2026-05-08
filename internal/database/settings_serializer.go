@@ -484,6 +484,13 @@ func settingsEquivalent(a, b *models.Settings) bool {
 // Server-managed columns (ID, CreatedAt, UpdatedAt) are excluded so
 // "skipped" reflects "no behavioural difference" rather than "no
 // timestamp difference".
+//
+// Phase-49 / Slice 0005: AllVehicles + VehicleIDs (sorted) are part of
+// the equivalence so settings export/import round-trips multi-vehicle
+// rules cleanly. The legacy VehicleID pointer is intentionally not
+// compared independently — it is mirrored from VehicleIDs by the repo
+// on read, so two rules with identical AllVehicles + VehicleIDs always
+// have identical VehicleID.
 func alertRulesEquivalent(a, b *models.AlertRule) bool {
 	if a == nil || b == nil {
 		return a == b
@@ -493,8 +500,13 @@ func alertRulesEquivalent(a, b *models.AlertRule) bool {
 		a.TriggerMode != b.TriggerMode || a.Kind != b.Kind {
 		return false
 	}
+	if a.AllVehicles != b.AllVehicles {
+		return false
+	}
+	if !int64SliceEqSorted(a.VehicleIDs, b.VehicleIDs) {
+		return false
+	}
 	if !ptrStringEq(a.Description, b.Description) ||
-		!ptrInt64Eq(a.VehicleID, b.VehicleID) ||
 		!ptrFloatEq(a.ValueNum, b.ValueNum) ||
 		!ptrStringEq(a.ValueText, b.ValueText) ||
 		!ptrBoolEq(a.ValueBool, b.ValueBool) ||
@@ -506,6 +518,31 @@ func alertRulesEquivalent(a, b *models.AlertRule) bool {
 		!ptrFloatEq(a.MetricThreshold, b.MetricThreshold) ||
 		!ptrStringEq(a.MetricOp, b.MetricOp) {
 		return false
+	}
+	return true
+}
+
+// int64SliceEqSorted reports whether two int64 slices contain the same
+// elements (order-insensitive). Both slices are copied + sorted before
+// comparison so a caller-supplied unsorted slice doesn't trigger a
+// false negative. Phase-49 / Slice 0005.
+func int64SliceEqSorted(a, b []int64) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	if len(a) == 0 {
+		return true
+	}
+	aa := make([]int64, len(a))
+	bb := make([]int64, len(b))
+	copy(aa, a)
+	copy(bb, b)
+	sort.Slice(aa, func(i, j int) bool { return aa[i] < aa[j] })
+	sort.Slice(bb, func(i, j int) bool { return bb[i] < bb[j] })
+	for i := range aa {
+		if aa[i] != bb[i] {
+			return false
+		}
 	}
 	return true
 }

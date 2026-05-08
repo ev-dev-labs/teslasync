@@ -40,6 +40,127 @@ var forbiddenAlertTestFields = map[string]struct{}{
 	"notify_channels": {},
 }
 
+// vehicleSelectionField names every JSON key the handler treats as part
+// of the multi-select coalesce decision. Phase-49 / Slice 0005.
+const (
+	vehicleSelectionFieldVehicleID   = "vehicle_id"
+	vehicleSelectionFieldAllVehicles = "all_vehicles"
+	vehicleSelectionFieldVehicleIDs  = "vehicle_ids"
+)
+
+// coalesceVehicleSelection resolves the three legal vehicle-selection
+// spellings (`vehicle_id`, `all_vehicles`, `vehicle_ids`) into a
+// canonical (allVehicles, vehicleIDs) pair. Phase-49 / Slice 0005.
+//
+// `present` reports whether any of the three keys appeared in the JSON
+// payload — callers use this on Update to decide between "preserve
+// existing assignment" and "switch to resolved selection". `defaultAll`
+// controls the absent-everything behaviour: true on Create (new rules
+// default to sticky-all per Decision D9), false on Update (caller passes
+// existing values when present=false anyway).
+//
+// Validation rules (returned as errors with HTTP-422-suitable messages):
+//   - all_vehicles=TRUE && len(vehicle_ids) > 0 → conflict
+//   - vehicle_id=N && vehicle_ids=[M,...] && N not in vehicle_ids → conflict
+//   - all_vehicles=TRUE && vehicle_id non-nil → conflict
+//   - all_vehicles=FALSE && len(vehicle_ids) == 0 && vehicle_id == nil → empty subset
+//   - any vehicle ID <= 0 → invalid
+func coalesceVehicleSelection(
+	allVehicles *bool,
+	vehicleIDs []int64,
+	legacyVehicleID *int64,
+	fields map[string]json.RawMessage,
+	defaultAll bool,
+) (bool, []int64, bool, error) {
+	hasAll := fieldPresent(fields, vehicleSelectionFieldAllVehicles)
+	hasIDs := fieldPresent(fields, vehicleSelectionFieldVehicleIDs)
+	hasLegacy := fieldPresent(fields, vehicleSelectionFieldVehicleID)
+	present := hasAll || hasIDs || hasLegacy
+
+	if !present {
+		if defaultAll {
+			return true, []int64{}, false, nil
+		}
+		return false, nil, false, nil
+	}
+
+	for _, vid := range vehicleIDs {
+		if vid <= 0 {
+			return false, nil, present, errVehicleSelectionInvalidID
+		}
+	}
+	if legacyVehicleID != nil && *legacyVehicleID <= 0 {
+		return false, nil, present, errVehicleSelectionInvalidID
+	}
+
+	resolvedAll := defaultAll
+	if hasAll && allVehicles != nil {
+		resolvedAll = *allVehicles
+	} else if hasIDs || hasLegacy {
+		resolvedAll = false
+	}
+
+	resolvedIDs := dedupSortInt64Local(vehicleIDs)
+	if hasLegacy && legacyVehicleID != nil {
+		if !containsInt64(resolvedIDs, *legacyVehicleID) {
+			if hasIDs && len(resolvedIDs) > 0 {
+				return false, nil, present, errVehicleSelectionLegacyConflict
+			}
+			resolvedIDs = append(resolvedIDs, *legacyVehicleID)
+			resolvedIDs = dedupSortInt64Local(resolvedIDs)
+		}
+	}
+
+	if resolvedAll && len(resolvedIDs) > 0 {
+		return false, nil, present, errVehicleSelectionAllPlusSubset
+	}
+	if !resolvedAll && len(resolvedIDs) == 0 {
+		return false, nil, present, errVehicleSelectionEmptySubset
+	}
+
+	if resolvedAll {
+		return true, []int64{}, present, nil
+	}
+	return false, resolvedIDs, present, nil
+}
+
+var (
+	errVehicleSelectionAllPlusSubset  = errors.New("vehicle selection conflict: all_vehicles=true cannot be combined with vehicle_ids or vehicle_id")
+	errVehicleSelectionLegacyConflict = errors.New("vehicle selection conflict: vehicle_id is not a member of vehicle_ids")
+	errVehicleSelectionEmptySubset    = errors.New("vehicle selection invalid: when all_vehicles=false, vehicle_ids must contain at least one vehicle")
+	errVehicleSelectionInvalidID      = errors.New("vehicle selection invalid: vehicle IDs must be positive integers")
+)
+
+func dedupSortInt64Local(in []int64) []int64 {
+	if len(in) == 0 {
+		return []int64{}
+	}
+	seen := make(map[int64]struct{}, len(in))
+	out := make([]int64, 0, len(in))
+	for _, v := range in {
+		if _, ok := seen[v]; ok {
+			continue
+		}
+		seen[v] = struct{}{}
+		out = append(out, v)
+	}
+	for i := 1; i < len(out); i++ {
+		for j := i; j > 0 && out[j-1] > out[j]; j-- {
+			out[j-1], out[j] = out[j], out[j-1]
+		}
+	}
+	return out
+}
+
+func containsInt64(s []int64, v int64) bool {
+	for _, x := range s {
+		if x == v {
+			return true
+		}
+	}
+	return false
+}
+
 func (h *AlertHandler) ListRules(w http.ResponseWriter, r *http.Request) {
 	rules, err := h.alertRuleRepo.GetAll(r.Context())
 	if err != nil {
@@ -91,8 +212,15 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 		}
 		existing.Enabled = *body.Enabled
 	}
-	if fieldPresent(fields, "vehicle_id") {
-		existing.VehicleID = body.VehicleID
+	allVehicles, vehicleIDs, vehicleFieldsPresent, err := coalesceVehicleSelection(
+		body.AllVehicles, body.VehicleIDs, body.VehicleID, fields, false)
+	if err != nil {
+		writeError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+	if vehicleFieldsPresent {
+		existing.AllVehicles = allVehicles
+		existing.VehicleIDs = vehicleIDs
 	}
 	if fieldPresent(fields, "signal_name") {
 		if body.SignalName == nil {
@@ -250,11 +378,19 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	allVehicles, vehicleIDs, _, err := coalesceVehicleSelection(
+		body.AllVehicles, body.VehicleIDs, body.VehicleID, fields, true)
+	if err != nil {
+		writeError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
 	rule := &models.AlertRule{
 		Name:                  name,
 		Description:           body.Description,
 		Enabled:               enabled,
-		VehicleID:             body.VehicleID,
+		AllVehicles:           allVehicles,
+		VehicleIDs:            vehicleIDs,
 		SignalName:            signalName,
 		Op:                    op,
 		ValueNum:              body.ValueNum,
