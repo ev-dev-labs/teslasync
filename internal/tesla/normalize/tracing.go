@@ -8,6 +8,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 )
 
 // normalizeTracerName is the OpenTelemetry tracer name for spans produced
@@ -63,7 +65,8 @@ func (b *batchSpan) recordError(err error) {
 }
 
 func (b *batchSpan) stop() {
-	durUs := time.Since(b.start).Microseconds()
+	dur := time.Since(b.start)
+	durUs := dur.Microseconds()
 	b.span.SetAttributes(
 		attribute.Int("signal.count", b.signalCount),
 		attribute.Int64("normalize.duration_us", durUs),
@@ -71,6 +74,14 @@ func (b *batchSpan) stop() {
 		attribute.Int("normalize.errors", b.errors),
 	)
 	b.span.End()
+	// Phase-44 prompt 0022: derive instantaneous throughput (signals/sec)
+	// from this batch and publish to the gauge so PromQL has a live value
+	// without needing rate(). Empty batches and zero-duration batches are
+	// skipped to avoid divide-by-zero / NaN.
+	if b.signalCount > 0 && dur > 0 {
+		throughput := float64(b.signalCount) / dur.Seconds()
+		metrics.SetNormalizePipelineThroughput(throughput)
+	}
 }
 
 // startChildSpan opens a child span with the given name inside the active

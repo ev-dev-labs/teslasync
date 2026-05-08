@@ -652,6 +652,11 @@ func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.M
 		),
 	)
 	defer span.End()
+	// Phase-44 prompt 0022: track consumer backlog. Inc when message enters
+	// the handler, Dec via defer when it leaves (success, drop, panic, or
+	// non-ack error). The gauge is the leading indicator of saturation.
+	metrics.IncMQTTConsumerBacklog()
+	defer metrics.DecMQTTConsumerBacklog()
 	defer func() {
 		if r := recover(); r != nil {
 			span.RecordError(fmt.Errorf("panic: %v", r))
