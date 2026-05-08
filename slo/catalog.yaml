@@ -1,0 +1,95 @@
+# TeslaSync SLO catalog
+#
+# Single source of truth for service-level objectives. Subsequent phase-44
+# prompts generate Prometheus recording rules (0031), burn-rate alerts
+# (0032), and Grafana dashboards (0033) from this file.
+#
+# Schema: slo/catalog.schema.json. Validate with `go run ./cmd/slogen validate slo/catalog.yaml`.
+#
+# Format conventions enforced by `cmd/slogen validate`:
+#   - Top-level keys: version, slos.
+#   - Each SLO is a list item starting with `  - name: <snake_case>`.
+#   - All scalar values are single-line; no `>-` block scalars.
+#   - `tags` uses inline array syntax `[a, b, c]`.
+version: 1
+
+slos:
+  - name: api_availability
+    description: "HTTP request success ratio across /api/v1/. Counts non-5xx responses as good events."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: platform
+    tags: [http, red]
+
+  - name: api_latency_p99_500ms
+    description: "p99 latency of /api/v1/vehicles/{vehicleID}/state must stay under 500ms."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/vehicles/{vehicleID}/state\",le=\"0.5\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/{vehicleID}/state\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, latency]
+
+  - name: telemetry_freshness
+    description: "Vehicle telemetry must arrive within 60 seconds. Good = vehicles with lag <= 60s."
+    sli:
+      good_events: "sum(teslasync_telemetry_lag_seconds <= 60)"
+      valid_events: "sum(teslasync_telemetry_lag_seconds >= 0)"
+    objective: 99.0
+    window: 7d
+    owner: ingest
+    tags: [telemetry, freshness]
+
+  - name: normalize_throughput
+    description: "Normalize pipeline must sustain at least 100 signals per second."
+    sli:
+      good_events: "sum_over_time((teslasync_normalize_pipeline_throughput_signals_per_second >= 100)[5m:30s])"
+      valid_events: "count_over_time(teslasync_normalize_pipeline_throughput_signals_per_second[5m:30s])"
+    objective: 95.0
+    window: 7d
+    owner: ingest
+    tags: [throughput, pipeline]
+
+  - name: mqtt_no_backlog
+    description: "MQTT consumer backlog must stay below 1000 messages."
+    sli:
+      good_events: "sum_over_time((teslasync_mqtt_consumer_backlog < 1000)[5m:30s])"
+      valid_events: "count_over_time(teslasync_mqtt_consumer_backlog[5m:30s])"
+    objective: 99.0
+    window: 7d
+    owner: ingest
+    tags: [mqtt, backlog]
+
+  - name: tesla_api_availability
+    description: "Tesla upstream API circuit breaker must remain closed."
+    sli:
+      good_events: "sum_over_time((max(teslasync_tesla_api_circuit_breaker_state) == 0)[5m:30s])"
+      valid_events: "count_over_time(teslasync_tesla_api_circuit_breaker_state[5m:30s])"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [upstream, breaker]
+
+  - name: sse_delivery
+    description: "Server-sent-events broadcast latency p95 must remain under 2 seconds."
+    sli:
+      good_events: "sum(rate(teslasync_sse_broadcast_duration_seconds_bucket{le=\"2.0\"}[5m]))"
+      valid_events: "sum(rate(teslasync_sse_broadcast_duration_seconds_count[5m]))"
+    objective: 95.0
+    window: 7d
+    owner: realtime
+    tags: [sse, latency]
+
+  - name: frontend_lcp
+    description: "Largest Contentful Paint p75 must stay below 2.5 seconds."
+    sli:
+      good_events: "sum(rate(teslasync_frontend_web_vitals_lcp_seconds_bucket{le=\"2.5\"}[5m]))"
+      valid_events: "sum(rate(teslasync_frontend_web_vitals_lcp_seconds_count[5m]))"
+    objective: 90.0
+    window: 28d
+    owner: frontend
+    tags: [frontend, web-vitals]
