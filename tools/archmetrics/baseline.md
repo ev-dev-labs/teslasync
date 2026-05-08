@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics ΓÇö baseline
 
-_Generated 2026-05-08T20:30:41Z, Go go1.26.1, commit f83f2c2dffb0e7e743c3d77178a49aacd667f7e0_
+_Generated 2026-05-08T20:42:50Z, Go go1.26.1, commit 9399b53cc579a365ac4c6f1ad65399147cb6af17_
 
 ## Summary
 
 - Packages: 104
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 0
-- Total non-blank LOC under cmd/+internal/+tools/: 197279
+- Total non-blank LOC under cmd/+internal/+tools/: 197538
 
 ## cmd/* main.go LOC
 
@@ -64,7 +64,7 @@ _None._
 | internal/app/notificationsvc | 2 | 1 | 305 | yes | app |
 | internal/app/tripsvc | 2 | 1 | 308 | yes | app |
 | internal/app/vehiclesvc | 3 | 1 | 342 | yes | app |
-| internal/arch | 2 | 1 | 428 | yes | tool |
+| internal/arch | 2 | 1 | 633 | yes | tool |
 | internal/auth | 6 | 4 | 2384 | yes | platform |
 | internal/automation | 6 | 2 | 1560 | yes | platform |
 | internal/automation/action | 6 | 5 | 3822 | yes | platform |
@@ -78,13 +78,13 @@ _None._
 | internal/crypto | 3 | 2 | 666 | yes | platform |
 | internal/database | 96 | 27 | 23271 | yes | platform |
 | internal/domain | 2 | 1 | 114 | yes | domain |
-| internal/domain/charging | 6 | 1 | 351 | yes | domain |
-| internal/domain/export | 3 | 1 | 120 | yes | domain |
-| internal/domain/fsm | 6 | 1 | 928 | yes | domain |
-| internal/domain/notification | 3 | 1 | 110 | yes | domain |
-| internal/domain/trip | 4 | 1 | 140 | yes | domain |
-| internal/domain/user | 3 | 1 | 92 | yes | domain |
-| internal/domain/vehicle | 5 | 1 | 344 | yes | domain |
+| internal/domain/charging | 6 | 1 | 357 | yes | domain |
+| internal/domain/export | 3 | 1 | 126 | yes | domain |
+| internal/domain/fsm | 6 | 1 | 933 | yes | domain |
+| internal/domain/notification | 3 | 1 | 116 | yes | domain |
+| internal/domain/trip | 4 | 1 | 146 | yes | domain |
+| internal/domain/user | 3 | 1 | 98 | yes | domain |
+| internal/domain/vehicle | 5 | 1 | 350 | yes | domain |
 | internal/enums | 5 | 1 | 304 | yes | platform |
 | internal/events | 2 | 1 | 145 | yes | platform |
 | internal/export | 9 | 3 | 2998 | yes | platform |
@@ -102,7 +102,7 @@ _None._
 | internal/imaging | 2 | 1 | 510 | yes | platform |
 | internal/integrations | 2 | 0 | 134 | yes | platform |
 | internal/metrics | 5 | 1 | 751 | yes | platform |
-| internal/models | 34 | 1 | 2825 | yes | domain |
+| internal/models | 34 | 1 | 2838 | yes | domain |
 | internal/mqtt | 4 | 4 | 2175 | yes | platform |
 | internal/notification | 4 | 2 | 1092 | yes | platform |
 | internal/notification/computed | 4 | 1 | 1004 | yes | platform |

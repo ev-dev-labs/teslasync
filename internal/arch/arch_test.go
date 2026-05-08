@@ -2,6 +2,9 @@ package arch
 
 import (
 	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -361,5 +364,194 @@ func stringSet(values []string) map[string]bool {
 		out[v] = true
 	}
 	return out
+}
+
+// TestDomainPurity enforces ADR-006 (phase-47/07): packages under
+// internal/domain/* may import only stdlib and other internal/domain/*
+// subpackages (including the parent internal/domain package).
+// Persistence (internal/database, internal/adapter/*), transport
+// (internal/api, internal/handler/*), use cases (internal/app/*), and
+// ports (internal/port/*) are forbidden imports.
+func TestDomainPurity(t *testing.T) {
+	cfg := &packages.Config{
+		Mode: packages.NeedName | packages.NeedImports,
+		Dir:  filepath.Join("..", ".."),
+	}
+	pkgs, err := packages.Load(cfg, "./internal/domain/...")
+	if err != nil {
+		t.Fatalf("packages.Load: %v", err)
+	}
+	if len(pkgs) == 0 {
+		t.Fatal("packages.Load returned no packages for ./internal/domain/...")
+	}
+
+	type violation struct {
+		pkg, dep string
+	}
+	var bad []violation
+	for _, p := range pkgs {
+		for tgt := range p.Imports {
+			rel := strings.TrimPrefix(tgt, modulePath+"/")
+			if !strings.HasPrefix(rel, "internal/") {
+				continue
+			}
+			if rel == "internal/domain" {
+				continue
+			}
+			if strings.HasPrefix(rel, "internal/domain/") {
+				continue
+			}
+			bad = append(bad, violation{pkg: p.PkgPath, dep: tgt})
+		}
+	}
+
+	sort.Slice(bad, func(i, j int) bool {
+		if bad[i].pkg != bad[j].pkg {
+			return bad[i].pkg < bad[j].pkg
+		}
+		return bad[i].dep < bad[j].dep
+	})
+	for _, v := range bad {
+		t.Errorf("DOMAIN PURITY (ADR-006): %s imports %s — only stdlib + internal/domain/* allowed",
+			v.pkg, v.dep)
+	}
+}
+
+// TestModelsHaveStructTags enforces ADR-006 (phase-47/07): every
+// exported field of every exported struct under internal/models/*.go
+// (excluding *_test.go) must carry at least one struct tag containing
+// `db:` or `json:`. Embedded fields (no field names) and fields whose
+// names are all unexported are skipped.
+func TestModelsHaveStructTags(t *testing.T) {
+	dir := filepath.Join("..", "models")
+	fset := token.NewFileSet()
+
+	type miss struct {
+		file, typ, field string
+	}
+	var misses []miss
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		base := filepath.Base(path)
+		if !strings.HasSuffix(base, ".go") || strings.HasSuffix(base, "_test.go") {
+			return nil
+		}
+		f, perr := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		if perr != nil {
+			return perr
+		}
+		ast.Inspect(f, func(n ast.Node) bool {
+			ts, ok := n.(*ast.TypeSpec)
+			if !ok {
+				return true
+			}
+			if !ts.Name.IsExported() {
+				return true
+			}
+			st, ok := ts.Type.(*ast.StructType)
+			if !ok {
+				return true
+			}
+			if st.Fields == nil {
+				return true
+			}
+			for _, field := range st.Fields.List {
+				if len(field.Names) == 0 {
+					continue
+				}
+				anyExported := false
+				for _, fn := range field.Names {
+					if fn.IsExported() {
+						anyExported = true
+						break
+					}
+				}
+				if !anyExported {
+					continue
+				}
+				if field.Tag == nil {
+					misses = append(misses, miss{file: path, typ: ts.Name.Name, field: field.Names[0].Name})
+					continue
+				}
+				tagVal := field.Tag.Value
+				if !strings.Contains(tagVal, "db:") && !strings.Contains(tagVal, "json:") {
+					misses = append(misses, miss{file: path, typ: ts.Name.Name, field: field.Names[0].Name})
+				}
+			}
+			return true
+		})
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk %s: %v", dir, err)
+	}
+
+	sort.Slice(misses, func(i, j int) bool {
+		if misses[i].file != misses[j].file {
+			return misses[i].file < misses[j].file
+		}
+		if misses[i].typ != misses[j].typ {
+			return misses[i].typ < misses[j].typ
+		}
+		return misses[i].field < misses[j].field
+	})
+	for _, m := range misses {
+		t.Errorf("MODELS TAGS (ADR-006): %s: type %s field %s missing struct tag (db: or json: required)",
+			m.file, m.typ, m.field)
+	}
+}
+
+// TestModelsImportsRestricted enforces ADR-006 (phase-47/07): packages
+// under internal/models may NOT import internal/database,
+// internal/adapter/*, internal/api, internal/handler/*,
+// internal/app/*, or internal/port/*. Imports of stdlib and
+// internal/domain/* (for ToDomain helpers) are explicitly allowed.
+func TestModelsImportsRestricted(t *testing.T) {
+	cfg := &packages.Config{
+		Mode: packages.NeedName | packages.NeedImports,
+		Dir:  filepath.Join("..", ".."),
+	}
+	pkgs, err := packages.Load(cfg, "./internal/models")
+	if err != nil {
+		t.Fatalf("packages.Load: %v", err)
+	}
+	if len(pkgs) == 0 {
+		t.Fatal("packages.Load returned no packages for ./internal/models")
+	}
+
+	type violation struct {
+		pkg, dep string
+	}
+	var bad []violation
+	for _, p := range pkgs {
+		for tgt := range p.Imports {
+			rel := strings.TrimPrefix(tgt, modulePath+"/")
+			if !strings.HasPrefix(rel, "internal/") {
+				continue
+			}
+			for _, forbidden := range ModelsForbiddenImports {
+				if rel == forbidden || strings.HasPrefix(rel, forbidden+"/") {
+					bad = append(bad, violation{pkg: p.PkgPath, dep: tgt})
+					break
+				}
+			}
+		}
+	}
+
+	sort.Slice(bad, func(i, j int) bool {
+		if bad[i].pkg != bad[j].pkg {
+			return bad[i].pkg < bad[j].pkg
+		}
+		return bad[i].dep < bad[j].dep
+	})
+	for _, v := range bad {
+		t.Errorf("MODELS IMPORTS (ADR-006): %s imports forbidden %s", v.pkg, v.dep)
+	}
 }
 

@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-08T20:30:40Z",
+  "generated_at": "2026-05-08T20:42:49Z",
   "go_version": "go1.26.1",
-  "commit_sha": "f83f2c2dffb0e7e743c3d77178a49aacd667f7e0",
+  "commit_sha": "9399b53cc579a365ac4c6f1ad65399147cb6af17",
   "packages": [
     {
       "path": "cmd/automation-worker",
@@ -920,7 +920,7 @@
       "path": "internal/arch",
       "go_files": 2,
       "test_files": 1,
-      "loc": 428,
+      "loc": 633,
       "has_doc_go": true,
       "layer": "tool",
       "imports": null,
@@ -1325,7 +1325,7 @@
       "path": "internal/domain/charging",
       "go_files": 6,
       "test_files": 1,
-      "loc": 351,
+      "loc": 357,
       "has_doc_go": true,
       "layer": "domain",
       "imports": [
@@ -1346,7 +1346,7 @@
       "path": "internal/domain/export",
       "go_files": 3,
       "test_files": 1,
-      "loc": 120,
+      "loc": 126,
       "has_doc_go": true,
       "layer": "domain",
       "imports": [
@@ -1363,7 +1363,7 @@
       "path": "internal/domain/fsm",
       "go_files": 6,
       "test_files": 1,
-      "loc": 928,
+      "loc": 933,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -1381,7 +1381,7 @@
       "path": "internal/domain/notification",
       "go_files": 3,
       "test_files": 1,
-      "loc": 110,
+      "loc": 116,
       "has_doc_go": true,
       "layer": "domain",
       "imports": [
@@ -1398,7 +1398,7 @@
       "path": "internal/domain/trip",
       "go_files": 4,
       "test_files": 1,
-      "loc": 140,
+      "loc": 146,
       "has_doc_go": true,
       "layer": "domain",
       "imports": [
@@ -1417,7 +1417,7 @@
       "path": "internal/domain/user",
       "go_files": 3,
       "test_files": 1,
-      "loc": 92,
+      "loc": 98,
       "has_doc_go": true,
       "layer": "domain",
       "imports": [
@@ -1434,7 +1434,7 @@
       "path": "internal/domain/vehicle",
       "go_files": 5,
       "test_files": 1,
-      "loc": 344,
+      "loc": 350,
       "has_doc_go": true,
       "layer": "domain",
       "imports": [
@@ -1770,7 +1770,7 @@
       "path": "internal/models",
       "go_files": 34,
       "test_files": 1,
-      "loc": 2825,
+      "loc": 2838,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,

@@ -82,3 +82,28 @@ var AdvisorySources = map[string]bool{
 var FrozenPackages = []string{
 	"internal/api",
 }
+
+// DomainAllowedInternalImports lists the internal/* package prefixes
+// that an internal/domain/* package may import. Per ADR-006
+// (.github/ARCHITECTURE.md), domain packages may also import stdlib
+// freely; only internal/* imports are constrained. The parent
+// `internal/domain` package and any `internal/domain/<sub>` package
+// are allowed.
+var DomainAllowedInternalImports = []string{
+	"internal/domain",
+}
+
+// ModelsForbiddenImports lists the internal/* package prefixes that
+// internal/models may NOT import. Per ADR-006, models is a DTO layer
+// and must not depend on persistence (database/adapter), transport
+// (api/handler), use cases (app), or ports. Importing
+// internal/domain/* is explicitly allowed for ToDomain conversion
+// methods.
+var ModelsForbiddenImports = []string{
+	"internal/database",
+	"internal/adapter",
+	"internal/api",
+	"internal/handler",
+	"internal/app",
+	"internal/port",
+}

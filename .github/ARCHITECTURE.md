@@ -1130,3 +1130,105 @@ ROLLBACK:
   file with rationale and an issue link. Do not silently bypass the
   freeze.
 ```
+
+
+## ADR-006: Models vs Domain Charter
+
+```
+STATUS: APPROVED (PA, phase-47/07)
+DATE: 2026-05-08
+SUPERSEDES: implicit "use whichever package you find first"
+NUMBERING NOTE: an unrelated subsection-level "### ADR-006: Mutation UX
+Feedback" exists under ADR-002 (Authentication Architecture) at
+.github/ARCHITECTURE.md:406. That is a nested sub-decision in the
+ADR-002 sequence and is scoped to that section; this top-level
+"## ADR-006:" is the next free top-level ADR number after the
+existing 001-005, 008, 009. The two enumerations live at different
+heading levels (## vs ###) by pre-existing convention; future
+ADR-NNN prompts should anchor their grep checks with "^## ADR-NNN:"
+to avoid matching the subsection sequence.
+
+DECISION:
+
+  internal/models/    = persistence + transport DTOs
+                        - Every exported field of every exported struct
+                          carries `db:"..."` or `json:"..."` (or both).
+                          arch_test enforces.
+                        - Pointer fields for nullable columns.
+                        - Methods limited to ToDomain() / FromDomain() and
+                          simple validators.
+                        - Imports: stdlib + time + (allowed exception)
+                          internal/domain types referenced via
+                          ToDomain/FromDomain.
+                        - May NOT import internal/database,
+                          internal/adapter/*, internal/api,
+                          internal/handler/*, internal/app/*, or
+                          internal/port/*. arch_test enforces.
+
+  internal/domain/<X>/= business entities + value objects + invariants
+                        - Imports: stdlib + other internal/domain/*
+                          subpackages (including the parent
+                          internal/domain package) ONLY. arch_test
+                          enforces.
+                        - May NOT import internal/models,
+                          internal/database, internal/adapter/*,
+                          internal/api, internal/handler/*,
+                          internal/app/*, internal/port/*.
+                        - Rich methods enforcing invariants permitted.
+                        - MAY carry `db:"..."` / `json:"..."` tags
+                          (today's types do; this is grandfathered).
+                          Tags are NOT prohibited; the rule is the
+                          IMPORT boundary, not tag presence. Future
+                          types should minimize tags when feasible.
+
+CONVERSION POLICY:
+  - Repos in internal/adapter/postgres or internal/database return
+    models.X by default. The matching internal/app/<name>svc method
+    calls models.X.ToDomain() before applying business logic.
+  - HTTP handlers under internal/handler/v1 accept request DTOs from
+    internal/handler/dto and convert via dto -> domain.
+
+RATIONALE:
+  - Today's practice was undocumented; this ADR codifies what is
+    actually safe to enforce: the import boundary. Domain stays
+    portable (no DB or HTTP coupling); models stays persistence-aware.
+  - Persistence-first refactors (TimescaleDB column changes) touch
+    models; business-rule changes touch domain.
+  - The "domain MAY have tags" relaxation is honest: most domain types
+    under internal/domain/<X>/types.go currently carry json/db tags
+    (legacy from pre-charter migration). Mass-stripping them is out
+    of scope for this prompt. The arch_test enforces the rule we can
+    defend today (imports), not the rule we'd like to defend
+    eventually (no tags in domain).
+
+EXCEPTIONS:
+  - Legacy types under internal/api/* (FROZEN per ADR-009) often blur
+    the line. They are grandfathered until the per-endpoint migration
+    moves them. arch_test does NOT enforce the charter on
+    internal/api.
+  - The vendored Tesla proto (api/proto/tesla/) carries upstream-named
+    identifiers that may violate Phase-48 SI canonical naming (e.g.
+    proto field 256 ChargeRateMilePerHour whose wire content is
+    meters of range added per hour). The proto identifier MUST stay
+    verbatim (it is upstream-owned); the misnomer is documented via
+    SignalMeta.UnitKind + the JSON wire field name + the
+    TestRangeAddedMetersPerHour_R2_AuditPin invariant. This ADR's
+    import test does NOT touch internal/tesla/protomodel/.
+
+PHASE-48 SI CANONICAL HARD RULE:
+  All numeric fields in internal/models/, internal/domain/<X>/,
+  internal/handler/dto/, internal/app/<X>svc/, and
+  internal/adapter/postgres/ MUST use SI units: meters (not miles),
+  m/s (not mph), Wh (not kWh), Pa (not psi/bar), degC (not degF).
+  Field name suffixes must reflect the unit (M for meters, MS for
+  m/s, Wh for watt-hours, Pa for pascals, C for celsius). User-
+  setting fields that are configuration not measurement (e.g.
+  BaseCostPerKWh, cooldown_min, value_min, dwell_minutes) are
+  explicitly allowed to keep human-readable units. See:
+  .github/prompts/db-refactor/phase-48-si-canonical/0000-methodology.prompt.md
+
+ROLLBACK:
+  - If maintaining two parallel hierarchies proves too costly,
+    propose a superseding ADR with a clear merge plan. Do not
+    silently merge.
+```
