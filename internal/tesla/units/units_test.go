@@ -171,19 +171,19 @@ func TestActiveUnit_StringValuesStable(t *testing.T) {
 	}
 }
 
-// TestChargeRateMilePerHour_R2_AuditPin pins the Phase-48 R2 risk-register
+// TestRangeAddedMetersPerHour_R2_AuditPin pins the Phase-48 R2 risk-register
 // finding so a future codec / metadata change cannot silently re-classify
 // the field and corrupt charge-rate JSON output.
 //
 // R2 finding (.github/prompts/db-refactor/phase-48-si-canonical/0000-methodology.prompt.md):
 //
-//	The ChargeRateMilePerHour proto field is metadata-typed
+//	The RangeAddedMetersPerHour proto field is metadata-typed
 //	UnitKindDistance, NOT UnitKindSpeed. After ToSI(...) with a Miles
 //	user setting, the value flowing into signal.Store and downstream
 //	JSON is "meters of range added per hour" (raw mph * 1609.344), NOT
 //	a true SI velocity in m/s.
 //
-// The downstream JSON field name `charge_rate_mph` is therefore a
+// The downstream JSON field name `range_added_meters_per_hour` is therefore a
 // misnomer — the value at runtime is m/h, not mph. Slice 2 of the SI
 // canonical mega-PR renames the JSON field to a name that reflects the
 // real semantics (e.g. `range_added_meters_per_hour`) and is documented
@@ -194,10 +194,10 @@ func TestActiveUnit_StringValuesStable(t *testing.T) {
 // JSON name) or removes the speed-override classification path —
 // either change MUST be a coordinated codec-and-rename PR, never an
 // invisible metadata flip.
-func TestChargeRateMilePerHour_R2_AuditPin(t *testing.T) {
+func TestRangeAddedMetersPerHour_R2_AuditPin(t *testing.T) {
 	t.Parallel()
 
-	const field = "ChargeRateMilePerHour"
+	const field = "RangeAddedMetersPerHour"
 
 	// Pin: the field MUST be UnitKindDistance per the methodology's
 	// R2 finding. A future rename PR that changes this MUST also

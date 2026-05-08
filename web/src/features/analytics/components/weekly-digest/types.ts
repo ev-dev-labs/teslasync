@@ -10,7 +10,7 @@ export interface Drive {
 export interface ChargingSession {
   id: number;
   start_ts: string;
-  energy_added_kwh: number;
+  total_energy_added_wh: number;
   cost: number;
   duration_min: number;
   start_battery_pct: number;

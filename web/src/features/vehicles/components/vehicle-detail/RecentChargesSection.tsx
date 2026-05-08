@@ -24,7 +24,7 @@ function useChargeColumns(): Column<ChargingSession>[] {
     {
       key: 'energy',
       header: t('common.energy', 'Energy'),
-      render: (s) => `${fmtNumber(s.energy_added_kwh)} kWh`,
+      render: (s) => `${fmtNumber(s.total_energy_added_wh)} kWh`,
       sortable: true,
     },
     {
@@ -41,9 +41,9 @@ function useChargeColumns(): Column<ChargingSession>[] {
       key: 'battery',
       header: t('common.battery', 'Battery'),
       render: (s) =>
-        s.end_battery_pct != null
-          ? `${s.start_battery_pct}% → ${s.end_battery_pct}%`
-          : `${s.start_battery_pct}%`,
+        s.end_soc_pct != null
+          ? `${s.start_soc_pct}% → ${s.end_soc_pct}%`
+          : `${s.start_soc_pct}%`,
     },
   ]
 }

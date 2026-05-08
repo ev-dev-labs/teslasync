@@ -11,6 +11,7 @@ import { formatDurationMinutes } from '@/lib/dateFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
 import { fmtNumber, fmtWithUnit, fmtInt } from '@/lib/numberFormat';
 import type { ChargingSession } from '@/api/types';
+import { distanceAddedM, durationMinutes } from './charging-curve/helpers';
 
 type ChargerCategory = 'supercharger' | 'dc' | 'home';
 
@@ -45,17 +46,19 @@ export function ChargingSessionCard({ session, toDistanceDisplay, distanceUnit, 
   };
 
   const batteryGain =
-    (session.end_battery_pct ?? session.start_battery_pct) - session.start_battery_pct;
+    (session.end_soc_pct ?? session.start_soc_pct ?? 0) - (session.start_soc_pct ?? 0);
+  const durationMin = durationMinutes(session.started_at, session.ended_at);
   const avgRate =
-    session.duration_min > 0
-      ? fmtNumber(session.energy_added_kwh / (session.duration_min / 60))
+    durationMin > 0
+      ? fmtNumber((session.total_energy_added_wh ?? 0) / 1000 / (durationMin / 60))
       : null;
   const cat = getChargerCategory(session.charger_type);
   const costPerKwh =
-    session.cost && session.energy_added_kwh > 0
-      ? session.cost / session.energy_added_kwh
+    session.cost_decimal && (session.total_energy_added_wh ?? 0) > 0
+      ? session.cost_decimal / ((session.total_energy_added_wh ?? 0) / 1000)
       : null;
-  const milesGained = session.miles_added != null ? toDistanceDisplay(session.miles_added) : null;
+  const addedM = distanceAddedM(session);
+  const milesGained = addedM != null ? toDistanceDisplay(addedM / 1000) : null;
 
   const showCheckbox = typeof onToggleSelect === 'function';
 
@@ -76,16 +79,16 @@ export function ChargingSessionCard({ session, toDistanceDisplay, distanceUnit, 
       <GlassPanel hover glow="green" className="p-4 transition-all duration-normal group cursor-pointer">
         <div className="flex items-center gap-4">
           <ProgressRing
-            value={session.end_battery_pct ?? session.start_battery_pct}
+            value={session.end_soc_pct ?? session.start_soc_pct}
             max={100}
             size={48}
             strokeWidth={4}
             color={CHARGER_COLORS[cat]}
-            label={`${session.end_battery_pct ?? session.start_battery_pct}%`}
+            label={`${session.end_soc_pct ?? session.start_soc_pct}%`}
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <TimeStamp value={session.start_ts} className="text-sm font-semibold text-[var(--text-primary)]" />
+              <TimeStamp value={session.started_at} className="text-sm font-semibold text-[var(--text-primary)]" />
               <Badge
                 variant={cat === 'supercharger' ? 'danger' : cat === 'dc' ? 'warning' : 'success'}
               >
@@ -98,16 +101,16 @@ export function ChargingSessionCard({ session, toDistanceDisplay, distanceUnit, 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
               <InlineMetric
                 icon={<Zap className="h-3 w-3" />}
-                value={fmtWithUnit(session.energy_added_kwh ?? 0, 'kWh')}
+                value={fmtWithUnit((session.total_energy_added_wh ?? 0) / 1000, 'kWh')}
               />
               <InlineMetric
                 icon={<Clock className="h-3 w-3" />}
-                value={formatDurationMinutes(session.duration_min)}
+                value={formatDurationMinutes(durationMin)}
               />
-              {session.charger_power_kw_max != null && (
+              {session.peak_power_w != null && (
                 <InlineMetric
                   icon={<TrendingUp className="h-3 w-3" />}
-                  value={`${fmtNumber(session.charger_power_kw_max)} kW peak`}
+                  value={`${fmtNumber(session.peak_power_w / 1000)} kW peak`}
                 />
               )}
               {avgRate && (
@@ -116,10 +119,10 @@ export function ChargingSessionCard({ session, toDistanceDisplay, distanceUnit, 
                   value={`~${avgRate} kW avg`}
                 />
               )}
-              {typeof session.cost === 'number' && (
+               {typeof session.cost_decimal === 'number' && (
                 <InlineMetric
                   icon={<DollarSign className="h-3 w-3" />}
-                  value={`$${fmtNumber(session.cost)}`}
+                   value={`$${fmtNumber(session.cost_decimal)}`}
                   className="text-emerald-300"
                 />
               )}
@@ -132,10 +135,10 @@ export function ChargingSessionCard({ session, toDistanceDisplay, distanceUnit, 
                 </span>
               )}
             </div>
-            {session.charger_location && (
+            {session.start_place && (
               <div className="mt-1 text-[10px] text-[var(--text-secondary)] flex items-center gap-1 truncate">
                 <Home className="h-2.5 w-2.5 shrink-0" />
-                <span className="truncate">{session.charger_location}</span>
+                <span className="truncate">{session.start_place}</span>
               </div>
             )}
           </div>

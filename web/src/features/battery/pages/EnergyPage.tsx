@@ -54,14 +54,14 @@ function CostComparisonCard({
       <div className="flex items-center gap-4 mb-3">
         <div>
           <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-            {t('energy.cost.evCost', 'EV Cost')}
+            {t('energy.cost_decimal.evCost', 'EV Cost')}
           </p>
           <p className="text-lg font-bold text-cyan-300"><Currency value={evCost ?? 0} /></p>
         </div>
         <ArrowRight className="h-4 w-4 text-[var(--text-muted)]" />
         <div>
           <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-            {t('energy.cost.gasEquivalent', 'Gas Equivalent')}
+            {t('energy.cost_decimal.gasEquivalent', 'Gas Equivalent')}
           </p>
           <p className="text-lg font-bold text-[var(--text-secondary)]">
             <Currency value={gasCost ?? 0} />
@@ -70,10 +70,10 @@ function CostComparisonCard({
       </div>
       <div className="flex items-center gap-2">
         <span className="text-sm font-bold text-emerald-300">
-          {t('energy.cost.saving', 'Saving')} <Currency value={savings ?? 0} />
+          {t('energy.cost_decimal.saving', 'Saving')} <Currency value={savings ?? 0} />
         </span>
         <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green font-semibold">
-          {fmtPercent(savingsPct ?? 0)} {t('energy.cost.less', 'less')}
+          {fmtPercent(savingsPct ?? 0)} {t('energy.cost_decimal.less', 'less')}
         </span>
       </div>
     </GlassPanel>
@@ -171,8 +171,8 @@ export default function EnergyPage() {
   const { data: liveCharging } = useChargingTelemetryLatest(vehicleId ?? 0);
 
   /* ── Derived metrics ──────────────────────────────────────────── */
-  const totalEnergy = sessions?.reduce((s, c) => s + c.energy_added_kwh, 0) ?? 0;
-  const totalCost = sessions?.reduce((s, c) => s + (c.cost ?? 0), 0) ?? 0;
+  const totalEnergy = sessions?.reduce((s, c) => s + c.total_energy_added_wh, 0) ?? 0;
+  const totalCost = sessions?.reduce((s, c) => s + (c.cost_decimal ?? 0), 0) ?? 0;
   const avgEfficiency = stats?.avg_efficiency_wh_per_mi ?? 0;
   const totalDistance = stats?.total_distance_mi ?? 0;
   const co2Saved = stats?.co2_saved_kg ?? totalEnergy * 0.42;
@@ -217,10 +217,10 @@ export default function EnergyPage() {
     const buckets: Record<string, { count: number; energy: number }> = {};
     labels.forEach((l) => { buckets[l] = { count: 0, energy: 0 }; });
     sessions.forEach((s) => {
-      const hour = new Date(s.start_ts).getHours();
+      const hour = new Date(s.started_at).getHours();
       const idx = hour < 6 ? 0 : hour < 12 ? 1 : hour < 18 ? 2 : 3;
       buckets[labels[idx]].count++;
-      buckets[labels[idx]].energy += s.energy_added_kwh;
+      buckets[labels[idx]].energy += s.total_energy_added_wh;
     });
     return labels.map((name) => ({ name, ...buckets[name] }));
   }, [sessions, t]);
@@ -235,8 +235,8 @@ export default function EnergyPage() {
         : s.charger_type ? 'DC Fast' : 'Home/AC';
       if (!types[label]) types[label] = { count: 0, energy: 0, cost: 0 };
       types[label].count++;
-      types[label].energy += s.energy_added_kwh;
-      types[label].cost += s.cost ?? 0;
+      types[label].energy += s.total_energy_added_wh;
+      types[label].cost += s.cost_decimal ?? 0;
     });
     return Object.entries(types).map(([name, data]) => ({
       name,
@@ -252,7 +252,7 @@ export default function EnergyPage() {
       header: t('energy.table.date', 'Date'),
       render: (s) => (
         <Link to={`/charging/${s.id}`} className="hover:text-cyan-300 transition-colors">
-          {formatDateShort(s.start_ts)}
+          {formatDateShort(s.started_at)}
         </Link>
       ),
     },
@@ -261,7 +261,7 @@ export default function EnergyPage() {
       header: t('energy.table.energy', 'Energy'),
       render: (s) => (
         <span className="text-cyan-300 font-medium">
-          {fmtNumber(s.energy_added_kwh ?? 0)} kWh
+          {fmtNumber(s.total_energy_added_wh ?? 0)} kWh
         </span>
       ),
     },
@@ -270,16 +270,16 @@ export default function EnergyPage() {
       header: t('energy.table.battery', 'Battery'),
       render: (s) => (
         <>
-          <span className="text-[var(--text-muted)]">{s.start_battery_pct}%</span>
+          <span className="text-[var(--text-muted)]">{s.start_soc_pct}%</span>
           <span className="text-gray-700 mx-1">→</span>
-          <span className="text-emerald-300">{s.end_battery_pct ?? '—'}%</span>
+          <span className="text-emerald-300">{s.end_soc_pct ?? '—'}%</span>
         </>
       ),
     },
     {
       key: 'power',
       header: t('energy.table.power', 'Power'),
-      render: (s) => <>{s.charger_power_kw_max != null ? `${fmtNumber(s.charger_power_kw_max)} kW` : '—'}</>,
+      render: (s) => <>{s.peak_power_w != null ? `${fmtNumber(s.peak_power_w)} kW` : '—'}</>,
     },
     {
       key: 'type',
@@ -302,16 +302,16 @@ export default function EnergyPage() {
     },
     {
       key: 'cost',
-      header: t('energy.table.cost', 'Cost'),
-      render: (s) => <>{typeof s.cost === 'number' ? `$${fmtNumber(s.cost)}` : '—'}</>,
+      header: t('energy.table.cost_decimal', 'Cost'),
+      render: (s) => <>{typeof s.cost_decimal === 'number' ? `$${fmtNumber(s.cost_decimal)}` : '—'}</>,
     },
     {
       key: 'perKwh',
       header: t('energy.table.perKwh', '$/kWh'),
       render: (s) => (
         <span className="text-[var(--text-muted)]">
-          {typeof s.cost === 'number' && s.energy_added_kwh > 0
-            ? `$${fmtNumber(s.cost / s.energy_added_kwh)}`
+          {typeof s.cost_decimal === 'number' && s.total_energy_added_wh > 0
+            ? `$${fmtNumber(s.cost_decimal / s.total_energy_added_wh)}`
             : '—'}
         </span>
       ),
@@ -464,7 +464,7 @@ export default function EnergyPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FadeIn>
           <CostComparisonCard
-            label={t('energy.cost.periodTotal', { days: periodDays, defaultValue: '{{days}}-Day Total' })}
+            label={t('energy.cost_decimal.periodTotal', { days: periodDays, defaultValue: '{{days}}-Day Total' })}
             evCost={totalCost}
             gasCost={gasEquivalent}
             icon={<Fuel className="h-4 w-4" />}
@@ -472,7 +472,7 @@ export default function EnergyPage() {
         </FadeIn>
         <FadeIn delay={0.05}>
           <CostComparisonCard
-            label={t('energy.cost.projectedAnnual', 'Projected Annual')}
+            label={t('energy.cost_decimal.projectedAnnual', 'Projected Annual')}
             evCost={yearlyProjectedCost}
             gasCost={(gasEquivalent / periodDays) * 365}
             icon={<Leaf className="h-4 w-4" />}
@@ -749,7 +749,7 @@ export default function EnergyPage() {
                             <span className="text-cyan-300">{fmtNumber(b.energy ?? 0)} kWh</span>
                             <span className="text-emerald-300"><Currency value={b.cost ?? 0} /></span>
                             <span className="text-[var(--text-muted)]">
-                              <Currency value={b.energy > 0 ? b.cost / b.energy : 0} precision={3} />/kWh
+                              <Currency value={b.energy > 0 ? b.cost / (b.energy / 1000) : 0} precision={3} />/kWh
                             </span>
                           </div>
                         </div>

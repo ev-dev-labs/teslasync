@@ -8,28 +8,28 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/rs/zerolog/log"
 )
 
 // WatchSummary is the minimal data needed for a watch face display.
 type WatchSummary struct {
-	VehicleName string  `json:"vehicle_name"`
-	State       string  `json:"state"`
-	BatteryLevel int    `json:"battery_level"`
-	RangeKm     float64 `json:"range_km"`
-	IsCharging  bool    `json:"is_charging"`
-	ChargeRate  float64 `json:"charge_rate"`
-	TimeToFull  float64 `json:"time_to_full"`
-	IsLocked    bool    `json:"is_locked"`
-	SentryMode  bool    `json:"sentry_mode"`
-	InsideTemp  float64 `json:"inside_temp_c"`
-	OutsideTemp float64 `json:"outside_temp_c"`
-	IsClimateOn bool    `json:"is_climate_on"`
-	LastUpdated string  `json:"last_updated"`
+	VehicleName  string  `json:"vehicle_name"`
+	State        string  `json:"state"`
+	BatteryLevel int     `json:"battery_level"`
+	RangeKm      float64 `json:"range_km"`
+	IsCharging   bool    `json:"is_charging"`
+	ChargeRate   float64 `json:"charge_rate"`
+	TimeToFull   float64 `json:"time_to_full"`
+	IsLocked     bool    `json:"is_locked"`
+	SentryMode   bool    `json:"sentry_mode"`
+	InsideTemp   float64 `json:"inside_temp_c"`
+	OutsideTemp  float64 `json:"outside_temp_c"`
+	IsClimateOn  bool    `json:"is_climate_on"`
+	LastUpdated  string  `json:"last_updated"`
 }
 
 // WatchComplication is the absolute minimum for Apple Watch complications.
@@ -67,10 +67,10 @@ func (h *WatchHandler) WithRedisCache(cache *signal.RedisSignalCache) *WatchHand
 
 // watchCommands is the limited set of commands available from a watch.
 var watchCommands = map[string]bool{
-	"lock":        true,
-	"unlock":      true,
-	"climate_on":  true,
-	"climate_off": true,
+	"lock":         true,
+	"unlock":       true,
+	"climate_on":   true,
+	"climate_off":  true,
 	"charge_start": true,
 	"charge_stop":  true,
 	"flash_lights": true,
@@ -246,7 +246,7 @@ func (h *WatchHandler) queryWatchSummary(ctx context.Context, vehicleID int64) (
 
 	insideTemp, _ := signalFloat(signals, "InsideTemp")
 	outsideTemp, _ := signalFloat(signals, "OutsideTemp")
-	chargeRate, _ := signalFloat(signals, "ChargeRateMilePerHour")
+	chargeRate, _ := signalFloat(signals, "RangeAddedMetersPerHour")
 
 	// TimeToFullCharge is in hours — convert to minutes
 	ttf, _ := signalFloat(signals, "TimeToFullCharge")
@@ -344,8 +344,8 @@ func stateEmoji(state string) string {
 }
 
 func derefInt(p *int) int {
-if p == nil {
-return 0
-}
-return *p
+	if p == nil {
+		return 0
+	}
+	return *p
 }

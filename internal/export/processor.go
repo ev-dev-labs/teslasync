@@ -78,15 +78,15 @@ type driveRow struct {
 // session row in the charging export. Lifted to package scope for the
 // same reason as driveRow.
 type chargingRow struct {
-	ID           int64   `json:"id"`
-	VehicleID    int64   `json:"vehicle_id"`
-	StartDate    string  `json:"start_date"`
-	EndDate      string  `json:"end_date"`
-	EnergyAdded  float64 `json:"energy_added_kwh"`
-	StartBattery int     `json:"start_battery"`
-	EndBattery   int     `json:"end_battery"`
-	ChargerPower float64 `json:"charger_power"`
-	Duration     float64 `json:"duration_min"`
+	ID          int64   `json:"id"`
+	VehicleID   int64   `json:"vehicle_id"`
+	StartedAt   string  `json:"started_at"`
+	EndedAt     string  `json:"ended_at"`
+	EnergyAdded float64 `json:"total_energy_added_wh"`
+	StartSocPct float64 `json:"start_soc_pct"`
+	EndSocPct   float64 `json:"end_soc_pct"`
+	PeakPowerW  float64 `json:"peak_power_w"`
+	DurationS   float64 `json:"duration_s"`
 }
 
 func (p *Processor) processDrives(ctx context.Context, req *JobRequest) (*ProcessResult, error) {
@@ -275,17 +275,17 @@ func (p *Processor) processCharging(ctx context.Context, req *JobRequest) (*Proc
 			}
 			for _, s := range sessions {
 				es := chargingRow{
-					ID:           s.ID,
-					VehicleID:    s.VehicleID,
-					StartDate:    s.StartTs.Format("2006-01-02T15:04:05Z"),
-					EnergyAdded:  ptrFloat(s.EnergyAddedKwh),
-					StartBattery: ptrInt16(s.StartBatteryPct),
-					EndBattery:   ptrInt16(s.EndBatteryPct),
-					ChargerPower: ptrFloat(s.ChargerPowerKwMax),
-					Duration:     ptrFloat(s.DurationMin),
+					ID:          s.ID,
+					VehicleID:   s.VehicleID,
+					StartedAt:   s.StartedAt.Format("2006-01-02T15:04:05Z"),
+					EnergyAdded: ptrFloat(s.TotalEnergyAddedWh),
+					StartSocPct: ptrFloat(s.StartSocPct),
+					EndSocPct:   ptrFloat(s.EndSocPct),
+					PeakPowerW:  ptrFloat(s.PeakPowerW),
 				}
-				if s.EndTs != nil {
-					es.EndDate = s.EndTs.Format("2006-01-02T15:04:05Z")
+				if s.EndedAt != nil {
+					es.EndedAt = s.EndedAt.Format("2006-01-02T15:04:05Z")
+					es.DurationS = s.EndedAt.Sub(s.StartedAt).Seconds()
 				}
 				allSessions = append(allSessions, es)
 			}
@@ -346,20 +346,20 @@ func csvCellForCharging(s chargingRow, col string) string {
 		return strconv.FormatInt(s.ID, 10)
 	case "vehicle_id":
 		return strconv.FormatInt(s.VehicleID, 10)
-	case "start_date":
-		return s.StartDate
-	case "end_date":
-		return s.EndDate
-	case "energy_added_kwh":
+	case "started_at":
+		return s.StartedAt
+	case "ended_at":
+		return s.EndedAt
+	case "total_energy_added_wh":
 		return fmt.Sprintf("%.2f", s.EnergyAdded)
-	case "start_battery":
-		return strconv.Itoa(s.StartBattery)
-	case "end_battery":
-		return strconv.Itoa(s.EndBattery)
-	case "charger_power":
-		return fmt.Sprintf("%.1f", s.ChargerPower)
-	case "duration_min":
-		return fmt.Sprintf("%.1f", s.Duration)
+	case "start_soc_pct":
+		return fmt.Sprintf("%.1f", s.StartSocPct)
+	case "end_soc_pct":
+		return fmt.Sprintf("%.1f", s.EndSocPct)
+	case "peak_power_w":
+		return fmt.Sprintf("%.1f", s.PeakPowerW)
+	case "duration_s":
+		return fmt.Sprintf("%.0f", s.DurationS)
 	default:
 		return ""
 	}
@@ -373,20 +373,20 @@ func jsonCellForCharging(s chargingRow, col string) any {
 		return s.ID
 	case "vehicle_id":
 		return s.VehicleID
-	case "start_date":
-		return s.StartDate
-	case "end_date":
-		return s.EndDate
-	case "energy_added_kwh":
+	case "started_at":
+		return s.StartedAt
+	case "ended_at":
+		return s.EndedAt
+	case "total_energy_added_wh":
 		return s.EnergyAdded
-	case "start_battery":
-		return s.StartBattery
-	case "end_battery":
-		return s.EndBattery
-	case "charger_power":
-		return s.ChargerPower
-	case "duration_min":
-		return s.Duration
+	case "start_soc_pct":
+		return s.StartSocPct
+	case "end_soc_pct":
+		return s.EndSocPct
+	case "peak_power_w":
+		return s.PeakPowerW
+	case "duration_s":
+		return s.DurationS
 	default:
 		return nil
 	}

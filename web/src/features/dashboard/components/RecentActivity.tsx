@@ -44,16 +44,16 @@ export function RecentActivity({
     activityItems.push({
       type: 'drive',
       title: `${fmtNumber(convertDistanceFromSI(d.distance_m ?? 0, distanceUnit === 'mi' ? 'mi' : 'km'), 1)} ${distanceUnit} ${t('activity.drive', 'drive')}`,
-      subtitle: `${Math.floor((d.duration_s ?? 0) / 3600)}h ${fmtInt(Math.floor(((d.duration_s ?? 0) % 3600) / 60))}m · ${d.start_battery_pct ?? '?'}% → ${d.end_battery_pct ?? '?'}%`,
-      time: new Date(d.start_ts),
+      subtitle: `${Math.floor((d.duration_s ?? 0) / 3600)}h ${fmtInt(Math.floor(((d.duration_s ?? 0) % 3600) / 60))}m · ${d.start_soc_pct ?? '?'}% → ${d.end_soc_pct ?? '?'}%`,
+      time: new Date(d.started_at),
     }),
   );
   recentCharges?.forEach((s) =>
     activityItems.push({
       type: 'charge',
-      title: `${fmtNumber(s.energy_added_kwh ?? 0, 1)} kWh ${t('activity.charged', 'charged')}`,
-      subtitle: `${s.start_battery_pct ?? '?'}% → ${s.end_battery_pct ?? '?'}%${typeof s.cost === 'number' ? ` · $${fmtNumber(s.cost, 2)}` : ''}`,
-      time: new Date(s.start_ts),
+      title: `${fmtNumber(s.total_energy_added_wh ?? 0, 1)} kWh ${t('activity.charged', 'charged')}`,
+      subtitle: `${s.start_soc_pct ?? '?'}% → ${s.end_soc_pct ?? '?'}%${typeof s.cost === 'number' ? ` · $${fmtNumber(s.cost, 2)}` : ''}`,
+      time: new Date(s.started_at),
     }),
   );
   activityItems.sort((a, b) => b.time.getTime() - a.time.getTime());
@@ -61,7 +61,7 @@ export function RecentActivity({
   // Battery trend for chart
   const batteryTrend = recentDrives?.map((d, i) => ({
     i: String(i),
-    v: d.end_battery_pct ?? 50,
+    v: d.end_soc_pct ?? 50,
   })).reverse() ?? [];
 
   return (

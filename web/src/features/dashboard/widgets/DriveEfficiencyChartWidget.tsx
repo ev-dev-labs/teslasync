@@ -38,8 +38,8 @@ function estimateEfficiency(d: Drive): number | null {
   }
 
   // Fallback: estimate from battery pct
-  const startBatt = d.start_battery_pct;
-  const endBatt = d.end_battery_pct;
+  const startBatt = d.start_soc_pct;
+  const endBatt = d.end_soc_pct;
   if (startBatt == null || endBatt == null) return null;
   const battUsed = startBatt - endBatt;
   if (battUsed <= 0) return null;

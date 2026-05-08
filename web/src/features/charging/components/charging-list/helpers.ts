@@ -3,6 +3,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
 import { getChargerCategory } from '../ChargingSessionCard';
 import type { ChargingSession } from '@/api/types';
+import { durationMinutes } from '../charging-curve/helpers';
 import type { TFunction } from 'i18next';
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -77,12 +78,12 @@ export interface StartLevelBucket { range: string; count: number }
 
 export function computeStats(sessions: ChargingSession[]): ChargingStats | null {
   if (sessions.length === 0) return null;
-  const totalEnergy = sessions.reduce((sum, s) => sum + s.energy_added_kwh, 0);
-  const totalCost = sessions.reduce((sum, s) => sum + (s.cost ?? 0), 0);
-  const totalDuration = sessions.reduce((sum, s) => sum + s.duration_min, 0);
-  const withPower = sessions.filter((s) => s.charger_power_kw_max);
+  const totalEnergy = sessions.reduce((sum, s) => sum + s.total_energy_added_wh, 0);
+  const totalCost = sessions.reduce((sum, s) => sum + (s.cost_decimal ?? 0), 0);
+  const totalDuration = sessions.reduce((sum, s) => sum + durationMinutes(s.started_at, s.ended_at), 0);
+  const withPower = sessions.filter((s) => s.peak_power_w);
   const avgPower =
-    withPower.reduce((sum, s) => sum + (s.charger_power_kw_max ?? 0), 0) / Math.max(withPower.length, 1);
+    withPower.reduce((sum, s) => sum + (s.peak_power_w ?? 0), 0) / Math.max(withPower.length, 1);
   const avgCostPerKwh = totalEnergy > 0 ? totalCost / totalEnergy : 0;
   const homeCount = sessions.filter((s) => getChargerCategory(s.charger_type) === 'home').length;
   const scCount = sessions.filter((s) => getChargerCategory(s.charger_type) === 'supercharger').length;
@@ -103,9 +104,9 @@ export function computeEnergyTrend(sessions: ChargingSession[]): EnergyTrendPoin
     .slice(0, 20)
     .reverse()
     .map((s) => ({
-      date: formatDateShort(s.start_ts),
-      energy: parseFloat(fmtNumber(s.energy_added_kwh ?? 0, 1)),
-      cost: s.cost ?? 0,
+      date: formatDateShort(s.started_at),
+      energy: parseFloat(fmtNumber(s.total_energy_added_wh ?? 0, 1)),
+      cost: s.cost_decimal ?? 0,
     }));
 }
 
@@ -117,15 +118,15 @@ export function computeCostByType(
   sessions.forEach((s) => {
     const cat = chargerLabels[getChargerCategory(s.charger_type)];
     if (!groups[cat]) groups[cat] = { energy: 0, cost: 0, count: 0 };
-    groups[cat].energy += s.energy_added_kwh;
-    groups[cat].cost += s.cost ?? 0;
+    groups[cat].energy += s.total_energy_added_wh;
+    groups[cat].cost += s.cost_decimal ?? 0;
     groups[cat].count++;
   });
   return Object.entries(groups).map(([name, v]) => ({
     name,
     energy: parseFloat(fmtNumber(v.energy, 1)),
     cost: parseFloat(fmtNumber(v.cost, 2)),
-    perKwh: v.energy > 0 ? parseFloat(fmtNumber(v.cost / v.energy, 3)) : 0,
+    perKwh: v.energy > 0 ? parseFloat(fmtNumber(v.cost / (v.energy / 1000), 3)) : 0,
   }));
 }
 
@@ -135,7 +136,7 @@ export function computeStartLevelDist(sessions: ChargingSession[]): StartLevelBu
     count: 0,
   }));
   sessions.forEach((s) => {
-    const idx = Math.min(Math.floor(s.start_battery_pct / 10), 9);
+    const idx = Math.min(Math.floor(s.start_soc_pct / 10), 9);
     buckets[idx].count++;
   });
   return buckets;
@@ -145,16 +146,16 @@ export function computeAcDcBreakdown(sessions: ChargingSession[]): AcDcBreakdown
   const ac: AcDcBucket = { energy: 0, energyUsed: 0, cost: 0, count: 0, totalDuration: 0, freeCount: 0, freeEnergy: 0 };
   const dc: AcDcBucket = { energy: 0, energyUsed: 0, cost: 0, count: 0, totalDuration: 0, freeCount: 0, freeEnergy: 0 };
   sessions.forEach((s) => {
-    const isDC = !!(s.charger_type || (s.charger_power_kw_max && s.charger_power_kw_max > 22));
+    const isDC = !!(s.charger_type || (s.peak_power_w && s.peak_power_w > 22));
     const bucket = isDC ? dc : ac;
-    bucket.energy += s.energy_added_kwh;
-    bucket.energyUsed += s.energy_added_kwh;
-    bucket.cost += s.cost ?? 0;
+    bucket.energy += s.total_energy_added_wh;
+    bucket.energyUsed += s.total_energy_added_wh;
+    bucket.cost += s.cost_decimal ?? 0;
     bucket.count++;
-    bucket.totalDuration += s.duration_min;
-    if (!s.cost || s.cost === 0) {
+    bucket.totalDuration += durationMinutes(s.started_at, s.ended_at);
+    if (!s.cost_decimal || s.cost_decimal === 0) {
       bucket.freeCount++;
-      bucket.freeEnergy += s.energy_added_kwh;
+      bucket.freeEnergy += s.total_energy_added_wh;
     }
   });
   return {
@@ -172,20 +173,20 @@ export function computeAcDcBreakdown(sessions: ChargingSession[]): AcDcBreakdown
 export function computeEfficiencyStats(sessions: ChargingSession[]): EfficiencyStats | null {
   if (sessions.length === 0) return null;
   const withData = sessions.filter(
-    (s) => s.energy_added_kwh > 0 && s.duration_min > 0,
+    (s) => s.total_energy_added_wh > 0 && durationMinutes(s.started_at, s.ended_at) > 0,
   );
   if (withData.length === 0) return null;
   const efficiencies = withData.map((s) => ({
     id: s.id,
-    date: s.start_ts,
-    efficiency: (s.energy_added_kwh / s.duration_min) * 60,
-    added: s.energy_added_kwh,
-    used: s.energy_added_kwh,
+    date: s.started_at,
+    efficiency: (s.total_energy_added_wh / durationMinutes(s.started_at, s.ended_at)) * 60,
+    added: s.total_energy_added_wh,
+    used: s.total_energy_added_wh,
   }));
-  const totalAdded = withData.reduce((sum, s) => sum + s.energy_added_kwh, 0);
+  const totalAdded = withData.reduce((sum, s) => sum + s.total_energy_added_wh, 0);
   const totalUsed = totalAdded;
   const avgEfficiency = withData.length > 0
-    ? withData.reduce((sum, s) => sum + (s.energy_added_kwh / s.duration_min) * 60, 0) / withData.length
+    ? withData.reduce((sum, s) => sum + (s.total_energy_added_wh / durationMinutes(s.started_at, s.ended_at)) * 60, 0) / withData.length
     : 0;
   const sorted = [...efficiencies].sort((a, b) => b.efficiency - a.efficiency);
   return {
@@ -208,32 +209,12 @@ export function computeChargerSpecs(sessions: ChargingSession[]): ChargerSpecsDa
     const typeKey = s.charger_type ?? 'AC/Home';
     if (!byType[typeKey]) byType[typeKey] = { count: 0, energy: 0, power: 0 };
     byType[typeKey].count++;
-    byType[typeKey].energy += s.energy_added_kwh;
-    byType[typeKey].power += s.charger_power_kw_max ?? 0;
+    byType[typeKey].energy += s.total_energy_added_wh;
+    byType[typeKey].power += s.peak_power_w ?? 0;
   });
 
-  // Group by voltage range
   const byVoltage: Record<string, { count: number; energy: number; power: number }> = {};
-  sessions.forEach((s) => {
-    if (s.max_charger_voltage != null) {
-      const range = s.max_charger_voltage > 300 ? 'DC (400V+)'
-        : s.max_charger_voltage > 200 ? '240V' : '120V';
-      if (!byVoltage[range]) byVoltage[range] = { count: 0, energy: 0, power: 0 };
-      byVoltage[range].count++;
-      byVoltage[range].energy += s.energy_added_kwh;
-    }
-  });
-
-  // Group by phases
   const byPhase: Record<string, { count: number; energy: number; power: number }> = {};
-  sessions.forEach((s) => {
-    if (s.charger_phases != null) {
-      const key = `${s.charger_phases}-phase`;
-      if (!byPhase[key]) byPhase[key] = { count: 0, energy: 0, power: 0 };
-      byPhase[key].count++;
-      byPhase[key].energy += s.energy_added_kwh;
-    }
-  });
 
   // Group by cable type
   const byCable: Record<string, { count: number; energy: number; power: number }> = {};
@@ -241,7 +222,7 @@ export function computeChargerSpecs(sessions: ChargingSession[]): ChargerSpecsDa
     if (s.cable_type) {
       if (!byCable[s.cable_type]) byCable[s.cable_type] = { count: 0, energy: 0, power: 0 };
       byCable[s.cable_type].count++;
-      byCable[s.cable_type].energy += s.energy_added_kwh;
+      byCable[s.cable_type].energy += s.total_energy_added_wh;
     }
   });
 
@@ -282,7 +263,7 @@ export function filterAndSortSessions(
   const q = searchQuery.trim().toLowerCase();
   if (q) {
     filtered = filtered.filter((s) => {
-      const loc = (s.charger_location ?? '').toLowerCase();
+      const loc = (s.start_place ?? '').toLowerCase();
       const type = (s.charger_type ?? '').toLowerCase();
       return loc.includes(q) || type.includes(q);
     });
@@ -291,19 +272,19 @@ export function filterAndSortSessions(
     let cmp = 0;
     switch (sortBy) {
       case 'date':
-        cmp = new Date(b.start_ts).getTime() - new Date(a.start_ts).getTime();
+        cmp = new Date(b.started_at).getTime() - new Date(a.started_at).getTime();
         break;
       case 'energy':
-        cmp = b.energy_added_kwh - a.energy_added_kwh;
+        cmp = b.total_energy_added_wh - a.total_energy_added_wh;
         break;
       case 'cost':
-        cmp = (b.cost ?? 0) - (a.cost ?? 0);
+        cmp = (b.cost_decimal ?? 0) - (a.cost_decimal ?? 0);
         break;
       case 'duration':
-        cmp = b.duration_min - a.duration_min;
+        cmp = durationMinutes(b.started_at, b.ended_at) - durationMinutes(a.started_at, a.ended_at);
         break;
       case 'power':
-        cmp = (b.charger_power_kw_max ?? 0) - (a.charger_power_kw_max ?? 0);
+        cmp = (b.peak_power_w ?? 0) - (a.peak_power_w ?? 0);
         break;
     }
     return sortDesc ? cmp : -cmp;

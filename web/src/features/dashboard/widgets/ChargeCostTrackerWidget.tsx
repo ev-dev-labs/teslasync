@@ -33,7 +33,7 @@ function computeMetrics(
   let totalDistanceMi = 0;
 
   for (const s of sessions) {
-    const energy = s.energy_added_kwh ?? 0;
+    const energy = s.total_energy_added_wh ?? 0;
     totalKwh += energy;
     // Prefer session cost if recorded, otherwise estimate from kWh
     totalCost += s.cost != null ? s.cost : energy * costPerKwh;

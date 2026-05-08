@@ -33,7 +33,7 @@ const catalog: SignalMeta[] = [
   { name: 'ChargePortColdWeatherMode', category: 'Charging', type: 'boolean', description: 'Cold weather mode for charge port' },
   { name: 'ChargePortDoorOpen', category: 'Charging', type: 'boolean', description: 'Charge port door open status' },
   { name: 'ChargePortLatch', category: 'Charging', type: 'string', description: 'Charge port latch status', enumValues: ['Engaged', 'Disengaged', 'Unknown'] },
-  { name: 'ChargeRateMilePerHour', category: 'Charging', type: 'number', unit: 'mi/h', description: 'Charge rate in miles per hour' },
+  { name: 'RangeAddedMetersPerHour', category: 'Charging', type: 'number', unit: 'mi/h', description: 'Charge rate in miles per hour' },
   { name: 'ChargeState', category: 'Charging', type: 'string', description: 'Current charging state', enumValues: ['Charging', 'Complete', 'Disconnected', 'NoPower', 'Starting', 'Stopped'] },
   { name: 'ChargerPhases', category: 'Charging', type: 'number', description: 'Number of charger phases in use' },
   { name: 'ChargerVoltage', category: 'Charging', type: 'number', unit: 'V', description: 'Charger voltage' },

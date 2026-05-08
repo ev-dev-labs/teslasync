@@ -4,7 +4,7 @@ import type { ChargingSession } from '@/api/types';
 import { fmtNumber } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { isDcSession, avg } from './helpers';
+import { isDcSession, avg, durationMinutes } from './helpers';
 import type { TimeToChargeMetrics } from './types';
 import YearlyTrendChart from './YearlyTrendChart';
 
@@ -52,20 +52,20 @@ export default function TimeToChargeSection({ sessions }: TimeToChargeSectionPro
     if (!dcSessions.length) return empty;
 
     const cross10to80 = dcSessions.filter(
-      (s) => s.start_battery_pct <= 10 && (s.end_battery_pct ?? 0) >= 80,
+      (s) => s.start_soc_pct <= 10 && (s.end_soc_pct ?? 0) >= 80,
     );
     const cross20to80 = dcSessions.filter(
-      (s) => s.start_battery_pct <= 20 && (s.end_battery_pct ?? 0) >= 80,
+      (s) => s.start_soc_pct <= 20 && (s.end_soc_pct ?? 0) >= 80,
     );
 
-    const avg10to80 = cross10to80.length ? avg(cross10to80.map((s) => s.duration_min)) : null;
-    const avg20to80 = cross20to80.length ? avg(cross20to80.map((s) => s.duration_min)) : null;
+    const avg10to80 = cross10to80.length ? avg(cross10to80.map((s) => durationMinutes(s.started_at, s.ended_at))) : null;
+    const avg20to80 = cross20to80.length ? avg(cross20to80.map((s) => durationMinutes(s.started_at, s.ended_at))) : null;
 
     const withRate = dcSessions
-      .filter((s) => s.duration_min > 0 && s.energy_added_kwh > 0)
+      .filter((s) => durationMinutes(s.started_at, s.ended_at) > 0 && s.total_energy_added_wh > 0)
       .map((s) => ({
         id: s.id,
-        rate: (s.energy_added_kwh / s.duration_min) * 60,
+        rate: (s.total_energy_added_wh / durationMinutes(s.started_at, s.ended_at)) * 60,
       }));
 
     const fastest = withRate.length
@@ -77,14 +77,14 @@ export default function TimeToChargeSection({ sessions }: TimeToChargeSectionPro
 
     const byYear = new Map<string, { d10: number[]; d20: number[]; count: number }>();
     dcSessions.forEach((s) => {
-      const year = (s.start_ts ?? '').slice(0, 4);
+      const year = (s.started_at ?? '').slice(0, 4);
       if (!byYear.has(year)) byYear.set(year, { d10: [], d20: [], count: 0 });
       const g = byYear.get(year)!;
       g.count++;
-      if (s.start_battery_pct <= 10 && (s.end_battery_pct ?? 0) >= 80)
-        g.d10.push(s.duration_min);
-      if (s.start_battery_pct <= 20 && (s.end_battery_pct ?? 0) >= 80)
-        g.d20.push(s.duration_min);
+      if (s.start_soc_pct <= 10 && (s.end_soc_pct ?? 0) >= 80)
+        g.d10.push(durationMinutes(s.started_at, s.ended_at));
+      if (s.start_soc_pct <= 20 && (s.end_soc_pct ?? 0) >= 80)
+        g.d20.push(durationMinutes(s.started_at, s.ended_at));
     });
 
     const yearlyTrend = Array.from(byYear.entries())

@@ -4800,10 +4800,10 @@ components:
         vehicle_id:
           type: integer
           example: 1
-        start_time:
+        started_at:
           type: string
           format: date-time
-        end_time:
+        ended_at:
           type: string
           format: date-time
         location:
@@ -4815,27 +4815,24 @@ components:
         longitude:
           type: number
           example: -122.4194
-        start_battery_level:
+        start_soc_pct:
           type: integer
           example: 20
-        end_battery_level:
+        end_soc_pct:
           type: integer
           example: 90
-        energy_added_kwh:
+        total_energy_added_wh:
           type: number
-          example: 52.5
-        cost:
+          example: 52500
+        cost_decimal:
           type: number
           example: 8.40
         charger_type:
           type: string
           example: Level 2
-        max_charger_power:
+        peak_power_w:
           type: number
-          example: 11.5
-        duration_minutes:
-          type: number
-          example: 300
+          example: 11500
 
     Position:
       type: object

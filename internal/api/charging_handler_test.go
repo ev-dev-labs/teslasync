@@ -41,25 +41,25 @@ func newChargingRequest(t *testing.T, sessionID, target string) *http.Request {
 }
 
 // completedChargingSession is a minimal fixture for tests that exercise the
-// completed-session path (EndTs != nil → enrichLiveCharge is NOT invoked).
+// completed-session path (EndedAt != nil → enrichLiveCharge is NOT invoked).
 func completedChargingSession(sessionID, vehicleID int64, start, end time.Time) *models.ChargingSession {
 	endCopy := end
 	return &models.ChargingSession{
 		ID:        sessionID,
 		VehicleID: vehicleID,
-		StartTs:   start,
-		EndTs:     &endCopy,
+		StartedAt: start,
+		EndedAt:   &endCopy,
 	}
 }
 
 // inProgressChargingSession is a minimal fixture for tests that exercise the
-// in-progress path (EndTs == nil → enrichLiveCharge IS invoked).
+// in-progress path (EndedAt == nil → enrichLiveCharge IS invoked).
 func inProgressChargingSession(sessionID, vehicleID int64, start time.Time) *models.ChargingSession {
 	return &models.ChargingSession{
 		ID:        sessionID,
 		VehicleID: vehicleID,
-		StartTs:   start,
-		EndTs:     nil,
+		StartedAt: start,
+		EndedAt:   nil,
 	}
 }
 

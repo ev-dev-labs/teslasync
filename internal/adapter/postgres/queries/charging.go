@@ -17,9 +17,9 @@ package queries
 // semantically these are the public read-side contract names already baked
 // into domain/charging.ChargingSession's db tags.
 const (
-	aliasStartSocPct    = "start" + "_battery_pct"
-	aliasEndSocPct      = "end" + "_battery_pct"
-	aliasEnergyAddedKwh = "energy" + "_added_kwh"
+	aliasStartSocPct        = "start" + "_battery_pct"
+	aliasEndSocPct          = "end" + "_battery_pct"
+	aliasTotalEnergyAddedWh = "total_energy_added_wh"
 )
 
 const chargingSessionSelectColumns = `
@@ -28,7 +28,7 @@ const chargingSessionSelectColumns = `
 		       COALESCE(charger_type, '') AS charger_type,
 		       COALESCE(start_soc_pct, 0)::int AS ` + aliasStartSocPct + `,
 		       COALESCE(end_soc_pct, 0)::int AS ` + aliasEndSocPct + `,
-		       COALESCE(total_energy_added_wh, 0) / 1000.0 AS ` + aliasEnergyAddedKwh + `,
+		       COALESCE(total_energy_added_wh, 0) AS ` + aliasTotalEnergyAddedWh + `,
 		       COALESCE(peak_power_w, 0) / 1000.0 AS max_power_kw,
 		       COALESCE((cost_decimal * 100)::int, 0) AS cost_cents,
 		       'completed' AS fsm_state,

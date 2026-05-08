@@ -131,7 +131,7 @@ export default function TeslaChargingHistoryPage() {
     },
     {
       key: 'cost',
-      header: t('tesla_charging.col.cost', 'Cost'),
+      header: t('tesla_charging.col.cost_decimal', 'Cost'),
       render: (row) => (
         <span className="text-sm font-medium text-emerald-400">
           {row.total_due != null

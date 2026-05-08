@@ -5,12 +5,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/rs/zerolog/log"
 )
 
 // apiDriveState tracks comprehensive data during an active drive session
@@ -151,44 +151,44 @@ func (s *SessionService) startDrive(ctx context.Context, vehicle *models.Vehicle
 	speed := float64(*data.DriveState.Speed)
 	power := float64(data.DriveState.Power)
 	state := &apiDriveState{
-		DriveID:         drive.ID,
-		VehicleID:       vehicle.ID,
-		StartTime:       now,
-		StartOdometer:   &odometer,
-		StartLatitude:   &lat,
-		StartLongitude:  &lon,
-		StartRatedRange: &ratedRange,
-		StartIdealRange: &idealRange,
-		StartEstRange:   &estRange,
-		StartSoc:        &soc,
-		MaxSpeed:        speed,
-		MinSpeed:        speed,
-		SpeedSum:        speed,
-		SpeedCount:      1,
-		PowerMax:        power,
-		PowerMin:        power,
-		RatedRangeMax:   ratedRange,
-		RatedRangeMin:   ratedRange,
-		RatedRangeSum:   ratedRange,
-		IdealRangeMax:   idealRange,
-		IdealRangeMin:   idealRange,
-		IdealRangeSum:   idealRange,
-		EstRangeMax:     estRange,
-		EstRangeMin:     estRange,
-		EstRangeSum:     estRange,
-		RangeCount:      1,
-		SocMax:          soc,
-		SocMin:          soc,
-		SocSum:          soc,
-		SocCount:        1,
-		InsideTempSum:   data.ClimateState.InsideTemp,
-		OutsideTempSum:  data.ClimateState.OutsideTemp,
-		DriverTempSum:   data.ClimateState.DriverTempSetting,
+		DriveID:          drive.ID,
+		VehicleID:        vehicle.ID,
+		StartTime:        now,
+		StartOdometer:    &odometer,
+		StartLatitude:    &lat,
+		StartLongitude:   &lon,
+		StartRatedRange:  &ratedRange,
+		StartIdealRange:  &idealRange,
+		StartEstRange:    &estRange,
+		StartSoc:         &soc,
+		MaxSpeed:         speed,
+		MinSpeed:         speed,
+		SpeedSum:         speed,
+		SpeedCount:       1,
+		PowerMax:         power,
+		PowerMin:         power,
+		RatedRangeMax:    ratedRange,
+		RatedRangeMin:    ratedRange,
+		RatedRangeSum:    ratedRange,
+		IdealRangeMax:    idealRange,
+		IdealRangeMin:    idealRange,
+		IdealRangeSum:    idealRange,
+		EstRangeMax:      estRange,
+		EstRangeMin:      estRange,
+		EstRangeSum:      estRange,
+		RangeCount:       1,
+		SocMax:           soc,
+		SocMin:           soc,
+		SocSum:           soc,
+		SocCount:         1,
+		InsideTempSum:    data.ClimateState.InsideTemp,
+		OutsideTempSum:   data.ClimateState.OutsideTemp,
+		DriverTempSum:    data.ClimateState.DriverTempSetting,
 		PassengerTempSum: data.ClimateState.PassengerTempSetting,
-		TempCount:       1,
-		LastOdometer:    &odometer,
-		LastLatitude:    &lat,
-		LastLongitude:   &lon,
+		TempCount:        1,
+		LastOdometer:     &odometer,
+		LastLatitude:     &lat,
+		LastLongitude:    &lon,
 	}
 
 	s.mu.Lock()
@@ -420,11 +420,11 @@ func (s *SessionService) TrackChargeFromAPI(ctx context.Context, vehicle *models
 	s.mu.Unlock()
 
 	if isCharging && !hasActiveCharge {
-		cbl := int16(data.ChargeState.BatteryLevel)
+		cbl := float64(data.ChargeState.BatteryLevel)
 		session := &models.ChargingSession{
-			VehicleID:       vehicle.ID,
-			StartTs:         time.Now().UTC(),
-			StartBatteryPct: &cbl,
+			VehicleID:   vehicle.ID,
+			StartedAt:   time.Now().UTC(),
+			StartSocPct: &cbl,
 		}
 
 		if err := s.chargeRepo.Create(ctx, session); err != nil {
@@ -440,14 +440,14 @@ func (s *SessionService) TrackChargeFromAPI(ctx context.Context, vehicle *models
 		}
 	} else if !isCharging && hasActiveCharge {
 		endBattery := data.ChargeState.BatteryLevel
-		power := data.ChargeState.ChargerPower
-		energyAdded := data.ChargeState.ChargeEnergyAdded
-		ceb := int16(endBattery)
+		powerW := data.ChargeState.ChargerPower * 1000
+		energyAddedWh := data.ChargeState.ChargeEnergyAdded * 1000
+		ceb := float64(endBattery)
 
 		if err := s.chargeRepo.Complete(ctx, activeChargeID, time.Now().UTC(),
-			&energyAdded, &ceb, nil,
-			&power, nil,
-			nil, nil, nil, nil); err != nil {
+			&energyAddedWh, &ceb,
+			&powerW, nil,
+			nil, nil); err != nil {
 			log.Error().Err(err).Int64("sessionID", activeChargeID).Msg("failed to complete charging session")
 		}
 		s.mu.Lock()

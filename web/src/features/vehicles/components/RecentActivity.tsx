@@ -65,9 +65,9 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                       icon={<Clock />}
                       value={`${Math.floor(d.duration_s / 3600)}h ${fmtInt(Math.floor((d.duration_s % 3600) / 60))}m`}
                     />
-                    {d.start_battery_pct != null && d.end_battery_pct != null && (
+                    {d.start_soc_pct != null && d.end_soc_pct != null && (
                       <span className="text-[10px] text-[var(--text-muted)]">
-                        {d.start_battery_pct}% → {d.end_battery_pct}%
+                        {d.start_soc_pct}% → {d.end_soc_pct}%
                       </span>
                     )}
                   </div>
@@ -111,7 +111,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                   <div className="flex-1 text-sm">
                     <p className="text-[var(--text-primary)] font-medium group-hover:text-emerald-300 transition-colors">
                       <AnimatedNumber
-                        value={s.energy_added_kwh}
+                        value={s.total_energy_added_wh}
                         decimals={1}
                         suffix=" kWh"
                       />
@@ -125,9 +125,9 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                       icon={<Clock />}
                       value={`${Math.floor(s.duration_min / 60)}h ${fmtInt(s.duration_min % 60)}m`}
                     />
-                    {s.end_battery_pct != null && (
+                    {s.end_soc_pct != null && (
                       <span className="text-[10px] text-[var(--text-muted)]">
-                        {s.start_battery_pct}% → {s.end_battery_pct}%
+                        {s.start_soc_pct}% → {s.end_soc_pct}%
                       </span>
                     )}
                   </div>

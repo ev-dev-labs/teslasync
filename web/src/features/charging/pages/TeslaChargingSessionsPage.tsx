@@ -126,7 +126,7 @@ export default function TeslaChargingSessionsPage() {
       header: t('tesla_sessions.col.energy', 'Energy (kWh)'),
       render: (row) => (
         <span className="text-sm font-medium text-cyan-400">
-          {row.energy_added_kwh != null ? fmtNumber(row.energy_added_kwh, 1) : '—'}
+          {row.total_energy_added_wh != null ? fmtNumber(row.total_energy_added_wh, 1) : '—'}
         </span>
       ),
       sortable: true,
@@ -153,7 +153,7 @@ export default function TeslaChargingSessionsPage() {
     },
     {
       key: 'cost',
-      header: t('tesla_sessions.col.cost', 'Cost'),
+      header: t('tesla_sessions.col.cost_decimal', 'Cost'),
       render: (row) => (
         <span className="text-sm font-medium text-emerald-400">
           {row.total_cost != null
@@ -198,7 +198,7 @@ export default function TeslaChargingSessionsPage() {
           cmp = a.charge_start_datetime.localeCompare(b.charge_start_datetime);
           break;
         case 'energy':
-          cmp = (a.energy_added_kwh ?? 0) - (b.energy_added_kwh ?? 0);
+          cmp = (a.total_energy_added_wh ?? 0) - (b.total_energy_added_wh ?? 0);
           break;
         case 'peakPower':
           cmp = (a.peak_power_kw ?? 0) - (b.peak_power_kw ?? 0);
@@ -237,7 +237,7 @@ export default function TeslaChargingSessionsPage() {
           r.charge_start_datetime,
           (r.site_location_name ?? '').replace(/[",\n]/g, ' '),
           r.vin ?? '',
-          r.energy_added_kwh != null ? String(r.energy_added_kwh) : '',
+          r.total_energy_added_wh != null ? String(r.total_energy_added_wh) : '',
           r.peak_power_kw != null ? String(r.peak_power_kw) : '',
           r.charge_duration_s != null ? String(r.charge_duration_s) : '',
           r.total_cost != null ? String(r.total_cost) : '',
@@ -337,7 +337,7 @@ export default function TeslaChargingSessionsPage() {
             </StaggerItem>
             <StaggerItem>
               <StatCard
-                label={t('tesla_sessions.stats.cost', 'Total Cost')}
+                label={t('tesla_sessions.stats.cost_decimal', 'Total Cost')}
                 value={summary.total_cost != null ? `$${fmtNumber(summary.total_cost, 2)}` : '—'}
                 icon={<DollarSign className="h-5 w-5 text-emerald-400" />}
                 loading={isLoading}
@@ -445,7 +445,7 @@ export default function TeslaChargingSessionsPage() {
                 date: row.charge_start_datetime,
                 location: row.site_location_name ?? '',
                 vin: row.vin ?? '',
-                energy: row.energy_added_kwh ?? null,
+                energy: row.total_energy_added_wh ?? null,
                 peakPower: row.peak_power_kw ?? null,
                 duration: row.charge_duration_s ?? null,
                 cost: row.total_cost ?? null,

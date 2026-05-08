@@ -55,8 +55,8 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
                     {fmtNumber(convertDistanceFromSI(d.distance_m ?? 0, unitPrefs.distance), 1)} {unitPrefs.distance}
                   </p>
                   <p className="text-[10px] text-[var(--text-muted)]">
-                    {fmtInt((d.duration_s ?? 0) / 60)} min · {d.start_battery_pct ?? '?'}% →{' '}
-                    {d.end_battery_pct ?? '?'}%
+                    {fmtInt((d.duration_s ?? 0) / 60)} min · {d.start_soc_pct ?? '?'}% →{' '}
+                    {d.end_soc_pct ?? '?'}%
                   </p>
                 </div>
                 <span className="text-[10px] text-[var(--text-muted)] shrink-0">

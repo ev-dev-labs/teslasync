@@ -99,8 +99,8 @@ export interface Drive {
   start_lon: number | null
   end_lat: number | null
   end_lon: number | null
-  start_battery_pct: number | null
-  end_battery_pct: number | null
+  start_soc_pct: number
+  end_soc_pct: number | null
   /** Energy used in watt-hours (Wh, SI canonical). */
   energy_used_wh: number | null
   /** Energy recovered via regen in watt-hours (Wh, SI canonical). */
@@ -124,30 +124,33 @@ export interface Drive {
 export interface ChargingSession {
   id: number
   vehicle_id: number
-  start_ts: string
-  end_ts: string | null
-  duration_min: number
-  start_battery_pct: number
-  end_battery_pct: number | null
-  /** Energy added in kilowatt-hours (kWh, derived SI). */
-  energy_added_kwh: number
-  miles_added: number | null
-  charger_type: string | null
-  charger_location: string | null
-  /** Peak charger power in kilowatts (kW, derived SI). */
-  charger_power_kw_max: number | null
-  /** Average charger power in kilowatts (kW, derived SI). */
-  charger_power_kw_avg: number | null
-  cost: number | null
+  started_at: string
+  ended_at: string | null
+  start_soc_pct: number
+  end_soc_pct: number | null
+  delta_soc_pct: number | null
+  start_odometer_m: number | null
+  end_odometer_m: number | null
+  start_lat: number | null
+  start_lng: number | null
+  start_place: string | null
+  /** Energy added in watt-hours (Wh, SI canonical). */
+  total_energy_added_wh: number
+  /** Peak charger power in watts (W, SI canonical). */
+  peak_power_w: number | null
+  /** Average charger power in watts (W, SI canonical). */
+  avg_power_w: number | null
+  cost_decimal: number | null
   cost_currency: string | null
-  /** Maximum charger voltage in volts (V, derived SI). */
-  max_charger_voltage: number | null
-  charger_phases: number | null
+  charger_type: string | null
   cable_type: string | null
-  ended_status: string | null
-  created_at: string
-  updated_at: string
   live?: boolean
+  start_ts?: string
+  end_ts?: string | null
+  startedAt: string
+  duration_min: number
+  cost?: number | null
+  ended_status?: string | null
 }
 
 export interface DriveTelemetryReading {
@@ -182,29 +185,36 @@ export interface DriveTelemetryReading {
 }
 
 export interface ChargeTelemetryReading {
-  id: number
-  session_id: number
+  session_id: number | null
   vehicle_id: number
-  battery_level: number | null
-  soc: number | null
-  /** Instantaneous power in kilowatts (kW, derived SI). */
-  power_kw: number | null
-  /** Voltage in volts (V, derived SI). */
-  voltage: number | null
-  /** Current in amperes (SI). */
-  current_amps: number | null
-  phases: number | null
-  energy_added: number | null
-  rated_range: number | null
-  ideal_range: number | null
-  est_range: number | null
-  inside_temp: number | null
-  outside_temp: number | null
-  battery_temp: number | null
-  latitude: number | null
-  longitude: number | null
-  charge_rate: number | null
+  ts: string
+  ac_charging_power_w: number | null
+  dc_charging_power_w: number | null
+  ac_charging_energy_in_wh: number | null
+  dc_charging_energy_in_wh: number | null
+  charger_voltage_v: number | null
+  charger_actual_current_a: number | null
+  charger_pilot_current_a: number | null
+  charger_phases: number | null
+  battery_heater_on: boolean | null
+  battery_heater_power_w: number | null
+  charge_limit_soc_pct: number | null
+  charge_request: string | null
+  fast_charger_type: string | null
+  charging_cable_type: string | null
+  charge_port_door_open: boolean | null
+  charge_port_latch: string | null
   created_at: string
+  battery_level?: number | null
+  soc?: number | null
+  power_kw?: number | null
+  energy_added?: number | null
+  rated_range?: number | null
+  battery_temp?: number | null
+  inside_temp?: number | null
+  outside_temp?: number | null
+  voltage?: number | null
+  current_amps?: number | null
 }
 
 export interface Geofence {
@@ -214,7 +224,7 @@ export interface Geofence {
   longitude: number
   radius: number
   cost_per_kwh: number | null
-  created_at?: string
+  created_at: string
   updated_at?: string
 }
 
@@ -828,7 +838,7 @@ export interface TirePressureSnapshot {
 export interface MotorSnapshot {
   id?: number
   ts: string
-  created_at?: string
+  created_at: string
   vehicle_id?: number
   /** Front-axle torque in newton-meters (Nm, derived SI). */
   torque_nm_front: number | null
@@ -932,7 +942,7 @@ export interface SecurityEvent {
   // columns, seat/belt/light JSONB carve-outs). Optional so existing widgets
   // compile; values are undefined when reading the typed column set.
   id?: number
-  created_at?: string
+  created_at: string
   door_state?: string | null
   fd_window?: string | null
   fp_window?: string | null
@@ -1555,13 +1565,13 @@ export interface ChargingTelemetry {
   charger_voltage: number | null
   /** Charger actual current in amperes (SI). */
   charger_actual_current: number | null
-  /** Charger power in kilowatts (kW, derived SI). */
-  charger_power_kw: number | null
+  /** Charger power in watts (W, SI canonical). */
+  charger_power_w: number | null
   charger_phases: number | null
-  /** Energy added in kilowatt-hours (kWh, derived SI). */
-  charge_energy_added_kwh: number | null
-  charge_miles_added: number | null
-  charge_rate_mph: number | null
+  /** Energy added in watt-hours (Wh, SI canonical). */
+  charge_energy_added_wh: number | null
+  range_added_meters: number | null
+  range_added_meters_per_hour: number | null
   /** Charger pilot current in amperes (SI). */
   charger_pilot_current: number | null
   scheduled_charging_at: string | null

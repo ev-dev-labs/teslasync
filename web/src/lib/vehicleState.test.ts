@@ -171,7 +171,7 @@ describe('buildTwinState', () => {
         source: 'test',
       },
       { state: 'driving', speed: 12, is_charging: false },
-      { vehicle_id: 1, ts: '2024-01-01', session_id: null, battery_level: null, battery_range_mi: null, charging_state: 'Charging', charger_voltage: null, charger_actual_current: null, charger_power_kw: 7, charger_phases: null, charge_energy_added_kwh: null, charge_miles_added: null, charge_rate_mph: null, charger_pilot_current: null, scheduled_charging_at: null, source: 'test' },
+      { vehicle_id: 1, ts: '2024-01-01', session_id: null, battery_level: null, battery_range_mi: null, charging_state: 'Charging', charger_voltage: null, charger_actual_current: null, charger_power_w: 7, charger_phases: null, charge_total_energy_added_wh: null, range_added_meters: null, range_added_meters_per_hour: null, charger_pilot_current: null, scheduled_charging_at: null, source: 'test' },
     );
 
     expect(result.isDriving).toBe(true);
@@ -187,7 +187,7 @@ describe('buildTwinState', () => {
     const result = buildTwinState(
       null,
       null,
-      { vehicle_id: 1, ts: '2024-01-01', session_id: null, battery_level: null, battery_range_mi: null, charging_state: 'Charging', charger_voltage: null, charger_actual_current: null, charger_power_kw: 3, charger_phases: null, charge_energy_added_kwh: null, charge_miles_added: null, charge_rate_mph: null, charger_pilot_current: null, scheduled_charging_at: null, source: 'test' },
+      { vehicle_id: 1, ts: '2024-01-01', session_id: null, battery_level: null, battery_range_mi: null, charging_state: 'Charging', charger_voltage: null, charger_actual_current: null, charger_power_w: 3, charger_phases: null, charge_total_energy_added_wh: null, range_added_meters: null, range_added_meters_per_hour: null, charger_pilot_current: null, scheduled_charging_at: null, source: 'test' },
     );
 
     expect(result.isCharging).toBe(true);

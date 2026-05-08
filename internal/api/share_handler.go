@@ -6,26 +6,26 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
 )
 
 // ShareHandler handles share link creation and public access.
 type ShareHandler struct {
-	shareRepo    *database.ShareTokenRepo
-	driveRepo    *database.DriveRepo
-	posRepo      *database.PositionRepo
-	vehicleRepo  *database.VehicleRepo
+	shareRepo   *database.ShareTokenRepo
+	driveRepo   *database.DriveRepo
+	posRepo     *database.PositionRepo
+	vehicleRepo *database.VehicleRepo
 }
 
 func NewShareHandler(db *database.DB) *ShareHandler {
 	return &ShareHandler{
-		shareRepo:    database.NewShareTokenRepo(db),
-		driveRepo:    database.NewDriveRepo(db),
-		posRepo:      database.NewPositionRepo(db),
-		vehicleRepo:  database.NewVehicleRepo(db),
+		shareRepo:   database.NewShareTokenRepo(db),
+		driveRepo:   database.NewDriveRepo(db),
+		posRepo:     database.NewPositionRepo(db),
+		vehicleRepo: database.NewVehicleRepo(db),
 	}
 }
 
@@ -72,14 +72,14 @@ type publicTelemetryPoint struct {
 }
 
 type publicShareResponse struct {
-	Title            string                  `json:"title"`
-	Description      string                  `json:"description"`
-	Drive            publicDriveInfo         `json:"drive"`
-	Vehicle          *publicVehicle          `json:"vehicle,omitempty"`
-	MapPoints        []publicMapPoint        `json:"map_points,omitempty"`
-	ElevationProfile []publicElevationPoint  `json:"elevation_profile,omitempty"`
-	SpeedProfile     []publicSpeedPoint      `json:"speed_profile,omitempty"`
-	Telemetry        []publicTelemetryPoint  `json:"telemetry,omitempty"`
+	Title            string                 `json:"title"`
+	Description      string                 `json:"description"`
+	Drive            publicDriveInfo        `json:"drive"`
+	Vehicle          *publicVehicle         `json:"vehicle,omitempty"`
+	MapPoints        []publicMapPoint       `json:"map_points,omitempty"`
+	ElevationProfile []publicElevationPoint `json:"elevation_profile,omitempty"`
+	SpeedProfile     []publicSpeedPoint     `json:"speed_profile,omitempty"`
+	Telemetry        []publicTelemetryPoint `json:"telemetry,omitempty"`
 }
 
 // ── Create share link (authenticated) ──────────────────────────────

@@ -61,8 +61,8 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
           items.map((d) => {
             const dist = convertDistanceFromSI(d.distance_m ?? 0, unitPrefs.distance);
             const batteryUsed =
-              d.start_battery_pct != null && d.end_battery_pct != null
-                ? d.start_battery_pct - d.end_battery_pct
+              d.start_soc_pct != null && d.end_soc_pct != null
+                ? d.start_soc_pct - d.end_soc_pct
                 : null;
 
             return (
@@ -104,7 +104,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
                     <div className="flex items-center justify-end gap-1">
                       <Battery className="h-2.5 w-2.5 text-[var(--text-muted)]" />
                       <span className="text-[10px] text-[var(--text-secondary)] tabular-nums">
-                        {d.start_battery_pct ?? '?'}% → {d.end_battery_pct ?? '?'}%
+                        {d.start_soc_pct ?? '?'}% → {d.end_soc_pct ?? '?'}%
                       </span>
                     </div>
                     <div className="flex items-center justify-end gap-1 mt-0.5">

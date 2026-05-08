@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/rs/zerolog/log"
 )
 
 // ImportHandler handles CSV import endpoints for drives and charging data.
@@ -172,29 +172,26 @@ func (h *ImportHandler) ImportCharging(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		startBattPct := int16(startBattery)
+		startSocPct := float64(startBattery)
 		c := &models.ChargingSession{
-			VehicleID:       vehicleID,
-			StartTs:         startDate,
-			EnergyAddedKwh:  &energyAdded,
-			StartBatteryPct: &startBattPct,
+			VehicleID:          vehicleID,
+			StartedAt:          startDate,
+			TotalEnergyAddedWh: &energyAdded,
+			StartSocPct:        &startSocPct,
 		}
 
 		if record[2] != "" {
 			if endDate, err := time.Parse("2006-01-02T15:04:05Z", record[2]); err == nil {
-				c.EndTs = &endDate
+				c.EndedAt = &endDate
 			}
 		}
 		if endBatt, err := strconv.Atoi(record[5]); err == nil {
-			endBattPct := int16(endBatt)
-			c.EndBatteryPct = &endBattPct
+			endSocPct := float64(endBatt)
+			c.EndSocPct = &endSocPct
 		}
 		if power, err := strconv.ParseFloat(record[6], 64); err == nil {
-			c.ChargerPowerKwMax = &power
+			c.PeakPowerW = &power
 		}
-		durationMin, _ := strconv.ParseFloat(record[7], 64)
-		c.DurationMin = &durationMin
-
 		if err := h.chargingRepo.Create(r.Context(), c); err != nil {
 			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to import charging session")
 			errors++
@@ -254,5 +251,3 @@ func ExportNotificationLogs(db *database.DB) http.HandlerFunc {
 		cw.Flush()
 	}
 }
-
-

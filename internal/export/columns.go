@@ -39,13 +39,13 @@ var columnCatalog = map[string][]ColumnInfo{
 	"charging": {
 		{Name: "id", Label: "ID", AlwaysIncluded: true},
 		{Name: "vehicle_id", Label: "Vehicle ID", AlwaysIncluded: true},
-		{Name: "start_date", Label: "Start date"},
-		{Name: "end_date", Label: "End date"},
-		{Name: "energy_added_kwh", Label: "Energy added (kWh)"},
-		{Name: "start_battery", Label: "Start battery"},
-		{Name: "end_battery", Label: "End battery"},
-		{Name: "charger_power", Label: "Charger power"},
-		{Name: "duration_min", Label: "Duration (min)"},
+		{Name: "started_at", Label: "Started at"},
+		{Name: "ended_at", Label: "Ended at"},
+		{Name: "total_energy_added_wh", Label: "Energy added (Wh)"},
+		{Name: "start_soc_pct", Label: "Start SoC (%)"},
+		{Name: "end_soc_pct", Label: "End SoC (%)"},
+		{Name: "peak_power_w", Label: "Peak power (W)"},
+		{Name: "duration_s", Label: "Duration (s)"},
 	},
 }
 

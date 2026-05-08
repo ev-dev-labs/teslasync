@@ -48,8 +48,8 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
               {t('telemetry.chargerPower', 'Charger Power')}
             </span>
             <span className="text-sm font-mono text-[var(--text-primary)]">
-              {chargingTelemetry.charger_power_kw != null
-                ? `${fmtWithUnit(chargingTelemetry.charger_power_kw, 'kW')}`
+              {chargingTelemetry.charger_power_w != null
+                ? `${fmtWithUnit(chargingTelemetry.charger_power_w, 'kW')}`
                 : '—'}
             </span>
           </div>
@@ -59,8 +59,8 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
               {t('telemetry.energyAdded', 'Energy Added')}
             </span>
             <span className="text-sm font-mono text-[var(--text-primary)]">
-              {chargingTelemetry.charge_energy_added_kwh != null
-                ? `${fmtWithUnit(chargingTelemetry.charge_energy_added_kwh, 'kWh')}`
+              {chargingTelemetry.charge_energy_added_wh != null
+                ? `${fmtWithUnit(chargingTelemetry.charge_energy_added_wh, 'kWh')}`
                 : '—'}
             </span>
           </div>
@@ -102,8 +102,8 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
               <Zap className="h-3 w-3" /> {t('telemetry.chargeRate', 'Charge Rate')}
             </span>
             <span className="text-sm font-mono text-[var(--text-primary)]">
-              {chargingTelemetry.charge_rate_mph != null
-                ? `${fmtNumber(chargingTelemetry.charge_rate_mph)} mph`
+              {chargingTelemetry.range_added_meters_per_hour != null
+                ? `${fmtNumber(chargingTelemetry.range_added_meters_per_hour)} mph`
                 : '—'}
             </span>
           </div>

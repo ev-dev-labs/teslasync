@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"strings"
 	"sync"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
-	"github.com/ev-dev-labs/teslasync/internal/units"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -67,7 +65,7 @@ func (t *TelemetrySessionTracker) chargeStateReader() signal.StateReader {
 // structurally-identical unnamed types when the element type is itself a
 // defined alias (signal.SignalValue), so the copy is unavoidable. The
 // snapshot maps are small (≤ ~50 entries — a single per-vehicle state) so
-// the allocation cost is negligible compared to the underlying signal_log
+// the allocation cost_decimal is negligible compared to the underlying signal_log
 // query.
 func stateToLegacyMap(s signal.State) map[string]interface{} {
 	if s == nil {
@@ -168,9 +166,9 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		startTs = eventTimeOrNow(startTs)
 
 		session := &models.ChargingSession{
-			VehicleID:       vehicleID,
-			StartTs:         startTs,
-			StartBatteryPct: int16Ptr(batteryLevel),
+			VehicleID:   vehicleID,
+			StartedAt:   startTs,
+			StartSocPct: floatPtr(float64(batteryLevel)),
 		}
 
 		if err := t.chargeRepo.Create(ctx, session); err != nil {
@@ -290,55 +288,31 @@ func (t *TelemetrySessionTracker) flushChargeTelemetry(ctx context.Context, char
 
 func (t *TelemetrySessionTracker) recordChargeTelemetry(ctx context.Context, charge *streamingCharge, signals map[string]interface{}) {
 	reading := &models.ChargeTelemetryReading{
-		SessionID: charge.SessionID,
+		SessionID: telemetryInt64Ptr(charge.SessionID),
 		VehicleID: charge.VehicleID,
+		Ts:        time.Now().UTC(),
 	}
 
 	if v, ok := signalInt(signals, "BatteryLevel"); ok {
-		reading.BatteryLevel = intPtr(v)
+		reading.ChargeLimitSocPct = floatPtr(float64(v))
 	}
 	if v, ok := signalFloat(signals, "Soc"); ok {
-		reading.Soc = floatPtr(v)
+		reading.ChargeLimitSocPct = floatPtr(v)
 	}
 	if v, ok := signalFloat(signals, "DCChargingPower", "ACChargingPower"); ok {
-		reading.PowerKW = floatPtr(v)
+		reading.DCChargingPowerW = floatPtr(v)
 	}
 	if v, ok := signalFloat(signals, "ChargerVoltage"); ok {
-		reading.Voltage = floatPtr(v)
+		reading.ChargerVoltageV = floatPtr(v)
 	}
 	if v, ok := signalFloat(signals, "ChargerActualCurrent", "ChargeAmps"); ok {
-		reading.CurrentAmps = floatPtr(v)
+		reading.ChargerActualCurrentA = floatPtr(v)
 	}
 	if v, ok := signalInt(signals, "ChargerPhases"); ok {
-		reading.Phases = intPtr(v)
+		reading.ChargerPhases = intPtr(v)
 	}
 	if v, ok := signalFloat(signals, "DCChargingEnergyIn", "ACChargingEnergyIn"); ok {
-		reading.EnergyAdded = floatPtr(v)
-	}
-	if v, ok := signalFloat(signals, "RatedRange"); ok {
-		reading.RatedRange = floatPtr(v)
-	}
-	if v, ok := signalFloat(signals, "IdealBatteryRange"); ok {
-		reading.IdealRange = floatPtr(v)
-	}
-	if v, ok := signalFloat(signals, "EstBatteryRange"); ok {
-		reading.EstRange = floatPtr(v)
-	}
-	if v, ok := signalFloat(signals, "InsideTemp"); ok {
-		reading.InsideTemp = floatPtr(v)
-	}
-	if v, ok := signalFloat(signals, "OutsideTemp"); ok {
-		reading.OutsideTemp = floatPtr(v)
-	}
-	if v, ok := signalFloat(signals, "ModuleTempMax"); ok {
-		reading.BatteryTemp = floatPtr(v)
-	}
-	if la, lo, ok := signalLatLon(signals); ok {
-		reading.Latitude = floatPtr(la)
-		reading.Longitude = floatPtr(lo)
-	}
-	if v, ok := signalFloat(signals, "ChargeRateMilePerHour", "ChargeRateMph"); ok {
-		reading.ChargeRate = floatPtr(v)
+		reading.DCChargingEnergyInWh = floatPtr(v)
 	}
 
 	// Charge telemetry data now lands in signal_log; reading built for session stats only.
@@ -384,14 +358,8 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 
 	// Estimate energy from battery% diff if direct energy signal unavailable
 	if active.EnergyAdded == 0 && active.StartBatteryLevel > 0 && endBattery > active.StartBatteryLevel {
-		estimatedKWh := float64(endBattery-active.StartBatteryLevel) * 0.75
-		active.EnergyAdded = estimatedKWh
-	}
-
-	// Get end range — fall back to accumulated signals → SignalStore
-	var endRange *float64
-	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "RatedRange"); ok {
-		endRange = floatPtr(v)
+		estimatedWh := float64(endBattery-active.StartBatteryLevel) * 750
+		active.EnergyAdded = estimatedWh
 	}
 
 	// Build enhanced fields (only columns that exist in charging_sessions)
@@ -443,13 +411,9 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			endSnap = map[string]interface{}{}
 		}
 
-		// Unit preferences at start and end (may differ if user changed mid-charge)
-		startDistUnit := units.GetUnitFromSnapshot(startSnap, "SettingDistanceUnit")
-		endDistUnit := units.GetUnitFromSnapshot(endSnap, "SettingDistanceUnit")
-
 		// Battery level from snapshots
 		if bl, ok := snapFloat(startSnap, "BatteryLevel"); ok && bl > 0 {
-			enhancedFields["start_battery_pct"] = int16(bl)
+			enhancedFields["start_soc_pct"] = bl
 		}
 		if bl, ok := snapFloat(endSnap, "BatteryLevel"); ok && bl > 0 {
 			endBattery = int(bl)
@@ -461,20 +425,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 				energyDelta := endEnergy - startEnergy
 				if energyDelta > 0 {
 					active.EnergyAdded = energyDelta
-					enhancedFields["energy_added_kwh"] = energyDelta
-				}
-			}
-		}
-
-		// Range added (normalized to miles)
-		if startRangeRaw, ok := snapFloat(startSnap, "BatteryRange"); ok {
-			if endRangeRaw, ok := snapFloat(endSnap, "BatteryRange"); ok {
-				startRangeMi := units.NormalizeDistance(startRangeRaw, startDistUnit)
-				endRangeMi := units.NormalizeDistance(endRangeRaw, endDistUnit)
-				milesAdded := endRangeMi - startRangeMi
-				if milesAdded > 0 {
-					endRange = floatPtr(milesAdded)
-					enhancedFields["miles_added"] = milesAdded
+					enhancedFields["total_energy_added_wh"] = energyDelta
 				}
 			}
 		}
@@ -501,23 +452,12 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 		// kept on signalLogReader because StateReader has no aggregation API.
 		slMaxPower, slAvgPower := t.signalLogReader.ChargeAggregates(ctx, vehicleID, active.StartTime, endTs)
 		if slMaxPower > 0 {
-			enhancedFields["charger_power_kw_max"] = slMaxPower
+			enhancedFields["peak_power_w"] = slMaxPower
 		}
 		if slAvgPower > 0 {
-			enhancedFields["charger_power_kw_avg"] = slAvgPower
+			enhancedFields["avg_power_w"] = slAvgPower
 		}
 
-		// Charger spec fields from in-memory session data or signal_log snapshots
-		if active.Voltage != nil && *active.Voltage > 0 {
-			enhancedFields["max_charger_voltage"] = int16(*active.Voltage)
-		} else if v, ok := snapFloat(endSnap, "ChargerVoltage"); ok && v > 0 {
-			enhancedFields["max_charger_voltage"] = int16(v)
-		}
-		if active.Phases != nil && *active.Phases > 0 {
-			enhancedFields["charger_phases"] = int16(*active.Phases)
-		} else if v, ok := snapFloat(endSnap, "ChargerPhases"); ok && v > 0 {
-			enhancedFields["charger_phases"] = int16(v)
-		}
 		if active.ChargeCable != nil && *active.ChargeCable != "" {
 			enhancedFields["cable_type"] = *active.ChargeCable
 		} else if v, ok := signalStr(endSnap, "ChargingCableType"); ok {
@@ -570,40 +510,22 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 		}
 	}
 
-	// Determine ended_status based on how the charge ended
-	switch {
-	case signals == nil:
-		enhancedFields["ended_status"] = "interrupted"
-	case endBattery >= 95:
-		enhancedFields["ended_status"] = "full"
-	default:
-		// Check DetailedChargeState for user-stop vs normal completion
-		if cs, ok := signalStr(signals, "DetailedChargeState", "ChargeState"); ok {
-			if strings.Contains(cs, enums.ChargeStateStopped) || strings.Contains(cs, enums.ChargeStateDisconnected) {
-				enhancedFields["ended_status"] = "user_stopped"
-			} else {
-				enhancedFields["ended_status"] = "completed"
-			}
-		} else {
-			enhancedFields["ended_status"] = "completed"
-		}
-	}
-
 	// Default cost_currency — will be overridden when geofence electricity pricing is implemented
 	// TODO: Set from geofence.ElectricityCurrency when Geofence model gains that field
 	enhancedFields["cost_currency"] = "USD"
 
 	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
-		var endBatteryPct *int16
-		if b := int16(endBattery); b > 0 {
-			endBatteryPct = &b
+		var endSocPct *float64
+		if endBattery > 0 {
+			v := float64(endBattery)
+			endSocPct = &v
 		}
 		var energyAdded *float64
 		if active.EnergyAdded > 0 {
 			energyAdded = &active.EnergyAdded
 		}
 		// Power aggregation: derive max + avg from signal_log over the
-		// session window (kW). Using ChargeAggregates here mirrors the
+		// session window (W). Using ChargeAggregates here mirrors the
 		// recovery path (telemetry_sessions_recovery.go) which has
 		// always done this. The previous code passed `active.Power,
 		// active.Power` — i.e. the LAST observed sample for both peak
@@ -613,20 +535,20 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 		// above so it's expected to be wired in production; if it
 		// isn't, peak/avg fall through as nil and the columns remain
 		// NULL rather than being polluted with a stale single sample.
-		var maxPowerKW, avgPowerKW *float64
+		var maxPowerW, avgPowerW *float64
 		if t.signalLogReader != nil {
 			slMaxPower, slAvgPower := t.signalLogReader.ChargeAggregates(ctx, vehicleID, active.StartTime, endTs)
 			if slMaxPower > 0 {
-				maxPowerKW = &slMaxPower
+				maxPowerW = &slMaxPower
 			}
 			if slAvgPower > 0 {
-				avgPowerKW = &slAvgPower
+				avgPowerW = &slAvgPower
 			}
 		}
 		if err := t.chargeRepo.CompleteWithTx(ctx, tx, active.SessionID, endTs,
-			energyAdded, endBatteryPct, endRange,
-			maxPowerKW, avgPowerKW,
-			nil, nil, &duration, nil); err != nil {
+			energyAdded, endSocPct,
+			maxPowerW, avgPowerW,
+			nil, nil); err != nil {
 			return err
 		}
 
@@ -669,7 +591,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 
 		// TODO: Auto-calculate charge cost from geofence electricity rate.
 		// Geofence model does not yet have ElectricityRate/ElectricityCurrency fields.
-		// When added, compute: cost = energyAdded * rate, cost_currency = geofence.ElectricityCurrency.
+		// When added, compute: cost_decimal = energyAddedWh * ratePerWh, cost_currency = geofence.ElectricityCurrency.
 
 		return nil
 	}); err != nil {
@@ -688,7 +610,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 
 			// 1. Check geofences first (user-defined name)
 			if geofences, err := t.geofenceRepo.FindByCoordinates(gctx, lat, lon); err == nil && len(geofences) > 0 {
-				fields["charger_location"] = geofences[0].Name
+				fields["start_place"] = geofences[0].Name
 				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
 				return
 			}
@@ -696,7 +618,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			// 2. Check places cache (previously resolved, within 50m)
 			if cached, err := t.placesCache.FindNearby(gctx, lat, lon, 50); err == nil && cached != nil {
 				_ = t.placesCache.IncrementHitCount(gctx, cached.ID)
-				fields["charger_location"] = cached.DisplayName
+				fields["start_place"] = cached.DisplayName
 				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
 				return
 			}
@@ -708,7 +630,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 				return
 			}
 			name := result.ShortName()
-			fields["charger_location"] = name
+			fields["start_place"] = name
 			_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
 
 			// Save to cache
@@ -734,7 +656,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	ChargeSessionsCompleted.Inc()
 	TotalCharges.Inc()
 	if active.EnergyAdded > 0 {
-		TotalEnergyKwh.Add(active.EnergyAdded)
+		TotalEnergyKwh.Add(active.EnergyAdded / 1000)
 	}
 
 	// Backfill missing start/end values from nearest position data (async)
@@ -754,7 +676,7 @@ func (t *TelemetrySessionTracker) backfillChargeValues(active *streamingCharge, 
 	if active.StartBatteryLevel == 0 {
 		startPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, active.StartTime, lookupWindow)
 		if err == nil && startPos != nil && startPos.BatteryLvl > 0 {
-			backfill["start_battery_pct"] = int16(startPos.BatteryLvl)
+			backfill["start_soc_pct"] = float64(startPos.BatteryLvl)
 		}
 	}
 
@@ -763,7 +685,7 @@ func (t *TelemetrySessionTracker) backfillChargeValues(active *streamingCharge, 
 	endPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, endTime, lookupWindow)
 	if err == nil && endPos != nil {
 		if endPos.BatteryLvl > 0 {
-			backfill["end_battery_pct"] = int16(endPos.BatteryLvl)
+			backfill["end_soc_pct"] = float64(endPos.BatteryLvl)
 		}
 	}
 

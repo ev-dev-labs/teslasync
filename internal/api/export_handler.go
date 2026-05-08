@@ -416,13 +416,13 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.
 	}
 
 	type exportDrive struct {
-		ID         int64   `json:"id"`
-		VehicleID  int64   `json:"vehicle_id"`
-		StartDate  string  `json:"start_date"`
-		EndDate    string  `json:"end_date"`
-		Distance   float64 `json:"distance"`
-		Duration   float64 `json:"duration_min"`
-		SpeedMax   float64 `json:"speed_max"`
+		ID        int64   `json:"id"`
+		VehicleID int64   `json:"vehicle_id"`
+		StartDate string  `json:"start_date"`
+		EndDate   string  `json:"end_date"`
+		Distance  float64 `json:"distance"`
+		Duration  float64 `json:"duration_min"`
+		SpeedMax  float64 `json:"speed_max"`
 	}
 
 	var allDrives []exportDrive
@@ -481,15 +481,15 @@ func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *databas
 	}
 
 	type exportSession struct {
-		ID           int64   `json:"id"`
-		VehicleID    int64   `json:"vehicle_id"`
-		StartDate    string  `json:"start_date"`
-		EndDate      string  `json:"end_date"`
-		EnergyAdded  float64 `json:"energy_added_kwh"`
-		StartBattery int     `json:"start_battery"`
-		EndBattery   int     `json:"end_battery"`
-		ChargerPower float64 `json:"charger_power_kw_max"`
-		Duration     float64 `json:"duration_min"`
+		ID          int64   `json:"id"`
+		VehicleID   int64   `json:"vehicle_id"`
+		StartedAt   string  `json:"started_at"`
+		EndedAt     string  `json:"ended_at"`
+		EnergyAdded float64 `json:"total_energy_added_wh"`
+		StartSocPct float64 `json:"start_soc_pct"`
+		EndSocPct   float64 `json:"end_soc_pct"`
+		PeakPowerW  float64 `json:"peak_power_w"`
+		DurationS   float64 `json:"duration_s"`
 	}
 
 	var allSessions []exportSession
@@ -501,17 +501,17 @@ func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *databas
 		}
 		for _, s := range sessions {
 			es := exportSession{
-				ID:           s.ID,
-				VehicleID:    s.VehicleID,
-				StartDate:    s.StartTs.Format("2006-01-02T15:04:05Z"),
-				EnergyAdded:  ptrFloat(s.EnergyAddedKwh),
-				StartBattery: ptrInt16(s.StartBatteryPct),
-				EndBattery:   ptrInt16(s.EndBatteryPct),
-				ChargerPower: ptrFloat(s.ChargerPowerKwMax),
-				Duration:     ptrFloat(s.DurationMin),
+				ID:          s.ID,
+				VehicleID:   s.VehicleID,
+				StartedAt:   s.StartedAt.Format("2006-01-02T15:04:05Z"),
+				EnergyAdded: ptrFloat(s.TotalEnergyAddedWh),
+				StartSocPct: ptrFloat(s.StartSocPct),
+				EndSocPct:   ptrFloat(s.EndSocPct),
+				PeakPowerW:  ptrFloat(s.PeakPowerW),
 			}
-			if s.EndTs != nil {
-				es.EndDate = s.EndTs.Format("2006-01-02T15:04:05Z")
+			if s.EndedAt != nil {
+				es.EndedAt = s.EndedAt.Format("2006-01-02T15:04:05Z")
+				es.DurationS = s.EndedAt.Sub(s.StartedAt).Seconds()
 			}
 			allSessions = append(allSessions, es)
 		}
@@ -527,18 +527,18 @@ func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *databas
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", "attachment; filename=teslasync-charging.csv")
 	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "energy_added_kwh", "start_battery", "end_battery", "charger_power_kw_max", "duration_min"})
+	_ = cw.Write([]string{"id", "vehicle_id", "started_at", "ended_at", "total_energy_added_wh", "start_soc_pct", "end_soc_pct", "peak_power_w", "duration_s"})
 	for _, s := range allSessions {
 		_ = cw.Write([]string{
 			strconv.FormatInt(s.ID, 10),
 			strconv.FormatInt(s.VehicleID, 10),
-			s.StartDate,
-			s.EndDate,
+			s.StartedAt,
+			s.EndedAt,
 			fmt.Sprintf("%.2f", s.EnergyAdded),
-			strconv.Itoa(s.StartBattery),
-			strconv.Itoa(s.EndBattery),
-			fmt.Sprintf("%.1f", s.ChargerPower),
-			fmt.Sprintf("%.1f", s.Duration),
+			fmt.Sprintf("%.1f", s.StartSocPct),
+			fmt.Sprintf("%.1f", s.EndSocPct),
+			fmt.Sprintf("%.1f", s.PeakPowerW),
+			fmt.Sprintf("%.0f", s.DurationS),
 		})
 	}
 	cw.Flush()

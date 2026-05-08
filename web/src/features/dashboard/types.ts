@@ -63,15 +63,16 @@ export interface Alert {
 export interface Drive {
   id: number;
   vehicle_id: number;
+  started_at: string;
+  ended_at: string | null;
   start_ts: string;
-  end_ts: string | null;
   distance_m: number;
   duration_s: number;
   max_speed_mps: number | null;
   avg_speed_mps: number | null;
   avg_power_w: number | null;
-  start_battery_pct: number | null;
-  end_battery_pct: number | null;
+  start_soc_pct: number;
+  end_soc_pct: number | null;
   energy_used_wh: number | null;
   regen_energy_wh: number | null;
   start_address?: string;
@@ -81,12 +82,14 @@ export interface Drive {
 export interface ChargingSession {
   id: number;
   vehicle_id: number;
-  start_ts: string;
-  end_ts: string | null;
-  energy_added_kwh: number;
-  start_battery_pct: number;
-  end_battery_pct: number | null;
-  cost: number | null;
+  started_at: string;
+  ended_at: string | null;
+  total_energy_added_wh: number;
+  start_soc_pct: number;
+  end_soc_pct: number | null;
+  cost_decimal: number | null;
+  cost?: number | null;
+  startedAt: string;
   duration_min: number;
 }
 

@@ -555,7 +555,7 @@ func classifyExplicit(name string) fieldClass {
 		return fieldClass{cat: "climate", kind: "bool", unit: "none", isSettingUnit: false}
 	case "RearDefrostEnabled":
 		return fieldClass{cat: "metadata", kind: "bool", unit: "none", isSettingUnit: false}
-	case "ChargeRateMilePerHour":
+	case "RangeAddedMetersPerHour":
 		return fieldClass{cat: "charging", kind: "float", unit: "distance", isSettingUnit: false}
 	case "Deprecated_3":
 		return fieldClass{cat: "metadata", kind: "string", unit: "none", isSettingUnit: false}

@@ -46,8 +46,8 @@ export default function TeslaChargingSessionsMap({ sessions }: Props) {
             s.site_location_name || t('tesla_sessions.unknown', 'Unknown'),
           );
           const energy =
-            s.energy_added_kwh != null
-              ? `<p>${fmtNumber(s.energy_added_kwh, 1)} kWh</p>`
+            s.total_energy_added_wh != null
+              ? `<p>${fmtNumber(s.total_energy_added_wh, 1)} kWh</p>`
               : '';
           const cost =
             s.total_cost != null ? `<p>$${fmtNumber(s.total_cost, 2)}</p>` : '';

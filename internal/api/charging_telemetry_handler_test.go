@@ -145,9 +145,9 @@ func TestChargingTelemetry_Latest_UsesNow(t *testing.T) {
 	if v, ok := got["charging_state"].(string); !ok || v != "Charging" {
 		t.Fatalf("charging_state = %v, want Charging", got["charging_state"])
 	}
-	// DCChargingPower=150 > 0 must override charger_power_kw (which had 7.7 from AC).
-	if v, ok := got["charger_power_kw"].(float64); !ok || v != 150.0 {
-		t.Fatalf("charger_power_kw = %v, want 150 (DC override active)", got["charger_power_kw"])
+	// DCChargingPower=150 must override AC power and be returned under the SI key.
+	if v, ok := got["charger_power_w"].(float64); !ok || v != 150.0 {
+		t.Fatalf("charger_power_w = %v, want 150 (DC override active)", got["charger_power_w"])
 	}
 }
 

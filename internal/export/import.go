@@ -153,30 +153,27 @@ func (p *Processor) processImportCharging(ctx context.Context, req *JobRequest) 
 			errors++
 			continue
 		}
-		startBatteryI16 := int16(startBattery)
+		startSocPct := float64(startBattery)
 
 		c := &models.ChargingSession{
-			VehicleID:       vehicleID,
-			StartTs:         startDate,
-			EnergyAddedKwh:  &energyAdded,
-			StartBatteryPct: &startBatteryI16,
+			VehicleID:          vehicleID,
+			StartedAt:          startDate,
+			TotalEnergyAddedWh: &energyAdded,
+			StartSocPct:        &startSocPct,
 		}
 
 		if record[2] != "" {
 			if endDate, err := time.Parse("2006-01-02T15:04:05Z", record[2]); err == nil {
-				c.EndTs = &endDate
+				c.EndedAt = &endDate
 			}
 		}
 		if endBatt, err := strconv.Atoi(record[5]); err == nil {
-			endBattI16 := int16(endBatt)
-			c.EndBatteryPct = &endBattI16
+			endSocPct := float64(endBatt)
+			c.EndSocPct = &endSocPct
 		}
 		if power, err := strconv.ParseFloat(record[6], 64); err == nil {
-			c.ChargerPowerKwMax = &power
+			c.PeakPowerW = &power
 		}
-		durationMin, _ := strconv.ParseFloat(record[7], 64)
-		c.DurationMin = &durationMin
-
 		if err := p.chargingRepo.Create(ctx, c); err != nil {
 			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("import: failed to import charging session")
 			errors++

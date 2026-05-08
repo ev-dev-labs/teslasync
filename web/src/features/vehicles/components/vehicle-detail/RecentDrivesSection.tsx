@@ -38,8 +38,8 @@ function useDriveColumns(distanceUnit: DistanceUnitPref): Column<Drive>[] {
       key: 'battery',
       header: t('common.battery', 'Battery'),
       render: (d) =>
-        d.start_battery_pct != null && d.end_battery_pct != null
-          ? `${d.start_battery_pct}% → ${d.end_battery_pct}%`
+        d.start_soc_pct != null && d.end_soc_pct != null
+          ? `${d.start_soc_pct}% → ${d.end_soc_pct}%`
           : '—',
     },
   ]

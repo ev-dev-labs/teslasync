@@ -181,14 +181,14 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 
 		var energy, cost float64
 		for _, s := range sessions {
-			if s.StartTs.Before(cutoff) {
+			if s.StartedAt.Before(cutoff) {
 				continue
 			}
-			if s.EnergyAddedKwh != nil {
-				energy += *s.EnergyAddedKwh
+			if s.TotalEnergyAddedWh != nil {
+				energy += (*s.TotalEnergyAddedWh / 1000.0)
 			}
-			if s.Cost != nil {
-				cost += *s.Cost
+			if s.CostDecimal != nil {
+				cost += *s.CostDecimal
 			}
 
 			// Charger type analytics
@@ -199,45 +199,45 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 			chargerTypeMap[ct]++
 
 			// Charge power and duration
-			if s.ChargerPowerKwMax != nil {
-				chargePowers = append(chargePowers, *s.ChargerPowerKwMax)
+			if s.PeakPowerW != nil {
+				chargePowers = append(chargePowers, (*s.PeakPowerW / 1000.0))
 			}
-			if s.DurationMin != nil {
-				chargeDurations = append(chargeDurations, *s.DurationMin)
+			if dur := s.DurationMinutes(); dur != nil {
+				chargeDurations = append(chargeDurations, *dur)
 			}
-			if s.EnergyAddedKwh != nil {
-				chargeEnergies = append(chargeEnergies, *s.EnergyAddedKwh)
+			if s.TotalEnergyAddedWh != nil {
+				chargeEnergies = append(chargeEnergies, (*s.TotalEnergyAddedWh / 1000.0))
 			}
-			if s.Cost != nil {
-				chargeCosts = append(chargeCosts, *s.Cost)
+			if s.CostDecimal != nil {
+				chargeCosts = append(chargeCosts, *s.CostDecimal)
 			}
-			if s.StartBatteryPct != nil {
-				chargeStartBat = append(chargeStartBat, int(*s.StartBatteryPct))
+			if s.StartSocPct != nil {
+				chargeStartBat = append(chargeStartBat, int(*s.StartSocPct))
 			}
 
 			// Hour of day
-			chHour := s.StartTs.Hour()
+			chHour := s.StartedAt.Hour()
 			hourChargeCounts[chHour]++
-			if s.EnergyAddedKwh != nil {
-				hourChargeEnergy[chHour] += *s.EnergyAddedKwh
+			if s.TotalEnergyAddedWh != nil {
+				hourChargeEnergy[chHour] += (*s.TotalEnergyAddedWh / 1000.0)
 			}
 
 			// Monthly aggregation
-			monthKey := s.StartTs.Format("2006-01")
+			monthKey := s.StartedAt.Format("2006-01")
 			if monthlyChargeAgg[monthKey] == nil {
 				monthlyChargeAgg[monthKey] = map[string]interface{}{
 					"energy": 0.0, "cost": 0.0, "sessions": 0, "power_sum": 0.0,
 				}
 			}
-			if s.EnergyAddedKwh != nil {
-				monthlyChargeAgg[monthKey]["energy"] = monthlyChargeAgg[monthKey]["energy"].(float64) + *s.EnergyAddedKwh
+			if s.TotalEnergyAddedWh != nil {
+				monthlyChargeAgg[monthKey]["energy"] = monthlyChargeAgg[monthKey]["energy"].(float64) + (*s.TotalEnergyAddedWh / 1000.0)
 			}
-			if s.Cost != nil {
-				monthlyChargeAgg[monthKey]["cost"] = monthlyChargeAgg[monthKey]["cost"].(float64) + *s.Cost
+			if s.CostDecimal != nil {
+				monthlyChargeAgg[monthKey]["cost"] = monthlyChargeAgg[monthKey]["cost"].(float64) + *s.CostDecimal
 			}
 			monthlyChargeAgg[monthKey]["sessions"] = monthlyChargeAgg[monthKey]["sessions"].(int) + 1
-			if s.ChargerPowerKwMax != nil {
-				monthlyChargeAgg[monthKey]["power_sum"] = monthlyChargeAgg[monthKey]["power_sum"].(float64) + *s.ChargerPowerKwMax
+			if s.PeakPowerW != nil {
+				monthlyChargeAgg[monthKey]["power_sum"] = monthlyChargeAgg[monthKey]["power_sum"].(float64) + (*s.PeakPowerW / 1000.0)
 			}
 		}
 

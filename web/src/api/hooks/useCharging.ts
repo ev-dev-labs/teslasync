@@ -214,7 +214,7 @@ export interface TeslaChargingSession {
   site_location_name: string;
   charge_start_datetime: string;
   charge_stop_datetime: string | null;
-  energy_added_kwh: number | null;
+  total_energy_added_wh: number;
   peak_power_kw: number | null;
   max_charge_rate_kw: number | null;
   charge_duration_s: number | null;

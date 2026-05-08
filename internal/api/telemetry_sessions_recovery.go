@@ -79,14 +79,14 @@ func (t *TelemetrySessionTracker) RecoverSessions(ctx context.Context) {
 		sc := &streamingCharge{
 			SessionID:          c.ID,
 			VehicleID:          c.VehicleID,
-			StartTime:          c.StartTs,
-			StartBatteryLevel:  derefInt16AsInt(c.StartBatteryPct),
+			StartTime:          c.StartedAt,
+			StartBatteryLevel:  derefFloatAsInt(c.StartSocPct),
 			LastSeen:           time.Now().UTC(),
 			accumulatedSignals: make(map[string]interface{}),
 			lastTelemetryWrite: time.Now().UTC(),
 		}
-		if c.ChargerPowerKwMax != nil {
-			sc.Power = c.ChargerPowerKwMax
+		if c.PeakPowerW != nil {
+			sc.Power = c.PeakPowerW
 		}
 		t.activeCharges[c.VehicleID] = sc
 		log.Info().Int64("session_id", c.ID).Int64("vehicle_id", c.VehicleID).Msg("session recovery: restored open charge")
@@ -283,7 +283,7 @@ func (t *TelemetrySessionTracker) RecoverIncompleteSessions(ctx context.Context)
 		// for the full rationale). State() errors are logged-and-swallowed.
 		var startSnap, endSnap map[string]interface{}
 		if chargeR.state != nil {
-			s, startErr := chargeR.state.State(ctx, charge.VehicleID, charge.StartTs)
+			s, startErr := chargeR.state.State(ctx, charge.VehicleID, charge.StartedAt)
 			if startErr != nil {
 				log.Warn().Err(startErr).Int64("charge_id", charge.ID).
 					Msg("recovery: state.State charge start snapshot failed")
@@ -461,20 +461,12 @@ func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, c
 		endSnap = map[string]interface{}{}
 	}
 
-	duration := endTs.Sub(charge.StartTs).Minutes()
-	enhancedFields := map[string]interface{}{
-		"ended_status": "recovered",
-	}
-
-	// Unit preferences from snapshots
-	startDistUnit := units.GetUnitFromSnapshot(startSnap, "SettingDistanceUnit")
-	endDistUnit := units.GetUnitFromSnapshot(endSnap, "SettingDistanceUnit")
-	endTempUnit := units.GetUnitFromSnapshot(endSnap, "SettingTemperatureUnit")
+	enhancedFields := map[string]interface{}{}
 
 	// Battery level from snapshots
 	var endBattery int
 	if bl, ok := snapFloat(startSnap, "BatteryLevel"); ok && bl > 0 {
-		enhancedFields["start_battery_pct"] = int16(bl)
+		enhancedFields["start_soc_pct"] = bl
 	}
 	if bl, ok := snapFloat(endSnap, "BatteryLevel"); ok && bl > 0 {
 		endBattery = int(bl)
@@ -487,47 +479,23 @@ func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, c
 			delta := endEnergy - startEnergy
 			if delta > 0 {
 				energyAdded = delta
-				enhancedFields["energy_added_kwh"] = delta
+				enhancedFields["total_energy_added_wh"] = delta
 			}
 		}
 	}
 
 	// Estimate energy from battery% diff if direct signal unavailable
-	startBattery := derefInt16AsInt(charge.StartBatteryPct)
+	startBattery := derefFloatAsInt(charge.StartSocPct)
 	if energyAdded == 0 && startBattery > 0 && endBattery > startBattery {
-		energyAdded = float64(endBattery-startBattery) * 0.75
-	}
-
-	// Range added (normalized to miles)
-	var milesAdded *float64
-	if startRangeRaw, ok := snapFloat(startSnap, "BatteryRange"); ok {
-		if endRangeRaw, ok := snapFloat(endSnap, "BatteryRange"); ok {
-			startRangeMi := units.NormalizeDistance(startRangeRaw, startDistUnit)
-			endRangeMi := units.NormalizeDistance(endRangeRaw, endDistUnit)
-			mi := endRangeMi - startRangeMi
-			if mi > 0 {
-				milesAdded = &mi
-				enhancedFields["miles_added"] = mi
-			}
-		}
+		energyAdded = float64(endBattery-startBattery) * 750
 	}
 
 	// Location from snapshots
 	if lat, ok := snapFloat(endSnap, "LocationLatitude", "Latitude"); ok {
-		enhancedFields["latitude"] = lat
+		enhancedFields["start_lat"] = lat
 	}
 	if lon, ok := snapFloat(endSnap, "LocationLongitude", "Longitude"); ok {
-		enhancedFields["longitude"] = lon
-	}
-
-	// Temperature (unit-aware, normalized to °C)
-	if temp, ok := snapFloat(endSnap, "InsideTemp"); ok {
-		normalized := units.NormalizeTemp(temp, endTempUnit)
-		enhancedFields["inside_temp_avg_c"] = normalized
-	}
-	if temp, ok := snapFloat(endSnap, "OutsideTemp"); ok {
-		normalized := units.NormalizeTemp(temp, endTempUnit)
-		enhancedFields["outside_temp_avg_c"] = normalized
+		enhancedFields["start_lng"] = lon
 	}
 
 	// Charger type detection from snapshot
@@ -536,30 +504,24 @@ func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, c
 	}
 
 	// Max/avg power from signal_log aggregate during charge window
-	slMaxPower, slAvgPower := t.signalLogReader.ChargeAggregates(ctx, charge.VehicleID, charge.StartTs, endTs)
+	slMaxPower, slAvgPower := t.signalLogReader.ChargeAggregates(ctx, charge.VehicleID, charge.StartedAt, endTs)
 	if slMaxPower > 0 {
-		enhancedFields["charger_power_kw_max"] = slMaxPower
+		enhancedFields["peak_power_w"] = slMaxPower
 	}
 	if slAvgPower > 0 {
-		enhancedFields["charger_power_kw_avg"] = slAvgPower
+		enhancedFields["avg_power_w"] = slAvgPower
 	}
 
-	// Charger spec fields from signal_log snapshots
-	if v, ok := snapFloat(endSnap, "ChargerVoltage"); ok && v > 0 {
-		enhancedFields["max_charger_voltage"] = int16(v)
-	}
-	if v, ok := snapFloat(endSnap, "ChargerPhases"); ok && v > 0 {
-		enhancedFields["charger_phases"] = int16(v)
-	}
 	if v, ok := signalStr(endSnap, "ChargingCableType"); ok {
 		enhancedFields["cable_type"] = v
 	}
 
 	// Commit to DB
 	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
-		var endBatteryPct *int16
-		if b := int16(endBattery); b > 0 {
-			endBatteryPct = &b
+		var endSocPct *float64
+		if endBattery > 0 {
+			v := float64(endBattery)
+			endSocPct = &v
 		}
 		var energyAddedPtr *float64
 		if energyAdded > 0 {
@@ -572,11 +534,10 @@ func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, c
 		if slAvgPower > 0 {
 			avgPower = &slAvgPower
 		}
-		endedStatus := "recovered"
 		if err := t.chargeRepo.CompleteWithTx(ctx, tx, charge.ID, endTs,
-			energyAddedPtr, endBatteryPct, milesAdded,
+			energyAddedPtr, endSocPct,
 			maxPower, avgPower,
-			nil, nil, &duration, &endedStatus); err != nil {
+			nil, nil); err != nil {
 			return err
 		}
 		// Backfill session_id on charging_telemetry rows in the same tx
@@ -585,11 +546,11 @@ func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, c
 		// because the api may have crashed between session-create and
 		// session-complete, leaving every reading session_id=NULL.
 		if affected, err := t.chargeRepo.BackfillChargingTelemetrySessionIDInTx(
-			ctx, tx, charge.ID, charge.VehicleID, charge.StartTs, endTs); err != nil {
+			ctx, tx, charge.ID, charge.VehicleID, charge.StartedAt, endTs); err != nil {
 			log.Error().Err(err).
 				Int64("session_id", charge.ID).
 				Int64("vehicle_id", charge.VehicleID).
-				Time("start_ts", charge.StartTs).
+				Time("start_ts", charge.StartedAt).
 				Time("end_ts", endTs).
 				Msg("recovery: charging_telemetry session_id backfill failed; rolling back completion")
 			return err
@@ -612,7 +573,7 @@ func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, c
 	}
 
 	log.Info().Int64("charge_id", charge.ID).Int64("vehicle_id", charge.VehicleID).
-		Time("original_start", charge.StartTs).Time("recovered_end", endTs).
-		Float64("duration_min", duration).Float64("energy_added_kwh", energyAdded).
+		Time("original_start", charge.StartedAt).Time("recovered_end", endTs).
+		Float64("duration_s", endTs.Sub(charge.StartedAt).Seconds()).Float64("total_energy_added_wh", energyAdded).
 		Msg("recovery: charge completed")
 }

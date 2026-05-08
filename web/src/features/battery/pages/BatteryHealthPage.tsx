@@ -130,7 +130,7 @@ function buildInsights(
   }
 
   if (sessions) {
-    const deepDischarges = sessions.filter((s) => s.start_battery_pct < 10).length;
+    const deepDischarges = sessions.filter((s) => s.start_soc_pct < 10).length;
     if (deepDischarges > 3) {
       items.push({
         icon: <AlertTriangle className="h-4 w-4" />,
@@ -329,10 +329,10 @@ export default function BatteryHealthPage() {
       endCount: 0,
     }));
     items.forEach((s) => {
-      const si = Math.min(Math.floor(s.start_battery_pct / 10), 9);
+      const si = Math.min(Math.floor(s.start_soc_pct / 10), 9);
       buckets[si].startCount++;
-      if (s.end_battery_pct != null) {
-        const ei = Math.min(Math.floor(s.end_battery_pct / 10), 9);
+      if (s.end_soc_pct != null) {
+        const ei = Math.min(Math.floor(s.end_soc_pct / 10), 9);
         buckets[ei].endCount++;
       }
     });
@@ -343,8 +343,8 @@ export default function BatteryHealthPage() {
   const chargingHabits = useMemo(() => {
     const items = sessions ?? [];
     if (items.length === 0) return null;
-    const startLevels = items.map((s) => s.start_battery_pct);
-    const endLevels = items.filter((s) => s.end_battery_pct != null).map((s) => s.end_battery_pct!);
+    const startLevels = items.map((s) => s.start_soc_pct);
+    const endLevels = items.filter((s) => s.end_soc_pct != null).map((s) => s.end_soc_pct!);
     const avgStart = startLevels.length > 0 ? startLevels.reduce((a, b) => a + b, 0) / startLevels.length : 0;
     const avgEnd = endLevels.length > 0 ? endLevels.reduce((a, b) => a + b, 0) / endLevels.length : 80;
     const superchargerCount = items.filter((s) => s.charger_type?.toLowerCase().includes('tesla')).length;
@@ -360,8 +360,8 @@ export default function BatteryHealthPage() {
     items.forEach((s) => {
       const isDC =
         (s.charger_type != null && s.charger_type.length > 0) ||
-        (s.charger_power_kw_max != null && s.charger_power_kw_max > 20);
-      const energy = s.energy_added_kwh ?? 0;
+        (s.peak_power_w != null && s.peak_power_w > 20);
+      const energy = s.total_energy_added_wh ?? 0;
       if (isDC) { dcEnergy += energy; dcCount++; }
       else { acEnergy += energy; acCount++; }
     });

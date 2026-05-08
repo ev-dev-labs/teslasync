@@ -34,8 +34,8 @@ interface ChargingSession {
   start_ts: string;
   start_battery_pct: number;
   end_battery_pct?: number;
-  energy_added_kwh?: number;
-  charger_power_kw_max?: number;
+  total_energy_added_wh?: number;
+  peak_power_w?: number;
   duration_min?: number;
   cost?: number;
 }
@@ -74,9 +74,9 @@ function ChargingEditForm({ session, onClose, t }: { session: ChargingSession; o
   const toast = useToast();
   const [form, setForm] = useState({
     end_ts: '',
-    energy_added_kwh: String(session.energy_added_kwh ?? ''),
+    total_energy_added_wh: String(session.total_energy_added_wh ?? ''),
     end_battery_pct: String(session.end_battery_pct ?? ''),
-    charger_power_kw_max: String(session.charger_power_kw_max ?? ''),
+    peak_power_w: String(session.peak_power_w ?? ''),
     duration_min: String(session.duration_min ?? ''),
     cost: String(session.cost ?? ''),
   });
@@ -85,9 +85,9 @@ function ChargingEditForm({ session, onClose, t }: { session: ChargingSession; o
     mutationFn: () => {
       const data: Record<string, unknown> = {};
       if (form.end_ts) data.end_ts = form.end_ts;
-      if (form.energy_added_kwh) data.energy_added_kwh = Number(form.energy_added_kwh);
+      if (form.total_energy_added_wh) data.total_energy_added_wh = Number(form.total_energy_added_wh);
       if (form.end_battery_pct) data.end_battery_pct = Number(form.end_battery_pct);
-      if (form.charger_power_kw_max) data.charger_power_kw_max = Number(form.charger_power_kw_max);
+      if (form.peak_power_w) data.peak_power_w = Number(form.peak_power_w);
       if (form.duration_min) data.duration_min = Number(form.duration_min);
       if (form.cost) data.cost = Number(form.cost);
       return request(`/data-repair/charging/${session.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
@@ -112,9 +112,9 @@ function ChargingEditForm({ session, onClose, t }: { session: ChargingSession; o
     <GlassPanel className="p-4 space-y-4 bg-neon-amber/[0.03] border-neon-amber/20">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <Input label={t('End Date (ISO)')} value={form.end_ts} placeholder="2026-03-30T04:00:00Z" onChange={e => setForm(f => ({ ...f, end_ts: e.target.value }))} />
-        <Input label={t('Energy Added (kWh)')} type="number" value={form.energy_added_kwh} onChange={e => setForm(f => ({ ...f, energy_added_kwh: e.target.value }))} />
+        <Input label={t('Energy Added (kWh)')} type="number" value={form.total_energy_added_wh} onChange={e => setForm(f => ({ ...f, total_energy_added_wh: e.target.value }))} />
         <Input label={t('End Battery %')} type="number" value={form.end_battery_pct} onChange={e => setForm(f => ({ ...f, end_battery_pct: e.target.value }))} />
-        <Input label={t('Charger Power (kW)')} type="number" value={form.charger_power_kw_max} onChange={e => setForm(f => ({ ...f, charger_power_kw_max: e.target.value }))} />
+        <Input label={t('Charger Power (kW)')} type="number" value={form.peak_power_w} onChange={e => setForm(f => ({ ...f, peak_power_w: e.target.value }))} />
         <Input label={t('Duration (min)')} type="number" value={form.duration_min} onChange={e => setForm(f => ({ ...f, duration_min: e.target.value }))} />
         <Input label={t('Cost ($)')} type="number" value={form.cost} onChange={e => setForm(f => ({ ...f, cost: e.target.value }))} />
       </div>

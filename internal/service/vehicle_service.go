@@ -236,7 +236,7 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 	if f, ok := signal.Float64Value(all["DCChargingPower"]); ok && f > 0 {
 		state.ChargerPower = f
 	}
-	if f, ok := signal.Float64Value(all["ChargeRateMilePerHour"]); ok {
+	if f, ok := signal.Float64Value(all["RangeAddedMetersPerHour"]); ok {
 		state.ChargeRate = f
 	}
 	if f, ok := signal.Float64Value(all["TimeToFullCharge"]); ok {

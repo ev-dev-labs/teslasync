@@ -281,7 +281,7 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   if (raw['DetailedChargeState'] != null) s.detailedChargeState = str('DetailedChargeState')
   if (raw['ChargerVoltage'] != null) s.chargerVoltage = n('ChargerVoltage')
   if (raw['ChargeAmps'] != null) s.chargeAmps = n('ChargeAmps')
-  if (raw['ChargeRateMilePerHour'] != null) s.chargeRate = n('ChargeRateMilePerHour')
+  if (raw['RangeAddedMetersPerHour'] != null) s.chargeRate = n('RangeAddedMetersPerHour')
   if (raw['DCChargingPower'] != null) s.chargerPower = n('DCChargingPower')
   else if (raw['ACChargingPower'] != null) s.chargerPower = n('ACChargingPower')
   if (raw['ChargeLimitSoc'] != null) s.chargeLimitSoc = Math.round(n('ChargeLimitSoc'))
