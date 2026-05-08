@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics ΓÇö baseline
 
-_Generated 2026-05-08T20:49:04Z, Go go1.26.1, commit f976b2b1b08a58837281a4a0f5bad69f4e69f312_
+_Generated 2026-05-08T20:55:58Z, Go go1.26.1, commit 283271e4e1d48718254058e2cb6cc32c92851dc9_
 
 ## Summary
 
 - Packages: 104
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 0
-- Total non-blank LOC under cmd/+internal/+tools/: 197606
+- Total non-blank LOC under cmd/+internal/+tools/: 197807
 
 ## cmd/* main.go LOC
 
@@ -48,13 +48,13 @@ _None._
 | cmd/trace-coverage-audit | 2 | 0 | 223 | yes | cmd-internal |
 | cmd/unit-drift-validator | 2 | 1 | 296 | yes | cmd-internal |
 | internal/adapter/gasprices | 2 | 1 | 358 | yes | adapter |
-| internal/adapter/geocoding | 2 | 0 | 34 | yes | adapter |
-| internal/adapter/mqtt | 2 | 0 | 82 | yes | adapter |
-| internal/adapter/postgres | 8 | 0 | 460 | yes | adapter |
-| internal/adapter/postgres/queries | 8 | 0 | 316 | yes | adapter |
-| internal/adapter/redis | 2 | 0 | 58 | yes | adapter |
-| internal/adapter/storage | 2 | 0 | 64 | yes | adapter |
-| internal/adapter/tesla | 3 | 0 | 199 | yes | adapter |
+| internal/adapter/geocoding | 2 | 0 | 35 | yes | adapter |
+| internal/adapter/mqtt | 2 | 0 | 83 | yes | adapter |
+| internal/adapter/postgres | 8 | 0 | 461 | yes | adapter |
+| internal/adapter/postgres/queries | 8 | 0 | 317 | yes | adapter |
+| internal/adapter/redis | 2 | 0 | 59 | yes | adapter |
+| internal/adapter/storage | 2 | 0 | 65 | yes | adapter |
+| internal/adapter/tesla | 3 | 0 | 200 | yes | adapter |
 | internal/api | 197 | 93 | 77662 | yes | handler |
 | internal/apilog | 4 | 1 | 505 | yes | platform |
 | internal/app | 6 | 1 | 1207 | yes | app |
@@ -64,7 +64,7 @@ _None._
 | internal/app/notificationsvc | 2 | 1 | 305 | yes | app |
 | internal/app/tripsvc | 2 | 1 | 308 | yes | app |
 | internal/app/vehiclesvc | 3 | 1 | 342 | yes | app |
-| internal/arch | 2 | 1 | 672 | yes | tool |
+| internal/arch | 2 | 1 | 863 | yes | tool |
 | internal/auth | 6 | 4 | 2384 | yes | platform |
 | internal/automation | 6 | 2 | 1560 | yes | platform |
 | internal/automation/action | 6 | 5 | 3822 | yes | platform |
@@ -115,9 +115,9 @@ _None._
 | internal/platform/httputil | 10 | 8 | 2254 | yes | platform |
 | internal/platform/telemetry | 4 | 0 | 143 | yes | platform |
 | internal/polling | 11 | 1 | 1413 | yes | platform |
-| internal/port/external | 5 | 0 | 86 | yes | port |
-| internal/port/messaging | 3 | 1 | 271 | yes | port |
-| internal/port/repository | 8 | 0 | 109 | yes | port |
+| internal/port/external | 5 | 0 | 87 | yes | port |
+| internal/port/messaging | 3 | 1 | 272 | yes | port |
+| internal/port/repository | 8 | 0 | 110 | yes | port |
 | internal/resilience | 2 | 4 | 722 | yes | platform |
 | internal/service | 4 | 1 | 1377 | yes | platform |
 | internal/signal | 11 | 11 | 7233 | yes | platform |

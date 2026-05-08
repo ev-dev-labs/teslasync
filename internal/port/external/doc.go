@@ -1,4 +1,5 @@
 // Package external declares ports for outbound integrations (Tesla, geocoding, gas prices). declares the application's hexagonal-architecture ports.
 //
 // Layer: port
+// Layering: imports stdlib + internal/domain/* + sibling internal/port/* only. arch_test (TestPortPurity) enforces.
 package external

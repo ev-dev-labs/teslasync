@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-08T20:49:03Z",
+  "generated_at": "2026-05-08T20:55:57Z",
   "go_version": "go1.26.1",
-  "commit_sha": "f976b2b1b08a58837281a4a0f5bad69f4e69f312",
+  "commit_sha": "283271e4e1d48718254058e2cb6cc32c92851dc9",
   "packages": [
     {
       "path": "cmd/automation-worker",
@@ -256,7 +256,7 @@
       "path": "internal/adapter/geocoding",
       "go_files": 2,
       "test_files": 0,
-      "loc": 34,
+      "loc": 35,
       "has_doc_go": true,
       "layer": "adapter",
       "imports": [
@@ -271,7 +271,7 @@
       "path": "internal/adapter/mqtt",
       "go_files": 2,
       "test_files": 0,
-      "loc": 82,
+      "loc": 83,
       "has_doc_go": true,
       "layer": "adapter",
       "imports": [
@@ -287,7 +287,7 @@
       "path": "internal/adapter/postgres",
       "go_files": 8,
       "test_files": 0,
-      "loc": 460,
+      "loc": 461,
       "has_doc_go": true,
       "layer": "adapter",
       "imports": [
@@ -316,7 +316,7 @@
       "path": "internal/adapter/postgres/queries",
       "go_files": 8,
       "test_files": 0,
-      "loc": 316,
+      "loc": 317,
       "has_doc_go": true,
       "layer": "adapter",
       "imports": null,
@@ -335,7 +335,7 @@
       "path": "internal/adapter/redis",
       "go_files": 2,
       "test_files": 0,
-      "loc": 58,
+      "loc": 59,
       "has_doc_go": true,
       "layer": "adapter",
       "imports": [
@@ -351,7 +351,7 @@
       "path": "internal/adapter/storage",
       "go_files": 2,
       "test_files": 0,
-      "loc": 64,
+      "loc": 65,
       "has_doc_go": true,
       "layer": "adapter",
       "imports": null,
@@ -364,7 +364,7 @@
       "path": "internal/adapter/tesla",
       "go_files": 3,
       "test_files": 0,
-      "loc": 199,
+      "loc": 200,
       "has_doc_go": true,
       "layer": "adapter",
       "imports": [
@@ -920,7 +920,7 @@
       "path": "internal/arch",
       "go_files": 2,
       "test_files": 1,
-      "loc": 672,
+      "loc": 863,
       "has_doc_go": true,
       "layer": "tool",
       "imports": null,
@@ -2044,7 +2044,7 @@
       "path": "internal/port/external",
       "go_files": 5,
       "test_files": 0,
-      "loc": 86,
+      "loc": 87,
       "has_doc_go": true,
       "layer": "port",
       "imports": null,
@@ -2060,7 +2060,7 @@
       "path": "internal/port/messaging",
       "go_files": 3,
       "test_files": 1,
-      "loc": 271,
+      "loc": 272,
       "has_doc_go": true,
       "layer": "port",
       "imports": [
@@ -2078,7 +2078,7 @@
       "path": "internal/port/repository",
       "go_files": 8,
       "test_files": 0,
-      "loc": 109,
+      "loc": 110,
       "has_doc_go": true,
       "layer": "port",
       "imports": [

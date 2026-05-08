@@ -1,0 +1,63 @@
+=== PHASE-47 / 09 port-adapter-rules — 2026-05-08T13:55:17.1493357-07:00 ===
+=== STEP 1: ARCH_TEST ===
+=== RUN   TestForbiddenEdges
+--- PASS: TestForbiddenEdges (4.75s)
+=== RUN   TestBaselineHonoured
+--- PASS: TestBaselineHonoured (0.01s)
+=== RUN   TestEveryInternalPackageHasDocGoWithLayer
+--- PASS: TestEveryInternalPackageHasDocGoWithLayer (0.35s)
+=== RUN   TestFrozenPackagesNoNewFiles
+--- PASS: TestFrozenPackagesNoNewFiles (0.00s)
+=== RUN   TestDomainPurity
+--- PASS: TestDomainPurity (0.21s)
+=== RUN   TestModelsHaveStructTags
+--- PASS: TestModelsHaveStructTags (0.01s)
+=== RUN   TestModelsImportsRestricted
+--- PASS: TestModelsImportsRestricted (0.20s)
+=== RUN   TestPlatformSubpackagesGated
+--- PASS: TestPlatformSubpackagesGated (0.00s)
+=== RUN   TestPortPurity
+--- PASS: TestPortPurity (0.20s)
+=== RUN   TestAdapterPurity
+--- PASS: TestAdapterPurity (0.29s)
+PASS
+ok  	github.com/ev-dev-labs/teslasync/internal/arch	6.603s
+=== STEP 2: ADVISORY_SOURCES_CLEAN ===
+AdvisorySources entries for hexagonal layers: 0
+=== STEP 3: NEGATIVE_PORT ===
+--- FAIL: TestPortPurity (0.33s)
+    arch_test.go:631: PORT PURITY (phase-47/09): github.com/ev-dev-labs/teslasync/internal/port/external imports github.com/ev-dev-labs/teslasync/internal/adapter/redis ΓÇö only stdlib + internal/domain/* + internal/port/* allowed
+FAIL
+FAIL	github.com/ev-dev-labs/teslasync/internal/arch	0.915s
+FAIL
+=== STEP 4: NEGATIVE_ADAPTER ===
+--- FAIL: TestAdapterPurity (0.50s)
+    arch_test.go:683: ADAPTER PURITY (phase-47/09): github.com/ev-dev-labs/teslasync/internal/adapter/redis imports forbidden github.com/ev-dev-labs/teslasync/internal/api ΓÇö adapters must not depend on transport, app, or handler layers
+FAIL
+FAIL	github.com/ev-dev-labs/teslasync/internal/arch	1.090s
+FAIL
+=== STEP 5: EXEMPTIONS_DOC ===
+exemptions.md present
+=== STEP 6: REFRESH_BASELINE ===
+baseline refreshed
+=== STEP 7: GIT_STATUS ===
+AM .github/prompts/db-refactor/logs/phase-47-09-port-adapter-rules.log
+A  .github/prompts/db-refactor/phase-47/09-port-adapter-rules.prompt.md
+ M internal/adapter/gasprices/doc.go
+ M internal/adapter/geocoding/doc.go
+ M internal/adapter/mqtt/doc.go
+ M internal/adapter/postgres/doc.go
+ M internal/adapter/postgres/queries/doc.go
+ M internal/adapter/redis/doc.go
+ M internal/adapter/storage/doc.go
+ M internal/adapter/tesla/doc.go
+ M internal/arch/arch_test.go
+ M internal/arch/rules.go
+ M internal/port/external/doc.go
+ M internal/port/messaging/doc.go
+ M internal/port/repository/doc.go
+ M tools/archmetrics/baseline.json
+ M tools/archmetrics/baseline.md
+?? docs/architecture/exemptions.md
+EXIT=0
+STATUS=DONE

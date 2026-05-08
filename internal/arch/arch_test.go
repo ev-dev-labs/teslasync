@@ -582,3 +582,129 @@ func TestPlatformSubpackagesGated(t *testing.T) {
 	}
 }
 
+// TestPortPurity enforces the phase-47/09 hexagonal contract for ports:
+// every package under internal/port/* may import only stdlib, the
+// parent internal/port package, sibling internal/port/* packages, and
+// internal/domain/* (entity types appearing in port signatures).
+// Adapters, persistence, transport, app services, platform, models —
+// all forbidden.
+func TestPortPurity(t *testing.T) {
+	cfg := &packages.Config{
+		Mode: packages.NeedName | packages.NeedImports,
+		Dir:  filepath.Join("..", ".."),
+	}
+	pkgs, err := packages.Load(cfg, "./internal/port/...")
+	if err != nil {
+		t.Fatalf("packages.Load: %v", err)
+	}
+	if len(pkgs) == 0 {
+		t.Fatal("packages.Load returned no packages for ./internal/port/...")
+	}
+
+	type violation struct {
+		pkg, dep string
+	}
+	var bad []violation
+	for _, p := range pkgs {
+		for tgt := range p.Imports {
+			rel := strings.TrimPrefix(tgt, modulePath+"/")
+			if !strings.HasPrefix(rel, "internal/") {
+				continue
+			}
+			if isAllowedInternalImport(rel, PortAllowedInternalImports) {
+				continue
+			}
+			if isException(strings.TrimPrefix(p.PkgPath, modulePath+"/"), rel) {
+				continue
+			}
+			bad = append(bad, violation{pkg: p.PkgPath, dep: tgt})
+		}
+	}
+
+	sort.Slice(bad, func(i, j int) bool {
+		if bad[i].pkg != bad[j].pkg {
+			return bad[i].pkg < bad[j].pkg
+		}
+		return bad[i].dep < bad[j].dep
+	})
+	for _, v := range bad {
+		t.Errorf("PORT PURITY (phase-47/09): %s imports %s — only stdlib + internal/domain/* + internal/port/* allowed",
+			v.pkg, v.dep)
+	}
+}
+
+// TestAdapterPurity enforces the phase-47/09 hexagonal contract for
+// adapters: no package under internal/adapter/* may import any of the
+// prefixes in AdapterForbiddenImports (internal/api, internal/handler/*,
+// internal/app/*). Adapters live at the bottom of the dependency stack
+// and must depend only on the abstractions (ports), entities (domain),
+// scan targets (models), platform utilities, and 3rd-party drivers.
+// Cross-layer wiring belongs in cmd/ and internal/app, never here.
+func TestAdapterPurity(t *testing.T) {
+	cfg := &packages.Config{
+		Mode: packages.NeedName | packages.NeedImports,
+		Dir:  filepath.Join("..", ".."),
+	}
+	pkgs, err := packages.Load(cfg, "./internal/adapter/...")
+	if err != nil {
+		t.Fatalf("packages.Load: %v", err)
+	}
+	if len(pkgs) == 0 {
+		t.Fatal("packages.Load returned no packages for ./internal/adapter/...")
+	}
+
+	type violation struct {
+		pkg, dep string
+	}
+	var bad []violation
+	for _, p := range pkgs {
+		for tgt := range p.Imports {
+			rel := strings.TrimPrefix(tgt, modulePath+"/")
+			if !strings.HasPrefix(rel, "internal/") {
+				continue
+			}
+			if !isOnDenyList(rel, AdapterForbiddenImports) {
+				continue
+			}
+			if isException(strings.TrimPrefix(p.PkgPath, modulePath+"/"), rel) {
+				continue
+			}
+			bad = append(bad, violation{pkg: p.PkgPath, dep: tgt})
+		}
+	}
+
+	sort.Slice(bad, func(i, j int) bool {
+		if bad[i].pkg != bad[j].pkg {
+			return bad[i].pkg < bad[j].pkg
+		}
+		return bad[i].dep < bad[j].dep
+	})
+	for _, v := range bad {
+		t.Errorf("ADAPTER PURITY (phase-47/09): %s imports forbidden %s — adapters must not depend on transport, app, or handler layers",
+			v.pkg, v.dep)
+	}
+}
+
+// isAllowedInternalImport returns true when rel matches the parent
+// prefix exactly OR rel is rooted under "<prefix>/" for any prefix in
+// the allow list.
+func isAllowedInternalImport(rel string, allowed []string) bool {
+	for _, prefix := range allowed {
+		if rel == prefix || strings.HasPrefix(rel, prefix+"/") {
+			return true
+		}
+	}
+	return false
+}
+
+// isOnDenyList returns true when rel matches any deny-list prefix
+// either exactly or as a parent ("<prefix>/...").
+func isOnDenyList(rel string, deny []string) bool {
+	for _, prefix := range deny {
+		if rel == prefix || strings.HasPrefix(rel, prefix+"/") {
+			return true
+		}
+	}
+	return false
+}
+
