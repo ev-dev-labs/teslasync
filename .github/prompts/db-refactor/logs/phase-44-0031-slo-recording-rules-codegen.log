@@ -1,0 +1,7 @@
+=== GATE ===
+=== GENERATE ===
+wrote helm/teslasync/files/prometheus/recording-rules.yaml (8 SLOs, 32 rules)
+=== IDEMPOTENT ===
+All gate checks passed.
+EXIT=0
+STATUS=DONE

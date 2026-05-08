@@ -4,8 +4,14 @@
 //
 //	slogen validate <catalog.yaml>
 //	    Validates the catalog against the embedded schema and exits non-zero
-//	    on any violation. Subsequent prompts add `rules`, `alerts`, and
-//	    `dashboards` subcommands consuming the same catalogue.
+//	    on any violation.
+//
+//	slogen generate recording [--catalog slo/catalog.yaml] [--out <file>]
+//	    Regenerates the Prometheus recording rules YAML from the catalog.
+//	    Default output: helm/teslasync/files/prometheus/recording-rules.yaml.
+//
+// Subsequent prompts add `alerts` and `dashboards` subcommands consuming
+// the same catalogue.
 //
 // Implementation note:
 //
@@ -76,6 +82,11 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Fprintln(os.Stdout, "catalog OK")
+	case "generate":
+		if err := runGenerate(os.Args[2:]); err != nil {
+			fmt.Fprintf(os.Stderr, "generate: %v\n", err)
+			os.Exit(1)
+		}
 	case "-h", "--help", "help":
 		usage()
 	default:
@@ -85,7 +96,9 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: slogen validate <catalog.yaml>")
+	fmt.Fprintln(os.Stderr, "usage:")
+	fmt.Fprintln(os.Stderr, "  slogen validate <catalog.yaml>")
+	fmt.Fprintln(os.Stderr, "  slogen generate recording [--catalog FILE] [--out FILE]")
 }
 
 // validateFile parses the catalogue and applies the schema invariants.
