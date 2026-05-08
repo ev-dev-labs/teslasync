@@ -48,7 +48,7 @@ function categoryIcon(range: string): React.ReactNode {
 
 function getEfficiency(drive: Drive): number | null {
   const battUsed = (drive.startBatteryPct ?? 0) - (drive.endBatteryPct ?? 0);
-  if (drive.distanceMi > 0 && battUsed > 0) return (battUsed * 0.75 * 1000) / drive.distanceMi;
+  if (drive.distanceM > 0 && battUsed > 0) return (battUsed * 0.75 * 1000) / (drive.distanceM / 1609.344);
   return null;
 }
 
@@ -74,11 +74,11 @@ export default function SpeedProfilePage() {
   const scatterData = useMemo(() => {
     if (!drives) return [];
     return drives
-      .filter((d) => d.avgSpeedMph && getEfficiency(d))
+      .filter((d) => d.avgSpeedMps && getEfficiency(d))
       .map((d) => {
         const eff = convertEfficiency(getEfficiency(d)!);
         return {
-          speed: Math.round(convertSpeed(d.avgSpeedMph!)),
+          speed: Math.round(convertSpeed((d.avgSpeedMps!) / 0.44704)),
           efficiency: Math.round(eff),
           color: eff < 140 ? '#10b981' : eff < 200 ? '#00f0ff' : eff < 260 ? '#f59e0b' : '#ef4444',
         };
@@ -91,19 +91,20 @@ export default function SpeedProfilePage() {
     const map = new Map<string, { totalEff: number; totalSpd: number; count: number }>();
     const ranges = data?.distribution ?? [];
     drives.forEach((d) => {
-      if (d.avgSpeedMph == null) return;
+      if (d.avgSpeedMps == null) return;
       const eff = getEfficiency(d);
       if (!eff) return;
+      const avgSpeedMph = d.avgSpeedMps / 0.44704;
       for (const r of ranges) {
         const bucket = r.speedBucket ?? r.speed_bucket ?? '';
         const parts = bucket.match(/(\d+)/g);
         if (!parts) continue;
         const lo = Number(parts[0]);
         const hi = parts.length > 1 ? Number(parts[1]) : 999;
-        if (d.avgSpeedMph >= lo && d.avgSpeedMph < hi) {
+        if (avgSpeedMph >= lo && avgSpeedMph < hi) {
           const existing = map.get(bucket) ?? { totalEff: 0, totalSpd: 0, count: 0 };
           existing.totalEff += eff;
-          existing.totalSpd += d.avgSpeedMph;
+          existing.totalSpd += avgSpeedMph;
           existing.count++;
           map.set(bucket, existing);
           break;

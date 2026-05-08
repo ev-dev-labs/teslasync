@@ -43,7 +43,7 @@ function efficiencyColor(wh: number): string {
 
 function getEfficiency(drive: Drive): number | null {
   const battUsed = (drive.startBatteryPct ?? 0) - (drive.endBatteryPct ?? 0);
-  if (drive.distanceMi > 0 && battUsed > 0) return (battUsed * 0.75 * 1000) / drive.distanceMi;
+  if (drive.distanceM > 0 && battUsed > 0) return (battUsed * 0.75 * 1000) / (drive.distanceM / 1609.344);
   return null;
 }
 
@@ -98,16 +98,16 @@ export default function EfficiencyPage() {
       .map((d) => ({
         date: formatDateShort(d.startTs),
         efficiency: Math.round(convertEfficiency(getEfficiency(d)!)),
-        distance: parseFloat(fmtNumber(convertDistance(d.distanceMi ?? 0), 1)),
+        distance: parseFloat(fmtNumber(convertDistance((d.distanceM ?? 0) / 1609.344), 1)),
       }));
   }, [filteredDrives, convertEfficiency, convertDistance]);
 
   /* ---- Speed vs Efficiency scatter ---- */
   const speedVsEff = useMemo(() => {
     return filteredDrives
-      .filter((d) => d.avgSpeedMph && getEfficiency(d))
+      .filter((d) => d.avgSpeedMps && getEfficiency(d))
       .map((d) => ({
-        speed: Math.round(convertSpeed(d.avgSpeedMph!)),
+        speed: Math.round(convertSpeed((d.avgSpeedMps!) / 0.44704)),
         efficiency: Math.round(convertEfficiency(getEfficiency(d)!)),
       }));
   }, [filteredDrives, convertSpeed, convertEfficiency]);
@@ -132,10 +132,10 @@ export default function EfficiencyPage() {
       { range: `120+`, min: 120, max: 999, count: 0, totalEff: 0 },
     ];
     filteredDrives.forEach((d) => {
-      if (d.avgSpeedMph == null) return;
+      if (d.avgSpeedMps == null) return;
       const eff = getEfficiency(d);
       if (!eff) return;
-      const b = buckets.find((bk) => d.avgSpeedMph! >= bk.min && d.avgSpeedMph! < bk.max);
+      const b = buckets.find((bk) => (d.avgSpeedMps! / 0.44704) >= bk.min && (d.avgSpeedMps! / 0.44704) < bk.max);
       if (b) { b.count++; b.totalEff += eff; }
     });
     return buckets.filter((b) => b.count > 0).map((b) => ({
@@ -177,8 +177,8 @@ export default function EfficiencyPage() {
       if (b) {
         b.count++;
         b.totalEff += eff;
-        b.totalDist += d.distanceMi;
-        b.totalSpeed += d.avgSpeedMph ?? 0;
+        b.totalDist += d.distanceM / 1609.344;
+        b.totalSpeed += (d.avgSpeedMps ?? 0) / 0.44704;
       }
     });
     return buckets

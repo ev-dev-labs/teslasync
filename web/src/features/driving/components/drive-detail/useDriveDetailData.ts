@@ -24,9 +24,9 @@ const SPEED_SEGMENT_LOW_MPS = 30 * 0.44704;
 export function useDriveDetailData(id: string) {
   const { data: drive, isLoading, error } = useDrive(id);
   const { data: vehicle } = useVehicle(String(drive?.vehicleId ?? ''));
-  // Drive aggregate fields (distanceMi, maxSpeedMph, avgSpeedMph) stay on the
+  // Drive aggregate fields (distanceM, maxSpeedMps, avgSpeedMps) stay on the
   // legacy useSettings surface — same locked-policy continuation as Phase-43 /
-  // Prompt 0020 Drive.distance_mi (genuine miles after the SQL adapter
+  // Prompt 0020 Drive.distance_m (genuine miles after the SQL adapter
   // boundary in internal/database/drive_repo.go).
   const { convertDistance, convertSpeed } = useSettings();
   // Telemetry / position fields from drive(Telemetry|Position)FieldMappings are
@@ -135,8 +135,8 @@ export function useDriveDetailData(id: string) {
   /* ---- Computed stats ---- */
   const stats = useMemo<DriveStats | null>(() => {
     if (!drive) return null;
-    const maxSpd = drive.maxSpeedMph != null ? convertSpeed(drive.maxSpeedMph) : 0;
-    const avgSpd = drive.avgSpeedMph != null ? convertSpeed(drive.avgSpeedMph) : 0;
+    const maxSpd = drive.maxSpeedMps != null ? convertSpeed((drive.maxSpeedMps) / 0.44704) : 0;
+    const avgSpd = drive.avgSpeedMps != null ? convertSpeed((drive.avgSpeedMps) / 0.44704) : 0;
     // speedMin removed from API contract; compute from per-row chart data.
     // We want the minimum *non-zero* speed during the actual moving portion of
     // the drive — pure zeroes mean parked/stopped at a light and don't tell
@@ -147,23 +147,23 @@ export function useDriveDetailData(id: string) {
     // Backend derives power = pack_voltage * pack_current / 1000 per row;
     // sign is preserved (positive = drive, negative = regen).
     const powerValues = chartData.map((d) => d.power).filter((p) => p !== 0);
-    const powerMax = powerValues.length > 0 ? Math.max(...powerValues) : (drive.avgPowerKw ?? 0);
+    const powerMax = powerValues.length > 0 ? Math.max(...powerValues) : ((drive.avgPowerW ?? 0) / 1000);
     const powerMin = powerValues.length > 0 ? Math.min(...powerValues) : 0;
-    const avgPower = drive.avgPowerKw != null
-      ? drive.avgPowerKw
+    const avgPower = drive.avgPowerW != null
+      ? drive.avgPowerW / 1000
       : (chartData.length > 0
         ? chartData.reduce((s, d) => s + d.power, 0) / chartData.length
         : 0);
-    const durationH = (drive.durationMin ?? 0) / 60;
-    const energyWh = drive.energyUsedKwh != null
-      ? drive.energyUsedKwh * 1000
+    const durationH = (drive.durationS ?? 0) / 3600;
+    const energyWh = drive.energyUsedWh != null
+      ? drive.energyUsedWh
       : Math.abs(avgPower) * durationH * 1000;
-    const regenWh = drive.regenKwh != null
-      ? drive.regenKwh * 1000
+    const regenWh = drive.regenEnergyWh != null
+      ? drive.regenEnergyWh
       : (chartData.length > 0
         ? chartData.filter((d) => d.power < 0).reduce((s, d) => s + Math.abs(d.power), 0) * (durationH / chartData.length) * 1000
         : 0);
-    const consumptionWhKm = drive.distanceMi > 0 ? energyWh / drive.distanceMi : 0;
+    const consumptionWhKm = drive.distanceM > 0 ? energyWh / (drive.distanceM / 1000) : 0;
     const elevGain = chartData.reduce((sum, d, i) => {
       if (i === 0) return 0;
       const diff = d.elevation - chartData[i - 1].elevation;
@@ -206,8 +206,8 @@ export function useDriveDetailData(id: string) {
 
     const hasTirePressure = chartData.some((d) => d.tireFl !== null || d.tireFr !== null || d.tireRl !== null || d.tireRr !== null);
 
-    const efficiencyPctPer100 = drive.distanceMi > 0 && drive.startBatteryPct != null && drive.endBatteryPct != null
-      ? (drive.startBatteryPct - drive.endBatteryPct) / convertDistance(drive.distanceMi) * 10
+    const efficiencyPctPer100 = drive.distanceM > 0 && drive.startBatteryPct != null && drive.endBatteryPct != null
+      ? (drive.startBatteryPct - drive.endBatteryPct) / convertDistance((drive.distanceM) / 1609.344) * 10
       : null;
 
     return {

@@ -58,7 +58,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
       <div className="space-y-1.5 overflow-y-auto h-full">
         {items.length > 0 ? (
           items.map((d) => {
-            const dist = convertDistance(d.distance_mi ?? 0);
+            const dist = convertDistance((d.distance_m ?? 0) / 1609.344);
             const batteryUsed =
               d.start_battery_pct != null && d.end_battery_pct != null
                 ? d.start_battery_pct - d.end_battery_pct
@@ -75,7 +75,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
                     <div className="flex items-center gap-1 mt-0.5">
                       <Clock className="h-2.5 w-2.5 text-[var(--text-muted)]" />
                       <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
-                        {formatDurationMinutes(d.duration_min ?? 0, { subMinuteLabel: '<1m' })}
+                        {formatDurationMinutes((d.duration_s ?? 0) / 60, { subMinuteLabel: '<1m' })}
                       </span>
                     </div>
                   </div>

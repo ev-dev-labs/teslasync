@@ -107,23 +107,25 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 			if d.StartTs.Before(cutoff) {
 				continue
 			}
-			dist += d.DistanceMi
+			distKm := d.DistanceM / 1000.0
+			dist += distKm
 			driveCount++
 
 			hour := d.StartTs.Hour()
 			hourCounts[hour]++
-			hourDistance[hour] += d.DistanceMi
+			hourDistance[hour] += distKm
 			dow := int(d.StartTs.Weekday())
 			dowCounts[dow]++
-			dowDistance[dow] += d.DistanceMi
+			dowDistance[dow] += distKm
 
-			if d.MaxSpeedMph != nil {
-				allSpeedMax = append(allSpeedMax, *d.MaxSpeedMph)
+			if d.MaxSpeedMps != nil {
+				// convert m/s -> km/h for the speed stats output bucket
+				allSpeedMax = append(allSpeedMax, *d.MaxSpeedMps*3.6)
 			}
-			allDriveDurations = append(allDriveDurations, d.DurationMin)
-			allDriveDistances = append(allDriveDistances, d.DistanceMi)
+			allDriveDurations = append(allDriveDurations, float64(d.DurationS)/60.0)
+			allDriveDistances = append(allDriveDistances, distKm)
 
-			if d.StartBatteryPct != nil && d.EndBatteryPct != nil && d.DistanceMi > 0 {
+			if d.StartBatteryPct != nil && d.EndBatteryPct != nil && d.DistanceM > 0 {
 				totalRangeUsed += float64(*d.StartBatteryPct - *d.EndBatteryPct)
 			}
 			if d.OutsideTempAvgC != nil {
@@ -138,7 +140,7 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 				dailyDriveAgg[dateKey] = map[string]interface{}{"drives": 0, "distance": 0.0}
 			}
 			dailyDriveAgg[dateKey]["drives"] = dailyDriveAgg[dateKey]["drives"].(int) + 1
-			dailyDriveAgg[dateKey]["distance"] = dailyDriveAgg[dateKey]["distance"].(float64) + d.DistanceMi
+			dailyDriveAgg[dateKey]["distance"] = dailyDriveAgg[dateKey]["distance"].(float64) + distKm
 		}
 
 		var energy, cost float64

@@ -25,13 +25,13 @@ function useDriveColumns(convertDistance: (v: number) => number, distanceUnit: s
     {
       key: 'distance',
       header: t('common.distance', 'Distance'),
-      render: (d) => `${fmtNumber(convertDistance(d.distance_mi))} ${distanceUnit}`,
+      render: (d) => `${fmtNumber(convertDistance((d.distance_m) / 1609.344))} ${distanceUnit}`,
       sortable: true,
     },
     {
       key: 'duration',
       header: t('common.duration', 'Duration'),
-      render: (d) => durationStr(d.duration_min),
+      render: (d) => durationStr((d.duration_s ?? 0) / 60),
     },
     {
       key: 'battery',

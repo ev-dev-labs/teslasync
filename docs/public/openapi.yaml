@@ -4704,6 +4704,11 @@ components:
 
     Drive:
       type: object
+      description: |
+        SI canonical drive aggregate (Phase-42 migration 000185, Phase-48
+        Slice 1 rename). All distance/speed/energy/power values are in SI base
+        units. Convert at the display boundary using `useUnits()` on the
+        frontend.
       properties:
         id:
           type: integer
@@ -4711,53 +4716,79 @@ components:
         vehicle_id:
           type: integer
           example: 1
-        start_time:
+        start_ts:
           type: string
           format: date-time
-        end_time:
+        end_ts:
           type: string
           format: date-time
+          nullable: true
         start_lat:
           type: number
           example: 37.7749
-        start_lng:
+        start_lon:
           type: number
           example: -122.4194
         end_lat:
           type: number
           example: 37.3382
-        end_lng:
+        end_lon:
           type: number
           example: -121.8863
         start_address:
           type: string
+          nullable: true
           example: San Francisco, CA
         end_address:
           type: string
+          nullable: true
           example: San Jose, CA
-        distance_km:
+        distance_m:
           type: number
-          example: 77.5
-        duration_minutes:
-          type: number
-          example: 55.2
-        avg_speed_kmh:
-          type: number
-          example: 84.2
-        max_speed_kmh:
-          type: number
-          example: 120.5
-        start_battery_level:
+          description: Distance travelled in meters (SI canonical).
+          example: 124761.0
+        duration_s:
           type: integer
+          format: int64
+          description: Drive duration in seconds (SI canonical).
+          example: 3312
+        avg_speed_mps:
+          type: number
+          description: Average speed in meters per second (SI canonical).
+          nullable: true
+          example: 23.4
+        max_speed_mps:
+          type: number
+          description: Maximum speed in meters per second (SI canonical).
+          nullable: true
+          example: 33.5
+        start_battery_pct:
+          type: integer
+          nullable: true
           example: 85
-        end_battery_level:
+        end_battery_pct:
           type: integer
+          nullable: true
           example: 62
-        energy_used_kwh:
+        energy_used_wh:
           type: number
-          example: 15.3
-        outside_temp_avg:
+          description: Energy used in watt-hours (SI canonical).
+          nullable: true
+          example: 15300
+        regen_energy_wh:
           type: number
+          description: Energy recovered via regenerative braking in watt-hours (SI canonical).
+          nullable: true
+          example: 1850
+        avg_power_w:
+          type: number
+          description: Average power draw in watts (SI canonical).
+          nullable: true
+          example: 16500
+        outside_temp_avg_c:
+          type: number
+          description: Average ambient temperature in degrees Celsius.
+          nullable: true
           example: 22.5
 
     ChargingSession:

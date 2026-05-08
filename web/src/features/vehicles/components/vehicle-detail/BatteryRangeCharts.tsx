@@ -25,7 +25,7 @@ interface BatteryRangeChartsProps {
 
 export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
   const { t } = useTranslation()
-  // Drive.distance_mi remains in miles after the SQL m→mi adapter (see drive_repo.go),
+  // Drive.distance_m remains in miles after the SQL m→mi adapter (see drive_repo.go),
   // so it still flows through the legacy useSettings converter.
   const { convertDistance, distanceUnit } = useSettings()
   // VehicleState.rated_range is SI (meters) — use the SI-aware unit pref / formatter.
@@ -39,8 +39,8 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
   const driveChartData = useMemo(() =>
     (drives ?? []).map((d) => ({
       date: formatDate(d.start_ts),
-      distance: Math.round(convertDistance(d.distance_mi)),
-      duration: Math.round(d.duration_min),
+      distance: Math.round(convertDistance((d.distance_m) / 1609.344)),
+      duration: Math.round((d.duration_s ?? 0) / 60),
     })).reverse(),
   [drives, convertDistance])
 

@@ -3,8 +3,10 @@ export interface Drive {
   vehicleId: number;
   startTs: string;
   endTs: string | null;
-  durationMin: number;
-  distanceMi: number;
+  /** Drive duration in seconds (SI canonical). */
+  durationS: number;
+  /** Distance travelled in meters (SI canonical). */
+  distanceM: number;
   startAddress: string | null;
   endAddress: string | null;
   startLat: number | null;
@@ -13,11 +15,16 @@ export interface Drive {
   endLon: number | null;
   startBatteryPct: number | null;
   endBatteryPct: number | null;
-  energyUsedKwh: number | null;
-  regenKwh: number | null;
-  avgSpeedMph: number | null;
-  maxSpeedMph: number | null;
-  avgPowerKw: number | null;
+  /** Energy used in watt-hours (Wh, SI canonical). */
+  energyUsedWh: number | null;
+  /** Energy recovered via regen in watt-hours (Wh, SI canonical). */
+  regenEnergyWh: number | null;
+  /** Average speed in meters per second (SI canonical). */
+  avgSpeedMps: number | null;
+  /** Maximum speed in meters per second (SI canonical). */
+  maxSpeedMps: number | null;
+  /** Average power in watts (W, SI canonical). */
+  avgPowerW: number | null;
   outsideTempAvgC: number | null;
   insideTempAvgC: number | null;
   score: number | null;

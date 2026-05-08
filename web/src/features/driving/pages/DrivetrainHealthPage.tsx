@@ -79,10 +79,10 @@ export default function DrivetrainHealthPage() {
       .slice(-30)
       .map((d) => ({
         date: formatDateShort(d.startTs),
-        powerMax: d.avgPowerKw ?? 0,
+        powerMax: (d.avgPowerW ?? 0) / 1000,
         powerMin: 0,
         outsideTemp: d.outsideTempAvgC ?? null,
-        distance: d.distanceMi,
+        distance: d.distanceM / 1609.344,
       }));
   }, [drives]);
 

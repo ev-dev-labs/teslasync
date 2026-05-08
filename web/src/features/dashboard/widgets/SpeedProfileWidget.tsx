@@ -55,7 +55,7 @@ function formatBucketLabel(
   return bucket;
 }
 
-/** Find the bucket with the best (lowest avg_power_kw) efficiency */
+/** Find the bucket with the best (lowest avg_power_w) efficiency */
 function findSweetSpot(chartData: ChartDatum[]): string {
   const withEff = chartData.filter((d) => d.efficiency > 0);
   if (withEff.length === 0) return '—';

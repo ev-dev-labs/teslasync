@@ -123,27 +123,29 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 			if d.StartTs.Before(cutoff) {
 				continue
 			}
-			dist += d.DistanceMi
+			distKm := d.DistanceM / 1000.0
+			dist += distKm
 			driveCount++
 
 			// Hour & DOW
 			hour := d.StartTs.Hour()
 			hourCounts[hour]++
-			hourDistance[hour] += d.DistanceMi
+			hourDistance[hour] += distKm
 			dow := int(d.StartTs.Weekday())
 			dowCounts[dow]++
-			dowDistance[dow] += d.DistanceMi
+			dowDistance[dow] += distKm
 
 			// Performance metrics
-			if d.MaxSpeedMph != nil {
-				allSpeedMax = append(allSpeedMax, *d.MaxSpeedMph)
+			if d.MaxSpeedMps != nil {
+				// km/h for the speed-stats output bucket
+				allSpeedMax = append(allSpeedMax, *d.MaxSpeedMps*3.6)
 			}
-			allDriveDurations = append(allDriveDurations, d.DurationMin)
-			allDriveDistances = append(allDriveDistances, d.DistanceMi)
+			allDriveDurations = append(allDriveDurations, float64(d.DurationS)/60.0)
+			allDriveDistances = append(allDriveDistances, distKm)
 
-			// Efficiency per drive (Wh/mi from EnergyUsedKwh)
-			if d.EnergyUsedKwh != nil && d.DistanceMi > 0 {
-				eff := (*d.EnergyUsedKwh * 1000) / d.DistanceMi
+			// Efficiency per drive (Wh/km from EnergyUsedWh)
+			if d.EnergyUsedWh != nil && d.DistanceM > 0 {
+				eff := (*d.EnergyUsedWh) / distKm
 				if eff > 0 && eff < 1000 {
 					allDriveEfficiencies = append(allDriveEfficiencies, eff)
 				}
@@ -157,13 +159,13 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 				insideTemps = append(insideTemps, *d.InsideTempAvgC)
 			}
 			// Temp vs efficiency scatter
-			if d.OutsideTempAvgC != nil && d.DistanceMi > 1 && d.EnergyUsedKwh != nil {
-				eff := (*d.EnergyUsedKwh * 1000) / d.DistanceMi
+			if d.OutsideTempAvgC != nil && distKm > 1 && d.EnergyUsedWh != nil {
+				eff := (*d.EnergyUsedWh) / distKm
 				if eff > 0 && eff < 1000 {
 					tempVsEfficiency = append(tempVsEfficiency, map[string]interface{}{
 						"temp":       math.Round(*d.OutsideTempAvgC*10) / 10,
 						"efficiency": math.Round(eff*10) / 10,
-						"distance":   math.Round(d.DistanceMi*10) / 10,
+						"distance":   math.Round(distKm*10) / 10,
 					})
 				}
 			}
@@ -174,7 +176,7 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 				dailyDriveAgg[dateKey] = map[string]interface{}{"drives": 0, "distance": 0.0}
 			}
 			dailyDriveAgg[dateKey]["drives"] = dailyDriveAgg[dateKey]["drives"].(int) + 1
-			dailyDriveAgg[dateKey]["distance"] = dailyDriveAgg[dateKey]["distance"].(float64) + d.DistanceMi
+			dailyDriveAgg[dateKey]["distance"] = dailyDriveAgg[dateKey]["distance"].(float64) + distKm
 		}
 
 		var energy, cost float64

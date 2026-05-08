@@ -53,7 +53,7 @@ import type { Drive } from '@/types/driving';
 
 function getEfficiency(drive: Drive): number | null {
   const batteryUsed = (drive.startBatteryPct ?? 0) - (drive.endBatteryPct ?? 0);
-  if (drive.distanceMi > 0 && batteryUsed > 0) return (batteryUsed * 0.75 * 1000) / drive.distanceMi;
+  if (drive.distanceM > 0 && batteryUsed > 0) return (batteryUsed * 0.75 * 1000) / (drive.distanceM / 1609.344);
   return null;
 }
 
@@ -89,14 +89,14 @@ function DriveCardImpl({
   selected, onToggleSelect,
 }: DriveCardProps) {
   const { t } = useTranslation();
-  const actualDistance = drive.distanceMi;
+  const actualDistance = drive.distanceM;
   const isCompleted = drive.endTs != null;
-  const hasData = actualDistance > 0 || drive.durationMin > 0;
+  const hasData = actualDistance > 0 || drive.durationS > 0;
   const avgSpeed =
-    drive.avgSpeedMph != null
-      ? fmtInt(convertSpeed(drive.avgSpeedMph))
-      : drive.durationMin > 0 && actualDistance > 0
-        ? fmtInt(convertSpeed(actualDistance / (drive.durationMin / 60)))
+    drive.avgSpeedMps != null
+      ? fmtInt(convertSpeed((drive.avgSpeedMps) / 0.44704))
+      : drive.durationS > 0 && actualDistance > 0
+        ? fmtInt(convertSpeed((actualDistance / 1609.344) / (drive.durationS / 3600)))
         : '—';
   const eff = getEfficiency(drive);
   const effConverted = eff ? convertEfficiency(eff) : null;
@@ -142,18 +142,18 @@ function DriveCardImpl({
               ) : (
                 <Badge variant="success" size="sm">{t('drives.inProgress', 'In progress')}</Badge>
               )}
-              {drive.maxSpeedMph !== null && drive.maxSpeedMph > 130 && (
+              {drive.maxSpeedMps !== null && (drive.maxSpeedMps / 0.44704) > 130 && (
                 <Badge variant="danger" size="sm">{t('drives.highSpeed', 'High speed')}</Badge>
               )}
             </div>
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
-              <InlineMetric icon={<Clock />} value={formatDurationMinutes(drive.durationMin)} />
+              <InlineMetric icon={<Clock />} value={formatDurationMinutes((drive.durationS) / 60)} />
               <InlineMetric icon={<Gauge />} value={`${t('drives.avg', 'Avg')} ${avgSpeed} ${speedUnit}`} />
-              {drive.maxSpeedMph !== null && (
+              {drive.maxSpeedMps !== null && (
                 <InlineMetric
                   icon={<TrendingUp />}
-                  value={`${t('drives.max', 'Max')} ${fmtInt(convertSpeed(drive.maxSpeedMph))} ${speedUnit}`}
+                  value={`${t('drives.max', 'Max')} ${fmtInt(convertSpeed((drive.maxSpeedMps) / 0.44704))} ${speedUnit}`}
                 />
               )}
               {hasBattery && (
@@ -298,7 +298,7 @@ export default function DrivesListPage() {
   const sortedDrives = useMemo(() => {
     const sorted = [...filteredDrives];
     switch (sortBy) {
-      case 'distance': return sorted.sort((a, b) => b.distanceMi - a.distanceMi);
+      case 'distance': return sorted.sort((a, b) => b.distanceM - a.distanceM);
       case 'efficiency': return sorted.sort((a, b) => (getEfficiency(a) ?? 999) - (getEfficiency(b) ?? 999));
       default: return sorted;
     }
@@ -360,9 +360,9 @@ export default function DrivesListPage() {
     if (filteredDrives.length === 0) return null;
     const effs = filteredDrives.map((d) => getEfficiency(d)).filter((e): e is number => e !== null);
     const bestEff = effs.length > 0 ? Math.min(...effs) : 0;
-    const longest = filteredDrives.reduce((best, d) => (d.distanceMi > best.distanceMi ? d : best), filteredDrives[0]);
-    const totalDist = filteredDrives.reduce((s, d) => s + d.distanceMi, 0);
-    const totalDur = filteredDrives.reduce((s, d) => s + d.durationMin, 0);
+    const longest = filteredDrives.reduce((best, d) => (d.distanceM > best.distanceM ? d : best), filteredDrives[0]);
+    const totalDist = filteredDrives.reduce((s, d) => s + d.distanceM, 0);
+    const totalDur = filteredDrives.reduce((s, d) => s + d.durationS, 0);
     return { bestEff, longest, totalDist, totalDur, count: filteredDrives.length };
   }, [filteredDrives]);
 
@@ -378,7 +378,8 @@ export default function DrivesListPage() {
       { range: '100+', min: 100, max: Infinity, count: 0 },
     ];
     filteredDrives.forEach((d) => {
-      const b = buckets.find((bk) => d.distanceMi >= bk.min && d.distanceMi < bk.max);
+      const distMi = d.distanceM / 1609.344;
+      const b = buckets.find((bk) => distMi >= bk.min && distMi < bk.max);
       if (b) b.count++;
     });
     return buckets.map((b) => ({ range: `${b.range} ${distanceUnit}`, count: b.count }));
@@ -388,11 +389,11 @@ export default function DrivesListPage() {
   const scatterData = useMemo(() => {
     if (filteredDrives.length === 0) return [];
     return filteredDrives
-      .filter((d) => d.maxSpeedMph && d.durationMin > 0)
+      .filter((d) => d.maxSpeedMps && d.durationS > 0)
       .map((d) => {
-        const avgSpd = d.durationMin > 0 ? d.distanceMi / (d.durationMin / 60) : 0;
+        const avgSpdMph = d.durationS > 0 ? (d.distanceM / 1609.344) / (d.durationS / 3600) : 0;
         const eff = getEfficiency(d);
-        return eff ? { speed: Math.round(avgSpd), efficiency: Math.round(eff) } : null;
+        return eff ? { speed: Math.round(avgSpdMph), efficiency: Math.round(eff) } : null;
       })
       .filter(Boolean) as { speed: number; efficiency: number }[];
   }, [filteredDrives]);
@@ -402,7 +403,7 @@ export default function DrivesListPage() {
     if (filteredDrives.length === 0) return [];
     return filteredDrives.slice(0, 20).reverse().map((d) => ({
       date: formatDateShort(d.startTs),
-      distance: parseFloat(fmtNumber(d.distanceMi ?? 0, 1)),
+      distance: parseFloat(fmtNumber((d.distanceM ?? 0) / 1609.344, 1)),
     }));
   }, [filteredDrives]);
 
@@ -556,43 +557,43 @@ export default function DrivesListPage() {
               <div>
                 <MetricBar
                   label={t('drives.totalDriveTime', 'Total Drive Time')}
-                  value={computedStats.totalDur}
-                  max={Math.max(computedStats.totalDur, 600)}
+                  value={computedStats.totalDur / 60}
+                  max={Math.max(computedStats.totalDur / 60, 600)}
                   color="#00f0ff"
                 />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">{formatDurationMinutes(computedStats.totalDur)}</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{formatDurationMinutes(computedStats.totalDur / 60)}</p>
               </div>
               <div>
                 <MetricBar
                   label={t('drives.avgTripDistance', 'Avg Trip Distance')}
-                  value={computedStats.totalDist / computedStats.count}
+                  value={computedStats.totalDist / computedStats.count / 1609.344}
                   max={100}
                   color="#10b981"
                 />
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                  {fmtNumber(convertDistance(computedStats.totalDist / computedStats.count))} {distanceUnit}
+                  {fmtNumber(convertDistance(computedStats.totalDist / computedStats.count / 1609.344))} {distanceUnit}
                 </p>
               </div>
               <div>
                 <MetricBar
                   label={t('drives.longestDrive', 'Longest Drive')}
-                  value={computedStats.longest.distanceMi}
-                  max={Math.max(computedStats.longest.distanceMi, 200)}
+                  value={computedStats.longest.distanceM / 1609.344}
+                  max={Math.max(computedStats.longest.distanceM / 1609.344, 200)}
                   color="#a855f7"
                 />
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                  {fmtNumber(convertDistance(computedStats.longest.distanceMi))} {distanceUnit}
+                  {fmtNumber(convertDistance((computedStats.longest.distanceM) / 1609.344))} {distanceUnit}
                 </p>
               </div>
               <div>
                 <MetricBar
                   label={t('drives.avgDuration', 'Avg Duration')}
-                  value={computedStats.totalDur / computedStats.count}
+                  value={computedStats.totalDur / computedStats.count / 60}
                   max={120}
                   color="#f59e0b"
                 />
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                  {formatDurationMinutes(computedStats.totalDur / computedStats.count)}
+                  {formatDurationMinutes(computedStats.totalDur / computedStats.count / 60)}
                 </p>
               </div>
             </div>

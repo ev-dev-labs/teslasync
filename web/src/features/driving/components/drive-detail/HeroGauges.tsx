@@ -22,8 +22,8 @@ export function HeroGauges({ drive, stats }: HeroGaugesProps) {
         <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/[0.02] to-purple-500/[0.02]" />
         <div className="relative flex flex-wrap items-center gap-6 lg:gap-10 justify-center">
           <RadialGauge
-            value={Math.round(convertDistance(drive.distanceMi))}
-            max={Math.max(convertDistance(drive.distanceMi) * 1.5, 100)}
+            value={Math.round(convertDistance((drive.distanceM) / 1609.344))}
+            max={Math.max(convertDistance((drive.distanceM) / 1609.344) * 1.5, 100)}
             label={t('driveDetail.distance', 'Distance')}
             unit={distanceUnit}
             color="#00f0ff"
@@ -38,8 +38,8 @@ export function HeroGauges({ drive, stats }: HeroGaugesProps) {
             size={110}
           />
           <RadialGauge
-            value={Math.round(drive.durationMin ?? 0)}
-            max={Math.max((drive.durationMin ?? 0) * 1.5, 60)}
+            value={Math.round((drive.durationS ?? 0) / 60)}
+            max={Math.max(((drive.durationS ?? 0) / 60) * 1.5, 60)}
             label={t('driveDetail.duration', 'Duration')}
             unit="min"
             color="#f59e0b"

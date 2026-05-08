@@ -55,7 +55,7 @@ export default function DriveDetailPage() {
   const hasTelemetryRows = (drive?.telemetry?.length ?? 0) > 0
     || (drive?.positions?.length ?? 0) > 0;
   const hasMeaningfulDriveStats = !!drive && (
-    (drive.distanceMi ?? 0) > 0
+    (drive.distanceM ?? 0) > 0
     || ((stats?.maxSpd ?? 0) > 0)
     || ((stats?.energyWh ?? 0) > 0)
     || hasTelemetryRows

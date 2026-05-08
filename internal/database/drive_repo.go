@@ -11,8 +11,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
 
-// Phase-42 SI canonical schema (migration 000185_drives_si). The drives table
-// is forward-only SI:
+// SI canonical schema (migration 000185_drives_si). The drives table is
+// forward-only SI:
 //   - duration_s (BIGINT, seconds)
 //   - distance_m (DOUBLE PRECISION, meters)
 //   - start_soc_pct / end_soc_pct (REAL, percent of pack capacity 0-100)
@@ -24,21 +24,14 @@ import (
 //   - start_lat / start_lng / end_lat / end_lng (DOUBLE PRECISION, WGS84°)
 //   - start_place / end_place (TEXT, geocoded place names)
 //
-// The frontend API surface (models.Drive) still exposes display units (mi,
-// min, kWh, mph, kW) and a few legacy fields dropped by phase-42 (inside
-// cabin temp, score, ended_status, created_at, updated_at). Conversion
-// happens at the repo boundary so the JSON shape consumed by the frontend
-// is preserved (per Prompt 0073 covenant #11). Phase-42-dropped columns
-// surface as nil/derived values per ADR-004 forward-only.
-
-// SI conversion constants. Named so they don't collide with Phase-42 banned
-// words (see prompt-0073 gate).
-const (
-	metersPerMile = 1609.344
-	mpsPerMph     = 0.44704
-	kiloUnit      = 1000.0 // W↔kW and Wh↔kWh share a 1000 factor
-	secsPerMin    = 60.0
-)
+// Phase-48 (SI canonical mega-PR): models.Drive is now SI canonical, so this
+// repo no longer performs any unit conversion. The frontend converts at the
+// display boundary using useUnits()/lib/unitConversion's SI-floor formatters.
+//
+// Phase-42 dropped these columns (forward-only — ADR-004 #2). The fields
+// survive on models.Drive for JSON shape stability and surface nil/derived:
+//   - InsideTempAvgC, Score, EndedStatus → always nil
+//   - CreatedAt → started_at; UpdatedAt → ended_at-or-started_at
 
 // DriveRepo provides drive session data access against the SI canonical
 // drives table (migration 000185_drives_si).
@@ -53,31 +46,21 @@ const driveColumns = `id, vehicle_id, started_at, ended_at, duration_s, distance
 	energy_used_wh, regen_energy_wh, avg_speed_mps, max_speed_mps, avg_power_w,
 	ambient_temp_c_avg`
 
-// scanDrive scans the SI canonical column list into a models.Drive populated
-// with legacy display units. Preserves the public JSON shape consumed by
-// the frontend (per Prompt 0073 covenant #11).
-//
-// Phase-42-dropped columns surface as nil:
-//   - InsideTempAvgC, Score, EndedStatus → always nil
-//   - CreatedAt → started_at; UpdatedAt → ended_at-or-started_at
+// scanDrive scans the SI canonical column list into a models.Drive. No unit
+// conversion is performed — both struct and DB are SI canonical.
 func scanDrive(row interface{ Scan(dest ...any) error }) (*models.Drive, error) {
 	d := &models.Drive{}
 	var (
-		durationSec   *int64
-		distanceM     *float64
-		startSocPct   *float32
-		endSocPct     *float32
-		energyUsedWh  *float64
-		regenEnergyWh *float64
-		avgSpeedMps   *float64
-		maxSpeedMps   *float64
-		avgPowerW     *float64
+		durationSec *int64
+		distanceM   *float64
+		startSocPct *float32
+		endSocPct   *float32
 	)
 	err := row.Scan(
 		&d.ID, &d.VehicleID, &d.StartTs, &d.EndTs, &durationSec, &distanceM,
 		&d.StartAddress, &d.EndAddress, &d.StartLat, &d.StartLon, &d.EndLat, &d.EndLon,
 		&startSocPct, &endSocPct,
-		&energyUsedWh, &regenEnergyWh, &avgSpeedMps, &maxSpeedMps, &avgPowerW,
+		&d.EnergyUsedWh, &d.RegenEnergyWh, &d.AvgSpeedMps, &d.MaxSpeedMps, &d.AvgPowerW,
 		&d.OutsideTempAvgC,
 	)
 	if err != nil {
@@ -85,18 +68,13 @@ func scanDrive(row interface{ Scan(dest ...any) error }) (*models.Drive, error) 
 	}
 
 	if distanceM != nil {
-		d.DistanceMi = *distanceM / metersPerMile
+		d.DistanceM = *distanceM
 	}
 	if durationSec != nil {
-		d.DurationMin = float64(*durationSec) / secsPerMin
+		d.DurationS = *durationSec
 	}
 	d.StartBatteryPct = socPctToInt16(startSocPct)
 	d.EndBatteryPct = socPctToInt16(endSocPct)
-	d.EnergyUsedKwh = whPtrToKwhPtr(energyUsedWh)
-	d.RegenKwh = whPtrToKwhPtr(regenEnergyWh)
-	d.AvgSpeedMph = mpsPtrToMphPtr(avgSpeedMps)
-	d.MaxSpeedMph = mpsPtrToMphPtr(maxSpeedMps)
-	d.AvgPowerKw = wPtrToKwPtr(avgPowerW)
 
 	// Phase-42 dropped columns (forward-only — ADR-004 #2): surface as nil
 	// so the JSON shape stays stable while the value is honestly absent.
@@ -126,33 +104,6 @@ func socPctToInt16(p *float32) *int16 {
 	return &v
 }
 
-// mpsPtrToMphPtr converts a nullable m/s value to a nullable mph value.
-func mpsPtrToMphPtr(p *float64) *float64 {
-	if p == nil {
-		return nil
-	}
-	v := *p / mpsPerMph
-	return &v
-}
-
-// wPtrToKwPtr converts a nullable Watts value to a nullable kW value.
-func wPtrToKwPtr(p *float64) *float64 {
-	if p == nil {
-		return nil
-	}
-	v := *p / kiloUnit
-	return &v
-}
-
-// whPtrToKwhPtr converts a nullable Watt-hours value to a nullable kWh value.
-func whPtrToKwhPtr(p *float64) *float64 {
-	if p == nil {
-		return nil
-	}
-	v := *p / kiloUnit
-	return &v
-}
-
 func NewDriveRepo(db *DB) *DriveRepo {
 	return &DriveRepo{db: db}
 }
@@ -176,48 +127,32 @@ func (r *DriveRepo) Create(ctx context.Context, d *models.Drive) error {
 	return err
 }
 
-// completeArgsToSI converts the legacy display-unit Complete arguments to
-// SI canonical types matching the migration-000185 column types.
-func completeArgsToSI(distanceMi, duration float64, endBatteryPct *int16,
-	maxSpeedMph, avgPowerKw *float64) (
-	distanceM float64, durationSec int64, endSoc *float32,
-	maxSpeedMps, avgPowerW *float64,
-) {
-	distanceM = distanceMi * metersPerMile
-	durationSec = int64(math.Round(duration * secsPerMin))
-	if endBatteryPct != nil {
-		v := float32(*endBatteryPct)
-		endSoc = &v
+// pctInt16ToFloat32 converts a nullable percent int16 (0-100) to the
+// float32 form persisted by start_soc_pct / end_soc_pct.
+func pctInt16ToFloat32(p *int16) *float32 {
+	if p == nil {
+		return nil
 	}
-	if maxSpeedMph != nil {
-		v := *maxSpeedMph * mpsPerMph
-		maxSpeedMps = &v
-	}
-	if avgPowerKw != nil {
-		v := *avgPowerKw * kiloUnit
-		avgPowerW = &v
-	}
-	return
+	v := float32(*p)
+	return &v
 }
 
-// Complete finalizes a drive with end-of-drive aggregates. Argument units
-// remain legacy display (mi, min, kW, mph) for caller compatibility; values
-// are converted to SI before the UPDATE. The insideTempAvgC parameter is
-// accepted for compatibility but ignored — the inside cabin temperature
-// column was dropped in migration 000185 (forward-only).
+// Complete finalizes a drive with end-of-drive aggregates. All arguments
+// are SI canonical (Phase-48): distance in meters, duration in seconds,
+// max speed in m/s, avg power in Watts, outside temp in °C. The drive's
+// inside cabin temp column was dropped in migration 000185 (forward-only)
+// and is no longer accepted.
 func (r *DriveRepo) Complete(ctx context.Context, id int64, endTs time.Time,
-	distanceMi, duration float64, endBatteryPct *int16,
-	maxSpeedMph, avgPowerKw, insideTempAvgC, outsideTempAvgC *float64) error {
-	_ = insideTempAvgC // dropped column (migration 000185)
-	distanceM, durationSec, endSoc, maxSpeedMps, avgPowerW :=
-		completeArgsToSI(distanceMi, duration, endBatteryPct, maxSpeedMph, avgPowerKw)
+	distanceM float64, durationS int64, endBatteryPct *int16,
+	maxSpeedMps, avgPowerW, outsideTempAvgC *float64) error {
+	endSoc := pctInt16ToFloat32(endBatteryPct)
 	query := `
 		UPDATE drives SET ended_at=$2,
 		distance_m=$3, duration_s=$4, end_soc_pct=$5,
 		max_speed_mps=$6, avg_power_w=$7, ambient_temp_c_avg=$8
 		WHERE id=$1`
 	_, err := r.db.Pool.Exec(ctx, query, id, endTs,
-		distanceM, durationSec, endSoc, maxSpeedMps, avgPowerW, outsideTempAvgC)
+		distanceM, durationS, endSoc, maxSpeedMps, avgPowerW, outsideTempAvgC)
 	return err
 }
 
@@ -332,9 +267,9 @@ func (r *DriveRepo) ResumeForMerge(ctx context.Context, id int64) error {
 	return err
 }
 
-// drivePartialAllowed maps SI canonical column names to themselves. The
-// PartialUpdate translation step normalizes incoming legacy display-unit
-// keys into SI canonical keys before this filter runs.
+// drivePartialAllowed enumerates the SI canonical columns that PartialUpdate
+// is allowed to mutate. Callers MUST pass SI canonical keys directly
+// (Phase-48 — no display-unit aliasing).
 var drivePartialAllowed = map[string]string{
 	"ended_at":           "ended_at",
 	"distance_m":         "distance_m",
@@ -353,128 +288,18 @@ var drivePartialAllowed = map[string]string{
 	"start_lng":          "start_lng",
 	"end_lat":            "end_lat",
 	"end_lng":            "end_lng",
-	// C7 (Phase-41 v3.4): SI-canonical odometer columns now persistable
-	// via PartialUpdate. Required so completeDriveLocked can write the
-	// authoritative drive boundary odometer (meters) directly without
-	// going through legacy distance_mi → distance_m conversion paths
-	// that cause unit confusion with the Phase-42 codec emitting SI.
+	// C7 (Phase-41 v3.4): SI-canonical odometer columns persistable via
+	// PartialUpdate. Required so completeDriveLocked can write the
+	// authoritative drive boundary odometer (meters) directly.
 	"start_odometer_m": "start_odometer_m",
 	"end_odometer_m":   "end_odometer_m",
 }
 
-// translatePartialFieldsToSI rewrites a partial-update fields map keyed by
-// legacy display-unit input field names (mile-distance, minute-duration,
-// kWh-energy, longitude/address text, ...) into a map keyed by SI canonical
-// column names with values converted to SI units. Unknown keys and the
-// Phase-42-dropped columns (inside cabin temp, score, ended status) are
-// silently dropped.
-//
-// Legacy field-name string literals are constructed via concatenation so the
-// repo file does not embed legacy SQL column references (Prompt 0073 gate
-// regex bans `\bdistance_mi\b` etc. anywhere in the file). This is purely a
-// gate-compatibility workaround — semantically these are public input
-// contract names from pre-Phase-42 callers.
-func translatePartialFieldsToSI(in map[string]interface{}) map[string]interface{} {
-	out := make(map[string]interface{}, len(in))
-	for k, v := range in {
-		switch k {
-		case "end" + "_ts":
-			out["ended_at"] = v
-		case "distance" + "_mi":
-			if f, ok := coerceToFloat(v); ok {
-				out["distance_m"] = f * metersPerMile
-			}
-		case "duration" + "_min":
-			if f, ok := coerceToFloat(v); ok {
-				out["duration_s"] = int64(math.Round(f * secsPerMin))
-			}
-		case "start" + "_battery_pct":
-			if f, ok := coerceToFloat(v); ok {
-				out["start_soc_pct"] = float32(f)
-			}
-		case "end" + "_battery_pct":
-			if f, ok := coerceToFloat(v); ok {
-				out["end_soc_pct"] = float32(f)
-			}
-		case "max_speed" + "_mph":
-			if f, ok := coerceToFloat(v); ok {
-				out["max_speed_mps"] = f * mpsPerMph
-			}
-		case "avg_speed" + "_mph":
-			if f, ok := coerceToFloat(v); ok {
-				out["avg_speed_mps"] = f * mpsPerMph
-			}
-		case "avg_power" + "_kw":
-			if f, ok := coerceToFloat(v); ok {
-				out["avg_power_w"] = f * kiloUnit
-			}
-		case "outside_temp" + "_avg_c":
-			out["ambient_temp_c_avg"] = v
-		case "energy_used" + "_kwh":
-			if f, ok := coerceToFloat(v); ok {
-				out["energy_used_wh"] = f * kiloUnit
-			}
-		case "regen" + "_kwh":
-			if f, ok := coerceToFloat(v); ok {
-				out["regen_energy_wh"] = f * kiloUnit
-			}
-		case "start_address":
-			out["start_place"] = v
-		case "end_address":
-			out["end_place"] = v
-		case "start_lat", "end_lat":
-			out[k] = v
-		case "start" + "_lon":
-			out["start_lng"] = v
-		case "end" + "_lon":
-			out["end_lng"] = v
-		// Phase-42 dropped columns (forward-only ADR-004 #2): silently
-		// ignored — inside_temp_avg_c, score, ended_status no longer exist.
-		default:
-			// C7 (Phase-41 v3.4): SI-canonical passthrough. If the caller
-			// already provides an SI canonical column key (distance_m,
-			// avg_speed_mps, max_speed_mps, start_odometer_m, etc.),
-			// pass it through unchanged. Required so completeDriveLocked
-			// can write authoritative SI values from Phase-42 codec data
-			// (signal_log stores SI) without round-tripping through the
-			// legacy display-unit aliases that cause m/s↔mph and m↔mi
-			// double-conversions. drivePartialAllowed below filters keys
-			// that don't correspond to real columns.
-			if _, ok := drivePartialAllowed[k]; ok {
-				out[k] = v
-			}
-		}
-	}
-	return out
-}
-
-// coerceToFloat normalizes JSON-decoded numbers (always float64) and typed
-// numeric inputs into a float64 for unit conversion math.
-func coerceToFloat(v interface{}) (float64, bool) {
-	switch x := v.(type) {
-	case float64:
-		return x, true
-	case float32:
-		return float64(x), true
-	case int:
-		return float64(x), true
-	case int16:
-		return float64(x), true
-	case int32:
-		return float64(x), true
-	case int64:
-		return float64(x), true
-	}
-	return 0, false
-}
-
 // PartialUpdate updates only the provided fields on a drive. The fields map
-// is keyed by legacy display-unit input names (preserved for caller
-// compatibility); values are converted to SI canonical units before the
-// UPDATE.
+// MUST be keyed by SI canonical column names (Phase-48 — no display-unit
+// aliasing).
 func (r *DriveRepo) PartialUpdate(ctx context.Context, id int64, fields map[string]interface{}) error {
-	siFields := translatePartialFieldsToSI(fields)
-	query, args := buildPartialUpdate("drives", id, siFields, drivePartialAllowed)
+	query, args := buildPartialUpdate("drives", id, fields, drivePartialAllowed)
 	if query == "" {
 		return nil
 	}
@@ -535,19 +360,19 @@ func (r *DriveRepo) BulkDelete(ctx context.Context, ids []int64) (int64, error) 
 }
 
 // CompleteWithTx is like Complete but uses the provided transaction.
+// All arguments are SI canonical (Phase-48): distance in meters, duration
+// in seconds, max speed in m/s, avg power in Watts, outside temp in °C.
 func (r *DriveRepo) CompleteWithTx(ctx context.Context, tx DBTX, id int64, endTs time.Time,
-	distanceMi, duration float64, endBatteryPct *int16,
-	maxSpeedMph, avgPowerKw, insideTempAvgC, outsideTempAvgC *float64) error {
-	_ = insideTempAvgC // dropped column (migration 000185)
-	distanceM, durationSec, endSoc, maxSpeedMps, avgPowerW :=
-		completeArgsToSI(distanceMi, duration, endBatteryPct, maxSpeedMph, avgPowerKw)
+	distanceM float64, durationS int64, endBatteryPct *int16,
+	maxSpeedMps, avgPowerW, outsideTempAvgC *float64) error {
+	endSoc := pctInt16ToFloat32(endBatteryPct)
 	query := `
 		UPDATE drives SET ended_at=$2,
 		distance_m=$3, duration_s=$4, end_soc_pct=$5,
 		max_speed_mps=$6, avg_power_w=$7, ambient_temp_c_avg=$8
 		WHERE id=$1`
 	_, err := tx.Exec(ctx, query, id, endTs,
-		distanceM, durationSec, endSoc, maxSpeedMps, avgPowerW, outsideTempAvgC)
+		distanceM, durationS, endSoc, maxSpeedMps, avgPowerW, outsideTempAvgC)
 	return err
 }
 
@@ -577,9 +402,9 @@ func (r *DriveRepo) FindMissingAddresses(ctx context.Context) ([]*models.Drive, 
 }
 
 // PartialUpdateWithTx is like PartialUpdate but uses the provided transaction.
+// The fields map MUST be keyed by SI canonical column names.
 func (r *DriveRepo) PartialUpdateWithTx(ctx context.Context, tx DBTX, id int64, fields map[string]interface{}) error {
-	siFields := translatePartialFieldsToSI(fields)
-	query, args := buildPartialUpdate("drives", id, siFields, drivePartialAllowed)
+	query, args := buildPartialUpdate("drives", id, fields, drivePartialAllowed)
 	if query == "" {
 		return nil
 	}

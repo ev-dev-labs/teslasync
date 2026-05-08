@@ -606,7 +606,7 @@ export default function EnergyPage() {
                             />
                             <Area
                               {...AREA_DEFAULTS}
-                              dataKey="distance_mi"
+                              dataKey="distance_m"
                               name={t('energy.chart.distance', { unit: distanceUnit, defaultValue: 'Distance ({{unit}})' })}
                               stroke="#00f0ff"
                               fill="url(#distGrad2)"

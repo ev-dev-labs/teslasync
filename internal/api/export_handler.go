@@ -437,9 +437,9 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.
 				ID:        d.ID,
 				VehicleID: d.VehicleID,
 				StartDate: d.StartTs.Format("2006-01-02T15:04:05Z"),
-				Distance:  d.DistanceMi,
-				Duration:  d.DurationMin,
-				SpeedMax:  ptrFloat(d.MaxSpeedMph),
+				Distance:  d.DistanceM / 1609.344,
+				Duration:  float64(d.DurationS) / 60.0,
+				SpeedMax:  ptrFloatMpsToMphAPI(d.MaxSpeedMps),
 			}
 			if d.EndTs != nil {
 				ed.EndDate = d.EndTs.Format("2006-01-02T15:04:05Z")
@@ -549,6 +549,17 @@ func ptrFloat(p *float64) float64 {
 		return *p
 	}
 	return 0
+}
+
+// ptrFloatMpsToMphAPI converts a nullable SI speed value (m/s) to mph for
+// the legacy CSV/JSON export shape served by the public /exports endpoints.
+// Slice 4 of phase-48 will rename the export column to max_speed_mps and
+// drop this conversion.
+func ptrFloatMpsToMphAPI(p *float64) float64 {
+	if p == nil {
+		return 0
+	}
+	return *p / 0.44704
 }
 
 func ptrInt16(p *int16) int {

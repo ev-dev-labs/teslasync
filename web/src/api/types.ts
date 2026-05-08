@@ -89,8 +89,10 @@ export interface Drive {
   vehicle_id: number
   start_ts: string
   end_ts: string | null
-  duration_min: number
-  distance_mi: number
+  /** Drive duration in seconds (SI canonical). */
+  duration_s: number
+  /** Distance travelled in meters (SI canonical). */
+  distance_m: number
   start_address: string | null
   end_address: string | null
   start_lat: number | null
@@ -99,17 +101,19 @@ export interface Drive {
   end_lon: number | null
   start_battery_pct: number | null
   end_battery_pct: number | null
-  /** Energy in kilowatt-hours (kWh, derived SI). */
-  energy_used_kwh: number | null
-  /** Energy in kilowatt-hours (kWh, derived SI). */
-  regen_kwh: number | null
-  avg_speed_mph: number | null
-  max_speed_mph: number | null
-  /** Power in kilowatts (kW, derived SI). */
-  avg_power_kw: number | null
-  /** Temperature in degrees Celsius (SI). */
+  /** Energy used in watt-hours (Wh, SI canonical). */
+  energy_used_wh: number | null
+  /** Energy recovered via regen in watt-hours (Wh, SI canonical). */
+  regen_energy_wh: number | null
+  /** Average speed in meters per second (SI canonical). */
+  avg_speed_mps: number | null
+  /** Maximum speed in meters per second (SI canonical). */
+  max_speed_mps: number | null
+  /** Average power in watts (W, SI canonical). */
+  avg_power_w: number | null
+  /** Average ambient temperature in degrees Celsius (SI). */
   outside_temp_avg_c: number | null
-  /** Temperature in degrees Celsius (SI). */
+  /** Average inside cabin temperature in degrees Celsius (SI; nullable, column dropped Phase-42). */
   inside_temp_avg_c: number | null
   score: number | null
   ended_status: string | null

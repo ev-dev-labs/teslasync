@@ -232,8 +232,8 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 		"vehicle_id":         drive.VehicleID,
 		"start_ts":           drive.StartTs,
 		"end_ts":             drive.EndTs,
-		"duration_min":       drive.DurationMin,
-		"distance_mi":        drive.DistanceMi,
+		"duration_s":         drive.DurationS,
+		"distance_m":         drive.DistanceM,
 		"start_address":      drive.StartAddress,
 		"end_address":        drive.EndAddress,
 		"start_lat":          drive.StartLat,
@@ -242,11 +242,11 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 		"end_lon":            drive.EndLon,
 		"start_battery_pct":  drive.StartBatteryPct,
 		"end_battery_pct":    drive.EndBatteryPct,
-		"energy_used_kwh":    drive.EnergyUsedKwh,
-		"regen_kwh":          drive.RegenKwh,
-		"avg_speed_mph":      drive.AvgSpeedMph,
-		"max_speed_mph":      drive.MaxSpeedMph,
-		"avg_power_kw":       drive.AvgPowerKw,
+		"energy_used_wh":     drive.EnergyUsedWh,
+		"regen_energy_wh":    drive.RegenEnergyWh,
+		"avg_speed_mps":      drive.AvgSpeedMps,
+		"max_speed_mps":      drive.MaxSpeedMps,
+		"avg_power_w":        drive.AvgPowerW,
 		"outside_temp_avg_c": drive.OutsideTempAvgC,
 		"inside_temp_avg_c":  drive.InsideTempAvgC,
 		"score":              drive.Score,
@@ -264,6 +264,10 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 // The drive struct is mutated in place. Returns an error if the start
 // snapshot lookup fails — the caller should respond 500 because the live
 // derivation depends on it (distance/battery deltas need a baseline).
+//
+// Inputs are SI canonical post-Phase-42 (Odometer in meters, VehicleSpeed
+// in m/s, PackVoltage*PackCurrent in Watts), so values are written
+// directly to the SI-canonical Drive fields with no unit conversion.
 func (h *driveDetailHandler) enrichLiveDrive(ctx context.Context, drive *models.Drive, now time.Time) error {
 	startState, err := h.state.State(ctx, drive.VehicleID, drive.StartTs)
 	if err != nil {
@@ -273,15 +277,14 @@ func (h *driveDetailHandler) enrichLiveDrive(ctx context.Context, drive *models.
 
 	currentSnap := h.currentSignals(ctx, drive.VehicleID)
 
-	// Duration — always computable from wall clock.
-	durationMin := now.Sub(drive.StartTs).Minutes()
-	drive.DurationMin = safeFloat(durationMin)
+	// Duration — always computable from wall clock (SI seconds).
+	drive.DurationS = int64(now.Sub(drive.StartTs).Seconds() + 0.5)
 
-	// Distance from odometer delta.
+	// Distance from odometer delta (meters; codec emits SI).
 	startOdo, startOdoOk := signalFloat(startSnap, "Odometer")
 	currentOdo, currentOdoOk := signalFloat(currentSnap, "Odometer")
 	if startOdoOk && currentOdoOk && currentOdo > startOdo {
-		drive.DistanceMi = safeFloat(currentOdo - startOdo)
+		drive.DistanceM = safeFloat(currentOdo - startOdo)
 	}
 
 	// Battery levels.
@@ -294,17 +297,17 @@ func (h *driveDetailHandler) enrichLiveDrive(ctx context.Context, drive *models.
 		drive.EndBatteryPct = &v
 	}
 
-	// Average speed (distance / hours).
-	if drive.DistanceMi > 0 && durationMin > 0 {
-		avgSpeed := safeFloat(drive.DistanceMi / (durationMin / 60.0))
-		drive.AvgSpeedMph = &avgSpeed
+	// Average speed (distance / duration) in m/s.
+	if drive.DistanceM > 0 && drive.DurationS > 0 {
+		avgSpeed := safeFloat(drive.DistanceM / float64(drive.DurationS))
+		drive.AvgSpeedMps = &avgSpeed
 	}
 
-	// Current speed as max (best approximation during live drive).
+	// Current speed as max (best approximation during live drive); m/s.
 	if currentSpeed, ok := signalFloat(currentSnap, "VehicleSpeed"); ok {
-		if drive.MaxSpeedMph == nil || currentSpeed > *drive.MaxSpeedMph {
+		if drive.MaxSpeedMps == nil || currentSpeed > *drive.MaxSpeedMps {
 			v := safeFloat(currentSpeed)
-			drive.MaxSpeedMph = &v
+			drive.MaxSpeedMps = &v
 		}
 	}
 
@@ -320,11 +323,11 @@ func (h *driveDetailHandler) enrichLiveDrive(ctx context.Context, drive *models.
 		drive.EndLon = &lon
 	}
 
-	// Power.
+	// Power in Watts (V × A).
 	if voltage, vOk := signalFloat(currentSnap, "PackVoltage"); vOk {
 		if current, cOk := signalFloat(currentSnap, "PackCurrent"); cOk {
-			power := safeFloat(voltage * current / 1000.0)
-			drive.AvgPowerKw = &power
+			power := safeFloat(voltage * current)
+			drive.AvgPowerW = &power
 		}
 	}
 

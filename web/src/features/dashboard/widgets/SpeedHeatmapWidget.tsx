@@ -31,7 +31,7 @@ function buildHeatmap(drives: Drive[], convertSpeed: (mph: number) => number): H
 
   for (const d of drives) {
     if (!d.start_ts) continue;
-    const speed = d.avg_speed_mph ?? d.max_speed_mph;
+    const speed = d.avg_speed_mps ?? d.max_speed_mps;
     if (speed == null || speed <= 0) continue;
 
     const dt = new Date(d.start_ts);
@@ -48,7 +48,7 @@ function buildHeatmap(drives: Drive[], convertSpeed: (mph: number) => number): H
     row.map((cell, hour) => ({
       day,
       hour,
-      avgSpeed: cell.count > 0 ? convertSpeed(cell.count > 0 ? cell.total / cell.count : 0) : 0,
+      avgSpeed: cell.count > 0 ? convertSpeed((cell.count > 0 ? cell.total / cell.count : 0) / 0.44704) : 0,
       count: cell.count,
     })),
   );

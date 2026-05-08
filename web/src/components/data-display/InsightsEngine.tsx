@@ -101,13 +101,13 @@ function analyzeChargingCost(sessions: ChargingSession[]): Insight | null {
 
 function analyzeEfficiencyTrend(drives: Drive[]): Insight | null {
   const valid = drives
-    .filter(d => d.distance_mi > 0 && d.energy_used_kwh != null)
+    .filter(d => d.distance_m > 0 && d.energy_used_wh != null)
   if (valid.length < 4) return null
 
   const half = Math.floor(valid.length / 2)
   const efficiency = (arr: Drive[]) => {
-    const totalDist = arr.reduce((a, d) => a + d.distance_mi, 0)
-    const totalEnergy = arr.reduce((a, d) => a + (d.energy_used_kwh ?? 0), 0)
+    const totalDist = arr.reduce((a, d) => a + d.distance_m, 0)
+    const totalEnergy = arr.reduce((a, d) => a + (d.energy_used_wh ?? 0), 0)
     return totalDist > 0 ? (totalEnergy / totalDist) * 1000 : 0
   }
 
@@ -236,7 +236,7 @@ function analyzeVampireDrain(stats: VampireDrainStats): Insight | null {
 function analyzeDrivingPatterns(drives: Drive[]): Insight | null {
   if (drives.length < 3) return null
 
-  const totalDist = drives.reduce((a, d) => a + d.distance_mi, 0)
+  const totalDist = drives.reduce((a, d) => a + d.distance_m, 0)
   const dates = drives.map(d => new Date(d.start_ts))
 
   const daySpan = dates.length > 1
@@ -261,7 +261,7 @@ function analyzeDrivingPatterns(drives: Drive[]): Insight | null {
     id: 'driving-patterns',
     icon: Car,
     title: 'Driving Patterns',
-    description: `You drive an average of ${fmtNumber(avgDaily, 1)} km/day. Your most active day is ${busiestDay}. Peak driving time: ${peakHour}:00–${peakEnd}:00.`,
+    description: `You drive an average of ${fmtNumber(avgDaily / 1000, 1)} km/day. Your most active day is ${busiestDay}. Peak driving time: ${peakHour}:00–${peakEnd}:00.`,
     trend: 'neutral',
     trendGood: true,
     severity: 'info',

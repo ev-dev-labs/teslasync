@@ -39,7 +39,7 @@ export const drivingKeys = {
   // id. The collision swapped the cached value between `Drive[]` (list) and
   // `DriveDetail` (object) on every navigation between /drives and
   // /drives/{id}, surfacing as "No telemetry recorded" + NaNm + "In progress"
-  // because `Drive[].distanceMi`, `.endTs`, `.durationMin`, `.telemetry` are
+  // because `Drive[].distanceM`, `.endTs`, `.durationS`, `.telemetry` are
   // all undefined on an array.
   drive: (id: string) => ['drive', id] as const,
   score: (vehicleId?: string) => ['drive-score', vehicleId] as const,

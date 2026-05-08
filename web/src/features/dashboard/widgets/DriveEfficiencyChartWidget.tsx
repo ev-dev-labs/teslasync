@@ -27,11 +27,11 @@ interface DailyEfficiency {
 
 /** Estimate Wh/mi for a single drive from energy + distance data. */
 function estimateEfficiency(d: Drive): number | null {
-  const distance = d.distance_mi;
-  if (!distance || distance < 0.5) return null; // skip tiny drives
+  const distanceMi = (d.distance_m ?? 0) / 1609.344;
+  if (!distanceMi || distanceMi < 0.5) return null; // skip tiny drives
 
-  if (d.energy_used_kwh != null && d.energy_used_kwh > 0) {
-    const whPerMi = (d.energy_used_kwh * 1000) / distance;
+  if (d.energy_used_wh != null && d.energy_used_wh > 0) {
+    const whPerMi = d.energy_used_wh / distanceMi;
     if (whPerMi < 50 || whPerMi > 800) return null;
     return whPerMi;
   }
@@ -42,7 +42,7 @@ function estimateEfficiency(d: Drive): number | null {
   if (startBatt == null || endBatt == null) return null;
   const battUsed = startBatt - endBatt;
   if (battUsed <= 0) return null;
-  const whPerMi = (battUsed * 0.75 * 1000) / distance;
+  const whPerMi = (battUsed * 0.75 * 1000) / distanceMi;
   if (whPerMi < 50 || whPerMi > 800) return null;
   return whPerMi;
 }

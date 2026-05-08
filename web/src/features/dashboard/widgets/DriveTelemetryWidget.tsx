@@ -84,17 +84,17 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
     const items: ChartSummaryStat[] = [
       {
         label: t('widget.driveTelemetry.distance', 'Distance'),
-        value: fmtNumber(convertDistance(latestDrive.distanceMi), 1),
+        value: fmtNumber(convertDistance((latestDrive.distanceM) / 1609.344), 1),
         unit: distanceUnit,
       },
       {
         label: t('widget.driveTelemetry.duration', 'Duration'),
-        value: fmtInt(latestDrive.durationMin),
+        value: fmtInt(latestDrive.durationS / 60),
         unit: t('widget.driveTelemetry.min', 'min'),
       },
     ];
-    if (latestDrive.energyUsedKwh != null && latestDrive.distanceMi > 0) {
-      const whPerMi = (latestDrive.energyUsedKwh * 1000) / latestDrive.distanceMi;
+    if (latestDrive.energyUsedWh != null && latestDrive.distanceM > 0) {
+      const whPerMi = (latestDrive.energyUsedWh / (latestDrive.distanceM / 1609.344));
       items.push({
         label: t('widget.driveTelemetry.efficiency', 'Efficiency'),
         value: fmtNumber(whPerMi, 0),

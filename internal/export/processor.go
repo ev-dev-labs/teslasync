@@ -128,9 +128,9 @@ func (p *Processor) processDrives(ctx context.Context, req *JobRequest) (*Proces
 					ID:        d.ID,
 					VehicleID: d.VehicleID,
 					StartDate: d.StartTs.Format("2006-01-02T15:04:05Z"),
-					Distance:  d.DistanceMi,
-					Duration:  d.DurationMin,
-					SpeedMax:  ptrFloat(d.MaxSpeedMph),
+					Distance:  d.DistanceM / 1609.344,
+					Duration:  float64(d.DurationS) / 60.0,
+					SpeedMax:  ptrFloatMpsToMph(d.MaxSpeedMps),
 				}
 				if d.EndTs != nil {
 					ed.EndDate = d.EndTs.Format("2006-01-02T15:04:05Z")
@@ -453,6 +453,16 @@ func ptrFloat(p *float64) float64 {
 		return *p
 	}
 	return 0
+}
+
+// ptrFloatMpsToMph converts a nullable SI speed value (m/s) to mph for the
+// legacy CSV/JSON export shape. Slice 4 of phase-48 will rename the export
+// column to max_speed_mps and drop this conversion.
+func ptrFloatMpsToMph(p *float64) float64 {
+	if p == nil {
+		return 0
+	}
+	return *p / 0.44704
 }
 
 func ptrInt(p *int) int {

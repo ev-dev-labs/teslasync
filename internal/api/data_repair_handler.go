@@ -200,11 +200,11 @@ func (h *DataRepairHandler) CloseDrive(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	duration := math.Round(now.Sub(drive.StartTs).Minutes()*100) / 100
+	durationS := int64(now.Sub(drive.StartTs).Seconds() + 0.5)
 
 	patch := map[string]interface{}{
-		"end_ts":       now.Format(time.RFC3339),
-		"duration_min": duration,
+		"end_ts":     now.Format(time.RFC3339),
+		"duration_s": durationS,
 	}
 	if err := h.driveRepo.PartialUpdate(ctx, id, patch); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to close drive")

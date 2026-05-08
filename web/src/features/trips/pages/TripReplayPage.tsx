@@ -20,6 +20,7 @@ import { Sparkline, ElevationProfile, type ElevationDataPoint } from '@/componen
 import { useDrive } from '@/api/hooks/useDriving';
 import { useUnits } from '@/hooks/useUnits';
 import { useSettings } from '@/hooks/useSettings';
+import type { DistanceUnitPref, SpeedUnitPref } from '@/lib/unitConversion';
 import {
   convertDistanceFromSI,
   convertSpeedFromSI,
@@ -98,7 +99,7 @@ function fmtDriveTime(min: number): string {
  *   Position-derived fields (speed, outsideTemp, ratedRange, cumulative
  *   distance from haversine) are SI canonical. They go through
  *   `convertXFromSI` from `@/lib/unitConversion` via `useUnits`.
- *   Drive-level summary fields (`drive.distanceMi`, `maxSpeedMph`,
+ *   Drive-level summary fields (`drive.distanceM`, `maxSpeedMph`,
  *   `avgSpeedMph`) are genuine miles/mph after the SQL adapter boundary
  *   in `internal/database/drive_repo.go`, so they remain on the legacy
  *   `useSettings` helpers (locked-policy continuation from Phase-43/0022
@@ -117,7 +118,7 @@ export default function TripReplayPage() {
   // Legacy helpers retained for drive-level summary fields that are
   // genuine miles / mph after the SQL adapter boundary
   // (locked-policy continuation from Phase-43/0022).
-  const { convertDistance, convertSpeed, distanceUnit, speedUnit } = useSettings();
+  const { distanceUnit, speedUnit } = useSettings();
 
   /* ---- Normalize positions ---- */
   // The /drives/{id} positions array carries only lat/lon/heading/speed
@@ -379,12 +380,13 @@ export default function TripReplayPage() {
   const cp = replay.currentPosition;
 
   /* ---- Drive summary stats ---- */
-  // Locked-policy: drive.distanceMi is genuine miles after the SQL adapter
-  // boundary; legacy convertDistance is correct for it. Same for speed.
-  const distanceMi = drive?.distanceMi ?? 0;
-  const durationMin = drive?.durationMin ?? 0;
-  const efficiency = distanceMi > 0 && drive?.startBatteryPct != null && drive?.endBatteryPct != null
-    ? ((drive.startBatteryPct - drive.endBatteryPct) / convertDistance(distanceMi)) * 1000
+  // Phase-48 Slice 1: drive.distanceM is meters, drive.durationS is seconds.
+  // Use convertDistanceFromSI/convertSpeedFromSI for SI-aware conversion.
+  const distanceM = drive?.distanceM ?? 0;
+  const durationS = drive?.durationS ?? 0;
+  const distanceUserUnit = convertDistanceFromSI(distanceM, distanceUnit as DistanceUnitPref);
+  const efficiency = distanceM > 0 && drive?.startBatteryPct != null && drive?.endBatteryPct != null
+    ? ((drive.startBatteryPct - drive.endBatteryPct) / distanceUserUnit) * 1000
     : null;
 
   return (
@@ -574,7 +576,7 @@ export default function TripReplayPage() {
                 <StaggerItem>
                   <StatCard
                     label={t('replay.summary.distance', 'Distance')}
-                    value={fmtNumber(convertDistance(distanceMi))}
+                    value={fmtNumber(distanceUserUnit)}
                     unit={distanceUnit}
                     icon={<Route className="h-4 w-4" />}
                   />
@@ -582,7 +584,7 @@ export default function TripReplayPage() {
                 <StaggerItem>
                   <StatCard
                     label={t('replay.summary.duration', 'Duration')}
-                    value={fmtDriveTime(durationMin)}
+                    value={fmtDriveTime(durationS / 60)}
                     icon={<Clock className="h-4 w-4" />}
                   />
                 </StaggerItem>
@@ -611,16 +613,16 @@ export default function TripReplayPage() {
                 <StaggerItem>
                   <StatCard
                     label={t('replay.summary.maxSpeed', 'Max Speed')}
-                    value={drive?.maxSpeedMph != null ? fmtNumber(convertSpeed(drive.maxSpeedMph)) : '—'}
-                    unit={drive?.maxSpeedMph != null ? speedUnit : undefined}
+                    value={drive?.maxSpeedMps != null ? fmtNumber(convertSpeedFromSI(drive.maxSpeedMps, speedUnit as SpeedUnitPref)) : '—'}
+                    unit={drive?.maxSpeedMps != null ? speedUnit : undefined}
                     icon={<Gauge className="h-4 w-4" />}
                   />
                 </StaggerItem>
                 <StaggerItem>
                   <StatCard
                     label={t('replay.summary.avgSpeed', 'Avg Speed')}
-                    value={drive?.avgSpeedMph != null ? fmtNumber(convertSpeed(drive.avgSpeedMph)) : '—'}
-                    unit={drive?.avgSpeedMph != null ? speedUnit : undefined}
+                    value={drive?.avgSpeedMps != null ? fmtNumber(convertSpeedFromSI(drive.avgSpeedMps, speedUnit as SpeedUnitPref)) : '—'}
+                    unit={drive?.avgSpeedMps != null ? speedUnit : undefined}
                     icon={<Gauge className="h-4 w-4" />}
                   />
                 </StaggerItem>

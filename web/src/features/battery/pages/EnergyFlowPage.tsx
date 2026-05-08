@@ -40,7 +40,7 @@ import {
 interface DailyBreakdownEntry {
   date: string;
   energy_kwh: number;
-  distance_mi: number;
+  distance_m: number;
   efficiency_wh_per_mi: number;
   cost: number;
 }
@@ -149,7 +149,7 @@ export default function EnergyFlowPage() {
       dailyBreakdown.map((d) => ({
         date: formatDateShort(d.date),
         energy_kwh: d.energy_kwh,
-        distance: toDisplayDistance(d.distance_mi, DistanceUnit.Miles, userDistUnit, 1),
+        distance: toDisplayDistance(d.distance_m, DistanceUnit.Miles, userDistUnit, 1),
       })),
     [dailyBreakdown, userDistUnit],
   );
@@ -197,7 +197,7 @@ export default function EnergyFlowPage() {
     const rows = dailyBreakdown.slice();
     return sortFn(rows, (row, key) => {
       if (key === 'energy_kwh') return row.energy_kwh;
-      if (key === 'distance_mi') return row.distance_mi;
+      if (key === 'distance_m') return row.distance_m;
       if (key === 'efficiency_wh_per_mi') return row.efficiency_wh_per_mi;
       return row.date;
     });
@@ -226,12 +226,12 @@ export default function EnergyFlowPage() {
         ),
       },
       {
-        key: 'distance_mi',
+        key: 'distance_m',
         header: `${t('Distance')} (${distanceLabel(userDistUnit)})`,
         sortable: true,
         render: (row) => (
           <span className="font-mono text-sm text-[var(--text-primary)]">
-            {toDisplayDistance(row.distance_mi, DistanceUnit.Miles, userDistUnit, 1)}
+            {toDisplayDistance(row.distance_m, DistanceUnit.Miles, userDistUnit, 1)}
           </span>
         ),
       },

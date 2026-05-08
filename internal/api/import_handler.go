@@ -87,13 +87,14 @@ func (h *ImportHandler) ImportDrives(w http.ResponseWriter, r *http.Request) {
 		speedMax, _ := strconv.ParseFloat(record[5], 64)
 
 		d := &models.Drive{
-			VehicleID:   vehicleID,
-			StartTs:     startDate,
-			DistanceMi:  distance,
-			DurationMin: duration,
+			VehicleID: vehicleID,
+			StartTs:   startDate,
+			DistanceM: distance * 1609.344,
+			DurationS: int64(duration*60.0 + 0.5),
 		}
 		if speedMax > 0 {
-			d.MaxSpeedMph = &speedMax
+			mps := speedMax * 0.44704
+			d.MaxSpeedMps = &mps
 		}
 		if record[2] != "" {
 			if endDate, err := time.Parse("2006-01-02T15:04:05Z", record[2]); err == nil {

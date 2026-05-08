@@ -51,7 +51,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                   <div className="flex-1 text-sm">
                     <p className="text-[var(--text-primary)] font-medium group-hover:text-cyan-300 transition-colors">
                       <AnimatedNumber
-                        value={convertDistance(d.distance_mi)}
+                        value={convertDistance((d.distance_m) / 1609.344)}
                         decimals={1}
                         suffix={` ${distanceUnit}`}
                       />
@@ -63,7 +63,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                   <div className="text-right">
                     <InlineMetric
                       icon={<Clock />}
-                      value={`${Math.floor(d.duration_min / 60)}h ${fmtInt(d.duration_min % 60)}m`}
+                      value={`${Math.floor(d.duration_s / 3600)}h ${fmtInt(Math.floor((d.duration_s % 3600) / 60))}m`}
                     />
                     {d.start_battery_pct != null && d.end_battery_pct != null && (
                       <span className="text-[10px] text-[var(--text-muted)]">

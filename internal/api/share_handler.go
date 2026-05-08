@@ -244,27 +244,41 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build public drive info (no PII)
+	// Build public drive info (no PII).
+	// Decision #3 (phase-48 methodology): convert SI canonical Drive fields
+	// to true km / min / km/h for the existing publicDriveInfo JSON shape.
+	// Pre-Phase-48 the field names said "km" but the values were silently
+	// miles; Slice 4 will rename the JSON keys to SI canonical and bump the
+	// payload `version` field. Numbers in newly issued share links jump by
+	// a factor of ~1.609× compared to old links — that is the correct
+	// behaviour.
 	info := publicDriveInfo{
-		Date:          drive.StartTs.Format("2006-01-02"),
-		DistanceKm:    drive.DistanceMi,
-		DurationMin:   drive.DurationMin,
-		StartAddress:  safeDeref(drive.StartAddress, ""),
-		EndAddress:    safeDeref(drive.EndAddress, ""),
-		StartBattery:  drive.StartBatteryPct,
-		EndBattery:    drive.EndBatteryPct,
+		Date:         drive.StartTs.Format("2006-01-02"),
+		DistanceKm:   drive.DistanceM / 1000.0,
+		DurationMin:  float64(drive.DurationS) / 60.0,
+		StartAddress: safeDeref(drive.StartAddress, ""),
+		EndAddress:   safeDeref(drive.EndAddress, ""),
+		StartBattery: drive.StartBatteryPct,
+		EndBattery:   drive.EndBatteryPct,
 	}
 
 	if share.IncludeSpeed {
-		info.MaxSpeedKmh = drive.MaxSpeedMph
-		info.AvgSpeedKmh = drive.AvgSpeedMph
+		if drive.MaxSpeedMps != nil {
+			v := *drive.MaxSpeedMps * 3.6
+			info.MaxSpeedKmh = &v
+		}
+		if drive.AvgSpeedMps != nil {
+			v := *drive.AvgSpeedMps * 3.6
+			info.AvgSpeedKmh = &v
+		}
 	}
 
 	// Approximate efficiency: battery % delta per km → Wh/km
-	if drive.StartBatteryPct != nil && drive.EndBatteryPct != nil && drive.DistanceMi > 2 {
+	distanceKm := drive.DistanceM / 1000.0
+	if drive.StartBatteryPct != nil && drive.EndBatteryPct != nil && distanceKm > 2 {
 		battUsed := float64(*drive.StartBatteryPct - *drive.EndBatteryPct)
 		if battUsed > 0 {
-			eff := battUsed / drive.DistanceMi * 100 * 0.75
+			eff := battUsed / distanceKm * 100 * 0.75
 			info.EfficiencyWhKm = &eff
 		}
 	}
