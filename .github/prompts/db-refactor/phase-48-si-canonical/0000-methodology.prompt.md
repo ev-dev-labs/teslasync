@@ -253,3 +253,42 @@ Each slice commit message references this methodology document. The
 session-state plan at
 `~/.copilot/session-state/<id>/plan.md` carries detailed in-flight notes
 (audit table, remaining files, etc.) and is durable across sessions.
+
+---
+
+## Pre-execution decisions (locked, "you decide" defaults)
+
+These were left open at methodology authoring time. The user delegated
+the call. Defaults below are the canonical answer for all subsequent
+slices — do not re-litigate without an explicit user override.
+
+1. **Public CSV export column rename.** Rename `distance` → `distance_m`,
+   `duration_min` → `duration_s`, `avg_speed_mph` → `avg_speed_mps`,
+   `max_speed_mph` → `max_speed_mps`, `energy_used_kwh` → `energy_used_wh`,
+   `regen_kwh` → `regen_energy_wh`, `avg_power_kw` → `avg_power_w` in
+   `internal/export/processor.go`. Bump the export filename suffix to
+   `-v2.csv` (e.g. `drives-v2.csv`, `charging-v2.csv`) so external scripts
+   that hard-code the old filename keep getting the old shape via the
+   legacy endpoint until it is removed in Slice 6. If no legacy endpoint
+   exists, document the breaking change in the Slice 4 commit body.
+
+2. **`ChargeRateMilePerHour` semantics.** Audit
+   `internal/tesla/units` + `api/proto/tesla/*` to confirm the proto
+   `UnitKindDistance` annotation. If confirmed it is meters (distance
+   added per second of charging), rename to `range_added_m_per_s` in
+   Slice 2 and add a regression test in `internal/tesla/units` pinning
+   the unit-kind to prevent silent re-introduction of the speed
+   misnomer. If the annotation actually means a power/charge-rate value,
+   rename to `charge_rate_w` and document the discovery in the Slice 2
+   commit body.
+
+3. **`/share/{token}` public API.** Slice 1 fixes the latent bug —
+   `share_handler.go` will read SI from the renamed Drive struct and
+   convert to true kilometres for the existing `distance_km` /
+   `duration_min` / `max_speed_kmh` field names. Numbers in newly issued
+   share links will jump by a factor of ~1.609× compared to old links,
+   which is the correct behaviour (old links were silently miles). Slice
+   4 then renames the JSON keys to `distance_m` / `duration_s` /
+   `max_speed_mps` and bumps the share-payload `version` field. Old
+   tokens remain redeemable; the SPA share-view page must read both
+   shapes for one release before the legacy keys are removed.
