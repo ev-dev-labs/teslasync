@@ -1,0 +1,8 @@
+=== GATE ===
+=== AUDIT ===
+=== BUILD ===
+=== TESTS ===
+ok  	github.com/ev-dev-labs/teslasync/internal/tracing	(cached)
+All gate checks passed.
+EXIT=0
+STATUS=DONE

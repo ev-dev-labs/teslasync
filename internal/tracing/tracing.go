@@ -17,6 +17,12 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// defaultHeadSamplingRatio is the head-sampling ratio applied when the
+// caller did not provide a valid OTEL_TRACES_SAMPLER_ARG. The collector
+// applies tail-based sampling on top of this baseline (errors and slow
+// requests are kept regardless).
+const defaultHeadSamplingRatio = 0.01
+
 // Init initializes the OpenTelemetry tracer provider with an OTLP gRPC exporter.
 // It returns a shutdown function that must be called on application exit.
 func Init(ctx context.Context, cfg *config.Config) (func(context.Context) error, error) {
@@ -59,13 +65,20 @@ func Init(ctx context.Context, cfg *config.Config) (func(context.Context) error,
 	samplerArg := cfg.OTELTracesSamplerArg
 	ratio, err := strconv.ParseFloat(strings.TrimSpace(samplerArg), 64)
 	if err != nil || ratio < 0 || ratio > 1 {
-		ratio = 1
+		ratio = defaultHeadSamplingRatio
 	}
+	// Parent-based head sampling: respect upstream sampling decisions
+	// propagated via traceparent so HTTP entry → DB → MQTT spans share
+	// one decision. Tail-based filtering (errors, > 1s) is applied
+	// downstream by the OTel collector — see
+	// helm/teslasync/files/otel-collector/config.yaml and
+	// docs/runbooks/phase-44-trace-sampling.md.
+	sampler := sdktrace.ParentBased(sdktrace.TraceIDRatioBased(ratio))
 	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(bsp),
 		sdktrace.WithResource(res),
-		sdktrace.WithSampler(sdktrace.TraceIDRatioBased(ratio)),
+		sdktrace.WithSampler(sampler),
 	)
 
 	otel.SetTracerProvider(tp)

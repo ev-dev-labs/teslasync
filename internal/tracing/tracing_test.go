@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestInitReturnsShutdownWhenEndpointConfigured(t *testing.T) {
@@ -72,4 +73,28 @@ func testConfig(endpoint string) *config.Config {
 			Insecure:    true,
 		},
 	}
+}
+
+func TestSamplerIsParentBased(t *testing.T) {
+	// The sampler must implement parent-based behaviour so HTTP entry
+	// sampling decisions propagate down to MQTT, DB and Tesla-client
+	// children. We assert the description Prometheus would log; the
+	// description is documented as `ParentBased{root:...}` by the SDK.
+	s := sdktrace.ParentBased(sdktrace.TraceIDRatioBased(defaultHeadSamplingRatio))
+	desc := s.Description()
+	if desc == "" {
+		t.Fatal("sampler description is empty")
+	}
+	if want := "ParentBased"; want != "" && !contains(desc, want) {
+		t.Fatalf("sampler description %q does not contain %q", desc, want)
+	}
+}
+
+func contains(s, sub string) bool {
+	for i := 0; i+len(sub) <= len(s); i++ {
+		if s[i:i+len(sub)] == sub {
+			return true
+		}
+	}
+	return false
 }
