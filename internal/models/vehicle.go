@@ -8,24 +8,24 @@ import "time"
 // and .github/prompts/db-refactor/phase-3-schema/_baseline_source/01-vehicles.sql).
 // ADR-001: typed-by-default — no raw_json, no JSONB carve-outs.
 type Vehicle struct {
-	ID          int64      `db:"id"           json:"id"`
-	TeslaID     int64      `db:"tesla_id"     json:"tesla_id"`
-	VIN         string     `db:"vin"          json:"vin"`
-	DisplayName string     `db:"display_name" json:"display_name"`
-	Model       *string    `db:"model"        json:"model,omitempty"`
-	OptionCodes *string    `db:"option_codes" json:"option_codes,omitempty"`
-	Color       *string    `db:"color"        json:"color,omitempty"`
-	TrimLevel   *string    `db:"trim_level"   json:"trim_level,omitempty"`
+	ID          int64   `db:"id"           json:"id"`
+	TeslaID     int64   `db:"tesla_id"     json:"tesla_id"`
+	VIN         string  `db:"vin"          json:"vin"`
+	DisplayName string  `db:"display_name" json:"display_name"`
+	Model       *string `db:"model"        json:"model,omitempty"`
+	OptionCodes *string `db:"option_codes" json:"option_codes,omitempty"`
+	Color       *string `db:"color"        json:"color,omitempty"`
+	TrimLevel   *string `db:"trim_level"   json:"trim_level,omitempty"`
 	// Timezone is the IANA tz database name reported by Tesla
 	// (vehicle_state.timezone, e.g. "America/Los_Angeles"). Updated on
 	// every successful vehicle_data poll. Defaults to "UTC"; the frontend
 	// treats "UTC" as "fall back to user TZ" so streaming-only vehicles
 	// that never reach the polling path render gracefully (Phase 40 / 22).
-	Timezone    string     `db:"timezone"     json:"timezone"`
-	EnrolledAt  time.Time  `db:"enrolled_at"  json:"enrolled_at"`
-	ArchivedAt  *time.Time `db:"archived_at"  json:"archived_at,omitempty"`
-	CreatedAt   time.Time  `db:"created_at"   json:"created_at"`
-	UpdatedAt   time.Time  `db:"updated_at"   json:"updated_at"`
+	Timezone   string     `db:"timezone"     json:"timezone"`
+	EnrolledAt time.Time  `db:"enrolled_at"  json:"enrolled_at"`
+	ArchivedAt *time.Time `db:"archived_at"  json:"archived_at,omitempty"`
+	CreatedAt  time.Time  `db:"created_at"   json:"created_at"`
+	UpdatedAt  time.Time  `db:"updated_at"   json:"updated_at"`
 }
 
 // IsActive reports whether the vehicle has not been soft-deleted.
@@ -79,19 +79,6 @@ type CommandLog struct {
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
-// BatterySnapshot represents a point-in-time battery health reading.
-type BatterySnapshot struct {
-	ID             int64     `json:"id" db:"id"`
-	VehicleID      int64     `json:"vehicle_id" db:"vehicle_id"`
-	HealthScore    float64   `json:"health_score" db:"health_score"`
-	CapacityKWh    float64   `json:"capacity_kwh" db:"capacity_kwh"`
-	DegradationPct float64   `json:"degradation_pct" db:"degradation_pct"`
-	EstRangeKm     float64   `json:"est_range_km" db:"est_range_km"`
-	CycleCount     int       `json:"cycle_count" db:"cycle_count"`
-	AvgCellTempC   float64   `json:"avg_cell_temp_c" db:"avg_cell_temp_c"`
-	CreatedAt      time.Time `json:"created_at" db:"created_at"`
-}
-
 // TirePressureSnapshot represents a point-in-time tire pressure reading.
 type TirePressureSnapshot struct {
 	ID             int64      `json:"id" db:"id"`
@@ -124,29 +111,6 @@ type VampireDrainEvent struct {
 	OutsideTempAvg    *float64   `json:"outside_temp_avg,omitempty" db:"outside_temp_avg"`
 	SentryMode        bool       `json:"sentry_mode" db:"sentry_mode"`
 	CreatedAt         time.Time  `json:"created_at" db:"created_at"`
-}
-
-// DailyMileage represents mileage data for a single day.
-type DailyMileage struct {
-	ID            int64     `json:"id" db:"id"`
-	VehicleID     int64     `json:"vehicle_id" db:"vehicle_id"`
-	Date          time.Time `json:"date" db:"date"`
-	DistanceKm    float64   `json:"distance_km" db:"distance_km"`
-	OdometerStart float64   `json:"odometer_start" db:"odometer_start"`
-	OdometerEnd   float64   `json:"odometer_end" db:"odometer_end"`
-	DriveCount    int       `json:"drive_count" db:"drive_count"`
-	EnergyUsedKWh float64   `json:"energy_used_kwh" db:"energy_used_kwh"`
-}
-
-// VehicleStateRecord represents a vehicle state change record from the DB.
-type VehicleStateRecord struct {
-	ID          int64      `json:"id" db:"id"`
-	VehicleID   int64      `json:"vehicle_id" db:"vehicle_id"`
-	State       string     `json:"state" db:"state"`
-	StartDate   time.Time  `json:"start_date" db:"start_date"`
-	EndDate     *time.Time `json:"end_date,omitempty" db:"end_date"`
-	DurationMin float64    `json:"duration_min" db:"duration_min"`
-	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
 }
 
 // MediaSnapshot represents a point-in-time media playback telemetry reading.
@@ -196,25 +160,24 @@ type VehicleConfigSnapshot struct {
 
 // LocationSnapshot represents a point-in-time navigation/location telemetry reading.
 type LocationSnapshot struct {
-	ID                   int64      `json:"id" db:"id"`
-	VehicleID            int64      `json:"vehicle_id" db:"vehicle_id"`
-	DestinationName      *string    `json:"destination_name,omitempty" db:"destination_name"`
-	DestinationLat       *float64   `json:"destination_lat,omitempty" db:"destination_lat"`
-	DestinationLon       *float64   `json:"destination_lon,omitempty" db:"destination_lon"`
-	OriginLat            *float64   `json:"origin_lat,omitempty" db:"origin_lat"`
-	OriginLon            *float64   `json:"origin_lon,omitempty" db:"origin_lon"`
-	MilesToArrival       *float64   `json:"miles_to_arrival,omitempty" db:"miles_to_arrival"`
-	MinutesToArrival     *float64   `json:"minutes_to_arrival,omitempty" db:"minutes_to_arrival"`
-	RouteLine            *string    `json:"route_line,omitempty" db:"route_line"`
-	RouteTrafficDelayMin *float64   `json:"route_traffic_delay_min,omitempty" db:"route_traffic_delay_min"`
-	LocatedAtHome        *bool      `json:"located_at_home,omitempty" db:"located_at_home"`
-	LocatedAtWork        *bool      `json:"located_at_work,omitempty" db:"located_at_work"`
-	LocatedAtFavorite    *bool      `json:"located_at_favorite,omitempty" db:"located_at_favorite"`
-	GpsState             *string    `json:"gps_state,omitempty" db:"gps_state"`
-	RouteLastUpdated     *time.Time `json:"route_last_updated,omitempty" db:"route_last_updated"`
-	CurrentLat           *float64   `json:"current_lat,omitempty" db:"current_lat"`
-	CurrentLon           *float64   `json:"current_lon,omitempty" db:"current_lon"`
-	CreatedAt            time.Time  `json:"created_at" db:"created_at"`
+	ID                int64      `json:"id" db:"id"`
+	VehicleID         int64      `json:"vehicle_id" db:"vehicle_id"`
+	DestinationName   *string    `json:"destination_name,omitempty" db:"destination_name"`
+	DestinationLat    *float64   `json:"destination_lat,omitempty" db:"destination_lat"`
+	DestinationLon    *float64   `json:"destination_lon,omitempty" db:"destination_lon"`
+	OriginLat         *float64   `json:"origin_lat,omitempty" db:"origin_lat"`
+	OriginLon         *float64   `json:"origin_lon,omitempty" db:"origin_lon"`
+	MilesToArrival    *float64   `json:"miles_to_arrival,omitempty" db:"miles_to_arrival"`
+	MinutesToArrival  *float64   `json:"minutes_to_arrival,omitempty" db:"minutes_to_arrival"`
+	RouteLine         *string    `json:"route_line,omitempty" db:"route_line"`
+	LocatedAtHome     *bool      `json:"located_at_home,omitempty" db:"located_at_home"`
+	LocatedAtWork     *bool      `json:"located_at_work,omitempty" db:"located_at_work"`
+	LocatedAtFavorite *bool      `json:"located_at_favorite,omitempty" db:"located_at_favorite"`
+	GpsState          *string    `json:"gps_state,omitempty" db:"gps_state"`
+	RouteLastUpdated  *time.Time `json:"route_last_updated,omitempty" db:"route_last_updated"`
+	CurrentLat        *float64   `json:"current_lat,omitempty" db:"current_lat"`
+	CurrentLon        *float64   `json:"current_lon,omitempty" db:"current_lon"`
+	CreatedAt         time.Time  `json:"created_at" db:"created_at"`
 }
 
 // SafetySnapshot represents a point-in-time safety settings telemetry reading.

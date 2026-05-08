@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/rs/zerolog/log"
 )
 
 // TCOHandler handles True Cost of Ownership analytics requests.
@@ -32,15 +32,15 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 	// Total electricity cost from charging sessions. Phase-42 SI canonical
 	// charging_sessions (000184): cost_decimal NUMERIC, total_energy_added_wh
 	// BIGINT. Cast cost_decimal to float8 for pgx scan; convert Wh→kWh.
-	var totalChargingCost, totalKWh float64
+	var totalChargingCost, totalWh float64
 	var totalSessions int
 	err = h.db.Pool.QueryRow(ctx,
 		`SELECT COALESCE(SUM(cost_decimal::float8), 0),
-		        COALESCE(SUM(total_energy_added_wh) / 1000.0, 0),
+		        COALESCE(SUM(total_energy_added_wh), 0),
 		        COUNT(*)
 		 FROM charging_sessions
 		 WHERE vehicle_id = $1 AND cost_decimal > 0`, vehicleID,
-	).Scan(&totalChargingCost, &totalKWh, &totalSessions)
+	).Scan(&totalChargingCost, &totalWh, &totalSessions)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("tco: failed to get charging costs")
 		writeError(w, http.StatusInternalServerError, "failed to get TCO data")
@@ -116,18 +116,18 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 
 	// Build monthly breakdown from charging sessions
 	type monthlyEntry struct {
-		Month          string  `json:"month"`
-		EVCost         float64 `json:"ev_cost"`
-		EquivGasCost   float64 `json:"equiv_gas_cost"`
-		Savings        float64 `json:"savings"`
-		CumSavings     float64 `json:"cumulative_savings"`
-		EnergyKWh      float64 `json:"energy_kwh"`
+		Month        string  `json:"month"`
+		EVCost       float64 `json:"ev_cost"`
+		EquivGasCost float64 `json:"equiv_gas_cost"`
+		Savings      float64 `json:"savings"`
+		CumSavings   float64 `json:"cumulative_savings"`
+		EnergyWh     float64 `json:"energy_wh"`
 	}
 
 	rows, err := h.db.Pool.Query(ctx,
 		`SELECT TO_CHAR(started_at, 'YYYY-MM') as month,
 		        COALESCE(SUM(cost_decimal::float8), 0) as monthly_cost,
-		        COALESCE(SUM(total_energy_added_wh) / 1000.0, 0) as monthly_kwh
+		        COALESCE(SUM(total_energy_added_wh), 0) as monthly_wh
 		 FROM charging_sessions
 		 WHERE vehicle_id = $1 AND cost_decimal > 0
 		 GROUP BY TO_CHAR(started_at, 'YYYY-MM')
@@ -143,8 +143,8 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 	var cumulativeSavings float64
 	for rows.Next() {
 		var month string
-		var monthlyCost, monthlyKWh float64
-		if err := rows.Scan(&month, &monthlyCost, &monthlyKWh); err != nil {
+		var monthlyCost, monthlyWh float64
+		if err := rows.Scan(&month, &monthlyCost, &monthlyWh); err != nil {
 			continue
 		}
 		// Estimate equivalent gas cost for this month's driving using energy consumed
@@ -152,12 +152,12 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 		if baseCostPerKWh > 0 && gasEfficiencyMPG > 0 {
 			// kWh → estimated km (using overall efficiency) → miles → gallons → cost
 			kmPerKWh := 0.0
-			if totalKWh > 0 && totalKm > 0 {
-				kmPerKWh = totalKm / totalKWh
+			if totalWh > 0 && totalKm > 0 {
+				kmPerKWh = totalKm / (totalWh / 1000.0)
 			} else {
 				kmPerKWh = 5.0 // reasonable EV default
 			}
-			estimatedKm := monthlyKWh * kmPerKWh
+			estimatedKm := (monthlyWh / 1000.0) * kmPerKWh
 			estimatedMiles := estimatedKm / 1.60934
 			gallons := estimatedMiles / gasEfficiencyMPG
 			equivGas = gallons * gasPrice
@@ -170,7 +170,7 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 			EquivGasCost: math.Round(equivGas*100) / 100,
 			Savings:      math.Round(monthSavings*100) / 100,
 			CumSavings:   math.Round(cumulativeSavings*100) / 100,
-			EnergyKWh:    math.Round(monthlyKWh*100) / 100,
+			EnergyWh:     math.Round(monthlyWh*100) / 100,
 		})
 	}
 
@@ -208,7 +208,7 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id":                   vehicleID,
 		"total_charging_cost":          safeF(math.Round(totalChargingCost*100) / 100),
-		"total_kwh":                    safeF(math.Round(totalKWh*100) / 100),
+		"total_wh":                     safeF(math.Round(totalWh*100) / 100),
 		"total_sessions":               totalSessions,
 		"total_km":                     safeF(math.Round(totalKm*100) / 100),
 		"first_date":                   firstDateStr,

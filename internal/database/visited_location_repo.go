@@ -40,7 +40,7 @@ func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *i
 			d.vehicle_id,
 			d.end_place,
 			COUNT(*) AS visit_count,
-			COALESCE(SUM(d.duration_s), 0) / 60.0 AS total_duration_min,
+			COALESCE(SUM(d.duration_s), 0) AS total_duration_s,
 			MAX(d.ended_at) AS last_visited,
 			MIN(d.started_at) AS first_visited
 		FROM drives d
@@ -71,7 +71,7 @@ func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *i
 		l := &models.VisitedLocation{}
 		var firstVisited time.Time
 		if err := rows.Scan(&l.ID, &l.VehicleID, &l.AddressName, &l.VisitCount,
-			&l.TotalDurationMin, &l.LastVisited, &firstVisited); err != nil {
+			&l.TotalDurationS, &l.LastVisited, &firstVisited); err != nil {
 			return nil, err
 		}
 		l.CreatedAt = firstVisited
@@ -87,10 +87,10 @@ func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *i
 // deriveFromDrives, so an explicit upsert call is no longer needed; this
 // method is preserved as a no-op so existing callers (out of allowed-files
 // scope for this prompt) continue to compile and call it harmlessly.
-func (r *VisitedLocationRepo) UpsertFromDrive(ctx context.Context, vehicleID int64, address string, durationMin float64) error {
+func (r *VisitedLocationRepo) UpsertFromDrive(ctx context.Context, vehicleID int64, address string, durationS float64) error {
 	_ = ctx
 	_ = vehicleID
 	_ = address
-	_ = durationMin
+	_ = durationS
 	return nil
 }

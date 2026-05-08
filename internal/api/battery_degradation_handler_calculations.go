@@ -247,7 +247,7 @@ func generateRecommendations(factors []riskFactor) []string {
 // synthesizeBatterySnapshots converts signal trace entries into the legacy
 // batterySnapshotData shape expected by the prediction and display code.
 // Entries are grouped by timestamp; each unique timestamp yields one snapshot.
-// nominalCapacity is the vehicle-specific estimated capacity in kWh.
+// nominalCapacity is the vehicle-specific estimated capacity in Wh.
 func synthesizeBatterySnapshots(entries []database.SignalTraceEntry, nominalCapacity float64) []batterySnapshotData {
 	if len(entries) == 0 {
 		return nil
@@ -296,11 +296,11 @@ func synthesizeBatterySnapshots(entries []database.SignalTraceEntry, nominalCapa
 		idCounter++
 
 		// Derive health_score from EnergyRemaining / nominal
-		capacityKWh := nominalCapacity
+		capacityWh := nominalCapacity
 		healthScore := 100.0
 		if g.energyRemain != nil && *g.energyRemain > 0 {
-			capacityKWh = *g.energyRemain
-			healthScore = (capacityKWh / nominalCapacity) * 100
+			capacityWh = *g.energyRemain
+			healthScore = (capacityWh / nominalCapacity) * 100
 			if healthScore > 100 {
 				healthScore = 100
 			}
@@ -314,7 +314,7 @@ func synthesizeBatterySnapshots(entries []database.SignalTraceEntry, nominalCapa
 		result = append(result, batterySnapshotData{
 			ID:             idCounter,
 			HealthScore:    healthScore,
-			CapacityKWh:    capacityKWh,
+			CapacityWh:     capacityWh,
 			DegradationPct: 100 - healthScore,
 			EstRangeKm:     estRangeKm,
 			CreatedAt:      g.ts,
@@ -351,7 +351,7 @@ func aggregateMonthlyTrends(snapshots []batterySnapshotData) []monthlyTrend {
 			monthOrder = append(monthOrder, key)
 		}
 		acc.sumHealth += s.HealthScore
-		acc.sumCapacity += s.CapacityKWh
+		acc.sumCapacity += s.CapacityWh
 		acc.sumDegradation += s.DegradationPct
 		acc.sumRange += s.EstRangeKm
 		acc.sumTemp += s.AvgCellTempC

@@ -135,7 +135,7 @@ export interface TeslaChargingHistoryEntry {
   currency_code: string | null;
   pricing_type: string | null;
   rate_base: number | null;
-  usage_kwh: number | null;
+  usage_wh: number | null;
   total_due: number | null;
   has_invoice: boolean;
   invoice_content_id: string | null;
@@ -145,7 +145,7 @@ export interface TeslaChargingHistoryEntry {
 
 export interface TeslaChargingHistorySummary {
   total_sessions: number;
-  total_kwh: number | null;
+  total_wh: number | null;
   total_spend: number | null;
   avg_cost_per_kwh: number | null;
 }
@@ -232,7 +232,7 @@ export interface TeslaChargingSession {
 
 export interface TeslaChargingSessionSummary {
   total_sessions: number;
-  total_kwh: number | null;
+  total_wh: number | null;
   total_cost: number | null;
   avg_cost_per_kwh: number | null;
   peak_power_kw: number | null;

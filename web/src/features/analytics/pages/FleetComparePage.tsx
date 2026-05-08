@@ -219,7 +219,7 @@ export default function FleetComparePage() {
   const navigate = useNavigate();
   usePageTitle(t('comparison.title', 'Fleet Comparison'));
 
-  const { unitPrefs, formatDistance: formatDistanceUnit } = useUnits();
+  const { unitPrefs, formatDistance: formatDistanceUnit, formatEnergy } = useUnits();
   const formatDistance = (value: number | null | undefined, precision?: number) => formatDistanceUnit(value, { precision });
   const { formatTemperature: formatTemperatureUnit } = useUnits();
   const formatTemperature = (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision });
@@ -450,10 +450,10 @@ export default function FleetComparePage() {
       },
       {
         metric: t('comparison.totalEnergy', 'Total Energy'),
-        valueA: `${fmtNumber(cA?.total_kwh ?? 0)} kWh`,
-        valueB: `${fmtNumber(cB?.total_kwh ?? 0)} kWh`,
-        rawA: cA?.total_kwh ?? 0,
-        rawB: cB?.total_kwh ?? 0,
+        valueA: formatEnergy(cA?.total_wh ?? 0),
+        valueB: formatEnergy(cB?.total_wh ?? 0),
+        rawA: cA?.total_wh ?? 0,
+        rawB: cB?.total_wh ?? 0,
         winner: 'neutral' as WinnerSemantic,
       },
       {

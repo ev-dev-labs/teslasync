@@ -236,14 +236,14 @@ func (pc *LegacyPollingConfig) EnabledOnDemandVehicleDataEndpoints() []string {
 
 // EnergyStatsRow represents a single day of energy data from cagg_fleet_stats.
 type EnergyStatsRow struct {
-	Date              string  `json:"date"`
-	EnergyKWh         float64 `json:"energy_kwh"`
-	DistanceMi        float64 `json:"distance_mi"`
-	EfficiencyWhPerMi float64 `json:"efficiency_wh_per_mi"`
-	Cost              float64 `json:"cost"`
+	Date             string  `json:"date"`
+	EnergyWh         float64 `json:"energy_wh"`
+	DistanceM        float64 `json:"distance_m"`
+	EfficiencyWhPerM float64 `json:"efficiency_wh_per_m"`
+	Cost             float64 `json:"cost"`
 }
 
-// BatterySnapshot has moved to vehicle.go.
+// BatterySnapshot was removed with the dropped battery_snapshots table.
 
 // NotificationChannel represents a configured notification delivery channel.
 type NotificationChannel struct {
@@ -353,23 +353,23 @@ type ChatSessionInfo struct {
 
 // VampireDrainEvent has moved to vehicle.go.
 
-// DailyMileage has moved to vehicle.go.
+// DailyMileage was removed; mileage endpoints derive from SI drives data.
 
 // VisitedLocation represents an aggregated visited place.
 type VisitedLocation struct {
-	ID               int64      `json:"id" db:"id"`
-	VehicleID        int64      `json:"vehicle_id" db:"vehicle_id"`
-	AddressID        *int64     `json:"address_id,omitempty" db:"address_id"`
-	AddressName      string     `json:"address_name" db:"address_name"`
-	VisitCount       int        `json:"visit_count" db:"visit_count"`
-	TotalDurationMin float64    `json:"total_duration_min" db:"total_duration_min"`
-	LastVisited      *time.Time `json:"last_visited,omitempty" db:"last_visited"`
-	CreatedAt        time.Time  `json:"created_at" db:"created_at"`
+	ID             int64      `json:"id" db:"id"`
+	VehicleID      int64      `json:"vehicle_id" db:"vehicle_id"`
+	AddressID      *int64     `json:"address_id,omitempty" db:"address_id"`
+	AddressName    string     `json:"address_name" db:"address_name"`
+	VisitCount     int        `json:"visit_count" db:"visit_count"`
+	TotalDurationS float64    `json:"total_duration_s" db:"total_duration_s"`
+	LastVisited    *time.Time `json:"last_visited,omitempty" db:"last_visited"`
+	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
 }
 
 // Trip is defined in trip.go (regenerated to match post-migration schema).
 
-// VehicleStateRecord has moved to vehicle.go.
+// VehicleStateRecord was removed; vehicle-state endpoints derive from fsm_transitions.
 
 // APICallLog has been moved to tesla.go and regenerated to match the
 // post-migration api_call_logs schema (ADR-005: no raw_json bodies).
@@ -602,7 +602,7 @@ type TeslaChargingHistoryEntry struct {
 	CurrencyCode        *string    `json:"currency_code" db:"currency_code"`
 	PricingType         *string    `json:"pricing_type" db:"pricing_type"`
 	RateBase            *float64   `json:"rate_base" db:"rate_base"`
-	UsageKWh            *float64   `json:"usage_kwh" db:"usage_kwh"`
+	UsageWh             *float64   `json:"usage_wh" db:"usage_wh"`
 	TotalDue            *float64   `json:"total_due" db:"total_due"`
 	HasInvoice          bool       `json:"has_invoice" db:"has_invoice"`
 	InvoiceContentID    *string    `json:"invoice_content_id" db:"invoice_content_id"`
@@ -613,7 +613,7 @@ type TeslaChargingHistoryEntry struct {
 // TeslaChargingHistorySummary holds aggregated stats for Tesla charging history.
 type TeslaChargingHistorySummary struct {
 	TotalSessions int      `json:"total_sessions"`
-	TotalKWh      *float64 `json:"total_kwh"`
+	TotalWh       *float64 `json:"total_wh"`
 	TotalSpend    *float64 `json:"total_spend"`
 	AvgCostPerKWh *float64 `json:"avg_cost_per_kwh"`
 }
@@ -646,7 +646,7 @@ type TeslaChargingSession struct {
 // TeslaChargingSessionSummary holds aggregated stats for Tesla fleet charging sessions.
 type TeslaChargingSessionSummary struct {
 	TotalSessions int      `json:"total_sessions"`
-	TotalKWh      *float64 `json:"total_kwh"`
+	TotalWh       *float64 `json:"total_wh"`
 	TotalCost     *float64 `json:"total_cost"`
 	AvgCostPerKWh *float64 `json:"avg_cost_per_kwh"`
 	PeakPowerKW   *float64 `json:"peak_power_kw"`

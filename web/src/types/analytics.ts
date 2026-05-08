@@ -35,7 +35,7 @@ export interface MonthlyStat {
 
 export interface CostBreakdown {
   total_charging_cost: number;
-  total_kwh: number;
+  total_wh: number;
   total_sessions: number;
   total_km: number;
   first_date: string;
@@ -57,6 +57,7 @@ export interface MonthlyCostEntry {
   ev_cost: number;
   equiv_gas_cost: number;
   cumulative_savings: number;
+  energy_wh: number;
 }
 
 export interface TimelineEvent {

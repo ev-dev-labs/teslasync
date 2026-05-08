@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // RegenHandler handles regenerative braking analytics HTTP requests.
@@ -35,7 +35,7 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Look up vehicle-specific battery capacity
-	capacityKWh, capacitySource := lookupVehicleCapacity(ctx, h.db, vehicleID)
+	capacityWh, capacitySource := lookupVehicleCapacityWh(ctx, h.db, vehicleID)
 
 	// Per-drive regen stats (last 90 days). Phase-42 SI canonical drives
 	// schema (migration 000185): distance_m, duration_s, avg_speed_mps,
@@ -44,17 +44,17 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	// start_soc_pct, end_soc_pct) — frontend already mismatched these field
 	// names against the legacy backend tags so the rename is forward-compatible.
 	type driveRegen struct {
-		ID              int64     `json:"id"`
-		StartDate       time.Time `json:"start_date"`
-		Distance        float64   `json:"distance"`
-		DurationS       float64   `json:"duration_s"`
-		SpeedAvgMps     *float64  `json:"avg_speed_mps"`
-		PowerMaxW       *float64  `json:"avg_power_w"`
-		PowerMinW       *float64  `json:"min_power_w"`
-		StartSocPct     *float64  `json:"start_soc_pct"`
-		EndSocPct       *float64  `json:"end_soc_pct"`
-		Efficiency      float64   `json:"efficiency"`
-		RegenScore      float64   `json:"regen_score"`
+		ID          int64     `json:"id"`
+		StartDate   time.Time `json:"start_date"`
+		Distance    float64   `json:"distance"`
+		DurationS   float64   `json:"duration_s"`
+		SpeedAvgMps *float64  `json:"avg_speed_mps"`
+		PowerMaxW   *float64  `json:"avg_power_w"`
+		PowerMinW   *float64  `json:"min_power_w"`
+		StartSocPct *float64  `json:"start_soc_pct"`
+		EndSocPct   *float64  `json:"end_soc_pct"`
+		Efficiency  float64   `json:"efficiency"`
+		RegenScore  float64   `json:"regen_score"`
 	}
 
 	driveRows, err := h.db.Pool.Query(ctx, `
@@ -198,21 +198,21 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 
 	// Free charges equivalent (based on vehicle-specific estimated capacity)
 	freeCharges := 0.0
-	if totalRegenKWh > 0 && capacityKWh > 0 {
-		freeCharges = math.Round(totalRegenKWh/capacityKWh*10) / 10
+	if totalRegenWh > 0 && capacityWh > 0 {
+		freeCharges = math.Round(totalRegenWh/capacityWh*10) / 10
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"vehicle_id":          vehicleID,
-		"total_regen_kwh":     math.Round(totalRegenKWh*100) / 100,
-		"total_drive_kwh":     math.Round(totalDriveKWh*100) / 100,
-		"regen_ratio":         math.Round(regenRatio*10) / 10,
-		"monthly_avg_regen":   monthlyAvgRegen,
-		"free_charges":        freeCharges,
-		"monthly_summary":     monthly,
-		"drives":              drives,
+		"vehicle_id":        vehicleID,
+		"total_regen_kwh":   math.Round(totalRegenKWh*100) / 100,
+		"total_drive_kwh":   math.Round(totalDriveKWh*100) / 100,
+		"regen_ratio":       math.Round(regenRatio*10) / 10,
+		"monthly_avg_regen": monthlyAvgRegen,
+		"free_charges":      freeCharges,
+		"monthly_summary":   monthly,
+		"drives":            drives,
 		// Capacity estimate metadata
-		"battery_capacity_kwh": capacityKWh,
-		"capacity_source":      capacitySource,
+		"battery_capacity_wh": capacityWh,
+		"capacity_source":     capacitySource,
 	})
 }

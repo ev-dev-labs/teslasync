@@ -88,21 +88,19 @@ func isNotPopulated(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "has not been populated")
 }
 
-// Phase-42 (prompt 0077, migration 000188): cagg_fleet_stats now stores
-// energy in Wh (total_energy_wh) and distance in meters (total_distance_m).
-// We convert to legacy units (kWh / miles) at the SELECT boundary so the
-// downstream models.EnergyStatsRow contract (kWh / miles / Wh-per-mile) is
-// unchanged.
+// Phase-42 (prompt 0077, migration 000188): cagg_fleet_stats stores SI
+// canonical energy in Wh and distance in meters. Keep those units at this
+// boundary so the API/FE display layer owns presentation conversion.
 
 func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64, days int) ([]*models.EnergyStatsRow, error) {
 	query := `SELECT
 		TO_CHAR(day, 'YYYY-MM-DD') AS date,
-		COALESCE(total_energy_wh, 0) * 0.001 AS energy_kwh,
-		COALESCE(total_distance_m, 0) * 0.000621371 AS distance_mi,
+		COALESCE(total_energy_wh, 0) AS energy_wh,
+		COALESCE(total_distance_m, 0) AS distance_m,
 		CASE WHEN COALESCE(total_distance_m, 0) > 0
-			THEN COALESCE(total_energy_wh, 0) / (total_distance_m * 0.000621371)
+			THEN COALESCE(total_energy_wh, 0) / total_distance_m
 			ELSE 0
-		END AS efficiency_wh_per_mi,
+		END AS efficiency_wh_per_m,
 		0 AS cost
 	FROM cagg_fleet_stats
 	WHERE vehicle_id = $1
@@ -121,7 +119,7 @@ func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64
 	var stats []*models.EnergyStatsRow
 	for rows.Next() {
 		s := &models.EnergyStatsRow{}
-		if err := rows.Scan(&s.Date, &s.EnergyKWh, &s.DistanceMi, &s.EfficiencyWhPerMi, &s.Cost); err != nil {
+		if err := rows.Scan(&s.Date, &s.EnergyWh, &s.DistanceM, &s.EfficiencyWhPerM, &s.Cost); err != nil {
 			return nil, err
 		}
 		stats = append(stats, s)
@@ -131,9 +129,9 @@ func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64
 
 func (r *EnergyStatsRepo) GetTotalEnergy(ctx context.Context, vehicleID int64, days int) (float64, float64, float64, error) {
 	query := `SELECT
-		COALESCE(SUM(total_energy_wh), 0) * 0.001,
+		COALESCE(SUM(total_energy_wh), 0),
 		0,
-		COALESCE(SUM(total_distance_m), 0) * 0.000621371
+		COALESCE(SUM(total_distance_m), 0)
 	FROM cagg_fleet_stats
 	WHERE vehicle_id = $1
 	  AND day >= (NOW() - make_interval(days := $2))::date`

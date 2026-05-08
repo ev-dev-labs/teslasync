@@ -4,7 +4,7 @@ import { Zap } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useTeslaChargingHistory } from '@/api/hooks/useCharging';
 import { useFormatting } from '@/hooks/useFormatting';
-import { fmtNumber } from '@/lib/numberFormat';
+import { useUnits } from '@/hooks/useUnits';
 import { WidgetShell } from './WidgetShell';
 import { WidgetRankedList, type RankedItem } from './shared';
 import { WidgetBigNumber } from './shared';
@@ -13,6 +13,7 @@ import type { WidgetProps } from './types';
 export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { formatCurrency } = useFormatting();
+  const { formatEnergy } = useUnits();
 
   const {
     data,
@@ -35,22 +36,22 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
       .slice(0, 10);
 
     return sorted.map((entry) => {
-      const kwh = entry.usage_kwh ?? 0;
+      const wh = entry.usage_wh ?? 0;
       const cost = entry.total_due ?? 0;
       return {
         id: entry.id,
         label: entry.site_location_name ?? '—',
-        value: kwh,
-        formattedValue: `${fmtNumber(kwh, 1)} kWh`,
+        value: wh,
+        formattedValue: formatEnergy(wh, { precision: 1 }),
         badge: cost > 0
           ? { text: formatCurrency(cost), variant: 'neutral' as const }
           : undefined,
         barColor: 'bg-yellow-400',
       };
     });
-  }, [entries, formatCurrency]);
+  }, [entries, formatCurrency, formatEnergy]);
 
-  const totalKwh = summary?.total_kwh ?? 0;
+  const totalWh = summary?.total_wh ?? 0;
   const totalSpend = summary?.total_spend ?? 0;
 
   // Compact: show 30-day Supercharger spend as big number
@@ -113,7 +114,7 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
               {t('widget.superchargerHistory.totals', '30-day totals')}
             </span>
             <div className="flex items-center gap-3 text-sm font-semibold tabular-nums text-[var(--text-primary)]">
-              <span>{fmtNumber(totalKwh, 1)} kWh</span>
+              <span>{formatEnergy(totalWh, { precision: 1 })}</span>
               <span>{formatCurrency(totalSpend)}</span>
             </div>
           </div>

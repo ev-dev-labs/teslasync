@@ -58,7 +58,7 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 	type batteryPoint struct {
 		Date        string  `json:"date"`
 		HealthScore float64 `json:"health_score"`
-		CapacityKWh float64 `json:"capacity_kwh"`
+		CapacityWh  float64 `json:"capacity_wh"`
 		Degradation float64 `json:"degradation_pct"`
 		RangeKm     float64 `json:"range_km"`
 		CycleCount  int     `json:"cycle_count"`
@@ -218,7 +218,7 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 		// Phase-42 (prompt 0077, migration 000188): the legacy
 		// per-day charge-signal counter column was renamed to
 		// soc_sample_count.
-		const btNominalCap = 75.0
+		const btNominalCap = 75000.0
 		const btNominalRange = 531.0
 		btRows, btErr := p.db.Pool.Query(ctx,
 			`SELECT bucket, end_soc, min_soc, max_soc, soc_sample_count
@@ -245,7 +245,7 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 				batteryTrend = append(batteryTrend, batteryPoint{
 					Date:        bucket.Format("2006-01-02"),
 					HealthScore: soc,
-					CapacityKWh: soc * btNominalCap / 100,
+					CapacityWh:  soc * btNominalCap / 100,
 					Degradation: 100 - soc,
 					RangeKm:     soc * btNominalRange / 100,
 					CycleCount:  cycles,

@@ -38,7 +38,7 @@ interface DegradationEntry {
   date: string;
   odometer: number;
   soh_pct: number;
-  capacity_kwh: number;
+  capacity_wh: number;
   range_km: number;
 }
 
@@ -123,7 +123,7 @@ export default function BatteryDegradationPage() {
      SI-canonical helper so users with `unit_of_length=mi` see miles
      (the legacy useSettings.toDistanceDisplay helper expected miles input
      and would silently double-convert here). */
-  const { unitPrefs } = useUnits();
+  const { unitPrefs, formatEnergy } = useUnits();
   const fromKm = useCallback(
     (km: number): number => convertDistanceFromSI(km * 1000, unitPrefs.distance),
     [unitPrefs.distance],
@@ -208,10 +208,10 @@ export default function BatteryDegradationPage() {
         sortable: true,
       },
       {
-        key: 'capacity_kwh',
+        key: 'capacity_wh',
         header: t('Capacity'),
         render: (row: DegradationEntry) =>
-          `${fmtNumber(row.capacity_kwh)} kWh`,
+          formatEnergy(row.capacity_wh, { precision: 1 }),
         sortable: true,
       },
       {
@@ -221,7 +221,7 @@ export default function BatteryDegradationPage() {
         sortable: true,
       },
     ],
-    [t, fromKm, unitPrefs.distance],
+    [t, fromKm, unitPrefs.distance, formatEnergy],
   );
 
   /* ── Render ──────────────────────────────────────────── */

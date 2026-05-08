@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/jackc/pgx/v5"
 )
 
 // TeslaChargingSessionRepo provides data access for Tesla fleet charging sessions (business accounts).
@@ -90,7 +90,7 @@ func (r *TeslaChargingSessionRepo) GetBySessionID(ctx context.Context, sessionID
 
 // GetSummary returns aggregated stats for Tesla fleet charging sessions, optionally filtered by VIN.
 func (r *TeslaChargingSessionRepo) GetSummary(ctx context.Context, vin string) (*models.TeslaChargingSessionSummary, error) {
-	query := `SELECT COUNT(*), SUM(energy_added_kwh), SUM(total_cost),
+	query := `SELECT COUNT(*), SUM(energy_added_kwh) * 1000.0, SUM(total_cost),
 		CASE WHEN SUM(energy_added_kwh) > 0 THEN SUM(total_cost) / SUM(energy_added_kwh) ELSE NULL END,
 		MAX(peak_power_kw)
 		FROM tesla_charging_sessions`
@@ -102,7 +102,7 @@ func (r *TeslaChargingSessionRepo) GetSummary(ctx context.Context, vin string) (
 
 	s := &models.TeslaChargingSessionSummary{}
 	err := r.db.Pool.QueryRow(ctx, query, args...).Scan(
-		&s.TotalSessions, &s.TotalKWh, &s.TotalCost, &s.AvgCostPerKWh, &s.PeakPowerKW,
+		&s.TotalSessions, &s.TotalWh, &s.TotalCost, &s.AvgCostPerKWh, &s.PeakPowerKW,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get tesla charging session summary: %w", err)

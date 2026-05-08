@@ -66,11 +66,11 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	// Look up vehicle-specific battery capacity
-	var capacityKWh float64
+	var capacityWh float64
 	if h.db != nil {
-		capacityKWh, _ = lookupVehicleCapacity(ctx, h.db, vehicleID)
+		capacityWh, _ = lookupVehicleCapacityWh(ctx, h.db, vehicleID)
 	} else {
-		capacityKWh = 75.0 // default Model 3/Y capacity
+		capacityWh = 75000.0 // default Model 3/Y capacity
 	}
 
 	// Current battery state from canonical StateReader (forward-folded
@@ -185,7 +185,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// ── Efficiency matrix ────────────────────────────────
 	var matrix []efficiencyBucket
 	if h.db != nil {
-		matrix = h.buildEfficiencyMatrix(ctx, vehicleID, capacityKWh)
+		matrix = h.buildEfficiencyMatrix(ctx, vehicleID, capacityWh)
 	} else {
 		matrix = []efficiencyBucket{}
 	}
@@ -201,7 +201,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		}
 		if val != nil {
 			if energy, ok := val.(float64); ok && energy > 0 {
-				hs := (energy / capacityKWh) * 100
+				hs := (energy / capacityWh) * 100
 				if hs > 100 {
 					hs = 100
 				}
@@ -214,7 +214,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if healthScore != nil && *healthScore > 0 && *healthScore < 100 {
 		healthFactor = *healthScore / 100
 	}
-	usableCapacity := capacityKWh * healthFactor
+	usableCapacity := capacityWh * healthFactor
 
 	// ── Build original response fields ───────────────────
 	bl := ptrF64(batteryLevel)
@@ -305,7 +305,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		"projection_curve":   curve,
 		// Enhanced fields
 		"current_battery_pct": math.Round(bl*10) / 10,
-		"usable_capacity_kwh": math.Round(usableCapacity*10) / 10,
+		"usable_capacity_wh":  math.Round(usableCapacity*10) / 10,
 		"health_factor":       math.Round(healthFactor*1000) / 1000,
 		"scenarios":           scenarios,
 		"efficiency_matrix":   matrix,
@@ -317,10 +317,10 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 // ── Efficiency matrix ────────────────────────────────────────
 
-func (h *RangeProjectionHandler) buildEfficiencyMatrix(ctx context.Context, vehicleID int64, capacityKWh float64) []efficiencyBucket {
+func (h *RangeProjectionHandler) buildEfficiencyMatrix(ctx context.Context, vehicleID int64, capacityWh float64) []efficiencyBucket {
 	// Phase-42 SI canonical drives. Speed buckets translated from mph to mps:
 	// 50/90 mph -> 22.352 / 40.2336 mps. The Wh/km formula preserves the
-	// legacy "delta_pct * capacity_kWh * 10 / distance" shape — even
+	// legacy "delta_pct * capacity * 10 / distance" shape — even
 	// though the column is aliased wh_per_km, it has historically returned
 	// per-mile values; the SI rewrite keeps that numeric output by using
 	// `distance_m / driveStatsMetersPerMile` (i.e. miles) as denominator,
@@ -345,7 +345,7 @@ func (h *RangeProjectionHandler) buildEfficiencyMatrix(ctx context.Context, vehi
 		  AND ambient_temp_c_avg IS NOT NULL AND avg_speed_mps IS NOT NULL
 		GROUP BY temp_bucket, speed_bucket
 		HAVING COUNT(*) >= 3`,
-		vehicleID, capacityKWh, driveStatsMetersPerMile, 5*driveStatsMetersPerMile)
+		vehicleID, capacityWh/1000.0, driveStatsMetersPerMile, 5*driveStatsMetersPerMile)
 	if err != nil {
 		return []efficiencyBucket{}
 	}
@@ -368,7 +368,7 @@ func (h *RangeProjectionHandler) buildEfficiencyMatrix(ctx context.Context, vehi
 
 // ── Scenario projections ─────────────────────────────────────
 
-func (h *RangeProjectionHandler) buildScenarios(matrix []efficiencyBucket, batteryPct, usableCapKWh float64, outsideTemp *float64) []rangeScenario {
+func (h *RangeProjectionHandler) buildScenarios(matrix []efficiencyBucket, batteryPct, usableCapWh float64, outsideTemp *float64) []rangeScenario {
 	lookup := make(map[string]efficiencyBucket)
 	for _, b := range matrix {
 		lookup[b.TempBucket+"|"+b.SpeedBucket] = b
@@ -378,7 +378,7 @@ func (h *RangeProjectionHandler) buildScenarios(matrix []efficiencyBucket, batte
 		if effWhKm <= 0 {
 			return 0, 0
 		}
-		km = usableCapKWh * 1000 * (batteryPct / 100) / effWhKm
+		km = usableCapWh * (batteryPct / 100) / effWhKm
 		mi = km * 0.621371
 		return math.Round(km*10) / 10, math.Round(mi*10) / 10
 	}
@@ -485,11 +485,11 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 	defer cancel()
 
 	// Look up vehicle-specific battery capacity
-	var capacityKWh float64
+	var capacityWh float64
 	if h.db != nil {
-		capacityKWh, _ = lookupVehicleCapacity(ctx, h.db, vehicleID)
+		capacityWh, _ = lookupVehicleCapacityWh(ctx, h.db, vehicleID)
 	} else {
-		capacityKWh = 75.0 // default Model 3/Y capacity
+		capacityWh = 75000.0 // default Model 3/Y capacity
 	}
 
 	var batteryLevel, ratedRange, idealRange *float64
@@ -556,7 +556,7 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 		}
 		if val != nil {
 			if energy, ok := val.(float64); ok && energy > 0 {
-				hp := (energy / capacityKWh) * 100
+				hp := (energy / capacityWh) * 100
 				if hp > 100 {
 					hp = 100
 				}

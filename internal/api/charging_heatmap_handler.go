@@ -4,8 +4,8 @@ import (
 	"math"
 	"net/http"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/rs/zerolog/log"
 )
 
 // ChargingHeatmapHandler serves aggregated charging-pattern analytics.
@@ -21,23 +21,23 @@ type heatmapCell struct {
 	DayOfWeek    int     `json:"day_of_week"`
 	HourOfDay    int     `json:"hour_of_day"`
 	SessionCount int     `json:"session_count"`
-	AvgEnergy    float64 `json:"avg_energy"`
+	AvgEnergyWh  float64 `json:"avg_energy_wh"`
 	AvgCost      float64 `json:"avg_cost"`
 }
 
 type locationBreakdown struct {
 	Location  string  `json:"location"`
 	Count     int     `json:"count"`
-	TotalKWh  float64 `json:"total_kwh"`
+	TotalWh   float64 `json:"total_wh"`
 	TotalCost float64 `json:"total_cost"`
-	AvgPower  float64 `json:"avg_power"`
+	AvgPowerW float64 `json:"avg_power_w"`
 }
 
 type chargingSummary struct {
 	TotalSessions int     `json:"total_sessions"`
-	TotalKWh      float64 `json:"total_kwh"`
+	TotalWh       float64 `json:"total_wh"`
 	TotalCost     float64 `json:"total_cost"`
-	AvgDuration   float64 `json:"avg_duration"`
+	AvgDurationS  float64 `json:"avg_duration_s"`
 }
 
 func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -55,15 +55,14 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Phase-42 (000184_charging_si): SI canonical columns. We convert
-	// total_energy_added_wh -> kWh and peak_power_w -> kW at the SQL boundary
-	// so the JSON response keys (avg_energy in kWh, avg_power in kW) stay
-	// stable. The legacy duration column is derived from EXTRACT(EPOCH ...).
+	// total_energy_added_wh and peak_power_w are already SI canonical; the
+	// frontend display boundary formats them with user preferences.
 	// Heatmap data: hour of day × day of week
 	heatmapRows, err := h.db.Pool.Query(ctx, `
 		SELECT EXTRACT(DOW FROM started_at)::int  AS day_of_week,
 		       EXTRACT(HOUR FROM started_at)::int AS hour_of_day,
 		       COUNT(*)                            AS session_count,
-		       COALESCE(AVG(total_energy_added_wh) / 1000.0, 0) AS avg_energy,
+		       COALESCE(AVG(total_energy_added_wh), 0) AS avg_energy_wh,
 		       COALESCE(AVG(cost_decimal), 0)      AS avg_cost
 		FROM charging_sessions
 		WHERE vehicle_id = $1
@@ -79,12 +78,12 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 	var heatmap []heatmapCell
 	for heatmapRows.Next() {
 		var c heatmapCell
-		if err := heatmapRows.Scan(&c.DayOfWeek, &c.HourOfDay, &c.SessionCount, &c.AvgEnergy, &c.AvgCost); err != nil {
+		if err := heatmapRows.Scan(&c.DayOfWeek, &c.HourOfDay, &c.SessionCount, &c.AvgEnergyWh, &c.AvgCost); err != nil {
 			log.Error().Err(err).Msg("charging heatmap: scan heatmap row")
 			writeError(w, http.StatusInternalServerError, "failed to scan heatmap data")
 			return
 		}
-		c.AvgEnergy = math.Round(c.AvgEnergy*100) / 100
+		c.AvgEnergyWh = math.Round(c.AvgEnergyWh*100) / 100
 		c.AvgCost = math.Round(c.AvgCost*100) / 100
 		heatmap = append(heatmap, c)
 	}
@@ -99,9 +98,9 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 	locRows, err := h.db.Pool.Query(ctx, `
 		SELECT COALESCE(start_place, 'Unknown')                  AS location,
 		       COUNT(*)                                          AS count,
-		       COALESCE(SUM(total_energy_added_wh) / 1000.0, 0)  AS total_kwh,
+		       COALESCE(SUM(total_energy_added_wh), 0)           AS total_wh,
 		       COALESCE(SUM(cost_decimal), 0)                    AS total_cost,
-		       COALESCE(AVG(peak_power_w) / 1000.0, 0)           AS avg_power
+		       COALESCE(AVG(peak_power_w), 0)                    AS avg_power_w
 		FROM charging_sessions
 		WHERE vehicle_id = $1
 		GROUP BY start_place
@@ -117,14 +116,14 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 	var locations []locationBreakdown
 	for locRows.Next() {
 		var l locationBreakdown
-		if err := locRows.Scan(&l.Location, &l.Count, &l.TotalKWh, &l.TotalCost, &l.AvgPower); err != nil {
+		if err := locRows.Scan(&l.Location, &l.Count, &l.TotalWh, &l.TotalCost, &l.AvgPowerW); err != nil {
 			log.Error().Err(err).Msg("charging heatmap: scan location row")
 			writeError(w, http.StatusInternalServerError, "failed to scan location data")
 			return
 		}
-		l.TotalKWh = math.Round(l.TotalKWh*100) / 100
+		l.TotalWh = math.Round(l.TotalWh*100) / 100
 		l.TotalCost = math.Round(l.TotalCost*100) / 100
-		l.AvgPower = math.Round(l.AvgPower*100) / 100
+		l.AvgPowerW = math.Round(l.AvgPowerW*100) / 100
 		locations = append(locations, l)
 	}
 	if err := locRows.Err(); err != nil {
@@ -138,19 +137,19 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 	var summary chargingSummary
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*)                                                                      AS total_sessions,
-		       COALESCE(SUM(total_energy_added_wh) / 1000.0, 0)                              AS total_kwh,
+		       COALESCE(SUM(total_energy_added_wh), 0)                                       AS total_wh,
 		       COALESCE(SUM(cost_decimal), 0)                                                AS total_cost,
-		       COALESCE(AVG(EXTRACT(EPOCH FROM (ended_at - started_at)) / 60.0), 0)          AS avg_duration
+		       COALESCE(AVG(EXTRACT(EPOCH FROM (ended_at - started_at))), 0)                 AS avg_duration_s
 		FROM charging_sessions WHERE vehicle_id = $1`, vehicleID).
-		Scan(&summary.TotalSessions, &summary.TotalKWh, &summary.TotalCost, &summary.AvgDuration)
+		Scan(&summary.TotalSessions, &summary.TotalWh, &summary.TotalCost, &summary.AvgDurationS)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("charging heatmap: failed to query summary")
 		writeError(w, http.StatusInternalServerError, "failed to query summary")
 		return
 	}
-	summary.TotalKWh = math.Round(summary.TotalKWh*100) / 100
+	summary.TotalWh = math.Round(summary.TotalWh*100) / 100
 	summary.TotalCost = math.Round(summary.TotalCost*100) / 100
-	summary.AvgDuration = math.Round(summary.AvgDuration*10) / 10
+	summary.AvgDurationS = math.Round(summary.AvgDurationS*10) / 10
 
 	if heatmap == nil {
 		heatmap = []heatmapCell{}

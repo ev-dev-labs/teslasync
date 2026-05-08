@@ -57,12 +57,12 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Derive battery health from signal_log (no more battery_snapshots table)
-	var healthScore, capacityKWh, degradation, estRange float64
+	var healthScore, capacityWh, degradation, estRange float64
 	var avgTemp *float64
 	var cycleCount int
 
 	{
-		const nominalCapacity = 75.0
+		const nominalCapacity = 75000.0
 		const nominalRangeKm = 531.0
 
 		if h.state != nil {
@@ -74,8 +74,8 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 			}
 			if val != nil {
 				if v, ok := toFloatOk(val); ok && v > 0 {
-					capacityKWh = v
-					healthScore = (capacityKWh / nominalCapacity) * 100
+					capacityWh = v
+					healthScore = (capacityWh / nominalCapacity) * 100
 					if healthScore > 100 {
 						healthScore = 100
 					}
@@ -144,7 +144,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		CapacityPct float64 `json:"capacity_pct"`
 		RangeKm     float64 `json:"range_km"`
 		HealthScore float64 `json:"health_score"`
-		CapacityKWh float64 `json:"capacity_kwh"`
+		CapacityWh  float64 `json:"capacity_wh"`
 		EstRangeKm  float64 `json:"est_range_km"`
 	}
 	var trend []trendPoint
@@ -157,7 +157,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	trendCutoff := time.Now().UTC().AddDate(0, 0, -trendDays)
-	const trendNominalCap = 75.0
+	const trendNominalCap = 75000.0
 	const trendNominalRange = 531.0
 
 	if h.db != nil {
@@ -184,7 +184,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 					Month:       bucket.Format("2006-01-02"),
 					CapacityPct: soc,
 					HealthScore: soc,
-					CapacityKWh: soc * trendNominalCap / 100,
+					CapacityWh:  soc * trendNominalCap / 100,
 					RangeKm:     soc * trendNominalRange / 100,
 					EstRangeKm:  soc * trendNominalRange / 100,
 				})
@@ -198,7 +198,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]interface{}{
 		"vehicle_id":                 vehicleID,
 		"health_score":               healthScore,
-		"capacity_kwh":               capacityKWh,
+		"capacity_wh":                capacityWh,
 		"current_capacity_pct":       healthScore,
 		"degradation_pct":            degradation,
 		"est_range_km":               estRange,

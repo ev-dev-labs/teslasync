@@ -136,7 +136,7 @@ export default function EnergyPage() {
 
   const distanceUnit = unitPrefs.distance;
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
-  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
+  const toEfficiencyDisplay = (whPerM: number) => unitPrefs.distance === 'mi' ? whPerM * 1609.344 : whPerM * 1000;
   const savedView = useSavedViewUrl();
 
   /* ── Vehicle selector ─────────────────────────────────────────── */
@@ -173,8 +173,8 @@ export default function EnergyPage() {
   /* ── Derived metrics ──────────────────────────────────────────── */
   const totalEnergy = sessions?.reduce((s, c) => s + c.total_energy_added_wh, 0) ?? 0;
   const totalCost = sessions?.reduce((s, c) => s + (c.cost_decimal ?? 0), 0) ?? 0;
-  const avgEfficiency = stats?.avg_efficiency_wh_per_mi ?? 0;
-  const totalDistance = stats?.total_distance_mi ?? 0;
+  const avgEfficiency = stats?.avg_efficiency_wh_per_m ?? 0;
+  const totalDistance = stats?.total_distance_m ?? 0;
   const co2Saved = stats?.co2_saved_kg ?? totalEnergy * 0.42;
 
   const periodDays = Math.max(
@@ -182,7 +182,7 @@ export default function EnergyPage() {
     Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000),
   );
   const costPerKm = totalDistance > 0 ? totalCost / totalDistance : 0;
-  const costPerKwh = totalEnergy > 0 ? totalCost / totalEnergy : 0;
+  const costPerKwh = totalEnergy > 0 ? totalCost / (totalEnergy / 1000) : 0;
   const gasEquivalent = totalDistance * 0.12;
   const monthlyProjectedCost = costPerKm > 0 ? costPerKm * (totalDistance / periodDays) * 30 : 0;
   const yearlyProjectedCost = monthlyProjectedCost * 12;
@@ -198,9 +198,9 @@ export default function EnergyPage() {
   const hasNoEnergyData = useMemo(() => {
     const noSessions = !sessions || sessions.length === 0;
     const noStats = !stats || (
-      (stats.total_kwh ?? 0) === 0 &&
-      (stats.total_energy_used_kwh ?? 0) === 0 &&
-      (stats.total_distance_mi ?? 0) === 0
+      (stats.total_wh ?? 0) === 0 &&
+      (stats.total_energy_used_wh ?? 0) === 0 &&
+      (stats.total_distance_m ?? 0) === 0
     );
     return noSessions && noStats;
   }, [sessions, stats]);
@@ -521,22 +521,22 @@ export default function EnergyPage() {
                               {renderAnnotationLines(chartAnnotations, (ts) => ts)}
                               <Bar
                                 yAxisId="left"
-                                dataKey="energy_kwh"
-                                name={t('energy.chart.energyKwh', 'Energy (kWh)')}
+                                dataKey="energy_wh"
+                                name={t('energy.chart.energy', 'Energy')}
                                 fill="url(#energyBarGrad)"
                                 fillOpacity={0.6}
                                 radius={[3, 3, 0, 0]}
                                 animationDuration={800}
-                                hide={energyCostHidden.isHidden('energy_kwh')}
+                                hide={energyCostHidden.isHidden('energy_wh')}
                               />
                               <Line
                                 {...AREA_DEFAULTS}
                                 yAxisId="right"
-                                dataKey="efficiency_wh_per_mi"
+                                dataKey="efficiency_wh_per_m"
                                 name={efficiencyUnit}
                                 stroke="#10b981"
                                 animationDuration={800}
-                                hide={energyCostHidden.isHidden('efficiency_wh_per_mi')}
+                                hide={energyCostHidden.isHidden('efficiency_wh_per_m')}
                               />
                               {syncedX != null && (
                                 <ReferenceLine
@@ -603,7 +603,7 @@ export default function EnergyPage() {
                             <Tooltip content={<ChartTooltip />} />
                             <Area
                               {...AREA_DEFAULTS}
-                              dataKey="efficiency_wh_per_mi"
+                              dataKey="efficiency_wh_per_m"
                               name={efficiencyUnit}
                               stroke="#10b981"
                               fill="url(#effGrad)"

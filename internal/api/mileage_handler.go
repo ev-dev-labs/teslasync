@@ -132,7 +132,7 @@ func (h *MileageHandler) parseStatsParams(w http.ResponseWriter, r *http.Request
 // Snake-case JSON tags so the frontend hooks can read either
 // camelCaseKeys-transformed or original keys per project convention.
 //
-// total_kwh_consumed and avg_efficiency_wh_per_km are pointers to
+// total_wh_consumed and avg_efficiency_wh_per_km are pointers to
 // preserve JSON null semantics: a month whose drives all had NULL
 // energy_used_wh reports null for both energy fields rather than a
 // fabricated zero.
@@ -140,7 +140,7 @@ type MileageMonthlyBucket struct {
 	YearMonth            string   `json:"year_month"`
 	DriveCount           int      `json:"drive_count"`
 	TotalKm              float64  `json:"total_km"`
-	TotalKwhConsumed     *float64 `json:"total_kwh_consumed"`
+	TotalWhConsumed     *float64 `json:"total_wh_consumed"`
 	AvgEfficiencyWhPerKm *float64 `json:"avg_efficiency_wh_per_km"`
 }
 
@@ -209,7 +209,7 @@ func (h *MileageHandler) Monthly(w http.ResponseWriter, r *http.Request) {
 			YearMonth:            row.Bucket.UTC().Format("2006-01"),
 			DriveCount:           row.DriveCount,
 			TotalKm:              row.TotalKm,
-			TotalKwhConsumed:     row.TotalKwhConsumed,
+			TotalWhConsumed:     row.TotalWhConsumed,
 			AvgEfficiencyWhPerKm: row.AvgEfficiencyWhPerKm,
 		})
 	}

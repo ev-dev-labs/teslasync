@@ -13,13 +13,13 @@ const CO2PerKWh = 0.4
 
 // EnergyStats holds computed energy statistics for a vehicle over a period.
 type EnergyStats struct {
-	VehicleID      int64                  `json:"vehicle_id"`
-	PeriodDays     int                    `json:"period_days"`
-	TotalEnergy    float64                `json:"total_energy_used_kwh"`
-	TotalCost      float64                `json:"total_cost"`
-	TotalDistance  float64                `json:"total_distance_mi"`
-	AvgEfficiency  float64                `json:"avg_efficiency_wh_per_mi"`
-	CO2Saved       float64                `json:"co2_saved_kg"`
+	VehicleID      int64                    `json:"vehicle_id"`
+	PeriodDays     int                      `json:"period_days"`
+	TotalEnergy    float64                  `json:"total_energy_used_wh"`
+	TotalCost      float64                  `json:"total_cost"`
+	TotalDistance  float64                  `json:"total_distance_m"`
+	AvgEfficiency  float64                  `json:"avg_efficiency_wh_per_m"`
+	CO2Saved       float64                  `json:"co2_saved_kg"`
 	DailyBreakdown []*models.EnergyStatsRow `json:"daily_breakdown"`
 }
 
@@ -53,7 +53,7 @@ func (s *EnergyService) CalculateStats(ctx context.Context, vehicleID int64, day
 
 	var avgEfficiency float64
 	if totalDistance > 0 {
-		avgEfficiency = totalEnergy / totalDistance * 1000 // Wh/mi
+		avgEfficiency = totalEnergy / totalDistance
 	}
 
 	return &EnergyStats{
@@ -63,7 +63,7 @@ func (s *EnergyService) CalculateStats(ctx context.Context, vehicleID int64, day
 		TotalCost:      totalCost,
 		TotalDistance:  totalDistance,
 		AvgEfficiency:  avgEfficiency,
-		CO2Saved:       totalEnergy * CO2PerKWh,
+		CO2Saved:       (totalEnergy / 1000.0) * CO2PerKWh,
 		DailyBreakdown: breakdown,
 	}, nil
 }

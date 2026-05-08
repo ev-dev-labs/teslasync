@@ -379,18 +379,19 @@ export interface AuthStatus {
 // === New Feature Types ===
 
 export interface EnergyStats {
-  /** Energy in kilowatt-hours (kWh, derived SI). */
-  total_energy_used_kwh: number
-  /** Energy in kilowatt-hours (kWh, derived SI). */
-  total_energy_charged_kwh: number
-  /** Energy intensity in watt-hours per kilometer (Wh/km, derived SI). */
-  avg_efficiency_wh_km: number
-  /** Distance in kilometers (km, derived SI). */
-  total_distance_km: number
+  /** Energy in watt-hours (Wh, SI). */
+  total_energy_used_wh: number
+  /** Energy in watt-hours (Wh, SI). */
+  total_energy_charged_wh: number
+  total_wh: number
+  /** Energy intensity in watt-hours per meter (Wh/m, SI). */
+  avg_efficiency_wh_per_m: number
+  /** Distance in meters (m, SI). */
+  total_distance_m: number
   total_cost: number
   /** CO2 saved in kilograms (kg, SI). */
   co2_saved_kg: number
-  daily_breakdown: { date: string; energy_kwh: number; distance_km: number; efficiency: number }[]
+  daily_breakdown: { date: string; energy_wh: number; distance_m: number; efficiency_wh_per_m: number }[]
 }
 
 export interface BatteryReport {
@@ -598,7 +599,7 @@ export interface FleetAnalytics {
     efficiency_stats: StatsSummary
   }
 
-  battery_trend: { date: string; health_score: number; capacity_kwh: number; degradation_pct: number; range_km: number; cycle_count: number }[]
+  battery_trend: { date: string; health_score: number; capacity_wh: number; degradation_pct: number; range_km: number; cycle_count: number }[]
 }
 
 export interface CommandResult {
@@ -1432,23 +1433,23 @@ export interface ChargingHeatmapCell {
   day_of_week: number
   hour_of_day: number
   session_count: number
-  avg_energy: number
+  avg_energy_wh: number
   avg_cost: number
 }
 
 export interface ChargingLocationBreakdown {
   location: string
   count: number
-  total_kwh: number
+  total_wh: number
   total_cost: number
-  avg_power: number
+  avg_power_w: number
 }
 
 export interface ChargingHeatmapSummary {
   total_sessions: number
-  total_kwh: number
+  total_wh: number
   total_cost: number
-  avg_duration: number
+  avg_duration_s: number
 }
 
 export interface ChargingHeatmapData {
@@ -1655,7 +1656,7 @@ export interface LocationSnapshot {
   destination_name?: string
   miles_to_arrival?: number
   minutes_to_arrival?: number
-  route_traffic_delay_min?: number
+  route_traffic_delay_s?: number
   route_last_updated?: string
   // Destination/origin coords (Latest only — from unpacked compounds)
   destination_lat?: number
@@ -1749,8 +1750,8 @@ export interface BackupRun {
 export interface TCOAnalytics {
   vehicle_id: number
   total_charging_cost: number
-  /** Total charged energy in kilowatt-hours (kWh, derived SI). */
-  total_kwh: number
+  /** Total charged energy in watt-hours (Wh, SI canonical). */
+  total_wh: number
   total_sessions: number
   /** Total distance in kilometers (km, derived SI). */
   total_km: number
@@ -1773,7 +1774,7 @@ export interface TCOAnalytics {
     equiv_gas_cost: number
     savings: number
     cumulative_savings: number
-    energy_kwh: number
+    energy_wh: number
   }[]
 }
 
@@ -1800,7 +1801,7 @@ export interface SleepAnalytics {
   sentry_extra_drain_rate: number
   sentry_extra_monthly_kwh: number
   sentry_extra_monthly_cost: number
-  battery_capacity_kwh: number
+  battery_capacity_wh: number
   base_cost_per_kwh: number
   recent_events: {
     id: number
@@ -1872,7 +1873,7 @@ export interface BatteryDegradationData {
     id: number
     health_score: number
     /** Battery capacity in kilowatt-hours (kWh, derived SI). */
-    capacity_kwh: number
+    capacity_wh: number
     degradation_pct: number
     /** Estimated range in kilometers (km, derived SI). */
     est_range_km: number
@@ -2124,7 +2125,7 @@ export interface YearReviewMonthStat {
   /** Distance in kilometers (km, derived SI). */
   distance_km: number
   /** Energy in kilowatt-hours (kWh, derived SI). */
-  energy_kwh: number
+  energy_wh: number
   cost: number
 }
 

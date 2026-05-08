@@ -52,7 +52,7 @@ var locationMappings = []signal.FieldMapping{
 	{Signal: "DestinationName", Field: "destination_name"},
 	{Signal: "MilesToArrival", Field: "miles_to_arrival"},
 	{Signal: "MinutesToArrival", Field: "minutes_to_arrival"},
-	{Signal: "RouteTrafficMinutesDelay", Field: "route_traffic_delay_min"},
+	{Signal: "RouteTrafficMinutesDelay", Field: "route_traffic_delay_s"},
 	{Signal: "RouteLastUpdated", Field: "route_last_updated"},
 	// Destination / origin coordinates. The Tesla Location compound
 	// (lat,lng pair) is unpacked into these scalar signal names by the
@@ -107,6 +107,7 @@ func (h *LocationSnapshotHandler) List(w http.ResponseWriter, r *http.Request) {
 		if ts, ok := row["ts"]; ok {
 			row["created_at"] = ts
 		}
+		convertRouteTrafficDelayToSeconds(row)
 		row["id"] = i + 1
 	}
 	writeJSON(w, http.StatusOK, rows)
@@ -140,5 +141,16 @@ func (h *LocationSnapshotHandler) Latest(w http.ResponseWriter, r *http.Request)
 			result[m.Field] = v
 		}
 	}
+	convertRouteTrafficDelayToSeconds(result)
 	writeJSON(w, http.StatusOK, result)
+}
+
+func convertRouteTrafficDelayToSeconds(row map[string]interface{}) {
+	v, ok := row["route_traffic_delay_s"]
+	if !ok {
+		return
+	}
+	if minutes, ok := toFloatOk(v); ok {
+		row["route_traffic_delay_s"] = minutes * 60
+	}
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-const nominalBatteryCapacityKWh = 75.0
+const nominalBatteryCapacityWh = 75000.0
 
 // DrivingCoachHandler analyses driving patterns and produces coaching insights.
 type DrivingCoachHandler struct {
@@ -172,7 +172,7 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 	for i := range drives {
 		d := &drives[i]
 		if d.distance > 0 && d.socStart > d.socEnd {
-			d.efficiency = (d.socStart - d.socEnd) * nominalBatteryCapacityKWh * 10 / d.distance
+			d.efficiency = (d.socStart - d.socEnd) / 100 * nominalBatteryCapacityWh / d.distance
 			if d.efficiency > 0 && d.efficiency < bestEfficiency {
 				bestEfficiency = d.efficiency
 			}

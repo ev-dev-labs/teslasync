@@ -5,7 +5,7 @@ import "time"
 type batterySnapshotData struct {
 	ID             int64     `json:"id"`
 	HealthScore    float64   `json:"health_score"`
-	CapacityKWh    float64   `json:"capacity_kwh"`
+	CapacityWh     float64   `json:"capacity_wh"`
 	DegradationPct float64   `json:"degradation_pct"`
 	EstRangeKm     float64   `json:"est_range_km"`
 	CycleCount     int       `json:"cycle_count"`

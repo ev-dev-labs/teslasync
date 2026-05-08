@@ -20,6 +20,7 @@ import {
 } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -52,6 +53,7 @@ const gridCols = { default: 1, sm: 2, lg: 5 } as const;
 
 export default function TeslaChargingSessionsPage() {
   const { t } = useTranslation();
+  const { formatEnergy } = useUnits();
   usePageTitle(t('tesla_sessions.title', 'Fleet Charging Sessions'));
 
   const { data: vehicles } = useVehicles();
@@ -61,7 +63,7 @@ export default function TeslaChargingSessionsPage() {
 
   const sessions = response?.sessions ?? [];
   const summary = response?.summary ?? {
-    total_sessions: 0, total_kwh: null, total_cost: null, avg_cost_per_kwh: null, peak_power_kw: null,
+    total_sessions: 0, total_wh: null, total_cost: null, avg_cost_per_kwh: null, peak_power_kw: null,
   };
 
   const vehicleOptions = useMemo(() => {
@@ -228,7 +230,7 @@ export default function TeslaChargingSessionsPage() {
     (rows: TeslaChargingSession[]) => {
       if (rows.length === 0) return;
       const header = [
-        'date', 'location', 'vin', 'energy_kwh', 'peak_power_kw',
+        'date', 'location', 'vin', 'energy_wh', 'peak_power_kw',
         'duration_seconds', 'cost', 'currency', 'per_kwh_rate', 'charger_type',
       ];
       const lines = [header.join(',')];
@@ -329,8 +331,7 @@ export default function TeslaChargingSessionsPage() {
             <StaggerItem>
               <StatCard
                 label={t('tesla_sessions.stats.energy', 'Total Energy')}
-                value={summary.total_kwh != null ? fmtNumber(summary.total_kwh, 1) : '—'}
-                unit="kWh"
+                value={summary.total_wh != null ? formatEnergy(summary.total_wh, { precision: 1 }) : '—'}
                 icon={<Gauge className="h-5 w-5 text-yellow-400" />}
                 loading={isLoading}
               />

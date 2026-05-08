@@ -24,6 +24,7 @@ import {
 } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -61,6 +62,7 @@ const gridCols = { default: 1, sm: 2, lg: 4 } as const;
 
 export default function TeslaChargingHistoryPage() {
   const { t } = useTranslation();
+  const { formatEnergy } = useUnits();
   usePageTitle(t('tesla_charging.title', 'Tesla Charging History'));
 
   const { data: vehicles } = useVehicles();
@@ -70,7 +72,7 @@ export default function TeslaChargingHistoryPage() {
   const refreshMutation = useRefreshTeslaChargingHistory();
 
   const entries = response?.entries ?? [];
-  const summary = response?.summary ?? { total_sessions: 0, total_kwh: null, total_spend: null, avg_cost_per_kwh: null };
+  const summary = response?.summary ?? { total_sessions: 0, total_wh: null, total_spend: null, avg_cost_per_kwh: null };
 
   const vehicleOptions = useMemo(() => {
     const opts = [{ value: '', label: t('tesla_charging.allVehicles', 'All Vehicles') }];
@@ -120,10 +122,10 @@ export default function TeslaChargingHistoryPage() {
     },
     {
       key: 'energy',
-      header: t('tesla_charging.col.energy', 'Energy (kWh)'),
+      header: t('tesla_charging.col.energy', 'Energy'),
       render: (row) => (
         <span className="text-sm font-medium text-cyan-400">
-          {row.usage_kwh != null ? fmtNumber(row.usage_kwh, 1) : '—'}
+          {row.usage_wh != null ? formatEnergy(row.usage_wh, { precision: 1 }) : '—'}
         </span>
       ),
       sortable: true,
@@ -176,7 +178,7 @@ export default function TeslaChargingHistoryPage() {
         </span>
       ),
     },
-  ], [t]);
+  ], [formatEnergy, t]);
 
   const [sortKey, setSortKey] = useUrlEnum<'date' | 'energy' | 'cost'>(
     'sort',
@@ -202,7 +204,7 @@ export default function TeslaChargingHistoryPage() {
           cmp = a.charge_start_datetime.localeCompare(b.charge_start_datetime);
           break;
         case 'energy':
-          cmp = (a.usage_kwh ?? 0) - (b.usage_kwh ?? 0);
+          cmp = (a.usage_wh ?? 0) - (b.usage_wh ?? 0);
           break;
         case 'cost':
           cmp = (a.total_due ?? 0) - (b.total_due ?? 0);
@@ -231,7 +233,7 @@ export default function TeslaChargingHistoryPage() {
     (rows: TeslaChargingHistoryEntry[]) => {
       if (rows.length === 0) return;
       const header = [
-        'date', 'location', 'duration_minutes', 'energy_kwh',
+        'date', 'location', 'duration_minutes', 'energy_wh',
         'cost', 'currency', 'rate_base', 'pricing_type', 'invoice_id',
       ];
       const csvLines = [header.join(',')];
@@ -241,7 +243,7 @@ export default function TeslaChargingHistoryPage() {
           r.charge_start_datetime,
           (r.site_location_name ?? '').replace(/[",\n]/g, ' '),
           dur != null ? String(dur) : '',
-          r.usage_kwh != null ? String(r.usage_kwh) : '',
+          r.usage_wh != null ? String(r.usage_wh) : '',
           r.total_due != null ? String(r.total_due) : '',
           r.currency_code ?? '',
           r.rate_base != null ? String(r.rate_base) : '',
@@ -313,8 +315,7 @@ export default function TeslaChargingHistoryPage() {
             <StaggerItem>
               <StatCard
                 label={t('tesla_charging.stats.energy', 'Total Energy')}
-                value={summary.total_kwh != null ? fmtNumber(summary.total_kwh, 1) : '—'}
-                unit="kWh"
+                value={summary.total_wh != null ? formatEnergy(summary.total_wh, { precision: 1 }) : '—'}
                 icon={<Gauge className="h-5 w-5 text-yellow-400" />}
                 loading={isLoading}
               />
@@ -428,7 +429,7 @@ export default function TeslaChargingHistoryPage() {
                     date: row.charge_start_datetime,
                     location: row.site_location_name ?? '',
                     duration: durationMinutes(row.charge_start_datetime, row.charge_stop_datetime) ?? null,
-                    energy: row.usage_kwh ?? null,
+                    energy: row.usage_wh ?? null,
                     cost: row.total_due ?? null,
                     currency: row.currency_code ?? '',
                     rate: row.rate_base ?? null,

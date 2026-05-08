@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/service"
+	"github.com/rs/zerolog/log"
 )
 
 // EnergyHandler handles energy statistics HTTP requests.
@@ -47,16 +47,16 @@ func (h *EnergyHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"vehicle_id":               stats.VehicleID,
-		"period_days":              stats.PeriodDays,
-		"total_energy_used_kwh":    stats.TotalEnergy,
-		"total_energy_charged_kwh": stats.TotalEnergy,
-		"total_kwh":                stats.TotalEnergy,
-		"total_cost":               stats.TotalCost,
-		"total_distance_mi":        stats.TotalDistance,
-		"avg_efficiency_wh_per_mi": stats.AvgEfficiency,
-		"co2_saved_kg":             stats.CO2Saved,
-		"daily_breakdown":          stats.DailyBreakdown,
+		"vehicle_id":              stats.VehicleID,
+		"period_days":             stats.PeriodDays,
+		"total_energy_used_wh":    stats.TotalEnergy,
+		"total_energy_charged_wh": stats.TotalEnergy,
+		"total_wh":                stats.TotalEnergy,
+		"total_cost":              stats.TotalCost,
+		"total_distance_m":        stats.TotalDistance,
+		"avg_efficiency_wh_per_m": stats.AvgEfficiency,
+		"co2_saved_kg":            stats.CO2Saved,
+		"daily_breakdown":         stats.DailyBreakdown,
 	})
 }
 
@@ -88,15 +88,15 @@ func (h *EnergyHandler) AnalyticsStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"vehicle_id":               stats.VehicleID,
-		"period_days":              stats.PeriodDays,
-		"total_energy_used_kwh":    stats.TotalEnergy,
-		"total_energy_charged_kwh": stats.TotalEnergy,
-		"total_kwh":                stats.TotalEnergy,
-		"total_cost":               stats.TotalCost,
-		"total_distance_mi":        stats.TotalDistance,
-		"avg_efficiency_wh_per_mi": stats.AvgEfficiency,
-		"co2_saved_kg":             stats.CO2Saved,
-		"daily_breakdown":          stats.DailyBreakdown,
+		"vehicle_id":              stats.VehicleID,
+		"period_days":             stats.PeriodDays,
+		"total_energy_used_wh":    stats.TotalEnergy,
+		"total_energy_charged_wh": stats.TotalEnergy,
+		"total_wh":                stats.TotalEnergy,
+		"total_cost":              stats.TotalCost,
+		"total_distance_m":        stats.TotalDistance,
+		"avg_efficiency_wh_per_m": stats.AvgEfficiency,
+		"co2_saved_kg":            stats.CO2Saved,
+		"daily_breakdown":         stats.DailyBreakdown,
 	})
 }

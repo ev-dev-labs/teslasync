@@ -19,7 +19,7 @@ import { SectionTitle } from './helpers';
 
 export function BatteryTab({ data }: { data: FleetAnalytics | undefined }) {
   const { t } = useTranslation();
-  const { unitPrefs } = useUnits();
+  const { unitPrefs, formatEnergy } = useUnits();
   const distanceUnit = unitPrefs.distance;
   // backend `range_km` is SI km; convert via meter-floored helper.
   const fromKm = (km: number) => convertDistanceFromSI(km * 1000, distanceUnit);
@@ -53,8 +53,7 @@ export function BatteryTab({ data }: { data: FleetAnalytics | undefined }) {
         />
         <MetricCard
           label={t('analytics.battery.capacity', 'Capacity')}
-          value={latest ? fmtNumber(safe(latest.capacity_kwh), 1) : '—'}
-          subtitle="kWh"
+          value={latest ? formatEnergy(safe(latest.capacity_wh), { precision: 1 }) : '—'}
           icon={<Battery className="h-4 w-4" />}
           color="cyan"
         />
@@ -107,7 +106,7 @@ export function BatteryTab({ data }: { data: FleetAnalytics | undefined }) {
               <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
               <YAxis tick={axisTick} />
               <Tooltip content={<ChartTooltip />} />
-              <Line {...AREA_DEFAULTS} dataKey="capacity_kwh" name={t('analytics.battery.capacitykWh', 'Capacity (kWh)')} stroke={CHART_COLORS[0]} />
+              <Line {...AREA_DEFAULTS} dataKey="capacity_wh" name={t('analytics.battery.capacity', 'Capacity')} stroke={CHART_COLORS[0]} />
             </LineChart>
           </ResponsiveContainer>
         </GlassPanel>

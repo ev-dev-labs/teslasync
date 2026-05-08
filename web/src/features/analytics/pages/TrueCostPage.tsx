@@ -23,7 +23,7 @@ import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 export default function TrueCostPage() {
   const { t } = useTranslation();
   usePageTitle(t('tco.title', 'Total Cost of Ownership'));
-  const { unitPrefs } = useUnits();
+  const { unitPrefs, formatEnergy } = useUnits();
   const distanceUnit = unitPrefs.distance;
 
   const { data: vehicles } = useVehicles();
@@ -72,7 +72,7 @@ export default function TrueCostPage() {
                 </div>
                 <p className="text-2xl font-bold text-cyan-300">{fmtCurrency(tco.total_charging_cost)}</p>
                 <p className="text-xs text-[var(--text-muted)] mt-1">
-                  {fmtNumber(tco.total_kwh)} kWh · {tco.total_sessions} {t('tco.sessions', 'sessions')}
+                  {formatEnergy(tco.total_wh)} · {tco.total_sessions} {t('tco.sessions', 'sessions')}
                 </p>
               </GlassPanel>
             </StaggerItem>

@@ -321,9 +321,9 @@ func TestMileage_Monthly_GroupingPassThrough(t *testing.T) {
 	repo := &fakeMileageRepo{
 		exists: map[int64]bool{42: true},
 		monthly: []database.MileageMonthlyRow{
-			{Bucket: mar, DriveCount: 5, TotalKm: 120.5, TotalKwhConsumed: mileagePtrFloat(20.0), AvgEfficiencyWhPerKm: mileagePtrFloat(166.0)},
-			{Bucket: apr, DriveCount: 8, TotalKm: 250.0, TotalKwhConsumed: mileagePtrFloat(40.0), AvgEfficiencyWhPerKm: mileagePtrFloat(160.0)},
-			{Bucket: may, DriveCount: 3, TotalKm: 90.0, TotalKwhConsumed: nil, AvgEfficiencyWhPerKm: nil},
+			{Bucket: mar, DriveCount: 5, TotalKm: 120.5, TotalWhConsumed: mileagePtrFloat(20.0), AvgEfficiencyWhPerKm: mileagePtrFloat(166.0)},
+			{Bucket: apr, DriveCount: 8, TotalKm: 250.0, TotalWhConsumed: mileagePtrFloat(40.0), AvgEfficiencyWhPerKm: mileagePtrFloat(160.0)},
+			{Bucket: may, DriveCount: 3, TotalKm: 90.0, TotalWhConsumed: nil, AvgEfficiencyWhPerKm: nil},
 		},
 	}
 	h := newMileageHandlerForTest(repo, now)
@@ -345,9 +345,9 @@ func TestMileage_Monthly_GroupingPassThrough(t *testing.T) {
 	}
 
 	want := []MileageMonthlyBucket{
-		{YearMonth: "2026-03", DriveCount: 5, TotalKm: 120.5, TotalKwhConsumed: mileagePtrFloat(20.0), AvgEfficiencyWhPerKm: mileagePtrFloat(166.0)},
-		{YearMonth: "2026-04", DriveCount: 8, TotalKm: 250.0, TotalKwhConsumed: mileagePtrFloat(40.0), AvgEfficiencyWhPerKm: mileagePtrFloat(160.0)},
-		{YearMonth: "2026-05", DriveCount: 3, TotalKm: 90.0, TotalKwhConsumed: nil, AvgEfficiencyWhPerKm: nil},
+		{YearMonth: "2026-03", DriveCount: 5, TotalKm: 120.5, TotalWhConsumed: mileagePtrFloat(20.0), AvgEfficiencyWhPerKm: mileagePtrFloat(166.0)},
+		{YearMonth: "2026-04", DriveCount: 8, TotalKm: 250.0, TotalWhConsumed: mileagePtrFloat(40.0), AvgEfficiencyWhPerKm: mileagePtrFloat(160.0)},
+		{YearMonth: "2026-05", DriveCount: 3, TotalKm: 90.0, TotalWhConsumed: nil, AvgEfficiencyWhPerKm: nil},
 	}
 	for i, w := range want {
 		got := body.Months[i]
@@ -360,11 +360,11 @@ func TestMileage_Monthly_GroupingPassThrough(t *testing.T) {
 		if got.TotalKm != w.TotalKm {
 			t.Errorf("[%d].total_km = %f, want %f", i, got.TotalKm, w.TotalKm)
 		}
-		if (got.TotalKwhConsumed == nil) != (w.TotalKwhConsumed == nil) {
-			t.Errorf("[%d].total_kwh_consumed nilness mismatch: got=%v want=%v", i, got.TotalKwhConsumed, w.TotalKwhConsumed)
+		if (got.TotalWhConsumed == nil) != (w.TotalWhConsumed == nil) {
+			t.Errorf("[%d].total_wh_consumed nilness mismatch: got=%v want=%v", i, got.TotalWhConsumed, w.TotalWhConsumed)
 		}
-		if got.TotalKwhConsumed != nil && w.TotalKwhConsumed != nil && *got.TotalKwhConsumed != *w.TotalKwhConsumed {
-			t.Errorf("[%d].total_kwh_consumed = %f, want %f", i, *got.TotalKwhConsumed, *w.TotalKwhConsumed)
+		if got.TotalWhConsumed != nil && w.TotalWhConsumed != nil && *got.TotalWhConsumed != *w.TotalWhConsumed {
+			t.Errorf("[%d].total_wh_consumed = %f, want %f", i, *got.TotalWhConsumed, *w.TotalWhConsumed)
 		}
 		if (got.AvgEfficiencyWhPerKm == nil) != (w.AvgEfficiencyWhPerKm == nil) {
 			t.Errorf("[%d].avg_efficiency_wh_per_km nilness mismatch: got=%v want=%v", i, got.AvgEfficiencyWhPerKm, w.AvgEfficiencyWhPerKm)
@@ -380,7 +380,7 @@ func TestMileage_Monthly_GroupingPassThrough(t *testing.T) {
 
 	// JSON shape pin — snake_case keys frontend depends on.
 	bodyStr := rec.Body.String()
-	for _, key := range []string{`"vehicle_id"`, `"months"`, `"year_month"`, `"drive_count"`, `"total_km"`, `"total_kwh_consumed"`, `"avg_efficiency_wh_per_km"`} {
+	for _, key := range []string{`"vehicle_id"`, `"months"`, `"year_month"`, `"drive_count"`, `"total_km"`, `"total_wh_consumed"`, `"avg_efficiency_wh_per_km"`} {
 		if !strings.Contains(bodyStr, key) {
 			t.Errorf("response missing snake_case key %s\nbody=%s", key, bodyStr)
 		}

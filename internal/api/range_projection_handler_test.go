@@ -49,7 +49,7 @@ var rangeProjectionCarriedSignals = map[string]float64{
 	"EstBatteryRange":   350.0,
 	"RatedRange":        400.0,
 	"IdealBatteryRange": 420.0,
-	"EnergyRemaining":   60.0,
+	"EnergyRemaining":   60000.0,
 }
 
 // TestRangeProjection_AllNineSignalsCarryForward verifies that BOTH
@@ -91,10 +91,10 @@ func TestRangeProjection_AllNineSignalsCarryForward(t *testing.T) {
 		estBatteryRange   = 350.0
 		ratedRange        = 400.0
 		idealBatteryRange = 420.0
-		energyRemaining   = 60.0
+		energyRemaining   = 60000.0
 		// db is nil in this test, so lookupVehicleCapacity is bypassed and
-		// capacityKWh defaults to 75.0; healthFactor = energy/cap = 0.8.
-		capacityKWhDefault = 75.0
+		// capacityWh defaults to 75000.0; healthFactor = energy/cap = 0.8.
+		capacityWhDefault = 75000.0
 	)
 	var calls []signalAtCallRecord
 	fake := &fakeStateReader{
@@ -170,7 +170,7 @@ func TestRangeProjection_AllNineSignalsCarryForward(t *testing.T) {
 	// health_factor = round((energy/cap)*1000)/1000 with cap = 75 (db-nil
 	// default) and energy = 60 → 0.8. Pins that EnergyRemaining feeds the
 	// usable-capacity scaling.
-	wantHealthFactor := energyRemaining / capacityKWhDefault
+	wantHealthFactor := energyRemaining / capacityWhDefault
 	if got, _ := getBody["health_factor"].(float64); got != wantHealthFactor {
 		t.Fatalf("Get.health_factor = %#v, want %v (energy/cap)", getBody["health_factor"], wantHealthFactor)
 	}
@@ -185,7 +185,7 @@ func TestRangeProjection_AllNineSignalsCarryForward(t *testing.T) {
 		t.Fatalf("GetByVehicle.current_range_km = %#v, want %v (rated × bl/100)", byVehBody["current_range_km"], wantCurrent)
 	}
 	// health_score = (energy/cap)*100 = 80. Pins EnergyRemaining feeds health.
-	wantHealthScore := (energyRemaining / capacityKWhDefault) * 100
+	wantHealthScore := (energyRemaining / capacityWhDefault) * 100
 	if got, _ := byVehBody["health_score"].(float64); got != wantHealthScore {
 		t.Fatalf("GetByVehicle.health_score = %#v, want %v ((energy/cap)*100)", byVehBody["health_score"], wantHealthScore)
 	}

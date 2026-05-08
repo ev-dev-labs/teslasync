@@ -56,11 +56,11 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 	ctx := r.Context()
 
 	// Look up vehicle-specific battery capacity (nil-safe; falls back to
-	// the same default that lookupVehicleCapacity uses on lookup error).
-	capacityKWh := 75.0
+	// the same default that lookupVehicleCapacityWh uses on lookup error).
+	capacityWh := 75000.0
 	capacitySource := "default"
 	if h.db != nil {
-		capacityKWh, capacitySource = lookupVehicleCapacity(ctx, h.db, vehicleID)
+		capacityWh, capacitySource = lookupVehicleCapacityWh(ctx, h.db, vehicleID)
 	}
 
 	// Battery health history — reconstruct from signal_log
@@ -76,7 +76,7 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 			writeError(w, http.StatusInternalServerError, "failed to get battery data")
 			return
 		}
-		snapshots = synthesizeBatterySnapshots(entries, capacityKWh)
+		snapshots = synthesizeBatterySnapshots(entries, capacityWh)
 	}
 	if snapshots == nil {
 		snapshots = []batterySnapshotData{}
@@ -134,7 +134,7 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 	if len(snapshots) > 0 {
 		latest := snapshots[len(snapshots)-1]
 		currentHealth = latest.HealthScore
-		currentCapacity = latest.CapacityKWh
+		currentCapacity = latest.CapacityWh
 		currentDegradation = latest.DegradationPct
 		currentRange = latest.EstRangeKm
 		currentCycles = latest.CycleCount
@@ -171,7 +171,7 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		}
 		if energy != nil && *energy > 0 {
 			currentCapacity = *energy
-			currentHealth = (currentCapacity / capacityKWh) * 100
+			currentHealth = (currentCapacity / capacityWh) * 100
 			if currentHealth > 100 {
 				currentHealth = 100
 			}
@@ -196,7 +196,7 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		if currentHealth > 0 {
 			snapshots = []batterySnapshotData{{
 				HealthScore:    currentHealth,
-				CapacityKWh:    currentCapacity,
+				CapacityWh:     currentCapacity,
 				DegradationPct: currentDegradation,
 				EstRangeKm:     currentRange,
 				CycleCount:     currentCycles,
@@ -271,8 +271,8 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		"risk_factors":                   riskFactors,
 		"recommendations":                recommendations,
 		// Capacity estimate metadata
-		"battery_capacity_kwh": capacityKWh,
-		"capacity_source":      capacitySource,
+		"battery_capacity_wh": capacityWh,
+		"capacity_source":     capacitySource,
 	})
 }
 
@@ -293,20 +293,20 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 	ctx := r.Context()
 
 	// Look up vehicle-specific battery capacity (nil-safe; falls back to
-	// the same default that lookupVehicleCapacity uses on lookup error).
-	capacityKWh := 75.0
+	// the same default that lookupVehicleCapacityWh uses on lookup error).
+	capacityWh := 75000.0
 	capacitySource := "default"
 	if h.db != nil {
-		capacityKWh, capacitySource = lookupVehicleCapacity(ctx, h.db, vehicleID)
+		capacityWh, capacitySource = lookupVehicleCapacityWh(ctx, h.db, vehicleID)
 	}
 
 	// Battery history — reconstruct from signal_log
 	type histEntry struct {
-		Date        string  `json:"date"`
-		Odometer    float64 `json:"odometer"`
-		SohPct      float64 `json:"soh_pct"`
-		CapacityKWh float64 `json:"capacity_kwh"`
-		RangeKm     float64 `json:"range_km"`
+		Date       string  `json:"date"`
+		Odometer   float64 `json:"odometer"`
+		SohPct     float64 `json:"soh_pct"`
+		CapacityWh float64 `json:"capacity_wh"`
+		RangeKm    float64 `json:"range_km"`
 	}
 
 	var history []histEntry
@@ -324,19 +324,19 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 			writeError(w, http.StatusInternalServerError, "failed to get battery data")
 			return
 		}
-		snaps := synthesizeBatterySnapshots(entries, capacityKWh)
+		snaps := synthesizeBatterySnapshots(entries, capacityWh)
 		for _, s := range snaps {
 			if firstDate.IsZero() {
 				firstDate = s.CreatedAt
 			}
 			soh := s.HealthScore
-			cap := s.CapacityKWh
+			cap := s.CapacityWh
 			rng := s.EstRangeKm
 			history = append(history, histEntry{
-				Date:        s.CreatedAt.Format("2006-01-02"),
-				SohPct:      math.Round(soh*10) / 10,
-				CapacityKWh: math.Round(cap*10) / 10,
-				RangeKm:     math.Round(rng*10) / 10,
+				Date:       s.CreatedAt.Format("2006-01-02"),
+				SohPct:     math.Round(soh*10) / 10,
+				CapacityWh: math.Round(cap*10) / 10,
+				RangeKm:    math.Round(rng*10) / 10,
 			})
 			latestSOH = soh
 			latestCapacity = cap
@@ -375,7 +375,7 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		}
 		if energy != nil && *energy > 0 {
 			latestCapacity = *energy
-			latestSOH = (latestCapacity / capacityKWh) * 100
+			latestSOH = (latestCapacity / capacityWh) * 100
 			if latestSOH > 100 {
 				latestSOH = 100
 			}
@@ -395,10 +395,10 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		}
 		if latestSOH > 0 {
 			history = []histEntry{{
-				Date:        time.Now().Format("2006-01-02"),
-				SohPct:      math.Round(latestSOH*10) / 10,
-				CapacityKWh: math.Round(latestCapacity*10) / 10,
-				RangeKm:     math.Round(latestRange*10) / 10,
+				Date:       time.Now().Format("2006-01-02"),
+				SohPct:     math.Round(latestSOH*10) / 10,
+				CapacityWh: math.Round(latestCapacity*10) / 10,
+				RangeKm:    math.Round(latestRange*10) / 10,
 			}}
 			firstDate = time.Now().AddDate(0, -1, 0)
 		}
@@ -515,7 +515,7 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"current_soh":            math.Round(latestSOH*10) / 10,
 		"estimated_capacity":     math.Round(latestCapacity*10) / 10,
-		"original_capacity":      capacityKWh,
+		"original_capacity":      capacityWh,
 		"degradation_rate_yr":    math.Round(degradationRate*100) / 100,
 		"battery_age_months":     ageMonths,
 		"total_cycles":           latestCycles,
@@ -527,7 +527,7 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		"temp_exposure_reason":   tempExposureReason,
 		"history":                history,
 		// Capacity estimate metadata
-		"battery_capacity_kwh": capacityKWh,
-		"capacity_source":      capacitySource,
+		"battery_capacity_wh": capacityWh,
+		"capacity_source":     capacitySource,
 	})
 }

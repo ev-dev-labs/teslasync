@@ -77,7 +77,7 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 	type batteryPoint struct {
 		Date        string  `json:"date"`
 		HealthScore float64 `json:"health_score"`
-		CapacityKWh float64 `json:"capacity_kwh"`
+		CapacityWh  float64 `json:"capacity_wh"`
 		Degradation float64 `json:"degradation_pct"`
 		RangeKm     float64 `json:"range_km"`
 		CycleCount  int     `json:"cycle_count"`
@@ -105,12 +105,12 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 			log.Error().Err(snapErr).Int64("vehicleID", v.ID).Msg("analytics: failed to get latest signal snapshot")
 		} else if snap != nil {
 			if bl, ok := toFloatOk(snap["BatteryLevel"]); ok && bl > 0 {
-				const nomCap = 75.0
+				const nomCap = 75000.0
 				const nomRange = 531.0
 				batteryTrend = append(batteryTrend, batteryPoint{
 					Date:        time.Now().Format("2006-01-02"),
 					HealthScore: bl,
-					CapacityKWh: bl * nomCap / 100,
+					CapacityWh:  bl * nomCap / 100,
 					Degradation: 100 - bl,
 					RangeKm:     bl * nomRange / 100,
 				})
@@ -263,7 +263,7 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 
 		// Battery trend from cagg_battery_daily
 		if h.db != nil {
-			const btCap = 75.0
+			const btCap = 75000.0
 			const btRange = 531.0
 			btRows, btErr := h.db.Pool.Query(r.Context(),
 				`SELECT bucket, end_soc, min_soc, max_soc
@@ -285,7 +285,7 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 					batteryTrend = append(batteryTrend, batteryPoint{
 						Date:        bucket.Format("2006-01-02"),
 						HealthScore: soc,
-						CapacityKWh: soc * btCap / 100,
+						CapacityWh:  soc * btCap / 100,
 						Degradation: 100 - soc,
 						RangeKm:     soc * btRange / 100,
 					})

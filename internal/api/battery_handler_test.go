@@ -97,7 +97,7 @@ func TestBatteryHandler_SOC_UsesSignalAt(t *testing.T) {
 }
 
 // TestBatteryHandler_AllFieldsCarryForward verifies that the handler
-// derives all four projected battery fields (capacity_kwh, est_range_km,
+// derives all four projected battery fields (capacity_wh, est_range_km,
 // avg_cell_temp_c, health_score) from forward-folded SignalAt reads. The
 // fake returns last-known values for every signal name — emulating
 // StateReader's forward-fold semantics where unchanged signals carry
@@ -110,9 +110,9 @@ func TestBatteryHandler_SOC_UsesSignalAt(t *testing.T) {
 // caught immediately.
 func TestBatteryHandler_AllFieldsCarryForward(t *testing.T) {
 	const (
-		nominalCapacity = 75.0
-		energyRemaining = 60.0  // capacity_kwh; health = 60/75*100 = 80%
-		estBatteryRange = 410.5 // est_range_km
+		nominalCapacity = 75000.0
+		energyRemaining = 60000.0 // capacity_wh; health = 60000/75000*100 = 80%
+		estBatteryRange = 410.5   // est_range_km
 		moduleTempMax   = 24.0
 		moduleTempMin   = 20.0 // avg_cell_temp = (24+20)/2 = 22.0
 		expectedHealth  = (energyRemaining / nominalCapacity) * 100
@@ -145,8 +145,8 @@ func TestBatteryHandler_AllFieldsCarryForward(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("decode: %v; body=%s", err, rec.Body.String())
 	}
-	if got, _ := body["capacity_kwh"].(float64); got != energyRemaining {
-		t.Fatalf("capacity_kwh = %#v, want %v (carried forward from EnergyRemaining)", body["capacity_kwh"], energyRemaining)
+	if got, _ := body["capacity_wh"].(float64); got != energyRemaining {
+		t.Fatalf("capacity_wh = %#v, want %v (carried forward from EnergyRemaining)", body["capacity_wh"], energyRemaining)
 	}
 	if got, _ := body["est_range_km"].(float64); got != estBatteryRange {
 		t.Fatalf("est_range_km = %#v, want %v (carried forward from EstBatteryRange)", body["est_range_km"], estBatteryRange)

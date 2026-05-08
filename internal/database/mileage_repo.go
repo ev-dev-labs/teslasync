@@ -15,7 +15,7 @@
 //
 // Per the prompt's escape hatch, this repo uses the actual column names
 // and converts to km / kWh in the SELECT list. Decision #5 holds —
-// energy_used_wh exists, so total_kwh_consumed and avg_efficiency_wh_per_km
+// energy_used_wh exists, so total_wh_consumed and avg_efficiency_wh_per_km
 // are populated. Frontend hooks (MileageStats / MonthlyStat in
 // web/src/types/analytics.ts) currently use legacy camelCase fields from
 // the deleted handler; updating those types is out-of-scope for this
@@ -35,7 +35,7 @@ import (
 // timestamp is the start of the UTC month (date_trunc('month', ts) in
 // PostgreSQL); the handler renders it as 'YYYY-MM'.
 //
-// total_kwh_consumed and avg_efficiency_wh_per_km are pointers because
+// total_wh_consumed and avg_efficiency_wh_per_km are pointers because
 // energy_used_wh is nullable in mig 000185 — a drive with NULL energy
 // rows still contributes to drive_count and total_km but its energy
 // share is dropped (we never fabricate a zero kWh value).
@@ -43,7 +43,7 @@ type MileageMonthlyRow struct {
 	Bucket               time.Time
 	DriveCount           int
 	TotalKm              float64
-	TotalKwhConsumed     *float64
+	TotalWhConsumed     *float64
 	AvgEfficiencyWhPerKm *float64
 }
 
@@ -101,14 +101,13 @@ func NewMileageRepo(pool *pgxpool.Pool) *MileageRepo {
 //     distance rows are skipped, not erroring; zero-distance rows are
 //     treated as ghost drives with no mileage to report).
 //
-// Per-bucket aggregates emit kilometres + kilowatt-hours so the handler
-// does not have to repeat the unit conversion.
+// Per-bucket aggregates keep energy in SI watt-hours. Distance remains in
+// kilometres until the deferred _km rename slice changes the mileage surface.
 const monthlySelectSQL = `
 SELECT
     date_trunc('month', started_at AT TIME ZONE 'UTC') AS bucket,
     COUNT(*)                                            AS drive_count,
     COALESCE(SUM(distance_m), 0) / 1000.0               AS total_km,
-    SUM(energy_used_wh) / 1000.0                        AS total_kwh,
     SUM(energy_used_wh)                                 AS total_wh,
     SUM(distance_m)                                     AS total_distance_m
 FROM drives
@@ -172,7 +171,6 @@ func (r *MileageRepo) Monthly(ctx context.Context, vehicleID int64, windowStart 
 	for rows.Next() {
 		var (
 			row            MileageMonthlyRow
-			totalKwh       *float64
 			totalWh        *float64
 			totalDistanceM *float64
 		)
@@ -180,13 +178,12 @@ func (r *MileageRepo) Monthly(ctx context.Context, vehicleID int64, windowStart 
 			&row.Bucket,
 			&row.DriveCount,
 			&row.TotalKm,
-			&totalKwh,
 			&totalWh,
 			&totalDistanceM,
 		); err != nil {
 			return nil, fmt.Errorf("mileage: monthly row scan: %w", err)
 		}
-		row.TotalKwhConsumed = totalKwh
+		row.TotalWhConsumed = totalWh
 		// avg_efficiency_wh_per_km is computed in Go from the same
 		// SUM(energy_used_wh) and SUM(distance_m) aggregates we already
 		// pulled. Computing in Go (rather than a SQL `CASE WHEN ...

@@ -39,8 +39,8 @@ func newBatteryDegradationRequest(t *testing.T, vehicleID string) *http.Request 
 // Degradation panel and is caught here.
 func TestBatteryDegradation_AllSignalsCarryForward(t *testing.T) {
 	const (
-		energyRemaining = 60.0  // capacity_kwh
-		estBatteryRange = 410.5 // est_range_km
+		energyRemaining = 60000.0 // capacity_wh
+		estBatteryRange = 410.5   // est_range_km
 	)
 	vid := int64(42)
 
@@ -116,7 +116,7 @@ func TestBatteryDegradation_AllSignalsCarryForward(t *testing.T) {
 // current_degradation from the StateReader-resolved EnergyRemaining
 // signal divided by the looked-up battery capacity (75 kWh default
 // when no vehicle row exists). With energy_remaining=60 kWh and the
-// default capacity of 75 kWh, expected health = 60/75*100 = 80%, and
+// default capacity of 75 kWh, expected health = 60000/75000*100 = 80%, and
 // expected degradation = 100 - 80 = 20%. A future regression that
 // drops the divide-by-capacity step (and degenerates current_health to
 // raw kWh), inverts the degradation formula, or short-circuits the
@@ -124,8 +124,8 @@ func TestBatteryDegradation_AllSignalsCarryForward(t *testing.T) {
 // Battery Degradation panel's headline metric and is caught here.
 func TestBatteryDegradation_DegradationCalc_UsesLatestValues(t *testing.T) {
 	const (
-		nominalCapacity = 75.0 // default when h.db == nil
-		energyRemaining = 60.0
+		nominalCapacity = 75000.0 // default when h.db == nil
+		energyRemaining = 60000.0
 		expectedHealth  = (energyRemaining / nominalCapacity) * 100 // 80
 		expectedDegrad  = 100 - expectedHealth                      // 20
 	)
@@ -163,11 +163,11 @@ func TestBatteryDegradation_DegradationCalc_UsesLatestValues(t *testing.T) {
 	if got, _ := body["current_health_pct"].(float64); got != expectedHealth {
 		t.Fatalf("current_health_pct = %#v, want %v (must mirror current_health)", body["current_health_pct"], expectedHealth)
 	}
-	// battery_capacity_kwh must surface the looked-up (default) capacity
+	// battery_capacity_wh must surface the looked-up (default) capacity
 	// — a regression that loses the projection would break the Battery
 	// Degradation panel's "estimated capacity" tile.
-	if got, _ := body["battery_capacity_kwh"].(float64); got != nominalCapacity {
-		t.Fatalf("battery_capacity_kwh = %#v, want %v (default when no vehicle row)", body["battery_capacity_kwh"], nominalCapacity)
+	if got, _ := body["battery_capacity_wh"].(float64); got != nominalCapacity {
+		t.Fatalf("battery_capacity_wh = %#v, want %v (default when no vehicle row)", body["battery_capacity_wh"], nominalCapacity)
 	}
 }
 

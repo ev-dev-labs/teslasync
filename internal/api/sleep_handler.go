@@ -45,7 +45,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 	ctx := r.Context()
 
 	// Look up vehicle-specific battery capacity
-	batteryCapacityKWh, capacitySource := lookupVehicleCapacity(ctx, h.db, vehicleID)
+	batteryCapacityWh, capacitySource := lookupVehicleCapacityWh(ctx, h.db, vehicleID)
 
 	// Time in each vehicle state — derived from fsm_transitions (000187).
 	// Each row represents the count of transitions INTO a given state in
@@ -141,14 +141,14 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 	// sentryOnDrainRate/sentryOffDrainRate are 0 until per-park drain
 	// reconstruction is reintroduced.
 	hoursPerMonth := 730.0 // avg hours in a month
-	sentryMonthlyKWh := sentryOnDrainRate / 100 * batteryCapacityKWh * hoursPerMonth
+	sentryMonthlyKWh := sentryOnDrainRate / 100 * (batteryCapacityWh / 1000.0) * hoursPerMonth
 	sentryMonthlyCost := sentryMonthlyKWh * baseCostPerKWh
 
 	extraDrainRate := sentryOnDrainRate - sentryOffDrainRate
 	if extraDrainRate < 0 {
 		extraDrainRate = 0
 	}
-	extraMonthlyKWh := extraDrainRate / 100 * batteryCapacityKWh * hoursPerMonth
+	extraMonthlyKWh := extraDrainRate / 100 * (batteryCapacityWh / 1000.0) * hoursPerMonth
 	extraMonthlyCost := extraMonthlyKWh * baseCostPerKWh
 
 	// Phase-42 (prompt 0077): the avg-time-to-sleep query against
@@ -171,7 +171,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		"sentry_extra_drain_rate":   math.Round(extraDrainRate*100) / 100,
 		"sentry_extra_monthly_kwh":  math.Round(extraMonthlyKWh*100) / 100,
 		"sentry_extra_monthly_cost": math.Round(extraMonthlyCost*100) / 100,
-		"battery_capacity_kwh":      batteryCapacityKWh,
+		"battery_capacity_wh":       batteryCapacityWh,
 		"capacity_source":           capacitySource,
 		"base_cost_per_kwh":         baseCostPerKWh,
 		"recent_events":             recentEvents,

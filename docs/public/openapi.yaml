@@ -434,11 +434,11 @@ paths:
               schema:
                 type: object
                 properties:
-                  total_energy_used_kwh:
+                  total_energy_used_wh:
                     type: number
-                  total_energy_regen_kwh:
+                  total_energy_regen_wh:
                     type: number
-                  efficiency_wh_per_km:
+                  efficiency_wh_per_m:
                     type: number
         "404":
           $ref: "#/components/responses/NotFound"
@@ -461,9 +461,9 @@ paths:
               schema:
                 type: object
                 properties:
-                  current_capacity_kwh:
+                  current_capacity_wh:
                     type: number
-                  original_capacity_kwh:
+                  original_capacity_wh:
                     type: number
                   degradation_percent:
                     type: number
@@ -2492,7 +2492,7 @@ paths:
                       type: number
                     drive_count:
                       type: integer
-                    energy_used_kwh:
+                    energy_used_wh:
                       type: number
         "500":
           $ref: "#/components/responses/InternalError"

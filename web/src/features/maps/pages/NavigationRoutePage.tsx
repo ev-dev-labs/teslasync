@@ -82,7 +82,7 @@ interface LocationSnapshot {
   destination_name?: string;
   miles_to_arrival?: number;
   minutes_to_arrival?: number;
-  route_traffic_delay_min?: number;
+  route_traffic_delay_s?: number;
   route_last_updated?: string;
   // Destination/origin coords (Latest only — from unpacked compounds)
   destination_lat?: number;
@@ -159,17 +159,18 @@ function LocationStatusCard({ icon, label, value, active }: LocationStatusCardPr
 /* ------------------------------------------------------------------ */
 
 interface TrafficDelayBadgeProps {
-  minutes: number;
+  seconds: number;
   t: ReturnType<typeof useTranslation>['t'];
 }
 
-function TrafficDelayBadge({ minutes, t }: TrafficDelayBadgeProps) {
+function TrafficDelayBadge({ seconds, t }: TrafficDelayBadgeProps) {
+  const { formatDuration } = useUnits();
   const variant: 'success' | 'warning' | 'danger' =
-    minutes < 5 ? 'success' : minutes <= 15 ? 'warning' : 'danger';
+    seconds < 300 ? 'success' : seconds <= 900 ? 'warning' : 'danger';
 
   return (
     <Badge variant={variant} size="sm" dot>
-      {fmtNumber(minutes, 0)} {t('nav.minDelay', 'min delay')}
+      {formatDuration(seconds)} {t('nav.delay', 'delay')}
     </Badge>
   );
 }
@@ -208,7 +209,7 @@ export default function NavigationRoutePage() {
      (meters SI) — the legacy field names are kept for backward compat but
      values are SI canonical. Pre-existing legacy bug: useSettings.toDistanceDisplay
      was treating the meters value as miles, producing 1609x inflated output. */
-  const { unitPrefs } = useUnits();
+  const { unitPrefs, formatDuration } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const speedUnit = unitPrefs.speed;
 
@@ -615,7 +616,7 @@ export default function NavigationRoutePage() {
                     {t('nav.trafficDelay', 'Traffic Delay')}
                   </span>
                   <TrafficDelayBadge
-                    minutes={latest.route_traffic_delay_min ?? 0}
+                    seconds={latest.route_traffic_delay_s ?? 0}
                     t={t}
                   />
                 </span>
@@ -732,7 +733,7 @@ export default function NavigationRoutePage() {
                 label={t('nav.metric.trafficDelay', 'Traffic Delay')}
                 value={
                   hasActiveRoute
-                    ? `${fmtNumber(latest?.route_traffic_delay_min ?? 0, 0)} min`
+                    ? formatDuration(latest?.route_traffic_delay_s ?? 0)
                     : '—'
                 }
                 icon={<BatteryCharging className="h-5 w-5" />}
@@ -892,19 +893,18 @@ export default function NavigationRoutePage() {
                     <span
                       className={cn(
                         'text-3xl font-bold',
-                        (latest?.route_traffic_delay_min ?? 0) === 0
+                        (latest?.route_traffic_delay_s ?? 0) === 0
                           ? 'text-green-400'
-                          : (latest?.route_traffic_delay_min ?? 0) <= 5
+                          : (latest?.route_traffic_delay_s ?? 0) <= 300
                             ? 'text-amber-400'
                             : 'text-red-400',
                       )}
                     >
-                      {latest?.route_traffic_delay_min ?? 0}
+                      {formatDuration(latest?.route_traffic_delay_s ?? 0)}
                     </span>
-                    <span className="text-sm text-[var(--text-muted)]">{t('nav.min', 'min')}</span>
                   </div>
                   <TrafficDelayBadge
-                    minutes={latest?.route_traffic_delay_min ?? 0}
+                    seconds={latest?.route_traffic_delay_s ?? 0}
                     t={t}
                   />
                 </div>

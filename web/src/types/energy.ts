@@ -1,22 +1,22 @@
 /** Types for battery & energy domain */
 
 export interface EnergyStats {
-  total_energy_used_kwh: number;
-  total_energy_charged_kwh: number;
-  total_kwh: number;
+  total_energy_used_wh: number;
+  total_energy_charged_wh: number;
+  total_wh: number;
   total_cost: number;
-  total_distance_mi: number;
-  avg_efficiency_wh_per_mi: number;
+  total_distance_m: number;
+  avg_efficiency_wh_per_m: number;
   co2_saved_kg: number;
   daily_breakdown: DailyEnergy[];
 }
 
 export interface DailyEnergy {
   date: string;
-  energy_kwh: number;
+  energy_wh: number;
   cost: number;
-  distance_mi: number;
-  efficiency_wh_per_mi: number;
+  distance_m: number;
+  efficiency_wh_per_m: number;
 }
 
 export interface BatteryHealth {
@@ -133,7 +133,7 @@ export interface BatteryHealthSnapshot {
   date: string;
   odometer: number;
   soh_pct: number;
-  capacity_kwh: number;
+  capacity_wh: number;
   range_km: number;
 }
 
