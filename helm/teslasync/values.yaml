@@ -1061,3 +1061,27 @@ jaeger:
     requests:
       cpu: 50m
       memory: 64Mi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Observability stack (phase-44)
+#
+# Adds an OpenTelemetry collector that receives OTLP from app pods,
+# applies tail-sampling per docs/runbooks/phase-44-trace-sampling.md,
+# and forwards to Tempo (deployed in 0051). Disabled by default so the
+# chart is install-clean on a stock cluster.
+# ─────────────────────────────────────────────────────────────────────────────
+observability:
+  otelCollector:
+    enabled: false
+    image:
+      repository: otel/opentelemetry-collector-contrib
+      tag: 0.116.1
+      pullPolicy: IfNotPresent
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi

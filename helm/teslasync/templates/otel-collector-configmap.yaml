@@ -1,0 +1,12 @@
+{{- if .Values.observability.otelCollector.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "teslasync.fullname" . }}-otel-collector
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: otel-collector
+data:
+  config.yaml: |-
+{{ .Files.Get "files/otel-collector/config.yaml" | indent 4 }}
+{{- end }}
