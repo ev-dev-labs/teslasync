@@ -894,6 +894,10 @@ func TestEvaluate_MaxFiresCap_FallingEdgeResetsCounter(t *testing.T) {
 
 	engine := NewRuleEngine()
 	engine.SetStateRepo(store)
+	// Slice 0004 added an engine-level hourly safety cap (default 4).
+	// This test exercises the per-resolution cap in isolation, so push
+	// the hourly cap out of the way with a generous override.
+	engine.SetMaxFiresPerHour(1000)
 
 	// Saturate the cap.
 	for i := 1; i <= 3; i++ {
@@ -937,8 +941,12 @@ func TestEvaluate_MaxFiresCap_NullMeansUnlimited(t *testing.T) {
 
 	engine := NewRuleEngine()
 	engine.SetStateRepo(store)
+	// Disable the slice-0004 hourly safety cap so this test exercises
+	// only the NULL per-resolution cap (= unlimited per resolution).
+	engine.SetMaxFiresPerHour(1000)
 
-	// Ten fires in a row, all must succeed (legacy unlimited behaviour).
+	// Ten fires in a row, all must succeed (legacy unlimited behaviour
+	// when neither cap is in force).
 	for i := 1; i <= 10; i++ {
 		if got := engine.Evaluate(rule, vid, signals); !got.Triggered {
 			t.Fatalf("fire #%d must trigger when cap is NULL (unlimited)", i)
@@ -976,6 +984,201 @@ func TestEvaluate_MaxFiresCap_OnceMode_NoEffect(t *testing.T) {
 	row := store.rows[ruleKey{RuleID: rule.ID, VehicleID: vid}]
 	if row == nil || row.FireCountSinceReset != 1 {
 		t.Fatalf("expected fire_count_since_reset=1 (latch, not cap), got %+v", row)
+	}
+}
+
+// ---------------------------------------------------------------------
+// Phase-49 / Slice 0004 — Cooldown unification (Path C "merge").
+// The legacy CooldownFSM was a second-stage gate stacked on top of
+// RuleEngine.Evaluate in telemetry_alerts.go. Slice 0004 deleted the
+// FSM and merged its only unique feature — the hourly safety cap — into
+// the engine. These tests pin the new behaviour:
+//   * the per-(rule, vehicle) hourly window suppresses fires once the
+//     cap (engine-level, default 4, overridable via SetMaxFiresPerHour)
+//     is reached;
+//   * the window rolls over after one hour;
+//   * the falling edge does NOT reset the hourly counter (matches the
+//     legacy CooldownFSM.Reset semantics — see deleted cooldown.go:116);
+//   * the merged engine still fires after a cooldown elapses, proving
+//     no second FSM gate silently re-suppresses (mis-delete check).
+// ---------------------------------------------------------------------
+
+// rewindHourWindow rewinds the rolling 1h window for a (rule, vehicle)
+// pair so the next fire is treated as the start of a fresh window. Used
+// by tests that need to advance "time" without sleeping for an hour.
+// Engine internals are accessible because the test file shares the api
+// package, mirroring the bypassCooldown helper for cooldown tests.
+func rewindHourWindow(e *RuleEngine, ruleID, vid int64) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if st, ok := e.state[ruleKey{RuleID: ruleID, VehicleID: vid}]; ok {
+		st.HourWindowStart = time.Now().UTC().Add(-2 * time.Hour)
+	}
+}
+
+func TestEvaluate_HourlyCap_SuppressesAfterCap(t *testing.T) {
+	t.Parallel()
+	store := newFakeRuleStateStore()
+	// No per-resolution cap so the hourly cap is the only safety net.
+	rule := repeatRuleWithCap(201, nil)
+	const vid = int64(30)
+	signals := map[string]interface{}{"BatteryLevel": 19.0}
+
+	engine := NewRuleEngine()
+	engine.SetStateRepo(store)
+	engine.SetMaxFiresPerHour(3)
+
+	// First three fires succeed — within the cap.
+	for i := 1; i <= 3; i++ {
+		if got := engine.Evaluate(rule, vid, signals); !got.Triggered {
+			t.Fatalf("fire #%d must trigger (hourly cap=3, count=%d)", i, i-1)
+		}
+		bypassCooldown(engine, rule.ID, vid)
+	}
+
+	// Fourth eval matches but cap reached → suppressed by hourly cap.
+	if got := engine.Evaluate(rule, vid, signals); got.Triggered {
+		t.Fatal("fire #4 must be suppressed by engine-level hourly fire cap")
+	}
+}
+
+func TestEvaluate_HourlyCap_DefaultIsFour(t *testing.T) {
+	t.Parallel()
+	store := newFakeRuleStateStore()
+	rule := repeatRuleWithCap(202, nil)
+	const vid = int64(31)
+	signals := map[string]interface{}{"BatteryLevel": 19.0}
+
+	// Default cap (don't call SetMaxFiresPerHour). Matches the legacy
+	// CooldownFSM DefaultCooldownConfig.MaxFiresPerHour value of 4.
+	engine := NewRuleEngine()
+	engine.SetStateRepo(store)
+
+	for i := 1; i <= defaultMaxFiresPerHour; i++ {
+		if got := engine.Evaluate(rule, vid, signals); !got.Triggered {
+			t.Fatalf("fire #%d must trigger under default cap (4)", i)
+		}
+		bypassCooldown(engine, rule.ID, vid)
+	}
+	if got := engine.Evaluate(rule, vid, signals); got.Triggered {
+		t.Fatalf("fire #%d must be suppressed by default hourly cap (4)", defaultMaxFiresPerHour+1)
+	}
+}
+
+func TestEvaluate_HourlyCap_WindowRollsOver(t *testing.T) {
+	t.Parallel()
+	store := newFakeRuleStateStore()
+	rule := repeatRuleWithCap(203, nil)
+	const vid = int64(32)
+	signals := map[string]interface{}{"BatteryLevel": 19.0}
+
+	engine := NewRuleEngine()
+	engine.SetStateRepo(store)
+	engine.SetMaxFiresPerHour(2)
+
+	// Saturate the cap.
+	for i := 1; i <= 2; i++ {
+		if got := engine.Evaluate(rule, vid, signals); !got.Triggered {
+			t.Fatalf("fire #%d must trigger before cap", i)
+		}
+		bypassCooldown(engine, rule.ID, vid)
+	}
+	if got := engine.Evaluate(rule, vid, signals); got.Triggered {
+		t.Fatal("fire #3 must be suppressed before window rolls over")
+	}
+
+	// Rewind the window — simulates ">1h elapsed" without wall-clock waiting.
+	rewindHourWindow(engine, rule.ID, vid)
+	bypassCooldown(engine, rule.ID, vid)
+
+	if got := engine.Evaluate(rule, vid, signals); !got.Triggered {
+		t.Fatal("fire after window roll-over must succeed")
+	}
+}
+
+func TestEvaluate_HourlyCap_FallingEdgeDoesNotReset(t *testing.T) {
+	t.Parallel()
+	// The legacy CooldownFSM.Reset() deliberately preserved the hourly
+	// counter (cooldown.go:116 "do NOT reset fireCountHour"). The merged
+	// engine must do the same: a flapping signal that hits the cap stays
+	// suppressed by the cap until the rolling 1h window naturally rolls
+	// over, even after a falling edge.
+	store := newFakeRuleStateStore()
+	rule := repeatRuleWithCap(204, nil)
+	const vid = int64(33)
+
+	engine := NewRuleEngine()
+	engine.SetStateRepo(store)
+	engine.SetMaxFiresPerHour(2)
+
+	// Saturate the hourly cap.
+	for i := 1; i <= 2; i++ {
+		if got := engine.Evaluate(rule, vid, map[string]interface{}{"BatteryLevel": 19.0}); !got.Triggered {
+			t.Fatalf("fire #%d must trigger before cap", i)
+		}
+		bypassCooldown(engine, rule.ID, vid)
+	}
+
+	// Falling edge: condition resolves. Per-resolution counter clears,
+	// but the hourly counter must NOT.
+	if got := engine.Evaluate(rule, vid, map[string]interface{}{"BatteryLevel": 50.0}); got.Triggered {
+		t.Fatal("falling edge eval should not fire")
+	}
+
+	// Rising edge: condition matches again, cooldown bypassed — but
+	// the hourly cap is still in force so the fire stays suppressed.
+	bypassCooldown(engine, rule.ID, vid)
+	if got := engine.Evaluate(rule, vid, map[string]interface{}{"BatteryLevel": 19.0}); got.Triggered {
+		t.Fatal("rising-edge fire after falling-edge reset must STILL be suppressed by hourly cap (counter survives reset)")
+	}
+}
+
+// TestEvaluate_FiresAfterCooldown_NoStackedFSM is the slice-0004 risk
+// mitigation test (called for explicitly in the prompt). Before the
+// merge, telemetry_alerts.go stacked a CooldownFSM gate (15-min default
+// cooldown, hardcoded) on top of the rule-engine result. A rule with
+// cooldown_min=1 still got blocked by the 15-min FSM default — a latent
+// bug. After the merge, the rule's own CooldownMin is the only cooldown
+// gate, so a 1-minute cooldown means a fire 1 minute later actually
+// succeeds. This test pins the post-merge behaviour and would
+// immediately catch any regression that re-introduces a hidden gate.
+func TestEvaluate_FiresAfterCooldown_NoStackedFSM(t *testing.T) {
+	t.Parallel()
+	store := newFakeRuleStateStore()
+	rule := repeatRuleWithCap(205, nil) // CooldownMin=1, no per-resolution cap
+	const vid = int64(34)
+	signals := map[string]interface{}{"BatteryLevel": 19.0}
+
+	engine := NewRuleEngine()
+	engine.SetStateRepo(store)
+
+	// First fire: no prior state, immediate trigger.
+	if got := engine.Evaluate(rule, vid, signals); !got.Triggered {
+		t.Fatal("first fire must trigger from a cold engine")
+	}
+
+	// Immediate second fire: rule.CooldownMin=1min not yet elapsed → suppressed.
+	if got := engine.Evaluate(rule, vid, signals); got.Triggered {
+		t.Fatal("second fire within cooldown_min must be suppressed by the engine cooldown")
+	}
+
+	// Bypass the cooldown (simulates >1min elapsed). With the legacy
+	// stacked CooldownFSM in place, the FSM's hardcoded 15-min default
+	// would still suppress this fire even though rule.CooldownMin elapsed.
+	// After the merge there is no second gate, so the fire MUST succeed.
+	bypassCooldown(engine, rule.ID, vid)
+	if got := engine.Evaluate(rule, vid, signals); !got.Triggered {
+		t.Fatal("fire after cooldown elapsed must succeed (slice 0004 mis-delete check: no second cooldown gate)")
+	}
+
+	// Persisted state confirms exactly two MarkFired calls happened
+	// (suppressed eval did NOT bump the persistent counter).
+	row := store.rows[ruleKey{RuleID: rule.ID, VehicleID: vid}]
+	if row == nil {
+		t.Fatal("expected store row after fires")
+	}
+	if row.FireCountSinceReset != 2 {
+		t.Fatalf("expected fire_count_since_reset=2 (one fire, one suppressed by cooldown, one fire after bypass), got %d", row.FireCountSinceReset)
 	}
 }
 

@@ -145,6 +145,18 @@ var (
 		Help:      "Alert rule evaluations suppressed because the per-resolution fire cap was reached",
 	})
 
+	// AlertRulesHourlyCapHit counts rule evaluations suppressed by the
+	// engine-level safety cap that limits a (rule, vehicle) pair to a
+	// fixed number of fires per rolling 1h window. Phase-49 / Slice 0004
+	// merged this from the now-deleted CooldownFSM.MaxFiresPerHour into
+	// the rule engine; the cap defaults to 4 (matching the legacy FSM
+	// default) and is overridable by tests via RuleEngine.SetMaxFiresPerHour.
+	AlertRulesHourlyCapHit = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "cep_rules_hourly_cap_hit_total",
+		Help:      "Alert rule evaluations suppressed because the engine-level hourly fire cap was reached",
+	})
+
 	AlertRuleEvalDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 		Namespace: "teslasync",
 		Name:      "cep_eval_duration_seconds",

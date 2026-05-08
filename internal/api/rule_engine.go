@@ -31,15 +31,25 @@ type RuleStateStore interface {
 	ClearLatch(ctx context.Context, ruleID, vehicleID int64, now time.Time) error
 }
 
+// defaultMaxFiresPerHour is the engine-level safety cap that limits how
+// many times a single (rule, vehicle) pair can fire inside any rolling
+// 1h window. It supersedes the legacy CooldownFSM hourly limit (also 4)
+// merged into the engine in Phase-49 / Slice 0004. A rule that exceeds
+// it gets suppressed even if cooldown_min and max_fires_per_resolution
+// would otherwise allow the fire — this is the last-line defence against
+// notification storms from a flapping signal.
+const defaultMaxFiresPerHour = 4
+
 // RuleEngine evaluates alert rules against incoming telemetry signals.
 // It tracks per-rule cooldown and previous signal state in an in-memory
 // write-through cache backed by RuleStateStore (when configured). The
 // in-memory map is the hot-read path; writes go to the store first to
 // enforce cross-pod race safety, then update the cache on success.
 type RuleEngine struct {
-	mu        sync.RWMutex
-	state     map[ruleKey]*ruleState // per (ruleID, vehicleID) state
-	stateRepo RuleStateStore         // optional; nil means in-memory-only (legacy/test)
+	mu              sync.RWMutex
+	state           map[ruleKey]*ruleState // per (ruleID, vehicleID) state
+	stateRepo       RuleStateStore         // optional; nil means in-memory-only (legacy/test)
+	maxFiresPerHour int                    // 0 ⇒ defaultMaxFiresPerHour; non-zero overrides
 }
 
 type ruleKey struct {
@@ -59,6 +69,15 @@ type ruleState struct {
 	// cap added in Phase-49 / Slice 0003 / Decision D5. Reset to 0 on the
 	// falling edge by ClearLatch (both DB and cache).
 	FireCountSinceReset int
+	// HourWindowStart and FireCountHour back the engine-level hourly safety
+	// cap merged in from CooldownFSM in Phase-49 / Slice 0004. The window
+	// rolls over lazily on the next fire after time.Hour has elapsed; the
+	// counter is intentionally NOT reset on the falling edge so that a
+	// signal flapping repeatedly within an hour still gets suppressed once
+	// the cap is reached. Pure in-memory (no DB persistence) — pod restart
+	// rearms the cap, matching pre-merge CooldownFSM behaviour.
+	HourWindowStart time.Time
+	FireCountHour   int
 }
 
 // NewRuleEngine creates a new alert rule engine. The returned engine has
@@ -78,6 +97,15 @@ func (e *RuleEngine) SetStateRepo(repo RuleStateStore) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.stateRepo = repo
+}
+
+// SetMaxFiresPerHour overrides the engine-level hourly fire cap. Pass 0
+// (or omit entirely) to fall back to defaultMaxFiresPerHour. Tests use
+// this to exercise the cap with small numbers without sleeping.
+func (e *RuleEngine) SetMaxFiresPerHour(n int) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.maxFiresPerHour = n
 }
 
 // HydrateFromDB loads every persisted (rule, vehicle) state row into the
@@ -147,10 +175,15 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	var lastFiredAt *time.Time
 	var onceLatched bool
 	var fireCount int
+	var hourWindowStart time.Time
+	var fireCountHour int
+	maxFiresPerHour := e.maxFiresPerHour
 	if hasState {
 		lastFiredAt = st.LastFiredAt
 		onceLatched = st.OnceLatched
 		fireCount = st.FireCountSinceReset
+		hourWindowStart = st.HourWindowStart
+		fireCountHour = st.FireCountHour
 		prevSignals = cloneSignals(st.PrevSignals)
 	}
 	if len(prevSignals) < 1 {
@@ -242,6 +275,25 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 		return EvalResult{}
 	}
 
+	// Engine-level hourly fire cap (Phase-49 / Slice 0004 — replaces
+	// CooldownFSM.MaxFiresPerHour). Computed against an in-memory rolling
+	// 1h window per (rule, vehicle). Once-mode rules are exempt because
+	// the latch already caps them at 1 per resolution. The window is
+	// rolled lazily during MarkFired bookkeeping below; here we only
+	// observe the snapshot taken at evaluation start.
+	if rule.TriggerMode != "once" {
+		capHour := maxFiresPerHour
+		if capHour <= 0 {
+			capHour = defaultMaxFiresPerHour
+		}
+		if !hourWindowStart.IsZero() &&
+			time.Since(hourWindowStart) <= time.Hour &&
+			fireCountHour >= capHour {
+			metrics.AlertRulesHourlyCapHit.Inc()
+			return EvalResult{}
+		}
+	}
+
 	// Fire. Persist the fire BEFORE updating the in-memory cache so that
 	// race-lost peers (MarkFired returns (false, nil) when another pod
 	// already latched) don't dispatch the alert. Repo failures fall back
@@ -285,8 +337,19 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 		if isOnce {
 			st.OnceLatched = true
 		}
+		if st.HourWindowStart.IsZero() || now.Sub(st.HourWindowStart) > time.Hour {
+			st.HourWindowStart = now
+			st.FireCountHour = 1
+		} else {
+			st.FireCountHour++
+		}
 	} else {
-		st = &ruleState{LastFiredAt: &now, FireCountSinceReset: 1}
+		st = &ruleState{
+			LastFiredAt:         &now,
+			FireCountSinceReset: 1,
+			HourWindowStart:     now,
+			FireCountHour:       1,
+		}
 		if isOnce {
 			st.OnceLatched = true
 		}
