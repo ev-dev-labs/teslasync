@@ -170,3 +170,58 @@ func TestActiveUnit_StringValuesStable(t *testing.T) {
 		}
 	}
 }
+
+// TestChargeRateMilePerHour_R2_AuditPin pins the Phase-48 R2 risk-register
+// finding so a future codec / metadata change cannot silently re-classify
+// the field and corrupt charge-rate JSON output.
+//
+// R2 finding (.github/prompts/db-refactor/phase-48-si-canonical/0000-methodology.prompt.md):
+//
+//	The ChargeRateMilePerHour proto field is metadata-typed
+//	UnitKindDistance, NOT UnitKindSpeed. After ToSI(...) with a Miles
+//	user setting, the value flowing into signal.Store and downstream
+//	JSON is "meters of range added per hour" (raw mph * 1609.344), NOT
+//	a true SI velocity in m/s.
+//
+// The downstream JSON field name `charge_rate_mph` is therefore a
+// misnomer — the value at runtime is m/h, not mph. Slice 2 of the SI
+// canonical mega-PR renames the JSON field to a name that reflects the
+// real semantics (e.g. `range_added_meters_per_hour`) and is documented
+// in the Slice 2 plan.
+//
+// This test fails loudly if anyone retypes the field as
+// UnitKindSpeed (which would require a /3600 division and a different
+// JSON name) or removes the speed-override classification path —
+// either change MUST be a coordinated codec-and-rename PR, never an
+// invisible metadata flip.
+func TestChargeRateMilePerHour_R2_AuditPin(t *testing.T) {
+	t.Parallel()
+
+	const field = "ChargeRateMilePerHour"
+
+	// Pin: the field MUST be UnitKindDistance per the methodology's
+	// R2 finding. A future rename PR that changes this MUST also
+	// rename the field at the JSON boundary in lockstep.
+	{
+		out, err := ToSI(field, 28.5, ActiveUnitMiles)
+		if err != nil {
+			t.Fatalf("ToSI(%s, 28.5, miles) returned err: %v", field, err)
+		}
+		// 28.5 mi * 1609.344 m/mi = 45866.304 m (per HOUR, despite the m units)
+		want := 28.5 * 1609.344
+		if math.Abs(out-want) > 1e-6 {
+			t.Errorf("ToSI(%s, 28.5, miles) = %v, want %v (UnitKindDistance with miles user)", field, out, want)
+		}
+	}
+
+	// Pin: NOT speed-override classified. If a future PR moves the
+	// field to the speedFields list, the conversion factor changes
+	// from *1609.344 to *0.44704 (a 3600× difference) and silently
+	// corrupts every previously-stored charge-rate value. This test
+	// is the canary.
+	if isSpeedField(field) {
+		t.Errorf("R2 invariant broken: %s is now classified as a speed field. "+
+			"This changes the ToSI conversion factor by 3600× and requires a "+
+			"coordinated DB / JSON rename. See Phase-48 methodology R2.", field)
+	}
+}
