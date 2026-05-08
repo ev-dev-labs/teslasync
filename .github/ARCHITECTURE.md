@@ -1009,3 +1009,64 @@ that some pages may need section-by-section reimplementation when their
 underlying signal source has changed (e.g., a page reading from
 `vehicle_units` snapshots now reads from `vehicle_unit_history` via the new
 backend). Such pages are ported, not deleted.
+
+## ADR-008: Observability stack
+
+**Status:** Accepted (phase-44)
+**Date:** 2026-05-08
+
+### Decision 1: Purely additive
+
+Phase-44 observability deepening is additive only. Existing tracing, metrics,
+alerts, dashboards, Prometheus scrape configuration, Jaeger development wiring,
+and `internal/tracing/` bootstrap code are preserved. Audit prompts may block on
+coverage gaps, but they do not delete existing instrumentation.
+
+### Decision 2: Self-hosted
+
+The default observability stack is self-hosted: Tempo for traces, Loki for logs,
+Prometheus for metrics, and Grafana for dashboards. The default deployment must
+not require an external SaaS dependency.
+
+### Decision 3: OpenTelemetry-only API
+
+OpenTelemetry is the only tracing API for new code. The existing
+`internal/tracing/` package remains the bootstrap boundary, and new spans use
+`otel.Tracer("...")`. Direct Jaeger SDK calls are forbidden in new code; the
+legacy Jaeger development service receives traces through the OpenTelemetry
+Collector.
+
+### Decision 4: Declarative SLOs
+
+Service-level objectives are declared in `slo/catalog.yaml` and generated into
+Prometheus recording rules, Prometheus alerting rules, and Grafana dashboards.
+Hand-edited generated rule files are forbidden.
+
+### Decision 5: Multi-window multi-burn-rate alerts
+
+Burn-rate alerts follow the Google SRE workbook multi-window, multi-burn-rate
+model. Fast burn alerts use a 1h window at 14.4x and page; slow burn alerts use
+a 6h window at 6x and ticket. Single-window `error rate > X` alerts are
+forbidden for SLO burn alerts.
+
+### Decision 6: Frontend RUM in scope
+
+Frontend real-user monitoring is in scope through top-level bootstrap only:
+`@opentelemetry/sdk-trace-web`, fetch instrumentation, route-change spans, and
+error instrumentation. Page and component UI mutations are out of scope.
+
+### Decision 7: Verification floor
+
+Each phase-44 prompt gate runs the relevant verification floor: `go build ./...`,
+`go test -race ./...` for changed packages, `golangci-lint run` for changed
+packages, `helm lint` for changed charts, `npx tsc --noEmit` and `npm run build`
+for changed frontend, plus prompt-specific assertions.
+
+### Locks
+
+- Lock: Additive only — no prompt may remove existing observability assets while deepening coverage.
+- Lock: Self-hosted by default — Tempo, Loki, Prometheus, and Grafana are the default stack.
+- Lock: OTel API everywhere — new tracing code uses OpenTelemetry APIs only.
+- Lock: SLOs are code-generated — catalog-driven generation is the only supported SLO rule/dashboard path.
+- Lock: MW-MBR alerts only — SLO burn alerts must use multi-window multi-burn-rate expressions.
+- Lock: RUM via bootstrap only — browser telemetry is initialized centrally without per-page UI changes.

@@ -1,0 +1,10 @@
+=== PREFLIGHT ===
+PREV_EXIT=EXIT=0
+PREV_STATUS=STATUS=DONE
+=== ADR_APPEND ===
+ADR-008 section appended to .github\ARCHITECTURE.md
+=== GATE ===
+ADR-008 appended.
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
