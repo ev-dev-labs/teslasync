@@ -1,0 +1,281 @@
+Phase-49 / Prompt 0001 — Investigate Cooldown System Duality
+============================================================
+
+Branch:   refactor/alert-engine
+Base:     009a702c5 (refactor/signals-rewrite tip)
+Method:   read-only ripgrep + handler-by-handler trace
+Date:     2026-05-08
+
+This log answers the prompt's five sections and ends with a single
+RECOMMENDATION that slice 0004 will action verbatim.
+
+----------------------------------------------------------------------
+CALLERS_COOLDOWN_FSM
+----------------------------------------------------------------------
+
+Production:
+  internal/fsm/notification/cooldown.go:35-132
+      Definition only. CooldownFSM struct + ShouldFire/Reset/State/Stats.
+
+  internal/api/telemetry_alerts.go:12
+      Import: notifFSM "github.com/ev-dev-labs/teslasync/internal/fsm/notification"
+
+  internal/api/telemetry_alerts.go:29
+      Field: cooldowns map[string]*notifFSM.CooldownFSM  // keyed "ruleID:vehicleID"
+
+  internal/api/telemetry_alerts.go:30
+      Field: cooldownMu sync.Mutex
+
+  internal/api/telemetry_alerts.go:43
+      Constructor: cooldowns: make(map[string]*notifFSM.CooldownFSM)
+
+  internal/api/telemetry_alerts.go:96-100
+      Lazy construction inside Evaluate():
+          cfg := notifFSM.DefaultCooldownConfig()
+          if rule.CooldownMin > 0 { cfg.CooldownDuration = ... }
+          cd = notifFSM.NewCooldownFSM(rule.ID, vehicleID, cfg)
+          e.cooldowns[cooldownKey] = cd
+
+  internal/api/telemetry_alerts.go:105
+      Gate: if cd.ShouldFire() { e.fireAlert(...) }
+
+  internal/api/telemetry_alerts.go:115-117
+      Reset on falling edge for transition rules:
+          if cd, exists := e.cooldowns[cooldownKey]; exists { cd.Reset() }
+
+Tests-only:
+  internal/fsm/notification/notification_test.go:11,21,32,41,50
+  internal/fsm/notification/cooldown_test.go:13,48,77
+
+Conclusion: CooldownFSM has exactly ONE production caller — the streaming
+telemetry alert evaluator at internal/api/telemetry_alerts.go.
+
+----------------------------------------------------------------------
+CALLERS_RULE_ENGINE
+----------------------------------------------------------------------
+
+Production:
+  internal/api/rule_engine.go:18-456
+      Definition. Includes Evaluate, SetLastFired, LoadCooldownFromDB,
+      LoadPrevSignalsFromStore.
+
+  internal/api/telemetry_alerts.go:27
+      Field: ruleEngine *RuleEngine
+
+  internal/api/telemetry_alerts.go:42
+      Constructor: ruleEngine: NewRuleEngine()
+
+  internal/api/telemetry_alerts.go:55
+      LoadState(): e.ruleEngine.LoadCooldownFromDB(ctx, rules)
+
+  internal/api/telemetry_alerts.go:60
+      Accessor: func (e *TelemetryAlertEvaluator) RuleEngine() *RuleEngine
+
+  internal/api/telemetry_alerts.go:86
+      Gate (PRIMARY): result := e.ruleEngine.Evaluate(rule, vehicleID, signals)
+
+  internal/app/new.go:411
+      Wiring during pod startup:
+          alertEvaluator.RuleEngine().LoadPrevSignalsFromStore(vid, raw)
+
+  internal/tesla_pipeline/side_effects_observer.go:243 (comment)
+  internal/tesla_pipeline/side_effects_observer.go:320
+      Inbound dispatch from telemetry pipeline:
+          o.alerts.Evaluate(ctx, vehicleID, vin, signals, signals)
+      The o.alerts here is *TelemetryAlertEvaluator (verified at line 64
+      of the same file: "alerts AlertEvaluator"; see app/new.go:357 wiring).
+
+Tests-only (matching .Evaluate( pattern but unrelated to alert RuleEngine):
+  internal/automation/safety/retry_test.go              — RetryPolicy.Evaluate (decision)
+  internal/automation/engine_test.go                    — automation engine
+  internal/polling/engine.go + engine_test.go           — polling DriveEvaluator/etc.
+  internal/notification/computed/evaluator.go + tests   — computed-rule evaluator (DIFFERENT path; cron-based)
+  cmd/notification-worker/main.go:336                   — computed-rule evaluator (NOT RuleEngine)
+
+Conclusion: alert-rule RuleEngine has exactly ONE production caller — the
+streaming telemetry alert evaluator at internal/api/telemetry_alerts.go.
+
+----------------------------------------------------------------------
+LIVE_PATH_TRACE
+----------------------------------------------------------------------
+
+Trace from the MQTT-fed telemetry pipeline through to alert delivery:
+
+  1. internal/tesla_pipeline/side_effects_observer.go:320
+        o.alerts.Evaluate(ctx, vehicleID, vin, signals, signals)
+
+  2. internal/api/telemetry_alerts.go:67
+        func (e *TelemetryAlertEvaluator) Evaluate(...)
+
+  3. For each enabled rule whose VehicleID matches (or is nil = fleet rule),
+     line 86:
+        result := e.ruleEngine.Evaluate(rule, vehicleID, signals)
+                  ^^^^^^^^^^^^^^^^^^^^ FIRST cooldown gate (RuleEngine)
+
+  4. If result.Triggered (line 90-91):
+        cooldownKey := fmt.Sprintf("%d:%d", rule.ID, vehicleID)
+        cd = lazy-init CooldownFSM
+        if cd.ShouldFire() { e.fireAlert(...) }
+        ^^^^^^^^^^^^^^^^^ SECOND cooldown gate (CooldownFSM)
+
+  5. Reset on falling edge (lines 111-119):
+        else if isTransitionRule(rule) {
+            cd.Reset()    // resets CooldownFSM (FSM goes Armed)
+        }
+     RuleEngine.Evaluate ALSO resets its own cooldown for edge-aware rules
+     at rule_engine.go:108-115:
+        if !matched && needsFalseEdgeDetection {
+            st.LastFiredAt = nil
+            st.OnceLatched = false
+        }
+
+So both layers have their own cooldown timer AND their own falling-edge
+reset. They are NOT redundant — they are stacked, with CooldownFSM acting
+as a SECONDARY gate that adds:
+
+  * an hourly fire cap (MaxFiresPerHour: 4) which RuleEngine completely
+    lacks;
+  * a separate per-pair lock (sync.Mutex) which RuleEngine does not need
+    (RuleEngine has its own RWMutex);
+  * Suppressed-state metrics (suppressedCount stat) the RuleEngine doesn't
+    expose.
+
+There is exactly ONE entry point for streaming alerts in the entire repo
+(side_effects_observer:320 → telemetry_alerts:67), and inside that entry
+point both systems run in series.
+
+----------------------------------------------------------------------
+DUPLICATE_FIRE_RISK
+----------------------------------------------------------------------
+
+DUPLICATE FIRE: NO — there is no parallel path. Both gates run inside the
+same per-rule loop iteration; the second gate can only suppress, not
+re-fire.
+
+But three real semantic bugs DO exist from the duality:
+
+  B1 (state divergence on suppression):
+      RuleEngine.Evaluate marks its st.LastFiredAt = now WHEN IT MATCHES
+      (rule_engine.go:142). This happens BEFORE CooldownFSM has been
+      consulted. If CooldownFSM then suppresses (hourly cap reached, or
+      the FSM's cooldown has not lapsed but RuleEngine's HAS — they have
+      independent clocks if the FSM was reset by Reset() but RuleEngine's
+      cooldown was not), RuleEngine still believes it fired. The next
+      RuleEngine cooldown window is off by up to one cycle.
+
+  B2 (no shared state — once-mode latch is in-memory):
+      RuleEngine.OnceLatched is in the in-memory map. Pod restart loses
+      it. CooldownFSM also resets on restart. If a rule was Once-mode
+      latched and the pod restarts, the rule will fire again immediately
+      next batch — even though the underlying condition never reset.
+      This is the T1 BUG that slice 0002 will fix by persisting latch
+      state in alert_rule_state.
+
+  B3 (Reset semantics differ):
+      For transition rules:
+        - RuleEngine clears st.LastFiredAt AND st.OnceLatched on falling
+          edge (rule_engine.go:108-117).
+        - CooldownFSM.Reset clears state to Armed AND zeros lastFiredAt,
+          but does NOT touch fireCountHour (cooldown.go:107-118 — note
+          the deliberate comment "do NOT reset fireCountHour").
+      So after a falling edge, the inner gate fully forgets, but the
+      outer gate keeps counting hourly fires. A rule that bounces 5 times
+      in an hour with falling-edge resets between each will correctly
+      fire on rising edges 1-4 then be silently suppressed by the FSM on
+      bounce 5 — which is actually the desired storm-protection behavior,
+      but is only documented in the FSM source comment and not in any
+      ADR or README. Slice 0004 should make this contract explicit.
+
+----------------------------------------------------------------------
+RECOMMENDATION
+----------------------------------------------------------------------
+
+merge
+
+Rationale:
+
+  * Neither system is dead; deletion of either would lose real behavior.
+    - delete_fsm would lose: hourly fire cap, suppressedCount metric,
+      Suppressed state visibility.
+    - delete_engine_cooldown would lose: integration with OnceLatched
+      semantics + the prev-signals "baseline" map that drives changed/
+      transition operators (rule_engine.go:76-80, 244-280).
+
+  * Phase-49's locked decisions (D1, D2, slice 0003 max-fires cap, slice
+    0009 escalation tier) all want a SINGLE place to ask "should this
+    rule fire right now?" — keeping two stacked gates makes those
+    decisions ambiguous (which gate enforces max-fires? which one applies
+    the escalation grace period?).
+
+  * The merge preserves separation of concerns:
+      - RuleEngine continues to own EVALUATION (matched / not-matched
+        + once-latched + prev-signals baseline) — this is the rule
+        semantics layer.
+      - CooldownFSM (renamed to FireGate or AlertGate during slice 0004)
+        becomes the SOLE timing layer: cooldown-min, max-fires-per-hour,
+        max-fires-per-resolution (slice 0003), escalation grace
+        (slice 0009).
+
+  * The merge enables the persistent-latch work in slice 0002:
+      - Persist (rule_id, vehicle_id) → latched_at / last_fired_at /
+        fire_count_since_reset in the new alert_rule_state table.
+      - Both layers read/write to the same row, so divergence (B1) is
+        eliminated by construction.
+
+Concrete merge plan for slice 0004:
+
+  1. Move RuleEngine cooldown bookkeeping (LastFiredAt + cooldown
+     suppression at rule_engine.go:88-100) into CooldownFSM. RuleEngine
+     stops maintaining LastFiredAt and SetLastFired becomes a no-op
+     (deprecate, remove after one release).
+
+  2. RuleEngine.Evaluate becomes purely about matching:
+        return EvalResult{Triggered: matched, Message: rendered}
+     where Triggered means "rule condition is met right now", NOT "fire
+     a notification". Caller (TelemetryAlertEvaluator) decides via the
+     unified gate.
+
+  3. CooldownFSM owns: cooldown-min duration, max-fires-per-hour,
+     max-fires-per-resolution (slice 0003 adds this), escalation grace
+     (slice 0009 adds this).
+
+  4. The OnceLatched bit moves to the persistent alert_rule_state row
+     (slice 0002), read by RuleEngine on Evaluate, written by the gate
+     when it actually fires.
+
+  5. Reset semantics consolidate: ONE Reset(rule, vid) path, called by
+     TelemetryAlertEvaluator on falling edge. It clears LastFiredAt +
+     latch, leaves fireCountHour and fireCountSinceResolution alone.
+
+Estimated touch radius for slice 0004 (informational — slice 0004
+authors will produce their own scope):
+  internal/api/rule_engine.go              — strip cooldown logic
+  internal/api/telemetry_alerts.go         — single-gate refactor
+  internal/api/rule_engine_test.go         — drop cooldown test cases
+                                             (move to FSM tests)
+  internal/fsm/notification/cooldown.go    — absorb cooldown-min, rename
+  internal/fsm/notification/cooldown_test.go — extend
+  cmd/teslasync/main.go or app wiring     — none expected
+  database migration                       — none in 0004 (latch table
+                                             lands in 0002)
+  No frontend impact (cooldown_min field on alert_rules already exposed).
+
+Forward dependency note for slice 0002:
+  Slice 0002 should design the alert_rule_state schema with this merge in
+  mind. Suggested columns:
+      rule_id              BIGINT  NOT NULL
+      vehicle_id           BIGINT  NOT NULL  -- 0 = fleet-rule baseline
+      latched_at           TIMESTAMPTZ NULL  -- once-mode latch timestamp
+      last_fired_at        TIMESTAMPTZ NULL  -- supersedes both in-memory clocks
+      fire_count_since_reset INT NOT NULL DEFAULT 0  -- for slice 0003 cap
+      hour_window_start    TIMESTAMPTZ NULL  -- for hourly cap (CooldownFSM)
+      fire_count_hour      INT NOT NULL DEFAULT 0
+      PRIMARY KEY (rule_id, vehicle_id)
+
+  R1 mitigation (concurrent batch race):
+      INSERT ... ON CONFLICT (rule_id, vehicle_id)
+      DO UPDATE SET ... WHERE alert_rule_state.last_fired_at IS NULL
+                            OR EXCLUDED.last_fired_at > alert_rule_state.last_fired_at + cooldown
+      RETURNING xmax;  -- non-zero = we won the race, safe to fire
+
+=== STATUS === EXIT=0 STATUS=DONE
