@@ -31,6 +31,8 @@ func runGenerate(args []string) error {
 	switch target {
 	case "recording":
 		return runGenerateRecording(args[1:])
+	case "alerts":
+		return runGenerateAlerts(args[1:])
 	default:
 		return fmt.Errorf("unknown generate target %q", target)
 	}

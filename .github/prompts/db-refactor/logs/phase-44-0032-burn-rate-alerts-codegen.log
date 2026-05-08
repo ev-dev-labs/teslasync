@@ -1,0 +1,6 @@
+=== GATE ===
+=== GENERATE ===
+wrote helm/teslasync/files/prometheus/alerting-rules.yaml (8 SLOs, 16 alerts)
+All gate checks passed.
+EXIT=0
+STATUS=DONE
