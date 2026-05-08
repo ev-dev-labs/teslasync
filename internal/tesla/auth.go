@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // teslaAuthClientTimeout is the default timeout for OAuth token exchanges.
@@ -81,7 +82,10 @@ type TokenResponse struct {
 }
 
 // ExchangeCode exchanges an authorization code for tokens.
-func (c *Client) ExchangeCode(ctx context.Context, code string) (*TokenResponse, error) {
+func (c *Client) ExchangeCode(ctx context.Context, code string) (resp *TokenResponse, err error) {
+	ctx, span := startSpan(ctx, "tesla.ExchangeCode")
+	defer endSpan(span, &err)
+
 	form := url.Values{
 		"grant_type":    {"authorization_code"},
 		"client_id":     {c.clientID},
@@ -94,7 +98,10 @@ func (c *Client) ExchangeCode(ctx context.Context, code string) (*TokenResponse,
 }
 
 // RefreshTokens refreshes the access token using the refresh token.
-func (c *Client) RefreshTokens(ctx context.Context) (*TokenResponse, error) {
+func (c *Client) RefreshTokens(ctx context.Context) (resp *TokenResponse, err error) {
+	ctx, span := startSpan(ctx, "tesla.RefreshTokens")
+	defer endSpan(span, &err)
+
 	c.mu.RLock()
 	refresh := c.refreshTok
 	c.mu.RUnlock()
@@ -112,27 +119,33 @@ func (c *Client) RefreshTokens(ctx context.Context) (*TokenResponse, error) {
 	return c.tokenRequest(ctx, form)
 }
 
-func (c *Client) tokenRequest(ctx context.Context, form url.Values) (*TokenResponse, error) {
+func (c *Client) tokenRequest(ctx context.Context, form url.Values) (resp *TokenResponse, err error) {
 	tokenURL := c.authURL + "/oauth2/v3/token"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(form.Encode()))
-	if err != nil {
-		return nil, fmt.Errorf("create token request: %w", err)
+	ctx, span := startSpan(ctx, "tesla.tokenRequest",
+		attribute.String("http.request.method", http.MethodPost),
+		attribute.String("http.url", tokenURL),
+	)
+	defer endSpan(span, &err)
+
+	req, reqErr := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(form.Encode()))
+	if reqErr != nil {
+		return nil, fmt.Errorf("create token request: %w", reqErr)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := authClient().Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("token request: %w", err)
+	httpResp, doErr := authClient().Do(req)
+	if doErr != nil {
+		return nil, fmt.Errorf("token request: %w", doErr)
 	}
-	defer resp.Body.Close()
+	defer httpResp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("token request failed: status %d", resp.StatusCode)
+	if httpResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("token request failed: status %d", httpResp.StatusCode)
 	}
 
 	var tokenResp TokenResponse
-	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
-		return nil, fmt.Errorf("decode token response: %w", err)
+	if decErr := json.NewDecoder(httpResp.Body).Decode(&tokenResp); decErr != nil {
+		return nil, fmt.Errorf("decode token response: %w", decErr)
 	}
 
 	// Update stored tokens

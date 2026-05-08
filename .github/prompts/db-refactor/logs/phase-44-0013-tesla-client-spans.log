@@ -1,0 +1,23 @@
+=== PREFLIGHT ===
+Phase-44 / Prompt 0013 - Tesla client spans
+2026-05-08T11:01:58.8310155-07:00
+=== AUDIT ===
+(see audit grep below)
+=== BUILD ===
+=== TESTS ===
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla	3.044s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/bootstrap	3.090s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/codec	2.648s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/config	1.833s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/normalize	3.093s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/protomodel	1.725s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router	2.645s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/router/writers	3.377s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/unit_history	1.124s
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/units	1.717s
+=== GATE ===
+=== AUDIT_GREP ===
+All audit-grep files reference otel.Tracer
+All gate checks passed.
+EXIT=0
+STATUS=DONE

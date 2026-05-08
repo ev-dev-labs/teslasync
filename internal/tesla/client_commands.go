@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // commandDef defines how a frontend command name maps to the Tesla API.
@@ -166,7 +167,13 @@ func IsKnownCommand(name string) bool {
 // SendCommand sends a named command to a vehicle via the Fleet API or the
 // Vehicle Command Proxy (if configured). Commands that require signing are
 // routed through the proxy; wake_up goes directly to Fleet API.
-func (c *Client) SendCommand(ctx context.Context, vin string, command string, params map[string]interface{}) error {
+func (c *Client) SendCommand(ctx context.Context, vin string, command string, params map[string]interface{}) (err error) {
+	ctx, span := startSpan(ctx, "tesla.SendCommand",
+		attribute.String("tesla.vehicle.vin", vin),
+		attribute.String("tesla.command", command),
+	)
+	defer endSpan(span, &err)
+
 	def, ok := commands[command]
 	if !ok {
 		return fmt.Errorf("unknown command: %s", command)
@@ -208,9 +215,15 @@ func (c *Client) SendCommand(ctx context.Context, vin string, command string, pa
 }
 
 // doProxyRequest sends a command through the Vehicle Command Proxy for signing.
-func (c *Client) doProxyRequest(ctx context.Context, path string, body io.Reader) error {
-	if err := c.limiter.Wait(ctx); err != nil {
-		return fmt.Errorf("rate limiter: %w", err)
+func (c *Client) doProxyRequest(ctx context.Context, path string, body io.Reader) (err error) {
+	ctx, span := startSpan(ctx, "tesla.proxy POST "+path,
+		attribute.String("http.request.method", http.MethodPost),
+		attribute.String("tesla.proxy.path", path),
+	)
+	defer endSpan(span, &err)
+
+	if waitErr := c.limiter.Wait(ctx); waitErr != nil {
+		return fmt.Errorf("rate limiter: %w", waitErr)
 	}
 
 	reqURL := c.commandProxyURL + path
@@ -275,9 +288,18 @@ func (c *Client) doProxyRequest(ctx context.Context, path string, body io.Reader
 
 // doProxyRequestWithResponse sends a request through the Vehicle Command Proxy
 // and returns the raw response body and status code (for endpoints like fleet_telemetry_config).
-func (c *Client) doProxyRequestWithResponse(ctx context.Context, method, path string, body io.Reader) ([]byte, int, error) {
-	if err := c.limiter.Wait(ctx); err != nil {
-		return nil, 0, fmt.Errorf("rate limiter: %w", err)
+func (c *Client) doProxyRequestWithResponse(ctx context.Context, method, path string, body io.Reader) (respBody []byte, statusCode int, err error) {
+	ctx, span := startSpan(ctx, "tesla.proxy "+method+" "+path,
+		attribute.String("http.request.method", method),
+		attribute.String("tesla.proxy.path", path),
+	)
+	defer func() {
+		recordHTTPStatus(span, method, c.commandProxyURL+path, statusCode)
+		endSpan(span, &err)
+	}()
+
+	if waitErr := c.limiter.Wait(ctx); waitErr != nil {
+		return nil, 0, fmt.Errorf("rate limiter: %w", waitErr)
 	}
 
 	reqURL := c.commandProxyURL + path
@@ -310,7 +332,7 @@ func (c *Client) doProxyRequestWithResponse(ctx context.Context, method, path st
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
+	respBody, _ = io.ReadAll(resp.Body)
 
 	log.Debug().
 		Str("url", reqURL).
@@ -322,5 +344,6 @@ func (c *Client) doProxyRequestWithResponse(ctx context.Context, method, path st
 		c.logCallback(method, reqURL, resp.StatusCode, reqBodyBytes, respBody, int(duration), nil)
 	}
 
-	return respBody, resp.StatusCode, nil
+	statusCode = resp.StatusCode
+	return respBody, statusCode, nil
 }

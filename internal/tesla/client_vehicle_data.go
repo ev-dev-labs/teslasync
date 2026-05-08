@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // GetNearbyChargingSites returns charging sites near the vehicle's current location.
@@ -108,7 +110,13 @@ func (c *Client) ListVehicles(ctx context.Context) ([]VehicleData, error) {
 // drive, and config state. Returns ErrVehicleAsleep if the vehicle cannot
 // be reached (408/504). The optional endpoints parameter specifies which
 // vehicle_data sub-endpoints to request; if empty, all endpoints are requested.
-func (c *Client) GetVehicleData(ctx context.Context, vin string, endpoints ...string) (*VehicleDataResponse, error) {
+func (c *Client) GetVehicleData(ctx context.Context, vin string, endpoints ...string) (out *VehicleDataResponse, err error) {
+	ctx, span := startSpan(ctx, "tesla.GetVehicleData",
+		attribute.String("tesla.vehicle.vin", vin),
+		attribute.Int("tesla.vehicle_data.endpoints", len(endpoints)),
+	)
+	defer endSpan(span, &err)
+
 	epStr := "charge_state;climate_state;drive_state;location_data;vehicle_state;vehicle_config"
 	if len(endpoints) > 0 {
 		epStr = strings.Join(endpoints, ";")
