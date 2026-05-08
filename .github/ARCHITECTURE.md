@@ -581,6 +581,109 @@ SQL exports under `files/raw-audits/`.
 
 **Status:** Accepted (phase-42).
 
+### Pipeline at-a-glance (read this first)
+
+```
+                                                         ┌────────────────────┐
+Tesla Vehicle ── mTLS stream ──▶ Tesla Fleet Telemetry ──▶│ Mosquitto MQTT    │
+                                                          │ telemetry/payload/+│
+                                                          └─────────┬──────────┘
+                                                                    ▼
+                                                    ┌──────────────────────────────┐
+                                                    │ PipelineSubscriber           │
+                                                    │ internal/mqtt/...            │
+                                                    │ ▸ ack-after-process          │
+                                                    │ ▸ tracker (4096 capacity)    │
+                                                    │ ▸ max_redeliveries=5         │
+                                                    └──────────────┬───────────────┘
+                                                                   ▼
+                                                ┌──────────────────────────────────┐
+                                                │ Codec  internal/tesla/codec      │
+                                                │ proto bytes → typed Datums       │
+                                                │ failure ⇒ MQTT redeliver         │
+                                                └──────────────┬───────────────────┘
+                                                               ▼
+                                ┌──────────────────────────────────────────────────┐
+                                │ normalize.Pipeline   internal/tesla/normalize    │
+                                │ ▸ THE one entry — reflective coverage test pins  │
+                                │ ▸ ToSI(field, raw, vehicleUnits)                 │
+                                │   uses tesla/unit_history per-vehicle Setting*   │
+                                │ ▸ produces signal.Sample{Field, Value, Time}     │
+                                └──────────────┬───────────────────────────────────┘
+                                               ▼
+                          ┌────────────────────────────────────────┐
+                          │ Router  internal/tesla/router          │
+                          │ routing.yaml — field-static, vehicle-  │
+                          │ agnostic per ADR-004 #8                │
+                          │ field → {dest_table, column?, also_log}│
+                          └──────┬──────────────────────┬──────────┘
+                                 ▼                      ▼
+                     ┌───────────────────────┐  ┌───────────────────┐
+                     │ Writers (per table)   │  │ signal.Store L1   │
+                     │ drive_telemetry       │  │ in-process map    │
+                     │ charging_telemetry    │  │ hot path: FSM,    │
+                     │ positions             │  │ sessions, merge   │
+                     │ tesla_charging_history│  │ context           │
+                     │ ...                   │  └────────┬──────────┘
+                     │ writer failure ⇒ log+ │           │
+                     │ counter, NEVER MQTT   │           │ pubsub
+                     │ redeliver             │           ▼
+                     └─────────┬─────────────┘  ┌───────────────────┐
+                               ▼                │ Redis L2          │
+                     ┌───────────────────┐      │ HSET vehicle:{id}:│
+                     │ signal_log        │      │ signals + Pub/Sub │
+                     │ (TimescaleDB      │      │ cross-pod live    │
+                     │  hypertable)      │      │ TTL: 2 min stale  │
+                     │ durable history,  │      └────────┬──────────┘
+                     │ replay, charts,   │               │
+                     │ point-in-time     │               ▼
+                     └───────────────────┘   ┌──────────────────────┐
+                                             │ SSE event hub        │
+                                             │ Redis Pub/Sub        │
+                                             │ → /events stream     │
+                                             └──────────┬───────────┘
+                                                        │
+                                ┌───────────────────────┴────────────────┐
+                                ▼                                        ▼
+                  ┌──────────────────────────┐           ┌─────────────────────────┐
+                  │ FSM   internal/fsm       │           │ React SPA               │
+                  │ 20-transition table      │           │ ▸ EventSource for live  │
+                  │ ▸ drive / charge / park  │           │ ▸ TanStack Query for    │
+                  │ ▸ reconciliation 15s     │           │   history endpoints     │
+                  │ ▸ commits sessions to    │           │ ▸ useUnits/useFormatting│
+                  │   drives, charging_     │           │   for SI→display only at │
+                  │   sessions tables        │           │   render boundary       │
+                  └──────────────────────────┘           └─────────────────────────┘
+```
+
+**Five-line summary:**
+
+1. **Vehicle → Mosquitto:** Tesla streams Fleet Telemetry over mTLS into MQTT topic `telemetry/payload/+`.
+2. **Decode → Normalize:** `PipelineSubscriber` pulls payloads, codec decodes proto, `normalize.Pipeline.Process` converts each value to SI using per-vehicle `Setting*Unit` history.
+3. **Route → Persist:** `routing.yaml` (static, no per-vehicle logic) routes each field to a destination table writer + optional `signal_log` history. **Codec failures redeliver via MQTT; writer failures only log+counter** (never redeliver).
+4. **Live state, three tiers:** L1 = in-process `signal.Store` (FSM, sessions hot path) · L2 = Redis `vehicle:{id}:signals` HSET + Pub/Sub (cross-pod, restart recovery) · durable = `signal_log` hypertable (charts, replay, point-in-time snapshots).
+5. **Consumers:** FSM watches the store and commits drive/charge sessions when transitions complete · SSE hub fans Redis Pub/Sub out to the SPA · REST endpoints serve historical reads from `signal_log` and aggregates from `drives` / `charging_sessions` / continuous aggregates.
+
+**The whole pipeline writes SI units to disk** (meters, m/s, °C, Pa, Wh — never miles, mph, °F, psi, kWh). User display preference is applied **only** at the React render boundary by `useUnits()` / `useFormatting()` hooks. The vendored Tesla proto is the only place imperial-named identifiers survive (e.g. proto field 256 `ChargeRateMilePerHour` whose wire content is actually meters/hour — pinned by `TestRangeAddedMetersPerHour_R2_AuditPin`).
+
+### Pipeline invariants (enforced by tests / startup checks)
+
+| # | Invariant | Where enforced |
+|---|---|---|
+| 1 | `normalize.Pipeline.Process` is THE one ingest entry | Reflective coverage test in `internal/tesla/normalize` |
+| 2 | `routing.yaml` is field-static, vehicle-agnostic | Schema validation at startup |
+| 3 | Every `ftproto.Field_*` has exactly one routing entry | Reflective coverage test in `internal/tesla/router` |
+| 4 | Writer failures never trigger MQTT redelivery | `tesla_router_writer_failures_total` counter; `internal/tesla/router/writers` |
+| 5 | `signal.Store` L1 is mandatory for FSM/sessions | `LIVE_SIGNAL_STORE_MODE=local` rollback switch |
+| 6 | `tesla_*` prefix for vendor-specific tables | New tables only; existing ones grandfathered |
+| 7 | `internal/tesla/*` for vendor code, `internal/signal/*` for vendor-agnostic | Directory layout |
+| 8 | SignalMeta.Field name MUST match `ftproto.Field_name[N]` | `TestCoverage_EveryProtoFieldHasSignalMeta` |
+| 9 | Generated files in sync with vendored proto | `go generate` + CI check |
+
+**Detailed decision record below.** The at-a-glance section above is the pointer for new contributors and AI agents; the rest of ADR-004 is the deep historical record of why each decision was locked in.
+
+---
+
 **Context.**
 The pre-phase-42 Tesla Fleet Telemetry ingest pipeline contained two parallel
 transform paths (`NormalizeFleetUnits` switch and `HotCatalog.Transformer`

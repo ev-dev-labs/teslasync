@@ -435,6 +435,43 @@ completion logic.
 ❌ DO NOT treat Redis Pub/Sub SSE as durable replay; clients recover missed state through polling/live reads
 ```
 
+### Telemetry Pipeline End-to-End (Phase-42)
+
+> Full diagram + decision record: `.github/ARCHITECTURE.md` ADR-004.
+> Detailed file-level rules: `.github/instructions/tesla-pipeline.instructions.md`.
+
+**The flow (memorize this — every backend change touches it):**
+
+```
+Vehicle ─mTLS▶ Fleet Telemetry ─MQTT▶ PipelineSubscriber ─▶ Codec ─▶ normalize.Pipeline ─▶ Router ─▶ Writers ─▶ {dest tables, signal_log}
+                                       (telemetry/payload/+)  (proto)   (ToSI per vehicle units)   (routing.yaml)              │
+                                                                                                                               ├─▶ signal.Store (L1, in-process)
+                                                                                                                               ├─▶ Redis HSET vehicle:{id}:signals (L2, cross-pod)
+                                                                                                                               └─▶ Redis Pub/Sub ─▶ SSE hub ─▶ SPA EventSource
+                                                                                                                                                            FSM (drive/charge/park, 15s reconciliation)
+                                                                                                                                                            REST handlers (history reads from signal_log)
+```
+
+**Five rules every agent must internalize:**
+
+1. **`normalize.Pipeline.Process` is THE one ingest entry.** Adding any other path is forbidden — a reflective coverage test enforces this. Vendor-specific decode goes in `internal/tesla/*`; vendor-agnostic signal primitives go in `internal/signal/*`.
+2. **The pipeline writes SI on disk.** Meters, m/s, °C, Pa, Wh. Never miles, mph, °F, psi, kWh in any DB column, API field, Go struct field, or TS interface. User display preference is applied **only** at the React render boundary by `useUnits()` / `useFormatting()`.
+3. **`routing.yaml` is field-static and vehicle-agnostic.** Per-vehicle or value-conditional routing is forbidden by ADR-004 #8. To route a new field: re-vendor proto → `go generate ./internal/tesla/protomodel/...` → add a routing.yaml entry → done.
+4. **Failure semantics are split.** Codec failures (malformed proto bytes) MUST trigger MQTT redelivery. Writer failures (DB down, schema mismatch) MUST be logged + counted via `tesla_router_writer_failures_total` and NEVER propagate to MQTT redelivery — otherwise a stuck table blocks the whole stream.
+5. **Live state is layered, not replaced.** L1 `signal.Store` for hot paths (FSM, sessions). L2 Redis for cross-pod + restart recovery. Durable `signal_log` for charts, replay, point-in-time. Don't bypass L1 by reading Redis directly in FSM/telemetry/session code paths.
+
+**The proto identifier paradox:** Tesla's vendored proto has misnamed fields (e.g. field 256 `ChargeRateMilePerHour` whose wire content is *meters of range added per hour*). The proto identifier is upstream-owned and immutable — our generator MUST emit it verbatim. The semantic truth lives in three places: the SignalMeta `UnitKind` (e.g. `UnitKindDistance` not `UnitKindSpeed`), the JSON wire field name (`range_added_meters_per_hour`), and an audit-pin test (`TestRangeAddedMetersPerHour_R2_AuditPin`). Renaming the proto identifier silently breaks runtime telemetry plumbing — see the Phase-48 R2 finding.
+
+**Boot-time sanity** (look for these lines in `docker logs teslasync-api`):
+```
+"phase-42 PipelineSubscriber started" topic=telemetry/payload/+ max_redeliveries=5
+"phase-42a: fleet-telemetry PipelineSubscriber active" writer_count=12
+"signal store hydrated from signal_log via stateReader"
+"FSM vehicle state engine active — declarative transition table with 20 transitions"
+"SSE event hub: Redis Pub/Sub subscription started"
+```
+If any of these are missing, the pipeline is degraded — investigate before assuming the system is healthy.
+
 ## Engineering Principles
 
 ### DRY — Don't Repeat Yourself
