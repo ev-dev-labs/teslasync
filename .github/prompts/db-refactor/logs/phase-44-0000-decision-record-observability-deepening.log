@@ -1,0 +1,81 @@
+=== PREFLIGHT ===
+BRANCH=refactor/signals-rewrite
+GIT_STATUS_START
+GIT_STATUS_END
+=== DECISIONS ===
+Decision 1: Observability is purely additive. Phase-44 NEVER deletes
+existing tracing, metrics, alerts, or dashboards. Cleanup prompts BLOCK on
+gaps; they do not prune.
+
+Decision 2: Self-hosted stack. Tempo for traces, Loki (existing or new) for
+logs, Prometheus (existing) for metrics, Grafana (existing) for dashboards.
+No external SaaS dependency in the default deployment.
+
+Decision 3: OpenTelemetry is the only tracing API. Existing
+`internal/tracing/` package is the bootstrap; all new spans use
+`otel.Tracer("...")`. The legacy Jaeger client is preserved for the dev
+docker-compose but receives traces via the OTel collector — direct Jaeger
+SDK calls are forbidden in new code.
+
+Decision 4: SLOs are declarative. Defined in `slo/catalog.yaml`, generated
+into Prometheus recording + alerting rules and Grafana dashboards by code
+generators. Hand-edited rule files are forbidden.
+
+Decision 5: Multi-window multi-burn-rate alerts. Per Google SRE workbook:
+fast burn (1h, 14.4x) pages; slow burn (6h, 6x) tickets. Single-window
+"error rate > X" alerts are forbidden.
+
+Decision 6: Frontend RUM is in scope. `@opentelemetry/sdk-trace-web` plus
+fetch + route-change + error instrumentation. NO UI MUTATIONS — RUM is
+added via top-level bootstrap only; no per-page changes.
+
+Decision 7: Verification floor. Every phase-44 prompt's gate runs:
+`go build ./...`, `go test -race ./...` for changed packages,
+`golangci-lint run` for changed packages, `helm lint` for changed charts,
+`npx tsc --noEmit` + `npm run build` for changed frontend, plus its own
+prompt-specific assertions.
+=== GATE ===
+Predecessor not DONE: .github\prompts\db-refactor\logs\phase-43-9999-final-gate.log
+EXIT=1
+STATUS=BLOCKED
+=== PREFLIGHT ===
+BRANCH=refactor/signals-rewrite
+GIT_STATUS_START
+GIT_STATUS_END
+=== DECISIONS ===
+Decision 1: Observability is purely additive. Phase-44 NEVER deletes
+existing tracing, metrics, alerts, or dashboards. Cleanup prompts BLOCK on
+gaps; they do not prune.
+
+Decision 2: Self-hosted stack. Tempo for traces, Loki (existing or new) for
+logs, Prometheus (existing) for metrics, Grafana (existing) for dashboards.
+No external SaaS dependency in the default deployment.
+
+Decision 3: OpenTelemetry is the only tracing API. Existing
+`internal/tracing/` package is the bootstrap; all new spans use
+`otel.Tracer("...")`. The legacy Jaeger client is preserved for the dev
+docker-compose but receives traces via the OTel collector — direct Jaeger
+SDK calls are forbidden in new code.
+
+Decision 4: SLOs are declarative. Defined in `slo/catalog.yaml`, generated
+into Prometheus recording + alerting rules and Grafana dashboards by code
+generators. Hand-edited rule files are forbidden.
+
+Decision 5: Multi-window multi-burn-rate alerts. Per Google SRE workbook:
+fast burn (1h, 14.4x) pages; slow burn (6h, 6x) tickets. Single-window
+"error rate > X" alerts are forbidden.
+
+Decision 6: Frontend RUM is in scope. `@opentelemetry/sdk-trace-web` plus
+fetch + route-change + error instrumentation. NO UI MUTATIONS — RUM is
+added via top-level bootstrap only; no per-page changes.
+
+Decision 7: Verification floor. Every phase-44 prompt's gate runs:
+`go build ./...`, `go test -race ./...` for changed packages,
+`golangci-lint run` for changed packages, `helm lint` for changed charts,
+`npx tsc --noEmit` + `npm run build` for changed frontend, plus its own
+prompt-specific assertions.
+=== GATE ===
+Decisions locked.
+EXIT=0
+STATUS=DONE
+=== COMMIT ===
