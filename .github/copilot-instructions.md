@@ -80,6 +80,50 @@ TeslaSync is a **self-hosted Tesla Fleet Intelligence Platform** — Go 1.25 bac
 Collects, analyzes, and visualizes Tesla vehicle data via Fleet API + Fleet Telemetry streaming.
 **Repository:** `github.com/ev-dev-labs/teslasync`
 
+## ⚠️ ACTIVE MIGRATION: Phase-48 — SI Canonical Mega-PR (no legacy)
+
+> **Status:** methodology committed, execution pending. Branch
+> `refactor/signals-rewrite`, methodology at
+> `.github/prompts/db-refactor/phase-48-si-canonical/0000-methodology.prompt.md`,
+> pre-execution decisions locked at HEAD `66b5705c`. User mandate (verbatim):
+> *"we need just the new one. and all must use the new one. no legacy"* —
+> single mega-PR across 6 vertical slices, no temporary dual-shape adapters
+> beyond the explicit Slice 4 share-link transition.
+>
+> Renames every legacy unit-suffixed Go field
+> (`DistanceMi`, `DurationMin`, `EnergyUsedKwh`, `RegenKwh`, `AvgSpeedMph`,
+> `MaxSpeedMph`, `AvgPowerKw` and 97 peers across `Trip`, `ChargingSession`,
+> `EnergyDailySummary`, etc.) to SI canonical (`DistanceM`, `DurationS`,
+> `EnergyUsedWh`, …`Mps`, …`W`). Frontend `useSettings.ts` legacy converter
+> block + `unitConversion.ts` `@deprecated` block are DELETED in Slice 5 —
+> DO NOT add new callers of the legacy helpers.
+
+```
+❌ DO NOT add new Go struct fields with `Mi`/`Min`/`Mph`/`Kwh`/`Kw`/`Psi` suffixes
+   — use `M`, `S`, `Mps`, `Wh`, `W`, `Kpa` instead.
+❌ DO NOT add new JSON/DB column names ending in `_mi`/`_min`/`_mph`/`_kwh`/`_kw`/`_psi`
+   — use `_m`/`_s`/`_mps`/`_wh`/`_w`/`_kpa`.
+❌ DO NOT call `useSettings()`'s legacy converter block
+   (`convertDistance`/`convertSpeed`/`convertTemp`/`convertEfficiency`/
+   `convertPressure`/`fmtDistance`/`fmtSpeed`/`fmtTemp`/`fmtPressure`)
+   — being deleted in Slice 5.
+❌ DO NOT call any `@deprecated`-marked function in
+   `web/src/lib/unitConversion.ts` (block at L397+).
+✅ DO read SI directly from the API. Phase-42 migration 000185 already
+   stores everything as SI in the database.
+✅ DO convert at the display boundary using `useUnits()` (web/src/hooks/useUnits.ts)
+   + the SI converters/formatters in `web/src/lib/unitConversion.ts` (L1-395).
+✅ DO check the methodology document's 6-slice plan + 5 risk register
+   (R1 write-path corruption, R2 charge_rate_mph misname, R3 OpenAPI
+   contract, R4 camelCaseKeys dual-shape, R5 useSettings non-unit responsibilities)
+   before starting any change that touches a unit-suffixed field.
+```
+
+If you find yourself touching a Drive/Charging/Trip/Energy struct field
+mid-stream, STOP and read
+`.github/prompts/db-refactor/phase-48-si-canonical/0000-methodology.prompt.md`.
+Slice ordering matters — out-of-order edits introduce write-path corruption.
+
 ## ✅ COMPLETED MIGRATION: Phase-42 — Tesla Fleet Telemetry Pipeline Rewrite
 
 > **Status:** COMPLETE. Phase-42 final-gate v2 PASSED at commit `b1dd7ea4`
