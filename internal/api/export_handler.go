@@ -420,9 +420,9 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.
 		VehicleID int64   `json:"vehicle_id"`
 		StartDate string  `json:"start_date"`
 		EndDate   string  `json:"end_date"`
-		Distance  float64 `json:"distance"`
-		Duration  float64 `json:"duration_min"`
-		SpeedMax  float64 `json:"speed_max"`
+		DistanceM float64 `json:"distance_m"`
+		DurationS int64   `json:"duration_s"`
+		SpeedMax  float64 `json:"max_speed_mps"`
 	}
 
 	var allDrives []exportDrive
@@ -437,9 +437,9 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.
 				ID:        d.ID,
 				VehicleID: d.VehicleID,
 				StartDate: d.StartTs.Format("2006-01-02T15:04:05Z"),
-				Distance:  d.DistanceM / 1609.344,
-				Duration:  float64(d.DurationS) / 60.0,
-				SpeedMax:  ptrFloatMpsToMphAPI(d.MaxSpeedMps),
+				DistanceM: d.DistanceM,
+				DurationS: d.DurationS,
+				SpeedMax:  ptrFloat(d.MaxSpeedMps),
 			}
 			if d.EndTs != nil {
 				ed.EndDate = d.EndTs.Format("2006-01-02T15:04:05Z")
@@ -458,15 +458,15 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", "attachment; filename=teslasync-drives.csv")
 	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "distance", "duration_min", "speed_max"})
+	_ = cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "distance_m", "duration_s", "max_speed_mps"})
 	for _, d := range allDrives {
 		_ = cw.Write([]string{
 			strconv.FormatInt(d.ID, 10),
 			strconv.FormatInt(d.VehicleID, 10),
 			d.StartDate,
 			d.EndDate,
-			fmt.Sprintf("%.2f", d.Distance),
-			fmt.Sprintf("%.1f", d.Duration),
+			fmt.Sprintf("%.2f", d.DistanceM),
+			strconv.FormatInt(d.DurationS, 10),
 			fmt.Sprintf("%.1f", d.SpeedMax),
 		})
 	}

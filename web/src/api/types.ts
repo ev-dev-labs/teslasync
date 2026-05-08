@@ -1093,7 +1093,7 @@ export interface VisitedLocation {
   address_id: number | null
   address_name: string
   visit_count: number
-  total_duration_min: number
+  total_duration_s: number
   last_visited: string | null
   created_at: string
 }
@@ -1498,7 +1498,7 @@ export interface TempEfficiencyBucket {
   temp_bucket: string
   drive_count: number
   avg_distance_km: number
-  avg_duration_min: number
+  avg_duration_s: number
   avg_battery_pct_per_100km: number
   avg_temp: number
 }
@@ -1530,7 +1530,7 @@ export interface RouteSummary {
   end_location: string
   trip_count: number
   avg_distance_km: number
-  avg_duration_min: number
+  avg_duration_s: number
   avg_efficiency: number
   best_efficiency: number
   worst_efficiency: number
@@ -1542,8 +1542,8 @@ export interface RouteDriveDetail {
   id: number
   start_date: string
   distance: number
-  duration_min: number
-  speed_avg: number
+  duration_s: number
+  avg_speed_mps: number
   start_battery_level: number
   end_battery_level: number
   outside_temp_avg: number
@@ -1830,8 +1830,8 @@ export interface SleepAnalytics {
 
 export interface RegenData {
   vehicle_id: number
-  total_regen_kwh: number
-  total_drive_kwh: number
+  total_regen_wh: number
+  total_drive_wh: number
   regen_ratio: number
   monthly_avg_regen: number
   free_charges: number

@@ -66,7 +66,7 @@ export default function EfficiencyPage() {
   const { data: drives } = useDrives(vehicleIdStr);
 
   const { isFahrenheit } = useSettings();
-  const { unitPrefs } = useUnits();
+  const { unitPrefs, formatDuration, formatEnergy } = useUnits();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
 
   const distanceUnit = unitPrefs.distance;
@@ -502,8 +502,8 @@ export default function EfficiencyPage() {
                   <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(stats.regenRatio * 100)}%</p>
                 </div>
                 <div>
-                  <MetricBar label={t('efficiency.totalDriveTime', 'Total Drive Time')} value={stats.totalDurationMin} max={Math.max(stats.totalDurationMin, 600)} color="#f59e0b" />
-                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(stats.totalDurationMin / 60)} {t('efficiency.hours', 'h')}</p>
+                  <MetricBar label={t('efficiency.totalDriveTime', 'Total Drive Time')} value={stats.totalDurationS} max={Math.max(stats.totalDurationS, 36000)} color="#f59e0b" />
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{formatDuration(stats.totalDurationS, { precision: 1 })}</p>
                 </div>
               </div>
             </>
@@ -524,7 +524,7 @@ export default function EfficiencyPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
                 <div>
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.totalRegen', 'Total Regen')}</p>
-                  <p className="text-lg font-bold text-green-400">{fmtNumber(stats.totalRegenKwh)} <span className="text-xs text-[var(--text-muted)]">kWh</span></p>
+                  <p className="text-lg font-bold text-green-400">{formatEnergy(stats.regenEnergyWh, { precision: 1 })}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.regenRatioLabel', 'Regen Ratio')}</p>

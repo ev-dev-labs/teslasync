@@ -1185,7 +1185,7 @@ paths:
                     type: integer
                   total_distance_km:
                     type: number
-                  total_energy_kwh:
+                  total_energy_wh:
                     type: number
                   total_charging_sessions:
                     type: integer
@@ -2255,7 +2255,7 @@ paths:
                     end_time:
                       type: string
                       format: date-time
-                    energy_lost_kwh:
+                    energy_lost_wh:
                       type: number
                     start_battery_level:
                       type: integer
@@ -2287,11 +2287,11 @@ paths:
                 properties:
                   total_events:
                     type: integer
-                  total_energy_lost_kwh:
+                  total_energy_lost_wh:
                     type: number
-                  avg_drain_rate_kwh_per_hour:
+                  avg_drain_rate_w:
                     type: number
-                  worst_drain_kwh:
+                  worst_drain_wh:
                     type: number
         "500":
           $ref: "#/components/responses/InternalError"

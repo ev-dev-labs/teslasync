@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/rs/zerolog/log"
 )
 
 // RouteEfficiencyHandler serves route-efficiency analytics.
@@ -18,17 +18,14 @@ func NewRouteEfficiencyHandler(db *database.DB) *RouteEfficiencyHandler {
 	return &RouteEfficiencyHandler{db: db}
 }
 
-// routeSummary fields preserve the legacy display semantics (km/min/mph/°C)
-// even though the underlying drives columns are now SI canonical
-// (distance_m / duration_s / avg_speed_mps / ambient_temp_c_avg). The Go
-// boundary converts at scan time so the JSON shape stays stable for the
-// frontend's RouteEfficiencyData.
+// routeSummary reads from SI-canonical drives columns. Frontend consumers
+// convert display units at the render boundary.
 type routeSummary struct {
 	StartLocation   string  `json:"start_location"`
 	EndLocation     string  `json:"end_location"`
 	TripCount       int     `json:"trip_count"`
 	AvgDistanceKm   float64 `json:"avg_distance_km"`
-	AvgDurationMin  float64 `json:"avg_duration_minutes"`
+	AvgDurationS    float64 `json:"avg_duration_s"`
 	AvgEfficiency   float64 `json:"avg_efficiency"`
 	BestEfficiency  float64 `json:"best_efficiency"`
 	WorstEfficiency float64 `json:"worst_efficiency"`
@@ -70,15 +67,14 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 	// Phase-42 SI canonical drives (migration 000185): start_place/end_place
 	// for grouping, distance_m/duration_s/avg_speed_mps for metrics,
 	// start_soc_pct/end_soc_pct for SoC, ambient_temp_c_avg for temperature.
-	// All conversions back to legacy display units (km/min/mph/°C) happen
-	// inside Postgres so the response keys keep their semantics.
+	// Durations and speeds are returned in SI units.
 	rows, err := h.db.Pool.Query(ctx, `
 		SELECT
 		  start_place as start_location,
 		  end_place as end_location,
 		  COUNT(*) as trip_count,
 		  AVG(distance_m / 1000.0) as avg_distance_km,
-		  AVG(duration_s / 60.0) as avg_duration_minutes,
+		  AVG(duration_s) as avg_duration_s,
 		  AVG(CASE WHEN distance_m > 0
 		           THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
 		           ELSE 0 END) as avg_efficiency,
@@ -119,7 +115,7 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 			rs.AvgDistanceKm = math.Round(*avgDist*100) / 100
 		}
 		if avgDur != nil {
-			rs.AvgDurationMin = math.Round(*avgDur*100) / 100
+			rs.AvgDurationS = math.Round(*avgDur*100) / 100
 		}
 		if avgEff != nil {
 			rs.AvgEfficiency = math.Round(*avgEff*100) / 100

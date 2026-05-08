@@ -13,8 +13,8 @@ type ChargingSession struct {
 	ChargerType       string    `json:"chargerType" db:"charger_type"` // "ac", "dc", "supercharger"
 	StartBatteryLevel int       `json:"startBatteryLevel" db:"start_battery_pct"`
 	EndBatteryLevel   int       `json:"endBatteryLevel" db:"end_battery_pct"`
-	EnergyAddedKWh    float64   `json:"energyAddedKwh" db:"energy_added_kwh"`
-	MaxPowerKW        float64   `json:"maxPowerKw" db:"max_power_kw"`
+	EnergyAddedWh     float64   `json:"energyAddedWh" db:"energy_added_wh"`
+	MaxPowerW         float64   `json:"maxPowerW" db:"max_power_w"`
 	CostCents         int       `json:"costCents" db:"cost_cents"`
 	FSMState          fsm.State `json:"fsmState" db:"fsm_state"`
 	SubFSMState       fsm.State `json:"subFsmState,omitempty" db:"sub_fsm_state"`

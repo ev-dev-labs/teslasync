@@ -96,7 +96,7 @@ var driveTelemetryFieldMappings = []signal.FieldMapping{
 // downstream chart consumers can distinguish drive (+) from regen (−).
 //
 // This mirrors the formula used by enrichLiveDrive() for live drive
-// AvgPowerKw and by signalPowerKW() in telemetry_sessions_signal_helpers.go
+// average-power and by signalPowerKW() in telemetry_sessions_signal_helpers.go
 // — Tesla Fleet Telemetry does not emit a per-row PackPower signal.
 func derivePowerKw(rows []map[string]interface{}) {
 	for _, row := range rows {

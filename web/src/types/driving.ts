@@ -99,12 +99,12 @@ export interface DriveScore {
 export interface DrivingStats {
   totalDrives: number;
   totalDistanceKm: number;
-  totalDurationMin: number;
+  totalDurationS: number;
   avgEfficiencyWhKm: number;
   avgSpeedKmh: number;
   topSpeedKmh: number;
   regenRatio: number;
-  totalRegenKwh: number;
+  regenEnergyWh: number;
   co2SavedKg: number;
 }
 
@@ -150,7 +150,8 @@ export interface SpeedBucket {
 }
 
 export interface RegenEfficiencyData {
-  totalRegenKwh: number;
+  totalRegenWh: number;
+  totalDriveWh: number;
   regenRatio: number;
   monthlyAvgRegen: number;
   freeCharges: number;

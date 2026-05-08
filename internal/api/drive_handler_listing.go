@@ -44,8 +44,8 @@ const (
 	driveStatsMetersPerMile  = 1609.344
 	driveStatsMpsPerMph      = 0.44704
 	driveStatsKilo           = 1000.0
-	driveStatsTwoMilesMeters = 2.0 * driveStatsMetersPerMile  // ~3218.688 m
-	driveStatsSpeedLimitMps  = 130.0 * driveStatsMpsPerMph    // ~58.1152 m/s
+	driveStatsTwoMilesMeters = 2.0 * driveStatsMetersPerMile // ~3218.688 m
+	driveStatsSpeedLimitMps  = 130.0 * driveStatsMpsPerMph   // ~58.1152 m/s
 )
 
 // Stats returns aggregate driving statistics for a vehicle.
@@ -84,11 +84,10 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Convert SI aggregates to legacy display units. Preserves prior JSON
-	// keys and (pre-existing) value semantics: total_distance_km has always
-	// returned miles; *_kmh keys have always returned mph.
+	// Convert selected SI aggregates only where existing non-Phase-48 fields
+	// intentionally remain outside this slice. Duration and regen are exposed
+	// in SI canonical fields.
 	totalDistMi := scaleNullable(totalDistMeters, 1.0/driveStatsMetersPerMile)
-	totalDurMin := scaleNullable(totalDurSec, 1.0/60.0)
 	avgSpeedMph := scaleNullable(avgSpeedMpsVal, 1.0/driveStatsMpsPerMph)
 	topSpeedMph := scaleNullable(topSpeedMpsVal, 1.0/driveStatsMpsPerMph)
 
@@ -111,7 +110,7 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Regen: estimate from negative average-power readings.
-	// avg_power_w * duration_s / 3600 = Watt-hours; divide by 1000 for kWh.
+	// avg_power_w * duration_s / 3600 = Watt-hours.
 	var totalRegenWh *float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT SUM(CASE WHEN avg_power_w IS NOT NULL AND avg_power_w < 0
@@ -122,7 +121,7 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Debug().Err(err).Msg("drive stats: regen query")
 	}
-	totalRegenKwh := scaleNullable(totalRegenWh, 1.0/driveStatsKilo)
+	totalRegenEnergyWh := scaleNullable(totalRegenWh, 1.0)
 
 	sf := func(v *float64) float64 {
 		if v == nil {
@@ -135,7 +134,7 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	totalDist := sf(totalDistMi)
-	regenKwh := sf(totalRegenKwh)
+	regenEnergyWh := sf(totalRegenEnergyWh)
 
 	// CO2 saved: ~120g CO2/km for an average ICE car, minus ~50g/km for EV
 	co2SavedKg := totalDist * 0.070 // net 70g/km saved
@@ -144,9 +143,9 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	regenRatio := 0.0
 	if totalDist > 0 {
 		// Approximate total energy used: ~150 Wh/km average
-		totalEnergyKwh := totalDist * 0.15
-		if totalEnergyKwh > 0 {
-			regenRatio = regenKwh / totalEnergyKwh
+		totalEnergyWh := totalDist * 150
+		if totalEnergyWh > 0 {
+			regenRatio = regenEnergyWh / totalEnergyWh
 			if regenRatio > 1 {
 				regenRatio = 1
 			}
@@ -156,12 +155,12 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"total_drives":         totalDrives,
 		"total_distance_km":    math.Round(totalDist*100) / 100,
-		"total_duration_min":   sf(totalDurMin),
+		"total_duration_s":     sf(totalDurSec),
 		"avg_efficiency_wh_km": sf(avgEfficiency),
 		"avg_speed_kmh":        sf(avgSpeedMph),
 		"top_speed_kmh":        sf(topSpeedMph),
 		"regen_ratio":          math.Round(regenRatio*1000) / 1000,
-		"total_regen_kwh":      math.Round(regenKwh*100) / 100,
+		"regen_energy_wh":      math.Round(regenEnergyWh*100) / 100,
 		"co2_saved_kg":         math.Round(co2SavedKg*100) / 100,
 	})
 }

@@ -13,5 +13,5 @@ func CanStartCharging(_ context.Context, s *ChargingSession, _ fsm.Event) (bool,
 
 // CanComplete checks that energy was actually added.
 func CanComplete(_ context.Context, s *ChargingSession, _ fsm.Event) (bool, error) {
-	return s.EnergyAddedKWh > 0 && s.EndBatteryLevel >= s.StartBatteryLevel, nil
+	return s.EnergyAddedWh > 0 && s.EndBatteryLevel >= s.StartBatteryLevel, nil
 }

@@ -1041,9 +1041,9 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		// reported in kWh; convert to SI Wh for the energy_used_wh column.
 		if startEnergy, ok := snapFloat(startSnap, "LifetimeEnergyUsed"); ok {
 			if endEnergy, ok := snapFloat(endSnap, "LifetimeEnergyUsed"); ok {
-				energyUsedKwh := endEnergy - startEnergy
-				if energyUsedKwh > 0 {
-					enhancedFields["energy_used_wh"] = energyUsedKwh * 1000.0
+				energyUsedDisplay := endEnergy - startEnergy
+				if energyUsedDisplay > 0 {
+					enhancedFields["energy_used_wh"] = energyUsedDisplay * 1000.0
 				}
 			}
 		}

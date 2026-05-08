@@ -4,8 +4,8 @@ import (
 	"math"
 	"net/http"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/rs/zerolog/log"
 )
 
 // TempImpactHandler serves temperature-impact analytics.
@@ -21,7 +21,7 @@ type tempEfficiencyBucket struct {
 	TempBucket         string  `json:"temp_bucket"`
 	DriveCount         int     `json:"drive_count"`
 	AvgDistanceKm      float64 `json:"avg_distance_km"`
-	AvgDurationMin     float64 `json:"avg_duration_min"`
+	AvgDurationS       float64 `json:"avg_duration_s"`
 	AvgBatteryPer100km float64 `json:"avg_battery_pct_per_100km"`
 	AvgTemp            float64 `json:"avg_temp"`
 }
@@ -37,7 +37,7 @@ type monthlyTempTrend struct {
 	AvgTemp       float64 `json:"avg_temp"`
 	AvgEfficiency float64 `json:"avg_efficiency"`
 	DriveCount    int     `json:"drive_count"`
-	TotalDistance  float64 `json:"total_distance"`
+	TotalDistance float64 `json:"total_distance"`
 }
 
 func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +57,7 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// Phase-42 SI canonical drives (migration 000185): ambient_temp_c_avg
 	// (Celsius), distance_m (meters), duration_s (seconds),
 	// start_soc_pct/end_soc_pct (REAL). avg_distance_km computed in SQL,
-	// avg_duration_min computed by dividing duration_s by 60. The
+	// avg_duration_s is read directly from duration_s. The
 	// `> 2 miles` filter becomes `distance_m > 3218.688`.
 	effRows, err := h.db.Pool.Query(ctx, `
 		SELECT
@@ -70,7 +70,7 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 		  END as temp_bucket,
 		  COUNT(*) as drive_count,
 		  AVG(distance_m / 1000.0) as avg_distance_km,
-		  AVG(duration_s / 60.0) as avg_duration_min,
+		  AVG(duration_s) as avg_duration_s,
 		  AVG(CASE WHEN distance_m > 0
 		           THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
 		           ELSE 0 END) as avg_battery_pct_per_100km,
@@ -99,7 +99,7 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 			b.AvgDistanceKm = math.Round(*avgDist*100) / 100
 		}
 		if avgDur != nil {
-			b.AvgDurationMin = math.Round(*avgDur*100) / 100
+			b.AvgDurationS = math.Round(*avgDur*100) / 100
 		}
 		if avgBat != nil {
 			b.AvgBatteryPer100km = math.Round(*avgBat*100) / 100
@@ -219,9 +219,15 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 			if err := pointRows.Scan(&temp, &eff, &dist, &driveDate); err != nil {
 				continue
 			}
-			if temp != nil { p.OutsideTemp = math.Round(*temp*10) / 10 }
-			if eff != nil { p.EfficiencyWhKm = math.Round(*eff*10) / 10 }
-			if dist != nil { p.DistanceKm = math.Round(*dist*10) / 10 }
+			if temp != nil {
+				p.OutsideTemp = math.Round(*temp*10) / 10
+			}
+			if eff != nil {
+				p.EfficiencyWhKm = math.Round(*eff*10) / 10
+			}
+			if dist != nil {
+				p.DistanceKm = math.Round(*dist*10) / 10
+			}
 			if dt, ok := driveDate.(interface{ Format(string) string }); ok {
 				p.DriveDate = dt.Format("2006-01-02")
 			}

@@ -318,7 +318,7 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 		}
 	}
 	durationMin := now.Sub(state.StartTime).Minutes()
-	maxSpeedMph := state.MaxSpeed
+	maxSpeedUS := state.MaxSpeed
 
 	var speedAvgMph *float64
 	if state.SpeedCount > 0 {
@@ -345,7 +345,7 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 	const mpsPerMph = 0.44704
 	distanceM := distanceMi * mPerMile
 	durationS := int64(durationMin*60.0 + 0.5)
-	maxSpeedMps := maxSpeedMph * mpsPerMph
+	maxSpeedMps := maxSpeedUS * mpsPerMph
 
 	// Complete with core fields (SI canonical per Phase-48)
 	endBatteryPct := int16(endBattery)

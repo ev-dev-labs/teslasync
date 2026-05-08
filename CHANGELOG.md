@@ -2,14 +2,41 @@
 
 All notable changes to TeslaSync are documented here.
 
-## [Unreleased]
+## [Unreleased] - Phase-48 SI canonical
 
-### Phase-48 SI canonical migration
+Phase-48 completes the forward-only SI canonical mega-PR: production APIs,
+exports, share payloads, frontend types, and documentation now use the new SI
+field names only. Methodology:
+`.github/prompts/db-refactor/phase-48-si-canonical/0000-methodology.prompt.md`.
 
-- **BREAKING: CSV exports v2** — Drive, charging, trip, and account-backup CSV filenames now use `-v2.csv` (`teslasync-drives-v2.csv`, `teslasync-charging-v2.csv`, `teslasync-trips-v2.csv`, and `*-v2.csv` files inside account ZIPs). Old CSV filenames are removed; there is no v1/v2 toggle.
-- **BREAKING: CSV columns renamed to SI canonical** — External scripts must update from legacy headers such as `distance`, `duration_min`, and `speed_max` to v2 headers such as `distance_m`, `duration_s`, `max_speed_mps`, `total_energy_wh`, and `total_duration_s`.
-- **BREAKING: Share payload v2** — Public share responses now include `payload_version: "v2"` and expose `distance_m`, `duration_s`, and `max_speed_mps` instead of `distance_km`, `duration_min`, and `max_speed_kmh`. Existing v1 share URLs are honored read-only by the SPA parser.
-- Trip base models no longer expose stale denormalized aggregates; trip list/detail responses compute SI aggregates from constituent drives on read.
+Slice commits:
+- `f916031b4` — Slice 1: Drive aggregates renamed to SI canonical.
+- `f729a6a8` — Slice 2: Charging aggregates and telemetry renamed to SI canonical.
+- `3371a493a` — Slice 3: Battery, energy, range, and mileage DTOs renamed.
+- `6dc10602` — Slice 4: Trips, share payloads, import/export surfaces renamed.
+- `6b19fd618` — Slice 5: Frontend legacy unit converters deleted.
+- Slice 6 — Final hexagonal trip/dashboard cleanup, OpenAPI sweep, and docs.
+
+Breaking changes:
+- **CSV exports** — v2 filenames/columns are SI-only (for example
+  `distance_m`, `duration_s`, `max_speed_mps`, `energy_used_wh`,
+  `regen_energy_wh`). Update import scripts and dashboards that parse old CSV
+  headers.
+- **Share links** — share payloads use the v2 SI schema (`distance_m`,
+  `duration_s`, `max_speed_mps`) and no longer publish legacy display-unit
+  fields.
+- **API fields** — legacy names such as `distance_mi`, `duration_min`,
+  `energy_used_kwh`, `max_speed_mph`, `total_miles`, and `regen_kwh` were
+  renamed to SI equivalents (`distance_m`, `duration_s`, `energy_used_wh`,
+  `max_speed_mps`, `total_m`, `regen_energy_wh`).
+
+Migration guide for external consumers:
+1. Regenerate clients from `docs/public/openapi.yaml`.
+2. Rename request/response field reads to the SI names above.
+3. Treat energy values as Wh, distance as m, speed as m/s, power as W, and
+   durations as s; apply display-unit conversion only at presentation time.
+4. Update CSV parsers to accept the v2 filenames and headers.
+5. Re-issue share links if downstream tooling requires v2-only payloads.
 
 ### 🚀 New Features
 

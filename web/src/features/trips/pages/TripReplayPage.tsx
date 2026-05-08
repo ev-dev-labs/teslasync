@@ -98,7 +98,7 @@ function fmtDriveTime(min: number): string {
  *   Position-derived fields (speed, outsideTemp, ratedRange, cumulative
  *   distance from haversine) are SI canonical. They go through
  *   `convertXFromSI` from `@/lib/unitConversion` via `useUnits`.
- *   Drive-level summary fields (`drive.distanceM`, `maxSpeedMph`,
+ *   Drive-level summary fields (`drive.distanceM`, `maxSpeedMps`,
  *   `avgSpeedMph`) are genuine miles/mph after the SQL adapter boundary
  *   in `internal/database/drive_repo.go`, so they remain on the legacy
  *   `useSettings` helpers (locked-policy continuation from Phase-43/0022

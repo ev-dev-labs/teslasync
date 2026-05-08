@@ -148,9 +148,8 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		m.Month = monthTime.Format("2006-01")
-		// Convert SI -> legacy display units at the response boundary.
 		if avgPowerW != nil {
-			m.AvgRegenPower = math.Round((*avgPowerW/driveStatsKilo)*10) / 10
+			m.AvgRegenPower = math.Round(*avgPowerW*10) / 10
 		}
 		if avgSpeedMps != nil {
 			m.AvgSpeed = math.Round((*avgSpeedMps/driveStatsMpsPerMph)*10) / 10
@@ -164,11 +163,7 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		monthly = []monthlySummary{}
 	}
 
-	// Lifetime regen/drive energy — not available in current schema, use
-	// aggregated cagg_fleet_stats regen totals when available.
-	// Phase-42 (prompt 0077, migration 000188): cagg_fleet_stats now stores
-	// energy in Wh (total_regen_wh / total_energy_wh). Convert to kWh at
-	// the JSON-populate site (×0.001) to keep the API contract unchanged.
+	// Lifetime regen/drive energy from SI-canonical cagg_fleet_stats (Wh).
 	var totalRegenWh, totalDriveWh float64
 	if err := h.db.Pool.QueryRow(ctx, `
 		SELECT
@@ -178,12 +173,9 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		WHERE vehicle_id = $1`, vehicleID).Scan(&totalRegenWh, &totalDriveWh); err != nil && err != pgx.ErrNoRows {
 		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("regen: cagg_fleet_stats query failed")
 	}
-	totalRegenKWh := totalRegenWh * 0.001
-	totalDriveKWh := totalDriveWh * 0.001
-
 	regenRatio := 0.0
-	if totalDriveKWh > 0 {
-		regenRatio = totalRegenKWh / totalDriveKWh * 100
+	if totalDriveWh > 0 {
+		regenRatio = totalRegenWh / totalDriveWh * 100
 	}
 
 	// Monthly average regen power
@@ -204,8 +196,8 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id":        vehicleID,
-		"total_regen_kwh":   math.Round(totalRegenKWh*100) / 100,
-		"total_drive_kwh":   math.Round(totalDriveKWh*100) / 100,
+		"total_regen_wh":    math.Round(totalRegenWh*100) / 100,
+		"total_drive_wh":    math.Round(totalDriveWh*100) / 100,
 		"regen_ratio":       math.Round(regenRatio*10) / 10,
 		"monthly_avg_regen": monthlyAvgRegen,
 		"free_charges":      freeCharges,

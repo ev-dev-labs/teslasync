@@ -11,7 +11,7 @@ import (
 // DashboardStats holds aggregated dashboard metrics.
 type DashboardStats struct {
 	TotalVehicles         int     `json:"totalVehicles"`
-	TotalMiles            float64 `json:"totalMiles"`
+	TotalM                float64 `json:"totalM"`
 	TotalEnergyWh         float64 `json:"totalEnergyWh"`
 	TotalChargingSessions int     `json:"totalChargingSessions"`
 	TotalTrips            int     `json:"totalTrips"`
@@ -60,8 +60,8 @@ func (s *Service) GetStats(ctx context.Context, userID string) (*DashboardStats,
 		}
 		stats.TotalTrips += len(trips)
 		for _, t := range trips {
-			stats.TotalMiles += t.DistanceMiles
-			stats.TotalEnergyWh += t.EnergyUsedKWh * 1000
+			stats.TotalM += t.DistanceM
+			stats.TotalEnergyWh += t.EnergyUsedWh
 		}
 
 		sessions, err := s.chargingRepo.ListByDateRange(ctx, v.ID, monthAgo, now)
@@ -74,8 +74,8 @@ func (s *Service) GetStats(ctx context.Context, userID string) (*DashboardStats,
 		}
 	}
 
-	if stats.TotalMiles > 0 {
-		stats.AvgEfficiency = stats.TotalEnergyWh / stats.TotalMiles
+	if stats.TotalM > 0 {
+		stats.AvgEfficiency = stats.TotalEnergyWh / stats.TotalM
 	}
 
 	return stats, nil

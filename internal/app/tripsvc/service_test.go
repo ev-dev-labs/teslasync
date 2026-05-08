@@ -107,8 +107,8 @@ func TestService_Create(t *testing.T) {
 		VehicleID:      "v1",
 		StartLatitude:  37.7749,
 		StartLongitude: -122.4194,
-		DistanceMiles:  10.5,
-		EnergyUsedKWh: 3.2,
+		DistanceM:      10500,
+		EnergyUsedWh:   3200,
 	}
 	err := svc.Create(context.Background(), tr)
 	if err != nil {
@@ -131,7 +131,7 @@ func TestService_Create_ValidationError(t *testing.T) {
 	svc := New(newMockTripRepo(), &mockFSMHistory{}, nil)
 
 	// Missing VehicleID should fail validation
-	tr := &trip.Trip{ID: "t1", DistanceMiles: 5.0}
+	tr := &trip.Trip{ID: "t1", DistanceM: 5000}
 	err := svc.Create(context.Background(), tr)
 	if err == nil {
 		t.Error("expected validation error for missing VehicleID")
@@ -143,9 +143,9 @@ func TestService_GetByID(t *testing.T) {
 	svc := New(repo, &mockFSMHistory{}, nil)
 
 	tr := &trip.Trip{
-		ID:            "t1",
-		VehicleID:     "v1",
-		DistanceMiles: 5.0,
+		ID:        "t1",
+		VehicleID: "v1",
+		DistanceM: 5000,
 	}
 	_ = svc.Create(context.Background(), tr)
 
@@ -173,10 +173,10 @@ func TestService_HandleEvent(t *testing.T) {
 	svc := New(repo, history, nil)
 
 	tr := &trip.Trip{
-		ID:            "t1",
-		VehicleID:     "v1",
-		DistanceMiles: 10.0,
-		FSMState:      trip.StateStarted,
+		ID:        "t1",
+		VehicleID: "v1",
+		DistanceM: 10000,
+		FSMState:  trip.StateStarted,
 	}
 	_ = repo.Save(context.Background(), tr)
 
@@ -201,10 +201,10 @@ func TestService_HandleEvent_InvalidTransition(t *testing.T) {
 	svc := New(repo, &mockFSMHistory{}, nil)
 
 	tr := &trip.Trip{
-		ID:            "t1",
-		VehicleID:     "v1",
-		DistanceMiles: 10.0,
-		FSMState:      trip.StateStarted,
+		ID:        "t1",
+		VehicleID: "v1",
+		DistanceM: 10000,
+		FSMState:  trip.StateStarted,
 	}
 	_ = repo.Save(context.Background(), tr)
 

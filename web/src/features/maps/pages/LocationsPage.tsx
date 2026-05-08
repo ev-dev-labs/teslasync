@@ -75,7 +75,7 @@ export default function LocationsPage() {
   const totalTime = locations?.reduce((s, l) => s + l.total_duration_s, 0) ?? 0;
   const uniquePlaces = locations?.length ?? 0;
   const topLocation = locations?.[0];
-  const avgDurationMin = totalVisits > 0 ? totalTime / totalVisits : 0;
+  const avgDurationS = totalVisits > 0 ? totalTime / totalVisits : 0;
 
   const uniqueCities = useMemo(() => {
     if (!locations?.length) return 0;
@@ -131,7 +131,7 @@ export default function LocationsPage() {
           <MetricCard label={t('Total Visits')} value={totalVisits} icon={<Hash className="h-4 w-4" />} color="cyan" />
           <MetricCard label={t('Total Time')} value={formatDuration(totalTime)} icon={<Clock className="h-4 w-4" />} color="purple" />
           <MetricCard label={t('Most Visited')} value={topLocation?.address_name ?? '—'} icon={<Trophy className="h-4 w-4" />} color="amber" />
-          <MetricCard label={t('Avg Visit')} value={formatDuration(avgDurationMin)} icon={<Clock className="h-4 w-4" />} color="cyan" />
+          <MetricCard label={t('Avg Visit')} value={formatDuration(avgDurationS)} icon={<Clock className="h-4 w-4" />} color="cyan" />
         </div>
       </FadeIn>
 

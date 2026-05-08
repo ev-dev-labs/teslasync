@@ -1,16 +1,15 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // YearReviewHandler serves Spotify Wrapped-style annual driving reports.
@@ -23,32 +22,14 @@ func NewYearReviewHandler(db *database.DB) *YearReviewHandler {
 	return &YearReviewHandler{db: db}
 }
 
-// driveHighlight serializes the longest/shortest drive snapshot for the
-// year-review payload. The Duration JSON tag avoids a literal source
-// reference to the Phase-42-banned legacy column identifier so the gate
-// won't trip; MarshalJSON rebuilds the legacy key name from a runtime
-// concatenation, preserving the frontend contract.
 type driveHighlight struct {
 	DriveID        int64
 	Date           string
 	DistanceKm     float64
-	DurationMin    int
+	DurationS      int64
 	StartAddress   string
 	EndAddress     string
 	EfficiencyWhKm float64
-}
-
-func (d driveHighlight) MarshalJSON() ([]byte, error) {
-	out := map[string]interface{}{
-		"drive_id":         d.DriveID,
-		"date":             d.Date,
-		"distance_km":      d.DistanceKm,
-		"start_address":    d.StartAddress,
-		"end_address":      d.EndAddress,
-		"efficiency_wh_km": d.EfficiencyWhKm,
-	}
-	out["duration_"+"min"] = d.DurationMin
-	return json.Marshal(out)
 }
 
 type monthStat struct {
@@ -233,7 +214,7 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 		}
 		dh.Date = startDate.Format("2006-01-02")
 		dh.DistanceKm = distM / 1000.0
-		dh.DurationMin = int(durS / 60.0)
+		dh.DurationS = int64(durS)
 		if startAddr != nil {
 			dh.StartAddress = *startAddr
 		}
@@ -460,23 +441,23 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 		},
 
 		// Headline stats
-		"total_drives":           totalDrives,
-		"total_distance_km":      roundYR(totalDistKm, 1),
-		"total_energy_kwh":       roundYR(totalEnergyKwh, 1),
-		"total_charge_sessions":  totalChargeSessions,
-		"total_driving_minutes":  int(totalDrivingMin),
-		"total_charging_cost":    roundYR(totalChargingCost, 2),
-		"gas_savings":            roundYR(gasSavings, 2),
-		"co2_offset_kg":          roundYR(co2OffsetKg, 1),
+		"total_drives":          totalDrives,
+		"total_distance_km":     roundYR(totalDistKm, 1),
+		"total_energy_kwh":      roundYR(totalEnergyKwh, 1),
+		"total_charge_sessions": totalChargeSessions,
+		"total_driving_minutes": int(totalDrivingMin),
+		"total_charging_cost":   roundYR(totalChargingCost, 2),
+		"gas_savings":           roundYR(gasSavings, 2),
+		"co2_offset_kg":         roundYR(co2OffsetKg, 1),
 
 		// Extremes
-		"longest_drive":          longestDrive,
-		"shortest_drive":         shortestDrive,
-		"most_efficient_drive":   mostEfficient,
-		"least_efficient_drive":  leastEfficient,
-		"fastest_speed_kmh":      roundYR(derefFloat(fastestSpeed), 1),
-		"coldest_drive_temp_c":   roundYR(derefFloat(coldestTemp), 1),
-		"hottest_drive_temp_c":   roundYR(derefFloat(hottestTemp), 1),
+		"longest_drive":         longestDrive,
+		"shortest_drive":        shortestDrive,
+		"most_efficient_drive":  mostEfficient,
+		"least_efficient_drive": leastEfficient,
+		"fastest_speed_kmh":     roundYR(derefFloat(fastestSpeed), 1),
+		"coldest_drive_temp_c":  roundYR(derefFloat(coldestTemp), 1),
+		"hottest_drive_temp_c":  roundYR(derefFloat(hottestTemp), 1),
 
 		// Monthly breakdown
 		"monthly_stats": monthlyStats,
@@ -489,9 +470,9 @@ func (h *YearReviewHandler) GetYearReview(w http.ResponseWriter, r *http.Request
 		"avg_efficiency_wh_km":      roundYR(avgEffWhKm, 1),
 
 		// Charging habits
-		"supercharger_pct":    roundYR(superchargerPct, 1),
-		"dc_fast_pct":         roundYR(dcFastPct, 1),
-		"ac_other_pct":        roundYR(acOtherPct, 1),
+		"supercharger_pct":     roundYR(superchargerPct, 1),
+		"dc_fast_pct":          roundYR(dcFastPct, 1),
+		"ac_other_pct":         roundYR(acOtherPct, 1),
 		"avg_charge_start_soc": roundYR(avgChargeStartSOC, 1),
 
 		// Fun comparisons

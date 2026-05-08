@@ -61,7 +61,7 @@ function RouteCard({ route, efficiencyUnit, distanceUnit, toDistanceDisplay, toE
               {route.startLocation} <ArrowRight className="h-3 w-3 inline mx-1 text-[var(--text-muted)]" /> {route.endLocation}
             </p>
             <p className="text-[10px] text-[var(--text-muted)]">
-              {route.tripCount} {t('routeEfficiency.trips', 'trips')} · {fmtNumber(toDistanceDisplay(route.avgDistanceKm))} {distanceUnit} {t('routeEfficiency.avg', 'avg')}
+               {route.tripCount} {t('routeEfficiency.trips', 'trips')} · {fmtNumber(toDistanceDisplay(route.avgDistanceKm * 1000))} {distanceUnit} {t('routeEfficiency.avg', 'avg')}
             </p>
           </div>
         </div>

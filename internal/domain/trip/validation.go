@@ -10,12 +10,12 @@ func (t *Trip) Validate() error {
 		errs = append(errs, domain.ValidationError{Field: "vehicleId", Message: "required"})
 	}
 
-	if t.DistanceMiles < 0 {
-		errs = append(errs, domain.ValidationError{Field: "distanceMiles", Message: "must be non-negative"})
+	if t.DistanceM < 0 {
+		errs = append(errs, domain.ValidationError{Field: "distanceM", Message: "must be non-negative"})
 	}
 
-	if t.EnergyUsedKWh < 0 {
-		errs = append(errs, domain.ValidationError{Field: "energyUsedKwh", Message: "must be non-negative"})
+	if t.EnergyUsedWh < 0 {
+		errs = append(errs, domain.ValidationError{Field: "energyUsedWh", Message: "must be non-negative"})
 	}
 
 	if len(errs) > 0 {

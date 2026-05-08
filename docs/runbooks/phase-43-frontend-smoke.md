@@ -440,7 +440,7 @@ profiles before signing off the release.
 
 ### DataRepairPage — `/system/data-repair`
 - [ ] Drive-edit form loads selected drive.
-- [ ] Submitting an edit (distance_mi, max_speed_mph, end_battery_pct)
+- [ ] Submitting an edit (distance_m, max_speed_mps, end_battery_pct)
       persists and the drive list reflects the change (Phase-43/0029
       silent-drop fix in effect).
 

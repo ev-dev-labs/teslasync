@@ -1,52 +1,73 @@
 package queries
 
+const tripSelectFrom = `
+		SELECT t.id::text AS id,
+		       t.vehicle_id::text AS vehicle_id,
+		       COALESCE(first_drive.start_lat, 0) AS start_latitude,
+		       COALESCE(first_drive.start_lng, 0) AS start_longitude,
+		       COALESCE(last_drive.end_lat, 0) AS end_latitude,
+		       COALESCE(last_drive.end_lng, 0) AS end_longitude,
+		       COALESCE(first_drive.start_place, '') AS start_address,
+		       COALESCE(last_drive.end_place, '') AS end_address,
+		       COALESCE(agg.distance_m, 0) AS distance_m,
+		       COALESCE(agg.energy_used_wh, 0) AS energy_used_wh,
+		       CASE WHEN COALESCE(agg.distance_m, 0) > 0
+		            THEN COALESCE(agg.energy_used_wh, 0) / agg.distance_m
+		            ELSE 0 END AS efficiency_wh_per_m,
+		       COALESCE(agg.max_speed_mps, 0) AS max_speed_mps,
+		       CASE WHEN t.ended_at IS NULL THEN 'started' ELSE 'completed' END AS fsm_state,
+		       t.started_at,
+		       COALESCE(t.ended_at, t.started_at) AS completed_at,
+		       t.started_at AS created_at
+		FROM trips t
+		LEFT JOIN LATERAL (
+			SELECT SUM(COALESCE(d.distance_m, 0)) AS distance_m,
+			       SUM(COALESCE(d.energy_used_wh, 0)) AS energy_used_wh,
+			       MAX(d.max_speed_mps) AS max_speed_mps
+			FROM trip_drives td
+			JOIN drives d ON d.id = td.drive_id
+			WHERE td.trip_id = t.id
+		) agg ON true
+		LEFT JOIN LATERAL (
+			SELECT d.start_lat, d.start_lng, d.start_place
+			FROM trip_drives td
+			JOIN drives d ON d.id = td.drive_id
+			WHERE td.trip_id = t.id
+			ORDER BY td.position ASC
+			LIMIT 1
+		) first_drive ON true
+		LEFT JOIN LATERAL (
+			SELECT d.end_lat, d.end_lng, d.end_place
+			FROM trip_drives td
+			JOIN drives d ON d.id = td.drive_id
+			WHERE td.trip_id = t.id
+			ORDER BY td.position DESC
+			LIMIT 1
+		) last_drive ON true`
+
 // Trip SQL queries.
 const (
-	GetTripByID = `
-		SELECT id, vehicle_id, start_latitude, start_longitude, end_latitude, end_longitude,
-		       start_address, end_address, distance_miles, energy_used_kwh,
-		       efficiency_wh_per_mile, max_speed_mph, fsm_state, started_at, completed_at, created_at
-		FROM trips
-		WHERE id = $1`
+	GetTripByID = tripSelectFrom + `
+		WHERE t.id = $1::bigint`
 
-	GetTripsByVehicleID = `
-		SELECT id, vehicle_id, start_latitude, start_longitude, end_latitude, end_longitude,
-		       start_address, end_address, distance_miles, energy_used_kwh,
-		       efficiency_wh_per_mile, max_speed_mph, fsm_state, started_at, completed_at, created_at
-		FROM trips
-		WHERE vehicle_id = $1
-		ORDER BY started_at DESC`
+	GetTripsByVehicleID = tripSelectFrom + `
+		WHERE t.vehicle_id = $1::bigint
+		ORDER BY t.started_at DESC`
 
-	ListTripsByDateRange = `
-		SELECT id, vehicle_id, start_latitude, start_longitude, end_latitude, end_longitude,
-		       start_address, end_address, distance_miles, energy_used_kwh,
-		       efficiency_wh_per_mile, max_speed_mph, fsm_state, started_at, completed_at, created_at
-		FROM trips
-		WHERE vehicle_id = $1 AND started_at >= $2 AND started_at <= $3
-		ORDER BY started_at DESC`
+	ListTripsByDateRange = tripSelectFrom + `
+		WHERE t.vehicle_id = $1::bigint AND t.started_at >= $2 AND t.started_at <= $3
+		ORDER BY t.started_at DESC`
 
-	GetTripByIDForUpdate = `
-		SELECT id, vehicle_id, start_latitude, start_longitude, end_latitude, end_longitude,
-		       start_address, end_address, distance_miles, energy_used_kwh,
-		       efficiency_wh_per_mile, max_speed_mph, fsm_state, started_at, completed_at, created_at
-		FROM trips
-		WHERE id = $1
-		FOR UPDATE`
+	GetTripByIDForUpdate = tripSelectFrom + `
+		WHERE t.id = $1::bigint
+		FOR UPDATE OF t`
 
 	UpsertTrip = `
 		INSERT INTO trips (
-			id, vehicle_id, start_latitude, start_longitude, end_latitude, end_longitude,
-			start_address, end_address, distance_miles, energy_used_kwh,
-			efficiency_wh_per_mile, max_speed_mph, fsm_state, started_at, completed_at, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+			id, vehicle_id, started_at, ended_at
+		) VALUES ($1::bigint, $2::bigint, $14, NULLIF($15, $14))
 		ON CONFLICT (id) DO UPDATE SET
-			end_latitude = EXCLUDED.end_latitude,
-			end_longitude = EXCLUDED.end_longitude,
-			end_address = EXCLUDED.end_address,
-			distance_miles = EXCLUDED.distance_miles,
-			energy_used_kwh = EXCLUDED.energy_used_kwh,
-			efficiency_wh_per_mile = EXCLUDED.efficiency_wh_per_mile,
-			max_speed_mph = EXCLUDED.max_speed_mph,
-			fsm_state = EXCLUDED.fsm_state,
-			completed_at = EXCLUDED.completed_at`
+			vehicle_id = EXCLUDED.vehicle_id,
+			started_at = EXCLUDED.started_at,
+			ended_at = EXCLUDED.ended_at`
 )

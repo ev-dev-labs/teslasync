@@ -109,10 +109,10 @@ function scoreDrive(drive: Drive): DriveScore {
   const effScore = Math.max(0, Math.min(40, 40 - (whPerKm - 130) / 3));
   const avgPowerKw = drive.avgPowerW != null ? drive.avgPowerW / 1000 : 30;
   const smoothScore = Math.max(0, Math.min(30, 30 - avgPowerKw / 3));
-  const maxSpeedMph = drive.maxSpeedMps != null ? drive.maxSpeedMps * 2.2369362920544 : 80;
+  const maxSpeedDisplayMph = drive.maxSpeedMps != null ? drive.maxSpeedMps * 2.2369362920544 : 80;
   const speedScore = Math.max(
     0,
-    Math.min(30, 30 - Math.max(0, maxSpeedMph - 90) / 2),
+    Math.min(30, 30 - Math.max(0, maxSpeedDisplayMph - 90) / 2),
   );
 
   const total = Math.round(effScore + smoothScore + speedScore);

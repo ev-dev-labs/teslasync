@@ -26,7 +26,7 @@ export function DetailCards({
   stats,
 }: DetailCardsProps) {
   const { t } = useTranslation();
-  const { formatTemperature: formatTemperatureUnit } = useUnits();
+  const { formatTemperature: formatTemperatureUnit, formatEnergy } = useUnits();
   const formatTemperature = (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision });
 
   return (
@@ -62,7 +62,7 @@ export function DetailCards({
               },
               {
                 label: t('drivetrain.regenLabel', 'Total Regen'),
-                value: stats ? `${fmtNumber(stats.totalRegenKwh, 1)} kWh` : '—',
+                value: stats ? formatEnergy(stats.regenEnergyWh, { precision: 1 }) : '—',
               },
               {
                 label: t('drivetrain.co2Label', 'CO₂ Saved'),
