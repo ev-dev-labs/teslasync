@@ -85,7 +85,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Use(LoggerMiddleware)
 	r.Use(RecoveryMiddleware)                    // Enhanced recovery that logs panics as structured errors
 	r.Use(ErrorTrackingMiddleware(errorTracker)) // Centralized error aggregation
-	r.Use(PrometheusMiddleware)                  // HTTP request metrics (duration, count, size)
+	r.Use(PrometheusMiddleware)                  // Legacy {method,path,status} HTTP metrics (kept for back-compat dashboards)
+	r.Use(MetricsMiddleware)                     // RED metrics: http_requests_total / http_request_errors_total / http_request_duration_seconds with status_class
 	r.Use(chimw.Compress(5))
 
 	// CORS ╬ô├ç├╢ use explicit origins in production. The wildcard is kept for
