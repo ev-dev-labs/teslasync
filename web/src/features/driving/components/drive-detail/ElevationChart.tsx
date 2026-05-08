@@ -8,7 +8,7 @@ import {
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { LEGEND_STYLE } from './helpers';
 import type { ChartDataPoint, DriveStats } from './types';
@@ -20,7 +20,8 @@ interface ElevationChartProps {
 
 export function ElevationChart({ chartData, stats }: ElevationChartProps) {
   const { t } = useTranslation();
-  const { speedUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const speedUnit = unitPrefs.speed;
   const syncProps = useSyncedCursor();
   const syncedX = useSyncedReferenceLineX();
 

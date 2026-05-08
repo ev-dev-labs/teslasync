@@ -8,18 +8,21 @@ import {
   type TemperatureUnitPref,
   type PressureUnitPref,
   type EnergyUnitPref,
+  type PowerUnitPref,
   type DurationUnitPref,
   convertDistanceFromSI,
   convertSpeedFromSI,
   convertTempFromSI,
   convertPressureFromSI,
   convertEnergyFromSI,
+  convertPowerFromSI,
   convertDurationFromSI,
   formatDistance,
   formatSpeed,
   formatTemperature,
   formatPressure,
   formatEnergy,
+  formatPower,
   formatDuration,
 } from '../unitConversion'
 
@@ -33,6 +36,7 @@ const basePref: UnitPref = {
   temperature: '°C',
   pressure: 'kPa',
   energy: 'kWh',
+  power: 'kW',
   duration: 'h',
   locale: 'en-US',
 }
@@ -56,6 +60,7 @@ describe('SI baseline constant', () => {
     expect(SI.temperature).toBe('°C')
     expect(SI.pressure).toBe('kPa')
     expect(SI.energy).toBe('Wh')
+    expect(SI.power).toBe('W')
     expect(SI.duration).toBe('s')
   })
 
@@ -220,6 +225,29 @@ describe('convertEnergyFromSI', () => {
 // Duration — input contract: seconds (SI)
 // ---------------------------------------------------------------------------
 
+
+// ---------------------------------------------------------------------------
+// Power — input contract: W (SI)
+// ---------------------------------------------------------------------------
+
+describe('convertPowerFromSI', () => {
+  it('passes W through unchanged (SI input contract)', () => {
+    expect(convertPowerFromSI(500, 'W')).toBe(500)
+  })
+
+  it('converts 1000 W → 1 kW (SI input contract)', () => {
+    expect(convertPowerFromSI(1000, 'kW')).toBeCloseTo(1, EPS_EXACT)
+  })
+
+  it('round-trips through every target unit', () => {
+    const watts = 125000
+    const targets: PowerUnitPref[] = ['W', 'kW']
+    for (const t of targets) {
+      expect(Number.isFinite(convertPowerFromSI(watts, t))).toBe(true)
+    }
+  })
+})
+
 describe('convertDurationFromSI', () => {
   it('passes seconds through unchanged (SI input contract)', () => {
     expect(convertDurationFromSI(45, 's')).toBe(45)
@@ -377,6 +405,20 @@ describe('formatEnergy', () => {
   })
 })
 
+describe('formatPower', () => {
+  it('formats 125000 W as "125.00 kW" (SI input contract, default precision 2)', () => {
+    expect(formatPower(125000, withPref({ power: 'kW' }))).toBe('125.00 kW')
+  })
+
+  it('formats 500 W as "500.00 W" (SI input contract, passthrough)', () => {
+    expect(formatPower(500, withPref({ power: 'W' }))).toBe('500.00 W')
+  })
+
+  it('returns "—" for non-finite input', () => {
+    expect(formatPower(NaN, withPref({ power: 'kW' }))).toBe('—')
+  })
+})
+
 describe('formatDuration', () => {
   it('formats 60 s as "1 min" (SI input contract)', () => {
     expect(formatDuration(60, withPref({ duration: 'min' }))).toBe('1 min')
@@ -442,6 +484,7 @@ describe('SI input contract (no "guess the input unit" fallback)', () => {
     expect(formatTemperature.length).toBeLessThanOrEqual(3)
     expect(formatPressure.length).toBeLessThanOrEqual(3)
     expect(formatEnergy.length).toBeLessThanOrEqual(3)
+    expect(formatPower.length).toBeLessThanOrEqual(3)
     expect(formatDuration.length).toBeLessThanOrEqual(3)
   })
 
@@ -453,6 +496,7 @@ describe('SI input contract (no "guess the input unit" fallback)', () => {
       temperature: '°F' satisfies TemperatureUnitPref,
       pressure: 'psi' satisfies PressureUnitPref,
       energy: 'kWh' satisfies EnergyUnitPref,
+      power: 'kW' satisfies PowerUnitPref,
       duration: 'h' satisfies DurationUnitPref,
     }
     expect(pref.distance).toBe('mi')

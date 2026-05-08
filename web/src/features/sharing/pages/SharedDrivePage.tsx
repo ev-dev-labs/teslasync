@@ -66,7 +66,7 @@ function efficiencyUnit(distancePref: DistanceUnitPref): string {
   return distancePref === 'mi' ? 'Wh/mi' : 'Wh/km';
 }
 
-function convertEfficiency(whPerKm: number, distancePref: DistanceUnitPref): number {
+function toEfficiencyDisplay(whPerKm: number, distancePref: DistanceUnitPref): number {
   return distancePref === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
 }
 
@@ -257,7 +257,7 @@ export default function SharedDrivePage() {
             {drive.efficiency_wh_km != null && (
               <StatCard
                 label={t('share.efficiency', 'Efficiency')}
-                value={`${Math.round(convertEfficiency(drive.efficiency_wh_km, distancePref))} ${effPref}`}
+                value={`${Math.round(toEfficiencyDisplay(drive.efficiency_wh_km, distancePref))} ${effPref}`}
                 icon={<Zap className="h-4 w-4" />}
               />
             )}

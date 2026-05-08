@@ -5,12 +5,12 @@ import { Badge } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useTrips } from '@/api/hooks/useTrips';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { formatDurationRange } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { kmToMiles } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -21,7 +21,10 @@ function formatDate(iso: string): string {
 
 export default function TripSummaryWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
 
   const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useTrips({
     limit: 5,
@@ -33,7 +36,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
 
   const isCompact = size.cols <= 1;
 
-  const displayDist = (km: number) => convertDistance(kmToMiles(km ?? 0));
+  const displayDist = (km: number) => toDistanceDisplay((km ?? 0) * 1000);
 
   return (
     <WidgetShell

@@ -3,6 +3,8 @@ import { DollarSign } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { DriveDetail } from '@/types/driving';
 import type { DriveStats } from './types';
@@ -14,12 +16,13 @@ interface CostSavingsPanelProps {
 
 export function CostSavingsPanel({ drive, stats }: CostSavingsPanelProps) {
   const { t } = useTranslation();
-  const {
-    costPerKwh, currencySymbol, formatEnergyCost, formatCurrency,
-    costPerDistanceUnit, estimateGasCost, distanceUnit, settings,
-  } = useSettings();
+  const { settings } = useSettings();
+  const { costPerKwh } = useFormatting();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const { currencySymbol, formatEnergyCost, formatCurrency, costPerDistanceUnit, estimateGasCost } = useFormatting();
 
-  const gasCost = estimateGasCost(drive.distanceM / 1609.344);
+  const gasCost = estimateGasCost(drive.distanceM);
   const evCost = (stats.energyWh / 1000) * costPerKwh;
   const savings = gasCost != null ? gasCost - evCost : null;
 
@@ -39,7 +42,7 @@ export function CostSavingsPanel({ drive, stats }: CostSavingsPanelProps) {
             <div>
               <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.costPerUnit', { unit: distanceUnit, defaultValue: 'Cost / {{unit}}' })}</p>
               <p className="text-lg font-bold text-cyan-400">
-                {formatCurrency(costPerDistanceUnit(stats.energyWh / 1000, drive.distanceM / 1609.344) ?? 0, 3)}
+                {formatCurrency(costPerDistanceUnit(stats.energyWh / 1000, drive.distanceM) ?? 0, 3)}
               </p>
             </div>
           )}

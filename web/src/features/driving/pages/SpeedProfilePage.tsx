@@ -16,11 +16,12 @@ import { StaggerItem } from '@/components/motion/StaggerItem';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { useSpeedProfile, useDrives } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { cn } from '@/lib/cn';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { Drive } from '@/types/driving';
+import { convertSpeedFromSI } from '@/lib/unitConversion';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -48,7 +49,7 @@ function categoryIcon(range: string): React.ReactNode {
 
 function getEfficiency(drive: Drive): number | null {
   const battUsed = (drive.startBatteryPct ?? 0) - (drive.endBatteryPct ?? 0);
-  if (drive.distanceM > 0 && battUsed > 0) return (battUsed * 0.75 * 1000) / (drive.distanceM / 1609.344);
+  if (drive.distanceM > 0 && battUsed > 0) return (battUsed * 0.75 * 1000) / (drive.distanceM / 1000);
   return null;
 }
 
@@ -68,7 +69,12 @@ export default function SpeedProfilePage() {
   const { data, isLoading, error } = useSpeedProfile(vehicleIdStr);
   const { data: drives } = useDrives(vehicleIdStr);
 
-  const { convertSpeed, speedUnit, convertEfficiency, efficiencyUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
+
+  const speedUnit = unitPrefs.speed;
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
 
   /* ---- Speed vs Efficiency scatter from drives ---- */
   const scatterData = useMemo(() => {
@@ -76,14 +82,14 @@ export default function SpeedProfilePage() {
     return drives
       .filter((d) => d.avgSpeedMps && getEfficiency(d))
       .map((d) => {
-        const eff = convertEfficiency(getEfficiency(d)!);
+        const eff = toEfficiencyDisplay(getEfficiency(d)!);
         return {
-          speed: Math.round(convertSpeed((d.avgSpeedMps!) / 0.44704)),
+          speed: Math.round(toSpeedDisplay(d.avgSpeedMps!)),
           efficiency: Math.round(eff),
           color: eff < 140 ? '#10b981' : eff < 200 ? '#00f0ff' : eff < 260 ? '#f59e0b' : '#ef4444',
         };
       });
-  }, [drives, convertSpeed, convertEfficiency]);
+  }, [drives, toSpeedDisplay, toEfficiencyDisplay]);
 
   /* ---- Per-bucket efficiency from drives ---- */
   const bucketEfficiency = useMemo(() => {
@@ -94,17 +100,17 @@ export default function SpeedProfilePage() {
       if (d.avgSpeedMps == null) return;
       const eff = getEfficiency(d);
       if (!eff) return;
-      const avgSpeedMph = d.avgSpeedMps / 0.44704;
+      const avgSpeed = toSpeedDisplay(d.avgSpeedMps);
       for (const r of ranges) {
         const bucket = r.speedBucket ?? r.speed_bucket ?? '';
         const parts = bucket.match(/(\d+)/g);
         if (!parts) continue;
         const lo = Number(parts[0]);
         const hi = parts.length > 1 ? Number(parts[1]) : 999;
-        if (avgSpeedMph >= lo && avgSpeedMph < hi) {
+        if (avgSpeed >= lo && avgSpeed < hi) {
           const existing = map.get(bucket) ?? { totalEff: 0, totalSpd: 0, count: 0 };
           existing.totalEff += eff;
-          existing.totalSpd += avgSpeedMph;
+          existing.totalSpd += avgSpeed;
           existing.count++;
           map.set(bucket, existing);
           break;
@@ -140,22 +146,22 @@ export default function SpeedProfilePage() {
             <GlassPanel className="p-4 sm:p-6">
               <div className="grid grid-cols-3 gap-4 sm:gap-6 items-center">
                 <RadialGauge
-                  value={Math.round(convertSpeed(data.avgSpeedKmh ?? 0))}
-                  max={Math.round(convertSpeed(200))}
+                  value={Math.round(toSpeedDisplay(data.avgSpeedKmh ?? 0))}
+                  max={Math.round(toSpeedDisplay(200))}
                   label={t('speedProfile.avgSpeed', 'Avg Speed')}
                   unit={speedUnit}
                   color="#00f0ff"
                 />
                 <RadialGauge
-                  value={Math.round(convertSpeed(data.peakSpeedKmh ?? 0))}
-                  max={Math.round(convertSpeed(250))}
+                  value={Math.round(toSpeedDisplay(data.peakSpeedKmh ?? 0))}
+                  max={Math.round(toSpeedDisplay(250))}
                   label={t('speedProfile.peakSpeed', 'Peak Speed')}
                   unit={speedUnit}
                   color="#ef4444"
                 />
                 <RadialGauge
-                  value={Math.round(convertSpeed(data.optimalSpeedKmh ?? 0))}
-                  max={Math.round(convertSpeed(200))}
+                  value={Math.round(toSpeedDisplay(data.optimalSpeedKmh ?? 0))}
+                  max={Math.round(toSpeedDisplay(200))}
                   label={t('speedProfile.optimalSpeed', 'Optimal Speed')}
                   unit={speedUnit}
                   color="#10b981"
@@ -221,13 +227,13 @@ export default function SpeedProfilePage() {
                           <div className="flex justify-between">
                             <span className="text-[10px] text-[var(--text-muted)]">{t('speedProfile.avgSpeed', 'Avg Speed')}</span>
                             <span className="text-sm font-bold text-[var(--text-secondary)]">
-                              {fmtNumber(convertSpeed(effData.avgSpeed))} {speedUnit}
+                              {fmtNumber(toSpeedDisplay(effData.avgSpeed))} {speedUnit}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-[10px] text-[var(--text-muted)]">{efficiencyUnit}</span>
                             <span className={cn('text-sm font-bold', effData.avgEff < 160 ? 'text-green-400' : effData.avgEff < 220 ? 'text-amber-400' : 'text-red-400')}>
-                              {fmtNumber(convertEfficiency(effData.avgEff))}
+                              {fmtNumber(toEfficiencyDisplay(effData.avgEff))}
                             </span>
                           </div>
                         </>
@@ -289,7 +295,7 @@ export default function SpeedProfilePage() {
                     </p>
                     <p className="text-xs text-[var(--text-secondary)]">
                       {t('speedProfile.insightText', 'Drives around {{speed}} {{unit}} show the best energy efficiency. Reducing highway speed could improve efficiency by ~15%.', {
-                        speed: fmtNumber(convertSpeed(data.optimalSpeedKmh ?? 0)),
+                        speed: fmtNumber(toSpeedDisplay(data.optimalSpeedKmh ?? 0)),
                         unit: speedUnit,
                       })}
                     </p>

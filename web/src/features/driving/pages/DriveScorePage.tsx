@@ -28,7 +28,7 @@ import { DateRangeFilter } from '@/components/forms';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { useDriveScore, useDrives } from '@/api/hooks/useDriving';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateShort, formatDurationMinutes } from '@/lib/dateFormat';
@@ -38,6 +38,7 @@ import { chartTokens } from '@/lib/tokens';
 import { COLOR } from '@/lib/colors';
 
 import { Icons } from '@/lib/icons';
+import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -108,7 +109,7 @@ function scoreDrive(drive: Drive): DriveScore {
   const effScore = Math.max(0, Math.min(40, 40 - (whPerKm - 130) / 3));
   const avgPowerKw = drive.avgPowerW != null ? drive.avgPowerW / 1000 : 30;
   const smoothScore = Math.max(0, Math.min(30, 30 - avgPowerKw / 3));
-  const maxSpeedMph = drive.maxSpeedMps != null ? drive.maxSpeedMps / 0.44704 : 80;
+  const maxSpeedMph = drive.maxSpeedMps != null ? drive.maxSpeedMps * 2.2369362920544 : 80;
   const speedScore = Math.max(
     0,
     Math.min(30, 30 - Math.max(0, maxSpeedMph - 90) / 2),
@@ -401,22 +402,19 @@ export default function DriveScorePage() {
 
   /* ---- queries ---- */
   const {
-    data: apiScore,
-  } = useDriveScore(vehicleIdStr);
+    data: apiScore, } = useDriveScore(vehicleIdStr);
   const {
-    data: drives,
-    isLoading: drivesLoading,
-  } = useDrives(vehicleIdStr);
+    data: drives, isLoading: drivesLoading, } = useDrives(vehicleIdStr);
 
   /* ---- settings ---- */
-  const {
-    convertDistance,
-    convertSpeed,
-    convertEfficiency,
-    distanceUnit,
-    speedUnit,
-    efficiencyUnit,
-  } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
+  const speedUnit = unitPrefs.speed;
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
+  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
 
   /* ---- date filter ---- */
   const [startDate, setStartDate] = useState<string>(getDefaultStartDate);
@@ -878,7 +876,7 @@ export default function DriveScorePage() {
                   icon={<Icons.charging className="h-4 w-4 text-green-400" />}
                   label={t('driveScore.avgConsumption', 'Avg consumption')}
                   value={fmtWithUnit(
-                    convertEfficiency(
+                    toEfficiencyDisplay(
                       scoredDrives.reduce(
                         (sum, sd) => sum + sd.score.whPerKm,
                         0,
@@ -959,10 +957,10 @@ export default function DriveScorePage() {
                   label={t('driveScore.avgMaxSpeed', 'Avg max speed')}
                   value={fmtWithUnit(
                     scoredDrives.length > 0
-                      ? convertSpeed(
+                      ? toSpeedDisplay(
                             scoredDrives.reduce(
                               (sum, sd) =>
-                                sum + ((sd.drive.maxSpeedMps ?? 0) / 0.44704),
+                                sum + (sd.drive.maxSpeedMps ?? 0),
                               0,
                             ) / scoredDrives.length,
                           )
@@ -1181,7 +1179,7 @@ export default function DriveScorePage() {
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[var(--text-muted)]">{t('driveScore.distance', 'Distance')}</span>
-                          <span className="text-[var(--text-primary)]">{fmtNumber(convertDistance((bestDrive.drive.distanceM) / 1609.344))} {distanceUnit}</span>
+                          <span className="text-[var(--text-primary)]">{fmtNumber(toDistanceDisplay(bestDrive.drive.distanceM))} {distanceUnit}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[var(--text-muted)]">{t('driveScore.durationLabel', 'Duration')}</span>
@@ -1189,7 +1187,7 @@ export default function DriveScorePage() {
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[var(--text-muted)]">{t('driveScore.consumption', 'Consumption')}</span>
-                          <span className="text-[var(--text-primary)]">{fmtInt(convertEfficiency(bestDrive.score.whPerKm))} {efficiencyUnit}</span>
+                          <span className="text-[var(--text-primary)]">{fmtInt(toEfficiencyDisplay(bestDrive.score.whPerKm))} {efficiencyUnit}</span>
                         </div>
                       </div>
                     </div>
@@ -1225,7 +1223,7 @@ export default function DriveScorePage() {
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[var(--text-muted)]">{t('driveScore.distance', 'Distance')}</span>
-                          <span className="text-[var(--text-primary)]">{fmtNumber(convertDistance((worstDrive.drive.distanceM) / 1609.344))} {distanceUnit}</span>
+                          <span className="text-[var(--text-primary)]">{fmtNumber(toDistanceDisplay(worstDrive.drive.distanceM))} {distanceUnit}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[var(--text-muted)]">{t('driveScore.durationLabel', 'Duration')}</span>
@@ -1233,7 +1231,7 @@ export default function DriveScorePage() {
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[var(--text-muted)]">{t('driveScore.consumption', 'Consumption')}</span>
-                          <span className="text-[var(--text-primary)]">{fmtInt(convertEfficiency(worstDrive.score.whPerKm))} {efficiencyUnit}</span>
+                          <span className="text-[var(--text-primary)]">{fmtInt(toEfficiencyDisplay(worstDrive.score.whPerKm))} {efficiencyUnit}</span>
                         </div>
                       </div>
                     </div>
@@ -1322,7 +1320,7 @@ export default function DriveScorePage() {
                       {/* Distance */}
                       <span className="text-sm text-[var(--text-primary)]">
                         {fmtWithUnit(
-                          convertDistance((drive.distanceM) / 1609.344),
+                          toDistanceDisplay(drive.distanceM),
                           distanceUnit,
                         )}
                       </span>
@@ -1335,7 +1333,7 @@ export default function DriveScorePage() {
                       {/* Consumption */}
                       <span className="text-sm text-[var(--text-primary)]">
                         {fmtWithUnit(
-                          convertEfficiency(ds.whPerKm),
+                          toEfficiencyDisplay(ds.whPerKm),
                           efficiencyUnit,
                         )}
                       </span>
@@ -1410,7 +1408,7 @@ export default function DriveScorePage() {
                 label={t('driveScore.avgEffLabel', 'Avg Efficiency')}
                 value={fmtNumber(
                   scoredDrives.length > 0
-                    ? convertEfficiency(
+                    ? toEfficiencyDisplay(
                         scoredDrives.reduce(
                           (sum, sd) => sum + sd.score.whPerKm,
                           0,
@@ -1612,11 +1610,11 @@ export default function DriveScorePage() {
                     {
                       label: t('driveScore.totalDistance', 'Total Distance'),
                       value: fmtWithUnit(
-                        convertDistance(
+                        toDistanceDisplay(
                           filteredDrives.reduce(
                             (sum, d) => sum + d.distanceM,
                             0,
-                          ) / 1609.344,
+                          ),
                         ),
                         distanceUnit,
                       ),
@@ -1634,11 +1632,11 @@ export default function DriveScorePage() {
                       label: t('driveScore.avgDistance', 'Avg Distance/Drive'),
                       value: fmtWithUnit(
                         filteredDrives.length > 0
-                          ? convertDistance(
+                          ? toDistanceDisplay(
                               filteredDrives.reduce(
                                 (sum, d) => sum + d.distanceM,
                                 0,
-                              ) / filteredDrives.length / 1609.344,
+                              ) / filteredDrives.length,
                             )
                           : 0,
                         distanceUnit,
@@ -1662,12 +1660,12 @@ export default function DriveScorePage() {
                       label: t('driveScore.highestSpeed', 'Highest Max Speed'),
                       value: fmtWithUnit(
                         filteredDrives.length > 0
-                          ? convertSpeed(
+                          ? toSpeedDisplay(
                               Math.max(
                                 ...filteredDrives.map(
                                   (d) => d.maxSpeedMps ?? 0,
                                 ),
-                              ) / 0.44704,
+                              ),
                             )
                           : 0,
                         speedUnit,

@@ -74,13 +74,13 @@ function getTempBucketIndex(temp: number): number {
 
 function bucketLabel(
   b: (typeof TEMP_BUCKETS_C)[number],
-  convertTemp: (c: number) => number,
+  toTemperatureDisplay: (c: number) => number,
   tempUnit: string,
   idx: number,
 ): string {
-  if (idx === 0) return `< ${Math.round(convertTemp(b.max))}${tempUnit}`;
-  if (idx === TEMP_BUCKETS_C.length - 1) return `> ${Math.round(convertTemp(b.min))}${tempUnit}`;
-  return `${Math.round(convertTemp(b.min))}–${Math.round(convertTemp(b.max))}${tempUnit}`;
+  if (idx === 0) return `< ${Math.round(toTemperatureDisplay(b.max))}${tempUnit}`;
+  if (idx === TEMP_BUCKETS_C.length - 1) return `> ${Math.round(toTemperatureDisplay(b.min))}${tempUnit}`;
+  return `${Math.round(toTemperatureDisplay(b.min))}–${Math.round(toTemperatureDisplay(b.max))}${tempUnit}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -97,14 +97,14 @@ export default function TemperatureImpactPage() {
        efficiency_wh_km:  Wh/km (already derived in SQL)
        distance_km:       km (already derived in SQL)
      We convert outside_temp via convertTempFromSI (mathematically
-     identical to legacy convertTemp) and Wh/km -> Wh/mi inline using
+     identical to legacy toTemperatureDisplay) and Wh/km -> Wh/mi inline using
      KM_PER_MILE per Phase-43/0025 (no convertEfficiencyFromSI helper). */
   const { unitPrefs } = useUnits();
   const tempUnit = unitPrefs.temperature;
   const isMiles = unitPrefs.distance === 'mi';
   const effLabel = isMiles ? 'Wh/mi' : 'Wh/km';
 
-  const convertTemp = useCallback(
+  const toTemperatureDisplay = useCallback(
     (c: number) => convertTempFromSI(c, tempUnit),
     [tempUnit],
   );
@@ -118,12 +118,12 @@ export default function TemperatureImpactPage() {
   /* Build display bucket labels */
   const tempBuckets: BucketDef[] = useMemo(
     () => TEMP_BUCKETS_C.map((b, i) => ({
-      label: bucketLabel(b, convertTemp, tempUnit, i),
+      label: bucketLabel(b, toTemperatureDisplay, tempUnit, i),
       min: b.min,
       max: b.max,
       color: b.color,
     })),
-    [convertTemp, tempUnit],
+    [toTemperatureDisplay, tempUnit],
   );
 
   /* ---- vehicles ---- */
@@ -186,11 +186,11 @@ export default function TemperatureImpactPage() {
     () =>
       (points ?? []).map((p) => ({
         ...p,
-        outside_temp: convertTemp(p.outside_temp),
+        outside_temp: toTemperatureDisplay(p.outside_temp),
         efficiency_wh_km: toDispEff(p.efficiency_wh_km),
         fill: TEMP_BUCKETS_C[getTempBucketIndex(p.outside_temp)].color,
       })),
-    [points, convertTemp, toDispEff],
+    [points, toTemperatureDisplay, toDispEff],
   );
 
   /* ---- contextual tips ---- */

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useTeslaChargingHistory } from '@/api/hooks/useCharging';
-import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetRankedList, type RankedItem } from './shared';
@@ -12,7 +12,7 @@ import type { WidgetProps } from './types';
 
 export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { formatCurrency } = useSettings();
+  const { formatCurrency } = useFormatting();
 
   const {
     data,

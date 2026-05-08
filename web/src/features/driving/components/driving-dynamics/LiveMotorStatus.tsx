@@ -11,11 +11,11 @@ import type { MotorSnapshot } from '@/api/types';
 
 interface LiveMotorStatusProps {
   motorLatest: MotorSnapshot | null | undefined;
-  convertTemp: (v: number) => number;
+  toTemperatureDisplay: (v: number) => number;
   tempUnit: string;
 }
 
-export default function LiveMotorStatus({ motorLatest, convertTemp, tempUnit }: LiveMotorStatusProps) {
+export default function LiveMotorStatus({ motorLatest, toTemperatureDisplay, tempUnit }: LiveMotorStatusProps) {
   const { t } = useTranslation();
 
   const torqueTotal =
@@ -29,7 +29,7 @@ export default function LiveMotorStatus({ motorLatest, convertTemp, tempUnit }: 
         motorLatest.motor_temp_c_rear ?? -Infinity,
       )
     : null;
-  const motorTempDisplay = motorTempC != null && isFinite(motorTempC) ? convertTemp(motorTempC) : 0;
+  const motorTempDisplay = motorTempC != null && isFinite(motorTempC) ? toTemperatureDisplay(motorTempC) : 0;
 
   return (
     <FadeIn>
@@ -76,7 +76,7 @@ export default function LiveMotorStatus({ motorLatest, convertTemp, tempUnit }: 
               />
               <span className="text-xs text-[var(--text-secondary)]">
                 {motorTempC != null && isFinite(motorTempC)
-                  ? `${fmtNumber(convertTemp(motorTempC), 1)}°${tempUnit}`
+                  ? `${fmtNumber(toTemperatureDisplay(motorTempC), 1)}°${tempUnit}`
                   : t('dynamics.awaiting', 'Awaiting data')}
               </span>
             </div>

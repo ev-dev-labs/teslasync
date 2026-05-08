@@ -11,12 +11,13 @@ import {
   type LatLngExpression,
   type MapStyle,
 } from '@/components/maps';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { formatTime, formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { hasMeaningfulRoute, firstValidIndex } from '@/lib/geo';
 import type { DriveDetail } from '@/types/driving';
 import type { SpeedSegment } from './types';
+import { convertSpeedFromSI } from '@/lib/unitConversion';
 
 /* Auto-fit map bounds to trail. Special-cases two cluster degeneracies that
  * leaflet otherwise zooms past the maxZoom for: (1) trail with N identical
@@ -58,7 +59,10 @@ interface RouteMapSectionProps {
 
 export function RouteMapSection({ drive, trail, startPos, endPos, centerPos, speedSegments }: RouteMapSectionProps) {
   const { t } = useTranslation();
-  const { convertSpeed, speedUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
+
+  const speedUnit = unitPrefs.speed;
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
 
   /* Stationary-GPS detection: positions exist but every recorded coord is
@@ -134,10 +138,10 @@ export function RouteMapSection({ drive, trail, startPos, endPos, centerPos, spe
               <span className="flex items-center gap-1.5 text-green-400"><Flag className="h-3 w-3" /> {t('driveDetail.start', 'Start')}: {formatTime(drive.startTs)}</span>
               {hasRoute && trail.length > 1 && (
                 <div className="flex items-center gap-3 text-[var(--text-muted)]">
-                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-emerald-500" /> &lt;{fmtNumber(convertSpeed(30))}</span>
-                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-cyan-400" /> {fmtNumber(convertSpeed(30))}–{fmtNumber(convertSpeed(60))}</span>
-                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-amber-500" /> {fmtNumber(convertSpeed(60))}–{fmtNumber(convertSpeed(100))}</span>
-                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-red-500" /> &gt;{fmtNumber(convertSpeed(100))}</span>
+                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-emerald-500" /> &lt;{fmtNumber(toSpeedDisplay(30))}</span>
+                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-cyan-400" /> {fmtNumber(toSpeedDisplay(30))}–{fmtNumber(toSpeedDisplay(60))}</span>
+                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-amber-500" /> {fmtNumber(toSpeedDisplay(60))}–{fmtNumber(toSpeedDisplay(100))}</span>
+                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-red-500" /> &gt;{fmtNumber(toSpeedDisplay(100))}</span>
                   <span>{speedUnit}</span>
                 </div>
               )}

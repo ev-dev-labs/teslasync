@@ -9,7 +9,7 @@ import { AnimatedNumber } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useEnergyStats } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
@@ -23,11 +23,12 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
   const {
-    data, isLoading, error,
-    isFetching, isStale, isError, dataUpdatedAt, refetch,
-  } = useEnergyStats(id > 0 ? String(id) : null);
+    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useEnergyStats(id > 0 ? String(id) : null);
 
-  const { convertEfficiency, efficiencyUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
+
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
@@ -64,7 +65,7 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
       },
       {
         label: t('widget.energyStats.avgEfficiency', 'Avg Efficiency'),
-        value: fmtNumber(convertEfficiency(data.avg_efficiency_wh_per_mi ?? 0), 1),
+        value: fmtNumber(toEfficiencyDisplay(data.avg_efficiency_wh_per_mi ?? 0), 1),
         unit: efficiencyUnit,
         icon: <TrendingUp className="h-3.5 w-3.5" />,
       },
@@ -94,7 +95,7 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
     }
 
     return items;
-  }, [data, isWide, convertEfficiency, efficiencyUnit, t]);
+  }, [data, isWide, toEfficiencyDisplay, efficiencyUnit, t]);
 
   const shellProps = {
     loading: isLoading,

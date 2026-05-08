@@ -4,11 +4,12 @@ import { HeartPulse } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetGaugeHero, type GaugeHeroStat } from './shared';
 import type { WidgetProps } from './types';
+import { convertTempFromSI } from '@/lib/unitConversion';
 
 function scoreColor(score: number): string {
   if (score >= 80) return '#10b981';
@@ -18,7 +19,10 @@ function scoreColor(score: number): string {
 
 export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { convertTemp, tempUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+
+  const tempUnit = unitPrefs.temperature;
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vehicleIdStr = vid != null ? String(vid) : null;
@@ -73,7 +77,7 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
       value: fmtInt(data?.charge_habits_score ?? 0),
       unit: `/ 100`,
     },
-  ], [data, convertTemp, tempUnit, t]);
+  ], [data, toTemperatureDisplay, tempUnit, t]);
 
   const shellProps = {
     loading: isLoading,

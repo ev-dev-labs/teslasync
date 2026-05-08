@@ -4,27 +4,31 @@ import { Car, Wifi, Route, Zap } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 export default function FleetStatsBarWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const { data: analytics, isLoading: analyticsLoading, error, isFetching: analyticsFetching, isStale: analyticsStale, isError: analyticsIsError, dataUpdatedAt: analyticsUpdatedAt, refetch: refetchAnalytics } = useFleetAnalytics(30);
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
 
   const isLoading = vehiclesLoading || analyticsLoading;
 
   const stats = useMemo(() => {
     const vehicleCount = vehicles?.length ?? 0;
     const onlineCount = vehicles?.filter((v) => v.state === 'online').length ?? 0;
-    const totalDistance = convertDistance(analytics?.total_distance_km ?? 0);
+    const totalDistance = toDistanceDisplay(analytics?.total_distance_km ?? 0);
     const totalEnergy = analytics?.total_energy_kwh ?? 0;
     return { vehicleCount, onlineCount, totalDistance, totalEnergy };
-  }, [vehicles, analytics, convertDistance]);
+  }, [vehicles, analytics, toDistanceDisplay]);
 
   const isCompact = size.rows < 2;
 

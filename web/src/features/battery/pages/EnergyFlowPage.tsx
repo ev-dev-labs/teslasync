@@ -22,18 +22,14 @@ import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUnits } from '@/hooks/useUnits';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useEnergyFlow } from '@/api/hooks/useEnergy';
-import { useSettings } from '@/api/hooks/useSettings';
-import {
-  toDisplayDistance,
-  distanceLabel,
-  DistanceUnit,
-} from '@/lib/unitConversion';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 /* ───────── Types (match actual API response from energy_handler.go) ───────── */
 
@@ -113,15 +109,13 @@ export default function EnergyFlowPage() {
   usePageTitle(t('Energy Flow'));
 
   const { data: vehicles } = useVehicles();
-  const { data: settings } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const [days, setDays] = useState('7');
 
   const activeId = vehicleId ?? (vehicles?.[0]?.id != null ? String(vehicles[0].id) : null);
-
-  const userDistUnit = settings?.unit_of_length === 'km'
-    ? DistanceUnit.Kilometers
-    : DistanceUnit.Miles;
 
   // Historical stats from GET /vehicles/{id}/energy
   const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
@@ -149,9 +143,9 @@ export default function EnergyFlowPage() {
       dailyBreakdown.map((d) => ({
         date: formatDateShort(d.date),
         energy_kwh: d.energy_kwh,
-        distance: toDisplayDistance(d.distance_m, DistanceUnit.Miles, userDistUnit, 1),
+        distance: Number(toDistanceDisplay(d.distance_m).toFixed(1)),
       })),
-    [dailyBreakdown, userDistUnit],
+    [dailyBreakdown, distanceUnit, toDistanceDisplay],
   );
 
   const efficiencyChartData = useMemo(
@@ -161,29 +155,24 @@ export default function EnergyFlowPage() {
         .map((d) => ({
           date: formatDateShort(d.date),
           efficiency:
-            userDistUnit === DistanceUnit.Kilometers
+            distanceUnit === 'km'
               ? Number((d.efficiency_wh_per_mi * 0.621371).toFixed(0))
               : d.efficiency_wh_per_mi,
         })),
-    [dailyBreakdown, userDistUnit],
+    [dailyBreakdown, distanceUnit, toDistanceDisplay],
   );
 
   /* ─── Derived: stat values with unit conversion ─── */
-  const totalDistance = toDisplayDistance(
-    stats?.total_distance_mi ?? 0,
-    DistanceUnit.Miles,
-    userDistUnit,
-    1,
-  );
+  const totalDistance = toDistanceDisplay((stats?.total_distance_mi ?? 0) * 1609.344);
 
   const avgEfficiency = useMemo(() => {
     const raw = stats?.avg_efficiency_wh_per_mi ?? 0;
-    return userDistUnit === DistanceUnit.Kilometers
+    return distanceUnit === 'km'
       ? Number((raw * 0.621371).toFixed(0))
       : Math.round(raw);
-  }, [stats, userDistUnit]);
+  }, [stats, distanceUnit]);
 
-  const efficiencyUnit = userDistUnit === DistanceUnit.Kilometers ? 'Wh/km' : 'Wh/mi';
+  const efficiencyUnit = distanceUnit === 'km' ? 'Wh/km' : 'Wh/mi';
 
   const avgEnergyPerDay = useMemo(() => {
     const period = stats?.period_days ?? 0;
@@ -227,11 +216,11 @@ export default function EnergyFlowPage() {
       },
       {
         key: 'distance_m',
-        header: `${t('Distance')} (${distanceLabel(userDistUnit)})`,
+        header: `${t('Distance')} (${distanceUnit})`,
         sortable: true,
         render: (row) => (
           <span className="font-mono text-sm text-[var(--text-primary)]">
-            {toDisplayDistance(row.distance_m, DistanceUnit.Miles, userDistUnit, 1)}
+            {fmtNumber(toDistanceDisplay(row.distance_m), 1)}
           </span>
         ),
       },
@@ -241,7 +230,7 @@ export default function EnergyFlowPage() {
         sortable: true,
         render: (row) => {
           const val =
-            userDistUnit === DistanceUnit.Kilometers
+            distanceUnit === 'km'
               ? row.efficiency_wh_per_mi * 0.621371
               : row.efficiency_wh_per_mi;
           return (
@@ -252,7 +241,7 @@ export default function EnergyFlowPage() {
         },
       },
     ],
-    [t, userDistUnit, efficiencyUnit],
+    [t, distanceUnit, efficiencyUnit, toDistanceDisplay],
   );
 
   /* ───── Vehicle & Range Controls ───── */
@@ -325,8 +314,8 @@ export default function EnergyFlowPage() {
   }
 
   /* ─── Efficiency thresholds (unit-aware) ─── */
-  const excellentThreshold = userDistUnit === DistanceUnit.Kilometers ? 150 : 240;
-  const goodThreshold = userDistUnit === DistanceUnit.Kilometers ? 200 : 320;
+  const excellentThreshold = distanceUnit === 'km' ? 150 : 240;
+  const goodThreshold = distanceUnit === 'km' ? 200 : 320;
 
   /* ───── Main render ───── */
 
@@ -449,7 +438,7 @@ export default function EnergyFlowPage() {
             value={totalDistance}
             icon={<Car className="h-4 w-4" />}
             color="purple"
-            subtitle={distanceLabel(userDistUnit)}
+            subtitle={distanceUnit}
           />
           <MetricCard
             label={t('Efficiency')}
@@ -533,7 +522,7 @@ export default function EnergyFlowPage() {
                   <Legend />
                   <Bar
                     dataKey="distance"
-                    name={`${t('Distance')} (${distanceLabel(userDistUnit)})`}
+                    name={`${t('Distance')} (${distanceUnit})`}
                     fill={CHART_COLORS[1]}
                     radius={[4, 4, 0, 0]}
                   />

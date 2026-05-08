@@ -1,6 +1,6 @@
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
-import { fahrenheitToCelsius } from '@/lib/unitConversion';
+import { convertTempFromSI } from '@/lib/unitConversion';
 
 interface TemperatureProps {
   /** Canonical input in °C. */
@@ -16,7 +16,9 @@ interface TemperatureProps {
  * Hover title shows the raw caller-supplied value with its source unit.
  */
 export function Temperature({ c, f, precision, className }: TemperatureProps) {
-  const { convertTemp, tempUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const tempUnit = unitPrefs.temperature;
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
 
   let sourceC: number | null = null;
   let title: string | undefined;
@@ -24,7 +26,7 @@ export function Temperature({ c, f, precision, className }: TemperatureProps) {
     sourceC = c;
     title = `${c.toFixed(1)} °C`;
   } else if (f != null && Number.isFinite(f)) {
-    sourceC = fahrenheitToCelsius(f);
+    sourceC = ((f - 32) * 5) / 9;
     title = `${f.toFixed(1)} °F`;
   }
 
@@ -32,7 +34,7 @@ export function Temperature({ c, f, precision, className }: TemperatureProps) {
     return <span className={className}>—</span>;
   }
 
-  const display = fmtNumber(convertTemp(sourceC), precision);
+  const display = fmtNumber(toTemperatureDisplay(sourceC), precision);
   return (
     <span className={className} title={title}>
       {display}{tempUnit}

@@ -5,11 +5,12 @@ import { Badge } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useWarrantyDetails } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 /** Safely extract a string from an unknown value */
 function asString(val: unknown): string | null {
@@ -63,7 +64,10 @@ const COVERAGE_TYPES = [
 
 export default function WarrantyStatusWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
 
   const {
     data: envelope,
@@ -139,7 +143,7 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
 
     // Mileage limit (converted)
     if (mileageLimitMi != null) {
-      const converted = convertDistance(mileageLimitMi);
+      const converted = toDistanceDisplay(mileageLimitMi);
       items.push({
         label: t('widget.warranty.mileageLimit', 'Mileage Limit'),
         value: `${fmtNumber(converted, 0)} ${distanceUnit}`,
@@ -149,7 +153,7 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
 
     // Current mileage (converted)
     if (currentMileageMi != null) {
-      const converted = convertDistance(currentMileageMi);
+      const converted = toDistanceDisplay(currentMileageMi);
       items.push({
         label: t('widget.warranty.currentMileage', 'Current Mileage'),
         value: `${fmtNumber(converted, 0)} ${distanceUnit}`,
@@ -182,7 +186,7 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
     }
 
     return items;
-  }, [warrantyData, expiryDate, daysRemaining, variant, mileageLimitMi, currentMileageMi, convertDistance, distanceUnit, t]);
+  }, [warrantyData, expiryDate, daysRemaining, variant, mileageLimitMi, currentMileageMi, toDistanceDisplay, distanceUnit, t]);
 
   const shellProps = {
     loading: isLoading,
@@ -260,8 +264,8 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
           {/* Mileage remaining progress bar */}
           {mileageLimitMi != null && currentMileageMi != null && (
             <MetricBar
-              value={convertDistance(currentMileageMi)}
-              max={convertDistance(mileageLimitMi)}
+              value={toDistanceDisplay(currentMileageMi)}
+              max={toDistanceDisplay(mileageLimitMi)}
               color={
                 currentMileageMi / mileageLimitMi > 0.9
                   ? '#ef4444'
@@ -270,7 +274,7 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
                     : '#10b981'
               }
               label={t('widget.warranty.mileageRemaining', 'Mileage Remaining')}
-              sublabel={`${fmtNumber(convertDistance(mileageLimitMi - currentMileageMi), 0)} ${distanceUnit}`}
+              sublabel={`${fmtNumber(toDistanceDisplay(mileageLimitMi - currentMileageMi), 0)} ${distanceUnit}`}
             />
           )}
 

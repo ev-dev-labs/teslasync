@@ -21,7 +21,7 @@ import { DateRangeFilter } from '@/components/forms';
 import { useEnergyStats } from '@/api/hooks/useEnergy';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
@@ -31,6 +31,7 @@ import { fmtNumber, fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
 import { chartTokens } from '@/lib/tokens';
 import type { ChargingSession } from '@/api/types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 /* ── Local: Cost Comparison Card ────────────────────────────────── */
 
@@ -88,8 +89,7 @@ function CostComparisonCard({
  * they sync hover cursors and a persistent reference line through this helper.
  */
 function EnergyChartSync({
-  children,
-}: {
+  children, }: {
   children: (state: {
     sync: ReturnType<typeof useSyncedCursor>;
     syncedX: ReturnType<typeof useSyncedReferenceLineX>;
@@ -131,7 +131,12 @@ function EnergyPageSkeleton() {
 export default function EnergyPage() {
   const { t } = useTranslation();
   usePageTitle(t('energy.title', 'Energy'));
-  const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
   const savedView = useSavedViewUrl();
 
   /* ── Vehicle selector ─────────────────────────────────────────── */
@@ -369,8 +374,8 @@ export default function EnergyPage() {
                 color="#00f0ff"
               />
               <RadialGauge
-                value={convertEfficiency(avgEfficiency || (totalDistance > 0 ? (totalEnergy * 1000) / totalDistance : 0))}
-                max={convertEfficiency(300)}
+                value={toEfficiencyDisplay(avgEfficiency || (totalDistance > 0 ? (totalEnergy * 1000) / totalDistance : 0))}
+                max={toEfficiencyDisplay(300)}
                 label={t('energy.gauge.efficiency', 'Efficiency')}
                 unit={efficiencyUnit}
                 color="#10b981"
@@ -397,9 +402,9 @@ export default function EnergyPage() {
       {/* ── Quick Metrics Strip ─────────────────────────────────── */}
       <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
         {[
-          { label: t('energy.metric.costPerDist', { unit: distanceUnit, defaultValue: 'Cost per {{unit}}' }), value: `$${fmtNumber(totalDistance > 0 ? totalCost / convertDistance(totalDistance) : 0)}`, color: 'text-neon-cyan' },
+          { label: t('energy.metric.costPerDist', { unit: distanceUnit, defaultValue: 'Cost per {{unit}}' }), value: `$${fmtNumber(totalDistance > 0 ? totalCost / toDistanceDisplay(totalDistance) : 0)}`, color: 'text-neon-cyan' },
           { label: t('energy.metric.costPerKwh', 'Cost per kWh'), value: `$${fmtNumber(costPerKwh ?? 0)}`, color: 'text-neon-green' },
-          { label: t('energy.metric.totalDistance', 'Total Distance'), value: `${fmtInt(convertDistance(totalDistance ?? 0))} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
+          { label: t('energy.metric.totalDistance', 'Total Distance'), value: `${fmtInt(toDistanceDisplay(totalDistance ?? 0))} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
           { label: t('energy.metric.sessions', 'Sessions'), value: `${sessions?.length ?? 0}`, color: 'text-neon-purple' },
           { label: t('energy.metric.monthlyEst', 'Monthly Est.'), value: `$${fmtNumber(monthlyProjectedCost ?? 0)}`, color: 'text-neon-amber' },
           { label: t('energy.metric.yearlyEst', 'Yearly Est.'), value: `$${fmtNumber(yearlyProjectedCost ?? 0)}`, color: 'text-neon-red' },

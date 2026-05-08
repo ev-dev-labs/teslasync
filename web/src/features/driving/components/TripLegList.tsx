@@ -2,9 +2,10 @@ import { GlassPanel } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useTranslation } from 'react-i18next';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { MapPin, Zap, Clock, ArrowRight } from 'lucide-react';
 import type { TripLeg, TripChargeStop } from '@/types/driving';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 interface TripLegListProps {
   legs: TripLeg[];
@@ -13,7 +14,10 @@ interface TripLegListProps {
 
 export function TripLegList({ legs, chargeStops }: TripLegListProps) {
   const { t } = useTranslation();
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
   const legItems = legs ?? [];
   const stops = chargeStops ?? [];
 
@@ -55,7 +59,7 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
                 <div>
                   <span className="text-[var(--text-muted)] text-xs">{t('tripPlanner.legs.distance', 'Distance')}</span>
                   <p className="text-[var(--text-primary)] font-medium">
-                    {convertDistance(leg.distance_km).toFixed(1)} {distanceUnit}
+                    {toDistanceDisplay(leg.distance_km).toFixed(1)} {distanceUnit}
                   </p>
                 </div>
                 <div>

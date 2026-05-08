@@ -25,9 +25,8 @@ import { FadeIn } from '@/components/motion';
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
 import { useUnits } from '@/hooks/useUnits';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAlertContext } from '@/hooks/useAlertContext';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -222,14 +221,17 @@ function BatteryHealthSkeleton() {
 export default function BatteryHealthPage() {
   const { t } = useTranslation();
   usePageTitle(t('battery.title', 'Battery Health'));
-  const { convertTemp, tempUnit } = useSettings();
-  // Phase-43 / Prompt 0023 — `convertDistance` from useSettings expects MILES
+  const { unitPrefs } = useUnits();
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+
+  const tempUnit = unitPrefs.temperature;
+  // Phase-43 / Prompt 0023 — `toDistanceDisplay` from useSettings expects MILES
   // input. Backend's analytics range_km is genuinely km (derived SI from
   // signal_log via `internal/api/battery_degradation_handler.go`). To convert
   // safely, route km → metres then through `convertDistanceFromSI`. Mixing
   // the legacy helper with km input was the pre-existing bug this prompt
   // fixes (same root cause as the Phase-43/0022 driving telemetry fix).
-  const { unitPrefs } = useUnits();
+
   const fromKm = useCallback(
     (km: number): number => convertDistanceFromSI(km * 1000, unitPrefs.distance),
     [unitPrefs.distance],
@@ -595,7 +597,7 @@ export default function BatteryHealthPage() {
               label={t('battery.thermal.moduleTempMax', 'Module Temp (Max)')}
               value={
                 chargingLive?.module_temp_max != null
-                  ? `${fmtNumber(convertTemp(chargingLive.module_temp_max), 1)} ${tempUnit}`
+                  ? `${fmtNumber(toTemperatureDisplay(chargingLive.module_temp_max), 1)} ${tempUnit}`
                   : '—'
               }
               subtitle={
@@ -612,7 +614,7 @@ export default function BatteryHealthPage() {
               label={t('battery.thermal.moduleTempMin', 'Module Temp (Min)')}
               value={
                 chargingLive?.module_temp_min != null
-                  ? `${fmtNumber(convertTemp(chargingLive.module_temp_min), 1)} ${tempUnit}`
+                  ? `${fmtNumber(toTemperatureDisplay(chargingLive.module_temp_min), 1)} ${tempUnit}`
                   : '—'
               }
               subtitle={
@@ -642,8 +644,8 @@ export default function BatteryHealthPage() {
               value={
                 chargingLive?.module_temp_max != null && chargingLive?.module_temp_min != null
                   ? `${fmtNumber(
-                      convertTemp(chargingLive.module_temp_max) -
-                        convertTemp(chargingLive.module_temp_min),
+                      toTemperatureDisplay(chargingLive.module_temp_max) -
+                        toTemperatureDisplay(chargingLive.module_temp_min),
                       1,
                     )} ${tempUnit}`
                   : '—'

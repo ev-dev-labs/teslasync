@@ -7,6 +7,7 @@ import {
   formatPressure as libFormatPressure,
   formatEnergy as libFormatEnergy,
   formatDuration as libFormatDuration,
+  formatPower as libFormatPower,
   type UnitPref,
   type DistanceUnitPref,
   type SpeedUnitPref,
@@ -14,6 +15,7 @@ import {
   type PressureUnitPref,
   type EnergyUnitPref,
   type DurationUnitPref,
+  type PowerUnitPref,
 } from '../lib/unitConversion'
 
 /**
@@ -22,8 +24,8 @@ import {
  *
  * Contract:
  *   - Reads `useSettings()` once per render and derives a stable `UnitPref`.
- *   - Exposes `formatDistance / formatSpeed / formatTemperature /
- *     formatPressure / formatEnergy / formatDuration`. Every formatter
+  *   - Exposes `formatDistance / formatSpeed / formatTemperature /
+  *     formatPressure / formatEnergy / formatDuration / formatPower`. Every formatter
  *     delegates to the corresponding `formatX(value, pref, options)` in
  *     `@/lib/unitConversion` — this hook performs NO unit math itself.
  *     Inline math here was the source of legacy drift that prompt 0010
@@ -64,6 +66,7 @@ export interface UseUnitsResult {
   formatPressure: UnitFormatter
   formatEnergy: UnitFormatter
   formatDuration: UnitFormatter
+  formatPower: UnitFormatter
 }
 
 /**
@@ -80,6 +83,7 @@ const DEFAULT_ENERGY_PREF: EnergyUnitPref = 'kWh'
  * should pass `{ precision }` if they need finer granularity.
  */
 const DEFAULT_DURATION_PREF: DurationUnitPref = 'h'
+const DEFAULT_POWER_PREF: PowerUnitPref = 'kW'
 
 /** Default locale fallback when `settings.locale` is absent or empty. */
 const DEFAULT_LOCALE = 'en-US'
@@ -130,6 +134,7 @@ export function useUnits(): UseUnitsResult {
       pressure,
       energy: DEFAULT_ENERGY_PREF,
       duration: DEFAULT_DURATION_PREF,
+      power: DEFAULT_POWER_PREF,
       locale,
       precision,
     }),
@@ -160,6 +165,10 @@ export function useUnits(): UseUnitsResult {
     (value, options) => libFormatDuration(value, unitPrefs, options),
     [unitPrefs],
   )
+  const formatPower = useCallback<UnitFormatter>(
+    (value, options) => libFormatPower(value, unitPrefs, options),
+    [unitPrefs],
+  )
 
   return useMemo(
     () => ({
@@ -170,6 +179,7 @@ export function useUnits(): UseUnitsResult {
       formatPressure,
       formatEnergy,
       formatDuration,
+      formatPower,
     }),
     [
       unitPrefs,
@@ -179,6 +189,7 @@ export function useUnits(): UseUnitsResult {
       formatPressure,
       formatEnergy,
       formatDuration,
+      formatPower,
     ],
   )
 }

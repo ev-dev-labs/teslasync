@@ -37,7 +37,8 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { useDrives, useDrivingStats, useBulkDeleteDrives } from '@/api/hooks/useDriving';
-import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
+import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -46,6 +47,7 @@ import { formatDateTime, formatDateShort, formatDurationMinutes } from '@/lib/da
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { Drive } from '@/types/driving';
+import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -53,7 +55,7 @@ import type { Drive } from '@/types/driving';
 
 function getEfficiency(drive: Drive): number | null {
   const batteryUsed = (drive.startBatteryPct ?? 0) - (drive.endBatteryPct ?? 0);
-  if (drive.distanceM > 0 && batteryUsed > 0) return (batteryUsed * 0.75 * 1000) / (drive.distanceM / 1609.344);
+  if (drive.distanceM > 0 && batteryUsed > 0) return (batteryUsed * 0.75 * 1000) / (drive.distanceM / 1000);
   return null;
 }
 
@@ -72,9 +74,9 @@ function getEfficiencyScore(eff: number | null): { label: string; color: string 
 
 interface DriveCardProps {
   drive: Drive;
-  convertDistance: (v: number) => number;
-  convertSpeed: (v: number) => number;
-  convertEfficiency: (v: number) => number;
+  toDistanceDisplay: (v: number) => number;
+  toSpeedDisplay: (v: number) => number;
+  toEfficiencyDisplay: (v: number) => number;
   distanceUnit: string;
   speedUnit: string;
   efficiencyUnit: string;
@@ -84,7 +86,7 @@ interface DriveCardProps {
 }
 
 function DriveCardImpl({
-  drive, convertDistance, convertSpeed, convertEfficiency,
+  drive, toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay,
   distanceUnit, speedUnit, efficiencyUnit, formatEnergyCost,
   selected, onToggleSelect,
 }: DriveCardProps) {
@@ -94,12 +96,12 @@ function DriveCardImpl({
   const hasData = actualDistance > 0 || drive.durationS > 0;
   const avgSpeed =
     drive.avgSpeedMps != null
-      ? fmtInt(convertSpeed((drive.avgSpeedMps) / 0.44704))
+      ? fmtInt(toSpeedDisplay(drive.avgSpeedMps))
       : drive.durationS > 0 && actualDistance > 0
-        ? fmtInt(convertSpeed((actualDistance / 1609.344) / (drive.durationS / 3600)))
+        ? fmtInt(toSpeedDisplay(actualDistance / drive.durationS))
         : '—';
   const eff = getEfficiency(drive);
-  const effConverted = eff ? convertEfficiency(eff) : null;
+  const effConverted = eff ? toEfficiencyDisplay(eff) : null;
   const score = getEfficiencyScore(eff);
   const hasBattery =
     drive.startBatteryPct !== null &&
@@ -135,14 +137,14 @@ function DriveCardImpl({
               <TimeStamp value={drive.startTs} className="text-sm font-semibold text-[var(--text-primary)]" />
               {hasData ? (
                 <Badge variant="info" size="sm">
-                  {fmtNumber(convertDistance(actualDistance))} {distanceUnit}
+                  {fmtNumber(toDistanceDisplay(actualDistance))} {distanceUnit}
                 </Badge>
               ) : isCompleted ? (
                 <Badge variant="warning" size="sm">{t('drives.noTelemetry', 'No telemetry')}</Badge>
               ) : (
                 <Badge variant="success" size="sm">{t('drives.inProgress', 'In progress')}</Badge>
               )}
-              {drive.maxSpeedMps !== null && (drive.maxSpeedMps / 0.44704) > 130 && (
+              {drive.maxSpeedMps !== null && drive.maxSpeedMps > 58.1152 && (
                 <Badge variant="danger" size="sm">{t('drives.highSpeed', 'High speed')}</Badge>
               )}
             </div>
@@ -153,7 +155,7 @@ function DriveCardImpl({
               {drive.maxSpeedMps !== null && (
                 <InlineMetric
                   icon={<TrendingUp />}
-                  value={`${t('drives.max', 'Max')} ${fmtInt(convertSpeed((drive.maxSpeedMps) / 0.44704))} ${speedUnit}`}
+                  value={`${t('drives.max', 'Max')} ${fmtInt(toSpeedDisplay(drive.maxSpeedMps))} ${speedUnit}`}
                 />
               )}
               {hasBattery && (
@@ -210,8 +212,7 @@ const DriveCard = memo(DriveCardImpl, (prev, next) =>
   prev.distanceUnit === next.distanceUnit &&
   prev.speedUnit === next.speedUnit &&
   prev.efficiencyUnit === next.efficiencyUnit &&
-  prev.onToggleSelect === next.onToggleSelect,
-);
+  prev.onToggleSelect === next.onToggleSelect, );
 
 /* ------------------------------------------------------------------ */
 /*  DrivesListPage                                                    */
@@ -244,11 +245,15 @@ export default function DrivesListPage() {
     );
 
   /* Unit conversion */
-  const {
-    convertDistance, convertSpeed, convertEfficiency,
-    distanceUnit, speedUnit, efficiencyUnit,
-    formatEnergyCost,
-  } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
+  const speedUnit = unitPrefs.speed;
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
+  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
+  const { formatEnergyCost } = useFormatting();
 
   /* Local UI state — Phase 40 / Prompt 33: filters/sort live in the URL so
      a date-range + sort view can be shared, bookmarked, or restored on reload. */
@@ -378,8 +383,8 @@ export default function DrivesListPage() {
       { range: '100+', min: 100, max: Infinity, count: 0 },
     ];
     filteredDrives.forEach((d) => {
-      const distMi = d.distanceM / 1609.344;
-      const b = buckets.find((bk) => distMi >= bk.min && distMi < bk.max);
+      const displayDistance = toDistanceDisplay(d.distanceM);
+      const b = buckets.find((bk) => displayDistance >= bk.min && displayDistance < bk.max);
       if (b) b.count++;
     });
     return buckets.map((b) => ({ range: `${b.range} ${distanceUnit}`, count: b.count }));
@@ -391,9 +396,9 @@ export default function DrivesListPage() {
     return filteredDrives
       .filter((d) => d.maxSpeedMps && d.durationS > 0)
       .map((d) => {
-        const avgSpdMph = d.durationS > 0 ? (d.distanceM / 1609.344) / (d.durationS / 3600) : 0;
+        const avgSpd = d.durationS > 0 ? toSpeedDisplay(d.distanceM / d.durationS) : 0;
         const eff = getEfficiency(d);
-        return eff ? { speed: Math.round(avgSpdMph), efficiency: Math.round(eff) } : null;
+        return eff ? { speed: Math.round(avgSpd), efficiency: Math.round(eff) } : null;
       })
       .filter(Boolean) as { speed: number; efficiency: number }[];
   }, [filteredDrives]);
@@ -403,9 +408,9 @@ export default function DrivesListPage() {
     if (filteredDrives.length === 0) return [];
     return filteredDrives.slice(0, 20).reverse().map((d) => ({
       date: formatDateShort(d.startTs),
-      distance: parseFloat(fmtNumber((d.distanceM ?? 0) / 1609.344, 1)),
+      distance: parseFloat(fmtNumber(toDistanceDisplay(d.distanceM ?? 0), 1)),
     }));
-  }, [filteredDrives]);
+  }, [filteredDrives, toDistanceDisplay]);
 
   // Defensive guard: when no vehicle is selected (fresh install or
   // revoked Tesla token), bail out before rendering the data
@@ -514,20 +519,20 @@ export default function DrivesListPage() {
                 color="#00f0ff"
               />
               <RadialGauge
-                value={Math.round(convertDistance(stats.totalDistanceKm))}
-                max={Math.max(convertDistance(stats.totalDistanceKm), 1000)}
+                value={Math.round(toDistanceDisplay(stats.totalDistanceKm))}
+                max={Math.max(toDistanceDisplay(stats.totalDistanceKm), 1000)}
                 label={`${t('drives.total', 'Total')} ${distanceUnit}`}
                 color="#10b981"
               />
               <RadialGauge
-                value={Math.round(convertEfficiency(stats.avgEfficiencyWhKm))}
+                value={Math.round(toEfficiencyDisplay(stats.avgEfficiencyWhKm))}
                 max={300}
                 label={`${t('drives.avg', 'Avg')} ${efficiencyUnit}`}
                 color={stats.avgEfficiencyWhKm < 180 ? '#10b981' : '#f59e0b'}
               />
               {computedStats && (
                 <RadialGauge
-                  value={Math.round(convertEfficiency(computedStats.bestEff))}
+                  value={Math.round(toEfficiencyDisplay(computedStats.bestEff))}
                   max={300}
                   label={`${t('drives.best', 'Best')} ${efficiencyUnit}`}
                   color="#a855f7"
@@ -535,7 +540,7 @@ export default function DrivesListPage() {
               )}
               <div className="flex flex-col items-center text-center">
                 <p className="text-2xl font-bold text-[var(--text-primary)]">
-                  <AnimatedNumber value={Math.round(convertSpeed(stats.topSpeedKmh))} />
+                  <AnimatedNumber value={Math.round(toSpeedDisplay(stats.topSpeedKmh))} />
                 </p>
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">
                   {t('drives.topSpeed', 'Top Speed')}
@@ -566,23 +571,23 @@ export default function DrivesListPage() {
               <div>
                 <MetricBar
                   label={t('drives.avgTripDistance', 'Avg Trip Distance')}
-                  value={computedStats.totalDist / computedStats.count / 1609.344}
+                  value={toDistanceDisplay(computedStats.totalDist / computedStats.count)}
                   max={100}
                   color="#10b981"
                 />
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                  {fmtNumber(convertDistance(computedStats.totalDist / computedStats.count / 1609.344))} {distanceUnit}
+                  {fmtNumber(toDistanceDisplay(computedStats.totalDist / computedStats.count))} {distanceUnit}
                 </p>
               </div>
               <div>
                 <MetricBar
                   label={t('drives.longestDrive', 'Longest Drive')}
-                  value={computedStats.longest.distanceM / 1609.344}
-                  max={Math.max(computedStats.longest.distanceM / 1609.344, 200)}
+                  value={toDistanceDisplay(computedStats.longest.distanceM)}
+                  max={Math.max(toDistanceDisplay(computedStats.longest.distanceM), 200)}
                   color="#a855f7"
                 />
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                  {fmtNumber(convertDistance((computedStats.longest.distanceM) / 1609.344))} {distanceUnit}
+                  {fmtNumber(toDistanceDisplay(computedStats.longest.distanceM))} {distanceUnit}
                 </p>
               </div>
               <div>
@@ -767,9 +772,9 @@ export default function DrivesListPage() {
               <StaggerItem key={d.id}>
                 <DriveCard
                   drive={d}
-                  convertDistance={convertDistance}
-                  convertSpeed={convertSpeed}
-                  convertEfficiency={convertEfficiency}
+                  toDistanceDisplay={toDistanceDisplay}
+                  toSpeedDisplay={toSpeedDisplay}
+                  toEfficiencyDisplay={toEfficiencyDisplay}
                   distanceUnit={distanceUnit}
                   speedUnit={speedUnit}
                   efficiencyUnit={efficiencyUnit}

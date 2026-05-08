@@ -4,7 +4,8 @@ import { Route, ChevronRight } from 'lucide-react'
 
 import { GlassPanel, DataTable, type Column } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
-import { useSettings } from '@/hooks/useSettings'
+import { useUnits } from '@/hooks/useUnits'
+import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion'
 import { formatDateTime } from '@/lib/dateFormat'
 import { fmtNumber } from '@/lib/numberFormat'
 import type { Drive } from '@/api/types'
@@ -14,7 +15,7 @@ interface RecentDrivesSectionProps {
   drives: Drive[] | undefined
 }
 
-function useDriveColumns(convertDistance: (v: number) => number, distanceUnit: string): Column<Drive>[] {
+function useDriveColumns(distanceUnit: DistanceUnitPref): Column<Drive>[] {
   const { t } = useTranslation()
   return [
     {
@@ -25,7 +26,7 @@ function useDriveColumns(convertDistance: (v: number) => number, distanceUnit: s
     {
       key: 'distance',
       header: t('common.distance', 'Distance'),
-      render: (d) => `${fmtNumber(convertDistance((d.distance_m) / 1609.344))} ${distanceUnit}`,
+      render: (d) => `${fmtNumber(convertDistanceFromSI(d.distance_m ?? 0, distanceUnit))} ${distanceUnit}`,
       sortable: true,
     },
     {
@@ -46,8 +47,8 @@ function useDriveColumns(convertDistance: (v: number) => number, distanceUnit: s
 
 export function RecentDrivesSection({ drives }: RecentDrivesSectionProps) {
   const { t } = useTranslation()
-  const { convertDistance, distanceUnit } = useSettings()
-  const driveColumns = useDriveColumns(convertDistance, distanceUnit)
+  const { unitPrefs } = useUnits()
+  const driveColumns = useDriveColumns(unitPrefs.distance)
 
   return (
     <GlassPanel className="p-6">

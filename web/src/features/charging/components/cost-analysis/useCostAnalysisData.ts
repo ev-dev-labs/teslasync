@@ -14,7 +14,7 @@ interface UseCostAnalysisDataParams {
   gasPrice: number;
   mpg: number;
   electricityRate: number;
-  convertDistance: (km: number) => number;
+  toDistanceDisplay: (km: number) => number;
   isMiles: boolean;
 }
 
@@ -34,7 +34,7 @@ export function useCostAnalysisData({
   gasPrice,
   mpg,
   electricityRate,
-  convertDistance,
+  toDistanceDisplay,
   isMiles,
 }: UseCostAnalysisDataParams): UseCostAnalysisDataResult {
   const coreStats = useMemo(() => {
@@ -51,7 +51,7 @@ export function useCostAnalysisData({
       }
     });
 
-    const distVal = convertDistance(totalDistanceMi);
+    const distVal = toDistanceDisplay(totalDistanceMi);
     const costPerDist = distVal > 0 ? totalCost / distVal : 0;
 
     const gallonsEquiv = totalEnergy / KWH_PER_GALLON;
@@ -67,7 +67,7 @@ export function useCostAnalysisData({
       totalDistanceMi, costPerDist, gasCost, savings, savingsPercent,
       co2SavedKg, treeEquiv, gallonsEquiv, count: sessions.length,
     };
-  }, [sessions, gasPrice, convertDistance]);
+  }, [sessions, gasPrice, toDistanceDisplay]);
 
   const monthlyData = useMemo<MonthlyBucket[]>(() => {
     if (!sessions || sessions.length === 0) return [];
@@ -174,10 +174,10 @@ export function useCostAnalysisData({
   const gasComparison = useMemo<GasComparison | null>(() => {
     if (!coreStats) return null;
     const { totalEnergy, totalCost, totalDistanceMi } = coreStats;
-    const distMiles = convertDistance(totalDistanceMi);
+    const distMiles = toDistanceDisplay(totalDistanceMi);
     const gallonsNeeded = isMiles
       ? distMiles / mpg
-      : convertDistance(totalDistanceMi) / mpg;
+      : toDistanceDisplay(totalDistanceMi) / mpg;
     const gasCostCalc = gallonsNeeded * gasPrice;
     const evCostCalc = totalEnergy * electricityRate;
     const monthlySavings =
@@ -196,7 +196,7 @@ export function useCostAnalysisData({
       costPerMileGas: distMiles > 0 ? gasCostCalc / distMiles : 0,
       costPerMileEV: distMiles > 0 ? totalCost / distMiles : 0,
     };
-  }, [coreStats, gasPrice, mpg, electricityRate, isMiles, convertDistance, monthlyData.length]);
+  }, [coreStats, gasPrice, mpg, electricityRate, isMiles, toDistanceDisplay, monthlyData.length]);
 
   const lifetimeMetrics = useMemo<LifetimeMetrics | null>(() => {
     if (!sessions || sessions.length === 0 || !coreStats) return null;

@@ -5,10 +5,11 @@ import { AnimatedNumber, MetricCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useDrivingStats } from '@/api/hooks/useDriving';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -18,7 +19,10 @@ export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) 
 
   const { data: stateData, isLoading: stateLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
   const { data: stats, isLoading: statsLoading } = useDrivingStats(idStr);
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
 
   const isCompact = size.cols === 1 && size.rows === 1;
   const isWide = size.cols >= 2;
@@ -27,12 +31,12 @@ export default function OdometerCounterWidget({ vehicleId, size }: WidgetProps) 
   const totalDistanceKm = stats?.totalDistanceKm ?? null;
 
   const convertedOdometer = useMemo(
-    () => (odometer != null ? convertDistance(odometer) : null),
-    [odometer, convertDistance],
+    () => (odometer != null ? toDistanceDisplay(odometer) : null),
+    [odometer, toDistanceDisplay],
   );
   const convertedTotalDriven = useMemo(
-    () => (totalDistanceKm != null ? convertDistance(totalDistanceKm) : null),
-    [totalDistanceKm, convertDistance],
+    () => (totalDistanceKm != null ? toDistanceDisplay(totalDistanceKm) : null),
+    [totalDistanceKm, toDistanceDisplay],
   );
 
   const isLoading = stateLoading || statsLoading;

@@ -7,11 +7,12 @@ import {
 } from '@/components/charts';
 import { useMonthlyMileage } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 interface BarDatum {
   month: string;
@@ -39,7 +40,10 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
 
   const {
     data,
@@ -58,10 +62,10 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
     const items = data ?? [];
     return items.slice(-12).map((m) => ({
       month: shortMonth(m.month ?? ''),
-      distance: convertDistance(m.distance ?? 0),
+      distance: toDistanceDisplay(m.distance ?? 0),
       isCurrent: (m.month ?? '') === curMonth,
     }));
-  }, [data, convertDistance, curMonth]);
+  }, [data, toDistanceDisplay, curMonth]);
 
   const totalDistance = useMemo(
     () => chartData.reduce((sum, d) => sum + d.distance, 0),

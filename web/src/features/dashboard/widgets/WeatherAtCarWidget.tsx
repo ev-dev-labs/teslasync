@@ -2,10 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { CloudSun, Sun, CloudSnow, Thermometer } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertTempFromSI } from '@/lib/unitConversion';
 
 /** Pick an icon based on outside temperature (°C). */
 function WeatherIcon({ tempC, className }: { tempC: number; className?: string }) {
@@ -19,7 +20,10 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id, { refetchInterval: 30_000 });
-  const { convertTemp, tempUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+
+  const tempUnit = unitPrefs.temperature;
 
   const state = stateData?.state;
   const outsideTemp = state?.outside_temp;
@@ -42,7 +46,7 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
           <div className="h-full flex flex-col items-center justify-center gap-1">
             <WeatherIcon tempC={outsideTemp} className="h-6 w-6 text-neon-cyan" />
             <span className="text-2xl font-bold text-[var(--text-primary)]">
-              {fmtInt(convertTemp(outsideTemp))}{tempUnit}
+              {fmtInt(toTemperatureDisplay(outsideTemp))}{tempUnit}
             </span>
           </div>
         ) : (
@@ -50,7 +54,7 @@ export default function WeatherAtCarWidget({ vehicleId, size }: WidgetProps) {
             <WeatherIcon tempC={outsideTemp} className="h-10 w-10 text-neon-cyan flex-shrink-0" />
             <div className="flex flex-col gap-0.5">
               <span className="text-3xl font-bold text-[var(--text-primary)]">
-                {fmtInt(convertTemp(outsideTemp))}{tempUnit}
+                {fmtInt(toTemperatureDisplay(outsideTemp))}{tempUnit}
               </span>
               <span className="text-xs text-[var(--text-muted)]">
                 {t('widget.outsideTemp', 'Outside Temperature')}

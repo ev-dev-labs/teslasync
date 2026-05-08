@@ -5,11 +5,12 @@ import { GlassPanel } from '@/components/ui';
 import { Grid } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { RadialGauge } from '@/components/charts/RadialGauge';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 
 import type { TempSensor } from './constants';
 import { tempSeverityColor } from './helpers';
+import { convertTempFromSI } from '@/lib/unitConversion';
 
 interface TemperatureGaugesProps {
   sensors: TempSensor[];
@@ -17,7 +18,10 @@ interface TemperatureGaugesProps {
 
 export function TemperatureGauges({ sensors }: TemperatureGaugesProps) {
   const { t } = useTranslation();
-  const { convertTemp, tempUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+
+  const tempUnit = unitPrefs.temperature;
 
   return (
     <FadeIn delay={0.15}>
@@ -30,14 +34,14 @@ export function TemperatureGauges({ sensors }: TemperatureGaugesProps) {
           {sensors.map((sensor) => (
             <div key={sensor.key} className="flex flex-col items-center">
               <RadialGauge
-                value={sensor.value !== null ? convertTemp(sensor.value) : 0}
-                max={convertTemp(sensor.maxTemp)}
+                value={sensor.value !== null ? toTemperatureDisplay(sensor.value) : 0}
+                max={toTemperatureDisplay(sensor.maxTemp)}
                 label={t(sensor.labelKey, sensor.defaultLabel)}
                 unit={tempUnit}
                 color={tempSeverityColor(sensor.value, sensor.maxTemp)}
               />
               <p className="mt-2 text-xs text-[var(--text-muted)]">
-                {t('drivetrain.maxLabel', 'Max')}: {fmtNumber(convertTemp(sensor.maxTemp), 0)}
+                {t('drivetrain.maxLabel', 'Max')}: {fmtNumber(toTemperatureDisplay(sensor.maxTemp), 0)}
                 {tempUnit}
               </p>
             </div>

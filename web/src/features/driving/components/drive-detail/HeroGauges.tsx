@@ -3,9 +3,11 @@ import { GlassPanel } from '@/components/ui';
 import { RadialGauge } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { DriveDetail } from '@/types/driving';
 import type { DriveStats } from './types';
+import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 
 interface HeroGaugesProps {
   drive: DriveDetail;
@@ -14,7 +16,15 @@ interface HeroGaugesProps {
 
 export function HeroGauges({ drive, stats }: HeroGaugesProps) {
   const { t } = useTranslation();
-  const { convertDistance, convertEfficiency, convertSpeed, distanceUnit, speedUnit, efficiencyUnit, isMiles } = useSettings();
+  const { isMiles } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
+  const speedUnit = unitPrefs.speed;
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
+  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
 
   return (
     <FadeIn>
@@ -22,8 +32,8 @@ export function HeroGauges({ drive, stats }: HeroGaugesProps) {
         <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/[0.02] to-purple-500/[0.02]" />
         <div className="relative flex flex-wrap items-center gap-6 lg:gap-10 justify-center">
           <RadialGauge
-            value={Math.round(convertDistance((drive.distanceM) / 1609.344))}
-            max={Math.max(convertDistance((drive.distanceM) / 1609.344) * 1.5, 100)}
+            value={Math.round(toDistanceDisplay(drive.distanceM))}
+            max={Math.max(toDistanceDisplay(drive.distanceM) * 1.5, 100)}
             label={t('driveDetail.distance', 'Distance')}
             unit={distanceUnit}
             color="#00f0ff"
@@ -31,7 +41,7 @@ export function HeroGauges({ drive, stats }: HeroGaugesProps) {
           />
           <RadialGauge
             value={Math.round(stats.maxSpd)}
-            max={convertSpeed(250)}
+            max={toSpeedDisplay(250)}
             label={t('driveDetail.maxSpeed', 'Max Speed')}
             unit={speedUnit}
             color="#a855f7"
@@ -46,8 +56,8 @@ export function HeroGauges({ drive, stats }: HeroGaugesProps) {
             size={110}
           />
           <RadialGauge
-            value={Math.round(convertEfficiency(stats.consumptionWhKm))}
-            max={Math.max(convertEfficiency(stats.consumptionWhKm) * 1.5, 300)}
+            value={Math.round(toEfficiencyDisplay(stats.consumptionWhKm))}
+            max={Math.max(toEfficiencyDisplay(stats.consumptionWhKm) * 1.5, 300)}
             label={t('driveDetail.consumption', 'Consumption')}
             unit={efficiencyUnit}
             color="#ef4444"

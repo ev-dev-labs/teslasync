@@ -5,12 +5,13 @@ import { AnimatedNumber } from '@/components/data-display';
 import { Sparkline } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { useAnalyticsSummary } from '@/api/hooks/useAnalytics';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
 import { fmtNumber } from '@/lib/numberFormat';
-import { kmToMiles } from '@/lib/unitConversion';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 const MI_TO_KM = 1.60934;
 
@@ -18,7 +19,10 @@ const SPARKLINE_COLORS = ['#00f0ff', '#34d399', '#fbbf24', '#a78bfa'];
 
 export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { distanceUnit, currencySymbol } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+  const { currencySymbol } = useFormatting();
 
   const {
     data,
@@ -35,7 +39,7 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
   const isWide = size.cols >= 4;
 
   const distKm = data?.totalDistanceKm ?? 0;
-  const displayDist = distanceUnit === 'mi' ? kmToMiles(distKm) : distKm;
+  const displayDist = toDistanceDisplay(distKm * 1000);
 
   const effWhKm = data?.avgEfficiencyWhKm ?? 0;
   const displayEff = distanceUnit === 'mi' ? effWhKm * MI_TO_KM : effWhKm;

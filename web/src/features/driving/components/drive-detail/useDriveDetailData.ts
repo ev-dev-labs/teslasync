@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { useDrive } from '@/api/hooks/useDriving';
 import { useVehicle } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
 import { useUnits } from '@/hooks/useUnits';
 import {
   convertDistanceFromSI,
@@ -28,13 +27,16 @@ export function useDriveDetailData(id: string) {
   // legacy useSettings surface — same locked-policy continuation as Phase-43 /
   // Prompt 0020 Drive.distance_m (genuine miles after the SQL adapter
   // boundary in internal/database/drive_repo.go).
-  const { convertDistance, convertSpeed } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
   // Telemetry / position fields from drive(Telemetry|Position)FieldMappings are
   // strict SI per ADR-004 (m, m/s, °C, Pa). Use the SI-aware converters from
   // @/lib/unitConversion so changing the user's display unit (km/h ↔ mph,
   // °C ↔ °F, kPa ↔ psi ↔ bar) produces correct values without re-passing data
   // through the legacy mph-input converters.
-  const { unitPrefs } = useUnits();
+
 
   /* ---- Route data ---- */
   const routeSource = useMemo<RoutePoint[]>(() => {
@@ -135,8 +137,8 @@ export function useDriveDetailData(id: string) {
   /* ---- Computed stats ---- */
   const stats = useMemo<DriveStats | null>(() => {
     if (!drive) return null;
-    const maxSpd = drive.maxSpeedMps != null ? convertSpeed((drive.maxSpeedMps) / 0.44704) : 0;
-    const avgSpd = drive.avgSpeedMps != null ? convertSpeed((drive.avgSpeedMps) / 0.44704) : 0;
+    const maxSpd = drive.maxSpeedMps != null ? toSpeedDisplay(drive.maxSpeedMps) : 0;
+    const avgSpd = drive.avgSpeedMps != null ? toSpeedDisplay(drive.avgSpeedMps) : 0;
     // speedMin removed from API contract; compute from per-row chart data.
     // We want the minimum *non-zero* speed during the actual moving portion of
     // the drive — pure zeroes mean parked/stopped at a light and don't tell
@@ -207,7 +209,7 @@ export function useDriveDetailData(id: string) {
     const hasTirePressure = chartData.some((d) => d.tireFl !== null || d.tireFr !== null || d.tireRl !== null || d.tireRr !== null);
 
     const efficiencyPctPer100 = drive.distanceM > 0 && drive.startBatteryPct != null && drive.endBatteryPct != null
-      ? (drive.startBatteryPct - drive.endBatteryPct) / convertDistance((drive.distanceM) / 1609.344) * 10
+      ? (drive.startBatteryPct - drive.endBatteryPct) / toDistanceDisplay(drive.distanceM) * 10
       : null;
 
     return {
@@ -219,19 +221,19 @@ export function useDriveDetailData(id: string) {
       startRange, endRange, odometerStart, odometerEnd,
       hasTirePressure, efficiencyPctPer100,
     };
-  }, [drive, chartData, convertSpeed, convertDistance]);
+  }, [drive, chartData, toSpeedDisplay, toDistanceDisplay]);
 
   /* ---- Speed histogram ---- */
   const speedHistData = useMemo<SpeedHistogramBucket[]>(() => {
     if (chartData.length === 0) return [];
     const defs = [
-      { min: 0, max: convertSpeed(20) },
-      { min: convertSpeed(20), max: convertSpeed(40) },
-      { min: convertSpeed(40), max: convertSpeed(60) },
-      { min: convertSpeed(60), max: convertSpeed(80) },
-      { min: convertSpeed(80), max: convertSpeed(100) },
-      { min: convertSpeed(100), max: convertSpeed(120) },
-      { min: convertSpeed(120), max: 9999 },
+      { min: 0, max: toSpeedDisplay(20) },
+      { min: toSpeedDisplay(20), max: toSpeedDisplay(40) },
+      { min: toSpeedDisplay(40), max: toSpeedDisplay(60) },
+      { min: toSpeedDisplay(60), max: toSpeedDisplay(80) },
+      { min: toSpeedDisplay(80), max: toSpeedDisplay(100) },
+      { min: toSpeedDisplay(100), max: toSpeedDisplay(120) },
+      { min: toSpeedDisplay(120), max: 9999 },
     ];
     const buckets = defs.map((d) => ({
       range: d.max >= 9999 ? `${fmtNumber(d.min)}+` : `${fmtNumber(d.min)}–${fmtNumber(d.max)}`,
@@ -244,7 +246,7 @@ export function useDriveDetailData(id: string) {
     return buckets
       .filter((b) => b.count > 0)
       .map((b) => ({ range: b.range, pct: chartData.length > 0 ? Math.round((b.count / chartData.length) * 100) : 0 }));
-  }, [chartData, convertSpeed]);
+  }, [chartData, toSpeedDisplay]);
 
   return {
     drive: drive ?? null,

@@ -27,22 +27,11 @@
  *   formatPressure(kpa, pref): string
  *   formatEnergy(wh, pref): string
  *   formatDuration(seconds, pref): string
+ *   formatPower(watts, pref): string
  *   convertDistanceFromSI / convertSpeedFromSI / convertTempFromSI /
- *   convertPressureFromSI / convertEnergyFromSI / convertDurationFromSI
- *
- * Public surface (LEGACY, retained for backward compatibility while
- * pages are migrated; documented as @deprecated. Do not introduce new
- * call sites):
- *
- *   enum DistanceUnit / TemperatureUnit / PressureUnit
- *   milesToKm / kmToMiles / celsiusToFahrenheit / fahrenheitToCelsius /
- *   psiToBar / barToPsi
- *   convertDistance / convertTemp / convertPressure
- *   toDisplayDistance / toDisplayTemperature / toDisplayPressure
- *   distanceLabel / speedLabel / temperatureLabel / pressureLabel
+ *   convertPressureFromSI / convertEnergyFromSI / convertDurationFromSI /
+ *   convertPowerFromSI
  */
-
-import { UNITS } from './constants'
 
 // ---------------------------------------------------------------------------
 // SI canonical baseline (informational; renderers reference this so the
@@ -61,6 +50,7 @@ export const SI = Object.freeze({
   pressure: 'kPa',
   energy: 'Wh',
   duration: 's',
+  power: 'W',
 } as const)
 
 // ---------------------------------------------------------------------------
@@ -79,6 +69,8 @@ export type PressureUnitPref = 'kPa' | 'psi' | 'bar'
 export type EnergyUnitPref = 'Wh' | 'kWh'
 /** Duration display unit (target of formatDuration). */
 export type DurationUnitPref = 's' | 'min' | 'h' | 'd'
+/** Power display unit (target of formatPower). */
+export type PowerUnitPref = 'W' | 'kW'
 
 /**
  * UnitPref aggregates the user's per-quantity display preference plus
@@ -94,6 +86,7 @@ export interface UnitPref {
   pressure: PressureUnitPref
   energy: EnergyUnitPref
   duration: DurationUnitPref
+  power: PowerUnitPref
   /** BCP-47 locale tag passed to `Intl.NumberFormat`. Undefined = host. */
   locale?: string
   /** Default `maximumFractionDigits` when formatX has no per-call override. */
@@ -232,6 +225,20 @@ export function convertDurationFromSI(
   }
 }
 
+/**
+ * Convert power from SI watts to the user's display unit.
+ * @param watts - power in watts (SI)
+ * @param to - target display unit
+ */
+export function convertPowerFromSI(watts: number, to: PowerUnitPref): number {
+  switch (to) {
+    case 'W':
+      return watts
+    case 'kW':
+      return watts / 1000
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Locale-aware string formatters.
 // Each fn returns the locale '—' fallback (or pref.emptyDisplay) for
@@ -249,6 +256,7 @@ const DEFAULT_PRECISION: Record<keyof typeof SI, number> = {
   pressure: 1,
   energy: 2,
   duration: 0,
+  power: 2,
 }
 
 interface FormatOptions {
@@ -394,164 +402,18 @@ export function formatDuration(
   return `${formatNumber(value, pref.locale, digits)} ${pref.duration}`
 }
 
-// ===========================================================================
-// LEGACY API — retained for backward compatibility while existing pages
-// migrate to the SI-floor surface above. Every export below is marked
-// @deprecated; do not introduce new call sites.
-// ===========================================================================
-
-/** @deprecated Use `DistanceUnitPref` and `formatDistance(meters, pref)`. */
-export enum DistanceUnit {
-  Unknown = 0,
-  Miles = 1,
-  Kilometers = 2,
-}
-
-/** @deprecated Use `TemperatureUnitPref` and `formatTemperature(celsius, pref)`. */
-export enum TemperatureUnit {
-  Unknown = 0,
-  Fahrenheit = 1,
-  Celsius = 2,
-}
-
-/** @deprecated Use `PressureUnitPref` and `formatPressure(kpa, pref)`. */
-export enum PressureUnit {
-  Unknown = 0,
-  PSI = 1,
-  Bar = 2,
-}
-
-// --- Pair converters (pure, unidirectional; kept for migration churn).
-
-/** @deprecated Pure pair converter; new code should pass meters to `formatDistance`. */
-export function milesToKm(miles: number): number {
-  return miles * UNITS.MI_TO_KM
-}
-
-/** @deprecated Pure pair converter; new code should pass meters to `formatDistance`. */
-export function kmToMiles(km: number): number {
-  return km * UNITS.KM_TO_MI
-}
-
-/** @deprecated Pure pair converter; new code should pass °C to `formatTemperature`. */
-export function celsiusToFahrenheit(c: number): number {
-  return (c * 9) / 5 + 32
-}
-
-/** @deprecated Pure pair converter; new code should pass °C to `formatTemperature`. */
-export function fahrenheitToCelsius(f: number): number {
-  return ((f - 32) * 5) / 9
-}
-
-/** @deprecated Pure pair converter; new code should pass kPa to `formatPressure`. */
-export function psiToBar(psi: number): number {
-  return psi / UNITS.BAR_TO_PSI
-}
-
-/** @deprecated Pure pair converter; new code should pass kPa to `formatPressure`. */
-export function barToPsi(bar: number): number {
-  return bar * UNITS.BAR_TO_PSI
-}
-
-// --- High-level legacy display converters (assume miles / °C / PSI input).
-
 /**
- * @deprecated Legacy converter that assumes miles input. New code should
- * pass meters to `formatDistance` / `convertDistanceFromSI`.
+ * Format SI watts for display in the user's unit.
+ * @param watts - power in watts (SI). Null/undefined/NaN → fallback.
+ * @param pref - user display preference.
  */
-export function convertDistance(miles: number, toUnit: 'mi' | 'km'): number {
-  return toUnit === 'km' ? milesToKm(miles) : miles
-}
-
-/**
- * @deprecated Legacy converter that assumes Celsius input. New code should
- * use `formatTemperature` / `convertTempFromSI`.
- */
-export function convertTemp(celsius: number, toUnit: '°C' | '°F'): number {
-  return toUnit === '°F' ? celsiusToFahrenheit(celsius) : celsius
-}
-
-/**
- * @deprecated Legacy converter that assumes PSI input. New code should
- * pass kPa to `formatPressure` / `convertPressureFromSI`.
- */
-export function convertPressure(psi: number, toUnit: 'PSI' | 'bar'): number {
-  return toUnit === 'bar' ? psiToBar(psi) : psi
-}
-
-// --- Source-aware legacy converters (Unknown→raw passthrough).
-
-/**
- * @deprecated Source-aware legacy converter. New code should consume SI
- * meters at the boundary and call `formatDistance(meters, pref)`.
- */
-export function toDisplayDistance(
-  value: number,
-  fromUnit: DistanceUnit,
-  toUnit: DistanceUnit,
-  precision = 1,
-): number {
-  const miles =
-    fromUnit === DistanceUnit.Kilometers ? kmToMiles(value) : value
-  const display =
-    toUnit === DistanceUnit.Kilometers ? milesToKm(miles) : miles
-  return Number(display.toFixed(precision))
-}
-
-/**
- * @deprecated Source-aware legacy converter. New code should consume SI
- * Celsius at the boundary and call `formatTemperature(c, pref)`.
- */
-export function toDisplayTemperature(
-  value: number,
-  fromUnit: TemperatureUnit,
-  toUnit: TemperatureUnit,
-  precision = 1,
-): number {
-  const celsius =
-    fromUnit === TemperatureUnit.Fahrenheit
-      ? fahrenheitToCelsius(value)
-      : value
-  const display =
-    toUnit === TemperatureUnit.Fahrenheit
-      ? celsiusToFahrenheit(celsius)
-      : celsius
-  return Number(display.toFixed(precision))
-}
-
-/**
- * @deprecated Source-aware legacy converter. New code should consume SI
- * kPa at the boundary and call `formatPressure(kpa, pref)`.
- */
-export function toDisplayPressure(
-  value: number,
-  fromUnit: PressureUnit,
-  toUnit: PressureUnit,
-  precision = 1,
-): number {
-  const psi = fromUnit === PressureUnit.Bar ? barToPsi(value) : value
-  const display = toUnit === PressureUnit.Bar ? psiToBar(psi) : psi
-  return Number(display.toFixed(precision))
-}
-
-// --- Legacy unit labels.
-
-/** @deprecated Use the literal `pref.distance` from `UnitPref`. */
-export function distanceLabel(unit: DistanceUnit): string {
-  return unit === DistanceUnit.Kilometers ? 'km' : 'mi'
-}
-
-/** @deprecated Use the literal `pref.speed` from `UnitPref`. */
-export function speedLabel(unit: DistanceUnit): string {
-  return unit === DistanceUnit.Kilometers ? 'km/h' : 'mph'
-}
-
-/** @deprecated Use the literal `pref.temperature` from `UnitPref`. */
-export function temperatureLabel(unit: TemperatureUnit): string {
-  return unit === TemperatureUnit.Fahrenheit ? '°F' : '°C'
-}
-
-/** @deprecated Use the literal `pref.pressure` from `UnitPref`. */
-export function pressureLabel(unit: PressureUnit): string {
-  return unit === PressureUnit.Bar ? 'bar' : 'PSI'
+export function formatPower(
+  watts: number | null | undefined,
+  pref: UnitPref,
+  options?: FormatOptions,
+): string {
+  if (!isFiniteNumber(watts)) return resolveEmpty(pref)
+  const digits = resolvePrecision(pref, options?.precision, DEFAULT_PRECISION.power)
+  const value = convertPowerFromSI(watts, pref.power)
+  return `${formatNumber(value, pref.locale, digits)} ${pref.power}`
 }

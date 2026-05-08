@@ -7,12 +7,13 @@ import { AnimatedNumber } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useYearReview } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { UNITS } from '@/lib/constants';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -26,24 +27,27 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
 
   const currentYear = new Date().getFullYear();
   const {
-    data, isLoading, error,
-    isFetching, isStale, isError, dataUpdatedAt, refetch,
-  } = useYearReview(currentYear, id > 0 ? String(id) : undefined);
+    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useYearReview(currentYear, id > 0 ? String(id) : undefined);
 
-  const { convertDistance, convertSpeed, distanceUnit, speedUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
+  const speedUnit = unitPrefs.speed;
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
   // API returns km; convert km → mi (internal) → user pref
   const distanceMi = (data?.total_distance_km ?? 0) * UNITS.KM_TO_MI;
-  const displayDistance = convertDistance(distanceMi);
+  const displayDistance = toDistanceDisplay(distanceMi);
 
   const longestDriveMi = ((data?.longest_drive?.distance_km ?? 0) * UNITS.KM_TO_MI);
-  const displayLongestDrive = convertDistance(longestDriveMi);
+  const displayLongestDrive = toDistanceDisplay(longestDriveMi);
 
   const fastestSpeedMph = (data?.fastest_speed_kmh ?? 0) * UNITS.KM_TO_MI;
-  const displayFastestSpeed = convertSpeed(fastestSpeedMph);
+  const displayFastestSpeed = toSpeedDisplay(fastestSpeedMph);
 
   // Find busiest month
   const busiestMonth = useMemo(() => {

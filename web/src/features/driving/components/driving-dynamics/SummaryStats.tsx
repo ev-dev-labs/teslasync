@@ -15,11 +15,11 @@ import type { MotorStats } from './helpers';
 
 interface SummaryStatsProps {
   motorStats: MotorStats | null;
-  convertTemp: (v: number) => number;
+  toTemperatureDisplay: (v: number) => number;
   tempUnit: string;
 }
 
-export default function SummaryStats({ motorStats, convertTemp, tempUnit }: SummaryStatsProps) {
+export default function SummaryStats({ motorStats, toTemperatureDisplay, tempUnit }: SummaryStatsProps) {
   const { t } = useTranslation();
 
   return (
@@ -64,7 +64,7 @@ export default function SummaryStats({ motorStats, convertTemp, tempUnit }: Summ
           <StatCard
             label={t('dynamics.avgMotorTemp', 'Avg Motor Temp')}
             value={motorStats
-              ? `${fmtNumber(convertTemp(motorStats.avgMotorTemp), 1)}°${tempUnit}`
+              ? `${fmtNumber(toTemperatureDisplay(motorStats.avgMotorTemp), 1)}°${tempUnit}`
               : '—'}
             icon={<Thermometer className="h-4 w-4" />}
           />

@@ -6,7 +6,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { LEGEND_STYLE } from './helpers';
 import type { ChartDataPoint, DriveStats } from './types';
@@ -18,7 +18,8 @@ interface TirePressureSectionProps {
 
 export function TirePressureSection({ chartData, stats }: TirePressureSectionProps) {
   const { t } = useTranslation();
-  const { pressureUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const pressureUnit = unitPrefs.pressure;
 
   const tpVals = (key: 'tireFl' | 'tireFr' | 'tireRl' | 'tireRr') => {
     const vals = chartData.map((d) => d[key]).filter((v): v is number => v != null && v > 0);

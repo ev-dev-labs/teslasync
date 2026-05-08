@@ -6,8 +6,8 @@ import (
 	"math"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/jackc/pgx/v5"
 )
 
 // Phase-42 SI canonical schema (migration 000184_charging_si). The
@@ -34,6 +34,47 @@ import (
 // at the repo boundary so the JSON shape consumed by the frontend is
 // preserved (per Prompt 0073 covenant #11). Phase-42-dropped columns surface
 // as nil per ADR-004 forward-only.
+
+// SI conversion helpers private to charging_repo. Removed when Slice 2
+// migrates the ChargingSession model to SI canonical.
+const (
+	metersPerMile = 1609.344
+	kiloUnit      = 1000.0 // W↔kW and Wh↔kWh share a 1000 factor
+)
+
+func wPtrToKwPtr(p *float64) *float64 {
+	if p == nil {
+		return nil
+	}
+	v := *p / kiloUnit
+	return &v
+}
+
+func whPtrToKwhPtr(p *float64) *float64 {
+	if p == nil {
+		return nil
+	}
+	v := *p / kiloUnit
+	return &v
+}
+
+func coerceToFloat(v interface{}) (float64, bool) {
+	switch x := v.(type) {
+	case float64:
+		return x, true
+	case float32:
+		return float64(x), true
+	case int:
+		return float64(x), true
+	case int16:
+		return float64(x), true
+	case int32:
+		return float64(x), true
+	case int64:
+		return float64(x), true
+	}
+	return 0, false
+}
 
 // ChargingRepo provides charging session data access against the SI canonical
 // charging_sessions table (migration 000184_charging_si).
@@ -188,9 +229,9 @@ func (r *ChargingRepo) Complete(ctx context.Context, id int64, endTs time.Time,
 	energyAddedKwh *float64, endBatteryPct *int16, milesAdded *float64,
 	chargerPowerKwMax, chargerPowerKwAvg *float64,
 	cost *float64, costCurrency *string, durationMin *float64, endedStatus *string) error {
-	_ = milesAdded   // dropped column (migration 000184)
-	_ = durationMin  // dropped column (migration 000184)
-	_ = endedStatus  // dropped column (migration 000184)
+	_ = milesAdded  // dropped column (migration 000184)
+	_ = durationMin // dropped column (migration 000184)
+	_ = endedStatus // dropped column (migration 000184)
 	totalEnergyAddedWh, endSoc, peakPowerW, avgPwrW :=
 		completeChargingArgsToSI(energyAddedKwh, endBatteryPct, chargerPowerKwMax, chargerPowerKwAvg)
 	query := `
@@ -344,9 +385,9 @@ func translateChargingPartialFieldsToSI(in map[string]interface{}) map[string]in
 			out["start_lat"] = v
 		case "start" + "_lon", "start_lng":
 			out["start_lng"] = v
-		// Phase-42 dropped columns (forward-only ADR-004 #2): silently
-		// ignored — the legacy duration / miles-added / max_charger_voltage /
-		// charger_phases / legacy ended-status columns no longer exist.
+			// Phase-42 dropped columns (forward-only ADR-004 #2): silently
+			// ignored — the legacy duration / miles-added / max_charger_voltage /
+			// charger_phases / legacy ended-status columns no longer exist.
 		}
 	}
 	return out
@@ -427,9 +468,9 @@ func (r *ChargingRepo) CompleteWithTx(ctx context.Context, tx DBTX, id int64, en
 	energyAddedKwh *float64, endBatteryPct *int16, milesAdded *float64,
 	chargerPowerKwMax, chargerPowerKwAvg *float64,
 	cost *float64, costCurrency *string, durationMin *float64, endedStatus *string) error {
-	_ = milesAdded   // dropped column (migration 000184)
-	_ = durationMin  // dropped column (migration 000184)
-	_ = endedStatus  // dropped column (migration 000184)
+	_ = milesAdded  // dropped column (migration 000184)
+	_ = durationMin // dropped column (migration 000184)
+	_ = endedStatus // dropped column (migration 000184)
 	totalEnergyAddedWh, endSoc, peakPowerW, avgPwrW :=
 		completeChargingArgsToSI(energyAddedKwh, endBatteryPct, chargerPowerKwMax, chargerPowerKwAvg)
 	query := `

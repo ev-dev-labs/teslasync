@@ -19,7 +19,6 @@ import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Sparkline, ElevationProfile, type ElevationDataPoint } from '@/components/charts';
 import { useDrive } from '@/api/hooks/useDriving';
 import { useUnits } from '@/hooks/useUnits';
-import { useSettings } from '@/hooks/useSettings';
 import type { DistanceUnitPref, SpeedUnitPref } from '@/lib/unitConversion';
 import {
   convertDistanceFromSI,
@@ -118,7 +117,10 @@ export default function TripReplayPage() {
   // Legacy helpers retained for drive-level summary fields that are
   // genuine miles / mph after the SQL adapter boundary
   // (locked-policy continuation from Phase-43/0022).
-  const { distanceUnit, speedUnit } = useSettings();
+
+  const distanceUnit = unitPrefs.distance;
+
+  const speedUnit = unitPrefs.speed;
 
   /* ---- Normalize positions ---- */
   // The /drives/{id} positions array carries only lat/lon/heading/speed
@@ -275,7 +277,7 @@ export default function TripReplayPage() {
 
   /* ---- Elevation profile data ---- */
   // PRE-EXISTING BUG fix: cumDist is meters from haversineDistance, but the
-  // legacy code did `convertDistance(cumDist / 1000)` which fed kilometres
+  // legacy code did `toDistanceDisplay(cumDist / 1000)` which fed kilometres
   // into a miles-based helper — same bug pattern Phase-43/0022 fixed in
   // useDriveDetailData. Now we use convertDistanceFromSI on raw meters.
   const elevationData: ElevationDataPoint[] = useMemo(() => {

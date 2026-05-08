@@ -38,7 +38,9 @@ import (
 // untouched (out of allowed-files scope).
 
 const (
-	mphPerMps = 2.2369362920544025 // 1 m/s = 2.2369... mph
+	// Removed when Slice 2 migrates speed columns to SI canonical.
+	mpsPerMph = 0.44704
+	mphPerMps = 1 / mpsPerMph
 )
 
 // Field names on models.Position split across string concatenation so the

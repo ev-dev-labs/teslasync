@@ -4,12 +4,13 @@ import { CalendarDays } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useWeeklyDigest } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { UNITS } from '@/lib/constants';
 import { WidgetShell } from './WidgetShell';
 import { WidgetComparisonCard, type ComparisonMetric } from './shared';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -17,22 +18,14 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
   const {
-    data,
-    isLoading,
-    error,
-    isFetching,
-    isStale,
-    isError,
-    dataUpdatedAt,
-    refetch,
-  } = useWeeklyDigest(String(id));
+    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useWeeklyDigest(String(id));
 
-  const {
-    convertDistance,
-    convertEfficiency,
-    distanceUnit,
-    efficiencyUnit,
-  } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
 
   const isCompact = size.cols <= 1;
 
@@ -41,14 +34,14 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
 
     const distMi = (data.distanceKm ?? 0) * UNITS.KM_TO_MI;
     const prevDistMi = (data.prevDistanceKm ?? 0) * UNITS.KM_TO_MI;
-    const dist = convertDistance(distMi);
-    const prevDist = convertDistance(prevDistMi);
+    const dist = toDistanceDisplay(distMi);
+    const prevDist = toDistanceDisplay(prevDistMi);
 
-    // Efficiency stored as Wh/km → convert to Wh/mi for convertEfficiency
+    // Efficiency stored as Wh/km → convert to Wh/mi for toEfficiencyDisplay
     const effWhMi = (data.efficiency ?? 0) * UNITS.MI_TO_KM;
     const prevEffWhMi = (data.prevEfficiency ?? 0) * UNITS.MI_TO_KM;
-    const eff = convertEfficiency(effWhMi);
-    const prevEff = convertEfficiency(prevEffWhMi);
+    const eff = toEfficiencyDisplay(effWhMi);
+    const prevEff = toEfficiencyDisplay(prevEffWhMi);
 
     const energy = data.energyKwh ?? 0;
     const prevEnergy = data.prevEnergyKwh ?? 0;
@@ -89,7 +82,7 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
         higherIsBetter: false,
       },
     ];
-  }, [data, convertDistance, convertEfficiency, distanceUnit, efficiencyUnit, t]);
+  }, [data, toDistanceDisplay, toEfficiencyDisplay, distanceUnit, efficiencyUnit, t]);
 
   return (
     <WidgetShell

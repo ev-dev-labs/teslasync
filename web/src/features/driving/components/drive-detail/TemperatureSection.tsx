@@ -10,7 +10,7 @@ import {
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { LEGEND_STYLE } from './helpers';
 import type { ChartDataPoint, DriveStats } from './types';
@@ -22,7 +22,8 @@ interface TemperatureSectionProps {
 
 export function TemperatureSection({ chartData, stats }: TemperatureSectionProps) {
   const { t } = useTranslation();
-  const { tempUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const tempUnit = unitPrefs.temperature;
   const syncProps = useSyncedCursor();
   const syncedX = useSyncedReferenceLineX();
 

@@ -15,9 +15,10 @@ import {
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 
 import type { MotorChartDataPoint } from './constants';
+import { convertTempFromSI } from '@/lib/unitConversion';
 
 interface StatorTempChartProps {
   data: MotorChartDataPoint[];
@@ -25,7 +26,10 @@ interface StatorTempChartProps {
 
 export function StatorTempChart({ data }: StatorTempChartProps) {
   const { t } = useTranslation();
-  const { convertTemp, tempUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+
+  const tempUnit = unitPrefs.temperature;
 
   if (data.length <= 1) return null;
 
@@ -75,14 +79,14 @@ export function StatorTempChart({ data }: StatorTempChartProps) {
               stroke="#06b6d4"
             />
             <ReferenceLine
-              y={convertTemp(60)}
+              y={toTemperatureDisplay(60)}
               stroke="#4ade80"
               strokeDasharray="4 4"
               strokeOpacity={0.5}
               label={{ value: t('drivetrain.normal', 'Normal'), position: 'right', fill: '#4ade80', fontSize: 10 }}
             />
             <ReferenceLine
-              y={convertTemp(80)}
+              y={toTemperatureDisplay(80)}
               stroke="#fbbf24"
               strokeDasharray="4 4"
               strokeOpacity={0.5}

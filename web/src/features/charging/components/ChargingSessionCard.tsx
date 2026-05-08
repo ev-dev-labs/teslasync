@@ -30,13 +30,13 @@ export { formatDurationMinutes as formatDuration };
 
 interface ChargingSessionCardProps {
   session: ChargingSession;
-  convertDistance: (km: number) => number;
+  toDistanceDisplay: (km: number) => number;
   distanceUnit: string;
   selected?: boolean;
   onToggleSelect?: (id: number, on: boolean) => void;
 }
 
-export function ChargingSessionCard({ session, convertDistance, distanceUnit, selected, onToggleSelect }: ChargingSessionCardProps) {
+export function ChargingSessionCard({ session, toDistanceDisplay, distanceUnit, selected, onToggleSelect }: ChargingSessionCardProps) {
   const { t } = useTranslation('charging');
   const chargerLabels: Record<ChargerCategory, string> = {
     supercharger: t('chargerTypes.supercharger', 'Supercharger'),
@@ -55,7 +55,7 @@ export function ChargingSessionCard({ session, convertDistance, distanceUnit, se
     session.cost && session.energy_added_kwh > 0
       ? session.cost / session.energy_added_kwh
       : null;
-  const milesGained = session.miles_added != null ? convertDistance(session.miles_added) : null;
+  const milesGained = session.miles_added != null ? toDistanceDisplay(session.miles_added) : null;
 
   const showCheckbox = typeof onToggleSelect === 'function';
 

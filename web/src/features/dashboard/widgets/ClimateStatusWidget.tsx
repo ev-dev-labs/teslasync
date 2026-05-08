@@ -2,10 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { Thermometer, Snowflake, Zap } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useClimateLatest } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertTempFromSI } from '@/lib/unitConversion';
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -21,7 +22,10 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { data: climateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useClimateLatest(id, 5_000);
-  const { convertTemp, tempUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+
+  const tempUnit = unitPrefs.temperature;
 
   return (
     <WidgetShell
@@ -40,7 +44,7 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
             label={t('widget.cabin', 'Cabin')}
             value={
               climateData.inside_temp != null
-                ? `${fmtInt(convertTemp(climateData.inside_temp))}${tempUnit}`
+                ? `${fmtInt(toTemperatureDisplay(climateData.inside_temp))}${tempUnit}`
                 : '—'
             }
           />
@@ -48,7 +52,7 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
             label={t('widget.outside', 'Outside')}
             value={
               climateData.outside_temp != null
-                ? `${fmtInt(convertTemp(climateData.outside_temp))}${tempUnit}`
+                ? `${fmtInt(toTemperatureDisplay(climateData.outside_temp))}${tempUnit}`
                 : '—'
             }
           />

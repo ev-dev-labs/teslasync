@@ -254,7 +254,7 @@ export default function ClimateControlPage() {
   // Backend ClimateState fields (insideTemp, outsideTemp, driverTempSetting,
   // passengerTempSetting) arrive in °C SI. `convertTempFromSI` accepts the
   // °C scalar directly and returns the user-pref display value.
-  const convertTemp = (celsius: number) => convertTempFromSI(celsius, tempUnit);
+  const toTemperatureDisplay = (celsius: number) => convertTempFromSI(celsius, tempUnit);
 
   /* ─── Vehicle selector — Phase 40 / Prompt 16: header VehiclePicker is the source of truth ─── */
   const { vehicleId } = useSelectedVehicle();
@@ -310,14 +310,14 @@ export default function ClimateControlPage() {
         header: `${t('Inside')} ${tempUnit}`,
         sortable: true,
         render: (row) =>
-          row.insideTemp != null ? fmtNumber(convertTemp(row.insideTemp), 1) : '—',
+          row.insideTemp != null ? fmtNumber(toTemperatureDisplay(row.insideTemp), 1) : '—',
       },
       {
         key: 'outsideTemp',
         header: `${t('Outside')} ${tempUnit}`,
         sortable: true,
         render: (row) =>
-          row.outsideTemp != null ? fmtNumber(convertTemp(row.outsideTemp), 1) : '—',
+          row.outsideTemp != null ? fmtNumber(toTemperatureDisplay(row.outsideTemp), 1) : '—',
       },
       {
         key: 'driverTempSetting',
@@ -325,7 +325,7 @@ export default function ClimateControlPage() {
         sortable: true,
         render: (row) =>
           row.driverTempSetting != null
-            ? fmtNumber(convertTemp(row.driverTempSetting), 1)
+            ? fmtNumber(toTemperatureDisplay(row.driverTempSetting), 1)
             : '—',
       },
       {
@@ -374,12 +374,12 @@ export default function ClimateControlPage() {
   const convertedChartData = useMemo(() =>
     chronoHistory.map(h => ({
       ...h,
-      insideTemp: h.insideTemp != null ? convertTemp(h.insideTemp) : null,
-      outsideTemp: h.outsideTemp != null ? convertTemp(h.outsideTemp) : null,
-      driverTempSetting: h.driverTempSetting != null ? convertTemp(h.driverTempSetting) : null,
+      insideTemp: h.insideTemp != null ? toTemperatureDisplay(h.insideTemp) : null,
+      outsideTemp: h.outsideTemp != null ? toTemperatureDisplay(h.outsideTemp) : null,
+      driverTempSetting: h.driverTempSetting != null ? toTemperatureDisplay(h.driverTempSetting) : null,
       acActive: h.isAcOn ? 1 : 0,
     })),
-    // Track the primitive `tempUnit` instead of the closure `convertTemp`
+    // Track the primitive `tempUnit` instead of the closure `toTemperatureDisplay`
     // so non-temperature settings churn doesn't invalidate the memo.
     [chronoHistory, tempUnit],
   );
@@ -496,14 +496,14 @@ export default function ClimateControlPage() {
             {latest?.insideTemp != null ? (
               <>
                 <RadialGauge
-                  value={convertTemp(latest.insideTemp)}
+                  value={toTemperatureDisplay(latest.insideTemp)}
                   max={tempGaugeMax}
                   label={t('Inside Temp')}
                   unit={tempUnit}
                   color={CHART_COLORS[0]}
                 />
                 <span className="text-lg font-bold text-[var(--text-primary)]">
-                  {fmtNumber(convertTemp(latest.insideTemp), 1)}{tempUnit}
+                  {fmtNumber(toTemperatureDisplay(latest.insideTemp), 1)}{tempUnit}
                 </span>
               </>
             ) : (
@@ -518,14 +518,14 @@ export default function ClimateControlPage() {
             {latest?.outsideTemp != null ? (
               <>
                 <RadialGauge
-                  value={convertTemp(latest.outsideTemp)}
+                  value={toTemperatureDisplay(latest.outsideTemp)}
                   max={tempGaugeMax}
                   label={t('Outside Temp')}
                   unit={tempUnit}
                   color={CHART_COLORS[1]}
                 />
                 <span className="text-lg font-bold text-[var(--text-primary)]">
-                  {fmtNumber(convertTemp(latest.outsideTemp), 1)}{tempUnit}
+                  {fmtNumber(toTemperatureDisplay(latest.outsideTemp), 1)}{tempUnit}
                 </span>
               </>
             ) : (
@@ -540,14 +540,14 @@ export default function ClimateControlPage() {
             {latest?.driverTempSetting != null ? (
               <>
                 <RadialGauge
-                  value={convertTemp(latest.driverTempSetting)}
+                  value={toTemperatureDisplay(latest.driverTempSetting)}
                   max={tempGaugeMax}
                   label={t('Driver Set Temp')}
                   unit={tempUnit}
                   color={CHART_COLORS[2]}
                 />
                 <span className="text-lg font-bold text-[var(--text-primary)]">
-                  {fmtNumber(convertTemp(latest.driverTempSetting), 1)}{tempUnit}
+                  {fmtNumber(toTemperatureDisplay(latest.driverTempSetting), 1)}{tempUnit}
                 </span>
               </>
             ) : (
@@ -840,7 +840,7 @@ export default function ClimateControlPage() {
             label={t('Passenger Setting')}
             value={
               latest?.passengerTempSetting != null
-                ? `${fmtNumber(convertTemp(latest.passengerTempSetting), 1)}${tempUnit}`
+                ? `${fmtNumber(toTemperatureDisplay(latest.passengerTempSetting), 1)}${tempUnit}`
                 : '—'
             }
             icon={<Thermometer className="h-5 w-5 text-purple-400" />}

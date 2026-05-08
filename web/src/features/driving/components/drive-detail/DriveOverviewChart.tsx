@@ -9,7 +9,7 @@ import {
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt, fmtPercent, fmtWithUnit } from '@/lib/numberFormat';
 import type { DriveDetail } from '@/types/driving';
 import type { ChartDataPoint } from './types';
@@ -21,7 +21,10 @@ interface DriveOverviewChartProps {
 
 export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
   const { t } = useTranslation();
-  const { speedUnit, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const speedUnit = unitPrefs.speed;
+
+  const distanceUnit = unitPrefs.distance;
   const syncProps = useSyncedCursor();
   const syncedX = useSyncedReferenceLineX();
 
@@ -95,7 +98,11 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
 
 function ChartLegend({ chartData }: { chartData: ChartDataPoint[] }) {
   const { t } = useTranslation();
-  const { speedUnit, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+
+  const speedUnit = unitPrefs.speed;
+
+  const distanceUnit = unitPrefs.distance;
 
   const statFn = (vals: (number | null)[]) => {
     const v = vals.filter((x): x is number => x != null);

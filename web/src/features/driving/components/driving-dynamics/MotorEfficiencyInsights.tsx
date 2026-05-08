@@ -12,14 +12,14 @@ import type { MotorStats, ThrottleStyle } from './helpers';
 interface MotorEfficiencyInsightsProps {
   motorStats: MotorStats | null;
   throttleStyle: ThrottleStyle | null;
-  convertTemp: (v: number) => number;
+  toTemperatureDisplay: (v: number) => number;
   tempUnit: string;
 }
 
 export default function MotorEfficiencyInsights({
   motorStats,
   throttleStyle,
-  convertTemp,
+  toTemperatureDisplay,
   tempUnit,
 }: MotorEfficiencyInsightsProps) {
   const { t } = useTranslation();
@@ -98,11 +98,11 @@ export default function MotorEfficiencyInsights({
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
                 <span>{t('dynamics.avgMotorTemp', 'Avg Motor Temp')}</span>
-                <span className="font-mono">{fmtNumber(convertTemp(motorStats.avgMotorTemp), 1)}°{tempUnit}</span>
+                <span className="font-mono">{fmtNumber(toTemperatureDisplay(motorStats.avgMotorTemp), 1)}°{tempUnit}</span>
               </div>
               <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
                 <span>{t('dynamics.maxMotorTemp', 'Max Motor Temp')}</span>
-                <span className="font-mono">{fmtNumber(convertTemp(motorStats.maxMotorTemp), 1)}°{tempUnit}</span>
+                <span className="font-mono">{fmtNumber(toTemperatureDisplay(motorStats.maxMotorTemp), 1)}°{tempUnit}</span>
               </div>
               <Badge
                 variant={motorStats.maxMotorTemp < 100 ? 'success' : motorStats.maxMotorTemp < 140 ? 'warning' : 'danger'}

@@ -21,6 +21,7 @@ import { StaggerItem } from '@/components/motion/StaggerItem';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { useDrivingStats, useDrives } from '@/api/hooks/useDriving';
 import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
@@ -28,6 +29,7 @@ import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { Drive } from '@/types/driving';
+import { convertDistanceFromSI, convertSpeedFromSI, convertTempFromSI } from '@/lib/unitConversion';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -43,7 +45,7 @@ function efficiencyColor(wh: number): string {
 
 function getEfficiency(drive: Drive): number | null {
   const battUsed = (drive.startBatteryPct ?? 0) - (drive.endBatteryPct ?? 0);
-  if (drive.distanceM > 0 && battUsed > 0) return (battUsed * 0.75 * 1000) / (drive.distanceM / 1609.344);
+  if (drive.distanceM > 0 && battUsed > 0) return (battUsed * 0.75 * 1000) / (drive.distanceM / 1000);
   return null;
 }
 
@@ -63,10 +65,17 @@ export default function EfficiencyPage() {
   const { data: stats } = useDrivingStats(vehicleIdStr);
   const { data: drives } = useDrives(vehicleIdStr);
 
-  const {
-    convertDistance, convertSpeed, convertTemp, convertEfficiency,
-    distanceUnit, speedUnit, tempUnit, efficiencyUnit, isFahrenheit,
-  } = useSettings();
+  const { isFahrenheit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
+  const speedUnit = unitPrefs.speed;
+  const tempUnit = unitPrefs.temperature;
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
 
   const defaultStartDate = useMemo(() => {
     const d = new Date(); d.setDate(d.getDate() - 30);
@@ -97,30 +106,30 @@ export default function EfficiencyPage() {
       .reverse()
       .map((d) => ({
         date: formatDateShort(d.startTs),
-        efficiency: Math.round(convertEfficiency(getEfficiency(d)!)),
-        distance: parseFloat(fmtNumber(convertDistance((d.distanceM ?? 0) / 1609.344), 1)),
+        efficiency: Math.round(toEfficiencyDisplay(getEfficiency(d)!)),
+        distance: parseFloat(fmtNumber(toDistanceDisplay(d.distanceM ?? 0), 1)),
       }));
-  }, [filteredDrives, convertEfficiency, convertDistance]);
+  }, [filteredDrives, toEfficiencyDisplay, toDistanceDisplay]);
 
   /* ---- Speed vs Efficiency scatter ---- */
   const speedVsEff = useMemo(() => {
     return filteredDrives
       .filter((d) => d.avgSpeedMps && getEfficiency(d))
       .map((d) => ({
-        speed: Math.round(convertSpeed((d.avgSpeedMps!) / 0.44704)),
-        efficiency: Math.round(convertEfficiency(getEfficiency(d)!)),
+        speed: Math.round(toSpeedDisplay(d.avgSpeedMps!)),
+        efficiency: Math.round(toEfficiencyDisplay(getEfficiency(d)!)),
       }));
-  }, [filteredDrives, convertSpeed, convertEfficiency]);
+  }, [filteredDrives, toSpeedDisplay, toEfficiencyDisplay]);
 
   /* ---- Temp vs Efficiency scatter ---- */
   const tempVsEff = useMemo(() => {
     return filteredDrives
       .filter((d) => d.outsideTempAvgC !== null && getEfficiency(d))
       .map((d) => ({
-        temp: Math.round(convertTemp(d.outsideTempAvgC!)),
-        efficiency: Math.round(convertEfficiency(getEfficiency(d)!)),
+        temp: Math.round(toTemperatureDisplay(d.outsideTempAvgC!)),
+        efficiency: Math.round(toEfficiencyDisplay(getEfficiency(d)!)),
       }));
-  }, [filteredDrives, convertTemp, convertEfficiency]);
+  }, [filteredDrives, toTemperatureDisplay, toEfficiencyDisplay]);
 
   /* ---- Speed distribution ---- */
   const speedDist = useMemo(() => {
@@ -135,15 +144,16 @@ export default function EfficiencyPage() {
       if (d.avgSpeedMps == null) return;
       const eff = getEfficiency(d);
       if (!eff) return;
-      const b = buckets.find((bk) => (d.avgSpeedMps! / 0.44704) >= bk.min && (d.avgSpeedMps! / 0.44704) < bk.max);
+      const displaySpeed = toSpeedDisplay(d.avgSpeedMps!);
+      const b = buckets.find((bk) => displaySpeed >= bk.min && displaySpeed < bk.max);
       if (b) { b.count++; b.totalEff += eff; }
     });
     return buckets.filter((b) => b.count > 0).map((b) => ({
       range: `${b.range} ${speedUnit}`,
-      avgEff: Math.round(convertEfficiency(b.totalEff / b.count)),
+      avgEff: Math.round(toEfficiencyDisplay(b.totalEff / b.count)),
       count: b.count,
     }));
-  }, [filteredDrives, speedUnit, convertEfficiency]);
+  }, [filteredDrives, speedUnit, toEfficiencyDisplay, toSpeedDisplay]);
 
   /* ---- Temperature-bucketed efficiency ---- */
   const tempBuckets = useMemo(() => {
@@ -177,8 +187,8 @@ export default function EfficiencyPage() {
       if (b) {
         b.count++;
         b.totalEff += eff;
-        b.totalDist += d.distanceM / 1609.344;
-        b.totalSpeed += (d.avgSpeedMps ?? 0) / 0.44704;
+        b.totalDist += toDistanceDisplay(d.distanceM);
+        b.totalSpeed += toSpeedDisplay(d.avgSpeedMps ?? 0);
       }
     });
     return buckets
@@ -228,7 +238,7 @@ export default function EfficiencyPage() {
           {stats ? (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 items-center">
               <RadialGauge
-                value={Math.round(convertEfficiency(stats.avgEfficiencyWhKm))}
+                value={Math.round(toEfficiencyDisplay(stats.avgEfficiencyWhKm))}
                 max={300}
                 label={`${t('efficiency.avg', 'Avg')} ${efficiencyUnit}`}
                 color={efficiencyColor(stats.avgEfficiencyWhKm)}
@@ -251,7 +261,7 @@ export default function EfficiencyPage() {
               </div>
               <div className="flex flex-col items-center text-center">
                 <p className="text-2xl font-bold text-cyan-400">
-                  <AnimatedNumber value={Math.round(convertDistance(stats.totalDistanceKm))} />
+                  <AnimatedNumber value={Math.round(toDistanceDisplay(stats.totalDistanceKm))} />
                 </p>
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">
                   {t('efficiency.totalDistance', 'Total')} {distanceUnit}
@@ -270,14 +280,14 @@ export default function EfficiencyPage() {
           <StaggerItem>
             <GlassPanel className="p-4 text-center">
               <Zap className="h-4 w-4 mx-auto mb-1 text-amber-400" />
-              <p className="text-lg font-bold text-[var(--text-primary)]">{fmtNumber(convertEfficiency(stats.avgEfficiencyWhKm))}</p>
+              <p className="text-lg font-bold text-[var(--text-primary)]">{fmtNumber(toEfficiencyDisplay(stats.avgEfficiencyWhKm))}</p>
               <p className="text-[10px] text-[var(--text-muted)]">{t('efficiency.avgConsumption', 'Avg')} {efficiencyUnit}</p>
             </GlassPanel>
           </StaggerItem>
           <StaggerItem>
             <GlassPanel className="p-4 text-center">
               <TrendingUp className="h-4 w-4 mx-auto mb-1 text-green-400" />
-              <p className="text-lg font-bold text-[var(--text-primary)]">{fmtNumber(convertSpeed(stats.avgSpeedKmh))}</p>
+              <p className="text-lg font-bold text-[var(--text-primary)]">{fmtNumber(toSpeedDisplay(stats.avgSpeedKmh))}</p>
               <p className="text-[10px] text-[var(--text-muted)]">{t('efficiency.avgSpeed', 'Avg Speed')} {speedUnit}</p>
             </GlassPanel>
           </StaggerItem>
@@ -438,7 +448,7 @@ export default function EfficiencyPage() {
                   className: 'text-right',
                   render: (b) => (
                     <span style={{ color: efficiencyColor(b.avgEff) }}>
-                      {fmtInt(convertEfficiency(b.avgEff))}
+                      {fmtInt(toEfficiencyDisplay(b.avgEff))}
                     </span>
                   ),
                 },
@@ -447,20 +457,20 @@ export default function EfficiencyPage() {
                   header: `${distanceUnit}/kWh`,
                   className: 'text-right',
                   render: (b) => (
-                    <span className="text-cyan-400">{b.avgEff > 0 ? fmtNumber(1000 / convertEfficiency(b.avgEff)) : '—'}</span>
+                    <span className="text-cyan-400">{b.avgEff > 0 ? fmtNumber(1000 / toEfficiencyDisplay(b.avgEff)) : '—'}</span>
                   ),
                 },
                 {
                   key: 'totalDist',
                   header: `${t('efficiency.total', 'Total')} ${distanceUnit}`,
                   className: 'text-right',
-                  render: (b) => <span className="text-[var(--text-secondary)]">{fmtInt(convertDistance(b.totalDist))}</span>,
+                  render: (b) => <span className="text-[var(--text-secondary)]">{fmtInt(toDistanceDisplay(b.totalDist))}</span>,
                 },
                 {
                   key: 'avgSpeed',
                   header: t('efficiency.avgSpeedCol', 'Avg Speed'),
                   className: 'text-right',
-                  render: (b) => <span className="text-[var(--text-secondary)]">{fmtInt(convertSpeed(b.avgSpeed))} {speedUnit}</span>,
+                  render: (b) => <span className="text-[var(--text-secondary)]">{fmtInt(toSpeedDisplay(b.avgSpeed))} {speedUnit}</span>,
                 },
               ]}
             />
@@ -480,12 +490,12 @@ export default function EfficiencyPage() {
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <MetricBar label={t('efficiency.avgConsumption', 'Avg Consumption')} value={convertEfficiency(stats.avgEfficiencyWhKm)} max={300} color="#00f0ff" />
-                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(convertEfficiency(stats.avgEfficiencyWhKm))} {efficiencyUnit}</p>
+                  <MetricBar label={t('efficiency.avgConsumption', 'Avg Consumption')} value={toEfficiencyDisplay(stats.avgEfficiencyWhKm)} max={300} color="#00f0ff" />
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(toEfficiencyDisplay(stats.avgEfficiencyWhKm))} {efficiencyUnit}</p>
                 </div>
                 <div>
-                  <MetricBar label={t('efficiency.avgSpeed', 'Avg Speed')} value={convertSpeed(stats.avgSpeedKmh)} max={150} color="#10b981" />
-                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(convertSpeed(stats.avgSpeedKmh))} {speedUnit}</p>
+                  <MetricBar label={t('efficiency.avgSpeed', 'Avg Speed')} value={toSpeedDisplay(stats.avgSpeedKmh)} max={150} color="#10b981" />
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(toSpeedDisplay(stats.avgSpeedKmh))} {speedUnit}</p>
                 </div>
                 <div>
                   <MetricBar label={t('efficiency.regenRatio', 'Regen Ratio')} value={stats.regenRatio * 100} max={100} color="#a855f7" />
@@ -526,11 +536,11 @@ export default function EfficiencyPage() {
                 </div>
                 <div>
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.totalDistLabel', 'Total Distance')}</p>
-                  <p className="text-lg font-bold text-cyan-400">{fmtInt(convertDistance(stats.totalDistanceKm))} <span className="text-xs text-[var(--text-muted)]">{distanceUnit}</span></p>
+                  <p className="text-lg font-bold text-cyan-400">{fmtInt(toDistanceDisplay(stats.totalDistanceKm))} <span className="text-xs text-[var(--text-muted)]">{distanceUnit}</span></p>
                 </div>
                 <div>
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.topSpeed', 'Top Speed')}</p>
-                  <p className="text-lg font-bold text-purple-400">{fmtInt(convertSpeed(stats.topSpeedKmh))} <span className="text-xs text-[var(--text-muted)]">{speedUnit}</span></p>
+                  <p className="text-lg font-bold text-purple-400">{fmtInt(toSpeedDisplay(stats.topSpeedKmh))} <span className="text-xs text-[var(--text-muted)]">{speedUnit}</span></p>
                 </div>
                 <div>
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.costPerKmLabel', 'Est. Cost/km')}</p>

@@ -5,12 +5,14 @@ import { StatCard, InlineMetric } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useWeeklyDigest } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { UNITS } from '@/lib/constants';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 function trendOf(
   current: number,
@@ -31,35 +33,38 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
   const { data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useWeeklyDigest(String(id));
-  const {
-    convertDistance, convertEfficiency,
-    distanceUnit, efficiencyUnit, formatCurrency,
-  } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
+  const { formatCurrency } = useFormatting();
 
   const metrics = useMemo(() => {
     if (!data) return null;
 
-    // WeeklyDigestData stores distance in km; convert to miles for convertDistance
+    // WeeklyDigestData stores distance in km; convert to miles for toDistanceDisplay
     const distMi = (data.distanceKm ?? 0) * UNITS.KM_TO_MI;
     const prevDistMi = (data.prevDistanceKm ?? 0) * UNITS.KM_TO_MI;
 
-    // Efficiency in Wh/km; convert to Wh/mi for convertEfficiency
+    // Efficiency in Wh/km; convert to Wh/mi for toEfficiencyDisplay
     const effWhMi = (data.efficiency ?? 0) * UNITS.MI_TO_KM;
     const prevEffWhMi = (data.prevEfficiency ?? 0) * UNITS.MI_TO_KM;
 
     return {
-      distance: convertDistance(distMi),
-      prevDistance: convertDistance(prevDistMi),
+      distance: toDistanceDisplay(distMi),
+      prevDistance: toDistanceDisplay(prevDistMi),
       energy: data.energyKwh ?? 0,
       prevEnergy: data.prevEnergyKwh ?? 0,
       cost: data.cost ?? 0,
       prevCost: data.prevCost ?? 0,
-      efficiency: convertEfficiency(effWhMi),
-      prevEfficiency: convertEfficiency(prevEffWhMi),
+      efficiency: toEfficiencyDisplay(effWhMi),
+      prevEfficiency: toEfficiencyDisplay(prevEffWhMi),
       drives: data.drives ?? 0,
       prevDrives: data.prevDrives ?? 0,
     };
-  }, [data, convertDistance, convertEfficiency]);
+  }, [data, toDistanceDisplay, toEfficiencyDisplay]);
 
   const isCompact = size.cols <= 1 && size.rows <= 1;
   const isWide = size.cols >= 3;

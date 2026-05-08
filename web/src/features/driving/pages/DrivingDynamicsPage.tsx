@@ -6,8 +6,9 @@ import { Select } from '@/components/ui';
 
 import { useDrives, useDrivingCoach } from '@/api/hooks/useDriving';
 import { useVehicles, useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { convertDistanceFromSI, convertSpeedFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import { computeMotorStats, getThrottleStyle } from '../components/driving-dynamics/helpers';
 import {
   LiveMotorStatus,
@@ -36,11 +37,7 @@ export default function DrivingDynamicsPage() {
   const vehicleOptions = useMemo(
     () =>
       (vehicles ?? []).map((v) => ({
-        value: String(v.id),
-        label: v.display_name ?? `Vehicle ${v.id}`,
-      })),
-    [vehicles],
-  );
+        value: String(v.id), label: v.display_name ?? `Vehicle ${v.id}`, })), [vehicles], );
 
   /* ---- data hooks ---- */
   const vehicleIdNum = vehicleId ?? 0;
@@ -50,14 +47,13 @@ export default function DrivingDynamicsPage() {
   const { data: coachData } = useDrivingCoach(vehicleIdStr);
 
   /* ---- settings ---- */
-  const {
-    convertDistance,
-    convertSpeed,
-    convertTemp,
-    distanceUnit,
-    speedUnit,
-    tempUnit,
-  } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+  const distanceUnit = unitPrefs.distance;
+  const speedUnit = unitPrefs.speed;
+  const tempUnit = unitPrefs.temperature;
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
 
   /* ---- date filter (page-scoped: used by SpeedGear + DriveAnalytics) ---- */
   const [startDate, setStartDate] = useState(() => {
@@ -104,24 +100,24 @@ export default function DrivingDynamicsPage() {
       }
     >
       <div className="space-y-6">
-        <LiveMotorStatus motorLatest={motorLatest} convertTemp={convertTemp} tempUnit={tempUnit} />
+        <LiveMotorStatus motorLatest={motorLatest} toTemperatureDisplay={toTemperatureDisplay} tempUnit={tempUnit} />
         <GForcePanel vehicleId={vehicleId} />
         <PedalUsage vehicleId={vehicleId} />
         <SpeedGearPanel
           motorLatest={motorLatest}
           filteredDrives={filteredDrives}
-          convertSpeed={convertSpeed}
+          toSpeedDisplay={toSpeedDisplay}
           speedUnit={speedUnit}
         />
         <AutopilotSection vehicleId={vehicleId} />
-        <MotorHistoryCharts motorHistory={motorHistory} convertSpeed={convertSpeed} speedUnit={speedUnit} />
+        <MotorHistoryCharts motorHistory={motorHistory} toSpeedDisplay={toSpeedDisplay} speedUnit={speedUnit} />
         <MotorEfficiencyInsights
           motorStats={motorStats}
           throttleStyle={throttleStyle}
-          convertTemp={convertTemp}
+          toTemperatureDisplay={toTemperatureDisplay}
           tempUnit={tempUnit}
         />
-        <SummaryStats motorStats={motorStats} convertTemp={convertTemp} tempUnit={tempUnit} />
+        <SummaryStats motorStats={motorStats} toTemperatureDisplay={toTemperatureDisplay} tempUnit={tempUnit} />
         <DrivingCoachSection coachData={coachData} />
         <DriveAnalyticsSection
           filteredDrives={filteredDrives}
@@ -129,8 +125,8 @@ export default function DrivingDynamicsPage() {
           endDate={endDate}
           onStartDateChange={setStartDate}
           onEndDateChange={setEndDate}
-          convertDistance={convertDistance}
-          convertSpeed={convertSpeed}
+          toDistanceDisplay={toDistanceDisplay}
+          toSpeedDisplay={toSpeedDisplay}
           distanceUnit={distanceUnit}
           speedUnit={speedUnit}
         />

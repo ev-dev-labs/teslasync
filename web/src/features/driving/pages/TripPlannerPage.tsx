@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { PageContainer, Grid } from '@/components/layout';
 import {
   GlassPanel, Button as ControlButton, Input as ControlInput, Select as ControlSelect,
@@ -28,11 +28,15 @@ import {
 } from 'lucide-react';
 import { request } from '@/api/client';
 import type { TripLocation, TripPlan, TripPlanRequest } from '@/types/driving';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 export default function TripPlannerPage() {
   const { t } = useTranslation();
   usePageTitle(t('tripPlanner.title', 'Trip Planner'));
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
 
   const { data: vehicles } = useVehicles();
   const planMutation = usePlanTrip();
@@ -286,7 +290,7 @@ export default function TripPlannerPage() {
           <Grid cols={{ default: 2, sm: 3, lg: 6 }} gap={4}>
             <StatCard
               label={t('tripPlanner.stats.distance', 'Distance')}
-              value={`${convertDistance(route.total_distance_km).toFixed(0)} ${distanceUnit}`}
+              value={`${toDistanceDisplay(route.total_distance_km).toFixed(0)} ${distanceUnit}`}
               icon={<Route className="h-4 w-4" />}
             />
             <StatCard

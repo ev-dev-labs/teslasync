@@ -7,11 +7,12 @@ import { KVList } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { RadialGauge } from '@/components/charts/RadialGauge';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
 import { HEALTH_COLOR, type HealthStatus, type TempSensor } from './constants';
 import type { DrivingStats } from '@/types/driving';
+import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 
 interface HealthGaugeGridProps {
   overallHealth: HealthStatus;
@@ -29,7 +30,12 @@ export function HealthGaugeGrid({
   stats,
 }: HealthGaugeGridProps) {
   const { t } = useTranslation();
-  const { convertDistance, convertSpeed, distanceUnit, speedUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
+  const speedUnit = unitPrefs.speed;
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
   const healthColor = HEALTH_COLOR[overallHealth];
 
   return (
@@ -88,15 +94,15 @@ export function HealthGaugeGrid({
                 { label: t('drivetrain.totalDrives', 'Total Drives'), value: fmtInt(stats.totalDrives) },
                 {
                   label: t('drivetrain.totalDistance', 'Total Distance'),
-                  value: `${fmtInt(convertDistance(stats.totalDistanceKm))} ${distanceUnit}`,
+                  value: `${fmtInt(toDistanceDisplay(stats.totalDistanceKm))} ${distanceUnit}`,
                 },
                 {
                   label: t('drivetrain.avgSpeed', 'Avg Speed'),
-                  value: `${fmtNumber(convertSpeed(stats.avgSpeedKmh), 1)} ${speedUnit}`,
+                  value: `${fmtNumber(toSpeedDisplay(stats.avgSpeedKmh), 1)} ${speedUnit}`,
                 },
                 {
                   label: t('drivetrain.topSpeed', 'Top Speed'),
-                  value: `${fmtNumber(convertSpeed(stats.topSpeedKmh), 1)} ${speedUnit}`,
+                  value: `${fmtNumber(toSpeedDisplay(stats.topSpeedKmh), 1)} ${speedUnit}`,
                 },
               ]}
             />

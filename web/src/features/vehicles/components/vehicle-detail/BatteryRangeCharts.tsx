@@ -11,7 +11,6 @@ import {
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts'
 import { EmptyState } from '@/components/feedback'
-import { useSettings } from '@/hooks/useSettings'
 import { useUnits } from '@/hooks/useUnits'
 import { convertDistanceFromSI } from '@/lib/unitConversion'
 import { formatDate } from '@/lib/dateFormat'
@@ -25,10 +24,6 @@ interface BatteryRangeChartsProps {
 
 export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
   const { t } = useTranslation()
-  // Drive.distance_m remains in miles after the SQL m→mi adapter (see drive_repo.go),
-  // so it still flows through the legacy useSettings converter.
-  const { convertDistance, distanceUnit } = useSettings()
-  // VehicleState.rated_range is SI (meters) — use the SI-aware unit pref / formatter.
   const { unitPrefs } = useUnits()
 
   const batteryChartData = useMemo(() => [
@@ -39,10 +34,10 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
   const driveChartData = useMemo(() =>
     (drives ?? []).map((d) => ({
       date: formatDate(d.start_ts),
-      distance: Math.round(convertDistance((d.distance_m) / 1609.344)),
+      distance: Math.round(convertDistanceFromSI(d.distance_m ?? 0, unitPrefs.distance)),
       duration: Math.round((d.duration_s ?? 0) / 60),
     })).reverse(),
-  [drives, convertDistance])
+  [drives, unitPrefs.distance])
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -114,7 +109,7 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
                 <Area
                   {...AREA_DEFAULTS}
                   dataKey="distance"
-                  name={`${t('common.distance', 'Distance')} (${distanceUnit})`}
+                  name={`${t('common.distance', 'Distance')} (${unitPrefs.distance})`}
                   stroke={CHART_COLORS[0]}
                   fill="url(#driveTrendDistGrad)"
                 />

@@ -26,7 +26,7 @@ import type { MotorSnapshot } from '@/api/types';
 
 interface MotorHistoryChartsProps {
   motorHistory: MotorSnapshot[] | undefined;
-  convertSpeed: (v: number) => number;
+  toSpeedDisplay: (v: number) => number;
   speedUnit: string;
 }
 

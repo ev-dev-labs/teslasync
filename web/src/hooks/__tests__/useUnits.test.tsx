@@ -79,6 +79,7 @@ describe('useUnits — unitPrefs derivation', () => {
       pressure: 'bar',
       energy: 'kWh',
       duration: 'h',
+      power: 'kW',
       locale: 'en-US',
       precision: 2,
     })
@@ -100,6 +101,7 @@ describe('useUnits — unitPrefs derivation', () => {
       pressure: 'psi',
       energy: 'kWh',
       duration: 'h',
+      power: 'kW',
       locale: 'en-GB',
       precision: 0,
     })

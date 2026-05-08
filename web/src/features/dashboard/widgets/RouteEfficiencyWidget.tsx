@@ -4,7 +4,7 @@ import { Route } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useRouteEfficiency } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetRankedList, type RankedItem } from './shared';
@@ -27,10 +27,12 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
   const vehicleIdStr = vid != null ? String(vid) : undefined;
 
   const {
-    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch,
-  } = useRouteEfficiency(vehicleIdStr);
+    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useRouteEfficiency(vehicleIdStr);
 
-  const { convertEfficiency, efficiencyUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
+
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
@@ -44,14 +46,14 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
 
     return routes.map((r, i) => {
       const rawEff = r.avgEfficiency ?? 0;
-      const eff = convertEfficiency(rawEff);
+      const eff = toEfficiencyDisplay(rawEff);
       const trips = r.tripCount ?? 0;
       const isBest = rawEff === bestRaw && rawEff > 0;
 
       let label = `${r.startLocation ?? '—'} → ${r.endLocation ?? '—'}`;
       if (isWide) {
-        const bestEff = fmtNumber(convertEfficiency(r.bestEfficiency ?? 0), 0);
-        const worstEff = fmtNumber(convertEfficiency(r.worstEfficiency ?? 0), 0);
+        const bestEff = fmtNumber(toEfficiencyDisplay(r.bestEfficiency ?? 0), 0);
+        const worstEff = fmtNumber(toEfficiencyDisplay(r.worstEfficiency ?? 0), 0);
         label += `  ·  ${t('widget.routeEfficiency.best', 'best')} ${bestEff} / ${t('widget.routeEfficiency.worst', 'worst')} ${worstEff} ${efficiencyUnit}`;
       }
 
@@ -65,7 +67,7 @@ export default function RouteEfficiencyWidget({ vehicleId, size }: WidgetProps) 
         barColor: isBest ? 'bg-emerald-400' : 'bg-blue-400',
       };
     });
-  }, [routes, convertEfficiency, efficiencyUnit, isWide, t]);
+  }, [routes, toEfficiencyDisplay, efficiencyUnit, isWide, t]);
 
   const shellProps = {
     loading: isLoading,

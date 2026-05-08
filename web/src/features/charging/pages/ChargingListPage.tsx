@@ -9,11 +9,12 @@ import { DataFreshnessAuto } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBatch, useUrlBoolean, useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useChargingSessionsPaginated, useChargingOptimizer, useBulkDeleteCharging } from '@/api/hooks/useCharging';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { PullToRefresh } from '@/components/mobile';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import {
   HeroGauges,
   QuickMetrics,
@@ -48,7 +49,9 @@ export default function ChargingListPage() {
   usePageTitle(t('charging.list.title', 'Charging Sessions'));
   const savedView = useSavedViewUrl();
 
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+  const distanceUnit = unitPrefs.distance;
   // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
   // Alert drillthrough URLs (?vehicle_id=...) flow into the same store via
   // useSelectedVehicle, so prior alert-context handling is no longer needed.
@@ -201,7 +204,7 @@ export default function ChargingListPage() {
         sessions={sessions}
         filteredSessions={filteredSessions}
         isLoading={isLoading}
-        convertDistance={convertDistance}
+        toDistanceDisplay={toDistanceDisplay}
         distanceUnit={distanceUnit}
         sortBy={sortBy}
         sortDesc={sortDesc}

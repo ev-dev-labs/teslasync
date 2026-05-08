@@ -198,10 +198,10 @@ export default function TirePressurePage() {
   // Backend `front_left`/`front_right`/`rear_left`/`rear_right` arrive
   // in Pa (SI). `convertPressureFromSI` expects kPa, so divide by 1000
   // at the boundary (precedent: Phase-43/0022 useDriveDetailData).
-  const toDisplayPressure = (pa: number) =>
+  const pressureDisplayValue = (pa: number) =>
     convertPressureFromSI(pa / 1000, unitPrefs.pressure);
 
-  const gaugeMax = toDisplayPressure(GAUGE_MAX_PA);
+  const gaugeMax = pressureDisplayValue(GAUGE_MAX_PA);
 
   // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
   const { vehicleId: activeVehicleId } = useSelectedVehicle();
@@ -258,13 +258,13 @@ export default function TirePressurePage() {
     if (!history?.length) return [];
     return [...history].reverse().map((r) => ({
       time: formatDateTime(r.created_at),
-      fl: toDisplayPressure(normaliseTpmsToPa(r.front_left)),
-      fr: toDisplayPressure(normaliseTpmsToPa(r.front_right)),
-      rl: toDisplayPressure(normaliseTpmsToPa(r.rear_left)),
-      rr: toDisplayPressure(normaliseTpmsToPa(r.rear_right)),
+      fl: pressureDisplayValue(normaliseTpmsToPa(r.front_left)),
+      fr: pressureDisplayValue(normaliseTpmsToPa(r.front_right)),
+      rl: pressureDisplayValue(normaliseTpmsToPa(r.rear_left)),
+      rr: pressureDisplayValue(normaliseTpmsToPa(r.rear_right)),
     }));
     // unitPrefs.pressure is the only relevant primitive dep — depending on
-    // the closure-captured `toDisplayPressure` would also work but referencing
+    // the closure-captured `pressureDisplayValue` would also work but referencing
     // the primitive keeps the dep list stable for memo invalidation.
   }, [history, unitPrefs.pressure]);
 
@@ -287,7 +287,7 @@ export default function TirePressurePage() {
             const status = pressureStatus(val);
             return (
               <Badge variant={statusVariant(status)} size="sm">
-                {fmtNumber(toDisplayPressure(val ?? 0))}
+                {fmtNumber(pressureDisplayValue(val ?? 0))}
               </Badge>
             );
           },
@@ -394,7 +394,7 @@ export default function TirePressurePage() {
                     ) : (
                       <>
                         <RadialGauge
-                          value={toDisplayPressure(value)}
+                          value={pressureDisplayValue(value)}
                           max={gaugeMax}
                           label={TIRE_LABELS[pos]}
                           unit={pressureUnit}
@@ -419,7 +419,7 @@ export default function TirePressurePage() {
             label={t('Avg Pressure')}
             value={
               summaryStats
-                ? `${fmtNumber(toDisplayPressure(summaryStats.avg ?? 0))} ${pressureUnit}`
+                ? `${fmtNumber(pressureDisplayValue(summaryStats.avg ?? 0))} ${pressureUnit}`
                 : '—'
             }
             icon={<Activity className="h-5 w-5" />}
@@ -429,7 +429,7 @@ export default function TirePressurePage() {
             label={t('Min Pressure')}
             value={
               summaryStats
-                ? `${fmtNumber(toDisplayPressure(summaryStats.min ?? 0))} ${pressureUnit}`
+                ? `${fmtNumber(pressureDisplayValue(summaryStats.min ?? 0))} ${pressureUnit}`
                 : '—'
             }
             icon={<TrendingDown className="h-5 w-5" />}

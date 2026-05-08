@@ -8,10 +8,11 @@ import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useSignalObservations } from '@/api/hooks/useTelemetry';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 
 import { latestNumeric } from '@/lib/signalObservation';
+import { convertSpeedFromSI } from '@/lib/unitConversion';
 
 interface AutopilotSectionProps {
   vehicleId: number | null | undefined;
@@ -24,7 +25,10 @@ interface AutopilotSectionProps {
  */
 export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
   const { t } = useTranslation();
-  const { convertSpeed, speedUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
+
+  const speedUnit = unitPrefs.speed;
 
   const { data: stateData } = useVehicleState(vehicleId ?? 0, { refetchInterval: 5_000 });
   const { data: cruiseSetObs } = useSignalObservations(
@@ -44,12 +48,12 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
   const hasAny =
     speedKph != null || cruiseSet != null || followDistance != null;
 
-  // VehicleState.speed is km/h (from VehicleSpeed signal); convertSpeed
+  // VehicleState.speed is km/h (from VehicleSpeed signal); toSpeedDisplay
   // expects mph. Convert kph → mph before running through the settings transformer.
   const currentSpeedDisplay =
-    speedKph != null ? convertSpeed(speedKph / 1.609344) : null;
+    speedKph != null ? toSpeedDisplay(speedKph / 1.609344) : null;
   const cruiseSetDisplay =
-    cruiseSet != null ? convertSpeed(cruiseSet / 1.609344) : null;
+    cruiseSet != null ? toSpeedDisplay(cruiseSet / 1.609344) : null;
 
   return (
     <FadeIn delay={0.17}>

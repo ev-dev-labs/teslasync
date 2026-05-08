@@ -7,11 +7,12 @@ import {
 } from '@/components/charts';
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtInt } from '@/lib/numberFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertTempFromSI } from '@/lib/unitConversion';
 
 interface ChartDatum {
   time: string;
@@ -21,15 +22,15 @@ interface ChartDatum {
 
 function buildChartData(
   data: ReturnType<typeof useClimateHistory>['data'],
-  convertTemp: (c: number) => number,
+  toTemperatureDisplay: (c: number) => number,
 ): ChartDatum[] {
   const items = data ?? [];
   return items
     .filter((d) => d.created_at || d.timestamp)
     .map((d) => {
       const ts = d.created_at ?? d.timestamp ?? '';
-      const inside = d.insideTemp != null ? convertTemp(d.insideTemp) : null;
-      const outside = d.outsideTemp != null ? convertTemp(d.outsideTemp) : null;
+      const inside = d.insideTemp != null ? toTemperatureDisplay(d.insideTemp) : null;
+      const outside = d.outsideTemp != null ? toTemperatureDisplay(d.outsideTemp) : null;
       return { time: ts, inside, outside };
     })
     .sort((a, b) => a.time.localeCompare(b.time));
@@ -48,7 +49,10 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { convertTemp, tempUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+
+  const tempUnit = unitPrefs.temperature;
 
   const {
     data,
@@ -61,8 +65,8 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
   } = useClimateHistory(vid > 0 ? String(vid) : '');
 
   const chartData = useMemo(
-    () => buildChartData(data, convertTemp),
-    [data, convertTemp],
+    () => buildChartData(data, toTemperatureDisplay),
+    [data, toTemperatureDisplay],
   );
 
   const hasData = chartData.length > 0;

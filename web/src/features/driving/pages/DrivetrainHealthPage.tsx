@@ -9,9 +9,10 @@ import { EmptyState } from '@/components/feedback';
 import { useDrivetrainHealth, useDrives, useDrivingStats } from '@/api/hooks/useDriving';
 import { useVehicles, useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateShort } from '@/lib/dateFormat';
+import { convertDistanceFromSI, convertTempFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 
 import {
   HEALTH_SCORE,
@@ -51,7 +52,10 @@ export default function DrivetrainHealthPage() {
   const { data: motorHistory } = useMotorHistory(vehicleId ?? 0, 200);
   const { state: liveState } = useVehicleLive(vehicleId ?? undefined);
 
-  const { convertTemp, convertSpeed } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
 
   const vehicleOptions = useMemo(() => {
     if (!vehicles?.length) return [];
@@ -82,9 +86,9 @@ export default function DrivetrainHealthPage() {
         powerMax: (d.avgPowerW ?? 0) / 1000,
         powerMin: 0,
         outsideTemp: d.outsideTempAvgC ?? null,
-        distance: d.distanceM / 1609.344,
+        distance: toDistanceDisplay(d.distanceM),
       }));
-  }, [drives]);
+  }, [drives, toDistanceDisplay]);
 
   const tempTrendData = useMemo(() => chartData.filter((d) => d.outsideTemp !== null), [chartData]);
 
@@ -108,14 +112,14 @@ export default function DrivetrainHealthPage() {
     if (history.length === 0) return [];
     return history.map((s) => ({
       time: s.ts ? new Date(s.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-      stator: s.motor_temp_c_front != null ? convertTemp(s.motor_temp_c_front) : null,
-      statorRel: s.motor_temp_c_rear != null ? convertTemp(s.motor_temp_c_rear) : null,
-      statorRer: s.inverter_temp_c != null ? convertTemp(s.inverter_temp_c) : null,
+      stator: s.motor_temp_c_front != null ? toTemperatureDisplay(s.motor_temp_c_front) : null,
+      statorRel: s.motor_temp_c_rear != null ? toTemperatureDisplay(s.motor_temp_c_rear) : null,
+      statorRer: s.inverter_temp_c != null ? toTemperatureDisplay(s.inverter_temp_c) : null,
       torque: s.torque_nm_front ?? s.torque_nm_rear ?? null,
       speed: null, // no direct power signal in motor pivot; field unused by charts
       axle: s.motor_rpm_front ?? s.motor_rpm_rear ?? null,
     }));
-  }, [motorHistory, convertTemp, convertSpeed]);
+  }, [motorHistory, toTemperatureDisplay, toSpeedDisplay]);
 
   return (
     <PageContainer

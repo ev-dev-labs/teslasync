@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 import type { ChargingSession, ChargeTelemetryReading } from '@/api/types';
 import { useChargingSessionDetail, useChargeTelemetry } from '@/api/hooks/useCharging';
 import { useVehicle, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
-import { convertTempFromSI } from '@/lib/unitConversion';
+import { convertTempFromSI, convertDistanceFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDate, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtWithUnit, fmtPercent } from '@/lib/numberFormat';
@@ -112,20 +112,20 @@ export default function ChargingDetailPage() {
   const sessionId = Number(id);
 
   // ChargingSession.miles_added (genuine miles after charging_repo.go SQL adapter
-  // boundary) and live ChargingTelemetry.{battery_range_mi,charge_rate_mph,
-  // charge_miles_added} (suffix-named misleading fields whose values are SI per
-  // Phase-43/0020 PREFLIGHT) stay on legacy useSettings.convertDistance per the
-  // locked-policy deferral. ChargeTelemetryReading.{rated_range,...} similarly
-  // keep convertDistance until backend populates SI.
-  const {
-    convertDistance, distanceUnit,
-    costPerKwh: settingsCostPerKwh, currencySymbol, formatEnergyCost,
-  } = useSettings();
+  // boundary) and live ChargingTelemetry.{battery_range_mi, charge_rate_mph, // charge_miles_added} (suffix-named misleading fields whose values are SI per
+  // Phase-43/0020 PREFLIGHT) stay on legacy useSettings.toDistanceDisplay per the
+  // locked-policy deferral. ChargeTelemetryReading.{rated_range, ...} similarly
+  // keep toDistanceDisplay until backend populates SI.
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
+  const { costPerKwh: settingsCostPerKwh, currencySymbol, formatEnergyCost } = useFormatting();
   // Battery / inside / outside temperatures from chargeTelemetryFieldMappings
   // (InsideTemp/OutsideTemp/ModuleTempMax) are °C SI — migrate to the SI-aware
   // useUnits surface. unitPrefs.temperature replaces the old tempUnit string;
   // chart values use convertTempFromSI so YAxis ticks remain raw numbers.
-  const { unitPrefs } = useUnits();
+
   const tempUnit = unitPrefs.temperature;
 
   const { data: session, isLoading } = useChargingSessionDetail(sessionId || null);
@@ -186,10 +186,10 @@ export default function ChargingDetailPage() {
       time: formatTime(r.created_at),
       soc: r.battery_level ?? r.soc,
       energy: r.energy_added,
-      range: r.rated_range != null ? convertDistance(r.rated_range) : null,
+      range: r.rated_range != null ? toDistanceDisplay(r.rated_range) : null,
       power: r.power_kw != null ? Math.abs(r.power_kw) : null,
     }));
-  }, [telemetry, hasTelemetry, convertDistance]);
+  }, [telemetry, hasTelemetry, toDistanceDisplay]);
 
   const tempData = useMemo(() => {
     if (!hasTelemetry) return [];
@@ -375,7 +375,7 @@ export default function ChargingDetailPage() {
               <p className="text-muted">{t('charging.detail.rangeGained', 'Range Gained')}</p>
               <p className="text-lg font-bold">
                 {session.miles_added != null
-                  ? fmtWithUnit(convertDistance(session.miles_added), distanceUnit, 0)
+                  ? fmtWithUnit(toDistanceDisplay(session.miles_added), distanceUnit, 0)
                   : '—'}
               </p>
             </div>
@@ -443,7 +443,7 @@ export default function ChargingDetailPage() {
             label={t('charging.detail.milesAdded', 'Miles Added')}
             value={
               session.miles_added != null
-                ? fmtNumber(convertDistance(session.miles_added), 0)
+                ? fmtNumber(toDistanceDisplay(session.miles_added), 0)
                 : '—'
             }
             unit={session.miles_added != null ? distanceUnit : ''}
@@ -472,7 +472,7 @@ export default function ChargingDetailPage() {
               label={t('charging.detail.milesAdded', 'Miles Added')}
               value={
                 session.miles_added != null
-                  ? fmtWithUnit(convertDistance(session.miles_added), distanceUnit, 0)
+                  ? fmtWithUnit(toDistanceDisplay(session.miles_added), distanceUnit, 0)
                   : '—'
               }
             />
@@ -836,14 +836,14 @@ export default function ChargingDetailPage() {
                   label: t('charging.detail.batteryRange', 'Battery Range'),
                   value:
                     liveCharging.battery_range_mi != null
-                      ? fmtWithUnit(convertDistance(liveCharging.battery_range_mi), distanceUnit, 0)
+                      ? fmtWithUnit(toDistanceDisplay(liveCharging.battery_range_mi), distanceUnit, 0)
                       : '—',
                 },
                 {
                   label: t('charging.detail.chargeRate', 'Charge Rate'),
                   value:
                     liveCharging.charge_rate_mph != null
-                      ? fmtWithUnit(convertDistance(liveCharging.charge_rate_mph), `${distanceUnit}/h`, 1)
+                      ? fmtWithUnit(toDistanceDisplay(liveCharging.charge_rate_mph), `${distanceUnit}/h`, 1)
                       : '—',
                 },
                 {
@@ -857,7 +857,7 @@ export default function ChargingDetailPage() {
                   label: t('charging.detail.chargeMilesAdded', 'Range Added'),
                   value:
                     liveCharging.charge_miles_added != null
-                      ? fmtWithUnit(convertDistance(liveCharging.charge_miles_added), distanceUnit, 1)
+                      ? fmtWithUnit(toDistanceDisplay(liveCharging.charge_miles_added), distanceUnit, 1)
                       : '—',
                 },
               ]}

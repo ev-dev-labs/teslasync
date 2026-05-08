@@ -11,7 +11,6 @@ import { FadeIn } from '@/components/motion';
 import { useTrips } from '@/api/hooks/useTrips';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { useSettings } from '@/hooks/useSettings';
 import {
   convertDistanceFromSI,
   type DistanceUnitPref,
@@ -63,7 +62,8 @@ export default function TripListPage() {
 
   const { unitPrefs } = useUnits();
   // useSettings retained for the legacy efficiencyUnit label string only.
-  const { efficiencyUnit } = useSettings();
+
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   const tripsQuery = useTrips({
     vehicle_id: vehicleId ?? undefined,

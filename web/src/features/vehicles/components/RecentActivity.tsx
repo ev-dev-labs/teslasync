@@ -7,7 +7,8 @@ import { FadeIn } from '@/components/motion/FadeIn'
 import { InlineMetric } from '@/components/data-display/InlineMetric'
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber'
 import { TimeStamp } from '@/components/data-display'
-import { useSettings } from '@/hooks/useSettings'
+import { useUnits } from '@/hooks/useUnits'
+import { convertDistanceFromSI } from '@/lib/unitConversion'
 import { fmtInt } from '@/lib/numberFormat'
 import type { Drive, ChargingSession } from '@/api/types'
 
@@ -18,8 +19,7 @@ interface RecentActivityProps {
 
 export function RecentActivity({ drives, sessions }: RecentActivityProps) {
   const { t } = useTranslation()
-  const { convertDistance, distanceUnit } = useSettings()
-
+  const { unitPrefs } = useUnits()
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Recent Drives */}
@@ -51,9 +51,9 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                   <div className="flex-1 text-sm">
                     <p className="text-[var(--text-primary)] font-medium group-hover:text-cyan-300 transition-colors">
                       <AnimatedNumber
-                        value={convertDistance((d.distance_m) / 1609.344)}
+                        value={convertDistanceFromSI(d.distance_m ?? 0, unitPrefs.distance)}
                         decimals={1}
-                        suffix={` ${distanceUnit}`}
+                        suffix={` ${unitPrefs.distance}`}
                       />
                     </p>
                     <p className="text-xs text-[var(--text-muted)]">

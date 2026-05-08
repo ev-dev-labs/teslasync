@@ -121,7 +121,7 @@ export default function BatteryDegradationPage() {
   /* Phase-43 / Prompt 0023 — backend `range_km` and `odometer` fields are
      derived SI in km. Convert km → metres → user-pref display via the
      SI-canonical helper so users with `unit_of_length=mi` see miles
-     (the legacy useSettings.convertDistance helper expected miles input
+     (the legacy useSettings.toDistanceDisplay helper expected miles input
      and would silently double-convert here). */
   const { unitPrefs } = useUnits();
   const fromKm = useCallback(

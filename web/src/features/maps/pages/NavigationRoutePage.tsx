@@ -206,7 +206,7 @@ export default function NavigationRoutePage() {
   /* Phase-43/0027: SI-floor display.
      /location-snapshots emits speed_mph (m/s SI alias) and miles_to_arrival
      (meters SI) — the legacy field names are kept for backward compat but
-     values are SI canonical. Pre-existing legacy bug: useSettings.convertDistance
+     values are SI canonical. Pre-existing legacy bug: useSettings.toDistanceDisplay
      was treating the meters value as miles, producing 1609x inflated output. */
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;

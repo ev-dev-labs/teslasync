@@ -6,12 +6,12 @@ import { StatusBadge, AnimatedNumber, TimeStamp } from '@/components/data-displa
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useWatchSummary, useWatchComplication } from '@/api/hooks/useWatch';
-import { useSettings } from '@/hooks/useSettings';
-import { kmToMiles } from '@/lib/unitConversion';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 
 function getBatteryColor(level: number): string {
   if (level > 50) return '#10b981';
@@ -22,21 +22,16 @@ function getBatteryColor(level: number): string {
 export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const {
-    data: summary,
-    isLoading: summaryLoading,
-    isFetching: summaryFetching,
-    isStale: summaryStale,
-    isError: summaryError,
-    dataUpdatedAt: summaryUpdatedAt,
-    refetch: refetchSummary,
-  } = useWatchSummary(vehicleId);
+    data: summary, isLoading: summaryLoading, isFetching: summaryFetching, isStale: summaryStale, isError: summaryError, dataUpdatedAt: summaryUpdatedAt, refetch: refetchSummary, } = useWatchSummary(vehicleId);
 
   const {
-    data: complication,
-    isLoading: compLoading,
-  } = useWatchComplication(vehicleId);
+    data: complication, isLoading: compLoading, } = useWatchComplication(vehicleId);
 
-  const { convertTemp, tempUnit, distanceUnit, isMiles } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const tempUnit = unitPrefs.temperature;
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
 
   const isCompact = size.cols <= 1;
   const isLoading = summaryLoading || compLoading;
@@ -50,13 +45,13 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
 
   const displayRange = useMemo(() => {
     if (rangeKm == null) return null;
-    return isMiles ? kmToMiles(rangeKm) : rangeKm;
-  }, [rangeKm, isMiles]);
+    return toDistanceDisplay(rangeKm * 1000);
+  }, [rangeKm, toDistanceDisplay]);
 
   const displayTemp = useMemo(() => {
     if (insideTempC == null) return null;
-    return convertTemp(insideTempC);
-  }, [insideTempC, convertTemp]);
+    return toTemperatureDisplay(insideTempC);
+  }, [insideTempC, toTemperatureDisplay]);
 
   const color = useMemo(
     () => (batteryLevel != null ? getBatteryColor(batteryLevel) : '#374151'),

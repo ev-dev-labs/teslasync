@@ -19,11 +19,12 @@ import { StaggerItem } from '@/components/motion/StaggerItem';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { useRegenEfficiency, useDrives } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtPercent, fmtWithUnit } from '@/lib/numberFormat';
 import type { Drive } from '@/types/driving';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -60,7 +61,10 @@ export default function RegenEfficiencyPage() {
   const lifetimeRegenKwh: number | null = null;
   const lifetimeDriveKwh: number | null = null;
 
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
 
   /* ---- Monthly regen trend from drives ---- */
   const monthlyTrend = useMemo(() => {
@@ -83,9 +87,9 @@ export default function RegenEfficiencyPage() {
         month,
         regenKwh: parseFloat(fmtNumber(val.totalRegen / 1000, 1)),
         drives: val.count,
-        distance: Math.round(convertDistance(val.totalDist / 1609.344)),
+        distance: Math.round(toDistanceDisplay(val.totalDist)),
       }));
-  }, [drives, convertDistance]);
+  }, [drives, toDistanceDisplay]);
 
   /* ---- Per-drive regen list ---- */
   const regenDrives = useMemo(() => {
@@ -96,11 +100,11 @@ export default function RegenEfficiencyPage() {
       .map((d) => ({
         id: d.id,
         date: d.startTs ? formatDateShort(d.startTs) : '—',
-        distance: fmtWithUnit(convertDistance((d.distanceM) / 1609.344), distanceUnit),
+        distance: fmtWithUnit(toDistanceDisplay(d.distanceM), distanceUnit),
         maxRegen: d.regenEnergyWh ? fmtWithUnit(d.regenEnergyWh / 1000, 'kWh') : '—',
         ratio: getRegenRatio(d),
       }));
-  }, [drives, convertDistance, distanceUnit]);
+  }, [drives, toDistanceDisplay, distanceUnit]);
 
   const vehicleOptions = (vehicles ?? []).map((v) => ({
     value: String(v.id), label: v.display_name || v.vin,

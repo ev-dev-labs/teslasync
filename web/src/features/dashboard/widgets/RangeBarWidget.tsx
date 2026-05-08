@@ -3,17 +3,21 @@ import { Gauge } from 'lucide-react';
 import { MetricBar } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
   const state = stateData?.state;
 
   const isCompact = size.cols === 1 && size.rows === 1;
@@ -23,9 +27,9 @@ export default function RangeBarWidget({ vehicleId, size }: WidgetProps) {
   const hasData = state != null && (rated > 0 || ideal > 0);
   const maxRange = Math.max(rated, ideal, 1);
 
-  const ratedConverted = convertDistance(rated);
-  const idealConverted = convertDistance(ideal);
-  const maxConverted = convertDistance(maxRange);
+  const ratedConverted = toDistanceDisplay(rated);
+  const idealConverted = toDistanceDisplay(ideal);
+  const maxConverted = toDistanceDisplay(maxRange);
 
   return (
     <WidgetShell

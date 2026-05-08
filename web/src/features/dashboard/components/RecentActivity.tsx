@@ -7,6 +7,7 @@ import { Currency } from '@/components/data-display';
 import { AreaChartWrapper } from '@/components/charts/AreaChartWrapper';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { formatDateShort } from '@/lib/dateFormat';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import type { FleetAnalytics, Drive, ChargingSession } from '../types';
 
 /* Relative time helper */
@@ -26,15 +27,14 @@ interface RecentActivityProps {
   recentDrives: Drive[] | undefined;
   recentCharges: ChargingSession[] | undefined;
   analytics: FleetAnalytics | undefined;
-  convertDistance: (km: number) => number;
-  convertEfficiency: (whKm: number) => number;
+  toEfficiencyDisplay: (whKm: number) => number;
   distanceUnit: string;
   efficiencyUnit: string;
 }
 
 export function RecentActivity({
   recentDrives, recentCharges, analytics,
-  convertDistance, convertEfficiency, distanceUnit, efficiencyUnit,
+  toEfficiencyDisplay, distanceUnit, efficiencyUnit,
 }: RecentActivityProps) {
   const { t } = useTranslation('dashboard');
 
@@ -43,7 +43,7 @@ export function RecentActivity({
   recentDrives?.forEach((d) =>
     activityItems.push({
       type: 'drive',
-      title: `${fmtNumber(convertDistance((d.distance_m ?? 0) / 1609.344), 1)} ${distanceUnit} ${t('activity.drive', 'drive')}`,
+      title: `${fmtNumber(convertDistanceFromSI(d.distance_m ?? 0, distanceUnit === 'mi' ? 'mi' : 'km'), 1)} ${distanceUnit} ${t('activity.drive', 'drive')}`,
       subtitle: `${Math.floor((d.duration_s ?? 0) / 3600)}h ${fmtInt(Math.floor(((d.duration_s ?? 0) % 3600) / 60))}m · ${d.start_battery_pct ?? '?'}% → ${d.end_battery_pct ?? '?'}%`,
       time: new Date(d.start_ts),
     }),
@@ -149,7 +149,7 @@ export function RecentActivity({
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{t('perf.mostEfficient', 'Most Efficient')}</p>
                 <p className="text-sm font-semibold text-emerald-300">{analytics.most_efficient_vehicle.name}</p>
                 <p className="text-xs text-[var(--text-muted)]">
-                  {fmtInt(convertEfficiency(analytics.most_efficient_vehicle.efficiency ?? 0))} {efficiencyUnit}
+                  {fmtInt(toEfficiencyDisplay(analytics.most_efficient_vehicle.efficiency ?? 0))} {efficiencyUnit}
                 </p>
               </div>
             )}

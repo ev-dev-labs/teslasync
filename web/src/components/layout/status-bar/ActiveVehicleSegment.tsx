@@ -35,7 +35,7 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
   // page-tier consumer, so this just lengthens the safety-net interval.
   const { data: stateData } = useVehicleState(vehicleId ?? 0, { refetchInterval: 60_000 });
   /* Phase-43 SI-floor: state.rated_range arrives in METERS, not miles. The
-   * legacy useSettings.convertDistance() expected miles-in / user-unit-out and
+   * legacy useSettings.toDistanceDisplay() expected miles-in / user-unit-out and
    * blew up by 1000× on SI input. Use the SI-aware converter + label from
    * useUnits() so the value tracks the user's distance preference. */
   const { unitPrefs } = useUnits();

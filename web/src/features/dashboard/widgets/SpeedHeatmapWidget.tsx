@@ -4,9 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Grid3X3 } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
 import { fmtNumber } from '@/lib/numberFormat';
+import { convertSpeedFromSI, type SpeedUnitPref } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { Drive } from '@/api/types';
@@ -23,7 +24,7 @@ interface HeatCell {
 }
 
 /** Build a 7×24 grid of average speeds from drive start times. */
-function buildHeatmap(drives: Drive[], convertSpeed: (mph: number) => number): HeatCell[][] {
+function buildHeatmap(drives: Drive[], speedUnit: SpeedUnitPref): HeatCell[][] {
   // Accumulator: [day][hour] → { total, count }
   const acc: { total: number; count: number }[][] = Array.from({ length: ROWS }, () =>
     Array.from({ length: COLS }, () => ({ total: 0, count: 0 })),
@@ -48,7 +49,7 @@ function buildHeatmap(drives: Drive[], convertSpeed: (mph: number) => number): H
     row.map((cell, hour) => ({
       day,
       hour,
-      avgSpeed: cell.count > 0 ? convertSpeed((cell.count > 0 ? cell.total / cell.count : 0) / 0.44704) : 0,
+      avgSpeed: cell.count > 0 ? convertSpeedFromSI(cell.total / cell.count, speedUnit) : 0,
       count: cell.count,
     })),
   );
@@ -87,7 +88,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { convertSpeed, speedUnit } = useSettings();
+  const { unitPrefs } = useUnits();
 
   const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['drives', id, 'speed-heatmap'],
@@ -96,7 +97,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
     staleTime: 120_000,
   });
 
-  const grid = useMemo(() => buildHeatmap(drives ?? [], convertSpeed), [drives, convertSpeed]);
+  const grid = useMemo(() => buildHeatmap(drives ?? [], unitPrefs.speed), [drives, unitPrefs.speed]);
 
   const maxSpeed = useMemo(() => {
     let max = 0;
@@ -130,7 +131,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
             {maxSpeed > 0 ? fmtNumber(maxSpeed, 0) : '—'}
           </span>
           <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
-            {t('widget.speedHeatmap.peak', 'Peak')} {speedUnit}
+            {t('widget.speedHeatmap.peak', 'Peak')} {unitPrefs.speed}
           </span>
         </div>
       </WidgetShell>
@@ -163,7 +164,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
             <span className="text-xs text-[var(--text-secondary)]">
               {t('widget.speedHeatmap.peakSpeed', 'Peak avg {{speed}} {{unit}}', {
                 speed: fmtNumber(maxSpeed, 0),
-                unit: speedUnit,
+                unit: unitPrefs.speed,
               })}
             </span>
           </div>
@@ -175,7 +176,7 @@ export default function SpeedHeatmapWidget({ vehicleId, size }: WidgetProps) {
               maxSpeed={maxSpeed}
               dayLabels={dayLabels}
               isWide={isWide}
-              speedUnit={speedUnit}
+              speedUnit={unitPrefs.speed}
               t={t}
             />
           </div>

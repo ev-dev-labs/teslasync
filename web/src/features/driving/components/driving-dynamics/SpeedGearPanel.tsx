@@ -30,21 +30,21 @@ function shiftBadgeVariant(shift: string | null | undefined): 'success' | 'dange
 interface SpeedGearPanelProps {
   motorLatest: MotorSnapshot | null | undefined;
   filteredDrives: Drive[];
-  convertSpeed: (v: number) => number;
+  toSpeedDisplay: (v: number) => number;
   speedUnit: string;
 }
 
-export default function SpeedGearPanel({ motorLatest, filteredDrives, convertSpeed, speedUnit }: SpeedGearPanelProps) {
+export default function SpeedGearPanel({ motorLatest, filteredDrives, toSpeedDisplay, speedUnit }: SpeedGearPanelProps) {
   const { t } = useTranslation();
 
   const avgDriveSpeed =
     filteredDrives.length > 0
-      ? filteredDrives.reduce((s, d) => s + ((d.avgSpeedMps ?? 0) / 0.44704), 0) / filteredDrives.length
+      ? filteredDrives.reduce((s, d) => s + toSpeedDisplay(d.avgSpeedMps ?? 0), 0) / filteredDrives.length
       : null;
 
   const topDriveSpeed =
     filteredDrives.length > 0
-      ? Math.max(...filteredDrives.map((d) => (d.maxSpeedMps ?? 0) / 0.44704))
+      ? Math.max(...filteredDrives.map((d) => toSpeedDisplay(d.maxSpeedMps ?? 0)))
       : null;
 
   return (
@@ -72,14 +72,14 @@ export default function SpeedGearPanel({ motorLatest, filteredDrives, convertSpe
           <div className="flex flex-col items-center gap-1">
             <span className="text-xs text-[var(--text-secondary)]">{t('dynamics.avgDriveSpeed', 'Avg Drive Speed')}</span>
             <span className="text-2xl font-semibold text-white">
-              {avgDriveSpeed != null ? fmtNumber(convertSpeed(avgDriveSpeed), 0) : '—'}
+              {avgDriveSpeed != null ? fmtNumber(toSpeedDisplay(avgDriveSpeed), 0) : '—'}
             </span>
             <span className="text-xs text-[var(--text-muted)]">{speedUnit}</span>
           </div>
           <div className="flex flex-col items-center gap-1">
             <span className="text-xs text-[var(--text-secondary)]">{t('dynamics.topDriveSpeed', 'Top Drive Speed')}</span>
             <span className="text-2xl font-semibold text-white">
-              {topDriveSpeed != null ? fmtNumber(convertSpeed(topDriveSpeed), 0) : '—'}
+              {topDriveSpeed != null ? fmtNumber(toSpeedDisplay(topDriveSpeed), 0) : '—'}
             </span>
             <span className="text-xs text-[var(--text-muted)]">{speedUnit}</span>
           </div>

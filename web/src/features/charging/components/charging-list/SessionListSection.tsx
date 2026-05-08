@@ -15,7 +15,7 @@ interface SessionListSectionProps {
   sessions: ChargingSession[] | undefined;
   filteredSessions: ChargingSession[];
   isLoading: boolean;
-  convertDistance: (mi: number) => number;
+  toDistanceDisplay: (mi: number) => number;
   distanceUnit: string;
   sortBy: SortKey;
   sortDesc: boolean;
@@ -43,7 +43,7 @@ export function SessionListSection({
   sessions,
   filteredSessions,
   isLoading,
-  convertDistance,
+  toDistanceDisplay,
   distanceUnit,
   sortBy,
   sortDesc,
@@ -273,7 +273,7 @@ export function SessionListSection({
               <StaggerItem key={s.id}>
                 <ChargingSessionCard
                   session={s}
-                  convertDistance={convertDistance}
+                  toDistanceDisplay={toDistanceDisplay}
                   distanceUnit={distanceUnit}
                   selected={selectedIds?.has(s.id) ?? false}
                   onToggleSelect={onToggleSelected}
