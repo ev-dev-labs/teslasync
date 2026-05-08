@@ -42,14 +42,39 @@ Allowed values: `domain`, `port`, `adapter`, `app`, `handler`, `platform`,
 `cmd-internal`, `tool`. Anything else is silently ignored. Phase-47 / 03
 adds the `doc.go` files; phase-47 / 02 enforces them via `arch_test.go`.
 
+## Frozen packages
+
+Per ADR-009 (`.github/ARCHITECTURE.md`, phase-47/06), `internal/api` is
+frozen against new production `.go` files. New HTTP handlers belong in
+`internal/handler/v1`. Test files (`_test.go`) for existing source files
+are exempt because tests must live in the same Go package as the code
+under test.
+
+To intentionally add a file to a frozen package (e.g. for a critical bug
+fix that genuinely belongs in `api/`):
+
+1. Get explicit reviewer approval citing why `handler/v1` is unsuitable.
+2. Add the file.
+3. Refresh the baseline:
+
+   ```sh
+   make arch-baseline
+   ```
+4. Commit the baseline alongside the new file.
+5. Reference the **ADR-009 Exceptions** block in the PR description.
+
+`arch_test`'s `TestFrozenPackagesNoNewFiles` enforces the rule by
+diffing the live tree against `tools/archmetrics/baseline.json`'s
+`files_by_package` map.
+
 ## Forbidden edges (initial set)
 
-| From | To |
-|---|---|
-| `cmd/notification-worker` | `internal/api` |
-| `cmd/automation-worker` | `internal/api` |
-| `internal/domain/*` | `internal/adapter/*` |
-| `internal/domain/*` | `internal/database` |
-| `internal/handler/v1` | `internal/database` |
+| From | To | Status |
+|---|---|---|
+| `cmd/notification-worker` | `internal/api` | resolved (phase-47/05) |
+| `cmd/automation-worker` | `internal/api` | resolved (phase-47/05) |
+| `internal/domain/*` | `internal/adapter/*` | advisory until prompt 09 |
+| `internal/domain/*` | `internal/database` | advisory until prompt 09 |
+| `internal/handler/v1` | `internal/database` | advisory until prompt 10 |
 
 Subsequent prompts (06, 09, 10) extend this list as ADRs land.

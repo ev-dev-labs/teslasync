@@ -102,13 +102,19 @@ type PkgMetric struct {
 
 // Snapshot is the full report — JSON-serialised to baseline.json.
 type Snapshot struct {
-	GeneratedAt    string         `json:"generated_at"`
-	GoVersion      string         `json:"go_version"`
-	CommitSHA      string         `json:"commit_sha"`
-	Packages       []PkgMetric    `json:"packages"`
-	CmdLOC         map[string]int `json:"cmd_loc"`
-	ForbiddenEdges []string       `json:"forbidden_edges"`
-	DocGoCoverage  float64        `json:"doc_go_coverage"`
+	GeneratedAt    string              `json:"generated_at"`
+	GoVersion      string              `json:"go_version"`
+	CommitSHA      string              `json:"commit_sha"`
+	Packages       []PkgMetric         `json:"packages"`
+	CmdLOC         map[string]int      `json:"cmd_loc"`
+	ForbiddenEdges []string            `json:"forbidden_edges"`
+	DocGoCoverage  float64             `json:"doc_go_coverage"`
+	// FilesByPackage maps a repo-relative package path (e.g. "internal/api")
+	// to the sorted list of production .go file basenames in that package
+	// (excludes _test.go). Phase-47/06 added this map so arch_test can
+	// enforce the ADR-009 frozen-packages rule via a simple lookup rather
+	// than rescanning Packages.
+	FilesByPackage map[string][]string `json:"files_by_package"`
 }
 
 func main() {
@@ -238,7 +244,28 @@ func collect() Snapshot {
 		CmdLOC:         cmdLOC,
 		ForbiddenEdges: edges,
 		DocGoCoverage:  cov,
+		FilesByPackage: filesByPackage(out),
 	}
+}
+
+// filesByPackage builds the per-package production .go file index used
+// by arch_test's TestFrozenPackagesNoNewFiles (ADR-009, phase-47/06).
+// _test.go files are excluded so adding a new test for an existing
+// source file does not trigger the frozen-package rule.
+func filesByPackage(pkgs []PkgMetric) map[string][]string {
+	out := make(map[string][]string, len(pkgs))
+	for _, p := range pkgs {
+		files := make([]string, 0, len(p.Files))
+		for _, f := range p.Files {
+			if strings.HasSuffix(f, "_test.go") {
+				continue
+			}
+			files = append(files, f)
+		}
+		sort.Strings(files)
+		out[p.Path] = files
+	}
+	return out
 }
 
 func gitHead() string {

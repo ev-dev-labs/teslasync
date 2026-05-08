@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-08T20:23:59Z",
+  "generated_at": "2026-05-08T20:30:40Z",
   "go_version": "go1.26.1",
-  "commit_sha": "56de71940b98a1618bae0845fa99f4ed792918b7",
+  "commit_sha": "f83f2c2dffb0e7e743c3d77178a49aacd667f7e0",
   "packages": [
     {
       "path": "cmd/automation-worker",
@@ -383,7 +383,7 @@
       "path": "internal/api",
       "go_files": 197,
       "test_files": 93,
-      "loc": 77652,
+      "loc": 77662,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -920,7 +920,7 @@
       "path": "internal/arch",
       "go_files": 2,
       "test_files": 1,
-      "loc": 333,
+      "loc": 428,
       "has_doc_go": true,
       "layer": "tool",
       "imports": null,
@@ -1698,7 +1698,7 @@
       "path": "internal/handler/v1",
       "go_files": 8,
       "test_files": 0,
-      "loc": 334,
+      "loc": 340,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2535,7 +2535,7 @@
       "path": "tools/archmetrics",
       "go_files": 2,
       "test_files": 0,
-      "loc": 458,
+      "loc": 484,
       "has_doc_go": true,
       "layer": "tool",
       "imports": null,
@@ -2560,5 +2560,970 @@
     "cmd/unit-drift-validator": 154
   },
   "forbidden_edges": null,
-  "doc_go_coverage": 1
+  "doc_go_coverage": 1,
+  "files_by_package": {
+    "cmd/automation-worker": [
+      "doc.go",
+      "main.go"
+    ],
+    "cmd/export-worker": [
+      "doc.go",
+      "main.go"
+    ],
+    "cmd/metric-coverage-audit": [
+      "doc.go",
+      "main.go"
+    ],
+    "cmd/notification-worker": [
+      "doc.go",
+      "main.go"
+    ],
+    "cmd/protogen-tesla": [
+      "doc.go",
+      "emit.go",
+      "main.go",
+      "parser.go"
+    ],
+    "cmd/protogen-tesla/testdata/golden": [
+      "datum_decoder_gen.go",
+      "doc.go",
+      "enum_parsers_gen.go",
+      "signal_metadata_gen.go"
+    ],
+    "cmd/pub-test-signal": [
+      "doc.go",
+      "main.go"
+    ],
+    "cmd/resubscribe": [
+      "doc.go",
+      "main.go"
+    ],
+    "cmd/slo-coverage-audit": [
+      "doc.go",
+      "main.go"
+    ],
+    "cmd/slogen": [
+      "doc.go",
+      "generate.go",
+      "generate_alerts.go",
+      "generate_dashboards.go",
+      "main.go"
+    ],
+    "cmd/teslasync": [
+      "doc.go",
+      "lifecycle.go",
+      "main.go",
+      "setup.go",
+      "vapid_keygen.go",
+      "version.go"
+    ],
+    "cmd/trace-coverage-audit": [
+      "doc.go",
+      "main.go"
+    ],
+    "cmd/unit-drift-validator": [
+      "doc.go",
+      "main.go"
+    ],
+    "internal/adapter/gasprices": [
+      "doc.go",
+      "eia.go"
+    ],
+    "internal/adapter/geocoding": [
+      "chain.go",
+      "doc.go"
+    ],
+    "internal/adapter/mqtt": [
+      "doc.go",
+      "publisher.go"
+    ],
+    "internal/adapter/postgres": [
+      "charging_repository.go",
+      "doc.go",
+      "export_repository.go",
+      "fsm_history_repository.go",
+      "notification_repository.go",
+      "trip_repository.go",
+      "user_repository.go",
+      "vehicle_repository.go"
+    ],
+    "internal/adapter/postgres/queries": [
+      "charging.go",
+      "doc.go",
+      "export.go",
+      "fsm_history.go",
+      "notification.go",
+      "trip.go",
+      "user.go",
+      "vehicle.go"
+    ],
+    "internal/adapter/redis": [
+      "doc.go",
+      "vehicle_cache.go"
+    ],
+    "internal/adapter/storage": [
+      "doc.go",
+      "s3.go"
+    ],
+    "internal/adapter/tesla": [
+      "client.go",
+      "doc.go",
+      "mapper.go"
+    ],
+    "internal/api": [
+      "admin_feedback_handler.go",
+      "admin_log_stream_handler.go",
+      "admin_maintenance_handler.go",
+      "alert_handler.go",
+      "alert_handler_dtos.go",
+      "alert_handler_rules.go",
+      "alerts_bulk_handler.go",
+      "alerts_handler.go",
+      "analytics_handler.go",
+      "analytics_handler_dtos.go",
+      "analytics_handler_queries.go",
+      "anomaly_handler.go",
+      "api_call_log_handler.go",
+      "api_call_log_middleware.go",
+      "apikey_handler.go",
+      "apikey_middleware.go",
+      "audit.go",
+      "audit_handler.go",
+      "auth_handler.go",
+      "auth_session_handler.go",
+      "automation_events.go",
+      "automation_handler.go",
+      "automation_handler_crud.go",
+      "automation_handler_decode.go",
+      "automation_handler_dtos.go",
+      "automation_handler_history.go",
+      "automation_handler_step_parsers.go",
+      "automation_handler_test_run.go",
+      "automation_mqtt_reloader.go",
+      "automations_bulk_handler.go",
+      "backup_handler.go",
+      "backup_restore_handler.go",
+      "battery_cells_handler.go",
+      "battery_degradation_handler.go",
+      "battery_degradation_handler_calculations.go",
+      "battery_degradation_handler_dtos.go",
+      "battery_handler.go",
+      "bulk_helpers.go",
+      "charge_planner_handler.go",
+      "charge_planner_handler_compute.go",
+      "charge_planner_handler_dtos.go",
+      "charging_bulk_handler.go",
+      "charging_handler.go",
+      "charging_heatmap_handler.go",
+      "charging_optimizer_handler.go",
+      "charging_optimizer_handler_compute.go",
+      "charging_optimizer_handler_dtos.go",
+      "charging_telemetry_handler.go",
+      "chart_annotation_handler.go",
+      "chatbot_handler.go",
+      "chatbot_handler_chat.go",
+      "chatbot_handler_dtos.go",
+      "climate_handler.go",
+      "command_handler.go",
+      "computed_metric_evaluator.go",
+      "computed_metrics.go",
+      "converters.go",
+      "cost_forecast_handler.go",
+      "dashboard_layout_handler.go",
+      "data_repair_handler.go",
+      "devtools_handler.go",
+      "devtools_handler_database.go",
+      "devtools_handler_dtos.go",
+      "devtools_handler_logs.go",
+      "diagnostic_handler.go",
+      "doc.go",
+      "drive_handler.go",
+      "drive_handler_detail.go",
+      "drive_handler_listing.go",
+      "drives_bulk_handler.go",
+      "drivetrain_health_handler.go",
+      "driving_coach_handler.go",
+      "energy_flow_handler.go",
+      "energy_handler.go",
+      "energy_site_handler.go",
+      "error_tracker.go",
+      "errors.go",
+      "export_handler.go",
+      "exports_bulk_handler.go",
+      "exports_columns_handler.go",
+      "feedback_handler.go",
+      "fleet_telemetry_error_handler.go",
+      "fleet_telemetry_handler.go",
+      "forward_auth_middleware.go",
+      "fsm_handler.go",
+      "fsm_handler_dtos.go",
+      "fsm_handler_query.go",
+      "gas_price_handler.go",
+      "geocode_handler.go",
+      "geofence_handler.go",
+      "geofences_bulk_handler.go",
+      "guard_handler.go",
+      "health.go",
+      "helpers.go",
+      "impersonate_handler.go",
+      "import_handler.go",
+      "lifetime_handler.go",
+      "location_snapshot_handler.go",
+      "maintenance_handler.go",
+      "media_handler.go",
+      "metrics.go",
+      "middleware.go",
+      "mileage_handler.go",
+      "motor_handler.go",
+      "notification_channel_handler.go",
+      "notification_handler.go",
+      "notification_schedule_handler.go",
+      "onboarding_handler.go",
+      "openapi_handler.go",
+      "period_stats_handler.go",
+      "pinned_handler.go",
+      "polling_handler.go",
+      "push_handler.go",
+      "queue_status_handler.go",
+      "quiet_hours_handler.go",
+      "range_projection_handler.go",
+      "range_projection_handler_compute.go",
+      "range_projection_handler_dtos.go",
+      "rate_limit_handler.go",
+      "rbac_handler.go",
+      "regen_handler.go",
+      "route_efficiency_handler.go",
+      "router.go",
+      "router_middleware.go",
+      "router_routes_admin.go",
+      "router_routes_telemetry.go",
+      "rule_engine.go",
+      "safe.go",
+      "safety_handler.go",
+      "saved_views_handler.go",
+      "scheduled_exports_handler.go",
+      "search_handler.go",
+      "security.go",
+      "security_handler.go",
+      "session_handler.go",
+      "settings_export_handler.go",
+      "settings_handler.go",
+      "settings_import_handler.go",
+      "settings_reset_handler.go",
+      "share_handler.go",
+      "signal_handler.go",
+      "signals.go",
+      "signals_catalog_handler.go",
+      "sleep_handler.go",
+      "software_update_handler.go",
+      "speed_profile_handler.go",
+      "sse_handler.go",
+      "sudo_middleware.go",
+      "system_auth_mode_handler.go",
+      "system_handler.go",
+      "tco_handler.go",
+      "telemetry_alerts.go",
+      "telemetry_handler.go",
+      "telemetry_handler_capture.go",
+      "telemetry_handler_ingest.go",
+      "telemetry_handler_wiring.go",
+      "telemetry_sessions.go",
+      "telemetry_sessions_charge_tracking.go",
+      "telemetry_sessions_drive_tracking.go",
+      "telemetry_sessions_flush_backfill.go",
+      "telemetry_sessions_recovery.go",
+      "telemetry_sessions_signal_helpers.go",
+      "temp_impact_handler.go",
+      "tesla_charging_history_handler.go",
+      "tesla_charging_session_handler.go",
+      "tesla_energy_history_handler.go",
+      "tesla_energy_history_handler_dtos.go",
+      "tesla_energy_history_handler_query.go",
+      "tesla_energy_live_status_handler.go",
+      "tesla_user_config_handler.go",
+      "tesla_user_order_handler.go",
+      "tesla_user_profile_handler.go",
+      "tire_pressure_handler.go",
+      "totp_handler.go",
+      "trip_handler.go",
+      "trip_planner_handler.go",
+      "trip_planner_handler_compute.go",
+      "trip_planner_handler_dtos.go",
+      "trips_detail_handler.go",
+      "user_handler.go",
+      "user_preference_handler.go",
+      "vampire_drain_handler.go",
+      "vehicle_access_handler.go",
+      "vehicle_config_handler.go",
+      "vehicle_handler.go",
+      "vehicle_info_handler.go",
+      "vehicle_photo_handler.go",
+      "vehicle_settings_handler.go",
+      "vehicle_states_handler.go",
+      "visited_location_handler.go",
+      "watch_handler.go",
+      "web_errors_handler.go",
+      "web_vitals_handler.go",
+      "webhook_handler.go",
+      "webhook_receiver_handler.go",
+      "weekly_digest_handler.go",
+      "year_review_handler.go"
+    ],
+    "internal/apilog": [
+      "async.go",
+      "doc.go",
+      "logger.go",
+      "sink.go"
+    ],
+    "internal/app": [
+      "adapters.go",
+      "app.go",
+      "doc.go",
+      "lifecycle.go",
+      "new.go",
+      "run.go"
+    ],
+    "internal/app/chargingsvc": [
+      "doc.go",
+      "service.go"
+    ],
+    "internal/app/dashboardsvc": [
+      "doc.go",
+      "service.go"
+    ],
+    "internal/app/exportsvc": [
+      "doc.go",
+      "service.go"
+    ],
+    "internal/app/notificationsvc": [
+      "doc.go",
+      "service.go"
+    ],
+    "internal/app/tripsvc": [
+      "doc.go",
+      "service.go"
+    ],
+    "internal/app/vehiclesvc": [
+      "doc.go",
+      "fsm_setup.go",
+      "service.go"
+    ],
+    "internal/arch": [
+      "doc.go",
+      "rules.go"
+    ],
+    "internal/auth": [
+      "doc.go",
+      "impersonation.go",
+      "permissions.go",
+      "session_tracker.go",
+      "subject.go",
+      "subject_recorder.go"
+    ],
+    "internal/automation": [
+      "audit.go",
+      "doc.go",
+      "engine.go",
+      "engine_evaluation.go",
+      "engine_execution.go",
+      "redis_state_provider.go"
+    ],
+    "internal/automation/action": [
+      "chain.go",
+      "command.go",
+      "doc.go",
+      "notify.go",
+      "variable.go",
+      "wait.go"
+    ],
+    "internal/automation/condition": [
+      "conflict.go",
+      "cooldown.go",
+      "day_filter.go",
+      "doc.go",
+      "location.go",
+      "seasonal.go",
+      "state_check.go",
+      "time_window.go",
+      "variable_check.go"
+    ],
+    "internal/automation/presets": [
+      "builtins.go",
+      "doc.go",
+      "preset.go"
+    ],
+    "internal/automation/safety": [
+      "auto_disable.go",
+      "doc.go",
+      "failure_alert.go",
+      "loop_detection.go",
+      "priority.go",
+      "rate_limit.go",
+      "retry.go"
+    ],
+    "internal/automation/trigger": [
+      "compare.go",
+      "cron.go",
+      "doc.go",
+      "event.go",
+      "geofence.go",
+      "signal.go",
+      "webhook.go"
+    ],
+    "internal/backup": [
+      "doc.go",
+      "processor.go",
+      "storage.go"
+    ],
+    "internal/cache": [
+      "cache.go",
+      "doc.go",
+      "mem.go"
+    ],
+    "internal/config": [
+      "config.go",
+      "doc.go",
+      "timings.go"
+    ],
+    "internal/crypto": [
+      "crypto.go",
+      "doc.go",
+      "totp_secret.go"
+    ],
+    "internal/database": [
+      "achievement_unlock_repo.go",
+      "alert_repo.go",
+      "api_call_log_repo.go",
+      "audit_repo.go",
+      "auth_sessions_repo.go",
+      "auth_subjects_repo.go",
+      "automation_history_repo.go",
+      "automation_repo.go",
+      "automation_repo_bulk.go",
+      "automation_repo_mutation.go",
+      "automation_repo_query.go",
+      "automation_step_child_repo.go",
+      "automation_step_child_repo_persistence.go",
+      "automation_step_child_repo_query.go",
+      "automation_step_repo.go",
+      "automation_variable_repo.go",
+      "backup_config_repo.go",
+      "backup_run_repo.go",
+      "cache.go",
+      "charge_plan_repo.go",
+      "charging_repo.go",
+      "chart_annotation_repo.go",
+      "circuit_breaker.go",
+      "dashboard_layout_repo.go",
+      "database.go",
+      "doc.go",
+      "drive_repo.go",
+      "energy_repo.go",
+      "export_job_repo.go",
+      "export_job_repo_bulk.go",
+      "export_repo.go",
+      "from_map.go",
+      "fsm_transition_repo.go",
+      "geofence_repo.go",
+      "geofence_repo_bulk.go",
+      "guard_repo.go",
+      "helpers.go",
+      "maintenance.go",
+      "migrate.go",
+      "mileage_repo.go",
+      "mongodb.go",
+      "notification_channel_repo.go",
+      "notification_repo.go",
+      "notification_schedule_repo.go",
+      "onboarding_repo.go",
+      "pinned_repo.go",
+      "places_cache_repo.go",
+      "position_repo.go",
+      "push_subscriptions_repo.go",
+      "quiet_hours_repo.go",
+      "raw_telemetry_repo.go",
+      "retry.go",
+      "role_permissions_repo.go",
+      "saved_views_repo.go",
+      "scheduled_export_repo.go",
+      "settings_repo.go",
+      "settings_reset.go",
+      "settings_serializer.go",
+      "share_token_repo.go",
+      "signal_catalog.go",
+      "signal_history_writer.go",
+      "signal_history_writer_buffer.go",
+      "signal_history_writer_flush.go",
+      "signal_log_reader.go",
+      "signal_log_reader_aggregations.go",
+      "signal_log_reader_query.go",
+      "signal_log_repo.go",
+      "signals_catalog_repo.go",
+      "software_update_repo.go",
+      "sudo_token_repo.go",
+      "system_state_repo.go",
+      "tesla_charging_history_repo.go",
+      "tesla_charging_session_repo.go",
+      "tesla_energy_history_repo.go",
+      "tesla_energy_live_status_repo.go",
+      "tesla_energy_site_repo.go",
+      "tesla_fleet_telemetry_error_repo.go",
+      "tesla_user_config_repo.go",
+      "tesla_user_order_repo.go",
+      "tesla_user_profile_repo.go",
+      "tesla_vehicle_driver_repo.go",
+      "token_repo.go",
+      "totp_repo.go",
+      "trip_repo.go",
+      "trips_detail_repo.go",
+      "user_feedback_repo.go",
+      "vampire_drain_repo.go",
+      "vehicle_photo_repo.go",
+      "vehicle_repo.go",
+      "vehicle_settings_repo.go",
+      "vehicle_settings_resolver.go",
+      "vehicle_states_repo.go",
+      "visited_location_repo.go",
+      "worker_status_queue_repo.go",
+      "worker_status_repo.go",
+      "write_buffer.go"
+    ],
+    "internal/domain": [
+      "doc.go",
+      "errors.go"
+    ],
+    "internal/domain/charging": [
+      "doc.go",
+      "fsm.go",
+      "guards.go",
+      "sub_fsm.go",
+      "types.go",
+      "validation.go"
+    ],
+    "internal/domain/export": [
+      "doc.go",
+      "fsm.go",
+      "types.go"
+    ],
+    "internal/domain/fsm": [
+      "definition.go",
+      "doc.go",
+      "engine.go",
+      "errors.go",
+      "sub_fsm.go",
+      "types.go"
+    ],
+    "internal/domain/notification": [
+      "doc.go",
+      "fsm.go",
+      "types.go"
+    ],
+    "internal/domain/trip": [
+      "doc.go",
+      "fsm.go",
+      "types.go",
+      "validation.go"
+    ],
+    "internal/domain/user": [
+      "doc.go",
+      "types.go",
+      "validation.go"
+    ],
+    "internal/domain/vehicle": [
+      "doc.go",
+      "fsm.go",
+      "guards.go",
+      "types.go",
+      "validation.go"
+    ],
+    "internal/enums": [
+      "constants.go",
+      "doc.go",
+      "parse.go",
+      "parse_charging.go",
+      "parse_climate.go"
+    ],
+    "internal/events": [
+      "doc.go",
+      "events.go"
+    ],
+    "internal/export": [
+      "account.go",
+      "analytics.go",
+      "columns.go",
+      "doc.go",
+      "import.go",
+      "processor.go",
+      "scheduler.go",
+      "types.go",
+      "worker.go"
+    ],
+    "internal/fsm": [
+      "actions.go",
+      "detector.go",
+      "doc.go",
+      "guards.go",
+      "machine.go",
+      "reconciler.go",
+      "signal_adapter.go",
+      "signal_adapter_compat.go",
+      "signal_context.go",
+      "state.go",
+      "transition.go"
+    ],
+    "internal/fsm/automation": [
+      "doc.go",
+      "machine.go"
+    ],
+    "internal/fsm/charge": [
+      "doc.go",
+      "machine.go",
+      "state.go"
+    ],
+    "internal/fsm/command": [
+      "doc.go",
+      "machine.go"
+    ],
+    "internal/fsm/drive": [
+      "doc.go",
+      "machine.go",
+      "state.go",
+      "validation.go"
+    ],
+    "internal/fsm/notification": [
+      "cooldown.go",
+      "delivery.go",
+      "doc.go"
+    ],
+    "internal/fsm/telemetry": [
+      "doc.go",
+      "machine.go",
+      "state.go"
+    ],
+    "internal/geocoding": [
+      "azure.go",
+      "doc.go",
+      "geocoder.go",
+      "google.go",
+      "nominatim.go",
+      "search.go"
+    ],
+    "internal/handler/dto": [
+      "charging.go",
+      "dashboard.go",
+      "doc.go",
+      "export.go",
+      "trip.go",
+      "vehicle.go"
+    ],
+    "internal/handler/middleware": [
+      "auth.go",
+      "cors.go",
+      "doc.go",
+      "error_mapper.go",
+      "idempotency.go",
+      "logging.go",
+      "metrics.go",
+      "ratelimit.go",
+      "recovery.go",
+      "security_headers.go"
+    ],
+    "internal/handler/v1": [
+      "charging_handler.go",
+      "dashboard_handler.go",
+      "doc.go",
+      "export_handler.go",
+      "helpers.go",
+      "trip_handler.go",
+      "user_handler.go",
+      "vehicle_handler.go"
+    ],
+    "internal/imaging": [
+      "doc.go",
+      "resize.go"
+    ],
+    "internal/integrations": [
+      "doc.go",
+      "github_issues.go"
+    ],
+    "internal/metrics": [
+      "business.go",
+      "doc.go",
+      "metrics.go",
+      "metrics_drive_charging.go",
+      "metrics_telemetry.go"
+    ],
+    "internal/models": [
+      "alert.go",
+      "automation.go",
+      "automation_step_action.go",
+      "automation_step_condition.go",
+      "automation_step_trigger.go",
+      "charging.go",
+      "chart_annotation.go",
+      "dashboard_layout.go",
+      "doc.go",
+      "drive.go",
+      "enum_automation_steps.go",
+      "enum_automation_triggers.go",
+      "enum_notification_channels.go",
+      "enum_signal_types.go",
+      "enum_vehicle_states.go",
+      "models.go",
+      "notification.go",
+      "notification_channel_discord.go",
+      "notification_channel_email_webhook.go",
+      "notification_channel_ntfy_pushover.go",
+      "notification_channel_slack_telegram.go",
+      "notification_log.go",
+      "pinned.go",
+      "position.go",
+      "push_subscription.go",
+      "quiet_hours.go",
+      "saved_view.go",
+      "security.go",
+      "signal.go",
+      "system.go",
+      "telemetry.go",
+      "tesla.go",
+      "trip.go",
+      "vehicle.go"
+    ],
+    "internal/mqtt": [
+      "dlq_production.go",
+      "doc.go",
+      "log_sampling.go",
+      "mqtt.go"
+    ],
+    "internal/notification": [
+      "doc.go",
+      "quiet_hours.go",
+      "sender.go",
+      "worker.go"
+    ],
+    "internal/notification/computed": [
+      "compare.go",
+      "doc.go",
+      "evaluator.go",
+      "registry.go"
+    ],
+    "internal/notifier": [
+      "doc.go",
+      "webhook.go"
+    ],
+    "internal/platform": [
+      "doc.go",
+      "httprate_metrics.go",
+      "log_subscribers.go"
+    ],
+    "internal/platform/buildinfo": [
+      "buildinfo.go",
+      "doc.go"
+    ],
+    "internal/platform/cache": [
+      "connect.go",
+      "doc.go"
+    ],
+    "internal/platform/config": [
+      "config.go",
+      "doc.go"
+    ],
+    "internal/platform/database": [
+      "connect.go",
+      "doc.go",
+      "migrate.go"
+    ],
+    "internal/platform/httputil": [
+      "circuit_breaker.go",
+      "client.go",
+      "doc.go",
+      "logging.go",
+      "ratelimiter.go",
+      "request.go",
+      "response.go",
+      "retry.go",
+      "sink.go",
+      "timeout.go"
+    ],
+    "internal/platform/telemetry": [
+      "doc.go",
+      "logger.go",
+      "metrics.go",
+      "tracer.go"
+    ],
+    "internal/polling": [
+      "battery_evaluator.go",
+      "charge_evaluator.go",
+      "climate_evaluator.go",
+      "cost_tracker.go",
+      "doc.go",
+      "drive_evaluator.go",
+      "engine.go",
+      "evaluator.go",
+      "predictor.go",
+      "sentry_evaluator.go",
+      "state.go"
+    ],
+    "internal/port/external": [
+      "doc.go",
+      "gasprices.go",
+      "geocoding.go",
+      "storage.go",
+      "tesla.go"
+    ],
+    "internal/port/messaging": [
+      "doc.go",
+      "mqtt.go",
+      "notifier.go"
+    ],
+    "internal/port/repository": [
+      "charging.go",
+      "doc.go",
+      "export.go",
+      "fsm_history.go",
+      "notification.go",
+      "trip.go",
+      "user.go",
+      "vehicle.go"
+    ],
+    "internal/resilience": [
+      "doc.go",
+      "resilience.go"
+    ],
+    "internal/service": [
+      "doc.go",
+      "energy_service.go",
+      "session_service.go",
+      "vehicle_service.go"
+    ],
+    "internal/signal": [
+      "asof.go",
+      "coerce.go",
+      "doc.go",
+      "live_state_reader.go",
+      "live_store.go",
+      "noop_live_store.go",
+      "pivot.go",
+      "redis_cache.go",
+      "state_reader.go",
+      "state_reader_log.go",
+      "store.go"
+    ],
+    "internal/signal/signaltest": [
+      "doc.go",
+      "live_state_reader.go"
+    ],
+    "internal/tesla": [
+      "auth.go",
+      "client.go",
+      "client_auth.go",
+      "client_commands.go",
+      "client_energy_charging.go",
+      "client_fleet_telemetry.go",
+      "client_partner_devtools.go",
+      "client_vehicle_data.go",
+      "doc.go",
+      "tracing.go",
+      "types.go"
+    ],
+    "internal/tesla/bootstrap": [
+      "bootstrap.go",
+      "doc.go",
+      "types.go"
+    ],
+    "internal/tesla/codec": [
+      "codec.go",
+      "doc.go",
+      "flatten.go",
+      "types.go"
+    ],
+    "internal/tesla/config": [
+      "config.go",
+      "doc.go",
+      "intervals.go"
+    ],
+    "internal/tesla/normalize": [
+      "doc.go",
+      "log_sampling.go",
+      "normalize.go",
+      "observer.go",
+      "pipeline.go",
+      "setting_unit_observer.go",
+      "tracing.go"
+    ],
+    "internal/tesla/protomodel": [
+      "compounds.go",
+      "datum_decoder_gen.go",
+      "doc.go",
+      "enum_parsers_gen.go",
+      "generate.go",
+      "signal_metadata_gen.go",
+      "types.go"
+    ],
+    "internal/tesla/router": [
+      "doc.go",
+      "router.go",
+      "routing_loader.go",
+      "types.go"
+    ],
+    "internal/tesla/router/writers": [
+      "charging_telemetry_writer.go",
+      "climate_writer.go",
+      "doc.go",
+      "drive_telemetry_writer.go",
+      "location_writer.go",
+      "media_writer.go",
+      "motor_writer.go",
+      "positions_writer.go",
+      "safety_writer.go",
+      "security_event_writer.go",
+      "signal_log_writer.go",
+      "snapshot_base.go",
+      "tire_pressure_writer.go",
+      "unit_history_writer.go"
+    ],
+    "internal/tesla/unit_history": [
+      "cache.go",
+      "doc.go",
+      "repo.go",
+      "types.go"
+    ],
+    "internal/tesla/units": [
+      "conversions.go",
+      "doc.go",
+      "types.go",
+      "units.go"
+    ],
+    "internal/tesla_pipeline": [
+      "doc.go",
+      "side_effects_observer.go"
+    ],
+    "internal/tracing": [
+      "doc.go",
+      "span.go",
+      "tracing.go"
+    ],
+    "internal/units": [
+      "convert.go",
+      "doc.go"
+    ],
+    "internal/webpush": [
+      "doc.go",
+      "service.go"
+    ],
+    "internal/worker": [
+      "doc.go",
+      "gas_price_worker.go",
+      "heartbeat.go",
+      "maintenance_worker.go",
+      "unit_drift_validator.go",
+      "worker.go",
+      "worker_jobs.go",
+      "worker_lifecycle.go"
+    ],
+    "tools/archmetrics": [
+      "doc.go",
+      "main.go"
+    ]
+  }
 }

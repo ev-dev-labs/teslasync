@@ -1,0 +1,47 @@
+=== PHASE-47 / 06 handler-canonical-adr — 2026-05-08T13:29:15.0473987-07:00 ===
+=== STEP 1: ADR_009_PRESENT ===
+ADR-009 lines: 1
+=== STEP 2: FROZEN_NOTICE_API ===
+=== STEP 3: ARCH_TEST ===
+=== RUN   TestForbiddenEdges
+--- PASS: TestForbiddenEdges (5.03s)
+=== RUN   TestBaselineHonoured
+--- PASS: TestBaselineHonoured (0.01s)
+=== RUN   TestEveryInternalPackageHasDocGoWithLayer
+--- PASS: TestEveryInternalPackageHasDocGoWithLayer (0.39s)
+=== RUN   TestFrozenPackagesNoNewFiles
+--- PASS: TestFrozenPackagesNoNewFiles (0.00s)
+PASS
+ok  	github.com/ev-dev-labs/teslasync/internal/arch	5.992s
+=== STEP 4: NEGATIVE_TEST ===
+--- FAIL: TestFrozenPackagesNoNewFiles (0.00s)
+    arch_test.go:332: FROZEN PACKAGE internal/api has 1 new file(s) not in baseline:
+          zzz_phase47_sentinel.go
+          ΓåÆ ADR-009 forbids new files here. Add the new endpoint to internal/handler/v1 OR refresh tools/archmetrics/baseline.json if this is an intentional exception.
+FAIL
+FAIL	github.com/ev-dev-labs/teslasync/internal/arch	0.556s
+FAIL
+FAIL: failure message did not cite ADR-009
+=== STEP 4 retry: NEGATIVE_TEST ===
+--- FAIL: TestFrozenPackagesNoNewFiles (0.00s)
+    arch_test.go:332: FROZEN PACKAGE internal/api has 1 new file(s) not in baseline:
+          zzz_phase47_sentinel.go
+          ΓåÆ ADR-009 forbids new files here. Add the new endpoint to internal/handler/v1 OR refresh tools/archmetrics/baseline.json if this is an intentional exception.
+FAIL
+FAIL	github.com/ev-dev-labs/teslasync/internal/arch	1.076s
+FAIL
+=== STEP 5: REFRESH_BASELINE ===
+baseline files in internal/api = 197
+=== STEP 6: GIT_STATUS ===
+ M .github/ARCHITECTURE.md
+ M .github/prompts/db-refactor/phase-47/06-handler-canonical-adr.prompt.md
+ M internal/api/doc.go
+ M internal/arch/arch_test.go
+ M internal/arch/rules.go
+ M internal/handler/v1/doc.go
+ M tools/archmetrics/README.md
+ M tools/archmetrics/baseline.json
+ M tools/archmetrics/baseline.md
+ M tools/archmetrics/main.go
+EXIT=0
+STATUS=DONE

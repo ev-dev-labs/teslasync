@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics ΓÇö baseline
 
-_Generated 2026-05-08T20:24:00Z, Go go1.26.1, commit 56de71940b98a1618bae0845fa99f4ed792918b7_
+_Generated 2026-05-08T20:30:41Z, Go go1.26.1, commit f83f2c2dffb0e7e743c3d77178a49aacd667f7e0_
 
 ## Summary
 
 - Packages: 104
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 0
-- Total non-blank LOC under cmd/+internal/+tools/: 197142
+- Total non-blank LOC under cmd/+internal/+tools/: 197279
 
 ## cmd/* main.go LOC
 
@@ -55,7 +55,7 @@ _None._
 | internal/adapter/redis | 2 | 0 | 58 | yes | adapter |
 | internal/adapter/storage | 2 | 0 | 64 | yes | adapter |
 | internal/adapter/tesla | 3 | 0 | 199 | yes | adapter |
-| internal/api | 197 | 93 | 77652 | yes | handler |
+| internal/api | 197 | 93 | 77662 | yes | handler |
 | internal/apilog | 4 | 1 | 505 | yes | platform |
 | internal/app | 6 | 1 | 1207 | yes | app |
 | internal/app/chargingsvc | 2 | 1 | 295 | yes | app |
@@ -64,7 +64,7 @@ _None._
 | internal/app/notificationsvc | 2 | 1 | 305 | yes | app |
 | internal/app/tripsvc | 2 | 1 | 308 | yes | app |
 | internal/app/vehiclesvc | 3 | 1 | 342 | yes | app |
-| internal/arch | 2 | 1 | 333 | yes | tool |
+| internal/arch | 2 | 1 | 428 | yes | tool |
 | internal/auth | 6 | 4 | 2384 | yes | platform |
 | internal/automation | 6 | 2 | 1560 | yes | platform |
 | internal/automation/action | 6 | 5 | 3822 | yes | platform |
@@ -98,7 +98,7 @@ _None._
 | internal/geocoding | 6 | 1 | 532 | yes | platform |
 | internal/handler/dto | 6 | 0 | 94 | yes | handler |
 | internal/handler/middleware | 10 | 1 | 742 | yes | handler |
-| internal/handler/v1 | 8 | 0 | 334 | yes | handler |
+| internal/handler/v1 | 8 | 0 | 340 | yes | handler |
 | internal/imaging | 2 | 1 | 510 | yes | platform |
 | internal/integrations | 2 | 0 | 134 | yes | platform |
 | internal/metrics | 5 | 1 | 751 | yes | platform |
@@ -137,7 +137,7 @@ _None._
 | internal/units | 2 | 0 | 63 | yes | platform |
 | internal/webpush | 2 | 1 | 455 | yes | platform |
 | internal/worker | 8 | 3 | 2520 | yes | platform |
-| tools/archmetrics | 2 | 0 | 458 | yes | tool |
+| tools/archmetrics | 2 | 0 | 484 | yes | tool |
 
 ## doc.go adoption
 

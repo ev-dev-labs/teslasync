@@ -1,4 +1,4 @@
-# Phase-47 / Prompt 06 — ADR-005: handler/v1 canonical, internal/api FROZEN
+# Phase-47 / Prompt 06 — ADR-009: handler/v1 canonical, internal/api FROZEN
 
 ## Why
 
@@ -14,7 +14,7 @@ question in the codebase: every new endpoint lands in the wrong place, and
 every refactor faces "well, where SHOULD this go?"
 
 This prompt **does not migrate any existing handler**. It records the
-decision in `ARCHITECTURE.md` as **ADR-005**, freezes
+decision in `ARCHITECTURE.md` as **ADR-009**, freezes
 `internal/api/` against new files (enforced by arch_test), and adds a
 deprecation notice in `internal/api/doc.go`. The actual port of 200+ files
 from `internal/api/` to `internal/handler/v1/` is a long-tail effort
@@ -50,18 +50,22 @@ freeze `api/` and grow `handler/v1`, OR embrace `api/` and delete
 
 ## Design
 
-### Step 1 — Append ADR-005 to `.github/ARCHITECTURE.md`
+### Step 1 — Append ADR-009 to `.github/ARCHITECTURE.md`
 
 Insert after the last existing ADR. Numbering: phase-42 introduces
-ADR-004; this is ADR-005.
+ADR-004; this is ADR-009.
 
 ```markdown
-## ADR-005: HTTP Handler Canonical Home
+## ADR-009: HTTP Handler Canonical Home
 
 ```
 STATUS: APPROVED (PA, phase-47/06)
 DATE: <YYYY-MM-DD set on execution>
 SUPERSEDES: implicit "use whichever package you find first"
+NUMBERING NOTE: this prompt was authored expecting ADR-009 but ADR-009
+(Frontend SI Cutover, phase-43) and ADR-008 (Observability stack,
+phase-44) were already taken when the prompt executed. Renumbered to
+ADR-009 in the same commit.
 
 DECISION:
   internal/handler/v1 is the CANONICAL home for new HTTP handlers.
@@ -106,7 +110,7 @@ RATIONALE:
 
 ROLLBACK:
   If handler/v1 + app proves insufficient (e.g. perf regressions on a
-  hot endpoint), record an exception under "ADR-005 Exceptions" in this
+  hot endpoint), record an exception under "ADR-009 Exceptions" in this
   file with rationale and an issue link. Do not silently bypass the
   freeze.
 ```
@@ -121,7 +125,7 @@ Append a clear deprecation notice:
 //
 // Layer: handler
 //
-// FROZEN per ADR-005 (.github/ARCHITECTURE.md, phase-47/06):
+// FROZEN per ADR-009 (.github/ARCHITECTURE.md, phase-47/06):
 //   - No new .go files may be added to this directory.
 //   - Existing files may be edited (bug fixes, dependency updates).
 //   - New endpoints belong in internal/handler/v1.
@@ -141,7 +145,7 @@ Mark it canonical:
 //
 // Layer: handler
 //
-// CANONICAL per ADR-005. New endpoints land here. Handlers are thin:
+// CANONICAL per ADR-009. New endpoints land here. Handlers are thin:
 // they decode the request, call internal/app/<bounded-context>svc, and
 // encode the response. Direct database access is forbidden — arch_test
 // (phase-47/10) enforces this.
@@ -175,7 +179,7 @@ func TestFrozenPackagesNoNewFiles(t *testing.T) {
 		baseFiles := baseline.GoFilesIn(frozen)
 		newFiles := setSubtract(liveFiles, baseFiles)
 		if len(newFiles) > 0 {
-			t.Errorf("FROZEN PACKAGE %s has %d new file(s) not in baseline:\n  %s\n  → ADR-005 forbids new files here. Add the new endpoint to internal/handler/v1 OR refresh the baseline if this is an intentional exception.",
+			t.Errorf("FROZEN PACKAGE %s has %d new file(s) not in baseline:\n  %s\n  → ADR-009 forbids new files here. Add the new endpoint to internal/handler/v1 OR refresh the baseline if this is an intentional exception.",
 				frozen, len(newFiles), strings.Join(newFiles, "\n  "))
 		}
 	}
@@ -211,20 +215,20 @@ Append to `tools/archmetrics/README.md`:
 ```markdown
 ## Frozen packages
 
-Per ADR-005, `internal/api` is frozen against new files. To intentionally
+Per ADR-009, `internal/api` is frozen against new files. To intentionally
 add a file (e.g. for a critical bug fix that genuinely belongs in api/):
 
 1. Get explicit reviewer approval citing why handler/v1 is unsuitable.
 2. Add the file.
 3. Run `make arch-baseline` to refresh the baseline.
 4. Commit the baseline alongside the new file.
-5. Reference ADR-005 Exceptions in the PR description.
+5. Reference ADR-009 Exceptions in the PR description.
 ```
 
 ## Verification
 
 ```
-1. Append ADR-005 to ARCHITECTURE.md — confirm Markdown renders cleanly
+1. Append ADR-009 to ARCHITECTURE.md — confirm Markdown renders cleanly
    (preview in VS Code or any md viewer).
 2. internal/api/doc.go updated — must contain the FROZEN notice.
 3. internal/handler/v1/doc.go updated — must contain CANONICAL notice.
@@ -233,7 +237,7 @@ add a file (e.g. for a critical bug fix that genuinely belongs in api/):
 5. Negative test:
      New-Item -ItemType File internal/api/zzz_phase47_test.go
      go test -v -run TestFrozenPackagesNoNewFiles ./internal/arch/...
-   → MUST fail with the ADR-005 message.
+   → MUST fail with the ADR-009 message.
    Remove-Item internal/api/zzz_phase47_test.go
 6. go test ./internal/arch/... — fully green.
 7. go run ./tools/archmetrics > tools/archmetrics/baseline.json
@@ -248,7 +252,7 @@ ADDED:
   (none)
 
 MODIFIED:
-  .github/ARCHITECTURE.md                    (+ ADR-005 section)
+  .github/ARCHITECTURE.md                    (+ ADR-009 section)
   internal/api/doc.go                        (FROZEN notice)
   internal/handler/v1/doc.go                 (CANONICAL notice)
   internal/arch/rules.go                     (+ FrozenPackages var)
@@ -282,9 +286,9 @@ DELETED:
 <!-- BEGIN: HONESTY_COVENANT (verbatim, do not modify) -->
 1. No red-as-green     — TestFrozenPackagesNoNewFiles must pass; negative test must fail as described.
 2. No scope narrowing  — both doc.go files updated AND ARCHITECTURE.md ADR section added AND archmetrics extended.
-3. No skip-and-assume  — paste output of negative test (must show ADR-005 error message).
+3. No skip-and-assume  — paste output of negative test (must show ADR-009 error message).
 4. No field resurrection — N/A.
-5. No stubs            — ADR-005 prose must be the full content shown above, not a placeholder.
+5. No stubs            — ADR-009 prose must be the full content shown above, not a placeholder.
 6. No delegation       — execute yourself.
 7. No predecessor bypass — depends on prompts 01, 02, 03; MUST ship AFTER phase-42 9999-final-gate.
 8. No commit on red    — Gate must be GREEN.
@@ -322,25 +326,25 @@ $log = ".github\prompts\db-refactor\logs\phase-47-06-handler-canonical-adr.log"
 New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
 "=== PHASE-47 / 06 handler-canonical-adr — $(Get-Date -Format o) ===" | Tee-Object -FilePath $log
 
-"=== STEP 1: ADR_005_PRESENT ===" | Tee-Object -FilePath $log -Append
-$adr = Select-String -Path .github/ARCHITECTURE.md -Pattern "## ADR-005:" -SimpleMatch
-"ADR-005 lines: $($adr.Count)" | Tee-Object -FilePath $log -Append
+"=== STEP 1: ADR_009_PRESENT ===" | Tee-Object -FilePath $log -Append
+$adr = Select-String -Path .github/ARCHITECTURE.md -Pattern "## ADR-009:" -SimpleMatch
+"ADR-009 lines: $($adr.Count)" | Tee-Object -FilePath $log -Append
 if ($adr.Count -lt 1) {
-  "FAIL: ADR-005 not added to ARCHITECTURE.md" | Tee-Object -FilePath $log -Append
+  "FAIL: ADR-009 not added to ARCHITECTURE.md" | Tee-Object -FilePath $log -Append
   "EXIT=1" | Tee-Object -FilePath $log -Append
   "STATUS=BLOCKED" | Tee-Object -FilePath $log -Append
   exit 1
 }
 
 "=== STEP 2: FROZEN_NOTICE_API ===" | Tee-Object -FilePath $log -Append
-$frozen = Select-String -Path internal/api/doc.go -Pattern "FROZEN per ADR-005"
+$frozen = Select-String -Path internal/api/doc.go -Pattern "FROZEN per ADR-009"
 if ($frozen.Count -lt 1) {
   "FAIL: internal/api/doc.go missing FROZEN notice" | Tee-Object -FilePath $log -Append
   "EXIT=1" | Tee-Object -FilePath $log -Append
   "STATUS=BLOCKED" | Tee-Object -FilePath $log -Append
   exit 1
 }
-$canonical = Select-String -Path internal/handler/v1/doc.go -Pattern "CANONICAL per ADR-005"
+$canonical = Select-String -Path internal/handler/v1/doc.go -Pattern "CANONICAL per ADR-009"
 if ($canonical.Count -lt 1) {
   "FAIL: internal/handler/v1/doc.go missing CANONICAL notice" | Tee-Object -FilePath $log -Append
   "EXIT=1" | Tee-Object -FilePath $log -Append
@@ -365,8 +369,8 @@ if ($detected -eq 0) {
   "STATUS=BLOCKED" | Tee-Object -FilePath $log -Append
   exit 1
 }
-if ($negOut -notmatch "ADR-005") {
-  "FAIL: failure message did not cite ADR-005" | Tee-Object -FilePath $log -Append
+if (-not (($negOut | Out-String) -match "ADR-009")) {
+  "FAIL: failure message did not cite ADR-009" | Tee-Object -FilePath $log -Append
   "EXIT=1" | Tee-Object -FilePath $log -Append
   "STATUS=BLOCKED" | Tee-Object -FilePath $log -Append
   exit 1
@@ -388,7 +392,7 @@ if ($apiFiles -lt 100) {
 "=== STEP 6: GIT_STATUS ===" | Tee-Object -FilePath $log -Append
 $status = git status --porcelain
 $status | Tee-Object -FilePath $log -Append
-$allowed = '^\s*[AM\?]+\s+(\.github/ARCHITECTURE\.md|internal/(api|handler/v1)/doc\.go|internal/arch/(rules|arch_test)\.go|tools/archmetrics/(main\.go|README\.md|baseline\.(json|md))|\.github/prompts/db-refactor/logs/phase-47-06.*)$'
+$allowed = '^\s*[AM\?]+\s+(\.github/ARCHITECTURE\.md|internal/(api|handler/v1)/doc\.go|internal/arch/(rules|arch_test)\.go|tools/archmetrics/(main\.go|README\.md|baseline\.(json|md))|\.github/prompts/db-refactor/(logs/phase-47-06.*|phase-47/06-handler-canonical-adr\.prompt\.md))$'
 $violations = $status | Where-Object { $_ -and ($_ -notmatch $allowed) }
 if ($violations) {
   "FAIL: unexpected files in git status" | Tee-Object -FilePath $log -Append
@@ -405,14 +409,14 @@ if ($violations) {
 ## Commit
 
 ```
-docs(arch): ADR-005 — handler/v1 canonical, internal/api FROZEN (phase-47/06)
+docs(arch): ADR-009 — handler/v1 canonical, internal/api FROZEN (phase-47/06)
 
 Records the binary decision: new HTTP handlers belong in
 internal/handler/v1, not internal/api. internal/api is FROZEN against new
 files (existing files may still be edited).
 
 Adds:
-  - ADR-005 section in .github/ARCHITECTURE.md
+  - ADR-009 section in .github/ARCHITECTURE.md
   - FROZEN notice in internal/api/doc.go
   - CANONICAL notice in internal/handler/v1/doc.go
   - FrozenPackages list in internal/arch/rules.go

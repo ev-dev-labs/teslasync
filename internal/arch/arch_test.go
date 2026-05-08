@@ -102,14 +102,39 @@ func isException(src, tgt string) bool {
 // baselinePackage mirrors the JSON written by tools/archmetrics so we
 // can read it without importing that command's internal types.
 type baselinePackage struct {
-	Path     string `json:"path"`
-	GoFiles  int    `json:"go_files"`
-	HasDocGo bool   `json:"has_doc_go"`
+	Path     string   `json:"path"`
+	GoFiles  int      `json:"go_files"`
+	HasDocGo bool     `json:"has_doc_go"`
+	Files    []string `json:"files"`
 }
 
 type baselineSnapshot struct {
-	Packages      []baselinePackage `json:"packages"`
-	DocGoCoverage float64           `json:"doc_go_coverage"`
+	Packages       []baselinePackage   `json:"packages"`
+	DocGoCoverage  float64             `json:"doc_go_coverage"`
+	FilesByPackage map[string][]string `json:"files_by_package"`
+}
+
+// goFilesIn returns the production-source .go files (no _test.go) that
+// the baseline records for the given package path. The lookup prefers
+// the explicit FilesByPackage map populated by phase-47/06; for older
+// baselines without that field it falls back to scanning Packages.
+func (s *baselineSnapshot) goFilesIn(pkg string) []string {
+	if files, ok := s.FilesByPackage[pkg]; ok {
+		return files
+	}
+	for _, p := range s.Packages {
+		if p.Path != pkg {
+			continue
+		}
+		out := make([]string, 0, len(p.Files))
+		for _, f := range p.Files {
+			if !strings.HasSuffix(f, "_test.go") {
+				out = append(out, f)
+			}
+		}
+		return out
+	}
+	return nil
 }
 
 func loadBaselineOrSkip(t *testing.T, path string) *baselineSnapshot {
@@ -274,5 +299,67 @@ func parseLayer(src string) string {
 		return ""
 	}
 	return m[1]
+}
+
+// TestFrozenPackagesNoNewFiles enforces ADR-009 (phase-47/06): packages
+// listed in FrozenPackages must not gain new production .go files
+// relative to tools/archmetrics/baseline.json. _test.go files for
+// existing source files are exempt — tests must live in the same Go
+// package as the code under test.
+//
+// To intentionally add a file:
+//   1. Get explicit reviewer approval citing why handler/v1 is unsuitable.
+//   2. Add the file.
+//   3. Refresh the baseline (`go run ./tools/archmetrics > tools/archmetrics/baseline.json`).
+//   4. Commit the baseline alongside the new file.
+//   5. Reference the ADR-009 Exceptions block in the PR description.
+func TestFrozenPackagesNoNewFiles(t *testing.T) {
+	baseline := loadBaselineOrSkip(t, filepath.Join("..", "..", "tools", "archmetrics", "baseline.json"))
+	if baseline == nil {
+		t.Skip("no baseline file (phase-47/01 prerequisite)")
+	}
+	for _, frozen := range FrozenPackages {
+		live := liveProductionGoFiles(t, filepath.Join("..", "..", frozen))
+		base := stringSet(baseline.goFilesIn(frozen))
+		var added []string
+		for _, f := range live {
+			if !base[f] {
+				added = append(added, f)
+			}
+		}
+		sort.Strings(added)
+		if len(added) > 0 {
+			t.Errorf("FROZEN PACKAGE %s has %d new file(s) not in baseline:\n  %s\n  → ADR-009 forbids new files here. Add the new endpoint to internal/handler/v1 OR refresh tools/archmetrics/baseline.json if this is an intentional exception.",
+				frozen, len(added), strings.Join(added, "\n  "))
+		}
+	}
+}
+
+func liveProductionGoFiles(t *testing.T, dir string) []string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("read frozen package dir %s: %v", dir, err)
+	}
+	var out []string
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") {
+			continue
+		}
+		if strings.HasSuffix(e.Name(), "_test.go") {
+			continue
+		}
+		out = append(out, e.Name())
+	}
+	sort.Strings(out)
+	return out
+}
+
+func stringSet(values []string) map[string]bool {
+	out := make(map[string]bool, len(values))
+	for _, v := range values {
+		out[v] = true
+	}
+	return out
 }
 

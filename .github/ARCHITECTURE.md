@@ -1070,3 +1070,63 @@ for changed frontend, plus prompt-specific assertions.
 - Lock: SLOs are code-generated — catalog-driven generation is the only supported SLO rule/dashboard path.
 - Lock: MW-MBR alerts only — SLO burn alerts must use multi-window multi-burn-rate expressions.
 - Lock: RUM via bootstrap only — browser telemetry is initialized centrally without per-page UI changes.
+
+
+## ADR-009: HTTP Handler Canonical Home
+
+```
+STATUS: APPROVED (PA, phase-47/06)
+DATE: 2026-05-08
+SUPERSEDES: implicit "use whichever package you find first"
+NUMBERING NOTE: phase-47 prompts 06/07/08 originally requested ADR-005/006/007.
+ADR-005 (Frontend SI Cutover, phase-43) and ADR-008 (Observability stack,
+phase-44) were already taken. This prompt was renumbered to ADR-009 in the
+same commit.
+
+DECISION:
+  internal/handler/v1 is the CANONICAL home for new HTTP handlers.
+  internal/api is FROZEN: no new .go files may be added.
+
+RULES:
+  + ADD new handlers under internal/handler/v1/<name>_handler.go.
+  + EDITS to existing internal/api/*.go files are permitted (bug fixes,
+     dependency updates, deprecations).
+  + MIGRATION of existing internal/api handlers to handler/v1 is
+     encouraged but tracked separately (phase-48+).
+  + Handlers under handler/v1 MUST call into internal/app/<name>svc
+     services. Direct repo or database access is forbidden (arch_test
+     enforces - see prompt 10).
+  + Handler/v1 + app/<name>svc + adapter/postgres + domain/<name>
+     code paths are the canonical SI-units pipeline per Phase-48 (SI
+     Canonical Mega-PR). NO new field may carry imperial-unit suffixes
+     (DistanceMiles, EnergyUsedKWh, MaxSpeedMph, EfficiencyWhMi,
+     TotalMiles, MilesAdded, ChargerPowerKw*). All persisted/transported
+     numeric fields are SI: meters, m/s, deg-C, Pa, Wh.
+     See: .github/prompts/db-refactor/phase-48-si-canonical/0000-methodology.prompt.md
+
+  - No new .go file may be created under internal/api (arch_test FAILS).
+  - EXCEPTION: `_test.go` files for existing `internal/api/*.go` source
+     files ARE permitted, because tests must live in the same Go package
+     as the code under test. arch_test MUST distinguish `_test.go` from
+     production source. Phase-44 prompts 0011 + 0020 rely on this
+     exception.
+  - No new sub-directory may be created under internal/api.
+  - Do not add new package-level vars to internal/api outside aliases
+     created by phase-47/05 deprecation.
+  - No new imperial-unit field names anywhere in handler/v1, dto,
+     app/*svc, domain/*, or adapter/postgres (Phase-48 SI canonical
+     mandate). Display conversion is React-only via useUnits/useFormatting.
+
+RATIONALE:
+  - Hexagonal scaffolding (domain, port, adapter, app, handler) is
+    already in place and partially populated.
+  - internal/api grew procedurally to 223 files with mixed concerns;
+    further additions deepen the technical debt.
+  - handler/v1 + app/<name>svc give us testable, layer-respecting code.
+
+ROLLBACK:
+  If handler/v1 + app proves insufficient (e.g. perf regressions on a
+  hot endpoint), record an exception under "ADR-009 Exceptions" in this
+  file with rationale and an issue link. Do not silently bypass the
+  freeze.
+```

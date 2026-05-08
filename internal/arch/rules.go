@@ -69,3 +69,16 @@ var AdvisorySources = map[string]bool{
 	"internal/domain/...": true,
 	"internal/handler/v1": true,
 }
+
+// FrozenPackages lists package paths where new .go files (excluding
+// _test.go files for existing source files) are not allowed. Phase-47/06
+// declares the first entry per ADR-009: internal/api is frozen against
+// new files because internal/handler/v1 is now the canonical home for
+// new HTTP handlers.
+//
+// arch_test compares the live file list against
+// tools/archmetrics/baseline.json and fails if any production .go file
+// appears in a frozen package that isn't in the baseline.
+var FrozenPackages = []string{
+	"internal/api",
+}
