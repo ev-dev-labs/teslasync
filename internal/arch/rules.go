@@ -2,7 +2,7 @@ package arch
 
 // ForbiddenEdge represents an import-graph edge that MUST NOT exist.
 // Both Source and Target are package paths relative to the module root,
-// e.g. "cmd/notification-worker" or "internal/api".
+// e.g. "internal/handler/v1" or "internal/database".
 //
 // Patterns may use a trailing "/..." to match any subpackage.
 type ForbiddenEdge struct {
@@ -56,10 +56,11 @@ type Exception struct {
 // AllowedExceptions lists currently-tolerated forbidden edges. Each entry
 // MUST be removed by the cited prompt; arch_test will start failing again
 // at that point unless the underlying violation is fixed.
-var AllowedExceptions = []Exception{
-	{Source: "cmd/notification-worker", Target: "internal/api", Until: "phase-47/05"},
-	{Source: "cmd/automation-worker", Target: "internal/api", Until: "phase-47/05"},
-}
+//
+// Phase-47/05 cleared the worker→internal/api exceptions: the workers now
+// depend on internal/apilog and internal/notification/computed (extracted
+// in that prompt) instead of the HTTP handler package.
+var AllowedExceptions = []Exception{}
 
 // AdvisorySources marks rules whose violations log a WARNING but DO NOT
 // fail the test. Prompts that promote a rule to fail-level remove the

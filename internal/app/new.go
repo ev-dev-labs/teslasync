@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api"
+	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
@@ -199,7 +200,7 @@ func (a *App) initAPILogging() {
 	a.APILogRepo = database.NewAPICallLogRepo(a.DB)
 
 	if a.Cfg.APILogs.Enabled {
-		a.InboundAPILogger = api.NewAsyncAPICallLogger(a.APILogRepo, api.AsyncLoggerOptions{
+		a.InboundAPILogger = apilog.NewAsync(a.APILogRepo, apilog.AsyncOptions{
 			QueueCapacity: a.Cfg.APILogs.QueueCapacity,
 			BatchSize:     a.Cfg.APILogs.BatchSize,
 			FlushInterval: a.Cfg.APILogs.FlushInterval,
@@ -260,7 +261,7 @@ func (a *App) initAPILogging() {
 // rows via the SetLogCallback path above so wiring it through this
 // sink would double-record every call.
 func (a *App) initOutboundSinks() {
-	a.OutboundAPILogSink = api.APICallSinkAdapter(a.InboundAPILogger, a.Cfg.APILogs.CaptureBodies)
+	a.OutboundAPILogSink = apilog.SinkAdapter(a.InboundAPILogger, a.Cfg.APILogs.CaptureBodies)
 	log.Info().
 		Bool("capture_bodies", a.Cfg.APILogs.CaptureBodies).
 		Bool("logger_enabled", a.InboundAPILogger != nil).

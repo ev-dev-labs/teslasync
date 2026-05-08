@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics ΓÇö baseline
 
-_Generated 2026-05-08T20:00:42Z, Go go1.26.1, commit 913f70c376b3515a3f7e4d2db2f52d506c139ea5_
+_Generated 2026-05-08T20:24:00Z, Go go1.26.1, commit 56de71940b98a1618bae0845fa99f4ed792918b7_
 
 ## Summary
 
-- Packages: 102
+- Packages: 104
 - doc.go coverage: 100.0%
-- Forbidden edges detected: 2
-- Total non-blank LOC under cmd/+internal/+tools/: 196798
+- Forbidden edges detected: 0
+- Total non-blank LOC under cmd/+internal/+tools/: 197142
 
 ## cmd/* main.go LOC
 
@@ -16,7 +16,7 @@ _Generated 2026-05-08T20:00:42Z, Go go1.26.1, commit 913f70c376b3515a3f7e4d2db2f
 | cmd/automation-worker/main.go | 272 |
 | cmd/export-worker/main.go | 172 |
 | cmd/metric-coverage-audit/main.go | 126 |
-| cmd/notification-worker/main.go | 372 |
+| cmd/notification-worker/main.go | 373 |
 | cmd/protogen-tesla/main.go | 73 |
 | cmd/pub-test-signal/main.go | 625 |
 | cmd/resubscribe/main.go | 363 |
@@ -28,8 +28,7 @@ _Generated 2026-05-08T20:00:42Z, Go go1.26.1, commit 913f70c376b3515a3f7e4d2db2f
 
 ## Forbidden edges
 
-- cmd/automation-worker -> internal/api (rule: cmd/automation-worker -> internal/api)
-- cmd/notification-worker -> internal/api (rule: cmd/notification-worker -> internal/api)
+_None._
 
 ## Per-package metrics
 
@@ -38,7 +37,7 @@ _Generated 2026-05-08T20:00:42Z, Go go1.26.1, commit 913f70c376b3515a3f7e4d2db2f
 | cmd/automation-worker | 2 | 0 | 276 | yes | cmd-internal |
 | cmd/export-worker | 2 | 0 | 176 | yes | cmd-internal |
 | cmd/metric-coverage-audit | 2 | 0 | 130 | yes | cmd-internal |
-| cmd/notification-worker | 2 | 0 | 376 | yes | cmd-internal |
+| cmd/notification-worker | 2 | 0 | 377 | yes | cmd-internal |
 | cmd/protogen-tesla | 4 | 1 | 2156 | yes | cmd-internal |
 | cmd/protogen-tesla/testdata/golden | 4 | 0 | 265 | yes | cmd-internal |
 | cmd/pub-test-signal | 2 | 0 | 629 | yes | cmd-internal |
@@ -56,15 +55,16 @@ _Generated 2026-05-08T20:00:42Z, Go go1.26.1, commit 913f70c376b3515a3f7e4d2db2f
 | internal/adapter/redis | 2 | 0 | 58 | yes | adapter |
 | internal/adapter/storage | 2 | 0 | 64 | yes | adapter |
 | internal/adapter/tesla | 3 | 0 | 199 | yes | adapter |
-| internal/api | 197 | 94 | 78820 | yes | handler |
-| internal/app | 6 | 1 | 1206 | yes | app |
+| internal/api | 197 | 93 | 77652 | yes | handler |
+| internal/apilog | 4 | 1 | 505 | yes | platform |
+| internal/app | 6 | 1 | 1207 | yes | app |
 | internal/app/chargingsvc | 2 | 1 | 295 | yes | app |
 | internal/app/dashboardsvc | 2 | 1 | 322 | yes | app |
 | internal/app/exportsvc | 2 | 1 | 274 | yes | app |
 | internal/app/notificationsvc | 2 | 1 | 305 | yes | app |
 | internal/app/tripsvc | 2 | 1 | 308 | yes | app |
 | internal/app/vehiclesvc | 3 | 1 | 342 | yes | app |
-| internal/arch | 2 | 1 | 332 | yes | tool |
+| internal/arch | 2 | 1 | 333 | yes | tool |
 | internal/auth | 6 | 4 | 2384 | yes | platform |
 | internal/automation | 6 | 2 | 1560 | yes | platform |
 | internal/automation/action | 6 | 5 | 3822 | yes | platform |
@@ -105,6 +105,7 @@ _Generated 2026-05-08T20:00:42Z, Go go1.26.1, commit 913f70c376b3515a3f7e4d2db2f
 | internal/models | 34 | 1 | 2825 | yes | domain |
 | internal/mqtt | 4 | 4 | 2175 | yes | platform |
 | internal/notification | 4 | 2 | 1092 | yes | platform |
+| internal/notification/computed | 4 | 1 | 1004 | yes | platform |
 | internal/notifier | 2 | 1 | 450 | yes | platform |
 | internal/platform | 3 | 2 | 702 | yes | platform |
 | internal/platform/buildinfo | 2 | 1 | 86 | yes | platform |

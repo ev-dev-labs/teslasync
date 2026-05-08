@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-08T20:00:41Z",
+  "generated_at": "2026-05-08T20:23:59Z",
   "go_version": "go1.26.1",
-  "commit_sha": "913f70c376b3515a3f7e4d2db2f52d506c139ea5",
+  "commit_sha": "56de71940b98a1618bae0845fa99f4ed792918b7",
   "packages": [
     {
       "path": "cmd/automation-worker",
@@ -11,7 +11,7 @@
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
-        "internal/api",
+        "internal/apilog",
         "internal/automation",
         "internal/automation/action",
         "internal/automation/safety",
@@ -64,15 +64,16 @@
       "path": "cmd/notification-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 376,
+      "loc": 377,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
-        "internal/api",
+        "internal/apilog",
         "internal/config",
         "internal/database",
         "internal/models",
         "internal/notification",
+        "internal/notification/computed",
         "internal/resilience",
         "internal/webpush"
       ],
@@ -381,13 +382,14 @@
     {
       "path": "internal/api",
       "go_files": 197,
-      "test_files": 94,
-      "loc": 78820,
+      "test_files": 93,
+      "loc": 77652,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
         "internal/adapter/postgres",
         "internal/api",
+        "internal/apilog",
         "internal/app/chargingsvc",
         "internal/app/dashboardsvc",
         "internal/app/exportsvc",
@@ -420,6 +422,7 @@
         "internal/models",
         "internal/mqtt",
         "internal/notification",
+        "internal/notification/computed",
         "internal/notifier",
         "internal/platform",
         "internal/platform/database",
@@ -520,7 +523,6 @@
         "climate_handler_test.go",
         "command_handler.go",
         "computed_metric_evaluator.go",
-        "computed_metric_evaluator_test.go",
         "computed_metrics.go",
         "converters.go",
         "cost_forecast_handler.go",
@@ -736,15 +738,36 @@
       ]
     },
     {
+      "path": "internal/apilog",
+      "go_files": 4,
+      "test_files": 1,
+      "loc": 505,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": [
+        "internal/apilog",
+        "internal/models",
+        "internal/platform/httputil"
+      ],
+      "files": [
+        "async.go",
+        "doc.go",
+        "logger.go",
+        "logger_test.go",
+        "sink.go"
+      ]
+    },
+    {
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1206,
+      "loc": 1207,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
         "internal/adapter/gasprices",
         "internal/api",
+        "internal/apilog",
         "internal/cache",
         "internal/config",
         "internal/crypto",
@@ -897,7 +920,7 @@
       "path": "internal/arch",
       "go_files": 2,
       "test_files": 1,
-      "loc": 332,
+      "loc": 333,
       "has_doc_go": true,
       "layer": "tool",
       "imports": null,
@@ -1834,6 +1857,26 @@
       ]
     },
     {
+      "path": "internal/notification/computed",
+      "go_files": 4,
+      "test_files": 1,
+      "loc": 1004,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": [
+        "internal/database",
+        "internal/metrics",
+        "internal/models"
+      ],
+      "files": [
+        "compare.go",
+        "doc.go",
+        "evaluator.go",
+        "evaluator_test.go",
+        "registry.go"
+      ]
+    },
+    {
       "path": "internal/notifier",
       "go_files": 2,
       "test_files": 1,
@@ -2506,7 +2549,7 @@
     "cmd/automation-worker": 272,
     "cmd/export-worker": 172,
     "cmd/metric-coverage-audit": 126,
-    "cmd/notification-worker": 372,
+    "cmd/notification-worker": 373,
     "cmd/protogen-tesla": 73,
     "cmd/pub-test-signal": 625,
     "cmd/resubscribe": 363,
@@ -2516,9 +2559,6 @@
     "cmd/trace-coverage-audit": 219,
     "cmd/unit-drift-validator": 154
   },
-  "forbidden_edges": [
-    "cmd/automation-worker -\u003e internal/api (rule: cmd/automation-worker -\u003e internal/api)",
-    "cmd/notification-worker -\u003e internal/api (rule: cmd/notification-worker -\u003e internal/api)"
-  ],
+  "forbidden_edges": null,
   "doc_go_coverage": 1
 }

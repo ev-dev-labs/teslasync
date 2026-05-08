@@ -1,4 +1,4 @@
-package api
+package computed
 
 import (
 	"context"
@@ -10,9 +10,9 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// fakeMetric returns a fixed value irrespective of window — keeps tests free of
-// real database calls. The lastWindow field lets tests assert that the
-// evaluator passed the right [start, end) bounds.
+// fakeMetric returns a fixed value irrespective of window — keeps tests
+// free of real database calls. The lastWindow field lets tests assert
+// that the evaluator passed the right [start, end) bounds.
 type fakeMetric struct {
 	id      string
 	value   float64
@@ -32,8 +32,6 @@ func (f *fakeMetric) def(now func() time.Time) MetricDef {
 		Windows: f.windows,
 		Compute: func(_ context.Context, _ *database.DB, _ int64, start, end time.Time) (float64, error) {
 			f.calls++
-			// Heuristic: the "previous" window's end equals the "current" window's
-			// start (per WindowBounds / PreviousWindowBounds contract).
 			if !current.IsZero() && end.Before(current.UTC().Add(-1*time.Second)) || end.Equal(f.lastCur[0]) {
 				f.lastPrv = [2]time.Time{start, end}
 				return f.prev, nil
@@ -66,15 +64,14 @@ func newComputedRule(id int64, metric, window, op string, threshold float64) *mo
 func TestComputedMetric_WindowBounds(t *testing.T) {
 	now := time.Date(2026, 5, 15, 14, 30, 0, 0, time.UTC) // Friday
 	cases := []struct {
-		window     string
-		wantStart  time.Time
-		wantEndIs  string // "now" or specific time
+		window    string
+		wantStart time.Time
 	}{
-		{"day", time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC), "now"},
-		{"week", time.Date(2026, 5, 11, 0, 0, 0, 0, time.UTC), "now"}, // Monday before
-		{"month", time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), "now"},
-		{"rolling_7d", now.Add(-7 * 24 * time.Hour), "now"},
-		{"rolling_30d", now.Add(-30 * 24 * time.Hour), "now"},
+		{"day", time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)},
+		{"week", time.Date(2026, 5, 11, 0, 0, 0, 0, time.UTC)}, // Monday before
+		{"month", time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)},
+		{"rolling_7d", now.Add(-7 * 24 * time.Hour)},
+		{"rolling_30d", now.Add(-30 * 24 * time.Hour)},
 	}
 	for _, c := range cases {
 		t.Run(c.window, func(t *testing.T) {
@@ -93,7 +90,6 @@ func TestComputedMetric_WindowBounds(t *testing.T) {
 }
 
 func TestComputedMetric_WindowBounds_WeekSundayWraps(t *testing.T) {
-	// Sunday — should wrap back to the previous Monday (6 days back).
 	now := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC) // Sunday
 	start, _, err := WindowBounds("week", now)
 	if err != nil {
@@ -142,7 +138,6 @@ func TestComputedMetric_PreviousWindowBounds(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		// current = [now-7d, now); previous = [now-14d, now-7d)
 		if !end.Equal(now.Add(-7 * 24 * time.Hour)) {
 			t.Errorf("end = %v, want %v", end, now.Add(-7*24*time.Hour))
 		}
@@ -181,7 +176,6 @@ func TestComputedMetric_CompareMetric(t *testing.T) {
 }
 
 func TestComputedMetric_ComparePercentChange(t *testing.T) {
-	// Increased 50% from 100→150, threshold 20% → matches "%_change_>".
 	matched, pct, err := ComparePercentChange("%_change_>", 150, 100, 20)
 	if err != nil {
 		t.Fatal(err)
@@ -193,7 +187,6 @@ func TestComputedMetric_ComparePercentChange(t *testing.T) {
 		t.Errorf("pct = %v, want ~50", pct)
 	}
 
-	// Decreased 50% from 100→50, threshold -20 → matches "%_change_<".
 	matched, _, err = ComparePercentChange("%_change_<", 50, 100, -20)
 	if err != nil {
 		t.Fatal(err)
@@ -202,7 +195,6 @@ func TestComputedMetric_ComparePercentChange(t *testing.T) {
 		t.Errorf("expected match: -50%% < -20%%")
 	}
 
-	// Zero baseline: never matches.
 	matched, _, err = ComparePercentChange("%_change_>", 100, 0, 10)
 	if err != nil {
 		t.Fatal(err)
@@ -223,7 +215,7 @@ func TestComputedMetric_Evaluator_Triggers(t *testing.T) {
 	now := time.Date(2026, 5, 15, 12, 0, 0, 0, time.UTC)
 	fake := &fakeMetric{id: "test_metric", value: 250, windows: []string{"day", "month"}}
 	registry := map[string]MetricDef{fake.id: fake.def(func() time.Time { return now })}
-	ev := newComputedMetricEvaluatorWithRegistry(registry, func() time.Time { return now })
+	ev := NewWithRegistry(registry, func() time.Time { return now })
 
 	rule := newComputedRule(1, "test_metric", "month", ">", 200)
 	res, err := ev.Evaluate(context.Background(), rule, 7)
@@ -245,7 +237,7 @@ func TestComputedMetric_Evaluator_DoesNotTriggerWhenBelow(t *testing.T) {
 	now := time.Now().UTC()
 	fake := &fakeMetric{id: "metric_a", value: 100, windows: []string{"month"}}
 	registry := map[string]MetricDef{fake.id: fake.def(func() time.Time { return now })}
-	ev := newComputedMetricEvaluatorWithRegistry(registry, func() time.Time { return now })
+	ev := NewWithRegistry(registry, func() time.Time { return now })
 
 	rule := newComputedRule(1, "metric_a", "month", ">", 200)
 	res, err := ev.Evaluate(context.Background(), rule, 7)
@@ -265,7 +257,7 @@ func TestComputedMetric_Evaluator_RespectsCooldown(t *testing.T) {
 	currentNow := now
 	fake := &fakeMetric{id: "metric_cd", value: 250, windows: []string{"month"}}
 	registry := map[string]MetricDef{fake.id: fake.def(func() time.Time { return currentNow })}
-	ev := newComputedMetricEvaluatorWithRegistry(registry, func() time.Time { return currentNow })
+	ev := NewWithRegistry(registry, func() time.Time { return currentNow })
 
 	rule := newComputedRule(2, "metric_cd", "month", ">", 200)
 	rule.CooldownMin = 30
@@ -275,7 +267,6 @@ func TestComputedMetric_Evaluator_RespectsCooldown(t *testing.T) {
 		t.Fatalf("first eval should trigger: %+v err=%v", first, err)
 	}
 
-	// Advance time by 5 minutes — still in cooldown.
 	currentNow = now.Add(5 * time.Minute)
 	second, err := ev.Evaluate(context.Background(), rule, 7)
 	if err != nil {
@@ -285,7 +276,6 @@ func TestComputedMetric_Evaluator_RespectsCooldown(t *testing.T) {
 		t.Errorf("expected cooldown suppression, got triggered=%v", second.Triggered)
 	}
 
-	// Advance past cooldown — fires again.
 	currentNow = now.Add(31 * time.Minute)
 	third, err := ev.Evaluate(context.Background(), rule, 7)
 	if err != nil {
@@ -300,7 +290,7 @@ func TestComputedMetric_Evaluator_RespectsSnooze(t *testing.T) {
 	now := time.Date(2026, 5, 15, 12, 0, 0, 0, time.UTC)
 	fake := &fakeMetric{id: "metric_snz", value: 250, windows: []string{"month"}}
 	registry := map[string]MetricDef{fake.id: fake.def(func() time.Time { return now })}
-	ev := newComputedMetricEvaluatorWithRegistry(registry, func() time.Time { return now })
+	ev := NewWithRegistry(registry, func() time.Time { return now })
 
 	rule := newComputedRule(3, "metric_snz", "month", ">", 200)
 	until := now.Add(time.Hour)
@@ -313,14 +303,13 @@ func TestComputedMetric_Evaluator_RespectsSnooze(t *testing.T) {
 	if res.Triggered {
 		t.Errorf("snoozed rule should not trigger")
 	}
-	// Value still computed (for preview).
 	if res.Value != 250 {
 		t.Errorf("Value = %v, want 250 (computed even when snoozed)", res.Value)
 	}
 }
 
 func TestComputedMetric_Evaluator_UnknownMetric(t *testing.T) {
-	ev := newComputedMetricEvaluatorWithRegistry(map[string]MetricDef{}, nil)
+	ev := NewWithRegistry(map[string]MetricDef{}, nil)
 	rule := newComputedRule(1, "nonexistent", "month", ">", 1)
 	_, err := ev.Evaluate(context.Background(), rule, 7)
 	if err == nil {
@@ -332,9 +321,9 @@ func TestComputedMetric_Evaluator_UnknownMetric(t *testing.T) {
 }
 
 func TestComputedMetric_Evaluator_RejectsBadKind(t *testing.T) {
-	ev := newComputedMetricEvaluatorWithRegistry(map[string]MetricDef{}, nil)
+	ev := NewWithRegistry(map[string]MetricDef{}, nil)
 	rule := newComputedRule(1, "x", "month", ">", 1)
-	rule.Kind = "signal" // wrong kind
+	rule.Kind = "signal"
 	if _, err := ev.Evaluate(context.Background(), rule, 7); err == nil {
 		t.Fatal("expected error when evaluating non-computed_metric rule")
 	}
@@ -342,11 +331,11 @@ func TestComputedMetric_Evaluator_RejectsBadKind(t *testing.T) {
 
 func TestComputedMetric_Evaluator_InvalidWindow(t *testing.T) {
 	now := time.Now().UTC()
-	fake := &fakeMetric{id: "narrow", value: 1, windows: []string{"day"}} // only day allowed
+	fake := &fakeMetric{id: "narrow", value: 1, windows: []string{"day"}}
 	registry := map[string]MetricDef{fake.id: fake.def(func() time.Time { return now })}
-	ev := newComputedMetricEvaluatorWithRegistry(registry, func() time.Time { return now })
+	ev := NewWithRegistry(registry, func() time.Time { return now })
 
-	rule := newComputedRule(1, "narrow", "month", ">", 0) // month not allowed
+	rule := newComputedRule(1, "narrow", "month", ">", 0)
 	if _, err := ev.Evaluate(context.Background(), rule, 7); err == nil {
 		t.Fatal("expected error for disallowed window")
 	}
@@ -356,7 +345,7 @@ func TestComputedMetric_Preview_BypassesCooldownAndSnooze(t *testing.T) {
 	now := time.Date(2026, 5, 15, 12, 0, 0, 0, time.UTC)
 	fake := &fakeMetric{id: "preview_metric", value: 500, windows: []string{"month"}}
 	registry := map[string]MetricDef{fake.id: fake.def(func() time.Time { return now })}
-	ev := newComputedMetricEvaluatorWithRegistry(registry, func() time.Time { return now })
+	ev := NewWithRegistry(registry, func() time.Time { return now })
 
 	rule := newComputedRule(1, "preview_metric", "month", ">", 200)
 	until := now.Add(time.Hour)
@@ -384,7 +373,6 @@ func TestComputedMetric_ListMetricSummaries_Stable(t *testing.T) {
 			t.Errorf("ListMetricSummaries not sorted: %s before %s", got[i-1].ID, got[i].ID)
 		}
 	}
-	// charging_cost is in the registry — sanity check.
 	found := false
 	for _, m := range got {
 		if m.ID == "charging_cost" {
