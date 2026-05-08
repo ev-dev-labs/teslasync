@@ -12,7 +12,7 @@ description: "Phase 44 - otelhttp-context-propagation"
 |---|---|
 | Output log | `.github/prompts/db-refactor/logs/phase-44-0011-otelhttp-context-propagation.log` |
 | Depends on | `phase-44-0010-tracing-bootstrap-audit.log` |
-| Allowed files to change | `internal/api/`, `internal/tesla/`, the output log |
+| Allowed files to change | `internal/api/`, `internal/tesla/`, `internal/notifier/`, `internal/adapter/`, `internal/webpush/`, `internal/integrations/`, `internal/platform/`, the output log |
 
 ## Honesty Covenant
 
@@ -95,7 +95,7 @@ exit 0
 
 ```powershell
 cd D:\repos\teslasync
-git add internal/api/ internal/tesla/
+git add internal/api/ internal/tesla/ internal/notifier/ internal/adapter/ internal/webpush/ internal/integrations/ internal/platform/
 git add -f .github/prompts/db-refactor/logs/phase-44-0011-otelhttp-context-propagation.log
 git commit -m "phase-44(0011): wire otelhttp inbound + outbound everywhere
 
@@ -103,3 +103,4 @@ Every chi router wrapped, every http.Client uses otelhttp.NewTransport.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ```
+
