@@ -102,7 +102,7 @@
       "alertStudio": {
         "cooldown": "Minimum minutes between repeat firings of this rule. Prevents the same condition from spamming your channels (e.g. battery at 19% triggering once per minute).",
         "severity": "Visual / routing priority — info, warn, or critical. Channels can subscribe to specific severities to keep critical alerts from being drowned out by chatty info ones.",
-        "triggerMode": "Repeat fires every cooldown while the condition stays true; once fires the first time and waits for the condition to reset to false before it can fire again.",
+        "alertBehavior": "Pick 'Notify on event' for one-time confirmations like 'vehicle locked' or 'charging done'. Pick 'Re-alert until resolved' for ongoing safety concerns like 'vehicle unlocked' or 'door open'.",
         "kind": "Signal threshold compares a single live telemetry value (e.g. BatteryLevel < 20). Computed metric aggregates over a time window (e.g. cost > $5 in last 24h).",
         "vehicleId": "Restricts the rule to a single vehicle. Leave blank to apply across every vehicle on the account.",
         "operator": "Comparison applied to the signal value: =, !=, <, <=, >, >=, between, any change. Some operators only apply to numeric signals.",
@@ -6387,9 +6387,11 @@
       "editor": {
         "enabled": "Enabled",
         "disabled": "Disabled",
-        "triggerMode": {
-          "repeat": "Every cooldown while true (default)",
-          "once": "Once, until condition resets"
+        "alertBehavior": {
+          "onceLabel": "Notify on event",
+          "onceDesc": "Fires when the condition is first met. Stays quiet until it resets.",
+          "repeatLabel": "Re-alert until resolved",
+          "repeatDesc": "Keeps firing every {{cooldown}} minutes while the condition stays true."
         },
         "noSignalTitle": "Choose a signal",
         "noSignalDescription": "Select a telemetry signal before entering a comparison value.",
@@ -6429,7 +6431,7 @@
         "allowedOperatorsPlaceholder": "Select a signal to see its operators",
         "typedValueLabel": "Typed Value",
         "cooldownLabel": "Cooldown (minutes)",
-        "triggerModeLabel": "Trigger Mode",
+        "alertBehaviorLabel": "Alert Behavior",
         "maxFiresLabel": "Max alerts before condition resolves",
         "maxFiresPlaceholder": "Leave blank for unlimited",
         "maxFiresHint": "Only applies to repeat-mode rules. Once-mode already caps at 1 per resolution.",

@@ -714,9 +714,9 @@ export default function AlertStudio() {
     { value: 'false', label: t('notifications.alertStudio.editor.disabled', 'Disabled') },
   ], [t])
 
-  const triggerModeOptions = useMemo(() => [
-    { value: 'repeat', label: t('notifications.alertStudio.editor.triggerMode.repeat', 'Every cooldown while true (default)') },
-    { value: 'once', label: t('notifications.alertStudio.editor.triggerMode.once', 'Once, until condition resets') },
+  const alertBehaviorOptions = useMemo(() => [
+    { value: 'repeat', label: t('notifications.alertStudio.editor.alertBehavior.repeatLabel', 'Re-alert until resolved') },
+    { value: 'once', label: t('notifications.alertStudio.editor.alertBehavior.onceLabel', 'Notify on event') },
   ], [t])
 
   const signalTypeLabels = useMemo<Record<SignalValueType, string>>(() => ({
@@ -1566,25 +1566,25 @@ export default function AlertStudio() {
               </div>
               <div>
                 <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-trigger-mode">
-                  {t('notifications.alertStudio.editor.triggerModeLabel', 'Trigger Mode')}
-                  <HelpIcon i18nKey="help.fields.alertStudio.triggerMode" content="'Once' fires on the rising edge then re-arms after the condition clears. 'Repeat' fires every cooldown interval while the condition stays true." for="alert-trigger-mode" />
+                  {t('notifications.alertStudio.editor.alertBehaviorLabel', 'Alert Behavior')}
+                  <HelpIcon i18nKey="help.fields.alertStudio.alertBehavior" content="Pick 'Notify on event' for one-time confirmations like 'vehicle locked' or 'charging done'. Pick 'Re-alert until resolved' for ongoing safety concerns like 'vehicle unlocked' or 'door open'." for="alert-trigger-mode" />
                 </label>
                 <UiSelect
                   id="alert-trigger-mode"
                   className="w-full"
                   value={editor.trigger_mode}
                   onChange={e => setEditor(s => ({ ...s, trigger_mode: normalizeTriggerMode(e.target.value) }))}
-                  options={triggerModeOptions}
+                  options={alertBehaviorOptions}
                 />
                 <p className="mt-1 text-[10px] text-[var(--text-muted)]">
                   {editor.trigger_mode === 'once'
                     ? t(
-                        'notifications.alertStudio.editor.triggerMode.onceHint',
-                        'Fires once on the rising edge, then waits until the condition becomes false again before re-arming.',
+                        'notifications.alertStudio.editor.alertBehavior.onceDesc',
+                        'Fires when the condition is first met. Stays quiet until it resets.',
                       )
                     : t(
-                        'notifications.alertStudio.editor.triggerMode.repeatHint',
-                        'Fires every {{cooldown}} minutes while the condition holds.',
+                        'notifications.alertStudio.editor.alertBehavior.repeatDesc',
+                        'Keeps firing every {{cooldown}} minutes while the condition stays true.',
                         { cooldown: editor.cooldown_min },
                       )}
                 </p>
