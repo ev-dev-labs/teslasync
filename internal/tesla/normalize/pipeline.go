@@ -199,11 +199,24 @@ func New(histRepo unithistory.Repo, r Routable, log zerolog.Logger, observers ..
 //     retry; the surrounding shutdown path is responsible for
 //     draining in-flight work.
 func (p *Pipeline) Process(ctx context.Context, payload []byte, vehicleIntID int64) error {
+	ctx, batch := startProcessSpan(ctx, "normalize.process", vehicleIntID)
+	defer batch.stop()
+
+	_, endParse := startChildSpan(ctx, "normalize.parse")
 	atomics, err := codec.Decode(payload)
+	endParse()
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrPayloadDrop, err)
+		wrapped := fmt.Errorf("%w: %v", ErrPayloadDrop, err)
+		batch.recordError(wrapped)
+		return wrapped
 	}
-	return p.processAtomics(ctx, atomics, vehicleIntID)
+	dropped, errs, perr := p.processAtomicsWithCounts(ctx, atomics, vehicleIntID)
+	batch.addCounts(len(atomics), dropped, errs)
+	if perr != nil {
+		batch.recordError(perr)
+		return perr
+	}
+	return nil
 }
 
 // ProcessAtomics is the SECOND public ingest entry, added in
@@ -231,7 +244,14 @@ func (p *Pipeline) Process(ctx context.Context, payload []byte, vehicleIntID int
 // Any future "third entry" must instead route its bytes/atomics
 // through one of these two methods.
 func (p *Pipeline) ProcessAtomics(ctx context.Context, atomics []codec.Atomic, vehicleIntID int64) error {
-	return p.processAtomics(ctx, atomics, vehicleIntID)
+	ctx, batch := startProcessSpan(ctx, "normalize.process_atomics", vehicleIntID)
+	defer batch.stop()
+	dropped, errs, perr := p.processAtomicsWithCounts(ctx, atomics, vehicleIntID)
+	batch.addCounts(len(atomics), dropped, errs)
+	if perr != nil {
+		batch.recordError(perr)
+	}
+	return perr
 }
 
 // processAtomics is the dispatch loop, split out so the test suite
@@ -256,7 +276,18 @@ func (p *Pipeline) ProcessAtomics(ctx context.Context, atomics []codec.Atomic, v
 // processAtomics is never reached — Process returns ErrPayloadDrop
 // and the MQTT subscriber's poison-pill path takes over.
 func (p *Pipeline) processAtomics(ctx context.Context, atomics []codec.Atomic, vehicleIntID int64) error {
+	_, _, err := p.processAtomicsWithCounts(ctx, atomics, vehicleIntID)
+	return err
+}
+
+// processAtomicsWithCounts is the internal dispatch loop that returns the
+// per-batch counters used by Process / ProcessAtomics to stamp the parent
+// normalize.process span. Test fixtures continue to call processAtomics
+// (no count return) for backwards compatibility — the counters stay an
+// implementation detail of the production hot path.
+func (p *Pipeline) processAtomicsWithCounts(ctx context.Context, atomics []codec.Atomic, vehicleIntID int64) (dropped, errs int, _ error) {
 	sortAtomicsSettingUnitFirst(atomics)
+	routeCtx, endRoute := startChildSpan(ctx, "normalize.route")
 	// Index-based loop so processOne can mutate atomics[i].Value in
 	// place after a successful toSI conversion. The mutation is
 	// observable to the AtomicsObserver fan-out below — observers
@@ -268,15 +299,38 @@ func (p *Pipeline) processAtomics(ctx context.Context, atomics []codec.Atomic, v
 		// the only "unrecoverable" path the contract permits — every
 		// other per-atomic failure is logged + counted + skipped.
 		if err := ctx.Err(); err != nil {
-			return err
+			endRoute()
+			return dropped, errs, err
 		}
-		p.processOne(ctx, &atomics[i], vehicleIntID)
+		switch p.processOne(routeCtx, &atomics[i], vehicleIntID) {
+		case atomicOutcomeDropped:
+			dropped++
+		case atomicOutcomeError:
+			errs++
+		}
 	}
+	endRoute()
+
+	_, endWrite := startChildSpan(ctx, "normalize.write")
 	for _, obs := range p.observers {
 		p.notifyObserver(ctx, obs, vehicleIntID, atomics)
 	}
-	return nil
+	endWrite()
+
+	return dropped, errs, nil
 }
+
+// atomicOutcome is a coarse summary of a single processOne result, used
+// only to feed the parent normalize.process span's count attributes
+// (signal.count / normalize.dropped / normalize.errors). The full per-field
+// outcome label set still flows through p.metrics.ValuesProcessed.
+type atomicOutcome int
+
+const (
+	atomicOutcomeOK atomicOutcome = iota
+	atomicOutcomeDropped
+	atomicOutcomeError
+)
 
 // processOne handles a single atomic: observe Setting*Unit OR
 // convert + route. Errors are NOT propagated; they are logged and
@@ -289,7 +343,7 @@ func (p *Pipeline) processAtomics(ctx context.Context, atomics []codec.Atomic, v
 // SI values rather than codec-original wire-format values. The
 // pointer is otherwise unused — this is purely the
 // observer-handoff substitution, not a wider mutation API.
-func (p *Pipeline) processOne(ctx context.Context, atomic *codec.Atomic, vehicleIntID int64) {
+func (p *Pipeline) processOne(ctx context.Context, atomic *codec.Atomic, vehicleIntID int64) atomicOutcome {
 	meta := protomodel.SignalsByName[atomic.Field]
 
 	// Setting*Unit atomics short-circuit the toSI + router.Route
@@ -308,22 +362,26 @@ func (p *Pipeline) processOne(ctx context.Context, atomic *codec.Atomic, vehicle
 				Int64("vehicle_id", vehicleIntID).
 				Time("emitted_at", atomic.EmittedAt).
 				Msg("normalize: setting-unit observer failed")
-			return
+			return atomicOutcomeError
 		}
 		p.metrics.ValuesProcessed.WithLabelValues(atomic.Field, outcomeOK).Inc()
-		return
+		return atomicOutcomeOK
 	}
 
 	converted, err := p.toSI(ctx, *atomic, vehicleIntID)
 	if err != nil {
-		p.metrics.ValuesProcessed.WithLabelValues(atomic.Field, outcomeFor(err)).Inc()
+		outcome := outcomeFor(err)
+		p.metrics.ValuesProcessed.WithLabelValues(atomic.Field, outcome).Inc()
 		p.log.Warn().
 			Err(err).
 			Str("field", atomic.Field).
 			Int64("vehicle_id", vehicleIntID).
 			Time("emitted_at", atomic.EmittedAt).
 			Msg("normalize: toSI failed; dropping atomic")
-		return
+		if outcome == outcomeError {
+			return atomicOutcomeError
+		}
+		return atomicOutcomeDropped
 	}
 
 	// Mutate the slice element in place so the AtomicsObserver
@@ -344,9 +402,13 @@ func (p *Pipeline) processOne(ctx context.Context, atomic *codec.Atomic, vehicle
 			Int64("vehicle_id", vehicleIntID).
 			Time("emitted_at", atomic.EmittedAt).
 			Msg("normalize: router.Route failed; atomic not persisted")
-		return
+		if outcome == outcomeDroppedNoRoute {
+			return atomicOutcomeDropped
+		}
+		return atomicOutcomeError
 	}
 	p.metrics.ValuesProcessed.WithLabelValues(atomic.Field, outcomeOK).Inc()
+	return atomicOutcomeOK
 }
 
 // notifyObserver invokes a single AtomicsObserver in a panic-safe
