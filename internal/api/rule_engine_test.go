@@ -1,9 +1,12 @@
 package api
 
 import (
+	"context"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -552,5 +555,261 @@ func TestRuleEngine_Snooze_ExpiredAllowsOnceFire(t *testing.T) {
 	// Subsequent match should be latched.
 	if got := engine.Evaluate(rule, vehicleID, map[string]interface{}{"BatteryLevel": 96.0}); got.Triggered {
 		t.Fatal("expected once-mode rule to latch after fire")
+	}
+}
+
+// ---------------------------------------------------------------------
+// Phase-49 / Slice 0002 — persistent latch + race-safe MarkFired tests.
+//
+// fakeRuleStateStore is an in-memory implementation of RuleStateStore
+// satisfying the same interface that *database.AlertRuleStateRepo
+// satisfies in production. The race semantics mirror the SQL in
+// migration 000193 + alert_rule_state_repo.go: MarkFired with isOnce=true
+// against an already-latched pair returns (false, nil); the WHERE clause
+// on the production ON CONFLICT is exactly that predicate.
+// ---------------------------------------------------------------------
+
+type fakeRuleStateStore struct {
+	mu    sync.Mutex
+	rows  map[ruleKey]*database.AlertRuleState
+	calls struct {
+		loadAll, markFired, clearLatch int
+	}
+}
+
+func newFakeRuleStateStore() *fakeRuleStateStore {
+	return &fakeRuleStateStore{rows: make(map[ruleKey]*database.AlertRuleState)}
+}
+
+func (f *fakeRuleStateStore) LoadAll(_ context.Context) ([]*database.AlertRuleState, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls.loadAll++
+	out := make([]*database.AlertRuleState, 0, len(f.rows))
+	for _, r := range f.rows {
+		copy := *r
+		out = append(out, &copy)
+	}
+	return out, nil
+}
+
+func (f *fakeRuleStateStore) MarkFired(_ context.Context, ruleID, vehicleID int64, now time.Time, isOnce bool) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls.markFired++
+	key := ruleKey{RuleID: ruleID, VehicleID: vehicleID}
+	row, ok := f.rows[key]
+	if !ok {
+		row = &database.AlertRuleState{RuleID: ruleID, VehicleID: vehicleID}
+		f.rows[key] = row
+	}
+	// Race-protection: an already-latched pair refuses the new fire.
+	// This is the in-memory mirror of `WHERE alert_rule_state.latched_at IS NULL`.
+	if row.LatchedAt != nil {
+		return false, nil
+	}
+	if isOnce {
+		t := now
+		row.LatchedAt = &t
+	}
+	t2 := now
+	row.LastFiredAt = &t2
+	row.FireCountSinceReset++
+	row.UpdatedAt = now
+	return true, nil
+}
+
+func (f *fakeRuleStateStore) ClearLatch(_ context.Context, ruleID, vehicleID int64, now time.Time) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls.clearLatch++
+	key := ruleKey{RuleID: ruleID, VehicleID: vehicleID}
+	if row, ok := f.rows[key]; ok {
+		row.LatchedAt = nil
+		row.FireCountSinceReset = 0
+		row.UpdatedAt = now
+	}
+	return nil
+}
+
+// onceModeRule returns a rule used by the persistence tests below.
+func onceModeRule(id int64) *models.AlertRule {
+	return &models.AlertRule{
+		ID:          id,
+		Name:        "Locked = true",
+		Enabled:     true,
+		SignalName:  "Locked",
+		Op:          "=",
+		ValueBool:   boolPtr(true),
+		Severity:    "info",
+		TriggerMode: "once",
+	}
+}
+
+func TestRuleEngine_PersistentLatch_SurvivesRestart(t *testing.T) {
+	t.Parallel()
+	store := newFakeRuleStateStore()
+	rule := onceModeRule(42)
+	const vid = int64(7)
+	signals := map[string]interface{}{"Locked": true}
+
+	// First engine: fire the rule → latches in store + cache.
+	engine1 := NewRuleEngine()
+	engine1.SetStateRepo(store)
+	if got := engine1.Evaluate(rule, vid, signals); !got.Triggered {
+		t.Fatal("expected first eval to fire")
+	}
+	// Confirm the store recorded the latch (this is what survives the
+	// pod going down and coming back up).
+	if got := store.rows[ruleKey{RuleID: rule.ID, VehicleID: vid}]; got == nil || got.LatchedAt == nil {
+		t.Fatalf("expected fakeRuleStateStore to hold a latched row, got %+v", got)
+	}
+
+	// Simulate pod restart: a brand-new engine instance, same store.
+	engine2 := NewRuleEngine()
+	engine2.SetStateRepo(store)
+	engine2.HydrateFromDB(context.Background())
+
+	// Same condition still true — must NOT re-fire (T1 BUG fix).
+	if got := engine2.Evaluate(rule, vid, signals); got.Triggered {
+		t.Fatal("once-mode rule re-fired after restart while condition still true (T1 BUG)")
+	}
+}
+
+func TestRuleEngine_PersistentLatch_FallingEdgeClearsRow(t *testing.T) {
+	t.Parallel()
+	store := newFakeRuleStateStore()
+	rule := onceModeRule(43)
+	const vid = int64(8)
+
+	engine := NewRuleEngine()
+	engine.SetStateRepo(store)
+
+	// Fire once.
+	if got := engine.Evaluate(rule, vid, map[string]interface{}{"Locked": true}); !got.Triggered {
+		t.Fatal("expected first eval to fire")
+	}
+	row := store.rows[ruleKey{RuleID: rule.ID, VehicleID: vid}]
+	if row == nil || row.LatchedAt == nil {
+		t.Fatalf("expected latched row after fire, got %+v", row)
+	}
+
+	// Falling edge — condition flips false. Engine must call ClearLatch.
+	if got := engine.Evaluate(rule, vid, map[string]interface{}{"Locked": false}); got.Triggered {
+		t.Fatal("falling edge eval should not fire")
+	}
+	if store.calls.clearLatch == 0 {
+		t.Fatal("expected ClearLatch to be called on falling edge")
+	}
+	if row.LatchedAt != nil {
+		t.Fatalf("expected latched_at cleared, got %v", row.LatchedAt)
+	}
+	if row.FireCountSinceReset != 0 {
+		t.Fatalf("expected fire_count_since_reset reset to 0, got %d", row.FireCountSinceReset)
+	}
+
+	// Rising edge after clear — must fire again.
+	if got := engine.Evaluate(rule, vid, map[string]interface{}{"Locked": true}); !got.Triggered {
+		t.Fatal("expected rising edge after ClearLatch to re-fire")
+	}
+}
+
+func TestRuleEngine_PersistentLatch_RaceLost_Suppresses(t *testing.T) {
+	t.Parallel()
+	store := newFakeRuleStateStore()
+	rule := onceModeRule(44)
+	const vid = int64(9)
+	signals := map[string]interface{}{"Locked": true}
+
+	// Pod A fires first.
+	engineA := NewRuleEngine()
+	engineA.SetStateRepo(store)
+	if got := engineA.Evaluate(rule, vid, signals); !got.Triggered {
+		t.Fatal("pod A first eval should fire")
+	}
+
+	// Pod B has cold cache (never hydrated) but talks to the same store.
+	// Without race protection, pod B would also fire — duplicate notification.
+	engineB := NewRuleEngine()
+	engineB.SetStateRepo(store)
+	if got := engineB.Evaluate(rule, vid, signals); got.Triggered {
+		t.Fatal("pod B should suppress because pod A already latched the row (race lost)")
+	}
+
+	// Pod B's local cache should now reflect the persistent truth so
+	// subsequent eval skips even the MarkFired round trip via OnceLatched.
+	calls := store.calls.markFired
+	if got := engineB.Evaluate(rule, vid, signals); got.Triggered {
+		t.Fatal("pod B should still suppress after cache update")
+	}
+	if store.calls.markFired != calls {
+		t.Fatalf("expected pod B to short-circuit on cached OnceLatched, got %d extra MarkFired calls", store.calls.markFired-calls)
+	}
+}
+
+func TestRuleEngine_PersistentLatch_RepeatModeNeverLatches(t *testing.T) {
+	t.Parallel()
+	store := newFakeRuleStateStore()
+	rule := &models.AlertRule{
+		ID:          45,
+		Name:        "BatteryLow",
+		Enabled:     true,
+		SignalName:  "BatteryLevel",
+		Op:          "<",
+		ValueNum:    floatPtr(20),
+		Severity:    "warn",
+		TriggerMode: "repeat",
+		// 0 cooldown so the second eval can fire immediately.
+		CooldownMin: 0,
+	}
+	const vid = int64(10)
+
+	engine := NewRuleEngine()
+	engine.SetStateRepo(store)
+
+	// In repeat mode, the same evaluator can be re-invoked; cooldown
+	// (default 15min) gates re-fires inside one engine. To test that
+	// MarkFired with isOnce=false leaves latched_at NULL we exercise it
+	// at the SQL boundary directly.
+	signals := map[string]interface{}{"BatteryLevel": 19.0}
+	if got := engine.Evaluate(rule, vid, signals); !got.Triggered {
+		t.Fatal("repeat-mode eval should fire on first match")
+	}
+	row := store.rows[ruleKey{RuleID: rule.ID, VehicleID: vid}]
+	if row == nil {
+		t.Fatal("expected store to have a row after fire")
+	}
+	if row.LatchedAt != nil {
+		t.Fatalf("repeat-mode rule must NOT set latched_at, got %v", row.LatchedAt)
+	}
+	if row.LastFiredAt == nil {
+		t.Fatal("repeat-mode rule must still record last_fired_at")
+	}
+	if row.FireCountSinceReset != 1 {
+		t.Fatalf("expected fire_count_since_reset=1, got %d", row.FireCountSinceReset)
+	}
+}
+
+func TestRuleEngine_NilStateRepo_FallsBackToInMemory(t *testing.T) {
+	t.Parallel()
+	rule := onceModeRule(46)
+	const vid = int64(11)
+
+	// No SetStateRepo call → nil stateRepo → engine still works exactly
+	// as it did before slice 0002 for callers that don't wire the repo.
+	engine := NewRuleEngine()
+	engine.HydrateFromDB(context.Background()) // safe no-op
+
+	if got := engine.Evaluate(rule, vid, map[string]interface{}{"Locked": true}); !got.Triggered {
+		t.Fatal("first eval should fire even without persistence")
+	}
+	if got := engine.Evaluate(rule, vid, map[string]interface{}{"Locked": true}); got.Triggered {
+		t.Fatal("once-mode latch should still suppress in-memory")
+	}
+	if got := engine.Evaluate(rule, vid, map[string]interface{}{"Locked": false}); got.Triggered {
+		t.Fatal("falling edge eval should not fire")
+	}
+	if got := engine.Evaluate(rule, vid, map[string]interface{}{"Locked": true}); !got.Triggered {
+		t.Fatal("rising edge after in-memory ClearLatch should fire")
 	}
 }

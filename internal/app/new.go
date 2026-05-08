@@ -405,6 +405,11 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 
 	alertEvaluator := a.TelemetryHandler.AlertEvaluator()
 	if alertEvaluator != nil {
+		// Phase-49 / Slice 0002: rebuild the in-memory latch cache from
+		// alert_rule_state so once-mode rules don't re-fire on pod restart
+		// while their condition is still true. Idempotent + best-effort —
+		// repo errors are logged inside HydrateFromDB and do not abort boot.
+		alertEvaluator.RuleEngine().HydrateFromDB(ctx)
 		for _, vid := range a.SignalStore.VehicleIDs() {
 			raw := a.SignalStore.GetRawMap(vid)
 			if raw != nil {

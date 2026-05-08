@@ -32,6 +32,12 @@ type TelemetryAlertEvaluator struct {
 
 // NewTelemetryAlertEvaluator creates an alert evaluator for streaming data.
 func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *EventHub, mqttClient pahomqtt.Client) *TelemetryAlertEvaluator {
+	engine := NewRuleEngine()
+	// Wire the persistent latch/fire-state repo so once-mode latches
+	// survive pod restarts. Phase-49 / Slice 0002. The hydration call
+	// itself is invoked from internal/app/new.go after the evaluator is
+	// constructed, before MQTT subscribers start dispatching telemetry.
+	engine.SetStateRepo(database.NewAlertRuleStateRepo(db))
 	return &TelemetryAlertEvaluator{
 		alertRuleRepo: database.NewAlertRuleRepo(db),
 		notifRepo:     database.NewNotificationRepo(db),
@@ -39,7 +45,7 @@ func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *Even
 		vehicleRepo:   database.NewVehicleRepo(db),
 		eventBus:      eventBus,
 		eventHub:      hub,
-		ruleEngine:    NewRuleEngine(),
+		ruleEngine:    engine,
 		cooldowns:     make(map[string]*notifFSM.CooldownFSM),
 		mqttClient:    mqttClient,
 	}

@@ -11,15 +11,35 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/rs/zerolog/log"
 )
 
+// RuleStateStore is the persistence seam for alert latch + fire state. It
+// is satisfied by *database.AlertRuleStateRepo in production and by a
+// small in-memory fake in unit tests. See migration 000193 and Phase-49
+// Slice 0002 for the design rationale.
+//
+// All methods are safe to call from a concurrent context — the SQL
+// implementation uses a race-safe ON CONFLICT upsert (see
+// alertRuleStateMarkFiredSQL) and the tests' fake uses a mutex.
+type RuleStateStore interface {
+	LoadAll(ctx context.Context) ([]*database.AlertRuleState, error)
+	MarkFired(ctx context.Context, ruleID, vehicleID int64, now time.Time, isOnce bool) (bool, error)
+	ClearLatch(ctx context.Context, ruleID, vehicleID int64, now time.Time) error
+}
+
 // RuleEngine evaluates alert rules against incoming telemetry signals.
-// It tracks per-rule cooldown and previous signal state.
+// It tracks per-rule cooldown and previous signal state in an in-memory
+// write-through cache backed by RuleStateStore (when configured). The
+// in-memory map is the hot-read path; writes go to the store first to
+// enforce cross-pod race safety, then update the cache on success.
 type RuleEngine struct {
-	mu    sync.RWMutex
-	state map[ruleKey]*ruleState // per (ruleID, vehicleID) state
+	mu        sync.RWMutex
+	state     map[ruleKey]*ruleState // per (ruleID, vehicleID) state
+	stateRepo RuleStateStore         // optional; nil means in-memory-only (legacy/test)
 }
 
 type ruleKey struct {
@@ -30,16 +50,68 @@ type ruleKey struct {
 type ruleState struct {
 	PrevSignals map[string]interface{} // previous signal values for transition baselines
 	LastFiredAt *time.Time             // cooldown tracking
-	// OnceLatched is set after a "once" trigger_mode rule fires; it is cleared
-	// when the rule's condition becomes false (the rising-edge reset).
+	// OnceLatched is true while a once-mode rule is suppressed after firing,
+	// until ClearLatch runs on the falling edge. Sourced from
+	// alert_rule_state.latched_at IS NOT NULL when stateRepo is configured.
 	OnceLatched bool
 }
 
-// NewRuleEngine creates a new alert rule engine.
+// NewRuleEngine creates a new alert rule engine. The returned engine has
+// no persistence wiring; call SetStateRepo + HydrateFromDB to enable
+// pod-restart-safe latch state.
 func NewRuleEngine() *RuleEngine {
 	return &RuleEngine{
 		state: make(map[ruleKey]*ruleState),
 	}
+}
+
+// SetStateRepo wires the persistent latch/fire-state repo. Pass nil to
+// disable persistence (used by unit tests that don't care about restart
+// survival). Production wiring lives in
+// internal/api/telemetry_alerts.go::NewTelemetryAlertEvaluator.
+func (e *RuleEngine) SetStateRepo(repo RuleStateStore) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.stateRepo = repo
+}
+
+// HydrateFromDB loads every persisted (rule, vehicle) state row into the
+// in-memory cache. Must be called once at engine boot, before MQTT
+// subscribers start dispatching telemetry. No-op when stateRepo is nil.
+//
+// Errors are logged but NOT fatal — degraded behavior (no latch
+// persistence) is preferable to refusing to start.
+func (e *RuleEngine) HydrateFromDB(ctx context.Context) {
+	e.mu.RLock()
+	repo := e.stateRepo
+	e.mu.RUnlock()
+	if repo == nil {
+		return
+	}
+	rows, err := repo.LoadAll(ctx)
+	if err != nil {
+		log.Warn().Err(err).Msg("alert_rules: HydrateFromDB failed — running with empty latch cache")
+		return
+	}
+
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	for _, row := range rows {
+		key := ruleKey{RuleID: row.RuleID, VehicleID: row.VehicleID}
+		st, ok := e.state[key]
+		if !ok {
+			st = &ruleState{}
+			e.state[key] = st
+		}
+		if row.LatchedAt != nil {
+			st.OnceLatched = true
+		}
+		if row.LastFiredAt != nil {
+			t := *row.LastFiredAt
+			st.LastFiredAt = &t
+		}
+	}
+	log.Info().Int("rows", len(rows)).Msg("alert_rules: hydrated rule_engine state from alert_rule_state")
 }
 
 // EvalResult holds the outcome of evaluating a rule.
@@ -105,14 +177,26 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	if !matched {
 		// Falling edge: clear the once-mode latch and reset cooldown for
 		// edge-aware rules so the next rising edge can fire immediately.
+		// Also clears the persistent latch row when stateRepo is wired —
+		// otherwise a pod restart would re-suppress the next rising edge
+		// based on the still-set latched_at column.
 		e.mu.Lock()
+		hadLatch := st != nil && st.OnceLatched
+		hadLastFired := st != nil && st.LastFiredAt != nil && needsFalseEdgeDetection
 		if st != nil {
 			st.OnceLatched = false
 			if st.LastFiredAt != nil && needsFalseEdgeDetection {
 				st.LastFiredAt = nil
 			}
 		}
+		repo := e.stateRepo
 		e.mu.Unlock()
+		if repo != nil && (hadLatch || hadLastFired) {
+			if err := repo.ClearLatch(context.Background(), rule.ID, vehicleID, time.Now().UTC()); err != nil {
+				log.Warn().Err(err).Int64("rule_id", rule.ID).Int64("vehicle_id", vehicleID).
+					Msg("alert_rules: ClearLatch failed; in-memory cleared but DB row stale")
+			}
+		}
 		e.updatePrevSignals(key, signals)
 		return EvalResult{}
 	}
@@ -135,17 +219,51 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 		return EvalResult{}
 	}
 
-	// Fire.
+	// Fire. Persist the fire BEFORE updating the in-memory cache so that
+	// race-lost peers (MarkFired returns (false, nil) when another pod
+	// already latched) don't dispatch the alert. Repo failures fall back
+	// to in-memory-only behavior — degraded persistence is preferable to
+	// dropping the alert entirely.
 	now := time.Now().UTC()
+	isOnce := rule.TriggerMode == "once"
+
+	e.mu.RLock()
+	repo := e.stateRepo
+	e.mu.RUnlock()
+
+	if repo != nil {
+		ok, err := repo.MarkFired(context.Background(), rule.ID, vehicleID, now, isOnce)
+		if err != nil {
+			log.Warn().Err(err).Int64("rule_id", rule.ID).Int64("vehicle_id", vehicleID).
+				Msg("alert_rules: MarkFired failed; firing anyway with in-memory state only")
+		} else if !ok {
+			// Race lost — peer pod (or earlier batch on this pod with a
+			// stale cache) already latched. Update local cache to match
+			// the persistent truth and suppress.
+			metrics.AlertRulesCooldownSkipped.Inc()
+			e.mu.Lock()
+			if st == nil {
+				st = &ruleState{}
+				e.state[key] = st
+			}
+			if isOnce {
+				st.OnceLatched = true
+			}
+			st.LastFiredAt = &now
+			e.mu.Unlock()
+			return EvalResult{}
+		}
+	}
+
 	e.mu.Lock()
 	if st != nil {
 		st.LastFiredAt = &now
-		if rule.TriggerMode == "once" {
+		if isOnce {
 			st.OnceLatched = true
 		}
 	} else {
 		st = &ruleState{LastFiredAt: &now}
-		if rule.TriggerMode == "once" {
+		if isOnce {
 			st.OnceLatched = true
 		}
 		e.state[key] = st
