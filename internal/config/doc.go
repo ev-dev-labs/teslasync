@@ -7,4 +7,6 @@
 // topic prefix), [WorkerConfig] (poll interval, sleep multiplier),
 // [RedisConfig], [AuthConfig] (JWT), and [RetentionConfig] (data and
 // position retention days). Call [Load] to populate from the environment.
+// Layer: platform
+//
 package config

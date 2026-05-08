@@ -4,4 +4,6 @@
 //   - EIA (US Energy Information Administration) — gasoline prices
 //
 // See ENGINEERING_GUIDELINES.md Section 7.4 for adapter patterns.
+// Layer: adapter
+//
 package gasprices

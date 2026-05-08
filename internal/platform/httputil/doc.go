@@ -11,4 +11,6 @@
 //   - Client:         composable HTTP client builder
 //
 // See ENGINEERING_GUIDELINES.md Section 6.3 for usage patterns.
+// Layer: platform
+//
 package httputil

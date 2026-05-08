@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -197,5 +198,81 @@ func walkInternal(t *testing.T, repoRoot string) (pkgs int, docGo int) {
 		}
 	}
 	return pkgs, docGo
+}
+
+// TestEveryInternalPackageHasDocGoWithLayer enforces phase-47/03: every
+// package under internal/, cmd/, or tools/ that ships at least one .go
+// file MUST have a doc.go containing a `// Layer: <name>` declaration
+// from the closed set { domain, port, adapter, app, handler, platform,
+// cmd-internal, tool }. testdata/ trees are skipped (golden fixtures).
+func TestEveryInternalPackageHasDocGoWithLayer(t *testing.T) {
+	root := filepath.Join("..", "..")
+	validLayers := map[string]bool{
+		"domain": true, "port": true, "adapter": true,
+		"app": true, "handler": true, "platform": true,
+		"cmd-internal": true, "tool": true,
+	}
+	missing := []string{}
+	bad := []string{}
+
+	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || !d.IsDir() {
+			return err
+		}
+		rel, _ := filepath.Rel(root, p)
+		rel = filepath.ToSlash(rel)
+		if !(strings.HasPrefix(rel, "internal/") || strings.HasPrefix(rel, "cmd/") || strings.HasPrefix(rel, "tools/")) {
+			return nil
+		}
+		// skip testdata/ subtrees — they hold golden fixtures, not packages
+		if strings.Contains(rel, "/testdata/") || strings.HasSuffix(rel, "/testdata") {
+			return filepath.SkipDir
+		}
+		hasGo := false
+		entries, _ := os.ReadDir(p)
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".go") {
+				hasGo = true
+				break
+			}
+		}
+		if !hasGo {
+			return nil
+		}
+		docPath := filepath.Join(p, "doc.go")
+		body, err := os.ReadFile(docPath)
+		if err != nil {
+			missing = append(missing, rel)
+			return nil
+		}
+		layer := parseLayer(string(body))
+		if layer == "" {
+			bad = append(bad, rel+" (missing // Layer: line)")
+		} else if !validLayers[layer] {
+			bad = append(bad, rel+" (invalid layer: "+layer+")")
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk: %v", err)
+	}
+	sort.Strings(missing)
+	sort.Strings(bad)
+	if len(missing) > 0 {
+		t.Errorf("packages missing doc.go (%d):\n  %s", len(missing), strings.Join(missing, "\n  "))
+	}
+	if len(bad) > 0 {
+		t.Errorf("packages with invalid doc.go (%d):\n  %s", len(bad), strings.Join(bad, "\n  "))
+	}
+}
+
+var layerRE = regexp.MustCompile(`(?m)^// Layer:\s*([a-z\-]+)\s*$`)
+
+func parseLayer(src string) string {
+	m := layerRE.FindStringSubmatch(src)
+	if len(m) != 2 {
+		return ""
+	}
+	return m[1]
 }
 

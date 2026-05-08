@@ -21,4 +21,6 @@
 // generated artefacts always match the vendored proto bit-for-bit.
 //
 //go:generate go run ../../../cmd/protogen-tesla --proto ../../../api/proto/tesla/vehicle_data.proto --out .
+// Layer: platform
+//
 package protomodel

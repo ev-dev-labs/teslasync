@@ -8,4 +8,6 @@
 // pressure, software updates, vampire drain, mileage, trips,
 // vehicle state timeline, data export, and real-time SSE streaming
 // via EventHub. All routes are mounted under /api/v1.
+// Layer: handler
+//
 package api

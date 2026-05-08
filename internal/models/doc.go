@@ -7,4 +7,6 @@
 // [VehicleState]. All structs carry both `json` and `db` tags for
 // API serialization and database mapping. Pointer fields represent
 // nullable columns; timestamps use time.Time.
+// Layer: domain
+//
 package models

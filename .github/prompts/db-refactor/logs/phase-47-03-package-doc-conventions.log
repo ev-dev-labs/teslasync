@@ -1,0 +1,120 @@
+=== PHASE-47 / 03 package-doc-conventions — 2026-05-08T12:43:09.4567003-07:00 ===
+=== STEP 1: PRE_COVERAGE_COUNT ===
+missing doc.go: 0
+=== STEP 2: ARCH_TEST_LAYER ===
+=== RUN   TestEveryInternalPackageHasDocGoWithLayer
+--- PASS: TestEveryInternalPackageHasDocGoWithLayer (0.42s)
+PASS
+ok  	github.com/ev-dev-labs/teslasync/internal/arch	0.944s
+=== STEP 3: ARCH_TEST_FULL ===
+ok  	github.com/ev-dev-labs/teslasync/internal/arch	5.665s
+=== STEP 4: GO_BUILD_ALL ===
+=== STEP 5: GO_VET_ALL ===
+=== STEP 6: REFRESH_BASELINE ===
+doc_go_coverage = 1
+=== STEP 7: GIT_STATUS ===
+ M internal/adapter/gasprices/doc.go
+ M internal/api/doc.go
+ M internal/arch/arch_test.go
+ M internal/config/doc.go
+ M internal/database/doc.go
+ M internal/domain/fsm/doc.go
+ M internal/models/doc.go
+ M internal/mqtt/doc.go
+ M internal/platform/httputil/doc.go
+ M internal/resilience/doc.go
+ M internal/service/doc.go
+ M internal/tesla/doc.go
+ M internal/tesla/protomodel/doc.go
+ M internal/tesla/router/writers/doc.go
+ M internal/worker/doc.go
+ M tools/archmetrics/baseline.json
+ M tools/archmetrics/baseline.md
+?? cmd/automation-worker/doc.go
+?? cmd/export-worker/doc.go
+?? cmd/metric-coverage-audit/doc.go
+?? cmd/notification-worker/doc.go
+?? cmd/protogen-tesla/doc.go
+?? cmd/protogen-tesla/testdata/golden/doc.go
+?? cmd/pub-test-signal/doc.go
+?? cmd/resubscribe/doc.go
+?? cmd/slo-coverage-audit/doc.go
+?? cmd/slogen/doc.go
+?? cmd/teslasync/doc.go
+?? cmd/trace-coverage-audit/doc.go
+?? cmd/unit-drift-validator/doc.go
+?? internal/adapter/geocoding/doc.go
+?? internal/adapter/mqtt/doc.go
+?? internal/adapter/postgres/doc.go
+?? internal/adapter/postgres/queries/doc.go
+?? internal/adapter/redis/doc.go
+?? internal/adapter/storage/doc.go
+?? internal/adapter/tesla/doc.go
+?? internal/app/chargingsvc/doc.go
+?? internal/app/dashboardsvc/doc.go
+?? internal/app/exportsvc/doc.go
+?? internal/app/notificationsvc/doc.go
+?? internal/app/tripsvc/doc.go
+?? internal/app/vehiclesvc/doc.go
+?? internal/auth/doc.go
+?? internal/automation/action/doc.go
+?? internal/automation/condition/doc.go
+?? internal/automation/doc.go
+?? internal/automation/presets/doc.go
+?? internal/automation/safety/doc.go
+?? internal/automation/trigger/doc.go
+?? internal/backup/doc.go
+?? internal/cache/doc.go
+?? internal/crypto/doc.go
+?? internal/domain/charging/doc.go
+?? internal/domain/doc.go
+?? internal/domain/export/doc.go
+?? internal/domain/notification/doc.go
+?? internal/domain/trip/doc.go
+?? internal/domain/user/doc.go
+?? internal/domain/vehicle/doc.go
+?? internal/enums/doc.go
+?? internal/events/doc.go
+?? internal/export/doc.go
+?? internal/fsm/automation/doc.go
+?? internal/fsm/charge/doc.go
+?? internal/fsm/command/doc.go
+?? internal/fsm/doc.go
+?? internal/fsm/drive/doc.go
+?? internal/fsm/notification/doc.go
+?? internal/fsm/telemetry/doc.go
+?? internal/geocoding/doc.go
+?? internal/handler/dto/doc.go
+?? internal/handler/middleware/doc.go
+?? internal/handler/v1/doc.go
+?? internal/imaging/doc.go
+?? internal/integrations/doc.go
+?? internal/metrics/doc.go
+?? internal/notification/doc.go
+?? internal/notifier/doc.go
+?? internal/platform/buildinfo/doc.go
+?? internal/platform/cache/doc.go
+?? internal/platform/config/doc.go
+?? internal/platform/database/doc.go
+?? internal/platform/doc.go
+?? internal/platform/telemetry/doc.go
+?? internal/polling/doc.go
+?? internal/port/external/doc.go
+?? internal/port/messaging/doc.go
+?? internal/port/repository/doc.go
+?? internal/signal/doc.go
+?? internal/signal/signaltest/doc.go
+?? internal/tesla/bootstrap/doc.go
+?? internal/tesla/codec/doc.go
+?? internal/tesla/config/doc.go
+?? internal/tesla/normalize/doc.go
+?? internal/tesla/router/doc.go
+?? internal/tesla/unit_history/doc.go
+?? internal/tesla/units/doc.go
+?? internal/tesla_pipeline/doc.go
+?? internal/tracing/doc.go
+?? internal/units/doc.go
+?? internal/webpush/doc.go
+?? tools/archmetrics/doc.go
+EXIT=0
+STATUS=DONE

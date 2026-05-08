@@ -7,4 +7,6 @@
 // CRUD and domain-specific queries for all TeslaSync models. Native
 // PostgreSQL partitioning is used for high-volume time-series data such
 // as positions, with monthly partitions managed by the maintenance worker.
+// Layer: platform
+//
 package database

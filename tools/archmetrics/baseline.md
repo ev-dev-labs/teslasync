@@ -1,13 +1,13 @@
-# TeslaSync architecture metrics — baseline
+# TeslaSync architecture metrics ΓÇö baseline
 
-_Generated 2026-05-08T19:30:17Z, Go go1.26.1, commit fb4e6699f533d9a9e36e30714c11b72ec1b2180e_
+_Generated 2026-05-08T19:43:56Z, Go go1.26.1, commit b7507f1b742edd05c73baa89fd3ef3e96083a7cb_
 
 ## Summary
 
-- Packages: 100
-- doc.go coverage: 14.0%
+- Packages: 101
+- doc.go coverage: 100.0%
 - Forbidden edges detected: 2
-- Total non-blank LOC under cmd/+internal/+tools/: 195871
+- Total non-blank LOC under cmd/+internal/+tools/: 196605
 
 ## cmd/* main.go LOC
 
@@ -35,198 +35,108 @@ _Generated 2026-05-08T19:30:17Z, Go go1.26.1, commit fb4e6699f533d9a9e36e30714c1
 
 | Package | .go | _test.go | LOC | doc.go | Layer |
 |---|---:|---:|---:|:---:|---|
-| cmd/automation-worker | 1 | 0 | 272 |   |  |
-| cmd/export-worker | 1 | 0 | 172 |   |  |
-| cmd/metric-coverage-audit | 1 | 0 | 126 |   |  |
-| cmd/notification-worker | 1 | 0 | 372 |   |  |
-| cmd/protogen-tesla | 3 | 1 | 2152 |   |  |
-| cmd/protogen-tesla/testdata/golden | 3 | 0 | 261 |   |  |
-| cmd/pub-test-signal | 1 | 0 | 625 |   |  |
-| cmd/resubscribe | 1 | 1 | 584 |   |  |
-| cmd/slo-coverage-audit | 1 | 0 | 199 |   |  |
-| cmd/slogen | 4 | 4 | 1338 |   |  |
-| cmd/teslasync | 5 | 1 | 1153 |   |  |
-| cmd/trace-coverage-audit | 1 | 0 | 219 |   |  |
-| cmd/unit-drift-validator | 1 | 1 | 292 |   |  |
-| internal/adapter/gasprices | 2 | 1 | 356 | yes |  |
-| internal/adapter/geocoding | 1 | 0 | 30 |   |  |
-| internal/adapter/mqtt | 1 | 0 | 78 |   |  |
-| internal/adapter/postgres | 7 | 0 | 456 |   |  |
-| internal/adapter/postgres/queries | 7 | 0 | 312 |   |  |
-| internal/adapter/redis | 1 | 0 | 54 |   |  |
-| internal/adapter/storage | 1 | 0 | 60 |   |  |
-| internal/adapter/tesla | 2 | 0 | 195 |   |  |
-| internal/api | 197 | 94 | 78818 | yes |  |
-| internal/app/chargingsvc | 1 | 1 | 291 |   |  |
-| internal/app/dashboardsvc | 1 | 1 | 318 |   |  |
-| internal/app/exportsvc | 1 | 1 | 270 |   |  |
-| internal/app/notificationsvc | 1 | 1 | 301 |   |  |
-| internal/app/tripsvc | 1 | 1 | 304 |   |  |
-| internal/app/vehiclesvc | 2 | 1 | 338 |   |  |
-| internal/auth | 5 | 4 | 2380 |   |  |
-| internal/automation | 5 | 2 | 1556 |   |  |
-| internal/automation/action | 5 | 5 | 3818 |   |  |
-| internal/automation/condition | 8 | 8 | 3647 |   |  |
-| internal/automation/presets | 2 | 1 | 591 |   |  |
-| internal/automation/safety | 6 | 6 | 3561 |   |  |
-| internal/automation/trigger | 6 | 0 | 942 |   |  |
-| internal/backup | 2 | 1 | 664 |   |  |
-| internal/cache | 2 | 1 | 258 |   |  |
-| internal/config | 3 | 1 | 593 | yes |  |
-| internal/crypto | 2 | 2 | 662 |   |  |
-| internal/database | 96 | 27 | 23269 | yes |  |
-| internal/domain | 1 | 1 | 110 |   |  |
-| internal/domain/charging | 5 | 1 | 347 |   |  |
-| internal/domain/export | 2 | 1 | 116 |   |  |
-| internal/domain/fsm | 6 | 1 | 926 | yes |  |
-| internal/domain/notification | 2 | 1 | 106 |   |  |
-| internal/domain/trip | 3 | 1 | 136 |   |  |
-| internal/domain/user | 2 | 1 | 88 |   |  |
-| internal/domain/vehicle | 4 | 1 | 340 |   |  |
-| internal/enums | 4 | 1 | 300 |   |  |
-| internal/events | 1 | 1 | 141 |   |  |
-| internal/export | 8 | 3 | 2994 |   |  |
-| internal/fsm | 10 | 3 | 2508 |   |  |
-| internal/fsm/automation | 1 | 1 | 794 |   |  |
-| internal/fsm/charge | 2 | 1 | 617 |   |  |
-| internal/fsm/command | 1 | 1 | 406 |   |  |
-| internal/fsm/drive | 3 | 1 | 702 |   |  |
-| internal/fsm/notification | 2 | 2 | 519 |   |  |
-| internal/fsm/telemetry | 2 | 1 | 716 |   |  |
-| internal/geocoding | 5 | 1 | 528 |   |  |
-| internal/handler/dto | 5 | 0 | 90 |   |  |
-| internal/handler/middleware | 9 | 1 | 738 |   |  |
-| internal/handler/v1 | 7 | 0 | 330 |   |  |
-| internal/imaging | 1 | 1 | 506 |   |  |
-| internal/integrations | 1 | 0 | 130 |   |  |
-| internal/metrics | 4 | 1 | 747 |   |  |
-| internal/models | 34 | 1 | 2823 | yes |  |
-| internal/mqtt | 4 | 4 | 2173 | yes |  |
-| internal/notification | 3 | 2 | 1088 |   |  |
-| internal/notifier | 1 | 1 | 446 |   |  |
-| internal/platform | 2 | 2 | 698 |   |  |
-| internal/platform/buildinfo | 1 | 1 | 82 |   |  |
-| internal/platform/cache | 1 | 0 | 92 |   |  |
-| internal/platform/config | 1 | 1 | 317 |   |  |
-| internal/platform/database | 2 | 0 | 128 |   |  |
-| internal/platform/httputil | 10 | 8 | 2249 | yes |  |
-| internal/platform/telemetry | 3 | 0 | 134 |   |  |
-| internal/polling | 10 | 1 | 1409 |   |  |
-| internal/port/external | 4 | 0 | 82 |   |  |
-| internal/port/messaging | 2 | 1 | 267 |   |  |
-| internal/port/repository | 7 | 0 | 105 |   |  |
-| internal/resilience | 2 | 4 | 720 | yes |  |
-| internal/service | 4 | 1 | 1375 | yes |  |
-| internal/signal | 10 | 11 | 7226 |   |  |
-| internal/signal/signaltest | 1 | 0 | 96 |   |  |
-| internal/tesla | 11 | 3 | 2265 | yes |  |
-| internal/tesla/bootstrap | 2 | 1 | 1030 |   |  |
-| internal/tesla/codec | 3 | 2 | 934 |   |  |
-| internal/tesla/config | 2 | 1 | 466 |   |  |
-| internal/tesla/normalize | 6 | 5 | 2163 |   |  |
-| internal/tesla/protomodel | 7 | 3 | 5004 | yes |  |
-| internal/tesla/router | 3 | 2 | 870 |   |  |
-| internal/tesla/router/writers | 14 | 13 | 6747 | yes |  |
-| internal/tesla/unit_history | 3 | 2 | 1639 |   |  |
-| internal/tesla/units | 3 | 1 | 470 |   |  |
-| internal/tesla_pipeline | 1 | 3 | 2231 |   |  |
-| internal/tracing | 2 | 1 | 238 |   |  |
-| internal/units | 1 | 0 | 59 |   |  |
-| internal/webpush | 1 | 1 | 451 |   |  |
-| internal/worker | 8 | 3 | 2518 | yes |  |
-| tools/archmetrics | 1 | 0 | 454 |   |  |
+| cmd/automation-worker | 2 | 0 | 276 | yes | cmd-internal |
+| cmd/export-worker | 2 | 0 | 176 | yes | cmd-internal |
+| cmd/metric-coverage-audit | 2 | 0 | 130 | yes | cmd-internal |
+| cmd/notification-worker | 2 | 0 | 376 | yes | cmd-internal |
+| cmd/protogen-tesla | 4 | 1 | 2156 | yes | cmd-internal |
+| cmd/protogen-tesla/testdata/golden | 4 | 0 | 265 | yes | cmd-internal |
+| cmd/pub-test-signal | 2 | 0 | 629 | yes | cmd-internal |
+| cmd/resubscribe | 2 | 1 | 588 | yes | cmd-internal |
+| cmd/slo-coverage-audit | 2 | 0 | 203 | yes | cmd-internal |
+| cmd/slogen | 5 | 4 | 1342 | yes | cmd-internal |
+| cmd/teslasync | 6 | 1 | 1157 | yes | cmd-internal |
+| cmd/trace-coverage-audit | 2 | 0 | 223 | yes | cmd-internal |
+| cmd/unit-drift-validator | 2 | 1 | 296 | yes | cmd-internal |
+| internal/adapter/gasprices | 2 | 1 | 358 | yes | adapter |
+| internal/adapter/geocoding | 2 | 0 | 34 | yes | adapter |
+| internal/adapter/mqtt | 2 | 0 | 82 | yes | adapter |
+| internal/adapter/postgres | 8 | 0 | 460 | yes | adapter |
+| internal/adapter/postgres/queries | 8 | 0 | 316 | yes | adapter |
+| internal/adapter/redis | 2 | 0 | 58 | yes | adapter |
+| internal/adapter/storage | 2 | 0 | 64 | yes | adapter |
+| internal/adapter/tesla | 3 | 0 | 199 | yes | adapter |
+| internal/api | 197 | 94 | 78820 | yes | handler |
+| internal/app/chargingsvc | 2 | 1 | 295 | yes | app |
+| internal/app/dashboardsvc | 2 | 1 | 322 | yes | app |
+| internal/app/exportsvc | 2 | 1 | 274 | yes | app |
+| internal/app/notificationsvc | 2 | 1 | 305 | yes | app |
+| internal/app/tripsvc | 2 | 1 | 308 | yes | app |
+| internal/app/vehiclesvc | 3 | 1 | 342 | yes | app |
+| internal/arch | 2 | 1 | 332 | yes | tool |
+| internal/auth | 6 | 4 | 2384 | yes | platform |
+| internal/automation | 6 | 2 | 1560 | yes | platform |
+| internal/automation/action | 6 | 5 | 3822 | yes | platform |
+| internal/automation/condition | 9 | 8 | 3651 | yes | platform |
+| internal/automation/presets | 3 | 1 | 595 | yes | platform |
+| internal/automation/safety | 7 | 6 | 3565 | yes | platform |
+| internal/automation/trigger | 7 | 0 | 946 | yes | platform |
+| internal/backup | 3 | 1 | 668 | yes | platform |
+| internal/cache | 3 | 1 | 262 | yes | platform |
+| internal/config | 3 | 1 | 595 | yes | platform |
+| internal/crypto | 3 | 2 | 666 | yes | platform |
+| internal/database | 96 | 27 | 23271 | yes | platform |
+| internal/domain | 2 | 1 | 114 | yes | domain |
+| internal/domain/charging | 6 | 1 | 351 | yes | domain |
+| internal/domain/export | 3 | 1 | 120 | yes | domain |
+| internal/domain/fsm | 6 | 1 | 928 | yes | domain |
+| internal/domain/notification | 3 | 1 | 110 | yes | domain |
+| internal/domain/trip | 4 | 1 | 140 | yes | domain |
+| internal/domain/user | 3 | 1 | 92 | yes | domain |
+| internal/domain/vehicle | 5 | 1 | 344 | yes | domain |
+| internal/enums | 5 | 1 | 304 | yes | platform |
+| internal/events | 2 | 1 | 145 | yes | platform |
+| internal/export | 9 | 3 | 2998 | yes | platform |
+| internal/fsm | 11 | 3 | 2512 | yes | platform |
+| internal/fsm/automation | 2 | 1 | 798 | yes | platform |
+| internal/fsm/charge | 3 | 1 | 621 | yes | platform |
+| internal/fsm/command | 2 | 1 | 410 | yes | platform |
+| internal/fsm/drive | 4 | 1 | 706 | yes | platform |
+| internal/fsm/notification | 3 | 2 | 523 | yes | platform |
+| internal/fsm/telemetry | 3 | 1 | 720 | yes | platform |
+| internal/geocoding | 6 | 1 | 532 | yes | platform |
+| internal/handler/dto | 6 | 0 | 94 | yes | handler |
+| internal/handler/middleware | 10 | 1 | 742 | yes | handler |
+| internal/handler/v1 | 8 | 0 | 334 | yes | handler |
+| internal/imaging | 2 | 1 | 510 | yes | platform |
+| internal/integrations | 2 | 0 | 134 | yes | platform |
+| internal/metrics | 5 | 1 | 751 | yes | platform |
+| internal/models | 34 | 1 | 2825 | yes | domain |
+| internal/mqtt | 4 | 4 | 2175 | yes | platform |
+| internal/notification | 4 | 2 | 1092 | yes | platform |
+| internal/notifier | 2 | 1 | 450 | yes | platform |
+| internal/platform | 3 | 2 | 702 | yes | platform |
+| internal/platform/buildinfo | 2 | 1 | 86 | yes | platform |
+| internal/platform/cache | 2 | 0 | 96 | yes | platform |
+| internal/platform/config | 2 | 1 | 321 | yes | platform |
+| internal/platform/database | 3 | 0 | 132 | yes | platform |
+| internal/platform/httputil | 10 | 8 | 2251 | yes | platform |
+| internal/platform/telemetry | 4 | 0 | 138 | yes | platform |
+| internal/polling | 11 | 1 | 1413 | yes | platform |
+| internal/port/external | 5 | 0 | 86 | yes | port |
+| internal/port/messaging | 3 | 1 | 271 | yes | port |
+| internal/port/repository | 8 | 0 | 109 | yes | port |
+| internal/resilience | 2 | 4 | 722 | yes | platform |
+| internal/service | 4 | 1 | 1377 | yes | platform |
+| internal/signal | 11 | 11 | 7233 | yes | platform |
+| internal/signal/signaltest | 2 | 0 | 103 | yes | platform |
+| internal/tesla | 11 | 3 | 2267 | yes | platform |
+| internal/tesla/bootstrap | 3 | 1 | 1037 | yes | platform |
+| internal/tesla/codec | 4 | 2 | 941 | yes | platform |
+| internal/tesla/config | 3 | 1 | 473 | yes | platform |
+| internal/tesla/normalize | 7 | 5 | 2170 | yes | platform |
+| internal/tesla/protomodel | 7 | 3 | 5006 | yes | platform |
+| internal/tesla/router | 4 | 2 | 877 | yes | platform |
+| internal/tesla/router/writers | 14 | 13 | 6749 | yes | platform |
+| internal/tesla/unit_history | 4 | 2 | 1646 | yes | platform |
+| internal/tesla/units | 4 | 1 | 477 | yes | platform |
+| internal/tesla_pipeline | 2 | 3 | 2238 | yes | platform |
+| internal/tracing | 3 | 1 | 242 | yes | platform |
+| internal/units | 2 | 0 | 63 | yes | platform |
+| internal/webpush | 2 | 1 | 455 | yes | platform |
+| internal/worker | 8 | 3 | 2520 | yes | platform |
+| tools/archmetrics | 2 | 0 | 458 | yes | tool |
 
 ## doc.go adoption
 
-- Packages WITHOUT doc.go: 86
-
-<details><summary>List</summary>
-
-- `cmd/automation-worker`
-- `cmd/export-worker`
-- `cmd/metric-coverage-audit`
-- `cmd/notification-worker`
-- `cmd/protogen-tesla`
-- `cmd/protogen-tesla/testdata/golden`
-- `cmd/pub-test-signal`
-- `cmd/resubscribe`
-- `cmd/slo-coverage-audit`
-- `cmd/slogen`
-- `cmd/teslasync`
-- `cmd/trace-coverage-audit`
-- `cmd/unit-drift-validator`
-- `internal/adapter/geocoding`
-- `internal/adapter/mqtt`
-- `internal/adapter/postgres`
-- `internal/adapter/postgres/queries`
-- `internal/adapter/redis`
-- `internal/adapter/storage`
-- `internal/adapter/tesla`
-- `internal/app/chargingsvc`
-- `internal/app/dashboardsvc`
-- `internal/app/exportsvc`
-- `internal/app/notificationsvc`
-- `internal/app/tripsvc`
-- `internal/app/vehiclesvc`
-- `internal/auth`
-- `internal/automation`
-- `internal/automation/action`
-- `internal/automation/condition`
-- `internal/automation/presets`
-- `internal/automation/safety`
-- `internal/automation/trigger`
-- `internal/backup`
-- `internal/cache`
-- `internal/crypto`
-- `internal/domain`
-- `internal/domain/charging`
-- `internal/domain/export`
-- `internal/domain/notification`
-- `internal/domain/trip`
-- `internal/domain/user`
-- `internal/domain/vehicle`
-- `internal/enums`
-- `internal/events`
-- `internal/export`
-- `internal/fsm`
-- `internal/fsm/automation`
-- `internal/fsm/charge`
-- `internal/fsm/command`
-- `internal/fsm/drive`
-- `internal/fsm/notification`
-- `internal/fsm/telemetry`
-- `internal/geocoding`
-- `internal/handler/dto`
-- `internal/handler/middleware`
-- `internal/handler/v1`
-- `internal/imaging`
-- `internal/integrations`
-- `internal/metrics`
-- `internal/notification`
-- `internal/notifier`
-- `internal/platform`
-- `internal/platform/buildinfo`
-- `internal/platform/cache`
-- `internal/platform/config`
-- `internal/platform/database`
-- `internal/platform/telemetry`
-- `internal/polling`
-- `internal/port/external`
-- `internal/port/messaging`
-- `internal/port/repository`
-- `internal/signal`
-- `internal/signal/signaltest`
-- `internal/tesla/bootstrap`
-- `internal/tesla/codec`
-- `internal/tesla/config`
-- `internal/tesla/normalize`
-- `internal/tesla/router`
-- `internal/tesla/unit_history`
-- `internal/tesla/units`
-- `internal/tesla_pipeline`
-- `internal/tracing`
-- `internal/units`
-- `internal/webpush`
-- `tools/archmetrics`
-
-</details>
+- Packages WITHOUT doc.go: 0
