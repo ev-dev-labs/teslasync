@@ -266,7 +266,7 @@ const (
 	Field_SunroofInstalled                          Field = 253
 	Field_SeatVentEnabled                           Field = 254
 	Field_RearDefrostEnabled                        Field = 255
-	Field_RangeAddedMetersPerHour                   Field = 256
+	Field_ChargeRateMilePerHour                     Field = 256
 	Field_Deprecated_3                              Field = 257
 	Field_MilesSinceReset                           Field = 258
 	Field_SelfDrivingMilesSinceReset                Field = 259
@@ -788,8 +788,8 @@ func (f Field) Name() string {
 		return "SeatVentEnabled"
 	case Field_RearDefrostEnabled:
 		return "RearDefrostEnabled"
-	case Field_RangeAddedMetersPerHour:
-		return "RangeAddedMetersPerHour"
+	case Field_ChargeRateMilePerHour:
+		return "ChargeRateMilePerHour"
 	case Field_Deprecated_3:
 		return "Deprecated_3"
 	case Field_MilesSinceReset:
@@ -1326,8 +1326,8 @@ func ParseField(s string) (Field, error) {
 		return Field_SeatVentEnabled, nil
 	case "RearDefrostEnabled":
 		return Field_RearDefrostEnabled, nil
-	case "RangeAddedMetersPerHour":
-		return Field_RangeAddedMetersPerHour, nil
+	case "ChargeRateMilePerHour":
+		return Field_ChargeRateMilePerHour, nil
 	case "Deprecated_3":
 		return Field_Deprecated_3, nil
 	case "MilesSinceReset":
@@ -1601,7 +1601,7 @@ var Signals = []SignalMeta{
 	{Field: "SunroofInstalled", ProtoEnumNum: 253, Category: "config", ValueKind: ValueKindEnum, EnumTypeName: "SunroofInstalledState", IsCompound: false, UnitKind: UnitKindNone, IsSettingUnit: false},
 	{Field: "SeatVentEnabled", ProtoEnumNum: 254, Category: "climate", ValueKind: ValueKindBool, EnumTypeName: "", IsCompound: false, UnitKind: UnitKindNone, IsSettingUnit: false},
 	{Field: "RearDefrostEnabled", ProtoEnumNum: 255, Category: "metadata", ValueKind: ValueKindBool, EnumTypeName: "", IsCompound: false, UnitKind: UnitKindNone, IsSettingUnit: false},
-	{Field: "RangeAddedMetersPerHour", ProtoEnumNum: 256, Category: "charging", ValueKind: ValueKindFloat, EnumTypeName: "", IsCompound: false, UnitKind: UnitKindDistance, IsSettingUnit: false},
+	{Field: "ChargeRateMilePerHour", ProtoEnumNum: 256, Category: "charging", ValueKind: ValueKindFloat, EnumTypeName: "", IsCompound: false, UnitKind: UnitKindDistance, IsSettingUnit: false},
 	{Field: "Deprecated_3", ProtoEnumNum: 257, Category: "metadata", ValueKind: ValueKindString, EnumTypeName: "", IsCompound: false, UnitKind: UnitKindNone, IsSettingUnit: false},
 	{Field: "MilesSinceReset", ProtoEnumNum: 258, Category: "safety_security", ValueKind: ValueKindFloat, EnumTypeName: "", IsCompound: false, UnitKind: UnitKindDistance, IsSettingUnit: false},
 	{Field: "SelfDrivingMilesSinceReset", ProtoEnumNum: 259, Category: "safety_security", ValueKind: ValueKindFloat, EnumTypeName: "", IsCompound: false, UnitKind: UnitKindDistance, IsSettingUnit: false},

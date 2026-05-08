@@ -72,7 +72,7 @@ var chargeTelemetryFieldMappings = []signal.FieldMapping{
 	{Signal: "ACChargingPower", Field: "power_kw"},
 	{Signal: "DCChargingPower", Field: "dc_power_kw"},
 	{Signal: "ACChargingEnergyIn", Field: "energy_added"},
-	{Signal: "RangeAddedMetersPerHour", Field: "range_added_meters_per_hour"},
+	{Signal: "ChargeRateMilePerHour", Field: "range_added_meters_per_hour"},
 	{Signal: "BatteryHeaterOn", Field: "battery_heater_on"},
 	{Signal: "InsideTemp", Field: "inside_temp"},
 	{Signal: "OutsideTemp", Field: "outside_temp"},

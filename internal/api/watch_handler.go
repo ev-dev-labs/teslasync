@@ -246,7 +246,7 @@ func (h *WatchHandler) queryWatchSummary(ctx context.Context, vehicleID int64) (
 
 	insideTemp, _ := signalFloat(signals, "InsideTemp")
 	outsideTemp, _ := signalFloat(signals, "OutsideTemp")
-	chargeRate, _ := signalFloat(signals, "RangeAddedMetersPerHour")
+	chargeRate, _ := signalFloat(signals, "ChargeRateMilePerHour")
 
 	// TimeToFullCharge is in hours — convert to minutes
 	ttf, _ := signalFloat(signals, "TimeToFullCharge")

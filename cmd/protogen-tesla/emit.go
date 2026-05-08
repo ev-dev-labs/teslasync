@@ -555,7 +555,13 @@ func classifyExplicit(name string) fieldClass {
 		return fieldClass{cat: "climate", kind: "bool", unit: "none", isSettingUnit: false}
 	case "RearDefrostEnabled":
 		return fieldClass{cat: "metadata", kind: "bool", unit: "none", isSettingUnit: false}
-	case "RangeAddedMetersPerHour":
+	case "ChargeRateMilePerHour":
+		// R2 audit pin (Phase-48 methodology): Tesla's proto identifier is
+		// "ChargeRateMilePerHour" but the wire content is meters of range added
+		// per hour, NOT miles per hour. Classify as "distance" so ToSI multiplies
+		// by 1609.344 (NOT 0.44704 like a true speed). The downstream JSON field
+		// is renamed to range_added_meters_per_hour to reflect semantic truth;
+		// see internal/tesla/units/units_test.go::TestRangeAddedMetersPerHour_R2_AuditPin.
 		return fieldClass{cat: "charging", kind: "float", unit: "distance", isSettingUnit: false}
 	case "Deprecated_3":
 		return fieldClass{cat: "metadata", kind: "string", unit: "none", isSettingUnit: false}

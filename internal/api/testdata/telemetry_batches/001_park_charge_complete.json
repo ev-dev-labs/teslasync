@@ -12,7 +12,7 @@
     {"name": "ChargerPhases",         "value": 1},
     {"name": "ChargeEnergyAdded",     "value": 12.4},
     {"name": "ChargeMilesAdded",      "value": 38.2},
-    {"name": "RangeAddedMetersPerHour", "value": 23.5},
+    {"name": "ChargeRateMilePerHour", "value": 23.5},
     {"name": "InsideTemp",            "value": 21.5},
     {"name": "OutsideTemp",           "value": 12.0},
     {"name": "HvacPower",             "value": false},

@@ -177,7 +177,7 @@ func TestActiveUnit_StringValuesStable(t *testing.T) {
 //
 // R2 finding (.github/prompts/db-refactor/phase-48-si-canonical/0000-methodology.prompt.md):
 //
-//	The RangeAddedMetersPerHour proto field is metadata-typed
+//	The ChargeRateMilePerHour proto field is metadata-typed
 //	UnitKindDistance, NOT UnitKindSpeed. After ToSI(...) with a Miles
 //	user setting, the value flowing into signal.Store and downstream
 //	JSON is "meters of range added per hour" (raw mph * 1609.344), NOT
@@ -197,7 +197,7 @@ func TestActiveUnit_StringValuesStable(t *testing.T) {
 func TestRangeAddedMetersPerHour_R2_AuditPin(t *testing.T) {
 	t.Parallel()
 
-	const field = "RangeAddedMetersPerHour"
+	const field = "ChargeRateMilePerHour"
 
 	// Pin: the field MUST be UnitKindDistance per the methodology's
 	// R2 finding. A future rename PR that changes this MUST also
