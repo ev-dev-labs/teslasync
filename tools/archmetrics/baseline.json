@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-08T20:42:49Z",
+  "generated_at": "2026-05-08T20:49:03Z",
   "go_version": "go1.26.1",
-  "commit_sha": "9399b53cc579a365ac4c6f1ad65399147cb6af17",
+  "commit_sha": "f976b2b1b08a58837281a4a0f5bad69f4e69f312",
   "packages": [
     {
       "path": "cmd/automation-worker",
@@ -920,7 +920,7 @@
       "path": "internal/arch",
       "go_files": 2,
       "test_files": 1,
-      "loc": 633,
+      "loc": 672,
       "has_doc_go": true,
       "layer": "tool",
       "imports": null,
@@ -1910,7 +1910,7 @@
       "path": "internal/platform/buildinfo",
       "go_files": 2,
       "test_files": 1,
-      "loc": 86,
+      "loc": 91,
       "has_doc_go": true,
       "layer": "platform",
       "imports": null,
@@ -1924,7 +1924,7 @@
       "path": "internal/platform/cache",
       "go_files": 2,
       "test_files": 0,
-      "loc": 96,
+      "loc": 101,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1939,7 +1939,7 @@
       "path": "internal/platform/config",
       "go_files": 2,
       "test_files": 1,
-      "loc": 321,
+      "loc": 326,
       "has_doc_go": true,
       "layer": "platform",
       "imports": null,
@@ -1953,7 +1953,7 @@
       "path": "internal/platform/database",
       "go_files": 3,
       "test_files": 0,
-      "loc": 132,
+      "loc": 138,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1969,7 +1969,7 @@
       "path": "internal/platform/httputil",
       "go_files": 10,
       "test_files": 8,
-      "loc": 2251,
+      "loc": 2254,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -2000,7 +2000,7 @@
       "path": "internal/platform/telemetry",
       "go_files": 4,
       "test_files": 0,
-      "loc": 138,
+      "loc": 143,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [

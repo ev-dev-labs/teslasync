@@ -555,3 +555,30 @@ func TestModelsImportsRestricted(t *testing.T) {
 	}
 }
 
+// TestPlatformSubpackagesGated enforces ADR-007 (phase-47/08): the
+// directories directly under internal/platform/ must match the closed
+// set in AllowedPlatformSubpackages. Adding a new subpackage requires
+// an ADR-007 amendment AND updating AllowedPlatformSubpackages in the
+// same commit.
+func TestPlatformSubpackagesGated(t *testing.T) {
+	root := filepath.Join("..", "..", "internal", "platform")
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatalf("readdir %s: %v", root, err)
+	}
+	allowed := stringSet(AllowedPlatformSubpackages)
+	var unauthorised []string
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		if !allowed[e.Name()] {
+			unauthorised = append(unauthorised, e.Name())
+		}
+	}
+	sort.Strings(unauthorised)
+	for _, name := range unauthorised {
+		t.Errorf("UNAUTHORISED PLATFORM SUBPACKAGE (ADR-007): internal/platform/%s — add to internal/arch/rules.go::AllowedPlatformSubpackages with an ADR-007 amendment, or move to a specific layer (internal/domain, internal/adapter, internal/handler, internal/app, internal/port)", name)
+	}
+}
+

@@ -1232,3 +1232,87 @@ ROLLBACK:
     propose a superseding ADR with a clear merge plan. Do not
     silently merge.
 ```
+
+
+## ADR-007: internal/platform/ Charter
+
+```
+STATUS: APPROVED (PA, phase-47/08)
+DATE: 2026-05-08
+SUPERSEDES: implicit "platform = anywhere shared"
+NUMBERING NOTE: an unrelated subsection-level "### ADR-007: Live Signal
+State Layering (Scale-Out Contract)" exists at
+.github/ARCHITECTURE.md:201 as a nested decision under ADR-002. The two
+enumerations live at different heading levels (## vs ###). Future
+ADR-NNN gates anchor on "^## ADR-NNN:" to avoid matching the
+subsection sequence (see ADR-006 NUMBERING NOTE for the same pattern).
+
+DECISION:
+
+  internal/platform/ contains CROSS-CUTTING INFRASTRUCTURE that:
+    - Is not specific to a bounded context (otherwise it belongs in
+      internal/domain/<X> or internal/app/<X>svc).
+    - Is not a port interface (otherwise internal/port/...).
+    - Is not an adapter to an external system (otherwise
+      internal/adapter/<name>).
+    - Does not host HTTP request handlers (otherwise
+      internal/handler/v1).
+
+  Examples of LEGITIMATE platform/ residents:
+    - HTTP client construction with shared timeouts and middleware
+    - Generic pagination/cursor helpers
+    - Reusable middleware (request ID, panic recovery)
+    - Build-time metadata
+    - OpenTelemetry plumbing (will be renamed to platform/observability
+      in phase-48 — see EXISTING SUBPACKAGES)
+
+EXISTING SUBPACKAGES (charter status):
+
+  platform/buildinfo  → CANONICAL. Houses build-time metadata
+                        (Version/Commit/BuildDate ldflags + Info()
+                        accessor + /version Handler). NO duplicate
+                        exists at internal/buildinfo (phase-47/04
+                        explicitly chose not to extract; the package
+                        is single-purpose with zero callers needing
+                        layer separation). Future: stay here.
+  platform/cache      → DEPRECATED. Canonical home is internal/cache
+                        (4 .go files). Audit duplication; consolidate
+                        in phase-48.
+  platform/config     → DEPRECATED. Canonical home is internal/config
+                        (4 .go files). Audit duplication; consolidate
+                        in phase-48.
+  platform/database   → DEPRECATED. Canonical home depends on type:
+                        - generic SQL helpers → internal/adapter/postgres
+                        - higher-level repo wrappers → internal/database
+                        (123 .go files). Audit; consolidate in phase-48.
+  platform/httputil   → CANONICAL. Charter: shared HTTP client
+                        construction with circuit-breaking, timeouts,
+                        retry, rate-limit, and request/response
+                        logging hooks consumed by internal/apilog.
+  platform/telemetry  → KEEP. Will be RENAMED to platform/observability
+                        in phase-48 to avoid collision with
+                        internal/telemetry (phase-42 territory).
+                        Charter: OpenTelemetry tracer + meter
+                        provider plumbing.
+
+NEW PLATFORM SUBPACKAGES require an ADR amendment + reviewer sign-off.
+arch_test (TestPlatformSubpackagesGated) fails on unrecognised
+platform/<name> directories not present in
+internal/arch/rules.go::AllowedPlatformSubpackages.
+
+RATIONALE:
+  - Today's organic growth produced three duplicates (cache, config,
+    database) with no source-of-truth designation.
+  - Charter clarifies WHEN platform/ is the right answer (cross-cutting
+    + no specific layer fits) vs WHEN to use a specific layer.
+  - Deprecation of duplicates is recorded; consolidation tracked under
+    phase-48 (see docs/architecture/platform-consolidation-todo.md).
+  - buildinfo is NOT deprecated despite originally being slated for
+    extraction in phase-47/04 — that prompt's deviation note (commit
+    56de71940) explicitly justified keeping it where it is. ADR-007
+    ratifies that decision.
+
+ROLLBACK:
+  - If a deprecation creates an unsolvable circular dep, propose a
+    superseding ADR with rationale. Do not silently restore.
+```

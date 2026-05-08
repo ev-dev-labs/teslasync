@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics ΓÇö baseline
 
-_Generated 2026-05-08T20:42:50Z, Go go1.26.1, commit 9399b53cc579a365ac4c6f1ad65399147cb6af17_
+_Generated 2026-05-08T20:49:04Z, Go go1.26.1, commit f976b2b1b08a58837281a4a0f5bad69f4e69f312_
 
 ## Summary
 
 - Packages: 104
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 0
-- Total non-blank LOC under cmd/+internal/+tools/: 197538
+- Total non-blank LOC under cmd/+internal/+tools/: 197606
 
 ## cmd/* main.go LOC
 
@@ -64,7 +64,7 @@ _None._
 | internal/app/notificationsvc | 2 | 1 | 305 | yes | app |
 | internal/app/tripsvc | 2 | 1 | 308 | yes | app |
 | internal/app/vehiclesvc | 3 | 1 | 342 | yes | app |
-| internal/arch | 2 | 1 | 633 | yes | tool |
+| internal/arch | 2 | 1 | 672 | yes | tool |
 | internal/auth | 6 | 4 | 2384 | yes | platform |
 | internal/automation | 6 | 2 | 1560 | yes | platform |
 | internal/automation/action | 6 | 5 | 3822 | yes | platform |
@@ -108,12 +108,12 @@ _None._
 | internal/notification/computed | 4 | 1 | 1004 | yes | platform |
 | internal/notifier | 2 | 1 | 450 | yes | platform |
 | internal/platform | 3 | 2 | 702 | yes | platform |
-| internal/platform/buildinfo | 2 | 1 | 86 | yes | platform |
-| internal/platform/cache | 2 | 0 | 96 | yes | platform |
-| internal/platform/config | 2 | 1 | 321 | yes | platform |
-| internal/platform/database | 3 | 0 | 132 | yes | platform |
-| internal/platform/httputil | 10 | 8 | 2251 | yes | platform |
-| internal/platform/telemetry | 4 | 0 | 138 | yes | platform |
+| internal/platform/buildinfo | 2 | 1 | 91 | yes | platform |
+| internal/platform/cache | 2 | 0 | 101 | yes | platform |
+| internal/platform/config | 2 | 1 | 326 | yes | platform |
+| internal/platform/database | 3 | 0 | 138 | yes | platform |
+| internal/platform/httputil | 10 | 8 | 2254 | yes | platform |
+| internal/platform/telemetry | 4 | 0 | 143 | yes | platform |
 | internal/polling | 11 | 1 | 1413 | yes | platform |
 | internal/port/external | 5 | 0 | 86 | yes | port |
 | internal/port/messaging | 3 | 1 | 271 | yes | port |

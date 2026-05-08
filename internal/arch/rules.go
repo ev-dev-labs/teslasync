@@ -107,3 +107,17 @@ var ModelsForbiddenImports = []string{
 	"internal/app",
 	"internal/port",
 }
+
+// AllowedPlatformSubpackages is the closed set of permitted
+// directories directly under internal/platform/. Per ADR-007
+// (phase-47/08), adding a new one requires an ADR amendment AND
+// updating this list in the same commit. arch_test
+// (TestPlatformSubpackagesGated) enforces.
+var AllowedPlatformSubpackages = []string{
+	"buildinfo",
+	"cache",
+	"config",
+	"database",
+	"httputil",
+	"telemetry",
+}
