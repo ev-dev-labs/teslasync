@@ -98,8 +98,9 @@ func main() {
 func usage() {
 	fmt.Fprintln(os.Stderr, "usage:")
 	fmt.Fprintln(os.Stderr, "  slogen validate <catalog.yaml>")
-	fmt.Fprintln(os.Stderr, "  slogen generate recording [--catalog FILE] [--out FILE]")
-	fmt.Fprintln(os.Stderr, "  slogen generate alerts    [--catalog FILE] [--out FILE]")
+	fmt.Fprintln(os.Stderr, "  slogen generate recording  [--catalog FILE] [--out FILE]")
+	fmt.Fprintln(os.Stderr, "  slogen generate alerts     [--catalog FILE] [--out FILE]")
+	fmt.Fprintln(os.Stderr, "  slogen generate dashboards [--catalog FILE] [--out-dir DIR]")
 }
 
 // validateFile parses the catalogue and applies the schema invariants.

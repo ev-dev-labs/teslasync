@@ -1,0 +1,6 @@
+=== GATE ===
+=== GENERATE ===
+wrote 9 dashboards to helm/teslasync/files/grafana/dashboards
+All gate checks passed.
+EXIT=0
+STATUS=DONE
