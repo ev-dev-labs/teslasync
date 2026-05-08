@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics ΓÇö baseline
 
-_Generated 2026-05-08T20:55:58Z, Go go1.26.1, commit 283271e4e1d48718254058e2cb6cc32c92851dc9_
+_Generated 2026-05-08T21:00:44Z, Go go1.26.1, commit 4165c8b011061c276b6af79450d4cb41f0e97428_
 
 ## Summary
 
 - Packages: 104
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 0
-- Total non-blank LOC under cmd/+internal/+tools/: 197807
+- Total non-blank LOC under cmd/+internal/+tools/: 198007
 
 ## cmd/* main.go LOC
 
@@ -64,7 +64,7 @@ _None._
 | internal/app/notificationsvc | 2 | 1 | 305 | yes | app |
 | internal/app/tripsvc | 2 | 1 | 308 | yes | app |
 | internal/app/vehiclesvc | 3 | 1 | 342 | yes | app |
-| internal/arch | 2 | 1 | 863 | yes | tool |
+| internal/arch | 2 | 1 | 976 | yes | tool |
 | internal/auth | 6 | 4 | 2384 | yes | platform |
 | internal/automation | 6 | 2 | 1560 | yes | platform |
 | internal/automation/action | 6 | 5 | 3822 | yes | platform |
@@ -98,7 +98,7 @@ _None._
 | internal/geocoding | 6 | 1 | 532 | yes | platform |
 | internal/handler/dto | 6 | 0 | 94 | yes | handler |
 | internal/handler/middleware | 10 | 1 | 742 | yes | handler |
-| internal/handler/v1 | 8 | 0 | 340 | yes | handler |
+| internal/handler/v1 | 8 | 1 | 427 | yes | handler |
 | internal/imaging | 2 | 1 | 510 | yes | platform |
 | internal/integrations | 2 | 0 | 134 | yes | platform |
 | internal/metrics | 5 | 1 | 751 | yes | platform |

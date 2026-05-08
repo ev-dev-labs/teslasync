@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-08T20:55:57Z",
+  "generated_at": "2026-05-08T21:00:44Z",
   "go_version": "go1.26.1",
-  "commit_sha": "283271e4e1d48718254058e2cb6cc32c92851dc9",
+  "commit_sha": "4165c8b011061c276b6af79450d4cb41f0e97428",
   "packages": [
     {
       "path": "cmd/automation-worker",
@@ -920,7 +920,7 @@
       "path": "internal/arch",
       "go_files": 2,
       "test_files": 1,
-      "loc": 863,
+      "loc": 976,
       "has_doc_go": true,
       "layer": "tool",
       "imports": null,
@@ -1697,8 +1697,8 @@
     {
       "path": "internal/handler/v1",
       "go_files": 8,
-      "test_files": 0,
-      "loc": 340,
+      "test_files": 1,
+      "loc": 427,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -1715,6 +1715,7 @@
         "charging_handler.go",
         "dashboard_handler.go",
         "doc.go",
+        "example_thin_handler_test.go",
         "export_handler.go",
         "helpers.go",
         "trip_handler.go",

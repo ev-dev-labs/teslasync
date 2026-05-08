@@ -685,6 +685,77 @@ func TestAdapterPurity(t *testing.T) {
 	}
 }
 
+// TestHandlerV1Thinness enforces the phase-47/10 contract: files under
+// internal/handler/v1 MUST NOT import internal/database,
+// internal/platform/database, internal/adapter/*, internal/models, or
+// internal/api. Handlers stay thin — they decode requests, call
+// internal/app/<name>svc use cases, and encode DTOs from
+// internal/handler/dto.
+//
+// internal/api is FROZEN per ADR-009 and explicitly exempt from this
+// rule; its existing handlers freely query the database until each one
+// migrates to internal/handler/v1.
+func TestHandlerV1Thinness(t *testing.T) {
+	cfg := &packages.Config{
+		Mode: packages.NeedName | packages.NeedImports,
+		Dir:  filepath.Join("..", ".."),
+	}
+	pkgs, err := packages.Load(cfg, "./internal/handler/v1/...")
+	if err != nil {
+		t.Fatalf("packages.Load: %v", err)
+	}
+	if len(pkgs) == 0 {
+		t.Fatal("packages.Load returned no packages for ./internal/handler/v1/...")
+	}
+
+	type violation struct {
+		pkg, dep, hint string
+	}
+	var bad []violation
+	for _, p := range pkgs {
+		src := strings.TrimPrefix(p.PkgPath, modulePath+"/")
+		for tgt := range p.Imports {
+			rel := strings.TrimPrefix(tgt, modulePath+"/")
+			if !strings.HasPrefix(rel, "internal/") {
+				continue
+			}
+			if !isOnDenyList(rel, HandlerV1ForbiddenImports) {
+				continue
+			}
+			if isException(src, rel) {
+				continue
+			}
+			bad = append(bad, violation{pkg: p.PkgPath, dep: tgt, hint: thinnessHint(rel)})
+		}
+	}
+
+	sort.Slice(bad, func(i, j int) bool {
+		if bad[i].pkg != bad[j].pkg {
+			return bad[i].pkg < bad[j].pkg
+		}
+		return bad[i].dep < bad[j].dep
+	})
+	for _, v := range bad {
+		t.Errorf("HANDLER THINNESS (phase-47/10): %s imports forbidden %s — %s",
+			v.pkg, v.dep, v.hint)
+	}
+}
+
+func thinnessHint(forbidden string) string {
+	switch {
+	case forbidden == "internal/database" || forbidden == "internal/platform/database":
+		return "call internal/app/<name>svc instead"
+	case strings.HasPrefix(forbidden, "internal/adapter"):
+		return "depend on internal/port/* interfaces instead, wire concrete adapter in cmd or internal/app"
+	case forbidden == "internal/models":
+		return "use internal/handler/dto for transport DTOs (ADR-006)"
+	case forbidden == "internal/api":
+		return "internal/api is FROZEN per ADR-009; the new home is internal/handler/v1"
+	default:
+		return "see phase-47/10 prompt for the thin-handler contract"
+	}
+}
+
 // isAllowedInternalImport returns true when rel matches the parent
 // prefix exactly OR rel is rooted under "<prefix>/" for any prefix in
 // the allow list.

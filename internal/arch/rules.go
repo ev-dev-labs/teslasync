@@ -84,10 +84,35 @@ var ForbiddenEdges = []ForbiddenEdge{
 		Target: "internal/handler/...",
 		Reason: "adapters must not depend on HTTP handlers (phase-47/09)",
 	},
+	// Phase-47/10: handler thinness rule. Handlers in handler/v1 must
+	// stay thin: no direct database/adapter/models access, no import of
+	// the FROZEN internal/api. internal/api itself is exempt (it IS
+	// frozen; existing handlers query the DB freely until their per-
+	// handler migration to handler/v1 lands).
 	{
-		Source: "internal/adapter/...",
-		Target: "internal/app/...",
-		Reason: "adapters must not depend on app services (use callbacks via ports; phase-47/09)",
+		Source: "internal/handler/v1",
+		Target: "internal/database",
+		Reason: "handlers must call internal/app/<name>svc, not the database directly (phase-47/10)",
+	},
+	{
+		Source: "internal/handler/v1",
+		Target: "internal/platform/database",
+		Reason: "handlers must call internal/app/<name>svc, not platform DB helpers (phase-47/10)",
+	},
+	{
+		Source: "internal/handler/v1",
+		Target: "internal/adapter/...",
+		Reason: "handlers must depend on ports, not adapter implementations (phase-47/10)",
+	},
+	{
+		Source: "internal/handler/v1",
+		Target: "internal/models",
+		Reason: "handlers use internal/handler/dto for transport DTOs (ADR-006; phase-47/10)",
+	},
+	{
+		Source: "internal/handler/v1",
+		Target: "internal/api",
+		Reason: "internal/api is FROZEN per ADR-009; handlers must not import it (phase-47/10)",
 	},
 }
 
@@ -116,9 +141,11 @@ var AllowedExceptions = []Exception{}
 // domain→database edges in ForbiddenEdges are now FAIL-level.
 // Domain purity is independently enforced (more strictly) by
 // TestDomainPurity (ADR-006).
-var AdvisorySources = map[string]bool{
-	"internal/handler/v1": true,
-}
+//
+// Phase-47/10 cleared "internal/handler/v1": handler→database is now
+// FAIL-level. Handler thinness is independently enforced (more
+// strictly, with extra deny-list targets) by TestHandlerV1Thinness.
+var AdvisorySources = map[string]bool{}
 
 // FrozenPackages lists package paths where new .go files (excluding
 // _test.go files for existing source files) are not allowed. Phase-47/06
@@ -195,4 +222,24 @@ var AdapterForbiddenImports = []string{
 var PortAllowedInternalImports = []string{
 	"internal/port",
 	"internal/domain",
+}
+
+// HandlerV1ForbiddenImports lists internal/* package prefixes that
+// files in internal/handler/v1 may NOT import. Per the phase-47/10
+// thinness contract, handlers MUST NOT touch persistence
+// (internal/database, internal/platform/database), adapters
+// (internal/adapter/*), persistence DTOs (internal/models), or the
+// FROZEN HTTP package (internal/api). Handlers depend on
+// internal/app/<name>svc for use cases and on internal/handler/dto
+// for transport types.
+//
+// internal/api is exempt from this rule (it IS frozen; its existing
+// handlers freely query the DB until per-handler migration moves them
+// to handler/v1).
+var HandlerV1ForbiddenImports = []string{
+	"internal/database",
+	"internal/platform/database",
+	"internal/adapter",
+	"internal/models",
+	"internal/api",
 }
