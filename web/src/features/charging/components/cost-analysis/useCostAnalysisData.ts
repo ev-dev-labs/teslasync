@@ -45,12 +45,12 @@ export function useCostAnalysisData({
     const avgCostPerKwh = totalEnergy > 0 ? totalCost / (totalEnergy / 1000) : 0;
     const totalDuration = sessions.reduce((s, c) => s + durationMinutes(c.started_at, c.ended_at), 0);
 
-    let totalDistanceMi = 0;
+    let totalDistanceM = 0;
     sessions.forEach((s) => {
-      totalDistanceMi += (distanceAddedM(s) ?? 0) / 1609.344;
+      totalDistanceM += (distanceAddedM(s) ?? 0);
     });
 
-    const distVal = toDistanceDisplay(totalDistanceMi);
+    const distVal = toDistanceDisplay(totalDistanceM / 1609.344);
     const costPerDist = distVal > 0 ? totalCost / distVal : 0;
 
     const gallonsEquiv = totalEnergy / KWH_PER_GALLON;
@@ -63,7 +63,7 @@ export function useCostAnalysisData({
 
     return {
       totalCost, totalEnergy, avgCostPerKwh, totalDuration,
-      totalDistanceMi, costPerDist, gasCost, savings, savingsPercent,
+      totalDistanceM, costPerDist, gasCost, savings, savingsPercent,
       co2SavedKg, treeEquiv, gallonsEquiv, count: sessions.length,
     };
   }, [sessions, gasPrice, toDistanceDisplay]);
@@ -172,11 +172,11 @@ export function useCostAnalysisData({
 
   const gasComparison = useMemo<GasComparison | null>(() => {
     if (!coreStats) return null;
-    const { totalEnergy, totalCost, totalDistanceMi } = coreStats;
-    const distMiles = toDistanceDisplay(totalDistanceMi);
+    const { totalEnergy, totalCost, totalDistanceM } = coreStats;
+    const distMiles = toDistanceDisplay(totalDistanceM / 1609.344);
     const gallonsNeeded = isMiles
       ? distMiles / mpg
-      : toDistanceDisplay(totalDistanceMi) / mpg;
+      : toDistanceDisplay(totalDistanceM / 1609.344) / mpg;
     const gasCostCalc = gallonsNeeded * gasPrice;
     const evCostCalc = totalEnergy * electricityRate;
     const monthlySavings =

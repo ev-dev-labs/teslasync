@@ -2457,7 +2457,7 @@ paths:
     get:
       operationId: listTrips
       summary: List trips
-      description: Returns paginated list of trips.
+      description: Returns paginated list of trips. Aggregate fields are computed on read from constituent drives and use SI canonical units.
       tags: [Trips]
       parameters:
         - name: vehicle_id
@@ -2480,20 +2480,28 @@ paths:
                       type: integer
                     vehicle_id:
                       type: integer
-                    start_time:
+                    started_at:
                       type: string
                       format: date-time
-                    end_time:
+                    ended_at:
                       type: string
                       format: date-time
-                    distance_km:
+                      nullable: true
+                    total_distance_m:
                       type: number
-                    duration_minutes:
+                      description: Computed trip distance in meters.
+                    total_duration_s:
+                      type: integer
+                      description: Computed trip duration in seconds.
+                    total_energy_wh:
+                      type: number
+                      description: Computed trip energy in watt-hours.
+                    total_cost:
                       type: number
                     drive_count:
                       type: integer
-                    energy_used_wh:
-                      type: number
+                    charge_count:
+                      type: integer
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -4184,7 +4192,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [drives, charging, positions]
+            enum: [drives, charging, trips, analytics, backup, account]
         - name: vehicle_id
           in: query
           schema:
@@ -4212,11 +4220,47 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /share/{token}:
+    get:
+      operationId: getPublicShare
+      summary: Get public shared drive report
+      description: Returns a v2 share payload with SI canonical keys. Old v1 payloads may be read by the SPA only for existing shared URLs.
+      tags: [Sharing]
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Shared drive report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payload_version:
+                    type: string
+                    example: v2
+                  drive:
+                    type: object
+                    properties:
+                      distance_m:
+                        type: number
+                      duration_s:
+                        type: integer
+                      max_speed_mps:
+                        type: number
+                        nullable: true
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /export/jobs:
     post:
       operationId: submitExportJob
       summary: Submit async export job
-      description: Submits an asynchronous export job for large datasets.
+      description: Submits an asynchronous export job for large datasets. CSV exports are v2-only and use SI canonical filenames and columns: teslasync-drives-v2.csv, teslasync-charging-v2.csv, teslasync-trips-v2.csv. Drive headers include distance_m, duration_s, max_speed_mps; trip headers include total_distance_m, total_energy_wh, total_duration_s.
       tags: [Export]
       requestBody:
         required: true
@@ -4228,7 +4272,7 @@ paths:
               properties:
                 type:
                   type: string
-                  enum: [drives, charging, positions]
+                  enum: [drives, charging, trips, analytics, backup, account]
                 vehicle_id:
                   type: integer
                 format:

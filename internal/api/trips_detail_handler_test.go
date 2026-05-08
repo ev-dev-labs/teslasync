@@ -42,7 +42,7 @@ func newTripsDetailRouter(h *TripsDetailHandler) chi.Router {
 	return r
 }
 
-func ptrString(s string) *string  { return &s }
+func ptrString(s string) *string     { return &s }
 func ptrTime(t time.Time) *time.Time { return &t }
 func ptrFloat64(f float64) *float64  { return &f }
 func ptrInt64(i int64) *int64        { return &i }
@@ -64,8 +64,8 @@ func TestTripsDetailHandler_Get_HappyPath(t *testing.T) {
 			Name:         ptrString("Vacation 2026"),
 			StartedAt:    start,
 			EndedAt:      ptrTime(end),
-			DistanceM:    1234500.0, // 1234.5 km
-			EnergyUsedWh: 250000.0,  // 250.0 kWh
+			DistanceM:    1234500.0, // 1234500.0 km
+			EnergyUsedWh: 250000.0,  // 250000.0 kWh
 			DurationS:    1209600,
 			DriveCount:   12,
 			ChargeCount:  5,
@@ -125,17 +125,17 @@ func TestTripsDetailHandler_Get_HappyPath(t *testing.T) {
 	}
 
 	// SI conversion math.
-	if resp.TotalDistanceKm != 1234.5 {
-		t.Errorf("total_distance_km: got %v, want 1234.5", resp.TotalDistanceKm)
+	if resp.TotalDistanceM != 1234500.0 {
+		t.Errorf("total_distance_m: got %v, want 1234500.0", resp.TotalDistanceM)
 	}
-	if resp.TotalEnergyKWh != 250.0 {
-		t.Errorf("total_energy_kwh: got %v, want 250.0", resp.TotalEnergyKWh)
+	if resp.TotalEnergyWh != 250000.0 {
+		t.Errorf("total_energy_wh: got %v, want 250000.0", resp.TotalEnergyWh)
 	}
-	if resp.EnergyUsedKWh != 250.0 {
-		t.Errorf("energy_used_kwh alias: got %v, want 250.0", resp.EnergyUsedKWh)
+	if resp.EnergyUsedWh != 250000.0 {
+		t.Errorf("energy_used_wh alias: got %v, want 250000.0", resp.EnergyUsedWh)
 	}
-	if resp.TotalDurationSeconds != 1209600 {
-		t.Errorf("total_duration_seconds: got %d, want 1209600", resp.TotalDurationSeconds)
+	if resp.TotalDurationS != 1209600 {
+		t.Errorf("total_duration_seconds: got %d, want 1209600", resp.TotalDurationS)
 	}
 	if resp.TotalCost != 75.50 {
 		t.Errorf("total_cost: got %v, want 75.50", resp.TotalCost)
@@ -157,11 +157,11 @@ func TestTripsDetailHandler_Get_HappyPath(t *testing.T) {
 	if d.ID != 101 {
 		t.Errorf("drive id: got %d, want 101", d.ID)
 	}
-	if d.DistanceKm == nil || *d.DistanceKm != 100.0 {
-		t.Errorf("drive distance_km: got %v, want 100.0", d.DistanceKm)
+	if d.DistanceM == nil || *d.DistanceM != 100000.0 {
+		t.Errorf("drive distance_km: got %v, want 100000.0", d.DistanceM)
 	}
-	if d.EnergyUsedKWh == nil || *d.EnergyUsedKWh != 20.0 {
-		t.Errorf("drive energy_used_kwh: got %v, want 20.0", d.EnergyUsedKWh)
+	if d.EnergyUsedWh == nil || *d.EnergyUsedWh != 20000.0 {
+		t.Errorf("drive energy_used_wh: got %v, want 20000.0", d.EnergyUsedWh)
 	}
 	if d.DurationS == nil || *d.DurationS != 3600 {
 		t.Errorf("drive duration_s: got %v, want 3600", d.DurationS)
@@ -335,11 +335,11 @@ func TestBuildTripDetailResponse_PreservesNullDriveFields(t *testing.T) {
 		t.Fatalf("expected 1 drive, got %d", len(resp.Drives))
 	}
 	d := resp.Drives[0]
-	if d.DistanceKm != nil {
-		t.Errorf("nil distance_m must surface as nil distance_km, got %v", *d.DistanceKm)
+	if d.DistanceM != nil {
+		t.Errorf("nil distance_m must surface as nil distance_km, got %v", *d.DistanceM)
 	}
-	if d.EnergyUsedKWh != nil {
-		t.Errorf("nil energy_used_wh must surface as nil energy_used_kwh, got %v", *d.EnergyUsedKWh)
+	if d.EnergyUsedWh != nil {
+		t.Errorf("nil energy_used_wh must surface as nil energy_used_wh, got %v", *d.EnergyUsedWh)
 	}
 	if d.DurationS != nil {
 		t.Errorf("nil duration_s must surface as nil, got %v", *d.DurationS)

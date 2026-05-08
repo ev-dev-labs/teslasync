@@ -1104,14 +1104,21 @@ export interface Trip {
   name: string | null
   start_date: string
   end_date: string | null
-  /** Distance in kilometers (km, derived SI). */
-  total_distance_km: number
-  /** Energy in kilowatt-hours (kWh, derived SI). */
-  total_energy_kwh: number
+  started_at: string
+  ended_at: string | null
+  /** Distance in meters (SI canonical). */
+  total_distance_m: number
+  /** Energy in watt-hours (Wh, SI canonical). */
+  total_energy_wh: number
+  /** Duration in seconds (SI canonical). */
+  total_duration_s: number
   total_cost: number
   drive_count: number
   charge_count: number
   created_at: string
+  created_by_user?: number | null
+  auto_generated?: boolean
+  notes?: string | null
 }
 
 export interface VehicleStateRecord {

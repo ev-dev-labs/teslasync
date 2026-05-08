@@ -10,13 +10,13 @@ import (
 
 // DashboardStats holds aggregated dashboard metrics.
 type DashboardStats struct {
-	TotalVehicles      int     `json:"totalVehicles"`
-	TotalMiles         float64 `json:"totalMiles"`
-	TotalEnergyKWh    float64 `json:"totalEnergyKwh"`
-	TotalChargingSessions int  `json:"totalChargingSessions"`
-	TotalTrips         int     `json:"totalTrips"`
-	AvgEfficiency      float64 `json:"avgEfficiency"`
-	TotalCostCents     int     `json:"totalCostCents"`
+	TotalVehicles         int     `json:"totalVehicles"`
+	TotalMiles            float64 `json:"totalMiles"`
+	TotalEnergyWh         float64 `json:"totalEnergyWh"`
+	TotalChargingSessions int     `json:"totalChargingSessions"`
+	TotalTrips            int     `json:"totalTrips"`
+	AvgEfficiency         float64 `json:"avgEfficiency"`
+	TotalCostCents        int     `json:"totalCostCents"`
 }
 
 // Service provides dashboard aggregation use cases.
@@ -61,7 +61,7 @@ func (s *Service) GetStats(ctx context.Context, userID string) (*DashboardStats,
 		stats.TotalTrips += len(trips)
 		for _, t := range trips {
 			stats.TotalMiles += t.DistanceMiles
-			stats.TotalEnergyKWh += t.EnergyUsedKWh
+			stats.TotalEnergyWh += t.EnergyUsedKWh * 1000
 		}
 
 		sessions, err := s.chargingRepo.ListByDateRange(ctx, v.ID, monthAgo, now)
@@ -75,7 +75,7 @@ func (s *Service) GetStats(ctx context.Context, userID string) (*DashboardStats,
 	}
 
 	if stats.TotalMiles > 0 {
-		stats.AvgEfficiency = (stats.TotalEnergyKWh * 1000) / stats.TotalMiles
+		stats.AvgEfficiency = stats.TotalEnergyWh / stats.TotalMiles
 	}
 
 	return stats, nil

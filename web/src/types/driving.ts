@@ -244,11 +244,11 @@ export interface TripPlanRequest {
 }
 
 export interface TripPlanRoute {
-  total_distance_km: number;
-  total_duration_min: number;
-  driving_duration_min: number;
-  charging_duration_min: number;
-  total_energy_kwh: number;
+  total_distance_m: number;
+  total_duration_s: number;
+  driving_duration_s: number;
+  charging_duration_s: number;
+  total_energy_wh: number;
   estimated_cost: number;
   arrival_soc: number;
   feasible: boolean;
@@ -258,9 +258,9 @@ export interface TripPlanRoute {
 export interface TripLeg {
   from: TripLocation;
   to: TripLocation;
-  distance_km: number;
-  duration_min: number;
-  energy_kwh: number;
+  distance_m: number;
+  duration_s: number;
+  energy_wh: number;
   start_soc: number;
   arrival_soc: number;
 }
@@ -270,8 +270,8 @@ export interface TripChargeStop {
   location: TripLocation;
   charge_from_soc: number;
   charge_to_soc: number;
-  charge_duration_min: number;
-  energy_kwh: number;
+  charge_duration_s: number;
+  energy_wh: number;
   cost: number;
   is_recommended: boolean;
 }
@@ -283,7 +283,7 @@ export interface TripWeatherImpact {
 }
 
 export interface TripSOCPoint {
-  distance_km: number;
+  distance_m: number;
   soc: number;
 }
 

@@ -4,7 +4,7 @@ package dto
 type DashboardStatsResponse struct {
 	TotalVehicles         int     `json:"totalVehicles"`
 	TotalMiles            float64 `json:"totalMiles"`
-	TotalEnergyKWh       float64 `json:"totalEnergyKwh"`
+	TotalEnergyWh         float64 `json:"totalEnergyWh"`
 	TotalChargingSessions int     `json:"totalChargingSessions"`
 	TotalTrips            int     `json:"totalTrips"`
 	AvgEfficiency         float64 `json:"avgEfficiency"`

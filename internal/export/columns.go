@@ -32,9 +32,9 @@ var columnCatalog = map[string][]ColumnInfo{
 		{Name: "vehicle_id", Label: "Vehicle ID", AlwaysIncluded: true},
 		{Name: "start_date", Label: "Start date"},
 		{Name: "end_date", Label: "End date"},
-		{Name: "distance", Label: "Distance"},
-		{Name: "duration_min", Label: "Duration (min)"},
-		{Name: "speed_max", Label: "Max speed"},
+		{Name: "distance_m", Label: "Distance (m)"},
+		{Name: "duration_s", Label: "Duration (s)"},
+		{Name: "max_speed_mps", Label: "Max speed (m/s)"},
 	},
 	"charging": {
 		{Name: "id", Label: "ID", AlwaysIncluded: true},

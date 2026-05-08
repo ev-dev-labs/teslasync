@@ -36,7 +36,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
 
   const isCompact = size.cols <= 1;
 
-  const displayDist = (km: number) => toDistanceDisplay((km ?? 0) * 1000);
+  const displayDist = (meters: number) => toDistanceDisplay(meters ?? 0);
 
   return (
     <WidgetShell
@@ -77,7 +77,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
               <div className={isCompact ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-4 gap-2'}>
                 <StatCard
                   label={t('widget.distance', 'Distance')}
-                  value={`${fmtNumber(displayDist(lastTrip.total_distance_km ?? 0), 1)} ${distanceUnit}`}
+                  value={`${fmtNumber(displayDist(lastTrip.total_distance_m ?? 0), 1)} ${distanceUnit}`}
                   icon={<MapPin className="h-3 w-3" />}
                 />
                 <StatCard
@@ -121,7 +121,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
                   {!isCompact && (
                     <div className="flex items-center gap-3 flex-shrink-0 ml-2">
                       <span className="text-xs text-[var(--text-secondary)] tabular-nums">
-                        {fmtNumber(displayDist(trip.total_distance_km ?? 0), 1)} {distanceUnit}
+                        {fmtNumber(displayDist(trip.total_distance_m ?? 0), 1)} {distanceUnit}
                       </span>
                       <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
                         {formatDurationRange(trip.start_date, trip.end_date)}
@@ -133,7 +133,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
                   )}
                   {isCompact && (
                     <span className="text-xs text-[var(--text-secondary)] tabular-nums flex-shrink-0 ml-2">
-                      {fmtNumber(displayDist(trip.total_distance_km ?? 0), 1)} {distanceUnit}
+                      {fmtNumber(displayDist(trip.total_distance_m ?? 0), 1)} {distanceUnit}
                     </span>
                   )}
                 </div>

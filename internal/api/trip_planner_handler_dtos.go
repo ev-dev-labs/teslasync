@@ -28,36 +28,36 @@ type tripPlanRequest struct {
 }
 
 type tripPlanRoute struct {
-	TotalDistanceKm     float64 `json:"total_distance_km"`
-	TotalDurationMin    float64 `json:"total_duration_min"`
-	DrivingDurationMin  float64 `json:"driving_duration_min"`
-	ChargingDurationMin float64 `json:"charging_duration_min"`
-	TotalEnergyKWh      float64 `json:"total_energy_kwh"`
-	EstimatedCost       float64 `json:"estimated_cost"`
-	ArrivalSOC          float64 `json:"arrival_soc"`
-	Feasible            bool    `json:"feasible"`
-	IsEstimate          bool    `json:"is_estimate"`
+	TotalDistanceM    float64 `json:"total_distance_m"`
+	TotalDurationS    float64 `json:"total_duration_s"`
+	DrivingDurationS  float64 `json:"driving_duration_s"`
+	ChargingDurationS float64 `json:"charging_duration_s"`
+	TotalEnergyWh     float64 `json:"total_energy_wh"`
+	EstimatedCost     float64 `json:"estimated_cost"`
+	ArrivalSOC        float64 `json:"arrival_soc"`
+	Feasible          bool    `json:"feasible"`
+	IsEstimate        bool    `json:"is_estimate"`
 }
 
 type tripPlanLeg struct {
-	From        tripPlanLocation `json:"from"`
-	To          tripPlanLocation `json:"to"`
-	DistanceKm  float64          `json:"distance_km"`
-	DurationMin float64          `json:"duration_min"`
-	EnergyKWh   float64          `json:"energy_kwh"`
-	StartSOC    float64          `json:"start_soc"`
-	ArrivalSOC  float64          `json:"arrival_soc"`
+	From       tripPlanLocation `json:"from"`
+	To         tripPlanLocation `json:"to"`
+	DistanceM  float64          `json:"distance_m"`
+	DurationS  float64          `json:"duration_s"`
+	EnergyWh   float64          `json:"energy_wh"`
+	StartSOC   float64          `json:"start_soc"`
+	ArrivalSOC float64          `json:"arrival_soc"`
 }
 
 type tripChargeStop struct {
-	Name              string           `json:"name"`
-	Location          tripPlanLocation `json:"location"`
-	ChargeFromSOC     float64          `json:"charge_from_soc"`
-	ChargeToSOC       float64          `json:"charge_to_soc"`
-	ChargeDurationMin float64          `json:"charge_duration_min"`
-	EnergyKWh         float64          `json:"energy_kwh"`
-	Cost              float64          `json:"cost"`
-	IsRecommended     bool             `json:"is_recommended"`
+	Name            string           `json:"name"`
+	Location        tripPlanLocation `json:"location"`
+	ChargeFromSOC   float64          `json:"charge_from_soc"`
+	ChargeToSOC     float64          `json:"charge_to_soc"`
+	ChargeDurationS float64          `json:"charge_duration_s"`
+	EnergyWh        float64          `json:"energy_wh"`
+	Cost            float64          `json:"cost"`
+	IsRecommended   bool             `json:"is_recommended"`
 }
 
 type tripWeatherImpact struct {
@@ -67,8 +67,8 @@ type tripWeatherImpact struct {
 }
 
 type tripSOCPoint struct {
-	DistanceKm float64 `json:"distance_km"`
-	SOC        float64 `json:"soc"`
+	DistanceM float64 `json:"distance_m"`
+	SOC       float64 `json:"soc"`
 }
 
 type tripPlanResponse struct {

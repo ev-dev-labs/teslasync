@@ -4,6 +4,13 @@ All notable changes to TeslaSync are documented here.
 
 ## [Unreleased]
 
+### Phase-48 SI canonical migration
+
+- **BREAKING: CSV exports v2** — Drive, charging, trip, and account-backup CSV filenames now use `-v2.csv` (`teslasync-drives-v2.csv`, `teslasync-charging-v2.csv`, `teslasync-trips-v2.csv`, and `*-v2.csv` files inside account ZIPs). Old CSV filenames are removed; there is no v1/v2 toggle.
+- **BREAKING: CSV columns renamed to SI canonical** — External scripts must update from legacy headers such as `distance`, `duration_min`, and `speed_max` to v2 headers such as `distance_m`, `duration_s`, `max_speed_mps`, `total_energy_wh`, and `total_duration_s`.
+- **BREAKING: Share payload v2** — Public share responses now include `payload_version: "v2"` and expose `distance_m`, `duration_s`, and `max_speed_mps` instead of `distance_km`, `duration_min`, and `max_speed_kmh`. Existing v1 share URLs are honored read-only by the SPA parser.
+- Trip base models no longer expose stale denormalized aggregates; trip list/detail responses compute SI aggregates from constituent drives on read.
+
 ### 🚀 New Features
 
 #### Materialized Views & Fast Analytics

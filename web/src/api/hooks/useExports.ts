@@ -92,7 +92,7 @@ export function useExport(id: string) {
 
 /** Generic submit-export mutation against the legacy /export/jobs endpoint. */
 export interface CreateExportPayload {
-  type: 'drives' | 'charging' | 'analytics' | 'backup' | 'account';
+  type: 'drives' | 'charging' | 'trips' | 'analytics' | 'backup' | 'account';
   format?: 'csv' | 'json' | 'zip';
   vehicle_id?: number;
   start?: string;

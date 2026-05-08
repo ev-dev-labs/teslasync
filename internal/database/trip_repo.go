@@ -16,53 +16,8 @@ import (
 //            auto_generated, notes
 //   - trip_drives: trip_id, drive_id, position INT NOT NULL
 //
-// Phase-42 dropped these legacy columns from trips:
-//   - the legacy start_ts / end_ts pair (renamed to started_at / ended_at)
-//   - description (now `notes`; mapped at the repo boundary)
-//   - the total_distance / total_energy / total_duration columns are GONE;
-//     totals are recomputed on read from drives via trip_drives JOIN per
-//     migration 000185's "intentionally NOT denormalized" comment
-//   - created_at / updated_at (derive from started_at / ended_at)
-//
-// trip_drives gained a mandatory `position INT` ordering column and lost
-// the audit `added_at` column.
-//
-// models.Trip keeps legacy field names + units (mi, kWh, minutes) for JSON
-// wire compatibility per Prompt 0073 covenant #11. Conversion happens at the
-// repo boundary so the public shape consumed by the frontend is preserved.
-
-// tripSelectColumns produces the SI canonical SELECT column list with totals
-// recomputed on read from drives via trip_drives JOIN. Aliases are chosen so
-// scanning lines up with the legacy models.Trip field order (id, vehicle_id,
-// name, description, start_ts, end_ts, total_distance_mi, total_energy_kwh,
-// total_duration_min, created_at, updated_at).
-const tripSelectColumns = `
-	t.id,
-	t.vehicle_id,
-	COALESCE(t.name, '') AS name,
-	t.notes AS description,
-	t.started_at AS start_ts,
-	t.ended_at AS end_ts,
-	COALESCE(td_agg.distance_m, 0) / 1609.344 AS total_distance_mi,
-	COALESCE(td_agg.energy_used_wh, 0) / 1000.0 AS total_energy_kwh,
-	COALESCE(td_agg.duration_s, 0) / 60.0 AS total_duration_min,
-	t.started_at AS created_at,
-	COALESCE(t.ended_at, t.started_at) AS updated_at`
-
-// tripFromClause is the SI-canonical FROM clause that joins trips to its
-// derived totals. The LEFT JOIN ensures trips with zero linked drives still
-// surface (totals come back as 0).
-const tripFromClause = `
-	FROM trips t
-	LEFT JOIN (
-		SELECT td.trip_id,
-		       SUM(d.distance_m)      AS distance_m,
-		       SUM(d.energy_used_wh)  AS energy_used_wh,
-		       SUM(d.duration_s)      AS duration_s
-		FROM trip_drives td
-		JOIN drives d ON d.id = td.drive_id
-		GROUP BY td.trip_id
-	) td_agg ON td_agg.trip_id = t.id`
+// Distance / energy / duration aggregates are not stored on trips. List reads
+// recompute SI-canonical totals from constituent drives.
 
 type TripRepo struct {
 	db *DB
@@ -72,33 +27,85 @@ func NewTripRepo(db *DB) *TripRepo {
 	return &TripRepo{db: db}
 }
 
-// scanTrip scans a single row from a query that selects tripSelectColumns
-// into a models.Trip with derived totals populated as non-nil pointers
-// (totals always exist on the new schema; the LEFT JOIN supplies 0 when no
-// drives are linked).
-func scanTrip(rows pgx.Rows) (*models.Trip, error) {
-	t := &models.Trip{}
-	var (
-		totalDistanceMi  float64
-		totalEnergyKWh   float64
-		totalDurationMin float64
-	)
+// TripSummary is the repository projection used by GET /trips. It keeps the
+// base models.Trip schema clean while carrying computed SI aggregates for the
+// list response DTO.
+type TripSummary struct {
+	Trip           models.Trip
+	TotalDistanceM float64
+	TotalEnergyWh  float64
+	TotalDurationS int64
+	DriveCount     int64
+	ChargeCount    int64
+	TotalCost      float64
+}
+
+const tripSummarySelectColumns = `
+t.id,
+t.vehicle_id,
+COALESCE(t.name, '') AS name,
+t.started_at,
+t.ended_at,
+t.created_by_user,
+COALESCE(t.auto_generated, false) AS auto_generated,
+t.notes,
+COALESCE(td_agg.distance_m, 0)::DOUBLE PRECISION AS total_distance_m,
+COALESCE(td_agg.energy_used_wh, 0)::DOUBLE PRECISION AS total_energy_wh,
+COALESCE(td_agg.duration_s, 0)::BIGINT AS total_duration_s,
+COALESCE(td_agg.drive_count, 0)::BIGINT AS drive_count,
+COALESCE((
+SELECT COUNT(*)
+FROM charging_sessions cs
+WHERE cs.vehicle_id = t.vehicle_id
+  AND cs.started_at < COALESCE(t.ended_at, NOW())
+  AND COALESCE(cs.ended_at, cs.started_at) >= t.started_at
+), 0)::BIGINT AS charge_count,
+COALESCE((
+SELECT SUM(cs.cost_decimal)
+FROM charging_sessions cs
+WHERE cs.vehicle_id = t.vehicle_id
+  AND cs.started_at < COALESCE(t.ended_at, NOW())
+  AND COALESCE(cs.ended_at, cs.started_at) >= t.started_at
+), 0)::DOUBLE PRECISION AS total_cost`
+
+const tripSummaryFromClause = `
+FROM trips t
+LEFT JOIN (
+SELECT td.trip_id,
+       SUM(COALESCE(d.distance_m, 0))      AS distance_m,
+       SUM(COALESCE(d.energy_used_wh, 0))  AS energy_used_wh,
+       SUM(COALESCE(d.duration_s, 0))      AS duration_s,
+       COUNT(d.id)                         AS drive_count
+FROM trip_drives td
+JOIN drives d ON d.id = td.drive_id
+GROUP BY td.trip_id
+) td_agg ON td_agg.trip_id = t.id`
+
+func scanTripSummary(rows pgx.Rows) (*TripSummary, error) {
+	out := &TripSummary{}
 	if err := rows.Scan(
-		&t.ID, &t.VehicleID, &t.Name, &t.Description,
-		&t.StartTs, &t.EndTs,
-		&totalDistanceMi, &totalEnergyKWh, &totalDurationMin,
-		&t.CreatedAt, &t.UpdatedAt,
+		&out.Trip.ID,
+		&out.Trip.VehicleID,
+		&out.Trip.Name,
+		&out.Trip.StartedAt,
+		&out.Trip.EndedAt,
+		&out.Trip.CreatedByUser,
+		&out.Trip.AutoGenerated,
+		&out.Trip.Notes,
+		&out.TotalDistanceM,
+		&out.TotalEnergyWh,
+		&out.TotalDurationS,
+		&out.DriveCount,
+		&out.ChargeCount,
+		&out.TotalCost,
 	); err != nil {
 		return nil, err
 	}
-	t.TotalDistanceMi = &totalDistanceMi
-	t.TotalEnergyKWh = &totalEnergyKWh
-	t.TotalDurationMin = &totalDurationMin
-	return t, nil
+	return out, nil
 }
 
-func (r *TripRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*models.Trip, error) {
-	query := `SELECT ` + tripSelectColumns + tripFromClause + ` WHERE t.vehicle_id=$1`
+func (r *TripRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*TripSummary, error) {
+	query := `SELECT ` + tripSummarySelectColumns + tripSummaryFromClause + ` WHERE t.vehicle_id=$1`
 	args := []interface{}{vehicleID}
 	argIdx := 2
 	if !startTime.IsZero() {
@@ -119,9 +126,9 @@ func (r *TripRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, off
 	}
 	defer rows.Close()
 
-	var trips []*models.Trip
+	var trips []*TripSummary
 	for rows.Next() {
-		t, err := scanTrip(rows)
+		t, err := scanTripSummary(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -130,8 +137,8 @@ func (r *TripRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, off
 	return trips, rows.Err()
 }
 
-func (r *TripRepo) GetAll(ctx context.Context, limit, offset int, startTime, endTime time.Time) ([]*models.Trip, error) {
-	query := `SELECT ` + tripSelectColumns + tripFromClause + ` WHERE 1=1`
+func (r *TripRepo) GetAll(ctx context.Context, limit, offset int, startTime, endTime time.Time) ([]*TripSummary, error) {
+	query := `SELECT ` + tripSummarySelectColumns + tripSummaryFromClause + ` WHERE 1=1`
 	args := []interface{}{}
 	argIdx := 1
 	if !startTime.IsZero() {
@@ -152,9 +159,9 @@ func (r *TripRepo) GetAll(ctx context.Context, limit, offset int, startTime, end
 	}
 	defer rows.Close()
 
-	var trips []*models.Trip
+	var trips []*TripSummary
 	for rows.Next() {
-		t, err := scanTrip(rows)
+		t, err := scanTripSummary(rows)
 		if err != nil {
 			return nil, err
 		}

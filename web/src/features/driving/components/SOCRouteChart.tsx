@@ -28,7 +28,7 @@ export function SOCRouteChart({ socCurve, chargeStops, minArrivalSOC }: SOCRoute
 
   const chartData = useMemo(() =>
     (socCurve ?? []).map((pt) => ({
-      distance: Math.round(pt.distance_km * 10) / 10,
+      distance: Math.round(pt.distance_m * 10) / 10,
       soc: Math.round(pt.soc * 10) / 10,
     })),
     [socCurve],
@@ -41,11 +41,11 @@ export function SOCRouteChart({ socCurve, chargeStops, minArrivalSOC }: SOCRoute
     for (const stop of chargeStops ?? []) {
       // Charge stops align with leg boundaries in soc_curve
       const matchPt = (socCurve ?? []).find(
-        (pt) => pt.distance_km > cumDist && Math.abs(pt.soc - stop.charge_from_soc) < 5,
+        (pt) => pt.distance_m > cumDist && Math.abs(pt.soc - stop.charge_from_soc) < 5,
       );
       if (matchPt) {
-        distances.push(Math.round(matchPt.distance_km));
-        cumDist = matchPt.distance_km;
+        distances.push(Math.round(matchPt.distance_m));
+        cumDist = matchPt.distance_m;
       }
     }
     return distances;

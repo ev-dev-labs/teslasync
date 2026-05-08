@@ -28,6 +28,7 @@ type JobType string
 const (
 	TypeDrives         JobType = "drives"
 	TypeCharging       JobType = "charging"
+	TypeTrips          JobType = "trips"
 	TypeBackup         JobType = "backup"
 	TypeAnalytics      JobType = "analytics"
 	TypeImportDrives   JobType = "import_drives"
@@ -45,7 +46,7 @@ const MaxAccountRowsPerTable = 250_000
 
 // AccountSchemaVersion is the version of the account-export ZIP layout. Bump
 // this when columns are added or removed so consumers can detect changes.
-const AccountSchemaVersion = "1.0.0"
+const AccountSchemaVersion = "2.0.0"
 
 // JobRequest is the in-process representation of an export job request.
 // It is the single shape the worker decodes from MQTT, the processor
@@ -81,4 +82,3 @@ func FromModel(m *models.ExportJobRequest) *JobRequest {
 	}
 	return &JobRequest{ExportJobRequest: *m}
 }
-

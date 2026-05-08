@@ -290,27 +290,27 @@ export default function TripPlannerPage() {
           <Grid cols={{ default: 2, sm: 3, lg: 6 }} gap={4}>
             <StatCard
               label={t('tripPlanner.stats.distance', 'Distance')}
-              value={`${toDistanceDisplay(route.total_distance_km).toFixed(0)} ${distanceUnit}`}
+              value={`${toDistanceDisplay(route.total_distance_m).toFixed(0)} ${distanceUnit}`}
               icon={<Route className="h-4 w-4" />}
             />
             <StatCard
               label={t('tripPlanner.stats.totalTime', 'Total Time')}
-              value={formatDuration(route.total_duration_min)}
+              value={formatDuration(route.total_duration_s / 60)}
               icon={<Clock className="h-4 w-4" />}
             />
             <StatCard
               label={t('tripPlanner.stats.drivingTime', 'Driving')}
-              value={formatDuration(route.driving_duration_min)}
+              value={formatDuration(route.driving_duration_s / 60)}
               icon={<Navigation className="h-4 w-4" />}
             />
             <StatCard
               label={t('tripPlanner.stats.chargingTime', 'Charging')}
-              value={route.charging_duration_min > 0 ? formatDuration(route.charging_duration_min) : '—'}
+              value={route.charging_duration_s > 0 ? formatDuration(route.charging_duration_s / 60) : '—'}
               icon={<Zap className="h-4 w-4" />}
             />
             <StatCard
               label={t('tripPlanner.stats.energy', 'Energy')}
-              value={`${route.total_energy_kwh.toFixed(1)} kWh`}
+              value={`${(route.total_energy_wh / 1000).toFixed(1)} kWh`}
               icon={<Battery className="h-4 w-4" />}
             />
             <StatCard

@@ -22,13 +22,14 @@ import {
 import Logo from '@/components/ui/Logo';
 import { useSharedDrive } from '@/api/hooks/useSharing';
 import { FadeIn } from '@/components/motion';
-import { formatDurationMinutes } from '@/lib/dateFormat';
+import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 import { useUnits } from '@/hooks/useUnits';
 import {
   convertDistanceFromSI,
   convertSpeedFromSI,
   type DistanceUnitPref,
 } from '@/lib/unitConversion';
+import type { SharedDriveData, SharedDriveDataV1 } from '@/types/sharing';
 
 /* ------------------------------------------------------------------ */
 /*  Boundary constants                                                */
@@ -70,6 +71,48 @@ function toEfficiencyDisplay(whPerKm: number, distancePref: DistanceUnitPref): n
   return distancePref === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
 }
 
+
+function normalizeSharedDriveData(data: SharedDriveData | SharedDriveDataV1 | undefined): SharedDriveData | undefined {
+  if (!data) return undefined;
+  if ('payload_version' in data && data.payload_version === 'v2') return data;
+  const v1 = data as SharedDriveDataV1;
+  return {
+    payload_version: 'v1',
+    title: v1.title,
+    description: v1.description,
+    drive: {
+      date: v1.drive.date,
+      distance_m: v1.drive.distance_km * METERS_PER_KM,
+      duration_s: Math.round(v1.drive.duration_min * 60),
+      start_address: v1.drive.start_address,
+      end_address: v1.drive.end_address,
+      start_battery: v1.drive.start_battery,
+      end_battery: v1.drive.end_battery,
+      elevation_gain: v1.drive.elevation_gain,
+      elevation_loss: v1.drive.elevation_loss,
+      max_speed_mps: v1.drive.max_speed_kmh == null ? null : v1.drive.max_speed_kmh / KMH_PER_MPS,
+      avg_speed_mps: v1.drive.avg_speed_kmh == null ? null : v1.drive.avg_speed_kmh / KMH_PER_MPS,
+      efficiency_wh_per_m: v1.drive.efficiency_wh_km == null ? null : v1.drive.efficiency_wh_km / METERS_PER_KM,
+    },
+    vehicle: v1.vehicle,
+    map_points: v1.map_points,
+    elevation_profile: (v1.elevation_profile ?? []).map((p) => ({
+      distance_m: p.distance_km * METERS_PER_KM,
+      elevation_m: p.elevation_m,
+    })),
+    speed_profile: (v1.speed_profile ?? []).map((p) => ({
+      distance_m: p.distance_km * METERS_PER_KM,
+      speed_mps: p.speed_kmh / KMH_PER_MPS,
+    })),
+    telemetry: (v1.telemetry ?? []).map((p) => ({
+      distance_m: p.distance_km * METERS_PER_KM,
+      battery_level: p.battery_level,
+      power: p.power,
+      elevation: p.elevation,
+    })),
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /*  Expired / Error view                                              */
 /* ------------------------------------------------------------------ */
@@ -107,7 +150,8 @@ function ExpiredShareView() {
 export default function SharedDrivePage() {
   const { token } = useParams<{ token: string }>();
   const { t } = useTranslation();
-  const { data, isLoading, error } = useSharedDrive(token ?? '');
+  const { data: rawData, isLoading, error } = useSharedDrive(token ?? '');
+  const data = useMemo(() => normalizeSharedDriveData(rawData), [rawData]);
   const { unitPrefs, formatDistance, formatSpeed } = useUnits();
   const distancePref = unitPrefs.distance;
   const speedPref = unitPrefs.speed;
@@ -142,7 +186,7 @@ export default function SharedDrivePage() {
     () => (data?.elevation_profile ?? []).map((p) => ({
       // Wire ships per-point distance in km via haversineKm; lift to display
       // unit once and pass downstream to the renderer.
-      distance: convertDistanceFromSI(p.distance_km * METERS_PER_KM, distancePref),
+      distance: convertDistanceFromSI(p.distance_m, distancePref),
       // Wire ships elevation_m as SI metres; convert to feet for imperial
       // viewers.
       elevation: convertElevation(p.elevation_m, distancePref),
@@ -153,10 +197,10 @@ export default function SharedDrivePage() {
   /* ---- Speed chart data ---- */
   const speedData = useMemo(
     () => (data?.speed_profile ?? []).map((p) => ({
-      distance: convertDistanceFromSI(p.distance_km * METERS_PER_KM, distancePref),
+      distance: convertDistanceFromSI(p.distance_m, distancePref),
       // Wire field is named speed_kmh; convert km/h → m/s at boundary then
       // convert again to the preferred display unit via convertSpeedFromSI.
-      speed: convertSpeedFromSI(p.speed_kmh / KMH_PER_MPS, speedPref),
+      speed: convertSpeedFromSI(p.speed_mps, speedPref),
     })),
     [data?.speed_profile, distancePref, speedPref],
   );
@@ -246,18 +290,18 @@ export default function SharedDrivePage() {
           <Grid cols={{ default: 2, md: 4 }} gap={4}>
             <StatCard
               label={t('share.distance', 'Distance')}
-              value={formatDistance(drive.distance_km * METERS_PER_KM, { precision: 1 })}
+              value={formatDistance(drive.distance_m, { precision: 1 })}
               icon={<MapPin className="h-4 w-4" />}
             />
             <StatCard
               label={t('share.duration', 'Duration')}
-              value={formatDurationMinutes(drive.duration_min)}
+              value={formatDurationSecondsAsMinutes(drive.duration_s)}
               icon={<Clock className="h-4 w-4" />}
             />
-            {drive.efficiency_wh_km != null && (
+            {drive.efficiency_wh_per_m != null && (
               <StatCard
                 label={t('share.efficiency', 'Efficiency')}
-                value={`${Math.round(toEfficiencyDisplay(drive.efficiency_wh_km, distancePref))} ${effPref}`}
+                value={`${Math.round(toEfficiencyDisplay(drive.efficiency_wh_per_m * METERS_PER_KM, distancePref))} ${effPref}`}
                 icon={<Zap className="h-4 w-4" />}
               />
             )}
@@ -268,17 +312,17 @@ export default function SharedDrivePage() {
                 icon={<Battery className="h-4 w-4" />}
               />
             )}
-            {drive.max_speed_kmh != null && (
+            {drive.max_speed_mps != null && (
               <StatCard
                 label={t('share.maxSpeed', 'Max Speed')}
-                value={formatSpeed(drive.max_speed_kmh / KMH_PER_MPS, { precision: 0 })}
+                value={formatSpeed(drive.max_speed_mps, { precision: 0 })}
                 icon={<Gauge className="h-4 w-4" />}
               />
             )}
-            {drive.avg_speed_kmh != null && (
+            {drive.avg_speed_mps != null && (
               <StatCard
                 label={t('share.avgSpeed', 'Avg Speed')}
-                value={formatSpeed(drive.avg_speed_kmh / KMH_PER_MPS, { precision: 0 })}
+                value={formatSpeed(drive.avg_speed_mps, { precision: 0 })}
                 icon={<TrendingUp className="h-4 w-4" />}
               />
             )}

@@ -42,17 +42,17 @@ func (p *Processor) processAccount(ctx context.Context, req *JobRequest) (*Proce
 	}
 
 	manifest := struct {
-		ExportedAt        time.Time   `json:"exported_at"`
-		SchemaVersion     string      `json:"schema_version"`
-		Format            string      `json:"format"`
-		VehicleID         *int64      `json:"vehicle_id,omitempty"`
-		StartDate         *time.Time  `json:"start_date,omitempty"`
-		EndDate           *time.Time  `json:"end_date,omitempty"`
-		MaxRowsCap        int         `json:"max_rows_cap"`
-		RequestedColumns  []string    `json:"requested_columns,omitempty"`
-		Tables            []tableMeta `json:"tables"`
-		TotalRowCount     int         `json:"total_row_count"`
-		TotalSizeBytes    int64       `json:"total_size_bytes"`
+		ExportedAt       time.Time   `json:"exported_at"`
+		SchemaVersion    string      `json:"schema_version"`
+		Format           string      `json:"format"`
+		VehicleID        *int64      `json:"vehicle_id,omitempty"`
+		StartDate        *time.Time  `json:"start_date,omitempty"`
+		EndDate          *time.Time  `json:"end_date,omitempty"`
+		MaxRowsCap       int         `json:"max_rows_cap"`
+		RequestedColumns []string    `json:"requested_columns,omitempty"`
+		Tables           []tableMeta `json:"tables"`
+		TotalRowCount    int         `json:"total_row_count"`
+		TotalSizeBytes   int64       `json:"total_size_bytes"`
 	}{
 		ExportedAt:       time.Now().UTC(),
 		SchemaVersion:    AccountSchemaVersion,
@@ -96,7 +96,7 @@ func (p *Processor) processAccount(ctx context.Context, req *JobRequest) (*Proce
 			continue
 		}
 
-		fname := table + ".csv"
+		fname := table + "-v2.csv"
 		fw, err := zw.Create(fname)
 		if err != nil {
 			_ = zw.Close()

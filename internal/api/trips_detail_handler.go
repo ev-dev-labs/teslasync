@@ -11,16 +11,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// metersPerKilometer + wattHoursPerKilowattHour are the SI conversion
-// constants used to translate the repo's canonical SI units to the
-// km / kWh form the frontend Trip type expects. Inlined as named
-// constants so the math is self-documenting and a future grep for
-// "1000.0" in this file does not produce false positives.
-const (
-	metersPerKilometer       = 1000.0
-	wattHoursPerKilowattHour = 1000.0
-)
-
 // tripsDetailRepository is the narrow interface the handler depends
 // on. Declared at the call site so handler tests can inject an
 // in-memory fake without reaching into the database package.
@@ -53,25 +43,25 @@ func NewTripsDetailHandler(repo tripsDetailRepository) *TripsDetailHandler {
 // "drives" array. Nullable fields use *float64 / *int64 / *string
 // so JSON nulls (not zeros) surface for genuinely missing data.
 type tripDriveSummaryDTO struct {
-	ID             int64      `json:"id"`
-	StartedAt      time.Time  `json:"started_at"`
-	EndedAt        *time.Time `json:"ended_at"`
-	DistanceKm     *float64   `json:"distance_km"`
-	EnergyUsedKWh  *float64   `json:"energy_used_kwh"`
-	DurationS      *int64     `json:"duration_s"`
-	StartPlace     *string    `json:"start_place"`
-	EndPlace       *string    `json:"end_place"`
+	ID           int64      `json:"id"`
+	StartedAt    time.Time  `json:"started_at"`
+	EndedAt      *time.Time `json:"ended_at"`
+	DistanceM    *float64   `json:"distance_m"`
+	EnergyUsedWh *float64   `json:"energy_used_wh"`
+	DurationS    *int64     `json:"duration_s"`
+	StartPlace   *string    `json:"start_place"`
+	EndPlace     *string    `json:"end_place"`
 }
 
 // tripDetailResponse is the wire DTO. SUPERSET shape per Decision D2:
 //
 //   - frontend Trip interface fields:
 //       id, vehicle_id, name, start_date, end_date,
-//       total_distance_km, total_energy_kwh, total_cost,
+//       total_distance_m, total_energy_wh, total_cost,
 //       drive_count, charge_count, created_at
 //   - prompt Decision #3 fields:
-//       started_at, ended_at, total_duration_seconds,
-//       energy_used_kwh (alias), drives:[...]
+//       started_at, ended_at, total_duration_s,
+//       energy_used_wh (alias), drives:[...]
 //
 // Notes:
 //   - created_at is derived from started_at because the SI trips
@@ -83,22 +73,22 @@ type tripDriveSummaryDTO struct {
 //     because the schema has no per-trip polyline source
 //     (rubber-duck issue #11).
 type tripDetailResponse struct {
-	ID                   int64                 `json:"id"`
-	VehicleID            int64                 `json:"vehicle_id"`
-	Name                 *string               `json:"name"`
-	StartDate            time.Time             `json:"start_date"`
-	StartedAt            time.Time             `json:"started_at"`
-	EndDate              *time.Time            `json:"end_date"`
-	EndedAt              *time.Time            `json:"ended_at"`
-	TotalDistanceKm      float64               `json:"total_distance_km"`
-	TotalEnergyKWh       float64               `json:"total_energy_kwh"`
-	EnergyUsedKWh        float64               `json:"energy_used_kwh"`
-	TotalDurationSeconds int64                 `json:"total_duration_seconds"`
-	TotalCost            float64               `json:"total_cost"`
-	DriveCount           int64                 `json:"drive_count"`
-	ChargeCount          int64                 `json:"charge_count"`
-	Drives               []tripDriveSummaryDTO `json:"drives"`
-	CreatedAt            time.Time             `json:"created_at"`
+	ID             int64                 `json:"id"`
+	VehicleID      int64                 `json:"vehicle_id"`
+	Name           *string               `json:"name"`
+	StartDate      time.Time             `json:"start_date"`
+	StartedAt      time.Time             `json:"started_at"`
+	EndDate        *time.Time            `json:"end_date"`
+	EndedAt        *time.Time            `json:"ended_at"`
+	TotalDistanceM float64               `json:"total_distance_m"`
+	TotalEnergyWh  float64               `json:"total_energy_wh"`
+	EnergyUsedWh   float64               `json:"energy_used_wh"`
+	TotalDurationS int64                 `json:"total_duration_s"`
+	TotalCost      float64               `json:"total_cost"`
+	DriveCount     int64                 `json:"drive_count"`
+	ChargeCount    int64                 `json:"charge_count"`
+	Drives         []tripDriveSummaryDTO `json:"drives"`
+	CreatedAt      time.Time             `json:"created_at"`
 }
 
 // Get serves GET /trips/{trip_id}.
@@ -123,62 +113,49 @@ func (h *TripsDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, buildTripDetailResponse(td))
 }
 
-// buildTripDetailResponse converts the repo-level TripDetail (raw SI
-// units) to the wire DTO with km / kWh + alias fields. Pulled out as
-// a free function so handler tests can pin the conversion math
-// without spinning up a full http test server.
+// buildTripDetailResponse converts the repo-level TripDetail to the SI-canonical
+// wire DTO. Pulled out as a free function so handler tests can pin the response
+// shape without spinning up a full http test server.
 func buildTripDetailResponse(td *database.TripDetail) tripDetailResponse {
-	totalKm := td.DistanceM / metersPerKilometer
-	totalKWh := td.EnergyUsedWh / wattHoursPerKilowattHour
-
 	resp := tripDetailResponse{
-		ID:                   td.ID,
-		VehicleID:            td.VehicleID,
-		Name:                 td.Name,
-		StartDate:            td.StartedAt,
-		StartedAt:            td.StartedAt,
-		EndDate:              td.EndedAt,
-		EndedAt:              td.EndedAt,
-		TotalDistanceKm:      totalKm,
-		TotalEnergyKWh:       totalKWh,
-		EnergyUsedKWh:        totalKWh,
-		TotalDurationSeconds: td.DurationS,
-		TotalCost:            td.TotalCost,
-		DriveCount:           td.DriveCount,
-		ChargeCount:          td.ChargeCount,
-		Drives:               make([]tripDriveSummaryDTO, 0, len(td.Drives)),
-		CreatedAt:            td.StartedAt,
+		ID:             td.ID,
+		VehicleID:      td.VehicleID,
+		Name:           td.Name,
+		StartDate:      td.StartedAt,
+		StartedAt:      td.StartedAt,
+		EndDate:        td.EndedAt,
+		EndedAt:        td.EndedAt,
+		TotalDistanceM: td.DistanceM,
+		TotalEnergyWh:  td.EnergyUsedWh,
+		EnergyUsedWh:   td.EnergyUsedWh,
+		TotalDurationS: td.DurationS,
+		TotalCost:      td.TotalCost,
+		DriveCount:     td.DriveCount,
+		ChargeCount:    td.ChargeCount,
+		Drives:         make([]tripDriveSummaryDTO, 0, len(td.Drives)),
+		CreatedAt:      td.StartedAt,
 	}
 	for _, d := range td.Drives {
 		resp.Drives = append(resp.Drives, tripDriveSummaryDTO{
-			ID:            d.ID,
-			StartedAt:     d.StartedAt,
-			EndedAt:       d.EndedAt,
-			DistanceKm:    convertOptMetersToKm(d.DistanceM),
-			EnergyUsedKWh: convertOptWhToKWh(d.EnergyUsedWh),
-			DurationS:     d.DurationS,
-			StartPlace:    d.StartPlace,
-			EndPlace:      d.EndPlace,
+			ID:           d.ID,
+			StartedAt:    d.StartedAt,
+			EndedAt:      d.EndedAt,
+			DistanceM:    cloneOptFloat(d.DistanceM),
+			EnergyUsedWh: cloneOptFloat(d.EnergyUsedWh),
+			DurationS:    d.DurationS,
+			StartPlace:   d.StartPlace,
+			EndPlace:     d.EndPlace,
 		})
 	}
 	return resp
 }
 
-// convertOptMetersToKm preserves nullability — a missing distance_m
-// for a single drive surfaces as JSON null, not "0".
-func convertOptMetersToKm(m *float64) *float64 {
-	if m == nil {
+// cloneOptFloat preserves nullability — missing per-drive metrics surface as
+// JSON null, not zero.
+func cloneOptFloat(v *float64) *float64 {
+	if v == nil {
 		return nil
 	}
-	v := *m / metersPerKilometer
-	return &v
-}
-
-// convertOptWhToKWh preserves nullability for energy_used_wh.
-func convertOptWhToKWh(wh *float64) *float64 {
-	if wh == nil {
-		return nil
-	}
-	v := *wh / wattHoursPerKilowattHour
-	return &v
+	out := *v
+	return &out
 }

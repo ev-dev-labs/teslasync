@@ -201,8 +201,8 @@ func TestService_GetStats(t *testing.T) {
 	if stats.TotalMiles != 80.0 {
 		t.Errorf("expected 80.0 miles, got %f", stats.TotalMiles)
 	}
-	if stats.TotalEnergyKWh != 24.0 {
-		t.Errorf("expected 24.0 kWh, got %f", stats.TotalEnergyKWh)
+	if stats.TotalEnergyWh != 24.0 {
+		t.Errorf("expected 24.0 kWh, got %f", stats.TotalEnergyWh)
 	}
 	if stats.TotalChargingSessions != 1 {
 		t.Errorf("expected 1 charging session, got %d", stats.TotalChargingSessions)

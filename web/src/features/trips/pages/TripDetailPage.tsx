@@ -28,8 +28,8 @@ export default function TripDetailPage() {
 
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
 
-  const whPerKm = trip && trip.total_distance_km > 0
-    ? (trip.total_energy_kwh / trip.total_distance_km) * 1000
+  const whPerKm = trip && trip.total_distance_m > 0
+    ? (trip.total_energy_wh / (trip.total_distance_m / 1000))
     : 0;
   const efficiencyDisplay = unitPrefs.distance === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
 
@@ -48,13 +48,13 @@ export default function TripDetailPage() {
           <Grid cols={{ default: 2, lg: 4 }} gap={4}>
             <StatCard
               label={t('trips.detail.distance', 'Distance')}
-              value={fmtInt(convertDistanceFromSI(trip.total_distance_km * 1000, unitPrefs.distance))}
+              value={fmtInt(convertDistanceFromSI(trip.total_distance_m, unitPrefs.distance))}
               unit={unitPrefs.distance}
             />
             <StatCard
               label={t('trips.detail.energy', 'Energy Used')}
-              value={fmtNumber(trip.total_energy_kwh)}
-              unit="kWh"
+              value={fmtNumber(trip.total_energy_wh)}
+              unit="Wh"
             />
             <StatCard
               label={t('trips.detail.efficiency', 'Efficiency')}

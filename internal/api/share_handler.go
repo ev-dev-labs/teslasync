@@ -32,16 +32,16 @@ func NewShareHandler(db *database.DB) *ShareHandler {
 // ── Public DTOs — allowlisted fields only, no PII ──────────────────
 
 type publicDriveInfo struct {
-	Date           string   `json:"date"`
-	DistanceKm     float64  `json:"distance_km"`
-	DurationMin    float64  `json:"duration_min"`
-	StartAddress   string   `json:"start_address"`
-	EndAddress     string   `json:"end_address"`
-	StartBattery   *int16   `json:"start_battery"`
-	EndBattery     *int16   `json:"end_battery"`
-	MaxSpeedKmh    *float64 `json:"max_speed_kmh,omitempty"`
-	AvgSpeedKmh    *float64 `json:"avg_speed_kmh,omitempty"`
-	EfficiencyWhKm *float64 `json:"efficiency_wh_km,omitempty"`
+	Date          string   `json:"date"`
+	DistanceM     float64  `json:"distance_m"`
+	DurationS     int64    `json:"duration_s"`
+	StartAddress  string   `json:"start_address"`
+	EndAddress    string   `json:"end_address"`
+	StartBattery  *int16   `json:"start_battery"`
+	EndBattery    *int16   `json:"end_battery"`
+	MaxSpeedMps   *float64 `json:"max_speed_mps,omitempty"`
+	AvgSpeedMps   *float64 `json:"avg_speed_mps,omitempty"`
+	EfficiencyWhM *float64 `json:"efficiency_wh_per_m,omitempty"`
 }
 
 type publicVehicle struct {
@@ -55,23 +55,24 @@ type publicMapPoint struct {
 }
 
 type publicElevationPoint struct {
-	DistanceKm float64 `json:"distance_km"`
+	DistanceM  float64 `json:"distance_m"`
 	ElevationM float64 `json:"elevation_m"`
 }
 
 type publicSpeedPoint struct {
-	DistanceKm float64 `json:"distance_km"`
-	SpeedKmh   float64 `json:"speed_kmh"`
+	DistanceM float64 `json:"distance_m"`
+	SpeedMps  float64 `json:"speed_mps"`
 }
 
 type publicTelemetryPoint struct {
-	DistanceKm   float64  `json:"distance_km"`
+	DistanceM    float64  `json:"distance_m"`
 	BatteryLevel *int     `json:"battery_level,omitempty"`
 	Power        *float64 `json:"power,omitempty"`
 	Elevation    *float64 `json:"elevation,omitempty"`
 }
 
 type publicShareResponse struct {
+	PayloadVersion   string                 `json:"payload_version"`
 	Title            string                 `json:"title"`
 	Description      string                 `json:"description"`
 	Drive            publicDriveInfo        `json:"drive"`
@@ -254,8 +255,8 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 	// behaviour.
 	info := publicDriveInfo{
 		Date:         drive.StartTs.Format("2006-01-02"),
-		DistanceKm:   drive.DistanceM / 1000.0,
-		DurationMin:  float64(drive.DurationS) / 60.0,
+		DistanceM:    drive.DistanceM,
+		DurationS:    drive.DurationS,
 		StartAddress: safeDeref(drive.StartAddress, ""),
 		EndAddress:   safeDeref(drive.EndAddress, ""),
 		StartBattery: drive.StartBatteryPct,
@@ -264,29 +265,29 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 
 	if share.IncludeSpeed {
 		if drive.MaxSpeedMps != nil {
-			v := *drive.MaxSpeedMps * 3.6
-			info.MaxSpeedKmh = &v
+			v := *drive.MaxSpeedMps
+			info.MaxSpeedMps = &v
 		}
 		if drive.AvgSpeedMps != nil {
-			v := *drive.AvgSpeedMps * 3.6
-			info.AvgSpeedKmh = &v
+			v := *drive.AvgSpeedMps
+			info.AvgSpeedMps = &v
 		}
 	}
 
 	// Approximate efficiency: battery % delta per km → Wh/km
-	distanceKm := drive.DistanceM / 1000.0
-	if drive.StartBatteryPct != nil && drive.EndBatteryPct != nil && distanceKm > 2 {
+	if drive.StartBatteryPct != nil && drive.EndBatteryPct != nil && drive.DistanceM > 2000 {
 		battUsed := float64(*drive.StartBatteryPct - *drive.EndBatteryPct)
 		if battUsed > 0 {
-			eff := battUsed / distanceKm * 100 * 0.75
-			info.EfficiencyWhKm = &eff
+			eff := battUsed / drive.DistanceM * 100 * 750.0
+			info.EfficiencyWhM = &eff
 		}
 	}
 
 	resp := publicShareResponse{
-		Title:       safeDeref(share.Title, "Shared Drive"),
-		Description: safeDeref(share.Description, ""),
-		Drive:       info,
+		PayloadVersion: "v2",
+		Title:          safeDeref(share.Title, "Shared Drive"),
+		Description:    safeDeref(share.Description, ""),
+		Drive:          info,
 	}
 
 	// Fetch vehicle info (model and color only — no VIN, no IDs)
@@ -332,7 +333,7 @@ func (h *ShareHandler) buildFromTelemetry(resp *publicShareResponse, readings []
 	// Clip start and end points for privacy
 	clipped := readings[clipPoints : n-clipPoints]
 
-	var cumulativeDist float64
+	var cumulativeDistM float64
 	var prevLat, prevLng float64
 
 	for i, tp := range clipped {
@@ -345,7 +346,7 @@ func (h *ShareHandler) buildFromTelemetry(resp *publicShareResponse, readings []
 
 		// Accumulate distance
 		if i > 0 && prevLat != 0 {
-			cumulativeDist += haversineKm(prevLat, prevLng, lat, lng)
+			cumulativeDistM += haversineKm(prevLat, prevLng, lat, lng) * 1000.0
 		}
 		prevLat, prevLng = lat, lng
 
@@ -355,21 +356,21 @@ func (h *ShareHandler) buildFromTelemetry(resp *publicShareResponse, readings []
 
 		if tp.Elevation != nil {
 			resp.ElevationProfile = append(resp.ElevationProfile, publicElevationPoint{
-				DistanceKm: cumulativeDist,
+				DistanceM:  cumulativeDistM,
 				ElevationM: *tp.Elevation,
 			})
 		}
 
 		if share.IncludeSpeed && tp.Speed != nil {
 			resp.SpeedProfile = append(resp.SpeedProfile, publicSpeedPoint{
-				DistanceKm: cumulativeDist,
-				SpeedKmh:   *tp.Speed,
+				DistanceM: cumulativeDistM,
+				SpeedMps:  *tp.Speed * 0.44704,
 			})
 		}
 
 		if share.IncludeTelemetry {
 			resp.Telemetry = append(resp.Telemetry, publicTelemetryPoint{
-				DistanceKm:   cumulativeDist,
+				DistanceM:    cumulativeDistM,
 				BatteryLevel: tp.BatteryLevel,
 				Power:        tp.Power,
 				Elevation:    tp.Elevation,
@@ -386,7 +387,7 @@ func (h *ShareHandler) buildFromPositions(resp *publicShareResponse, positions [
 
 	clipped := positions[clipPoints : n-clipPoints]
 
-	var cumulativeDist float64
+	var cumulativeDistM float64
 	var prevLat, prevLng float64
 
 	for i, p := range clipped {
@@ -395,7 +396,7 @@ func (h *ShareHandler) buildFromPositions(resp *publicShareResponse, positions [
 		}
 
 		if i > 0 && prevLat != 0 {
-			cumulativeDist += haversineKm(prevLat, prevLng, p.Latitude, p.Longitude)
+			cumulativeDistM += haversineKm(prevLat, prevLng, p.Latitude, p.Longitude) * 1000.0
 		}
 		prevLat, prevLng = p.Latitude, p.Longitude
 
@@ -408,15 +409,15 @@ func (h *ShareHandler) buildFromPositions(resp *publicShareResponse, positions [
 
 		if p.ElevationM != nil {
 			resp.ElevationProfile = append(resp.ElevationProfile, publicElevationPoint{
-				DistanceKm: cumulativeDist,
+				DistanceM:  cumulativeDistM,
 				ElevationM: *p.ElevationM,
 			})
 		}
 
 		if share.IncludeSpeed && p.SpeedMph != nil {
 			resp.SpeedProfile = append(resp.SpeedProfile, publicSpeedPoint{
-				DistanceKm: cumulativeDist,
-				SpeedKmh:   *p.SpeedMph,
+				DistanceM: cumulativeDistM,
+				SpeedMps:  *p.SpeedMph * 0.44704,
 			})
 		}
 	}

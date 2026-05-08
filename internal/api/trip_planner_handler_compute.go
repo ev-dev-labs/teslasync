@@ -12,7 +12,7 @@ import (
 func (h *TripPlannerHandler) computePlan(ctx context.Context, req *tripPlanRequest) (*tripPlanResponse, error) {
 	// 1. Estimate route distance (haversine × driving factor)
 	straightDist := haversineKm(req.Origin.Lat, req.Origin.Lng, req.Destination.Lat, req.Destination.Lng)
-	routeDistanceKm := straightDist * drivingDistanceFactor
+	routeDistanceM := straightDist * drivingDistanceFactor
 
 	// 2. Get vehicle efficiency and battery capacity
 	efficiencyWhKm := h.vehicleEfficiency(ctx, req.VehicleID)
@@ -32,35 +32,35 @@ func (h *TripPlannerHandler) computePlan(ctx context.Context, req *tripPlanReque
 	efficiencyWhKm *= weatherImpact.EfficiencyFactor
 
 	// 5. Calculate total energy and feasibility
-	totalEnergyKWh := routeDistanceKm * efficiencyWhKm / 1000.0
-	availableEnergyKWh := (req.CurrentSOC - req.MinArrivalSOC) / 100.0 * batteryCapKWh
-	feasible := availableEnergyKWh >= totalEnergyKWh
+	totalEnergyWh := routeDistanceM * efficiencyWhKm
+	availableEnergyWh := (req.CurrentSOC - req.MinArrivalSOC) / 100.0 * batteryCapKWh * 1000.0
+	feasible := availableEnergyWh >= totalEnergyWh
 
 	// 6. Estimate driving duration (assume avg 90 km/h adjusted by speed factor)
 	avgSpeedKmh := 90.0 * req.Preferences.SpeedFactor
-	drivingDurationMin := routeDistanceKm / avgSpeedKmh * 60.0
+	drivingDurationS := routeDistanceM / avgSpeedKmh * 3600.0
 
 	// 7. Build legs and charging stops
 	var legs []tripPlanLeg
 	var chargeStops []tripChargeStop
-	var chargingDurationMin float64
+	var chargingDurationS float64
 
 	if feasible {
 		// Single leg, no stops needed
-		arrivalSOC := req.CurrentSOC - (totalEnergyKWh / batteryCapKWh * 100.0)
+		arrivalSOC := req.CurrentSOC - (totalEnergyWh / (batteryCapKWh * 1000.0) * 100.0)
 		legs = append(legs, tripPlanLeg{
-			From:        req.Origin,
-			To:          req.Destination,
-			DistanceKm:  math.Round(routeDistanceKm*10) / 10,
-			DurationMin: math.Round(drivingDurationMin*10) / 10,
-			EnergyKWh:   math.Round(totalEnergyKWh*10) / 10,
-			StartSOC:    req.CurrentSOC,
-			ArrivalSOC:  math.Round(arrivalSOC*10) / 10,
+			From:       req.Origin,
+			To:         req.Destination,
+			DistanceM:  math.Round(routeDistanceM*1000*10) / 10,
+			DurationS:  math.Round(drivingDurationS*10) / 10,
+			EnergyWh:   math.Round(totalEnergyWh*10) / 10,
+			StartSOC:   req.CurrentSOC,
+			ArrivalSOC: math.Round(arrivalSOC*10) / 10,
 		})
 	} else {
 		// Need charging stops
-		legs, chargeStops, chargingDurationMin = h.buildStopsAlongRoute(
-			req, routeDistanceKm, efficiencyWhKm, batteryCapKWh,
+		legs, chargeStops, chargingDurationS = h.buildStopsAlongRoute(
+			req, routeDistanceM, efficiencyWhKm, batteryCapKWh,
 		)
 		feasible = len(legs) > 0
 	}
@@ -78,21 +78,21 @@ func (h *TripPlannerHandler) computePlan(ctx context.Context, req *tripPlanReque
 	}
 
 	// Build SOC curve points along the route
-	socCurve := h.buildSOCCurve(legs, chargeStops, routeDistanceKm)
+	socCurve := h.buildSOCCurve(legs, chargeStops, routeDistanceM)
 
-	totalDurationMin := drivingDurationMin + chargingDurationMin
+	totalDurationS := drivingDurationS + chargingDurationS
 
 	return &tripPlanResponse{
 		Route: tripPlanRoute{
-			TotalDistanceKm:     math.Round(routeDistanceKm*10) / 10,
-			TotalDurationMin:    math.Round(totalDurationMin*10) / 10,
-			DrivingDurationMin:  math.Round(drivingDurationMin*10) / 10,
-			ChargingDurationMin: math.Round(chargingDurationMin*10) / 10,
-			TotalEnergyKWh:      math.Round(totalEnergyKWh*10) / 10,
-			EstimatedCost:       math.Round(chargingCost*100) / 100,
-			ArrivalSOC:          math.Round(arrivalSOC*10) / 10,
-			Feasible:            feasible,
-			IsEstimate:          true,
+			TotalDistanceM:    math.Round(routeDistanceM*1000*10) / 10,
+			TotalDurationS:    math.Round(totalDurationS*10) / 10,
+			DrivingDurationS:  math.Round(drivingDurationS*10) / 10,
+			ChargingDurationS: math.Round(chargingDurationS*10) / 10,
+			TotalEnergyWh:     math.Round(totalEnergyWh*10) / 10,
+			EstimatedCost:     math.Round(chargingCost*100) / 100,
+			ArrivalSOC:        math.Round(arrivalSOC*10) / 10,
+			Feasible:          feasible,
+			IsEstimate:        true,
 		},
 		Legs:          legs,
 		ChargeStops:   chargeStops,
@@ -132,16 +132,16 @@ func (h *TripPlannerHandler) buildStopsAlongRoute(
 
 		if maxRangeKm >= remainingKm+(req.MinArrivalSOC-minStopSOCThreshold)/100.0*batteryCapKWh/(effWhKm/1000.0) {
 			// Can reach destination
-			legEnergy := remainingKm * effWhKm / 1000.0
-			arrivalSOC := soc - (legEnergy / batteryCapKWh * 100.0)
+			legEnergy := remainingKm * effWhKm
+			arrivalSOC := soc - (legEnergy / (batteryCapKWh * 1000.0) * 100.0)
 			legs = append(legs, tripPlanLeg{
-				From:        currentFrom,
-				To:          req.Destination,
-				DistanceKm:  math.Round(remainingKm*10) / 10,
-				DurationMin: math.Round(remainingKm/90.0*60.0*10) / 10,
-				EnergyKWh:   math.Round(legEnergy*10) / 10,
-				StartSOC:    math.Round(soc*10) / 10,
-				ArrivalSOC:  math.Round(arrivalSOC*10) / 10,
+				From:       currentFrom,
+				To:         req.Destination,
+				DistanceM:  math.Round(remainingKm*1000*10) / 10,
+				DurationS:  math.Round(remainingKm/90.0*3600.0*10) / 10,
+				EnergyWh:   math.Round(legEnergy*10) / 10,
+				StartSOC:   math.Round(soc*10) / 10,
+				ArrivalSOC: math.Round(arrivalSOC*10) / 10,
 			})
 			break
 		}
@@ -152,8 +152,8 @@ func (h *TripPlannerHandler) buildStopsAlongRoute(
 			legKm = math.Min(50, remainingKm) // minimum 50 km leg
 		}
 
-		legEnergy := legKm * effWhKm / 1000.0
-		arrivalSOCAtStop := soc - (legEnergy / batteryCapKWh * 100.0)
+		legEnergy := legKm * effWhKm
+		arrivalSOCAtStop := soc - (legEnergy / (batteryCapKWh * 1000.0) * 100.0)
 		if arrivalSOCAtStop < 5 {
 			arrivalSOCAtStop = 5
 		}
@@ -174,13 +174,13 @@ func (h *TripPlannerHandler) buildStopsAlongRoute(
 		}
 
 		legs = append(legs, tripPlanLeg{
-			From:        currentFrom,
-			To:          stopLoc,
-			DistanceKm:  math.Round(legKm*10) / 10,
-			DurationMin: math.Round(legKm/90.0*60.0*10) / 10,
-			EnergyKWh:   math.Round(legEnergy*10) / 10,
-			StartSOC:    math.Round(soc*10) / 10,
-			ArrivalSOC:  math.Round(arrivalSOCAtStop*10) / 10,
+			From:       currentFrom,
+			To:         stopLoc,
+			DistanceM:  math.Round(legKm*1000*10) / 10,
+			DurationS:  math.Round(legKm/90.0*3600.0*10) / 10,
+			EnergyWh:   math.Round(legEnergy*10) / 10,
+			StartSOC:   math.Round(soc*10) / 10,
+			ArrivalSOC: math.Round(arrivalSOCAtStop*10) / 10,
 		})
 
 		// Charge at stop
@@ -203,14 +203,14 @@ func (h *TripPlannerHandler) buildStopsAlongRoute(
 		chargeCost := chargeKWh * superchargerCostPerKWh
 
 		stops = append(stops, tripChargeStop{
-			Name:              stopName,
-			Location:          stopLoc,
-			ChargeFromSOC:     math.Round(arrivalSOCAtStop*10) / 10,
-			ChargeToSOC:       math.Round(chargeToSOC*10) / 10,
-			ChargeDurationMin: math.Round(chargeMins*10) / 10,
-			EnergyKWh:         math.Round(chargeKWh*10) / 10,
-			Cost:              math.Round(chargeCost*100) / 100,
-			IsRecommended:     true,
+			Name:            stopName,
+			Location:        stopLoc,
+			ChargeFromSOC:   math.Round(arrivalSOCAtStop*10) / 10,
+			ChargeToSOC:     math.Round(chargeToSOC*10) / 10,
+			ChargeDurationS: math.Round(chargeMins*60.0*10) / 10,
+			EnergyWh:        math.Round(chargeKWh*1000.0*10) / 10,
+			Cost:            math.Round(chargeCost*100) / 100,
+			IsRecommended:   true,
 		})
 
 		totalChargingMin += chargeMins
@@ -223,20 +223,20 @@ func (h *TripPlannerHandler) buildStopsAlongRoute(
 	// If we haven't reached the destination yet, add final leg
 	remainingKm := totalDistKm - coveredKm
 	if remainingKm > 0.5 && (len(legs) == 0 || legs[len(legs)-1].To.Name != req.Destination.Name) {
-		legEnergy := remainingKm * effWhKm / 1000.0
-		arrivalSOC := soc - (legEnergy / batteryCapKWh * 100.0)
+		legEnergy := remainingKm * effWhKm
+		arrivalSOC := soc - (legEnergy / (batteryCapKWh * 1000.0) * 100.0)
 		legs = append(legs, tripPlanLeg{
-			From:        currentFrom,
-			To:          req.Destination,
-			DistanceKm:  math.Round(remainingKm*10) / 10,
-			DurationMin: math.Round(remainingKm/90.0*60.0*10) / 10,
-			EnergyKWh:   math.Round(legEnergy*10) / 10,
-			StartSOC:    math.Round(soc*10) / 10,
-			ArrivalSOC:  math.Round(arrivalSOC*10) / 10,
+			From:       currentFrom,
+			To:         req.Destination,
+			DistanceM:  math.Round(remainingKm*1000*10) / 10,
+			DurationS:  math.Round(remainingKm/90.0*3600.0*10) / 10,
+			EnergyWh:   math.Round(legEnergy*10) / 10,
+			StartSOC:   math.Round(soc*10) / 10,
+			ArrivalSOC: math.Round(arrivalSOC*10) / 10,
 		})
 	}
 
-	return legs, stops, totalChargingMin
+	return legs, stops, totalChargingMin * 60.0
 }
 
 // estimateChargeTime estimates minutes to charge from startSOC to endSOC.
@@ -394,22 +394,22 @@ func (h *TripPlannerHandler) buildSOCCurve(legs []tripPlanLeg, stops []tripCharg
 	for i, leg := range legs {
 		// Add start of leg
 		points = append(points, tripSOCPoint{
-			DistanceKm: math.Round(cumDist*10) / 10,
-			SOC:        leg.StartSOC,
+			DistanceM: math.Round(cumDist*10) / 10,
+			SOC:       leg.StartSOC,
 		})
 
 		// Add end of leg (arrival at stop or destination)
-		cumDist += leg.DistanceKm
+		cumDist += leg.DistanceM
 		points = append(points, tripSOCPoint{
-			DistanceKm: math.Round(cumDist*10) / 10,
-			SOC:        leg.ArrivalSOC,
+			DistanceM: math.Round(cumDist*10) / 10,
+			SOC:       leg.ArrivalSOC,
 		})
 
 		// If there's a charging stop after this leg, add the post-charge point
 		if i < len(stops) {
 			points = append(points, tripSOCPoint{
-				DistanceKm: math.Round(cumDist*10) / 10,
-				SOC:        stops[i].ChargeToSOC,
+				DistanceM: math.Round(cumDist*10) / 10,
+				SOC:       stops[i].ChargeToSOC,
 			})
 		}
 	}

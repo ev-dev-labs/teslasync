@@ -55,17 +55,17 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Type == "" {
-		writeError(w, http.StatusBadRequest, "type is required (drives, charging, backup, analytics)")
+		writeError(w, http.StatusBadRequest, "type is required (drives, charging, trips, backup, analytics)")
 		return
 	}
 
 	validTypes := map[string]bool{
-		"drives": true, "charging": true, "backup": true, "analytics": true,
+		"drives": true, "charging": true, "trips": true, "backup": true, "analytics": true,
 		"import_drives": true, "import_charging": true,
 		"account": true,
 	}
 	if !validTypes[req.Type] {
-		writeError(w, http.StatusBadRequest, "invalid type: must be one of drives, charging, backup, analytics, account")
+		writeError(w, http.StatusBadRequest, "invalid type: must be one of drives, charging, trips, backup, analytics, account")
 		return
 	}
 
