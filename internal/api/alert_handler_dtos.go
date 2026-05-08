@@ -25,6 +25,13 @@ type createAlertRuleRequest struct {
 	MetricWindow    *string  `json:"metric_window"`
 	MetricThreshold *float64 `json:"metric_threshold"`
 	MetricOp        *string  `json:"metric_op"`
+
+	// MaxFiresPerResolution caps how many notifications a repeat-mode rule
+	// emits between successive falling-edge resets. NULL = unlimited
+	// (legacy behaviour). Once-mode rules ignore this field — the latch
+	// already caps them at 1 per resolution.
+	// Phase-49 / Slice 0003 / Decision D5.
+	MaxFiresPerResolution *int `json:"max_fires_per_resolution"`
 }
 
 type updateAlertRuleRequest struct {
@@ -52,6 +59,14 @@ type updateAlertRuleRequest struct {
 	MetricWindow    *string  `json:"metric_window"`
 	MetricThreshold *float64 `json:"metric_threshold"`
 	MetricOp        *string  `json:"metric_op"`
+
+	// MaxFiresPerResolution — see createAlertRuleRequest. On Update, NULL
+	// in the JSON payload (or absence of the key) leaves the existing
+	// value unchanged; explicit `"max_fires_per_resolution": null` in the
+	// JSON cannot be distinguished from absence with this DTO shape, so
+	// the handler treats omission as "unchanged" and sets a JSON-supplied
+	// non-null value as the new cap.
+	MaxFiresPerResolution *int `json:"max_fires_per_resolution"`
 }
 
 // snoozeAlertRuleRequest is the body for POST /alerts/rules/{ruleID}/snooze.

@@ -813,3 +813,170 @@ func TestRuleEngine_NilStateRepo_FallsBackToInMemory(t *testing.T) {
 		t.Fatal("rising edge after in-memory ClearLatch should fire")
 	}
 }
+
+// ---------------------------------------------------------------------
+// Phase-49 / Slice 0003 — max-fires-per-resolution cap (Decision D5).
+//
+// A repeat-mode rule with a non-NULL MaxFiresPerResolution stops firing
+// after N fires until the underlying condition resolves (falling edge
+// clears the counter via ClearLatch). NULL keeps the legacy unlimited
+// behaviour. Once-mode rules ignore the cap because the latch already
+// caps them at 1 per resolution.
+// ---------------------------------------------------------------------
+
+// repeatRuleWithCap is the canonical fixture for the cap tests: a
+// numeric repeat-mode rule with a 1-minute cooldown. Tests bypass the
+// cooldown between rapid fires via SetLastFired(far-past) so the cap
+// is the only suppression knob being exercised.
+func repeatRuleWithCap(id int64, cap *int) *models.AlertRule {
+	return &models.AlertRule{
+		ID:                    id,
+		Name:                  "BatteryLow",
+		Enabled:               true,
+		SignalName:            "BatteryLevel",
+		Op:                    "<",
+		ValueNum:              floatPtr(20),
+		Severity:              "warn",
+		TriggerMode:           "repeat",
+		CooldownMin:           1, // positive so engine doesn't coerce to 15min default
+		MaxFiresPerResolution: cap,
+	}
+}
+
+// bypassCooldown resets LastFiredAt to 1 hour ago so the next eval is
+// outside any cooldown window. Used by cap tests that need to fire
+// multiple times without waiting wall-clock minutes.
+func bypassCooldown(e *RuleEngine, ruleID, vid int64) {
+	e.SetLastFired(ruleID, vid, time.Now().UTC().Add(-1*time.Hour))
+}
+
+func TestEvaluate_MaxFiresCap_SuppressesAfterCap(t *testing.T) {
+	t.Parallel()
+	store := newFakeRuleStateStore()
+	rule := repeatRuleWithCap(101, intPtr(3))
+	const vid = int64(20)
+	signals := map[string]interface{}{"BatteryLevel": 19.0}
+
+	engine := NewRuleEngine()
+	engine.SetStateRepo(store)
+
+	// First three fires must succeed.
+	for i := 1; i <= 3; i++ {
+		if got := engine.Evaluate(rule, vid, signals); !got.Triggered {
+			t.Fatalf("fire #%d must trigger (cap=3, count=%d)", i, i-1)
+		}
+		bypassCooldown(engine, rule.ID, vid)
+	}
+
+	// Fourth eval matches but cap is reached → suppressed.
+	if got := engine.Evaluate(rule, vid, signals); got.Triggered {
+		t.Fatal("fire #4 must be suppressed by max_fires_per_resolution cap")
+	}
+
+	// And the persisted counter exactly equals the cap (3 successful
+	// MarkFired calls). The capped 4th eval MUST NOT have called
+	// MarkFired — that would silently bump the persistent counter past
+	// the cap on subsequent restarts and re-suppress incorrectly.
+	row := store.rows[ruleKey{RuleID: rule.ID, VehicleID: vid}]
+	if row == nil {
+		t.Fatal("expected store row after fires")
+	}
+	if row.FireCountSinceReset != 3 {
+		t.Fatalf("expected fire_count_since_reset=3 (cap), got %d", row.FireCountSinceReset)
+	}
+}
+
+func TestEvaluate_MaxFiresCap_FallingEdgeResetsCounter(t *testing.T) {
+	t.Parallel()
+	store := newFakeRuleStateStore()
+	rule := repeatRuleWithCap(102, intPtr(3))
+	const vid = int64(21)
+
+	engine := NewRuleEngine()
+	engine.SetStateRepo(store)
+
+	// Saturate the cap.
+	for i := 1; i <= 3; i++ {
+		if got := engine.Evaluate(rule, vid, map[string]interface{}{"BatteryLevel": 19.0}); !got.Triggered {
+			t.Fatalf("fire #%d must trigger before cap", i)
+		}
+		bypassCooldown(engine, rule.ID, vid)
+	}
+	if got := engine.Evaluate(rule, vid, map[string]interface{}{"BatteryLevel": 19.0}); got.Triggered {
+		t.Fatal("fire #4 must be suppressed by cap")
+	}
+
+	// Falling edge: condition resolves. Counter must reset to 0 (both
+	// in-memory and via ClearLatch in the store).
+	if got := engine.Evaluate(rule, vid, map[string]interface{}{"BatteryLevel": 50.0}); got.Triggered {
+		t.Fatal("falling edge eval should not fire")
+	}
+	row := store.rows[ruleKey{RuleID: rule.ID, VehicleID: vid}]
+	if row == nil || row.FireCountSinceReset != 0 {
+		t.Fatalf("expected fire_count_since_reset reset to 0 after falling edge, got %+v", row)
+	}
+
+	// Rising edge: a fresh round starts. The cap allows 3 more fires.
+	for i := 1; i <= 3; i++ {
+		if got := engine.Evaluate(rule, vid, map[string]interface{}{"BatteryLevel": 19.0}); !got.Triggered {
+			t.Fatalf("fire #%d after reset must trigger", i)
+		}
+		bypassCooldown(engine, rule.ID, vid)
+	}
+	if got := engine.Evaluate(rule, vid, map[string]interface{}{"BatteryLevel": 19.0}); got.Triggered {
+		t.Fatal("fire #4 after reset must be suppressed by cap (counter not actually reset)")
+	}
+}
+
+func TestEvaluate_MaxFiresCap_NullMeansUnlimited(t *testing.T) {
+	t.Parallel()
+	store := newFakeRuleStateStore()
+	rule := repeatRuleWithCap(103, nil) // explicitly NULL cap
+	const vid = int64(22)
+	signals := map[string]interface{}{"BatteryLevel": 19.0}
+
+	engine := NewRuleEngine()
+	engine.SetStateRepo(store)
+
+	// Ten fires in a row, all must succeed (legacy unlimited behaviour).
+	for i := 1; i <= 10; i++ {
+		if got := engine.Evaluate(rule, vid, signals); !got.Triggered {
+			t.Fatalf("fire #%d must trigger when cap is NULL (unlimited)", i)
+		}
+		bypassCooldown(engine, rule.ID, vid)
+	}
+	row := store.rows[ruleKey{RuleID: rule.ID, VehicleID: vid}]
+	if row == nil || row.FireCountSinceReset != 10 {
+		t.Fatalf("expected fire_count_since_reset=10 with NULL cap, got %+v", row)
+	}
+}
+
+func TestEvaluate_MaxFiresCap_OnceMode_NoEffect(t *testing.T) {
+	t.Parallel()
+	store := newFakeRuleStateStore()
+	// Once-mode rule with a generous cap — the latch must still
+	// suppress the second fire regardless of the cap.
+	rule := onceModeRule(104)
+	rule.MaxFiresPerResolution = intPtr(3)
+	const vid = int64(23)
+	signals := map[string]interface{}{"Locked": true}
+
+	engine := NewRuleEngine()
+	engine.SetStateRepo(store)
+
+	// First fire succeeds (latches).
+	if got := engine.Evaluate(rule, vid, signals); !got.Triggered {
+		t.Fatal("once-mode rule first eval should fire")
+	}
+	// Second eval with same condition: latch (NOT cap) suppresses.
+	if got := engine.Evaluate(rule, vid, signals); got.Triggered {
+		t.Fatal("once-mode rule second eval should be suppressed by latch (cap is irrelevant)")
+	}
+	// Counter should be exactly 1 (latch capped at 1, cap of 3 never reached).
+	row := store.rows[ruleKey{RuleID: rule.ID, VehicleID: vid}]
+	if row == nil || row.FireCountSinceReset != 1 {
+		t.Fatalf("expected fire_count_since_reset=1 (latch, not cap), got %+v", row)
+	}
+}
+
+

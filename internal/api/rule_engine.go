@@ -54,6 +54,11 @@ type ruleState struct {
 	// until ClearLatch runs on the falling edge. Sourced from
 	// alert_rule_state.latched_at IS NOT NULL when stateRepo is configured.
 	OnceLatched bool
+	// FireCountSinceReset mirrors alert_rule_state.fire_count_since_reset.
+	// Compared against rule.MaxFiresPerResolution to enforce the per-rule
+	// cap added in Phase-49 / Slice 0003 / Decision D5. Reset to 0 on the
+	// falling edge by ClearLatch (both DB and cache).
+	FireCountSinceReset int
 }
 
 // NewRuleEngine creates a new alert rule engine. The returned engine has
@@ -110,6 +115,7 @@ func (e *RuleEngine) HydrateFromDB(ctx context.Context) {
 			t := *row.LastFiredAt
 			st.LastFiredAt = &t
 		}
+		st.FireCountSinceReset = row.FireCountSinceReset
 	}
 	log.Info().Int("rows", len(rows)).Msg("alert_rules: hydrated rule_engine state from alert_rule_state")
 }
@@ -140,9 +146,11 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	var prevSignals map[string]interface{}
 	var lastFiredAt *time.Time
 	var onceLatched bool
+	var fireCount int
 	if hasState {
 		lastFiredAt = st.LastFiredAt
 		onceLatched = st.OnceLatched
+		fireCount = st.FireCountSinceReset
 		prevSignals = cloneSignals(st.PrevSignals)
 	}
 	if len(prevSignals) < 1 {
@@ -183,15 +191,17 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 		e.mu.Lock()
 		hadLatch := st != nil && st.OnceLatched
 		hadLastFired := st != nil && st.LastFiredAt != nil && needsFalseEdgeDetection
+		hadFireCount := st != nil && st.FireCountSinceReset > 0
 		if st != nil {
 			st.OnceLatched = false
 			if st.LastFiredAt != nil && needsFalseEdgeDetection {
 				st.LastFiredAt = nil
 			}
+			st.FireCountSinceReset = 0
 		}
 		repo := e.stateRepo
 		e.mu.Unlock()
-		if repo != nil && (hadLatch || hadLastFired) {
+		if repo != nil && (hadLatch || hadLastFired || hadFireCount) {
 			if err := repo.ClearLatch(context.Background(), rule.ID, vehicleID, time.Now().UTC()); err != nil {
 				log.Warn().Err(err).Int64("rule_id", rule.ID).Int64("vehicle_id", vehicleID).
 					Msg("alert_rules: ClearLatch failed; in-memory cleared but DB row stale")
@@ -216,6 +226,19 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	// get suppressed.
 	if inCooldown {
 		metrics.AlertRulesCooldownSkipped.Inc()
+		return EvalResult{}
+	}
+
+	// Per-rule max-fires-per-resolution cap (Phase-49 / Slice 0003 / D5).
+	// Once-mode rules are exempt — the latch already caps them at 1, and
+	// applying the cap on top would just be a redundant guard. The
+	// counter resets to 0 on the falling edge (handled above), so a
+	// rule that hit the cap stays suppressed only until the underlying
+	// condition resolves and re-fires.
+	if rule.TriggerMode != "once" &&
+		rule.MaxFiresPerResolution != nil &&
+		fireCount >= *rule.MaxFiresPerResolution {
+		metrics.AlertRulesMaxFiresCapHit.Inc()
 		return EvalResult{}
 	}
 
@@ -258,11 +281,12 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	e.mu.Lock()
 	if st != nil {
 		st.LastFiredAt = &now
+		st.FireCountSinceReset++
 		if isOnce {
 			st.OnceLatched = true
 		}
 	} else {
-		st = &ruleState{LastFiredAt: &now}
+		st = &ruleState{LastFiredAt: &now, FireCountSinceReset: 1}
 		if isOnce {
 			st.OnceLatched = true
 		}

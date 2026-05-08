@@ -484,6 +484,14 @@ export interface AlertRule {
   metric_window?: string | null
   metric_threshold?: number | null
   metric_op?: ComputedMetricOp | null
+  /**
+   * Per-rule cap on how many notifications a `repeat`-mode rule may emit
+   * between successive falling-edge resets. NULL = unlimited (legacy
+   * behaviour). Once-mode rules ignore this field — the latch already
+   * caps them at 1 per resolution.
+   * Phase-49 / Slice 0003 / Decision D5.
+   */
+  max_fires_per_resolution?: number | null
   created_at: string
   updated_at: string
 }
@@ -509,6 +517,7 @@ export interface AlertRuleInput {
   metric_window?: string | null
   metric_threshold?: number | null
   metric_op?: ComputedMetricOp | null
+  max_fires_per_resolution?: number | null
 }
 
 export interface ComputedMetricSummary {

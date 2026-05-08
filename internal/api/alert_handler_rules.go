@@ -153,6 +153,9 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 	if fieldPresent(fields, "snoozed_until") {
 		existing.SnoozedUntil = body.SnoozedUntil
 	}
+	if fieldPresent(fields, "max_fires_per_resolution") {
+		existing.MaxFiresPerResolution = body.MaxFiresPerResolution
+	}
 
 	// Computed-metric fields (kind switching is handled below).
 	if fieldPresent(fields, "metric_id") {
@@ -248,25 +251,26 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rule := &models.AlertRule{
-		Name:            name,
-		Description:     body.Description,
-		Enabled:         enabled,
-		VehicleID:       body.VehicleID,
-		SignalName:      signalName,
-		Op:              op,
-		ValueNum:        body.ValueNum,
-		ValueText:       body.ValueText,
-		ValueBool:       body.ValueBool,
-		ValueMin:        body.ValueMin,
-		ValueMax:        body.ValueMax,
-		Severity:        severity,
-		CooldownMin:     cooldownMin,
-		TriggerMode:     triggerMode,
-		SnoozedUntil:    body.SnoozedUntil,
-		MetricID:        body.MetricID,
-		MetricWindow:    body.MetricWindow,
-		MetricThreshold: body.MetricThreshold,
-		MetricOp:        body.MetricOp,
+		Name:                  name,
+		Description:           body.Description,
+		Enabled:               enabled,
+		VehicleID:             body.VehicleID,
+		SignalName:            signalName,
+		Op:                    op,
+		ValueNum:              body.ValueNum,
+		ValueText:             body.ValueText,
+		ValueBool:             body.ValueBool,
+		ValueMin:              body.ValueMin,
+		ValueMax:              body.ValueMax,
+		Severity:              severity,
+		CooldownMin:           cooldownMin,
+		TriggerMode:           triggerMode,
+		SnoozedUntil:          body.SnoozedUntil,
+		MetricID:              body.MetricID,
+		MetricWindow:          body.MetricWindow,
+		MetricThreshold:       body.MetricThreshold,
+		MetricOp:              body.MetricOp,
+		MaxFiresPerResolution: body.MaxFiresPerResolution,
 	}
 	kind, err := validateAlertRuleKind(body.Kind)
 	if err != nil {
@@ -589,6 +593,9 @@ func validateAlertRule(rule *models.AlertRule) error {
 	}
 	if rule.TriggerMode != "once" && rule.TriggerMode != "repeat" {
 		return errors.New(`trigger_mode must be "once" or "repeat"`)
+	}
+	if rule.MaxFiresPerResolution != nil && *rule.MaxFiresPerResolution <= 0 {
+		return errors.New("max_fires_per_resolution must be greater than 0 when set")
 	}
 	switch rule.Kind {
 	case "", models.AlertRuleKindSignal:

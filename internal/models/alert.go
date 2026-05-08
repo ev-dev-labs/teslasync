@@ -57,6 +57,13 @@ type AlertRule struct {
 	// The %_change_ operators compare the current window to the previous window.
 	MetricOp *string `db:"metric_op" json:"metric_op,omitempty"`
 
+	// MaxFiresPerResolution is the per-rule cap on how many notifications
+	// a repeat-mode rule may emit between successive falling-edge resets.
+	// NULL means unlimited (legacy behaviour). Once-mode rules ignore
+	// this column — the latch already caps them at 1 per resolution.
+	// Added in migration 000194 (Phase-49 / Slice 0003 / Decision D5).
+	MaxFiresPerResolution *int `db:"max_fires_per_resolution" json:"max_fires_per_resolution,omitempty"`
+
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }

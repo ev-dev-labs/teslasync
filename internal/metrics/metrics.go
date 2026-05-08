@@ -135,6 +135,16 @@ var (
 		Help:      "Alert rule evaluations skipped because the rule is snoozed",
 	})
 
+	// AlertRulesMaxFiresCapHit counts rule evaluations suppressed because
+	// the rule already hit its `max_fires_per_resolution` cap and the
+	// condition has not yet resolved (falling edge clears the counter).
+	// Phase-49 / Slice 0003 / Decision D5.
+	AlertRulesMaxFiresCapHit = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "cep_rules_max_fires_cap_hit_total",
+		Help:      "Alert rule evaluations suppressed because the per-resolution fire cap was reached",
+	})
+
 	AlertRuleEvalDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 		Namespace: "teslasync",
 		Name:      "cep_eval_duration_seconds",

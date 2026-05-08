@@ -154,6 +154,14 @@ interface EditorState {
   severity: Severity
   cooldown_min: number
   trigger_mode: AlertRuleTriggerMode
+  /**
+   * Empty string means "no cap" (NULL on the wire). Stored as a string
+   * because <UiInput type="number"> emits a string and the form lets the
+   * user type 3-digit caps; conversion to number happens in
+   * buildSavePayload.
+   * Phase-49 / Slice 0003 / Decision D5.
+   */
+  max_fires_per_resolution: string
   message: string
   // kind: 'signal' (default — uses signal_name/op/value_*) or
   // 'computed_metric' (uses metric_id/metric_window/metric_op/metric_threshold).
@@ -182,6 +190,7 @@ function freshEditor(): EditorState {
     severity: 'warn',
     cooldown_min: 15,
     trigger_mode: 'repeat',
+    max_fires_per_resolution: '',
     message: '',
     kind: 'signal',
     metric_id: '',
@@ -233,6 +242,18 @@ function parseOptionalNumber(value: string): number | null {
 }
 
 function parseOptionalVehicleID(value: string): number | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const parsed = Number(trimmed)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+}
+
+// parseOptionalMaxFires turns the editor input string into the wire shape
+// for max_fires_per_resolution: empty/blank → null (unlimited), otherwise
+// a positive integer. Fractional or non-positive inputs collapse to null
+// so we never POST an invalid value the backend would reject with 400.
+// Phase-49 / Slice 0003 / Decision D5.
+function parseOptionalMaxFires(value: string): number | null {
   const trimmed = value.trim()
   if (!trimmed) return null
   const parsed = Number(trimmed)
@@ -358,6 +379,8 @@ function ruleToEditor(rule: AlertRule): EditorState {
     severity: normalizeSeverity(rule.severity),
     cooldown_min: rule.cooldown_min,
     trigger_mode: normalizeTriggerMode(rule.trigger_mode),
+    max_fires_per_resolution:
+      rule.max_fires_per_resolution == null ? '' : String(rule.max_fires_per_resolution),
     message: rule.signal_name ? `${rule.name}: {{${rule.signal_name}}}` : '',
     kind,
     metric_id: rule.metric_id ?? '',
@@ -395,6 +418,7 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
       severity: state.severity,
       cooldown_min: state.cooldown_min,
       trigger_mode: state.trigger_mode,
+      max_fires_per_resolution: parseOptionalMaxFires(state.max_fires_per_resolution),
       kind: 'computed_metric',
       metric_id: state.metric_id || null,
       metric_window: state.metric_window || null,
@@ -418,6 +442,7 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
     severity: state.severity,
     cooldown_min: state.cooldown_min,
     trigger_mode: state.trigger_mode,
+    max_fires_per_resolution: parseOptionalMaxFires(state.max_fires_per_resolution),
     kind: 'signal',
   }
 
@@ -1520,6 +1545,42 @@ export default function AlertStudio() {
                       )}
                 </p>
               </div>
+              {editor.trigger_mode === 'repeat' && (
+                <div className="sm:col-span-2">
+                  <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-max-fires">
+                    {t(
+                      'notifications.alertStudio.editor.maxFiresLabel',
+                      'Max alerts before condition resolves',
+                    )}
+                    <HelpIcon
+                      i18nKey="help.fields.alertStudio.maxFires"
+                      content="Cap the number of times this rule can re-fire while the condition keeps holding. The counter resets to zero as soon as the condition becomes false. Leave blank for unlimited."
+                      for="alert-max-fires"
+                    />
+                  </label>
+                  <UiInput
+                    id="alert-max-fires"
+                    type="number"
+                    min={1}
+                    step={1}
+                    className="w-full"
+                    value={editor.max_fires_per_resolution}
+                    placeholder={t(
+                      'notifications.alertStudio.editor.maxFiresPlaceholder',
+                      'Leave blank for unlimited',
+                    )}
+                    onChange={e =>
+                      setEditor(s => ({ ...s, max_fires_per_resolution: e.target.value }))
+                    }
+                  />
+                  <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                    {t(
+                      'notifications.alertStudio.editor.maxFiresHint',
+                      'Only applies to repeat-mode rules. Once-mode already caps at 1 per resolution.',
+                    )}
+                  </p>
+                </div>
+              )}
               <div className="sm:col-span-2">
                 <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-test-message">
                   {t('notifications.alertStudio.editor.testMessageLabel', 'Test Message')}

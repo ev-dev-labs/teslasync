@@ -83,6 +83,19 @@ export const alertRuleSchema = z
       .optional(),
     trigger_mode: z.enum(ALERT_RULE_TRIGGER_MODES).optional(),
     snoozed_until: z.string().optional().nullable(),
+    /**
+     * Per-rule cap on how many notifications a `repeat`-mode rule may
+     * emit between falling-edge resets. NULL = unlimited (legacy).
+     * Once-mode rules accept the field but the backend latch caps them
+     * at 1 per resolution regardless of the value.
+     * Phase-49 / Slice 0003 / Decision D5.
+     */
+    max_fires_per_resolution: z
+      .number()
+      .int('Max fires must be a whole number')
+      .positive('Max fires must be greater than 0')
+      .nullable()
+      .optional(),
     kind: z.enum(ALERT_RULE_KINDS).optional(),
     metric_id: z.string().trim().max(120).optional().nullable(),
     metric_window: z.string().trim().max(60).optional().nullable(),

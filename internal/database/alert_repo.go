@@ -19,11 +19,13 @@ func NewAlertRuleRepo(db *DB) *AlertRuleRepo {
 
 // alertRuleColumns is the canonical SELECT column list, kept in sync with
 // scanAlertRule below. Add new columns here AND in scanAlertRule when extending
-// the schema (migration 000158_alert_rule_kinds added kind/metric_*).
+// the schema (migration 000158_alert_rule_kinds added kind/metric_*; migration
+// 000194 added max_fires_per_resolution).
 const alertRuleColumns = `id, name, description, enabled, vehicle_id, signal_name, op,
 	value_num, value_text, value_bool, value_min, value_max,
 	severity, cooldown_min, trigger_mode, snoozed_until,
 	kind, metric_id, metric_window, metric_threshold, metric_op,
+	max_fires_per_resolution,
 	created_at, updated_at`
 
 func scanAlertRule(row interface{ Scan(dest ...any) error }, ar *models.AlertRule) error {
@@ -33,6 +35,7 @@ func scanAlertRule(row interface{ Scan(dest ...any) error }, ar *models.AlertRul
 		&ar.ValueMin, &ar.ValueMax, &ar.Severity, &ar.CooldownMin,
 		&ar.TriggerMode, &ar.SnoozedUntil,
 		&ar.Kind, &ar.MetricID, &ar.MetricWindow, &ar.MetricThreshold, &ar.MetricOp,
+		&ar.MaxFiresPerResolution,
 		&ar.CreatedAt, &ar.UpdatedAt,
 	)
 }
@@ -86,13 +89,15 @@ func (r *AlertRuleRepo) Update(ctx context.Context, id int64, rule *models.Alert
 		value_min=$11, value_max=$12, severity=$13, cooldown_min=$14,
 		trigger_mode=$15, snoozed_until=$16,
 		kind=$17, metric_id=$18, metric_window=$19, metric_threshold=$20, metric_op=$21,
-		updated_at=$22
+		max_fires_per_resolution=$22,
+		updated_at=$23
 		WHERE id=$1`,
 		id, rule.Name, rule.Description, rule.Enabled, rule.VehicleID,
 		rule.SignalName, rule.Op, rule.ValueNum, rule.ValueText, rule.ValueBool,
 		rule.ValueMin, rule.ValueMax, rule.Severity, rule.CooldownMin,
 		rule.TriggerMode, rule.SnoozedUntil,
 		rule.Kind, rule.MetricID, rule.MetricWindow, rule.MetricThreshold, rule.MetricOp,
+		rule.MaxFiresPerResolution,
 		time.Now().UTC())
 	return err
 }
@@ -115,15 +120,17 @@ func (r *AlertRuleRepo) Create(ctx context.Context, rule *models.AlertRule) erro
 		value_num, value_text, value_bool, value_min, value_max,
 		severity, cooldown_min, trigger_mode, snoozed_until,
 		kind, metric_id, metric_window, metric_threshold, metric_op,
+		max_fires_per_resolution,
 		created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-			$16, $17, $18, $19, $20, NOW(), NOW())
+			$16, $17, $18, $19, $20, $21, NOW(), NOW())
 		RETURNING id, created_at, updated_at`
 	return r.db.Pool.QueryRow(ctx, query, rule.Name, rule.Description, rule.Enabled,
 		rule.VehicleID, rule.SignalName, rule.Op, rule.ValueNum, rule.ValueText,
 		rule.ValueBool, rule.ValueMin, rule.ValueMax, rule.Severity, rule.CooldownMin,
 		rule.TriggerMode, rule.SnoozedUntil,
-		rule.Kind, rule.MetricID, rule.MetricWindow, rule.MetricThreshold, rule.MetricOp).
+		rule.Kind, rule.MetricID, rule.MetricWindow, rule.MetricThreshold, rule.MetricOp,
+		rule.MaxFiresPerResolution).
 		Scan(&rule.ID, &rule.CreatedAt, &rule.UpdatedAt)
 }
 
