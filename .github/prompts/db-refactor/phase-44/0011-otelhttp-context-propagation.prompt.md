@@ -81,7 +81,7 @@ go test -race ./internal/api/... 2>&1 | Tee-Object -FilePath $log -Append
 if ($LASTEXITCODE -ne 0) { "EXIT=$LASTEXITCODE" | Tee-Object -FilePath $log -Append; "STATUS=BLOCKED" | Tee-Object -FilePath $log -Append; exit $LASTEXITCODE }
 
 $status = git status --porcelain
-$allowed = @('internal/api/','internal/tesla/',$log)
+$allowed = @('internal/api/','internal/tesla/','internal/notifier/','internal/adapter/','internal/webpush/','internal/integrations/','internal/platform/',$log)
 $badLines = $status | Where-Object { $line = $_; -not ($allowed | Where-Object { $line -match [regex]::Escape($_) }) }
 if ($badLines) { $badLines | Tee-Object -FilePath $log -Append; "EXIT=1" | Tee-Object -FilePath $log -Append; "STATUS=BLOCKED" | Tee-Object -FilePath $log -Append; exit 1 }
 
@@ -103,4 +103,5 @@ Every chi router wrapped, every http.Client uses otelhttp.NewTransport.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ```
+
 
