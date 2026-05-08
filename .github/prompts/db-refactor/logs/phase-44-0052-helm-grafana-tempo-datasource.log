@@ -1,0 +1,8 @@
+=== GATE ===
+==> Linting helm/teslasync
+[INFO] Chart.yaml: icon is recommended
+
+1 chart(s) linted, 0 chart(s) failed
+All gate checks passed.
+EXIT=0
+STATUS=DONE
