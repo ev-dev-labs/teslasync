@@ -19,3 +19,10 @@ export {
   type TagSeparator,
 } from './TagInput';
 export { UnitInput, type UnitInputProps } from './UnitInput';
+export {
+  VehicleMultiSelect,
+  hydrateVehicleSelection,
+  buildVehiclePayload,
+  type VehicleMultiSelectProps,
+  type VehicleSelection,
+} from './VehicleMultiSelect';

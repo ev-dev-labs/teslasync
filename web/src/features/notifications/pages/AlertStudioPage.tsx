@@ -31,7 +31,8 @@ import { BulkActionsToolbar, type BulkAction, SeverityBadge, SeverityIcon } from
 import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
 import { AlertBanner, DraftRecoveryBanner, EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
-import { SearchInput } from '@/components/forms'
+import { SearchInput, VehicleMultiSelect, hydrateVehicleSelection, buildVehiclePayload, type VehicleSelection } from '@/components/forms'
+import { useVehicles } from '@/api/hooks/useVehicles'
 import { cn } from '@/lib/cn'
 import { severityTokens } from '@/lib/tokens'
 import { formatDateTime } from '@/lib/dateFormat'
@@ -142,7 +143,13 @@ interface EditorState {
   id?: number
   name: string
   enabled: boolean
-  vehicle_id: string
+  /**
+   * Phase-49 / Slice 0006 — discriminated-union vehicle selection.
+   * Replaces the legacy free-text `vehicle_id: string` field. Sticky-
+   * all means "current + future fleet"; specific means an explicit
+   * subset that does NOT auto-grow when new vehicles are added.
+   */
+  vehicle_selection: VehicleSelection
   signal_name: string
   op: RuleOp
   value_kind: ValueKind
@@ -178,7 +185,7 @@ function freshEditor(): EditorState {
   return {
     name: '',
     enabled: true,
-    vehicle_id: '',
+    vehicle_selection: { kind: 'all_sticky' },
     signal_name: '',
     op: '=',
     value_kind: 'number',
@@ -241,13 +248,6 @@ function parseOptionalNumber(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function parseOptionalVehicleID(value: string): number | null {
-  const trimmed = value.trim()
-  if (!trimmed) return null
-  const parsed = Number(trimmed)
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null
-}
-
 // parseOptionalMaxFires turns the editor input string into the wire shape
 // for max_fires_per_resolution: empty/blank → null (unlimited), otherwise
 // a positive integer. Fractional or non-positive inputs collapse to null
@@ -258,10 +258,6 @@ function parseOptionalMaxFires(value: string): number | null {
   if (!trimmed) return null
   const parsed = Number(trimmed)
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null
-}
-
-function hasValidVehicleID(value: string): boolean {
-  return value.trim() === '' || parseOptionalVehicleID(value) !== null
 }
 
 function isNumericOnlyOp(op: RuleOp): boolean {
@@ -367,7 +363,7 @@ function ruleToEditor(rule: AlertRule): EditorState {
     id: rule.id,
     name: rule.name,
     enabled: rule.enabled,
-    vehicle_id: rule.vehicle_id == null ? '' : String(rule.vehicle_id),
+    vehicle_selection: hydrateVehicleSelection(rule),
     signal_name: rule.signal_name,
     op: rule.op,
     value_kind: inferValueKind(rule),
@@ -409,12 +405,14 @@ function templateToEditor(template: RuleTemplate, name: string, message: string)
 }
 
 function buildSavePayload(state: EditorState): AlertRuleInput {
+  const vehiclePayload = buildVehiclePayload(state.vehicle_selection)
+
   if (state.kind === 'computed_metric') {
     const threshold = parseOptionalNumber(state.metric_threshold)
     return {
       name: state.name.trim(),
       enabled: state.enabled,
-      vehicle_id: parseOptionalVehicleID(state.vehicle_id),
+      ...vehiclePayload,
       severity: state.severity,
       cooldown_min: state.cooldown_min,
       trigger_mode: state.trigger_mode,
@@ -431,7 +429,7 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
   const payload: AlertRuleInput = {
     name: state.name.trim(),
     enabled: state.enabled,
-    vehicle_id: parseOptionalVehicleID(state.vehicle_id),
+    ...vehiclePayload,
     signal_name: state.signal_name.trim(),
     op: state.op,
     value_num: null,
@@ -496,6 +494,9 @@ export default function AlertStudio() {
 
   const { data: rules, isLoading, error } = useAlertRules()
   const { data: channels, isLoading: channelsLoading, error: channelsError } = useNotificationChannels()
+  // Phase-49 / Slice 0006 — drives the multi-vehicle picker.
+  const { data: vehiclesData } = useVehicles()
+  const vehicles = useMemo(() => vehiclesData ?? [], [vehiclesData])
   const saveRuleMut = useSaveAlertRule()
   const deleteRuleMut = useDeleteAlertRule()
   const toggleRuleMut = useToggleAlertRule()
@@ -527,6 +528,15 @@ export default function AlertStudio() {
   const [formError, setFormError] = useState<string | null>(null)
   const initialEditorRef = useRef<string>(JSON.stringify(freshEditor()))
 
+  // Phase-49 / Slice 0006 — `useFormDraft` resets its internal state during
+  // render whenever `draftKey` changes (documented React 18 pattern).
+  // `setSelectedId(id)` triggers that reset, which races with any in-event
+  // `setEditor(hydrated)` call and silently discards the hydration. We stash
+  // the desired post-switch editor state in this ref and re-apply it inside a
+  // `useEffect` keyed on `selectedId`, so the override happens AFTER the
+  // render-time reset has committed.
+  const pendingHydrationRef = useRef<EditorState | null>(null)
+
   // Phase-40 / Prompt 55 — `useFormDraft` persists in-progress new-rule
   // editing to localStorage so a tab close, SW reload, or auth redirect
   // doesn't destroy the user's work. Only the `alert-rule-new` key is
@@ -543,7 +553,10 @@ export default function AlertStudio() {
     draftSavedAt,
     discardDraft,
   } = useFormDraft<EditorState>(draftKey, freshEditor(), {
-    version: 1,
+    // Phase-49 / Slice 0006 / Decision D6 — vehicle_id: string was
+    // replaced with vehicle_selection: discriminated_union. Bump
+    // version so old (incompatible) drafts are silently discarded.
+    version: 2,
     debounceMs: 800,
     skipPersist: v =>
       saveRuleMut.isPending
@@ -556,6 +569,17 @@ export default function AlertStudio() {
     () => JSON.stringify(editor) !== initialEditorRef.current,
     [editor],
   )
+
+  // Phase-49 / Slice 0006 — apply pending hydration AFTER the `useFormDraft`
+  // render-time reset has committed (see `pendingHydrationRef` declaration
+  // for the race-condition rationale).
+  useEffect(() => {
+    if (pendingHydrationRef.current == null) return
+    const next = pendingHydrationRef.current
+    pendingHydrationRef.current = null
+    setEditor(next)
+    initialEditorRef.current = JSON.stringify(next)
+  }, [selectedId, setEditor])
 
   useDirtyForm(isDirty)
   // Phase-45 / Prompt 16: in-app navigation guard. Pairs with `useDirtyForm`
@@ -762,7 +786,15 @@ export default function AlertStudio() {
   const canSave = useMemo(() => {
     if (editor.name.trim().length === 0) return false
     if (editor.cooldown_min <= 0) return false
-    if (!hasValidVehicleID(editor.vehicle_id)) return false
+    // Phase-49 / Slice 0006 — sticky-all is always valid; specific
+    // requires at least one selected vehicle. The new picker prevents
+    // any other invalid intermediate state by construction.
+    if (
+      editor.vehicle_selection.kind === 'specific'
+      && editor.vehicle_selection.vehicle_ids.length === 0
+    ) {
+      return false
+    }
     if (editor.kind === 'computed_metric') {
       // Only enforce metric-shape requirements; if registry is loading we
       // optimistically allow the save and the server-side validator catches
@@ -789,33 +821,39 @@ export default function AlertStudio() {
         op: nextOp,
         value_kind: valueKindForSignalOp(signalType, nextOp),
       }
+      // Phase-49 / Slice 0006 — `useFormDraft` reset on key change races
+      // with the inline `setEditor`. Apply both: the inline call covers the
+      // same-key path; the ref + `useEffect` covers the cross-key path.
+      pendingHydrationRef.current = finalEditor
       setSelectedId(rule.id)
       setEditor(finalEditor)
       initialEditorRef.current = JSON.stringify(finalEditor)
       setFormError(null)
     })
-  }, [guardSwitch])
+  }, [guardSwitch, setEditor])
 
   const handleNewRule = useCallback(() => {
     guardSwitch(() => {
       const blank = freshEditor()
+      pendingHydrationRef.current = blank
       setSelectedId(null)
       setEditor(blank)
       initialEditorRef.current = JSON.stringify(blank)
       setFormError(null)
     })
-  }, [guardSwitch])
+  }, [guardSwitch, setEditor])
 
   const handleCloneTemplate = useCallback((tpl: RuleTemplate) => {
     guardSwitch(() => {
       const next = templateToEditor(tpl, getTemplateName(tpl), getTemplateMessage(tpl))
+      pendingHydrationRef.current = next
       setSelectedId(null)
       setEditor(next)
       initialEditorRef.current = JSON.stringify(next)
       setShowTemplates(false)
       setFormError(null)
     })
-  }, [getTemplateMessage, getTemplateName, guardSwitch])
+  }, [getTemplateMessage, getTemplateName, guardSwitch, setEditor])
 
   const handleSignalChange = useCallback((signalName: string) => {
     setEditor(current => {
@@ -869,6 +907,7 @@ export default function AlertStudio() {
           // a real rule, so drop both the per-rule and the `new` drafts.
           discardDraft()
           const blank = freshEditor()
+          pendingHydrationRef.current = blank
           setSelectedId(null)
           setEditor(blank)
           initialEditorRef.current = JSON.stringify(blank)
@@ -884,6 +923,7 @@ export default function AlertStudio() {
         // rule so a future visit doesn't restore stale work.
         discardDraft()
         const blank = freshEditor()
+        pendingHydrationRef.current = blank
         setSelectedId(null)
         setEditor(blank)
         initialEditorRef.current = JSON.stringify(blank)
@@ -1344,21 +1384,21 @@ export default function AlertStudio() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-vehicle-id">
-                  {t('notifications.alertStudio.editor.vehicleIdLabel', 'Vehicle ID')}
-                  <span className="text-[var(--text-muted)] ml-1 normal-case tracking-normal">
-                    {t('notifications.alertStudio.editor.optionalLabel', 'Optional')}
-                  </span>
-                  <HelpIcon i18nKey="help.fields.alertStudio.vehicleId" content="Restrict this rule to a single vehicle by ID. Leave blank to apply across all vehicles in the fleet." for="alert-vehicle-id" />
+                <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-vehicle-picker">
+                  {t('notifications.alertStudio.editor.vehiclesLabel', 'Vehicles')}
+                  <HelpIcon i18nKey="help.fields.alertStudio.vehicles" content="Choose 'All vehicles' to apply this rule to your entire fleet, including any cars you add later. Otherwise pick a specific subset." for="alert-vehicle-picker" />
                 </label>
-                <UiInput
-                  id="alert-vehicle-id"
-                  type="number"
-                  min={1}
-                  className="w-full"
-                  placeholder={t('notifications.alertStudio.editor.vehicleIdPlaceholder', 'All vehicles')}
-                  value={editor.vehicle_id}
-                  onChange={e => setEditor(s => ({ ...s, vehicle_id: e.target.value }))}
+                <VehicleMultiSelect
+                  id="alert-vehicle-picker"
+                  value={editor.vehicle_selection}
+                  onChange={next => setEditor(s => ({ ...s, vehicle_selection: next }))}
+                  vehicles={vehicles}
+                  errorKey={
+                    editor.vehicle_selection.kind === 'specific'
+                      && editor.vehicle_selection.vehicle_ids.length === 0
+                      ? 'notifications.alertStudio.editor.vehiclesEmptyError'
+                      : null
+                  }
                 />
               </div>
               <div className="sm:col-span-2">
@@ -1413,7 +1453,11 @@ export default function AlertStudio() {
                   metric_window: editor.metric_window,
                   metric_op: editor.metric_op,
                   metric_threshold: editor.metric_threshold,
-                  vehicle_id: parseOptionalVehicleID(editor.vehicle_id),
+                  vehicle_id:
+                    editor.vehicle_selection.kind === 'specific'
+                      && editor.vehicle_selection.vehicle_ids.length > 0
+                      ? editor.vehicle_selection.vehicle_ids[0]
+                      : null,
                 }}
                 onChange={next =>
                   setEditor(s => ({

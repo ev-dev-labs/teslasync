@@ -468,6 +468,21 @@ export interface AlertRule {
   description?: string | null
   enabled: boolean
   vehicle_id?: number | null
+  /**
+   * Phase-49 / Slice 0005 — sticky-all flag. When `true`, the rule
+   * applies to every vehicle in the fleet, including any added after
+   * the rule was created. Mutually exclusive with a non-empty
+   * `vehicle_ids` array. Optional on read for backward-compat with
+   * pre-0005 API responses; transitional hydration falls back to
+   * `vehicle_id`.
+   */
+  all_vehicles?: boolean
+  /**
+   * Phase-49 / Slice 0005 — explicit subset of vehicle IDs the rule
+   * applies to. Always present (`[]` if sticky-all). Optional on read
+   * only for backward-compat with pre-0005 API responses.
+   */
+  vehicle_ids?: number[]
   signal_name: string
   op: AlertRuleOp
   value_num?: number | null
@@ -501,6 +516,18 @@ export interface AlertRuleInput {
   description?: string | null
   enabled?: boolean
   vehicle_id?: number | null
+  /**
+   * Phase-49 / Slice 0005 — sticky-all flag. New writes from the
+   * editor MUST set this together with `vehicle_ids`; the legacy
+   * `vehicle_id` field is no longer written by Alert Studio.
+   */
+  all_vehicles?: boolean
+  /**
+   * Phase-49 / Slice 0005 — explicit subset of vehicle IDs. Empty
+   * array when `all_vehicles` is true. Always sorted + deduped on the
+   * client per slice 0006 / Decision D14.
+   */
+  vehicle_ids?: number[]
   signal_name?: string
   op?: AlertRuleOp
   value_num?: number | null

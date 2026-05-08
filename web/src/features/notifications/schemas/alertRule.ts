@@ -63,6 +63,18 @@ export const alertRuleSchema = z
     description: z.string().max(500).optional().nullable(),
     enabled: z.boolean().optional(),
     vehicle_id: z.number().int().positive().optional().nullable(),
+    /**
+     * Phase-49 / Slice 0005 — sticky-all flag. When `true`, rule
+     * applies to every fleet vehicle including ones added later.
+     * Mutually exclusive with a non-empty `vehicle_ids` array
+     * (server-side returns 422 on conflict).
+     */
+    all_vehicles: z.boolean().optional(),
+    /**
+     * Phase-49 / Slice 0005 — explicit subset of vehicle IDs.
+     * Sorted + deduped before submit per slice 0006 / Decision D14.
+     */
+    vehicle_ids: z.array(z.number().int().positive()).optional(),
     signal_name: z
       .string()
       .trim()
