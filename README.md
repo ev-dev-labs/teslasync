@@ -20,8 +20,8 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white" alt="Go 1.25" />
-  <img src="https://img.shields.io/badge/tests-14%20packages-success" alt="Tests" />
-  <img src="https://img.shields.io/badge/coverage-race%20enabled-blue" alt="Coverage" />
+  <img src="https://img.shields.io/badge/SI-canonical-success" alt="SI canonical" />
+  <img src="https://img.shields.io/badge/coverage-race%20enabled-blue" alt="Race-enabled tests" />
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License" />
 </p>
 
@@ -33,19 +33,19 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 
 ### Highlights
 
-- **Lightweight** — Go backend with ~30 MB memory footprint and efficient connection pooling
+- **Lightweight** — Go backend with a small memory footprint and efficient pgx connection pooling
+- **Phase-48 SI canonical** — Every DB column, API field, and Go/TS type stores SI units (meters, m/s, °C, Pa, Wh). User display preference (mi/km, °F/°C, psi/bar) is applied **only** at the React render boundary by `useUnits()` / `useFormatting()`. No legacy unit converters anywhere downstream.
 - **69 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, Alert Studio, trip replay, backup & restore, and more
 - **5 dynamic themes** — Neon Cyan, Tesla Red, Matrix Green, Royal Purple, Solar Amber (each with 4 display modes)
 - **Real-time SSE streaming** — Singleton connection per browser tab, instant vehicle + alert updates pushed to connected browsers
 - **CEP Rule Engine** — Complex Event Processing with recursive condition trees, temporal sustain, transition detection, cooldown, and 50+ templates
-- **Alert Studio** — Visual rule builder with 230-signal catalog, test notifications, quiet hours, multi-channel dispatch
+- **Alert Studio** — Visual rule builder with full Tesla signal catalog, test notifications, quiet hours, multi-channel dispatch
 - **14 remote commands** — Lock, unlock, climate, sentry, charge, frunk, trunk, horn, flash, and more
 - **Smart Insights** — Auto-generated data analysis with actionable recommendations
 - **28 Grafana dashboards** — Pre-built dashboards for deep analytics, CEP monitoring, SSE real-time, and infrastructure
-- **230 Tesla fleet telemetry fields** — 100% Tesla Fleet Telemetry Protocol coverage, 229/230 signals persisted in PostgreSQL
-- **57 schema migrations** — Including 3 materialized views (mv_energy_daily, mv_position_hourly, mv_signal_stats) for fast analytics
-- **In-memory SignalStore** — Always-complete vehicle state with nanosecond reads, 30KB RAM per vehicle, pod restart recovery
-- **MongoDB Signal Log** — Every telemetry signal persisted forever with per-signal queryable history
+- **100% Tesla Fleet Telemetry coverage** — Vendored `vehicle_data.proto` + `go generate` keep the codec, signal metadata, and routing table in lock-step with upstream
+- **Layered live state** — `signal.Store` L1 (in-process, nanosecond reads, FSM/sessions hot path) + Redis L2 (`vehicle:{id}:signals` HSET + Pub/Sub for cross-pod + restart recovery) + `signal_log` durable history
+- **TimescaleDB hypertable** — `signal_log` persists every Tesla telemetry signal for charts, replay, and point-in-time reconstruction; continuous aggregates (`cagg_fleet_stats`, `cagg_battery_daily`) drive fast analytics
 - **8 Diagnostics Tools** — Live signal monitor, signal explorer, signal diff, gap detector, state machine debugger, MQTT inspector, DB health dashboard, signal log viewer
 - **Helm chart** — Production-ready Kubernetes deployment with external service support
 - **Complete CI/CD** — 14 GitHub Actions workflows for build, test, security, and release
@@ -97,8 +97,8 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 
 ### 🔍 Diagnostics & Signal Intelligence (NEW)
 - 🟢 **Live Signal Monitor** — Real-time SSE feed of all incoming signals with pause/resume, filter, and signals/sec rate
-- 📊 **Signal Log Viewer** — Browse raw MongoDB signal recordings with pagination, time range, and signal filtering
-- ⚡ **Signal Explorer** — Chart any of 230 telemetry signals over time with configurable time ranges
+- 📊 **Signal Log Viewer** — Browse `signal_log` (TimescaleDB hypertable) with pagination, time range, and signal filtering
+- ⚡ **Signal Explorer** — Chart any Tesla telemetry signal over time with configurable time ranges
 - 🔀 **Signal Diff** — Compare a signal's values across two time ranges side-by-side
 - ⚠️ **Signal Gap Detector** — Identify stale or missing signals with color-coded staleness indicators
 - ⚙️ **State Machine Debugger** — Vehicle state visualization with transition timeline, duration distribution, and per-state 'since' field
@@ -181,23 +181,23 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Rate Limiting** — Configurable per-IP rate limiting
 - **Prometheus Metrics** — `/metrics` endpoint for monitoring
 - **Structured Logging** — JSON logs via zerolog
-- **PostgreSQL 17** — Natively partitioned tables for position data, 57 schema migrations, 3 materialized views (mv_energy_daily, mv_position_hourly, mv_signal_stats), DBTX transaction support for critical paths, [interactive database diagram](https://teslasync-labs.github.io/teslasync/guide/architecture) in docs
+- **PostgreSQL 17 + TimescaleDB** — Hypertable for `signal_log`, continuous aggregates (`cagg_fleet_stats`, `cagg_battery_daily`), natively partitioned tables for position data, DBTX transaction support for critical paths, [interactive database diagram](https://teslasync-labs.github.io/teslasync/guide/architecture) in docs (current migration count: see `migrations/`)
   - `motor_snapshots` — Drivetrain telemetry (torque, RPM, G-forces, pedal position)
   - `climate_snapshots` — HVAC telemetry (temps, fan speed, power, defrost)
   - `security_events` — Security state (locks, sentry, doors, windows)
-  - `charging_telemetry` — 55-column real-time charging data (pack voltage/current, cell voltages, BMS, powershare)
+  - `charging_telemetry` — SI-canonical charging telemetry (pack voltage/current, cell voltages, BMS, powershare)
   - `media_snapshots` — Now playing, volume, playback source
   - `vehicle_config_snapshots` — Trim, color, software updates
   - `location_snapshots` — Navigation destination, route, home/work/favorite detection
-  - `safety_snapshots` — ADAS settings, collision warnings, FSD miles
+  - `safety_snapshots` — ADAS settings, collision warnings, FSD distance
   - `user_preference_snapshots` — Unit settings, time format
-  - `vehicle_live_state` — Always-complete vehicle state checkpoint (1 row per vehicle, UPSERT every 5s)
+  - `signal_log` — TimescaleDB hypertable storing every Tesla telemetry signal forever for charts, replay, and point-in-time reconstruction
 - **MQTT Publishing** — Real-time vehicle telemetry to any MQTT subscriber
 - **MQTT Workers** — Notification worker + export worker for async processing
-- **Redis Caching** — Fast lookups for vehicle state and sessions
-- **In-Memory SignalStore** — Per-vehicle signal map with nanosecond reads, periodic DB flush, pod restart recovery
-- **MongoDB Signal Log** — Per-signal time-series storage with compound indexes for history queries
-- **Debounced State Machine** — 5-state vehicle detection (driving/charging/parked/online/offline) with gear-based transitions, traffic light guard, charging orphan detection, stale gear freshness, and hysteresis to prevent flapping
+- **Redis Caching** — Fast lookups for vehicle state and sessions; L2 layer for cross-pod live signals (`vehicle:{id}:signals` HSET + Pub/Sub)
+- **In-Memory SignalStore (L1)** — Per-vehicle signal map with nanosecond reads, FSM/sessions hot path, restart recovery from L2 + `signal_log`
+- **Durable Signal History** — `signal_log` TimescaleDB hypertable indexed for per-signal queryable history (replaces the legacy `vehicle_live_state` UPSERT model — see Phase-42 ADR-004)
+- **FSM (Vehicle State Engine)** — 20-transition declarative table covering drive / charge / park / online / offline with gear-based transitions, traffic light guard, charging orphan detection, stale freshness, and hysteresis to prevent flapping; reconciliation loop every 15s
 - **CEP Rule Engine** — Recursive condition tree evaluator with temporal sustain, transition detection, per-rule cooldown, and template rendering
 - **SSE Singleton** — One EventSource per browser tab shared across all hooks; 11 Prometheus metrics (active clients, events by type, drops, broadcast latency, bandwidth)
 - **Adaptive Polling** — 3s interval when SSE disconnected, 30s when connected (via `useAdaptiveInterval` hook)
@@ -212,11 +212,11 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Public Key Management** — Generate ECDSA P-256 keypairs, auto-serve at `.well-known` path, upload existing keys
 - **Infrastructure Diagnostics** — Database stats, migration status, MQTT connectivity test, environment check
 - **Client-Side Utilities** — VIN decoder, JWT decoder, JSON formatter, UUID generator, regex tester, and more
-- **Fleet Telemetry** — Status monitoring, 231 signals with 100% Tesla protocol coverage across all categories, enable/disable visibility in system status
+- **Fleet Telemetry** — Status monitoring with 100% Tesla protocol coverage via vendored proto + `go generate`, enable/disable visibility in system status
 - **Vehicle Data Queries** — Fleet telemetry errors table with download, vehicle data queries tool
 - **Tesla Fleet API** — Nearby charging sites, release notes, recent alerts, service data
 - **Signal Configuration Modal** — Full-screen per-signal interval configuration with presets (Real-time Driving, Balanced, Low Power, Track Mode)
-- **Raw Telemetry Capture** — MongoDB-backed raw signal recording with export capability
+- **Raw Telemetry Capture** — `signal_log`-backed raw signal recording with export capability
 
 ## Architecture
 
@@ -274,24 +274,57 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 
 > **Traffic Flow:** In Kubernetes, all external traffic enters through a single ingress route pointing to `teslasync-web` (Nginx). Nginx serves static files directly and proxies API paths (`/api/*`, `/.well-known/*`, `/healthz`, `/readyz`, `/metrics`) to `teslasync-api` over the internal Kubernetes network. API traffic never traverses the ingress controller — only the initial page load does.
 
-### Signal Processing Pipeline
+### Signal Processing Pipeline (Phase-42)
+
+> Canonical reference: `.github/ARCHITECTURE.md` ADR-004.
+> File-level rules: `.github/instructions/tesla-pipeline.instructions.md`.
 
 ```
-Tesla Vehicle (500ms capable)
-    ↓
-Fleet Telemetry Server → MQTT (per-signal messages)
-    ↓
-ProcessSignals()
-    ├─ normalizeFleetUnits()      — mph→km/h, miles→km
-    ├─ SignalStore.Update()       — in-memory (nanoseconds, always complete)
-    ├─ signalLogger.Write()       — MongoDB signal_log (every signal, forever)
-    ├─ liveState.Flush()          — Postgres vehicle_live_state (every 5s, 229 columns)
-    ├─ extractPosition()          — Postgres positions (every 10s)
-    ├─ sessionTracker             — drives + charge sessions (gear-based + speed fallback)
-    ├─ trackStateTransition()     — 5-state machine (gear-based, stale freshness, orphan guard)
-    ├─ evaluateCEPRules()         — CEP condition trees → alerts + SSE + notification dispatch
-    └─ track*() snapshots         — 15 domain tables (every 10s)
+Tesla Vehicle ── mTLS stream ──▶ Tesla Fleet Telemetry ──▶ Mosquitto MQTT (telemetry/payload/+)
+                                                                         │
+                                                                         ▼
+                                                         PipelineSubscriber  (internal/mqtt)
+                                                         ▸ ack-after-process
+                                                         ▸ tracker (4096 capacity)
+                                                         ▸ max_redeliveries=5
+                                                                         │
+                                                                         ▼
+                                                         Codec  (internal/tesla/codec)
+                                                         proto bytes → typed Datums
+                                                         failure ⇒ MQTT redeliver
+                                                                         │
+                                                                         ▼
+                                                         normalize.Pipeline  (internal/tesla/normalize)
+                                                         ▸ THE one ingest entry (reflective coverage test)
+                                                         ▸ ToSI(field, raw, vehicleUnits) using
+                                                           per-vehicle Setting*Unit history
+                                                                         │
+                                                                         ▼
+                                                         Router  (internal/tesla/router)
+                                                         routing.yaml — field-static, vehicle-agnostic
+                                                                         │
+                                       ┌─────────────────────────────────┼─────────────────────────────────┐
+                                       ▼                                 ▼                                 ▼
+                       Writers (per dest table)              signal.Store (L1, in-process)        signal_log (TimescaleDB hypertable)
+                       drive_telemetry, charging_           hot path: FSM, sessions,             durable history, charts,
+                       telemetry, positions,                 merge context                        replay, point-in-time
+                       tesla_charging_history, ...                       │                                 ▲
+                       writer fail ⇒ log+counter,                        │ pubsub                          │
+                       NEVER MQTT redeliver                              ▼                                 │
+                                                             Redis L2 (vehicle:{id}:signals                │
+                                                             HSET + Pub/Sub) ─▶ SSE hub ─▶ SPA EventSource │
+                                                                                                           │
+                                                                              FSM (drive/charge/park, 20-transition table, 15s reconciliation)
+                                                                              REST handlers (history reads)
 ```
+
+**Five non-negotiable rules** (enforced by tests / startup checks):
+
+1. **`normalize.Pipeline.Process` is THE one ingest entry.** A reflective coverage test pins this. Vendor-specific decode lives in `internal/tesla/*`; vendor-agnostic signal primitives in `internal/signal/*`.
+2. **SI on disk, always.** Meters, m/s, °C, Pa, Wh in every column / API field / Go struct / TS interface. Display conversion only at the React render boundary via `useUnits()` / `useFormatting()`.
+3. **`routing.yaml` is field-static, vehicle-agnostic.** Per-vehicle or value-conditional routing is forbidden by ADR-004 #8.
+4. **Failure semantics are split.** Codec failures (malformed proto bytes) trigger MQTT redelivery. Writer failures (DB down, schema mismatch) only log + increment `tesla_router_writer_failures_total` and never propagate to MQTT — otherwise a stuck table blocks the whole stream.
+5. **Live state is layered, not replaced.** L1 `signal.Store` for hot paths (FSM, sessions). L2 Redis for cross-pod + restart recovery. Durable `signal_log` for charts and replay.
 
 ### Tech Stack
 
@@ -299,9 +332,9 @@ ProcessSignals()
 |-------|-----------|
 | **Backend** | Go 1.25 · Chi router · pgx/v5 · zerolog · gobreaker |
 | **Frontend** | React 18 · TypeScript · Vite 5 · Tailwind CSS · Recharts · Leaflet · Framer Motion |
-| **Database** | PostgreSQL 17 with native partitioning |
-| **Cache** | Redis 7 |
-| **Messaging** | MQTT (Mosquitto 2) |
+| **Database** | PostgreSQL 17 + **TimescaleDB** (hypertables for `signal_log`, continuous aggregates for fleet/battery analytics) |
+| **Cache / Pub-Sub** | Redis 7 (L2 live state, SSE fanout, restart recovery) |
+| **Messaging** | MQTT (Mosquitto 2) — Tesla Fleet Telemetry topic `telemetry/payload/+` |
 | **Monitoring** | Grafana 10.4 · Prometheus · OpenTelemetry (optional Jaeger) |
 | **Deployment** | Docker Compose · Helm 3 · GitHub Actions |
 
