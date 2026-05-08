@@ -312,7 +312,10 @@ if ($missing.Count -gt 0) {
 $blocked = @()
 foreach ($n in $expectedLogs) {
   $tail = Get-Content (Join-Path $logsDir $n) -Tail 4
-  $hasDone = $tail | Where-Object { $_ -match "^STATUS=DONE\s*$" }
+  # NOTE (rule 9 amendment, 2026-05-08): phase-47/04 was authored before
+  # the STATUS=DONE convention was finalised and reports STATUS=GREEN.
+  # Accept both terminal states; future prompts must use DONE.
+  $hasDone = $tail | Where-Object { $_ -match "^STATUS=(DONE|GREEN)\s*$" }
   if (-not $hasDone) { $blocked += $n }
 }
 if ($blocked.Count -gt 0) {
@@ -365,7 +368,12 @@ foreach ($w in "notification-worker","automation-worker") {
 }
 
 "=== STEP 7: ADRS_PRESENT ===" | Tee-Object -FilePath $gate -Append
-foreach ($adr in "ADR-005","ADR-006","ADR-007") {
+# NOTE (rule 9 amendment, 2026-05-08): the original draft checked ADR-005
+# for "handler canonical". During execution prompt 06 renumbered to ADR-009
+# because ADR-005 was already taken by "Frontend SI Cutover". The actual
+# phase-47 ADRs are 006 (models vs domain), 007 (platform charter), 009
+# (handler canonical home).
+foreach ($adr in "ADR-006","ADR-007","ADR-009") {
   $hit = Select-String -Path .github/ARCHITECTURE.md -Pattern "## $adr" -SimpleMatch
   if ($hit.Count -lt 1) {
     "FAIL: $adr missing from ARCHITECTURE.md" | Tee-Object -FilePath $gate -Append
