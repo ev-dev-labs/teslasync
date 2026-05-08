@@ -511,7 +511,14 @@ func alertRulesEquivalent(a, b *models.AlertRule) bool {
 }
 
 // geofencesEquivalent compares the user-authored fields of two
-// geofences (name, polygon, category). ID + timestamps are excluded.
+// geofences (name, polygon, category, enabled, alert flags).
+// ID + timestamps are excluded.
+//
+// The alert flag comparison was added with migration 000192 — older import
+// bundles that omit them unmarshal as `false`, so re-importing a legacy
+// bundle against a row that has alerts enabled WILL flip the row off. This
+// matches the rest of settings-import semantics (omitted fields = explicit
+// false) and is the agreed trade-off for keeping the merge stable.
 func geofencesEquivalent(a, b *models.Geofence) bool {
 	if a == nil || b == nil {
 		return a == b
@@ -523,6 +530,15 @@ func geofencesEquivalent(a, b *models.Geofence) bool {
 		return false
 	}
 	if a.Category != nil && *a.Category != *b.Category {
+		return false
+	}
+	if a.Enabled != b.Enabled {
+		return false
+	}
+	if a.AlertOnEntry != b.AlertOnEntry {
+		return false
+	}
+	if a.AlertOnExit != b.AlertOnExit {
 		return false
 	}
 	return true

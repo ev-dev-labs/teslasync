@@ -86,13 +86,22 @@ const (
 
 // Geofence mirrors the post-migration `geofences` schema. PolygonWKT is a
 // Well-Known Text POLYGON((lon lat, ...)) parsed at runtime — not server-side.
+//
+// Enabled / AlertOnEntry / AlertOnExit were added by migration
+// 000192_geofences_alerts. Pre-existing rows are backfilled with
+// `enabled=false`; alert consumers (FSM transitions, notification dispatcher)
+// MUST filter on Enabled themselves — FindByCoordinates intentionally returns
+// disabled fences too because the reverse-geocoder uses it for friendly naming.
 type Geofence struct {
-	ID         int64             `db:"id" json:"id"`
-	Name       string            `db:"name" json:"name"`
-	PolygonWKT string            `db:"polygon_wkt" json:"polygon_wkt"`
-	Category   *GeofenceCategory `db:"category" json:"category,omitempty"`
-	CreatedAt  time.Time         `db:"created_at" json:"created_at"`
-	UpdatedAt  time.Time         `db:"updated_at" json:"updated_at"`
+	ID           int64             `db:"id" json:"id"`
+	Name         string            `db:"name" json:"name"`
+	PolygonWKT   string            `db:"polygon_wkt" json:"polygon_wkt"`
+	Category     *GeofenceCategory `db:"category" json:"category,omitempty"`
+	Enabled      bool              `db:"enabled" json:"enabled"`
+	AlertOnEntry bool              `db:"alert_on_entry" json:"alert_on_entry"`
+	AlertOnExit  bool              `db:"alert_on_exit" json:"alert_on_exit"`
+	CreatedAt    time.Time         `db:"created_at" json:"created_at"`
+	UpdatedAt    time.Time         `db:"updated_at" json:"updated_at"`
 }
 
 // Centroid computes the arithmetic mean of the polygon vertices.
