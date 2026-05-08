@@ -284,6 +284,13 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 	if fieldPresent(fields, "max_fires_per_resolution") {
 		existing.MaxFiresPerResolution = body.MaxFiresPerResolution
 	}
+	// Phase-49 / Slice 0009 — escalation pair. fieldPresent on EITHER
+	// key replaces both so the user can clear escalation by sending
+	// `{"escalation_after_min": null, "escalation_severity": null}`.
+	if fieldPresent(fields, "escalation_after_min") || fieldPresent(fields, "escalation_severity") {
+		existing.EscalationAfterMin = body.EscalationAfterMin
+		existing.EscalationSeverity = body.EscalationSeverity
+	}
 
 	// Computed-metric fields (kind switching is handled below).
 	if fieldPresent(fields, "metric_id") {
@@ -407,6 +414,8 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		MetricThreshold:       body.MetricThreshold,
 		MetricOp:              body.MetricOp,
 		MaxFiresPerResolution: body.MaxFiresPerResolution,
+		EscalationAfterMin:    body.EscalationAfterMin,
+		EscalationSeverity:    body.EscalationSeverity,
 	}
 	kind, err := validateAlertRuleKind(body.Kind)
 	if err != nil {
@@ -714,6 +723,62 @@ func validateAlertSeverity(severity string) (string, error) {
 	}
 }
 
+// validateAlertRuleEscalation enforces the four invariants on the
+// Phase-49 / Slice 0009 escalation pair:
+//   1. mutual presence — both nil or both set
+//   2. positive duration when set
+//   3. valid severity literal when set
+//   4. strict severity ordering — escalated severity must be HIGHER than
+//      the rule's base severity (info < warn < critical). Equal or lower
+//      escalations would be downgrades or no-ops, which the user mental
+//      model and the DB CHECK constraint both forbid.
+//
+// Repeat-only is enforced by the DB CHECK constraint and the engine's
+// `if rule.TriggerMode != "once"` guard. Defence-in-depth at the handler
+// boundary additionally rejects `trigger_mode='once'` + escalation set
+// so the user gets a clean 400 rather than a 5xx from a constraint
+// violation.
+func validateAlertRuleEscalation(rule *models.AlertRule) error {
+	if (rule.EscalationAfterMin == nil) != (rule.EscalationSeverity == nil) {
+		return errors.New("escalation_after_min and escalation_severity must be set together (both null or both populated)")
+	}
+	if rule.EscalationAfterMin == nil {
+		return nil
+	}
+	if rule.TriggerMode != "repeat" {
+		return errors.New(`escalation requires trigger_mode "repeat" (once-mode rules latch and never re-evaluate)`)
+	}
+	if *rule.EscalationAfterMin <= 0 {
+		return errors.New("escalation_after_min must be greater than 0 when set")
+	}
+	escalated, err := validateAlertSeverity(*rule.EscalationSeverity)
+	if err != nil {
+		return fmt.Errorf("escalation_severity: %w", err)
+	}
+	if alertSeverityRank(escalated) <= alertSeverityRank(rule.Severity) {
+		return fmt.Errorf("escalation_severity %q must be higher than the rule severity %q", escalated, rule.Severity)
+	}
+	return nil
+}
+
+// alertSeverityRank assigns the canonical info < warn < critical
+// ordering used by the escalation higher-severity check. Unknown
+// severities collapse to 0 so an unknown rule severity allows ANY
+// recognised escalated severity (the rule severity should already have
+// been validated by validateAlertSeverity earlier in the same path).
+func alertSeverityRank(severity string) int {
+	switch severity {
+	case "info":
+		return 1
+	case "warn":
+		return 2
+	case "critical":
+		return 3
+	default:
+		return 0
+	}
+}
+
 func validateAlertRule(rule *models.AlertRule) error {
 	if rule.Name == "" {
 		return errors.New("name is required")
@@ -732,6 +797,9 @@ func validateAlertRule(rule *models.AlertRule) error {
 	}
 	if rule.MaxFiresPerResolution != nil && *rule.MaxFiresPerResolution <= 0 {
 		return errors.New("max_fires_per_resolution must be greater than 0 when set")
+	}
+	if err := validateAlertRuleEscalation(rule); err != nil {
+		return err
 	}
 	switch rule.Kind {
 	case "", models.AlertRuleKindSignal:

@@ -1182,4 +1182,271 @@ func TestEvaluate_FiresAfterCooldown_NoStackedFSM(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------
+// Phase-49 / Slice 0009 — escalation tier (Decision D8).
+//
+// repeatRuleWithEscalation builds a numeric repeat-mode rule with both
+// escalation knobs set. The base severity is intentionally `warn` so
+// the escalated severity (`critical`) is strictly higher per the
+// validation contract.
+// ---------------------------------------------------------------------
+
+func repeatRuleWithEscalation(id int64, afterMin int, escalated string) *models.AlertRule {
+	rule := repeatRuleWithCap(id, nil)
+	rule.EscalationAfterMin = intPtr(afterMin)
+	sev := escalated
+	rule.EscalationSeverity = &sev
+	return rule
+}
+
+// setConditionStartedAt rewrites the in-memory escalation onset for a
+// (rule, vehicle) so tests can fast-forward without sleeping wall-clock
+// minutes. Mirrors the bypassCooldown helper for the cooldown timer.
+func setConditionStartedAt(e *RuleEngine, ruleID, vid int64, t time.Time) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	st, ok := e.state[ruleKey{RuleID: ruleID, VehicleID: vid}]
+	if !ok {
+		st = &ruleState{}
+		e.state[ruleKey{RuleID: ruleID, VehicleID: vid}] = st
+	}
+	st.ConditionStartedAt = &t
+}
+
+// TestEvaluate_Escalation_NotYetTriggered confirms a freshly-firing
+// repeat-mode rule with escalation set returns the BASE severity
+// because zero seconds have elapsed since the condition started.
+func TestEvaluate_Escalation_NotYetTriggered(t *testing.T) {
+	t.Parallel()
+	store := newFakeRuleStateStore()
+	rule := repeatRuleWithEscalation(301, 30, "critical")
+	const vid = int64(40)
+
+	engine := NewRuleEngine()
+	engine.SetStateRepo(store)
+	engine.SetMaxFiresPerHour(1000)
+
+	got := engine.Evaluate(rule, vid, map[string]interface{}{"BatteryLevel": 19.0})
+	if !got.Triggered {
+		t.Fatal("first fire must trigger")
+	}
+	if got.Severity != "warn" {
+		t.Fatalf("expected base severity 'warn' on the very first fire (escalation timer still 0), got %q", got.Severity)
+	}
+}
+
+// TestEvaluate_Escalation_TriggeredAfterDuration confirms that once
+// the condition has stayed unresolved for >= EscalationAfterMin, the
+// next fire returns the ESCALATED severity (and the metric counter is
+// bumped). Uses setConditionStartedAt to fast-forward without sleeping.
+func TestEvaluate_Escalation_TriggeredAfterDuration(t *testing.T) {
+	t.Parallel()
+	store := newFakeRuleStateStore()
+	rule := repeatRuleWithEscalation(302, 30, "critical")
+	const vid = int64(41)
+
+	engine := NewRuleEngine()
+	engine.SetStateRepo(store)
+	engine.SetMaxFiresPerHour(1000)
+
+	// First fire establishes the resolution + ConditionStartedAt = now.
+	if got := engine.Evaluate(rule, vid, map[string]interface{}{"BatteryLevel": 19.0}); !got.Triggered || got.Severity != "warn" {
+		t.Fatalf("first fire must trigger at base severity, got %+v", got)
+	}
+
+	// Fast-forward the escalation onset to 31 minutes ago AND bypass the
+	// cooldown so the next eval is permitted to fire.
+	setConditionStartedAt(engine, rule.ID, vid, time.Now().UTC().Add(-31*time.Minute))
+	bypassCooldown(engine, rule.ID, vid)
+
+	got := engine.Evaluate(rule, vid, map[string]interface{}{"BatteryLevel": 19.0})
+	if !got.Triggered {
+		t.Fatal("post-duration fire must trigger")
+	}
+	if got.Severity != "critical" {
+		t.Fatalf("expected ESCALATED severity 'critical' after 31min unresolved, got %q", got.Severity)
+	}
+
+	// Bypass cooldown again so the falling-edge eval (which is repeat-mode,
+	// hence non-edge-aware) actually reaches the matched=false branch.
+	bypassCooldown(engine, rule.ID, vid)
+
+	// And the falling edge resets the escalation onset so the next
+	// rising edge would start the timer over.
+	if got := engine.Evaluate(rule, vid, map[string]interface{}{"BatteryLevel": 50.0}); got.Triggered {
+		t.Fatal("falling edge must not fire")
+	}
+	st := engine.state[ruleKey{RuleID: rule.ID, VehicleID: vid}]
+	if st == nil || st.ConditionStartedAt != nil {
+		t.Fatalf("expected ConditionStartedAt cleared after falling edge, got %+v", st)
+	}
+}
+
+// TestEvaluate_Escalation_OnceModeIgnored confirms the engine's
+// defence-in-depth guard: even if a once-mode rule somehow got
+// escalation knobs through the validator (e.g. stale read after a
+// schema rollback), the engine refuses to escalate it because once-mode
+// rules latch and never see a second fire anyway.
+func TestEvaluate_Escalation_OnceModeIgnored(t *testing.T) {
+	t.Parallel()
+	store := newFakeRuleStateStore()
+	rule := onceModeRule(303)
+	rule.EscalationAfterMin = intPtr(30)
+	sev := "critical"
+	rule.EscalationSeverity = &sev
+	const vid = int64(42)
+
+	engine := NewRuleEngine()
+	engine.SetStateRepo(store)
+
+	if got := engine.Evaluate(rule, vid, map[string]interface{}{"Locked": true}); !got.Triggered || got.Severity != "info" {
+		t.Fatalf("once-mode first fire must trigger at base severity (escalation guarded out), got %+v", got)
+	}
+
+	// Even if we fast-forward + clear the latch + fire again, severity
+	// stays at base because the escalation gate has `if rule.TriggerMode != "once"`.
+	setConditionStartedAt(engine, rule.ID, vid, time.Now().UTC().Add(-31*time.Minute))
+	if err := store.ClearLatch(context.Background(), rule.ID, vid, time.Now().UTC()); err != nil {
+		t.Fatalf("ClearLatch: %v", err)
+	}
+	engine.mu.Lock()
+	engine.state[ruleKey{RuleID: rule.ID, VehicleID: vid}].OnceLatched = false
+	engine.mu.Unlock()
+	bypassCooldown(engine, rule.ID, vid)
+
+	if got := engine.Evaluate(rule, vid, map[string]interface{}{"Locked": true}); got.Triggered && got.Severity != "info" {
+		t.Fatalf("once-mode rule must NEVER escalate even after fast-forward, got severity %q", got.Severity)
+	}
+}
+
+// TestEvaluate_Escalation_NilFieldsBaseSeverity confirms a regular
+// repeat-mode rule with NO escalation configured returns the base
+// severity unchanged across many fires (regression-guard: the new
+// gate cannot accidentally promote rules that didn't opt in).
+func TestEvaluate_Escalation_NilFieldsBaseSeverity(t *testing.T) {
+	t.Parallel()
+	store := newFakeRuleStateStore()
+	rule := repeatRuleWithCap(304, nil) // no escalation knobs set
+	const vid = int64(43)
+
+	engine := NewRuleEngine()
+	engine.SetStateRepo(store)
+	engine.SetMaxFiresPerHour(1000)
+
+	for i := 1; i <= 5; i++ {
+		got := engine.Evaluate(rule, vid, map[string]interface{}{"BatteryLevel": 19.0})
+		if !got.Triggered {
+			t.Fatalf("fire #%d must trigger", i)
+		}
+		if got.Severity != "warn" {
+			t.Fatalf("fire #%d severity must remain 'warn' (no escalation), got %q", i, got.Severity)
+		}
+		bypassCooldown(engine, rule.ID, vid)
+		// Also fast-forward the escalation onset — the gate must not
+		// fire because EscalationAfterMin is nil.
+		setConditionStartedAt(engine, rule.ID, vid, time.Now().UTC().Add(-1*time.Hour))
+	}
+}
+
+// TestValidateAlertRuleEscalation_AllInvariants exercises the handler
+// validator in one place: mutual presence, repeat-only, positive
+// duration, valid severity literal, strict severity ordering. The
+// happy path is a warn → critical configuration with a 30-min timer.
+func TestValidateAlertRuleEscalation_AllInvariants(t *testing.T) {
+	t.Parallel()
+
+	mkRule := func() *models.AlertRule {
+		return &models.AlertRule{
+			Name:        "x",
+			Severity:    "warn",
+			CooldownMin: 5,
+			TriggerMode: "repeat",
+			SignalName:  "BatteryLevel",
+			Op:          "<",
+			ValueNum:    floatPtr(20),
+		}
+	}
+
+	// happy path
+	r := mkRule()
+	r.EscalationAfterMin = intPtr(30)
+	sev := "critical"
+	r.EscalationSeverity = &sev
+	if err := validateAlertRule(r); err != nil {
+		t.Fatalf("happy path must be valid, got %v", err)
+	}
+
+	// mutual presence: only after_min set
+	r = mkRule()
+	r.EscalationAfterMin = intPtr(30)
+	if err := validateAlertRule(r); err == nil {
+		t.Fatal("expected error: only escalation_after_min set without escalation_severity")
+	}
+
+	// mutual presence: only severity set
+	r = mkRule()
+	sev2 := "critical"
+	r.EscalationSeverity = &sev2
+	if err := validateAlertRule(r); err == nil {
+		t.Fatal("expected error: only escalation_severity set without escalation_after_min")
+	}
+
+	// repeat-only
+	r = mkRule()
+	r.TriggerMode = "once"
+	r.EscalationAfterMin = intPtr(30)
+	sev3 := "critical"
+	r.EscalationSeverity = &sev3
+	if err := validateAlertRule(r); err == nil {
+		t.Fatal("expected error: escalation on a once-mode rule")
+	}
+
+	// positive duration
+	r = mkRule()
+	r.EscalationAfterMin = intPtr(0)
+	sev4 := "critical"
+	r.EscalationSeverity = &sev4
+	if err := validateAlertRule(r); err == nil {
+		t.Fatal("expected error: escalation_after_min == 0")
+	}
+
+	// invalid severity literal
+	r = mkRule()
+	r.EscalationAfterMin = intPtr(30)
+	bad := "warning" // legacy spelling explicitly rejected
+	r.EscalationSeverity = &bad
+	if err := validateAlertRule(r); err == nil {
+		t.Fatal(`expected error: escalation_severity "warning" is not a valid literal`)
+	}
+
+	// strict ordering: equal severities (warn → warn) must reject
+	r = mkRule()
+	r.EscalationAfterMin = intPtr(30)
+	sev5 := "warn"
+	r.EscalationSeverity = &sev5
+	if err := validateAlertRule(r); err == nil {
+		t.Fatal("expected error: warn -> warn is not a strict escalation")
+	}
+
+	// strict ordering: downgrade (critical → warn) must reject
+	r = mkRule()
+	r.Severity = "critical"
+	r.EscalationAfterMin = intPtr(30)
+	sev6 := "warn"
+	r.EscalationSeverity = &sev6
+	if err := validateAlertRule(r); err == nil {
+		t.Fatal("expected error: critical -> warn is a downgrade")
+	}
+
+	// strict ordering: info → warn passes
+	r = mkRule()
+	r.Severity = "info"
+	r.EscalationAfterMin = intPtr(30)
+	sev7 := "warn"
+	r.EscalationSeverity = &sev7
+	if err := validateAlertRule(r); err != nil {
+		t.Fatalf("info -> warn must be valid, got %v", err)
+	}
+}
+
 

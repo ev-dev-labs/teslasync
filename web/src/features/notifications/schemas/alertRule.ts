@@ -108,6 +108,24 @@ export const alertRuleSchema = z
       .positive('Max fires must be greater than 0')
       .nullable()
       .optional(),
+    /**
+     * Phase-49 / Slice 0009 — escalation pair (mutual presence).
+     * Repeat-mode rules whose underlying condition stays unresolved
+     * for at least `escalation_after_min` minutes will start firing
+     * at `escalation_severity` instead of the base `severity`. Both
+     * fields MUST be present together or both null. The escalated
+     * severity MUST rank strictly higher than the base severity under
+     * info < warn < critical. Once-mode rules ignore these fields
+     * (the latch caps them at 1 fire per resolution).
+     */
+    escalation_after_min: z
+      .number()
+      .int('Escalate after must be a whole number of minutes')
+      .positive('Escalate after must be greater than 0')
+      .max(1440, 'Escalate after cannot exceed 1440 minutes (24 hours)')
+      .nullable()
+      .optional(),
+    escalation_severity: z.enum(ALERT_RULE_SEVERITIES).nullable().optional(),
     kind: z.enum(ALERT_RULE_KINDS).optional(),
     metric_id: z.string().trim().max(120).optional().nullable(),
     metric_window: z.string().trim().max(60).optional().nullable(),
@@ -115,6 +133,42 @@ export const alertRuleSchema = z
     metric_op: z.enum(COMPUTED_METRIC_OPS).optional().nullable(),
   })
   .superRefine((data, ctx) => {
+    // Phase-49 / Slice 0009 — escalation pair invariants. Run first
+    // so the user gets the clearest error before kind-specific checks.
+    const afterPresent = data.escalation_after_min != null
+    const sevPresent = data.escalation_severity != null
+    if (afterPresent !== sevPresent) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [afterPresent ? 'escalation_severity' : 'escalation_after_min'],
+        message: 'Escalation requires both an escalate-after duration and a severity',
+      })
+    }
+    if (afterPresent && sevPresent) {
+      const triggerMode = data.trigger_mode ?? 'repeat'
+      if (triggerMode !== 'repeat') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['escalation_after_min'],
+          message: 'Escalation only applies to repeat-mode rules',
+        })
+      }
+      const rank: Record<(typeof ALERT_RULE_SEVERITIES)[number], number> = {
+        info: 1,
+        warn: 2,
+        critical: 3,
+      }
+      const baseSev = data.severity ?? 'warn'
+      const escSev = data.escalation_severity!
+      if (rank[escSev] <= rank[baseSev]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['escalation_severity'],
+          message: 'Escalated severity must be higher than the base severity',
+        })
+      }
+    }
+
     const kind = data.kind ?? 'signal'
 
     if (kind === 'computed_metric') {

@@ -157,6 +157,18 @@ var (
 		Help:      "Alert rule evaluations suppressed because the engine-level hourly fire cap was reached",
 	})
 
+	// AlertRulesEscalated counts repeat-mode alert rule fires that were
+	// promoted to the rule's `escalation_severity` because the underlying
+	// condition stayed unresolved for at least `escalation_after_min`
+	// minutes. Incremented exactly once per dispatched escalated alert
+	// (NOT per evaluation, NOT per cap-suppressed evaluation). Phase-49
+	// / Slice 0009 / Decision D8.
+	AlertRulesEscalated = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "alert_rules_escalated_total",
+		Help:      "Alert rule fires promoted to the escalation severity after the configured duration",
+	})
+
 	AlertRuleEvalDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 		Namespace: "teslasync",
 		Name:      "cep_eval_duration_seconds",

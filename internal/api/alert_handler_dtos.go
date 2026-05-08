@@ -38,6 +38,15 @@ type createAlertRuleRequest struct {
 	// already caps them at 1 per resolution.
 	// Phase-49 / Slice 0003 / Decision D5.
 	MaxFiresPerResolution *int `json:"max_fires_per_resolution"`
+
+	// EscalationAfterMin + EscalationSeverity together configure the
+	// repeat-mode two-tier severity escalation introduced in Phase-49 /
+	// Slice 0009 / Decision D8. Both must be NULL together (no
+	// escalation, default) or both set together. The handler enforces
+	// mutual presence + repeat-only + strict severity ordering before
+	// the row reaches the DB.
+	EscalationAfterMin *int    `json:"escalation_after_min"`
+	EscalationSeverity *string `json:"escalation_severity"`
 }
 
 type updateAlertRuleRequest struct {
@@ -79,6 +88,16 @@ type updateAlertRuleRequest struct {
 	// the handler treats omission as "unchanged" and sets a JSON-supplied
 	// non-null value as the new cap.
 	MaxFiresPerResolution *int `json:"max_fires_per_resolution"`
+
+	// EscalationAfterMin + EscalationSeverity — see
+	// createAlertRuleRequest. Update semantics use the standard
+	// fieldPresent fingerprint: omitting both keys preserves the
+	// existing escalation configuration; sending either key (even with
+	// JSON null) replaces it. Mutual presence + repeat-only + strict
+	// severity ordering are validated by validateAlertRule before the
+	// row reaches the DB.
+	EscalationAfterMin *int    `json:"escalation_after_min"`
+	EscalationSeverity *string `json:"escalation_severity"`
 }
 
 // snoozeAlertRuleRequest is the body for POST /alerts/rules/{ruleID}/snooze.

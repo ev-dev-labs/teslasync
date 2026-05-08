@@ -78,6 +78,14 @@ type ruleState struct {
 	// rearms the cap, matching pre-merge CooldownFSM behaviour.
 	HourWindowStart time.Time
 	FireCountHour   int
+	// ConditionStartedAt records when the underlying condition was first
+	// observed as TRUE in the current resolution (the fire that bumped
+	// FireCountSinceReset from 0 → 1). Cleared on the falling edge by
+	// ClearLatch. Read by the escalation gate (Phase-49 / Slice 0009 /
+	// Decision D8) to compute "minutes the condition has stayed
+	// unresolved." Pure in-memory (no DB persistence) — pod restart
+	// resets the escalation timer, same trade-off as HourWindowStart.
+	ConditionStartedAt *time.Time
 }
 
 // NewRuleEngine creates a new alert rule engine. The returned engine has
@@ -152,6 +160,13 @@ func (e *RuleEngine) HydrateFromDB(ctx context.Context) {
 type EvalResult struct {
 	Triggered bool
 	Message   string
+	// Severity is the EFFECTIVE severity for this fire — it equals the
+	// rule's base severity in the common case, and the rule's
+	// `EscalationSeverity` when the escalation timer fired (Phase-49 /
+	// Slice 0009 / Decision D8). Empty string when the rule did not
+	// trigger; callers MUST fall back to `rule.Severity` defensively if
+	// they ever see an empty severity on a Triggered=true result.
+	Severity string
 }
 
 // Evaluate checks a single rule against the current signal batch.
@@ -231,6 +246,10 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 				st.LastFiredAt = nil
 			}
 			st.FireCountSinceReset = 0
+			// Phase-49 / Slice 0009 — clear the escalation onset on the
+			// falling edge so the next rising edge starts a fresh
+			// escalation timer. Mirrors FireCountSinceReset reset.
+			st.ConditionStartedAt = nil
 		}
 		repo := e.stateRepo
 		e.mu.Unlock()
@@ -331,8 +350,19 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	}
 
 	e.mu.Lock()
+	// Phase-49 / Slice 0009 — stamp ConditionStartedAt on the FIRST fire
+	// of this resolution (the one that bumps fire_count_since_reset 0→1).
+	// Subsequent fires within the same resolution leave it alone so the
+	// escalation timer measures from "condition first observed true."
+	// Cleared by the falling-edge branch above (and by ClearLatch on
+	// the persistent side). This is in-memory only, mirroring the
+	// HourWindowStart trade-off.
 	if st != nil {
 		st.LastFiredAt = &now
+		if st.FireCountSinceReset == 0 {
+			started := now
+			st.ConditionStartedAt = &started
+		}
 		st.FireCountSinceReset++
 		if isOnce {
 			st.OnceLatched = true
@@ -344,18 +374,40 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 			st.FireCountHour++
 		}
 	} else {
+		started := now
 		st = &ruleState{
 			LastFiredAt:         &now,
 			FireCountSinceReset: 1,
 			HourWindowStart:     now,
 			FireCountHour:       1,
+			ConditionStartedAt:  &started,
 		}
 		if isOnce {
 			st.OnceLatched = true
 		}
 		e.state[key] = st
 	}
+	// Re-snapshot ConditionStartedAt under the same lock so the
+	// escalation gate below sees a consistent view (could have been
+	// freshly stamped above on the first-fire path).
+	conditionStartedAtLocal := st.ConditionStartedAt
 	e.mu.Unlock()
+
+	// Phase-49 / Slice 0009 — escalation severity gate. Only meaningful
+	// for repeat-mode rules (DB CHECK constraint enforces that, defence
+	// in depth here too). When the rule has both escalation knobs set
+	// AND the condition has stayed unresolved for at least
+	// EscalationAfterMin minutes, fire AT the higher severity. The
+	// counter is bumped once per dispatched escalated alert (not per
+	// evaluation, so it cannot drift on cap-suppressed evals).
+	effectiveSeverity := rule.Severity
+	if rule.TriggerMode != "once" &&
+		rule.EscalationAfterMin != nil && rule.EscalationSeverity != nil &&
+		conditionStartedAtLocal != nil &&
+		now.Sub(*conditionStartedAtLocal) >= time.Duration(*rule.EscalationAfterMin)*time.Minute {
+		effectiveSeverity = *rule.EscalationSeverity
+		metrics.AlertRulesEscalated.Inc()
+	}
 
 	// Render message template — merge prevSignals with current batch so template
 	// variables resolve even when the signal was from a recent (but not current) batch
@@ -379,6 +431,7 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	return EvalResult{
 		Triggered: true,
 		Message:   message,
+		Severity:  effectiveSeverity,
 	}
 }
 

@@ -83,6 +83,17 @@ type AlertRule struct {
 	// Added in migration 000194 (Phase-49 / Slice 0003 / Decision D5).
 	MaxFiresPerResolution *int `db:"max_fires_per_resolution" json:"max_fires_per_resolution,omitempty"`
 
+	// EscalationAfterMin and EscalationSeverity together configure the
+	// two-tier escalation behaviour: a repeat-mode rule that holds at
+	// its declared `Severity` for at least this many minutes of
+	// continuously unresolved condition fires at `EscalationSeverity`
+	// instead. Both fields are NULL together (no escalation) or both set
+	// together (mutual-presence + repeat-only + strict-severity-ordering
+	// CHECK constraints in migration 000196). Added in migration 000196
+	// (Phase-49 / Slice 0009 / Decision D8).
+	EscalationAfterMin *int    `db:"escalation_after_min" json:"escalation_after_min,omitempty"`
+	EscalationSeverity *string `db:"escalation_severity"  json:"escalation_severity,omitempty"`
+
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }

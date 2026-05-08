@@ -507,6 +507,18 @@ export interface AlertRule {
    * Phase-49 / Slice 0003 / Decision D5.
    */
   max_fires_per_resolution?: number | null
+  /**
+   * Phase-49 / Slice 0009 — two-tier severity escalation. When set,
+   * a repeat-mode rule whose underlying condition has stayed
+   * unresolved for at least `escalation_after_min` minutes fires at
+   * `escalation_severity` instead of the base `severity`. Both fields
+   * MUST be set or both MUST be null. Once-mode rules ignore these
+   * fields entirely (the latch caps them at 1 fire per resolution).
+   * `escalation_severity` MUST rank strictly higher than `severity`
+   * under info < warn < critical.
+   */
+  escalation_after_min?: number | null
+  escalation_severity?: AlertRuleSeverity | null
   created_at: string
   updated_at: string
 }
@@ -545,6 +557,13 @@ export interface AlertRuleInput {
   metric_threshold?: number | null
   metric_op?: ComputedMetricOp | null
   max_fires_per_resolution?: number | null
+  /**
+   * Phase-49 / Slice 0009 — escalation pair. See AlertRule.escalation_*
+   * for invariants. Both fields MUST appear together (both null or
+   * both populated). Repeat-mode only.
+   */
+  escalation_after_min?: number | null
+  escalation_severity?: AlertRuleSeverity | null
 }
 
 export interface ComputedMetricSummary {

@@ -26,7 +26,7 @@ import {
 } from '@/api/hooks/useNotifications'
 import type { AlertRuleKind, ComputedMetricOp } from '@/api/types'
 import type { SignalValueType } from '@/types/signals'
-import { GlassPanel, Badge, Button as UiButton, ConfirmDialog, Input as UiInput, Select as UiSelect, Modal, HelpIcon } from '@/components/ui'
+import { GlassPanel, Badge, Button as UiButton, ConfirmDialog, Input as UiInput, Select as UiSelect, Modal, HelpIcon, Toggle } from '@/components/ui'
 import { BulkActionsToolbar, type BulkAction, SeverityBadge, SeverityIcon } from '@/components/data-display'
 import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
@@ -179,6 +179,19 @@ interface EditorState {
    * Phase-49 / Slice 0003 / Decision D5.
    */
   max_fires_per_resolution: string
+  /**
+   * Phase-49 / Slice 0009 — escalation tier. `escalation_enabled`
+   * gates whether the editor sends the pair. `escalation_after_min`
+   * is a string for the same reason as max_fires_per_resolution
+   * (UiInput emits strings + the user may type 3-digit values).
+   * `escalation_severity` is one of info/warn/critical or '' when
+   * the user hasn't picked yet (Save will block via canSave).
+   * Repeat-mode only — buildSavePayload nulls both fields when
+   * trigger_mode !== 'repeat' OR escalation_enabled is false.
+   */
+  escalation_enabled: boolean
+  escalation_after_min: string
+  escalation_severity: Severity | ''
   message: string
   // kind: 'signal' (default — uses signal_name/op/value_*) or
   // 'computed_metric' (uses metric_id/metric_window/metric_op/metric_threshold).
@@ -212,6 +225,9 @@ function freshEditor(): EditorState {
     // in tri-state and the Save button blocks until the user picks.
     trigger_mode: 'unset',
     max_fires_per_resolution: '',
+    escalation_enabled: false,
+    escalation_after_min: '',
+    escalation_severity: '',
     message: '',
     kind: 'signal',
     metric_id: '',
@@ -272,6 +288,35 @@ function parseOptionalMaxFires(value: string): number | null {
   if (!trimmed) return null
   const parsed = Number(trimmed)
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+}
+
+// buildEscalationPayload converts the editor's tri-input escalation
+// state (enabled flag + after_min string + severity string) into the
+// `{ escalation_after_min, escalation_severity }` pair the wire
+// expects. Returns BOTH NULLS when:
+//   - the rule isn't repeat-mode (backend rejects escalation on once-mode)
+//   - the user toggled the checkbox off
+//   - either field is incomplete (Save would have been blocked by canSave)
+// Returns the populated pair otherwise. The two fields move together
+// — the backend's mutual-presence CHECK rejects half-set values.
+// Phase-49 / Slice 0009.
+// Phase-49 / Slice 0009 — canonical info < warn < critical ordering
+// used by the escalation higher-severity check. Must match the
+// alertSeverityRank Go helper in internal/api/alert_handler_rules.go.
+const SEVERITY_RANK: Record<Severity, number> = { info: 1, warn: 2, critical: 3 }
+
+function buildEscalationPayload(
+  state: EditorState,
+  triggerMode: AlertRuleTriggerMode,
+): { escalation_after_min: number | null; escalation_severity: Severity | null } {
+  if (triggerMode !== 'repeat' || !state.escalation_enabled) {
+    return { escalation_after_min: null, escalation_severity: null }
+  }
+  const after = parseOptionalMaxFires(state.escalation_after_min)
+  if (after == null || state.escalation_severity === '') {
+    return { escalation_after_min: null, escalation_severity: null }
+  }
+  return { escalation_after_min: after, escalation_severity: state.escalation_severity }
 }
 
 function isNumericOnlyOp(op: RuleOp): boolean {
@@ -391,6 +436,10 @@ function ruleToEditor(rule: AlertRule): EditorState {
     trigger_mode: normalizeTriggerMode(rule.trigger_mode),
     max_fires_per_resolution:
       rule.max_fires_per_resolution == null ? '' : String(rule.max_fires_per_resolution),
+    escalation_enabled: rule.escalation_after_min != null && rule.escalation_severity != null,
+    escalation_after_min:
+      rule.escalation_after_min == null ? '' : String(rule.escalation_after_min),
+    escalation_severity: rule.escalation_severity ?? '',
     message: rule.signal_name ? `${rule.name}: {{${rule.signal_name}}}` : '',
     kind,
     metric_id: rule.metric_id ?? '',
@@ -431,6 +480,7 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
 
   if (state.kind === 'computed_metric') {
     const threshold = parseOptionalNumber(state.metric_threshold)
+    const escalation = buildEscalationPayload(state, triggerMode)
     return {
       name: state.name.trim(),
       enabled: state.enabled,
@@ -439,6 +489,7 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
       cooldown_min: state.cooldown_min,
       trigger_mode: triggerMode,
       max_fires_per_resolution: parseOptionalMaxFires(state.max_fires_per_resolution),
+      ...escalation,
       kind: 'computed_metric',
       metric_id: state.metric_id || null,
       metric_window: state.metric_window || null,
@@ -448,6 +499,7 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
   }
 
   const valueKind = valueKindForState(state)
+  const escalation = buildEscalationPayload(state, triggerMode)
   const payload: AlertRuleInput = {
     name: state.name.trim(),
     enabled: state.enabled,
@@ -463,6 +515,7 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
     cooldown_min: state.cooldown_min,
     trigger_mode: triggerMode,
     max_fires_per_resolution: parseOptionalMaxFires(state.max_fires_per_resolution),
+    ...escalation,
     kind: 'signal',
   }
 
@@ -575,13 +628,13 @@ export default function AlertStudio() {
     draftSavedAt,
     discardDraft,
   } = useFormDraft<EditorState>(draftKey, freshEditor(), {
-    // Phase-49 / Slice 0008 / Decision D3 — bumped from 2 to 3.
-    // Pre-slice-0008 new-rule drafts contain `trigger_mode: 'repeat'`
-    // (the implicit default before this slice). Restoring such a draft
-    // would silently bypass the new force-choose gate. Bumping the
-    // version forces those drafts to be discarded so the user lands
-    // on the proper 'unset' state and is asked to choose.
-    version: 3,
+    // Phase-49 / Slice 0009 — bumped from 3 to 4. Pre-slice-0009
+    // drafts lack `escalation_*` fields entirely; restoring them
+    // would leave the editor in an undefined-state shape and the
+    // checkbox would render as `undefined` (controlled→uncontrolled
+    // warning + crash on toggle). Bumping the version forces those
+    // drafts to be discarded so the user lands on a fresh editor.
+    version: 4,
     debounceMs: 800,
     skipPersist: v =>
       saveRuleMut.isPending
@@ -869,6 +922,22 @@ export default function AlertStudio() {
       && editor.vehicle_selection.vehicle_ids.length === 0
     ) {
       return false
+    }
+    // Phase-49 / Slice 0009 — escalation pair validity. When the
+    // checkbox is on, BOTH fields must be filled AND the escalated
+    // severity must rank strictly higher than the base severity.
+    // Also rejects the impossible-but-possible state of escalation
+    // enabled on a non-repeat trigger mode (defence-in-depth — the
+    // UI hides the section for non-repeat, but if a stale draft
+    // restored it, Save must still block).
+    if (editor.escalation_enabled) {
+      if (editor.trigger_mode !== 'repeat') return false
+      const after = parseOptionalMaxFires(editor.escalation_after_min)
+      if (after == null) return false
+      if (editor.escalation_severity === '') return false
+      if (SEVERITY_RANK[editor.escalation_severity] <= SEVERITY_RANK[editor.severity]) {
+        return false
+      }
     }
     if (editor.kind === 'computed_metric') {
       // Only enforce metric-shape requirements; if registry is loading we
@@ -1599,7 +1668,24 @@ export default function AlertStudio() {
                   id="alert-severity"
                   className="w-full"
                   value={editor.severity}
-                  onChange={e => setEditor(s => ({ ...s, severity: e.target.value as Severity }))}
+                  onChange={e => {
+                    const next = e.target.value as Severity
+                    setEditor(s => {
+                      // Phase-49 / Slice 0009 — reset escalation_severity
+                      // if the new base severity makes it no longer
+                      // strictly higher (e.g. user bumps base from warn
+                      // to critical, the previously-set warn escalation
+                      // is now a downgrade).
+                      const escSev = s.escalation_severity
+                      const stillValid =
+                        escSev === '' || SEVERITY_RANK[escSev] > SEVERITY_RANK[next]
+                      return {
+                        ...s,
+                        severity: next,
+                        escalation_severity: stillValid ? escSev : '',
+                      }
+                    })
+                  }}
                   options={severityOptions}
                 />
               </div>
@@ -1680,7 +1766,17 @@ export default function AlertStudio() {
                   onChange={e => {
                     const v = e.target.value
                     if (v !== 'once' && v !== 'repeat') return
-                    setEditor(s => ({ ...s, trigger_mode: v }))
+                    setEditor(s => ({
+                      ...s,
+                      trigger_mode: v,
+                      // Phase-49 / Slice 0009 — flipping to once-mode
+                      // disables the escalation section AND nulls the
+                      // pair so a stale value from an earlier 'repeat'
+                      // selection can't sneak through buildSavePayload.
+                      escalation_enabled: v === 'repeat' ? s.escalation_enabled : false,
+                      escalation_after_min: v === 'repeat' ? s.escalation_after_min : '',
+                      escalation_severity: v === 'repeat' ? s.escalation_severity : '',
+                    }))
                   }}
                   options={alertBehaviorOptions}
                   aria-invalid={triggerModeBlocked ? 'true' : undefined}
@@ -1747,6 +1843,102 @@ export default function AlertStudio() {
                       'Only applies to repeat-mode rules. Once-mode already caps at 1 per resolution.',
                     )}
                   </p>
+                </div>
+              )}
+              {editor.trigger_mode === 'repeat' && (
+                <div className="sm:col-span-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Toggle
+                      id="alert-escalation-enabled"
+                      checked={editor.escalation_enabled}
+                      onChange={next =>
+                        setEditor(s => ({
+                          ...s,
+                          escalation_enabled: next,
+                          // Clear the pair when toggling off so a stale
+                          // value can't sneak through buildSavePayload.
+                          escalation_after_min: next ? s.escalation_after_min : '',
+                          escalation_severity: next ? s.escalation_severity : '',
+                        }))
+                      }
+                      size="sm"
+                    />
+                    <span className="text-xs text-[var(--text-primary)] font-medium">
+                      {t(
+                        'notifications.alertStudio.editor.escalationCheckboxLabel',
+                        'Escalate to a higher severity if the condition stays unresolved',
+                      )}
+                    </span>
+                    <HelpIcon
+                      i18nKey="help.fields.alertStudio.escalation"
+                      content="When the underlying condition stays true for at least the minutes you specify, subsequent fires use the escalated severity instead of the base one. Useful for a soft warn → critical promotion when a problem is being ignored."
+                      for="alert-escalation-enabled"
+                    />
+                  </div>
+                  {editor.escalation_enabled && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-escalation-after">
+                          {t(
+                            'notifications.alertStudio.editor.escalationAfterLabel',
+                            'Escalate after (minutes)',
+                          )}
+                        </label>
+                        <UiInput
+                          id="alert-escalation-after"
+                          type="number"
+                          min={1}
+                          step={1}
+                          className="w-full"
+                          value={editor.escalation_after_min}
+                          placeholder={t(
+                            'notifications.alertStudio.editor.escalationAfterPlaceholder',
+                            'e.g. 30',
+                          )}
+                          onChange={e =>
+                            setEditor(s => ({ ...s, escalation_after_min: e.target.value }))
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-escalation-severity">
+                          {t(
+                            'notifications.alertStudio.editor.escalationSeverityLabel',
+                            'Escalated severity',
+                          )}
+                        </label>
+                        <UiSelect
+                          id="alert-escalation-severity"
+                          className="w-full"
+                          value={editor.escalation_severity}
+                          onChange={e =>
+                            setEditor(s => ({
+                              ...s,
+                              escalation_severity: e.target.value as Severity | '',
+                            }))
+                          }
+                          options={[
+                            {
+                              value: '',
+                              label: t(
+                                'notifications.alertStudio.editor.escalationSeverityPlaceholder',
+                                'Select severity…',
+                              ),
+                            },
+                            ...severityOptions.filter(
+                              opt => SEVERITY_RANK[opt.value as Severity] > SEVERITY_RANK[editor.severity],
+                            ),
+                          ]}
+                        />
+                      </div>
+                      <p className="sm:col-span-2 text-[10px] text-[var(--text-muted)]">
+                        {t(
+                          'notifications.alertStudio.editor.escalationHint',
+                          'Only repeat-mode rules can escalate. The escalated severity must be higher than the base severity.',
+                        )}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
               <div className="sm:col-span-2">

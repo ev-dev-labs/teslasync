@@ -95,7 +95,7 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 		metrics.AlertRulesEvaluated.Inc()
 		result := e.ruleEngine.Evaluate(rule, vehicleID, signals)
 		if result.Triggered {
-			e.fireAlert(ctx, rule, vehicleID, vin, result.Message)
+			e.fireAlert(ctx, rule, vehicleID, vin, result.Message, result.Severity)
 		}
 	}
 	metrics.ActiveAlertRules.Set(float64(enabledCount))
@@ -103,8 +103,17 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 }
 
 // fireAlert broadcasts via SSE and dispatches to notification channels.
-func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.AlertRule, vehicleID int64, vin, message string) {
-	severity := rule.Severity
+// `effectiveSeverity` is the severity returned by the engine, which may
+// differ from `rule.Severity` when the Phase-49 / Slice 0009 escalation
+// gate fired. It is the SOURCE OF TRUTH for every downstream consumer
+// (SSE, event bus, metrics, quiet-hours suppression, notification
+// dispatch). An empty `effectiveSeverity` falls back to the rule's
+// declared severity so legacy callers (none today) keep working.
+func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.AlertRule, vehicleID int64, vin, message, effectiveSeverity string) {
+	severity := effectiveSeverity
+	if severity == "" {
+		severity = rule.Severity
+	}
 	if severity == "" {
 		severity = "warning"
 	}

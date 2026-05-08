@@ -368,3 +368,172 @@ describe('AlertStudioPage — alert-behavior force-choose + recommendation (Phas
     expect(screen.queryByTestId('alert-behavior-recommend-banner')).toBeNull()
   });
 });
+
+describe('AlertStudioPage — two-tier severity escalation (Phase-49 / Slice 0009)', () => {
+  beforeEach(() => {
+    RULES = [];
+    recordedSavePayloads.length = 0;
+    window.localStorage.clear();
+  });
+
+  function getEscalationCheckbox(): HTMLElement | null {
+    // Toggle (Phase-49 / Slice 0009) wraps a button[role="switch"]
+    // inside a div whose id is the prop we passed. Walk to find the
+    // actual switch button so click() and aria-checked are observable.
+    const wrapper = document.getElementById('alert-escalation-enabled')
+    if (!wrapper) return null
+    return wrapper.querySelector('button[role="switch"]') as HTMLElement | null
+  }
+
+  function getEscalationAfterInput(): HTMLInputElement | null {
+    return document.getElementById('alert-escalation-after') as HTMLInputElement | null
+  }
+
+  function getEscalationSeveritySelect(): HTMLSelectElement | null {
+    return document.getElementById('alert-escalation-severity') as HTMLSelectElement | null
+  }
+
+  function getTriggerSelect(): HTMLSelectElement {
+    const el = document.getElementById('alert-trigger-mode')
+    if (!el) throw new Error('alert-trigger-mode select not rendered')
+    return el as HTMLSelectElement
+  }
+
+  function getSaveButton(): HTMLButtonElement {
+    const btn = screen.queryByRole('button', { name: /create rule|update rule/i })
+    if (!btn) throw new Error('Save button not rendered')
+    return btn as HTMLButtonElement
+  }
+
+  function fillName(name: string) {
+    fireEvent.change(screen.getByPlaceholderText('My alert rule'), { target: { value: name } })
+  }
+
+  function pickSignal(name: string) {
+    const el = document.getElementById('alert-signal') as HTMLSelectElement
+    fireEvent.change(el, { target: { value: name } })
+  }
+
+  function pickOperator(op: string) {
+    const el = document.getElementById('alert-operator') as HTMLSelectElement
+    fireEvent.change(el, { target: { value: op } })
+  }
+
+  function fillValueNum(v: string) {
+    fireEvent.change(document.querySelector('input[type="number"]')!, { target: { value: v } })
+  }
+
+  // T1 — section is hidden when trigger_mode != 'repeat'. Force-choose
+  // checkbox keeps it hidden until the user picks a mode, and stays
+  // hidden when they pick 'once'.
+  it('escalation section is hidden for once-mode rules', async () => {
+    renderPage()
+    fillName('OnceRule')
+    pickSignal('BatteryLevel')
+    pickOperator('<')
+    fillValueNum('20')
+    fireEvent.change(getTriggerSelect(), { target: { value: 'once' } })
+    await waitFor(() => expect(getTriggerSelect().value).toBe('once'))
+    expect(getEscalationCheckbox()).toBeNull()
+  });
+
+  // T2 — section IS visible when trigger_mode === 'repeat', but the
+  // duration + severity inputs only appear once the checkbox is on.
+  it('escalation checkbox appears for repeat-mode; fields render only when checked', async () => {
+    renderPage()
+    fillName('RepeatRule')
+    pickSignal('BatteryLevel')
+    pickOperator('<')
+    fillValueNum('20')
+    fireEvent.change(getTriggerSelect(), { target: { value: 'repeat' } })
+    await waitFor(() => expect(getEscalationCheckbox()).not.toBeNull())
+    // Checkbox unchecked → fields not rendered yet.
+    expect(getEscalationAfterInput()).toBeNull()
+    expect(getEscalationSeveritySelect()).toBeNull()
+    // Toggle on → both fields appear.
+    fireEvent.click(getEscalationCheckbox()!)
+    await waitFor(() => expect(getEscalationAfterInput()).not.toBeNull())
+    expect(getEscalationSeveritySelect()).not.toBeNull()
+  });
+
+  // T3 — Save blocks until BOTH escalation fields are filled AND the
+  // escalated severity is strictly higher than the base. Half-set
+  // states fail the canSave gate.
+  it('Save is disabled when escalation is on but fields are incomplete', async () => {
+    renderPage()
+    fillName('PartialRule')
+    pickSignal('BatteryLevel')
+    pickOperator('<')
+    fillValueNum('20')
+    fireEvent.change(getTriggerSelect(), { target: { value: 'repeat' } })
+    await waitFor(() => expect(getEscalationCheckbox()).not.toBeNull())
+    fireEvent.click(getEscalationCheckbox()!)
+
+    // Just opened: both fields blank → Save blocked.
+    expect(getSaveButton()).toBeDisabled()
+
+    // Fill duration only → still blocked (severity missing).
+    fireEvent.change(getEscalationAfterInput()!, { target: { value: '30' } })
+    expect(getSaveButton()).toBeDisabled()
+
+    // Add severity → Save unblocks (default base 'warn' < 'critical').
+    fireEvent.change(getEscalationSeveritySelect()!, { target: { value: 'critical' } })
+    await waitFor(() => expect(getSaveButton()).not.toBeDisabled())
+  });
+
+  // T4 — Save payload includes the pair when the user filled it AND
+  // both fields are nulled when the user toggles the checkbox off.
+  // Verifies buildEscalationPayload + buildSavePayload integration.
+  it('save payload includes escalation_after_min + escalation_severity when filled', async () => {
+    renderPage()
+    fillName('EscalatedRule')
+    pickSignal('BatteryLevel')
+    pickOperator('<')
+    fillValueNum('20')
+    fireEvent.change(getTriggerSelect(), { target: { value: 'repeat' } })
+    await waitFor(() => expect(getEscalationCheckbox()).not.toBeNull())
+    fireEvent.click(getEscalationCheckbox()!)
+    fireEvent.change(getEscalationAfterInput()!, { target: { value: '30' } })
+    fireEvent.change(getEscalationSeveritySelect()!, { target: { value: 'critical' } })
+
+    await waitFor(() => expect(getSaveButton()).not.toBeDisabled())
+    fireEvent.click(getSaveButton())
+
+    await waitFor(() => expect(recordedSavePayloads.length).toBeGreaterThan(0))
+    const payload = recordedSavePayloads[recordedSavePayloads.length - 1]
+    expect(payload.escalation_after_min).toBe(30)
+    expect(payload.escalation_severity).toBe('critical')
+  });
+
+  // T5 — flipping trigger_mode away from repeat must NULL OUT the
+  // escalation pair on the wire. The UI hides the section, but if a
+  // stale field value lingered in EditorState it would still get sent
+  // and the backend would 400. Defence-in-depth integration test.
+  it('payload nulls escalation when user flips trigger_mode from repeat to once', async () => {
+    renderPage()
+    fillName('FlippedRule')
+    pickSignal('BatteryLevel')
+    pickOperator('<')
+    fillValueNum('20')
+    fireEvent.change(getTriggerSelect(), { target: { value: 'repeat' } })
+    await waitFor(() => expect(getEscalationCheckbox()).not.toBeNull())
+    fireEvent.click(getEscalationCheckbox()!)
+    fireEvent.change(getEscalationAfterInput()!, { target: { value: '45' } })
+    fireEvent.change(getEscalationSeveritySelect()!, { target: { value: 'critical' } })
+
+    // Now flip back to once-mode. Checkbox + fields disappear; the
+    // EditorState's escalation_* values get nulled by the trigger_mode
+    // onChange handler.
+    fireEvent.change(getTriggerSelect(), { target: { value: 'once' } })
+    await waitFor(() => expect(getTriggerSelect().value).toBe('once'))
+    expect(getEscalationCheckbox()).toBeNull()
+
+    await waitFor(() => expect(getSaveButton()).not.toBeDisabled())
+    fireEvent.click(getSaveButton())
+
+    await waitFor(() => expect(recordedSavePayloads.length).toBeGreaterThan(0))
+    const payload = recordedSavePayloads[recordedSavePayloads.length - 1]
+    expect(payload.escalation_after_min).toBeNull()
+    expect(payload.escalation_severity).toBeNull()
+  });
+});
