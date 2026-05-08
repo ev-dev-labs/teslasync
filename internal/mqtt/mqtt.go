@@ -566,7 +566,7 @@ func NewPipelineSubscriber(
 		tracker:    NewRedeliveryTracker(cfg.TrackerCapacity),
 		resolveVIN: resolveVIN,
 		cfg:        cfg,
-		logger:     logger,
+		logger:     withHotPathSampling(logger),
 		ctx:        ctx,
 		cancel:     cancel,
 	}

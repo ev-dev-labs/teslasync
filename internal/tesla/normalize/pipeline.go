@@ -168,7 +168,7 @@ func New(histRepo unithistory.Repo, r Routable, log zerolog.Logger, observers ..
 	return &Pipeline{
 		histRepo:  histRepo,
 		router:    r,
-		log:       log,
+		log:       withHotPathSampling(log),
 		metrics:   defaultMetrics,
 		observers: registered,
 	}

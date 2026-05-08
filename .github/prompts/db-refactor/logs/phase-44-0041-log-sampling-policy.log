@@ -1,0 +1,10 @@
+=== GATE ===
+=== AUDIT ===
+samplers: 2
+=== BUILD ===
+=== TESTS ===
+ok  	github.com/ev-dev-labs/teslasync/internal/tesla/normalize	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/mqtt	(cached)
+All gate checks passed.
+EXIT=0
+STATUS=DONE
