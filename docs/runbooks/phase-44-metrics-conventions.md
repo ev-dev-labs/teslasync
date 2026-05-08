@@ -205,10 +205,79 @@ pin every contract listed above:
 
 ## Future work tracked in subsequent phase-44 prompts
 
-- **0021** — exemplars (link traces from histogram buckets)
+- **0021** — exemplars (link traces from histogram buckets) ✅ landed
 - **0022** — business SLIs (drive-completed, charge-completed)
 - **0030** — SLO catalog yaml referencing these RED metrics
 - **0031** — Prometheus recording rules over these counters
 - **0032** — burn-rate alerts (see template above)
 - **0033** — Grafana dashboards consuming these metrics
 - **0080** — route-coverage audit (verifies every route is instrumented)
+
+## Trace-ID exemplars on the latency histogram
+
+Since prompt 0021, the latency histogram observation is routed through
+`observeDurationWithExemplar()` (in
+[`internal/api/middleware.go`](../../internal/api/middleware.go)) which calls
+`prometheus.ExemplarObserver.ObserveWithExemplar()` whenever the active OTel
+span context is **valid AND sampled**. The exemplar carries two label pairs:
+
+| Exemplar label | Source                                                     |
+|----------------|------------------------------------------------------------|
+| `trace_id`     | `trace.SpanContextFromContext(ctx).TraceID().String()`     |
+| `span_id`     | `trace.SpanContextFromContext(ctx).SpanID().String()`      |
+
+When no span is in flight, or the span is explicitly NOT sampled
+(`TraceFlags=0`), the observation falls back to a plain `Observe()` and no
+exemplar is recorded. Tests
+`TestObserveDurationWithExemplar_AttachesTraceID`,
+`TestObserveDurationWithExemplar_NoExemplarWithoutSampledSpan`, and
+`TestObserveDurationWithExemplar_NotSampledSpanIsSkipped` pin all three
+branches.
+
+### Prometheus configuration required
+
+Exemplars are only **stored and queryable** when Prometheus is started with
+the `--enable-feature=exemplar-storage` flag. Without the flag, the
+histogram still emits exemplars on /metrics scrapes, but Prometheus drops
+them on ingestion, so the Grafana "Show exemplars" toggle has nothing to
+render.
+
+In [`deploy/`](../../deploy/) Helm/Compose definitions, add to the
+Prometheus container args:
+
+```yaml
+args:
+  - --config.file=/etc/prometheus/prometheus.yml
+  - --storage.tsdb.path=/prometheus
+  - --enable-feature=exemplar-storage   # required for trace-ID exemplars
+```
+
+In a docker-compose dev stack:
+
+```yaml
+prometheus:
+  image: prom/prometheus:v2.47.0
+  command:
+    - --config.file=/etc/prometheus/prometheus.yml
+    - --enable-feature=exemplar-storage
+```
+
+### Querying exemplars
+
+Once the flag is on, exemplars are queryable via:
+
+```
+GET /api/v1/query_exemplars?query=teslasync_red_http_request_duration_seconds_bucket&start=...&end=...
+```
+
+In Grafana, enable the "Show exemplars" toggle on any panel using the
+histogram, and configure a "Trace to logs / Trace to metrics" datasource
+link from `trace_id` → Tempo so a click on a bucket exemplar opens the
+trace.
+
+### Follow-on work
+
+The exemplar feature gate is enabled per-Prometheus-server. Phase-44
+prompt 0050 (Helm OTel collector) and 0051 (Helm Tempo) will land the
+chart-side configuration so all three observability backends agree on
+the contract. Until then, dev stacks must enable the flag manually.

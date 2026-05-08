@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"runtime/debug"
@@ -12,6 +13,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // RED metrics (Rate / Errors / Duration) emitted exactly once per HTTP request
@@ -104,11 +106,39 @@ func MetricsMiddleware(next http.Handler) http.Handler {
 			if class == "5xx" {
 				redHTTPRequestErrorsTotal.WithLabelValues(r.Method, route, class).Inc()
 			}
-			redHTTPRequestDurationSeconds.WithLabelValues(r.Method, route).Observe(duration)
+			observeDurationWithExemplar(r.Context(), r.Method, route, duration)
 		}()
 
 		next.ServeHTTP(ww, r)
 	})
+}
+
+// observeDurationWithExemplar records a duration sample on the RED latency
+// histogram and, when the active OTel span is sampled, attaches the trace ID
+// as a Prometheus exemplar so operators can jump from a slow histogram bucket
+// straight to the trace in Tempo/Jaeger. Falls back to a plain Observe() when
+// no sampled span context is present.
+//
+// Requires Prometheus to be started with --enable-feature=exemplar-storage so
+// the server retains exemplars in the TSDB and exposes them on /api/v1/query
+// (see docs/runbooks/phase-44-metrics-conventions.md).
+func observeDurationWithExemplar(ctx context.Context, method, route string, duration float64) {
+	obs, err := redHTTPRequestDurationSeconds.GetMetricWithLabelValues(method, route)
+	if err != nil {
+		// Should never happen — labels match the metric definition.
+		return
+	}
+	sc := trace.SpanContextFromContext(ctx)
+	if sc.IsValid() && sc.IsSampled() {
+		if exObs, ok := obs.(prometheus.ExemplarObserver); ok {
+			exObs.ObserveWithExemplar(duration, prometheus.Labels{
+				"trace_id": sc.TraceID().String(),
+				"span_id":  sc.SpanID().String(),
+			})
+			return
+		}
+	}
+	obs.Observe(duration)
 }
 
 // Observability contract:
