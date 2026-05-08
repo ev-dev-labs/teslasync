@@ -13,9 +13,17 @@ import { ThemeProvider } from './components/ui/ThemeProvider'
 import ReloadPrompt from './components/feedback/ReloadPrompt'
 import { SelectedVehicleProvider } from './store/selectedVehicle'
 import { installGlobalErrorReporting, reportFrontendError } from './lib/errorReporter'
+import { initRum } from './observability/rum'
 import App from './App'
 import './i18n'
 import './index.css'
+
+// ── RUM bootstrap (Phase 44 / Prompt 0060) ────────────────────────────────────
+// Install the OpenTelemetry browser SDK BEFORE React mounts so the
+// auto-instrumentations (page load, fetch, XHR) can capture even the very
+// first request the app fires. No-ops if VITE_OTLP_HTTP_ENDPOINT is unset
+// (the dev default), so this is safe in every environment.
+initRum()
 
 // ── Frontend error reporting (Phase 46 / Prompt 01) ───────────────────────────
 // Install global window.error / window.unhandledrejection listeners BEFORE
