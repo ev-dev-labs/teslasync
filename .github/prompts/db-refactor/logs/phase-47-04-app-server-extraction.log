@@ -1,0 +1,39 @@
+=== PHASE-47 / 04 app-server-extraction — 2026-05-08T12:59:50.7390687-07:00 ===
+=== STEP 1: LINE_COUNT ===
+cmd/teslasync/main.go LOC = 71
+=== STEP 2: GO_BUILD ===
+=== STEP 3: GO_VET ===
+=== STEP 4: GO_TEST_RACE_APP ===
+ok  	github.com/ev-dev-labs/teslasync/internal/app	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/chargingsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/exportsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/notificationsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/tripsvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc	(cached)
+ok  	github.com/ev-dev-labs/teslasync/cmd/teslasync	1.188s [no tests to run]
+=== STEP 5: ARCH_TEST ===
+ok  	github.com/ev-dev-labs/teslasync/internal/arch	5.965s
+=== STEP 6: REFRESH_BASELINE ===
+baseline cmd/teslasync/main.go LOC = 
+=== STEP 7: WORKERS_UNTOUCHED ===
+=== STEP 8: GIT_STATUS ===
+ M cmd/teslasync/lifecycle.go
+ M cmd/teslasync/main.go
+ M cmd/teslasync/main_pipeline_wiring_test.go
+ M tools/archmetrics/baseline.json
+ M tools/archmetrics/baseline.md
+?? internal/app/adapters.go
+?? internal/app/app.go
+?? internal/app/doc.go
+?? internal/app/lifecycle.go
+?? internal/app/new.go
+?? internal/app/run.go
+?? internal/app/wiring_test.go
+=== EXTRA: SMOKE_BUILD ===
+binary size = 92704256 bytes
+smoke build OK
+=== EXTRA: SMOKE_HEALTHCHECK ===
+healthcheck exit=0 (running api container responded, 0=healthy)
+EXIT=0
+STATUS=GREEN

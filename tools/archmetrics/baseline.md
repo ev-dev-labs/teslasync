@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics ΓÇö baseline
 
-_Generated 2026-05-08T19:43:56Z, Go go1.26.1, commit b7507f1b742edd05c73baa89fd3ef3e96083a7cb_
+_Generated 2026-05-08T20:00:42Z, Go go1.26.1, commit 913f70c376b3515a3f7e4d2db2f52d506c139ea5_
 
 ## Summary
 
-- Packages: 101
+- Packages: 102
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 2
-- Total non-blank LOC under cmd/+internal/+tools/: 196605
+- Total non-blank LOC under cmd/+internal/+tools/: 196798
 
 ## cmd/* main.go LOC
 
@@ -22,7 +22,7 @@ _Generated 2026-05-08T19:43:56Z, Go go1.26.1, commit b7507f1b742edd05c73baa89fd3
 | cmd/resubscribe/main.go | 363 |
 | cmd/slo-coverage-audit/main.go | 199 |
 | cmd/slogen/main.go | 356 |
-| cmd/teslasync/main.go | 923 |
+| cmd/teslasync/main.go | 71 |
 | cmd/trace-coverage-audit/main.go | 219 |
 | cmd/unit-drift-validator/main.go | 154 |
 
@@ -45,7 +45,7 @@ _Generated 2026-05-08T19:43:56Z, Go go1.26.1, commit b7507f1b742edd05c73baa89fd3
 | cmd/resubscribe | 2 | 1 | 588 | yes | cmd-internal |
 | cmd/slo-coverage-audit | 2 | 0 | 203 | yes | cmd-internal |
 | cmd/slogen | 5 | 4 | 1342 | yes | cmd-internal |
-| cmd/teslasync | 6 | 1 | 1157 | yes | cmd-internal |
+| cmd/teslasync | 6 | 1 | 144 | yes | cmd-internal |
 | cmd/trace-coverage-audit | 2 | 0 | 223 | yes | cmd-internal |
 | cmd/unit-drift-validator | 2 | 1 | 296 | yes | cmd-internal |
 | internal/adapter/gasprices | 2 | 1 | 358 | yes | adapter |
@@ -57,6 +57,7 @@ _Generated 2026-05-08T19:43:56Z, Go go1.26.1, commit b7507f1b742edd05c73baa89fd3
 | internal/adapter/storage | 2 | 0 | 64 | yes | adapter |
 | internal/adapter/tesla | 3 | 0 | 199 | yes | adapter |
 | internal/api | 197 | 94 | 78820 | yes | handler |
+| internal/app | 6 | 1 | 1206 | yes | app |
 | internal/app/chargingsvc | 2 | 1 | 295 | yes | app |
 | internal/app/dashboardsvc | 2 | 1 | 322 | yes | app |
 | internal/app/exportsvc | 2 | 1 | 274 | yes | app |

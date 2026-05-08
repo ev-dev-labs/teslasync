@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-08T19:43:55Z",
+  "generated_at": "2026-05-08T20:00:41Z",
   "go_version": "go1.26.1",
-  "commit_sha": "b7507f1b742edd05c73baa89fd3ef3e96083a7cb",
+  "commit_sha": "913f70c376b3515a3f7e4d2db2f52d506c139ea5",
   "packages": [
     {
       "path": "cmd/automation-worker",
@@ -185,35 +185,12 @@
       "path": "cmd/teslasync",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1157,
+      "loc": 144,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
-        "internal/adapter/gasprices",
-        "internal/api",
-        "internal/cache",
-        "internal/config",
-        "internal/crypto",
-        "internal/database",
-        "internal/events",
-        "internal/geocoding",
-        "internal/metrics",
-        "internal/models",
-        "internal/mqtt",
-        "internal/notification",
-        "internal/platform/httputil",
-        "internal/polling",
-        "internal/resilience",
-        "internal/signal",
-        "internal/tesla",
-        "internal/tesla/normalize",
-        "internal/tesla/router",
-        "internal/tesla/router/writers",
-        "internal/tesla/unit_history",
-        "internal/tesla_pipeline",
-        "internal/tracing",
-        "internal/webpush",
-        "internal/worker"
+        "internal/app",
+        "internal/config"
       ],
       "files": [
         "doc.go",
@@ -756,6 +733,50 @@
         "webhook_receiver_handler_test.go",
         "weekly_digest_handler.go",
         "year_review_handler.go"
+      ]
+    },
+    {
+      "path": "internal/app",
+      "go_files": 6,
+      "test_files": 1,
+      "loc": 1206,
+      "has_doc_go": true,
+      "layer": "app",
+      "imports": [
+        "internal/adapter/gasprices",
+        "internal/api",
+        "internal/cache",
+        "internal/config",
+        "internal/crypto",
+        "internal/database",
+        "internal/events",
+        "internal/geocoding",
+        "internal/metrics",
+        "internal/models",
+        "internal/mqtt",
+        "internal/notification",
+        "internal/platform/httputil",
+        "internal/polling",
+        "internal/resilience",
+        "internal/signal",
+        "internal/tesla",
+        "internal/tesla/normalize",
+        "internal/tesla/router",
+        "internal/tesla/router/writers",
+        "internal/tesla/unit_history",
+        "internal/tesla_pipeline",
+        "internal/tracing",
+        "internal/webpush",
+        "internal/worker"
+      ],
+      "files": [
+        "adapters.go",
+        "app.go",
+        "doc.go",
+        "lifecycle.go",
+        "new.go",
+        "run.go",
+        "wiring_test.go"
       ]
     },
     {
@@ -2491,7 +2512,7 @@
     "cmd/resubscribe": 363,
     "cmd/slo-coverage-audit": 199,
     "cmd/slogen": 356,
-    "cmd/teslasync": 923,
+    "cmd/teslasync": 71,
     "cmd/trace-coverage-audit": 219,
     "cmd/unit-drift-validator": 154
   },
