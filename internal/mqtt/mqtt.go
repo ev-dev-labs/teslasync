@@ -18,11 +18,20 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
+
+// mqttTracerName is the OpenTelemetry tracer name for spans produced by this
+// package. Phase-44 prompt 0014 contract: the receive-boundary span is named
+// "mqtt.consume" and seeds context for downstream normalize/router spans.
+const mqttTracerName = "mqtt"
 
 // Client wraps MQTT publishing.
 type Client struct {
@@ -629,8 +638,24 @@ type mqttPayload struct {
 }
 
 func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.Message) {
+	// Phase-44 prompt 0014: open the receive-boundary span. The ctx returned
+	// here MUST be threaded through handlePayload → pipeline.Process so all
+	// normalize / router / writer spans become children of mqtt.consume.
+	ctx, span := otel.Tracer(mqttTracerName).Start(
+		s.ctx,
+		"mqtt.consume",
+		trace.WithSpanKind(trace.SpanKindConsumer),
+		trace.WithAttributes(
+			attribute.String("mqtt.topic", msg.Topic()),
+			attribute.Int("mqtt.message_size", len(msg.Payload())),
+			attribute.Int("mqtt.message_id", int(msg.MessageID())),
+		),
+	)
+	defer span.End()
 	defer func() {
 		if r := recover(); r != nil {
+			span.RecordError(fmt.Errorf("panic: %v", r))
+			span.SetStatus(codes.Error, "panic in onPipelineMessage")
 			metrics.PanicsRecovered.WithLabelValues("mqtt-pipeline-subscriber").Inc()
 			s.logger.Error().
 				Interface("panic", r).
@@ -639,7 +664,7 @@ func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.M
 				Msg("mqtt: PipelineSubscriber panic in onPipelineMessage")
 		}
 	}()
-	s.handlePayload(s.ctx, mqttPayload{
+	s.handlePayload(ctx, mqttPayload{
 		Topic:     msg.Topic(),
 		Payload:   msg.Payload(),
 		MessageID: msg.MessageID(),
@@ -670,8 +695,10 @@ func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.M
 //        normalize.Pipeline.Process contract; do NOT ack and do NOT DLQ.
 //        Bubble up via metrics only. (rubber-duck-#2 fix.)
 func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload) {
+	span := trace.SpanFromContext(ctx)
 	vin, ok := parsePipelineTopic(s.cfg.TopicBase, msg.Topic)
 	if !ok {
+		span.SetAttributes(attribute.String("mqtt.disposition", "ack-drop-bad-topic"))
 		s.logger.Warn().
 			Str("topic", msg.Topic).
 			Msg("mqtt: PipelineSubscriber: topic does not match {base}/payload/{VIN}; ack-drop")
@@ -682,6 +709,7 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 	vehicleID, err := s.resolveVIN(ctx, vin)
 	if err != nil {
 		if errors.Is(err, ErrUnknownVIN) {
+			span.SetAttributes(attribute.String("mqtt.disposition", "ack-drop-unknown-vin"))
 			normalizeFailuresTotal.WithLabelValues(reasonVINUnknown).Inc()
 			s.logger.Debug().
 				Str("vin_prefix", redactVIN(vin)).
@@ -689,6 +717,9 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 			msg.Ack()
 			return
 		}
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "vin resolver error")
+		span.SetAttributes(attribute.String("mqtt.disposition", "no-ack-vin-resolver-error"))
 		normalizeFailuresTotal.WithLabelValues(reasonVINResolverError).Inc()
 		s.logger.Error().
 			Err(err).
@@ -698,11 +729,14 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 		return
 	}
 
+	span.SetAttributes(attribute.Int64("vehicle_id", vehicleID))
+
 	if err := s.pipeline.Process(ctx, msg.Payload, vehicleID); err != nil {
 		s.handlePipelineError(ctx, msg, vehicleID, vin, err)
 		return
 	}
 
+	span.SetAttributes(attribute.String("mqtt.disposition", "ack"))
 	s.tracker.Forget(msg.MessageID)
 	msg.Ack()
 }
