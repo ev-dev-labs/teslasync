@@ -86,7 +86,11 @@ securityContext:
     drop:
       - ALL
 
-nodeSelector: {}
+# Pin api + workers (notification, export, automation, command-proxy) to carbon
+# so all teslasync workloads colocate on the node that hosts TimescaleDB, MQTT,
+# and Redis. Empty {} restores default Kubernetes scheduling.
+nodeSelector:
+  kubernetes.io/hostname: carbon
 tolerations: []
 affinity: {}
 
@@ -139,7 +143,9 @@ web:
       drop:
         - ALL
 
-  nodeSelector: {}
+  # Colocate web with the rest of the teslasync stack on carbon.
+  nodeSelector:
+    kubernetes.io/hostname: carbon
   tolerations: []
   affinity: {}
 
@@ -344,8 +350,29 @@ fleetTelemetry:
   image: tesla/fleet-telemetry:latest
 
   service:
-    type: ClusterIP
+    # NodePort opens port 30443 on every node's host network. The router
+    # forwards WAN 8443 → carbon:30443 (carbon's real MAC keeps Deco happy).
+    # nodePort must be in k3s's default range 30000-32767 unless the
+    # apiserver --service-node-port-range flag has been customized.
+    type: NodePort
     port: 4443
+    nodePort: 30443
+    # -- Optional: bind the Service port to one or more host IPs via kube-proxy
+    # iptables. Useful when the cluster is behind a router/firewall that requires
+    # a real node MAC for port-forwarding (e.g., TP-Link Deco) and a virtual
+    # MetalLB IP isn't acceptable. Leave empty unless you know you need this.
+    # The IPs MUST belong to a node already running the fleet-telemetry pod.
+    # Example: ["192.168.68.112"]  (carbon's host IP)
+    externalIPs: []
+
+  # -- Pin the fleet-telemetry pod to a specific node. Required when
+  # service.externalIPs is set so the bound IP belongs to the same node that
+  # actually runs the pod.
+  nodeSelector:
+    kubernetes.io/hostname: carbon
+
+  tolerations: []
+  affinity: {}
 
   tls:
     # -- K8s TLS secret containing tls.crt and tls.key for the Fleet Telemetry server.
