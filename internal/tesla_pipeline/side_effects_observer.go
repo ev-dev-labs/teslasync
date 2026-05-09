@@ -61,8 +61,25 @@ import (
 // at WARN. The bridge does NOT propagate the error to the
 // AtomicsObserver caller — observer failures must not fail the
 // payload (phase-42a/0000 Decision #2).
+//
+// GetAll returns the current cross-batch snapshot of all signals
+// known for the vehicle (i.e. the union of every UpdateAll call
+// since the live store was hydrated). The bridge invokes GetAll
+// AFTER UpdateAll on every payload to build the true `accumulated`
+// argument SessionTracker + AlertEvaluator need. Returning a nil
+// map (or an error) is acceptable — the bridge falls back to the
+// per-payload signals map and logs at DEBUG.
+//
+// Per the per-field MQTT cutover this is the load-bearing fix:
+// before, the bridge passed the per-payload `signals` map as both
+// `current` and `accumulated`. With per-field MQTT each payload
+// carries one signal, so accumulated would only have one key,
+// breaking sessions' "use last-known battery / odometer / location
+// when starting a new session" feature. GetAll restores the
+// cross-batch accumulator to its legacy semantics.
 type LiveSignalStore interface {
 	UpdateAll(ctx context.Context, vehicleID int64, signals map[string]any) error
+	GetAll(ctx context.Context, vehicleID int64) (map[string]any, error)
 }
 
 // SignalHistoryWriter mirrors the buffered Append on
@@ -239,12 +256,20 @@ func New(cfg Config) *SideEffectsObserver {
 //  3. fsm.ProcessSignals(...)           — drive/charge/sleep FSM
 //                                          (may read live state from
 //                                          step 1)
-//  4. sessions.ProcessSignals(...)      — drive/charge sessions
+//  4. live.GetAll(...)                  — cross-batch accumulated
+//                                          snapshot for sessions +
+//                                          alerts (per-field MQTT
+//                                          delivers one atomic per
+//                                          payload, so the per-batch
+//                                          signals map alone is
+//                                          insufficient)
+//  5. sessions.ProcessSignals(...)      — drive/charge sessions
 //     alerts.Evaluate(...)              — alert rule fanout
-//                                          (both share the same
-//                                          per-payload signals map
-//                                          per Decision #8)
-//  5. broadcastSSE(...)                 — SSE fanout LAST so the
+//                                          (current=signals from
+//                                          this payload;
+//                                          accumulated=snapshot
+//                                          from step 4)
+//  6. broadcastSSE(...)                 — SSE fanout LAST so the
 //                                          wire view reflects all
 //                                          upstream side-effects
 //
@@ -287,7 +312,9 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 		}
 	}
 
-	// Step 1: live store FIRST so FSM may read live state.
+	// Step 1: live store FIRST so FSM may read live state AND so the
+	// accumulated snapshot built in step 4 reflects the current
+	// payload's atomics merged with all prior batches.
 	if err := o.live.UpdateAll(ctx, vehicleID, signals); err != nil {
 		o.log.Warn().
 			Err(err).
@@ -304,7 +331,27 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 	// Decision #10(e) explicitly guards against.
 	o.fsm.ProcessSignalsAt(ctx, vehicleID, signals, payloadTs, fieldTs)
 
-	// Step 4: VIN-keyed sessions + alerts. A VIN lookup failure
+	// Step 4: build the cross-batch accumulated snapshot. Per-field
+	// MQTT delivers one atomic per payload, so the per-payload
+	// signals map carries at most one field — sessions/alerts MUST
+	// receive the union of all prior batches to make "use last-known
+	// battery / odometer / location" decisions correctly. GetAll is
+	// invoked AFTER UpdateAll so the snapshot includes the current
+	// payload's atomics. On error (or nil snapshot — first message
+	// ever), fall back to the per-payload map and log at DEBUG so
+	// the regression is surfaced without flooding WARN.
+	accumulated, err := o.live.GetAll(ctx, vehicleID)
+	if err != nil {
+		o.log.Debug().
+			Err(err).
+			Int64("vehicle_id", vehicleID).
+			Msg("teslapipeline: live signal store GetAll failed; falling back to per-payload signals map for accumulated")
+		accumulated = signals
+	} else if accumulated == nil {
+		accumulated = signals
+	}
+
+	// Step 5: VIN-keyed sessions + alerts. A VIN lookup failure
 	// SKIPS this pair only; live / history / FSM / SSE proceed.
 	vin, err := o.vinResolver.VINByID(ctx, vehicleID)
 	if err != nil {
@@ -313,14 +360,17 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 			Int64("vehicle_id", vehicleID).
 			Msg("teslapipeline: VIN lookup failed; skipping sessions + alerts")
 	} else {
-		// Both sessions and alerts receive the SAME per-payload map
-		// for both the current and accumulated arguments
-		// (Decision #8). The cross-batch accumulator is deferred.
-		o.sessions.ProcessSignalsAt(ctx, vehicleID, vin, signals, signals, payloadTs, fieldTs)
-		o.alerts.Evaluate(ctx, vehicleID, vin, signals, signals)
+		// `signals` is the per-payload current view; `accumulated`
+		// is the cross-batch snapshot from the live store. They are
+		// distinct maps under per-field MQTT (a payload typically
+		// has 1 entry; accumulated has hundreds). Downstream
+		// consumers MUST NOT mutate either map — both are shared
+		// with FSM / SSE / live store under Decision #10(d).
+		o.sessions.ProcessSignalsAt(ctx, vehicleID, vin, signals, accumulated, payloadTs, fieldTs)
+		o.alerts.Evaluate(ctx, vehicleID, vin, signals, accumulated)
 	}
 
-	// Step 5: SSE fanout LAST so the broadcast reflects all
+	// Step 6: SSE fanout LAST so the broadcast reflects all
 	// upstream side-effects. Wire shape: {vehicle_id, ts, signals}.
 	// The shape intentionally differs from the legacy
 	// {vehicle_id, ts, tables} payload because that legacy shape

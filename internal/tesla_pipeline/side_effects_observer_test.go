@@ -37,6 +37,28 @@ type fakeLiveStore struct {
 	err       error
 	rec       *callRecorder
 	orderTick int64
+
+	// state holds the cross-batch accumulated snapshot. Tests that
+	// pre-seed prior batches set it directly via seed(); UpdateAll
+	// merges each per-payload signals map into the per-vehicle
+	// entry. GetAll returns a defensive copy so test assertions
+	// that capture the snapshot do not race with later UpdateAll
+	// calls.
+	state map[int64]map[string]any
+
+	// getAllErr lets a test inject a transient GetAll failure so
+	// the bridge's "fall back to per-payload signals" path can be
+	// exercised. Zero value: nil (success).
+	getAllErr error
+
+	// getAllCalls counts GetAll invocations for ordering / call-count
+	// assertions.
+	getAllCalls int
+
+	// getAllOrderTick is set on each GetAll call (mirrors UpdateAll's
+	// orderTick) so tests can assert GetAll runs AFTER UpdateAll +
+	// FSM but BEFORE sessions/alerts.
+	getAllOrderTick int64
 }
 
 func (s *fakeLiveStore) UpdateAll(_ context.Context, vehicleID int64, signals map[string]any) error {
@@ -48,7 +70,59 @@ func (s *fakeLiveStore) UpdateAll(_ context.Context, vehicleID int64, signals ma
 	if s.rec != nil {
 		s.orderTick = s.rec.next()
 	}
-	return s.err
+	if s.err != nil {
+		return s.err
+	}
+	if s.state == nil {
+		s.state = make(map[int64]map[string]any)
+	}
+	veh, ok := s.state[vehicleID]
+	if !ok {
+		veh = make(map[string]any, len(signals))
+		s.state[vehicleID] = veh
+	}
+	for k, v := range signals {
+		veh[k] = v
+	}
+	return nil
+}
+
+func (s *fakeLiveStore) GetAll(_ context.Context, vehicleID int64) (map[string]any, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.getAllCalls++
+	if s.rec != nil {
+		s.getAllOrderTick = s.rec.next()
+	}
+	if s.getAllErr != nil {
+		return nil, s.getAllErr
+	}
+	veh, ok := s.state[vehicleID]
+	if !ok {
+		return nil, nil
+	}
+	out := make(map[string]any, len(veh))
+	for k, v := range veh {
+		out[k] = v
+	}
+	return out, nil
+}
+
+// seed pre-populates the cross-batch snapshot for a vehicle. Tests
+// that need to assert sessions/alerts receive prior-batch state use
+// this BEFORE invoking OnPayloadProcessed. The seeded map is
+// shallow-copied to avoid sharing references with the test setup.
+func (s *fakeLiveStore) seed(vehicleID int64, signals map[string]any) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.state == nil {
+		s.state = make(map[int64]map[string]any)
+	}
+	veh := make(map[string]any, len(signals))
+	for k, v := range signals {
+		veh[k] = v
+	}
+	s.state[vehicleID] = veh
 }
 
 type fakeHistoryWriter struct {
@@ -441,6 +515,12 @@ func TestSideEffectsObserver_VINLookupInvokedOncePerPayload(t *testing.T) {
 // sessions and alerts. This is the strongest possible "same map"
 // assertion and catches a future "defensive copy per callback"
 // regression that would silently break the legacy contract.
+//
+// Per the per-field MQTT cutover, sessions/alerts now receive a
+// SEPARATE accumulated map (built via live.GetAll AFTER UpdateAll)
+// in addition to the per-payload signals map. The signals-map
+// sharing rule still holds; the accumulated-map rule is asserted
+// separately (TestSideEffectsObserver_AccumulatedIncludesPriorBatches).
 // ---------------------------------------------------------------------------
 
 func TestSideEffectsObserver_FSMAndSessionsAndAlertsShareSignalsMap(t *testing.T) {
@@ -465,21 +545,132 @@ func TestSideEffectsObserver_FSMAndSessionsAndAlertsShareSignalsMap(t *testing.T
 	if v, ok := alerts.lastSigs["__shared_marker__"].(string); !ok || v != "mutated-via-fsm" {
 		t.Errorf("alerts saw a different map than FSM (alerts[__shared_marker__]=%v); maps must share backing storage per Decision #10(d)", alerts.lastSigs["__shared_marker__"])
 	}
+}
 
-	// Sessions' accumulated parameter MUST be the same map as
-	// signals (Decision #8 — the legacy cross-batch accumulator is
-	// not preserved in the bridge, so accumulated == signals).
-	if sess.lastAccum == nil {
-		t.Fatalf("sessions.lastAccum is nil")
+// ---------------------------------------------------------------------------
+// Per-field MQTT accumulated rule: under per-field MQTT each payload
+// carries one atomic, so the per-payload signals map alone is
+// insufficient for sessions' "use last-known battery / odometer /
+// location when starting a new session" feature. The bridge MUST
+// invoke live.GetAll AFTER UpdateAll and pass the cross-batch
+// snapshot as the accumulated argument.
+// ---------------------------------------------------------------------------
+
+func TestSideEffectsObserver_AccumulatedIncludesPriorBatches(t *testing.T) {
+	t.Parallel()
+
+	obs, live, _, _, sess, alerts, _, _ := newDefaultObserver(t)
+
+	// Pre-seed the live store with state from prior batches that
+	// the per-payload signals map does NOT carry.
+	live.seed(7, map[string]any{
+		"BatteryLevel":      82.5,
+		"Odometer":          123456.0,
+		"LocationLatitude":  37.7749,
+		"LocationLongitude": -122.4194,
+	})
+
+	// New per-field payload carrying ONLY the gear change.
+	atomics := []codec.Atomic{
+		{Field: "Gear", Value: "D", EmittedAt: time.Now(), VehicleID: "VIN-PF"},
 	}
-	if v, ok := sess.lastAccum["__shared_marker__"].(string); !ok || v != "mutated-via-fsm" {
-		t.Errorf("sessions.accumulated must share the signals map per Decision #8; got accumulated[__shared_marker__]=%v", sess.lastAccum["__shared_marker__"])
+	obs.OnPayloadProcessed(context.Background(), 7, atomics)
+
+	if sess.lastAccum == nil {
+		t.Fatal("sessions.lastAccum is nil; bridge must call live.GetAll after UpdateAll")
 	}
 	if alerts.lastAccum == nil {
-		t.Fatalf("alerts.lastAccum is nil")
+		t.Fatal("alerts.lastAccum is nil; bridge must call live.GetAll after UpdateAll")
 	}
-	if v, ok := alerts.lastAccum["__shared_marker__"].(string); !ok || v != "mutated-via-fsm" {
-		t.Errorf("alerts.accumulated must share the signals map per Decision #8; got accumulated[__shared_marker__]=%v", alerts.lastAccum["__shared_marker__"])
+
+	// Accumulated must include both the prior-batch state AND the
+	// current payload's atomics (UpdateAll merges current into
+	// the snapshot before GetAll is called).
+	wantAccum := map[string]any{
+		"BatteryLevel":      82.5,
+		"Odometer":          123456.0,
+		"LocationLatitude":  37.7749,
+		"LocationLongitude": -122.4194,
+		"Gear":              "D",
+	}
+	for k, want := range wantAccum {
+		if got := sess.lastAccum[k]; got != want {
+			t.Errorf("sessions.accumulated[%q] = %v, want %v", k, got, want)
+		}
+		if got := alerts.lastAccum[k]; got != want {
+			t.Errorf("alerts.accumulated[%q] = %v, want %v", k, got, want)
+		}
+	}
+
+	// Per-payload signals map carries ONLY the current atomic.
+	// Sessions/alerts must receive both — current as `signals`,
+	// cross-batch as `accumulated`. The two MUST be distinct maps;
+	// mutating accumulated must NOT show up in signals.
+	if len(sess.lastSigs) != 1 {
+		t.Errorf("sessions.signals: got %d entries, want 1 (per-field MQTT delivers one atomic per payload)", len(sess.lastSigs))
+	}
+	if got := sess.lastSigs["Gear"]; got != "D" {
+		t.Errorf("sessions.signals[Gear] = %v, want %q", got, "D")
+	}
+
+	sess.lastAccum["__accum_marker__"] = "mutated"
+	if _, leaked := sess.lastSigs["__accum_marker__"]; leaked {
+		t.Error("mutation of sessions.accumulated leaked into sessions.signals; the two must be distinct maps")
+	}
+}
+
+func TestSideEffectsObserver_AccumulatedFallsBackToSignalsOnGetAllError(t *testing.T) {
+	t.Parallel()
+
+	obs, live, _, _, sess, alerts, _, _ := newDefaultObserver(t)
+
+	// Inject a transient GetAll failure. UpdateAll still succeeds
+	// (so live.lastSigs is populated) but the bridge cannot build
+	// the cross-batch snapshot.
+	live.getAllErr = errors.New("transient redis read failure")
+
+	atomics := []codec.Atomic{
+		{Field: "BatteryLevel", Value: 50.0, EmittedAt: time.Now(), VehicleID: "VIN-FB"},
+	}
+	obs.OnPayloadProcessed(context.Background(), 11, atomics)
+
+	if sess.lastAccum == nil {
+		t.Fatal("sessions.lastAccum is nil; on GetAll error the bridge must fall back to the per-payload signals map")
+	}
+	if got := sess.lastAccum["BatteryLevel"]; got != 50.0 {
+		t.Errorf("sessions.accumulated[BatteryLevel] = %v, want 50.0 (fallback should equal the per-payload signals map)", got)
+	}
+	if alerts.lastAccum == nil {
+		t.Fatal("alerts.lastAccum is nil; on GetAll error the bridge must fall back to the per-payload signals map")
+	}
+	if got := alerts.lastAccum["BatteryLevel"]; got != 50.0 {
+		t.Errorf("alerts.accumulated[BatteryLevel] = %v, want 50.0 (fallback should equal the per-payload signals map)", got)
+	}
+}
+
+func TestSideEffectsObserver_AccumulatedFallsBackToSignalsOnFirstMessage(t *testing.T) {
+	t.Parallel()
+
+	obs, _, _, _, sess, alerts, _, _ := newDefaultObserver(t)
+
+	// No prior batches seeded; UpdateAll merges the current
+	// payload's atomics into the empty snapshot. GetAll then
+	// returns a snapshot containing exactly the current atomics
+	// (after merge), which is functionally equivalent to the
+	// per-payload signals map.
+	atomics := []codec.Atomic{
+		{Field: "Gear", Value: "P", EmittedAt: time.Now(), VehicleID: "VIN-FM"},
+	}
+	obs.OnPayloadProcessed(context.Background(), 13, atomics)
+
+	if sess.lastAccum == nil {
+		t.Fatal("sessions.lastAccum is nil")
+	}
+	if got := sess.lastAccum["Gear"]; got != "P" {
+		t.Errorf("sessions.accumulated[Gear] = %v, want %q", got, "P")
+	}
+	if alerts.lastAccum == nil {
+		t.Fatal("alerts.lastAccum is nil")
 	}
 }
 
@@ -544,11 +735,16 @@ func TestSideEffectsObserver_SSECalledLast(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Full ordering pin: live -> history -> fsm -> sessions -> alerts -> sse
-// (sessions and alerts can be in either order between themselves but
-// MUST sit between fsm and sse). This is the single most important
-// behavioural assertion for the bridge — if any future refactor
-// reorders the callbacks this test breaks loudly.
+// Full ordering pin: live -> history -> fsm -> live.GetAll -> sessions
+// -> alerts -> sse (sessions and alerts can be in either order between
+// themselves but MUST sit between live.GetAll and sse). This is the
+// single most important behavioural assertion for the bridge — if any
+// future refactor reorders the callbacks this test breaks loudly.
+//
+// live.GetAll runs AFTER FSM and BEFORE sessions/alerts so the
+// accumulated snapshot includes the current payload's atomics
+// (UpdateAll has merged them) but FSM still sees only the current
+// payload as `signals` (per Decision #10(d)).
 // ---------------------------------------------------------------------------
 
 func TestSideEffectsObserver_FullCallOrderLivesUpToDesignContract(t *testing.T) {
@@ -560,9 +756,10 @@ func TestSideEffectsObserver_FullCallOrderLivesUpToDesignContract(t *testing.T) 
 	}
 	obs.OnPayloadProcessed(context.Background(), 1, atomics)
 
-	// live(1) < history(2) < fsm(3) < {sessions, alerts}(4..5) < sse(6)
+	// live.UpdateAll(1) < history(2) < fsm(3) < live.GetAll(4) <
+	// {sessions, alerts}(5..6) < sse(7)
 	if live.orderTick != 1 {
-		t.Errorf("live.orderTick = %d, want 1", live.orderTick)
+		t.Errorf("live.UpdateAll.orderTick = %d, want 1", live.orderTick)
 	}
 	if hist.orderTick != 2 {
 		t.Errorf("history.orderTick = %d, want 2", hist.orderTick)
@@ -570,18 +767,21 @@ func TestSideEffectsObserver_FullCallOrderLivesUpToDesignContract(t *testing.T) 
 	if fsm.orderTick != 3 {
 		t.Errorf("fsm.orderTick = %d, want 3", fsm.orderTick)
 	}
-	// Sessions and alerts run consecutively after fsm but before
-	// sse. We do NOT pin which runs first because Decision #10
+	if live.getAllOrderTick != 4 {
+		t.Errorf("live.GetAll.orderTick = %d, want 4 (after fsm, before sessions/alerts)", live.getAllOrderTick)
+	}
+	// Sessions and alerts run consecutively after live.GetAll but
+	// before sse. We do NOT pin which runs first because Decision #10
 	// names them as a pair without ordering.
 	pair := []int64{sess.orderTick, alerts.orderTick}
 	if pair[0] == 0 || pair[1] == 0 {
 		t.Fatalf("sessions/alerts not invoked: sess=%d alerts=%d", pair[0], pair[1])
 	}
-	if !((pair[0] == 4 && pair[1] == 5) || (pair[0] == 5 && pair[1] == 4)) {
-		t.Errorf("sessions+alerts must run on ticks {4,5} (after fsm, before sse); got sess=%d alerts=%d", pair[0], pair[1])
+	if !((pair[0] == 5 && pair[1] == 6) || (pair[0] == 6 && pair[1] == 5)) {
+		t.Errorf("sessions+alerts must run on ticks {5,6} (after live.GetAll, before sse); got sess=%d alerts=%d", pair[0], pair[1])
 	}
-	if bcast.orderTick != 6 {
-		t.Errorf("broadcastSSE.orderTick = %d, want 6 (final tick)", bcast.orderTick)
+	if bcast.orderTick != 7 {
+		t.Errorf("broadcastSSE.orderTick = %d, want 7 (final tick)", bcast.orderTick)
 	}
 }
 

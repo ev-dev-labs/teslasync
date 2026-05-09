@@ -9,19 +9,54 @@ import (
 )
 
 // liveSignalStoreAdapter bridges signal.LiveSignalStore (whose
-// per-payload write method is UpdateNonBlocking) to the
-// teslapipeline.LiveSignalStore interface (whose method is named
-// UpdateAll). The two have identical semantics — the rename exists so
-// the teslapipeline package can describe the contract in its own
-// vocabulary without depending on the internal/signal naming
-// conventions. Wraps the legacy implementation verbatim; no behaviour
-// change.
+// per-payload write method is UpdateNonBlocking and whose snapshot
+// reader is GetAll(...) (map[string]*Value, error)) to the
+// teslapipeline.LiveSignalStore interface (UpdateAll +
+// GetAll(...) (map[string]any, error)). The two have identical
+// semantics — the rename + Value-unwrap exists so the teslapipeline
+// package can describe the contract in its own vocabulary without
+// depending on the internal/signal naming conventions or the
+// signal.Value envelope shape.
 type liveSignalStoreAdapter struct {
 	store sigsvc.LiveSignalStore
 }
 
 func (a *liveSignalStoreAdapter) UpdateAll(ctx context.Context, vehicleID int64, signals map[string]any) error {
 	return a.store.UpdateNonBlocking(ctx, vehicleID, signals)
+}
+
+// GetAll returns the cross-batch snapshot of all signals the live
+// store has accumulated for the vehicle. The bridge invokes this
+// AFTER UpdateAll to construct the `accumulated` argument
+// SessionTracker + AlertEvaluator need under per-field MQTT (where
+// each payload carries one atomic and the per-payload signals map
+// alone is insufficient for "use last-known battery / odometer /
+// location" decisions).
+//
+// LiveSignalReadDistributed is used so the snapshot includes both
+// L1 (in-process) and L2 (Redis) state — important for multi-pod
+// deployments where the FSM/session state for a vehicle may have
+// been populated by a prior payload routed to a different pod.
+//
+// Returns nil + nil when the live store has no state for the
+// vehicle (first message ever); the bridge handles this by
+// falling back to the per-payload signals map.
+func (a *liveSignalStoreAdapter) GetAll(ctx context.Context, vehicleID int64) (map[string]any, error) {
+	values, err := a.store.GetAll(ctx, vehicleID, sigsvc.LiveSignalReadDistributed)
+	if err != nil {
+		return nil, fmt.Errorf("phase-42a liveStore GetAll: %w", err)
+	}
+	if len(values) == 0 {
+		return nil, nil
+	}
+	out := make(map[string]any, len(values))
+	for k, v := range values {
+		if v == nil {
+			continue
+		}
+		out[k] = v.Raw
+	}
+	return out, nil
 }
 
 // vinByIDResolver bridges *database.VehicleRepo (whose lookup returns

@@ -255,9 +255,13 @@ type e2eLiveCall struct {
 
 // e2eLiveStore satisfies LiveSignalStore. UpdateAll never errors;
 // failure-injection is exercised in side_effects_observer_test.go.
+// GetAll returns the union of every UpdateAll call so tests that
+// assert on the cross-batch accumulated snapshot see the full
+// state — matching the production HybridLiveSignalStore semantics.
 type e2eLiveStore struct {
 	mu    sync.Mutex
 	calls []e2eLiveCall
+	state map[int64]map[string]any
 }
 
 func (s *e2eLiveStore) UpdateAll(_ context.Context, vehicleID int64, signals map[string]any) error {
@@ -268,7 +272,28 @@ func (s *e2eLiveStore) UpdateAll(_ context.Context, vehicleID int64, signals map
 	// race with the next test (or, in production, with later
 	// observers that read the map).
 	s.calls = append(s.calls, e2eLiveCall{VehicleID: vehicleID, Signals: copyAnyMapE2E(signals)})
+	if s.state == nil {
+		s.state = make(map[int64]map[string]any)
+	}
+	veh, ok := s.state[vehicleID]
+	if !ok {
+		veh = make(map[string]any, len(signals))
+		s.state[vehicleID] = veh
+	}
+	for k, v := range signals {
+		veh[k] = v
+	}
 	return nil
+}
+
+func (s *e2eLiveStore) GetAll(_ context.Context, vehicleID int64) (map[string]any, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	veh, ok := s.state[vehicleID]
+	if !ok {
+		return nil, nil
+	}
+	return copyAnyMapE2E(veh), nil
 }
 
 func (s *e2eLiveStore) callCount() int {
