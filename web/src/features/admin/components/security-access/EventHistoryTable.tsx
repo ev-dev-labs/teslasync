@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { TimeStamp } from '@/components/data-display';
 import type { SecurityEvent } from '@/types/admin';
+import { asNonEmptyString } from '@/lib/typeGuards';
 import { doorClosed, allWindowsClosed, windowSummary } from './helpers';
 
 interface EventHistoryTableProps {
@@ -56,7 +57,7 @@ export function EventHistoryTable({ history, isLoading }: EventHistoryTableProps
               doorClosed(row.doorState) ? 'text-green-400' : 'text-amber-400',
             )}
           >
-            {row.doorState || '—'}
+            {asNonEmptyString(row.doorState) ?? (doorClosed(row.doorState) ? t('admin.security.closed', 'Closed') : '—')}
           </span>
         ),
       },

@@ -32,23 +32,29 @@ function inferAuditSeverity(action: string): Severity {
   return 'info';
 }
 
-function inferSecuritySeverity(event: { locked: boolean | null; sentryMode: string | null }): Severity {
+function inferSecuritySeverity(event: { locked: boolean | null; sentryMode: string | boolean | null }): Severity {
   if (event.locked === false) return 'critical';
-  if (event.sentryMode === 'active') return 'warning';
+  if (event.sentryMode === 'active' || event.sentryMode === true) return 'warning';
   return 'info';
 }
 
 function buildSecurityTitle(event: {
   locked: boolean | null;
-  sentryMode: string | null;
-  doorState: string | null;
+  sentryMode: string | boolean | null;
+  doorState: string | boolean | null;
   guestMode: boolean | null;
   valetModeEnabled: boolean | null;
 }): string {
   const parts: string[] = [];
   if (event.locked !== null) parts.push(event.locked ? 'Vehicle locked' : 'Vehicle unlocked');
-  if (event.sentryMode) parts.push(`Sentry: ${event.sentryMode}`);
-  if (event.doorState) parts.push(`Door: ${event.doorState}`);
+  if (event.sentryMode) {
+    const sentryLabel = typeof event.sentryMode === 'string' ? event.sentryMode : 'On';
+    parts.push(`Sentry: ${sentryLabel}`);
+  }
+  if (event.doorState) {
+    const doorLabel = typeof event.doorState === 'string' ? event.doorState : 'Open';
+    parts.push(`Door: ${doorLabel}`);
+  }
   if (event.guestMode !== null) parts.push(event.guestMode ? 'Guest mode on' : 'Guest mode off');
   if (event.valetModeEnabled !== null) parts.push(event.valetModeEnabled ? 'Valet mode on' : 'Valet mode off');
   return parts.length > 0 ? parts[0] : 'Security event';

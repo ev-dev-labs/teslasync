@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Lock, Unlock, Shield, ShieldCheck, DoorOpen, AppWindow } from 'lucide-react';
 import { useVehicles, useSecurityLatest } from '@/api/hooks/useVehicles';
+import { asNonEmptyString } from '@/lib/typeGuards';
 import { WidgetStatusGrid, type StatusCell } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -15,11 +16,14 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
   const cells = useMemo<StatusCell[]>(() => {
     if (!securityData) return [];
 
-    const doorStates = (securityData.door_state ?? '')
+    const doorRaw = asNonEmptyString(securityData.door_state) ?? '';
+    const doorStates = doorRaw
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
-    const openDoors = doorStates.filter((s) => s.toLowerCase().includes('open'));
+    // If door_state arrived as native boolean true, treat as one open door.
+    const doorBoolOpen = securityData.door_state === true;
+    const openDoors = doorBoolOpen ? ['open'] : doorStates.filter((s) => s.toLowerCase().includes('open'));
 
     const windows = [
       { val: securityData.fd_window },
@@ -27,7 +31,11 @@ export default function SecurityStatusWidget({ vehicleId }: WidgetProps) {
       { val: securityData.rd_window },
       { val: securityData.rp_window },
     ];
-    const openWindows = windows.filter((w) => w.val && w.val.toLowerCase() !== 'closed');
+    const openWindows = windows.filter((w) => {
+      if (typeof w.val === 'boolean') return w.val;
+      const s = asNonEmptyString(w.val);
+      return !!s && s.toLowerCase() !== 'closed';
+    });
 
     return [
       {

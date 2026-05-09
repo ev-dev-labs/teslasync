@@ -171,22 +171,31 @@ export interface UserActivityEntry {
   user_agent: string | null;
 }
 
+// SecurityEvent mirrors `/security/latest` and `/security` rows. After
+// the per-field MQTT cutover (Phase-42a) the backend serializes raw
+// `signal.SignalValue` (`interface{}`) directly, so several fields whose
+// signal *names* sound string-shaped actually arrive as native JSON
+// booleans (e.g. `speed_limit_mode`, `service_mode`). Fields below that
+// can arrive as either a string enum *or* a boolean are declared as a
+// union so consumers MUST type-narrow before calling string methods.
+// See `web/src/lib/typeGuards.ts::asNonEmptyString` for the canonical
+// narrowing helper.
 export interface SecurityEvent {
   id: string;
   locked: boolean | null;
-  sentryMode: string | null;
-  doorState: string | null;
-  fdWindow: string | null;
-  fpWindow: string | null;
-  rdWindow: string | null;
-  rpWindow: string | null;
+  sentryMode: string | boolean | null;
+  doorState: string | boolean | null;
+  fdWindow: string | boolean | null;
+  fpWindow: string | boolean | null;
+  rdWindow: string | boolean | null;
+  rpWindow: string | boolean | null;
   homelinkNearby: boolean | null;
   guestMode: boolean | null;
   homelinkDeviceCount: number | null;
   guestModeMobileAccessState: string | null;
   driverSeatOccupied: boolean | null;
-  centerDisplay: string | null;
-  speedLimitMode: string | null;
+  centerDisplay: string | boolean | null;
+  speedLimitMode: string | boolean | null;
   valetModeEnabled: boolean | null;
   serviceMode: boolean | null;
   pairedPhoneKeyCount: number | null;

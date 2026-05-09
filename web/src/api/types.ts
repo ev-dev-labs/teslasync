@@ -997,13 +997,18 @@ export interface SecurityEvent {
   // Legacy / compat-view field aliases (pre-migration individual door/window
   // columns, seat/belt/light JSONB carve-outs). Optional so existing widgets
   // compile; values are undefined when reading the typed column set.
+  //
+  // Post per-field MQTT cutover (Phase-42a) the backend serializes raw
+  // `signal.SignalValue` (`interface{}`) — door / window fields can arrive
+  // as native booleans (e.g. `false`) or string enums depending on the
+  // protomodel emission. Mark them as a union so consumers type-narrow.
   id?: number
   created_at: string
-  door_state?: string | null
-  fd_window?: string | null
-  fp_window?: string | null
-  rd_window?: string | null
-  rp_window?: string | null
+  door_state?: string | boolean | null
+  fd_window?: string | boolean | null
+  fp_window?: string | boolean | null
+  rd_window?: string | boolean | null
+  rp_window?: string | boolean | null
   driver_seat_belt?: boolean | null
   passenger_seat_belt?: boolean | null
   driver_seat_occupied?: boolean | null

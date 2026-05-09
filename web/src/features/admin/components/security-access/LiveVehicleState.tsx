@@ -18,6 +18,7 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FadeIn } from '@/components/motion/FadeIn';
 import type { SecurityEvent } from '@/types/admin';
+import { asNonEmptyString } from '@/lib/typeGuards';
 
 /* ------------------------------------------------------------------ */
 /*  Live signal builder (uses JSX icons — cannot live in helpers.ts)    */
@@ -57,8 +58,11 @@ function buildLiveSignals(ev: SecurityEvent | undefined, t: (k: string, fb: stri
       key: 'turnSignal',
       label: t('admin.security.live.turnSignal', 'Turn Signal'),
       icon: <Signal className="h-4 w-4" />,
-      value: ev.lightsTurnSignal ?? '—',
-      active: !!ev.lightsTurnSignal && !ev.lightsTurnSignal.toLowerCase().includes('off'),
+      value: asNonEmptyString(ev.lightsTurnSignal) ?? '—',
+      active: (() => {
+        const s = asNonEmptyString(ev.lightsTurnSignal);
+        return !!s && !s.toLowerCase().includes('off');
+      })(),
     },
     {
       key: 'driverSeat',
@@ -92,8 +96,15 @@ function buildLiveSignals(ev: SecurityEvent | undefined, t: (k: string, fb: stri
       key: 'speedLimit',
       label: t('admin.security.live.speedLimit', 'Speed Limit'),
       icon: <Gauge className="h-4 w-4" />,
-      value: ev.speedLimitMode ?? '—',
-      active: !!ev.speedLimitMode && !ev.speedLimitMode.toLowerCase().includes('off'),
+      value: typeof ev.speedLimitMode === 'boolean'
+        ? (ev.speedLimitMode ? t('admin.security.on', 'On') : t('admin.security.off', 'Off'))
+        : (asNonEmptyString(ev.speedLimitMode) ?? '—'),
+      active: typeof ev.speedLimitMode === 'boolean'
+        ? ev.speedLimitMode
+        : (() => {
+            const s = asNonEmptyString(ev.speedLimitMode);
+            return !!s && !s.toLowerCase().includes('off');
+          })(),
     },
     {
       key: 'homelinkDevices',
@@ -106,8 +117,11 @@ function buildLiveSignals(ev: SecurityEvent | undefined, t: (k: string, fb: stri
       key: 'centerDisplay',
       label: t('admin.security.live.centerDisplay', 'Center Display'),
       icon: <Monitor className="h-4 w-4" />,
-      value: ev.centerDisplay ?? '—',
-      active: !!ev.centerDisplay && !ev.centerDisplay.toLowerCase().includes('off'),
+      value: asNonEmptyString(ev.centerDisplay) ?? '—',
+      active: (() => {
+        const s = asNonEmptyString(ev.centerDisplay);
+        return !!s && !s.toLowerCase().includes('off');
+      })(),
     },
   ];
 }
