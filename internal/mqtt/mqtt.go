@@ -26,6 +26,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 )
 
 // mqttTracerName is the OpenTelemetry tracer name for spans produced by this
@@ -246,12 +247,25 @@ func randomSuffix(n int) string {
 
 // Pipeline is the subset of *normalize.Pipeline that PipelineSubscriber
 // depends on. Production wiring passes a *normalize.Pipeline; tests pass a
-// recording fake. Pipeline.Process MUST return an error wrapping
-// normalize.ErrPayloadDrop for codec-level (poison-pill candidate) failures
-// and nil for per-atomic failures (which are observable via the pipeline's
-// own values_processed metric — they MUST NOT trigger MQTT redelivery).
+// recording fake. ProcessAtomics MUST return nil for per-atomic failures
+// (which are observable via the pipeline's own values_processed metric —
+// they MUST NOT trigger MQTT redelivery) and a non-nil error for
+// unrecoverable infrastructure failures (e.g. context cancelled mid-batch);
+// per the *normalize.Pipeline contract ProcessAtomics never returns
+// errPayloadDrop because the codec.DecodeJSONField step that produces
+// poison-pill candidates runs INSIDE the subscriber, not inside the
+// pipeline.
+//
+// The pre-Phase-49 Process(ctx, []byte, vehicleID) entry was removed when
+// the api cut over to the per-field MQTT topic shape (Tesla's MQTT
+// publisher emits one signal per topic via JSON, not protobuf batches);
+// the only remaining ingest entry on this interface is ProcessAtomics so
+// the codec.DecodeJSONField → ProcessAtomics handoff is the SINGLE path
+// from the subscriber into the pipeline. Adding a parallel Process method
+// would re-introduce the "two ingest entries" trap that ADR-004 #2
+// expressly bans.
 type Pipeline interface {
-	Process(ctx context.Context, payload []byte, vehicleIntID int64) error
+	ProcessAtomics(ctx context.Context, atomics []codec.Atomic, vehicleIntID int64) error
 }
 
 // ErrUnknownVIN is returned by a VINResolver when the VIN is syntactically
@@ -340,34 +354,14 @@ const (
 	reasonDLQPublishFailure  = "dlq_publish_failure"
 )
 
-// errPayloadDrop is the local sentinel that marks a codec-level pipeline
-// failure (a "poison pill" candidate). The package-level alias avoids a
-// circular import on internal/tesla/normalize from this file: production
-// wiring passes a *normalize.Pipeline whose Process returns errors wrapping
-// normalize.ErrPayloadDrop, and the subscriber matches via errors.Is using
-// this local sentinel that callers (and the production wiring) MUST set to
-// normalize.ErrPayloadDrop via SetPayloadDropSentinel before Start().
-//
-// The indirection exists because importing internal/tesla/normalize from
-// internal/mqtt would create a dependency cycle once normalize itself begins
-// emitting MQTT events (a possibility flagged in ADR-004 #2 follow-ups).
-var errPayloadDrop = errors.New("mqtt: payload-level failure (default sentinel; replace via SetPayloadDropSentinel)")
-
-// SetPayloadDropSentinel replaces the package-level ErrPayloadDrop sentinel
-// used by the subscriber's errors.Is check. Production wiring MUST call this
-// once with normalize.ErrPayloadDrop before constructing PipelineSubscriber;
-// tests inject their own sentinel matching the fake Pipeline's returns.
-//
-// Calling this after Start() is racy and unsupported.
-func SetPayloadDropSentinel(err error) {
-	if err == nil {
-		panic("mqtt: SetPayloadDropSentinel: err must be non-nil")
-	}
-	errPayloadDrop = err
-}
-
-// PayloadDropSentinel returns the current sentinel for testing/observability.
-func PayloadDropSentinel() error { return errPayloadDrop }
+// errPayloadDrop is the local sentinel that marks a per-message payload
+// failure (a "poison pill" candidate). The per-field MQTT path wraps every
+// codec.DecodeJSONField error in this sentinel before handing the wrapped
+// error to handlePipelineError so the existing DLQ classification (which
+// matches via errors.Is) treats codec drops uniformly with any future
+// pipeline-side ErrPayloadDrop wraps. Kept package-private so nothing
+// outside this package can synthesise a false poison pill.
+var errPayloadDrop = errors.New("mqtt: payload-level failure")
 
 // RedeliveryTracker is a process-local bounded LRU keyed by paho MessageID
 // (uint16). A QoS 1 redelivery from the broker reuses the same MessageID as
@@ -464,7 +458,12 @@ func (t *RedeliveryTracker) Len() int {
 // Zero values fall back to defaults documented per field.
 type PipelineSubscriberConfig struct {
 	// TopicBase is the fleet-telemetry MQTT prefix (e.g. "telemetry"). The
-	// subscriber listens on {TopicBase}/payload/+ where + matches the VIN.
+	// subscriber listens on {TopicBase}/+/v/+ where the first wildcard
+	// matches the VIN and the second matches the per-signal proto field
+	// name (e.g. "Soc", "Gear"). This is the per-field topic shape Tesla's
+	// fleet-telemetry MQTT publisher emits — one signal per topic with a
+	// JSON body — and supersedes the legacy {TopicBase}/payload/{VIN}
+	// proto-batch shape removed by the per-field cutover.
 	TopicBase string
 
 	// MaxRedeliveries caps how many times the broker may re-deliver a single
@@ -572,10 +571,13 @@ func NewPipelineSubscriber(
 	}
 }
 
-// pipelineTopicFilter returns the SUBSCRIBE filter for the proto-payload
-// topic, e.g. "telemetry/payload/+". Exposed for tests.
+// pipelineTopicFilter returns the SUBSCRIBE filter for the per-field
+// MQTT topic shape Tesla's fleet-telemetry MQTT publisher uses:
+// `{topicBase}/+/v/+` where the first wildcard matches the VIN and the
+// second matches the per-signal proto field name (e.g. "Soc", "Gear",
+// "Location"). Exposed for tests.
 func (s *PipelineSubscriber) pipelineTopicFilter() string {
-	return fmt.Sprintf("%s/payload/+", s.cfg.TopicBase)
+	return fmt.Sprintf("%s/+/v/+", s.cfg.TopicBase)
 }
 
 // Start subscribes to {TopicBase}/payload/+. Returns a non-nil error if the
@@ -681,35 +683,58 @@ func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.M
 // exported as a method on the unexported mqttPayload (file-private) so unit
 // tests in the same package can drive the handler without paho.
 //
-// Decision tree (LOCKED by phase-42 prompt 0060 honesty covenant):
+// Decision tree (LOCKED by phase-42 prompt 0060 honesty covenant; updated
+// for the per-field MQTT cutover that delivers one signal per topic):
 //
-//  1. Parse VIN from topic. If parse fails, ack-and-drop (malformed topic
-//     publishes are not poison pills, they are deployment misconfiguration).
+//  1. Parse VIN AND field from topic. If parse fails, ack-and-drop
+//     (malformed topic publishes are not poison pills, they are deployment
+//     misconfiguration).
 //  2. Resolve VIN -> vehicleID. ErrUnknownVIN: ack-and-drop. Other resolver
 //     errors: do NOT ack, increment normalize_failures_total{vin_resolver_error},
-//     let MQTT redeliver. (This is the rubber-duck-#5 fix: a transient DB
-//     outage during VIN lookup MUST NOT lose data.)
-//  3. Pipeline.Process(ctx, payload, vehicleID). Three outcomes:
-//     a. nil. Forget tracker, ack. Done.
-//     b. errors.Is(err, errPayloadDrop). Increment tracker. If count >=
-//        MaxRedeliveries, publish to DLQ. If DLQ.Publish succeeds, ack.
-//        If DLQ.Publish fails, do NOT ack (rubber-duck-#3 fix). If count <
-//        MaxRedeliveries, do NOT ack, let MQTT redeliver.
-//     c. context.Canceled OR any other non-ErrPayloadDrop error. This is a
-//        shutdown / non-retriable infra failure path per ADR-004 #8 and the
-//        normalize.Pipeline.Process contract; do NOT ack and do NOT DLQ.
-//        Bubble up via metrics only. (rubber-duck-#2 fix.)
+//     let MQTT redeliver. (rubber-duck-#5 fix: a transient DB outage during
+//     VIN lookup MUST NOT lose data.)
+//  3. codec.DecodeJSONField(field, body, vin, receivedAt). Three outcomes:
+//     a. (nil, nil)        Producer flagged Value.invalid (body=null) OR
+//                          field is unknown to SignalsByName. Counter
+//                          incremented inside the codec. Forget tracker, ack.
+//     b. (atomics, nil)    Forward to pipeline.ProcessAtomics. The
+//                          pipeline contract says ProcessAtomics returns
+//                          nil for per-atomic failures (visible only via
+//                          metrics) so the disposition mirrors 3a:
+//                          forget tracker, ack.
+//     c. (nil, err)        errors.Is(err, errPayloadDrop). Increment
+//                          tracker. If count >= MaxRedeliveries publish
+//                          to DLQ; if DLQ.Publish succeeds ack, else do
+//                          NOT ack (rubber-duck-#3 fix). If count <
+//                          MaxRedeliveries do NOT ack, let MQTT redeliver.
+//  4. Defensive: pipeline.ProcessAtomics may itself return an error for
+//     unrecoverable infra failures (e.g. context cancelled mid-batch). We
+//     surface it through handlePipelineError using the same context-cancel /
+//     other classification the proto-batch path used.
+//
+// Note on event-time: Tesla's per-field MQTT publisher does NOT include a
+// timestamp in the body (only the topic + bare JSON value). The
+// "receivedAt" we hand DecodeJSONField is the wall-clock at which the
+// subscriber received the message — a regression from the proto-batch case
+// where Payload.CreatedAt carried event-time, but it is the only signal
+// the upstream wire format gives us. The optional replay envelope
+// `{"value":...,"ts":...}` written by cmd/pub-test-signal preserves
+// event-time on the test path.
 func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload) {
 	span := trace.SpanFromContext(ctx)
-	vin, ok := parsePipelineTopic(s.cfg.TopicBase, msg.Topic)
+	vin, field, ok := parsePipelineTopic(s.cfg.TopicBase, msg.Topic)
 	if !ok {
 		span.SetAttributes(attribute.String("mqtt.disposition", "ack-drop-bad-topic"))
 		s.logger.Warn().
 			Str("topic", msg.Topic).
-			Msg("mqtt: PipelineSubscriber: topic does not match {base}/payload/{VIN}; ack-drop")
+			Msg("mqtt: PipelineSubscriber: topic does not match {base}/{VIN}/v/{field}; ack-drop")
 		msg.Ack()
 		return
 	}
+	span.SetAttributes(
+		attribute.String("mqtt.field", field),
+		attribute.String("mqtt.vin_prefix", redactVIN(vin)),
+	)
 
 	vehicleID, err := s.resolveVIN(ctx, vin)
 	if err != nil {
@@ -736,7 +761,37 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 
 	span.SetAttributes(attribute.Int64("vehicle_id", vehicleID))
 
-	if err := s.pipeline.Process(ctx, msg.Payload, vehicleID); err != nil {
+	// receivedAt is the wall-clock at which we ingested this message. It
+	// is the codec's fallback EmittedAt for the bare-JSON production
+	// path; the optional replay envelope overrides it with the producer's
+	// "ts" when present (cmd/pub-test-signal injects this for offline
+	// historical replays). time.Now() is the right call here — we are
+	// the boundary that just received the bytes; substituting any other
+	// clock would silently misattribute event-time.
+	receivedAt := time.Now().UTC()
+
+	atomics, err := codec.DecodeJSONField(field, msg.Payload, vin, receivedAt)
+	if err != nil {
+		// Per the codec contract, every err from DecodeJSONField wraps
+		// codec.ErrPayloadDrop; rather than inventing a separate sentinel
+		// for the per-field path we synthesise the same wrapped error
+		// the pipeline would have produced for a malformed proto batch
+		// so the existing handlePipelineError DLQ classifier (which
+		// already understands errPayloadDrop) treats it identically.
+		s.handlePipelineError(ctx, msg, vehicleID, vin, fmt.Errorf("%w: %v", errPayloadDrop, err))
+		return
+	}
+	if len(atomics) == 0 {
+		// Codec drop (Value.invalid OR unknown field). Counter already
+		// incremented inside the codec. Forget tracker, ack — this
+		// is the same disposition as a successful empty batch in the
+		// proto-batch era.
+		span.SetAttributes(attribute.String("mqtt.disposition", "ack-codec-drop"))
+		s.tracker.Forget(msg.MessageID)
+		msg.Ack()
+		return
+	}
+	if err := s.pipeline.ProcessAtomics(ctx, atomics, vehicleID); err != nil {
 		s.handlePipelineError(ctx, msg, vehicleID, vin, err)
 		return
 	}
@@ -843,18 +898,35 @@ func (s *PipelineSubscriber) dlqPublishAndMaybeAck(
 	msg.Ack()
 }
 
-// parsePipelineTopic extracts the VIN from a topic of form
-// {topicBase}/payload/{VIN}. Returns ok=false on any other shape.
-func parsePipelineTopic(topicBase, topic string) (vin string, ok bool) {
-	prefix := strings.TrimSuffix(topicBase, "/") + "/payload/"
+// parsePipelineTopic extracts the VIN AND signal field name from a topic
+// of form `{topicBase}/{VIN}/v/{field}`. Returns ok=false on any other
+// shape — including the legacy `{topicBase}/payload/{VIN}` proto-batch
+// shape, which the per-field cutover (Phase-49) intentionally rejects so
+// a stray retained message from the bridge era cannot smuggle bytes past
+// the JSON decoder.
+//
+// Field is whatever segment 4 contains; the codec layer is the
+// authoritative validator (DecodeJSONField returns nil + a counter
+// increment on unknown field names rather than rejecting at the topic
+// level, so a future proto bump that adds a new signal does not require
+// a subscriber redeploy).
+func parsePipelineTopic(topicBase, topic string) (vin, field string, ok bool) {
+	prefix := strings.TrimSuffix(topicBase, "/") + "/"
 	if !strings.HasPrefix(topic, prefix) {
-		return "", false
+		return "", "", false
 	}
 	rest := topic[len(prefix):]
-	if rest == "" || strings.Contains(rest, "/") {
-		return "", false
+	parts := strings.Split(rest, "/")
+	if len(parts) != 3 {
+		return "", "", false
 	}
-	return rest, true
+	if parts[1] != "v" {
+		return "", "", false
+	}
+	if parts[0] == "" || parts[2] == "" {
+		return "", "", false
+	}
+	return parts[0], parts[2], true
 }
 
 // redactVIN returns a partial VIN for log lines so a complete VIN does not
@@ -921,17 +993,14 @@ var (
 )
 
 // Per ADR-004 #2 normalize.Pipeline is THE ONLY public ingest entry. The
-// PipelineSubscriber above forwards bytes verbatim to it; documenting the
+// PipelineSubscriber above decodes per-field MQTT JSON via codec.DecodeJSONField
+// and forwards the resulting atomics to ProcessAtomics; documenting the
 // dependency here keeps the gate's normalize.Pipeline regex match satisfied
-// without introducing an actual import cycle (see SetPayloadDropSentinel
-// above for the indirection rationale).
+// without introducing an actual import cycle.
 //
-// Wiring path (cmd/<server>/main.go, deferred to a follow-up phase-42 prompt
-// because router.New requires writers for every routing.yaml destination —
-// which is the scope of prompts 0050-0058):
+// Wiring path (cmd/<server>/main.go):
 //
 //	pipeline := normalize.New(unitHistRepo, router, log)
-//	mqtt.SetPayloadDropSentinel(normalize.ErrPayloadDrop)
 //	dlq      := mqtt.NewMQTTDLQPublisher(mqttClient.Underlying(), "teslasync/dlq")
 //	resolver := func(ctx context.Context, vin string) (int64, error) {
 //	    v, err := vehicleRepo.GetByVIN(ctx, vin)

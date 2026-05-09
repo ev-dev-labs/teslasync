@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 )
 
 func TestMQTTConfigBrokerURL(t *testing.T) {
@@ -106,7 +107,7 @@ func TestNilClientSafety(t *testing.T) {
 }
 
 // =============================================================================
-// Phase-42 PipelineSubscriber tests (prompt 0060)
+// Phase-42 PipelineSubscriber tests (per-field MQTT cutover)
 // =============================================================================
 
 // fakePipeline is a recording stub of the Pipeline interface. It returns the
@@ -120,17 +121,16 @@ type fakePipeline struct {
 }
 
 type fakePipelineCall struct {
-	Payload   []byte
+	Atomics   []codec.Atomic
 	VehicleID int64
 }
 
-func (f *fakePipeline) Process(_ context.Context, payload []byte, vehicleID int64) error {
+func (f *fakePipeline) ProcessAtomics(_ context.Context, atomics []codec.Atomic, vehicleID int64) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	// Copy payload so test assertions are stable even if caller reuses the slice.
-	cp := make([]byte, len(payload))
-	copy(cp, payload)
-	f.calls = append(f.calls, fakePipelineCall{Payload: cp, VehicleID: vehicleID})
+	cp := make([]codec.Atomic, len(atomics))
+	copy(cp, atomics)
+	f.calls = append(f.calls, fakePipelineCall{Atomics: cp, VehicleID: vehicleID})
 	f.callCount.Add(1)
 	if len(f.errs) == 0 {
 		return nil
@@ -211,32 +211,36 @@ func staticResolver(id int64) VINResolver {
 }
 
 // TestPipelineSubscriber_ValidPayload_DelegatesToPipeline asserts that a
-// well-formed payload is forwarded byte-identical to Pipeline.Process and the
-// message is acked exactly once.
+// well-formed per-field MQTT payload is decoded and the resulting atomics
+// are forwarded to Pipeline.ProcessAtomics with the correct vehicleID, and
+// that the message is acked exactly once.
 func TestPipelineSubscriber_ValidPayload_DelegatesToPipeline(t *testing.T) {
 	pipe := &fakePipeline{}
 	dlq := &fakeDLQ{}
 	sub := newTestSubscriber(t, pipe, dlq, staticResolver(42))
 
 	var ackCalls atomic.Int32
-	payload := []byte{0x01, 0x02, 0x03, 0xff, 0x00, 0xaa}
+	body := []byte("75.5") // Soc is a float field; "75.5" is valid JSON for it.
 
 	sub.handlePayload(context.Background(), mqttPayload{
-		Topic:     "telemetry/payload/5YJ3E1EA1LF000001",
-		Payload:   payload,
+		Topic:     "telemetry/5YJ3E1EA1LF000001/v/Soc",
+		Payload:   body,
 		MessageID: 42,
 		Ack:       func() { ackCalls.Add(1) },
 	})
 
 	calls := pipe.Calls()
 	if len(calls) != 1 {
-		t.Fatalf("Pipeline.Process called %d times, want 1", len(calls))
+		t.Fatalf("Pipeline.ProcessAtomics called %d times, want 1", len(calls))
 	}
-	if !bytesEq(calls[0].Payload, payload) {
-		t.Errorf("payload mismatch: got %v want %v", calls[0].Payload, payload)
+	if got := len(calls[0].Atomics); got != 1 {
+		t.Fatalf("atomics len = %d, want 1", got)
 	}
 	if calls[0].VehicleID != 42 {
 		t.Errorf("vehicleID = %d, want 42", calls[0].VehicleID)
+	}
+	if got := calls[0].Atomics[0].Field; got != "Soc" {
+		t.Errorf("atomic field = %q, want %q", got, "Soc")
 	}
 	if got := ackCalls.Load(); got != 1 {
 		t.Errorf("ack called %d times, want 1", got)
@@ -247,23 +251,20 @@ func TestPipelineSubscriber_ValidPayload_DelegatesToPipeline(t *testing.T) {
 }
 
 // TestPipelineSubscriber_TransientCodecError_NoAck_IncrementsRedeliveries
-// asserts that an ErrPayloadDrop below MaxRedeliveries does NOT ack and the
-// tracker count grows with each redelivery.
+// asserts that a malformed JSON body for a known field (causing
+// codec.DecodeJSONField to wrap codec.ErrPayloadDrop) does NOT ack and the
+// tracker count grows with each redelivery while the count stays below
+// MaxRedeliveries.
 func TestPipelineSubscriber_TransientCodecError_NoAck_IncrementsRedeliveries(t *testing.T) {
-	prev := PayloadDropSentinel()
-	t.Cleanup(func() { SetPayloadDropSentinel(prev) })
-	customDrop := errors.New("test: codec drop")
-	SetPayloadDropSentinel(customDrop)
-
-	pipe := &fakePipeline{errs: []error{customDrop, customDrop}}
+	pipe := &fakePipeline{}
 	dlq := &fakeDLQ{}
 	sub := newTestSubscriber(t, pipe, dlq, staticResolver(7))
 
 	var ackCalls atomic.Int32
 	deliver := func() {
 		sub.handlePayload(context.Background(), mqttPayload{
-			Topic:     "telemetry/payload/5YJ3E1EA1LF000007",
-			Payload:   []byte("garbage"),
+			Topic:     "telemetry/5YJ3E1EA1LF000007/v/Soc",
+			Payload:   []byte("garbage"), // not valid JSON for Soc (a float)
 			MessageID: 1234,
 			Ack:       func() { ackCalls.Add(1) },
 		})
@@ -284,18 +285,16 @@ func TestPipelineSubscriber_TransientCodecError_NoAck_IncrementsRedeliveries(t *
 	if got := len(dlq.Entries()); got != 0 {
 		t.Errorf("DLQ entries = %d, want 0 (below MaxRedeliveries)", got)
 	}
+	if got := len(pipe.Calls()); got != 0 {
+		t.Errorf("ProcessAtomics called %d times for codec drop, want 0", got)
+	}
 }
 
 // TestPipelineSubscriber_PoisonPill_ReachesMaxRedeliveries_DLQAndAck asserts
 // that once the redelivery counter reaches MaxRedeliveries the payload is
 // published to the DLQ and acked.
 func TestPipelineSubscriber_PoisonPill_ReachesMaxRedeliveries_DLQAndAck(t *testing.T) {
-	prev := PayloadDropSentinel()
-	t.Cleanup(func() { SetPayloadDropSentinel(prev) })
-	customDrop := errors.New("test: codec drop")
-	SetPayloadDropSentinel(customDrop)
-
-	pipe := &fakePipeline{errs: []error{customDrop, customDrop, customDrop, customDrop}}
+	pipe := &fakePipeline{}
 	dlq := &fakeDLQ{}
 	sub := newTestSubscriber(t, pipe, dlq, staticResolver(13))
 	// MaxRedeliveries = 3 from newTestSubscriber.
@@ -303,8 +302,8 @@ func TestPipelineSubscriber_PoisonPill_ReachesMaxRedeliveries_DLQAndAck(t *testi
 	var ackCalls atomic.Int32
 	deliver := func() {
 		sub.handlePayload(context.Background(), mqttPayload{
-			Topic:     "telemetry/payload/5YJ3E1EA1LF000013",
-			Payload:   []byte{0xde, 0xad},
+			Topic:     "telemetry/5YJ3E1EA1LF000013/v/Soc",
+			Payload:   []byte("garbage"),
 			MessageID: 9999,
 			Ack:       func() { ackCalls.Add(1) },
 		})
@@ -327,10 +326,10 @@ func TestPipelineSubscriber_PoisonPill_ReachesMaxRedeliveries_DLQAndAck(t *testi
 	if entries[0].Redeliveries != 3 {
 		t.Errorf("DLQ Redeliveries = %d, want 3", entries[0].Redeliveries)
 	}
-	if entries[0].Topic != "telemetry/payload/5YJ3E1EA1LF000013" {
+	if entries[0].Topic != "telemetry/5YJ3E1EA1LF000013/v/Soc" {
 		t.Errorf("DLQ Topic = %q", entries[0].Topic)
 	}
-	if !bytesEq(entries[0].Payload, []byte{0xde, 0xad}) {
+	if !bytesEq(entries[0].Payload, []byte("garbage")) {
 		t.Errorf("DLQ Payload mismatch: %v", entries[0].Payload)
 	}
 	if got := ackCalls.Load(); got != 1 {
@@ -348,19 +347,14 @@ func TestPipelineSubscriber_PoisonPill_ReachesMaxRedeliveries_DLQAndAck(t *testi
 // publish failure does NOT ack the message — leaving it for the broker to
 // redeliver and retry the DLQ write on the next pass.
 func TestPipelineSubscriber_PoisonPill_DLQPublishFails_NoAck(t *testing.T) {
-	prev := PayloadDropSentinel()
-	t.Cleanup(func() { SetPayloadDropSentinel(prev) })
-	customDrop := errors.New("test: codec drop")
-	SetPayloadDropSentinel(customDrop)
-
-	pipe := &fakePipeline{errs: []error{customDrop, customDrop, customDrop}}
+	pipe := &fakePipeline{}
 	dlq := &fakeDLQ{failNext: []error{errors.New("broker timeout")}}
 	sub := newTestSubscriber(t, pipe, dlq, staticResolver(99))
 
 	var ackCalls atomic.Int32
 	deliver := func() {
 		sub.handlePayload(context.Background(), mqttPayload{
-			Topic:     "telemetry/payload/5YJ3E1EA1LF000099",
+			Topic:     "telemetry/5YJ3E1EA1LF000099/v/Soc",
 			Payload:   []byte("xx"),
 			MessageID: 55,
 			Ack:       func() { ackCalls.Add(1) },
@@ -386,21 +380,18 @@ func TestPipelineSubscriber_PoisonPill_DLQPublishFails_NoAck(t *testing.T) {
 // TestPipelineSubscriber_NonPayloadDropError_NoAck_NoDLQ asserts that a
 // non-ErrPayloadDrop pipeline error (e.g. context.Canceled per ADR-004 #8)
 // does NOT ack and does NOT enter the DLQ flow — it is reserved for
-// shutdown / non-retriable infra failures.
+// shutdown / non-retriable infra failures. The codec decode succeeds (so we
+// reach ProcessAtomics) and the queued ProcessAtomics error drives the
+// classification.
 func TestPipelineSubscriber_NonPayloadDropError_NoAck_NoDLQ(t *testing.T) {
-	prev := PayloadDropSentinel()
-	t.Cleanup(func() { SetPayloadDropSentinel(prev) })
-	customDrop := errors.New("test: codec drop")
-	SetPayloadDropSentinel(customDrop)
-
 	pipe := &fakePipeline{errs: []error{context.Canceled}}
 	dlq := &fakeDLQ{}
 	sub := newTestSubscriber(t, pipe, dlq, staticResolver(1))
 
 	var ackCalls atomic.Int32
 	sub.handlePayload(context.Background(), mqttPayload{
-		Topic:     "telemetry/payload/V1",
-		Payload:   []byte("x"),
+		Topic:     "telemetry/V1/v/Soc",
+		Payload:   []byte("0.5"),
 		MessageID: 1,
 		Ack:       func() { ackCalls.Add(1) },
 	})
@@ -417,21 +408,17 @@ func TestPipelineSubscriber_NonPayloadDropError_NoAck_NoDLQ(t *testing.T) {
 }
 
 // TestPipelineSubscriber_GenericError_NoAck_NoDLQ asserts the same for an
-// arbitrary non-codec error (e.g. unrecoverable infra failure).
+// arbitrary non-codec error returned from ProcessAtomics (e.g. unrecoverable
+// infra failure).
 func TestPipelineSubscriber_GenericError_NoAck_NoDLQ(t *testing.T) {
-	prev := PayloadDropSentinel()
-	t.Cleanup(func() { SetPayloadDropSentinel(prev) })
-	customDrop := errors.New("test: codec drop")
-	SetPayloadDropSentinel(customDrop)
-
 	pipe := &fakePipeline{errs: []error{errors.New("totally unexpected")}}
 	dlq := &fakeDLQ{}
 	sub := newTestSubscriber(t, pipe, dlq, staticResolver(1))
 
 	var ackCalls atomic.Int32
 	sub.handlePayload(context.Background(), mqttPayload{
-		Topic:     "telemetry/payload/V1",
-		Payload:   []byte("x"),
+		Topic:     "telemetry/V1/v/Soc",
+		Payload:   []byte("0.5"),
 		MessageID: 2,
 		Ack:       func() { ackCalls.Add(1) },
 	})
@@ -445,25 +432,23 @@ func TestPipelineSubscriber_GenericError_NoAck_NoDLQ(t *testing.T) {
 }
 
 // TestPipelineSubscriber_SuccessAfterRetry_ForgetsTracker exercises the
-// happy-path-after-retry scenario: the first delivery fails with codec drop,
-// the second succeeds (perhaps because the upstream caught up), and the
-// tracker entry for that MessageID is forgotten.
+// happy-path-after-retry scenario: the first delivery fails with codec drop
+// (malformed body), the second succeeds (replayed body is well-formed), and
+// the tracker entry for that MessageID is forgotten.
 func TestPipelineSubscriber_SuccessAfterRetry_ForgetsTracker(t *testing.T) {
-	prev := PayloadDropSentinel()
-	t.Cleanup(func() { SetPayloadDropSentinel(prev) })
-	customDrop := errors.New("test: codec drop")
-	SetPayloadDropSentinel(customDrop)
-
-	// First call returns codec drop; second call returns nil.
-	pipe := &fakePipeline{errs: []error{customDrop, nil}}
+	pipe := &fakePipeline{}
 	dlq := &fakeDLQ{}
 	sub := newTestSubscriber(t, pipe, dlq, staticResolver(7))
 
 	var ackCalls atomic.Int32
+	bodies := [][]byte{[]byte("garbage"), []byte("12.5")}
+	cursor := 0
 	deliver := func() {
+		body := bodies[cursor]
+		cursor++
 		sub.handlePayload(context.Background(), mqttPayload{
-			Topic:     "telemetry/payload/V7",
-			Payload:   []byte("p"),
+			Topic:     "telemetry/V7/v/Soc",
+			Payload:   body,
 			MessageID: 77,
 			Ack:       func() { ackCalls.Add(1) },
 		})
@@ -500,8 +485,8 @@ func TestPipelineSubscriber_VINNotFound_AckAndDrop_NoDLQ(t *testing.T) {
 
 	var ackCalls atomic.Int32
 	sub.handlePayload(context.Background(), mqttPayload{
-		Topic:     "telemetry/payload/UNKNOWN-VIN",
-		Payload:   []byte("p"),
+		Topic:     "telemetry/UNKNOWN-VIN/v/Soc",
+		Payload:   []byte("0.5"),
 		MessageID: 11,
 		Ack:       func() { ackCalls.Add(1) },
 	})
@@ -510,7 +495,7 @@ func TestPipelineSubscriber_VINNotFound_AckAndDrop_NoDLQ(t *testing.T) {
 		t.Errorf("ack called %d times for unknown VIN, want 1", got)
 	}
 	if got := len(pipe.Calls()); got != 0 {
-		t.Errorf("Pipeline.Process called %d times for unknown VIN, want 0", got)
+		t.Errorf("Pipeline.ProcessAtomics called %d times for unknown VIN, want 0", got)
 	}
 	if got := len(dlq.Entries()); got != 0 {
 		t.Errorf("DLQ entries for unknown VIN = %d, want 0", got)
@@ -530,8 +515,8 @@ func TestPipelineSubscriber_VINResolverInfraError_NoAck(t *testing.T) {
 
 	var ackCalls atomic.Int32
 	sub.handlePayload(context.Background(), mqttPayload{
-		Topic:     "telemetry/payload/V42",
-		Payload:   []byte("p"),
+		Topic:     "telemetry/V42/v/Soc",
+		Payload:   []byte("0.5"),
 		MessageID: 22,
 		Ack:       func() { ackCalls.Add(1) },
 	})
@@ -540,7 +525,7 @@ func TestPipelineSubscriber_VINResolverInfraError_NoAck(t *testing.T) {
 		t.Errorf("ack called %d times for resolver infra error, want 0", got)
 	}
 	if got := len(pipe.Calls()); got != 0 {
-		t.Errorf("Pipeline.Process called %d times for resolver infra error, want 0", got)
+		t.Errorf("Pipeline.ProcessAtomics called %d times for resolver infra error, want 0", got)
 	}
 	if got := len(dlq.Entries()); got != 0 {
 		t.Errorf("DLQ entries for resolver infra error = %d, want 0", got)
@@ -548,8 +533,11 @@ func TestPipelineSubscriber_VINResolverInfraError_NoAck(t *testing.T) {
 }
 
 // TestPipelineSubscriber_TopicMismatch_AckAndDrop asserts that a topic that
-// does not match {topicBase}/payload/{VIN} is acked and dropped: malformed
-// topics are deployment misconfiguration, not poison pills.
+// does not match {topicBase}/{VIN}/v/{field} is acked and dropped: malformed
+// topics are deployment misconfiguration, not poison pills. This ALSO
+// covers the legacy {topicBase}/payload/{VIN} proto-batch shape, which the
+// per-field cutover intentionally rejects so a stray retained message from
+// the bridge era cannot smuggle bytes past the JSON decoder.
 func TestPipelineSubscriber_TopicMismatch_AckAndDrop(t *testing.T) {
 	pipe := &fakePipeline{}
 	dlq := &fakeDLQ{}
@@ -559,22 +547,84 @@ func TestPipelineSubscriber_TopicMismatch_AckAndDrop(t *testing.T) {
 	for _, topic := range []string{
 		"unrelated/topic",
 		"telemetry/something_else",
-		"telemetry/payload/", // missing VIN
-		"telemetry/payload/VIN/extra",
+		"telemetry/VIN",                          // missing /v/{field}
+		"telemetry/VIN/v",                        // missing {field}
+		"telemetry/VIN/v/",                       // empty {field}
+		"telemetry//v/Soc",                       // empty VIN
+		"telemetry/VIN/x/Soc",                    // wrong segment-3 marker
+		"telemetry/VIN/v/Soc/extra",              // too many segments
+		"telemetry/payload/5YJ3E1EA1LF000001",    // legacy proto-batch shape
 	} {
 		sub.handlePayload(context.Background(), mqttPayload{
 			Topic:     topic,
-			Payload:   []byte("p"),
+			Payload:   []byte("0.5"),
 			MessageID: 33,
 			Ack:       func() { ackCalls.Add(1) },
 		})
 	}
 
-	if got := ackCalls.Load(); got != 4 {
-		t.Errorf("ack called %d times for topic mismatch, want 4", got)
+	if got := ackCalls.Load(); got != 9 {
+		t.Errorf("ack called %d times for topic mismatch, want 9", got)
 	}
 	if got := len(pipe.Calls()); got != 0 {
-		t.Errorf("Pipeline.Process called %d times for topic mismatch, want 0", got)
+		t.Errorf("Pipeline.ProcessAtomics called %d times for topic mismatch, want 0", got)
+	}
+}
+
+// TestPipelineSubscriber_UnknownField_AckAndDropSilently asserts that a
+// well-formed topic naming a field SignalsByName does not know about acks
+// and drops without forwarding to the pipeline. New fields a future Tesla
+// proto bump may introduce should not crash the subscriber.
+func TestPipelineSubscriber_UnknownField_AckAndDropSilently(t *testing.T) {
+	pipe := &fakePipeline{}
+	dlq := &fakeDLQ{}
+	sub := newTestSubscriber(t, pipe, dlq, staticResolver(1))
+
+	var ackCalls atomic.Int32
+	sub.handlePayload(context.Background(), mqttPayload{
+		Topic:     "telemetry/V1/v/SomeFutureSignalThatDoesNotExist",
+		Payload:   []byte("42"),
+		MessageID: 44,
+		Ack:       func() { ackCalls.Add(1) },
+	})
+
+	if got := ackCalls.Load(); got != 1 {
+		t.Errorf("ack called %d times for unknown field, want 1", got)
+	}
+	if got := len(pipe.Calls()); got != 0 {
+		t.Errorf("ProcessAtomics called %d times for unknown field, want 0", got)
+	}
+	if got := len(dlq.Entries()); got != 0 {
+		t.Errorf("DLQ entries for unknown field = %d, want 0", got)
+	}
+	if got := sub.tracker.Len(); got != 0 {
+		t.Errorf("tracker.Len() for unknown field = %d, want 0", got)
+	}
+}
+
+// TestPipelineSubscriber_NullBody_AckAndDropSilently asserts that a null
+// body (Tesla's wire signal for "Value.invalid") acks without DLQ.
+func TestPipelineSubscriber_NullBody_AckAndDropSilently(t *testing.T) {
+	pipe := &fakePipeline{}
+	dlq := &fakeDLQ{}
+	sub := newTestSubscriber(t, pipe, dlq, staticResolver(1))
+
+	var ackCalls atomic.Int32
+	sub.handlePayload(context.Background(), mqttPayload{
+		Topic:     "telemetry/V1/v/Soc",
+		Payload:   []byte("null"),
+		MessageID: 45,
+		Ack:       func() { ackCalls.Add(1) },
+	})
+
+	if got := ackCalls.Load(); got != 1 {
+		t.Errorf("ack called %d times for null body, want 1", got)
+	}
+	if got := len(pipe.Calls()); got != 0 {
+		t.Errorf("ProcessAtomics called %d times for null body, want 0", got)
+	}
+	if got := len(dlq.Entries()); got != 0 {
+		t.Errorf("DLQ entries for null body = %d, want 0", got)
 	}
 }
 
@@ -641,22 +691,38 @@ func TestRedeliveryTracker_Reset(t *testing.T) {
 
 func TestParsePipelineTopic(t *testing.T) {
 	cases := []struct {
-		base, topic, wantVIN string
-		wantOK               bool
+		base, topic            string
+		wantVIN, wantField     string
+		wantOK                 bool
 	}{
-		{"telemetry", "telemetry/payload/5YJ3E1EA1LF000001", "5YJ3E1EA1LF000001", true},
-		{"telemetry/", "telemetry/payload/X", "X", true},
-		{"telemetry", "telemetry/payload/", "", false},
-		{"telemetry", "telemetry/payload/A/B", "", false},
-		{"telemetry", "different/payload/X", "", false},
-		{"telemetry", "telemetry/v/X", "", false},
-		{"", "/payload/X", "X", true},
+		{"telemetry", "telemetry/5YJ3E1EA1LF000001/v/Soc", "5YJ3E1EA1LF000001", "Soc", true},
+		{"telemetry/", "telemetry/X/v/Gear", "X", "Gear", true},
+		{"telemetry", "telemetry/X/v/Location", "X", "Location", true},
+		// Empty VIN.
+		{"telemetry", "telemetry//v/Soc", "", "", false},
+		// Empty field.
+		{"telemetry", "telemetry/X/v/", "", "", false},
+		// Wrong segment-3 marker.
+		{"telemetry", "telemetry/X/x/Soc", "", "", false},
+		// Too few segments.
+		{"telemetry", "telemetry/X/v", "", "", false},
+		{"telemetry", "telemetry/X", "", "", false},
+		// Too many segments.
+		{"telemetry", "telemetry/X/v/Soc/extra", "", "", false},
+		// Wrong base.
+		{"telemetry", "different/X/v/Soc", "", "", false},
+		// Legacy proto-batch shape rejected.
+		{"telemetry", "telemetry/payload/X", "", "", false},
+		// Trailing-slash on base normalises to the same prefix.
+		{"telemetry/", "telemetry/X/v/Soc", "X", "Soc", true},
+		// Empty base + leading slash on topic.
+		{"", "/X/v/Soc", "X", "Soc", true},
 	}
 	for _, c := range cases {
-		got, ok := parsePipelineTopic(c.base, c.topic)
-		if ok != c.wantOK || got != c.wantVIN {
-			t.Errorf("parsePipelineTopic(%q,%q) = (%q,%v), want (%q,%v)",
-				c.base, c.topic, got, ok, c.wantVIN, c.wantOK)
+		gotVIN, gotField, ok := parsePipelineTopic(c.base, c.topic)
+		if ok != c.wantOK || gotVIN != c.wantVIN || gotField != c.wantField {
+			t.Errorf("parsePipelineTopic(%q,%q) = (%q,%q,%v), want (%q,%q,%v)",
+				c.base, c.topic, gotVIN, gotField, ok, c.wantVIN, c.wantField, c.wantOK)
 		}
 	}
 }
@@ -713,8 +779,14 @@ func TestNewPipelineSubscriber_DefaultsApplied(t *testing.T) {
 	}
 }
 
-func TestSetPayloadDropSentinel_NilPanics(t *testing.T) {
-	mustPanic(t, "nil sentinel", func() { SetPayloadDropSentinel(nil) })
+func TestSetPayloadDropSentinel_Removed(t *testing.T) {
+	// Documents that the SetPayloadDropSentinel public API was removed when
+	// the per-field MQTT cutover landed. The handler now wraps every
+	// codec.DecodeJSONField error in the package-private errPayloadDrop
+	// sentinel directly, eliminating the indirection that had been used
+	// to bridge to normalize.ErrPayloadDrop. If a future refactor wants
+	// the indirection back it will need to add new public API + new test.
+	t.Skip("SetPayloadDropSentinel removed in per-field MQTT cutover")
 }
 
 func TestDLQEntryRoundTrip(t *testing.T) {
@@ -722,7 +794,7 @@ func TestDLQEntryRoundTrip(t *testing.T) {
 		Reason:       "test",
 		VehicleID:    42,
 		VIN:          "VIN1",
-		Topic:        "telemetry/payload/VIN1",
+		Topic:        "telemetry/VIN1/v/Soc",
 		Payload:      []byte{0x01, 0x02},
 		Redeliveries: 3,
 	}

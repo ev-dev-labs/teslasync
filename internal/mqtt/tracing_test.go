@@ -9,6 +9,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 )
 
 // installRecorder swaps the global TracerProvider for a tracetest-based
@@ -44,13 +46,13 @@ func (m *fakePahoMessage) MessageID() uint16 { return m.messageID }
 func (m *fakePahoMessage) Payload() []byte   { return m.payload }
 func (m *fakePahoMessage) Ack()              { m.acked.Add(1) }
 
-// ctxRecordingPipeline captures the context handed to Pipeline.Process so the
-// test can assert that the consume span propagates as the parent span.
+// ctxRecordingPipeline captures the context handed to Pipeline.ProcessAtomics
+// so the test can assert that the consume span propagates as the parent span.
 type ctxRecordingPipeline struct {
 	ctx context.Context
 }
 
-func (p *ctxRecordingPipeline) Process(ctx context.Context, _ []byte, _ int64) error {
+func (p *ctxRecordingPipeline) ProcessAtomics(ctx context.Context, _ []codec.Atomic, _ int64) error {
 	p.ctx = ctx
 	return nil
 }
@@ -60,8 +62,9 @@ func (p *ctxRecordingPipeline) Process(ctx context.Context, _ []byte, _ int64) e
 //   - onPipelineMessage MUST open a span named "mqtt.consume".
 //   - The span MUST carry attributes mqtt.topic and mqtt.message_size.
 //   - The span MUST appear with SpanKind=Consumer.
-//   - The ctx passed to Pipeline.Process MUST carry that span (so downstream
-//     normalize / router / writer spans become children of mqtt.consume).
+//   - The ctx passed to Pipeline.ProcessAtomics MUST carry that span (so
+//     downstream normalize / router / writer spans become children of
+//     mqtt.consume).
 //   - The span MUST be ended by the time the handler returns.
 //   - The vehicle_id attribute MUST be set after VIN resolution.
 func TestOnPipelineMessage_OpensConsumeSpan_PropagatesContext(t *testing.T) {
@@ -73,8 +76,8 @@ func TestOnPipelineMessage_OpensConsumeSpan_PropagatesContext(t *testing.T) {
 
 	sub := newTestSubscriber(t, pipe, dlq, resolver)
 
-	const wantTopic = "telemetry/payload/5YJ3E1EA1LF000001"
-	wantPayload := []byte{0x01, 0x02, 0x03, 0x04, 0x05}
+	const wantTopic = "telemetry/5YJ3E1EA1LF000001/v/Soc"
+	wantPayload := []byte("75.5") // valid JSON for the Soc float field
 	msg := &fakePahoMessage{
 		topic:     wantTopic,
 		payload:   wantPayload,
@@ -88,14 +91,14 @@ func TestOnPipelineMessage_OpensConsumeSpan_PropagatesContext(t *testing.T) {
 	}
 
 	if pipe.ctx == nil {
-		t.Fatal("Pipeline.Process was not called or received nil context")
+		t.Fatal("Pipeline.ProcessAtomics was not called or received nil context")
 	}
 
-	// Verify a span propagated to Pipeline.Process and points back at the
-	// mqtt.consume span (same TraceID, valid SpanID).
+	// Verify a span propagated to Pipeline.ProcessAtomics and points back at
+	// the mqtt.consume span (same TraceID, valid SpanID).
 	downstream := trace.SpanFromContext(pipe.ctx).SpanContext()
 	if !downstream.IsValid() {
-		t.Fatalf("expected a valid span on the context handed to Pipeline.Process, got invalid: %+v", downstream)
+		t.Fatalf("expected a valid span on the context handed to Pipeline.ProcessAtomics, got invalid: %+v", downstream)
 	}
 
 	spans := rec.Ended()
@@ -110,7 +113,7 @@ func TestOnPipelineMessage_OpensConsumeSpan_PropagatesContext(t *testing.T) {
 		t.Fatalf("span kind = %v, want Consumer", consume.SpanKind())
 	}
 	if consume.SpanContext().TraceID() != downstream.TraceID() {
-		t.Fatalf("Pipeline.Process ctx TraceID %s != mqtt.consume TraceID %s",
+		t.Fatalf("Pipeline.ProcessAtomics ctx TraceID %s != mqtt.consume TraceID %s",
 			downstream.TraceID(), consume.SpanContext().TraceID())
 	}
 
@@ -124,6 +127,9 @@ func TestOnPipelineMessage_OpensConsumeSpan_PropagatesContext(t *testing.T) {
 	if got, ok := attrs["mqtt.message_size"].(int64); !ok || got != int64(len(wantPayload)) {
 		t.Errorf("mqtt.message_size attribute = %v, want %d", attrs["mqtt.message_size"], len(wantPayload))
 	}
+	if got, ok := attrs["mqtt.field"].(string); !ok || got != "Soc" {
+		t.Errorf("mqtt.field attribute = %v, want %q", attrs["mqtt.field"], "Soc")
+	}
 	if got, ok := attrs["vehicle_id"].(int64); !ok || got != 42 {
 		t.Errorf("vehicle_id attribute = %v, want 42", attrs["vehicle_id"])
 	}
@@ -133,7 +139,7 @@ func TestOnPipelineMessage_OpensConsumeSpan_PropagatesContext(t *testing.T) {
 }
 
 // TestOnPipelineMessage_BadTopic_AckDropDisposition asserts that a topic that
-// does not match {base}/payload/{VIN} is annotated on the span as ack-drop.
+// does not match {base}/{VIN}/v/{field} is annotated on the span as ack-drop.
 func TestOnPipelineMessage_BadTopic_AckDropDisposition(t *testing.T) {
 	rec := installRecorder(t)
 
@@ -150,7 +156,7 @@ func TestOnPipelineMessage_BadTopic_AckDropDisposition(t *testing.T) {
 	sub.onPipelineMessage(nil, msg)
 
 	if pipe.ctx != nil {
-		t.Fatal("Pipeline.Process must NOT be called for a bad topic")
+		t.Fatal("Pipeline.ProcessAtomics must NOT be called for a bad topic")
 	}
 	if msg.acked.Load() != 1 {
 		t.Fatalf("bad-topic message should be ack-dropped exactly once, got %d", msg.acked.Load())
