@@ -74,8 +74,9 @@ func (r *AlertRuleStateRepo) LoadAll(ctx context.Context) ([]*AlertRuleState, er
 }
 
 // alertRuleStateMarkFiredSQL is the race-safe upsert per Risk R1 of the
-// Phase-49 methodology. The WHERE clause on ON CONFLICT DO UPDATE
-// suppresses concurrent fires of the same once-mode rule across pods:
+// Phase-49 / Slice 0002 design. The WHERE clause on ON CONFLICT DO UPDATE
+// suppresses concurrent fires of the same once-mode rule across pods.
+// The full statement runs atomically and returns AT MOST one row:
 //
 //   - First-ever fire: INSERT path → row returned with inserted=true.
 //   - Same-pair re-fire while NOT latched (repeat-mode, or once-mode
@@ -88,14 +89,24 @@ func (r *AlertRuleStateRepo) LoadAll(ctx context.Context) ([]*AlertRuleState, er
 // UPDATE path (xmax!=0) in a single round trip; we don't currently use
 // the distinction at the call site, but it documents the semantic and
 // is cheap to keep for future audits.
+//
+// IMPORTANT: $4 MUST be cast inside both CASE expressions. Without the
+// cast, pgx sends $4 as the unknown OID and PostgreSQL infers the CASE
+// type as text (the INSERT VALUES branch has no ELSE column anchor;
+// the UPDATE SET branch's ELSE references alert_rule_state.latched_at
+// but we cast both for symmetry and future-drift protection). Writing
+// text into a TIMESTAMPTZ column triggers SQLSTATE 42804 at execution
+// time and routes the engine into the in-memory fallback — which then
+// silently breaks persistence across pod restarts. Regression test:
+// TestAlertRuleStateRepo_MarkFired_Roundtrip in this package.
 const alertRuleStateMarkFiredSQL = `
 INSERT INTO alert_rule_state (
 	rule_id, vehicle_id, latched_at, last_fired_at, fire_count_since_reset, updated_at
 ) VALUES (
-	$1, $2, CASE WHEN $3 THEN $4 END, $4, 1, $4
+	$1, $2, CASE WHEN $3 THEN $4::timestamptz END, $4, 1, $4
 )
 ON CONFLICT (rule_id, vehicle_id) DO UPDATE
-   SET latched_at             = CASE WHEN $3 THEN $4 ELSE alert_rule_state.latched_at END,
+   SET latched_at             = CASE WHEN $3 THEN $4::timestamptz ELSE alert_rule_state.latched_at END,
        last_fired_at          = $4,
        fire_count_since_reset = alert_rule_state.fire_count_since_reset + 1,
        updated_at             = $4

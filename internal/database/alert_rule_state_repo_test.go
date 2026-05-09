@@ -57,8 +57,15 @@ func TestAlertRuleStateRepo_MarkFiredSQL_RaceSafe(t *testing.T) {
 		"WHERE alert_rule_state.latched_at IS NULL",
 		// Once-mode latch is conditional on the isOnce parameter; the
 		// CASE expression is the contract that distinguishes once-mode
-		// from repeat-mode at the SQL boundary.
-		"CASE WHEN $3 THEN $4",
+		// from repeat-mode at the SQL boundary. The ::timestamptz cast
+		// is REQUIRED — without it, pgx sends $4 as the unknown OID
+		// and PostgreSQL infers the CASE type as text (the INSERT
+		// VALUES branch has no ELSE column to anchor type inference),
+		// which then fails with SQLSTATE 42804 against the TIMESTAMPTZ
+		// column. See doc-comment on alertRuleStateMarkFiredSQL for
+		// the full root-cause analysis. This test anchors both CASEs.
+		"CASE WHEN $3 THEN $4::timestamptz END",
+		"CASE WHEN $3 THEN $4::timestamptz ELSE alert_rule_state.latched_at END",
 		// last_fired_at always updates regardless of mode — feeds the
 		// cooldown gate (slice 0004 will use this column).
 		"last_fired_at",
@@ -73,6 +80,14 @@ func TestAlertRuleStateRepo_MarkFiredSQL_RaceSafe(t *testing.T) {
 		if !strings.Contains(alertRuleStateMarkFiredSQL, frag) {
 			t.Errorf("alertRuleStateMarkFiredSQL missing %q\nfull SQL:\n%s", frag, alertRuleStateMarkFiredSQL)
 		}
+	}
+	// The bare un-cast form is the regression we're guarding against.
+	// Reject any future drift back to it.
+	if strings.Contains(alertRuleStateMarkFiredSQL, "CASE WHEN $3 THEN $4 END") {
+		t.Errorf("alertRuleStateMarkFiredSQL contains the un-cast form 'CASE WHEN $3 THEN $4 END' — must be 'CASE WHEN $3 THEN $4::timestamptz END' (SQLSTATE 42804 regression). full SQL:\n%s", alertRuleStateMarkFiredSQL)
+	}
+	if strings.Contains(alertRuleStateMarkFiredSQL, "CASE WHEN $3 THEN $4 ELSE") {
+		t.Errorf("alertRuleStateMarkFiredSQL contains the un-cast UPDATE form 'CASE WHEN $3 THEN $4 ELSE …' — must be 'CASE WHEN $3 THEN $4::timestamptz ELSE …'. full SQL:\n%s", alertRuleStateMarkFiredSQL)
 	}
 }
 
