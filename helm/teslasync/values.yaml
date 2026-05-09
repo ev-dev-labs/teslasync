@@ -382,13 +382,19 @@ fleetTelemetry:
 
   # -- MQTT topic base for fleet-telemetry's MQTT dispatcher.
   # Fleet Telemetry publishes each signal to: {topicBase}/{VIN}/v/{field_name}
-  # TeslaSync's MQTT subscriber listens on: {topicBase}/+/v/#
+  # TeslaSync's MQTT subscriber listens on: {topicBase}/+/v/+
+  #   - segment 2: VIN (single-level wildcard)
+  #   - segment 4: canonical proto field name (single-level wildcard)
   # Must match FLEET_TELEMETRY_TOPIC_BASE env var on the TeslaSync API.
   topicBase: "telemetry"
 
-  # -- Signal batching window in milliseconds.
-  # Fleet Telemetry publishes each field as a separate MQTT message.
-  # TeslaSync batches fields per VIN within this window before processing.
+  # -- DEPRECATED — no-op on the per-field MQTT path. The legacy
+  # proto-batch subscriber buffered atomics into per-VIN payloads
+  # within this window before invoking the codec; the new per-field
+  # subscriber processes each {VIN, field} message individually
+  # (one codec.Atomic per MQTT message, one signal_log row per
+  # codec.Atomic). The knob is kept for compat with legacy values
+  # files but no production code reads it.
   batchMs: 100
 
   # -- Time without signals before a vehicle is considered stale.

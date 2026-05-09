@@ -280,22 +280,23 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 > File-level rules: `.github/instructions/tesla-pipeline.instructions.md`.
 
 ```
-Tesla Vehicle ── mTLS stream ──▶ Tesla Fleet Telemetry ──▶ Mosquitto MQTT (telemetry/payload/+)
+Tesla Vehicle ── mTLS stream ──▶ Tesla Fleet Telemetry ──▶ Mosquitto MQTT (telemetry/{VIN}/v/{Field})
                                                                          │
                                                                          ▼
                                                          PipelineSubscriber  (internal/mqtt)
                                                          ▸ ack-after-process
                                                          ▸ tracker (4096 capacity)
                                                          ▸ max_redeliveries=5
+                                                         ▸ topic filter: {base}/+/v/+
                                                                          │
                                                                          ▼
                                                          Codec  (internal/tesla/codec)
-                                                         proto bytes → typed Datums
-                                                         failure ⇒ MQTT redeliver
+                                                         per-field JSON body → []codec.Atomic
+                                                         (DecodeJSONField; ErrPayloadDrop ⇒ DLQ)
                                                                          │
                                                                          ▼
                                                          normalize.Pipeline  (internal/tesla/normalize)
-                                                         ▸ THE one ingest entry (reflective coverage test)
+                                                         ▸ THE one ingest entry (ProcessAtomics)
                                                          ▸ ToSI(field, raw, vehicleUnits) using
                                                            per-vehicle Setting*Unit history
                                                                          │
@@ -320,10 +321,10 @@ Tesla Vehicle ── mTLS stream ──▶ Tesla Fleet Telemetry ──▶ Mosqu
 
 **Five non-negotiable rules** (enforced by tests / startup checks):
 
-1. **`normalize.Pipeline.Process` is THE one ingest entry.** A reflective coverage test pins this. Vendor-specific decode lives in `internal/tesla/*`; vendor-agnostic signal primitives in `internal/signal/*`.
+1. **`normalize.Pipeline.ProcessAtomics` is THE one ingest entry.** A reflective coverage test pins this. Vendor-specific decode lives in `internal/tesla/*`; vendor-agnostic signal primitives in `internal/signal/*`.
 2. **SI on disk, always.** Meters, m/s, °C, Pa, Wh in every column / API field / Go struct / TS interface. Display conversion only at the React render boundary via `useUnits()` / `useFormatting()`.
 3. **`routing.yaml` is field-static, vehicle-agnostic.** Per-vehicle or value-conditional routing is forbidden by ADR-004 #8.
-4. **Failure semantics are split.** Codec failures (malformed proto bytes) trigger MQTT redelivery. Writer failures (DB down, schema mismatch) only log + increment `tesla_router_writer_failures_total` and never propagate to MQTT — otherwise a stuck table blocks the whole stream.
+4. **Failure semantics are split.** Codec failures (malformed JSON, kind mismatch, unknown enum) wrap `codec.ErrPayloadDrop` and route to the DLQ. Writer failures (DB down, schema mismatch) only log + increment `tesla_router_writer_failures_total` and never propagate to MQTT — otherwise a stuck table blocks the whole stream.
 5. **Live state is layered, not replaced.** L1 `signal.Store` for hot paths (FSM, sessions). L2 Redis for cross-pod + restart recovery. Durable `signal_log` for charts and replay.
 
 ### Tech Stack
@@ -334,7 +335,7 @@ Tesla Vehicle ── mTLS stream ──▶ Tesla Fleet Telemetry ──▶ Mosqu
 | **Frontend** | React 18 · TypeScript · Vite 5 · Tailwind CSS · Recharts · Leaflet · Framer Motion |
 | **Database** | PostgreSQL 17 + **TimescaleDB** (hypertables for `signal_log`, continuous aggregates for fleet/battery analytics) |
 | **Cache / Pub-Sub** | Redis 7 (L2 live state, SSE fanout, restart recovery) |
-| **Messaging** | MQTT (Mosquitto 2) — Tesla Fleet Telemetry topic `telemetry/payload/+` |
+| **Messaging** | MQTT (Mosquitto 2) — Tesla Fleet Telemetry per-field topic `telemetry/{VIN}/v/{Field}` |
 | **Monitoring** | Grafana 10.4 · Prometheus · OpenTelemetry (optional Jaeger) |
 | **Deployment** | Docker Compose · Helm 3 · GitHub Actions |
 
