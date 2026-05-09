@@ -323,6 +323,49 @@ export default function FleetTelemetryCoveragePage({
       </FadeIn>
 
       <FadeIn>
+        <GlassPanel className="p-5" data-testid="coverage-legend-panel">
+          <Heading level="panel" className="mb-1">
+            {t('coverage.legend.title', 'Reading this page')}
+          </Heading>
+          <Caption className="mb-3 block">
+            {t(
+              'coverage.legend.intro',
+              'Each row is one Tesla telemetry field declared in routing.yaml. The dashes below mean "not applicable" for that field — they are expected, not missing data.',
+            )}
+          </Caption>
+          <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
+            <li data-testid="coverage-legend-column">
+              <Text variant="bodySm" as="span" className="font-semibold text-[var(--text-primary)]">
+                {t('coverage.legend.columnLabel', 'Column')}
+              </Text>{' '}
+              {t(
+                'coverage.legend.columnHelp',
+                '— the typed destination column. A dash means the field is stored in signal_log, a generic key/value table where the field name itself is the key — there is no per-field column.',
+              )}
+            </li>
+            <li data-testid="coverage-legend-dual-write">
+              <Text variant="bodySm" as="span" className="font-semibold text-[var(--text-primary)]">
+                {t('coverage.legend.dualWriteLabel', 'Dual write')}
+              </Text>{' '}
+              {t(
+                'coverage.legend.dualWriteHelp',
+                '— marks fields written to both their primary table AND signal_log (for replay and historical reconstruction). A dash means single-write only, which is the normal case.',
+              )}
+            </li>
+            <li data-testid="coverage-legend-subscribed">
+              <Text variant="bodySm" as="span" className="font-semibold text-[var(--text-primary)]">
+                {t('coverage.legend.subscribedLabel', 'Subscribed')}
+              </Text>{' '}
+              {t(
+                'coverage.legend.subscribedHelp',
+                '— whether Tesla Fleet Telemetry is currently pushing this field to us. "No" means the writer is wired but the subscription request omits the field.',
+              )}
+            </li>
+          </ul>
+        </GlassPanel>
+      </FadeIn>
+
+      <FadeIn>
         <GlassPanel className="p-5" data-testid="coverage-destinations-panel">
           <Heading level="panel" className="mb-1">
             {t('coverage.destinations.title', 'Destination breakdown')}
