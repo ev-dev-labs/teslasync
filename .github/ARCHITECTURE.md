@@ -584,85 +584,89 @@ SQL exports under `files/raw-audits/`.
 ### Pipeline at-a-glance (read this first)
 
 ```
-                                                         ┌────────────────────┐
-Tesla Vehicle ── mTLS stream ──▶ Tesla Fleet Telemetry ──▶│ Mosquitto MQTT    │
-                                                          │ telemetry/payload/+│
-                                                          └─────────┬──────────┘
+                                                          ┌─────────────────────────────┐
+Tesla Vehicle ── mTLS stream ──▶ Tesla Fleet Telemetry ──▶│ Mosquitto MQTT             │
+                                 (transmit_decoded_records │ telemetry/{VIN}/v/{Field}  │
+                                  = true → per-field JSON) │ subscriber filter:         │
+                                                           │  {base}/+/v/+              │
+                                                           └─────────┬───────────────────┘
+                                                                     ▼
+                                                     ┌──────────────────────────────┐
+                                                     │ PipelineSubscriber           │
+                                                     │ internal/mqtt/...            │
+                                                     │ ▸ ack-after-process          │
+                                                     │ ▸ tracker (4096 capacity)    │
+                                                     │ ▸ DLQ via ErrPayloadDrop     │
+                                                     │ ▸ VIN cache (5min refresh)   │
+                                                     └──────────────┬───────────────┘
                                                                     ▼
-                                                    ┌──────────────────────────────┐
-                                                    │ PipelineSubscriber           │
-                                                    │ internal/mqtt/...            │
-                                                    │ ▸ ack-after-process          │
-                                                    │ ▸ tracker (4096 capacity)    │
-                                                    │ ▸ max_redeliveries=5         │
-                                                    └──────────────┬───────────────┘
-                                                                   ▼
-                                                ┌──────────────────────────────────┐
-                                                │ Codec  internal/tesla/codec      │
-                                                │ proto bytes → typed Datums       │
-                                                │ failure ⇒ MQTT redeliver         │
-                                                └──────────────┬───────────────────┘
-                                                               ▼
-                                ┌──────────────────────────────────────────────────┐
-                                │ normalize.Pipeline   internal/tesla/normalize    │
-                                │ ▸ THE one entry — reflective coverage test pins  │
-                                │ ▸ ToSI(field, raw, vehicleUnits)                 │
-                                │   uses tesla/unit_history per-vehicle Setting*   │
-                                │ ▸ produces signal.Sample{Field, Value, Time}     │
-                                └──────────────┬───────────────────────────────────┘
-                                               ▼
-                          ┌────────────────────────────────────────┐
-                          │ Router  internal/tesla/router          │
-                          │ routing.yaml — field-static, vehicle-  │
-                          │ agnostic per ADR-004 #8                │
-                          │ field → {dest_table, column?, also_log}│
-                          └──────┬──────────────────────┬──────────┘
-                                 ▼                      ▼
-                     ┌───────────────────────┐  ┌───────────────────┐
-                     │ Writers (per table)   │  │ signal.Store L1   │
-                     │ drive_telemetry       │  │ in-process map    │
-                     │ charging_telemetry    │  │ hot path: FSM,    │
-                     │ positions             │  │ sessions, merge   │
-                     │ tesla_charging_history│  │ context           │
-                     │ ...                   │  └────────┬──────────┘
-                     │ writer failure ⇒ log+ │           │
-                     │ counter, NEVER MQTT   │           │ pubsub
-                     │ redeliver             │           ▼
-                     └─────────┬─────────────┘  ┌───────────────────┐
-                               ▼                │ Redis L2          │
-                     ┌───────────────────┐      │ HSET vehicle:{id}:│
-                     │ signal_log        │      │ signals + Pub/Sub │
-                     │ (TimescaleDB      │      │ cross-pod live    │
-                     │  hypertable)      │      │ TTL: 2 min stale  │
-                     │ durable history,  │      └────────┬──────────┘
-                     │ replay, charts,   │               │
-                     │ point-in-time     │               ▼
-                     └───────────────────┘   ┌──────────────────────┐
-                                             │ SSE event hub        │
-                                             │ Redis Pub/Sub        │
-                                             │ → /events stream     │
-                                             └──────────┬───────────┘
-                                                        │
-                                ┌───────────────────────┴────────────────┐
-                                ▼                                        ▼
-                  ┌──────────────────────────┐           ┌─────────────────────────┐
-                  │ FSM   internal/fsm       │           │ React SPA               │
-                  │ 20-transition table      │           │ ▸ EventSource for live  │
-                  │ ▸ drive / charge / park  │           │ ▸ TanStack Query for    │
-                  │ ▸ reconciliation 15s     │           │   history endpoints     │
-                  │ ▸ commits sessions to    │           │ ▸ useUnits/useFormatting│
-                  │   drives, charging_     │           │   for SI→display only at │
-                  │   sessions tables        │           │   render boundary       │
-                  └──────────────────────────┘           └─────────────────────────┘
+                                                 ┌──────────────────────────────────┐
+                                                 │ Codec  internal/tesla/codec      │
+                                                 │ DecodeJSONField(field, body) →   │
+                                                 │   []codec.Atomic                 │
+                                                 │ failure ⇒ ErrPayloadDrop → DLQ   │
+                                                 └──────────────┬───────────────────┘
+                                                                ▼
+                                 ┌──────────────────────────────────────────────────┐
+                                 │ normalize.Pipeline   internal/tesla/normalize    │
+                                 │ ▸ ProcessAtomics — THE one ingest entry          │
+                                 │ ▸ ToSI(field, raw, vehicleUnits)                 │
+                                 │   uses tesla/unit_history per-vehicle Setting*   │
+                                 │ ▸ produces signal.Sample{Field, Value, Time}     │
+                                 └──────────────┬───────────────────────────────────┘
+                                                ▼
+                           ┌────────────────────────────────────────┐
+                           │ Router  internal/tesla/router          │
+                           │ routing.yaml — field-static, vehicle-  │
+                           │ agnostic per ADR-004 #8                │
+                           │ field → {dest_table, column?, also_log}│
+                           └──────┬──────────────────────┬──────────┘
+                                  ▼                      ▼
+                      ┌───────────────────────┐  ┌───────────────────┐
+                      │ Writers (per table)   │  │ signal.Store L1   │
+                      │ drive_telemetry       │  │ in-process map    │
+                      │ charging_telemetry    │  │ hot path: FSM,    │
+                      │ positions             │  │ sessions, merge   │
+                      │ tesla_charging_history│  │ context           │
+                      │ ...                   │  └────────┬──────────┘
+                      │ writer failure ⇒ log+ │           │
+                      │ counter, NEVER MQTT   │           │ pubsub
+                      │ redeliver             │           ▼
+                      └─────────┬─────────────┘  ┌───────────────────┐
+                                ▼                │ Redis L2          │
+                      ┌───────────────────┐      │ HSET vehicle:{id}:│
+                      │ signal_log        │      │ signals + Pub/Sub │
+                      │ (TimescaleDB      │      │ cross-pod live    │
+                      │  hypertable)      │      │ TTL: 2 min stale  │
+                      │ durable history,  │      └────────┬──────────┘
+                      │ replay, charts,   │               │
+                      │ point-in-time     │               ▼
+                      └───────────────────┘   ┌──────────────────────┐
+                                              │ SSE event hub        │
+                                              │ Redis Pub/Sub        │
+                                              │ → /events stream     │
+                                              └──────────┬───────────┘
+                                                         │
+                                 ┌───────────────────────┴────────────────┐
+                                 ▼                                        ▼
+                   ┌──────────────────────────┐           ┌─────────────────────────┐
+                   │ FSM   internal/fsm       │           │ React SPA               │
+                   │ 20-transition table      │           │ ▸ EventSource for live  │
+                   │ ▸ drive / charge / park  │           │ ▸ TanStack Query for    │
+                   │ ▸ reconciliation 15s     │           │   history endpoints     │
+                   │ ▸ commits sessions to    │           │ ▸ useUnits/useFormatting│
+                   │   drives, charging_     │           │   for SI→display only at │
+                   │   sessions tables        │           │   render boundary       │
+                   └──────────────────────────┘           └─────────────────────────┘
 ```
 
 **Five-line summary:**
 
-1. **Vehicle → Mosquitto:** Tesla streams Fleet Telemetry over mTLS into MQTT topic `telemetry/payload/+`.
-2. **Decode → Normalize:** `PipelineSubscriber` pulls payloads, codec decodes proto, `normalize.Pipeline.Process` converts each value to SI using per-vehicle `Setting*Unit` history.
-3. **Route → Persist:** `routing.yaml` (static, no per-vehicle logic) routes each field to a destination table writer + optional `signal_log` history. **Codec failures redeliver via MQTT; writer failures only log+counter** (never redeliver).
+1. **Vehicle → Mosquitto:** Tesla streams Fleet Telemetry over mTLS; with `transmit_decoded_records: true` (helm-pinned) the upstream emits ONE signal per topic of the form `telemetry/{VIN}/v/{Field}` with the bare JSON value as body.
+2. **Decode → Normalize:** `PipelineSubscriber` filters `{base}/+/v/+`, codec `DecodeJSONField` translates the per-field body to a `[]codec.Atomic` keyed by canonical proto field name, and `normalize.Pipeline.ProcessAtomics` converts each value to SI using per-vehicle `Setting*Unit` history.
+3. **Route → Persist:** `routing.yaml` (static, no per-vehicle logic) routes each field to a destination table writer + optional `signal_log` history. **Codec failures route to the DLQ via `ErrPayloadDrop`; writer failures only log+counter** (never redeliver — a poisoned per-VIN topic would otherwise pin redelivery forever).
 4. **Live state, three tiers:** L1 = in-process `signal.Store` (FSM, sessions hot path) · L2 = Redis `vehicle:{id}:signals` HSET + Pub/Sub (cross-pod, restart recovery) · durable = `signal_log` hypertable (charts, replay, point-in-time snapshots).
-5. **Consumers:** FSM watches the store and commits drive/charge sessions when transitions complete · SSE hub fans Redis Pub/Sub out to the SPA · REST endpoints serve historical reads from `signal_log` and aggregates from `drives` / `charging_sessions` / continuous aggregates.
+5. **Consumers:** FSM watches the store and commits drive/charge sessions when transitions complete · `SideEffectsObserver` builds a true cross-batch accumulated map (via `live.GetAll` after `UpdateAll`) for sessions + alerts · SSE hub fans Redis Pub/Sub out to the SPA · REST endpoints serve historical reads from `signal_log` and aggregates from `drives` / `charging_sessions` / continuous aggregates.
 
 **The whole pipeline writes SI units to disk** (meters, m/s, °C, Pa, Wh — never miles, mph, °F, psi, kWh). User display preference is applied **only** at the React render boundary by `useUnits()` / `useFormatting()` hooks. The vendored Tesla proto is the only place imperial-named identifiers survive (e.g. proto field 256 `ChargeRateMilePerHour` whose wire content is actually meters/hour — pinned by `TestRangeAddedMetersPerHour_R2_AuditPin`).
 
@@ -670,15 +674,17 @@ Tesla Vehicle ── mTLS stream ──▶ Tesla Fleet Telemetry ──▶│ Mo
 
 | # | Invariant | Where enforced |
 |---|---|---|
-| 1 | `normalize.Pipeline.Process` is THE one ingest entry | Reflective coverage test in `internal/tesla/normalize` |
+| 1 | `normalize.Pipeline.ProcessAtomics` is THE one ingest entry | Reflective coverage test in `internal/tesla/normalize`; `mqtt.Pipeline` interface has only this method |
 | 2 | `routing.yaml` is field-static, vehicle-agnostic | Schema validation at startup |
 | 3 | Every `ftproto.Field_*` has exactly one routing entry | Reflective coverage test in `internal/tesla/router` |
-| 4 | Writer failures never trigger MQTT redelivery | `tesla_router_writer_failures_total` counter; `internal/tesla/router/writers` |
+| 4 | Codec failures → DLQ via `ErrPayloadDrop`; writer failures never trigger MQTT redelivery | `tesla_router_writer_failures_total` counter; `internal/tesla/router/writers`; `handlePipelineError` classifier in `internal/mqtt` |
 | 5 | `signal.Store` L1 is mandatory for FSM/sessions | `LIVE_SIGNAL_STORE_MODE=local` rollback switch |
 | 6 | `tesla_*` prefix for vendor-specific tables | New tables only; existing ones grandfathered |
 | 7 | `internal/tesla/*` for vendor code, `internal/signal/*` for vendor-agnostic | Directory layout |
 | 8 | SignalMeta.Field name MUST match `ftproto.Field_name[N]` | `TestCoverage_EveryProtoFieldHasSignalMeta` |
 | 9 | Generated files in sync with vendored proto | `go generate` + CI check |
+| 10 | Subscriber filter is `{base}/+/v/+` (per-field topics only) | `pipelineTopicFilter()` + subscriber tests |
+| 11 | `SideEffectsObserver` accumulated map is the cross-batch live snapshot (not the per-payload signals) | `TestSideEffectsObserver_AccumulatedIncludesPriorBatches` |
 
 **Detailed decision record below.** The at-a-glance section above is the pointer for new contributors and AI agents; the rest of ADR-004 is the deep historical record of why each decision was locked in.
 
@@ -965,6 +971,123 @@ AFTER phase-42a's final gate because phase-43a's handlers query the new SI
 tables — those tables have schema but no data flowing in until phase-42a's
 writers + cutover are live. Authoring phase-43a handlers against empty
 tables would be untestable end-to-end and unsafe to ship.
+
+### Per-field MQTT Amendment
+
+**Status:** Accepted (2026-05-09).
+
+**Context.**
+The upstream Tesla fleet-telemetry MQTT producer (`transmit_decoded_records:
+true` in fleet-telemetry's config.json) emits ONE signal per topic of the
+form `{topicBase}/{VIN}/v/{Field}` with the bare `json.Marshal` of the
+producer's per-Value-variant Go value as the body. The Phase-42 codec was
+authored against the proto-batch path (`telemetry/payload/{VIN}` carrying a
+serialised `ftproto.Payload`); the per-field path is what Tesla's vendored
+config in this repo's helm chart actually ships. Production replays
+captured at the Mosquitto broker showed all signal traffic flowing
+through the per-field topics, completely bypassing the Phase-42a
+PipelineSubscriber's `{base}/payload/+` filter — `signal_log` would
+therefore stop populating once the Phase-42a cutover landed without this
+amendment.
+
+**Decision.**
+1. **Topic shape.** PipelineSubscriber subscribes to `{base}/+/v/+` (4
+   segments, both wildcards single-level). Segment 2 is the VIN; segment
+   4 is the canonical proto field name. The legacy `{base}/payload/+`
+   filter is DELETED in the same commit — no dual-subscribe migration
+   period.
+2. **Codec entry point.** `internal/tesla/codec.DecodeJSONField(field,
+   body, vin, fallbackTs)` is the SINGLE per-field MQTT translation
+   point. Body shape is per `protomodel.SignalsByName[field].ValueKind`:
+   bare JSON value for atomic kinds, JSON object for compound kinds, the
+   proto-prefixed string form (`"ShiftStateD"`) for typed enums (codec
+   strips `EnumStringPrefix`). An optional envelope `{"value":<bare>,
+   "ts":"<RFC3339>"}` carries replay event-time; production traffic uses
+   bare bodies.
+3. **Pipeline interface narrowed.** `mqtt.Pipeline` exposes a single
+   method `ProcessAtomics(ctx, []codec.Atomic, vehicleID)` —
+   `Process(ctx, []byte, vehicleID)` is removed. This re-affirms ADR-004
+   #2 (single ingest entry) and shifts the codec call site to the
+   subscriber, which already owns DLQ + redelivery routing for the
+   wrapped `codec.ErrPayloadDrop` sentinel.
+4. **Failure semantics revised.** Phase-42-era invariant #4 ("codec
+   failures trigger MQTT redelivery") is REPLACED by: codec failures
+   wrap `codec.ErrPayloadDrop` and route to the DLQ (manual-ack quarantine
+   topic) via the existing `handlePipelineError` classifier; the
+   subscriber acks the original message so the broker does NOT redeliver
+   poison pills. This is safer for per-field traffic because a single
+   malformed body would otherwise pin a per-VIN topic forever.
+5. **VIN cache.** `internal/mqtt.VINCache` preloads the entire vehicles
+   table on startup, refreshes every 5 minutes, and falls back to the
+   wrapped resolver on miss (with positive + negative memoisation). The
+   cache is mandatory because the per-field hot path resolves
+   `VIN → vehicle_id` on EVERY message — without the cache that's a DB
+   round-trip per signal at ~5 Hz per vehicle.
+6. **Cross-batch accumulator.** `tesla_pipeline.SideEffectsObserver`
+   passes a TRUE accumulated map to sessions + alerts (not the
+   per-payload signals map as previously deferred under Phase-42a/0000
+   Decision #8). The bridge invokes `live.GetAll(ctx, vehicleID)` AFTER
+   `live.UpdateAll` so the snapshot reflects the current payload merged
+   into all prior batches. This restores the legacy "use last-known
+   battery / odometer / location when starting a new session" feature
+   under per-field MQTT, where the per-payload map carries one atomic
+   and is otherwise insufficient.
+7. **Replay tool wire-format parity.** `cmd/pub-test-signal` publishes
+   per-field JSON envelopes matching the subscriber's expected shape;
+   the legacy proto-batch path is DELETED. Historical CSV captures with
+   decomposed `Latitude`/`Longitude` rows are paired into a synthetic
+   `Location` compound publish so positions writer end-to-end coverage
+   survives the cutover.
+8. **No bridge.** A short-lived "mqtt-bridge" pod was prototyped to
+   re-encode per-field traffic into the legacy proto-batch shape, then
+   rejected: bridges introduce a fail point AND violate the
+   "single ingest entry" rule by smuggling two wire formats into the
+   same subscriber. The proper fix is the cutover above.
+
+**Consequences.**
+- The `{base}/payload/+` topic name is permanently abandoned. Any
+  external publisher (replay tools, third-party producers) must publish
+  to per-field topics or the subscriber drops their traffic entirely.
+- `transmit_decoded_records: true` in upstream fleet-telemetry's
+  config.json is REQUIRED. A future fleet-telemetry release that
+  removes this knob would break the wire shape; the helm template
+  pins the value explicitly.
+- DLQ depth is now a per-field, per-VIN concern — a single vehicle's
+  malformed `Soc` body no longer delays neighbour vehicles. This is a
+  net improvement, but operators must sweep the DLQ topic regularly to
+  catch schema drift (e.g., a Tesla firmware change that introduces a
+  new `Field` not yet in `protomodel.SignalsByName`).
+- `mqtt.SetPayloadDropSentinel` / `mqtt.PayloadDropSentinel` public
+  API are DELETED — the indirection existed only to bridge to
+  `normalize.ErrPayloadDrop` which `ProcessAtomics` never returns by
+  contract.
+
+**Alternatives considered and rejected.**
+- *Bridge pod (legacy → new wire format).* Rejected: extra fail point;
+  violates single-ingest-entry; complicates Helm + secrets surface.
+- *Dual-subscribe (both topics during migration).* Rejected: doubles
+  the failure surface; observability becomes ambiguous (which path
+  produced which row?); cutover never actually completes if both
+  remain green.
+- *Hand-maintained per-field type table.* Rejected: violates the
+  "no shortcuts, codegen everything" mandate. Type metadata for the
+  per-field decoder is derived from `protomodel.SignalsByName` (already
+  codegen-emitted by `cmd/protogen-tesla`).
+- *Codec-side enum prefix re-derivation.* Rejected: violates Rule 11
+  in `tesla-pipeline.instructions.md`. Codec consumes
+  `meta.EnumStringPrefix` (codegen-populated) and never re-derives.
+
+**Enforcement.**
+- `internal/mqtt/mqtt.go` `pipelineTopicFilter()` returns the canonical
+  `{base}/+/v/+` filter; subscriber tests pin it.
+- `internal/mqtt.Pipeline` interface has exactly one method; a
+  compile-time check in `internal/tesla_pipeline` asserts
+  `*normalize.Pipeline` and the bridge satisfy the interface.
+- `internal/tesla_pipeline.SideEffectsObserver` test
+  `TestSideEffectsObserver_AccumulatedIncludesPriorBatches` pins the
+  cross-batch accumulated contract.
+- `internal/tesla/codec.DecodeJSONField` golden tests pin the per-kind
+  body shape parity with the proto-batch decoder.
 
 ## ADR-005: Frontend SI Cutover (forward-port, no deletions)
 
