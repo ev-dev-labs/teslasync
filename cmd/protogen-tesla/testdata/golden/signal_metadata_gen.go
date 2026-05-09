@@ -70,11 +70,11 @@ func ParseField(s string) (Field, error) {
 // can iterate Signals to build per-Field state without having to reflect
 // on the proto.
 var Signals = []SignalMeta{
-	{Field: "Unknown", ProtoEnumNum: 0, Category: "metadata", ValueKind: ValueKindString, EnumTypeName: "", IsCompound: false, UnitKind: UnitKindNone, IsSettingUnit: false},
-	{Field: "VehicleSpeed", ProtoEnumNum: 4, Category: "driving", ValueKind: ValueKindFloat, EnumTypeName: "", IsCompound: false, UnitKind: UnitKindNone, IsSettingUnit: false},
-	{Field: "Gear", ProtoEnumNum: 10, Category: "driving", ValueKind: ValueKindEnum, EnumTypeName: "ShiftState", IsCompound: false, UnitKind: UnitKindNone, IsSettingUnit: false},
-	{Field: "Location", ProtoEnumNum: 21, Category: "location", ValueKind: ValueKindCompound, EnumTypeName: "", IsCompound: true, UnitKind: UnitKindNone, IsSettingUnit: false},
-	{Field: "VehicleName", ProtoEnumNum: 64, Category: "config", ValueKind: ValueKindString, EnumTypeName: "", IsCompound: false, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "Unknown", ProtoEnumNum: 0, Category: "metadata", ValueKind: ValueKindString, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "VehicleSpeed", ProtoEnumNum: 4, Category: "driving", ValueKind: ValueKindFloat, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "Gear", ProtoEnumNum: 10, Category: "driving", ValueKind: ValueKindEnum, EnumTypeName: "ShiftState", EnumStringPrefix: "ShiftState", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "Location", ProtoEnumNum: 21, Category: "location", ValueKind: ValueKindCompound, EnumTypeName: "", EnumStringPrefix: "", IsCompound: true, CompoundKind: CompoundKindLocation, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "VehicleName", ProtoEnumNum: 64, Category: "config", ValueKind: ValueKindString, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
 }
 
 // SignalsByName indexes Signals by canonical proto field name. The pointer

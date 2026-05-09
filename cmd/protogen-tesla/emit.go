@@ -715,6 +715,30 @@ func unitKindConstName(unit string) string {
 	return "UnitKindNone"
 }
 
+// compoundKindConstName maps the per-compound suffix of a "compound:Foo"
+// classifier kind to the matching CompoundKind constant declared in
+// internal/tesla/protomodel/types.go. Returns "CompoundKindNone" for any
+// non-compound kind (so it can be called unconditionally per row). The
+// per-field MQTT JSON decoder consumes SignalMeta.CompoundKind to pick
+// the right typed parser without re-deriving the type from a hand
+// switch (Rule 11 forbids the latter).
+func compoundKindConstName(kind string) string {
+	if !strings.HasPrefix(kind, "compound:") {
+		return "CompoundKindNone"
+	}
+	switch strings.TrimPrefix(kind, "compound:") {
+	case "LocationValue":
+		return "CompoundKindLocation"
+	case "Doors":
+		return "CompoundKindDoors"
+	case "TireLocation":
+		return "CompoundKindTireLocation"
+	case "Time":
+		return "CompoundKindTime"
+	}
+	return "CompoundKindNone"
+}
+
 // generatedHeader is the comment header every emitted file starts with. It is
 // detected by editor agents (per .github/instructions/tesla-pipeline.instructions.md)
 // to refuse manual edits to *_gen.go files.
@@ -818,15 +842,17 @@ type signalMetaTplData struct {
 }
 
 type signalMetaRow struct {
-	ConstName     string
-	Name          string
-	Number        int32
-	Category      string
-	ValueKindExpr string
-	EnumTypeName  string
-	IsCompound    bool
-	UnitKindExpr  string
-	IsSettingUnit bool
+	ConstName        string
+	Name             string
+	Number           int32
+	Category         string
+	ValueKindExpr    string
+	EnumTypeName     string
+	EnumStringPrefix string
+	IsCompound       bool
+	CompoundKindExpr string
+	UnitKindExpr     string
+	IsSettingUnit    bool
 }
 
 const signalMetaTemplate = `{{.Header}}package {{.Package}}
@@ -879,7 +905,7 @@ func ParseField(s string) (Field, error) {
 // can iterate Signals to build per-Field state without having to reflect
 // on the proto.
 var Signals = []SignalMeta{
-{{range .SignalMeta}}	{Field: "{{.Name}}", ProtoEnumNum: {{.Number}}, Category: "{{.Category}}", ValueKind: {{.ValueKindExpr}}, EnumTypeName: "{{.EnumTypeName}}", IsCompound: {{.IsCompound}}, UnitKind: {{.UnitKindExpr}}, IsSettingUnit: {{.IsSettingUnit}}},
+{{range .SignalMeta}}	{Field: "{{.Name}}", ProtoEnumNum: {{.Number}}, Category: "{{.Category}}", ValueKind: {{.ValueKindExpr}}, EnumTypeName: "{{.EnumTypeName}}", EnumStringPrefix: "{{.EnumStringPrefix}}", IsCompound: {{.IsCompound}}, CompoundKind: {{.CompoundKindExpr}}, UnitKind: {{.UnitKindExpr}}, IsSettingUnit: {{.IsSettingUnit}}},
 {{end}}}
 
 // SignalsByName indexes Signals by canonical proto field name. The pointer
@@ -906,24 +932,35 @@ func renderSignalMetadata(pf *ProtoFile, packageName string) (string, error) {
 	if fieldEnum == nil {
 		return "", fmt.Errorf("Field enum not found in proto")
 	}
+	enumPrefix := buildEnumPrefixMap(pf)
 	rows := make([]signalMetaRow, 0, len(fieldEnum.Values))
 	for _, v := range fieldEnum.Values {
 		c, _ := classify(v.Name)
 		isCompound := strings.HasPrefix(c.kind, "compound:")
-		var enumName string
+		var enumName, enumStringPrefix string
 		if c.kind == "enum" {
 			enumName = enumTypeOf(v.Name)
+			if enumName == "" {
+				return "", fmt.Errorf("Field %q is classified as enum but enumTypeOf() returned empty; add a switch case to enumTypeOf", v.Name)
+			}
+			prefix, ok := enumPrefix[enumName]
+			if !ok {
+				return "", fmt.Errorf("Field %q maps to enum type %q which is not present in the proto", v.Name, enumName)
+			}
+			enumStringPrefix = prefix
 		}
 		rows = append(rows, signalMetaRow{
-			ConstName:     fieldEnum.Name + "_" + v.Name,
-			Name:          v.Name,
-			Number:        v.Number,
-			Category:      c.cat,
-			ValueKindExpr: valueKindConstName(c.kind),
-			EnumTypeName:  enumName,
-			IsCompound:    isCompound,
-			UnitKindExpr:  unitKindConstName(c.unit),
-			IsSettingUnit: c.isSettingUnit,
+			ConstName:        fieldEnum.Name + "_" + v.Name,
+			Name:             v.Name,
+			Number:           v.Number,
+			Category:         c.cat,
+			ValueKindExpr:    valueKindConstName(c.kind),
+			EnumTypeName:     enumName,
+			EnumStringPrefix: enumStringPrefix,
+			IsCompound:       isCompound,
+			CompoundKindExpr: compoundKindConstName(c.kind),
+			UnitKindExpr:     unitKindConstName(c.unit),
+			IsSettingUnit:    c.isSettingUnit,
 		})
 	}
 	tpl, err := template.New("signal_metadata").Parse(signalMetaTemplate)
@@ -940,6 +977,30 @@ func renderSignalMetadata(pf *ProtoFile, packageName string) (string, error) {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+// buildEnumPrefixMap returns a map from each non-Field proto enum's name to
+// the longest common prefix shared by all of that enum's value names. The
+// codec's per-Value-variant TrimPrefix calls (datum_decoder_gen.go) and the
+// SignalMeta.EnumStringPrefix field (signal_metadata_gen.go) both consume
+// this map so the canonical short form a typed enum is reduced to is
+// computed in EXACTLY one place. This is the proto-side guarantee that
+// backs the Phase-41 codec canonical-string contract (Rule 11 in
+// .github/instructions/tesla-pipeline.instructions.md): downstream code
+// MUST NOT re-derive the prefix.
+func buildEnumPrefixMap(pf *ProtoFile) map[string]string {
+	enumPrefix := make(map[string]string, len(pf.Enums))
+	for _, e := range pf.Enums {
+		if e.Name == "Field" {
+			continue
+		}
+		names := make([]string, len(e.Values))
+		for i, v := range e.Values {
+			names[i] = v.Name
+		}
+		enumPrefix[e.Name] = longestCommonPrefix(names)
+	}
+	return enumPrefix
 }
 
 // ---- enum_parsers_gen.go --------------------------------------------------
@@ -1312,20 +1373,13 @@ func renderDatumDecoder(pf *ProtoFile, packageName string) (string, error) {
 	// Build per-enum value-name longest-common-prefix table. The decoder
 	// strips this prefix from .String() output to produce the canonical
 	// short form (e.g. ShiftState's values share "ShiftState" prefix, so
-	// "ShiftStateD".String() -> "ShiftStateD" -> TrimPrefix -> "D"). Same
-	// computation as renderEnumParsers; kept local so the two emitters
-	// stay independently auditable.
-	enumPrefix := make(map[string]string, len(pf.Enums))
-	for _, e := range pf.Enums {
-		if e.Name == "Field" {
-			continue
-		}
-		names := make([]string, len(e.Values))
-		for i, v := range e.Values {
-			names[i] = v.Name
-		}
-		enumPrefix[e.Name] = longestCommonPrefix(names)
-	}
+	// "ShiftStateD".String() -> "ShiftStateD" -> TrimPrefix -> "D"). The
+	// same map is used by renderSignalMetadata to populate
+	// SignalMeta.EnumStringPrefix so the per-Value-variant TrimPrefix
+	// calls emitted below and the per-Field SignalMeta entry emitted by
+	// renderSignalMetadata stay in lockstep — there is exactly one
+	// proto-side computation of the trim prefix in this codegen.
+	enumPrefix := buildEnumPrefixMap(pf)
 
 	// Sort variants by proto field number for stable output.
 	oneofVariants := append([]FieldDef(nil), valueMsg.Oneofs[0].Variants...)

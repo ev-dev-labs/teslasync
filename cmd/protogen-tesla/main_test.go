@@ -172,3 +172,86 @@ func TestEnumTypeOfCoversAllEnumFields(t *testing.T) {
 		}
 	}
 }
+
+// TestSignalMetaCompoundKindMatchesValueKind asserts the
+// IsCompound/ValueKind/CompoundKind invariants hold for every emitted
+// SignalMeta row: ValueKindCompound iff IsCompound iff CompoundKind !=
+// CompoundKindNone. Without this guard, the per-field MQTT JSON decoder
+// could silently route a Compound to the atomic path (or vice versa)
+// whenever a future Field is added with mismatched classifier output —
+// the kind of bug that compiles cleanly and only surfaces as silently
+// dropped or shape-mismatched signals at runtime.
+func TestSignalMetaCompoundKindMatchesValueKind(t *testing.T) {
+	pf, err := ParseProtoFile(filepath.Join("..", "..", "api", "proto", "tesla", "vehicle_data.proto"))
+	if err != nil {
+		t.Fatalf("parse vendored proto: %v", err)
+	}
+	field := pf.FindEnum("Field")
+	if field == nil {
+		t.Fatal("Field enum not parsed from vendored proto")
+	}
+	for _, v := range field.Values {
+		c, _ := classify(v.Name)
+		isCompoundClassifier := strings.HasPrefix(c.kind, "compound:")
+		valueKindIsCompound := valueKindConstName(c.kind) == "ValueKindCompound"
+		compoundKindNonZero := compoundKindConstName(c.kind) != "CompoundKindNone"
+		if isCompoundClassifier != valueKindIsCompound {
+			t.Errorf("Field %q: classifier %q -> ValueKindCompound? %v, but compound: prefix? %v", v.Name, c.kind, valueKindIsCompound, isCompoundClassifier)
+		}
+		if isCompoundClassifier != compoundKindNonZero {
+			t.Errorf("Field %q: classifier %q -> CompoundKind != None? %v, but compound: prefix? %v", v.Name, c.kind, compoundKindNonZero, isCompoundClassifier)
+		}
+		if valueKindIsCompound && !compoundKindNonZero {
+			t.Errorf("Field %q: ValueKindCompound but CompoundKindNone — codegen would emit an undecodable signal", v.Name)
+		}
+	}
+}
+
+// TestEnumPrefixMatchesEnumValuesForEveryEnumField asserts that, for every
+// enum-classified Field, the longest-common-prefix computed by
+// buildEnumPrefixMap (which is what populates SignalMeta.EnumStringPrefix)
+// is actually a prefix of EVERY value name of the enum it points at AND is
+// non-empty. The first invariant guards against a future irregular enum
+// where a stray value breaks the LCP and the decoder would silently emit
+// the un-trimmed proto name (e.g. "ShiftStateD" instead of "D"), corrupting
+// the canonical-string contract (Rule 11 in
+// .github/instructions/tesla-pipeline.instructions.md). The second
+// invariant guards against the empty-string case which would make
+// strings.TrimPrefix a no-op and leak the proto-cased name verbatim.
+func TestEnumPrefixMatchesEnumValuesForEveryEnumField(t *testing.T) {
+	pf, err := ParseProtoFile(filepath.Join("..", "..", "api", "proto", "tesla", "vehicle_data.proto"))
+	if err != nil {
+		t.Fatalf("parse vendored proto: %v", err)
+	}
+	field := pf.FindEnum("Field")
+	if field == nil {
+		t.Fatal("Field enum not parsed from vendored proto")
+	}
+	enumPrefix := buildEnumPrefixMap(pf)
+	for _, v := range field.Values {
+		c, _ := classify(v.Name)
+		if c.kind != "enum" {
+			continue
+		}
+		enumName := enumTypeOf(v.Name)
+		prefix, ok := enumPrefix[enumName]
+		if !ok {
+			t.Errorf("Field %q -> enum %q: missing from buildEnumPrefixMap", v.Name, enumName)
+			continue
+		}
+		if prefix == "" {
+			t.Errorf("Field %q -> enum %q: empty EnumStringPrefix; trimmer would no-op and leak proto name", v.Name, enumName)
+			continue
+		}
+		enumDef := pf.FindEnum(enumName)
+		if enumDef == nil {
+			t.Errorf("Field %q -> enum %q: not present in vendored proto", v.Name, enumName)
+			continue
+		}
+		for _, ev := range enumDef.Values {
+			if !strings.HasPrefix(ev.Name, prefix) {
+				t.Errorf("Field %q -> enum %q: value %q does not start with computed prefix %q", v.Name, enumName, ev.Name, prefix)
+			}
+		}
+	}
+}

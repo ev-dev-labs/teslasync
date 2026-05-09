@@ -118,6 +118,55 @@ func (u UnitKind) String() string {
 	return "UnitKind(unknown)"
 }
 
+// CompoundKind discriminates which compound message variant a
+// ValueKindCompound signal carries. It is populated only when
+// ValueKind == ValueKindCompound and is the codec's per-field MQTT
+// dispatcher key: given just the field name, the JSON-body decoder
+// uses CompoundKind to pick the right shape parser (object-with-
+// latitude/longitude, object-with-DriverFront/etc., or wrapped JSON
+// string for the legacy string-encoded compounds DoorState /
+// ScheduledChargingStartTime / ScheduledDepartureTime). Without this,
+// the per-field MQTT layer would have to either re-derive the type
+// from a hand-maintained switch (the shortcut Rule 11 forbids) or
+// shape-sniff every body, neither of which is acceptable.
+//
+// Mapping from the classifier tag (cmd/protogen-tesla/emit.go classify):
+//   - compound:LocationValue         -> CompoundKindLocation
+//   - compound:Doors                 -> CompoundKindDoors
+//   - compound:TireLocation          -> CompoundKindTireLocation
+//   - compound:Time                  -> CompoundKindTime
+//
+// CompoundKindNone is the zero value and matches every non-compound
+// signal. ValueKind == ValueKindCompound implies CompoundKind != None;
+// the codegen guard test in cmd/protogen-tesla/main_test.go enforces
+// the implication in both directions.
+type CompoundKind int
+
+const (
+	CompoundKindNone CompoundKind = iota
+	CompoundKindLocation
+	CompoundKindDoors
+	CompoundKindTireLocation
+	CompoundKindTime
+)
+
+// String returns the symbolic name of the CompoundKind.
+func (c CompoundKind) String() string {
+	switch c {
+	case CompoundKindNone:
+		return "CompoundKindNone"
+	case CompoundKindLocation:
+		return "CompoundKindLocation"
+	case CompoundKindDoors:
+		return "CompoundKindDoors"
+	case CompoundKindTireLocation:
+		return "CompoundKindTireLocation"
+	case CompoundKindTime:
+		return "CompoundKindTime"
+	}
+	return "CompoundKind(unknown)"
+}
+
 // SignalMeta is the static, vendor-neutral description of a single Tesla
 // telemetry signal. Every Field declared in the vendored vehicle_data.proto
 // has exactly one SignalMeta entry in the generated Signals slice.
@@ -141,6 +190,23 @@ func (u UnitKind) String() string {
 // this signal. It is populated only when ValueKind == ValueKindEnum and
 // is consumed by the per-enum decoder dispatcher in the codec layer.
 //
+// EnumStringPrefix is the longest common prefix shared by every value of
+// the typed Go enum, computed by the codegen from the vendored proto.
+// It is the prefix that the codec strips from a raw proto-cased value
+// (e.g. "ShiftStateD".String() -> "D") to produce the canonical short
+// form persisted by the rest of the pipeline. It is populated only when
+// ValueKind == ValueKindEnum.
+//
+// EnumStringPrefix is the canonical SINGLE source of truth for the
+// per-enum trim prefix; the per-Value-variant TrimPrefix calls in
+// datum_decoder_gen.go MUST be derived from the same proto-side
+// computation that populates this field. Per the Phase-41 codec
+// canonical-string contract (Rule 11 in
+// .github/instructions/tesla-pipeline.instructions.md) downstream code
+// MUST NOT re-derive the prefix; it MUST consume EnumStringPrefix when
+// it needs to trim a JSON-shaped enum value (the per-field MQTT path)
+// or compare against canonical short strings.
+//
 // IsCompound is true for ValueKind == ValueKindCompound and exists as a
 // convenience boolean so hot-path code can avoid a switch on ValueKind
 // when the only thing it needs to know is "should I run the flattener?".
@@ -151,12 +217,14 @@ func (u UnitKind) String() string {
 // specifically and uses them to retroactively tag every other signal of
 // the matching UnitKind with the unit that was in effect at write time.
 type SignalMeta struct {
-	Field         string
-	ProtoEnumNum  int32
-	Category      string
-	ValueKind     ValueKind
-	EnumTypeName  string
-	IsCompound    bool
-	UnitKind      UnitKind
-	IsSettingUnit bool
+	Field            string
+	ProtoEnumNum     int32
+	Category         string
+	ValueKind        ValueKind
+	EnumTypeName     string
+	EnumStringPrefix string
+	IsCompound       bool
+	CompoundKind     CompoundKind
+	UnitKind         UnitKind
+	IsSettingUnit    bool
 }
