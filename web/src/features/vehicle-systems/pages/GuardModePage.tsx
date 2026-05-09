@@ -38,6 +38,7 @@ import {
   useSetGuardConfig,
   useGuardPanic,
   useAcknowledgeGuardEvent,
+  isGuardEventAcknowledged,
   type GuardEvent,
 } from '@/api/hooks/useGuard';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -46,6 +47,14 @@ import type { MapStyle } from '@/components/maps';
 
 // ── Event type display helpers ──────────────────────────────────────────
 
+// Phase-43a `/vehicles/{id}/guard/events` returns state-change records
+// derived from `security_events` (`locked`, `sentry_mode`,
+// `valet_mode_enabled` — see `securityEventTypeByField` in
+// `internal/tesla/router/writers/security_event_writer.go`). Legacy
+// alert-shaped entries (`vehicle_moved`, `unauthorized_*`) are kept so
+// historic rows still render, and the lookup-with-fallback pattern
+// makes any newly-added backend type render as the raw token without
+// crashing the page.
 const EVENT_LABELS: Record<string, string> = {
   vehicle_moved: '📍 Vehicle Moved',
   unauthorized_unlock: '🔓 Unauthorized Unlock',
@@ -53,6 +62,9 @@ const EVENT_LABELS: Record<string, string> = {
   sentry_triggered: '👁️ Sentry Triggered',
   manual_panic: '🚨 Manual Panic',
   test_alert: '🔔 Test Alert',
+  locked: '🔒 Lock State Changed',
+  sentry_mode: '👁️ Sentry Mode',
+  valet_mode_enabled: '🅿️ Valet Mode',
 };
 
 const EVENT_BADGE_VARIANT: Record<string, 'danger' | 'warning' | 'info'> = {
@@ -62,6 +74,9 @@ const EVENT_BADGE_VARIANT: Record<string, 'danger' | 'warning' | 'info'> = {
   sentry_triggered: 'warning',
   manual_panic: 'danger',
   test_alert: 'info',
+  locked: 'info',
+  sentry_mode: 'warning',
+  valet_mode_enabled: 'info',
 };
 
 const SENSITIVITY_OPTIONS = [
@@ -106,9 +121,9 @@ export default function GuardModePage() {
   // Derived data
   const isArmed = guardConfig?.enabled ?? false;
   const events = guardEvents ?? [];
-  const unacknowledgedCount = events.filter((e) => !e.acknowledged).length;
+  const unacknowledgedCount = events.filter((e) => !isGuardEventAcknowledged(e)).length;
   const latestEvent = events[0] ?? null;
-  const isTriggered = latestEvent != null && !latestEvent.acknowledged && latestEvent.event_type !== 'test_alert';
+  const isTriggered = latestEvent != null && !isGuardEventAcknowledged(latestEvent) && latestEvent.event_type !== 'test_alert';
 
   const state = vehicleState?.state ?? vehicleState;
   const vehicleLat = (state as Record<string, unknown>)?.latitude as number | undefined;
@@ -187,18 +202,8 @@ export default function GuardModePage() {
           <p className="text-sm">
             {EVENT_LABELS[latestEvent.event_type] ?? latestEvent.event_type}
             {' — '}
-            <TimeStamp value={latestEvent.created_at} />
+            <TimeStamp value={latestEvent.ts} />
           </p>
-          {latestEvent.latitude != null && latestEvent.longitude != null && (
-            <a
-              href={`https://maps.google.com/?q=${latestEvent.latitude},${latestEvent.longitude}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-red-300 hover:text-red-200 mt-1"
-            >
-              <MapPin className="h-3 w-3" /> {t('guard.viewOnMap', 'View on Google Maps')}
-            </a>
-          )}
         </AlertBanner>
       )}
 
@@ -447,15 +452,11 @@ function LiveMap({
 }) {
   const [mapStyle] = useState<MapStyle>('dark');
 
-  // Position trail from events with locations
-  const eventPositions = useMemo(
-    () =>
-      events
-        .filter((e) => e.latitude != null && e.longitude != null)
-        .map((e) => [e.latitude!, e.longitude!] as [number, number])
-        .reverse(),
-    [events],
-  );
+  // Phase-43a: GuardEvent records are state-change rows (locked,
+  // valet_mode_enabled, …) sourced from security_events; they no longer
+  // carry latitude/longitude. The map therefore omits the trail and
+  // shows only the live vehicle position + home geofence circle.
+  const eventPositions: [number, number][] = useMemo(() => [], [events]);
 
   return (
     <MapContainer center={[vehicleLat, vehicleLng]} zoom={15} scrollWheelZoom className="h-full w-full z-0">
@@ -522,18 +523,19 @@ function EventRow({
   isAcking: boolean;
 }) {
   const { t } = useTranslation();
+  const acknowledged = isGuardEventAcknowledged(event);
 
   return (
     <div
       className={cn(
         'flex items-start gap-3 p-3 rounded-lg border transition-colors',
-        event.acknowledged
+        acknowledged
           ? 'border-[var(--border-subtle)] bg-white/[0.01]'
           : 'border-red-500/20 bg-red-500/[0.03]',
       )}
     >
       <div className="shrink-0 mt-0.5">
-        {event.acknowledged ? (
+        {acknowledged ? (
           <CheckCircle2 className="h-5 w-5 text-[var(--text-muted)]" />
         ) : event.event_type === 'manual_panic' ? (
           <Siren className="h-5 w-5 text-red-400" />
@@ -554,30 +556,24 @@ function EventRow({
           >
             {EVENT_LABELS[event.event_type] ?? event.event_type}
           </Badge>
-          <TimeStamp value={event.created_at} className="text-xs text-[var(--text-muted)]" />
+          <TimeStamp value={event.ts} className="text-xs text-[var(--text-muted)]" />
         </div>
 
-        {event.latitude != null && event.longitude != null && (
-          <a
-            href={`https://maps.google.com/?q=${event.latitude},${event.longitude}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 mt-1"
-          >
-            <MapPin className="h-3 w-3" />
-            {event.latitude.toFixed(4)}, {event.longitude.toFixed(4)}
-          </a>
+        {(event.from_state != null || event.to_state != null) && (
+          <p className="text-xs text-[var(--text-muted)] mt-1">
+            {event.from_state ?? '—'} → {event.to_state ?? '—'}
+          </p>
         )}
 
-        {event.notified_channels && event.notified_channels.length > 0 && (
+        {event.acknowledged_by && (
           <p className="text-xs text-[var(--text-muted)] mt-1">
-            {t('guard.notified', 'Notified')}: {event.notified_channels.join(', ')}
+            {t('guard.acknowledgedBy', 'Acknowledged by')}: {event.acknowledged_by}
           </p>
         )}
       </div>
 
       <div className="shrink-0">
-        {!event.acknowledged && (
+        {!acknowledged && (
           <Button
             onClick={() => onAcknowledge(event.id)}
             disabled={isAcking}

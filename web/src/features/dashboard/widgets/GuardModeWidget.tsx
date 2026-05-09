@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
-import { useGuardConfig, useGuardEvents } from '@/api/hooks/useGuard';
+import { useGuardConfig, useGuardEvents, isGuardEventAcknowledged } from '@/api/hooks/useGuard';
 import type { GuardEvent } from '@/api/hooks/useGuard';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
@@ -17,8 +17,12 @@ import { fmtInt } from '@/lib/numberFormat';
 
 // ── Event type → visual mapping ──────────────────────────────────────
 
+// Lookup-with-fallback so unknown backend event types render with a
+// neutral icon instead of crashing or rendering as `undefined`. Phase-43a
+// added 'locked', 'sentry_mode', 'valet_mode_enabled'; legacy alert
+// shapes are preserved so historic rows still resolve.
 const EVENT_TYPE_MAP: Record<
-  GuardEvent['event_type'],
+  string,
   { icon: React.ReactNode; label: string; color: string; severity: EventFeedItem['severity'] }
 > = {
   vehicle_moved:       { icon: <Move className="h-3.5 w-3.5" />,        label: 'Vehicle Moved',       color: '#f59e0b', severity: 'warning' },
@@ -27,6 +31,9 @@ const EVENT_TYPE_MAP: Record<
   sentry_triggered:    { icon: <Eye className="h-3.5 w-3.5" />,         label: 'Sentry Triggered',    color: '#06b6d4', severity: 'warning' },
   manual_panic:        { icon: <Siren className="h-3.5 w-3.5" />,       label: 'Panic Alert',         color: '#ef4444', severity: 'critical' },
   test_alert:          { icon: <FlaskConical className="h-3.5 w-3.5" />,label: 'Test Alert',          color: '#8b5cf6', severity: 'info' },
+  locked:              { icon: <ShieldCheck className="h-3.5 w-3.5" />, label: 'Lock State Changed',  color: '#06b6d4', severity: 'info' },
+  sentry_mode:         { icon: <Eye className="h-3.5 w-3.5" />,         label: 'Sentry Mode',         color: '#f59e0b', severity: 'warning' },
+  valet_mode_enabled:  { icon: <ShieldAlert className="h-3.5 w-3.5" />, label: 'Valet Mode',          color: '#06b6d4', severity: 'info' },
 };
 
 function mapEventToFeedItem(ev: GuardEvent, t: (key: string, fallback: string) => string): EventFeedItem {
@@ -41,10 +48,10 @@ function mapEventToFeedItem(ev: GuardEvent, t: (key: string, fallback: string) =
     id: ev.id,
     icon: mapped.icon,
     title: t(`widget.guardEvent.${ev.event_type}`, mapped.label),
-    subtitle: ev.acknowledged
+    subtitle: isGuardEventAcknowledged(ev)
       ? t('widget.guardAcknowledged', 'Acknowledged')
       : t('widget.guardUnacknowledged', 'Unacknowledged'),
-    timestamp: ev.created_at,
+    timestamp: ev.ts,
     color: mapped.color,
     severity: mapped.severity,
   };
