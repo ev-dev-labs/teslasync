@@ -539,11 +539,42 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 		return v.ID, nil
 	}
 
+	// Per-field MQTT amplifies traffic 50-200x relative to the proto-batch
+	// shape, so a DB lookup per message is no longer affordable. The VIN
+	// cache preloads the full snapshot on startup and refreshes every
+	// 5 minutes; the on-miss path falls back to the DB resolver above and
+	// memoises the result. See internal/mqtt/vin_cache.go for the contract.
+	vinCacheLoader := func(ctx context.Context) (map[string]int64, error) {
+		all, listErr := vehicleRepo.GetAll(ctx)
+		if listErr != nil {
+			return nil, listErr
+		}
+		out := make(map[string]int64, len(all))
+		for _, v := range all {
+			if v == nil || v.VIN == "" {
+				continue
+			}
+			out[v.VIN] = v.ID
+		}
+		return out, nil
+	}
+	vinCache := mqtt.NewVINCache(
+		ctx,
+		vinCacheLoader,
+		subscriberVINResolver,
+		mqtt.VINCacheConfig{},
+		pipelineLogger,
+	)
+	a.addCloser("pipeline-vin-cache", func(_ context.Context) error {
+		vinCache.Close()
+		return nil
+	})
+
 	pipelineSubscriber := mqtt.NewPipelineSubscriber(
 		pahoClient,
 		normPipeline,
 		dlq,
-		subscriberVINResolver,
+		vinCache.Resolve,
 		mqtt.PipelineSubscriberConfig{
 			TopicBase: a.Cfg.FleetTelemetry.TopicBase,
 		},
