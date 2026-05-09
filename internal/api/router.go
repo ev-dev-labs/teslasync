@@ -1723,6 +1723,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/service-data", devToolsHandler.ServiceData)
 			r.Get("/redis-signals", devToolsHandler.RedisSignals)
 			r.Get("/redis-signals/keys", devToolsHandler.RedisSignalKeys)
+			// Destructive cache-purge ops — share a single 5-req/min
+			// limiter instance across both endpoints so a bot can't
+			// loop the per-vehicle path to bulk-purge by stealth. The
+			// shared limiter caps total destructive calls at 5/min/IP
+			// (per-vehicle + cluster-wide combined).
+			redisPurgeLimiter := httprate.LimitByIP(5, 1*time.Minute)
+			r.With(redisPurgeLimiter).Delete("/redis-signals", devToolsHandler.RedisSignalsPurge)
+			r.With(redisPurgeLimiter).Delete("/redis-signals/keys", devToolsHandler.RedisSignalsPurgeAll)
 
 			// Raw telemetry signal capture
 			r.Route("/telemetry-capture", func(r chi.Router) {

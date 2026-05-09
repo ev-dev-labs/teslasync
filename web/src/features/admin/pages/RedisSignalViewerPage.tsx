@@ -1,15 +1,16 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useQuery } from '@tanstack/react-query'
-import { Database, Search, RefreshCw } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Database, Search, RefreshCw, Trash2 } from 'lucide-react'
 
 import { PageContainer } from '@/components/layout'
-import { GlassPanel, Badge, Button as UiButton, DataTable, useSortToggle, Toggle, Input as UiInput, Select as UiSelect, MaskedValue, type Column } from '@/components/ui'
+import { GlassPanel, Badge, Button as UiButton, ConfirmDialog, DataTable, useSortToggle, Toggle, Input as UiInput, Select as UiSelect, MaskedValue, type Column } from '@/components/ui'
 import { StatCard } from '@/components/data-display'
 import { Skeleton, EmptyState } from '@/components/feedback'
+import { useToast } from '@/components/feedback/Toast'
 import { FadeIn } from '@/components/motion'
 import { useVehicles } from '@/api/hooks/useVehicles'
-import { getRedisSignals, type RedisSignalEntry } from '@/api/devtools'
+import { getRedisSignals, purgeRedisSignals, purgeAllRedisSignals, type RedisSignalEntry } from '@/api/devtools'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { fmtInt } from '@/lib/numberFormat'
 import { INTERVALS } from '@/lib/constants'
@@ -144,6 +145,19 @@ export default function RedisSignalViewerPage() {
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
+  // Purge UI state — `purgeMode` distinguishes the two destructive
+  // paths so a single ConfirmDialog can serve both. `purgeTargetId`
+  // pins the per-vehicle purge target at the moment the dialog opens
+  // so a mid-confirmation vehicle-picker change can't retarget the
+  // destructive call. `isPurging` keeps the dialog open with disabled
+  // buttons + spinner while the DELETE request is in flight.
+  const [purgeMode, setPurgeMode] = useState<'one' | 'all' | null>(null)
+  const [purgeTargetId, setPurgeTargetId] = useState<number | null>(null)
+  const [purgeTargetLabel, setPurgeTargetLabel] = useState<string>('')
+  const [isPurging, setIsPurging] = useState(false)
+  const queryClient = useQueryClient()
+  const toast = useToast()
+
   const {
     data: signalData,
     isLoading,
@@ -157,6 +171,79 @@ export default function RedisSignalViewerPage() {
     enabled: selectedVehicleId !== null,
     refetchInterval: autoRefresh ? INTERVALS.REALTIME : false,
   })
+
+  const selectedVehicle = useMemo(
+    () => vehicleList.find((v) => v.id === selectedVehicleId),
+    [vehicleList, selectedVehicleId],
+  )
+  const selectedVehicleLabel =
+    selectedVehicle?.display_name || selectedVehicle?.vin || (selectedVehicleId !== null ? `Vehicle ${selectedVehicleId}` : '')
+
+  const handlePurgeConfirm = async () => {
+    if (purgeMode === null) return
+    setIsPurging(true)
+    try {
+      if (purgeMode === 'one' && purgeTargetId !== null) {
+        const res = await purgeRedisSignals(purgeTargetId)
+        if (res.purged) {
+          toast.success(
+            t('redis.purgeSuccess', 'Redis L2 cache purged'),
+            t('redis.purgeSuccessDetail', '{{vehicle}}: Redis HSET removed. L1 in-memory caches on each pod will refill from new telemetry.', { vehicle: purgeTargetLabel }),
+          )
+        } else {
+          toast.info(
+            t('redis.purgeNoOpTitle', 'Nothing to purge'),
+            t('redis.purgeNoOpDetail', '{{vehicle}} had no cached signals in Redis.', { vehicle: purgeTargetLabel }),
+          )
+        }
+        await queryClient.invalidateQueries({ queryKey: ['redis-signals', purgeTargetId] })
+        await queryClient.invalidateQueries({ queryKey: ['redis-signal-keys'] })
+      } else if (purgeMode === 'all') {
+        const res = await purgeAllRedisSignals()
+        if (res.has_more) {
+          toast.warning(
+            t('redis.purgeAllPartial', 'Redis L2 cache partially purged'),
+            t(
+              'redis.purgeAllPartialDetail',
+              'Removed {{count}} of up to {{limit}} vehicle HSET(s) from Redis. More keys remain — click Purge All Redis again to drain.',
+              { count: res.purged, limit: res.limit },
+            ),
+          )
+        } else {
+          toast.success(
+            t('redis.purgeAllSuccess', 'Redis L2 cache purged'),
+            t('redis.purgeAllSuccessDetail', 'Removed {{count}} vehicle HSET(s) from Redis. L1 in-memory caches on each pod will refill from new telemetry.', { count: res.purged }),
+          )
+        }
+        await queryClient.invalidateQueries({ queryKey: ['redis-signals'] })
+        await queryClient.invalidateQueries({ queryKey: ['redis-signal-keys'] })
+      }
+      setPurgeMode(null)
+      setPurgeTargetId(null)
+      setPurgeTargetLabel('')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      toast.error(
+        t('redis.purgeError', 'Purge failed'),
+        msg,
+      )
+    } finally {
+      setIsPurging(false)
+    }
+  }
+
+  const openPurgeOne = () => {
+    if (selectedVehicleId === null) return
+    setPurgeTargetId(selectedVehicleId)
+    setPurgeTargetLabel(selectedVehicleLabel)
+    setPurgeMode('one')
+  }
+
+  const openPurgeAll = () => {
+    setPurgeTargetId(null)
+    setPurgeTargetLabel('')
+    setPurgeMode('all')
+  }
 
   const rows = useMemo<SignalRow[]>(() => {
     if (!signalData?.signals) return []
@@ -271,6 +358,36 @@ export default function RedisSignalViewerPage() {
                 <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
                 {t('redis.refresh', 'Refresh')}
               </UiButton>
+
+              {/* Purge buttons — destructive ops behind explicit confirm.
+                  Per-vehicle uses the standard danger-confirm; cluster-wide
+                  PurgeAll requires the operator to type "PURGE ALL" to
+                  prevent accidental wipe of every vehicle's L2 cache.
+                  The button labels are explicit about Redis L2 so operators
+                  don't expect cross-pod L1 invalidation. */}
+              <UiButton
+                type="button"
+                variant="danger"
+                onClick={openPurgeOne}
+                disabled={selectedVehicleId === null || isPurging}
+                className="gap-1.5"
+                title={t('redis.purgeButtonTitle', 'Delete this vehicle\u2019s cached signals from Redis (L2). The in-process L1 cache on each pod stays put and refills from new telemetry.')}
+              >
+                <Trash2 className="h-4 w-4" />
+                {t('redis.purgeButton', 'Purge Redis (L2)')}
+              </UiButton>
+
+              <UiButton
+                type="button"
+                variant="danger"
+                onClick={openPurgeAll}
+                disabled={isPurging}
+                className="gap-1.5 !bg-red-700 hover:!bg-red-800"
+                title={t('redis.purgeAllButtonTitle', 'Delete every vehicle:*:signals HSET in Redis (L2). Requires typed confirmation.')}
+              >
+                <Trash2 className="h-4 w-4" />
+                {t('redis.purgeAllButton', 'Purge All Redis')}
+              </UiButton>
             </div>
           </GlassPanel>
         </FadeIn>
@@ -375,6 +492,47 @@ export default function RedisSignalViewerPage() {
           </GlassPanel>
         </FadeIn>
       </div>
+
+      <ConfirmDialog
+        open={purgeMode !== null}
+        variant="danger"
+        loading={isPurging}
+        title={
+          purgeMode === 'all'
+            ? t('redis.purgeAllTitle', 'Purge ALL Redis (L2) caches?')
+            : t('redis.purgeTitle', 'Purge Redis (L2) cache for {{vehicle}}?', { vehicle: purgeTargetLabel })
+        }
+        message={
+          purgeMode === 'all'
+            ? t(
+                'redis.purgeAllMessage',
+                'This deletes every vehicle:*:signals HSET in Redis (the L2 cache). The L1 in-memory cache on each pod is NOT touched and will refill as new telemetry arrives. Read-paths on other pods may briefly read stale L1 values until the next signal arrives. If more than 1000 keys exist, you may need to click Purge All Redis again to drain.',
+              )
+            : t(
+                'redis.purgeMessage',
+                'This deletes the Redis HSET for this vehicle (L2 cache only). The L1 in-memory cache on this pod is NOT touched and will refill as new telemetry arrives. Read-paths on other pods may briefly read stale L1 values until the next signal arrives.',
+              )
+        }
+        confirmLabel={
+          purgeMode === 'all'
+            ? t('redis.purgeAllConfirm', 'Purge All Vehicles')
+            : t('redis.purgeConfirm', 'Purge Redis (L2)')
+        }
+        cancelLabel={t('common.cancel', 'Cancel')}
+        requireTypedConfirmation={purgeMode === 'all' ? 'PURGE ALL' : undefined}
+        typedConfirmationLabel={
+          purgeMode === 'all'
+            ? t('redis.purgeAllTypedLabel', 'Type PURGE ALL to confirm')
+            : undefined
+        }
+        onConfirm={handlePurgeConfirm}
+        onCancel={() => {
+          if (isPurging) return
+          setPurgeMode(null)
+          setPurgeTargetId(null)
+          setPurgeTargetLabel('')
+        }}
+      />
     </PageContainer>
   )
 }

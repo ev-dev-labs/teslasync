@@ -111,6 +111,7 @@ type redisSignalClient interface {
 	HGetAll(ctx context.Context, key string) *redis.MapStringStringCmd
 	HGet(ctx context.Context, key string, field string) *redis.StringCmd
 	HLen(ctx context.Context, key string) *redis.IntCmd
+	Del(ctx context.Context, keys ...string) *redis.IntCmd
 	Scan(ctx context.Context, cursor uint64, match string, count int64) *redis.ScanCmd
 	Publish(ctx context.Context, channel string, message interface{}) *redis.IntCmd
 	Subscribe(ctx context.Context, channels ...string) *redis.PubSub
@@ -409,6 +410,60 @@ func (c *RedisSignalCache) RawFieldCount(ctx context.Context, vehicleID int64) (
 		return 0, fmt.Errorf("redis HLEN %s: %w", key, err)
 	}
 	return int(n), nil
+}
+
+// Purge deletes the entire HSET for a single vehicle. Returns true when
+// the key existed and was removed, false when there was nothing to
+// delete (DEL on a missing key returns 0 — not an error).
+//
+// This is the destructive cousin of Update / GetAll: callers (currently
+// the /dev-tools/redis-signals diagnostic page) use it to reset the L2
+// cache when a vehicle's stored values are stale, malformed, or
+// otherwise need to be re-warmed from incoming telemetry. The L1
+// in-process Store is intentionally NOT touched here — it lives in each
+// pod's memory, would require pub/sub fan-out to clear cluster-wide,
+// and naturally drifts back into sync as new fleet telemetry arrives.
+func (c *RedisSignalCache) Purge(ctx context.Context, vehicleID int64) (bool, error) {
+	key := fmt.Sprintf("vehicle:%d:signals", vehicleID)
+	n, err := c.rdb.Del(ctx, key).Result()
+	if err != nil {
+		return false, fmt.Errorf("redis DEL %s: %w", key, err)
+	}
+	return n > 0, nil
+}
+
+// PurgeAll deletes every vehicle:*:signals HSET reachable via SCAN.
+// Returns (purged, scanned, err) where purged is the DEL return value
+// (the number of keys actually removed) and scanned is the number of
+// keys SCAN found in this batch.
+//
+// SCAN is bounded by `limit` (clamped 1..1000 per ScanVehicleKeys) so
+// extremely large clusters need to call PurgeAll in a loop until both
+// returned counts are zero — the bound exists to keep the dev-tools
+// endpoint's worst-case Redis load deterministic. When scanned == limit
+// there are likely more keys outside this batch and the caller should
+// loop. DEL is variadic, so the discovered keys are removed in a single
+// round-trip.
+//
+// The L1 in-process Store is NOT touched: each pod's L1 drifts back
+// into sync as new fleet telemetry arrives.
+func (c *RedisSignalCache) PurgeAll(ctx context.Context, limit int) (purged int, scanned int, err error) {
+	ids, err := c.ScanVehicleKeys(ctx, limit)
+	if err != nil {
+		return 0, 0, err
+	}
+	if len(ids) == 0 {
+		return 0, 0, nil
+	}
+	keys := make([]string, len(ids))
+	for i, id := range ids {
+		keys[i] = fmt.Sprintf("vehicle:%d:signals", id)
+	}
+	n, err := c.rdb.Del(ctx, keys...).Result()
+	if err != nil {
+		return 0, len(ids), fmt.Errorf("redis DEL (bulk %d): %w", len(keys), err)
+	}
+	return int(n), len(ids), nil
 }
 
 // ScanVehicleKeys uses cursor-based SCAN to enumerate vehicle:*:signals

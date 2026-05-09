@@ -136,6 +136,19 @@ func (f *fakeRedisSignalClient) HLen(ctx context.Context, key string) *redis.Int
 	return redis.NewIntResult(int64(len(hash)), nil)
 }
 
+func (f *fakeRedisSignalClient) Del(ctx context.Context, keys ...string) *redis.IntCmd {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var n int64
+	for _, k := range keys {
+		if _, ok := f.hashes[k]; ok {
+			delete(f.hashes, k)
+			n++
+		}
+	}
+	return redis.NewIntResult(n, nil)
+}
+
 func (f *fakeRedisSignalClient) Scan(ctx context.Context, cursor uint64, match string, count int64) *redis.ScanCmd {
 	// Naive but deterministic: collect every matching key, return in
 	// one shot with cursor=0. Sufficient for tests that don't care about
@@ -540,6 +553,157 @@ t.Fatalf("ScanVehicleKeys() error = %v", err)
 if len(got) != 10 {
 t.Fatalf("ScanVehicleKeys(limit=10) returned %d ids, want 10", len(got))
 }
+}
+
+func TestPurge_RemovesExistingKey(t *testing.T) {
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
+
+	if err := cache.Update(ctx, 7, map[string]interface{}{
+		"BatteryLevel": 72.0,
+		"Locked":       true,
+	}); err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	deleted, err := cache.Purge(ctx, 7)
+	if err != nil {
+		t.Fatalf("Purge() error = %v, want nil", err)
+	}
+	if !deleted {
+		t.Fatalf("Purge() = false, want true (key existed)")
+	}
+	if _, ok := redisClient.hashes["vehicle:7:signals"]; ok {
+		t.Fatalf("Purge() left vehicle:7:signals in fake redis")
+	}
+	n, _ := cache.RawFieldCount(ctx, 7)
+	if n != 0 {
+		t.Fatalf("RawFieldCount() after Purge = %d, want 0", n)
+	}
+}
+
+func TestPurge_MissingKeyIsNoop(t *testing.T) {
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
+
+	deleted, err := cache.Purge(ctx, 999)
+	if err != nil {
+		t.Fatalf("Purge() error = %v, want nil for missing key", err)
+	}
+	if deleted {
+		t.Fatalf("Purge() = true, want false (no key existed)")
+	}
+}
+
+func TestPurge_DoesNotTouchOtherVehicles(t *testing.T) {
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
+
+	if err := cache.Update(ctx, 1, map[string]interface{}{"BatteryLevel": 50.0}); err != nil {
+		t.Fatalf("Update(1) error = %v", err)
+	}
+	if err := cache.Update(ctx, 2, map[string]interface{}{"BatteryLevel": 60.0}); err != nil {
+		t.Fatalf("Update(2) error = %v", err)
+	}
+
+	if _, err := cache.Purge(ctx, 1); err != nil {
+		t.Fatalf("Purge(1) error = %v", err)
+	}
+
+	if _, ok := redisClient.hashes["vehicle:1:signals"]; ok {
+		t.Fatalf("Purge(1) left vehicle:1:signals behind")
+	}
+	if _, ok := redisClient.hashes["vehicle:2:signals"]; !ok {
+		t.Fatalf("Purge(1) collateral-deleted vehicle:2:signals")
+	}
+}
+
+func TestPurgeAll_DeletesEveryVehicleKey(t *testing.T) {
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
+
+	for _, vid := range []int64{1, 7, 42, 100} {
+		if err := cache.Update(ctx, vid, map[string]interface{}{"BatteryLevel": 50.0}); err != nil {
+			t.Fatalf("Update(%d) error = %v", vid, err)
+		}
+	}
+	// Sentinel: a non-vehicle key must NOT be touched.
+	redisClient.hashes["other:cache"] = map[string]string{"x": "1"}
+
+	purged, scanned, err := cache.PurgeAll(ctx, 1000)
+	if err != nil {
+		t.Fatalf("PurgeAll() error = %v", err)
+	}
+	if purged != 4 {
+		t.Fatalf("PurgeAll() purged = %d, want 4", purged)
+	}
+	if scanned != 4 {
+		t.Fatalf("PurgeAll() scanned = %d, want 4", scanned)
+	}
+
+	for _, vid := range []int64{1, 7, 42, 100} {
+		key := fmt.Sprintf("vehicle:%d:signals", vid)
+		if _, ok := redisClient.hashes[key]; ok {
+			t.Fatalf("PurgeAll() left %s behind", key)
+		}
+	}
+	if _, ok := redisClient.hashes["other:cache"]; !ok {
+		t.Fatalf("PurgeAll() collateral-deleted other:cache (non-vehicle key)")
+	}
+}
+
+func TestPurgeAll_EmptyCacheIsNoop(t *testing.T) {
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
+
+	purged, scanned, err := cache.PurgeAll(ctx, 1000)
+	if err != nil {
+		t.Fatalf("PurgeAll() error = %v, want nil", err)
+	}
+	if purged != 0 || scanned != 0 {
+		t.Fatalf("PurgeAll() = (%d, %d), want (0, 0) for empty cache", purged, scanned)
+	}
+}
+
+func TestPurgeAll_ReportsScannedAtLimit(t *testing.T) {
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
+
+	// Seed 5 vehicles, then ask for limit=2 — caller should be able to
+	// detect that there are more keys outside this batch by comparing
+	// scanned == limit.
+	for vid := int64(1); vid <= 5; vid++ {
+		if err := cache.Update(ctx, vid, map[string]interface{}{"BatteryLevel": 50.0}); err != nil {
+			t.Fatalf("Update(%d) error = %v", vid, err)
+		}
+	}
+
+	purged, scanned, err := cache.PurgeAll(ctx, 2)
+	if err != nil {
+		t.Fatalf("PurgeAll() error = %v", err)
+	}
+	if scanned != 2 {
+		t.Fatalf("PurgeAll() scanned = %d, want 2 (== limit, signals more remain)", scanned)
+	}
+	if purged != 2 {
+		t.Fatalf("PurgeAll() purged = %d, want 2", purged)
+	}
+	// And confirm 3 vehicles still survive in redis after this batch.
+	survivors := 0
+	for _, vid := range []int64{1, 2, 3, 4, 5} {
+		if _, ok := redisClient.hashes[fmt.Sprintf("vehicle:%d:signals", vid)]; ok {
+			survivors++
+		}
+	}
+	if survivors != 3 {
+		t.Fatalf("survivors after PurgeAll(limit=2) = %d, want 3", survivors)
+	}
 }
 
 // ── Phase-42 typed-envelope and stale-cache contract tests ──────────────

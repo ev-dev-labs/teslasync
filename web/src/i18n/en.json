@@ -2812,7 +2812,27 @@
       "mode": "Mode: {{mode}}",
       "l1Seen": "L1 last: {{date}}"
     },
-    "maskedCoord": "Coordinate, click to reveal"
+    "maskedCoord": "Coordinate, click to reveal",
+    "purgeButton": "Purge Redis (L2)",
+    "purgeButtonTitle": "Delete this vehicle's cached signals from Redis (L2). The in-process L1 cache on each pod stays put and refills from new telemetry.",
+    "purgeAllButton": "Purge All Redis",
+    "purgeAllButtonTitle": "Delete every vehicle:*:signals HSET in Redis (L2). Requires typed confirmation.",
+    "purgeTitle": "Purge Redis (L2) cache for {{vehicle}}?",
+    "purgeMessage": "This deletes the Redis HSET for this vehicle (L2 cache only). The L1 in-memory cache on this pod is NOT touched and will refill as new telemetry arrives. Read-paths on other pods may briefly read stale L1 values until the next signal arrives.",
+    "purgeConfirm": "Purge Redis (L2)",
+    "purgeAllTitle": "Purge ALL Redis (L2) caches?",
+    "purgeAllMessage": "This deletes every vehicle:*:signals HSET in Redis (the L2 cache). The L1 in-memory cache on each pod is NOT touched and will refill as new telemetry arrives. Read-paths on other pods may briefly read stale L1 values until the next signal arrives. If more than 1000 keys exist, you may need to click Purge All Redis again to drain.",
+    "purgeAllConfirm": "Purge All Vehicles",
+    "purgeAllTypedLabel": "Type PURGE ALL to confirm",
+    "purgeSuccess": "Redis L2 cache purged",
+    "purgeSuccessDetail": "{{vehicle}}: Redis HSET removed. L1 in-memory caches on each pod will refill from new telemetry.",
+    "purgeNoOpTitle": "Nothing to purge",
+    "purgeNoOpDetail": "{{vehicle}} had no cached signals in Redis.",
+    "purgeAllSuccess": "Redis L2 cache purged",
+    "purgeAllSuccessDetail": "Removed {{count}} vehicle HSET(s) from Redis. L1 in-memory caches on each pod will refill from new telemetry.",
+    "purgeAllPartial": "Redis L2 cache partially purged",
+    "purgeAllPartialDetail": "Removed {{count}} of up to {{limit}} vehicle HSET(s) from Redis. More keys remain — click Purge All Redis again to drain.",
+    "purgeError": "Purge failed"
   },
   "lifetime": {
     "unlocked": "✓ Unlocked",

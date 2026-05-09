@@ -1215,3 +1215,90 @@ func (h *DevToolsHandler) RedisSignalKeys(w http.ResponseWriter, r *http.Request
 		"total": len(out),
 	})
 }
+
+// RedisSignalsPurge deletes the Redis HSET for a single vehicle.
+//
+// DELETE /api/v1/dev-tools/redis-signals?vehicle_id=X
+//
+// Response: {"vehicle_id": X, "purged": true|false} where `purged`
+// indicates whether the key existed (true) or there was nothing to
+// delete (false). Both cases are 200 OK because the destructive intent
+// "ensure this vehicle's L2 cache is empty" is satisfied either way.
+//
+// The L1 in-process Store is NOT touched here — it lives in each pod's
+// memory and naturally drifts back into sync as new fleet telemetry
+// arrives. The frontend's confirm dialog explains this to operators so
+// they don't expect cluster-wide L1 invalidation.
+func (h *DevToolsHandler) RedisSignalsPurge(w http.ResponseWriter, r *http.Request) {
+	if h.redisCache == nil {
+		writeError(w, http.StatusServiceUnavailable, "Redis signal cache is not available")
+		return
+	}
+
+	vidStr := r.URL.Query().Get("vehicle_id")
+	if vidStr == "" {
+		writeError(w, http.StatusBadRequest, "vehicle_id query parameter is required")
+		return
+	}
+	vehicleID, err := strconv.ParseInt(vidStr, 10, 64)
+	if err != nil || vehicleID <= 0 {
+		writeError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
+		return
+	}
+
+	purged, err := h.redisCache.Purge(r.Context(), vehicleID)
+	if err != nil {
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("redis signal cache: Purge failed")
+		writeError(w, http.StatusServiceUnavailable, "Redis is unreachable")
+		return
+	}
+
+	log.Info().Int64("vehicle_id", vehicleID).Bool("purged", purged).Msg("redis signal cache: purged")
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"vehicle_id": vehicleID,
+		"purged":     purged,
+	})
+}
+
+// RedisSignalsPurgeAll deletes every vehicle:*:signals HSET reachable
+// via SCAN.
+//
+// DELETE /api/v1/dev-tools/redis-signals/keys
+//
+// Response: {"purged": N, "scanned": M, "has_more": bool, "limit": L}
+// where:
+//   - purged: number of HSETs DEL actually removed
+//   - scanned: number of HSETs SCAN found in this batch
+//   - limit: the per-batch SCAN cap (1000)
+//   - has_more: true when scanned == limit (more keys likely exist
+//     outside this batch — call again to drain).
+//
+// The L1 in-process Store is NOT touched (see RedisSignalsPurge for
+// rationale).
+func (h *DevToolsHandler) RedisSignalsPurgeAll(w http.ResponseWriter, r *http.Request) {
+	if h.redisCache == nil {
+		writeError(w, http.StatusServiceUnavailable, "Redis signal cache is not available")
+		return
+	}
+
+	const limit = 1000
+	purged, scanned, err := h.redisCache.PurgeAll(r.Context(), limit)
+	if err != nil {
+		log.Error().Err(err).Msg("redis signal cache: PurgeAll failed")
+		writeError(w, http.StatusServiceUnavailable, "Redis is unreachable")
+		return
+	}
+
+	hasMore := scanned >= limit
+	log.Warn().
+		Int("purged", purged).
+		Int("scanned", scanned).
+		Bool("has_more", hasMore).
+		Msg("redis signal cache: bulk purge")
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"purged":   purged,
+		"scanned":  scanned,
+		"limit":    limit,
+		"has_more": hasMore,
+	})
+}
