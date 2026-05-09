@@ -1,20 +1,27 @@
-// Command pub-test-signal publishes Tesla Fleet Telemetry proto-encoded
-// Payloads to the local MQTT broker, exercising the post-phase-42
+// Command pub-test-signal publishes Tesla Fleet Telemetry per-field MQTT
+// messages to the local broker, exercising the post-Phase-49 per-field
 // PipelineSubscriber end-to-end.
 //
-// Two modes:
+// Per the per-field MQTT cutover, the upstream Tesla fleet-telemetry
+// publisher emits ONE signal per topic in the form
+// `{topicBase}/{VIN}/v/{field}` with the raw json.Marshal of the
+// producer's per-Value-variant Go value as the body. This tool mirrors
+// that wire format so the new subscriber + codec.DecodeJSONField path
+// can be exercised against either:
 //
-//  1. Synthetic mode (default): emits a small hand-built Payload exercising
-//     six destinations (signal_log / drive_telemetry / charging_telemetry
-//     / positions). Use for smoke-testing the pipeline.
+//  1. Synthetic mode (default): emits a small hand-built fan-out of
+//     atomic + compound signals exercising six destinations
+//     (signal_log / drive_telemetry / charging_telemetry / positions).
+//     Use for smoke-testing the subscriber.
 //
 //        go run ./cmd/pub-test-signal --vin TEST00000000000VIN --count 3
 //
 //  2. CSV-replay mode (--csv): streams a prod-shape signal CSV
 //     (vehicle_id,signal,value_num,value_str,value_bool,created_at) and
-//     publishes one Payload per unique created_at, batching all signals
-//     observed at that timestamp into a single proto message. Use for
-//     full pipeline validation against EXPECTED_RESULTS.md fixtures.
+//     publishes one per-field message per CSV row, wrapping the body in
+//     the codec's `{"value":<bare>,"ts":"<RFC3339>"}` envelope so the
+//     original event-time is preserved end-to-end. Use for full pipeline
+//     validation against EXPECTED_RESULTS.md fixtures.
 //
 //        go run ./cmd/pub-test-signal --vin TEST00000000000VIN \
 //            --csv D:\copilot\teslasync\prod-signals\signal_history_last_7d.csv \
@@ -30,6 +37,7 @@ package main
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -42,25 +50,21 @@ import (
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
-	ftproto "github.com/teslamotors/fleet-telemetry/protos"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func main() {
 	broker := flag.String("broker", "tcp://localhost:1883", "MQTT broker URL")
 	topicBase := flag.String("topic-base", "telemetry", "topic base (must match TESLASYNC_FLEET_TELEMETRY_TOPIC_BASE)")
 	vin := flag.String("vin", "TEST00000000000VIN", "VIN of the test vehicle (must exist in vehicles table)")
-	count := flag.Int("count", 1, "synthetic mode only: number of payloads to publish")
-	intervalMS := flag.Int("interval-ms", 1000, "synthetic mode only: delay between payloads in milliseconds")
+	count := flag.Int("count", 1, "synthetic mode only: number of payload bursts to publish")
+	intervalMS := flag.Int("interval-ms", 1000, "synthetic mode only: delay between bursts in milliseconds")
 	clientID := flag.String("client-id", "teslasync-pub-test-signal", "MQTT client id")
 
 	csvPath := flag.String("csv", "", "CSV mode: path to prod-shape signal CSV (vehicle_id,signal,value_num,value_str,value_bool,created_at)")
 	startFilter := flag.String("start", "", "CSV mode: only include rows with created_at >= this (e.g. '2026-04-18 00:22:00')")
 	endFilter := flag.String("end", "", "CSV mode: only include rows with created_at <= this (e.g. '2026-04-18 00:46:30')")
-	maxPayloadSignals := flag.Int("max-payload-signals", 50, "CSV mode: cap signals per Payload to avoid oversized MQTT messages")
-	throttleMS := flag.Int("csv-throttle-ms", 5, "CSV mode: sleep this many ms between Payloads to avoid overwhelming the pipeline")
-	publishLimit := flag.Int("limit", 0, "CSV mode: stop after this many Payloads (0 = no limit)")
+	throttleMS := flag.Int("csv-throttle-ms", 1, "CSV mode: sleep this many ms between PER-FIELD publishes to avoid overwhelming the broker")
+	publishLimit := flag.Int("limit", 0, "CSV mode: stop after this many per-field publishes (0 = no limit)")
 	flag.Parse()
 
 	opts := pahomqtt.NewClientOptions().
@@ -75,37 +79,107 @@ func main() {
 	}
 	defer client.Disconnect(250)
 
-	topic := fmt.Sprintf("%s/payload/%s", *topicBase, *vin)
-
 	if *csvPath != "" {
-		runCSVReplay(client, topic, *vin, *csvPath, *startFilter, *endFilter, *maxPayloadSignals, *throttleMS, *publishLimit)
+		runCSVReplay(client, *topicBase, *vin, *csvPath, *startFilter, *endFilter, *throttleMS, *publishLimit)
 		return
 	}
 
-	runSynthetic(client, topic, *vin, *count, *intervalMS)
+	runSynthetic(client, *topicBase, *vin, *count, *intervalMS)
+}
+
+// ---------------------------------------------------------------------------
+// Per-field publish primitive
+// ---------------------------------------------------------------------------
+
+// publishField emits a single per-field MQTT message in the wire shape
+// codec.DecodeJSONField expects: topic = `{base}/{vin}/v/{field}`,
+// body = JSON envelope `{"value":<bare>,"ts":"<RFC3339>"}`. The
+// envelope is optional in the codec, but always emitted here so
+// historical replays preserve event-time even on bursts that span
+// minutes / hours / days of original wall-clock.
+//
+// jsonValue MUST be a Go value whose json.Marshal produces the bare
+// JSON shape the codec's per-ValueKind decoder expects:
+//
+//   - ValueKindString:   string                       -> `"foo"`
+//   - ValueKindBool:     bool                         -> `true` / `false`
+//   - ValueKindInt32:    int32 (or int)               -> `42`
+//   - ValueKindInt64:    int64                        -> `42`
+//   - ValueKindFloat:    float32                      -> `3.14`
+//   - ValueKindDouble:   float64                      -> `3.14`
+//   - ValueKindEnum:     string (proto-prefixed form) -> `"ShiftStateD"`
+//   - CompoundLocation:  map[string]float64           -> `{"latitude":x,"longitude":y}`
+//   - CompoundDoors:     map[string]bool              -> `{"DriverFront":true,...}`
+//   - CompoundTireLoc:   map[string]bool (snake_case) -> `{"front_left":true,...}`
+//   - StringCompound:    string (DoorState et al.)    -> `"FrontDoorOpen|..."`
+//
+// The ts argument is the original event-time (CSV row timestamp for
+// replay; wall-clock for synthetic). Marshal failure is fatal because
+// it indicates a programming bug in the caller's value shape.
+func publishField(client pahomqtt.Client, topicBase, vin, field string, jsonValue any, ts time.Time) (int, error) {
+	topic := fmt.Sprintf("%s/%s/v/%s", topicBase, vin, field)
+	envelope := struct {
+		Value any    `json:"value"`
+		TS    string `json:"ts"`
+	}{
+		Value: jsonValue,
+		TS:    ts.UTC().Format(time.RFC3339Nano),
+	}
+	body, err := json.Marshal(envelope)
+	if err != nil {
+		return 0, fmt.Errorf("marshal envelope for %q: %w", field, err)
+	}
+	tok := client.Publish(topic, 1, false, body)
+	if !tok.WaitTimeout(5*time.Second) || tok.Error() != nil {
+		return 0, fmt.Errorf("publish %q: %w", topic, tok.Error())
+	}
+	return len(body), nil
 }
 
 // ---------------------------------------------------------------------------
 // Synthetic mode
 // ---------------------------------------------------------------------------
 
-func runSynthetic(client pahomqtt.Client, topic, vin string, count, intervalMS int) {
-	log.Printf("publishing %d synthetic payload(s) to %s", count, topic)
+// syntheticAtomic represents a single per-field message to emit in a
+// synthetic burst. Each call to runSynthetic emits the same fan-out
+// `count` times, with the float-valued atomics drifting by `seed` each
+// burst so signal_log shows distinct values per iteration.
+type syntheticAtomic struct {
+	field string
+	value any
+}
+
+func runSynthetic(client pahomqtt.Client, topicBase, vin string, count, intervalMS int) {
+	log.Printf("synthetic mode: publishing %d burst(s) of per-field signals to %s/%s/v/+", count, topicBase, vin)
 
 	for i := 0; i < count; i++ {
-		payload := buildSyntheticPayload(vin, i)
-		bytes, err := proto.Marshal(payload)
-		if err != nil {
-			log.Fatalf("proto.Marshal: %v", err)
+		now := time.Now().UTC()
+		f := float32(i)
+
+		burst := []syntheticAtomic{
+			{field: "BatteryLevel", value: float32(78.5 - f*0.1)},
+			{field: "Soc", value: float32(80.0 - f*0.1)},
+			{field: "VehicleSpeed", value: float32(27.78 + f)},
+			{field: "ACChargingPower", value: float32(11.5)},
+			{field: "Gear", value: "ShiftStateD"},
+			// Compound: codec flattens to LocationLatitude + LocationLongitude.
+			{field: "Location", value: map[string]float64{
+				"latitude":  37.7749 + float64(i)*0.0001,
+				"longitude": -122.4194 + float64(i)*0.0001,
+			}},
 		}
 
-		tok := client.Publish(topic, 1, false, bytes)
-		if !tok.WaitTimeout(5*time.Second) || tok.Error() != nil {
-			log.Fatalf("publish[%d]: %v", i, tok.Error())
+		var totalBytes int
+		for _, a := range burst {
+			n, err := publishField(client, topicBase, vin, a.field, a.value, now)
+			if err != nil {
+				log.Fatalf("burst %d field %q: %v", i, a.field, err)
+			}
+			totalBytes += n
 		}
 
-		log.Printf("  [%d/%d] published %d bytes (BatteryLevel=%.2f Soc=%.2f Speed=%.2f)",
-			i+1, count, len(bytes), 78.5-float32(i)*0.1, 80.0-float32(i)*0.1, 27.78+float32(i))
+		log.Printf("  [%d/%d] published %d per-field msgs (%d bytes total) at ts=%s",
+			i+1, count, len(burst), totalBytes, now.Format(time.RFC3339Nano))
 
 		if i < count-1 {
 			time.Sleep(time.Duration(intervalMS) * time.Millisecond)
@@ -113,32 +187,6 @@ func runSynthetic(client pahomqtt.Client, topic, vin string, count, intervalMS i
 	}
 
 	log.Printf("done — query signal_log/positions/drive_telemetry/charging_telemetry in postgres to confirm")
-}
-
-func buildSyntheticPayload(vin string, seed int) *ftproto.Payload {
-	now := time.Now().UTC()
-	f := float32(seed)
-
-	return &ftproto.Payload{
-		Vin:       vin,
-		CreatedAt: timestamppb.New(now),
-		Data: []*ftproto.Datum{
-			{Key: ftproto.Field_BatteryLevel, Value: &ftproto.Value{Value: &ftproto.Value_FloatValue{FloatValue: 78.5 - f*0.1}}},
-			{Key: ftproto.Field_Soc, Value: &ftproto.Value{Value: &ftproto.Value_FloatValue{FloatValue: 80.0 - f*0.1}}},
-			{Key: ftproto.Field_VehicleSpeed, Value: &ftproto.Value{Value: &ftproto.Value_FloatValue{FloatValue: 27.78 + f}}},
-			{Key: ftproto.Field_ACChargingPower, Value: &ftproto.Value{Value: &ftproto.Value_FloatValue{FloatValue: 11.5}}},
-			{
-				Key: ftproto.Field_Location,
-				Value: &ftproto.Value{Value: &ftproto.Value_LocationValue{
-					LocationValue: &ftproto.LocationValue{
-						Latitude:  37.7749 + float64(seed)*0.0001,
-						Longitude: -122.4194 + float64(seed)*0.0001,
-					},
-				}},
-			},
-			{Key: ftproto.Field_Gear, Value: &ftproto.Value{Value: &ftproto.Value_ShiftStateValue{ShiftStateValue: ftproto.ShiftState_ShiftStateD}}},
-		},
-	}
 }
 
 // ---------------------------------------------------------------------------
@@ -154,11 +202,15 @@ type csvRow struct {
 	createdAt time.Time
 }
 
-// runCSVReplay reads the CSV, optionally filters by [start,end], groups
-// rows by created_at, and publishes one Payload per group.
-func runCSVReplay(client pahomqtt.Client, topic, vin, csvPath, startFilter, endFilter string, maxSignals, throttleMS, publishLimit int) {
+// runCSVReplay reads the CSV, optionally filters by [start,end], sorts
+// by created_at, and publishes ONE per-field MQTT message per row
+// (wrapped in the codec's value+ts envelope). Pre-Phase-42 captures
+// stored Latitude/Longitude as bare scalars; we pair them into a
+// single Location compound publish per (vin, timestamp) so the codec
+// flattens back to the canonical LocationLatitude/Longitude atomics.
+func runCSVReplay(client pahomqtt.Client, topicBase, vin, csvPath, startFilter, endFilter string, throttleMS, publishLimit int) {
 	log.Printf("CSV replay mode: %s", csvPath)
-	log.Printf("  publishing to %s as VIN=%s", topic, vin)
+	log.Printf("  publishing per-field to %s/%s/v/+ (envelope wraps event-time)", topicBase, vin)
 
 	startCutoff := parseTimeFilter(startFilter, time.Time{})
 	endCutoff := parseTimeFilter(endFilter, time.Time{})
@@ -215,73 +267,75 @@ func runCSVReplay(client pahomqtt.Client, topic, vin, csvPath, startFilter, endF
 		log.Fatalf("no rows in window — check --start/--end")
 	}
 
-	// Sort by timestamp, then group consecutive rows that share the same created_at.
+	// Sort by timestamp so the codec sees event-time in monotonic
+	// order (the per-field path is otherwise indifferent, but FSM
+	// edge transitions assume forward progress).
 	sort.Slice(rows, func(i, j int) bool { return rows[i].createdAt.Before(rows[j].createdAt) })
 
-	stats := replayStats{}
-	groupStart := 0
-	publishedPayloads := 0
-
-	flushGroup := func(end int) {
-		if end-groupStart == 0 {
-			return
-		}
-		group := rows[groupStart:end]
-		// Cap at maxSignals per payload to keep MQTT messages reasonable.
-		for chunkStart := 0; chunkStart < len(group); chunkStart += maxSignals {
-			chunkEnd := chunkStart + maxSignals
-			if chunkEnd > len(group) {
-				chunkEnd = len(group)
-			}
-			payload, datumStats := buildCSVPayload(vin, group[chunkStart:chunkEnd])
-			stats.merge(datumStats)
-			if payload == nil || len(payload.Data) == 0 {
-				continue
-			}
-
-			bytes, err := proto.Marshal(payload)
-			if err != nil {
-				log.Fatalf("proto.Marshal: %v", err)
-			}
-			tok := client.Publish(topic, 1, false, bytes)
-			if !tok.WaitTimeout(5*time.Second) || tok.Error() != nil {
-				log.Fatalf("publish: %v", tok.Error())
-			}
-			publishedPayloads++
-			stats.payloadsPublished++
-			stats.bytesPublished += int64(len(bytes))
-
-			if throttleMS > 0 {
-				time.Sleep(time.Duration(throttleMS) * time.Millisecond)
-			}
-			if publishLimit > 0 && publishedPayloads >= publishLimit {
-				return
-			}
-		}
-
-		if publishedPayloads%200 == 0 && publishedPayloads > 0 {
-			log.Printf("  ... %d payloads published, %d datums encoded, %d skipped",
-				publishedPayloads, stats.datumsEncoded, stats.datumsSkipped)
-		}
+	stats := replayStats{
+		skipReasons:    map[string]int{},
+		unknownSignals: map[string]int{},
 	}
 
-	for i := 1; i < len(rows); i++ {
-		if !rows[i].createdAt.Equal(rows[groupStart].createdAt) {
-			flushGroup(i)
-			if publishLimit > 0 && publishedPayloads >= publishLimit {
-				break
-			}
-			groupStart = i
+	// Pre-pass: pair Latitude/Longitude rows that share a timestamp
+	// into a synthetic Location row. Pre-Phase-42 ingests captured
+	// the compound DECOMPOSED into bare scalars; the modern codec
+	// has no Field_Latitude / Field_Longitude — only Field_Location.
+	// Pairing here lets historical CSVs still drive the positions
+	// writer end-to-end via Location -> codec flatten ->
+	// LocationLatitude + LocationLongitude.
+	rows = pairLatLonRows(rows, &stats)
+
+	for i := range rows {
+		row := rows[i]
+
+		// Skip the bare scalars that have no Field on the modern
+		// proto; pairLatLonRows already consumed valid pairs.
+		if row.signal == "Latitude" || row.signal == "Longitude" {
+			stats.datumsSkipped++
+			stats.skipReasons["bare lat/lon (unpaired in same group)"]++
+			continue
 		}
-	}
-	if publishLimit == 0 || publishedPayloads < publishLimit {
-		flushGroup(len(rows))
+
+		meta, ok := protomodel.SignalsByName[row.signal]
+		if !ok {
+			stats.datumsSkipped++
+			stats.unknownSignals[row.signal]++
+			continue
+		}
+
+		jsonValue, reason := encodeRowValue(meta, row)
+		if jsonValue == nil {
+			stats.datumsSkipped++
+			stats.skipReasons[reason]++
+			continue
+		}
+
+		n, err := publishField(client, topicBase, vin, row.signal, jsonValue, row.createdAt)
+		if err != nil {
+			log.Fatalf("publish row %d field %q: %v", i, row.signal, err)
+		}
+		stats.payloadsPublished++
+		stats.bytesPublished += int64(n)
+		stats.datumsEncoded++
+
+		if throttleMS > 0 {
+			time.Sleep(time.Duration(throttleMS) * time.Millisecond)
+		}
+		if publishLimit > 0 && stats.payloadsPublished >= publishLimit {
+			break
+		}
+
+		if stats.payloadsPublished%500 == 0 {
+			log.Printf("  ... %d publishes, %d encoded, %d skipped",
+				stats.payloadsPublished, stats.datumsEncoded, stats.datumsSkipped)
+		}
 	}
 
 	log.Printf("=== CSV REPLAY DONE ===")
-	log.Printf("  payloads published : %d (%.1f KB)", stats.payloadsPublished, float64(stats.bytesPublished)/1024.0)
-	log.Printf("  datums encoded     : %d", stats.datumsEncoded)
-	log.Printf("  datums skipped     : %d", stats.datumsSkipped)
+	log.Printf("  per-field publishes : %d (%.1f KB)", stats.payloadsPublished, float64(stats.bytesPublished)/1024.0)
+	log.Printf("  rows encoded        : %d", stats.datumsEncoded)
+	log.Printf("  rows skipped        : %d", stats.datumsSkipped)
 	if len(stats.skipReasons) > 0 {
 		log.Printf("  skip reasons:")
 		for _, r := range topReasons(stats.skipReasons, 10) {
@@ -296,6 +350,73 @@ func runCSVReplay(client pahomqtt.Client, topic, vin, csvPath, startFilter, endF
 	}
 }
 
+// pairLatLonRows scans the timestamp-sorted CSV row stream and merges
+// any matched (Latitude, Longitude) pair sharing the same timestamp
+// into a single synthetic Location row whose valueStr carries the
+// pre-marshalled compound JSON. The original Latitude / Longitude
+// rows are left in-place but tagged so the main loop counts them as
+// "consumed by location pair" rather than "bare lat/lon" — kept
+// in-place so timestamp ordering is preserved and the FSM doesn't
+// see a synthetic batch boundary.
+//
+// Implementation: we walk the sorted rows, group by timestamp, and
+// rewrite paired Latitude/Longitude rows as `signal=""` no-op
+// markers and prepend a synthetic `Location` row to that timestamp
+// group. The encodeRowValue dispatch returns nil for `signal==""`
+// without bumping the unknown-signals map, so the only counter
+// impact is the silently-skipped no-op markers in
+// "bare lat/lon (unpaired in same group)" — half-pairs (lat OR lon
+// alone) survive as their original rows and surface in that bucket.
+func pairLatLonRows(rows []csvRow, stats *replayStats) []csvRow {
+	if len(rows) == 0 {
+		return rows
+	}
+	out := make([]csvRow, 0, len(rows))
+	groupStart := 0
+	for i := 1; i <= len(rows); i++ {
+		if i < len(rows) && rows[i].createdAt.Equal(rows[groupStart].createdAt) {
+			continue
+		}
+		group := rows[groupStart:i]
+		var latRow, lonRow *csvRow
+		for j := range group {
+			switch group[j].signal {
+			case "Latitude":
+				latRow = &group[j]
+			case "Longitude":
+				lonRow = &group[j]
+			}
+		}
+		if latRow != nil && lonRow != nil {
+			lat, latErr := strconv.ParseFloat(latRow.valueNum, 64)
+			lon, lonErr := strconv.ParseFloat(lonRow.valueNum, 64)
+			if latErr == nil && lonErr == nil {
+				compound, _ := json.Marshal(map[string]float64{
+					"latitude":  lat,
+					"longitude": lon,
+				})
+				out = append(out, csvRow{
+					signal:    "Location",
+					valueStr:  string(compound),
+					createdAt: latRow.createdAt,
+				})
+				stats.datumsEncoded++ // counted once for the pair
+				// Mark the original lat/lon as consumed so the
+				// main loop classifies them under the consumed
+				// bucket without bumping unknown-signals.
+				for j := range group {
+					if group[j].signal == "Latitude" || group[j].signal == "Longitude" {
+						group[j].signal = "" // sentinel
+					}
+				}
+			}
+		}
+		out = append(out, group...)
+		groupStart = i
+	}
+	return out
+}
+
 type replayStats struct {
 	payloadsPublished int
 	bytesPublished    int64
@@ -303,27 +424,6 @@ type replayStats struct {
 	datumsSkipped     int
 	skipReasons       map[string]int
 	unknownSignals    map[string]int
-}
-
-func (s *replayStats) merge(o replayStats) {
-	s.datumsEncoded += o.datumsEncoded
-	s.datumsSkipped += o.datumsSkipped
-	if o.skipReasons != nil {
-		if s.skipReasons == nil {
-			s.skipReasons = map[string]int{}
-		}
-		for k, v := range o.skipReasons {
-			s.skipReasons[k] += v
-		}
-	}
-	if o.unknownSignals != nil {
-		if s.unknownSignals == nil {
-			s.unknownSignals = map[string]int{}
-		}
-		for k, v := range o.unknownSignals {
-			s.unknownSignals[k] += v
-		}
-	}
 }
 
 type reasonCount struct {
@@ -343,146 +443,55 @@ func topReasons(m map[string]int, n int) []reasonCount {
 	return out
 }
 
-// buildCSVPayload converts a group of csvRows that share a timestamp into
-// an ftproto.Payload, dispatching each signal's value via SignalMeta.ValueKind.
+// encodeRowValue dispatches to the right Go value shape for a CSV row
+// based on the signal's declared ValueKind. Returns (nil, reason) when
+// the row cannot be encoded — caller bumps the skipReasons counter.
 //
-// SPECIAL CASE — Tesla Location compound: prod CSVs captured pre-Phase-42
-// store the Tesla Location compound DECOMPOSED into bare scalar
-// "Latitude" / "Longitude" rows (legacy ingest path). The new codec has
-// only Field_Location (compound, ID 21) — there is no Field_Latitude or
-// Field_Longitude enum. This function therefore detects paired
-// Latitude+Longitude rows in the same group and emits a single
-// Field_Location protobuf datum carrying a LocationValue{Latitude,Longitude}.
-// Codec-side flatten then re-emits LocationLatitude / LocationLongitude
-// scalars into signal.Store, the router dual-writes them to signal_log,
-// and the drive-detail handler reads them via state.Timeline. End-to-end
-// the result is identical to a live Tesla emitting the compound directly.
-func buildCSVPayload(vin string, group []csvRow) (*ftproto.Payload, replayStats) {
-	stats := replayStats{
-		skipReasons:    map[string]int{},
-		unknownSignals: map[string]int{},
+// Compound signals use the JSON shape codec.decodeCompoundJSON
+// expects:
+//   - Location:     {"latitude":x,"longitude":y} (lowercase keys)
+//   - DoorState:    bare JSON-quoted string ("DoorOpen|Closed|...")
+//   - Sched*:       bare JSON-quoted string ("HH:MM:SS")
+//   - TireLocation: {"front_left":true,...} (snake_case keys)
+//
+// The CSV almost never carries usable compound bodies (the prod-shape
+// export decomposed everything to scalars), so the compound branches
+// here exist mostly for completeness — the only compound the replay
+// actually emits in practice is Location synthesised by
+// pairLatLonRows above.
+func encodeRowValue(meta *protomodel.SignalMeta, row csvRow) (any, string) {
+	if row.signal == "" {
+		// Sentinel from pairLatLonRows — the lat/lon was already
+		// consumed into a synthetic Location row earlier in the
+		// stream. Returning a clearer reason than "unknown signal"
+		// keeps the diagnostic counter focused on real misses.
+		return nil, "bare lat/lon (consumed by Location pair)"
 	}
-	if len(group) == 0 {
-		return nil, stats
-	}
-
-	// First pass: detect Latitude / Longitude rows so we can pair them
-	// into a Field_Location compound. We do this BEFORE the per-row
-	// dispatch loop because the bare scalar names have no proto enum
-	// of their own and would otherwise be skipped with "no Field_value".
-	var latRow, lonRow *csvRow
-	for i := range group {
-		switch group[i].signal {
-		case "Latitude":
-			latRow = &group[i]
-		case "Longitude":
-			lonRow = &group[i]
-		}
-	}
-
-	data := make([]*ftproto.Datum, 0, len(group))
-
-	// Emit Field_Location once if we have both halves of the pair.
-	if latRow != nil && lonRow != nil {
-		lat, latErr := strconv.ParseFloat(latRow.valueNum, 64)
-		lon, lonErr := strconv.ParseFloat(lonRow.valueNum, 64)
-		if latErr == nil && lonErr == nil {
-			data = append(data, &ftproto.Datum{
-				Key: ftproto.Field_Location,
-				Value: &ftproto.Value{Value: &ftproto.Value_LocationValue{
-					LocationValue: &ftproto.LocationValue{
-						Latitude:  lat,
-						Longitude: lon,
-					},
-				}},
-			})
-			stats.datumsEncoded++
-		} else {
-			stats.datumsSkipped++
-			stats.skipReasons["location pair: parse error"]++
-		}
-	} else if latRow != nil || lonRow != nil {
-		// Half a pair — can't synthesise the compound. Count it so it
-		// shows up in the replay summary; the next group containing a
-		// matching half will succeed.
-		stats.datumsSkipped++
-		stats.skipReasons["location: half-pair (lat or lon only in group)"]++
-	}
-
-	for _, row := range group {
-		// Skip the bare scalars — already consumed above (or were
-		// half-pairs that have no representable proto enum).
-		if row.signal == "Latitude" || row.signal == "Longitude" {
-			continue
-		}
-		meta, ok := protomodel.SignalsByName[row.signal]
-		if !ok {
-			stats.datumsSkipped++
-			stats.unknownSignals[row.signal]++
-			continue
-		}
-		fieldEnum, ok := ftproto.Field_value[row.signal]
-		if !ok {
-			stats.datumsSkipped++
-			stats.skipReasons["no Field_value"]++
-			continue
-		}
-
-		val, reason := encodeValue(meta, row)
-		if val == nil {
-			stats.datumsSkipped++
-			stats.skipReasons[reason]++
-			continue
-		}
-
-		data = append(data, &ftproto.Datum{
-			Key:   ftproto.Field(fieldEnum),
-			Value: val,
-		})
-		stats.datumsEncoded++
-	}
-
-	if len(data) == 0 {
-		return nil, stats
-	}
-
-	return &ftproto.Payload{
-		Vin:       vin,
-		CreatedAt: timestamppb.New(group[0].createdAt),
-		Data:      data,
-	}, stats
-}
-
-// encodeValue dispatches to the right Value oneof variant based on the
-// signal's declared ValueKind. Returns (nil, reason) when the row cannot
-// be encoded (missing/empty value, unsupported kind, parse error).
-func encodeValue(meta *protomodel.SignalMeta, row csvRow) (*ftproto.Value, string) {
 	switch meta.ValueKind {
 	case protomodel.ValueKindFloat:
 		f, err := strconv.ParseFloat(row.valueNum, 32)
 		if err != nil {
 			return nil, "float parse error"
 		}
-		return &ftproto.Value{Value: &ftproto.Value_FloatValue{FloatValue: float32(f)}}, ""
+		return float32(f), ""
 
 	case protomodel.ValueKindDouble:
 		f, err := strconv.ParseFloat(row.valueNum, 64)
 		if err != nil {
 			return nil, "double parse error"
 		}
-		return &ftproto.Value{Value: &ftproto.Value_DoubleValue{DoubleValue: f}}, ""
+		return f, ""
 
 	case protomodel.ValueKindInt32:
 		i, err := strconv.ParseInt(row.valueNum, 10, 32)
 		if err != nil {
-			// Some int32 signals get serialised as float in CSV — try that.
 			f, err2 := strconv.ParseFloat(row.valueNum, 64)
 			if err2 != nil {
 				return nil, "int32 parse error"
 			}
 			i = int64(f)
 		}
-		return &ftproto.Value{Value: &ftproto.Value_IntValue{IntValue: int32(i)}}, ""
+		return int32(i), ""
 
 	case protomodel.ValueKindInt64:
 		i, err := strconv.ParseInt(row.valueNum, 10, 64)
@@ -493,142 +502,160 @@ func encodeValue(meta *protomodel.SignalMeta, row csvRow) (*ftproto.Value, strin
 			}
 			i = int64(f)
 		}
-		return &ftproto.Value{Value: &ftproto.Value_LongValue{LongValue: i}}, ""
+		return i, ""
 
 	case protomodel.ValueKindBool:
 		v := strings.ToLower(strings.TrimSpace(row.valueBool))
 		if v == "" {
 			return nil, "bool: empty value_bool"
 		}
-		var b bool
 		switch v {
 		case "t", "true", "1", "yes":
-			b = true
+			return true, ""
 		case "f", "false", "0", "no":
-			b = false
-		default:
-			return nil, "bool: unrecognised value"
+			return false, ""
 		}
-		return &ftproto.Value{Value: &ftproto.Value_BooleanValue{BooleanValue: b}}, ""
+		return nil, "bool: unrecognised value"
 
 	case protomodel.ValueKindString:
 		s := strings.TrimSpace(row.valueStr)
 		if s == "" {
 			return nil, "string: empty value_str"
 		}
-		return &ftproto.Value{Value: &ftproto.Value_StringValue{StringValue: s}}, ""
+		return s, ""
 
 	case protomodel.ValueKindEnum:
-		return encodeTypedEnum(meta, row)
+		return encodeEnumValue(meta, row)
 
 	case protomodel.ValueKindCompound:
-		// Compound signals (Location, DoorState, TireLocation, Time)
-		// can't be reconstructed from the flat CSV — they would need
-		// the original LocationValue/StringValue JSON.
-		return nil, "compound: not representable in CSV"
+		// The synthetic Location row from pairLatLonRows arrives
+		// here with valueStr already set to a pre-marshalled
+		// JSON object; emit it as a json.RawMessage so json.Marshal
+		// passes it through verbatim.
+		s := strings.TrimSpace(row.valueStr)
+		if s == "" {
+			return nil, "compound: empty body (CSV export decomposes compounds)"
+		}
+		return json.RawMessage(s), ""
 
 	case protomodel.ValueKindTime:
-		// TimeValue compound — same issue.
-		return nil, "time: not representable in CSV"
+		s := strings.TrimSpace(row.valueStr)
+		if s == "" {
+			return nil, "time: empty value_str"
+		}
+		// Codec expects the JSON-quoted form; json.Marshal of the
+		// Go string handles quoting automatically.
+		return s, ""
 
 	default:
 		return nil, "unsupported ValueKind: " + meta.ValueKind.String()
 	}
 }
 
-// encodeTypedEnum handles signals whose ValueKind is ValueKindEnum. The
-// most critical one for the EXPECTED_RESULTS.md fixture is ShiftState
-// (Field=Gear) since R/D/P transitions drive the FSM. Other typed enums
-// are dispatched best-effort via the protomodel Parse* helpers; if a
-// helper isn't wired here yet, the row is skipped.
-func encodeTypedEnum(meta *protomodel.SignalMeta, row csvRow) (*ftproto.Value, string) {
+// encodeEnumValue produces the JSON-string form Tesla's MQTT producer
+// emits for typed enums: the proto-typed enum's String() output, which
+// is the prefixed form (e.g. "ShiftStateD", "ChargeStateCharging"). The
+// codec strips meta.EnumStringPrefix during decode to land the
+// canonical short string in signal.Store.
+//
+// Legacy Tesla Fleet API JSON poll values (Idle / WaitForLineVoltage /
+// Authorizing) are mapped to the closest modern proto value so
+// downstream FSMs can still fire TriggerChargeStarted/Ended off CSVs
+// captured in the legacy era.
+func encodeEnumValue(meta *protomodel.SignalMeta, row csvRow) (any, string) {
 	s := strings.TrimSpace(row.valueStr)
+	if s == "" && row.valueNum != "" {
+		s = strings.TrimSpace(row.valueNum)
+	}
 	if s == "" {
-		// Some enum-valued signals also arrive numerically.
-		if row.valueNum != "" {
-			s = row.valueNum
-		} else {
-			return nil, "enum: empty value_str"
-		}
+		return nil, "enum: empty value_str/value_num"
 	}
 
 	switch meta.EnumTypeName {
 	case "ShiftState":
-		v, err := parseShiftState(s)
-		if err != nil {
-			return nil, "enum ShiftState: " + err.Error()
+		// Accept P/R/N/D shorthand (the most common CSV form) and
+		// the prefixed long form. Always emit the prefixed form so
+		// the codec.TrimPrefix call has work to do uniformly.
+		if v, ok := canonicaliseShiftState(s); ok {
+			return v, ""
 		}
-		return &ftproto.Value{Value: &ftproto.Value_ShiftStateValue{ShiftStateValue: v}}, ""
+		return nil, "enum ShiftState: unrecognised " + s
 
 	case "ChargingState":
-		// Try the numeric ftproto enum reverse map first.
-		if num, ok := ftproto.ChargingState_value[s]; ok {
-			return &ftproto.Value{Value: &ftproto.Value_ChargingValue{ChargingValue: ftproto.ChargingState(num)}}, ""
-		}
-		// Fall back to the prefixed form (ChargeStateCharging etc.).
-		if num, ok := ftproto.ChargingState_value["ChargeState"+s]; ok {
-			return &ftproto.Value{Value: &ftproto.Value_ChargingValue{ChargingValue: ftproto.ChargingState(num)}}, ""
-		}
-		// Legacy Tesla Fleet API JSON poll path emitted values that the
-		// modern ftproto ChargingState enum doesn't define ("Idle",
-		// "WaitForLineVoltage", "Authorizing"). Map them to the closest
-		// proto-canonical state so downstream consumers (signal_adapter
-		// expects ValueKindEnum, not ValueKindString) still see a typed
-		// enum and the FSM can fire TriggerChargeEnded / TriggerChargeStarted.
-		switch s {
-		case "Idle", "Authorizing":
-			return &ftproto.Value{Value: &ftproto.Value_ChargingValue{ChargingValue: ftproto.ChargingState_ChargeStateStopped}}, ""
-		case "WaitForLineVoltage":
-			return &ftproto.Value{Value: &ftproto.Value_ChargingValue{ChargingValue: ftproto.ChargingState_ChargeStateStarting}}, ""
+		if v, ok := canonicaliseChargingState(s); ok {
+			return v, ""
 		}
 		return nil, "enum ChargingState: unknown value " + s
 
 	case "DetailedChargeStateValue":
-		if num, ok := ftproto.DetailedChargeStateValue_value[s]; ok {
-			return &ftproto.Value{Value: &ftproto.Value_DetailedChargeStateValue{DetailedChargeStateValue: ftproto.DetailedChargeStateValue(num)}}, ""
-		}
-		if num, ok := ftproto.DetailedChargeStateValue_value["DetailedChargeState"+s]; ok {
-			return &ftproto.Value{Value: &ftproto.Value_DetailedChargeStateValue{DetailedChargeStateValue: ftproto.DetailedChargeStateValue(num)}}, ""
-		}
-		// Same legacy-poll fallback as ChargingState.
-		switch s {
-		case "Idle", "Authorizing":
-			return &ftproto.Value{Value: &ftproto.Value_DetailedChargeStateValue{DetailedChargeStateValue: ftproto.DetailedChargeStateValue_DetailedChargeStateStopped}}, ""
-		case "WaitForLineVoltage":
-			return &ftproto.Value{Value: &ftproto.Value_DetailedChargeStateValue{DetailedChargeStateValue: ftproto.DetailedChargeStateValue_DetailedChargeStateStarting}}, ""
+		if v, ok := canonicaliseDetailedChargeState(s); ok {
+			return v, ""
 		}
 		return nil, "enum DetailedChargeStateValue: unknown value " + s
 
 	default:
-		// Fall back to StringValue for typed enums we haven't wired
-		// yet. The codec will reject these, so they show up in DLQ;
-		// counts surface in the skipReasons.
-		return nil, "enum " + meta.EnumTypeName + ": no typed encoder wired"
+		// For any enum we don't have a hand-wired mapping for,
+		// pass through with the codec's prefix prepended IF the
+		// raw value doesn't already start with it. This is best-
+		// effort: codec validation will surface unrecognised
+		// values via jsonDecodeErrorsTotal.
+		if !strings.HasPrefix(s, meta.EnumStringPrefix) {
+			return meta.EnumStringPrefix + s, ""
+		}
+		return s, ""
 	}
 }
 
-// parseShiftState mirrors the Tesla proto ShiftState enum literals.
-// The CSV stores P/R/N/D and occasionally the full "ShiftStateD" form;
-// accept both.
-func parseShiftState(s string) (ftproto.ShiftState, error) {
-	candidates := []string{s, "ShiftState" + s}
-	for _, c := range candidates {
-		if v, ok := ftproto.ShiftState_value[c]; ok {
-			return ftproto.ShiftState(v), nil
-		}
-	}
-	// Single-char short form
-	switch strings.ToUpper(s) {
+func canonicaliseShiftState(s string) (string, bool) {
+	upper := strings.ToUpper(s)
+	switch upper {
 	case "P":
-		return ftproto.ShiftState_ShiftStateP, nil
+		return "ShiftStateP", true
 	case "R":
-		return ftproto.ShiftState_ShiftStateR, nil
+		return "ShiftStateR", true
 	case "N":
-		return ftproto.ShiftState_ShiftStateN, nil
+		return "ShiftStateN", true
 	case "D":
-		return ftproto.ShiftState_ShiftStateD, nil
+		return "ShiftStateD", true
+	case "INVALID":
+		return "ShiftStateInvalid", true
+	case "SNA":
+		return "ShiftStateSNA", true
 	}
-	return 0, fmt.Errorf("unrecognised %q", s)
+	if strings.HasPrefix(s, "ShiftState") {
+		return s, true
+	}
+	return "", false
+}
+
+func canonicaliseChargingState(s string) (string, bool) {
+	if strings.HasPrefix(s, "ChargeState") {
+		return s, true
+	}
+	switch s {
+	case "Idle", "Authorizing":
+		return "ChargeStateStopped", true
+	case "WaitForLineVoltage":
+		return "ChargeStateStarting", true
+	case "Charging", "Stopped", "Disconnected", "Complete", "NoPower", "Starting", "Unknown":
+		return "ChargeState" + s, true
+	}
+	return "", false
+}
+
+func canonicaliseDetailedChargeState(s string) (string, bool) {
+	if strings.HasPrefix(s, "DetailedChargeState") {
+		return s, true
+	}
+	switch s {
+	case "Idle", "Authorizing":
+		return "DetailedChargeStateStopped", true
+	case "WaitForLineVoltage":
+		return "DetailedChargeStateStarting", true
+	case "Charging", "Stopped", "Disconnected", "Complete", "NoPower", "Starting", "Unknown":
+		return "DetailedChargeState" + s, true
+	}
+	return "", false
 }
 
 // ---------------------------------------------------------------------------
@@ -690,4 +717,3 @@ func parseTimeFilter(s string, def time.Time) time.Time {
 	}
 	return t
 }
-
