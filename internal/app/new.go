@@ -367,7 +367,7 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 		log.Info().Int("vehicles", len(vehicles)).Msg("live signal store warmed from Redis")
 	}
 
-	a.SignalHistoryWriter = database.NewSignalHistoryWriter(a.DB, 2*time.Second, a.Cache.Underlying())
+	a.SignalHistoryWriter = database.NewSignalHistoryWriter(a.DB)
 	a.TelemetryHandler.SetSignalHistoryWriter(a.SignalHistoryWriter)
 
 	for _, v := range vehicles {
@@ -389,9 +389,6 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 	}
 
 	log.Info().Msg("signal store initialized")
-
-	go a.SignalHistoryWriter.FlushLoop(ctx)
-	log.Info().Int("retention_days", a.Cfg.Retention.SignalHistoryRetentionDays).Msg("Postgres signal_history writer started")
 
 	sessionTracker := a.TelemetryHandler.SessionTracker()
 	signalLogReader := database.NewSignalLogReader(a.DB)
@@ -494,7 +491,6 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 	vinByID := &vinByIDResolver{repo: vehicleRepo}
 	sideEffects := teslapipeline.New(teslapipeline.Config{
 		Live:        liveStoreAdapter,
-		History:     a.SignalHistoryWriter,
 		FSM:         a.TelemetryHandler.FSMHandler(),
 		Sessions:    a.TelemetryHandler.SessionTracker(),
 		Alerts:      a.TelemetryHandler.AlertEvaluator(),

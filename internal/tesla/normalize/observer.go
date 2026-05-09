@@ -13,11 +13,13 @@ import (
 // not fit inside a per-destination router.Writer:
 //
 //   - L1 live-state updates  (signal.LiveSignalStore.UpdateAll)
-//   - durable history append (database.SignalHistoryWriter.Append)
 //   - FSM dispatch           (FSMHandler.ProcessSignals)
 //   - sessions + alerts      (TelemetrySessionTracker.ProcessSignals
 //                             + TelemetryAlertEvaluator.Evaluate)
 //   - SSE fanout             (TelemetryHandler.broadcastSSE)
+//
+// (Durable signal_log writes are owned by the router signal_log
+// writer, not the observer.)
 //
 // Each of those callbacks reads "signals as a map[string]any" rather
 // than per-destination columns, and has its own lifecycle/timing

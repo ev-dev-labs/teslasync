@@ -203,7 +203,6 @@ func e2eBuildWritersMap() (map[router.Destination]router.Writer, map[router.Dest
 // caller can assert callback counts and recorded payloads.
 type e2eFakes struct {
 	live     *e2eLiveStore
-	history  *e2eHistoryWriter
 	fsm      *e2eFSM
 	sessions *e2eSessions
 	alerts   *e2eAlerts
@@ -214,7 +213,6 @@ type e2eFakes struct {
 func e2eBuildSideEffects() (*SideEffectsObserver, *e2eFakes) {
 	fakes := &e2eFakes{
 		live:     &e2eLiveStore{},
-		history:  &e2eHistoryWriter{},
 		fsm:      &e2eFSM{},
 		sessions: &e2eSessions{},
 		alerts:   &e2eAlerts{},
@@ -223,7 +221,6 @@ func e2eBuildSideEffects() (*SideEffectsObserver, *e2eFakes) {
 	}
 	obs := New(Config{
 		Live:         fakes.live,
-		History:      fakes.history,
 		FSM:          fakes.fsm,
 		Sessions:     fakes.sessions,
 		Alerts:       fakes.alerts,
@@ -238,7 +235,7 @@ func e2eBuildSideEffects() (*SideEffectsObserver, *e2eFakes) {
 }
 
 // ---------------------------------------------------------------------------
-// Test 1 (Decision #4) — full e2e: 11 routed dests + 6 observer callbacks
+// Test 1 (Decision #4) — full e2e: 11 routed dests + 5 observer callbacks
 // ---------------------------------------------------------------------------
 
 // TestE2EPipeline_AllDestinationsAndObserverFire is the headline
@@ -253,9 +250,10 @@ func e2eBuildSideEffects() (*SideEffectsObserver, *e2eFakes) {
 //   2. The unit-history Repo receives exactly one Record call for
 //      SettingDistanceUnit (the unit_history router writer is a
 //      no-op per phase-42a/0022).
-//   3. Each of the 6 SideEffectsObserver callbacks (live store,
-//      signal history, FSM, sessions, alerts, SSE) is invoked
-//      exactly once with the per-payload signals map.
+//   3. Each of the 5 SideEffectsObserver callbacks (live store,
+//      FSM, sessions, alerts, SSE) is invoked exactly once with
+//      the per-payload signals map. (signal_log writes are owned
+//      by the router signal_log writer, not the observer.)
 //   4. The observer's signals map carries every routed atomic plus
 //      the SettingDistanceUnit short-circuited atomic (12 entries
 //      total — the 11 routed sentinels above + the second
@@ -384,15 +382,12 @@ func TestE2EPipeline_AllDestinationsAndObserverFire(t *testing.T) {
 		}
 	})
 
-	// (8) Observer callback fan-out. Each of the 6 callbacks must
+	// (8) Observer callback fan-out. Each of the 5 callbacks must
 	// be invoked exactly once for the single payload.
 	t.Run("observer_callbacks_each_invoked_exactly_once", func(t *testing.T) {
 		t.Parallel()
 		if got := fakes.live.callCount(); got != 1 {
 			t.Errorf("LiveSignalStore.UpdateAll: got %d calls, want 1", got)
-		}
-		if got := fakes.history.callCount(); got != 1 {
-			t.Errorf("SignalHistoryWriter.Append: got %d calls, want 1", got)
 		}
 		if got := fakes.fsm.callCount(); got != 1 {
 			t.Errorf("FSMHandler.ProcessSignals: got %d calls, want 1", got)
@@ -501,9 +496,6 @@ func TestE2EPipeline_MalformedPayloadIsolatesFailure(t *testing.T) {
 	// (c) NO observer callback was invoked.
 	if got := fakes.live.callCount(); got != 0 {
 		t.Errorf("LiveSignalStore.UpdateAll: got %d calls on malformed payload, want 0", got)
-	}
-	if got := fakes.history.callCount(); got != 0 {
-		t.Errorf("SignalHistoryWriter.Append: got %d calls on malformed payload, want 0", got)
 	}
 	if got := fakes.fsm.callCount(); got != 0 {
 		t.Errorf("FSMHandler.ProcessSignals: got %d calls on malformed payload, want 0", got)

@@ -3,16 +3,26 @@ package database
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
-
-	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
 // SignalHistoryRow represents a single signal value at a point in time.
+//
+// Phase-42 / per-field MQTT cutover: this struct is now READ-ONLY — the
+// legacy buffered Append + FlushLoop write path was deleted because the
+// Phase-42a router writer (`internal/tesla/router/writers/signal_log_writer.go`)
+// is the canonical signal_log writer and used the new schema (vehicle_id,
+// ts, field, value_kind, str_value, bool_value, int_value, float_value,
+// time_value). The old write path used pre-Phase-42 column names
+// (`signal`, `value_num`, `value_str`, `value_bool`, `value_jsonb`,
+// `created_at`) and never succeeded after the schema migration; rows
+// were re-cycled through a Redis backlog that produced continuous
+// `column "signal" of relation "signal_log" does not exist` log spam.
+//
+// The struct field names + JSON tags below are kept for backward compat
+// with the API response shapes that consume `GetHistory` / `Query`.
 type SignalHistoryRow struct {
 	VehicleID  int64
 	Signal     string
@@ -23,31 +33,20 @@ type SignalHistoryRow struct {
 	CreatedAt  time.Time
 }
 
-// SignalHistoryWriter buffers incoming signals and batch-inserts them into
-// the signal_log table every flushInterval. Uses pgx CopyFrom for
-// maximum insert performance.
-//
-// 3-tier resilience: memory buffer → Redis backlog → MQTT persistence.
+// SignalHistoryWriter is the read-only accessor for the signal_log
+// hypertable. The legacy buffered write path (Append + FlushLoop +
+// Redis backlog) was removed as part of the Phase-42 / per-field MQTT
+// cutover — see `internal/tesla/router/writers/signal_log_writer.go`
+// for the canonical writer.
 type SignalHistoryWriter struct {
-	db       *DB
-	redis    *redis.Client
-	mu       sync.Mutex
-	buffer   []SignalHistoryRow
-	interval time.Duration
+	db *DB
 }
 
-// NewSignalHistoryWriter creates a writer with the given flush interval.
-// rdb may be nil — Redis backlog features become no-ops.
-func NewSignalHistoryWriter(db *DB, flushInterval time.Duration, rdb *redis.Client) *SignalHistoryWriter {
-	if flushInterval <= 0 {
-		flushInterval = config.SignalFlushInterval
-	}
-	return &SignalHistoryWriter{
-		db:       db,
-		redis:    rdb,
-		buffer:   make([]SignalHistoryRow, 0, 512),
-		interval: flushInterval,
-	}
+// NewSignalHistoryWriter constructs a read-only signal_log accessor.
+// The legacy `flushInterval` and `rdb` parameters were dropped — the
+// constructor now takes only the DB pool.
+func NewSignalHistoryWriter(db *DB) *SignalHistoryWriter {
+	return &SignalHistoryWriter{db: db}
 }
 
 // Cleanup deletes rows older than the retention period.
@@ -133,7 +132,6 @@ func (w *SignalHistoryWriter) Query(ctx context.Context, vehicleID int64, signal
 	}
 	offset := (page - 1) * perPage
 
-	// Count total
 	var total int64
 	err := w.db.Pool.QueryRow(ctx,
 		"SELECT COUNT(*) FROM signal_log WHERE vehicle_id = $1 AND field = ANY($2) AND ts BETWEEN $3 AND $4",
@@ -142,7 +140,6 @@ func (w *SignalHistoryWriter) Query(ctx context.Context, vehicleID int64, signal
 		return nil, 0, err
 	}
 
-	// Fetch page
 	rows, err := w.db.Pool.Query(ctx,
 		`SELECT field, COALESCE(float_value, int_value::float8), str_value, bool_value, ts
 		 FROM signal_log
@@ -220,19 +217,4 @@ func (w *SignalHistoryWriter) Stats(ctx context.Context, vehicleID int64, signal
 		stats = append(stats, s)
 	}
 	return stats, rows.Err()
-}
-
-// locationCompoundNames maps Location compound signal names to their flattened
-// Latitude/Longitude signal names. Returns false for non-Location compounds.
-func locationCompoundNames(signal string) (latName, lonName string, isLocation bool) {
-	switch signal {
-	case "Location":
-		return "Latitude", "Longitude", true
-	case "OriginLocation":
-		return "OriginLatitude", "OriginLongitude", true
-	case "DestinationLocation":
-		return "DestinationLatitude", "DestinationLongitude", true
-	default:
-		return "", "", false
-	}
 }

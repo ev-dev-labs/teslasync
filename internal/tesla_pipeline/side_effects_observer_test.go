@@ -125,26 +125,6 @@ func (s *fakeLiveStore) seed(vehicleID int64, signals map[string]any) {
 	s.state[vehicleID] = veh
 }
 
-type fakeHistoryWriter struct {
-	mu        sync.Mutex
-	calls     int
-	lastVeh   int64
-	lastSigs  map[string]any
-	rec       *callRecorder
-	orderTick int64
-}
-
-func (w *fakeHistoryWriter) Append(vehicleID int64, signals map[string]any) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.calls++
-	w.lastVeh = vehicleID
-	w.lastSigs = signals
-	if w.rec != nil {
-		w.orderTick = w.rec.next()
-	}
-}
-
 type fakeFSMHandler struct {
 	mu             sync.Mutex
 	calls          int
@@ -293,27 +273,25 @@ func (b *fakeBroadcaster) call(payload map[string]any) {
 	}
 }
 
-// newFakeKit constructs a default-good kit of all 7 fake dependencies
+// newFakeKit constructs a default-good kit of all 6 fake dependencies
 // + a shared callRecorder. Tests mutate individual fields (err,
 // vin, etc.) before calling New.
-func newFakeKit() (*fakeLiveStore, *fakeHistoryWriter, *fakeFSMHandler, *fakeSessionTracker, *fakeAlertEvaluator, *fakeVINResolver, *fakeBroadcaster, *callRecorder) {
+func newFakeKit() (*fakeLiveStore, *fakeFSMHandler, *fakeSessionTracker, *fakeAlertEvaluator, *fakeVINResolver, *fakeBroadcaster, *callRecorder) {
 	rec := &callRecorder{}
 	live := &fakeLiveStore{rec: rec}
-	hist := &fakeHistoryWriter{rec: rec}
 	fsm := &fakeFSMHandler{rec: rec}
 	sess := &fakeSessionTracker{rec: rec}
 	alerts := &fakeAlertEvaluator{rec: rec}
 	vin := &fakeVINResolver{vin: "VIN-DEFAULT"}
 	bcast := &fakeBroadcaster{rec: rec}
-	return live, hist, fsm, sess, alerts, vin, bcast, rec
+	return live, fsm, sess, alerts, vin, bcast, rec
 }
 
-func newDefaultObserver(t *testing.T) (*SideEffectsObserver, *fakeLiveStore, *fakeHistoryWriter, *fakeFSMHandler, *fakeSessionTracker, *fakeAlertEvaluator, *fakeVINResolver, *fakeBroadcaster) {
+func newDefaultObserver(t *testing.T) (*SideEffectsObserver, *fakeLiveStore, *fakeFSMHandler, *fakeSessionTracker, *fakeAlertEvaluator, *fakeVINResolver, *fakeBroadcaster) {
 	t.Helper()
-	live, hist, fsm, sess, alerts, vin, bcast, _ := newFakeKit()
+	live, fsm, sess, alerts, vin, bcast, _ := newFakeKit()
 	obs := New(Config{
 		Live:         live,
-		History:      hist,
 		FSM:          fsm,
 		Sessions:     sess,
 		Alerts:       alerts,
@@ -322,7 +300,7 @@ func newDefaultObserver(t *testing.T) (*SideEffectsObserver, *fakeLiveStore, *fa
 		Logger:       zerolog.Nop(),
 		Now:          func() time.Time { return time.Date(2026, 5, 5, 14, 0, 0, 0, time.UTC) },
 	})
-	return obs, live, hist, fsm, sess, alerts, vin, bcast
+	return obs, live, fsm, sess, alerts, vin, bcast
 }
 
 // ---------------------------------------------------------------------------
@@ -333,7 +311,7 @@ func newDefaultObserver(t *testing.T) (*SideEffectsObserver, *fakeLiveStore, *fa
 func TestSideEffectsObserver_AtomicsConvertedToSignalsMap(t *testing.T) {
 	t.Parallel()
 
-	obs, live, _, _, _, _, _, _ := newDefaultObserver(t)
+	obs, live, _, _, _, _, _ := newDefaultObserver(t)
 
 	atomics := []codec.Atomic{
 		{Field: "VehicleSpeed", Value: 12.5, EmittedAt: time.Now(), VehicleID: "VIN-A"},     // SI value (m/s)
@@ -379,7 +357,7 @@ func TestSideEffectsObserver_AtomicsConvertedToSignalsMap(t *testing.T) {
 func TestSideEffectsObserver_ThreadsPerFieldEventTimeToFSMAndSessions(t *testing.T) {
 	t.Parallel()
 
-	obs, _, _, fsm, sess, _, _, _ := newDefaultObserver(t)
+	obs, _, fsm, sess, _, _, _ := newDefaultObserver(t)
 
 	gearTs := time.Date(2026, 4, 18, 0, 22, 13, 0, time.UTC)
 	speedTs := time.Date(2026, 4, 18, 0, 22, 14, 0, time.UTC)
@@ -425,7 +403,7 @@ func TestSideEffectsObserver_ThreadsPerFieldEventTimeToFSMAndSessions(t *testing
 func TestSideEffectsObserver_DuplicateFieldKeepsLatestEmittedAtInFieldTs(t *testing.T) {
 	t.Parallel()
 
-	obs, _, _, fsm, _, _, _, _ := newDefaultObserver(t)
+	obs, _, fsm, _, _, _, _ := newDefaultObserver(t)
 
 	first := time.Date(2026, 4, 18, 0, 22, 10, 0, time.UTC)
 	second := time.Date(2026, 4, 18, 0, 22, 11, 0, time.UTC)
@@ -446,15 +424,16 @@ func TestSideEffectsObserver_DuplicateFieldKeepsLatestEmittedAtInFieldTs(t *test
 	}
 }
 // ---------------------------------------------------------------------------
-// Decision #10 (b): all 5 callbacks invoked exactly once per payload
-// (live, history, fsm, sessions, alerts). SSE counts as a 6th callback
-// — also exactly once. VIN lookup counts as a 7th — also exactly once.
+// Decision #10 (b): all 4 callbacks invoked exactly once per payload
+// (live, fsm, sessions, alerts). SSE counts as a 5th callback —
+// also exactly once. VIN lookup counts as a 6th — also exactly once.
+// (signal_log writes are owned by the router writer, not this observer.)
 // ---------------------------------------------------------------------------
 
 func TestSideEffectsObserver_AllCallbacksInvokedOncePerPayload(t *testing.T) {
 	t.Parallel()
 
-	obs, live, hist, fsm, sess, alerts, vin, bcast := newDefaultObserver(t)
+	obs, live, fsm, sess, alerts, vin, bcast := newDefaultObserver(t)
 
 	atomics := []codec.Atomic{
 		{Field: "VehicleSpeed", Value: 0.0, EmittedAt: time.Now(), VehicleID: "VIN-B"},
@@ -463,9 +442,6 @@ func TestSideEffectsObserver_AllCallbacksInvokedOncePerPayload(t *testing.T) {
 
 	if live.calls != 1 {
 		t.Errorf("live.calls = %d, want 1", live.calls)
-	}
-	if hist.calls != 1 {
-		t.Errorf("history.calls = %d, want 1", hist.calls)
 	}
 	if fsm.calls != 1 {
 		t.Errorf("fsm.calls = %d, want 1", fsm.calls)
@@ -493,7 +469,7 @@ func TestSideEffectsObserver_AllCallbacksInvokedOncePerPayload(t *testing.T) {
 func TestSideEffectsObserver_VINLookupInvokedOncePerPayload(t *testing.T) {
 	t.Parallel()
 
-	obs, _, _, _, _, _, vin, _ := newDefaultObserver(t)
+	obs, _, _, _, _, vin, _ := newDefaultObserver(t)
 
 	atomics := []codec.Atomic{
 		{Field: "Gear", Value: "D", EmittedAt: time.Now(), VehicleID: "VIN-C"},
@@ -526,7 +502,7 @@ func TestSideEffectsObserver_VINLookupInvokedOncePerPayload(t *testing.T) {
 func TestSideEffectsObserver_FSMAndSessionsAndAlertsShareSignalsMap(t *testing.T) {
 	t.Parallel()
 
-	obs, _, _, fsm, sess, alerts, _, _ := newDefaultObserver(t)
+	obs, _, fsm, sess, alerts, _, _ := newDefaultObserver(t)
 
 	atomics := []codec.Atomic{
 		{Field: "VehicleSpeed", Value: 1.0, EmittedAt: time.Now(), VehicleID: "VIN-D"},
@@ -559,7 +535,7 @@ func TestSideEffectsObserver_FSMAndSessionsAndAlertsShareSignalsMap(t *testing.T
 func TestSideEffectsObserver_AccumulatedIncludesPriorBatches(t *testing.T) {
 	t.Parallel()
 
-	obs, live, _, _, sess, alerts, _, _ := newDefaultObserver(t)
+	obs, live, _, sess, alerts, _, _ := newDefaultObserver(t)
 
 	// Pre-seed the live store with state from prior batches that
 	// the per-payload signals map does NOT carry.
@@ -622,7 +598,7 @@ func TestSideEffectsObserver_AccumulatedIncludesPriorBatches(t *testing.T) {
 func TestSideEffectsObserver_AccumulatedFallsBackToSignalsOnGetAllError(t *testing.T) {
 	t.Parallel()
 
-	obs, live, _, _, sess, alerts, _, _ := newDefaultObserver(t)
+	obs, live, _, sess, alerts, _, _ := newDefaultObserver(t)
 
 	// Inject a transient GetAll failure. UpdateAll still succeeds
 	// (so live.lastSigs is populated) but the bridge cannot build
@@ -651,7 +627,7 @@ func TestSideEffectsObserver_AccumulatedFallsBackToSignalsOnGetAllError(t *testi
 func TestSideEffectsObserver_AccumulatedFallsBackToSignalsOnFirstMessage(t *testing.T) {
 	t.Parallel()
 
-	obs, _, _, _, sess, alerts, _, _ := newDefaultObserver(t)
+	obs, _, _, sess, alerts, _, _ := newDefaultObserver(t)
 
 	// No prior batches seeded; UpdateAll merges the current
 	// payload's atomics into the empty snapshot. GetAll then
@@ -682,7 +658,7 @@ func TestSideEffectsObserver_AccumulatedFallsBackToSignalsOnFirstMessage(t *test
 func TestSideEffectsObserver_LiveStoreCalledBeforeFSM(t *testing.T) {
 	t.Parallel()
 
-	obs, live, _, fsm, _, _, _, _ := newDefaultObserver(t)
+	obs, live, fsm, _, _, _, _ := newDefaultObserver(t)
 	atomics := []codec.Atomic{
 		{Field: "VehicleSpeed", Value: 5.5, EmittedAt: time.Now(), VehicleID: "VIN-E"},
 	}
@@ -705,7 +681,7 @@ func TestSideEffectsObserver_LiveStoreCalledBeforeFSM(t *testing.T) {
 func TestSideEffectsObserver_SSECalledLast(t *testing.T) {
 	t.Parallel()
 
-	obs, live, hist, fsm, sess, alerts, _, bcast := newDefaultObserver(t)
+	obs, live, fsm, sess, alerts, _, bcast := newDefaultObserver(t)
 	atomics := []codec.Atomic{
 		{Field: "VehicleSpeed", Value: 1.0, EmittedAt: time.Now(), VehicleID: "VIN-F"},
 	}
@@ -719,7 +695,6 @@ func TestSideEffectsObserver_SSECalledLast(t *testing.T) {
 		tick int64
 	}{
 		{"live", live.orderTick},
-		{"history", hist.orderTick},
 		{"fsm", fsm.orderTick},
 		{"sessions", sess.orderTick},
 		{"alerts", alerts.orderTick},
@@ -735,11 +710,11 @@ func TestSideEffectsObserver_SSECalledLast(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Full ordering pin: live -> history -> fsm -> live.GetAll -> sessions
-// -> alerts -> sse (sessions and alerts can be in either order between
-// themselves but MUST sit between live.GetAll and sse). This is the
-// single most important behavioural assertion for the bridge — if any
-// future refactor reorders the callbacks this test breaks loudly.
+// Full ordering pin: live -> fsm -> live.GetAll -> sessions -> alerts
+// -> sse (sessions and alerts can be in either order between themselves
+// but MUST sit between live.GetAll and sse). This is the single most
+// important behavioural assertion for the bridge — if any future
+// refactor reorders the callbacks this test breaks loudly.
 //
 // live.GetAll runs AFTER FSM and BEFORE sessions/alerts so the
 // accumulated snapshot includes the current payload's atomics
@@ -750,25 +725,22 @@ func TestSideEffectsObserver_SSECalledLast(t *testing.T) {
 func TestSideEffectsObserver_FullCallOrderLivesUpToDesignContract(t *testing.T) {
 	t.Parallel()
 
-	obs, live, hist, fsm, sess, alerts, _, bcast := newDefaultObserver(t)
+	obs, live, fsm, sess, alerts, _, bcast := newDefaultObserver(t)
 	atomics := []codec.Atomic{
 		{Field: "VehicleSpeed", Value: 7.7, EmittedAt: time.Now(), VehicleID: "VIN-G"},
 	}
 	obs.OnPayloadProcessed(context.Background(), 1, atomics)
 
-	// live.UpdateAll(1) < history(2) < fsm(3) < live.GetAll(4) <
-	// {sessions, alerts}(5..6) < sse(7)
+	// live.UpdateAll(1) < fsm(2) < live.GetAll(3) <
+	// {sessions, alerts}(4..5) < sse(6)
 	if live.orderTick != 1 {
 		t.Errorf("live.UpdateAll.orderTick = %d, want 1", live.orderTick)
 	}
-	if hist.orderTick != 2 {
-		t.Errorf("history.orderTick = %d, want 2", hist.orderTick)
+	if fsm.orderTick != 2 {
+		t.Errorf("fsm.orderTick = %d, want 2", fsm.orderTick)
 	}
-	if fsm.orderTick != 3 {
-		t.Errorf("fsm.orderTick = %d, want 3", fsm.orderTick)
-	}
-	if live.getAllOrderTick != 4 {
-		t.Errorf("live.GetAll.orderTick = %d, want 4 (after fsm, before sessions/alerts)", live.getAllOrderTick)
+	if live.getAllOrderTick != 3 {
+		t.Errorf("live.GetAll.orderTick = %d, want 3 (after fsm, before sessions/alerts)", live.getAllOrderTick)
 	}
 	// Sessions and alerts run consecutively after live.GetAll but
 	// before sse. We do NOT pin which runs first because Decision #10
@@ -777,17 +749,17 @@ func TestSideEffectsObserver_FullCallOrderLivesUpToDesignContract(t *testing.T) 
 	if pair[0] == 0 || pair[1] == 0 {
 		t.Fatalf("sessions/alerts not invoked: sess=%d alerts=%d", pair[0], pair[1])
 	}
-	if !((pair[0] == 5 && pair[1] == 6) || (pair[0] == 6 && pair[1] == 5)) {
-		t.Errorf("sessions+alerts must run on ticks {5,6} (after live.GetAll, before sse); got sess=%d alerts=%d", pair[0], pair[1])
+	if !((pair[0] == 4 && pair[1] == 5) || (pair[0] == 5 && pair[1] == 4)) {
+		t.Errorf("sessions+alerts must run on ticks {4,5} (after live.GetAll, before sse); got sess=%d alerts=%d", pair[0], pair[1])
 	}
-	if bcast.orderTick != 7 {
-		t.Errorf("broadcastSSE.orderTick = %d, want 7 (final tick)", bcast.orderTick)
+	if bcast.orderTick != 6 {
+		t.Errorf("broadcastSSE.orderTick = %d, want 6 (final tick)", bcast.orderTick)
 	}
 }
 
 // ---------------------------------------------------------------------------
 // VIN lookup failure path: sessions + alerts SKIPPED, but the other
-// 4 callbacks proceed. Documents the partial-failure semantics that
+// 3 callbacks proceed. Documents the partial-failure semantics that
 // the bridge inherits from the legacy ProcessSignals path (which had
 // no VIN lookup but did skip vehicleID-keyed work when vehicleID==0).
 // ---------------------------------------------------------------------------
@@ -795,11 +767,10 @@ func TestSideEffectsObserver_FullCallOrderLivesUpToDesignContract(t *testing.T) 
 func TestSideEffectsObserver_VINLookupFailureSkipsSessionsAndAlertsOnly(t *testing.T) {
 	t.Parallel()
 
-	live, hist, fsm, sess, alerts, vinResolver, bcast, _ := newFakeKit()
+	live, fsm, sess, alerts, vinResolver, bcast, _ := newFakeKit()
 	vinResolver.err = errors.New("vehicle not registered")
 	obs := New(Config{
 		Live:         live,
-		History:      hist,
 		FSM:          fsm,
 		Sessions:     sess,
 		Alerts:       alerts,
@@ -815,9 +786,6 @@ func TestSideEffectsObserver_VINLookupFailureSkipsSessionsAndAlertsOnly(t *testi
 
 	if live.calls != 1 {
 		t.Errorf("live.calls = %d, want 1 (live must run regardless of VIN)", live.calls)
-	}
-	if hist.calls != 1 {
-		t.Errorf("history.calls = %d, want 1 (history must run regardless of VIN)", hist.calls)
 	}
 	if fsm.calls != 1 {
 		t.Errorf("fsm.calls = %d, want 1 (FSM must run regardless of VIN)", fsm.calls)
@@ -843,7 +811,7 @@ func TestSideEffectsObserver_VINLookupFailureSkipsSessionsAndAlertsOnly(t *testi
 func TestSideEffectsObserver_LiveStoreErrorDoesNotFailChain(t *testing.T) {
 	t.Parallel()
 
-	live, hist, fsm, sess, alerts, vinResolver, bcast, _ := newFakeKit()
+	live, fsm, sess, alerts, vinResolver, bcast, _ := newFakeKit()
 	live.err = errors.New("redis publish queue full")
 
 	var logBuf strings.Builder
@@ -851,7 +819,6 @@ func TestSideEffectsObserver_LiveStoreErrorDoesNotFailChain(t *testing.T) {
 
 	obs := New(Config{
 		Live:         live,
-		History:      hist,
 		FSM:          fsm,
 		Sessions:     sess,
 		Alerts:       alerts,
@@ -868,8 +835,8 @@ func TestSideEffectsObserver_LiveStoreErrorDoesNotFailChain(t *testing.T) {
 	if live.calls != 1 {
 		t.Errorf("live.calls = %d, want 1", live.calls)
 	}
-	if hist.calls != 1 || fsm.calls != 1 || sess.calls != 1 || alerts.calls != 1 || bcast.calls != 1 {
-		t.Errorf("downstream callbacks did not all run after live error: hist=%d fsm=%d sess=%d alerts=%d bcast=%d (want all=1)", hist.calls, fsm.calls, sess.calls, alerts.calls, bcast.calls)
+	if fsm.calls != 1 || sess.calls != 1 || alerts.calls != 1 || bcast.calls != 1 {
+		t.Errorf("downstream callbacks did not all run after live error: fsm=%d sess=%d alerts=%d bcast=%d (want all=1)", fsm.calls, sess.calls, alerts.calls, bcast.calls)
 	}
 	logged := logBuf.String()
 	if !strings.Contains(logged, `"level":"warn"`) {
@@ -888,7 +855,7 @@ func TestSideEffectsObserver_LiveStoreErrorDoesNotFailChain(t *testing.T) {
 func TestSideEffectsObserver_SSEPayloadShape(t *testing.T) {
 	t.Parallel()
 
-	obs, _, _, _, _, _, _, bcast := newDefaultObserver(t)
+	obs, _, _, _, _, _, bcast := newDefaultObserver(t)
 
 	atomics := []codec.Atomic{
 		{Field: "Gear", Value: "D", EmittedAt: time.Now(), VehicleID: "VIN-SSE"},
@@ -927,7 +894,7 @@ func TestSideEffectsObserver_SSEPayloadShape(t *testing.T) {
 func TestSideEffectsObserver_DoesNotMutateAtomicsSlice(t *testing.T) {
 	t.Parallel()
 
-	obs, _, _, _, _, _, _, _ := newDefaultObserver(t)
+	obs, _, _, _, _, _, _ := newDefaultObserver(t)
 
 	atomics := []codec.Atomic{
 		{Field: "Gear", Value: "D", EmittedAt: time.Now(), VehicleID: "VIN-IMMUT"},
@@ -952,12 +919,12 @@ func TestSideEffectsObserver_DoesNotMutateAtomicsSlice(t *testing.T) {
 func TestSideEffectsObserver_EmptyAtomicsStillRunsAllCallbacks(t *testing.T) {
 	t.Parallel()
 
-	obs, live, hist, fsm, sess, alerts, _, bcast := newDefaultObserver(t)
+	obs, live, fsm, sess, alerts, _, bcast := newDefaultObserver(t)
 
 	obs.OnPayloadProcessed(context.Background(), 1, []codec.Atomic{})
 
-	if live.calls != 1 || hist.calls != 1 || fsm.calls != 1 || sess.calls != 1 || alerts.calls != 1 || bcast.calls != 1 {
-		t.Errorf("not all callbacks ran on empty atomics: live=%d hist=%d fsm=%d sess=%d alerts=%d bcast=%d (want all=1)", live.calls, hist.calls, fsm.calls, sess.calls, alerts.calls, bcast.calls)
+	if live.calls != 1 || fsm.calls != 1 || sess.calls != 1 || alerts.calls != 1 || bcast.calls != 1 {
+		t.Errorf("not all callbacks ran on empty atomics: live=%d fsm=%d sess=%d alerts=%d bcast=%d (want all=1)", live.calls, fsm.calls, sess.calls, alerts.calls, bcast.calls)
 	}
 	if live.lastSigs == nil {
 		t.Errorf("signals map is nil on empty atomics; should be empty (non-nil) so callbacks see len()==0")
@@ -976,10 +943,9 @@ func TestSideEffectsObserver_EmptyAtomicsStillRunsAllCallbacks(t *testing.T) {
 func TestNew_NilDependenciesPanic(t *testing.T) {
 	t.Parallel()
 
-	live, hist, fsm, sess, alerts, vin, bcast, _ := newFakeKit()
+	live, fsm, sess, alerts, vin, bcast, _ := newFakeKit()
 	good := Config{
 		Live:         live,
-		History:      hist,
 		FSM:          fsm,
 		Sessions:     sess,
 		Alerts:       alerts,
@@ -993,7 +959,6 @@ func TestNew_NilDependenciesPanic(t *testing.T) {
 		match string
 	}{
 		{"Live", func(c *Config) { c.Live = nil }, "Config.Live"},
-		{"History", func(c *Config) { c.History = nil }, "Config.History"},
 		{"FSM", func(c *Config) { c.FSM = nil }, "Config.FSM"},
 		{"Sessions", func(c *Config) { c.Sessions = nil }, "Config.Sessions"},
 		{"Alerts", func(c *Config) { c.Alerts = nil }, "Config.Alerts"},
@@ -1028,10 +993,9 @@ func TestNew_NilDependenciesPanic(t *testing.T) {
 func TestNew_DefaultClockUsesWallTime(t *testing.T) {
 	t.Parallel()
 
-	live, hist, fsm, sess, alerts, vin, bcast, _ := newFakeKit()
+	live, fsm, sess, alerts, vin, bcast, _ := newFakeKit()
 	obs := New(Config{
 		Live:         live,
-		History:      hist,
 		FSM:          fsm,
 		Sessions:     sess,
 		Alerts:       alerts,

@@ -16,7 +16,7 @@
 // in-memory recording-fake variant.
 //
 // Type names use the `e2e` prefix throughout to avoid collision with
-// the existing fakeLiveStore / fakeHistoryWriter / fakeFSMHandler /
+// the existing fakeLiveStore / fakeFSMHandler /
 // fakeSessionTracker / fakeAlertEvaluator / fakeVINResolver /
 // fakeBroadcaster set in side_effects_observer_test.go (same package).
 //
@@ -310,29 +310,6 @@ func (s *e2eLiveStore) lastCall() *e2eLiveCall {
 	}
 	c := s.calls[len(s.calls)-1]
 	return &c
-}
-
-// e2eHistoryCall records a SignalHistoryWriter.Append invocation.
-type e2eHistoryCall struct {
-	VehicleID int64
-	Signals   map[string]any
-}
-
-type e2eHistoryWriter struct {
-	mu    sync.Mutex
-	calls []e2eHistoryCall
-}
-
-func (h *e2eHistoryWriter) Append(vehicleID int64, signals map[string]any) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.calls = append(h.calls, e2eHistoryCall{VehicleID: vehicleID, Signals: copyAnyMapE2E(signals)})
-}
-
-func (h *e2eHistoryWriter) callCount() int {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	return len(h.calls)
 }
 
 // e2eFSMCall records an FSMHandler.ProcessSignals invocation.

@@ -22,13 +22,13 @@
 //     resolution. Those are application-level concerns that don't
 //     belong in the (pure, single-responsibility) normalize package.
 //
-//   - Tests for the bridge use mock implementations of the 6
+//   - Tests for the bridge use mock implementations of the 5
 //     callback interfaces declared here (LiveSignalStore,
-//     SignalHistoryWriter, FSMHandler, SessionTracker, AlertEvaluator,
-//     VINResolver) so the bridge can be exercised without spinning
-//     up a TelemetryHandler. Putting the interfaces here (rather
-//     than in internal/api) keeps internal/api free of the bridge's
-//     mock surface.
+//     FSMHandler, SessionTracker, AlertEvaluator, VINResolver) so
+//     the bridge can be exercised without spinning up a
+//     TelemetryHandler. Putting the interfaces here (rather than in
+//     internal/api) keeps internal/api free of the bridge's mock
+//     surface.
 //
 // Production wiring of *SideEffectsObserver into normalize.New is
 // deferred to phase-42a/0050 (the MQTT subscriber cutover prompt).
@@ -80,15 +80,6 @@ import (
 type LiveSignalStore interface {
 	UpdateAll(ctx context.Context, vehicleID int64, signals map[string]any) error
 	GetAll(ctx context.Context, vehicleID int64) (map[string]any, error)
-}
-
-// SignalHistoryWriter mirrors the buffered Append on
-// internal/database.SignalHistoryWriter. Append is non-blocking on
-// the legacy type (signals are queued for batched flush), so the
-// interface returns no error — buffer-overflow conditions surface
-// via metrics and are out of scope for the bridge.
-type SignalHistoryWriter interface {
-	Append(vehicleID int64, signals map[string]any)
 }
 
 // FSMHandler mirrors (*internal/api.FSMHandler).ProcessSignals. The
@@ -156,8 +147,8 @@ type AlertEvaluator interface {
 // "vehicle not registered" (the analogue of the writer-layer
 // "vehicle not found" PII-clean error in router/writers/*). The
 // bridge logs the error at WARN and SKIPS sessions+alerts for the
-// payload — live store / history / FSM / SSE proceed because they
-// do not depend on VIN.
+// payload — live store / FSM / SSE proceed because they do not
+// depend on VIN.
 type VINResolver interface {
 	VINByID(ctx context.Context, vehicleID int64) (string, error)
 }
@@ -168,12 +159,17 @@ type VINResolver interface {
 // internally; the bridge just delivers the wire-shaped payload.
 type BroadcastSSEFunc func(payload map[string]any)
 
-// Config bundles the SideEffectsObserver's six callback dependencies
+// Config bundles the SideEffectsObserver's callback dependencies
 // plus optional logger and clock. Required dependencies are checked
 // at constructor time — misuse is a programming bug and panics.
+//
+// Note: signal_log durable history writes are NOT a SideEffects
+// concern — they are owned by the router signal_log_writer.go which
+// runs synchronously in the routing path. The legacy
+// `History SignalHistoryWriter` field was deleted as part of the
+// per-field MQTT cutover.
 type Config struct {
 	Live         LiveSignalStore
-	History      SignalHistoryWriter
 	FSM          FSMHandler
 	Sessions     SessionTracker
 	Alerts       AlertEvaluator
@@ -197,7 +193,6 @@ type Config struct {
 // against the Pipeline at phase-42a/0050 cutover.
 type SideEffectsObserver struct {
 	live         LiveSignalStore
-	history      SignalHistoryWriter
 	fsm          FSMHandler
 	sessions     SessionTracker
 	alerts       AlertEvaluator
@@ -217,8 +212,6 @@ func New(cfg Config) *SideEffectsObserver {
 	switch {
 	case cfg.Live == nil:
 		panic("teslapipeline: New: Config.Live must be non-nil")
-	case cfg.History == nil:
-		panic("teslapipeline: New: Config.History must be non-nil")
 	case cfg.FSM == nil:
 		panic("teslapipeline: New: Config.FSM must be non-nil")
 	case cfg.Sessions == nil:
@@ -236,7 +229,6 @@ func New(cfg Config) *SideEffectsObserver {
 	}
 	return &SideEffectsObserver{
 		live:         cfg.Live,
-		history:      cfg.History,
 		fsm:          cfg.FSM,
 		sessions:     cfg.Sessions,
 		alerts:       cfg.Alerts,
@@ -248,35 +240,36 @@ func New(cfg Config) *SideEffectsObserver {
 }
 
 // OnPayloadProcessed implements normalize.AtomicsObserver. It runs
-// the legacy 5 cross-cutting effects in the order locked by
-// phase-42a/0000 Decision #10 + the prompt's DESIGN block:
+// the cross-cutting side-effects in the order locked by
+// phase-42a/0000 Decision #10 + the prompt's DESIGN block, as
+// amended by the per-field MQTT cutover (signal_log writes are
+// owned by the router writer, NOT this observer):
 //
 //  1. live.UpdateAll(...)               — L1 in-process state
-//  2. history.Append(...)               — durable history write
-//  3. fsm.ProcessSignals(...)           — drive/charge/sleep FSM
+//  2. fsm.ProcessSignals(...)           — drive/charge/sleep FSM
 //                                          (may read live state from
 //                                          step 1)
-//  4. live.GetAll(...)                  — cross-batch accumulated
+//  3. live.GetAll(...)                  — cross-batch accumulated
 //                                          snapshot for sessions +
 //                                          alerts (per-field MQTT
 //                                          delivers one atomic per
 //                                          payload, so the per-batch
 //                                          signals map alone is
 //                                          insufficient)
-//  5. sessions.ProcessSignals(...)      — drive/charge sessions
+//  4. sessions.ProcessSignals(...)      — drive/charge sessions
 //     alerts.Evaluate(...)              — alert rule fanout
 //                                          (current=signals from
 //                                          this payload;
 //                                          accumulated=snapshot
-//                                          from step 4)
-//  6. broadcastSSE(...)                 — SSE fanout LAST so the
+//                                          from step 3)
+//  5. broadcastSSE(...)                 — SSE fanout LAST so the
 //                                          wire view reflects all
 //                                          upstream side-effects
 //
 // VIN resolution is performed once via vinResolver.VINByID. If the
 // lookup fails (vehicle not registered, transient pgx error) the
 // bridge logs at WARN and SKIPS sessions + alerts only — the other
-// four callbacks proceed because they key off vehicleID, not vin.
+// callbacks proceed because they key off vehicleID, not vin.
 //
 // The atomics slice is the post-route slice from the Pipeline:
 // per-atomic Value fields hold the SI value for unit-bearing fields
@@ -313,7 +306,7 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 	}
 
 	// Step 1: live store FIRST so FSM may read live state AND so the
-	// accumulated snapshot built in step 4 reflects the current
+	// accumulated snapshot built in step 3 reflects the current
 	// payload's atomics merged with all prior batches.
 	if err := o.live.UpdateAll(ctx, vehicleID, signals); err != nil {
 		o.log.Warn().
@@ -323,15 +316,12 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 			Msg("teslapipeline: live signal store update failed")
 	}
 
-	// Step 2: durable history append (non-blocking by contract).
-	o.history.Append(vehicleID, signals)
-
-	// Step 3: FSM dispatch. The FSM may read live state populated by
+	// Step 2: FSM dispatch. The FSM may read live state populated by
 	// step 1 — calling FSM before live is the regression that
 	// Decision #10(e) explicitly guards against.
 	o.fsm.ProcessSignalsAt(ctx, vehicleID, signals, payloadTs, fieldTs)
 
-	// Step 4: build the cross-batch accumulated snapshot. Per-field
+	// Step 3: build the cross-batch accumulated snapshot. Per-field
 	// MQTT delivers one atomic per payload, so the per-payload
 	// signals map carries at most one field — sessions/alerts MUST
 	// receive the union of all prior batches to make "use last-known
