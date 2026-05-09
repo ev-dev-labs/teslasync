@@ -65,7 +65,13 @@ registerRoute(
 interface PushPayload {
   title?: string
   body?: string
-  icon?: string
+  // Phase-49 / Slice 0010 — `icon` was removed from the wire payload
+  // (the duplicate-icon bug). The interface intentionally drops it too
+  // so a future contributor cannot start populating `data.icon` from
+  // the SW side without first re-introducing the contract on the
+  // backend's webpush.Payload struct (which has its own regression
+  // test pinning the absence). Per-event contextual icons are tracked
+  // as future work; see prompt 0010 for the rationale.
   badge?: string
   tag?: string
   url?: string
@@ -88,14 +94,19 @@ self.addEventListener('push', (event: PushEvent) => {
   const title = data.title ?? 'TeslaSync'
   const options: NotificationOptions = {
     body: data.body ?? '',
-    // `icon` is the large coloured app icon on the right of the notification.
-    icon: data.icon ?? '/icons/icon-192.png',
-    // `badge` is the small monochrome status-bar icon on Android. The OS
-    // discards colour data and re-tints the alpha channel, so this MUST
-    // be a white silhouette on a transparent background. Passing the full
-    // colour app icon causes Chrome to render the icon on BOTH sides of
-    // the notification (status-bar AND large icon slot), producing the
-    // "duplicate icon" bug.
+    // Phase-49 / Slice 0010 — `icon` is intentionally NOT set. The PWA
+    // manifest icon (web/vite.config.ts) already populates the left
+    // thumbnail slot of the Android notification card. Setting `icon`
+    // here populates the OPTIONAL right-hand large-image slot too,
+    // which on Android Chrome renders the SAME teal lightning bolt as
+    // the manifest icon and produces the user-reported "duplicate
+    // icon" appearance. Leaving it unset matches the Macy's / Yahoo
+    // notification style (icon on left only). Per-event contextual
+    // icons are tracked as future work; see prompt 0010.
+    //
+    // `badge` is the small monochrome status-bar icon on Android. The
+    // OS discards colour data and re-tints the alpha channel, so this
+    // MUST be a white silhouette on a transparent background.
     // See: https://developer.mozilla.org/en-US/docs/Web/API/Notification/badge
     badge: data.badge ?? '/icons/badge-72.png',
     tag: data.tag,

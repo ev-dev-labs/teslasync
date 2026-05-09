@@ -1,0 +1,110 @@
+phase-49 / slice 0010 — duplicate notification icon fix
+========================================================
+
+OUTCOME: GREEN (with one DEFERRED-MANUAL-QA item documented below)
+
+Files changed
+-------------
+MOD internal/webpush/service.go
+MOD internal/webpush/service_test.go
+MOD web/src/sw/sw.ts
+NEW web/src/sw/__tests__/sw.test.ts
+MOD web/public/icons/README.md
+
+Allowed files vs. actual
+------------------------
+Prompt 0010-notification-icon-fix.prompt.md allowed:
+  - internal/webpush/service.go                           ✅ touched
+  - internal/webpush/service_test.go                      ✅ touched
+  - web/src/sw/sw.ts                                      ✅ touched
+  - web/src/sw/__tests__/sw.test.ts (NEW)                 ✅ created
+  - web/public/icons/README.md                            ✅ touched
+  - cmd/notification-worker/main.go                       not needed (pre-verified)
+  - internal/app/new.go                                   not needed (pre-verified)
+
+Deviations
+----------
+D1. cmd/notification-worker/main.go (allowed) NOT touched.
+    L104 already constructs webpush.Payload{Title, Body, URL, Tag,
+    Severity} with no Icon. Verified by direct read before any edits;
+    no caller-site update was required by the struct deletion.
+
+D2. internal/app/new.go (allowed) NOT touched.
+    L289 already constructs webpush.Payload without Icon (same pattern
+    as above). Verified by direct read.
+
+D3. Acceptance criterion #5 (manual Android verification) is DEFERRED
+    to post-merge manual QA. Rationale: the agent has no live VAPID
+    push subscription, no Android device, and no browser DevTools to
+    perform the visual side-by-side comparison the criterion calls for.
+
+D4. Acceptance criterion #6 (Chrome DevTools simulation) is also
+    DEFERRED for the same reason — no browser access in this
+    environment. The code-level safety net documented in
+    "Validation results" below is judged sufficient to prevent silent
+    regression of the original bug; #5 / #6 remain available to a
+    human reviewer with a phone for final visual sign-off.
+
+Validation results
+------------------
+go build ./...                                              PASS
+go vet ./...                                                PASS
+go test -race -count=1 ./internal/webpush/...               PASS
+go test -count=1 -run 'TestPayload_NoIconField|TestPayload_JSONShape_OmitsIcon' ./internal/webpush/
+                                                            2/2 PASS
+go test -count=1 ./internal/webpush/ ./internal/app/        PASS
+cd web && npx tsc --noEmit                                  PASS (project-wide)
+cd web && npx vitest run src/sw/__tests__/sw.test.ts        3/3 PASS
+
+Acceptance grep proofs
+----------------------
+grep -n '"icon"' internal/webpush/service.go                0 matches  ✅ (#3)
+grep -n 'Icon'   internal/webpush/service.go                1 match — line 39, the
+                                                            doc-comment that
+                                                            explains why the
+                                                            field is intentionally
+                                                            absent (rationale, not
+                                                            field re-introduction)
+grep -n 'icon:'  web/src/sw/sw.ts                           0 matches  ✅ (#4)
+grep -n 'icon'   web/src/sw/sw.ts                           comment lines only,
+                                                            inside the
+                                                            NotificationOptions
+                                                            block, explaining
+                                                            why icon is omitted
+
+Code-level safety net (rationale for accepting deferral of #5 / #6)
+-------------------------------------------------------------------
+Three reinforcing layers prevent silent reintroduction of the bug:
+
+1. Wire-format pin (backend):
+   `TestPayload_NoIconField` walks `webpush.Payload`'s reflected
+   struct fields and rejects any field whose name OR JSON tag starts
+   with the literal string "icon" (case-insensitive). A future PR that
+   re-adds `Icon string `json:"icon,omitempty"` will fail this test
+   immediately.
+
+2. Wire-shape pin (backend):
+   `TestPayload_JSONShape_OmitsIcon` marshals a fully-populated
+   Payload to JSON and asserts the resulting bytes do not contain the
+   substring `"icon"`. This catches the case where a future Payload
+   embeds a sub-struct that itself transmits an icon field.
+
+3. Renderer pin (service worker):
+   `web/src/sw/__tests__/sw.test.ts` synthesises a real `push` event,
+   dispatches it through the SW's registered handler, captures the
+   `self.registration.showNotification(title, options)` call, and
+   asserts `options.icon === undefined` for three scenarios:
+     - typical alert payload (no icon on the wire);
+     - critical alert payload (also asserts requireInteraction=true);
+     - rogue payload that includes a stray `icon` key — the SW's
+       typed PushPayload omits the field, so it cannot leak through
+       even if a future backend regression starts emitting it.
+
+Slice 0010 closes the user-reported "duplicate icon" bug at the
+contract level. A human reviewer with an Android device should still
+visually confirm criterion #5 once before final merge; the DEFERRED
+mark is a reminder of that, not a blocker.
+
+=== STATUS ===
+EXIT=0
+STATUS=GREEN
