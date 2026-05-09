@@ -31,14 +31,46 @@ export interface VehicleLiveSignalsResponse {
   signals?: Record<string, VehicleLiveSignal | unknown>;
 }
 
+/**
+ * useSignals — list of available signal NAMES for a vehicle.
+ *
+ * Backend (post Phase-42 / per-field MQTT cutover) returns the rich
+ * catalog shape `{ signals: AvailableSignal[] }` where each entry is
+ * `{ name, category, value_kind, unit_kind, is_compound, is_setting_unit }`.
+ * This hook normalizes that response down to `string[]` of signal names
+ * because every consumer (SignalLogViewerPage, SignalExplorerPage,
+ * SignalDiffPage, LiveSignalSparklinesWidget, SignalHealthWidget)
+ * already treats the result as a flat list of names.
+ *
+ * For the typed/rich catalog (with value_kind / unit_kind discriminators)
+ * use `useAvailableSignals` from `@/api/hooks/useSignals` instead.
+ *
+ * Legacy fallback: pre-Phase-42 deployments returned bare `string[]` or
+ * `{ signals: string[] }`. Both shapes are still accepted; malformed
+ * entries (non-string, missing `name`) are dropped silently.
+ */
 export function useSignals(vehicleId: number) {
   return useQuery({
     queryKey: telemetryKeys.signals(vehicleId),
-    queryFn: async ({ signal }) => {
-      const resp = await request<{ signals?: string[] } | string[]>(`/signals/${vehicleId}/available`, { signal });
-      // API wraps signals in { signals: [...] } but old code expected string[]
-      if (Array.isArray(resp)) return resp;
-      return (resp as { signals?: string[] }).signals ?? [];
+    queryFn: async ({ signal }): Promise<string[]> => {
+      const resp = await request<
+        | { signals?: Array<{ name?: unknown } | string> }
+        | Array<{ name?: unknown } | string>
+      >(`/signals/${vehicleId}/available`, { signal });
+
+      const arr: unknown[] = Array.isArray(resp)
+        ? resp
+        : ((resp as { signals?: unknown[] })?.signals ?? []);
+
+      return arr.reduce<string[]>((acc, entry) => {
+        if (typeof entry === 'string') {
+          acc.push(entry);
+        } else if (entry && typeof entry === 'object' && 'name' in entry) {
+          const name = (entry as { name: unknown }).name;
+          if (typeof name === 'string' && name.length > 0) acc.push(name);
+        }
+        return acc;
+      }, []);
     },
     enabled: vehicleId > 0,
     staleTime: STALE_TIMES.STANDARD,
