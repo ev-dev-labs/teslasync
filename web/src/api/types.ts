@@ -923,10 +923,15 @@ export interface MotorSnapshot {
   // Battery voltage (DiVBatF/R) — volts (V, derived SI)
   vbat_front: number | null
   vbat_rear: number | null
-  // Fields with no backing motor signal — always undefined from signal_log backend
-  /** Power in kilowatts (kW, derived SI). */
+  // Derived in motor_handler.go via injectDerivedMotorPower:
+  // sum_W = vbat_front × motor_current_front + vbat_rear × motor_current_rear
+  // power_kw = max(0, sum_W) / 1000   (drive — motor consuming pack power)
+  // regen_kw = max(0, -sum_W) / 1000  (regen — motor sourcing back to pack)
+  // Both keys are OMITTED when neither motor has a complete (V, I) pair, so
+  // chart consumers can plot true gaps instead of misleading zeros.
+  /** Power in kilowatts (kW, derived SI). Drive only; regen is split into regen_kw. */
   power_kw?: number | null
-  /** Regen power in kilowatts (kW, derived SI). */
+  /** Regen power in kilowatts (kW, derived SI). Always non-negative; magnitude of pack-side reverse flow. */
   regen_kw?: number | null
   /** Battery temperature in degrees Celsius (SI). */
   battery_temp_c?: number | null
