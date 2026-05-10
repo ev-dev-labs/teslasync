@@ -8,11 +8,13 @@ import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { MotorSnapshot } from '@/api/types';
+import type { TemperatureUnitPref } from '@/lib/unitConversion';
 
 interface LiveMotorStatusProps {
   motorLatest: MotorSnapshot | null | undefined;
   toTemperatureDisplay: (v: number) => number;
-  tempUnit: string;
+  // See MotorEfficiencyInsights tempUnit comment — already includes '°'.
+  tempUnit: TemperatureUnitPref;
 }
 
 export default function LiveMotorStatus({ motorLatest, toTemperatureDisplay, tempUnit }: LiveMotorStatusProps) {
@@ -70,13 +72,13 @@ export default function LiveMotorStatus({ motorLatest, toTemperatureDisplay, tem
                 value={motorTempDisplay}
                 max={200}
                 label={t('dynamics.motorTemp', 'Motor')}
-                unit={`°${tempUnit}`}
+                unit={tempUnit}
                 color="#f59e0b"
                 size={120}
               />
               <span className="text-xs text-[var(--text-secondary)]">
                 {motorTempC != null && isFinite(motorTempC)
-                  ? `${fmtNumber(toTemperatureDisplay(motorTempC), 1)}°${tempUnit}`
+                  ? `${fmtNumber(toTemperatureDisplay(motorTempC), 1)}${tempUnit}`
                   : t('dynamics.awaiting', 'Awaiting data')}
               </span>
             </div>

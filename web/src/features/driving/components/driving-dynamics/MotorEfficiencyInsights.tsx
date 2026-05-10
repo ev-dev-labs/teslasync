@@ -8,12 +8,18 @@ import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { MotorStats, ThrottleStyle } from './helpers';
+import type { TemperatureUnitPref } from '@/lib/unitConversion';
 
 interface MotorEfficiencyInsightsProps {
   motorStats: MotorStats | null;
   throttleStyle: ThrottleStyle | null;
   toTemperatureDisplay: (v: number) => number;
-  tempUnit: string;
+  // tempUnit is the user's display preference (e.g. '°C' or '°F'). The
+  // value already INCLUDES the degree symbol — never prefix another '°'
+  // (that produces "49.0°°C", which was a real bug). Type is narrowed
+  // from `string` to TemperatureUnitPref so callers can't pass a bare
+  // "C"/"F" and reintroduce the bug.
+  tempUnit: TemperatureUnitPref;
 }
 
 export default function MotorEfficiencyInsights({
@@ -80,6 +86,11 @@ export default function MotorEfficiencyInsights({
                 max={200}
                 color={throttleStyle === 'conservative' ? '#22c55e' : throttleStyle === 'moderate' ? '#eab308' : '#ef4444'}
                 label=""
+                // Empty string explicitly suppresses the textual readout
+                // beside the bar (the same number is already rendered as
+                // "Avg Power" above). MetricBar uses `??` so this is
+                // honoured — passing `||` previously fell through to
+                // `fmtNumber(value)` and rendered a stray "0.00".
                 sublabel=""
               />
             </div>
@@ -98,11 +109,11 @@ export default function MotorEfficiencyInsights({
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
                 <span>{t('dynamics.avgMotorTemp', 'Avg Motor Temp')}</span>
-                <span className="font-mono">{fmtNumber(toTemperatureDisplay(motorStats.avgMotorTemp), 1)}°{tempUnit}</span>
+                <span className="font-mono">{fmtNumber(toTemperatureDisplay(motorStats.avgMotorTemp), 1)}{tempUnit}</span>
               </div>
               <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
                 <span>{t('dynamics.maxMotorTemp', 'Max Motor Temp')}</span>
-                <span className="font-mono">{fmtNumber(toTemperatureDisplay(motorStats.maxMotorTemp), 1)}°{tempUnit}</span>
+                <span className="font-mono">{fmtNumber(toTemperatureDisplay(motorStats.maxMotorTemp), 1)}{tempUnit}</span>
               </div>
               <Badge
                 variant={motorStats.maxMotorTemp < 100 ? 'success' : motorStats.maxMotorTemp < 140 ? 'warning' : 'danger'}

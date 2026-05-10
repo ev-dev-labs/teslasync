@@ -12,11 +12,13 @@ import { StatCard } from '@/components/data-display';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { MotorStats } from './helpers';
+import type { TemperatureUnitPref } from '@/lib/unitConversion';
 
 interface SummaryStatsProps {
   motorStats: MotorStats | null;
   toTemperatureDisplay: (v: number) => number;
-  tempUnit: string;
+  // See MotorEfficiencyInsights tempUnit comment — already includes '°'.
+  tempUnit: TemperatureUnitPref;
 }
 
 export default function SummaryStats({ motorStats, toTemperatureDisplay, tempUnit }: SummaryStatsProps) {
@@ -64,7 +66,7 @@ export default function SummaryStats({ motorStats, toTemperatureDisplay, tempUni
           <StatCard
             label={t('dynamics.avgMotorTemp', 'Avg Motor Temp')}
             value={motorStats
-              ? `${fmtNumber(toTemperatureDisplay(motorStats.avgMotorTemp), 1)}°${tempUnit}`
+              ? `${fmtNumber(toTemperatureDisplay(motorStats.avgMotorTemp), 1)}${tempUnit}`
               : '—'}
             icon={<Thermometer className="h-4 w-4" />}
           />
