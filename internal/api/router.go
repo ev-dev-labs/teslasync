@@ -339,6 +339,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	chatbotHandler := NewChatbotHandler(db, vehicleSvc, stateReader, liveStateReader)
 	tirePressureHandler := NewTirePressureHandler(stateReader, liveStateReader)
 	motorHandler := NewMotorHandler(stateReader, liveStateReader)
+	driveDynamicsHandler := NewDriveDynamicsHandler(stateReader, liveStateReader)
 	climateHandler := NewClimateHandler(stateReader, liveStateReader)
 	securityHandler := NewSecurityHandler(stateReader, liveStateReader)
 	chargingTelemetryHandler := NewChargingTelemetryHandler(stateReader, liveStateReader)
@@ -1263,6 +1264,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/motor", func(r chi.Router) {
 			r.Get("/", motorHandler.List)
 			r.Get("/latest", motorHandler.Latest)
+		})
+
+		// Driving Dynamics (G-force + pedal usage live surface)
+		r.Route("/drive-dynamics", func(r chi.Router) {
+			r.Get("/", driveDynamicsHandler.List)
+			r.Get("/latest", driveDynamicsHandler.Latest)
 		})
 
 		// Climate/HVAC

@@ -6,39 +6,35 @@ import { GlassPanel, Badge } from '@/components/ui';
 import { RadialGauge } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { useSignalObservations } from '@/api/hooks/useTelemetry';
-
-import { latestNumeric, latestBool } from '@/lib/signalObservation';
+import { useDriveDynamicsLatest } from '@/api/hooks/useVehicles';
+import { INTERVALS } from '@/lib/constants';
 
 interface PedalUsageProps {
   vehicleId: number | null | undefined;
 }
 
 /**
- * Pedal telemetry (PedalPosition, BrakePedalPos, BrakePedal) is routed to
- * signal_observations (cold) per the typed-telemetry refactor (ADR-005).
- * We read the latest observation for each signal and render the original
- * gauge/badge layout.
+ * Pedal telemetry (PedalPosition, BrakePedalPos, BrakePedal).
+ *
+ * Pre-Phase-42 these were stored in the `signal_observations` cold table
+ * and read via the deprecated `useSignalObservations` hook. Phase-42
+ * deleted both the table and the `/signals/observations` route, so
+ * the old hook 404'd silently and this panel rendered a permanent
+ * "No pedal telemetry received yet" empty state.
+ *
+ * Today all 3 signals flow through per-field MQTT to the L1 live cache
+ * (mirrored to L2 / Redis with a `signal_log` fallback). We read the
+ * latest projected snapshot via `useDriveDynamicsLatest` and render
+ * the original throttle / brake / brake-active 3-up gauge layout.
  */
 export default function PedalUsage({ vehicleId }: PedalUsageProps) {
   const { t } = useTranslation();
 
-  const { data: throttleObs } = useSignalObservations(vehicleId ?? undefined, {
-    signal_name: 'PedalPosition',
-    limit: 1,
-  });
-  const { data: brakePosObs } = useSignalObservations(vehicleId ?? undefined, {
-    signal_name: 'BrakePedalPos',
-    limit: 1,
-  });
-  const { data: brakeObs } = useSignalObservations(vehicleId ?? undefined, {
-    signal_name: 'BrakePedal',
-    limit: 1,
-  });
+  const { data } = useDriveDynamicsLatest(vehicleId ?? 0, INTERVALS.REALTIME);
 
-  const throttle = latestNumeric(throttleObs);
-  const brakePos = latestNumeric(brakePosObs);
-  const brakeActive = latestBool(brakeObs);
+  const throttle = typeof data?.pedal_position === 'number' ? data.pedal_position : null;
+  const brakePos = typeof data?.brake_pedal_position === 'number' ? data.brake_pedal_position : null;
+  const brakeActive = typeof data?.brake_pedal_active === 'boolean' ? data.brake_pedal_active : null;
 
   const hasAny = throttle != null || brakePos != null || brakeActive != null;
 

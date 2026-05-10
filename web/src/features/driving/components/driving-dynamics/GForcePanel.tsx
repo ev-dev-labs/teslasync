@@ -6,34 +6,35 @@ import { GlassPanel } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { useSignalObservations } from '@/api/hooks/useTelemetry';
+import { useDriveDynamicsLatest } from '@/api/hooks/useVehicles';
+import { INTERVALS } from '@/lib/constants';
 import { fmtNumber } from '@/lib/numberFormat';
-
-import { latestNumeric } from '@/lib/signalObservation';
 
 interface GForcePanelProps {
   vehicleId: number | null | undefined;
 }
 
 /**
- * Acceleration G-forces (LateralAcceleration, LongitudinalAcceleration) are
- * cold signals stored in signal_observations per ADR-005. We read the latest
- * observation for each and render a small 2-up panel with magnitude.
+ * Acceleration G-forces (LateralAcceleration, LongitudinalAcceleration).
+ *
+ * Pre-Phase-42 these were stored in the `signal_observations` cold table
+ * and read via the deprecated `useSignalObservations` hook. Phase-42
+ * deleted both the table and the `/signals/observations` route, so
+ * the old hook 404'd silently and this panel rendered a permanent
+ * "No G-force telemetry received yet" empty state.
+ *
+ * Today both signals flow through per-field MQTT to the L1 live cache
+ * (mirrored to L2 / Redis with a `signal_log` fallback). We read the
+ * latest projected snapshot via `useDriveDynamicsLatest` and render
+ * the original 3-up panel (lateral / longitudinal / combined magnitude).
  */
 export default function GForcePanel({ vehicleId }: GForcePanelProps) {
   const { t } = useTranslation();
 
-  const { data: latObs } = useSignalObservations(vehicleId ?? undefined, {
-    signal_name: 'LateralAcceleration',
-    limit: 1,
-  });
-  const { data: longObs } = useSignalObservations(vehicleId ?? undefined, {
-    signal_name: 'LongitudinalAcceleration',
-    limit: 1,
-  });
+  const { data } = useDriveDynamicsLatest(vehicleId ?? 0, INTERVALS.REALTIME);
 
-  const lateral = latestNumeric(latObs);
-  const longitudinal = latestNumeric(longObs);
+  const lateral = typeof data?.lateral_acceleration === 'number' ? data.lateral_acceleration : null;
+  const longitudinal = typeof data?.longitudinal_acceleration === 'number' ? data.longitudinal_acceleration : null;
   const hasAny = lateral != null || longitudinal != null;
 
   const magnitude =

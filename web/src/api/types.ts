@@ -935,6 +935,32 @@ export interface MotorSnapshot {
   gear?: string | null
 }
 
+// DriveDynamicsSnapshot matches the JSON response shape from
+// /drive-dynamics/latest. Backed by signal.LiveStateReader.LiveState
+// via driveDynamicsMappings in drive_dynamics_handler.go.
+//
+// Field naming mirrors the snake_case wire format the backend emits.
+// camelCaseKeys() exposes both forms; consumers in this codebase
+// uniformly use snake_case for *_latest snapshot reads, so we keep
+// that convention here as well.
+//
+// All fields are optional + nullable: a vehicle whose telemetry has
+// never reported (e.g. PedalPosition for a freshly added vehicle)
+// will simply omit those keys, and the consuming panels render the
+// matching empty-state stat ("—" / "Brake Inactive" / etc).
+export interface DriveDynamicsSnapshot {
+  /** Lateral acceleration in g (cornering, +ve right). */
+  lateral_acceleration?: number | null
+  /** Longitudinal acceleration in g (+ve forward, -ve braking). */
+  longitudinal_acceleration?: number | null
+  /** Throttle pedal position 0..100 (%). */
+  pedal_position?: number | null
+  /** Brake pedal position 0..100 (%). */
+  brake_pedal_position?: number | null
+  /** Brake pedal active (true while pedal is depressed). */
+  brake_pedal_active?: boolean | null
+}
+
 // ClimateSnapshot matches the JSON response shape from /climate and /climate/latest.
 // Backed by signal_log after phase-14 rewire.
 export interface ClimateSnapshot {
