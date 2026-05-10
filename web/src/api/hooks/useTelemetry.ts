@@ -292,15 +292,29 @@ export function useSignalCatalog() {
 }
 
 /**
- * Phase-42 / Prompt 0077 — DEPRECATED. The backend `/signals/observations`
- * route was deleted alongside `signal_catalog_handler.go`. See
- * `useSignalCatalog` for the deletion rationale and migration plan. This
- * hook will reliably 404 in production. Kept (not removed) because
- * features outside the telemetry domain (charging PowersharePage,
- * driving dynamics components, dashboard widgets) still call it; their
- * UI surfaces the resulting query error gracefully. A future replacement
- * should derive observations from `useSignalHistory` per-signal time-series
- * queries against `signal_log`.
+ * Phase-43a / Prompt 0007 — RESTORED. The backend `/signals/observations`
+ * route is back, but with a modern enveloped contract that does NOT match
+ * the legacy `signal_observations` table the hook was originally written
+ * against (deleted in Phase-42 / 0077). Specifically, the new backend:
+ *   - filters by `field=` (not `signal_name=`),
+ *   - returns `{count, total, observations: [{vehicle_id, ts, field,
+ *     value_kind, value}]}` (not a bare array),
+ *   - encodes value as a single `value` column with a `value_kind`
+ *     discriminator (`ValueKindFloat`, `ValueKindDouble`,
+ *     `ValueKindInt32`, `ValueKindInt64`, `ValueKindString`,
+ *     `ValueKindBool`, `ValueKindEnum`, …) — not the trio of
+ *     `value_numeric` / `value_text` / `value_bool` columns the legacy
+ *     `signal_observations` table had.
+ *
+ * The hook bridges the gap so the existing callers — AutopilotSection,
+ * PowersharePage, SignalLogWidget — keep their `latestNumeric`,
+ * `latestBool`, `latestText` extractors and the `signal_name`-shaped
+ * frontend `SignalObservation` type. Without this adapter:
+ *   - the `signal_name` query param was silently dropped server-side
+ *     (the backend ignored it and returned WHATEVER rows were latest in
+ *     `signal_log`), so panels showed the wrong signal's value, and
+ *   - the envelope unwrapping never happened, so `data?.[0]` returned
+ *     `undefined` and every consumer rendered "—".
  */
 export function useSignalObservations(
   vehicleId: number | string | undefined,
@@ -308,16 +322,110 @@ export function useSignalObservations(
 ) {
   const params = new URLSearchParams();
   if (vehicleId != null) params.set('vehicle_id', String(vehicleId));
-  if (opts?.signal_name) params.set('signal_name', opts.signal_name);
+  // Backend accepts `field=` (matches `signal_log.field`); frontend
+  // callers still use `signal_name` historically, so translate at the
+  // wire boundary rather than ripple the rename through every caller.
+  if (opts?.signal_name) params.set('field', opts.signal_name);
   if (opts?.since) params.set('since', opts.since);
   if (opts?.until) params.set('until', opts.until);
   if (opts?.limit) params.set('limit', String(opts.limit));
 
   return useQuery({
     queryKey: ['signal-observations', vehicleId, opts],
-    queryFn: ({ signal }) => request<SignalObservation[]>(`/signals/observations?${params}`, { signal }),
+    queryFn: async ({ signal }) => {
+      const envelope = await request<SignalsObservationsResponseRaw>(
+        `/signals/observations?${params}`,
+        { signal },
+      );
+      return adaptObservations(envelope);
+    },
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.REALTIME,
+  });
+}
+
+// Wire shape returned by the modern Phase-43a /signals/observations
+// endpoint. Both snake_case (`value_kind`) and camelCase (`valueKind`)
+// shapes are tolerated because some `request` middleware variants in
+// the codebase camelCase response keys; production uses snake_case but
+// keeping both branches makes the adapter forward-compatible and keeps
+// unit tests independent of the `request` mock's casing choice.
+interface SignalsObservationsRowRaw {
+  vehicle_id?: number;
+  vehicleId?: number;
+  ts: string;
+  field?: string;
+  value_kind?: string;
+  valueKind?: string;
+  value: unknown;
+}
+
+interface SignalsObservationsResponseRaw {
+  count?: number;
+  total?: number;
+  observations?: SignalsObservationsRowRaw[];
+}
+
+// ValueKind enum literals emitted by `protomodel.ValueKind.String()`
+// (cmd/pub-test-signal/main.go documents the full set). Grouped by how
+// the legacy frontend `SignalObservation` shape stores them.
+const NUMERIC_VALUE_KINDS = new Set([
+  'ValueKindFloat',
+  'ValueKindDouble',
+  'ValueKindInt32',
+  'ValueKindInt64',
+  'ValueKindUnixTime', // seconds since epoch — numeric for legacy callers
+]);
+const TEXT_VALUE_KINDS = new Set([
+  'ValueKindString',
+  'ValueKindEnum', // proto-prefixed enum names like "ShiftStateD" or "FollowDistance7"
+]);
+const BOOL_VALUE_KINDS = new Set(['ValueKindBool', 'ValueKindBoolean']);
+
+function adaptObservations(envelope: SignalsObservationsResponseRaw | null | undefined): SignalObservation[] {
+  const rows = envelope?.observations ?? [];
+  return rows.map((row): SignalObservation => {
+    const kind = row.value_kind ?? row.valueKind ?? '';
+    const field = row.field ?? '';
+    const vehicleId = row.vehicle_id ?? row.vehicleId ?? 0;
+
+    let valueNumeric: number | null = null;
+    let valueText: string | null = null;
+    let valueBool: boolean | null = null;
+
+    if (NUMERIC_VALUE_KINDS.has(kind)) {
+      // Number(null) = 0 and Number(undefined) = NaN — guard explicitly
+      // so neither sentinel coerces to a misleading 0 in downstream
+      // aggregations (helpers.ts:computeMotorStats, etc.).
+      if (row.value == null) {
+        valueNumeric = null;
+      } else {
+        const n = typeof row.value === 'number' ? row.value : Number(row.value);
+        valueNumeric = Number.isFinite(n) ? n : null;
+      }
+    } else if (TEXT_VALUE_KINDS.has(kind)) {
+      valueText = row.value == null ? null : String(row.value);
+    } else if (BOOL_VALUE_KINDS.has(kind)) {
+      valueBool = typeof row.value === 'boolean' ? row.value : null;
+    }
+    // Compound kinds (CompoundLocation, CompoundDoors, CompoundTireLoc,
+    // StringCompound) and unknown kinds intentionally fall through to
+    // all-null — none of the legacy callers consume them via
+    // latestNumeric / latestText / latestBool.
+
+    return {
+      vehicle_id: vehicleId,
+      ts: row.ts,
+      signal_name: field,
+      value_numeric: valueNumeric,
+      value_text: valueText,
+      value_bool: valueBool,
+      // The modern /signals/observations envelope does not expose the
+      // ingestion source. Default to the dominant per-field MQTT path so
+      // SignalLogWidget's source-color mapping renders something sane
+      // rather than undefined.
+      source: 'fleet_telemetry',
+    };
   });
 }
 

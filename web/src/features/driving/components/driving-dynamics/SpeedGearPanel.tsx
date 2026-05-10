@@ -37,14 +37,24 @@ interface SpeedGearPanelProps {
 export default function SpeedGearPanel({ motorLatest, filteredDrives, toSpeedDisplay, speedUnit }: SpeedGearPanelProps) {
   const { t } = useTranslation();
 
-  const avgDriveSpeed =
+  // Compute drive-level aggregates in SI (m/s) and convert ONCE at render
+  // time. The pre-fix code called `toSpeedDisplay` once during the
+  // reduce/Math.max AND a second time at the JSX render site, which
+  // double-applied the m/s → mph factor (×2.237 squared = ×5.005). For
+  // mph users that turned a real ~31 mph top into a displayed "154 mph";
+  // for km/h users it was even worse (×3.6 → ×12.96). The bug shipped
+  // since this panel was extracted from the legacy DrivingDynamicsPage,
+  // because the surrounding code had already moved to "convert at the
+  // boundary" semantics but these two reductions kept the legacy "convert
+  // eagerly, render verbatim" assumption from the old in-line code.
+  const avgDriveSpeedMps =
     filteredDrives.length > 0
-      ? filteredDrives.reduce((s, d) => s + toSpeedDisplay(d.avgSpeedMps ?? 0), 0) / filteredDrives.length
+      ? filteredDrives.reduce((s, d) => s + (d.avgSpeedMps ?? 0), 0) / filteredDrives.length
       : null;
 
-  const topDriveSpeed =
+  const topDriveSpeedMps =
     filteredDrives.length > 0
-      ? Math.max(...filteredDrives.map((d) => toSpeedDisplay(d.maxSpeedMps ?? 0)))
+      ? Math.max(...filteredDrives.map((d) => d.maxSpeedMps ?? 0))
       : null;
 
   return (
@@ -72,14 +82,14 @@ export default function SpeedGearPanel({ motorLatest, filteredDrives, toSpeedDis
           <div className="flex flex-col items-center gap-1">
             <span className="text-xs text-[var(--text-secondary)]">{t('dynamics.avgDriveSpeed', 'Avg Drive Speed')}</span>
             <span className="text-2xl font-semibold text-white">
-              {avgDriveSpeed != null ? fmtNumber(toSpeedDisplay(avgDriveSpeed), 0) : '—'}
+              {avgDriveSpeedMps != null ? fmtNumber(toSpeedDisplay(avgDriveSpeedMps), 0) : '—'}
             </span>
             <span className="text-xs text-[var(--text-muted)]">{speedUnit}</span>
           </div>
           <div className="flex flex-col items-center gap-1">
             <span className="text-xs text-[var(--text-secondary)]">{t('dynamics.topDriveSpeed', 'Top Drive Speed')}</span>
             <span className="text-2xl font-semibold text-white">
-              {topDriveSpeed != null ? fmtNumber(toSpeedDisplay(topDriveSpeed), 0) : '—'}
+              {topDriveSpeedMps != null ? fmtNumber(toSpeedDisplay(topDriveSpeedMps), 0) : '—'}
             </span>
             <span className="text-xs text-[var(--text-muted)]">{speedUnit}</span>
           </div>
