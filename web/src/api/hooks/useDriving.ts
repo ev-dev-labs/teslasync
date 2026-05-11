@@ -167,15 +167,16 @@ export function useRegenEfficiency(vehicleId?: string, start?: string, end?: str
   });
 }
 
-export function useRouteEfficiency(vehicleId?: string) {
+export function useRouteEfficiency(vehicleId?: string, start?: string, end?: string) {
   return useQuery({
-    queryKey: drivingKeys.routeEfficiency(vehicleId),
-    queryFn: ({ signal }) =>
-      request<RouteEfficiencyData>(
-        vehicleId
-          ? `/analytics/route-efficiency?vehicle_id=${vehicleId}`
-          : '/analytics/route-efficiency', { signal },
-      ),
+    queryKey: [...drivingKeys.routeEfficiency(vehicleId), start, end],
+    queryFn: ({ signal }) => {
+      if (!vehicleId) return request<RouteEfficiencyData>('/analytics/route-efficiency', { signal });
+      const params = new URLSearchParams({ vehicle_id: vehicleId });
+      if (start) params.set('start', start);
+      if (end) params.set('end', end);
+      return request<RouteEfficiencyData>(`/analytics/route-efficiency?${params}`, { signal });
+    },
     enabled: !!vehicleId,
   });
 }

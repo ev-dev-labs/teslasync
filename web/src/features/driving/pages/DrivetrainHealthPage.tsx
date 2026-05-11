@@ -4,7 +4,7 @@ import { Zap, Cpu, BatteryCharging } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
-import { VehicleSelect } from '@/components/forms';
+import { VehicleSelect, RangePicker } from '@/components/forms';
 
 import { useDrivetrainHealth, useDrives, useDrivingStats } from '@/api/hooks/useDriving';
 import { useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
@@ -12,6 +12,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUrlString, useUrlBatch } from '@/hooks/useUrlState';
 import { formatDateShort } from '@/lib/dateFormat';
 import { convertDistanceFromSI, convertTempFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 
@@ -43,6 +44,16 @@ export default function DrivetrainHealthPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
+  const defaultStartDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split('T')[0];
+  }, []);
+  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [startDate] = useUrlString('from', defaultStartDate);
+  const [endDate] = useUrlString('to', defaultEndDate);
+  const setRangeBatch = useUrlBatch();
+
   const { data: health, isLoading: healthLoading } = useDrivetrainHealth(vehicleIdStr);
   const { data: drives } = useDrives(vehicleIdStr);
   const { data: stats } = useDrivingStats(vehicleIdStr);
@@ -70,7 +81,15 @@ export default function DrivetrainHealthPage() {
 
   const chartData: ChartDataPoint[] = useMemo(() => {
     if (!drives?.length) return [];
+    // Filter drives to selected date range; chart shows the resulting series
+    // (capped at 30 points so the trend stays readable on small viewports).
+    const startMs = new Date(`${startDate}T00:00:00`).getTime();
+    const endMs = new Date(`${endDate}T23:59:59`).getTime();
     return drives
+      .filter((d) => {
+        const t = new Date(d.startTs).getTime();
+        return Number.isFinite(t) && t >= startMs && t <= endMs;
+      })
       .slice()
       .sort((a, b) => new Date(a.startTs).getTime() - new Date(b.startTs).getTime())
       .slice(-30)
@@ -81,7 +100,7 @@ export default function DrivetrainHealthPage() {
         outsideTemp: d.outsideTempAvgC ?? null,
         distance: toDistanceDisplay(d.distanceM),
       }));
-  }, [drives, toDistanceDisplay]);
+  }, [drives, startDate, endDate, toDistanceDisplay]);
 
   const tempTrendData = useMemo(() => chartData.filter((d) => d.outsideTemp !== null), [chartData]);
 
@@ -120,7 +139,17 @@ export default function DrivetrainHealthPage() {
       subtitle={t('drivetrain.subtitle', 'Motor, inverter, and battery thermal status')}
       loading={healthLoading}
       error={null}
-      actions={<VehicleSelect />}
+      actions={
+        <div className="flex flex-wrap items-center gap-3">
+          <VehicleSelect />
+          <RangePicker
+            value={{ start: startDate, end: endDate }}
+            onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+            align="end"
+            triggerTestId="drivetrain-health-range-picker"
+          />
+        </div>
+      }
     >
       {health ? (
         <>

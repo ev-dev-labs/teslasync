@@ -5,7 +5,8 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { IconBox } from '@/components/ui/IconBox';
-import { VehicleSelect } from '@/components/forms';
+import { VehicleSelect, RangePicker } from '@/components/forms';
+import { useUrlString, useUrlBatch } from '@/hooks/useUrlState';
 import {
   ChartContainer, ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -105,7 +106,17 @@ export default function RouteEfficiencyPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
-  const { data, isLoading, error } = useRouteEfficiency(vehicleIdStr);
+  const defaultStartDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split('T')[0];
+  }, []);
+  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [startDate] = useUrlString('from', defaultStartDate);
+  const [endDate] = useUrlString('to', defaultEndDate);
+  const setRangeBatch = useUrlBatch();
+
+  const { data, isLoading, error } = useRouteEfficiency(vehicleIdStr, startDate, endDate);
   const { unitPrefs } = useUnits();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
 
@@ -138,9 +149,18 @@ export default function RouteEfficiencyPage() {
       title={t('routeEfficiency.title', 'Route Efficiency')}
       subtitle={t('routeEfficiency.subtitle', 'Compare efficiency across your most-driven routes')}
       error={error as Error | null}
-      actions={<VehicleSelect />}
+      actions={
+        <div className="flex flex-wrap items-center gap-3">
+          <VehicleSelect />
+          <RangePicker
+            value={{ start: startDate, end: endDate }}
+            onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+            align="end"
+            triggerTestId="route-efficiency-range-picker"
+          />
+        </div>
+      }
       loading={isLoading}
-
     >
       {/* Summary stats */}
       <FadeIn>
