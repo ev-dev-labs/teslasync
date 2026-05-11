@@ -138,15 +138,15 @@ export default function RegenEfficiencyPage() {
       error={error as Error | null}
       actions={
         <div className="flex items-center gap-3">
+          {vehicleOptions.length > 0 ? (
+            <Select value={String(vehicleId ?? '')} onChange={(e) => setSelectedVehicle(Number(e.target.value))} options={vehicleOptions} />
+          ) : null}
           <RangePicker
             value={{ start, end }}
             onChange={setRange}
             align="end"
             triggerTestId="regen-efficiency-range"
           />
-          {vehicleOptions.length > 0 ? (
-            <Select value={String(vehicleId ?? '')} onChange={(e) => setSelectedVehicle(Number(e.target.value))} options={vehicleOptions} />
-          ) : null}
         </div>
       }
       loading={isLoading}

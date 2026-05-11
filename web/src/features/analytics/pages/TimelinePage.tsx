@@ -311,6 +311,14 @@ export default function TimelinePage() {
 
   const actions = (
     <div className="flex items-center gap-3">
+      {vehicleOptions.length > 1 && (
+        <Select
+          options={vehicleOptions}
+          value={activeId}
+          onChange={(e) => setVehicleId(e.target.value)}
+          placeholder={t('timeline.selectVehicle', 'Select Vehicle')}
+        />
+      )}
       <RangePicker
         value={{ start, end }}
         onChange={(r) => setRange(r)}
@@ -320,14 +328,6 @@ export default function TimelinePage() {
         triggerTestId="timeline-range"
       />
       <DataFreshnessAuto query={timelineQuery} />
-      {vehicleOptions.length > 1 && (
-        <Select
-          options={vehicleOptions}
-          value={activeId}
-          onChange={(e) => setVehicleId(e.target.value)}
-          placeholder={t('timeline.selectVehicle', 'Select Vehicle')}
-        />
-      )}
       <Button variant="ghost" onClick={() => refetch()}>
         <RefreshCw className="h-4 w-4" />
       </Button>

@@ -132,6 +132,13 @@ export default function LocationsPage() {
       error={error as Error | null}
       actions={
         <div className="flex items-center gap-3">
+          {vehicles && vehicles.length > 1 ? (
+            <Select
+              value={String(vehicleId ?? '')}
+              onChange={e => setSelectedVehicle(Number(e.target.value))}
+              options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
+          ) : null}
           <RangePicker
             value={{ start, end }}
             onChange={(r) => {
@@ -142,13 +149,6 @@ export default function LocationsPage() {
             triggerTestId="locations-range"
           />
           <DataFreshnessAuto query={locationsQuery} />
-          {vehicles && vehicles.length > 1 ? (
-            <Select
-              value={String(vehicleId ?? '')}
-              onChange={e => setSelectedVehicle(Number(e.target.value))}
-              options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
-            />
-          ) : null}
         </div>
       }
     >
