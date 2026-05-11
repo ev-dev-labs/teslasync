@@ -15,14 +15,13 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
-import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Pagination } from '@/components/ui/Pagination';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { AlertBanner } from '@/components/feedback/AlertBanner';
-import { ComboboxMulti } from '@/components/forms';
+import { ComboboxMulti, RangePicker } from '@/components/forms';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import {
@@ -30,15 +29,14 @@ import {
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
-import { useUrlArray, useUrlBatch, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
+import { useUrlArray, useUrlNumber } from '@/hooks/useUrlState';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { CHART_COLORS } from '@/lib/colors';
-import { toLocalDatetimeStr } from '@/lib/dateFormat';
-import { TIME_RANGE_PRESETS, matchTimeRangePreset } from '@/lib/constants';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { Activity, BarChart3, Search, Clock, AlertCircle, Radio } from 'lucide-react';
+import { Activity, BarChart3, Search, AlertCircle, Radio } from 'lucide-react';
 import type { SignalLogEntry } from '@/components/SignalQueryControls';
 import type { SignalHistoryResp } from '@/api/types';
 
@@ -68,12 +66,13 @@ export default function SignalExplorerPage() {
   const { data: availableSignals, error: signalsError } = useSignals(vehicleId);
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
 
-  // DateTime range
-  const defaultFrom = useMemo(() => toLocalDatetimeStr(new Date(Date.now() - 3600_000)), []);
-  const defaultTo = useMemo(() => toLocalDatetimeStr(new Date()), []);
-  const [fromStr, setFromStr] = useUrlString('from', defaultFrom);
-  const [toStr, setToStr] = useUrlString('to', defaultTo);
-  const setRangeBatch = useUrlBatch();
+  // Date range — canonical RangePicker (day-precision); converted to
+  // start-of-day / end-of-day ISO datetimes for the per-signal history
+  // queries.
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'signal-explorer.range',
+    defaultPresetId: 'today',
+  });
 
   // Explore trigger key
   const [exploreKey, setExploreKey] = useState<number | null>(null);
@@ -159,17 +158,14 @@ export default function SignalExplorerPage() {
     }
   }, [isLive, selectedSignals]);
 
-  const applyPreset = useCallback((hours: number) => {
-    const end = new Date();
-    setRangeBatch({
-      from: toLocalDatetimeStr(new Date(end.getTime() - hours * 3600_000)),
-      to: toLocalDatetimeStr(end),
-    });
-  }, [setRangeBatch]);
+  const handleRangeChange = useCallback(
+    (next: { start: string; end: string }) => {
+      setRange(next);
+    },
+    [setRange],
+  );
 
-  const activePresetHours = matchTimeRangePreset(fromStr, toStr);
-
-  const canExplore = selectedSignals.length > 0 && fromStr && toStr;
+  const canExplore = selectedSignals.length > 0 && !!start && !!end;
 
   const handleExplore = useCallback(() => {
     if (!canExplore) return;
@@ -177,8 +173,14 @@ export default function SignalExplorerPage() {
     setExploreKey(Date.now());
   }, [canExplore]);
 
-  const fromIso = fromStr ? new Date(fromStr).toISOString() : '';
-  const toIso = toStr ? new Date(toStr).toISOString() : '';
+  const fromIso = useMemo(
+    () => (start ? new Date(`${start}T00:00:00`).toISOString() : ''),
+    [start],
+  );
+  const toIso = useMemo(
+    () => (end ? new Date(`${end}T23:59:59.999`).toISOString() : ''),
+    [end],
+  );
 
   // ── Combined signal data query (parallel per-signal fetches) ──
   const { data: allSignalRows, isLoading: dataLoading, error: dataError } = useQuery<SignalLogEntry[]>({
@@ -310,30 +312,18 @@ export default function SignalExplorerPage() {
           />
         </div>
 
-        {/* DateTime range — hidden in live mode */}
+        {/* Date range — hidden in live mode */}
         {!isLive && (
         <div>
-          <span className="block text-xs font-medium uppercase tracking-wider mb-2 text-[var(--text-muted)]">
-            <Clock className="inline h-3 w-3 mr-1" />{t('Time Range')}
+          <span className="block text-[10px] font-medium uppercase tracking-wider mb-1.5 text-[var(--text-muted)]">
+            {t('Time Range')}
           </span>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {TIME_RANGE_PRESETS.map(p => (
-              <Button
-                key={p.label}
-                size="sm"
-                variant={activePresetHours === p.hours ? 'primary' : 'ghost'}
-                aria-pressed={activePresetHours === p.hours}
-                aria-label={t('signalQuery.preset.aria', '{{label}} time range', { label: p.label })}
-                onClick={() => applyPreset(p.hours)}
-              >
-                {p.label}
-              </Button>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label={t('From')} type="datetime-local" value={fromStr} onChange={e => setFromStr(e.target.value)} />
-            <Input label={t('To')} type="datetime-local" value={toStr} onChange={e => setToStr(e.target.value)} />
-          </div>
+          <RangePicker
+            value={{ start, end }}
+            onChange={handleRangeChange}
+            presetIds={['today', 'yesterday', '7d', '30d', '90d', 'all']}
+            triggerTestId="signal-explorer-range"
+          />
         </div>
         )}
 

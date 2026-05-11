@@ -18,27 +18,25 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Pagination } from '@/components/ui/Pagination';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { AlertBanner } from '@/components/feedback';
-import { ComboboxMulti } from '@/components/forms';
+import { ComboboxMulti, RangePicker } from '@/components/forms';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useUrlArray, useUrlBatch, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
+import { useUrlArray } from '@/hooks/useUrlState';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { CHART_COLORS } from '@/lib/colors';
-import { toLocalDatetimeStr } from '@/lib/dateFormat';
 import { formatValue, type SignalLogEntry } from '@/components/SignalQueryControls';
 import type { SignalHistoryResp } from '@/api/types';
-import { TIME_RANGE_PRESETS, matchTimeRangePreset } from '@/lib/constants';
 import { cn } from '@/lib/cn';
-import { Database, Search, Clock, Activity, Filter, AlertCircle } from 'lucide-react';
+import { Database, Search, Activity, Filter, AlertCircle } from 'lucide-react';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -64,32 +62,24 @@ export default function SignalLogViewerPage() {
   const { data: availableSignals } = useSignals(vehicleId);
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
 
-  // DateTime range — defaults are recomputed relative to "now" if the URL
-  // doesn't pin them, so a fresh page load gets the last hour.
-  const defaultFrom = useMemo(() => toLocalDatetimeStr(new Date(Date.now() - 3600_000)), []);
-  const defaultTo = useMemo(() => toLocalDatetimeStr(new Date()), []);
-  const [fromStr, setFromStr] = useUrlString('from', defaultFrom);
-  const [toStr, setToStr] = useUrlString('to', defaultTo);
-  const setRangeBatch = useUrlBatch();
+  // Date range — uses the canonical RangePicker (day-precision). Picker
+  // emits YYYY-MM-DD strings; the query converts to start-of-day /
+  // end-of-day ISO datetimes so the back-end gets a closed window.
+  // Persisted under `signal-log.range` and synced into ?start/?end so
+  // a query can be deep-linked to another engineer.
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'signal-log.range',
+    defaultPresetId: 'today',
+  });
 
   // Pagination
-  const [perPage, setPerPage] = useUrlNumber('size', 50);
+  const [perPage, setPerPage] = useState(50);
   const [page, setPage] = useState(1);
 
   // Query trigger — only fetch when user clicks "Query"
   const [queryKey, setQueryKey] = useState<number | null>(null);
 
-  const applyPreset = useCallback((hours: number) => {
-    const end = new Date();
-    setRangeBatch({
-      from: toLocalDatetimeStr(new Date(end.getTime() - hours * 3600_000)),
-      to: toLocalDatetimeStr(end),
-    });
-  }, [setRangeBatch]);
-
-  const activePresetHours = matchTimeRangePreset(fromStr, toStr);
-
-  const canQuery = selectedSignals.length > 0 && fromStr && toStr;
+  const canQuery = selectedSignals.length > 0 && !!start && !!end;
 
   const handleQuery = useCallback(() => {
     if (!canQuery) return;
@@ -97,8 +87,17 @@ export default function SignalLogViewerPage() {
     setQueryKey(Date.now());
   }, [canQuery]);
 
-  const fromIso = fromStr ? new Date(fromStr).toISOString() : '';
-  const toIso = toStr ? new Date(toStr).toISOString() : '';
+  // Convert the picker's day-bounds to inclusive datetime windows.
+  // Local-day construction matches what the user sees on the calendar
+  // and what other day-range pages (Drives, Charging, Locations) send.
+  const fromIso = useMemo(
+    () => (start ? new Date(`${start}T00:00:00`).toISOString() : ''),
+    [start],
+  );
+  const toIso = useMemo(
+    () => (end ? new Date(`${end}T23:59:59.999`).toISOString() : ''),
+    [end],
+  );
 
   // ── Data query (parallel per-signal fetches) ──
   const { data: allRows, isLoading, isFetching, error: dataError } = useQuery<SignalLogEntry[]>({
@@ -195,59 +194,50 @@ export default function SignalLogViewerPage() {
           />
         </div>
 
-        {/* DateTime range */}
-        <div>
-          <span className="block text-xs font-medium uppercase tracking-wider mb-2 text-[var(--text-muted)]">
-            <Clock className="inline h-3 w-3 mr-1" />{t('Time Range')}
-          </span>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {TIME_RANGE_PRESETS.map(p => (
-              <Button
-                key={p.label}
-                size="sm"
-                variant={activePresetHours === p.hours ? 'primary' : 'ghost'}
-                aria-pressed={activePresetHours === p.hours}
-                aria-label={t('signalQuery.preset.aria', '{{label}} time range', { label: p.label })}
-                onClick={() => applyPreset(p.hours)}
-              >
-                {p.label}
-              </Button>
-            ))}
+        {/* Time range + per-page + query — single compact row */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex items-end gap-2">
+            <label className="space-y-1">
+              <span className="block text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                {t('Time Range')}
+              </span>
+              <RangePicker
+                value={{ start, end }}
+                onChange={setRange}
+                presetIds={['today', 'yesterday', '7d', '30d', '90d', 'all']}
+                align="start"
+                triggerTestId="signal-log-range"
+              />
+            </label>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label={t('From')} type="datetime-local" value={fromStr} onChange={e => setFromStr(e.target.value)} />
-            <Input label={t('To')} type="datetime-local" value={toStr} onChange={e => setToStr(e.target.value)} />
+          <div className="flex items-end gap-3">
+            <Select
+              label={t('Per Page')}
+              value={String(perPage)}
+              onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
+              options={[
+                { value: '25', label: '25' },
+                { value: '50', label: '50' },
+                { value: '100', label: '100' },
+                { value: '500', label: '500' },
+              ]}
+              className="w-24"
+            />
+            <Button
+              variant="primary"
+              icon={<Database className="h-4 w-4" />}
+              onClick={handleQuery}
+              disabled={!canQuery}
+              loading={isFetching}
+            >
+              {t('Query')}
+            </Button>
+            {hasQueried && (
+              <span className="text-xs text-[var(--text-muted)] pb-2">
+                {totalRecords} {t('records')}
+              </span>
+            )}
           </div>
-        </div>
-
-        {/* Query controls */}
-        <div className="flex items-end gap-3">
-          <Select
-            label={t('Per Page')}
-            value={String(perPage)}
-            onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
-            options={[
-              { value: '25', label: '25' },
-              { value: '50', label: '50' },
-              { value: '100', label: '100' },
-              { value: '500', label: '500' },
-            ]}
-            className="w-24"
-          />
-          <Button
-            variant="primary"
-            icon={<Database className="h-4 w-4" />}
-            onClick={handleQuery}
-            disabled={!canQuery}
-            loading={isFetching}
-          >
-            {t('Query')}
-          </Button>
-          {hasQueried && (
-            <span className="text-xs text-[var(--text-muted)]">
-              {totalRecords} {t('records')}
-            </span>
-          )}
         </div>
       </GlassPanel>
 
