@@ -9,15 +9,23 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { FleetAnalytics } from '@/api/types';
 import { SectionTitle } from './helpers';
 import { PIE_COLORS } from './constants';
 
+const KM_PER_MILE = 1.609344;
+
 export function OverviewVehicleComparison({ data }: { data: FleetAnalytics | undefined }) {
   const { t } = useTranslation();
-  const { convertDistance, convertEfficiency, efficiencyUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
+  // backend efficiency is Wh/km — convert to Wh/mi when the user prefers miles.
+  const whPerKmToDisplay = (whPerKm: number) =>
+    distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
 
   const vehicles = data?.vehicle_comparison ?? [];
 
@@ -57,7 +65,7 @@ export function OverviewVehicleComparison({ data }: { data: FleetAnalytics | und
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie
-                  data={vehicles.map((v) => ({ name: v.name, value: convertDistance(safe(v.distance)) }))}
+                  data={vehicles.map((v) => ({ name: v.name, value: convertDistanceFromSI(safe(v.distance) * 1000, distanceUnit) }))}
                   dataKey="value"
                   nameKey="name"
                   cx="50%"
@@ -90,7 +98,7 @@ export function OverviewVehicleComparison({ data }: { data: FleetAnalytics | und
                       #{idx + 1} {v.name}
                     </span>
                     <span className="text-[var(--text-muted)]">
-                      {fmtNumber(convertEfficiency(safe(v.efficiency)), 1)} {efficiencyUnit}
+                      {fmtNumber(whPerKmToDisplay(safe(v.efficiency)), 1)} {efficiencyUnit}
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">

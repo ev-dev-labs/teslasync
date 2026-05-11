@@ -20,7 +20,7 @@ export function DriveTimeline({ drive }: DriveTimelineProps) {
           <span className="flex items-center gap-1 text-green-400">
             <Flag className="h-3 w-3" />{formatTime(drive.startTs)}
           </span>
-          <span className="text-[var(--text-muted)]">{formatDuration(drive.durationMin)}</span>
+          <span className="text-[var(--text-muted)]">{formatDuration((drive.durationS) / 60)}</span>
           <span className="flex items-center gap-1 text-red-400">
             <Flag className="h-3 w-3" />{drive.endTs ? formatTime(drive.endTs) : t('driveDetail.inProgress', 'In progress')}
           </span>

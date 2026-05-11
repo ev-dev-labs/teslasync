@@ -7,6 +7,12 @@ type createAlertRuleRequest struct {
 	Description  *string    `json:"description"`
 	Enabled      *bool      `json:"enabled"`
 	VehicleID    *int64     `json:"vehicle_id"`
+	// AllVehicles + VehicleIDs are the new canonical multi-select shape
+	// (Phase-49 / Slice 0005). On write the handler coalesces all three
+	// spellings via coalesceVehicleSelection. Legacy clients that only
+	// send `vehicle_id` continue to work for one release per Decision D7.
+	AllVehicles  *bool      `json:"all_vehicles"`
+	VehicleIDs   []int64    `json:"vehicle_ids"`
 	SignalName   *string    `json:"signal_name"`
 	Op           *string    `json:"op"`
 	ValueNum     *float64   `json:"value_num"`
@@ -25,6 +31,22 @@ type createAlertRuleRequest struct {
 	MetricWindow    *string  `json:"metric_window"`
 	MetricThreshold *float64 `json:"metric_threshold"`
 	MetricOp        *string  `json:"metric_op"`
+
+	// MaxFiresPerResolution caps how many notifications a repeat-mode rule
+	// emits between successive falling-edge resets. NULL = unlimited
+	// (legacy behaviour). Once-mode rules ignore this field — the latch
+	// already caps them at 1 per resolution.
+	// Phase-49 / Slice 0003 / Decision D5.
+	MaxFiresPerResolution *int `json:"max_fires_per_resolution"`
+
+	// EscalationAfterMin + EscalationSeverity together configure the
+	// repeat-mode two-tier severity escalation introduced in Phase-49 /
+	// Slice 0009 / Decision D8. Both must be NULL together (no
+	// escalation, default) or both set together. The handler enforces
+	// mutual presence + repeat-only + strict severity ordering before
+	// the row reaches the DB.
+	EscalationAfterMin *int    `json:"escalation_after_min"`
+	EscalationSeverity *string `json:"escalation_severity"`
 }
 
 type updateAlertRuleRequest struct {
@@ -32,6 +54,12 @@ type updateAlertRuleRequest struct {
 	Description  *string    `json:"description"`
 	Enabled      *bool      `json:"enabled"`
 	VehicleID    *int64     `json:"vehicle_id"`
+	// AllVehicles + VehicleIDs — see createAlertRuleRequest. Update
+	// semantics: omitting all three vehicle keys preserves the existing
+	// rule's vehicle assignment; sending any of them switches the rule
+	// to the resolved selection. Phase-49 / Slice 0005.
+	AllVehicles  *bool      `json:"all_vehicles"`
+	VehicleIDs   []int64    `json:"vehicle_ids"`
 	SignalName   *string    `json:"signal_name"`
 	Op           *string    `json:"op"`
 	ValueNum     *float64   `json:"value_num"`
@@ -52,6 +80,24 @@ type updateAlertRuleRequest struct {
 	MetricWindow    *string  `json:"metric_window"`
 	MetricThreshold *float64 `json:"metric_threshold"`
 	MetricOp        *string  `json:"metric_op"`
+
+	// MaxFiresPerResolution — see createAlertRuleRequest. On Update, NULL
+	// in the JSON payload (or absence of the key) leaves the existing
+	// value unchanged; explicit `"max_fires_per_resolution": null` in the
+	// JSON cannot be distinguished from absence with this DTO shape, so
+	// the handler treats omission as "unchanged" and sets a JSON-supplied
+	// non-null value as the new cap.
+	MaxFiresPerResolution *int `json:"max_fires_per_resolution"`
+
+	// EscalationAfterMin + EscalationSeverity — see
+	// createAlertRuleRequest. Update semantics use the standard
+	// fieldPresent fingerprint: omitting both keys preserves the
+	// existing escalation configuration; sending either key (even with
+	// JSON null) replaces it. Mutual presence + repeat-only + strict
+	// severity ordering are validated by validateAlertRule before the
+	// row reaches the DB.
+	EscalationAfterMin *int    `json:"escalation_after_min"`
+	EscalationSeverity *string `json:"escalation_severity"`
 }
 
 // snoozeAlertRuleRequest is the body for POST /alerts/rules/{ruleID}/snooze.

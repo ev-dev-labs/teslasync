@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // SetTokens sets the current OAuth tokens.
@@ -57,7 +58,10 @@ func (c *Client) ClientSecret() string { return c.clientSec }
 
 // GetPartnerToken obtains a client_credentials token for partner-level API calls.
 // Partner tokens use a separate auth endpoint (fleet-auth) from the user OAuth flow.
-func (c *Client) GetPartnerToken(ctx context.Context) (string, error) {
+func (c *Client) GetPartnerToken(ctx context.Context) (token string, err error) {
+	ctx, span := startSpan(ctx, "tesla.GetPartnerToken")
+	defer endSpan(span, &err)
+
 	// Partner token endpoint is fleet-auth, not auth.tesla.com.
 	// Derive from base URL: https://fleet-api.prd.na.vn.cloud.tesla.com
 	//                     → https://fleet-auth.prd.vn.cloud.tesla.com
@@ -122,9 +126,19 @@ func (c *Client) partnerAuthURL() string {
 
 // doRequestWithToken performs an API request using a custom bearer token (e.g. partner token)
 // instead of the stored user access token. Runs through the circuit breaker and logging.
-func (c *Client) doRequestWithToken(ctx context.Context, method, path string, body io.Reader, token string) ([]byte, int, error) {
-	if err := c.limiter.Wait(ctx); err != nil {
-		return nil, 0, fmt.Errorf("rate limiter: %w", err)
+func (c *Client) doRequestWithToken(ctx context.Context, method, path string, body io.Reader, token string) (respBody []byte, statusCode int, err error) {
+	ctx, span := startSpan(ctx, "tesla.HTTP "+method+" "+path,
+		attribute.String("http.request.method", method),
+		attribute.String("tesla.api.path", path),
+		attribute.String("tesla.token.kind", "partner"),
+	)
+	defer func() {
+		recordHTTPStatus(span, method, c.baseURL+path, statusCode)
+		endSpan(span, &err)
+	}()
+
+	if waitErr := c.limiter.Wait(ctx); waitErr != nil {
+		return nil, 0, fmt.Errorf("rate limiter: %w", waitErr)
 	}
 
 	url := c.baseURL + path
@@ -136,24 +150,24 @@ func (c *Client) doRequestWithToken(ctx context.Context, method, path string, bo
 		body = bytes.NewReader(reqBodyBytes)
 	}
 
-	result, err := c.cb.Execute(func() (interface{}, error) {
-		req, err := http.NewRequestWithContext(ctx, method, url, body)
-		if err != nil {
-			return nil, fmt.Errorf("create request: %w", err)
+	result, cbErr := c.cb.Execute(func() (interface{}, error) {
+		req, reqErr := http.NewRequestWithContext(ctx, method, url, body)
+		if reqErr != nil {
+			return nil, fmt.Errorf("create request: %w", reqErr)
 		}
 
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("Content-Type", "application/json")
 
-		resp, err := c.httpClient.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("do request: %w", err)
+		resp, doErr := c.httpClient.Do(req)
+		if doErr != nil {
+			return nil, fmt.Errorf("do request: %w", doErr)
 		}
 		defer resp.Body.Close()
 
-		data, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("read body: %w", err)
+		data, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			return nil, fmt.Errorf("read body: %w", readErr)
 		}
 
 		if resp.StatusCode == http.StatusUnauthorized {
@@ -171,24 +185,22 @@ func (c *Client) doRequestWithToken(ctx context.Context, method, path string, bo
 
 	durationMs := int(time.Since(start).Milliseconds())
 
-	if err != nil {
-		if c.logCallback != nil {
-			statusCode := 0
-			var respBody []byte
-			if result != nil {
-				if resp, ok := result.(*apiResponse); ok {
-					statusCode = resp.StatusCode
-					respBody = resp.Body
-				}
-			}
-			c.logCallback(method, url, statusCode, reqBodyBytes, respBody, durationMs, err)
-		}
+	if cbErr != nil {
+		errStatus := 0
+		var errRespBody []byte
 		if result != nil {
 			if resp, ok := result.(*apiResponse); ok {
-				return resp.Body, resp.StatusCode, err
+				errStatus = resp.StatusCode
+				errRespBody = resp.Body
 			}
 		}
-		return nil, 0, err
+		if c.logCallback != nil {
+			c.logCallback(method, url, errStatus, reqBodyBytes, errRespBody, durationMs, cbErr)
+		}
+		err = cbErr
+		statusCode = errStatus
+		respBody = errRespBody
+		return respBody, statusCode, err
 	}
 
 	resp := result.(*apiResponse)
@@ -197,5 +209,7 @@ func (c *Client) doRequestWithToken(ctx context.Context, method, path string, bo
 		c.logCallback(method, url, resp.StatusCode, reqBodyBytes, resp.Body, durationMs, nil)
 	}
 
-	return resp.Body, resp.StatusCode, nil
+	respBody = resp.Body
+	statusCode = resp.StatusCode
+	return respBody, statusCode, nil
 }

@@ -61,21 +61,21 @@ func TestVehicle_Archived(t *testing.T) {
 
 func TestChargingSession_Fields(t *testing.T) {
 	energy := 45.5
-	pct := int16(20)
+	pct := 20.0
 	cs := ChargingSession{
-		VehicleID:       1,
-		StartTs:         time.Now(),
-		EnergyAddedKwh:  &energy,
-		StartBatteryPct: &pct,
+		VehicleID:          1,
+		StartedAt:          time.Now(),
+		TotalEnergyAddedWh: &energy,
+		StartSocPct:        &pct,
 	}
-	if cs.EnergyAddedKwh == nil || *cs.EnergyAddedKwh != 45.5 {
-		t.Errorf("expected energy added 45.5, got %v", cs.EnergyAddedKwh)
+	if cs.TotalEnergyAddedWh == nil || *cs.TotalEnergyAddedWh != 45.5 {
+		t.Errorf("expected energy added 45.5, got %v", cs.TotalEnergyAddedWh)
 	}
-	if cs.StartBatteryPct == nil || *cs.StartBatteryPct != 20 {
-		t.Errorf("expected start battery 20, got %v", cs.StartBatteryPct)
+	if cs.StartSocPct == nil || *cs.StartSocPct != 20 {
+		t.Errorf("expected start battery 20, got %v", cs.StartSocPct)
 	}
 	if !cs.IsActive() {
-		t.Errorf("expected session with nil EndTs to be active")
+		t.Errorf("expected session with nil EndedAt to be active")
 	}
 }
 
@@ -83,16 +83,16 @@ func TestDrive_Fields(t *testing.T) {
 	start := time.Now()
 	endTs := start.Add(30 * time.Minute)
 	d := Drive{
-		VehicleID:   1,
-		StartTs:     start,
-		EndTs:       &endTs,
-		DistanceMi:  25.5,
-		DurationMin: 30.0,
+		VehicleID: 1,
+		StartTs:   start,
+		EndTs:     &endTs,
+		DistanceM: 41036.4,
+		DurationS: 1800,
 	}
-	if d.DistanceMi != 25.5 {
-		t.Errorf("expected distance 25.5, got %f", d.DistanceMi)
+	if d.DistanceM != 41036.4 {
+		t.Errorf("expected distance 41036.4, got %f", d.DistanceM)
 	}
-	if d.DurationMin != 30.0 {
-		t.Errorf("expected duration 30.0, got %f", d.DurationMin)
+	if d.DurationS != 1800 {
+		t.Errorf("expected duration 1800, got %d", d.DurationS)
 	}
 }

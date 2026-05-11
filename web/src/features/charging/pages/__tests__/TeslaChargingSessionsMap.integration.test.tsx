@@ -85,7 +85,7 @@ function makeSessions(n: number, opts?: { invalidEvery?: number }): TeslaChargin
       site_location_name: `Site ${i}`,
       charge_start_datetime: new Date(2024, 0, 1, 12, i % 60).toISOString(),
       charge_stop_datetime: new Date(2024, 0, 1, 13, i % 60).toISOString(),
-      energy_added_kwh: 50 + (i % 20),
+      total_energy_added_wh: 50 + (i % 20),
       peak_power_kw: 150,
       max_charge_rate_kw: 250,
       charge_duration_s: 1800,

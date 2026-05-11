@@ -54,7 +54,7 @@ func TestChatbot_LocationLookup_UsesForwardFoldedState(t *testing.T) {
 			}, nil
 		},
 	}
-	h := &ChatbotHandler{state: fake}
+	h := &ChatbotHandler{state: fake, live: newTestLiveStateReader(fake)}
 
 	line, err := h.vehicleLocationLine(context.Background(), 42, "Falcon")
 	if err != nil {
@@ -114,7 +114,7 @@ func TestChatbot_PropagatesError(t *testing.T) {
 			return nil, wantErr
 		},
 	}
-	h := &ChatbotHandler{state: fake}
+	h := &ChatbotHandler{state: fake, live: newTestLiveStateReader(fake)}
 
 	line, err := h.vehicleLocationLine(context.Background(), 42, "Falcon")
 	if err == nil {
@@ -140,7 +140,7 @@ func TestChatbot_LocationLookup_UnknownWhenNoCoords(t *testing.T) {
 			return signal.State{}, nil
 		},
 	}
-	h := &ChatbotHandler{state: fake}
+	h := &ChatbotHandler{state: fake, live: newTestLiveStateReader(fake)}
 
 	line, err := h.vehicleLocationLine(context.Background(), 42, "Falcon")
 	if err != nil {

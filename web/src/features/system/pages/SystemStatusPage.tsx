@@ -61,9 +61,13 @@ export default function SystemStatusPage() {
   }, [refetchHealth, queryClient]);
 
   const components = health ? Object.entries(health.components) : [];
-  const okCount = components.filter(([, c]) => c.status === 'ok').length;
-  const degradedCount = components.filter(([, c]) => c.status === 'degraded').length;
-  const unhealthyCount = components.filter(([, c]) => c.status === 'unhealthy').length;
+  // Backend emits both 'healthy' (current /system/health) and 'ok' (legacy / probes).
+  // Treat 'unknown' (e.g. tesla_api when never polled) as neither healthy nor degraded.
+  const okCount = components.filter(([, c]) => c.status === 'ok' || c.status === 'healthy').length;
+  const degradedCount = components.filter(([, c]) => c.status === 'degraded' || c.status === 'warning').length;
+  const unhealthyCount = components.filter(
+    ([, c]) => c.status === 'unhealthy' || c.status === 'offline' || c.status === 'down' || c.status === 'failed',
+  ).length;
 
   const overallStatus = health?.status ?? 'unknown';
   const glowColor: 'cyan' | 'green' | 'purple' | 'none' =

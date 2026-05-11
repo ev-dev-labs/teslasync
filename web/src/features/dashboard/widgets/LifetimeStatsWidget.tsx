@@ -5,12 +5,14 @@ import { AnimatedNumber } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useLifetimeStats } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { UNITS } from '@/lib/constants';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -18,18 +20,20 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
   const {
-    data, isLoading, error,
-    isFetching, isStale, isError, dataUpdatedAt, refetch,
-  } = useLifetimeStats(id > 0 ? String(id) : undefined);
+    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useLifetimeStats(id > 0 ? String(id) : undefined);
 
-  const { convertDistance, distanceUnit, formatCurrency } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
+  const { formatCurrency } = useFormatting();
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
   // API returns km; convert km → mi (internal) → user pref
   const distanceMi = (data?.total_distance_km ?? 0) * UNITS.KM_TO_MI;
-  const displayDistance = convertDistance(distanceMi);
+  const displayDistance = toDistanceDisplay(distanceMi);
 
   const coreStats = useMemo((): StatGridItem[] => {
     if (!data) return [];
@@ -66,7 +70,7 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
     const avgDailyMi = data.ownership_days > 0
       ? distanceMi / data.ownership_days
       : 0;
-    const avgDailyDisplay = convertDistance(avgDailyMi);
+    const avgDailyDisplay = toDistanceDisplay(avgDailyMi);
 
     return [
       {
@@ -86,7 +90,7 @@ export default function LifetimeStatsWidget({ vehicleId, size }: WidgetProps) {
         icon: <Route className="h-3.5 w-3.5" />,
       },
     ];
-  }, [data, distanceMi, convertDistance, distanceUnit, formatCurrency, t]);
+  }, [data, distanceMi, toDistanceDisplay, distanceUnit, formatCurrency, t]);
 
   const allStats = useMemo(
     () => (isWide ? [...coreStats, ...wideStats] : coreStats),

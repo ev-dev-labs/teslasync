@@ -5,13 +5,15 @@ import { Shield, Lock, Unlock, Eye, EyeOff, DoorOpen, DoorClosed } from 'lucide-
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { request } from '@/api/client';
 import type { SecurityEvent } from '@/api/types';
+import { asNonEmptyString } from '@/lib/typeGuards';
 import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed, type EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 
 /** Derive a human-readable event descriptor with severity from a security snapshot. */
 function deriveEvent(ev: SecurityEvent): { icon: React.ReactNode; title: string; color: string; severity: EventFeedItem['severity'] } {
-  const openDoors = (ev.door_state ?? '')
+  const doorRaw = asNonEmptyString(ev.door_state) ?? '';
+  const openDoors = doorRaw
     .split(',')
     .map((s) => s.trim())
     .filter((s) => s.toLowerCase().includes('open'));

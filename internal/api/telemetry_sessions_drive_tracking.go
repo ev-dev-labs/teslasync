@@ -139,7 +139,7 @@ type streamingDrive struct {
 	state signal.StateReader
 }
 
-func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
+func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}, payloadTs time.Time, fieldTs map[string]time.Time) {
 	speed, hasSpeed := signalFloat(signals, "VehicleSpeed")
 	gear, hasGear := signalStr(signals, "Gear")
 
@@ -159,9 +159,9 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 			if activeCharge, hasCharge := t.activeCharges[vehicleID]; hasCharge {
 				log.Info().Int64("vehicle_id", vehicleID).Int64("charge_id", activeCharge.SessionID).
 					Msg("telemetry: drive starting while charge active — force-completing charge")
-				t.completeChargeLocked(ctx, vehicleID, activeCharge, signals)
+				t.completeChargeLocked(ctx, vehicleID, activeCharge, signals, payloadTs)
 			}
-			t.startDriveLocked(ctx, vehicleID, vin, signals, accumulatedSignals, speed, true)
+			t.startDriveLocked(ctx, vehicleID, vin, signals, accumulatedSignals, speed, true, payloadTs, fieldTs)
 			return
 		}
 
@@ -177,7 +177,7 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 			// Gear→P with active drive → END DRIVE immediately
 			log.Info().Int64("vehicle_id", vehicleID).Int64("drive_id", active.DriveID).
 				Str("gear", gear).Msg("telemetry: gear→P, ending drive")
-			t.completeDriveLocked(ctx, vehicleID, active, signals)
+			t.completeDriveLocked(ctx, vehicleID, active, signals, payloadTs, fieldTs)
 			return
 		}
 
@@ -205,9 +205,9 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		if activeCharge, hasCharge := t.activeCharges[vehicleID]; hasCharge {
 			log.Info().Int64("vehicle_id", vehicleID).Int64("charge_id", activeCharge.SessionID).
 				Msg("telemetry: drive starting (speed) while charge active — force-completing charge")
-			t.completeChargeLocked(ctx, vehicleID, activeCharge, signals)
+			t.completeChargeLocked(ctx, vehicleID, activeCharge, signals, payloadTs)
 		}
-		t.startDriveLocked(ctx, vehicleID, vin, signals, accumulatedSignals, speed, false)
+		t.startDriveLocked(ctx, vehicleID, vin, signals, accumulatedSignals, speed, false, payloadTs, fieldTs)
 
 	} else if speed > 0 && hasDrive {
 		// Speed > 0, active drive → UPDATE
@@ -242,13 +242,20 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 					}
 				}
 			}
-			t.completeDriveLocked(ctx, vehicleID, active, signals)
+			t.completeDriveLocked(ctx, vehicleID, active, signals, payloadTs, fieldTs)
 		}
 	}
 }
 
 // startDriveLocked creates a new drive session. Must be called with t.mu held.
-func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}, speed float64, gearBased bool) {
+//
+// payloadTs is the batch high-water EmittedAt; fieldTs is the per-Field
+// EmittedAt map. The drive's StartTs/StartTime are stamped using the Gear
+// field's EmittedAt when available (gear-based drives) or VehicleSpeed's
+// EmittedAt (speed-fallback drives), falling back to payloadTs, then
+// wall-clock if neither is set. Phase-42a/0030.bis (commit C2 of v3.4
+// prod-replay accuracy fix).
+func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}, speed float64, gearBased bool, payloadTs time.Time, fieldTs map[string]time.Time) {
 	batteryLevel, hasBat := t.resolveInt(vehicleID, signals, accumulatedSignals, "BatteryLevel", "Soc")
 	odometer, hasOdo := t.resolveFloat(vehicleID, signals, accumulatedSignals, "Odometer")
 	lat, lon, hasLoc := t.resolveLatLon(vehicleID, signals, accumulatedSignals)
@@ -259,9 +266,45 @@ func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleI
 	soc, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "Soc", "BatteryLevel")
 	usableSoc, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "UsableSoc")
 
+	// Prefer the originating signal's EmittedAt for the drive's start
+	// timestamp. Gear-based drives use Gear's EmittedAt; speed-fallback
+	// drives use VehicleSpeed's EmittedAt. Falls back to payloadTs (batch
+	// high-water mark) and ultimately wall-clock.
+	startTs := time.Time{}
+	if gearBased {
+		if ts, ok := fieldTs["Gear"]; ok && !ts.IsZero() {
+			startTs = ts
+		}
+	} else {
+		if ts, ok := fieldTs["VehicleSpeed"]; ok && !ts.IsZero() {
+			startTs = ts
+		}
+	}
+	if startTs.IsZero() {
+		startTs = payloadTs
+	}
+	startTs = eventTimeOrNow(startTs)
+
+	// C3 (v3.4 prod-replay accuracy fix): drive-merge.
+	// Before creating a new drive row, look up the most recent ended drive
+	// for this vehicle whose ended_at is within driveMergeWindow of the
+	// candidate startTs. If found, RESUME that drive (clear ended_at) and
+	// seed the in-memory streamingDrive from the prior drive's start
+	// values so completeDriveLocked extends it to the true end time.
+	//
+	// This compensates for spurious mid-trip Gear=P transients that the
+	// FSM's debounce window cannot fully prevent (e.g. when a Park frame
+	// is the last gear signal before a long silent stretch and CheckPending
+	// fires before another gear arrives). The merge window MUST be smaller
+	// than the FSM debounce + a small grace so we don't accidentally
+	// merge two genuinely separate trips made minutes apart.
+	if merged := t.tryMergeDriveLocked(ctx, vehicleID, vin, signals, accumulatedSignals, speed, gearBased, startTs, payloadTs); merged {
+		return
+	}
+
 	drive := &models.Drive{
 		VehicleID: vehicleID,
-		StartTs:   time.Now().UTC(),
+		StartTs:   startTs,
 	}
 	if hasBat {
 		drive.StartBatteryPct = int16Ptr(batteryLevel)
@@ -279,7 +322,7 @@ func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleI
 	sd := &streamingDrive{
 		DriveID:            drive.ID,
 		VehicleID:          vehicleID,
-		StartTime:          time.Now().UTC(),
+		StartTime:          startTs,
 		LastSpeed:          speed,
 		LastSeen:           time.Now().UTC(),
 		GearBased:          gearBased,
@@ -391,12 +434,17 @@ func (t *TelemetrySessionTracker) updateActiveDriveLocked(ctx context.Context, a
 		if odo, ok := signalFloat(signals, "Odometer"); ok {
 			active.StartOdometer = floatPtr(odo)
 			active.LastOdometer = floatPtr(odo)
+			// C7 (Phase-41 v3.4): persist SI-canonical start odometer to
+			// the drives row so the boundary value survives even if the
+			// snapshot path can't recover it at completion time. Mirrors
+			// the start_battery_pct / start_lat backfill pattern below.
+			startBackfill["start_odometer_m"] = odo
 		}
 	}
 	if active.StartSoc == nil {
 		if soc, ok := signalFloat(signals, "Soc", "BatteryLevel"); ok {
 			active.StartSoc = floatPtr(soc)
-			startBackfill["start_battery_pct"] = int16(soc)
+			startBackfill["start_soc_pct"] = float32(soc)
 			active.SocMax = soc
 			active.SocMin = soc
 			active.SocSum = soc
@@ -408,7 +456,7 @@ func (t *TelemetrySessionTracker) updateActiveDriveLocked(ctx context.Context, a
 			active.StartLatitude = floatPtr(la)
 			active.StartLongitude = floatPtr(lo)
 			startBackfill["start_lat"] = la
-			startBackfill["start_lon"] = lo
+			startBackfill["start_lng"] = lo
 			go t.resolveAndUpdateAddress(active.DriveID, la, lo, true)
 		}
 	}
@@ -685,12 +733,29 @@ func (t *TelemetrySessionTracker) recordDriveTelemetry(ctx context.Context, driv
 	_ = reading
 }
 
-func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehicleID int64, active *streamingDrive, signals map[string]interface{}) {
+func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehicleID int64, active *streamingDrive, signals map[string]interface{}, payloadTs time.Time, fieldTs map[string]time.Time) {
 	// Guard: prevent double-completion race between cleanup and normal end
 	if active.Completing {
 		return
 	}
 	active.Completing = true
+
+	// Resolve end timestamp from event-time first (Phase-42a/0030.bis):
+	// prefer Gear=P / Gear=N's EmittedAt for gear-based ends, then
+	// VehicleSpeed for speed-fallback ends, then payloadTs (batch
+	// high-water), then wall-clock. Without this, replaying a 24-min
+	// historical batch produces an end timestamp at the replay clock
+	// rather than the original signal's event-time.
+	endTs := time.Time{}
+	if ts, ok := fieldTs["Gear"]; ok && !ts.IsZero() {
+		endTs = ts
+	} else if ts, ok := fieldTs["VehicleSpeed"]; ok && !ts.IsZero() {
+		endTs = ts
+	}
+	if endTs.IsZero() {
+		endTs = payloadTs
+	}
+	endTs = eventTimeOrNow(endTs)
 
 	// Flush any remaining accumulated signals before closing
 	if signals != nil {
@@ -713,15 +778,27 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		endBattery = int(*active.StartSoc)
 	}
 
-	duration := time.Since(active.StartTime).Minutes()
-	maxSpeed := active.MaxSpeed
+	duration := endTs.Sub(active.StartTime).Minutes()
+	if duration < 0 {
+		duration = 0
+	}
 
-	// Compute distance from odometer
-	var distance float64
+	// Compute distance from odometer.
+	//
+	// Post-Phase-42 the codec emits Odometer in SI canonical meters (after
+	// normalize.toSI applies the unit-history distance unit). The in-memory
+	// active.{Start,Last}Odometer are populated from
+	// `signalFloat(signals, "Odometer")` and `signals` are the post-toSI
+	// atomics, so the subtraction yields METERS. Phase-48 drops the
+	// back-conversion to miles — completeDriveLocked feeds distanceMeters
+	// straight to the SI-direct CompleteWithTx signature.
+	// distanceMeters carries the SI value across the enhancedFields
+	// init point (line ~826) where it can be inserted into the map.
+	var distanceMeters float64
 	if active.StartOdometer != nil && active.LastOdometer != nil {
-		distance = *active.LastOdometer - *active.StartOdometer
-		if distance < 0 {
-			distance = 0
+		distanceMeters = *active.LastOdometer - *active.StartOdometer
+		if distanceMeters < 0 {
+			distanceMeters = 0
 		}
 	}
 
@@ -732,9 +809,11 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		speedAvg = &avg
 	}
 
-	// Fallback: estimate distance from avg speed × duration when odometer unavailable
-	if distance == 0 && speedAvg != nil && duration > 0 {
-		distance = (*speedAvg) * (duration / 60.0) // mph × hours = miles
+	// Fallback: estimate distance from avg speed × duration when odometer
+	// unavailable. speedAvg is m/s post-Phase-42 codec, duration is minutes,
+	// so meters = mps × seconds = mps × duration × 60.
+	if distanceMeters == 0 && speedAvg != nil && duration > 0 {
+		distanceMeters = (*speedAvg) * duration * 60.0
 	}
 
 	var insideAvg, outsideAvg *float64
@@ -761,20 +840,49 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 
 	// Build enhanced fields map (only columns in drivePartialAllowed)
 	enhancedFields := map[string]interface{}{}
+	// C6 (Phase-41 v3.4): forward SI-canonical odometer-derived distance
+	// in meters through the partial-update path (drivePartialAllowed
+	// permits distance_m as direct passthrough). PartialUpdateWithTx
+	// runs INSIDE the same tx after CompleteWithTx so the SI value
+	// authoritatively overwrites the back-converted distance from
+	// completeArgsToSI(distance_mi). Snapshot-odometer (line ~898) and
+	// C5 integration fallback (line ~927) further overwrite this when
+	// they yield a positive value.
+	if distanceMeters > 0 {
+		enhancedFields["distance_m"] = distanceMeters
+	}
+	// C7 (Phase-41 v3.4): persist SI-canonical drive boundary odometer
+	// (meters) when known. drivePartialAllowed now passes start_odometer_m
+	// and end_odometer_m through translatePartialFieldsToSI without
+	// conversion. Snapshot path below may overwrite with more accurate
+	// boundary values reconstructed from signal_log.
+	if active.StartOdometer != nil {
+		enhancedFields["start_odometer_m"] = *active.StartOdometer
+	}
+	if active.LastOdometer != nil {
+		enhancedFields["end_odometer_m"] = *active.LastOdometer
+	}
 	if speedAvg != nil {
-		enhancedFields["avg_speed_mph"] = *speedAvg
+		// C7 (Phase-41 v3.4): speedAvg is m/s post-Phase-42 codec. Writing
+		// to avg_speed_mph would trigger translatePartialFieldsToSI to
+		// multiply by mpsPerMph (0.44704) producing a 0.44× understatement.
+		// Write SI-direct via avg_speed_mps which the SI passthrough in
+		// translate now permits. signal_log-derived avg below (~line 1050)
+		// overwrites this with a more accurate time-weighted figure when
+		// the reader is wired.
+		enhancedFields["avg_speed_mps"] = *speedAvg
 	}
 	if active.StartLatitude != nil {
 		enhancedFields["start_lat"] = *active.StartLatitude
 	}
 	if active.StartLongitude != nil {
-		enhancedFields["start_lon"] = *active.StartLongitude
+		enhancedFields["start_lng"] = *active.StartLongitude
 	}
 	if endLat != nil {
 		enhancedFields["end_lat"] = *endLat
 	}
 	if endLon != nil {
-		enhancedFields["end_lon"] = *endLon
+		enhancedFields["end_lng"] = *endLon
 	}
 
 	// Enrich with signal_log for fields not captured during session.
@@ -802,7 +910,8 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	// so a transient signal_log query failure does not abort drive-session
 	// completion (the unenriched `drives` row is still committed).
 	if t.signalLogReader != nil {
-		endTs := time.Now().UTC()
+		// endTs already computed at function entry from per-field
+		// EmittedAt + payloadTs fallback (Phase-42a/0030.bis).
 		var startSnap, endSnap map[string]interface{}
 		if active.state != nil {
 			s, startErr := active.state.State(ctx, vehicleID, active.StartTime)
@@ -826,98 +935,148 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			endSnap = map[string]interface{}{}
 		}
 
-		// Unit preferences at start and end (may differ if user changed mid-drive)
-		startDistUnit := units.GetUnitFromSnapshot(startSnap, "SettingDistanceUnit")
-		endDistUnit := units.GetUnitFromSnapshot(endSnap, "SettingDistanceUnit")
+		// Unit preferences at start and end (may differ if user changed mid-drive).
+		// startDistUnit dropped per C6: snapshot Odometer is now SI meters
+		// (post-Phase-42 normalize.toSI) so no per-snapshot unit lookup is
+		// needed for the odometer-difference path.
+		// endDistUnit dropped per C7: signal_log stores SI m/s so the speed
+		// aggregates are written SI-direct via avg_speed_mps/max_speed_mps
+		// and need no per-snapshot unit lookup either.
 		endTempUnit := units.GetUnitFromSnapshot(endSnap, "SettingTemperatureUnit")
 
-		// Distance from odometer (unit-aware, normalized to miles)
+		// Distance from snapshot odometer.
+		//
+		// Post-Phase-42 the codec emits Odometer in SI canonical meters via
+		// normalize.toSI; signal_log stores SI; the state.State() snapshot
+		// reconstructs from signal_log so snapFloat(snap, "Odometer") returns
+		// METERS. Phase-48 forwards the SI value straight to
+		// enhancedFields["distance_m"] with no back-derivation.
 		if startOdoRaw, ok := snapFloat(startSnap, "Odometer"); ok {
 			if endOdoRaw, ok := snapFloat(endSnap, "Odometer"); ok {
-				startOdo := units.NormalizeDistance(startOdoRaw, startDistUnit)
-				endOdo := units.NormalizeDistance(endOdoRaw, endDistUnit)
-				sDist := endOdo - startOdo
-				if sDist > 0 {
-					distance = sDist
-					enhancedFields["distance_mi"] = distance
+				sDistMeters := endOdoRaw - startOdoRaw
+				if sDistMeters > 0 {
+					distanceMeters = sDistMeters
+					enhancedFields["distance_m"] = sDistMeters
 				}
+				// Persist boundary odometer regardless of distance sign — even
+				// if the snapshot delta is negative (rare reorder edge case)
+				// the boundary values themselves are still authoritative for
+				// display.
+				enhancedFields["start_odometer_m"] = startOdoRaw
+				enhancedFields["end_odometer_m"] = endOdoRaw
+			}
+		}
+
+		// If odometer never landed (codec did not populate Odometer at
+		// boundary times — common in short trips and prod-replay where
+		// samples may not align with drive-end), integrate VehicleSpeed
+		// (m/s) over the window from signal_log. Returned value is METERS
+		// (SI canonical).
+		if distanceMeters == 0 {
+			meters, intErr := t.signalLogReader.IntegrateDriveDistanceMeters(ctx, vehicleID, active.StartTime, endTs)
+			if intErr != nil {
+				log.Warn().Err(intErr).
+					Int64("vehicle_id", vehicleID).
+					Int64("drive_id", active.DriveID).
+					Msg("telemetry: SI distance integration failed; drive completes with distance=0")
+			} else if meters > 0 {
+				distanceMeters = meters
+				enhancedFields["distance_m"] = meters
+				log.Info().
+					Int64("vehicle_id", vehicleID).
+					Int64("drive_id", active.DriveID).
+					Float64("integrated_meters", meters).
+					Msg("telemetry: distance integrated from VehicleSpeed signal_log")
 			}
 		}
 
 		// Battery from snapshots
 		if bl, ok := snapFloat(startSnap, "BatteryLevel"); ok && bl > 0 {
-			enhancedFields["start_battery_pct"] = int16(bl)
+			enhancedFields["start_soc_pct"] = float32(bl)
 		}
 		if bl, ok := snapFloat(endSnap, "BatteryLevel"); ok && bl > 0 {
 			endBattery = int(bl)
 		}
 
-		// Position from snapshots (fill if missing)
+		// Position from snapshots (fill if missing).
+		// Dual-key tolerance: Phase-42 codec emits LocationLatitude /
+		// LocationLongitude (codec/flatten.go:18-22); legacy JSON ingest
+		// still emits "Latitude" / "Longitude". snapFloat accepts both.
 		if _, exists := enhancedFields["start_lat"]; !exists {
-			if lat, ok := snapFloat(startSnap, "Latitude"); ok {
+			if lat, ok := snapFloat(startSnap, "LocationLatitude", "Latitude"); ok {
 				enhancedFields["start_lat"] = lat
 			}
 		}
-		if _, exists := enhancedFields["start_lon"]; !exists {
-			if lon, ok := snapFloat(startSnap, "Longitude"); ok {
-				enhancedFields["start_lon"] = lon
+		if _, exists := enhancedFields["start_lng"]; !exists {
+			if lon, ok := snapFloat(startSnap, "LocationLongitude", "Longitude"); ok {
+				enhancedFields["start_lng"] = lon
 			}
 		}
 		if _, exists := enhancedFields["end_lat"]; !exists {
-			if lat, ok := snapFloat(endSnap, "Latitude"); ok {
+			if lat, ok := snapFloat(endSnap, "LocationLatitude", "Latitude"); ok {
 				enhancedFields["end_lat"] = lat
 			}
 		}
-		if _, exists := enhancedFields["end_lon"]; !exists {
-			if lon, ok := snapFloat(endSnap, "Longitude"); ok {
-				enhancedFields["end_lon"] = lon
+		if _, exists := enhancedFields["end_lng"]; !exists {
+			if lon, ok := snapFloat(endSnap, "LocationLongitude", "Longitude"); ok {
+				enhancedFields["end_lng"] = lon
 			}
 		}
 
-		// Temperature (unit-aware, normalized to °C)
+		// Temperature (unit-aware, normalized to °C). The drives table only
+		// has ambient_temp_c_avg (mig 000185 dropped the inside cabin temp
+		// column). Inside cabin temp is captured for the local insideAvg
+		// pointer used downstream, but not persisted.
 		if temp, ok := snapFloat(endSnap, "OutsideTemp"); ok {
 			normalized := units.NormalizeTemp(temp, endTempUnit)
-			enhancedFields["outside_temp_avg_c"] = normalized
+			enhancedFields["ambient_temp_c_avg"] = normalized
 			outsideAvg = &normalized
 		}
 		if temp, ok := snapFloat(endSnap, "InsideTemp"); ok {
 			normalized := units.NormalizeTemp(temp, endTempUnit)
-			enhancedFields["inside_temp_avg_c"] = normalized
 			insideAvg = &normalized
 		}
 
-		// Energy: delta of cumulative counters
+		// Energy: delta of cumulative counters. LifetimeEnergyUsed is
+		// reported in kWh; convert to SI Wh for the energy_used_wh column.
 		if startEnergy, ok := snapFloat(startSnap, "LifetimeEnergyUsed"); ok {
 			if endEnergy, ok := snapFloat(endSnap, "LifetimeEnergyUsed"); ok {
-				energyUsed := endEnergy - startEnergy
-				if energyUsed > 0 {
-					enhancedFields["energy_used_kwh"] = energyUsed
+				energyUsedDisplay := endEnergy - startEnergy
+				if energyUsedDisplay > 0 {
+					enhancedFields["energy_used_wh"] = energyUsedDisplay * 1000.0
 				}
 			}
 		}
 
 		// Aggregates from signal_log during the drive window
 		slAvgSpeed, slMaxSpeed, slAvgPower := t.signalLogReader.DriveAggregates(ctx, vehicleID, active.StartTime, endTs)
+		// C7 (Phase-41 v3.4): signal_log stores SI (m/s) post-Phase-42
+		// codec. Writing to *_mph would trigger translatePartialFieldsToSI
+		// to multiply by mpsPerMph (0.44704) producing a 0.44× understatement
+		// of both avg and max speed. Write SI-direct via *_mps which the
+		// SI passthrough in translate now permits. endDistUnit is no longer
+		// consulted because the signal_log values are unit-canonical SI.
 		if slAvgSpeed > 0 {
-			// Normalize speed: signal_log stores raw values in car's unit
-			normalizedAvg := units.NormalizeSpeed(slAvgSpeed, endDistUnit)
-			enhancedFields["avg_speed_mph"] = normalizedAvg
+			enhancedFields["avg_speed_mps"] = slAvgSpeed
 		}
 		if slMaxSpeed > 0 {
-			normalizedMax := units.NormalizeSpeed(slMaxSpeed, endDistUnit)
-			enhancedFields["max_speed_mph"] = normalizedMax
-			maxSpeed = normalizedMax
+			enhancedFields["max_speed_mps"] = slMaxSpeed
+			// maxSpeed (legacy m/s passed to CompleteWithTx as if mph)
+			// is left at zero so completeArgsToSI's max_speed_mph * 0.44704
+			// yields zero. PartialUpdateWithTx then writes the correct
+			// SI-direct value. Avoids the historical mph↔mps double convert.
 		}
 		if slAvgPower != 0 {
-			enhancedFields["avg_power_kw"] = math.Abs(slAvgPower)
-			p := math.Abs(slAvgPower)
-			powerMax = &p
+			// DriveAggregates returns avg power in kW; convert to SI W.
+			avgPowerW := math.Abs(slAvgPower) * 1000.0
+			enhancedFields["avg_power_w"] = avgPowerW
+			powerMax = &avgPowerW
 		}
 
-		// Regen energy
+		// Regen energy. RegenEnergy returns kWh; convert to SI Wh.
 		regenKwh := t.signalLogReader.RegenEnergy(ctx, vehicleID, active.StartTime, endTs)
 		if regenKwh > 0 {
-			enhancedFields["regen_kwh"] = regenKwh
+			enhancedFields["regen_energy_wh"] = regenKwh * 1000.0
 		}
 	} else if t.signalHistoryWriter != nil {
 		// Legacy fallback path: signalHistoryWriter is wired but signalLogReader
@@ -936,7 +1095,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			} else {
 				startSnapshot = stateToLegacyMap(s)
 			}
-			s2, endErr := active.state.State(ctx, vehicleID, time.Now().UTC())
+			s2, endErr := active.state.State(ctx, vehicleID, endTs)
 			if endErr != nil {
 				log.Warn().Err(endErr).Int64("vehicle_id", vehicleID).
 					Msg("telemetry: state.State (history-writer fallback) drive end snapshot failed")
@@ -949,98 +1108,114 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			endSnapshot = map[string]interface{}{}
 		}
 
-		// Fill missing start position
+		// Fill missing start position. Dual-key tolerance — see
+		// codec/flatten.go for the Phase-42 LocationLatitude name.
 		if _, exists := enhancedFields["start_lat"]; !exists {
-			if v, ok := startSnapshot["Latitude"]; ok {
-				if lat, fOk := v.(float64); fOk {
-					enhancedFields["start_lat"] = lat
+			for _, k := range []string{"LocationLatitude", "Latitude"} {
+				if v, ok := startSnapshot[k]; ok {
+					if lat, fOk := v.(float64); fOk {
+						enhancedFields["start_lat"] = lat
+						break
+					}
 				}
 			}
 		}
-		if _, exists := enhancedFields["start_lon"]; !exists {
-			if v, ok := startSnapshot["Longitude"]; ok {
-				if lon, fOk := v.(float64); fOk {
-					enhancedFields["start_lon"] = lon
+		if _, exists := enhancedFields["start_lng"]; !exists {
+			for _, k := range []string{"LocationLongitude", "Longitude"} {
+				if v, ok := startSnapshot[k]; ok {
+					if lon, fOk := v.(float64); fOk {
+						enhancedFields["start_lng"] = lon
+						break
+					}
 				}
 			}
 		}
 
 		// Fill missing end position
 		if _, exists := enhancedFields["end_lat"]; !exists {
-			if v, ok := endSnapshot["Latitude"]; ok {
-				if lat, fOk := v.(float64); fOk {
-					enhancedFields["end_lat"] = lat
+			for _, k := range []string{"LocationLatitude", "Latitude"} {
+				if v, ok := endSnapshot[k]; ok {
+					if lat, fOk := v.(float64); fOk {
+						enhancedFields["end_lat"] = lat
+						break
+					}
 				}
 			}
 		}
-		if _, exists := enhancedFields["end_lon"]; !exists {
-			if v, ok := endSnapshot["Longitude"]; ok {
-				if lon, fOk := v.(float64); fOk {
-					enhancedFields["end_lon"] = lon
+		if _, exists := enhancedFields["end_lng"]; !exists {
+			for _, k := range []string{"LocationLongitude", "Longitude"} {
+				if v, ok := endSnapshot[k]; ok {
+					if lon, fOk := v.(float64); fOk {
+						enhancedFields["end_lng"] = lon
+						break
+					}
 				}
 			}
 		}
 
-		// Fill missing temperature (single-point fallback when no temp signals during drive)
-		if insideAvg == nil {
-			if v, ok := startSnapshot["InsideTemp"]; ok {
-				if temp, fOk := v.(float64); fOk {
-					enhancedFields["inside_temp_avg_c"] = temp
-				}
-			}
-		}
+		// Fill missing temperature (single-point fallback when no temp signals during drive).
+		// Inside cabin temp has no persistent column post-mig 000185; only ambient is stored.
 		if outsideAvg == nil {
 			if v, ok := startSnapshot["OutsideTemp"]; ok {
 				if temp, fOk := v.(float64); fOk {
-					enhancedFields["outside_temp_avg_c"] = temp
+					enhancedFields["ambient_temp_c_avg"] = temp
+					outsideAvg = &temp
+				}
+			}
+		}
+		if insideAvg == nil {
+			if v, ok := startSnapshot["InsideTemp"]; ok {
+				if temp, fOk := v.(float64); fOk {
+					insideAvg = &temp
 				}
 			}
 		}
 	}
 
-	// Determine ended_status based on how the drive ended
-	switch {
-	case duration < 1.0 || distance < 0.1:
-		enhancedFields["ended_status"] = "aborted"
-	case signals != nil:
-		enhancedFields["ended_status"] = "completed"
-	default:
-		// signals == nil means stale-session cleanup closed the drive
-		enhancedFields["ended_status"] = "interrupted"
+	// Compute durationS in SI seconds for downstream completion call.
+	durationS := int64(duration*60.0 + 0.5)
+	// active.MaxSpeed is captured in m/s (post-Phase-42 codec emits VehicleSpeed
+	// in SI). active.PowerMax is captured in kW (signalPowerKW returns
+	// V*A/1000); convert to SI W for the avg_power_w write below.
+	maxSpeedMps := active.MaxSpeed
+	var powerMaxW *float64
+	if powerMax != nil {
+		w := *powerMax * 1000.0
+		powerMaxW = &w
 	}
-
-	// Compute drive score (0–100) from available driving data
-	driveScore := 100.0
-	if maxSpeed > 85 {
-		driveScore -= 10
-	}
-	if regenKwh, ok := enhancedFields["regen_kwh"].(float64); ok && regenKwh > 0 {
-		if energyUsed, ok := enhancedFields["energy_used_kwh"].(float64); ok && energyUsed > 0 {
-			if regenKwh/energyUsed > 0.3 {
-				driveScore += 5 // good regen usage
-			}
-		}
-	}
-	// Penalize very high average speed (aggressive driving)
-	if speedAvg != nil && *speedAvg > 80 {
-		driveScore -= 5
-	}
-	if driveScore < 0 {
-		driveScore = 0
-	}
-	if driveScore > 100 {
-		driveScore = 100
-	}
-	enhancedFields["score"] = driveScore
 
 	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var endBatteryPct *int16
 		if endBattery := int16(endBattery); endBattery > 0 {
 			endBatteryPct = &endBattery
 		}
-		if err := t.driveRepo.CompleteWithTx(ctx, tx, active.DriveID, time.Now().UTC(),
-			distance, duration, endBatteryPct, &maxSpeed, powerMax, insideAvg, outsideAvg); err != nil {
+		if err := t.driveRepo.CompleteWithTx(ctx, tx, active.DriveID, endTs,
+			distanceMeters, durationS, endBatteryPct, &maxSpeedMps, powerMaxW, outsideAvg); err != nil {
 			return err
+		}
+		// C4 (Phase-41 v3.4): attach unattributed drive_telemetry rows to
+		// this drive in the same tx as the completion update. Window is
+		// [active.StartTime, endTs] which already accounts for drive-merge
+		// (active.StartTime equals the original leg-1 start when merged via
+		// tryMergeDriveLocked). Failure inside this call rolls back the
+		// completion too — partial-failure window must not exist.
+		if affected, err := t.driveRepo.BackfillDriveTelemetryDriveIDInTx(
+			ctx, tx, active.DriveID, vehicleID, active.StartTime, endTs); err != nil {
+			log.Error().Err(err).
+				Int64("drive_id", active.DriveID).
+				Int64("vehicle_id", vehicleID).
+				Time("start_ts", active.StartTime).
+				Time("end_ts", endTs).
+				Msg("telemetry: drive_telemetry drive_id backfill failed; rolling back completion")
+			return err
+		} else if affected > 0 {
+			log.Info().
+				Int64("drive_id", active.DriveID).
+				Int64("vehicle_id", vehicleID).
+				Int64("rows_attributed", affected).
+				Time("start_ts", active.StartTime).
+				Time("end_ts", endTs).
+				Msg("telemetry: backfilled drive_telemetry.drive_id for completed drive")
 		}
 		if len(enhancedFields) > 0 {
 			if err := t.driveRepo.PartialUpdateWithTx(ctx, tx, active.DriveID, enhancedFields); err != nil {
@@ -1064,7 +1239,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	}
 
 	log.Info().Int64("vehicle_id", vehicleID).Int64("drive_id", active.DriveID).
-		Float64("duration_min", duration).Float64("distance", distance).Msg("telemetry: drive ended")
+		Int64("duration_s", durationS).Float64("distance_m", distanceMeters).Msg("telemetry: drive ended")
 
 	// Update monthly trip summary for this drive's month
 	go func() {
@@ -1079,15 +1254,16 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	if t.eventBus != nil {
 		t.eventBus.Publish(events.Event{Type: events.DriveEnded, VehicleID: vehicleID,
 			Data: map[string]interface{}{"drive_id": active.DriveID, "battery_level": endBattery,
-				"distance": distance, "duration_min": duration, "source": "fleet_telemetry"}})
+				"distance_m": distanceMeters, "duration_s": durationS, "source": "fleet_telemetry"}})
 	}
 
 	delete(t.activeDrives, vehicleID)
 	DriveSessionsActive.Dec()
 	DriveSessionsCompleted.Inc()
 	TotalDrives.Inc()
-	if distance > 0 {
-		TotalDistanceKm.Add(distance)
+	if distanceMeters > 0 {
+		// TotalDistanceKm is reported in km; convert from SI meters.
+		TotalDistanceKm.Add(distanceMeters / 1000.0)
 	}
 }
 
@@ -1109,11 +1285,11 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 		startPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, active.StartTime, lookupWindow)
 		if err == nil && startPos != nil {
 			if (active.StartSoc == nil || *active.StartSoc == 0) && startPos.BatteryLvl > 0 {
-				backfill["start_battery_pct"] = int16(startPos.BatteryLvl)
+				backfill["start_soc_pct"] = float32(startPos.BatteryLvl)
 			}
-			if active.StartLatitude == nil && startPos.Latitude != 0 {
-				backfill["start_lat"] = startPos.Latitude
-				backfill["start_lon"] = startPos.Longitude
+			if active.StartLatitude == nil && startPos.Lat != 0 {
+				backfill["start_lat"] = startPos.Lat
+				backfill["start_lng"] = startPos.Lng
 			}
 		}
 	}
@@ -1123,10 +1299,13 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 	endPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, endTime, lookupWindow)
 	if err == nil && endPos != nil {
 		if endPos.BatteryLvl > 0 {
-			backfill["end_battery_pct"] = int16(endPos.BatteryLvl)
+			backfill["end_soc_pct"] = float32(endPos.BatteryLvl)
 		}
 		if active.LastOdometer == nil && endPos.Odometer > 0 {
-			// Recompute distance if we now have both start and end odometer
+			// Recompute distance if we now have both start and end odometer.
+			// Post-Phase-42 the positions writer supplies SI canonical
+			// odometer in meters; the subtraction yields meters which goes
+			// straight into the SI-canonical distance_m partial-update field.
 			startOdo := 0.0
 			if active.StartOdometer != nil {
 				startOdo = *active.StartOdometer
@@ -1134,13 +1313,13 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 			if startOdo > 0 {
 				dist := endPos.Odometer - startOdo
 				if dist > 0 {
-					backfill["distance_mi"] = dist
+					backfill["distance_m"] = dist
 				}
 			}
 		}
-		if active.LastLatitude == nil && endPos.Latitude != 0 {
-			backfill["end_lat"] = endPos.Latitude
-			backfill["end_lon"] = endPos.Longitude
+		if active.LastLatitude == nil && endPos.Lat != 0 {
+			backfill["end_lat"] = endPos.Lat
+			backfill["end_lng"] = endPos.Lng
 		}
 	}
 
@@ -1251,4 +1430,120 @@ func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 		}
 	}
 	log.Info().Int("resolved", filled).Int("total_drives", len(drives)).Msg("backfill: address geocoding complete")
+}
+
+// driveMergeWindow is the maximum gap between an ended drive's ended_at and
+// a new candidate drive's startTs that triggers a merge instead of a new
+// drive row. C3 (v3.4 prod-replay accuracy fix). MUST stay smaller than
+// fsm.StateConfirmDuration (30s) plus a small grace so two genuinely
+// separate trips made minutes apart never get merged.
+const driveMergeWindow = 90 * time.Second
+
+// tryMergeDriveLocked attempts to extend a recently-ended drive instead of
+// creating a new one. Returns true when a merge happened (caller should
+// return without proceeding to the create path), false otherwise. Must be
+// called with t.mu held.
+//
+// On merge, the prior drive's ended_at is cleared via DriveRepo.ResumeForMerge,
+// the in-memory streamingDrive is seeded from the prior drive's start values
+// (StartTs, StartOdometer, StartLat/Lng, StartBatteryPct) so completeDriveLocked
+// extends the original drive's distance/duration window. In-memory aggregate
+// scratch (MaxSpeed, SpeedSum, …) starts fresh; signal_log enrichment in
+// completeDriveLocked recomputes max/avg over the full original-start →
+// new-end window via DriveAggregates.
+func (t *TelemetrySessionTracker) tryMergeDriveLocked(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}, speed float64, gearBased bool, startTs time.Time, payloadTs time.Time) bool {
+	if t.driveRepo == nil {
+		return false
+	}
+	prev, err := t.driveRepo.FindRecentEndedForMerge(ctx, vehicleID, startTs, driveMergeWindow)
+	if err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).
+			Msg("telemetry: drive-merge lookup failed; falling back to new drive")
+		return false
+	}
+	if prev == nil {
+		return false
+	}
+
+	// Re-open the prior drive: clear ended_at so a subsequent Complete() extends it.
+	if err := t.driveRepo.ResumeForMerge(ctx, prev.ID); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Int64("drive_id", prev.ID).
+			Msg("telemetry: drive-merge resume failed; falling back to new drive")
+		return false
+	}
+
+	// Resolve current-batch values for live tracking (Last* fields used during the resumed leg).
+	odometer, hasOdo := t.resolveFloat(vehicleID, signals, accumulatedSignals, "Odometer")
+	lat, lon, hasLoc := t.resolveLatLon(vehicleID, signals, accumulatedSignals)
+	elevation, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "Elevation")
+
+	sd := &streamingDrive{
+		DriveID:            prev.ID,
+		VehicleID:          vehicleID,
+		StartTime:          prev.StartTs, // canonical leg-1 start preserved
+		LastSpeed:          speed,
+		LastSeen:           time.Now().UTC(),
+		GearBased:          gearBased,
+		PowerMin:           math.MaxFloat64,
+		RatedRangeMin:      math.MaxFloat64,
+		IdealRangeMin:      math.MaxFloat64,
+		EstRangeMin:        math.MaxFloat64,
+		SocMin:             math.MaxFloat64,
+		UsableSocMin:       math.MaxFloat64,
+		accumulatedSignals: make(map[string]interface{}),
+		lastTelemetryWrite: time.Now().UTC(),
+		state:              t.driveStateReader(),
+	}
+	if speed > 0 {
+		sd.MaxSpeed = speed
+		sd.MinSpeed = speed
+		sd.SpeedSum = speed
+		sd.SpeedCount = 1
+	}
+
+	// Seed start values from the prior drive row so completeDriveLocked
+	// reports start-of-original-trip values and not start-of-second-leg.
+	if prev.StartLat != nil {
+		sd.StartLatitude = floatPtr(*prev.StartLat)
+	}
+	if prev.StartLon != nil {
+		sd.StartLongitude = floatPtr(*prev.StartLon)
+	}
+	// Seed Last* from the current batch so subsequent samples extend continuously.
+	if hasOdo {
+		sd.LastOdometer = floatPtr(odometer)
+	}
+	if hasLoc {
+		sd.LastLatitude = floatPtr(lat)
+		sd.LastLongitude = floatPtr(lon)
+	}
+	sd.LastElevation = floatPtr(elevation)
+
+	t.activeDrives[vehicleID] = sd
+	DriveSessionsActive.Inc()
+
+	// Accumulate this batch and flush so the resumed leg's first telemetry sample lands.
+	sd.accumulatedSignals = accumulateSignals(sd.accumulatedSignals, signals)
+	t.flushDriveTelemetry(ctx, sd)
+
+	gap := startTs.Sub(*prev.EndTs)
+	log.Info().
+		Int64("vehicle_id", vehicleID).
+		Int64("drive_id", prev.ID).
+		Time("original_start", prev.StartTs).
+		Time("merge_resume_at", startTs).
+		Dur("gap", gap).
+		Bool("gear_based", gearBased).
+		Msg("telemetry: drive-merge — resumed prior drive instead of starting new one")
+
+	if t.eventBus != nil {
+		t.eventBus.Publish(events.Event{Type: events.DriveStarted, VehicleID: vehicleID, VIN: vin,
+			Data: map[string]interface{}{
+				"drive_id": prev.ID,
+				"merged":   true,
+				"gap_sec":  gap.Seconds(),
+				"source":   "fleet_telemetry",
+			}})
+	}
+	return true
 }

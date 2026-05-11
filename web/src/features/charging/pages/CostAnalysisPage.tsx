@@ -9,10 +9,12 @@ import { SavedViewMenu } from '@/components/data-display';
 import { PrintButton } from '@/components/ui';
 import { useChargingSessionsPaginated, useCostForecast } from '@/api/hooks/useCharging';
 import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { DEFAULT_GAS_PRICE, DEFAULT_MPG, DEFAULT_ELECTRICITY_RATE } from '../components/cost-analysis/constants';
 import { useCostAnalysisData } from '../components/cost-analysis/useCostAnalysisData';
 import {
@@ -34,7 +36,10 @@ export default function CostAnalysisPage() {
   usePageTitle(t('costAnalysis.title', 'Cost Analysis'));
   const savedView = useSavedViewUrl();
 
-  const { isMiles, convertDistance, distanceUnit } = useSettings();
+  const { isMiles } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
   // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
   const { vehicleId } = useSelectedVehicle();
 
@@ -66,7 +71,7 @@ export default function CostAnalysisPage() {
     coreStats, monthlyData, costPerKwhTrend, chargerTypeData,
     hourlyData, touInsights, gasComparison, lifetimeMetrics,
   } = useCostAnalysisData({
-    sessions, gasPrice, mpg, electricityRate, convertDistance, isMiles,
+    sessions, gasPrice, mpg, electricityRate, toDistanceDisplay, isMiles,
   });
 
   if (isLoading) return <LoadingSkeleton />;

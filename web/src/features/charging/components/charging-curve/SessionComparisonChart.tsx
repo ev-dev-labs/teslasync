@@ -95,7 +95,7 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
                 key={s.id}
                 {...AREA_DEFAULTS}
                 dataKey={`s${i}`}
-                name={`${formatDateShort(s.start_ts)} (${getChargerLabel(s)})`}
+                name={`${formatDateShort(s.started_at)} (${getChargerLabel(s)})`}
                 stroke={palette[i % palette.length]}
                 strokeWidth={1.5}
                 unit=" kW"
@@ -110,7 +110,7 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
                 className="inline-block h-2 w-3 rounded-sm"
                 style={{ backgroundColor: palette[i % palette.length] }}
               />
-              {formatDateShort(s.start_ts)}
+              {formatDateShort(s.started_at)}
             </div>
           ))}
         </div>

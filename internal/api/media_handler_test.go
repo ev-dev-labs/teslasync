@@ -54,6 +54,15 @@ func (f *fakeStateReader) Timeline(ctx context.Context, vehicleID int64, fields 
 // Compile-time guarantee: fakeStateReader implements signal.StateReader.
 var _ signal.StateReader = (*fakeStateReader)(nil)
 
+// newTestLiveStateReader wraps a fakeStateReader as a signal.LiveStateReader
+// suitable for /latest handler tests. The L1+L2 layer is a no-op, so the
+// handler's LiveState() call falls through to the wrapped StateReader's
+// State() — letting tests continue to drive responses via fake.stateFn the
+// same way they did before the LiveStateReader boundary was introduced.
+func newTestLiveStateReader(state signal.StateReader) signal.LiveStateReader {
+	return signal.MustNewLiveStateReader(signal.NewNoopLiveSignalStore(), state)
+}
+
 // canonicalMediaKeys is the 11-key media response shape that BOTH List rows
 // and Latest envelopes carry. Keep this list in sync with mediaMappings in
 // media_handler.go.
@@ -101,7 +110,7 @@ func TestMediaHandler_List_CollapsesIdentityTuple(t *testing.T) {
 			return collapsedRows, nil
 		},
 	}
-	h := NewMediaHandler(fake)
+	h := NewMediaHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/media?vehicle_id=42", nil)
@@ -162,7 +171,7 @@ func TestMediaHandler_List_PreservesSpotifyAcrossUnchangedSignals(t *testing.T) 
 			return rows, nil
 		},
 	}
-	h := NewMediaHandler(fake)
+	h := NewMediaHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/media?vehicle_id=42", nil)
@@ -212,7 +221,7 @@ func TestMediaHandler_Latest_ProjectsThroughMappings(t *testing.T) {
 			return full, nil
 		},
 	}
-	h := NewMediaHandler(fake)
+	h := NewMediaHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/media/latest?vehicle_id=42", nil)
@@ -247,7 +256,7 @@ func TestMediaHandler_Latest_ProjectsThroughMappings(t *testing.T) {
 // reader. The fake records call counts to prove the reader was NOT called.
 func TestMediaHandler_List_RejectsZeroVehicleID(t *testing.T) {
 	fake := &fakeStateReader{}
-	h := NewMediaHandler(fake)
+	h := NewMediaHandler(fake, newTestLiveStateReader(fake))
 
 	cases := []struct{ name, url string }{
 		{"missing", "/media"},
@@ -279,7 +288,7 @@ func TestMediaHandler_List_PropagatesTimelineError(t *testing.T) {
 			return nil, wantErr
 		},
 	}
-	h := NewMediaHandler(fake)
+	h := NewMediaHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/media?vehicle_id=42", nil)
@@ -301,7 +310,7 @@ func TestMediaHandler_Latest_EmptyStateReturnsCanonicalShape(t *testing.T) {
 			return signal.State{}, nil
 		},
 	}
-	h := NewMediaHandler(fake)
+	h := NewMediaHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/media/latest?vehicle_id=42", nil)

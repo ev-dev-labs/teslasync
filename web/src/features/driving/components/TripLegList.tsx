@@ -2,9 +2,10 @@ import { GlassPanel } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useTranslation } from 'react-i18next';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { MapPin, Zap, Clock, ArrowRight } from 'lucide-react';
 import type { TripLeg, TripChargeStop } from '@/types/driving';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 interface TripLegListProps {
   legs: TripLeg[];
@@ -13,7 +14,10 @@ interface TripLegListProps {
 
 export function TripLegList({ legs, chargeStops }: TripLegListProps) {
   const { t } = useTranslation();
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
   const legItems = legs ?? [];
   const stops = chargeStops ?? [];
 
@@ -55,18 +59,18 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
                 <div>
                   <span className="text-[var(--text-muted)] text-xs">{t('tripPlanner.legs.distance', 'Distance')}</span>
                   <p className="text-[var(--text-primary)] font-medium">
-                    {convertDistance(leg.distance_km).toFixed(1)} {distanceUnit}
+                    {toDistanceDisplay(leg.distance_m).toFixed(1)} {distanceUnit}
                   </p>
                 </div>
                 <div>
                   <span className="text-[var(--text-muted)] text-xs">{t('tripPlanner.legs.duration', 'Duration')}</span>
                   <p className="text-[var(--text-primary)] font-medium">
-                    {Math.round(leg.duration_min)} {t('common.min', 'min')}
+                    {Math.round(leg.duration_s)} {t('common.min', 'min')}
                   </p>
                 </div>
                 <div>
                   <span className="text-[var(--text-muted)] text-xs">{t('tripPlanner.legs.energy', 'Energy')}</span>
-                  <p className="text-[var(--text-primary)] font-medium">{leg.energy_kwh.toFixed(1)} kWh</p>
+                  <p className="text-[var(--text-primary)] font-medium">{(leg.energy_wh / 1000).toFixed(1)} kWh</p>
                 </div>
                 <div>
                   <span className="text-[var(--text-muted)] text-xs">{t('tripPlanner.legs.soc', 'Battery')}</span>
@@ -90,12 +94,12 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
                   <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-[var(--text-secondary)]">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {Math.round(stops[idx].charge_duration_min)} {t('common.min', 'min')}
+                      {Math.round(stops[idx].charge_duration_s / 60)} {t('common.min', 'min')}
                     </span>
                     <span>
                       {Math.round(stops[idx].charge_from_soc)}% → {Math.round(stops[idx].charge_to_soc)}%
                     </span>
-                    <span>{stops[idx].energy_kwh.toFixed(1)} kWh</span>
+                    <span>{(stops[idx].energy_wh / 1000).toFixed(1)} kWh</span>
                     <span className="text-emerald-400">${stops[idx].cost.toFixed(2)}</span>
                   </div>
                   {stops[idx].is_recommended && (

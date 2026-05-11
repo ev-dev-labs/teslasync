@@ -70,6 +70,30 @@ export const getRedisSignals = (vehicleId: number) =>
 export const getRedisSignalKeys = (limit = 50) =>
   request<RedisSignalKeysResponse>(`/dev-tools/redis-signals/keys?limit=${limit}`)
 
+export interface RedisSignalsPurgeResponse {
+  vehicle_id: number
+  purged: boolean
+}
+
+export interface RedisSignalsPurgeAllResponse {
+  purged: number
+  scanned: number
+  limit: number
+  has_more: boolean
+}
+
+export const purgeRedisSignals = (vehicleId: number) =>
+  request<RedisSignalsPurgeResponse>(
+    `/dev-tools/redis-signals?vehicle_id=${vehicleId}`,
+    { method: 'DELETE' },
+  )
+
+export const purgeAllRedisSignals = () =>
+  request<RedisSignalsPurgeAllResponse>(
+    '/dev-tools/redis-signals/keys',
+    { method: 'DELETE' },
+  )
+
 // === Fleet Telemetry ===
 export const getTelemetryStatus = () =>
   request<TelemetryStatus>('/telemetry')

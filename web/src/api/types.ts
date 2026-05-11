@@ -2,6 +2,39 @@
  * @module api/types
  *
  * Every exported interface and type alias used across the API layer.
+ *
+ * === SI Unit Conventions (Phase-43 / Prompt 0011) ===
+ *
+ * Field names carry their unit as a suffix. Fields marked `(SI)` are stored
+ * and transported in canonical SI (or derived-SI) form; the frontend
+ * unit-conversion layer (`@/lib/unitConversion`) is the only place that
+ * converts to user-display units.
+ *
+ *   `_m`        -> meters                    (SI: length)
+ *   `_km`       -> kilometers                (derived SI)
+ *   `_c`        -> degrees Celsius           (SI: temperature)
+ *   `_pa`       -> pascals                   (SI: pressure)
+ *   `_kg`       -> kilograms                 (SI: mass)
+ *   `_kwh`      -> kilowatt-hours            (derived SI: energy)
+ *   `_kw`       -> kilowatts                 (derived SI: power)
+ *   `_wh_km`    -> watt-hours per kilometer  (derived SI: energy intensity)
+ *   `_v` /
+ *   `_voltage`  -> volts                     (derived SI: electric potential)
+ *   `_amps`     -> amperes                   (SI: electric current)
+ *   `_nm`       -> newton-meters             (derived SI: torque)
+ *   `_rpm`      -> revolutions per minute    (NON-SI; angular velocity)
+ *   `_sec`      -> seconds                   (SI: time)
+ *   `_ms`       -> milliseconds              (derived SI: time)
+ *
+ * NON-SI suffixes (legacy / display-only): `_mi`, `_mph`, `_psi`, `_f`,
+ * `_min`, `_hr`. These mirror Go struct fields in source units; the API
+ * does NOT convert them — `lib/unitConversion.ts` does on the boundary.
+ *
+ * Rule of thumb: any field tagged `(SI)` in JSDoc below is safe to feed
+ * directly into `metersToKm()` / `celsiusToF()` / `pascalsToPsi()` etc.
+ *
+ * Mirrors Go structs under `internal/api/*`, `internal/models/*`, and
+ * `internal/tesla/protomodel/*`.
  */
 
 import type {
@@ -45,6 +78,7 @@ export interface Position {
   longitude: number
   heading: number | null
   speed_mph: number | null
+  /** Elevation in meters (SI). */
   elevation_m: number | null
   gps_state: string | null
   source: string
@@ -55,22 +89,31 @@ export interface Drive {
   vehicle_id: number
   start_ts: string
   end_ts: string | null
-  duration_min: number
-  distance_mi: number
+  /** Drive duration in seconds (SI canonical). */
+  duration_s: number
+  /** Distance travelled in meters (SI canonical). */
+  distance_m: number
   start_address: string | null
   end_address: string | null
   start_lat: number | null
   start_lon: number | null
   end_lat: number | null
   end_lon: number | null
-  start_battery_pct: number | null
-  end_battery_pct: number | null
-  energy_used_kwh: number | null
-  regen_kwh: number | null
-  avg_speed_mph: number | null
-  max_speed_mph: number | null
-  avg_power_kw: number | null
+  start_soc_pct: number
+  end_soc_pct: number | null
+  /** Energy used in watt-hours (Wh, SI canonical). */
+  energy_used_wh: number | null
+  /** Energy recovered via regen in watt-hours (Wh, SI canonical). */
+  regen_energy_wh: number | null
+  /** Average speed in meters per second (SI canonical). */
+  avg_speed_mps: number | null
+  /** Maximum speed in meters per second (SI canonical). */
+  max_speed_mps: number | null
+  /** Average power in watts (W, SI canonical). */
+  avg_power_w: number | null
+  /** Average ambient temperature in degrees Celsius (SI). */
   outside_temp_avg_c: number | null
+  /** Average inside cabin temperature in degrees Celsius (SI; nullable, column dropped Phase-42). */
   inside_temp_avg_c: number | null
   score: number | null
   ended_status: string | null
@@ -81,26 +124,33 @@ export interface Drive {
 export interface ChargingSession {
   id: number
   vehicle_id: number
-  start_ts: string
-  end_ts: string | null
-  duration_min: number
-  start_battery_pct: number
-  end_battery_pct: number | null
-  energy_added_kwh: number
-  miles_added: number | null
-  charger_type: string | null
-  charger_location: string | null
-  charger_power_kw_max: number | null
-  charger_power_kw_avg: number | null
-  cost: number | null
+  started_at: string
+  ended_at: string | null
+  start_soc_pct: number
+  end_soc_pct: number | null
+  delta_soc_pct: number | null
+  start_odometer_m: number | null
+  end_odometer_m: number | null
+  start_lat: number | null
+  start_lng: number | null
+  start_place: string | null
+  /** Energy added in watt-hours (Wh, SI canonical). */
+  total_energy_added_wh: number
+  /** Peak charger power in watts (W, SI canonical). */
+  peak_power_w: number | null
+  /** Average charger power in watts (W, SI canonical). */
+  avg_power_w: number | null
+  cost_decimal: number | null
   cost_currency: string | null
-  max_charger_voltage: number | null
-  charger_phases: number | null
+  charger_type: string | null
   cable_type: string | null
-  ended_status: string | null
-  created_at: string
-  updated_at: string
   live?: boolean
+  start_ts?: string
+  end_ts?: string | null
+  startedAt: string
+  duration_min: number
+  cost?: number | null
+  ended_status?: string | null
 }
 
 export interface DriveTelemetryReading {
@@ -135,26 +185,36 @@ export interface DriveTelemetryReading {
 }
 
 export interface ChargeTelemetryReading {
-  id: number
-  session_id: number
+  session_id: number | null
   vehicle_id: number
-  battery_level: number | null
-  soc: number | null
-  power_kw: number | null
-  voltage: number | null
-  current_amps: number | null
-  phases: number | null
-  energy_added: number | null
-  rated_range: number | null
-  ideal_range: number | null
-  est_range: number | null
-  inside_temp: number | null
-  outside_temp: number | null
-  battery_temp: number | null
-  latitude: number | null
-  longitude: number | null
-  charge_rate: number | null
+  ts: string
+  ac_charging_power_w: number | null
+  dc_charging_power_w: number | null
+  ac_charging_energy_in_wh: number | null
+  dc_charging_energy_in_wh: number | null
+  charger_voltage_v: number | null
+  charger_actual_current_a: number | null
+  charger_pilot_current_a: number | null
+  charger_phases: number | null
+  battery_heater_on: boolean | null
+  battery_heater_power_w: number | null
+  charge_limit_soc_pct: number | null
+  charge_request: string | null
+  fast_charger_type: string | null
+  charging_cable_type: string | null
+  charge_port_door_open: boolean | null
+  charge_port_latch: string | null
   created_at: string
+  battery_level?: number | null
+  soc?: number | null
+  power_kw?: number | null
+  energy_added?: number | null
+  rated_range?: number | null
+  battery_temp?: number | null
+  inside_temp?: number | null
+  outside_temp?: number | null
+  voltage?: number | null
+  current_amps?: number | null
 }
 
 export interface Geofence {
@@ -164,7 +224,7 @@ export interface Geofence {
   longitude: number
   radius: number
   cost_per_kwh: number | null
-  created_at?: string
+  created_at: string
   updated_at?: string
 }
 
@@ -319,20 +379,28 @@ export interface AuthStatus {
 // === New Feature Types ===
 
 export interface EnergyStats {
-  total_energy_used_kwh: number
-  total_energy_charged_kwh: number
-  avg_efficiency_wh_km: number
-  total_distance_km: number
+  /** Energy in watt-hours (Wh, SI). */
+  total_energy_used_wh: number
+  /** Energy in watt-hours (Wh, SI). */
+  total_energy_charged_wh: number
+  total_wh: number
+  /** Energy intensity in watt-hours per meter (Wh/m, SI). */
+  avg_efficiency_wh_per_m: number
+  /** Distance in meters (m, SI). */
+  total_distance_m: number
   total_cost: number
+  /** CO2 saved in kilograms (kg, SI). */
   co2_saved_kg: number
-  daily_breakdown: { date: string; energy_kwh: number; distance_km: number; efficiency: number }[]
+  daily_breakdown: { date: string; energy_wh: number; distance_m: number; efficiency_wh_per_m: number }[]
 }
 
 export interface BatteryReport {
   vehicle_id: number
   current_capacity_pct: number
   degradation_pct: number
+  /** Estimated range when new in kilometers (km, derived SI). */
   estimated_range_new_km: number
+  /** Current estimated range in kilometers (km, derived SI). */
   estimated_range_current_km: number
   total_cycles: number
   health_score: number
@@ -400,6 +468,21 @@ export interface AlertRule {
   description?: string | null
   enabled: boolean
   vehicle_id?: number | null
+  /**
+   * Phase-49 / Slice 0005 — sticky-all flag. When `true`, the rule
+   * applies to every vehicle in the fleet, including any added after
+   * the rule was created. Mutually exclusive with a non-empty
+   * `vehicle_ids` array. Optional on read for backward-compat with
+   * pre-0005 API responses; transitional hydration falls back to
+   * `vehicle_id`.
+   */
+  all_vehicles?: boolean
+  /**
+   * Phase-49 / Slice 0005 — explicit subset of vehicle IDs the rule
+   * applies to. Always present (`[]` if sticky-all). Optional on read
+   * only for backward-compat with pre-0005 API responses.
+   */
+  vehicle_ids?: number[]
   signal_name: string
   op: AlertRuleOp
   value_num?: number | null
@@ -416,6 +499,26 @@ export interface AlertRule {
   metric_window?: string | null
   metric_threshold?: number | null
   metric_op?: ComputedMetricOp | null
+  /**
+   * Per-rule cap on how many notifications a `repeat`-mode rule may emit
+   * between successive falling-edge resets. NULL = unlimited (legacy
+   * behaviour). Once-mode rules ignore this field — the latch already
+   * caps them at 1 per resolution.
+   * Phase-49 / Slice 0003 / Decision D5.
+   */
+  max_fires_per_resolution?: number | null
+  /**
+   * Phase-49 / Slice 0009 — two-tier severity escalation. When set,
+   * a repeat-mode rule whose underlying condition has stayed
+   * unresolved for at least `escalation_after_min` minutes fires at
+   * `escalation_severity` instead of the base `severity`. Both fields
+   * MUST be set or both MUST be null. Once-mode rules ignore these
+   * fields entirely (the latch caps them at 1 fire per resolution).
+   * `escalation_severity` MUST rank strictly higher than `severity`
+   * under info < warn < critical.
+   */
+  escalation_after_min?: number | null
+  escalation_severity?: AlertRuleSeverity | null
   created_at: string
   updated_at: string
 }
@@ -425,6 +528,18 @@ export interface AlertRuleInput {
   description?: string | null
   enabled?: boolean
   vehicle_id?: number | null
+  /**
+   * Phase-49 / Slice 0005 — sticky-all flag. New writes from the
+   * editor MUST set this together with `vehicle_ids`; the legacy
+   * `vehicle_id` field is no longer written by Alert Studio.
+   */
+  all_vehicles?: boolean
+  /**
+   * Phase-49 / Slice 0005 — explicit subset of vehicle IDs. Empty
+   * array when `all_vehicles` is true. Always sorted + deduped on the
+   * client per slice 0006 / Decision D14.
+   */
+  vehicle_ids?: number[]
   signal_name?: string
   op?: AlertRuleOp
   value_num?: number | null
@@ -441,6 +556,14 @@ export interface AlertRuleInput {
   metric_window?: string | null
   metric_threshold?: number | null
   metric_op?: ComputedMetricOp | null
+  max_fires_per_resolution?: number | null
+  /**
+   * Phase-49 / Slice 0009 — escalation pair. See AlertRule.escalation_*
+   * for invariants. Both fields MUST appear together (both null or
+   * both populated). Repeat-mode only.
+   */
+  escalation_after_min?: number | null
+  escalation_severity?: AlertRuleSeverity | null
 }
 
 export interface ComputedMetricSummary {
@@ -489,11 +612,14 @@ export interface StatsSummary {
 export interface FleetAnalytics {
   period_days: number
   total_vehicles: number
+  /** Distance in kilometers (km, derived SI). */
   total_distance_km: number
   total_drives: number
   total_charging_sessions: number
+  /** Energy in kilowatt-hours (kWh, derived SI). */
   total_energy_kwh: number
   total_cost: number
+  /** Energy intensity in watt-hours per kilometer (Wh/km, derived SI). */
   avg_efficiency_wh_km: number
   most_efficient_vehicle: { id: number; name: string; efficiency: number } | null
   vehicle_comparison: { id: number; name: string; distance: number; energy: number; efficiency: number; drives: number }[]
@@ -528,7 +654,7 @@ export interface FleetAnalytics {
     efficiency_stats: StatsSummary
   }
 
-  battery_trend: { date: string; health_score: number; capacity_kwh: number; degradation_pct: number; range_km: number; cycle_count: number }[]
+  battery_trend: { date: string; health_score: number; capacity_wh: number; degradation_pct: number; range_km: number; cycle_count: number }[]
 }
 
 export interface CommandResult {
@@ -768,39 +894,76 @@ export interface TirePressureSnapshot {
 export interface MotorSnapshot {
   id?: number
   ts: string
-  created_at?: string
+  created_at: string
   vehicle_id?: number
-  // Torque (DiTorqueActualF/R, DiTorquemotor)
+  /** Front-axle torque in newton-meters (Nm, derived SI). */
   torque_nm_front: number | null
+  /** Rear-axle torque in newton-meters (Nm, derived SI). */
   torque_nm_rear: number | null
   di_torque: number | null
-  // Axle speed (DiAxleSpeedF/R)
+  // Axle speed (DiAxleSpeedF/R) — non-SI (rpm)
   motor_rpm_front: number | null
   motor_rpm_rear: number | null
-  // Temperatures (DiStatorTempF/R, DiInverterTF/R, DiHeatsinkTF/R)
+  /** Front motor temperature in degrees Celsius (SI). */
   motor_temp_c_front: number | null
+  /** Rear motor temperature in degrees Celsius (SI). */
   motor_temp_c_rear: number | null
+  /** Inverter temperature in degrees Celsius (SI). */
   inverter_temp_c: number | null
   inverter_temp_rear: number | null
   heatsink_temp_front: number | null
   heatsink_temp_rear: number | null
-  // Motor current (DiMotorCurrentF/R)
+  // Motor current (DiMotorCurrentF/R) — amperes (SI)
   motor_current_front: number | null
   motor_current_rear: number | null
   // State (DiStateF/R, Gear)
   state_front: string | null
   state_rear: string | null
   shift_state: string | null
-  // Battery voltage (DiVBatF/R)
+  // Battery voltage (DiVBatF/R) — volts (V, derived SI)
   vbat_front: number | null
   vbat_rear: number | null
-  // Fields with no backing motor signal — always undefined from signal_log backend
+  // Derived in motor_handler.go via injectDerivedMotorPower:
+  // sum_W = vbat_front × motor_current_front + vbat_rear × motor_current_rear
+  // power_kw = max(0, sum_W) / 1000   (drive — motor consuming pack power)
+  // regen_kw = max(0, -sum_W) / 1000  (regen — motor sourcing back to pack)
+  // Both keys are OMITTED when neither motor has a complete (V, I) pair, so
+  // chart consumers can plot true gaps instead of misleading zeros.
+  /** Power in kilowatts (kW, derived SI). Drive only; regen is split into regen_kw. */
   power_kw?: number | null
+  /** Regen power in kilowatts (kW, derived SI). Always non-negative; magnitude of pack-side reverse flow. */
   regen_kw?: number | null
+  /** Battery temperature in degrees Celsius (SI). */
   battery_temp_c?: number | null
   source?: string | null
   di_stator_temp?: number | null
   gear?: string | null
+}
+
+// DriveDynamicsSnapshot matches the JSON response shape from
+// /drive-dynamics/latest. Backed by signal.LiveStateReader.LiveState
+// via driveDynamicsMappings in drive_dynamics_handler.go.
+//
+// Field naming mirrors the snake_case wire format the backend emits.
+// camelCaseKeys() exposes both forms; consumers in this codebase
+// uniformly use snake_case for *_latest snapshot reads, so we keep
+// that convention here as well.
+//
+// All fields are optional + nullable: a vehicle whose telemetry has
+// never reported (e.g. PedalPosition for a freshly added vehicle)
+// will simply omit those keys, and the consuming panels render the
+// matching empty-state stat ("—" / "Brake Inactive" / etc).
+export interface DriveDynamicsSnapshot {
+  /** Lateral acceleration in g (cornering, +ve right). */
+  lateral_acceleration?: number | null
+  /** Longitudinal acceleration in g (+ve forward, -ve braking). */
+  longitudinal_acceleration?: number | null
+  /** Throttle pedal position 0..100 (%). */
+  pedal_position?: number | null
+  /** Brake pedal position 0..100 (%). */
+  brake_pedal_position?: number | null
+  /** Brake pedal active (true while pedal is depressed). */
+  brake_pedal_active?: boolean | null
 }
 
 // ClimateSnapshot matches the JSON response shape from /climate and /climate/latest.
@@ -808,9 +971,13 @@ export interface MotorSnapshot {
 export interface ClimateSnapshot {
   vehicle_id: number
   ts: string
+  /** Cabin inside temperature in degrees Celsius (SI). */
   inside_temp_c: number | null
+  /** Outside ambient temperature in degrees Celsius (SI). */
   outside_temp_c: number | null
+  /** Driver-side HVAC setpoint in degrees Celsius (SI). */
   driver_setpoint_c: number | null
+  /** Passenger-side HVAC setpoint in degrees Celsius (SI). */
   passenger_setpoint_c: number | null
   hvac_state: string | null
   defrost_mode: string | null
@@ -829,10 +996,15 @@ export interface ClimateSnapshot {
   // compile; values are undefined when reading the typed column set.
   inside_temp?: number | null
   outside_temp?: number | null
+  driver_temp_setting?: number | null
+  passenger_temp_setting?: number | null
   hvac_power?: number | null
+  is_ac_on?: boolean | null
   hvac_ac_enabled?: boolean | null
+  hvac_fan_status?: number | null
   hvac_fan_speed?: number | null
   hvac_steering_wheel_heat_level?: number | null
+  battery_heater?: boolean | null
   battery_heater_on?: boolean | null
   seat_heater_rear_center?: number | null
 }
@@ -856,13 +1028,18 @@ export interface SecurityEvent {
   // Legacy / compat-view field aliases (pre-migration individual door/window
   // columns, seat/belt/light JSONB carve-outs). Optional so existing widgets
   // compile; values are undefined when reading the typed column set.
+  //
+  // Post per-field MQTT cutover (Phase-42a) the backend serializes raw
+  // `signal.SignalValue` (`interface{}`) — door / window fields can arrive
+  // as native booleans (e.g. `false`) or string enums depending on the
+  // protomodel emission. Mark them as a union so consumers type-narrow.
   id?: number
-  created_at?: string
-  door_state?: string | null
-  fd_window?: string | null
-  fp_window?: string | null
-  rd_window?: string | null
-  rp_window?: string | null
+  created_at: string
+  door_state?: string | boolean | null
+  fd_window?: string | boolean | null
+  fp_window?: string | boolean | null
+  rd_window?: string | boolean | null
+  rp_window?: string | boolean | null
   driver_seat_belt?: boolean | null
   passenger_seat_belt?: boolean | null
   driver_seat_occupied?: boolean | null
@@ -952,6 +1129,7 @@ export interface VampireDrainEvent {
   start_battery: number
   end_battery: number | null
   battery_lost: number
+  /** Range lost in kilometers (km, derived SI). */
   range_lost_km: number
   duration_hours: number
   drain_rate_pct_per_hour: number
@@ -974,10 +1152,12 @@ export interface DailyMileage {
   id: number
   vehicle_id: number
   date: string
+  /** Distance in kilometers (km, derived SI). */
   distance_km: number
   odometer_start: number
   odometer_end: number
   drive_count: number
+  /** Energy in kilowatt-hours (kWh, derived SI). */
   energy_used_kwh: number
 }
 
@@ -1004,7 +1184,7 @@ export interface VisitedLocation {
   address_id: number | null
   address_name: string
   visit_count: number
-  total_duration_min: number
+  total_duration_s: number
   last_visited: string | null
   created_at: string
 }
@@ -1015,12 +1195,21 @@ export interface Trip {
   name: string | null
   start_date: string
   end_date: string | null
-  total_distance_km: number
-  total_energy_kwh: number
+  started_at: string
+  ended_at: string | null
+  /** Distance in meters (SI canonical). */
+  total_distance_m: number
+  /** Energy in watt-hours (Wh, SI canonical). */
+  total_energy_wh: number
+  /** Duration in seconds (SI canonical). */
+  total_duration_s: number
   total_cost: number
   drive_count: number
   charge_count: number
   created_at: string
+  created_by_user?: number | null
+  auto_generated?: boolean
+  notes?: string | null
 }
 
 export interface VehicleStateRecord {
@@ -1342,23 +1531,23 @@ export interface ChargingHeatmapCell {
   day_of_week: number
   hour_of_day: number
   session_count: number
-  avg_energy: number
+  avg_energy_wh: number
   avg_cost: number
 }
 
 export interface ChargingLocationBreakdown {
   location: string
   count: number
-  total_kwh: number
+  total_wh: number
   total_cost: number
-  avg_power: number
+  avg_power_w: number
 }
 
 export interface ChargingHeatmapSummary {
   total_sessions: number
-  total_kwh: number
+  total_wh: number
   total_cost: number
-  avg_duration: number
+  avg_duration_s: number
 }
 
 export interface ChargingHeatmapData {
@@ -1400,7 +1589,7 @@ export interface TempEfficiencyBucket {
   temp_bucket: string
   drive_count: number
   avg_distance_km: number
-  avg_duration_min: number
+  avg_duration_s: number
   avg_battery_pct_per_100km: number
   avg_temp: number
 }
@@ -1432,7 +1621,7 @@ export interface RouteSummary {
   end_location: string
   trip_count: number
   avg_distance_km: number
-  avg_duration_min: number
+  avg_duration_s: number
   avg_efficiency: number
   best_efficiency: number
   worst_efficiency: number
@@ -1444,8 +1633,8 @@ export interface RouteDriveDetail {
   id: number
   start_date: string
   distance: number
-  duration_min: number
-  speed_avg: number
+  duration_s: number
+  avg_speed_mps: number
   start_battery_level: number
   end_battery_level: number
   outside_temp_avg: number
@@ -1471,13 +1660,18 @@ export interface ChargingTelemetry {
   battery_level: number | null
   battery_range_mi: number | null
   charging_state: string | null
+  /** Charger voltage in volts (V, derived SI). */
   charger_voltage: number | null
+  /** Charger actual current in amperes (SI). */
   charger_actual_current: number | null
-  charger_power_kw: number | null
+  /** Charger power in watts (W, SI canonical). */
+  charger_power_w: number | null
   charger_phases: number | null
-  charge_energy_added_kwh: number | null
-  charge_miles_added: number | null
-  charge_rate_mph: number | null
+  /** Energy added in watt-hours (Wh, SI canonical). */
+  charge_energy_added_wh: number | null
+  range_added_meters: number | null
+  range_added_meters_per_hour: number | null
+  /** Charger pilot current in amperes (SI). */
   charger_pilot_current: number | null
   scheduled_charging_at: string | null
   source: string
@@ -1553,13 +1747,14 @@ export interface LocationSnapshot {
   longitude?: number
   heading?: number
   gps_state?: string
+  /** Elevation in meters (SI). */
   elevation_m?: number
   speed_mph?: number
   // Navigation & route
   destination_name?: string
   miles_to_arrival?: number
   minutes_to_arrival?: number
-  route_traffic_delay_min?: number
+  route_traffic_delay_s?: number
   route_last_updated?: string
   // Destination/origin coords (Latest only — from unpacked compounds)
   destination_lat?: number
@@ -1653,8 +1848,10 @@ export interface BackupRun {
 export interface TCOAnalytics {
   vehicle_id: number
   total_charging_cost: number
-  total_kwh: number
+  /** Total charged energy in watt-hours (Wh, SI canonical). */
+  total_wh: number
   total_sessions: number
+  /** Total distance in kilometers (km, derived SI). */
   total_km: number
   first_date: string
   last_date: string
@@ -1667,6 +1864,7 @@ export interface TCOAnalytics {
   maintenance_savings_estimate: number
   gas_price: number
   gas_efficiency_mpg: number
+  /** Base electricity cost per kilowatt-hour. */
   base_cost_per_kwh: number
   monthly_breakdown: {
     month: string
@@ -1674,7 +1872,7 @@ export interface TCOAnalytics {
     equiv_gas_cost: number
     savings: number
     cumulative_savings: number
-    energy_kwh: number
+    energy_wh: number
   }[]
 }
 
@@ -1701,7 +1899,7 @@ export interface SleepAnalytics {
   sentry_extra_drain_rate: number
   sentry_extra_monthly_kwh: number
   sentry_extra_monthly_cost: number
-  battery_capacity_kwh: number
+  battery_capacity_wh: number
   base_cost_per_kwh: number
   recent_events: {
     id: number
@@ -1723,8 +1921,8 @@ export interface SleepAnalytics {
 
 export interface RegenData {
   vehicle_id: number
-  total_regen_kwh: number
-  total_drive_kwh: number
+  total_regen_wh: number
+  total_drive_wh: number
   regen_ratio: number
   monthly_avg_regen: number
   free_charges: number
@@ -1772,10 +1970,13 @@ export interface BatteryDegradationData {
   snapshots: {
     id: number
     health_score: number
-    capacity_kwh: number
+    /** Battery capacity in kilowatt-hours (kWh, derived SI). */
+    capacity_wh: number
     degradation_pct: number
+    /** Estimated range in kilometers (km, derived SI). */
     est_range_km: number
     cycle_count: number
+    /** Average cell temperature in degrees Celsius (SI). */
     avg_cell_temp_c: number
     created_at: string
   }[]
@@ -2007,18 +2208,22 @@ export interface VehicleInvitation {
 export interface YearReviewDriveHighlight {
   drive_id: number
   date: string
+  /** Distance in kilometers (km, derived SI). */
   distance_km: number
   duration_min: number
   start_address: string
   end_address: string
+  /** Energy intensity in watt-hours per kilometer (Wh/km, derived SI). */
   efficiency_wh_km: number
 }
 
 export interface YearReviewMonthStat {
   month: number
   drives: number
+  /** Distance in kilometers (km, derived SI). */
   distance_km: number
-  energy_kwh: number
+  /** Energy in kilowatt-hours (kWh, derived SI). */
+  energy_wh: number
   cost: number
 }
 
@@ -2038,12 +2243,15 @@ export interface YearReview {
 
   // Headline stats
   total_drives: number
+  /** Total distance in kilometers (km, derived SI). */
   total_distance_km: number
+  /** Total energy in kilowatt-hours (kWh, derived SI). */
   total_energy_kwh: number
   total_charge_sessions: number
   total_driving_minutes: number
   total_charging_cost: number
   gas_savings: number
+  /** CO2 offset in kilograms (kg, SI). */
   co2_offset_kg: number
 
   // Extremes
@@ -2052,7 +2260,9 @@ export interface YearReview {
   most_efficient_drive: YearReviewDriveHighlight | null
   least_efficient_drive: YearReviewDriveHighlight | null
   fastest_speed_kmh: number
+  /** Coldest drive temperature in degrees Celsius (SI). */
   coldest_drive_temp_c: number
+  /** Hottest drive temperature in degrees Celsius (SI). */
   hottest_drive_temp_c: number
 
   // Monthly breakdown
@@ -2062,7 +2272,9 @@ export interface YearReview {
   most_active_day_of_week: string
   most_active_hour: number
   avg_drives_per_week: number
+  /** Average distance per drive in kilometers (km, derived SI). */
   avg_distance_per_drive_km: number
+  /** Average energy intensity in watt-hours per kilometer (Wh/km, derived SI). */
   avg_efficiency_wh_km: number
 
   // Charging habits
@@ -2209,6 +2421,129 @@ export interface PushSubscribeBody {
     p256dh: string
     auth: string
   }
+}
+
+// === Phase-42 typed signal envelope =============================//
+// Backend prompts 0069 (`/signals/`) and 0071 (SSE `signal_change`)
+// rewrote the live/history payload from a raw string to the typed
+// envelope `{kind, value, ts}`. The frontend hooks normalize the
+// backend's protomodel.ValueKind discriminator (e.g. "ValueKindFloat" or
+// the integer enum on SSE) into the compact `SignalKind` union below so
+// React components can switch on `kind` and trust the typed `value`
+// without re-parsing strings. Forward-only — no fallback for the
+// pre-Phase-42 string-only shape.
+
+/**
+ * Compact discriminator for a typed signal value. Maps to the backend's
+ * `protomodel.ValueKind` after normalization in the consuming hook:
+ *   string  ← ValueKindString
+ *   bool    ← ValueKindBool
+ *   int     ← ValueKindInt32 / ValueKindInt64 / ValueKindEnum
+ *   float   ← ValueKindFloat / ValueKindDouble
+ *   time    ← ValueKindTime
+ *   unknown ← ValueKindUnknown / ValueKindCompound / ValueKindInvalid
+ */
+export type SignalKind =
+  | 'string'
+  | 'bool'
+  | 'int'
+  | 'float'
+  | 'time'
+  | 'unknown'
+
+/** Typed primitive carried by a SignalEnvelope. `value` is the JSON-decoded
+ *  scalar matching `kind`; `null` indicates the typed column was empty. */
+export type SignalValue = string | boolean | number | null
+
+/** Typed live/history envelope returned by /signals/* and SSE signal_change.
+ *  `ts` is RFC3339 / ISO 8601. */
+export interface SignalEnvelope {
+  kind: SignalKind
+  value: SignalValue
+  ts: string
+}
+
+/** UnitKind discriminator surfaced by /signals/{vehicleID}/available.
+ *  Mirrors `protomodel.UnitKind` (none/distance/temperature/pressure/
+ *  charge); `speed` is included so the frontend can flag distance-derived
+ *  rate signals separately even though the backend currently rolls them
+ *  into UnitKindNone. */
+export type SignalUnitKind =
+  | 'none'
+  | 'distance'
+  | 'temperature'
+  | 'pressure'
+  | 'charge'
+  | 'speed'
+
+/** A single entry in the /signals/{vehicleID}/available catalog. */
+export interface SignalDescriptor {
+  name: string
+  category: string
+  value_kind: SignalKind
+  unit_kind: SignalUnitKind
+  is_compound: boolean
+  is_setting_unit: boolean
+}
+
+/** SSE `signal_change` event from EventHub.BroadcastSignalChange (Phase-42
+ *  Prompt 0071). Per-signal companion to the existing `vehicle_update`
+ *  batch event so dashboards can apply O(1) keyed updates. */
+export interface SignalChangeEvent extends SignalEnvelope {
+  vehicle_id: number
+  field: string
+}
+
+/** Response shape of GET /signals/{vehicleID}/live (Phase-42 Prompt 0069). */
+export interface LiveSignalsResponse {
+  vehicle_id: number
+  count: number
+  at: string
+  signals: Record<string, SignalEnvelope>
+}
+
+/** Response shape of GET /signals/{vehicleID}/available (Phase-42 Prompt 0069). */
+export interface AvailableSignalsResponse {
+  vehicle_id: number
+  count: number
+  source: string
+  signals: SignalDescriptor[]
+}
+
+/** Response shape of GET /signals/{vehicleID}/{signalName}/history. */
+export interface SignalHistoryResponseTyped {
+  vehicle_id: number
+  signal: string
+  expected_kind: string
+  from: string
+  to: string
+  count: number
+  data: SignalEnvelope[]
+}
+
+/** One row of the per-category routing destination map served by
+ *  GET /tesla/fleet-telemetry/coverage (Phase-42 Prompt 0068). */
+export interface FleetTelemetryFieldCoverage {
+  field: string
+  destination: string
+  column?: string
+  also_signal_log?: boolean
+  subscribed: boolean
+}
+
+/** A single category bucket in the coverage response. */
+export interface FleetTelemetryCategoryCoverage {
+  category: string
+  total_fields: number
+  destinations: Record<string, number>
+  fields: FleetTelemetryFieldCoverage[]
+}
+
+/** Response shape of GET /tesla/fleet-telemetry/coverage. */
+export interface FleetTelemetryCoverageResponse {
+  categories: FleetTelemetryCategoryCoverage[]
+  destination_totals: Record<string, number>
+  orphan_fields?: string[]
 }
 
 // === Auth Session Info (Phase 46 / Prompt 05) ===

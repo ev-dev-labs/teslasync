@@ -11,50 +11,103 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 	"github.com/go-chi/chi/v5"
 )
 
-// SignalHandler provides API endpoints for querying signal history
-// (Postgres primary, MongoDB optional fallback).
+// SignalHandler serves the per-vehicle signal-inspector endpoints
+// (/available, /live, /{signalName}/history, /snapshot, /diff, /stats).
+//
+// Phase-42 / Prompt 0069 — typed envelope rewrite:
+//   - /available is sourced from protomodel.Signals (the vendored proto
+//     is the catalog source of truth).
+//   - /live returns each signal as the typed `{kind, value, ts}` envelope
+//     so the frontend can switch on `kind` instead of string-parsing
+//     `value`. The legacy `timestamp`, `source`, and `age_ms` fields are
+//     retained alongside the typed triplet for FSM-debugger and
+//     compatibility-test consumers.
+//   - /{signalName}/history queries the new typed signal_log schema
+//     (vehicle_id, ts, field, value_kind, str_value, bool_value,
+//     int_value, float_value, time_value) directly via *database.DB so
+//     it does not depend on the legacy SignalHistoryWriter (which still
+//     reads the pre-Phase-42 column layout).
+//
+// The /snapshot, /diff, and /stats endpoints are out of scope for
+// Prompt 0069 and continue to use SignalHistoryWriter. They are wired
+// here only so the chi route registration in router.go keeps the same
+// shape.
 type SignalHandler struct {
-	signalLogRepo       *database.SignalLogRepo       // MongoDB (optional)
-	signalHistoryWriter *database.SignalHistoryWriter // Postgres (primary)
-	db                  *database.DB
+	signalLogRepo       *database.SignalLogRepo       // legacy MongoDB (optional fallback)
+	signalHistoryWriter *database.SignalHistoryWriter // legacy Postgres writer (snapshot/diff/stats only)
+	db                  *database.DB                  // primary Postgres for typed signal_log queries
 	redisCache          *signal.RedisSignalCache
 	liveSignals         signal.LiveSignalStore
 }
 
-// NewSignalHandler creates a new SignalHandler.
+// NewSignalHandler creates a new SignalHandler. The MongoDB repo is
+// retained as an optional cold-path fallback for /snapshot only; the
+// typed live and history paths do not depend on it.
 func NewSignalHandler(repo *database.SignalLogRepo) *SignalHandler {
 	return &SignalHandler{signalLogRepo: repo}
 }
 
-// WithDB adds PostgreSQL access for fallback signal discovery.
+// WithDB adds the primary Postgres handle. Required for /history; the
+// typed signal_log query routes through this.
 func (h *SignalHandler) WithDB(db *database.DB) *SignalHandler {
 	h.db = db
 	return h
 }
 
-// WithSignalHistory adds the Postgres signal_history writer for primary queries.
+// WithSignalHistory adds the legacy SignalHistoryWriter. Used only by
+// the snapshot/diff/stats endpoints (out of Prompt 0069 scope). The
+// typed /history endpoint queries signal_log directly via h.db.Pool.
 func (h *SignalHandler) WithSignalHistory(w *database.SignalHistoryWriter) *SignalHandler {
 	h.signalHistoryWriter = w
 	return h
 }
 
-// WithRedisCache sets the Redis signal cache for reading live signal keys.
+// WithRedisCache sets the Redis signal cache for live signal-keys
+// discovery (legacy fallback path; no longer wired into /available).
 func (h *SignalHandler) WithRedisCache(cache *signal.RedisSignalCache) *SignalHandler {
 	h.redisCache = cache
 	return h
 }
 
-// WithLiveSignalStore sets the live signal boundary for cross-pod live reads.
+// WithLiveSignalStore sets the live signal boundary (L1+L2) used by
+// /live and /snapshot.
 func (h *SignalHandler) WithLiveSignalStore(store signal.LiveSignalStore) *SignalHandler {
 	h.liveSignals = store
 	return h
 }
 
-// History returns signal history for a vehicle and signal name.
+// historyMaxLimit caps the number of signal_log rows a single /history
+// call may return. Mirrors the cap the legacy SignalHistoryWriter used
+// before this rewrite so a malicious or buggy client cannot scan an
+// entire vehicle's history into one response.
+const historyMaxLimit = 10000
+
+// historyDefaultLimit is the row count used when the caller omits the
+// `limit` query parameter.
+const historyDefaultLimit = 1000
+
+// signalHistoryPoint is a single row in a /history response. The `kind`
+// field echoes the row's stored protomodel.ValueKind discriminator so
+// the frontend can switch on it; `value` is the typed Go scalar that
+// the kind selects from the typed signal_log columns.
+type signalHistoryPoint struct {
+	Ts    time.Time   `json:"ts"`
+	Kind  string      `json:"kind"`
+	Value interface{} `json:"value"`
+}
+
+// History returns the typed time-series for one signal on one vehicle.
 // GET /api/v1/signals/{vehicleID}/{signalName}/history?from=...&to=...&limit=...&hours=...
+//
+// Each row is decoded by switching on the row's `value_kind` column
+// (the source-of-truth discriminator written by the cold-path writer
+// after normalize.toSI). protomodel.SignalsByName is consulted only for
+// the response-level `expected_kind` and to short-circuit on an unknown
+// signal name.
 func (h *SignalHandler) History(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
 	if err != nil {
@@ -68,17 +121,142 @@ func (h *SignalHandler) History(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse time range (defaults to last 24 hours)
+	from, to := parseHistoryRange(r)
+	limit := parseHistoryLimit(r)
+
+	expectedKind := ""
+	if meta, ok := protomodel.SignalsByName[signalName]; ok && meta != nil {
+		expectedKind = meta.ValueKind.String()
+	}
+
+	if h.db == nil || h.db.Pool == nil {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"vehicle_id":    vehicleID,
+			"signal":        signalName,
+			"expected_kind": expectedKind,
+			"from":          from,
+			"to":            to,
+			"count":         0,
+			"data":          []signalHistoryPoint{},
+		})
+		return
+	}
+
+	points, err := h.queryHistory(r.Context(), vehicleID, signalName, from, to, limit)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "query failed: "+err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"vehicle_id":    vehicleID,
+		"signal":        signalName,
+		"expected_kind": expectedKind,
+		"from":          from,
+		"to":            to,
+		"count":         len(points),
+		"data":          points,
+	})
+}
+
+// queryHistory executes the typed signal_log query and decodes each row
+// per the row's value_kind. Forward-only Phase-42 schema:
+//
+//	signal_log(vehicle_id, ts, field, value_kind,
+//	           str_value, bool_value, int_value, float_value, time_value)
+func (h *SignalHandler) queryHistory(ctx context.Context, vehicleID int64, signalName string, from, to time.Time, limit int) ([]signalHistoryPoint, error) {
+	const q = `
+		SELECT ts, value_kind, str_value, bool_value, int_value, float_value, time_value
+		  FROM signal_log
+		 WHERE vehicle_id = $1
+		   AND field      = $2
+		   AND ts BETWEEN $3 AND $4
+		 ORDER BY ts ASC
+		 LIMIT $5`
+	rows, err := h.db.Pool.Query(ctx, q, vehicleID, signalName, from, to, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]signalHistoryPoint, 0)
+	for rows.Next() {
+		var (
+			ts        time.Time
+			valueKind int16
+			strVal    *string
+			boolVal   *bool
+			intVal    *int64
+			floatVal  *float64
+			timeVal   *time.Time
+		)
+		if err := rows.Scan(&ts, &valueKind, &strVal, &boolVal, &intVal, &floatVal, &timeVal); err != nil {
+			return nil, err
+		}
+		out = append(out, signalHistoryPoint{
+			Ts:    ts,
+			Kind:  protomodel.ValueKind(valueKind).String(),
+			Value: decodeTypedRow(protomodel.ValueKind(valueKind), strVal, boolVal, intVal, floatVal, timeVal),
+		})
+	}
+	return out, rows.Err()
+}
+
+// decodeTypedRow returns the typed scalar dictated by the row's
+// value_kind. The row's discriminator is the source of truth: per the
+// 000186 schema comment, exactly one typed column is non-null per row,
+// and the writer is expected to keep value_kind in sync with the
+// populated column. If the discriminator is one we don't recognise
+// (forward-compat with future ValueKind additions), we fall back to
+// the first non-null typed column so the value still surfaces.
+func decodeTypedRow(kind protomodel.ValueKind, strVal *string, boolVal *bool, intVal *int64, floatVal *float64, timeVal *time.Time) interface{} {
+	switch kind {
+	case protomodel.ValueKindString:
+		if strVal != nil {
+			return *strVal
+		}
+	case protomodel.ValueKindBool:
+		if boolVal != nil {
+			return *boolVal
+		}
+	case protomodel.ValueKindInt32, protomodel.ValueKindInt64, protomodel.ValueKindEnum:
+		if intVal != nil {
+			return *intVal
+		}
+	case protomodel.ValueKindFloat, protomodel.ValueKindDouble:
+		if floatVal != nil {
+			return *floatVal
+		}
+	case protomodel.ValueKindTime:
+		if timeVal != nil {
+			return *timeVal
+		}
+	default:
+		switch {
+		case strVal != nil:
+			return *strVal
+		case boolVal != nil:
+			return *boolVal
+		case intVal != nil:
+			return *intVal
+		case floatVal != nil:
+			return *floatVal
+		case timeVal != nil:
+			return *timeVal
+		}
+	}
+	return nil
+}
+
+func parseHistoryRange(r *http.Request) (time.Time, time.Time) {
 	to := time.Now().UTC()
 	from := to.Add(-24 * time.Hour)
 
-	// Support "hours" shorthand (e.g. ?hours=6)
 	if hoursStr := r.URL.Query().Get("hours"); hoursStr != "" {
 		if hrs, err := strconv.Atoi(hoursStr); err == nil && hrs > 0 {
 			from = to.Add(-time.Duration(hrs) * time.Hour)
 		}
 	}
-
 	if fromStr := r.URL.Query().Get("from"); fromStr != "" {
 		if t, err := time.Parse(time.RFC3339, fromStr); err == nil {
 			from = t
@@ -89,78 +267,28 @@ func (h *SignalHandler) History(w http.ResponseWriter, r *http.Request) {
 			to = t
 		}
 	}
+	return from, to
+}
 
-	limit := int64(1000)
+func parseHistoryLimit(r *http.Request) int {
+	limit := historyDefaultLimit
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
-		if l, err := strconv.ParseInt(limitStr, 10, 64); err == nil && l > 0 {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
 			limit = l
 		}
 	}
-
-	// Try Postgres signal_history first
-	if h.signalHistoryWriter != nil {
-		rows, err := h.signalHistoryWriter.GetHistory(r.Context(), vehicleID, signalName, from, to, int(limit))
-		if err == nil && len(rows) > 0 {
-			points := make([]map[string]interface{}, len(rows))
-			for i, row := range rows {
-				p := map[string]interface{}{"created_at": row.CreatedAt}
-				if row.ValueNum != nil {
-					p["value_num"] = *row.ValueNum
-				}
-				if row.ValueStr != nil {
-					p["value_str"] = *row.ValueStr
-				}
-				if row.ValueBool != nil {
-					p["value_bool"] = *row.ValueBool
-				}
-				points[i] = p
-			}
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"vehicle_id": vehicleID,
-				"signal":     signalName,
-				"from":       from,
-				"to":         to,
-				"count":      len(points),
-				"data":       points,
-			})
-			return
-		}
+	if limit > historyMaxLimit {
+		limit = historyMaxLimit
 	}
-
-	// Fallback to MongoDB
-	if h.signalLogRepo != nil {
-		points, err := h.signalLogRepo.GetHistory(r.Context(), database.SignalHistoryQuery{
-			VehicleID: vehicleID,
-			Signal:    signalName,
-			From:      from,
-			To:        to,
-			Limit:     limit,
-		})
-		if err == nil {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"vehicle_id": vehicleID,
-				"signal":     signalName,
-				"from":       from,
-				"to":         to,
-				"count":      len(points),
-				"data":       points,
-			})
-			return
-		}
-	}
-
-	// No data from either source — return empty result (not 503)
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"vehicle_id": vehicleID,
-		"signal":     signalName,
-		"from":       from,
-		"to":         to,
-		"count":      0,
-		"data":       []interface{}{},
-	})
+	return limit
 }
 
-// AvailableSignals returns the list of signal names with data for a vehicle.
+// AvailableSignals returns the Tesla telemetry signal catalog for a
+// vehicle. The catalog itself is global (every vehicle subscribes to
+// the same fields); the {vehicleID} URL param is preserved for routing
+// symmetry and so a future per-vehicle subscription override could
+// filter the response without breaking the URL contract.
+//
 // GET /api/v1/signals/{vehicleID}/available
 func (h *SignalHandler) AvailableSignals(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
@@ -169,93 +297,20 @@ func (h *SignalHandler) AvailableSignals(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Try Postgres signal_history first (most accurate — actual observed signals)
-	if h.signalHistoryWriter != nil {
-		signals, err := h.signalHistoryWriter.AvailableSignals(r.Context(), vehicleID)
-		if err == nil && len(signals) > 0 {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"vehicle_id": vehicleID,
-				"count":      len(signals),
-				"signals":    signals,
-				"source":     "signal_history",
-			})
-			return
-		}
-	}
-
-	// Try MongoDB
-	if h.signalLogRepo != nil {
-		signals, err := h.signalLogRepo.GetAvailableSignals(r.Context(), vehicleID)
-		if err == nil && len(signals) > 0 {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"vehicle_id": vehicleID,
-				"count":      len(signals),
-				"signals":    signals,
-			})
-			return
-		}
-	}
-
-	// Fallback: query signal keys from Redis HSET
-	if h.redisCache != nil {
-		signals, err := h.getSignalNamesFromRedis(r.Context(), vehicleID)
-		if err == nil && len(signals) > 0 {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"vehicle_id": vehicleID,
-				"count":      len(signals),
-				"signals":    signals,
-				"source":     "redis",
-			})
-			return
-		}
-	}
-
-	// Last resort: return well-known Fleet Telemetry signal names
-	fallback := getKnownSignalNames()
+	signals := AvailableSignals()
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id": vehicleID,
-		"count":      len(fallback),
-		"signals":    fallback,
-		"source":     "static",
+		"count":      len(signals),
+		"signals":    signals,
+		"source":     "protomodel",
 	})
 }
 
-// getSignalNamesFromRedis returns sorted signal names from the Redis HSET for a vehicle.
-func (h *SignalHandler) getSignalNamesFromRedis(ctx context.Context, vehicleID int64) ([]string, error) {
-	signals, err := h.redisCache.GetAll(ctx, vehicleID)
-	if err != nil {
-		return nil, err
-	}
-	names := make([]string, 0, len(signals))
-	for name := range signals {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names, nil
-}
-
-// getKnownSignalNames returns a static list of commonly available Fleet Telemetry signals.
-func getKnownSignalNames() []string {
-	return []string{
-		"ACChargingEnergyIn", "ACChargingPower", "BatteryLevel",
-		"BatteryHeaterOn", "ChargeAmps", "ChargeCurrentRequest",
-		"ChargeEnableRequest", "ChargeLimitSoc", "ChargePort",
-		"ChargeState", "ChargerActualCurrent", "ChargerPhases",
-		"ChargerPilotCurrent", "ChargerVoltage", "DCChargingEnergyIn",
-		"DCChargingPower", "DetailedChargeState", "DoorState",
-		"DriveState", "EnergyRemaining", "EstBatteryRange",
-		"FastChargerPresent", "FastChargerType", "GearSelection",
-		"GpsHeading", "GpsState", "IdealBatteryRange",
-		"InsideTemp", "Location", "Locked",
-		"Odometer", "OutsideTemp", "PackCurrent",
-		"PackVoltage", "PreconditioningEnabled", "Soc",
-		"Speed", "TimeToFullCharge", "TpmsFl", "TpmsFr",
-		"TpmsRl", "TpmsRr", "VehicleName", "VehicleSpeed",
-	}
-}
-
-// Stats returns signal log statistics for a vehicle.
+// Stats returns signal log row counts and date range for a vehicle.
 // GET /api/v1/signals/{vehicleID}/stats
+//
+// Out of Prompt 0069 scope — kept compiling against SignalHistoryWriter
+// for backwards compatibility with existing route wiring.
 func (h *SignalHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
 	if err != nil {
@@ -263,7 +318,6 @@ func (h *SignalHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Try Postgres signal_history first
 	if h.signalHistoryWriter != nil {
 		count, oldest, newest, err := h.signalHistoryWriter.GetGlobalStats(r.Context(), vehicleID)
 		if err == nil {
@@ -277,7 +331,6 @@ func (h *SignalHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Fallback to MongoDB
 	if h.signalLogRepo != nil {
 		count, oldest, newest, err := h.signalLogRepo.GetStats(r.Context(), vehicleID)
 		if err == nil {
@@ -291,7 +344,6 @@ func (h *SignalHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// No source available — return zeros (not 503)
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id": vehicleID,
 		"count":      0,
@@ -300,13 +352,12 @@ func (h *SignalHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// LiveState returns the current in-memory signal state for a vehicle.
-// GET /api/v1/signals/{vehicleID}/live
+// LiveState returns the current in-memory signal state for a vehicle
+// as the typed `{kind, value, ts}` envelope. The envelope is augmented
+// with `timestamp`, `source` ("l1" | "l2" | "stale"), and `age_ms` so
+// the FSM debugger can keep surfacing which layer satisfied each read.
 //
-// Each signal entry includes `source` ("l1", "l2", "stale") and `age_ms` so
-// the FSM debugger can surface which layer satisfied the read. The shape is a
-// non-breaking extension — old clients that only read `value`/`timestamp` keep
-// working. Phase-40 / Prompt 58.
+// GET /api/v1/signals/{vehicleID}/live
 func (h *SignalHandler) LiveState(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
 	if err != nil {
@@ -330,15 +381,7 @@ func (h *SignalHandler) LiveState(w http.ResponseWriter, r *http.Request) {
 		if v == nil {
 			continue
 		}
-		entry := map[string]interface{}{
-			"value":     v.Raw,
-			"timestamp": v.Timestamp,
-			"source":    classifyLiveSource(v, now),
-		}
-		if !v.Timestamp.IsZero() {
-			entry["age_ms"] = now.Sub(v.Timestamp).Milliseconds()
-		}
-		signals[k] = entry
+		signals[k] = buildLiveEntry(k, v, now)
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -349,17 +392,70 @@ func (h *SignalHandler) LiveState(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// classifyLiveSource maps a live signal Value into the L1/L2/STALE bucket the
-// debugger UI uses. The boundary already merges L1 + L2 by the freshness rule
-// described in ADR-002 / "Signal Data — Layered Live-State Contract", so we
-// classify by age:
+// buildLiveEntry constructs the per-signal JSON envelope for /live and
+// /snapshot. The envelope superset-of-old-shape design lets the typed
+// rewrite ship without touching any existing test:
+//
+//	{
+//	  "kind":      "ValueKindFloat",         // typed (Phase-42)
+//	  "value":     73.0,                     // typed (Phase-42)
+//	  "ts":        "2024-01-01T00:00:00Z",   // typed (Phase-42)
+//	  "timestamp": "2024-01-01T00:00:00Z",   // legacy (FSM debugger)
+//	  "source":    "l1",                     // legacy (FSM debugger)
+//	  "age_ms":    1234                      // legacy (FSM debugger)
+//	}
+func buildLiveEntry(name string, v *signal.Value, now time.Time) map[string]interface{} {
+	entry := map[string]interface{}{
+		"kind":      resolveLiveKind(name, v.Raw),
+		"value":     v.Raw,
+		"ts":        v.Timestamp,
+		"timestamp": v.Timestamp,
+		"source":    classifyLiveSource(v, now),
+	}
+	if !v.Timestamp.IsZero() {
+		entry["age_ms"] = now.Sub(v.Timestamp).Milliseconds()
+	}
+	return entry
+}
+
+// resolveLiveKind picks the canonical protomodel.ValueKind name for a
+// signal observed in the live store. The vendored proto is the
+// authority for any field present in protomodel.SignalsByName; for
+// codec-flattened compound children (e.g. Latitude / Longitude), which
+// are NOT in SignalsByName, the kind is inferred from the Go type of
+// the raw value because the codec emits them as typed primitives.
+func resolveLiveKind(name string, raw interface{}) string {
+	if meta, ok := protomodel.SignalsByName[name]; ok && meta != nil {
+		return meta.ValueKind.String()
+	}
+	switch raw.(type) {
+	case bool:
+		return protomodel.ValueKindBool.String()
+	case string:
+		return protomodel.ValueKindString.String()
+	case int, int32:
+		return protomodel.ValueKindInt32.String()
+	case int64:
+		return protomodel.ValueKindInt64.String()
+	case float32, float64:
+		return protomodel.ValueKindFloat.String()
+	case time.Time:
+		return protomodel.ValueKindTime.String()
+	}
+	return protomodel.ValueKindUnknown.String()
+}
+
+// classifyLiveSource maps a live signal Value into the L1/L2/STALE
+// bucket the debugger UI uses (ADR-002 / "Signal Data — Layered
+// Live-State Contract"):
+//
 //   - zero timestamp        → "l2" (legacy unknown-freshness Redis entry)
 //   - age >  freshness      → "stale"
 //   - age <= freshness      → "l1"
 //
-// Strictly distinguishing L1 vs L2 would require the boundary to expose its
-// per-signal source; today we treat "fresh" as L1-equivalent because the L1
-// hot path is what the debugger primarily cares about.
+// Strictly distinguishing L1 vs L2 would require the boundary to expose
+// its per-signal source; today we treat "fresh" as L1-equivalent because
+// the L1 hot path is what the debugger primarily cares about.
 func classifyLiveSource(v *signal.Value, now time.Time) string {
 	if v == nil {
 		return "unknown"
@@ -373,11 +469,10 @@ func classifyLiveSource(v *signal.Value, now time.Time) string {
 	return "l1"
 }
 
-// Snapshot returns a point-in-time signal snapshot. When `at` is omitted (or
-// equals "now"), the response mirrors LiveState. When `at` is in the past, the
-// handler reconstructs the snapshot from signal_log: for each requested signal
-// (or the vehicle's full known signal set when none requested) it returns the
-// last value at-or-before `at`. Phase-40 / Prompt 58.
+// Snapshot returns a point-in-time signal snapshot. When `at` is
+// omitted (or equals "now"), the response mirrors LiveState. When `at`
+// is in the past, the handler reconstructs the snapshot from the
+// legacy SignalHistoryWriter (out of Prompt 0069 scope).
 //
 // GET /api/v1/signals/{vehicleID}/snapshot?at=...&signals=BatteryLevel,Gear
 func (h *SignalHandler) Snapshot(w http.ResponseWriter, r *http.Request) {
@@ -400,13 +495,11 @@ func (h *SignalHandler) Snapshot(w http.ResponseWriter, r *http.Request) {
 
 	requested := parseSignalNames(r.URL.Query().Get("signals"))
 
-	// Recent / present-time → live store path.
 	if !at.Before(now.Add(-30 * time.Second)) {
 		h.snapshotLive(w, r, vehicleID, requested, now)
 		return
 	}
 
-	// Past → reconstruct from signal_log.
 	h.snapshotFromLog(w, r, vehicleID, requested, at)
 }
 
@@ -448,15 +541,7 @@ func (h *SignalHandler) snapshotLive(w http.ResponseWriter, r *http.Request, veh
 				continue
 			}
 		}
-		entry := map[string]interface{}{
-			"value":     v.Raw,
-			"timestamp": v.Timestamp,
-			"source":    classifyLiveSource(v, now),
-		}
-		if !v.Timestamp.IsZero() {
-			entry["age_ms"] = now.Sub(v.Timestamp).Milliseconds()
-		}
-		signals[k] = entry
+		signals[k] = buildLiveEntry(k, v, now)
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -493,7 +578,9 @@ func (h *SignalHandler) snapshotFromLog(w http.ResponseWriter, r *http.Request, 
 			continue
 		}
 		entry := map[string]interface{}{
+			"kind":      resolveLiveKind(name, val),
 			"value":     val,
+			"ts":        ts,
 			"timestamp": ts,
 			"source":    "log",
 		}
@@ -511,26 +598,20 @@ func (h *SignalHandler) snapshotFromLog(w http.ResponseWriter, r *http.Request, 
 	})
 }
 
-// lastSignalAt fetches the most recent signal_history value at or before `at`
-// for one signal. Returns (value, ts, true) on success, (nil, zero, false)
-// otherwise. The lookback window is bounded so the page query stays fast even
-// when a vehicle has decades of history.
+// lastSignalAt fetches the most recent legacy signal_history value at
+// or before `at` for one signal. Used only by the out-of-scope
+// /snapshot path. The lookback window is bounded so the page query
+// stays fast even when a vehicle has decades of history.
 func lastSignalAt(ctx context.Context, w *database.SignalHistoryWriter, vehicleID int64, signalName string, at time.Time) (interface{}, time.Time, bool) {
 	from := at.Add(-snapshotLookback)
 	rows, err := w.GetHistory(ctx, vehicleID, signalName, from, at, 1)
 	if err != nil || len(rows) == 0 {
 		return nil, time.Time{}, false
 	}
-	// GetHistory returns rows ASC; for "last value at-or-before at" we want
-	// the newest within [from, at] which is the last element.
 	row := rows[len(rows)-1]
 	return signalRowValue(row), row.CreatedAt, true
 }
 
-// snapshotLookback bounds how far back snapshotFromLog will search for the
-// last value of a signal at-or-before `at`. 30 days is generous enough for a
-// debugger snapshot (signals that haven't changed in 30 days are effectively
-// static) while keeping the per-signal index lookup cheap.
 const snapshotLookback = 30 * 24 * time.Hour
 
 func signalRowValue(row database.SignalHistoryRow) interface{} {
@@ -556,10 +637,9 @@ func signalSet(names []string) map[string]struct{} {
 	return out
 }
 
-// Diff returns one row per signal that changed between two snapshots. Both
-// snapshots use the same point-in-time logic as Snapshot. Unchanged signals
-// are omitted server-side so the wire payload stays compact even when the
-// vehicle reports thousands of signals. Phase-40 / Prompt 58.
+// Diff returns one row per signal that changed between two snapshots.
+// Both snapshots use the same point-in-time logic as Snapshot. Out of
+// Prompt 0069 scope — kept compiling against the existing helpers.
 //
 // GET /api/v1/signals/{vehicleID}/diff?at_a=...&at_b=...&signals=...
 type signalDiffRow struct {
@@ -652,7 +732,6 @@ func (h *SignalHandler) collectSnapshot(ctx context.Context, vehicleID int64, re
 	now := time.Now().UTC()
 	out := map[string]signalSnapshotEntry{}
 
-	// Live path: when at is within ~30s of now, read the live store.
 	if !at.Before(now.Add(-30 * time.Second)) && h.liveSignals != nil {
 		raw, err := h.liveSignals.GetAll(ctx, vehicleID, signal.LiveSignalReadDistributed)
 		if err == nil {
@@ -677,7 +756,6 @@ func (h *SignalHandler) collectSnapshot(ctx context.Context, vehicleID int64, re
 		}
 	}
 
-	// Past path: reconstruct from signal_log.
 	if h.signalHistoryWriter == nil {
 		return out, nil
 	}
@@ -731,9 +809,10 @@ func mergeSignalKeys(a, b map[string]signalSnapshotEntry) []string {
 	return out
 }
 
-// valuesEqual treats numeric and string comparisons consistently with how the
-// upstream signal store coerces values. Pointer wrappers were already unboxed
-// when we built the snapshot entries, so we only have to deal with raw scalars.
+// valuesEqual treats numeric and string comparisons consistently with
+// how the upstream signal store coerces values. Pointer wrappers were
+// already unboxed when we built the snapshot entries, so we only deal
+// with raw scalars.
 func valuesEqual(a, b interface{}) bool {
 	if a == nil || b == nil {
 		return a == nil && b == nil
@@ -769,6 +848,11 @@ func signalToFloat(v interface{}) (float64, bool) {
 	return 0, false
 }
 
+// liveSignalValuesToRaw flattens a *signal.Value snapshot into a plain
+// {name -> raw} map. Used by alert_handler_rules.go and
+// vehicle_handler.go for template rendering and BuildStateFromSignalStore
+// hydration; preserved here so the typed rewrite does not require
+// touching files outside the Prompt 0069 allowed-files list.
 func liveSignalValuesToRaw(values map[string]*signal.Value) map[string]interface{} {
 	raw := make(map[string]interface{}, len(values))
 	for name, value := range values {

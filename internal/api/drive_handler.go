@@ -11,26 +11,24 @@ type DriveHandler struct {
 	driveRepo         *database.DriveRepo
 	posRepo           *database.PositionRepo
 	signalLogReader   *database.SignalLogReader
-	redisCache        *signal.RedisSignalCache
+	live              signal.LiveStateReader
 	forwardAuthHeader string
 	// bulkOverride lets tests substitute the bulk store without standing up a
 	// real *database.DriveRepo. Always nil in production.
 	bulkOverride driveBulkStore
 }
 
-func NewDriveHandler(db *database.DB) *DriveHandler {
+// NewDriveHandler constructs a DriveHandler. live is the layered live-state
+// reader used by the live-drive enrichment path; pass nil only in tests that
+// do not exercise the live path.
+func NewDriveHandler(db *database.DB, live signal.LiveStateReader) *DriveHandler {
 	return &DriveHandler{
 		db:              db,
 		driveRepo:       database.NewDriveRepo(db),
 		posRepo:         database.NewPositionRepo(db),
 		signalLogReader: database.NewSignalLogReader(db),
+		live:            live,
 	}
-}
-
-// WithRedisCache sets the Redis signal cache for computing live in-progress drive values.
-func (h *DriveHandler) WithRedisCache(cache *signal.RedisSignalCache) *DriveHandler {
-	h.redisCache = cache
-	return h
 }
 
 // WithForwardAuthHeader wires the auth header used to attribute audit log

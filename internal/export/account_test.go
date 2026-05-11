@@ -269,27 +269,27 @@ func TestValidateColumns(t *testing.T) {
 		{
 			name:      "subset preserves order",
 			jobType:   "drives",
-			requested: []string{"start_date", "distance"},
+			requested: []string{"start_date", "distance_m"},
 			// AlwaysIncluded (id, vehicle_id) get prepended in catalog order.
-			wantNames: []string{"id", "vehicle_id", "start_date", "distance"},
+			wantNames: []string{"id", "vehicle_id", "start_date", "distance_m"},
 		},
 		{
 			name:      "duplicates collapse to first occurrence",
 			jobType:   "drives",
-			requested: []string{"distance", "distance", "start_date"},
-			wantNames: []string{"id", "vehicle_id", "distance", "start_date"},
+			requested: []string{"distance_m", "distance_m", "start_date"},
+			wantNames: []string{"id", "vehicle_id", "distance_m", "start_date"},
 		},
 		{
 			name:      "always-included columns survive when caller omits them",
 			jobType:   "drives",
-			requested: []string{"distance"},
-			wantNames: []string{"id", "vehicle_id", "distance"},
+			requested: []string{"distance_m"},
+			wantNames: []string{"id", "vehicle_id", "distance_m"},
 		},
 		{
 			name:      "always-included columns kept in caller-supplied order when provided",
 			jobType:   "drives",
-			requested: []string{"distance", "id", "vehicle_id"},
-			wantNames: []string{"distance", "id", "vehicle_id"},
+			requested: []string{"distance_m", "id", "vehicle_id"},
+			wantNames: []string{"distance_m", "id", "vehicle_id"},
 		},
 		{
 			name:      "unknown column rejected",
@@ -301,7 +301,7 @@ func TestValidateColumns(t *testing.T) {
 			name:      "empty request returns catalog",
 			jobType:   "drives",
 			requested: nil,
-			wantNames: []string{"id", "vehicle_id", "start_date", "end_date", "distance", "duration_min", "speed_max"},
+			wantNames: []string{"id", "vehicle_id", "start_date", "end_date", "distance_m", "duration_s", "max_speed_mps"},
 		},
 		{
 			name:      "unknown type returns nil/nil (no validation)",

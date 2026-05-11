@@ -5,10 +5,12 @@ import { Badge } from '@/components/ui';
 import { Timeline } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useMaintenance, useServiceRecords } from '@/api/hooks/useVehicleSystems';
-import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 /** Determine urgency based on interval months remaining (heuristic). */
 function getUrgency(intervalMonths: number): 'overdue' | 'soon' | 'good' {
@@ -31,7 +33,11 @@ function urgencyLabel(urgency: string, t: (k: string, f: string) => string): str
 
 export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { convertDistance, distanceUnit, formatCurrency } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
+  const { formatCurrency } = useFormatting();
 
   const {
     data: maintenanceItems,
@@ -79,7 +85,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
     const itemMap = new Map(items.map((m) => [m.id, m]));
     return recentRecords.map((rec) => {
       const mi = itemMap.get(rec.itemId);
-      const odometerDisplay = fmtNumber(convertDistance((rec.odometerKm ?? 0) * 0.621371), 0);
+      const odometerDisplay = fmtNumber(toDistanceDisplay((rec.odometerKm ?? 0) * 0.621371), 0);
       return {
         icon: <CheckCircle2 className="h-3 w-3" />,
         title: mi?.name ?? rec.itemId ?? '—',
@@ -92,7 +98,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
         color: '#10b981',
       };
     });
-  }, [recentRecords, items, convertDistance, distanceUnit]);
+  }, [recentRecords, items, toDistanceDisplay, distanceUnit]);
 
   const updatedAt = Math.max(maintUpdatedAt ?? 0, recordsUpdatedAt ?? 0);
   const hasData = items.length > 0 || records.length > 0;
@@ -173,7 +179,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
                   {t('widget.maintenance.months', 'mo')}
                 </span>
                 <span className="flex items-center gap-1">
-                  {fmtNumber(convertDistance((nextItem.intervalKm ?? 0) * 0.621371), 0)}{' '}
+                  {fmtNumber(toDistanceDisplay((nextItem.intervalKm ?? 0) * 0.621371), 0)}{' '}
                   {distanceUnit}
                 </span>
                 {nextItem.estimatedCostUsd != null && nextItem.estimatedCostUsd > 0 && (

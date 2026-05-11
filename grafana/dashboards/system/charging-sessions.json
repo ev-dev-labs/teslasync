@@ -101,7 +101,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  COUNT(*) AS \"⚡ Sessions\",\n  ROUND(SUM(energy_added_kwh)::numeric, 1) AS \"🔋 Total kWh\",\n  ROUND(SUM(CASE WHEN cost > 0 THEN cost ELSE energy_added_kwh * (SELECT COALESCE(value_num, 0.12) FROM settings WHERE key = 'base_cost_per_kwh') END)::numeric, 2) AS \"💰 Total Cost ($)\",\n  ROUND(AVG(charger_power_kw_max)::numeric, 1) AS \"⚡ Avg Power (kW)\",\n  ROUND(AVG(duration_min)::numeric) AS \"⏱️ Avg Duration (min)\",\n  ROUND(AVG(end_battery_pct - start_battery_pct)::numeric) AS \"🔋 Avg % Gained\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)",
+          "rawSql": "SELECT \n  COUNT(*) AS \"⚡ Sessions\",\n  ROUND(SUM((total_energy_added_wh / 1000.0))::numeric, 1) AS \"🔋 Total kWh\",\n  ROUND(SUM(CASE WHEN cost_decimal > 0 THEN cost_decimal ELSE (total_energy_added_wh / 1000.0) * (SELECT COALESCE(value_num, 0.12) FROM settings WHERE key = 'base_cost_per_kwh') END)::numeric, 2) AS \"💰 Total Cost ($)\",\n  ROUND(AVG((peak_power_w / 1000.0))::numeric, 1) AS \"⚡ Avg Power (kW)\",\n  ROUND(AVG((EXTRACT(EPOCH FROM (ended_at - started_at)) / 60.0))::numeric) AS \"⏱️ Avg Duration (min)\",\n  ROUND(AVG(end_soc_pct - start_soc_pct)::numeric) AS \"🔋 Avg % Gained\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)",
           "refId": "A"
         }
       ],
@@ -176,7 +176,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  cs.id AS \"🔗 ID\",\n  cs.start_ts AS \"📅 Date\",\n  CASE\n    WHEN cs.charger_type IS NOT NULL AND cs.charger_type != '' THEN '⚡ ' || cs.charger_type\n    WHEN cs.charger_power_kw_max > 20 THEN '🔌 DC Fast'\n    ELSE '🏠 AC Level 2'\n  END AS \"🏷️ Type\",\n  cs.start_battery_pct AS \"🔋 Start\",\n  cs.end_battery_pct AS \"🔋 End\",\n  (cs.end_battery_pct - cs.start_battery_pct) AS \"📈 Gained\",\n  ROUND(cs.energy_added_kwh::numeric, 1) AS \"⚡ kWh\",\n  ROUND(cs.charger_power_kw_max::numeric, 1) AS \"🔌 kW\",\n  cs.max_charger_voltage AS \"⚡ V\",\n  cs.charger_phases AS \"🔌 Ph\",\n  COALESCE(cs.cable_type, '-') AS \"🔌 Cable\",\n  ROUND(cs.duration_min::numeric) AS \"⏱️ Min\",\n  ROUND(CASE WHEN cs.cost > 0 THEN cs.cost ELSE cs.energy_added_kwh * (SELECT COALESCE(value_num, 0.12) FROM settings WHERE key = 'base_cost_per_kwh') END::numeric, 2) AS \"💰 $\",\n  NULL AS \"📏 Range+\",\n  COALESCE(cs.charger_location, '-') AS \"📍 Location\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id} AND $__timeFilter(cs.start_ts)\nORDER BY cs.start_ts DESC\nLIMIT 200",
+          "rawSql": "SELECT\n  cs.id AS \"🔗 ID\",\n  cs.started_at AS \"📅 Date\",\n  CASE\n    WHEN cs.charger_type IS NOT NULL AND cs.charger_type != '' THEN '⚡ ' || cs.charger_type\n    WHEN (cs.peak_power_w / 1000.0) > 20 THEN '🔌 DC Fast'\n    ELSE '🏠 AC Level 2'\n  END AS \"🏷️ Type\",\n  cs.start_soc_pct AS \"🔋 Start\",\n  cs.end_soc_pct AS \"🔋 End\",\n  (cs.end_soc_pct - cs.start_soc_pct) AS \"📈 Gained\",\n  ROUND((cs.total_energy_added_wh / 1000.0)::numeric, 1) AS \"⚡ kWh\",\n  ROUND((cs.peak_power_w / 1000.0)::numeric, 1) AS \"🔌 kW\",\n  (NULL::float8) AS \"⚡ V\",\n  (NULL::int) AS \"🔌 Ph\",\n  COALESCE(cs.cable_type, '-') AS \"🔌 Cable\",\n  ROUND((EXTRACT(EPOCH FROM (cs.ended_at - cs.started_at)) / 60.0)::numeric) AS \"⏱️ Min\",\n  ROUND(CASE WHEN cs.cost_decimal > 0 THEN cs.cost_decimal ELSE (cs.total_energy_added_wh / 1000.0) * (SELECT COALESCE(value_num, 0.12) FROM settings WHERE key = 'base_cost_per_kwh') END::numeric, 2) AS \"💰 $\",\n  NULL AS \"📏 Range+\",\n  COALESCE((NULL::text), '-') AS \"📍 Location\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id} AND $__timeFilter(cs.started_at)\nORDER BY cs.started_at DESC\nLIMIT 200",
           "refId": "A"
         }
       ],
@@ -233,7 +233,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(start_ts, '1M') AS time,\n  SUM(energy_added_kwh) AS \"Energy (kWh)\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)\nGROUP BY time ORDER BY time",
+          "rawSql": "SELECT\n  $__timeGroup(started_at, '1M') AS time,\n  SUM((total_energy_added_wh / 1000.0)) AS \"Energy (kWh)\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\nGROUP BY time ORDER BY time",
           "refId": "A"
         }
       ],
@@ -291,7 +291,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(start_ts, '1M') AS time,\n  SUM(CASE WHEN cost > 0 THEN cost ELSE energy_added_kwh * (SELECT COALESCE(value_num, 0.12) FROM settings WHERE key = 'base_cost_per_kwh') END) AS \"Cost ($)\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)\nGROUP BY time ORDER BY time",
+          "rawSql": "SELECT\n  $__timeGroup(started_at, '1M') AS time,\n  SUM(CASE WHEN cost_decimal > 0 THEN cost_decimal ELSE (total_energy_added_wh / 1000.0) * (SELECT COALESCE(value_num, 0.12) FROM settings WHERE key = 'base_cost_per_kwh') END) AS \"Cost ($)\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\nGROUP BY time ORDER BY time",
           "refId": "A"
         }
       ],
@@ -345,7 +345,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  CASE\n    WHEN charger_type IS NOT NULL AND charger_type != '' THEN charger_type\n    WHEN charger_power_kw_max > 20 THEN 'DC Fast'\n    ELSE 'Home/AC'\n  END AS \"🏷️ Type\",\n  COUNT(*) AS \"🔄 Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)\nGROUP BY 1 ORDER BY 2 DESC",
+          "rawSql": "SELECT\n  CASE\n    WHEN charger_type IS NOT NULL AND charger_type != '' THEN charger_type\n    WHEN (peak_power_w / 1000.0) > 20 THEN 'DC Fast'\n    ELSE 'Home/AC'\n  END AS \"🏷️ Type\",\n  COUNT(*) AS \"🔄 Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\nGROUP BY 1 ORDER BY 2 DESC",
           "refId": "A"
         }
       ],
@@ -400,7 +400,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  CASE\n    WHEN charger_type IS NOT NULL AND charger_type != '' THEN charger_type\n    WHEN charger_power_kw_max > 20 THEN 'DC Fast'\n    ELSE 'Home/AC'\n  END AS \"🏷️ Type\",\n  ROUND(SUM(CASE WHEN cost > 0 THEN cost ELSE energy_added_kwh * (SELECT COALESCE(value_num, 0.12) FROM settings WHERE key = 'base_cost_per_kwh') END)::numeric, 2) AS \"Cost ($)\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)\nGROUP BY 1 ORDER BY 2 DESC",
+          "rawSql": "SELECT\n  CASE\n    WHEN charger_type IS NOT NULL AND charger_type != '' THEN charger_type\n    WHEN (peak_power_w / 1000.0) > 20 THEN 'DC Fast'\n    ELSE 'Home/AC'\n  END AS \"🏷️ Type\",\n  ROUND(SUM(CASE WHEN cost_decimal > 0 THEN cost_decimal ELSE (total_energy_added_wh / 1000.0) * (SELECT COALESCE(value_num, 0.12) FROM settings WHERE key = 'base_cost_per_kwh') END)::numeric, 2) AS \"Cost ($)\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\nGROUP BY 1 ORDER BY 2 DESC",
           "refId": "A"
         }
       ],
@@ -494,7 +494,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  CASE\n    WHEN charger_power_kw_max <= 7.7 THEN '🏠 ≤7.7 kW (L2)'\n    WHEN charger_power_kw_max <= 11.5 THEN '🔌 ≤11.5 kW (L2+)'\n    WHEN charger_power_kw_max <= 50 THEN '⚡ ≤50 kW (DC)'\n    WHEN charger_power_kw_max <= 150 THEN '⚡ ≤150 kW (SC v2)'\n    ELSE '⚡ 150+ kW (SC v3)'\n  END AS \"Power Range\",\n  COUNT(*) AS \"🔄 Sessions\",\n  ROUND(AVG(energy_added_kwh)::numeric, 1) AS \"⚡ Avg kWh\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)\nGROUP BY 1 ORDER BY MIN(charger_power_kw_max)",
+          "rawSql": "SELECT\n  CASE\n    WHEN (peak_power_w / 1000.0) <= 7.7 THEN '🏠 ≤7.7 kW (L2)'\n    WHEN (peak_power_w / 1000.0) <= 11.5 THEN '🔌 ≤11.5 kW (L2+)'\n    WHEN (peak_power_w / 1000.0) <= 50 THEN '⚡ ≤50 kW (DC)'\n    WHEN (peak_power_w / 1000.0) <= 150 THEN '⚡ ≤150 kW (SC v2)'\n    ELSE '⚡ 150+ kW (SC v3)'\n  END AS \"Power Range\",\n  COUNT(*) AS \"🔄 Sessions\",\n  ROUND(AVG((total_energy_added_wh / 1000.0))::numeric, 1) AS \"⚡ Avg kWh\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\nGROUP BY 1 ORDER BY MIN((peak_power_w / 1000.0))",
           "refId": "A"
         }
       ],
@@ -541,7 +541,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  CASE\n    WHEN start_battery_pct < 10 THEN '🔴 0-10%'\n    WHEN start_battery_pct < 20 THEN '🟠 10-20%'\n    WHEN start_battery_pct < 30 THEN '🟡 20-30%'\n    WHEN start_battery_pct < 40 THEN '🟢 30-40%'\n    WHEN start_battery_pct < 50 THEN '🟢 40-50%'\n    ELSE '🔵 50%+'\n  END AS \"Start Battery\",\n  COUNT(*) AS \"🔄 Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)\nGROUP BY 1 ORDER BY MIN(start_battery_pct)",
+          "rawSql": "SELECT\n  CASE\n    WHEN start_soc_pct < 10 THEN '🔴 0-10%'\n    WHEN start_soc_pct < 20 THEN '🟠 10-20%'\n    WHEN start_soc_pct < 30 THEN '🟡 20-30%'\n    WHEN start_soc_pct < 40 THEN '🟢 30-40%'\n    WHEN start_soc_pct < 50 THEN '🟢 40-50%'\n    ELSE '🔵 50%+'\n  END AS \"Start Battery\",\n  COUNT(*) AS \"🔄 Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\nGROUP BY 1 ORDER BY MIN(start_soc_pct)",
           "refId": "A"
         }
       ],
@@ -599,7 +599,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(start_ts, '1M') AS time,\n  ROUND((SUM(CASE WHEN cost > 0 THEN cost ELSE energy_added_kwh * (SELECT COALESCE(value_num, 0.12) FROM settings WHERE key = 'base_cost_per_kwh') END) / NULLIF(SUM(energy_added_kwh), 0))::numeric, 3) AS \"$/kWh\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)\nGROUP BY time ORDER BY time",
+          "rawSql": "SELECT\n  $__timeGroup(started_at, '1M') AS time,\n  ROUND((SUM(CASE WHEN cost_decimal > 0 THEN cost_decimal ELSE (total_energy_added_wh / 1000.0) * (SELECT COALESCE(value_num, 0.12) FROM settings WHERE key = 'base_cost_per_kwh') END) / NULLIF(SUM((total_energy_added_wh / 1000.0)), 0))::numeric, 3) AS \"$/kWh\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\nGROUP BY time ORDER BY time",
           "refId": "A"
         }
       ],
@@ -700,7 +700,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  ROUND(AVG(CASE WHEN NULL > 0 AND energy_added_kwh > 0 THEN energy_added_kwh / NULL * 100 ELSE NULL END)::numeric, 1) AS \"⚡ Avg Efficiency %\",\n  ROUND(MAX(charger_power_kw_max)::numeric, 1) AS \"🔌 Peak Power (kW)\",\n  ROUND(AVG(CASE WHEN cost > 0 THEN cost ELSE energy_added_kwh * (SELECT COALESCE(value_num, 0.12) FROM settings WHERE key = 'base_cost_per_kwh') END / NULLIF(energy_added_kwh, 0))::numeric, 3) AS \"💲 Avg $/kWh\",\n  ROUND(MIN(CASE WHEN cost > 0 THEN cost / NULLIF(energy_added_kwh, 0) ELSE NULL END)::numeric, 3) AS \"💲 Best $/kWh\",\n  ROUND(MAX(CASE WHEN cost > 0 THEN cost / NULLIF(energy_added_kwh, 0) ELSE NULL END)::numeric, 3) AS \"💲 Worst $/kWh\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)",
+          "rawSql": "SELECT\n  ROUND(AVG(CASE WHEN NULL > 0 AND (total_energy_added_wh / 1000.0) > 0 THEN (total_energy_added_wh / 1000.0) / NULL * 100 ELSE NULL END)::numeric, 1) AS \"⚡ Avg Efficiency %\",\n  ROUND(MAX((peak_power_w / 1000.0))::numeric, 1) AS \"🔌 Peak Power (kW)\",\n  ROUND(AVG(CASE WHEN cost_decimal > 0 THEN cost_decimal ELSE (total_energy_added_wh / 1000.0) * (SELECT COALESCE(value_num, 0.12) FROM settings WHERE key = 'base_cost_per_kwh') END / NULLIF((total_energy_added_wh / 1000.0), 0))::numeric, 3) AS \"💲 Avg $/kWh\",\n  ROUND(MIN(CASE WHEN cost_decimal > 0 THEN cost_decimal / NULLIF((total_energy_added_wh / 1000.0), 0) ELSE NULL END)::numeric, 3) AS \"💲 Best $/kWh\",\n  ROUND(MAX(CASE WHEN cost_decimal > 0 THEN cost_decimal / NULLIF((total_energy_added_wh / 1000.0), 0) ELSE NULL END)::numeric, 3) AS \"💲 Worst $/kWh\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)",
           "refId": "A"
         }
       ],

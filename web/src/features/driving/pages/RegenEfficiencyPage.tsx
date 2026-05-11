@@ -19,11 +19,12 @@ import { StaggerItem } from '@/components/motion/StaggerItem';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { useRegenEfficiency, useDrives } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtPercent, fmtWithUnit } from '@/lib/numberFormat';
 import type { Drive } from '@/types/driving';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -37,9 +38,9 @@ function regenColor(ratio: number): string {
 }
 
 function getRegenRatio(drive: Drive): number | null {
-  if (!drive.avgPowerKw || drive.avgPowerKw <= 0) return null;
-  if (!drive.regenKwh || !drive.energyUsedKwh || drive.energyUsedKwh <= 0) return null;
-  return (drive.regenKwh / drive.energyUsedKwh) * 100;
+  if (!drive.avgPowerW || drive.avgPowerW <= 0) return null;
+  if (!drive.regenEnergyWh || !drive.energyUsedWh || drive.energyUsedWh <= 0) return null;
+  return (drive.regenEnergyWh / drive.energyUsedWh) * 100;
 }
 
 /* ------------------------------------------------------------------ */
@@ -60,7 +61,10 @@ export default function RegenEfficiencyPage() {
   const lifetimeRegenKwh: number | null = null;
   const lifetimeDriveKwh: number | null = null;
 
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs, formatEnergy, formatPower } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
 
   /* ---- Monthly regen trend from drives ---- */
   const monthlyTrend = useMemo(() => {
@@ -69,11 +73,11 @@ export default function RegenEfficiencyPage() {
     drives.forEach((d) => {
       const month = d.startTs?.substring(0, 7);
       if (!month) return;
-      const regen = d.regenKwh ?? 0;
+      const regen = d.regenEnergyWh ?? 0;
       const existing = byMonth.get(month) ?? { totalRegen: 0, count: 0, totalDist: 0 };
       existing.totalRegen += regen;
       existing.count++;
-      existing.totalDist += d.distanceMi;
+      existing.totalDist += d.distanceM;
       byMonth.set(month, existing);
     });
     return Array.from(byMonth.entries())
@@ -83,24 +87,24 @@ export default function RegenEfficiencyPage() {
         month,
         regenKwh: parseFloat(fmtNumber(val.totalRegen / 1000, 1)),
         drives: val.count,
-        distance: Math.round(convertDistance(val.totalDist)),
+        distance: Math.round(toDistanceDisplay(val.totalDist)),
       }));
-  }, [drives, convertDistance]);
+  }, [drives, toDistanceDisplay]);
 
   /* ---- Per-drive regen list ---- */
   const regenDrives = useMemo(() => {
     if (!drives) return [];
     return drives
-      .filter((d) => d.regenKwh && d.regenKwh > 0)
+      .filter((d) => d.regenEnergyWh && d.regenEnergyWh > 0)
       .slice(0, 20)
       .map((d) => ({
         id: d.id,
         date: d.startTs ? formatDateShort(d.startTs) : '—',
-        distance: fmtWithUnit(convertDistance(d.distanceMi), distanceUnit),
-        maxRegen: d.regenKwh ? fmtWithUnit(d.regenKwh, 'kWh') : '—',
+        distance: fmtWithUnit(toDistanceDisplay(d.distanceM), distanceUnit),
+        maxRegen: d.regenEnergyWh ? fmtWithUnit(d.regenEnergyWh / 1000, 'kWh') : '—',
         ratio: getRegenRatio(d),
       }));
-  }, [drives, convertDistance, distanceUnit]);
+  }, [drives, toDistanceDisplay, distanceUnit]);
 
   const vehicleOptions = (vehicles ?? []).map((v) => ({
     value: String(v.id), label: v.display_name || v.vin,
@@ -131,8 +135,8 @@ export default function RegenEfficiencyPage() {
                 size={160}
               />
               <p className="text-xs text-[var(--text-muted)] mt-2">
-                {t('regen.recoveredInfo', 'You\'ve recovered {{kwh}} kWh — equivalent to ~{{charges}} free charges.', {
-                  kwh: fmtNumber(data.totalRegenKwh ?? 0),
+                {t('regen.recoveredInfo', 'You\'ve recovered {{energy}} — equivalent to ~{{charges}} free charges.', {
+                  energy: formatEnergy(data.totalRegenWh ?? 0, { precision: 1 }),
                   charges: fmtNumber(data.freeCharges ?? 0),
                 })}
               </p>
@@ -144,8 +148,8 @@ export default function RegenEfficiencyPage() {
             <StaggerItem>
               <GlassPanel className="p-4 text-center">
                 <Zap className="h-4 w-4 mx-auto mb-1 text-green-400" />
-                <p className="text-lg font-bold text-[var(--text-primary)]"><AnimatedNumber value={data.totalRegenKwh ?? 0} decimals={1} /></p>
-                <p className="text-[10px] text-[var(--text-muted)]">{t('regen.totalRegen', 'Total Regen kWh')}</p>
+                <p className="text-lg font-bold text-[var(--text-primary)]">{formatEnergy(data.totalRegenWh ?? 0, { precision: 1 })}</p>
+                <p className="text-[10px] text-[var(--text-muted)]">{t('regen.totalRegen', 'Total Regen')}</p>
               </GlassPanel>
             </StaggerItem>
             <StaggerItem>
@@ -158,7 +162,7 @@ export default function RegenEfficiencyPage() {
             <StaggerItem>
               <GlassPanel className="p-4 text-center">
                 <Calendar className="h-4 w-4 mx-auto mb-1 text-amber-400" />
-                <p className="text-lg font-bold text-[var(--text-primary)]"><AnimatedNumber value={data.monthlyAvgRegen ?? 0} decimals={1} /></p>
+                <p className="text-lg font-bold text-[var(--text-primary)]">{formatPower(data.monthlyAvgRegen ?? 0, { precision: 1 })}</p>
                 <p className="text-[10px] text-[var(--text-muted)]">{t('regen.monthlyAvg', 'Monthly Avg kW')}</p>
               </GlassPanel>
             </StaggerItem>
@@ -252,8 +256,8 @@ export default function RegenEfficiencyPage() {
               </h3>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
                 <div>
-                  <MetricBar label={t('regen.totalRegenLabel', 'Total Regen')} value={data.totalRegenKwh ?? 0} max={Math.max(data.totalRegenKwh ?? 0, 100)} color="#10b981" />
-                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(data.totalRegenKwh ?? 0)} kWh</p>
+                  <MetricBar label={t('regen.totalRegenLabel', 'Total Regen')} value={data.totalRegenWh ?? 0} max={Math.max(data.totalRegenWh ?? 0, 100000)} color="#10b981" />
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{formatEnergy(data.totalRegenWh ?? 0, { precision: 1 })}</p>
                 </div>
                 <div>
                   <MetricBar label={t('regen.regenRatioBar', 'Regen Ratio')} value={data.regenRatio ?? 0} max={100} color="#00f0ff" />
@@ -261,7 +265,7 @@ export default function RegenEfficiencyPage() {
                 </div>
                 <div>
                   <MetricBar label={t('regen.monthlyAvgBar', 'Monthly Avg')} value={data.monthlyAvgRegen ?? 0} max={Math.max(data.monthlyAvgRegen ?? 0, 50)} color="#a855f7" />
-                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(data.monthlyAvgRegen ?? 0)} kW</p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{formatPower(data.monthlyAvgRegen ?? 0, { precision: 1 })}</p>
                 </div>
                 <div>
                   <MetricBar label={t('regen.freeChargesBar', 'Free Charges')} value={data.freeCharges ?? 0} max={Math.max(data.freeCharges ?? 0, 10)} color="#f59e0b" />

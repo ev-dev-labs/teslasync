@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
 import { PrintButton } from '@/components/ui';
-import { SectionErrorBoundary } from '@/components/feedback';
+import { SectionErrorBoundary, AlertBanner } from '@/components/feedback';
 import { ChartTimeRangeProvider } from '@/components/charts';
 import { ShareDriveDialog } from '../components/ShareDriveDialog';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -42,6 +42,25 @@ export default function DriveDetailPage() {
 
   if (isLoading) return <DriveDetailSkeleton />;
 
+  /**
+   * A drive can be persisted with all-zero aggregate fields when the
+   * underlying signal_log slice contained only gear transitions (no
+   * VehicleSpeed / Odometer / EnergyRemaining samples). In that case
+   * HeroGauges, DriveStatCards, EnergySummaryPanel and MoreDetailsPanel
+   * all render zero-valued metrics that read as "broken vehicle". Detect
+   * that envelope and replace the four numeric-summary panels with a
+   * single banner explaining the gap. Charts and route map already
+   * gate themselves internally on an empty chartData / trail.
+   */
+  const hasTelemetryRows = (drive?.telemetry?.length ?? 0) > 0
+    || (drive?.positions?.length ?? 0) > 0;
+  const hasMeaningfulDriveStats = !!drive && (
+    (drive.distanceM ?? 0) > 0
+    || ((stats?.maxSpd ?? 0) > 0)
+    || ((stats?.energyWh ?? 0) > 0)
+    || hasTelemetryRows
+  );
+
   return (
     <PageContainer
       title={t('driveDetail.title', 'Drive Detail')}
@@ -67,21 +86,40 @@ export default function DriveDetailPage() {
               onShare={() => setShareDialogOpen(true)}
             />
           </SectionErrorBoundary>
-          <SectionErrorBoundary name="drive-detail:hero-gauges" fallbackTitle={t('driveDetail.section.heroGaugesFailed', 'Hero gauges failed to load')}>
-            <HeroGauges drive={drive} stats={stats} />
-          </SectionErrorBoundary>
+          {!hasMeaningfulDriveStats && (
+            <AlertBanner
+              variant="info"
+              title={t('driveDetail.noTelemetryTitle', 'No telemetry recorded for this drive')}
+            >
+              {t(
+                'driveDetail.noTelemetryBody',
+                'Only the start/end timestamps and battery levels are available. Distance, speed, energy and route data require live telemetry samples — none were captured during this drive.',
+              )}
+            </AlertBanner>
+          )}
+          {hasMeaningfulDriveStats && (
+            <SectionErrorBoundary name="drive-detail:hero-gauges" fallbackTitle={t('driveDetail.section.heroGaugesFailed', 'Hero gauges failed to load')}>
+              <HeroGauges drive={drive} stats={stats} />
+            </SectionErrorBoundary>
+          )}
           <SectionErrorBoundary name="drive-detail:timeline" fallbackTitle={t('driveDetail.section.timelineFailed', 'Drive timeline failed to load')}>
             <DriveTimeline drive={drive} />
           </SectionErrorBoundary>
-          <SectionErrorBoundary name="drive-detail:stat-cards" fallbackTitle={t('driveDetail.section.statCardsFailed', 'Drive stats failed to load')}>
-            <DriveStatCards drive={drive} stats={stats} />
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name="drive-detail:more-details" fallbackTitle={t('driveDetail.section.moreDetailsFailed', 'More details failed to load')}>
-            <MoreDetailsPanel drive={drive} stats={stats} />
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name="drive-detail:energy-summary" fallbackTitle={t('driveDetail.section.energySummaryFailed', 'Energy summary failed to load')}>
-            <EnergySummaryPanel drive={drive} stats={stats} />
-          </SectionErrorBoundary>
+          {hasMeaningfulDriveStats && (
+            <SectionErrorBoundary name="drive-detail:stat-cards" fallbackTitle={t('driveDetail.section.statCardsFailed', 'Drive stats failed to load')}>
+              <DriveStatCards drive={drive} stats={stats} />
+            </SectionErrorBoundary>
+          )}
+          {hasMeaningfulDriveStats && (
+            <SectionErrorBoundary name="drive-detail:more-details" fallbackTitle={t('driveDetail.section.moreDetailsFailed', 'More details failed to load')}>
+              <MoreDetailsPanel drive={drive} stats={stats} />
+            </SectionErrorBoundary>
+          )}
+          {hasMeaningfulDriveStats && (
+            <SectionErrorBoundary name="drive-detail:energy-summary" fallbackTitle={t('driveDetail.section.energySummaryFailed', 'Energy summary failed to load')}>
+              <EnergySummaryPanel drive={drive} stats={stats} />
+            </SectionErrorBoundary>
+          )}
           {stats.energyWh > 0 && (
             <SectionErrorBoundary name="drive-detail:cost-savings" fallbackTitle={t('driveDetail.section.costSavingsFailed', 'Cost savings panel failed to load')}>
               <CostSavingsPanel drive={drive} stats={stats} />

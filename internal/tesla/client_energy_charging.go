@@ -7,11 +7,20 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // GetChargingHistory calls GET /api/1/dx/charging/history with pagination.
 // Returns raw response bytes, HTTP status code, and error.
-func (c *Client) GetChargingHistory(ctx context.Context, vin string, startTime, endTime string, pageNo, pageSize int) ([]byte, int, error) {
+func (c *Client) GetChargingHistory(ctx context.Context, vin string, startTime, endTime string, pageNo, pageSize int) (respBody []byte, statusCode int, err error) {
+	ctx, span := startSpan(ctx, "tesla.GetChargingHistory",
+		attribute.String("tesla.vehicle.vin", vin),
+		attribute.Int("tesla.page.no", pageNo),
+		attribute.Int("tesla.page.size", pageSize),
+	)
+	defer endSpan(span, &err)
+
 	params := url.Values{}
 	if vin != "" {
 		params.Set("vin", vin)

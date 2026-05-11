@@ -9,7 +9,7 @@ import { AnimatedNumber } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useEnergyStats } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
@@ -23,11 +23,12 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
   const {
-    data, isLoading, error,
-    isFetching, isStale, isError, dataUpdatedAt, refetch,
-  } = useEnergyStats(id > 0 ? String(id) : null);
+    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useEnergyStats(id > 0 ? String(id) : null);
 
-  const { convertEfficiency, efficiencyUnit } = useSettings();
+  const { unitPrefs, formatEnergy } = useUnits();
+  const toEfficiencyDisplay = (whPerM: number) => unitPrefs.distance === 'mi' ? whPerM * 1609.344 : whPerM * 1000;
+
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
@@ -37,7 +38,7 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
   const chartData = useMemo(
     () => dailyBreakdown.map((d) => ({
       date: d.date,
-      energy: d.energy_kwh ?? 0,
+      energy: d.energy_wh ?? 0,
     })),
     [dailyBreakdown],
   );
@@ -52,19 +53,17 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
     const items: StatGridItem[] = [
       {
         label: t('widget.energyStats.totalUsed', 'Total Used'),
-        value: fmtNumber(data.total_energy_used_kwh ?? 0, 1),
-        unit: 'kWh',
+        value: formatEnergy(data.total_energy_used_wh ?? 0, { precision: 1 }),
         icon: <Zap className="h-3.5 w-3.5" />,
       },
       {
         label: t('widget.energyStats.totalCharged', 'Total Charged'),
-        value: fmtNumber(data.total_energy_charged_kwh ?? 0, 1),
-        unit: 'kWh',
+        value: formatEnergy(data.total_energy_charged_wh ?? 0, { precision: 1 }),
         icon: <BatteryCharging className="h-3.5 w-3.5" />,
       },
       {
         label: t('widget.energyStats.avgEfficiency', 'Avg Efficiency'),
-        value: fmtNumber(convertEfficiency(data.avg_efficiency_wh_per_mi ?? 0), 1),
+        value: fmtNumber(toEfficiencyDisplay(data.avg_efficiency_wh_per_m ?? 0), 1),
         unit: efficiencyUnit,
         icon: <TrendingUp className="h-3.5 w-3.5" />,
       },
@@ -86,15 +85,14 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
         },
         {
           label: t('widget.energyStats.netBalance', 'Net Energy'),
-          value: fmtNumber((data.total_energy_charged_kwh ?? 0) - (data.total_energy_used_kwh ?? 0), 1),
-          unit: 'kWh',
+          value: formatEnergy((data.total_energy_charged_wh ?? 0) - (data.total_energy_used_wh ?? 0), { precision: 1 }),
           icon: <Route className="h-3.5 w-3.5" />,
         },
       );
     }
 
     return items;
-  }, [data, isWide, convertEfficiency, efficiencyUnit, t]);
+  }, [data, isWide, toEfficiencyDisplay, efficiencyUnit, formatEnergy, t]);
 
   const shellProps = {
     loading: isLoading,
@@ -119,11 +117,11 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
         {hasData ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
             <AnimatedNumber
-              value={data.total_kwh ?? 0}
+              value={(data.total_wh ?? 0) / 1000}
               className="text-2xl font-bold text-[var(--text-primary)]"
             />
             <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
-              kWh
+              {unitPrefs.energy}
             </span>
           </div>
         ) : (

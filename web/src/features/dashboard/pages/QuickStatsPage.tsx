@@ -8,7 +8,8 @@ import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useAnalyticsSummary } from '@/api/hooks/useAnalytics';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtInt } from '@/lib/numberFormat';
 
@@ -18,7 +19,7 @@ export default function QuickStatsPage() {
 
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
   const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useAnalyticsSummary(30);
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
 
   const isLoading = vehiclesLoading || analyticsLoading;
   const error = vehiclesError || analyticsError;
@@ -60,8 +61,8 @@ export default function QuickStatsPage() {
         <FadeIn delay={0.05}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <MetricCard
-              label={t('quickStats.distance', '{{unit}} Driven', { unit: distanceUnit })}
-              value={fmtInt(convertDistance(analytics?.totalDistanceKm ?? 0))}
+              label={t('quickStats.distance', '{{unit}} Driven', { unit: unitPrefs.distance })}
+              value={fmtInt(convertDistanceFromSI((analytics?.totalDistanceKm ?? 0) * 1000, unitPrefs.distance))}
               color="cyan"
             />
             <MetricCard

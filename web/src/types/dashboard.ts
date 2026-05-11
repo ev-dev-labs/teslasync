@@ -1,7 +1,7 @@
 export interface DashboardStats {
   totalVehicles: number;
-  totalMiles: number;
-  totalEnergyKwh: number;
+  totalM: number;
+  totalEnergyWh: number;
   totalChargingSessions: number;
   totalTrips: number;
   avgEfficiency: number;

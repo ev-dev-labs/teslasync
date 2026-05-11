@@ -2,9 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fetchVehicleState } from '@/api/hooks/useVehicles';
-import { fmtNumber } from '@/lib/numberFormat';
 import { batteryColor } from '@/lib/colors';
 import type { Vehicle, VehicleState } from '@/api/types';
 
@@ -14,7 +13,7 @@ interface BatteryComparisonProps {
 
 export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
   const { t } = useTranslation('vehicles');
-  const { convertDistance, distanceUnit } = useSettings();
+  const { formatDistance } = useUnits();
 
   const { data: allStates } = useQuery({
     queryKey: ['fleet-battery-states', vehicles.map(v => v.id).sort()],
@@ -70,7 +69,7 @@ export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
                 {level}%
               </span>
               <span className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)] w-16 text-right">
-                {fmtNumber(convertDistance(state.rated_range ?? 0))} {distanceUnit}
+                {formatDistance(state.rated_range ?? 0)}
               </span>
             </div>
           );

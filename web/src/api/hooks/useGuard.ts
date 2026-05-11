@@ -3,6 +3,7 @@ import { request } from '../client';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useToast } from '@/components/feedback/Toast';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import { safeArray } from '@/lib/safeArray';
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -16,18 +17,46 @@ export interface GuardConfig {
   updated_at: string;
 }
 
+/** Wire shape of a guard event.
+ *
+ *  Matches `database.GuardEvent` from `internal/database/guard_repo.go`
+ *  exactly; do NOT add fields the backend does not emit. The Phase-43a
+ *  GuardHandler restoration (`/vehicles/{id}/guard/events`) returns
+ *  state-change records sourced from `security_events`, not the legacy
+ *  alert-shaped events (`vehicle_moved`, `unauthorized_drive`, …) that
+ *  the original interface was modelled after — `event_type` is therefore
+ *  a free-form `string` so the UI must use lookup-with-fallback for
+ *  labels/icons rather than exhaustive switching.
+ *
+ *  `acknowledged` is DERIVED from `acknowledged_at != null`; the
+ *  backend does not emit it as a separate boolean. */
 export interface GuardEvent {
   id: number;
   vehicle_id: number;
-  event_type: 'vehicle_moved' | 'unauthorized_unlock' | 'unauthorized_drive' | 'sentry_triggered' | 'manual_panic' | 'test_alert';
-  latitude: number | null;
-  longitude: number | null;
-  speed: number | null;
+  ts: string;
+  event_type: string;
+  from_state: string | null;
+  to_state: string | null;
   details: Record<string, unknown> | null;
-  notified_channels: string[] | null;
-  acknowledged: boolean;
   acknowledged_at: string | null;
-  created_at: string;
+  acknowledged_by: string | null;
+}
+
+/** Helper: a guard event is "acknowledged" iff acknowledged_at is set. */
+export function isGuardEventAcknowledged(ev: Pick<GuardEvent, 'acknowledged_at'>): boolean {
+  return ev.acknowledged_at != null;
+}
+
+/** Envelope returned by GET `/vehicles/{id}/guard/events`.
+ *
+ *  Mirrors `internal/api/guard_handler.go::GuardEventsResponse`. The
+ *  envelope shape (vs a bare array) was introduced by Phase-43a so the
+ *  vehicle_id can be echoed back; the frontend MUST NOT assume the
+ *  response is an array — use `safeArray(data?.events)` (already done
+ *  inside `useGuardEvents` via TanStack `select`). */
+export interface GuardEventsResponse {
+  vehicle_id: number;
+  events: GuardEvent[];
 }
 
 interface SetConfigResponse {
@@ -50,6 +79,15 @@ export const guardKeys = {
 
 // ── Hooks ───────────────────────────────────────────────────────────────
 
+/**
+ * Subscribes to the guard config (`GET /vehicles/{id}/guard`).
+ *
+ *  Phase-43a restored the four guard endpoints (Status / Events /
+ *  Acknowledge / Panic) backed by the new `guard_repo` over
+ *  `security_events` — see `internal/api/guard_handler.go` and
+ *  `internal/api/router.go:820-823`. The previous `@deprecated` notice
+ *  (Phase-42 prompt 0077 deletion) is therefore stale.
+ */
 export function useGuardConfig(vehicleId: number) {
   return useQuery({
     queryKey: guardKeys.config(vehicleId),
@@ -60,15 +98,27 @@ export function useGuardConfig(vehicleId: number) {
   });
 }
 
+/**
+ * Subscribes to the guard events feed.
+ *
+ *  Phase-43a backend returns an envelope `{ vehicle_id, events: [...] }`
+ *  — see `GuardEventsResponse`. We unwrap with `safeArray(data?.events)`
+ *  inside TanStack's `select` so callers always receive `GuardEvent[]`
+ *  and never need to defend against shape drift. This is the canonical
+ *  way to absorb the contract change without a "bridge" layer.
+ */
 export function useGuardEvents(vehicleId: number) {
   return useQuery({
     queryKey: guardKeys.events(vehicleId),
-    queryFn: ({ signal }) => request<GuardEvent[]>(`/vehicles/${vehicleId}/guard/events`, { signal }),
+    queryFn: ({ signal }) =>
+      request<GuardEventsResponse>(`/vehicles/${vehicleId}/guard/events`, { signal }),
+    select: (data): GuardEvent[] => safeArray<GuardEvent>(data?.events),
     enabled: vehicleId > 0,
     staleTime: STALE_TIMES.QUICK,
   });
 }
 
+/** Mutates the guard config (`POST /vehicles/{id}/guard`). Phase-43a restored. */
 export function useSetGuardConfig() {
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -96,6 +146,7 @@ export function useSetGuardConfig() {
   });
 }
 
+/** Triggers a panic alert (`POST /vehicles/{id}/guard/panic`). Phase-43a restored. */
 export function useGuardPanic() {
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -114,6 +165,11 @@ export function useGuardPanic() {
   });
 }
 
+/**
+ * Acknowledges a guard event
+ * (`POST /vehicles/{id}/guard/events/{eventID}/acknowledge`). Phase-43a
+ * restored.
+ */
 export function useAcknowledgeGuardEvent() {
   const queryClient = useQueryClient();
   const toast = useToast();

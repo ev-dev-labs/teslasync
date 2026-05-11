@@ -4,7 +4,8 @@ import { RotateCcw } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useRegenEfficiency } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { useUnits } from '@/hooks/useUnits';
+import { fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetGaugeHero, type GaugeHeroStat } from './shared';
 import type { WidgetProps } from './types';
@@ -17,6 +18,7 @@ function regenColor(pct: number): string {
 
 export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { formatEnergy, formatPower } = useUnits();
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vehicleIdStr = vid != null ? String(vid) : undefined;
@@ -33,13 +35,11 @@ export default function RegenEfficiencyWidget({ vehicleId, size }: WidgetProps) 
   const stats: GaugeHeroStat[] = useMemo(() => [
     {
       label: t('widget.regenEfficiency.totalKwh', 'Total Recovered'),
-      value: fmtNumber(data?.totalRegenKwh ?? 0, 1),
-      unit: 'kWh',
+      value: formatEnergy(data?.totalRegenWh, { precision: 1 }),
     },
     {
       label: t('widget.regenEfficiency.monthlyAvg', 'Monthly Avg'),
-      value: fmtNumber(data?.monthlyAvgRegen ?? 0, 1),
-      unit: 'kWh',
+      value: formatPower(data?.monthlyAvgRegen, { precision: 1 }),
     },
     {
       label: t('widget.regenEfficiency.freeCharges', 'Free Charges'),

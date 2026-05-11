@@ -88,7 +88,7 @@ func TestUserPreference_History_CarriesForwardUnits(t *testing.T) {
 			return folded, nil
 		},
 	}
-	h := NewUserPreferenceHandler(fake)
+	h := NewUserPreferenceHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	h.List(rec, newUserPreferenceRequest("42", ""))
@@ -210,7 +210,7 @@ func TestUserPreference_Latest_UsesNow(t *testing.T) {
 			}, nil
 		},
 	}
-	h := NewUserPreferenceHandler(fake)
+	h := NewUserPreferenceHandler(fake, newTestLiveStateReader(fake))
 
 	before := time.Now()
 	rec := httptest.NewRecorder()
@@ -287,7 +287,7 @@ func TestUserPreference_PropagatesError(t *testing.T) {
 				return nil, wantErr
 			},
 		}
-		h := NewUserPreferenceHandler(fake)
+		h := NewUserPreferenceHandler(fake, newTestLiveStateReader(fake))
 
 		rec := httptest.NewRecorder()
 		h.List(rec, newUserPreferenceRequest("42", ""))
@@ -304,7 +304,7 @@ func TestUserPreference_PropagatesError(t *testing.T) {
 				return nil, wantErr
 			},
 		}
-		h := NewUserPreferenceHandler(fake)
+		h := NewUserPreferenceHandler(fake, newTestLiveStateReader(fake))
 
 		rec := httptest.NewRecorder()
 		h.Latest(rec, newUserPreferenceRequest("42", "/user-preference/latest?vehicle_id=42"))

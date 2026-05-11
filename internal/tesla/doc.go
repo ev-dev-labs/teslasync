@@ -8,4 +8,6 @@
 // preventing cascading load on the upstream API. Response types such as
 // [VehicleDataResponse], [ChargeState], and [DriveState] mirror the
 // Tesla Fleet API schema.
+// Layer: platform
+//
 package tesla

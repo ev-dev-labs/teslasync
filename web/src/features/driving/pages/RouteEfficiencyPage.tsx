@@ -18,10 +18,11 @@ import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { useRouteEfficiency } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { RouteSummary } from '@/types/driving';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -38,17 +39,17 @@ function efficiencyVariant(eff: number): 'success' | 'info' | 'warning' | 'dange
 /*  RouteCard                                                         */
 /* ------------------------------------------------------------------ */
 
-function RouteCard({ route, efficiencyUnit, distanceUnit, convertDistance, convertEfficiency }: {
+function RouteCard({ route, efficiencyUnit, distanceUnit, toDistanceDisplay, toEfficiencyDisplay }: {
   route: RouteSummary;
   efficiencyUnit: string;
   distanceUnit: string;
-  convertDistance: (v: number) => number;
-  convertEfficiency: (v: number) => number;
+  toDistanceDisplay: (v: number) => number;
+  toEfficiencyDisplay: (v: number) => number;
 }) {
   const { t } = useTranslation();
-  const avgEff = convertEfficiency(route.avgEfficiency);
-  const bestEff = convertEfficiency(route.bestEfficiency);
-  const worstEff = convertEfficiency(route.worstEfficiency);
+  const avgEff = toEfficiencyDisplay(route.avgEfficiency);
+  const bestEff = toEfficiencyDisplay(route.bestEfficiency);
+  const worstEff = toEfficiencyDisplay(route.worstEfficiency);
 
   return (
     <GlassPanel hover glow="cyan" className="p-5 cursor-pointer transition-all">
@@ -60,7 +61,7 @@ function RouteCard({ route, efficiencyUnit, distanceUnit, convertDistance, conve
               {route.startLocation} <ArrowRight className="h-3 w-3 inline mx-1 text-[var(--text-muted)]" /> {route.endLocation}
             </p>
             <p className="text-[10px] text-[var(--text-muted)]">
-              {route.tripCount} {t('routeEfficiency.trips', 'trips')} · {fmtNumber(convertDistance(route.avgDistanceKm))} {distanceUnit} {t('routeEfficiency.avg', 'avg')}
+               {route.tripCount} {t('routeEfficiency.trips', 'trips')} · {fmtNumber(toDistanceDisplay(route.avgDistanceKm * 1000))} {distanceUnit} {t('routeEfficiency.avg', 'avg')}
             </p>
           </div>
         </div>
@@ -75,9 +76,7 @@ function RouteCard({ route, efficiencyUnit, distanceUnit, convertDistance, conve
           <div
             className="h-full rounded-full"
             style={{
-              width: '100%',
-              background: `linear-gradient(to right, #10b981 ${(bestEff / Math.max(worstEff, 1)) * 100}%, #00f0ff ${(bestEff / Math.max(worstEff, 1)) * 100}% ${(avgEff / Math.max(worstEff, 1)) * 100}%, #ef4444 ${(avgEff / Math.max(worstEff, 1)) * 100}%)`,
-            }}
+              width: '100%', background: `linear-gradient(to right, #10b981 ${(bestEff / Math.max(worstEff, 1)) * 100}%, #00f0ff ${(bestEff / Math.max(worstEff, 1)) * 100}% ${(avgEff / Math.max(worstEff, 1)) * 100}%, #ef4444 ${(avgEff / Math.max(worstEff, 1)) * 100}%)`, }}
           />
         </div>
         <div className="flex gap-3 text-[10px] shrink-0">
@@ -109,10 +108,12 @@ export default function RouteEfficiencyPage() {
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
   const { data, isLoading, error } = useRouteEfficiency(vehicleIdStr);
-  const {
-    convertDistance, convertEfficiency,
-    distanceUnit, efficiencyUnit,
-  } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
 
   const routes = data?.routes ?? [];
   const totalTrips = routes.reduce((sum, r) => sum + r.tripCount, 0);
@@ -127,12 +128,12 @@ export default function RouteEfficiencyPage() {
       .slice(0, 10)
       .map((r) => ({
         name: `${(r.startLocation ?? '').substring(0, 10)}→${(r.endLocation ?? '').substring(0, 10)}`,
-        avg: Math.round(convertEfficiency(r.avgEfficiency)),
-        best: Math.round(convertEfficiency(r.bestEfficiency)),
-        worst: Math.round(convertEfficiency(r.worstEfficiency)),
+        avg: Math.round(toEfficiencyDisplay(r.avgEfficiency)),
+        best: Math.round(toEfficiencyDisplay(r.bestEfficiency)),
+        worst: Math.round(toEfficiencyDisplay(r.worstEfficiency)),
         trips: r.tripCount,
       }));
-  }, [routes, convertEfficiency]);
+  }, [routes, toEfficiencyDisplay]);
 
   const vehicleOptions = (vehicles ?? []).map((v) => ({
     value: String(v.id), label: v.display_name || v.vin,
@@ -162,11 +163,11 @@ export default function RouteEfficiencyPage() {
               <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('routeEfficiency.totalTrips', 'Total Trips')}</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-green-400"><AnimatedNumber value={Math.round(convertEfficiency(bestEff))} /></p>
+              <p className="text-2xl font-bold text-green-400"><AnimatedNumber value={Math.round(toEfficiencyDisplay(bestEff))} /></p>
               <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('routeEfficiency.bestEfficiency', 'Best')} {efficiencyUnit}</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-amber-400"><AnimatedNumber value={Math.round(convertEfficiency(avgEff))} /></p>
+              <p className="text-2xl font-bold text-amber-400"><AnimatedNumber value={Math.round(toEfficiencyDisplay(avgEff))} /></p>
               <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('routeEfficiency.avgEfficiency', 'Avg')} {efficiencyUnit}</p>
             </div>
           </div>
@@ -211,8 +212,8 @@ export default function RouteEfficiencyPage() {
               route={route}
               efficiencyUnit={efficiencyUnit}
               distanceUnit={distanceUnit}
-              convertDistance={convertDistance}
-              convertEfficiency={convertEfficiency}
+              toDistanceDisplay={toDistanceDisplay}
+              toEfficiencyDisplay={toEfficiencyDisplay}
             />
           </StaggerItem>
         ))}
@@ -227,16 +228,16 @@ export default function RouteEfficiencyPage() {
           {routes.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               <div>
-                <MetricBar label={t('routeEfficiency.bestLabel', 'Best Efficiency')} value={convertEfficiency(bestEff)} max={300} color="#10b981" />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(convertEfficiency(bestEff))} {efficiencyUnit}</p>
+                <MetricBar label={t('routeEfficiency.bestLabel', 'Best Efficiency')} value={toEfficiencyDisplay(bestEff)} max={300} color="#10b981" />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(toEfficiencyDisplay(bestEff))} {efficiencyUnit}</p>
               </div>
               <div>
-                <MetricBar label={t('routeEfficiency.avgLabel', 'Avg Efficiency')} value={convertEfficiency(avgEff)} max={300} color="#00f0ff" />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(convertEfficiency(avgEff))} {efficiencyUnit}</p>
+                <MetricBar label={t('routeEfficiency.avgLabel', 'Avg Efficiency')} value={toEfficiencyDisplay(avgEff)} max={300} color="#00f0ff" />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(toEfficiencyDisplay(avgEff))} {efficiencyUnit}</p>
               </div>
               <div>
-                <MetricBar label={t('routeEfficiency.worstLabel', 'Worst Efficiency')} value={convertEfficiency(worstEff)} max={400} color="#ef4444" />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(convertEfficiency(worstEff))} {efficiencyUnit}</p>
+                <MetricBar label={t('routeEfficiency.worstLabel', 'Worst Efficiency')} value={toEfficiencyDisplay(worstEff)} max={400} color="#ef4444" />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(toEfficiencyDisplay(worstEff))} {efficiencyUnit}</p>
               </div>
               <div>
                 <MetricBar label={t('routeEfficiency.mostDrivenLabel', 'Most Driven Route')} value={routes[0]?.tripCount ?? 0} max={Math.max(routes[0]?.tripCount ?? 1, 20)} color="#a855f7" />

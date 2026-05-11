@@ -6,8 +6,9 @@ import { EmptyState } from '@/components/feedback';
 import { Circle, Marker } from '@/components/maps';
 import { useGeofences } from '@/api/hooks/useLocations';
 import { useVehicleState, useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
@@ -41,7 +42,7 @@ interface FenceStatus {
 
 export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
 
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -103,8 +104,7 @@ export default function GeofenceWidget({ vehicleId, size }: WidgetProps) {
 
   /** Convert radius (meters) to user-preferred distance and format */
   const fmtRadius = (meters: number): string => {
-    const mi = meters / 1609.344;
-    return `${fmtNumber(convertDistance(mi), 1)} ${distanceUnit}`;
+    return `${fmtNumber(convertDistanceFromSI(meters, unitPrefs.distance), 1)} ${unitPrefs.distance}`;
   };
 
   const shellProps = {

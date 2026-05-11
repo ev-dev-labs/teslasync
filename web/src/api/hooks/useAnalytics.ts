@@ -33,6 +33,17 @@ export function useFleetAnalytics(days = 30, start?: string) {
   });
 }
 
+/**
+ * @deprecated Phase-42 / Prompt 0077 deleted the `/mileage/*` route family
+ * (mileage_stats_handler.go, mileage_repo.go, mileage_monthly_handler.go).
+ * The hook is kept so out-of-scope dashboard widgets and pages
+ * (`MileagePage.tsx`, `StatisticsPage.tsx#mileage`,
+ * `FleetComparePage.tsx`, `MonthlyMileageWidget.tsx`) still type-check
+ * while their replacement aggregations are designed in a follow-up
+ * prompt. Calls return 404 today; the consuming UI surfaces the empty
+ * state via TanStack Query's `error` channel per ADR-005 #1
+ * (graceful-degradation contract).
+ */
 export function useMileageStats(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.mileage(vehicleId),
@@ -41,6 +52,7 @@ export function useMileageStats(vehicleId: string) {
   });
 }
 
+/** @deprecated See `useMileageStats` — `/mileage/monthly` was removed by Phase-42 / Prompt 0077. */
 export function useMonthlyMileage(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.monthlyMileage(vehicleId),
@@ -58,6 +70,14 @@ export function useCostBreakdown(vehicleId: string) {
   });
 }
 
+/**
+ * @deprecated Phase-42 / Prompt 0077 removed `/vehicle-states/timeline`
+ * along with the `vehicle_states` snapshot table. State transitions are
+ * now derived from `signal_log` directly via the FSM endpoints
+ * (`/fsm/transitions`). Hook retained so `TimelinePage.tsx` and
+ * `StateTimelineWidget.tsx` continue to type-check; the UI surfaces the
+ * empty state via the query's `error` channel.
+ */
 export function useTimeline(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.timeline(vehicleId),
@@ -67,6 +87,7 @@ export function useTimeline(vehicleId: string) {
   });
 }
 
+/** @deprecated See `useTimeline` — `/vehicle-states/summary` was removed by Phase-42 / Prompt 0077. */
 export function useStateSummary(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.stateSummary(vehicleId),

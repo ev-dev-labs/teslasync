@@ -4,8 +4,8 @@ import (
 	"math"
 	"net/http"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/rs/zerolog/log"
 )
 
 // TempImpactHandler serves temperature-impact analytics.
@@ -21,7 +21,7 @@ type tempEfficiencyBucket struct {
 	TempBucket         string  `json:"temp_bucket"`
 	DriveCount         int     `json:"drive_count"`
 	AvgDistanceKm      float64 `json:"avg_distance_km"`
-	AvgDurationMin     float64 `json:"avg_duration_min"`
+	AvgDurationS       float64 `json:"avg_duration_s"`
 	AvgBatteryPer100km float64 `json:"avg_battery_pct_per_100km"`
 	AvgTemp            float64 `json:"avg_temp"`
 }
@@ -37,7 +37,7 @@ type monthlyTempTrend struct {
 	AvgTemp       float64 `json:"avg_temp"`
 	AvgEfficiency float64 `json:"avg_efficiency"`
 	DriveCount    int     `json:"drive_count"`
-	TotalDistance  float64 `json:"total_distance"`
+	TotalDistance float64 `json:"total_distance"`
 }
 
 func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -54,25 +54,31 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Efficiency by temperature bucket
+	// Phase-42 SI canonical drives (migration 000185): ambient_temp_c_avg
+	// (Celsius), distance_m (meters), duration_s (seconds),
+	// start_soc_pct/end_soc_pct (REAL). avg_distance_km computed in SQL,
+	// avg_duration_s is read directly from duration_s. The
+	// `> 2 miles` filter becomes `distance_m > 3218.688`.
 	effRows, err := h.db.Pool.Query(ctx, `
 		SELECT
 		  CASE
-		    WHEN outside_temp_avg_c < 0 THEN 'Below 0°C'
-		    WHEN outside_temp_avg_c < 10 THEN '0-10°C'
-		    WHEN outside_temp_avg_c < 20 THEN '10-20°C'
-		    WHEN outside_temp_avg_c < 30 THEN '20-30°C'
+		    WHEN ambient_temp_c_avg < 0 THEN 'Below 0°C'
+		    WHEN ambient_temp_c_avg < 10 THEN '0-10°C'
+		    WHEN ambient_temp_c_avg < 20 THEN '10-20°C'
+		    WHEN ambient_temp_c_avg < 30 THEN '20-30°C'
 		    ELSE 'Above 30°C'
 		  END as temp_bucket,
 		  COUNT(*) as drive_count,
-		  AVG(distance_mi) as avg_distance_km,
-		  AVG(duration_min) as avg_duration_min,
-		  AVG(CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END) as avg_battery_pct_per_100km,
-		  AVG(outside_temp_avg_c) as avg_temp
+		  AVG(distance_m / 1000.0) as avg_distance_km,
+		  AVG(duration_s) as avg_duration_s,
+		  AVG(CASE WHEN distance_m > 0
+		           THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
+		           ELSE 0 END) as avg_battery_pct_per_100km,
+		  AVG(ambient_temp_c_avg) as avg_temp
 		FROM drives
-		WHERE vehicle_id = $1 AND distance_mi > 2 AND outside_temp_avg_c IS NOT NULL
+		WHERE vehicle_id = $1 AND distance_m > $3 AND ambient_temp_c_avg IS NOT NULL
 		GROUP BY temp_bucket
-		ORDER BY MIN(outside_temp_avg_c)`, vehicleID)
+		ORDER BY MIN(ambient_temp_c_avg)`, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("temp impact: failed to query efficiency buckets")
 		writeError(w, http.StatusInternalServerError, "failed to query temperature efficiency")
@@ -93,7 +99,7 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 			b.AvgDistanceKm = math.Round(*avgDist*100) / 100
 		}
 		if avgDur != nil {
-			b.AvgDurationMin = math.Round(*avgDur*100) / 100
+			b.AvgDurationS = math.Round(*avgDur*100) / 100
 		}
 		if avgBat != nil {
 			b.AvgBatteryPer100km = math.Round(*avgBat*100) / 100
@@ -109,61 +115,28 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Vampire drain vs temperature
-	drainRows, err := h.db.Pool.Query(ctx, `
-		SELECT
-		  CASE
-		    WHEN outside_temp_avg < 0 THEN 'Below 0°C'
-		    WHEN outside_temp_avg < 10 THEN '0-10°C'
-		    WHEN outside_temp_avg < 20 THEN '10-20°C'
-		    WHEN outside_temp_avg < 30 THEN '20-30°C'
-		    ELSE 'Above 30°C'
-		  END as temp_bucket,
-		  AVG(drain_rate_pct_per_hour) as avg_drain_rate,
-		  COUNT(*) as event_count
-		FROM vampire_drain_events
-		WHERE vehicle_id = $1 AND outside_temp_avg IS NOT NULL
-		GROUP BY temp_bucket
-		ORDER BY MIN(outside_temp_avg)`, vehicleID)
-	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("temp impact: failed to query vampire drain")
-		writeError(w, http.StatusInternalServerError, "failed to query vampire drain by temperature")
-		return
-	}
-	defer drainRows.Close()
+	// Phase-42 (prompt 0077): vampire drain vs temperature was removed
+	// with the vampire_drain_events table. The frontend key is preserved
+	// as an empty array so the response shape is unchanged. Restoring
+	// this metric requires a follow-on prompt that reconstructs per-park
+	// drain from typed signal_log.
+	vampireDrain := make([]vampireDrainBucket, 0)
 
-	var vampireDrain []vampireDrainBucket
-	for drainRows.Next() {
-		var b vampireDrainBucket
-		var avgDrain *float64
-		if err := drainRows.Scan(&b.TempBucket, &avgDrain, &b.EventCount); err != nil {
-			log.Error().Err(err).Msg("temp impact: scan vampire drain row")
-			writeError(w, http.StatusInternalServerError, "failed to scan vampire drain data")
-			return
-		}
-		if avgDrain != nil {
-			b.AvgDrainRate = math.Round(*avgDrain*100) / 100
-		}
-		vampireDrain = append(vampireDrain, b)
-	}
-	if err := drainRows.Err(); err != nil {
-		log.Error().Err(err).Msg("temp impact: vampire drain rows iteration")
-		writeError(w, http.StatusInternalServerError, "failed to read vampire drain data")
-		return
-	}
-
-	// Monthly temperature + efficiency trend
+	// Phase-42 SI canonical drives. Distance returned in km via SQL division
+	// to keep the legacy `total_distance` semantics (km).
 	trendRows, err := h.db.Pool.Query(ctx, `
-		SELECT DATE_TRUNC('month', start_ts) as month,
-		       AVG(outside_temp_avg_c) as avg_temp,
-		       AVG(CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END) as avg_efficiency,
+		SELECT DATE_TRUNC('month', started_at) as month,
+		       AVG(ambient_temp_c_avg) as avg_temp,
+		       AVG(CASE WHEN distance_m > 0
+		                THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
+		                ELSE 0 END) as avg_efficiency,
 		       COUNT(*) as drive_count,
-		       SUM(distance_mi) as total_distance
+		       SUM(distance_m / 1000.0) as total_distance
 		FROM drives
-		WHERE vehicle_id = $1 AND distance_mi > 2 AND outside_temp_avg_c IS NOT NULL
-		  AND start_ts > NOW() - interval '12 months'
+		WHERE vehicle_id = $1 AND distance_m > $3 AND ambient_temp_c_avg IS NOT NULL
+		  AND started_at > NOW() - interval '12 months'
 		GROUP BY month
-		ORDER BY month`, vehicleID)
+		ORDER BY month`, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("temp impact: failed to query monthly trend")
 		writeError(w, http.StatusInternalServerError, "failed to query monthly trend")
@@ -220,15 +193,18 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 		DriveDate      string  `json:"drive_date"`
 	}
 
+	// Phase-42 SI canonical drives. distance_km computed in SQL.
 	pointRows, err := h.db.Pool.Query(ctx, `
-		SELECT outside_temp_avg_c,
-		       CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 * 0.75 ELSE 0 END as efficiency_wh_km,
-		       distance_mi,
-		       start_ts::date
+		SELECT ambient_temp_c_avg,
+		       CASE WHEN distance_m > 0
+		            THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100 * 0.75
+		            ELSE 0 END as efficiency_wh_km,
+		       distance_m / 1000.0 as distance_km,
+		       started_at::date
 		FROM drives
-		WHERE vehicle_id = $1 AND distance_mi > 2 AND outside_temp_avg_c IS NOT NULL
-		ORDER BY start_ts DESC
-		LIMIT 500`, vehicleID)
+		WHERE vehicle_id = $1 AND distance_m > $3 AND ambient_temp_c_avg IS NOT NULL
+		ORDER BY started_at DESC
+		LIMIT 500`, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters)
 	if err != nil {
 		log.Error().Err(err).Msg("temp impact: failed to query drive points")
 	}
@@ -243,9 +219,15 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 			if err := pointRows.Scan(&temp, &eff, &dist, &driveDate); err != nil {
 				continue
 			}
-			if temp != nil { p.OutsideTemp = math.Round(*temp*10) / 10 }
-			if eff != nil { p.EfficiencyWhKm = math.Round(*eff*10) / 10 }
-			if dist != nil { p.DistanceKm = math.Round(*dist*10) / 10 }
+			if temp != nil {
+				p.OutsideTemp = math.Round(*temp*10) / 10
+			}
+			if eff != nil {
+				p.EfficiencyWhKm = math.Round(*eff*10) / 10
+			}
+			if dist != nil {
+				p.DistanceKm = math.Round(*dist*10) / 10
+			}
 			if dt, ok := driveDate.(interface{ Format(string) string }); ok {
 				p.DriveDate = dt.Format("2006-01-02")
 			}

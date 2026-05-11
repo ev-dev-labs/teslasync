@@ -6,10 +6,11 @@ import { AnimatedNumber } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -17,14 +18,14 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
   const { data: stateData, isLoading: stateLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id, {
-    refetchInterval: 5_000,
-  });
+    refetchInterval: 5_000, });
   const { data: sessions, isLoading: sessionsLoading } = useChargingSessionsPaginated(
-    id > 0 ? id : null,
-    { limit: 1 },
-  );
+    id > 0 ? id : null, { limit: 1 }, );
 
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
 
   const state = stateData?.state;
   const latestSession = (sessions ?? [])[0];
@@ -38,7 +39,7 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
     const power = state?.charger_power ?? 0;
     const voltage = null;
     const amps = null;
-    const energyAdded = latestSession?.energy_added_kwh ?? 0;
+    const energyAdded = latestSession?.total_energy_added_wh ?? 0;
     const timeToFull = state?.time_to_full_charge ?? 0;
     const chargeRate = state?.charge_rate ?? 0;
     const batteryLevel = state?.battery_level ?? 0;
@@ -78,7 +79,7 @@ export default function ChargeStatusLiveWidget({ vehicleId, size }: WidgetProps)
             <FullChargingView
               metrics={metrics}
               isTall={isTall}
-              convertDistance={convertDistance}
+              toDistanceDisplay={toDistanceDisplay}
               distanceUnit={distanceUnit}
               formatTime={formatTime}
               t={t}
@@ -138,13 +139,13 @@ interface FullChargingViewProps {
     batteryLevel: number;
   };
   isTall: boolean;
-  convertDistance: (km: number) => number;
+  toDistanceDisplay: (km: number) => number;
   distanceUnit: string;
   formatTime: (h: number) => string;
   t: (k: string, f: string) => string;
 }
 
-function FullChargingView({ metrics, isTall, convertDistance, distanceUnit, formatTime, t }: FullChargingViewProps) {
+function FullChargingView({ metrics, isTall, toDistanceDisplay, distanceUnit, formatTime, t }: FullChargingViewProps) {
   const { power, voltage, amps, energyAdded, timeToFull, chargeRate, batteryLevel } = metrics;
 
   return (
@@ -200,7 +201,7 @@ function FullChargingView({ metrics, isTall, convertDistance, distanceUnit, form
           <MetricCell
             icon={<Gauge className="h-3 w-3 text-[var(--text-muted)]" />}
             label={t('widget.chargeRate', 'Rate')}
-            value={`${fmtNumber(convertDistance(chargeRate), 0)} ${distanceUnit}/h`}
+            value={`${fmtNumber(toDistanceDisplay(chargeRate), 0)} ${distanceUnit}/h`}
           />
           <MetricCell
             icon={<BatteryCharging className="h-3 w-3 text-[var(--text-muted)]" />}
@@ -220,7 +221,7 @@ interface IdleViewProps {
     energyAdded: number;
     batteryLevel: number;
   };
-  latestSession: { energy_added_kwh: number } | undefined;
+  latestSession: { total_energy_added_wh: number } | undefined;
   t: (k: string, f: string) => string;
 }
 
@@ -242,7 +243,7 @@ function IdleView({ metrics, latestSession, t }: IdleViewProps) {
             {t('widget.lastSession', 'Last Session')}
           </p>
           <p className="text-xs font-medium text-[var(--text-secondary)]">
-            +{fmtNumber(latestSession.energy_added_kwh, 1)} kWh
+            +{fmtNumber(latestSession.total_energy_added_wh, 1)} kWh
           </p>
         </div>
       )}

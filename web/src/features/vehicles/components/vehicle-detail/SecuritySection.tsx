@@ -11,8 +11,29 @@ interface SecuritySectionProps {
   state: VehicleState
 }
 
+// windowOpenCount counts the number of windows reading > 0 (percent open).
+// Backend `*_window` fields land as strings (snake_case JSON projection of
+// the codec FdWindow/FpWindow/RdWindow/RpWindow signals) per
+// internal/api/security_handler.go securityMappings; coerce defensively.
+function windowOpenCount(s: SecurityEvent): number {
+  const fields = [s.fd_window, s.fp_window, s.rd_window, s.rp_window]
+  let open = 0
+  for (const v of fields) {
+    if (v == null) continue
+    const n = typeof v === 'number' ? v : Number(v)
+    if (Number.isFinite(n) && n > 0) open += 1
+  }
+  return open
+}
+
 export function SecuritySection({ securityData, state }: SecuritySectionProps) {
   const { t } = useTranslation()
+
+  const windowsOpen = securityData ? windowOpenCount(securityData) : 0
+  const doorState =
+    securityData?.door_state != null && securityData.door_state !== ''
+      ? String(securityData.door_state)
+      : null
 
   return (
     <GlassPanel className="p-6">
@@ -38,15 +59,19 @@ export function SecuritySection({ securityData, state }: SecuritySectionProps) {
           />
           <MetricCard
             label={t('vehicles.detail.doors', 'Doors')}
-            value={securityData.doors_open ?? t('common.closed', 'Closed')}
+            value={doorState ?? t('common.closed', 'Closed')}
             icon={<DoorClosed className="h-4 w-4" />}
-            color={securityData.doors_open ? 'cyan' : 'green'}
+            color={doorState ? 'cyan' : 'green'}
           />
           <MetricCard
             label={t('vehicles.detail.windows', 'Windows')}
-            value={securityData.windows_open ?? t('common.closed', 'Closed')}
+            value={
+              windowsOpen > 0
+                ? t('vehicles.detail.windowsOpen', '{{count}} open', { count: windowsOpen })
+                : t('common.closed', 'Closed')
+            }
             icon={<Car className="h-4 w-4" />}
-            color={securityData.windows_open ? 'cyan' : 'green'}
+            color={windowsOpen > 0 ? 'cyan' : 'green'}
           />
         </div>
       ) : (

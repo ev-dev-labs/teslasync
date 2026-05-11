@@ -134,7 +134,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  (FLOOR(value_num / 10) * 10 || '-' || (FLOOR(value_num / 10) * 10 + 10))::text AS speed_band,\n  COUNT(*)::bigint AS reading_count\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'VehicleSpeed'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND value_num > 0\nGROUP BY FLOOR(value_num / 10)\nORDER BY FLOOR(value_num / 10)",
+          "rawSql": "SELECT\n  (FLOOR(COALESCE(float_value, int_value::float8) / 10) * 10 || '-' || (FLOOR(COALESCE(float_value, int_value::float8) / 10) * 10 + 10))::text AS speed_band,\n  COUNT(*)::bigint AS reading_count\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'VehicleSpeed'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND COALESCE(float_value, int_value::float8) > 0\nGROUP BY FLOOR(COALESCE(float_value, int_value::float8) / 10)\nORDER BY FLOOR(COALESCE(float_value, int_value::float8) / 10)",
           "refId": "A"
         }
       ],
@@ -217,7 +217,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  (FLOOR(avg_speed_mph * 1.60934 / 10) * 10 || '-' || (FLOOR(avg_speed_mph * 1.60934 / 10) * 10 + 10))::text AS speed_range,\n  COUNT(*)::bigint AS count\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_ts)\n  AND avg_speed_mph > 0\nGROUP BY FLOOR(avg_speed_mph * 1.60934 / 10)\nORDER BY FLOOR(avg_speed_mph * 1.60934 / 10)",
+          "rawSql": "SELECT\n  (FLOOR((avg_speed_mps * 2.2369362920544) * 1.60934 / 10) * 10 || '-' || (FLOOR((avg_speed_mps * 2.2369362920544) * 1.60934 / 10) * 10 + 10))::text AS speed_range,\n  COUNT(*)::bigint AS count\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND (avg_speed_mps * 2.2369362920544) > 0\nGROUP BY FLOOR((avg_speed_mps * 2.2369362920544) * 1.60934 / 10)\nORDER BY FLOOR((avg_speed_mps * 2.2369362920544) * 1.60934 / 10)",
           "refId": "A"
         }
       ],

@@ -5,12 +5,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/rs/zerolog/log"
 )
 
 // apiDriveState tracks comprehensive data during an active drive session
@@ -137,10 +137,11 @@ func (s *SessionService) startDrive(ctx context.Context, vehicle *models.Vehicle
 		return
 	}
 
-	// Write additional start fields via PartialUpdate
+	// Write additional start fields via PartialUpdate (SI canonical column
+	// names per Phase-48; note start_lng vs the model's StartLon Go field).
 	startFields := map[string]interface{}{
 		"start_lat": lat,
-		"start_lon": lon,
+		"start_lng": lon,
 	}
 	if err := s.driveRepo.PartialUpdate(ctx, drive.ID, startFields); err != nil {
 		log.Warn().Err(err).Int64("driveID", drive.ID).Msg("failed to write drive start enhanced fields")
@@ -150,44 +151,44 @@ func (s *SessionService) startDrive(ctx context.Context, vehicle *models.Vehicle
 	speed := float64(*data.DriveState.Speed)
 	power := float64(data.DriveState.Power)
 	state := &apiDriveState{
-		DriveID:         drive.ID,
-		VehicleID:       vehicle.ID,
-		StartTime:       now,
-		StartOdometer:   &odometer,
-		StartLatitude:   &lat,
-		StartLongitude:  &lon,
-		StartRatedRange: &ratedRange,
-		StartIdealRange: &idealRange,
-		StartEstRange:   &estRange,
-		StartSoc:        &soc,
-		MaxSpeed:        speed,
-		MinSpeed:        speed,
-		SpeedSum:        speed,
-		SpeedCount:      1,
-		PowerMax:        power,
-		PowerMin:        power,
-		RatedRangeMax:   ratedRange,
-		RatedRangeMin:   ratedRange,
-		RatedRangeSum:   ratedRange,
-		IdealRangeMax:   idealRange,
-		IdealRangeMin:   idealRange,
-		IdealRangeSum:   idealRange,
-		EstRangeMax:     estRange,
-		EstRangeMin:     estRange,
-		EstRangeSum:     estRange,
-		RangeCount:      1,
-		SocMax:          soc,
-		SocMin:          soc,
-		SocSum:          soc,
-		SocCount:        1,
-		InsideTempSum:   data.ClimateState.InsideTemp,
-		OutsideTempSum:  data.ClimateState.OutsideTemp,
-		DriverTempSum:   data.ClimateState.DriverTempSetting,
+		DriveID:          drive.ID,
+		VehicleID:        vehicle.ID,
+		StartTime:        now,
+		StartOdometer:    &odometer,
+		StartLatitude:    &lat,
+		StartLongitude:   &lon,
+		StartRatedRange:  &ratedRange,
+		StartIdealRange:  &idealRange,
+		StartEstRange:    &estRange,
+		StartSoc:         &soc,
+		MaxSpeed:         speed,
+		MinSpeed:         speed,
+		SpeedSum:         speed,
+		SpeedCount:       1,
+		PowerMax:         power,
+		PowerMin:         power,
+		RatedRangeMax:    ratedRange,
+		RatedRangeMin:    ratedRange,
+		RatedRangeSum:    ratedRange,
+		IdealRangeMax:    idealRange,
+		IdealRangeMin:    idealRange,
+		IdealRangeSum:    idealRange,
+		EstRangeMax:      estRange,
+		EstRangeMin:      estRange,
+		EstRangeSum:      estRange,
+		RangeCount:       1,
+		SocMax:           soc,
+		SocMin:           soc,
+		SocSum:           soc,
+		SocCount:         1,
+		InsideTempSum:    data.ClimateState.InsideTemp,
+		OutsideTempSum:   data.ClimateState.OutsideTemp,
+		DriverTempSum:    data.ClimateState.DriverTempSetting,
 		PassengerTempSum: data.ClimateState.PassengerTempSetting,
-		TempCount:       1,
-		LastOdometer:    &odometer,
-		LastLatitude:    &lat,
-		LastLongitude:   &lon,
+		TempCount:        1,
+		LastOdometer:     &odometer,
+		LastLatitude:     &lat,
+		LastLongitude:    &lon,
 	}
 
 	s.mu.Lock()
@@ -292,7 +293,7 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 		log.Warn().Int64("driveID", driveID).Msg("completing drive without accumulator state — data will be incomplete")
 		eb := int16(endBattery)
 		if err := s.driveRepo.Complete(ctx, driveID, now,
-			0, 0, &eb, nil, nil, nil, nil); err != nil {
+			0, 0, &eb, nil, nil, nil); err != nil {
 			log.Error().Err(err).Int64("driveID", driveID).Msg("failed to complete drive")
 		}
 		s.mu.Lock()
@@ -305,26 +306,29 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 	// Accumulate the final poll data
 	s.updateActiveDrive(vehicle, data, state)
 
-	// Calculate metrics
-	var distance float64
+	// Calculate metrics. The Tesla API VehicleDataResponse reports speed in
+	// mph, distance/odometer in miles. SessionService accumulates in those
+	// US units so the math here stays in legacy display units; the values
+	// are converted to SI at the repo boundary (Phase-48).
+	var distanceMi float64
 	if state.StartOdometer != nil && state.LastOdometer != nil {
-		distance = *state.LastOdometer - *state.StartOdometer
-		if distance < 0 {
-			distance = 0
+		distanceMi = *state.LastOdometer - *state.StartOdometer
+		if distanceMi < 0 {
+			distanceMi = 0
 		}
 	}
-	duration := now.Sub(state.StartTime).Minutes()
-	maxSpeed := state.MaxSpeed
+	durationMin := now.Sub(state.StartTime).Minutes()
+	maxSpeedUS := state.MaxSpeed
 
-	var speedAvg *float64
+	var speedAvgMph *float64
 	if state.SpeedCount > 0 {
 		avg := state.SpeedSum / float64(state.SpeedCount)
-		speedAvg = &avg
+		speedAvgMph = &avg
 	}
 
 	// Fallback: estimate distance from avg speed when odometer delta is zero
-	if distance == 0 && speedAvg != nil && duration > 0 {
-		distance = (*speedAvg) * (duration / 60.0) // mph × hours = miles
+	if distanceMi == 0 && speedAvgMph != nil && durationMin > 0 {
+		distanceMi = (*speedAvgMph) * (durationMin / 60.0) // mph × hours = miles
 	}
 
 	var insideAvg, outsideAvg *float64
@@ -334,20 +338,29 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 		insideAvg = &ia
 		outsideAvg = &oa
 	}
+	_ = insideAvg // mig 000185 dropped the inside cabin temp column.
 
-	// Complete with core fields
+	// Convert legacy US units → SI canonical at the repo boundary (Phase-48).
+	const mPerMile = 1609.344
+	const mpsPerMph = 0.44704
+	distanceM := distanceMi * mPerMile
+	durationS := int64(durationMin*60.0 + 0.5)
+	maxSpeedMps := maxSpeedUS * mpsPerMph
+
+	// Complete with core fields (SI canonical per Phase-48)
 	endBatteryPct := int16(endBattery)
 	if err := s.driveRepo.Complete(ctx, driveID, now,
-		distance, duration, &endBatteryPct, &maxSpeed, nil, insideAvg, outsideAvg); err != nil {
+		distanceM, durationS, &endBatteryPct, &maxSpeedMps, nil, outsideAvg); err != nil {
 		log.Error().Err(err).Int64("driveID", driveID).Msg("failed to complete drive")
 	}
 
-	// Build enhanced fields map (same as telemetry path)
+	// Build enhanced fields map (same as telemetry path). Keys are SI
+	// canonical column names per Phase-48.
 	enhanced := map[string]interface{}{}
 
-	// Speed
-	if speedAvg != nil {
-		enhanced["avg_speed_mph"] = *speedAvg
+	// Speed (SI: m/s)
+	if speedAvgMph != nil {
+		enhanced["avg_speed_mps"] = (*speedAvgMph) * mpsPerMph
 	}
 
 	// Coordinates
@@ -355,13 +368,13 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 		enhanced["start_lat"] = *state.StartLatitude
 	}
 	if state.StartLongitude != nil {
-		enhanced["start_lon"] = *state.StartLongitude
+		enhanced["start_lng"] = *state.StartLongitude
 	}
 	if state.LastLatitude != nil {
 		enhanced["end_lat"] = *state.LastLatitude
 	}
 	if state.LastLongitude != nil {
-		enhanced["end_lon"] = *state.LastLongitude
+		enhanced["end_lng"] = *state.LastLongitude
 	}
 
 	if len(enhanced) > 0 {
@@ -376,8 +389,8 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 	s.mu.Unlock()
 
 	log.Info().Int64("vehicleID", vehicle.ID).Int64("driveID", driveID).
-		Float64("distance", distance).Float64("duration_min", duration).
-		Float64("maxSpeed", maxSpeed).Int("endBattery", endBattery).
+		Float64("distance_m", distanceM).Int64("duration_s", durationS).
+		Float64("max_speed_mps", maxSpeedMps).Int("endBattery", endBattery).
 		Msg("drive ended (API polling)")
 
 	// Update monthly trip summary for this drive's month
@@ -393,7 +406,7 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 	if s.eventBus != nil {
 		s.eventBus.Publish(events.Event{Type: events.DriveEnded, VehicleID: vehicle.ID, VIN: vehicle.VIN,
 			Data: map[string]interface{}{"drive_id": driveID, "battery_level": endBattery,
-				"distance": distance, "duration_min": duration, "source": "api_polling"}})
+				"distance_m": distanceM, "duration_s": durationS, "source": "api_polling"}})
 	}
 }
 
@@ -407,11 +420,11 @@ func (s *SessionService) TrackChargeFromAPI(ctx context.Context, vehicle *models
 	s.mu.Unlock()
 
 	if isCharging && !hasActiveCharge {
-		cbl := int16(data.ChargeState.BatteryLevel)
+		cbl := float64(data.ChargeState.BatteryLevel)
 		session := &models.ChargingSession{
-			VehicleID:       vehicle.ID,
-			StartTs:         time.Now().UTC(),
-			StartBatteryPct: &cbl,
+			VehicleID:   vehicle.ID,
+			StartedAt:   time.Now().UTC(),
+			StartSocPct: &cbl,
 		}
 
 		if err := s.chargeRepo.Create(ctx, session); err != nil {
@@ -427,14 +440,14 @@ func (s *SessionService) TrackChargeFromAPI(ctx context.Context, vehicle *models
 		}
 	} else if !isCharging && hasActiveCharge {
 		endBattery := data.ChargeState.BatteryLevel
-		power := data.ChargeState.ChargerPower
-		energyAdded := data.ChargeState.ChargeEnergyAdded
-		ceb := int16(endBattery)
+		powerW := data.ChargeState.ChargerPower * 1000
+		energyAddedWh := data.ChargeState.ChargeEnergyAdded * 1000
+		ceb := float64(endBattery)
 
 		if err := s.chargeRepo.Complete(ctx, activeChargeID, time.Now().UTC(),
-			&energyAdded, &ceb, nil,
-			&power, nil,
-			nil, nil, nil, nil); err != nil {
+			&energyAddedWh, &ceb,
+			&powerW, nil,
+			nil, nil); err != nil {
 			log.Error().Err(err).Int64("sessionID", activeChargeID).Msg("failed to complete charging session")
 		}
 		s.mu.Lock()

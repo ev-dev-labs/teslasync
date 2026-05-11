@@ -26,7 +26,7 @@ type ChargingHandler struct {
 	chargingRepo      *database.ChargingRepo
 	charging          chargingByIDFetcher
 	state             signal.StateReader
-	redisCache        *signal.RedisSignalCache
+	live              signal.LiveStateReader
 	forwardAuthHeader string
 	// bulkOverride lets tests substitute the bulk store without standing up a
 	// real *database.ChargingRepo. Always nil in production.
@@ -41,20 +41,15 @@ type chargingByIDFetcher interface {
 	GetByID(ctx context.Context, id int64) (*models.ChargingSession, error)
 }
 
-func NewChargingHandler(db *database.DB, state signal.StateReader) *ChargingHandler {
+func NewChargingHandler(db *database.DB, state signal.StateReader, live signal.LiveStateReader) *ChargingHandler {
 	repo := database.NewChargingRepo(db)
 	return &ChargingHandler{
 		db:           db,
 		chargingRepo: repo,
 		charging:     repo,
 		state:        state,
+		live:         live,
 	}
-}
-
-// WithRedisCache sets the Redis signal cache for computing live in-progress charge values.
-func (h *ChargingHandler) WithRedisCache(cache *signal.RedisSignalCache) *ChargingHandler {
-	h.redisCache = cache
-	return h
 }
 
 // WithForwardAuthHeader wires the auth header used to attribute audit log
@@ -77,7 +72,7 @@ var chargeTelemetryFieldMappings = []signal.FieldMapping{
 	{Signal: "ACChargingPower", Field: "power_kw"},
 	{Signal: "DCChargingPower", Field: "dc_power_kw"},
 	{Signal: "ACChargingEnergyIn", Field: "energy_added"},
-	{Signal: "ChargeRateMilePerHour", Field: "charge_rate"},
+	{Signal: "ChargeRateMilePerHour", Field: "range_added_meters_per_hour"},
 	{Signal: "BatteryHeaterOn", Field: "battery_heater_on"},
 	{Signal: "InsideTemp", Field: "inside_temp"},
 	{Signal: "OutsideTemp", Field: "outside_temp"},
@@ -104,6 +99,12 @@ func (h *ChargingHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) 
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to list charging sessions")
 		writeError(w, http.StatusInternalServerError, "failed to list charging sessions")
 		return
+	}
+	// Guarantee a JSON array response (`[]`) instead of `null` when there
+	// are no sessions; the SPA charging hooks crash on null when calling
+	// `.map`/`.length` and prefer the canonical empty-array shape.
+	if sessions == nil {
+		sessions = []*models.ChargingSession{}
 	}
 	writeJSON(w, http.StatusOK, sessions)
 }
@@ -145,25 +146,26 @@ func (h *ChargingHandler) Get(w http.ResponseWriter, r *http.Request) {
 // from the ChargingSession model while adding the extra "live" field.
 func chargingSessionResponse(s *models.ChargingSession, live bool) map[string]interface{} {
 	return map[string]interface{}{
-		"id":                   s.ID,
-		"vehicle_id":           s.VehicleID,
-		"start_ts":             s.StartTs,
-		"end_ts":               s.EndTs,
-		"duration_min":         s.DurationMin,
-		"start_battery_pct":    s.StartBatteryPct,
-		"end_battery_pct":      s.EndBatteryPct,
-		"energy_added_kwh":     s.EnergyAddedKwh,
-		"miles_added":          s.MilesAdded,
-		"charger_type":         s.ChargerType,
-		"charger_location":     s.ChargerLocation,
-		"charger_power_kw_max": s.ChargerPowerKwMax,
-		"charger_power_kw_avg": s.ChargerPowerKwAvg,
-		"cost":                 s.Cost,
-		"cost_currency":        s.CostCurrency,
-		"ended_status":         s.EndedStatus,
-		"created_at":           s.CreatedAt,
-		"updated_at":           s.UpdatedAt,
-		"live":                 live,
+		"id":                    s.ID,
+		"vehicle_id":            s.VehicleID,
+		"started_at":            s.StartedAt,
+		"ended_at":              s.EndedAt,
+		"start_soc_pct":         s.StartSocPct,
+		"end_soc_pct":           s.EndSocPct,
+		"delta_soc_pct":         s.DeltaSocPct,
+		"start_odometer_m":      s.StartOdometerM,
+		"end_odometer_m":        s.EndOdometerM,
+		"start_lat":             s.StartLat,
+		"start_lng":             s.StartLng,
+		"start_place":           s.StartPlace,
+		"total_energy_added_wh": s.TotalEnergyAddedWh,
+		"peak_power_w":          s.PeakPowerW,
+		"avg_power_w":           s.AvgPowerW,
+		"cost_decimal":          s.CostDecimal,
+		"cost_currency":         s.CostCurrency,
+		"charger_type":          s.ChargerType,
+		"cable_type":            s.CableType,
+		"live":                  live,
 	}
 }
 
@@ -175,9 +177,9 @@ func chargingSessionResponse(s *models.ChargingSession, live bool) map[string]in
 // depends on both baselines (battery / energy deltas need the start sample,
 // current power / battery readings need the now sample).
 func (h *ChargingHandler) enrichLiveCharge(ctx context.Context, session *models.ChargingSession, now time.Time) error {
-	startState, err := h.state.State(ctx, session.VehicleID, session.StartTs)
+	startState, err := h.state.State(ctx, session.VehicleID, session.StartedAt)
 	if err != nil {
-		return fmt.Errorf("start snapshot at %s: %w", session.StartTs.Format(time.RFC3339Nano), err)
+		return fmt.Errorf("start snapshot at %s: %w", session.StartedAt.Format(time.RFC3339Nano), err)
 	}
 	startSnap := stateToSignalMap(startState)
 
@@ -186,18 +188,18 @@ func (h *ChargingHandler) enrichLiveCharge(ctx context.Context, session *models.
 		return fmt.Errorf("current snapshot: %w", err)
 	}
 
-	// Duration from wall clock
-	durationMin := now.Sub(session.StartTs).Minutes()
-	session.DurationMin = &durationMin
-
 	// Battery levels
 	if startBat, ok := signalFloat(startSnap, "BatteryLevel"); ok {
-		v := int16(startBat)
-		session.StartBatteryPct = &v
+		v := startBat
+		session.StartSocPct = &v
 	}
 	if currentBat, ok := signalFloat(currentSnap, "BatteryLevel"); ok {
-		v := int16(currentBat)
-		session.EndBatteryPct = &v
+		v := currentBat
+		session.EndSocPct = &v
+		if session.StartSocPct != nil {
+			delta := v - *session.StartSocPct
+			session.DeltaSocPct = &delta
+		}
 	}
 
 	// Energy added from ACChargingEnergyIn delta
@@ -205,32 +207,25 @@ func (h *ChargingHandler) enrichLiveCharge(ctx context.Context, session *models.
 	currentEnergy, currentOk := signalFloat(currentSnap, "ACChargingEnergyIn")
 	if startOk && currentOk && currentEnergy > startEnergy {
 		delta := safeFloat(currentEnergy - startEnergy)
-		session.EnergyAddedKwh = &delta
+		session.TotalEnergyAddedWh = &delta
 	}
 
 	// Current charging power
 	if power, ok := signalFloat(currentSnap, "ACChargingPower"); ok {
 		v := safeFloat(power)
-		session.ChargerPowerKwMax = &v
+		session.PeakPowerW = &v
 	}
 	return nil
 }
 
-// currentSignals returns the latest signal values for a vehicle, preferring
-// Redis (sub-ms) with StateReader.State(time.Now()) as fallback. A
-// StateReader transport failure on the fallback path propagates so the Get
-// handler can respond 500 instead of silently degrading to wrong live
-// numbers (an empty current snapshot would zero-out battery / power without
-// signaling the failure).
+// currentSignals returns the latest signal values for a vehicle via the
+// LiveStateReader boundary (L1 in-process Store + L2 Redis HSET, with
+// signal_log fallback for keys not present in either layer). A reader
+// transport failure propagates so the Get handler can respond 500 instead
+// of silently degrading to wrong live numbers (an empty current snapshot
+// would zero-out battery / power without signaling the failure).
 func (h *ChargingHandler) currentSignals(ctx context.Context, vehicleID int64) (map[string]interface{}, error) {
-	if h.redisCache != nil {
-		snap, err := h.redisCache.GetAll(ctx, vehicleID)
-		if err == nil && snap != nil {
-			return snap, nil
-		}
-		log.Debug().Err(err).Int64("vehicleID", vehicleID).Msg("live charge: Redis unavailable, falling back to signal_log")
-	}
-	state, err := h.state.State(ctx, vehicleID, time.Now().UTC())
+	state, err := h.live.LiveState(ctx, vehicleID)
 	if err != nil {
 		return nil, err
 	}
@@ -257,15 +252,15 @@ func (h *ChargingHandler) TelemetryReadings(w http.ResponseWriter, r *http.Reque
 	}
 
 	endTs := time.Now().UTC()
-	if session.EndTs != nil {
-		endTs = *session.EndTs
+	if session.EndedAt != nil {
+		endTs = *session.EndedAt
 	}
 
 	// Chart mode (empty CollapseBy): every change-feed emission becomes a
 	// row, preserving the legacy flat-pivot semantics consumed by the
 	// charging-session telemetry chart on the frontend.
 	timelineRows, err := h.state.Timeline(ctx,
-		session.VehicleID, chargeTelemetryFieldMappings, session.StartTs, endTs, signal.TimelineOptions{})
+		session.VehicleID, chargeTelemetryFieldMappings, session.StartedAt, endTs, signal.TimelineOptions{})
 	if err != nil {
 		log.Error().Err(err).Int64("sessionID", sessionID).Msg("failed to get charge telemetry from signal_log")
 		writeError(w, http.StatusInternalServerError, "failed to get telemetry")

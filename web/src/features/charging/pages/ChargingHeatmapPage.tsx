@@ -12,6 +12,7 @@ import {
 } from '@/components/charts';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { durationMinutes } from '../components/charging-curve/helpers';
 import { useSettings } from '@/hooks/useSettings';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -41,11 +42,11 @@ function buildGrid(sessions: ChargingSession[]) {
   let favHour = 0;
 
   for (const s of sessions) {
-    const d = new Date(s.start_ts);
+    const d = new Date(s.started_at);
     const day = d.getDay();
     const hour = d.getHours();
     grid[day][hour].count += 1;
-    grid[day][hour].totalEnergy += s.energy_added_kwh;
+    grid[day][hour].totalEnergy += s.total_energy_added_wh;
     if (grid[day][hour].count > maxCount) {
       maxCount = grid[day][hour].count;
       favDay = day;
@@ -70,9 +71,9 @@ export default function ChargingHeatmapPage() {
 
   const stats = useMemo(() => {
     if (!sessions?.length) return null;
-    const totalEnergy = sessions.reduce((s, c) => s + c.energy_added_kwh, 0);
-    const totalCost = sessions.reduce((s, c) => s + (c.cost ?? 0), 0);
-    const totalDuration = sessions.reduce((s, c) => s + c.duration_min, 0);
+    const totalEnergy = sessions.reduce((s, c) => s + c.total_energy_added_wh, 0);
+    const totalCost = sessions.reduce((s, c) => s + (c.cost_decimal ?? 0), 0);
+    const totalDuration = sessions.reduce((s, c) => s + durationMinutes(c.started_at, c.ended_at), 0);
     return {
       count: sessions.length,
       totalEnergy,
@@ -90,7 +91,7 @@ export default function ChargingHeatmapPage() {
     if (!sessions?.length) return [];
     const counts: Record<string, number> = {};
     for (const s of sessions) {
-      const name = s.charger_location ?? 'Unknown';
+      const name = s.start_place ?? 'Unknown';
       counts[name] = (counts[name] ?? 0) + 1;
     }
     return Object.entries(counts)

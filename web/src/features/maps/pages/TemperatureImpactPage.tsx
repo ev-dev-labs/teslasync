@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -19,9 +19,9 @@ import {
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
-import { UNITS } from '@/lib/constants';
+import { convertTempFromSI } from '@/lib/unitConversion';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
@@ -54,6 +54,11 @@ interface BucketAvg {
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
 
+/* Wh/km -> Wh/mi conversion factor.
+   Per Phase-43/0025 precedent (no convertEfficiencyFromSI helper exists in
+   lib/unitConversion.ts), we keep the inline km-per-mile factor here. */
+const KM_PER_MILE = 1.609344;
+
 const TEMP_BUCKETS_C = [
   { min: -50, max: 0, color: '#3b82f6' },
   { min: 0, max: 10, color: '#06b6d4' },
@@ -69,13 +74,13 @@ function getTempBucketIndex(temp: number): number {
 
 function bucketLabel(
   b: (typeof TEMP_BUCKETS_C)[number],
-  convertTemp: (c: number) => number,
+  toTemperatureDisplay: (c: number) => number,
   tempUnit: string,
   idx: number,
 ): string {
-  if (idx === 0) return `< ${Math.round(convertTemp(b.max))}${tempUnit}`;
-  if (idx === TEMP_BUCKETS_C.length - 1) return `> ${Math.round(convertTemp(b.min))}${tempUnit}`;
-  return `${Math.round(convertTemp(b.min))}–${Math.round(convertTemp(b.max))}${tempUnit}`;
+  if (idx === 0) return `< ${Math.round(toTemperatureDisplay(b.max))}${tempUnit}`;
+  if (idx === TEMP_BUCKETS_C.length - 1) return `> ${Math.round(toTemperatureDisplay(b.min))}${tempUnit}`;
+  return `${Math.round(toTemperatureDisplay(b.min))}–${Math.round(toTemperatureDisplay(b.max))}${tempUnit}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -86,22 +91,39 @@ export default function TemperatureImpactPage() {
   const { t } = useTranslation();
   usePageTitle(t('temperature.title', 'Temperature Impact'));
 
-  /* ---- unit conversion ---- */
-  const { convertTemp, tempUnit, isMiles, efficiencyUnit } = useSettings();
-  const effLabel = efficiencyUnit;
+  /* ---- unit conversion (Phase-43 SI-floor display) ----
+     Backend `/analytics/temperature-impact` emits points with:
+       outside_temp:      °C SI (from ambient_temp_c_avg)
+       efficiency_wh_km:  Wh/km (already derived in SQL)
+       distance_km:       km (already derived in SQL)
+     We convert outside_temp via convertTempFromSI (mathematically
+     identical to legacy toTemperatureDisplay) and Wh/km -> Wh/mi inline using
+     KM_PER_MILE per Phase-43/0025 (no convertEfficiencyFromSI helper). */
+  const { unitPrefs } = useUnits();
+  const tempUnit = unitPrefs.temperature;
+  const isMiles = unitPrefs.distance === 'mi';
+  const effLabel = isMiles ? 'Wh/mi' : 'Wh/km';
+
+  const toTemperatureDisplay = useCallback(
+    (c: number) => convertTempFromSI(c, tempUnit),
+    [tempUnit],
+  );
 
   /* Efficiency: API returns Wh/km — convert to Wh/mi if user prefers miles */
-  const toDispEff = (whKm: number): number => isMiles ? whKm * UNITS.MI_TO_KM : whKm;
+  const toDispEff = useCallback(
+    (whKm: number): number => isMiles ? whKm * KM_PER_MILE : whKm,
+    [isMiles],
+  );
 
   /* Build display bucket labels */
   const tempBuckets: BucketDef[] = useMemo(
     () => TEMP_BUCKETS_C.map((b, i) => ({
-      label: bucketLabel(b, convertTemp, tempUnit, i),
+      label: bucketLabel(b, toTemperatureDisplay, tempUnit, i),
       min: b.min,
       max: b.max,
       color: b.color,
     })),
-    [convertTemp, tempUnit],
+    [toTemperatureDisplay, tempUnit],
   );
 
   /* ---- vehicles ---- */
@@ -164,11 +186,11 @@ export default function TemperatureImpactPage() {
     () =>
       (points ?? []).map((p) => ({
         ...p,
-        outside_temp: convertTemp(p.outside_temp),
+        outside_temp: toTemperatureDisplay(p.outside_temp),
         efficiency_wh_km: toDispEff(p.efficiency_wh_km),
         fill: TEMP_BUCKETS_C[getTempBucketIndex(p.outside_temp)].color,
       })),
-    [points, convertTemp, toDispEff],
+    [points, toTemperatureDisplay, toDispEff],
   );
 
   /* ---- contextual tips ---- */

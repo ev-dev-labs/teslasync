@@ -31,12 +31,12 @@ export function useFSMTransitions(
   page: number,
   perPage: number,
 ) {
-  const typeParam = fsmType === 'all' ? '' : `&fsm_type=${fsmType}`;
+  const nameParam = fsmType === 'all' ? '' : `&fsm_name=${fsmType}`;
   return useQuery({
     queryKey: fsmKeys.transitions(entityId, fsmType, hours, page, perPage),
     queryFn: ({ signal }) =>
       request<FSMTransitionResponse>(
-        `/fsm/transitions?vehicle_id=${entityId}&hours=${hours}&page=${page}&per_page=${perPage}${typeParam}`, { signal },
+        `/fsm/transitions?vehicle_id=${entityId}&hours=${hours}&page=${page}&per_page=${perPage}${nameParam}`, { signal },
       ),
     enabled: !!entityId,
     refetchInterval: INTERVALS.FAST,

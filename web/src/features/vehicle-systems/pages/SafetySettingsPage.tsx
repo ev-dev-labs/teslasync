@@ -30,12 +30,15 @@ import {
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useSecurityLatest } from '@/api/hooks/useVehicles';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
+import { cleanSafetyEnum, isSafetyEnumActive, type SafetyEnumField } from '@/lib/safetyEnum';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -48,10 +51,12 @@ interface SafetySnapshot {
   automatic_blind_spot_camera?: boolean | null;
   blind_spot_collision_warning?: boolean | null;
   emergency_lane_departure_avoidance?: boolean | null;
-  forward_collision_warning?: string | null;
-  lane_departure_avoidance?: string | null;
-  speed_limit_warning?: string | null;
-  cruise_follow_distance?: string | null;
+  // See lib/safetyEnum.ts for the rationale: Phase-42a interface{}
+  // pass-through means these may arrive as string|boolean|number|null.
+  forward_collision_warning?: string | boolean | number | null;
+  lane_departure_avoidance?: string | boolean | number | null;
+  speed_limit_warning?: string | boolean | number | null;
+  cruise_follow_distance?: string | boolean | number | null;
   pin_to_drive_enabled?: boolean | null;
   miles_since_reset?: number | null;
   self_driving_miles_since_reset?: number | null;
@@ -81,24 +86,9 @@ function isAebEnabled(off: boolean): boolean {
   return !off;
 }
 
-/** Known enum prefixes from raw Tesla telemetry. Old rows may still have these. */
-const ENUM_PREFIXES: Record<string, string> = {
-  forward_collision_warning: 'ForwardCollisionSensitivity',
-  lane_departure_avoidance: 'LaneAssistLevel',
-  speed_limit_warning: 'SpeedAssistLevel',
-  cruise_follow_distance: 'FollowDistance',
-};
-
-/** Strip Tesla enum prefix from a raw value, handling both old (raw) and new (clean) data. */
-function cleanEnum(value: string, field: keyof typeof ENUM_PREFIXES): string {
-  const prefix = ENUM_PREFIXES[field];
-  if (prefix && value.startsWith(prefix)) {
-    const stripped = value.slice(prefix.length);
-    // SpeedAssistLevelNone → "Off" (special case)
-    if (field === 'speed_limit_warning' && stripped === 'None') return 'Off';
-    return stripped || value;
-  }
-  return value;
+/** Wrapper kept so existing call sites read naturally. */
+function cleanEnum(value: unknown, field: SafetyEnumField): string {
+  return cleanSafetyEnum(value, field);
 }
 
 function boolFeatures(snap: SafetySnapshot): boolean[] {
@@ -108,10 +98,10 @@ function boolFeatures(snap: SafetySnapshot): boolean[] {
     snap.blind_spot_collision_warning ?? false,
     snap.emergency_lane_departure_avoidance ?? false,
     snap.pin_to_drive_enabled ?? false,
-    cleanEnum(snap.forward_collision_warning ?? 'Off', 'forward_collision_warning') !== 'Off',
-    cleanEnum(snap.lane_departure_avoidance ?? 'Off', 'lane_departure_avoidance') !== 'Off',
-    cleanEnum(snap.speed_limit_warning ?? 'Off', 'speed_limit_warning') !== 'Off',
-    Number(cleanEnum(snap.cruise_follow_distance ?? '0', 'cruise_follow_distance')) > 0,
+    isSafetyEnumActive(snap.forward_collision_warning, 'forward_collision_warning'),
+    isSafetyEnumActive(snap.lane_departure_avoidance, 'lane_departure_avoidance'),
+    isSafetyEnumActive(snap.speed_limit_warning, 'speed_limit_warning'),
+    isSafetyEnumActive(snap.cruise_follow_distance, 'cruise_follow_distance'),
   ];
 }
 
@@ -248,13 +238,13 @@ function buildFeatureCards(
   t: (key: string) => string,
 ): FeatureCardDef[] {
   const aebOn = isAebEnabled(snap.automatic_emergency_braking_off ?? false);
-  const fcwVal = cleanEnum(snap.forward_collision_warning ?? 'Off', 'forward_collision_warning');
-  const ldaVal = cleanEnum(snap.lane_departure_avoidance ?? 'Off', 'lane_departure_avoidance');
-  const slwVal = cleanEnum(snap.speed_limit_warning ?? 'Off', 'speed_limit_warning');
-  const cfdVal = cleanEnum(snap.cruise_follow_distance ?? '0', 'cruise_follow_distance');
-  const fcwOn = fcwVal !== 'Off';
-  const ldaOn = ldaVal !== 'Off';
-  const slwOn = slwVal !== 'Off';
+  const fcwVal = cleanEnum(snap.forward_collision_warning, 'forward_collision_warning');
+  const ldaVal = cleanEnum(snap.lane_departure_avoidance, 'lane_departure_avoidance');
+  const slwVal = cleanEnum(snap.speed_limit_warning, 'speed_limit_warning');
+  const cfdVal = cleanEnum(snap.cruise_follow_distance, 'cruise_follow_distance');
+  const fcwOn = isSafetyEnumActive(snap.forward_collision_warning, 'forward_collision_warning');
+  const ldaOn = isSafetyEnumActive(snap.lane_departure_avoidance, 'lane_departure_avoidance');
+  const slwOn = isSafetyEnumActive(snap.speed_limit_warning, 'speed_limit_warning');
 
   return [
     {
@@ -289,8 +279,8 @@ function buildFeatureCards(
       key: 'cfd',
       label: t('Cruise Follow Distance'),
       description: t('Adaptive cruise headway setting'),
-      enabled: Number(cfdVal) > 0,
-      valueText: cfdVal || '—',
+      enabled: isSafetyEnumActive(snap.cruise_follow_distance, 'cruise_follow_distance'),
+      valueText: cfdVal,
     },
     {
       key: 'slw',
@@ -363,7 +353,7 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
       header: t('FCW'),
       render: (row) => (
         <span className="text-xs text-[var(--text-secondary)]">
-          {cleanEnum(row.forward_collision_warning ?? '—', 'forward_collision_warning')}
+          {cleanEnum(row.forward_collision_warning, 'forward_collision_warning')}
         </span>
       ),
     },
@@ -372,7 +362,7 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
       header: t('LDA'),
       render: (row) => (
         <span className="text-xs text-[var(--text-secondary)]">
-          {cleanEnum(row.lane_departure_avoidance ?? '—', 'lane_departure_avoidance')}
+          {cleanEnum(row.lane_departure_avoidance, 'lane_departure_avoidance')}
         </span>
       ),
     },
@@ -386,7 +376,7 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
       header: t('CFD'),
       render: (row) => (
         <span className="text-xs text-[var(--text-secondary)]">
-          {cleanEnum(row.cruise_follow_distance ?? '—', 'cruise_follow_distance')}
+          {cleanEnum(row.cruise_follow_distance, 'cruise_follow_distance')}
         </span>
       ),
     },
@@ -395,7 +385,7 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
       header: t('SLW'),
       render: (row) => (
         <span className="text-xs text-[var(--text-secondary)]">
-          {cleanEnum(row.speed_limit_warning ?? '—', 'speed_limit_warning')}
+          {cleanEnum(row.speed_limit_warning, 'speed_limit_warning')}
         </span>
       ),
     },
@@ -436,6 +426,8 @@ function SafetyPageSkeleton() {
 export default function SafetySettingsPage() {
   const { t } = useTranslation();
   usePageTitle(t('Safety Settings'));
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
 
   /* --- vehicle selector --- */
   const { data: vehicles, error: vehiclesError } = useQuery<Vehicle[]>({
@@ -662,23 +654,33 @@ export default function SafetySettingsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <MetricCard
                   icon={<Navigation className="h-5 w-5" />}
-                  label={t('safety.milesSinceReset', 'Miles Since Reset')}
+                  label={t('safety.distanceSinceReset', 'Distance Since Reset')}
                   value={
                     latest.miles_since_reset != null
-                      ? fmtNumber(latest.miles_since_reset)
+                      ? fmtNumber(
+                          convertDistanceFromSI(
+                            latest.miles_since_reset,
+                            distanceUnit,
+                          ),
+                        )
                       : '—'
                   }
-                  subtitle={t('safety.miles', 'miles')}
+                  subtitle={distanceUnit}
                 />
                 <MetricCard
                   icon={<Cpu className="h-5 w-5" />}
-                  label={t('safety.selfDrivingMiles', 'Self-Driving Miles')}
+                  label={t('safety.selfDrivingDistance', 'Self-Driving Distance')}
                   value={
                     latest.self_driving_miles_since_reset != null
-                      ? fmtNumber(latest.self_driving_miles_since_reset)
+                      ? fmtNumber(
+                          convertDistanceFromSI(
+                            latest.self_driving_miles_since_reset,
+                            distanceUnit,
+                          ),
+                        )
                       : '—'
                   }
-                  subtitle={t('safety.milesAutopilot', 'miles (autopilot)')}
+                  subtitle={t('safety.distanceAutopilot', '{{unit}} (autopilot)', { unit: distanceUnit })}
                 />
               </div>
             </GlassPanel>

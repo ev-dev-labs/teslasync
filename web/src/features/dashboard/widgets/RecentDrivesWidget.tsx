@@ -4,9 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Route, ArrowUpRight } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { Drive } from '../types';
@@ -15,7 +16,7 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
 
   const { data: drives, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['drives', id, 'recent-5'],
@@ -51,11 +52,11 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
               <div className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] transition-colors">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-[var(--text-primary)] truncate">
-                    {fmtNumber(convertDistance(d.distance_mi ?? 0), 1)} {distanceUnit}
+                    {fmtNumber(convertDistanceFromSI(d.distance_m ?? 0, unitPrefs.distance), 1)} {unitPrefs.distance}
                   </p>
                   <p className="text-[10px] text-[var(--text-muted)]">
-                    {fmtInt(d.duration_min ?? 0)} min · {d.start_battery_pct ?? '?'}% →{' '}
-                    {d.end_battery_pct ?? '?'}%
+                    {fmtInt((d.duration_s ?? 0) / 60)} min · {d.start_soc_pct ?? '?'}% →{' '}
+                    {d.end_soc_pct ?? '?'}%
                   </p>
                 </div>
                 <span className="text-[10px] text-[var(--text-muted)] shrink-0">

@@ -100,7 +100,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  t.name AS \"✈️ Trip\",\n  t.start_ts AS \"📅 Start\",\n  t.end_ts AS \"📅 End\",\n  ROUND(convert_distance(t.total_distance_mi)::numeric, 1) AS \"📏 Distance\",\n  ROUND(t.total_energy_kwh::numeric, 1) AS \"⚡ Energy\",\n  ROUND(NULL::numeric, 2) AS \"💰 Cost\",\n  NULL AS \"🛣️ Drives\",\n  NULL AS \"⚡ Charges\",\n  ROUND((convert_efficiency(t.total_energy_kwh * 1000 / NULLIF(t.total_distance_mi, 0)))::numeric, 1) AS \"⚡ Efficiency\"\nFROM trips t\nWHERE t.vehicle_id = ${vehicle_id}\nORDER BY t.start_ts DESC\nLIMIT 50",
+          "rawSql": "SELECT\n  t.name AS \"✈️ Trip\",\n  t.started_at AS \"📅 Start\",\n  t.ended_at AS \"📅 End\",\n  ROUND(convert_distance(COALESCE(SUM(d.distance_m) / 1609.344, 0))::numeric, 1) AS \"📏 Distance\",\n  ROUND(COALESCE(SUM(d.energy_used_wh) / 1000.0, 0)::numeric, 1) AS \"⚡ Energy\",\n  ROUND(NULL::numeric, 2) AS \"💰 Cost\",\n  COUNT(d.id) AS \"🛣️ Drives\",\n  NULL AS \"⚡ Charges\",\n  ROUND((convert_efficiency(COALESCE(SUM(d.energy_used_wh), 0) / NULLIF(SUM(d.distance_m) / 1609.344, 0)))::numeric, 1) AS \"⚡ Efficiency\"\nFROM trips t\nLEFT JOIN drives d ON d.vehicle_id = t.vehicle_id\n  AND d.started_at >= t.started_at AND d.ended_at <= t.ended_at\nWHERE t.vehicle_id = ${vehicle_id}\nGROUP BY t.id, t.name, t.started_at, t.ended_at\nORDER BY t.started_at DESC\nLIMIT 50",
           "refId": "A"
         }
       ],

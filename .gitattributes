@@ -1,0 +1,10 @@
+# Vendored Tesla Fleet Telemetry protobuf — checksum-gated, byte-exact.
+# See api/proto/tesla/SOURCE.md.
+api/proto/tesla/vehicle_data.proto binary
+
+# Generated Go files emitted by cmd/protogen-tesla — written with LF.
+# Without this, autocrlf=true on Windows rewrites them to CRLF on
+# checkout, which makes `git status` report them as modified after
+# every `go generate` and trips the phase-42 prompt 0015 drift gate.
+internal/tesla/protomodel/*_gen.go text eol=lf
+cmd/protogen-tesla/testdata/golden/*_gen.go text eol=lf

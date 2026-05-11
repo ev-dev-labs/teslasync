@@ -3,16 +3,26 @@ package database
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
-
-	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
 // SignalHistoryRow represents a single signal value at a point in time.
+//
+// Phase-42 / per-field MQTT cutover: this struct is now READ-ONLY — the
+// legacy buffered Append + FlushLoop write path was deleted because the
+// Phase-42a router writer (`internal/tesla/router/writers/signal_log_writer.go`)
+// is the canonical signal_log writer and used the new schema (vehicle_id,
+// ts, field, value_kind, str_value, bool_value, int_value, float_value,
+// time_value). The old write path used pre-Phase-42 column names
+// (`signal`, `value_num`, `value_str`, `value_bool`, `value_jsonb`,
+// `created_at`) and never succeeded after the schema migration; rows
+// were re-cycled through a Redis backlog that produced continuous
+// `column "signal" of relation "signal_log" does not exist` log spam.
+//
+// The struct field names + JSON tags below are kept for backward compat
+// with the API response shapes that consume `GetHistory` / `Query`.
 type SignalHistoryRow struct {
 	VehicleID  int64
 	Signal     string
@@ -23,37 +33,29 @@ type SignalHistoryRow struct {
 	CreatedAt  time.Time
 }
 
-// SignalHistoryWriter buffers incoming signals and batch-inserts them into
-// the signal_log table every flushInterval. Uses pgx CopyFrom for
-// maximum insert performance.
-//
-// 3-tier resilience: memory buffer → Redis backlog → MQTT persistence.
+// SignalHistoryWriter is the read-only accessor for the signal_log
+// hypertable. The legacy buffered write path (Append + FlushLoop +
+// Redis backlog) was removed as part of the Phase-42 / per-field MQTT
+// cutover — see `internal/tesla/router/writers/signal_log_writer.go`
+// for the canonical writer.
 type SignalHistoryWriter struct {
-	db       *DB
-	redis    *redis.Client
-	mu       sync.Mutex
-	buffer   []SignalHistoryRow
-	interval time.Duration
+	db *DB
 }
 
-// NewSignalHistoryWriter creates a writer with the given flush interval.
-// rdb may be nil — Redis backlog features become no-ops.
-func NewSignalHistoryWriter(db *DB, flushInterval time.Duration, rdb *redis.Client) *SignalHistoryWriter {
-	if flushInterval <= 0 {
-		flushInterval = config.SignalFlushInterval
-	}
-	return &SignalHistoryWriter{
-		db:       db,
-		redis:    rdb,
-		buffer:   make([]SignalHistoryRow, 0, 512),
-		interval: flushInterval,
-	}
+// NewSignalHistoryWriter constructs a read-only signal_log accessor.
+// The legacy `flushInterval` and `rdb` parameters were dropped — the
+// constructor now takes only the DB pool.
+func NewSignalHistoryWriter(db *DB) *SignalHistoryWriter {
+	return &SignalHistoryWriter{db: db}
 }
 
 // Cleanup deletes rows older than the retention period.
+//
+// Phase-42 schema: signal_log uses `ts` (TIMESTAMPTZ) as the row timestamp;
+// the legacy `created_at` column no longer exists.
 func (w *SignalHistoryWriter) Cleanup(ctx context.Context, retentionDays int) {
 	result, err := w.db.Pool.Exec(ctx,
-		"DELETE FROM signal_log WHERE created_at < NOW() - $1::interval",
+		"DELETE FROM signal_log WHERE ts < NOW() - $1::interval",
 		fmt.Sprintf("%d days", retentionDays))
 	if err != nil {
 		log.Warn().Err(err).Msg("signal_log: TTL cleanup failed")
@@ -63,15 +65,19 @@ func (w *SignalHistoryWriter) Cleanup(ctx context.Context, retentionDays int) {
 }
 
 // GetHistory returns time-series data for a single signal within a date range.
-// Results are ordered by created_at ASC for chart rendering.
+// Results are ordered by ts ASC for chart rendering.
+//
+// Phase-42 schema: SELECT ts/field/str_value/bool_value/COALESCE(float_value,
+// int_value::float8); the legacy created_at/signal/value_num/value_str/
+// value_bool columns no longer exist.
 func (w *SignalHistoryWriter) GetHistory(ctx context.Context, vehicleID int64, signalName string, from, to time.Time, limit int) ([]SignalHistoryRow, error) {
 	if limit <= 0 || limit > 10000 {
 		limit = 1000
 	}
-	query := `SELECT vehicle_id, signal, value_num, value_str, value_bool, created_at
+	query := `SELECT vehicle_id, field, COALESCE(float_value, int_value::float8), str_value, bool_value, ts
 	          FROM signal_log
-	          WHERE vehicle_id = $1 AND signal = $2 AND created_at BETWEEN $3 AND $4
-	          ORDER BY created_at ASC
+	          WHERE vehicle_id = $1 AND field = $2 AND ts BETWEEN $3 AND $4
+	          ORDER BY ts ASC
 	          LIMIT $5`
 	rows, err := w.db.Pool.Query(ctx, query, vehicleID, signalName, from, to, limit)
 	if err != nil {
@@ -90,11 +96,13 @@ func (w *SignalHistoryWriter) GetHistory(ctx context.Context, vehicleID int64, s
 }
 
 // GetGlobalStats returns total signal count and date range for a vehicle.
+//
+// Phase-42 schema: signal_log uses `ts` as the row timestamp.
 func (w *SignalHistoryWriter) GetGlobalStats(ctx context.Context, vehicleID int64) (int64, *time.Time, *time.Time, error) {
 	var count int64
 	var oldest, newest *time.Time
 	err := w.db.Pool.QueryRow(ctx,
-		`SELECT COUNT(*), MIN(created_at), MAX(created_at)
+		`SELECT COUNT(*), MIN(ts), MAX(ts)
 		 FROM signal_log WHERE vehicle_id = $1`, vehicleID).Scan(&count, &oldest, &newest)
 	return count, oldest, newest, err
 }
@@ -109,6 +117,9 @@ type SignalHistoryEntry struct {
 }
 
 // Query returns signal history rows with pagination.
+//
+// Phase-42 schema: ts/field/str_value/bool_value/COALESCE(float_value,
+// int_value::float8).
 func (w *SignalHistoryWriter) Query(ctx context.Context, vehicleID int64, signals []string, from, to time.Time, page, perPage int) ([]SignalHistoryEntry, int64, error) {
 	if perPage <= 0 {
 		perPage = 50
@@ -121,21 +132,19 @@ func (w *SignalHistoryWriter) Query(ctx context.Context, vehicleID int64, signal
 	}
 	offset := (page - 1) * perPage
 
-	// Count total
 	var total int64
 	err := w.db.Pool.QueryRow(ctx,
-		"SELECT COUNT(*) FROM signal_log WHERE vehicle_id = $1 AND signal = ANY($2) AND created_at BETWEEN $3 AND $4",
+		"SELECT COUNT(*) FROM signal_log WHERE vehicle_id = $1 AND field = ANY($2) AND ts BETWEEN $3 AND $4",
 		vehicleID, signals, from, to).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Fetch page
 	rows, err := w.db.Pool.Query(ctx,
-		`SELECT signal, value_num, value_str, value_bool, created_at
+		`SELECT field, COALESCE(float_value, int_value::float8), str_value, bool_value, ts
 		 FROM signal_log
-		 WHERE vehicle_id = $1 AND signal = ANY($2) AND created_at BETWEEN $3 AND $4
-		 ORDER BY created_at DESC LIMIT $5 OFFSET $6`,
+		 WHERE vehicle_id = $1 AND field = ANY($2) AND ts BETWEEN $3 AND $4
+		 ORDER BY ts DESC LIMIT $5 OFFSET $6`,
 		vehicleID, signals, from, to, perPage, offset)
 	if err != nil {
 		return nil, 0, err
@@ -154,9 +163,11 @@ func (w *SignalHistoryWriter) Query(ctx context.Context, vehicleID int64, signal
 }
 
 // AvailableSignals returns distinct signal names for a vehicle.
+//
+// Phase-42 schema: signal_log column is `field`, not `signal`.
 func (w *SignalHistoryWriter) AvailableSignals(ctx context.Context, vehicleID int64) ([]string, error) {
 	rows, err := w.db.Pool.Query(ctx,
-		"SELECT DISTINCT signal FROM signal_log WHERE vehicle_id = $1 ORDER BY signal",
+		"SELECT DISTINCT field FROM signal_log WHERE vehicle_id = $1 ORDER BY field",
 		vehicleID)
 	if err != nil {
 		return nil, err
@@ -206,19 +217,4 @@ func (w *SignalHistoryWriter) Stats(ctx context.Context, vehicleID int64, signal
 		stats = append(stats, s)
 	}
 	return stats, rows.Err()
-}
-
-// locationCompoundNames maps Location compound signal names to their flattened
-// Latitude/Longitude signal names. Returns false for non-Location compounds.
-func locationCompoundNames(signal string) (latName, lonName string, isLocation bool) {
-	switch signal {
-	case "Location":
-		return "Latitude", "Longitude", true
-	case "OriginLocation":
-		return "OriginLatitude", "OriginLongitude", true
-	case "DestinationLocation":
-		return "DestinationLatitude", "DestinationLongitude", true
-	default:
-		return "", "", false
-	}
 }

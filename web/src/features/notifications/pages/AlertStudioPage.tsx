@@ -26,12 +26,13 @@ import {
 } from '@/api/hooks/useNotifications'
 import type { AlertRuleKind, ComputedMetricOp } from '@/api/types'
 import type { SignalValueType } from '@/types/signals'
-import { GlassPanel, Badge, Button as UiButton, ConfirmDialog, Input as UiInput, Select as UiSelect, Modal, HelpIcon } from '@/components/ui'
+import { GlassPanel, Badge, Button as UiButton, ConfirmDialog, Input as UiInput, Select as UiSelect, Modal, HelpIcon, Toggle } from '@/components/ui'
 import { BulkActionsToolbar, type BulkAction, SeverityBadge, SeverityIcon } from '@/components/data-display'
 import { PageContainer } from '@/components/layout'
 import { FadeIn } from '@/components/motion'
 import { AlertBanner, DraftRecoveryBanner, EmptyState, ErrorDisplay, Skeleton } from '@/components/feedback'
-import { SearchInput } from '@/components/forms'
+import { SearchInput, VehicleMultiSelect, hydrateVehicleSelection, buildVehiclePayload, type VehicleSelection } from '@/components/forms'
+import { useVehicles } from '@/api/hooks/useVehicles'
 import { cn } from '@/lib/cn'
 import { severityTokens } from '@/lib/tokens'
 import { formatDateTime } from '@/lib/dateFormat'
@@ -43,7 +44,14 @@ import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useUrlString } from '@/hooks/useUrlState'
 import { alertRuleSchema } from '../schemas/alertRule'
 import { ComputedMetricEditor } from '../components/ComputedMetricEditor'
+import { recommendedTriggerMode } from '../lib/recommendedTriggerMode'
 import { Icons } from '@/lib/icons';
+
+// Phase-49 / Slice 0008 — editor-only tri-state. Backend column stays
+// strict ('once' | 'repeat'); 'unset' exists purely so a brand-new
+// rule can be in the "user hasn't decided yet" state and the Save
+// button can block until they do (Decision D3 "force-choose").
+type TriggerModeOrUnset = AlertRuleTriggerMode | 'unset'
 
 type Severity = NonNullable<AlertRuleInput['severity']>
 type RuleOp = NonNullable<AlertRuleInput['op']>
@@ -142,7 +150,13 @@ interface EditorState {
   id?: number
   name: string
   enabled: boolean
-  vehicle_id: string
+  /**
+   * Phase-49 / Slice 0006 — discriminated-union vehicle selection.
+   * Replaces the legacy free-text `vehicle_id: string` field. Sticky-
+   * all means "current + future fleet"; specific means an explicit
+   * subset that does NOT auto-grow when new vehicles are added.
+   */
+  vehicle_selection: VehicleSelection
   signal_name: string
   op: RuleOp
   value_kind: ValueKind
@@ -153,7 +167,31 @@ interface EditorState {
   value_max: string
   severity: Severity
   cooldown_min: number
-  trigger_mode: AlertRuleTriggerMode
+  // Phase-49 / Slice 0008 — see `TriggerModeOrUnset`. Existing rules
+  // hydrated from the server are always 'once' | 'repeat'; only the
+  // initial freshEditor() / templateToEditor() result starts as 'unset'.
+  trigger_mode: TriggerModeOrUnset
+  /**
+   * Empty string means "no cap" (NULL on the wire). Stored as a string
+   * because <UiInput type="number"> emits a string and the form lets the
+   * user type 3-digit caps; conversion to number happens in
+   * buildSavePayload.
+   * Phase-49 / Slice 0003 / Decision D5.
+   */
+  max_fires_per_resolution: string
+  /**
+   * Phase-49 / Slice 0009 — escalation tier. `escalation_enabled`
+   * gates whether the editor sends the pair. `escalation_after_min`
+   * is a string for the same reason as max_fires_per_resolution
+   * (UiInput emits strings + the user may type 3-digit values).
+   * `escalation_severity` is one of info/warn/critical or '' when
+   * the user hasn't picked yet (Save will block via canSave).
+   * Repeat-mode only — buildSavePayload nulls both fields when
+   * trigger_mode !== 'repeat' OR escalation_enabled is false.
+   */
+  escalation_enabled: boolean
+  escalation_after_min: string
+  escalation_severity: Severity | ''
   message: string
   // kind: 'signal' (default — uses signal_name/op/value_*) or
   // 'computed_metric' (uses metric_id/metric_window/metric_op/metric_threshold).
@@ -170,7 +208,7 @@ function freshEditor(): EditorState {
   return {
     name: '',
     enabled: true,
-    vehicle_id: '',
+    vehicle_selection: { kind: 'all_sticky' },
     signal_name: '',
     op: '=',
     value_kind: 'number',
@@ -181,7 +219,15 @@ function freshEditor(): EditorState {
     value_max: '',
     severity: 'warn',
     cooldown_min: 15,
-    trigger_mode: 'repeat',
+    // Phase-49 / Slice 0008 / Decision D2 + D3 — was 'repeat'. The
+    // user-reported "locked vehicle alert spam" was caused by every
+    // new rule silently inheriting 'repeat'. Now the editor opens
+    // in tri-state and the Save button blocks until the user picks.
+    trigger_mode: 'unset',
+    max_fires_per_resolution: '',
+    escalation_enabled: false,
+    escalation_after_min: '',
+    escalation_severity: '',
     message: '',
     kind: 'signal',
     metric_id: '',
@@ -232,15 +278,45 @@ function parseOptionalNumber(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function parseOptionalVehicleID(value: string): number | null {
+// parseOptionalMaxFires turns the editor input string into the wire shape
+// for max_fires_per_resolution: empty/blank → null (unlimited), otherwise
+// a positive integer. Fractional or non-positive inputs collapse to null
+// so we never POST an invalid value the backend would reject with 400.
+// Phase-49 / Slice 0003 / Decision D5.
+function parseOptionalMaxFires(value: string): number | null {
   const trimmed = value.trim()
   if (!trimmed) return null
   const parsed = Number(trimmed)
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null
 }
 
-function hasValidVehicleID(value: string): boolean {
-  return value.trim() === '' || parseOptionalVehicleID(value) !== null
+// buildEscalationPayload converts the editor's tri-input escalation
+// state (enabled flag + after_min string + severity string) into the
+// `{ escalation_after_min, escalation_severity }` pair the wire
+// expects. Returns BOTH NULLS when:
+//   - the rule isn't repeat-mode (backend rejects escalation on once-mode)
+//   - the user toggled the checkbox off
+//   - either field is incomplete (Save would have been blocked by canSave)
+// Returns the populated pair otherwise. The two fields move together
+// — the backend's mutual-presence CHECK rejects half-set values.
+// Phase-49 / Slice 0009.
+// Phase-49 / Slice 0009 — canonical info < warn < critical ordering
+// used by the escalation higher-severity check. Must match the
+// alertSeverityRank Go helper in internal/api/alert_handler_rules.go.
+const SEVERITY_RANK: Record<Severity, number> = { info: 1, warn: 2, critical: 3 }
+
+function buildEscalationPayload(
+  state: EditorState,
+  triggerMode: AlertRuleTriggerMode,
+): { escalation_after_min: number | null; escalation_severity: Severity | null } {
+  if (triggerMode !== 'repeat' || !state.escalation_enabled) {
+    return { escalation_after_min: null, escalation_severity: null }
+  }
+  const after = parseOptionalMaxFires(state.escalation_after_min)
+  if (after == null || state.escalation_severity === '') {
+    return { escalation_after_min: null, escalation_severity: null }
+  }
+  return { escalation_after_min: after, escalation_severity: state.escalation_severity }
 }
 
 function isNumericOnlyOp(op: RuleOp): boolean {
@@ -346,7 +422,7 @@ function ruleToEditor(rule: AlertRule): EditorState {
     id: rule.id,
     name: rule.name,
     enabled: rule.enabled,
-    vehicle_id: rule.vehicle_id == null ? '' : String(rule.vehicle_id),
+    vehicle_selection: hydrateVehicleSelection(rule),
     signal_name: rule.signal_name,
     op: rule.op,
     value_kind: inferValueKind(rule),
@@ -358,6 +434,12 @@ function ruleToEditor(rule: AlertRule): EditorState {
     severity: normalizeSeverity(rule.severity),
     cooldown_min: rule.cooldown_min,
     trigger_mode: normalizeTriggerMode(rule.trigger_mode),
+    max_fires_per_resolution:
+      rule.max_fires_per_resolution == null ? '' : String(rule.max_fires_per_resolution),
+    escalation_enabled: rule.escalation_after_min != null && rule.escalation_severity != null,
+    escalation_after_min:
+      rule.escalation_after_min == null ? '' : String(rule.escalation_after_min),
+    escalation_severity: rule.escalation_severity ?? '',
     message: rule.signal_name ? `${rule.name}: {{${rule.signal_name}}}` : '',
     kind,
     metric_id: rule.metric_id ?? '',
@@ -386,15 +468,28 @@ function templateToEditor(template: RuleTemplate, name: string, message: string)
 }
 
 function buildSavePayload(state: EditorState): AlertRuleInput {
+  const vehiclePayload = buildVehiclePayload(state.vehicle_selection)
+  // Phase-49 / Slice 0008 — defence-in-depth narrowing. `canSave`
+  // already blocks the Save button when trigger_mode is 'unset', so
+  // this branch is unreachable from the UI; we throw to keep the
+  // backend contract honest in case a future caller bypasses canSave.
+  if (state.trigger_mode === 'unset') {
+    throw new Error('buildSavePayload: trigger_mode must be chosen before save')
+  }
+  const triggerMode: AlertRuleTriggerMode = state.trigger_mode
+
   if (state.kind === 'computed_metric') {
     const threshold = parseOptionalNumber(state.metric_threshold)
+    const escalation = buildEscalationPayload(state, triggerMode)
     return {
       name: state.name.trim(),
       enabled: state.enabled,
-      vehicle_id: parseOptionalVehicleID(state.vehicle_id),
+      ...vehiclePayload,
       severity: state.severity,
       cooldown_min: state.cooldown_min,
-      trigger_mode: state.trigger_mode,
+      trigger_mode: triggerMode,
+      max_fires_per_resolution: parseOptionalMaxFires(state.max_fires_per_resolution),
+      ...escalation,
       kind: 'computed_metric',
       metric_id: state.metric_id || null,
       metric_window: state.metric_window || null,
@@ -404,10 +499,11 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
   }
 
   const valueKind = valueKindForState(state)
+  const escalation = buildEscalationPayload(state, triggerMode)
   const payload: AlertRuleInput = {
     name: state.name.trim(),
     enabled: state.enabled,
-    vehicle_id: parseOptionalVehicleID(state.vehicle_id),
+    ...vehiclePayload,
     signal_name: state.signal_name.trim(),
     op: state.op,
     value_num: null,
@@ -417,7 +513,9 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
     value_max: null,
     severity: state.severity,
     cooldown_min: state.cooldown_min,
-    trigger_mode: state.trigger_mode,
+    trigger_mode: triggerMode,
+    max_fires_per_resolution: parseOptionalMaxFires(state.max_fires_per_resolution),
+    ...escalation,
     kind: 'signal',
   }
 
@@ -471,6 +569,9 @@ export default function AlertStudio() {
 
   const { data: rules, isLoading, error } = useAlertRules()
   const { data: channels, isLoading: channelsLoading, error: channelsError } = useNotificationChannels()
+  // Phase-49 / Slice 0006 — drives the multi-vehicle picker.
+  const { data: vehiclesData } = useVehicles()
+  const vehicles = useMemo(() => vehiclesData ?? [], [vehiclesData])
   const saveRuleMut = useSaveAlertRule()
   const deleteRuleMut = useDeleteAlertRule()
   const toggleRuleMut = useToggleAlertRule()
@@ -502,6 +603,15 @@ export default function AlertStudio() {
   const [formError, setFormError] = useState<string | null>(null)
   const initialEditorRef = useRef<string>(JSON.stringify(freshEditor()))
 
+  // Phase-49 / Slice 0006 — `useFormDraft` resets its internal state during
+  // render whenever `draftKey` changes (documented React 18 pattern).
+  // `setSelectedId(id)` triggers that reset, which races with any in-event
+  // `setEditor(hydrated)` call and silently discards the hydration. We stash
+  // the desired post-switch editor state in this ref and re-apply it inside a
+  // `useEffect` keyed on `selectedId`, so the override happens AFTER the
+  // render-time reset has committed.
+  const pendingHydrationRef = useRef<EditorState | null>(null)
+
   // Phase-40 / Prompt 55 — `useFormDraft` persists in-progress new-rule
   // editing to localStorage so a tab close, SW reload, or auth redirect
   // doesn't destroy the user's work. Only the `alert-rule-new` key is
@@ -518,7 +628,13 @@ export default function AlertStudio() {
     draftSavedAt,
     discardDraft,
   } = useFormDraft<EditorState>(draftKey, freshEditor(), {
-    version: 1,
+    // Phase-49 / Slice 0009 — bumped from 3 to 4. Pre-slice-0009
+    // drafts lack `escalation_*` fields entirely; restoring them
+    // would leave the editor in an undefined-state shape and the
+    // checkbox would render as `undefined` (controlled→uncontrolled
+    // warning + crash on toggle). Bumping the version forces those
+    // drafts to be discarded so the user lands on a fresh editor.
+    version: 4,
     debounceMs: 800,
     skipPersist: v =>
       saveRuleMut.isPending
@@ -531,6 +647,17 @@ export default function AlertStudio() {
     () => JSON.stringify(editor) !== initialEditorRef.current,
     [editor],
   )
+
+  // Phase-49 / Slice 0006 — apply pending hydration AFTER the `useFormDraft`
+  // render-time reset has committed (see `pendingHydrationRef` declaration
+  // for the race-condition rationale).
+  useEffect(() => {
+    if (pendingHydrationRef.current == null) return
+    const next = pendingHydrationRef.current
+    pendingHydrationRef.current = null
+    setEditor(next)
+    initialEditorRef.current = JSON.stringify(next)
+  }, [selectedId, setEditor])
 
   useDirtyForm(isDirty)
   // Phase-45 / Prompt 16: in-app navigation guard. Pairs with `useDirtyForm`
@@ -665,10 +792,56 @@ export default function AlertStudio() {
     { value: 'false', label: t('notifications.alertStudio.editor.disabled', 'Disabled') },
   ], [t])
 
-  const triggerModeOptions = useMemo(() => [
-    { value: 'repeat', label: t('notifications.alertStudio.editor.triggerMode.repeat', 'Every cooldown while true (default)') },
-    { value: 'once', label: t('notifications.alertStudio.editor.triggerMode.once', 'Once, until condition resets') },
+  const alertBehaviorOptions = useMemo(() => [
+    // Phase-49 / Slice 0008 — disabled placeholder option pinned at the
+    // top so brand-new rules render in the explicit "user hasn't decided
+    // yet" state. Disabled prevents the user from re-selecting unset
+    // after they've committed to once/repeat.
+    {
+      value: '',
+      label: t('notifications.alertStudio.editor.alertBehaviorPlaceholder', '— Choose one —'),
+      disabled: true,
+    },
+    { value: 'repeat', label: t('notifications.alertStudio.editor.alertBehavior.repeatLabel', 'Re-alert until resolved') },
+    { value: 'once', label: t('notifications.alertStudio.editor.alertBehavior.onceLabel', 'Notify on event') },
   ], [t])
+
+  // Phase-49 / Slice 0008 — derived recommendation. Pure derivation, no
+  // setState side effect: changing op recomputes the banner copy on the
+  // next render without ever mutating editor.trigger_mode (the user
+  // remains in control of the actual choice).
+  const recommendedMode = useMemo(
+    () => recommendedTriggerMode(editor.op),
+    [editor.op],
+  )
+  const recommendedLabel = useMemo(
+    () => (
+      recommendedMode === 'once'
+        ? t('notifications.alertStudio.editor.alertBehavior.onceLabel', 'Notify on event')
+        : t('notifications.alertStudio.editor.alertBehavior.repeatLabel', 'Re-alert until resolved')
+    ),
+    [recommendedMode, t],
+  )
+  const alternativeLabel = useMemo(
+    () => (
+      recommendedMode === 'once'
+        ? t('notifications.alertStudio.editor.alertBehavior.repeatLabel', 'Re-alert until resolved')
+        : t('notifications.alertStudio.editor.alertBehavior.onceLabel', 'Notify on event')
+    ),
+    [recommendedMode, t],
+  )
+  // Banner is signal-rule only — computed_metric uses metric_op which
+  // has its own semantics not yet covered by `recommendedTriggerMode`.
+  // Force-choose still applies to computed_metric (canSave blocks),
+  // but the recommendation hint is suppressed to avoid showing a
+  // signal-operator suggestion next to a metric editor.
+  const showRecommendBanner = (
+    isNewRule
+    && editor.trigger_mode === 'unset'
+    && editor.kind === 'signal'
+    && editor.signal_name.trim().length > 0
+  )
+  const triggerModeBlocked = isNewRule && editor.trigger_mode === 'unset'
 
   const signalTypeLabels = useMemo<Record<SignalValueType, string>>(() => ({
     numeric: t('notifications.alertStudio.signalTypes.numeric', 'Numeric'),
@@ -737,7 +910,35 @@ export default function AlertStudio() {
   const canSave = useMemo(() => {
     if (editor.name.trim().length === 0) return false
     if (editor.cooldown_min <= 0) return false
-    if (!hasValidVehicleID(editor.vehicle_id)) return false
+    // Phase-49 / Slice 0008 / Decision D3 — force-choose at create
+    // time. Editing an existing rule preserves whichever value the
+    // server already stored (R7: existing rules are never tri-state).
+    if (isNewRule && editor.trigger_mode === 'unset') return false
+    // Phase-49 / Slice 0006 — sticky-all is always valid; specific
+    // requires at least one selected vehicle. The new picker prevents
+    // any other invalid intermediate state by construction.
+    if (
+      editor.vehicle_selection.kind === 'specific'
+      && editor.vehicle_selection.vehicle_ids.length === 0
+    ) {
+      return false
+    }
+    // Phase-49 / Slice 0009 — escalation pair validity. When the
+    // checkbox is on, BOTH fields must be filled AND the escalated
+    // severity must rank strictly higher than the base severity.
+    // Also rejects the impossible-but-possible state of escalation
+    // enabled on a non-repeat trigger mode (defence-in-depth — the
+    // UI hides the section for non-repeat, but if a stale draft
+    // restored it, Save must still block).
+    if (editor.escalation_enabled) {
+      if (editor.trigger_mode !== 'repeat') return false
+      const after = parseOptionalMaxFires(editor.escalation_after_min)
+      if (after == null) return false
+      if (editor.escalation_severity === '') return false
+      if (SEVERITY_RANK[editor.escalation_severity] <= SEVERITY_RANK[editor.severity]) {
+        return false
+      }
+    }
     if (editor.kind === 'computed_metric') {
       // Only enforce metric-shape requirements; if registry is loading we
       // optimistically allow the save and the server-side validator catches
@@ -752,7 +953,7 @@ export default function AlertStudio() {
       && isOperatorAllowedForState(editor)
       && hasRequiredTypedValue(editor)
     )
-  }, [computedMetrics, editor])
+  }, [computedMetrics, editor, isNewRule])
 
   const handleSelectRule = useCallback((rule: AlertRule) => {
     guardSwitch(() => {
@@ -764,33 +965,39 @@ export default function AlertStudio() {
         op: nextOp,
         value_kind: valueKindForSignalOp(signalType, nextOp),
       }
+      // Phase-49 / Slice 0006 — `useFormDraft` reset on key change races
+      // with the inline `setEditor`. Apply both: the inline call covers the
+      // same-key path; the ref + `useEffect` covers the cross-key path.
+      pendingHydrationRef.current = finalEditor
       setSelectedId(rule.id)
       setEditor(finalEditor)
       initialEditorRef.current = JSON.stringify(finalEditor)
       setFormError(null)
     })
-  }, [guardSwitch])
+  }, [guardSwitch, setEditor])
 
   const handleNewRule = useCallback(() => {
     guardSwitch(() => {
       const blank = freshEditor()
+      pendingHydrationRef.current = blank
       setSelectedId(null)
       setEditor(blank)
       initialEditorRef.current = JSON.stringify(blank)
       setFormError(null)
     })
-  }, [guardSwitch])
+  }, [guardSwitch, setEditor])
 
   const handleCloneTemplate = useCallback((tpl: RuleTemplate) => {
     guardSwitch(() => {
       const next = templateToEditor(tpl, getTemplateName(tpl), getTemplateMessage(tpl))
+      pendingHydrationRef.current = next
       setSelectedId(null)
       setEditor(next)
       initialEditorRef.current = JSON.stringify(next)
       setShowTemplates(false)
       setFormError(null)
     })
-  }, [getTemplateMessage, getTemplateName, guardSwitch])
+  }, [getTemplateMessage, getTemplateName, guardSwitch, setEditor])
 
   const handleSignalChange = useCallback((signalName: string) => {
     setEditor(current => {
@@ -844,6 +1051,7 @@ export default function AlertStudio() {
           // a real rule, so drop both the per-rule and the `new` drafts.
           discardDraft()
           const blank = freshEditor()
+          pendingHydrationRef.current = blank
           setSelectedId(null)
           setEditor(blank)
           initialEditorRef.current = JSON.stringify(blank)
@@ -859,6 +1067,7 @@ export default function AlertStudio() {
         // rule so a future visit doesn't restore stale work.
         discardDraft()
         const blank = freshEditor()
+        pendingHydrationRef.current = blank
         setSelectedId(null)
         setEditor(blank)
         initialEditorRef.current = JSON.stringify(blank)
@@ -1294,10 +1503,11 @@ export default function AlertStudio() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-name">
                   {t('notifications.alertStudio.editor.nameLabel', 'Name')}
                 </label>
                 <UiInput
+                  id="alert-name"
                   className="w-full"
                   placeholder={t('notifications.alertStudio.editor.namePlaceholder', 'My alert rule')}
                   value={editor.name}
@@ -1319,21 +1529,21 @@ export default function AlertStudio() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-vehicle-id">
-                  {t('notifications.alertStudio.editor.vehicleIdLabel', 'Vehicle ID')}
-                  <span className="text-[var(--text-muted)] ml-1 normal-case tracking-normal">
-                    {t('notifications.alertStudio.editor.optionalLabel', 'Optional')}
-                  </span>
-                  <HelpIcon i18nKey="help.fields.alertStudio.vehicleId" content="Restrict this rule to a single vehicle by ID. Leave blank to apply across all vehicles in the fleet." for="alert-vehicle-id" />
+                <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-vehicle-picker">
+                  {t('notifications.alertStudio.editor.vehiclesLabel', 'Vehicles')}
+                  <HelpIcon i18nKey="help.fields.alertStudio.vehicles" content="Choose 'All vehicles' to apply this rule to your entire fleet, including any cars you add later. Otherwise pick a specific subset." for="alert-vehicle-picker" />
                 </label>
-                <UiInput
-                  id="alert-vehicle-id"
-                  type="number"
-                  min={1}
-                  className="w-full"
-                  placeholder={t('notifications.alertStudio.editor.vehicleIdPlaceholder', 'All vehicles')}
-                  value={editor.vehicle_id}
-                  onChange={e => setEditor(s => ({ ...s, vehicle_id: e.target.value }))}
+                <VehicleMultiSelect
+                  id="alert-vehicle-picker"
+                  value={editor.vehicle_selection}
+                  onChange={next => setEditor(s => ({ ...s, vehicle_selection: next }))}
+                  vehicles={vehicles}
+                  errorKey={
+                    editor.vehicle_selection.kind === 'specific'
+                      && editor.vehicle_selection.vehicle_ids.length === 0
+                      ? 'notifications.alertStudio.editor.vehiclesEmptyError'
+                      : null
+                  }
                 />
               </div>
               <div className="sm:col-span-2">
@@ -1388,7 +1598,11 @@ export default function AlertStudio() {
                   metric_window: editor.metric_window,
                   metric_op: editor.metric_op,
                   metric_threshold: editor.metric_threshold,
-                  vehicle_id: parseOptionalVehicleID(editor.vehicle_id),
+                  vehicle_id:
+                    editor.vehicle_selection.kind === 'specific'
+                      && editor.vehicle_selection.vehicle_ids.length > 0
+                      ? editor.vehicle_selection.vehicle_ids[0]
+                      : null,
                 }}
                 onChange={next =>
                   setEditor(s => ({
@@ -1406,10 +1620,11 @@ export default function AlertStudio() {
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">
+                    <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-signal">
                       {t('notifications.alertStudio.editor.signalNameLabel', 'Signal')}
                     </label>
                     <UiSelect
+                      id="alert-signal"
                       className="w-full"
                       value={editor.signal_name}
                       onChange={e => handleSignalChange(e.target.value)}
@@ -1453,7 +1668,24 @@ export default function AlertStudio() {
                   id="alert-severity"
                   className="w-full"
                   value={editor.severity}
-                  onChange={e => setEditor(s => ({ ...s, severity: e.target.value as Severity }))}
+                  onChange={e => {
+                    const next = e.target.value as Severity
+                    setEditor(s => {
+                      // Phase-49 / Slice 0009 — reset escalation_severity
+                      // if the new base severity makes it no longer
+                      // strictly higher (e.g. user bumps base from warn
+                      // to critical, the previously-set warn escalation
+                      // is now a downgrade).
+                      const escSev = s.escalation_severity
+                      const stillValid =
+                        escSev === '' || SEVERITY_RANK[escSev] > SEVERITY_RANK[next]
+                      return {
+                        ...s,
+                        severity: next,
+                        escalation_severity: stillValid ? escSev : '',
+                      }
+                    })
+                  }}
                   options={severityOptions}
                 />
               </div>
@@ -1495,31 +1727,220 @@ export default function AlertStudio() {
                   onChange={e => setEditor(s => ({ ...s, cooldown_min: Number(e.target.value) }))}
                 />
               </div>
-              <div>
+              <div data-testid="alert-behavior-block">
                 <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-trigger-mode">
-                  {t('notifications.alertStudio.editor.triggerModeLabel', 'Trigger Mode')}
-                  <HelpIcon i18nKey="help.fields.alertStudio.triggerMode" content="'Once' fires on the rising edge then re-arms after the condition clears. 'Repeat' fires every cooldown interval while the condition stays true." for="alert-trigger-mode" />
+                  {t('notifications.alertStudio.editor.alertBehaviorLabel', 'Alert Behavior')}
+                  <HelpIcon i18nKey="help.fields.alertStudio.alertBehavior" content="Pick 'Notify on event' for one-time confirmations like 'vehicle locked' or 'charging done'. Pick 'Re-alert until resolved' for ongoing safety concerns like 'vehicle unlocked' or 'door open'." for="alert-trigger-mode" />
                 </label>
+                {showRecommendBanner && (
+                  <AlertBanner
+                    variant="info"
+                    className="mb-2"
+                    role="status"
+                    data-testid="alert-behavior-recommend-banner"
+                  >
+                    <span>
+                      {t(
+                        'notifications.alertStudio.editor.alertBehavior.recommendBanner',
+                        'Recommended for "{{op}}" comparisons: {{recommended}}.',
+                        { op: editor.op, recommended: recommendedLabel },
+                      )}
+                    </span>
+                    <span className="ml-1">
+                      {t(
+                        'notifications.alertStudio.editor.alertBehavior.recommendBannerAlt',
+                        '{{alternative}} is also valid — pick whatever fits.',
+                        { alternative: alternativeLabel },
+                      )}
+                    </span>
+                  </AlertBanner>
+                )}
                 <UiSelect
                   id="alert-trigger-mode"
                   className="w-full"
-                  value={editor.trigger_mode}
-                  onChange={e => setEditor(s => ({ ...s, trigger_mode: normalizeTriggerMode(e.target.value) }))}
-                  options={triggerModeOptions}
+                  value={editor.trigger_mode === 'unset' ? '' : editor.trigger_mode}
+                  // Phase-49 / Slice 0008 — placeholder option is
+                  // disabled, so this branch only ever sees 'once' or
+                  // 'repeat' from real user interaction. Defensive
+                  // guard kept for type-narrowing.
+                  onChange={e => {
+                    const v = e.target.value
+                    if (v !== 'once' && v !== 'repeat') return
+                    setEditor(s => ({
+                      ...s,
+                      trigger_mode: v,
+                      // Phase-49 / Slice 0009 — flipping to once-mode
+                      // disables the escalation section AND nulls the
+                      // pair so a stale value from an earlier 'repeat'
+                      // selection can't sneak through buildSavePayload.
+                      escalation_enabled: v === 'repeat' ? s.escalation_enabled : false,
+                      escalation_after_min: v === 'repeat' ? s.escalation_after_min : '',
+                      escalation_severity: v === 'repeat' ? s.escalation_severity : '',
+                    }))
+                  }}
+                  options={alertBehaviorOptions}
+                  aria-invalid={triggerModeBlocked ? 'true' : undefined}
+                  aria-describedby={triggerModeBlocked ? 'alert-trigger-mode-error' : undefined}
                 />
-                <p className="mt-1 text-[10px] text-[var(--text-muted)]">
-                  {editor.trigger_mode === 'once'
-                    ? t(
-                        'notifications.alertStudio.editor.triggerMode.onceHint',
-                        'Fires once on the rising edge, then waits until the condition becomes false again before re-arming.',
-                      )
-                    : t(
-                        'notifications.alertStudio.editor.triggerMode.repeatHint',
-                        'Fires every {{cooldown}} minutes while the condition holds.',
-                        { cooldown: editor.cooldown_min },
-                      )}
-                </p>
+                {triggerModeBlocked && (
+                  <p
+                    id="alert-trigger-mode-error"
+                    className="mt-1 text-[10px] text-red-500"
+                    data-testid="alert-behavior-force-choose"
+                  >
+                    {t(
+                      'notifications.alertStudio.editor.alertBehavior.forceChoose',
+                      'Pick how this alert should behave.',
+                    )}
+                  </p>
+                )}
+                {!triggerModeBlocked && editor.trigger_mode !== 'unset' && (
+                  <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                    {editor.trigger_mode === 'once'
+                      ? t(
+                          'notifications.alertStudio.editor.alertBehavior.onceDesc',
+                          'Fires when the condition is first met. Stays quiet until it resets.',
+                        )
+                      : t(
+                          'notifications.alertStudio.editor.alertBehavior.repeatDesc',
+                          'Keeps firing every {{cooldown}} minutes while the condition stays true.',
+                          { cooldown: editor.cooldown_min },
+                        )}
+                  </p>
+                )}
               </div>
+              {editor.trigger_mode === 'repeat' && (
+                <div className="sm:col-span-2">
+                  <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-max-fires">
+                    {t(
+                      'notifications.alertStudio.editor.maxFiresLabel',
+                      'Max alerts before condition resolves',
+                    )}
+                    <HelpIcon
+                      i18nKey="help.fields.alertStudio.maxFires"
+                      content="Cap the number of times this rule can re-fire while the condition keeps holding. The counter resets to zero as soon as the condition becomes false. Leave blank for unlimited."
+                      for="alert-max-fires"
+                    />
+                  </label>
+                  <UiInput
+                    id="alert-max-fires"
+                    type="number"
+                    min={1}
+                    step={1}
+                    className="w-full"
+                    value={editor.max_fires_per_resolution}
+                    placeholder={t(
+                      'notifications.alertStudio.editor.maxFiresPlaceholder',
+                      'Leave blank for unlimited',
+                    )}
+                    onChange={e =>
+                      setEditor(s => ({ ...s, max_fires_per_resolution: e.target.value }))
+                    }
+                  />
+                  <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                    {t(
+                      'notifications.alertStudio.editor.maxFiresHint',
+                      'Only applies to repeat-mode rules. Once-mode already caps at 1 per resolution.',
+                    )}
+                  </p>
+                </div>
+              )}
+              {editor.trigger_mode === 'repeat' && (
+                <div className="sm:col-span-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Toggle
+                      id="alert-escalation-enabled"
+                      checked={editor.escalation_enabled}
+                      onChange={next =>
+                        setEditor(s => ({
+                          ...s,
+                          escalation_enabled: next,
+                          // Clear the pair when toggling off so a stale
+                          // value can't sneak through buildSavePayload.
+                          escalation_after_min: next ? s.escalation_after_min : '',
+                          escalation_severity: next ? s.escalation_severity : '',
+                        }))
+                      }
+                      size="sm"
+                    />
+                    <span className="text-xs text-[var(--text-primary)] font-medium">
+                      {t(
+                        'notifications.alertStudio.editor.escalationCheckboxLabel',
+                        'Escalate to a higher severity if the condition stays unresolved',
+                      )}
+                    </span>
+                    <HelpIcon
+                      i18nKey="help.fields.alertStudio.escalation"
+                      content="When the underlying condition stays true for at least the minutes you specify, subsequent fires use the escalated severity instead of the base one. Useful for a soft warn → critical promotion when a problem is being ignored."
+                      for="alert-escalation-enabled"
+                    />
+                  </div>
+                  {editor.escalation_enabled && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-escalation-after">
+                          {t(
+                            'notifications.alertStudio.editor.escalationAfterLabel',
+                            'Escalate after (minutes)',
+                          )}
+                        </label>
+                        <UiInput
+                          id="alert-escalation-after"
+                          type="number"
+                          min={1}
+                          step={1}
+                          className="w-full"
+                          value={editor.escalation_after_min}
+                          placeholder={t(
+                            'notifications.alertStudio.editor.escalationAfterPlaceholder',
+                            'e.g. 30',
+                          )}
+                          onChange={e =>
+                            setEditor(s => ({ ...s, escalation_after_min: e.target.value }))
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-escalation-severity">
+                          {t(
+                            'notifications.alertStudio.editor.escalationSeverityLabel',
+                            'Escalated severity',
+                          )}
+                        </label>
+                        <UiSelect
+                          id="alert-escalation-severity"
+                          className="w-full"
+                          value={editor.escalation_severity}
+                          onChange={e =>
+                            setEditor(s => ({
+                              ...s,
+                              escalation_severity: e.target.value as Severity | '',
+                            }))
+                          }
+                          options={[
+                            {
+                              value: '',
+                              label: t(
+                                'notifications.alertStudio.editor.escalationSeverityPlaceholder',
+                                'Select severity…',
+                              ),
+                            },
+                            ...severityOptions.filter(
+                              opt => SEVERITY_RANK[opt.value as Severity] > SEVERITY_RANK[editor.severity],
+                            ),
+                          ]}
+                        />
+                      </div>
+                      <p className="sm:col-span-2 text-[10px] text-[var(--text-muted)]">
+                        {t(
+                          'notifications.alertStudio.editor.escalationHint',
+                          'Only repeat-mode rules can escalate. The escalated severity must be higher than the base severity.',
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="sm:col-span-2">
                 <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-test-message">
                   {t('notifications.alertStudio.editor.testMessageLabel', 'Test Message')}

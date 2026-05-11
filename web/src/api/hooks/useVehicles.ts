@@ -174,6 +174,27 @@ export function useMotorHistory(vehicleId: number, limit = 200) {
   });
 }
 
+/**
+ * Live driving-dynamics surface (G-force + pedal usage). Backed by
+ * /drive-dynamics/latest, which projects 5 signals
+ * (LateralAcceleration, LongitudinalAcceleration, PedalPosition,
+ * BrakePedalPos, BrakePedal) from signal.LiveStateReader.LiveState.
+ *
+ * Replaces the deprecated useSignalObservations hook the
+ * GForcePanel + PedalUsage components used to call — the underlying
+ * /signals/observations route was removed alongside the
+ * signal_observations table per the Phase-42 cleanup, so the panels
+ * rendered "No telemetry received yet" forever.
+ */
+export function useDriveDynamicsLatest(vehicleId: number, refetchInterval?: number) {
+  return useQuery({
+    queryKey: ['drive-dynamics-latest', vehicleId],
+    queryFn: ({ signal }) => request<import('../types').DriveDynamicsSnapshot | null>(`/drive-dynamics/latest?vehicle_id=${vehicleId}`, { signal }),
+    enabled: vehicleId > 0,
+    refetchInterval,
+  });
+}
+
 export function useClimateLatest(vehicleId: number, refetchInterval?: number) {
   return useQuery({
     queryKey: ['climate-latest', vehicleId],

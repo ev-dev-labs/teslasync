@@ -1,0 +1,512 @@
+{
+  "uid": "teslasync-infra-trace-explorer",
+  "title": "TeslaSync - Trace Explorer (Tempo TraceQL)",
+  "tags": [
+    "teslasync",
+    "infra",
+    "tempo",
+    "tracing",
+    "traceql"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "1m",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "editable": true,
+  "graphTooltip": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "min_duration_ms",
+        "label": "Min duration (ms)",
+        "type": "textbox",
+        "current": {
+          "text": "500",
+          "value": "500"
+        },
+        "query": "500",
+        "hide": 0,
+        "skipUrlSync": false
+      },
+      {
+        "name": "service",
+        "label": "Service",
+        "type": "textbox",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "query": "",
+        "hide": 0,
+        "skipUrlSync": false,
+        "description": "Optional service.name filter — leave blank for all services. e.g., teslasync-api"
+      },
+      {
+        "name": "vehicle_id",
+        "label": "Vehicle ID",
+        "type": "textbox",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "query": "",
+        "hide": 0,
+        "skipUrlSync": false,
+        "description": "Optional vehicle_id filter for vehicle-specific trace search."
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Sampling & Pipeline Health",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Spans Received/s",
+      "description": "Rate of spans hitting the OTel collector OTLP receiver. Sum across both gRPC and HTTP transports.",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
+          "expr": "sum(rate(otelcol_receiver_accepted_spans[5m]))",
+          "refId": "A"
+        }
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Sampled (kept) Spans/s",
+      "description": "Spans that survived the tail_sampling decision and were forwarded to Tempo.",
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
+          "expr": "sum(rate(otelcol_processor_tail_sampling_count_traces_sampled[5m]))",
+          "refId": "A"
+        }
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Sampling Decision Wait",
+      "description": "How long the tail_sampling processor is buffering before deciding (configured `decision_wait`, default 30s). Sustained backlog growth means the buffer is not draining fast enough — bump `num_traces` or shorten `decision_wait`.",
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 40000
+              }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
+          "expr": "sum(otelcol_processor_tail_sampling_count_traces_buffered)",
+          "refId": "A"
+        }
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Tempo Ingester Bytes",
+      "description": "Bytes received by Tempo's distributor. Should match (sampled-spans/s × avg span size).",
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "Bps"
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
+          "expr": "sum(rate(tempo_distributor_bytes_received_total[5m]))",
+          "refId": "A"
+        }
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
+    },
+    {
+      "id": 200,
+      "type": "row",
+      "title": "Trace Search",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "traces",
+      "title": "Slow Traces (duration > $min_duration_ms ms)",
+      "description": "All traces whose root-span duration exceeds the threshold. Click any row to open the flame graph in the Tempo explore view.",
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 24,
+        "h": 10
+      },
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "DS_TESLASYNC_TEMPO"
+          },
+          "queryType": "traceql",
+          "query": "{ duration > ${min_duration_ms}ms }",
+          "limit": 50,
+          "refId": "A"
+        }
+      ],
+      "datasource": {
+        "type": "tempo",
+        "uid": "DS_TESLASYNC_TEMPO"
+      }
+    },
+    {
+      "id": 6,
+      "type": "traces",
+      "title": "Error Traces",
+      "description": "All traces whose root span finished with status=error. Always-sampled per the OTel collector tail_sampling policy.",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 24,
+        "h": 10
+      },
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "DS_TESLASYNC_TEMPO"
+          },
+          "queryType": "traceql",
+          "query": "{ status = error }",
+          "limit": 50,
+          "refId": "A"
+        }
+      ],
+      "datasource": {
+        "type": "tempo",
+        "uid": "DS_TESLASYNC_TEMPO"
+      }
+    },
+    {
+      "id": 7,
+      "type": "traces",
+      "title": "Vehicle-Specific Traces (vehicle_id=$vehicle_id)",
+      "description": "Filters by the `vehicle_id` resource/span attribute. Set the Vehicle ID variable above. Leave blank to disable this panel.",
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 24,
+        "h": 10
+      },
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "DS_TESLASYNC_TEMPO"
+          },
+          "queryType": "traceql",
+          "query": "{ resource.vehicle_id = \"${vehicle_id}\" || .vehicle_id = \"${vehicle_id}\" }",
+          "limit": 50,
+          "refId": "A"
+        }
+      ],
+      "datasource": {
+        "type": "tempo",
+        "uid": "DS_TESLASYNC_TEMPO"
+      }
+    },
+    {
+      "id": 300,
+      "type": "row",
+      "title": "Critical Flows",
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 8,
+      "type": "traces",
+      "title": "Auth Login Traces",
+      "description": "All POST /api/v1/auth/login traces. Always-sampled (100%) so the distribution is exact, not estimated. Spike in count = bot burst or credential-stuffing attempt.",
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 12,
+        "h": 10
+      },
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "DS_TESLASYNC_TEMPO"
+          },
+          "queryType": "traceql",
+          "query": "{ span.http.route = \"/api/v1/auth/login\" }",
+          "limit": 50,
+          "refId": "A"
+        }
+      ],
+      "datasource": {
+        "type": "tempo",
+        "uid": "DS_TESLASYNC_TEMPO"
+      }
+    },
+    {
+      "id": 9,
+      "type": "traces",
+      "title": "Wake-Command Traces",
+      "description": "POST /commands/{vehicleId}/wake — Phase-44 critical flow with full instrumentation. Useful for diagnosing slow wakes (Tesla API + auth + retry).",
+      "gridPos": {
+        "x": 12,
+        "y": 37,
+        "w": 12,
+        "h": 10
+      },
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "DS_TESLASYNC_TEMPO"
+          },
+          "queryType": "traceql",
+          "query": "{ span.http.route =~ \".*/commands/.*/wake.*\" }",
+          "limit": 50,
+          "refId": "A"
+        }
+      ],
+      "datasource": {
+        "type": "tempo",
+        "uid": "DS_TESLASYNC_TEMPO"
+      }
+    },
+    {
+      "id": 10,
+      "type": "traces",
+      "title": "MQTT Pipeline Traces",
+      "description": "MQTT consume → normalize → store. Phase-44 instrumented; tracks fleet-telemetry ingestion latency end-to-end.",
+      "gridPos": {
+        "x": 0,
+        "y": 47,
+        "w": 24,
+        "h": 10
+      },
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "DS_TESLASYNC_TEMPO"
+          },
+          "queryType": "traceql",
+          "query": "{ name =~ \"mqtt.*\" || name =~ \"normalize.*\" }",
+          "limit": 50,
+          "refId": "A"
+        }
+      ],
+      "datasource": {
+        "type": "tempo",
+        "uid": "DS_TESLASYNC_TEMPO"
+      }
+    }
+  ]
+}

@@ -9,11 +9,12 @@ import {
   useSecurityLatest,
   useLatestTirePressure,
 } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cleanNil } from '@/lib/cleanNil';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertTempFromSI, convertPressureFromSI } from '@/lib/unitConversion';
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -36,7 +37,12 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
   const { data: climate } = useClimateLatest(id, opts.refetchInterval);
   const { data: security } = useSecurityLatest(id, opts.refetchInterval);
   const { data: tires } = useLatestTirePressure(id, opts.refetchInterval);
-  const { convertTemp, convertPressure, tempUnit, pressureUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+
+  const tempUnit = unitPrefs.temperature;
+  const pressureUnit = unitPrefs.pressure;
+  const toPressureDisplay = (value: number) => convertPressureFromSI(value, unitPrefs.pressure);
 
   const hasData = motor || climate || security || tires;
 
@@ -73,7 +79,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   label={t('widget.motorTemp', 'Temp')}
                   value={
                     motor.di_stator_temp != null
-                      ? `${fmtInt(convertTemp(motor.di_stator_temp))}${tempUnit}`
+                      ? `${fmtInt(toTemperatureDisplay(motor.di_stator_temp))}${tempUnit}`
                       : '—'
                   }
                 />
@@ -95,7 +101,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   label={t('widget.cabin', 'Cabin')}
                   value={
                     climate.inside_temp != null
-                      ? `${fmtInt(convertTemp(climate.inside_temp))}${tempUnit}`
+                      ? `${fmtInt(toTemperatureDisplay(climate.inside_temp))}${tempUnit}`
                       : '—'
                   }
                 />
@@ -103,7 +109,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   label={t('widget.outside', 'Outside')}
                   value={
                     climate.outside_temp != null
-                      ? `${fmtInt(convertTemp(climate.outside_temp))}${tempUnit}`
+                      ? `${fmtInt(toTemperatureDisplay(climate.outside_temp))}${tempUnit}`
                       : '—'
                   }
                 />
@@ -128,7 +134,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   label="FL"
                   value={
                     tires.front_left != null
-                      ? `${fmtNumber(convertPressure(tires.front_left), 1)} ${pressureUnit}`
+                      ? `${fmtNumber(toPressureDisplay(tires.front_left), 1)} ${pressureUnit}`
                       : '—'
                   }
                 />
@@ -136,7 +142,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   label="FR"
                   value={
                     tires.front_right != null
-                      ? `${fmtNumber(convertPressure(tires.front_right), 1)} ${pressureUnit}`
+                      ? `${fmtNumber(toPressureDisplay(tires.front_right), 1)} ${pressureUnit}`
                       : '—'
                   }
                 />
@@ -144,7 +150,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   label="RL"
                   value={
                     tires.rear_left != null
-                      ? `${fmtNumber(convertPressure(tires.rear_left), 1)} ${pressureUnit}`
+                      ? `${fmtNumber(toPressureDisplay(tires.rear_left), 1)} ${pressureUnit}`
                       : '—'
                   }
                 />
@@ -152,7 +158,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   label="RR"
                   value={
                     tires.rear_right != null
-                      ? `${fmtNumber(convertPressure(tires.rear_right), 1)} ${pressureUnit}`
+                      ? `${fmtNumber(toPressureDisplay(tires.rear_right), 1)} ${pressureUnit}`
                       : '—'
                   }
                 />

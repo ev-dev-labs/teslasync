@@ -66,11 +66,11 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	// Look up vehicle-specific battery capacity
-	var capacityKWh float64
+	var capacityWh float64
 	if h.db != nil {
-		capacityKWh, _ = lookupVehicleCapacity(ctx, h.db, vehicleID)
+		capacityWh, _ = lookupVehicleCapacityWh(ctx, h.db, vehicleID)
 	} else {
-		capacityKWh = 75.0 // default Model 3/Y capacity
+		capacityWh = 75000.0 // default Model 3/Y capacity
 	}
 
 	// Current battery state from canonical StateReader (forward-folded
@@ -135,45 +135,57 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Recent driving efficiency
+	// Recent driving efficiency. Phase-42 SI canonical drives (000185):
+	// energy_used_wh (Watt-hours), distance_m (meters), avg_speed_mps,
+	// ambient_temp_c_avg. avgEffWhKm is computed as Wh / km using the
+	// existing pre-existing-bug-preserving SQL shape (the AVG(...) ORDER BY
+	// LIMIT 30 pattern is preserved from the legacy query per covenant —
+	// fix is out of scope for this prompt). avgSpeedKmh is averaged in mps
+	// and converted to km/h at the response boundary so downstream
+	// buildRangeFactors keeps its km/h-input contract.
 	var avgEffWhKm *float64
 	var avgTempC *float64
 	var avgSpeedKmh *float64
 	if h.db != nil {
 		if err := h.db.Pool.QueryRow(ctx, `
 		SELECT AVG(
-			CASE WHEN distance_mi > 0 THEN
-				COALESCE(energy_used_kwh, 0) * 1000
-				/ NULLIF(distance_mi * 1.60934, 0)
+			CASE WHEN distance_m > 0 THEN
+				COALESCE(energy_used_wh, 0)
+				/ NULLIF(distance_m / 1000.0, 0)
 			END
 		)
 		FROM drives
-		WHERE vehicle_id = $1 AND distance_mi > 1
-		ORDER BY start_ts DESC LIMIT 30`, vehicleID).Scan(&avgEffWhKm); err != nil {
+		WHERE vehicle_id = $1 AND distance_m > $2
+		ORDER BY started_at DESC LIMIT 30`, vehicleID, driveStatsMetersPerMile).Scan(&avgEffWhKm); err != nil {
 			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg efficiency query failed")
 		}
 
 		if err := h.db.Pool.QueryRow(ctx, `
-		SELECT AVG(outside_temp_avg_c)
+		SELECT AVG(ambient_temp_c_avg)
 		FROM drives
-		WHERE vehicle_id = $1 AND outside_temp_avg_c IS NOT NULL
-		  AND start_ts > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgTempC); err != nil {
+		WHERE vehicle_id = $1 AND ambient_temp_c_avg IS NOT NULL
+		  AND started_at > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgTempC); err != nil {
 			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg temp query failed")
 		}
 
+		var avgSpeedMps *float64
 		if err := h.db.Pool.QueryRow(ctx, `
-		SELECT AVG(avg_speed_mph)
+		SELECT AVG(avg_speed_mps)
 		FROM drives
-		WHERE vehicle_id = $1 AND avg_speed_mph IS NOT NULL AND avg_speed_mph > 0
-		  AND start_ts > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgSpeedKmh); err != nil {
+		WHERE vehicle_id = $1 AND avg_speed_mps IS NOT NULL AND avg_speed_mps > 0
+		  AND started_at > NOW() - INTERVAL '30 days'`, vehicleID).Scan(&avgSpeedMps); err != nil {
 			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg speed query failed")
+		}
+		if avgSpeedMps != nil {
+			kmh := *avgSpeedMps * 3.6
+			avgSpeedKmh = &kmh
 		}
 	}
 
 	// ── Efficiency matrix ────────────────────────────────
 	var matrix []efficiencyBucket
 	if h.db != nil {
-		matrix = h.buildEfficiencyMatrix(ctx, vehicleID, capacityKWh)
+		matrix = h.buildEfficiencyMatrix(ctx, vehicleID, capacityWh)
 	} else {
 		matrix = []efficiencyBucket{}
 	}
@@ -189,7 +201,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		}
 		if val != nil {
 			if energy, ok := val.(float64); ok && energy > 0 {
-				hs := (energy / capacityKWh) * 100
+				hs := (energy / capacityWh) * 100
 				if hs > 100 {
 					hs = 100
 				}
@@ -202,7 +214,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if healthScore != nil && *healthScore > 0 && *healthScore < 100 {
 		healthFactor = *healthScore / 100
 	}
-	usableCapacity := capacityKWh * healthFactor
+	usableCapacity := capacityWh * healthFactor
 
 	// ── Build original response fields ───────────────────
 	bl := ptrF64(batteryLevel)
@@ -255,19 +267,20 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	teslaEstKm := adjustedRange
 	yourEstKm := projectedRange
 
-	// Sample count
+	// Sample count. Phase-42 SI: distance_m / start_soc_pct / end_soc_pct.
+	// `> 5 miles` becomes `> 8046.72 m` (5 * driveStatsMetersPerMile).
 	var totalDrives int
 	var firstDrive *time.Time
 	if h.db != nil {
 		if err := h.db.Pool.QueryRow(ctx, `
-		SELECT COUNT(*) FROM drives WHERE vehicle_id = $1 AND distance_mi > 5 AND start_battery_pct > end_battery_pct`,
-			vehicleID).Scan(&totalDrives); err != nil {
+		SELECT COUNT(*) FROM drives WHERE vehicle_id = $1 AND distance_m > $2 AND start_soc_pct > end_soc_pct`,
+			vehicleID, 5*driveStatsMetersPerMile).Scan(&totalDrives); err != nil {
 			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: drive count query failed")
 		}
 
 		// First drive date for accuracy note
 		if err := h.db.Pool.QueryRow(ctx, `
-		SELECT MIN(start_ts) FROM drives WHERE vehicle_id = $1 AND distance_mi > 0`,
+		SELECT MIN(started_at) FROM drives WHERE vehicle_id = $1 AND distance_m > 0`,
 			vehicleID).Scan(&firstDrive); err != nil {
 			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: first drive query failed")
 		}
@@ -292,7 +305,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		"projection_curve":   curve,
 		// Enhanced fields
 		"current_battery_pct": math.Round(bl*10) / 10,
-		"usable_capacity_kwh": math.Round(usableCapacity*10) / 10,
+		"usable_capacity_wh":  math.Round(usableCapacity*10) / 10,
 		"health_factor":       math.Round(healthFactor*1000) / 1000,
 		"scenarios":           scenarios,
 		"efficiency_matrix":   matrix,
@@ -304,28 +317,35 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 // ── Efficiency matrix ────────────────────────────────────────
 
-func (h *RangeProjectionHandler) buildEfficiencyMatrix(ctx context.Context, vehicleID int64, capacityKWh float64) []efficiencyBucket {
+func (h *RangeProjectionHandler) buildEfficiencyMatrix(ctx context.Context, vehicleID int64, capacityWh float64) []efficiencyBucket {
+	// Phase-42 SI canonical drives. Speed buckets translated from mph to mps:
+	// 50/90 mph -> 22.352 / 40.2336 mps. The Wh/km formula preserves the
+	// legacy "delta_pct * capacity * 10 / distance" shape — even
+	// though the column is aliased wh_per_km, it has historically returned
+	// per-mile values; the SI rewrite keeps that numeric output by using
+	// `distance_m / driveStatsMetersPerMile` (i.e. miles) as denominator,
+	// matching the covenant requirement to preserve analytics math.
 	rows, err := h.db.Pool.Query(ctx, `
 		SELECT
 			CASE
-				WHEN outside_temp_avg_c < 0 THEN 'freezing'
-				WHEN outside_temp_avg_c < 10 THEN 'cold'
-				WHEN outside_temp_avg_c < 25 THEN 'mild'
+				WHEN ambient_temp_c_avg < 0 THEN 'freezing'
+				WHEN ambient_temp_c_avg < 10 THEN 'cold'
+				WHEN ambient_temp_c_avg < 25 THEN 'mild'
 				ELSE 'hot'
 			END AS temp_bucket,
 			CASE
-				WHEN avg_speed_mph < 50 THEN 'city'
-				WHEN avg_speed_mph < 90 THEN 'suburban'
+				WHEN avg_speed_mps < 22.352 THEN 'city'
+				WHEN avg_speed_mps < 40.2336 THEN 'suburban'
 				ELSE 'highway'
 			END AS speed_bucket,
-			AVG((start_battery_pct - end_battery_pct) * $2 * 10 / NULLIF(distance_mi, 0)) AS wh_per_km,
+			AVG((start_soc_pct - end_soc_pct) * $2 * 10 / NULLIF(distance_m / $3, 0)) AS wh_per_km,
 			COUNT(*) AS sample_count
 		FROM drives
-		WHERE vehicle_id = $1 AND distance_mi > 5 AND start_battery_pct > end_battery_pct
-		  AND outside_temp_avg_c IS NOT NULL AND avg_speed_mph IS NOT NULL
+		WHERE vehicle_id = $1 AND distance_m > $4 AND start_soc_pct > end_soc_pct
+		  AND ambient_temp_c_avg IS NOT NULL AND avg_speed_mps IS NOT NULL
 		GROUP BY temp_bucket, speed_bucket
 		HAVING COUNT(*) >= 3`,
-		vehicleID, capacityKWh)
+		vehicleID, capacityWh/1000.0, driveStatsMetersPerMile, 5*driveStatsMetersPerMile)
 	if err != nil {
 		return []efficiencyBucket{}
 	}
@@ -348,7 +368,7 @@ func (h *RangeProjectionHandler) buildEfficiencyMatrix(ctx context.Context, vehi
 
 // ── Scenario projections ─────────────────────────────────────
 
-func (h *RangeProjectionHandler) buildScenarios(matrix []efficiencyBucket, batteryPct, usableCapKWh float64, outsideTemp *float64) []rangeScenario {
+func (h *RangeProjectionHandler) buildScenarios(matrix []efficiencyBucket, batteryPct, usableCapWh float64, outsideTemp *float64) []rangeScenario {
 	lookup := make(map[string]efficiencyBucket)
 	for _, b := range matrix {
 		lookup[b.TempBucket+"|"+b.SpeedBucket] = b
@@ -358,7 +378,7 @@ func (h *RangeProjectionHandler) buildScenarios(matrix []efficiencyBucket, batte
 		if effWhKm <= 0 {
 			return 0, 0
 		}
-		km = usableCapKWh * 1000 * (batteryPct / 100) / effWhKm
+		km = usableCapWh * (batteryPct / 100) / effWhKm
 		mi = km * 0.621371
 		return math.Round(km*10) / 10, math.Round(mi*10) / 10
 	}
@@ -465,11 +485,11 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 	defer cancel()
 
 	// Look up vehicle-specific battery capacity
-	var capacityKWh float64
+	var capacityWh float64
 	if h.db != nil {
-		capacityKWh, _ = lookupVehicleCapacity(ctx, h.db, vehicleID)
+		capacityWh, _ = lookupVehicleCapacityWh(ctx, h.db, vehicleID)
 	} else {
-		capacityKWh = 75.0 // default Model 3/Y capacity
+		capacityWh = 75000.0 // default Model 3/Y capacity
 	}
 
 	var batteryLevel, ratedRange, idealRange *float64
@@ -536,7 +556,7 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 		}
 		if val != nil {
 			if energy, ok := val.(float64); ok && energy > 0 {
-				hp := (energy / capacityKWh) * 100
+				hp := (energy / capacityWh) * 100
 				if hp > 100 {
 					hp = 100
 				}
@@ -563,13 +583,16 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: charging cycle count query failed")
 		}
 
-		// Avg daily km
+		// Avg daily km. Phase-42 SI: distance_m / 1000 == km. Legacy emitted
+		// the per-mile sum as `daily_km` (mislabeled mi-as-km); the SI
+		// rewrite preserves the same numeric output by emitting miles via
+		// `distance_m / $2`.
 		if err := h.db.Pool.QueryRow(ctx, `
 		SELECT COALESCE(AVG(daily_km), 0) FROM (
-			SELECT DATE(start_ts) AS d, SUM(distance_mi) AS daily_km
-			FROM drives WHERE vehicle_id = $1 AND distance_mi > 0
-			GROUP BY DATE(start_ts)
-		) sub`, vehicleID).Scan(&avgDailyKm); err != nil && err != pgx.ErrNoRows {
+			SELECT DATE(started_at) AS d, SUM(distance_m / $2) AS daily_km
+			FROM drives WHERE vehicle_id = $1 AND distance_m > 0
+			GROUP BY DATE(started_at)
+		) sub`, vehicleID, driveStatsMetersPerMile).Scan(&avgDailyKm); err != nil && err != pgx.ErrNoRows {
 			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg daily km query failed")
 		}
 	}

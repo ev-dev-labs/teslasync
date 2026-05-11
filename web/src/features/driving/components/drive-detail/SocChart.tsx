@@ -21,12 +21,13 @@ export function SocChart({ chartData }: SocChartProps) {
   const syncedX = useSyncedReferenceLineX();
 
   return (
-    <FadeIn>
+    <FadeIn className="h-full">
       {/* chart-a11y:no-table dense per-sample SOC trace; start/end SOC visible in the drive summary tiles */}
       <ChartContainer
         title={t('driveDetail.socOverTime', 'SOC % Over Time')}
         ariaLabel={t('driveDetail.socOverTime.aria', 'State of charge percent over time area chart')}
         height={220}
+        className="h-full"
       >
         {chartData.length > 1 ? (
           <ResponsiveContainer width="100%" height="100%">

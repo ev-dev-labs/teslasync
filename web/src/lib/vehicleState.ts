@@ -1,4 +1,5 @@
 import { parseWindowState as parseWindowEnum } from './parseEnums';
+import { asNonEmptyString } from './typeGuards';
 import type { SecurityEvent, ChargingTelemetry } from '@/api/types';
 import type { VehicleLiveState } from '@/hooks/useVehicleLive';
 
@@ -25,12 +26,29 @@ const UNKNOWN_DOORS: DoorStates = {
 /**
  * Parses the compound DoorState signal from Tesla telemetry.
  * Handles JSON objects, simple enum strings, and descriptive values.
- * Returns null for each unknown field rather than defaulting to closed.
+ * Accepts `unknown` because the post-Phase-42 backend serializes raw
+ * `signal.SignalValue` directly — a nominally-string field may arrive as
+ * a boolean / number / object / null. Returns null for each unknown
+ * field rather than defaulting to closed.
  */
-export function parseDoorState(doorState: string | null | undefined): DoorStates {
-  if (!doorState) return { ...UNKNOWN_DOORS };
+export function parseDoorState(doorState: unknown): DoorStates {
+  // Compound signal — accept native object payloads directly.
+  if (doorState !== null && typeof doorState === 'object' && !Array.isArray(doorState)) {
+    const parsed = doorState as Record<string, unknown>;
+    return {
+      driverFront: parsed.DriverFront != null ? Boolean(parsed.DriverFront) : (parsed.driver_front != null ? Boolean(parsed.driver_front) : null),
+      passengerFront: parsed.PassengerFront != null ? Boolean(parsed.PassengerFront) : (parsed.passenger_front != null ? Boolean(parsed.passenger_front) : null),
+      driverRear: parsed.DriverRear != null ? Boolean(parsed.DriverRear) : (parsed.driver_rear != null ? Boolean(parsed.driver_rear) : null),
+      passengerRear: parsed.PassengerRear != null ? Boolean(parsed.PassengerRear) : (parsed.passenger_rear != null ? Boolean(parsed.passenger_rear) : null),
+      trunkFront: parsed.TrunkFront != null ? Boolean(parsed.TrunkFront) : (parsed.trunk_front != null ? Boolean(parsed.trunk_front) : null),
+      trunkRear: parsed.TrunkRear != null ? Boolean(parsed.TrunkRear) : (parsed.trunk_rear != null ? Boolean(parsed.trunk_rear) : null),
+    };
+  }
 
-  const trimmed = doorState.trim();
+  const raw = asNonEmptyString(doorState);
+  if (!raw) return { ...UNKNOWN_DOORS };
+
+  const trimmed = raw.trim();
   if (!trimmed) return { ...UNKNOWN_DOORS };
 
   // Check for "all closed" shorthand values
@@ -46,7 +64,7 @@ export function parseDoorState(doorState: string | null | undefined): DoorStates
     };
   }
 
-  // Try JSON parse (compound signal format)
+  // Try JSON parse (compound signal serialized as string)
   if (trimmed.startsWith('{')) {
     try {
       const parsed = JSON.parse(trimmed) as Record<string, unknown>;
@@ -88,15 +106,18 @@ export type WindowState = 'open' | 'closed' | 'partial' | null;
 /**
  * Normalizes Tesla window enum values to display state.
  * Uses the centralized parseWindowEnum from parseEnums.ts.
+ * Accepts `unknown` since post-Phase-42 the field can arrive as bool/null
+ * for some signals; non-strings yield `null`.
  */
-export function parseWindowState(state: string | null | undefined): WindowState {
-  if (!state) return null;
-  const clean = parseWindowEnum(state);
+export function parseWindowState(state: unknown): WindowState {
+  const raw = asNonEmptyString(state);
+  if (!raw) return null;
+  const clean = parseWindowEnum(raw);
   if (clean === 'Closed') return 'closed';
   if (clean === 'Partial') return 'partial';
   if (clean === 'Open') return 'open';
   // Fallback heuristics
-  const lower = state.toLowerCase();
+  const lower = raw.toLowerCase();
   if (lower.includes('closed') || lower === '0') return 'closed';
   if (lower.includes('partial') || lower.includes('vent')) return 'partial';
   if (lower.includes('open')) return 'open';
@@ -107,9 +128,10 @@ export function parseWindowState(state: string | null | undefined): WindowState 
 
 export type TurnSignalState = 'left' | 'right' | 'both' | 'off' | null;
 
-export function parseTurnSignal(signal: string | null | undefined): TurnSignalState {
-  if (!signal) return null;
-  const lower = signal.toLowerCase().replace(/turnsignal/i, '');
+export function parseTurnSignal(signal: unknown): TurnSignalState {
+  const raw = asNonEmptyString(signal);
+  if (!raw) return null;
+  const lower = raw.toLowerCase().replace(/turnsignal/i, '');
   if (lower.includes('both')) return 'both';
   if (lower.includes('left')) return 'left';
   if (lower.includes('right')) return 'right';
@@ -179,11 +201,12 @@ function isChargingActive(
 }
 
 function parseWindowOpenSummary(
-  windowsOpen: string | null | undefined,
+  windowsOpen: unknown,
   aliases: string[],
 ): WindowState {
-  if (!windowsOpen) return null;
-  const normalized = windowsOpen.toLowerCase();
+  const raw = asNonEmptyString(windowsOpen);
+  if (!raw) return null;
+  const normalized = raw.toLowerCase();
   if (normalized === 'closed' || normalized === 'none' || normalized === '[]' || normalized === 'false') return 'closed';
   return aliases.some((alias) => normalized.includes(alias)) ? 'open' : null;
 }
@@ -248,19 +271,22 @@ export function mapLiveToTwinState(live: VehicleLiveState): VehicleTwinState {
   };
 }
 
-/** Adapt camelCase SecurityEvent (from @/types/admin) into VehicleTwinState */
+/** Adapt camelCase SecurityEvent (from @/types/admin) into VehicleTwinState.
+ *  All string-enum fields accept `unknown` because post Phase-42a the
+ *  backend may emit them as string OR boolean depending on the protomodel
+ *  emission for that signal. Inner parsers narrow defensively. */
 export function buildTwinStateFromAdmin(
   ev: {
-    doorState?: string | null;
-    fdWindow?: string | null;
-    fpWindow?: string | null;
-    rdWindow?: string | null;
-    rpWindow?: string | null;
+    doorState?: unknown;
+    fdWindow?: unknown;
+    fpWindow?: unknown;
+    rdWindow?: unknown;
+    rpWindow?: unknown;
     locked?: boolean | null;
     sentryMode?: boolean | null;
     lightsHazardsActive?: boolean | null;
     lightsHighBeams?: boolean | null;
-    lightsTurnSignal?: string | null;
+    lightsTurnSignal?: unknown;
     driverSeatOccupied?: boolean | null;
     createdAt?: string;
   } | null | undefined,

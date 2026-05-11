@@ -85,7 +85,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Use(LoggerMiddleware)
 	r.Use(RecoveryMiddleware)                    // Enhanced recovery that logs panics as structured errors
 	r.Use(ErrorTrackingMiddleware(errorTracker)) // Centralized error aggregation
-	r.Use(PrometheusMiddleware)                  // HTTP request metrics (duration, count, size)
+	r.Use(PrometheusMiddleware)                  // Legacy {method,path,status} HTTP metrics (kept for back-compat dashboards)
+	r.Use(MetricsMiddleware)                     // RED metrics: http_requests_total / http_request_errors_total / http_request_duration_seconds with status_class
 	r.Use(chimw.Compress(5))
 
 	// CORS ╬ô├ç├╢ use explicit origins in production. The wildcard is kept for
@@ -131,10 +132,31 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	vehicleSvc := service.NewVehicleService(db)
 	energySvc := service.NewEnergyService(db)
 
+	// Layered live-state reader (ADR-002 / ADR-007). Composes the in-process
+	// L1 signal.Store + L2 Redis HSET (LiveSignalStore) with the cold-path
+	// signal_log StateReader as fallback. /latest handlers and any "current
+	// state" code path MUST go through this boundary so that:
+	//   * fields routed to typed snapshot tables (climate, motor, tire
+	//     pressure, media, security, vehicle_config, safety, etc.) are
+	//     served from L1+L2 instead of returning empty maps from
+	//     signal_log; and
+	//   * infrequent fields like Latitude / Longitude on a parked vehicle
+	//     still surface from signal_log when L1+L2 has no entry.
+	// When TelemetryHandler is nil (test wiring), a NoopLiveSignalStore is
+	// used so the StateReader fallback alone serves the request.
+	var liveSignalStore signal.LiveSignalStore
+	if opt.TelemetryHandler != nil {
+		liveSignalStore = opt.TelemetryHandler.GetLiveSignalStore()
+	}
+	if liveSignalStore == nil {
+		liveSignalStore = signal.NewNoopLiveSignalStore()
+	}
+	liveStateReader := signal.MustNewLiveStateReader(liveSignalStore, stateReader)
+
 	// Handlers
 	vehicleHandler := NewVehicleHandler(vehicleSvc, teslaClient, stateReader)
-	driveHandler := NewDriveDetail(db, stateReader)
-	chargingHandler := NewChargingHandler(db, stateReader)
+	driveHandler := NewDriveDetail(db, stateReader, liveStateReader)
+	chargingHandler := NewChargingHandler(db, stateReader, liveStateReader)
 	geofenceHandler := NewGeofenceHandler(db)
 	authHandler := NewAuthHandler(db, teslaClient, opt.Encryptor)
 	// Phase-46 / Prompt 31 — Sudo step-up. Construct the in-memory
@@ -299,13 +321,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if mqttClient != nil {
 		pahoForAlerts = mqttClient.Underlying()
 	}
-	var alertLiveSignalStore signal.LiveSignalStore
-	if opt.TelemetryHandler != nil {
-		alertLiveSignalStore = opt.TelemetryHandler.GetLiveSignalStore()
-	}
+	// alertLiveSignalStore is the same concrete store as liveSignalStore
+	// (above) when TelemetryHandler is set; we keep the local for clarity
+	// at the AlertHandler call site, which has its own narrow contract.
+	alertLiveSignalStore := liveSignalStore
 	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts, alertLiveSignalStore)
 	commandHandler := NewCommandHandler(db, teslaClient)
-	guardHandler := NewGuardHandler(db, teslaClient)
+	guardHandler := NewGuardHandler(database.NewGuardRepo(db.Pool), database.NewVehicleRepo(db), teslaClient, cfg)
 	energyHandler := NewEnergyHandler(energySvc)
 	signalLogReader := database.NewSignalLogReader(db)
 	batteryHandler := NewBatteryHandler(db, stateReader)
@@ -314,25 +336,28 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	notificationChannelHandler := NewNotificationChannelHandler(db)
 	notifScheduleHandler := NewNotificationScheduleHandler(db)
 	quietHoursHandler := NewQuietHoursHandler(database.NewQuietHoursRepo(db), cfg)
-	chatbotHandler := NewChatbotHandler(db, vehicleSvc, stateReader)
-	tirePressureHandler := NewTirePressureHandler(stateReader)
-	motorHandler := NewMotorHandler(stateReader)
-	climateHandler := NewClimateHandler(stateReader)
-	securityHandler := NewSecurityHandler(stateReader)
-	chargingTelemetryHandler := NewChargingTelemetryHandler(stateReader)
-	mediaHandler := NewMediaHandler(stateReader)
-	vehicleConfigHandler := NewVehicleConfigHandler(stateReader)
-	locationSnapshotHandler := NewLocationSnapshotHandler(stateReader)
-	safetyHandler := NewSafetyHandler(stateReader)
-	userPreferenceHandler := NewUserPreferenceHandler(stateReader)
+	chatbotHandler := NewChatbotHandler(db, vehicleSvc, stateReader, liveStateReader)
+	tirePressureHandler := NewTirePressureHandler(stateReader, liveStateReader)
+	motorHandler := NewMotorHandler(stateReader, liveStateReader)
+	driveDynamicsHandler := NewDriveDynamicsHandler(stateReader, liveStateReader)
+	climateHandler := NewClimateHandler(stateReader, liveStateReader)
+	securityHandler := NewSecurityHandler(stateReader, liveStateReader)
+	chargingTelemetryHandler := NewChargingTelemetryHandler(stateReader, liveStateReader)
+	mediaHandler := NewMediaHandler(stateReader, liveStateReader)
+	vehicleConfigHandler := NewVehicleConfigHandler(stateReader, liveStateReader)
+	locationSnapshotHandler := NewLocationSnapshotHandler(stateReader, liveStateReader)
+	safetyHandler := NewSafetyHandler(stateReader, liveStateReader)
+	userPreferenceHandler := NewUserPreferenceHandler(stateReader, liveStateReader)
 	softwareUpdateHandler := NewSoftwareUpdateHandler(db)
 	tcoHandler := NewTCOHandler(db)
 	sleepHandler := NewSleepHandler(db)
-	vampireDrainHandler := NewVampireDrainHandler(db)
+	// Phase-42 (prompt 0077): VampireDrainHandler deleted (vampire_drain_events).
 	visitedLocationHandler := NewVisitedLocationHandler(db)
-	mileageHandler := NewMileageHandler(db)
+	// Phase-42 (prompt 0077): MileageHandler deleted (daily_mileage); TCO derives
+	// distance via SUM(distance_m) FROM drives.
 	tripHandler := NewTripHandler(db)
-	vehicleStateHandler := NewVehicleStateHandler(db)
+	// Phase-42 (prompt 0077): VehicleStateHandler deleted (vehicle_states);
+	// current state is sourced from fsm_transitions / signal.StateReader.
 	backupHandler := NewBackupHandler(db)
 	backupRestoreHandler := NewBackupRestoreHandler(db)
 	regenHandler := NewRegenHandler(db)
@@ -340,7 +365,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	auditHandler := NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
 	apiCallLogHandler := NewAPICallLogHandler(db)
 	apiKeyHandler := NewAPIKeyHandler(db, cfg.Auth.ForwardAuthHeader)
-	signalCatalogHandler := NewSignalCatalogHandler(db)
+	// Phase-42 (prompt 0077): SignalCatalogHandler deleted (signal_catalog +
+	// signal_observations); the typed signal_log pipeline (000167+) is the
+	// authoritative catalog/observation surface.
 	chargingHeatmapHandler := NewChargingHeatmapHandler(db)
 	speedProfileHandler := NewSpeedProfileHandler(db)
 	dataRepairHandler := NewDataRepairHandler(db)
@@ -358,7 +385,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	lifetimeHandler := NewLifetimeHandler(db, eventHub)
 	yearReviewHandler := NewYearReviewHandler(db)
 	chargePlannerHandler := NewChargePlannerHandler(db, teslaClient, cfg, stateReader)
-	energyFlowHandler := NewEnergyFlowHandler(db, stateReader)
+	energyFlowHandler := NewEnergyFlowHandler(db, stateReader, liveStateReader)
 	weeklyDigestHandler := NewWeeklyDigestHandler(db)
 	teslaChargingHistoryHandler := NewTeslaChargingHistoryHandler(teslaClient, db)
 	teslaChargingSessionHandler := NewTeslaChargingSessionHandler(teslaClient, db)
@@ -366,6 +393,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaEnergyLiveStatusHandler := NewTeslaEnergyLiveStatusHandler(teslaClient, db)
 	energySiteHandler := NewEnergySiteHandler(teslaClient, db)
 	fleetTelemetryErrorHandler := NewFleetTelemetryErrorHandler(teslaClient, db)
+	// Phase-43a/0002 — wire the package-derived Fleet Telemetry coverage
+	// handler authored by Phase-42 prompt 0068. It is intentionally
+	// DB-free: the routing snapshot comes from the embedded routing.yaml
+	// via router.LoadMap() and the subscription view comes from
+	// teslaconfig.Builder. The handler is mounted inside the existing
+	// /tesla/fleet-telemetry route block below.
+	fleetTelemetryHandler := NewFleetTelemetryHandler(cfg)
 	teslaUserConfigHandler := NewTeslaUserConfigHandler(teslaClient, db)
 	teslaUserOrderHandler := NewTeslaUserOrderHandler(teslaClient, db)
 	teslaUserProfileHandler := NewTeslaUserProfileHandler(teslaClient, db)
@@ -378,15 +412,20 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	onboardingHandler := NewOnboardingHandler(db, opt.Encryptor)
 	searchHandler := NewSearchHandler(db)
 
-	// Wire Redis signal cache to handlers that read live vehicle state
+	// Wire Redis signal cache to handlers that read live vehicle state.
+	// driveHandler + chargingHandler now read live state via the
+	// LiveStateReader boundary (composed once at the top of NewRouter), so
+	// they no longer need a direct Redis cache injection. The remaining
+	// handlers in this block still read raw Redis for their own narrow
+	// purposes (wake state, command pre-checks, watch streams, range
+	// projection short-cuts, signal-key listing) and keep the legacy
+	// fluent setter until they migrate to LiveStateReader.
 	if opt.CacheStore != nil {
 		if rdb := opt.CacheStore.Underlying(); rdb != nil {
 			redisSignalCache := signal.NewRedisSignalCache(rdb)
 			maintenanceHandler.WithRedisCache(redisSignalCache)
 			commandHandler.WithRedisCache(redisSignalCache)
 			watchHandler.WithRedisCache(redisSignalCache)
-			driveHandler.WithRedisCache(redisSignalCache)
-			chargingHandler.WithRedisCache(redisSignalCache)
 			rangeProjectionHandler.WithRedisCache(redisSignalCache)
 		}
 	}
@@ -593,7 +632,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		queueHeartbeatStore = database.NewMemoryWorkerStatusStore()
 	}
 
-
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
 		// Phase-46 / Prompt 40 — count every /api/v1 request and every
@@ -772,13 +810,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/upgrades", vehicleInfoHandler.UpgradeEligibility)
 				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/upgrades/refresh", vehicleInfoHandler.RefreshUpgradeEligibility)
 
-				// Guard Mode (anti-theft)
+				// Phase-43a / Prompt 0006 — /guard endpoints restored.
+				// Status + Events are read-only and rate-limit-free
+				// (the SPA polls these from the dashboard). Acknowledge
+				// is a soft mark-read with per-IP rate-limit at 60/min
+				// matching every other vehicle-scoped POST. Panic is
+				// destructive (wakes the car, sounds horn, costs energy)
+				// and is sudo-gated + tightly rate-limited at 5/min.
 				r.Route("/guard", func(r chi.Router) {
-					r.Get("/", guardHandler.GetConfig)
-					r.Post("/", guardHandler.SetConfig)
-					r.Get("/events", guardHandler.ListEvents)
-					r.Post("/events/{eventID}/acknowledge", guardHandler.AcknowledgeEvent)
-					r.With(httprate.LimitByIP(3, 1*time.Minute)).Post("/panic", guardHandler.Panic)
+					r.Get("/", guardHandler.Status)
+					r.Get("/events", guardHandler.Events)
+					r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/events/{eventID}/acknowledge", guardHandler.Acknowledge)
+					r.With(httprate.LimitByIP(5, 1*time.Minute), RequireSudo(sudoStore, sudoCfg)).Post("/panic", guardHandler.Panic)
 				})
 
 				// FSM debug diagnostics
@@ -901,6 +944,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/error-vins/refresh", fleetTelemetryErrorHandler.RefreshErrorVINs)
 			r.Get("/errors", fleetTelemetryErrorHandler.Errors)
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/errors/refresh", fleetTelemetryErrorHandler.RefreshErrors)
+			// Phase-43a/0002 — package-derived routing snapshot for the
+			// admin Fleet Telemetry Coverage page. Read-only, DB-free.
+			// Rate limiting matches the admin /system endpoints' 60/min
+			// ceiling. The sibling /subscription endpoint owned by the
+			// same handler is intentionally NOT mounted here — no
+			// frontend caller exists today and the prompt allows only
+			// one new route.
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/coverage", fleetTelemetryHandler.Coverage)
 		})
 
 		// Tesla User Config (feature flags, region) and Orders
@@ -1215,6 +1266,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/latest", motorHandler.Latest)
 		})
 
+		// Driving Dynamics (G-force + pedal usage live surface)
+		r.Route("/drive-dynamics", func(r chi.Router) {
+			r.Get("/", driveDynamicsHandler.List)
+			r.Get("/latest", driveDynamicsHandler.Latest)
+		})
+
 		// Climate/HVAC
 		r.Route("/climate", func(r chi.Router) {
 			r.Get("/", climateHandler.List)
@@ -1266,18 +1323,35 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Software Updates
 		r.Get("/software-updates", softwareUpdateHandler.List)
 
-		// Vampire Drain
+		// Phase-43a / Prompt 0005: /vampire-drain + /vampire-drain/stats
+		// restored after Phase-42 prompt 0077 removed them with the
+		// vampire_drain_events table. The two endpoints are now derived
+		// live from fsm_transitions (mig 000187) — parked windows from
+		// fsm_name='vehicle' transitions into 'parked' — paired with
+		// signal_log.field='BatteryLevel' for the SOC endpoints, with
+		// charging windows excluded via signal_log.field='ChargeState'
+		// (int_value > 1). Same admin-style rate limit as /mileage and
+		// /vehicle-states (Phase-43a precedent).
+		vampireDrainHandler := NewVampireDrainHandler(database.NewVampireDrainRepo(db.Pool))
 		r.Route("/vampire-drain", func(r chi.Router) {
-			r.Get("/", vampireDrainHandler.List)
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/", vampireDrainHandler.Events)
 			r.Get("/stats", vampireDrainHandler.Stats)
 		})
 
 		// Visited Locations
 		r.Get("/locations", visitedLocationHandler.List)
 
-		// Mileage
+		// Phase-43a / Prompt 0004: /mileage/{monthly,stats} restored after
+		// Phase-42 prompt 0077 removed them with the daily_mileage table.
+		// Both shapes are now derived live from the SI-canonical drives
+		// table (mig 000185) — distance_m / 1000 → km, energy_used_wh /
+		// 1000 → kWh. Frontend hooks useMonthlyMileage / useMileageStats
+		// stop returning 404. Same admin-style rate limit as
+		// /vehicle-states (Phase-43a / Prompt 0003 precedent).
+		mileageHandler := NewMileageHandler(database.NewMileageRepo(db.Pool))
 		r.Route("/mileage", func(r chi.Router) {
-			r.Get("/daily", mileageHandler.Daily)
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
 			r.Get("/monthly", mileageHandler.Monthly)
 			r.Get("/stats", mileageHandler.Stats)
 		})
@@ -1285,11 +1359,29 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Trips
 		r.Get("/trips", tripHandler.List)
 
-		// Vehicle States / Timeline
+		// Phase-43a / Prompt 0008: GET /trips/{trip_id} restores the
+		// per-trip detail endpoint that the frontend useTrip hook
+		// (web/src/api/hooks/useTrips.ts) calls to populate
+		// TripDetailPage. Aggregates the trip header + constituent
+		// drives (via trip_drives) + a vehicle-scoped time-window
+		// charging_sessions overlap to surface drive_count /
+		// charge_count / total_cost. Same admin-style rate limit
+		// (60/min) as the rest of the Phase-43a admin reads.
+		tripsDetailHandler := NewTripsDetailHandler(database.NewTripsDetailRepo(db.Pool))
+		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/trips/{trip_id}", tripsDetailHandler.Get)
+
+		// Phase-43a / Prompt 0003: /vehicle-states/{timeline,summary} restored
+		// after Phase-42 prompt 0077 removed them with the vehicle_states
+		// snapshot table. The two endpoints are now derived from
+		// fsm_transitions (mig 000187) filtered to fsm_name='vehicle' so
+		// frontend hooks useStateTimeline / useTimeline / useStateSummary
+		// stop returning 404. Same admin-style rate limit as /system/queues
+		// (Phase-46 / Prompt 41 precedent).
+		vehicleStatesHandler := NewVehicleStatesHandler(database.NewVehicleStatesRepo(db.Pool))
 		r.Route("/vehicle-states", func(r chi.Router) {
-			r.Get("/timeline", vehicleStateHandler.Timeline)
-			r.Get("/summary", vehicleStateHandler.Summary)
-			r.Get("/daily", vehicleStateHandler.DailyBreakdown)
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Get("/timeline", vehicleStatesHandler.Timeline)
+			r.Get("/summary", vehicleStatesHandler.Summary)
 		})
 
 		// FSM shadow mode stats + transition log
@@ -1338,7 +1430,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					writeError(w, http.StatusBadRequest, "vehicle_id required")
 					return
 				}
-				fsmType := req.URL.Query().Get("fsm_type")
+				fsmName := req.URL.Query().Get("fsm_name")
 				hours := 1
 				if h := req.URL.Query().Get("hours"); h != "" {
 					if v, err := strconv.Atoi(h); err == nil && v >= 0 {
@@ -1364,7 +1456,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 						perPage = v
 					}
 				}
-				records, total, err := fsmTransRepo.Query(req.Context(), vehicleID, fsmType, nil, from, to, perPage, (page-1)*perPage)
+				records, total, err := fsmTransRepo.Query(req.Context(), vehicleID, fsmName, from, to, perPage, (page-1)*perPage)
 				if err != nil {
 					writeError(w, http.StatusInternalServerError, "query failed")
 					return
@@ -1638,6 +1730,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/service-data", devToolsHandler.ServiceData)
 			r.Get("/redis-signals", devToolsHandler.RedisSignals)
 			r.Get("/redis-signals/keys", devToolsHandler.RedisSignalKeys)
+			// Destructive cache-purge ops — share a single 5-req/min
+			// limiter instance across both endpoints so a bot can't
+			// loop the per-vehicle path to bulk-purge by stealth. The
+			// shared limiter caps total destructive calls at 5/min/IP
+			// (per-vehicle + cluster-wide combined).
+			redisPurgeLimiter := httprate.LimitByIP(5, 1*time.Minute)
+			r.With(redisPurgeLimiter).Delete("/redis-signals", devToolsHandler.RedisSignalsPurge)
+			r.With(redisPurgeLimiter).Delete("/redis-signals/keys", devToolsHandler.RedisSignalsPurgeAll)
 
 			// Raw telemetry signal capture
 			r.Route("/telemetry-capture", func(r chi.Router) {
@@ -1725,11 +1825,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		}
 
-		// Signal Catalog & Observations (cold-path, ADR-002 + ADR-009).
-		// Registered before /signals/{vehicleID} so chi's trie prefers the
-		// literal segment over the {vehicleID} param.
-		r.Get("/signals/catalog", signalCatalogHandler.ListCatalog)
-		r.Get("/signals/observations", signalCatalogHandler.ListObservations)
+		// Phase-43a / Prompt 0007: /signals/catalog and /signals/observations
+		// restored after Phase-42 prompt 0077 deleted the legacy
+		// signal_catalog_handler.go. The catalog spine is parsed from
+		// routing.yaml (router.Load) at handler construction; aggregates
+		// + observations come from signal_log (mig 000186). Frontend hooks
+		// useSignalCatalog / useSignalObservations stop returning 404. Same
+		// admin-style rate limit as /vehicle-states + /system/queues
+		// (Phase-43a / Prompt 0003 + Phase-46 / Prompt 41 precedent).
+		// Mounted BEFORE /signals/{vehicleID} so the static paths take
+		// precedence under chi v5's longest-static-prefix matching.
+		signalsCatalogHandler := NewSignalsCatalogHandler(database.NewSignalsCatalogRepo(db.Pool))
+		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/signals/catalog", signalsCatalogHandler.Catalog)
+		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/signals/observations", signalsCatalogHandler.Observations)
 
 		// Signal routes
 		r.Route("/signals/{vehicleID}", func(r chi.Router) {
@@ -2042,21 +2150,21 @@ func installAdminLogStreamTap(reg *platform.LogSubscriberRegistry) {
 // for photo uploads — a wrapped http.MaxBytesReader can't be
 // loosened later, so the bypass MUST happen at the global layer.
 func isVehiclePhotoUploadPath(method, path string) bool {
-if method != http.MethodPost {
-return false
-}
-const prefix = "/api/v1/vehicles/"
-if !strings.HasPrefix(path, prefix) {
-return false
-}
-rest := path[len(prefix):]
-idx := strings.Index(rest, "/")
-if idx <= 0 {
-return false
-}
-tail := rest[idx:]
-// Accept exactly /photo (no trailing slash, no sub-path) so
-// future endpoints under /vehicles/{id}/photo/X don't
-// inherit the 12 MB limit.
-return tail == "/photo"
+	if method != http.MethodPost {
+		return false
+	}
+	const prefix = "/api/v1/vehicles/"
+	if !strings.HasPrefix(path, prefix) {
+		return false
+	}
+	rest := path[len(prefix):]
+	idx := strings.Index(rest, "/")
+	if idx <= 0 {
+		return false
+	}
+	tail := rest[idx:]
+	// Accept exactly /photo (no trailing slash, no sub-path) so
+	// future endpoints under /vehicles/{id}/photo/X don't
+	// inherit the 12 MB limit.
+	return tail == "/photo"
 }

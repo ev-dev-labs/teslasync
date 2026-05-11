@@ -6,6 +6,16 @@
 // TimescaleDB instance: callers feed in a seed map plus a time-ordered slice
 // of (ts, signal, value) tuples, and the helpers return the projected
 // TimelineRow slice expected by Timeline.
+//
+// Phase-42 typed-primitive contract: values flowing into forwardFold are the
+// typed primitives produced by the Tesla codec (codec.Atomic.Value: float64,
+// float32, int32, int64, bool, string, time.Time, etc.) and persisted by the
+// SI-canonical signal_log row decoder. pivot.go does NO string parsing and
+// NO compound flattening — the codec emits already-flattened atomic names
+// (e.g. "LocationLatitude", "DoorStateDriverFront", "TpmsHardWarningsFrontLeft")
+// with already-typed values. Compound expansion of historical Location blobs
+// (legacy JSONB rows) is the responsibility of state_reader_log.go's
+// unpackLocationCompounds helper, NOT this file. See ADR-004 §2.
 package signal
 
 import (
@@ -28,11 +38,22 @@ type rawEvent struct {
 	// ascending before invoking forwardFold.
 	Ts time.Time
 	// Signal is the Tesla Fleet Telemetry signal name (e.g. "VehicleSpeed").
+	// Post-phase-42 the codec emits already-flattened atomic names
+	// (e.g. "LocationLatitude", "DoorStateDriverFront",
+	// "TpmsHardWarningsFrontLeft") rather than parent compound names —
+	// pivot does not split or rejoin these.
 	Signal string
-	// Value is the opaque payload observed at Ts. May be nil when the
-	// upstream change feed records an explicit "no value" emission, in which
-	// case the projected field for any mapping pointing at this signal will
-	// be nil for this row and any subsequent carry-forward row.
+	// Value is the opaque payload observed at Ts. Post-phase-42 this is a
+	// typed primitive emitted by the codec: float64/float32, int32/int64,
+	// bool, string, or time.Time, plus JSON-decoded slices/maps for the
+	// few signals that are still structured at the wire. forwardFold treats
+	// it as opaque (any) — equality, marshaling, and downstream coercion
+	// happen at the call site.
+	//
+	// May be nil when the upstream change feed records an explicit "no value"
+	// emission, in which case the projected field for any mapping pointing
+	// at this signal will be nil for this row and any subsequent
+	// carry-forward row.
 	Value SignalValue
 }
 

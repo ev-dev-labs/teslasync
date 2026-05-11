@@ -610,9 +610,31 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
 
   const displayItems = mode === 'vehicle-select' ? vehicleItems : filtered
 
+  // Stable semantic key over the visible items. `displayItems` is a fresh
+  // ternary on every render — even when its underlying memoised value is
+  // unchanged the array IDENTITY churns, so resetting selectedIndex on
+  // [displayItems] would fire continuously and the user could never
+  // navigate past row 0 (regression observed in prod 2026-05-10). We
+  // collapse the visible set into a single string so React's Object.is
+  // sees a stable value while contents are stable.
+  const displayItemIdsKey = useMemo(
+    () => displayItems.map(item => item.id).join('\u0000'),
+    [displayItems],
+  )
+
+  // Clamp the rendered/selected index against the actual list length so
+  // it stays in-range even if the list shrunk after a state update.
+  const effectiveSelectedIndex =
+    displayItems.length > 0 ? Math.min(selectedIndex, displayItems.length - 1) : 0
+
   // ── Effects ───────────────────────────────────────────────────────────────
 
-  useEffect(() => { setSelectedIndex(0) }, [displayItems])
+  // Reset selection only on semantic changes — typing/clearing the query,
+  // entering/leaving vehicle-select mode, or the visible item set actually
+  // changing (id-equality, not reference-equality). This avoids the
+  // "ArrowDown does nothing" bug where a render-time array reference
+  // change would otherwise undo the user's navigation.
+  useEffect(() => { setSelectedIndex(0) }, [query, mode, displayItemIdsKey])
 
   // Esc closes the palette (or pops vehicle-select mode). Esc fires from
   // anywhere — closing modals from inside an input is expected, and the
@@ -664,26 +686,37 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
 
   // Keyboard nav within palette
   function handleInputKey(e: React.KeyboardEvent) {
+    const maxIndex = displayItems.length - 1
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setSelectedIndex(prev => Math.min(prev + 1, displayItems.length - 1))
+      if (maxIndex >= 0) {
+        setSelectedIndex(prev => Math.min(Math.min(prev, maxIndex) + 1, maxIndex))
+      }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      setSelectedIndex(prev => Math.max(prev - 1, 0))
-    } else if (e.key === 'Enter' && displayItems[selectedIndex]) {
+      if (maxIndex >= 0) {
+        setSelectedIndex(prev => Math.max(Math.min(prev, maxIndex) - 1, 0))
+      }
+    } else if (e.key === 'Enter' && displayItems[effectiveSelectedIndex]) {
       e.preventDefault()
-      displayItems[selectedIndex].action()
+      displayItems[effectiveSelectedIndex].action()
     } else if (e.key === 'Backspace' && query === '' && mode === 'vehicle-select') {
       e.preventDefault()
       goBack()
     }
   }
 
-  // Scroll selected into view
+  // Scroll selected into view. Uses data-palette-row so we can target the
+  // actual button across section-grouped DOM (children of `listRef.current`
+  // are section group <div>s, NOT individual rows). Re-runs when the
+  // visible items change too, in case the row at `effectiveSelectedIndex`
+  // shifted out of view.
   useEffect(() => {
-    const el = listRef.current?.children[selectedIndex] as HTMLElement | undefined
+    const el = listRef.current?.querySelector<HTMLElement>(
+      `[data-palette-row="${effectiveSelectedIndex}"]`,
+    )
     el?.scrollIntoView({ block: 'nearest' })
-  }, [selectedIndex])
+  }, [effectiveSelectedIndex, displayItemIdsKey])
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -790,10 +823,12 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
                       </div>
                       {group.items.map(({ item, globalIndex }) => {
                         const isCommand = item.type === 'command'
-                        const isSelected = globalIndex === selectedIndex
+                        const isSelected = globalIndex === effectiveSelectedIndex
                         return (
                           <button
                             key={item.id}
+                            data-palette-row={globalIndex}
+                            aria-selected={isSelected}
                             onClick={item.action}
                             onMouseEnter={() => setSelectedIndex(globalIndex)}
                             className={cn(

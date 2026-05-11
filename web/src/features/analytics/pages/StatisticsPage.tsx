@@ -23,14 +23,18 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFleetAnalytics, useMileageStats, useStateSummary } from '@/api/hooks/useAnalytics';
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
+
+const KM_PER_MILE = 1.609344;
+const METERS_PER_KM = 1000;
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -80,7 +84,15 @@ function StatisticsSkeleton() {
 export default function StatisticsPage() {
   const { t } = useTranslation();
   usePageTitle(t('statistics.title', 'Statistics'));
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
+  // backend `total_distance` and `vehicle_comparison[].distance` are SI km;
+  // `avg_efficiency` is SI Wh/km. Convert at boundary so display matches the
+  // user's distance unit pref.
+  const fromKm = (km: number) => convertDistanceFromSI(km * METERS_PER_KM, distanceUnit);
+  const whPerKmToDisplay = (whPerKm: number) =>
+    distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
   const savedView = useSavedViewUrl();
 
   const [vehicleId, setVehicleId] = useUrlString('vehicle_id', '');
@@ -123,22 +135,33 @@ export default function StatisticsPage() {
 
   const stateData = useMemo(() => {
     if (!stateSummary?.length) return [];
-    const total = stateSummary.reduce((s, e) => s + e.totalMin, 0);
-    return stateSummary.map((e) => ({
-      name: e.state,
-      value: Math.round((e.totalMin / Math.max(total, 1)) * 100),
-      fill: STATE_COLORS[e.state] ?? palette[5],
-    }));
+    // Backend (deleted) returned `total_min`; legacy camelCase wrapper
+    // surfaced `totalMin`. Reading both via fallback keeps the empty-state
+    // banner correct even if a future replacement endpoint emits snake_case.
+    const total = stateSummary.reduce((s, e) => {
+      const minutes = (e as { totalMin?: number; total_min?: number }).totalMin
+        ?? (e as { total_min?: number }).total_min ?? 0;
+      return s + minutes;
+    }, 0);
+    return stateSummary.map((e) => {
+      const minutes = (e as { totalMin?: number; total_min?: number }).totalMin
+        ?? (e as { total_min?: number }).total_min ?? 0;
+      return {
+        name: e.state,
+        value: Math.round((minutes / Math.max(total, 1)) * 100),
+        fill: STATE_COLORS[e.state] ?? palette[5],
+      };
+    });
   }, [stateSummary, palette]);
 
   const compData = useMemo(() => {
     if (!fleet?.vehicle_comparison) return [];
     return fleet.vehicle_comparison.map((v) => ({
       name: v.name ?? `Vehicle ${v.id}`,
-      distance: Math.round(convertDistance(v.distance)),
+      distance: Math.round(fromKm(v.distance)),
       energy: Math.round(v.energy),
     }));
-  }, [fleet, convertDistance]);
+  }, [fleet, fromKm]);
 
   const vehicleOptions = (vehicles ?? []).map((v) => ({
     value: String(v.id),
@@ -178,7 +201,7 @@ export default function StatisticsPage() {
           {/* ── Period Stats ──────────────────────────────────── */}
           <FadeIn>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              <MetricCard label={t('statistics.totalDistance', 'Total Distance')} value={`${fmtInt(convertDistance(stats.total_distance))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
+              <MetricCard label={t('statistics.totalDistance', 'Total Distance')} value={`${fmtInt(fromKm(stats.total_distance))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
               <MetricCard label={t('statistics.totalDrives', 'Total Drives')} value={fmtInt(stats.total_drives)} icon={<TrendingUp className="h-4 w-4" />} color="green" />
               <MetricCard label={t('statistics.totalEnergy', 'Total Energy')} value={`${fmtNumber(stats.energy_used)} kWh`} icon={<Zap className="h-4 w-4" />} color="amber" />
               <MetricCard label={t('statistics.totalCost', 'Total Cost')} value={`$${fmtInt(stats.total_cost)}`} icon={<DollarSign className="h-4 w-4" />} color="red" />
@@ -189,8 +212,8 @@ export default function StatisticsPage() {
           {/* ── Averages ─────────────────────────────────────── */}
           <FadeIn delay={0.05}>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <MetricCard label={t('statistics.avgDriveDistance', 'Avg Drive Distance')} value={`${fmtNumber(convertDistance(avgDriveDistance))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
-              <MetricCard label={t('statistics.avgEfficiency', 'Avg Efficiency')} value={`${fmtNumber(stats.avg_efficiency)} Wh/km`} icon={<Gauge className="h-4 w-4" />} color="green" />
+              <MetricCard label={t('statistics.avgDriveDistance', 'Avg Drive Distance')} value={`${fmtNumber(fromKm(avgDriveDistance))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
+              <MetricCard label={t('statistics.avgEfficiency', 'Avg Efficiency')} value={`${fmtNumber(whPerKmToDisplay(stats.avg_efficiency))} ${efficiencyUnit}`} icon={<Gauge className="h-4 w-4" />} color="green" />
               <MetricCard label={t('statistics.costPerKm', 'Cost per km')} value={stats.total_distance > 0 ? `$${fmtNumber(stats.total_cost / stats.total_distance, 3)}` : '—'} icon={<DollarSign className="h-4 w-4" />} color="amber" />
             </div>
           </FadeIn>
@@ -254,10 +277,10 @@ export default function StatisticsPage() {
                 </h2>
                 {mileage ? (
                   <Grid cols={{ default: 2 }} gap={3}>
-                    <MetricCard label={t('statistics.totalMileage', 'Total Distance')} value={`${fmtInt(convertDistance(mileage.totalDistance))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
-                    <MetricCard label={t('statistics.dailyAvg', 'Daily Average')} value={`${fmtNumber(convertDistance(mileage.avgDaily))} ${distanceUnit}`} icon={<Car className="h-4 w-4" />} color="green" />
+                    <MetricCard label={t('statistics.totalMileage', 'Total Distance')} value={`${fmtInt(fromKm(mileage.totalDistance))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
+                    <MetricCard label={t('statistics.dailyAvg', 'Daily Average')} value={`${fmtNumber(fromKm(mileage.avgDaily))} ${distanceUnit}`} icon={<Car className="h-4 w-4" />} color="green" />
                     <MetricCard label={t('statistics.daysTracked', 'Days Tracked')} value={fmtInt(mileage.daysTracked)} icon={<Clock className="h-4 w-4" />} color="purple" />
-                    <MetricCard label={t('statistics.yearlyProjection', 'Yearly Projection')} value={`${fmtInt(convertDistance(mileage.avgDaily * 365))} ${distanceUnit}`} icon={<TrendingUp className="h-4 w-4" />} color="amber" />
+                    <MetricCard label={t('statistics.yearlyProjection', 'Yearly Projection')} value={`${fmtInt(fromKm(mileage.avgDaily * 365))} ${distanceUnit}`} icon={<TrendingUp className="h-4 w-4" />} color="amber" />
                   </Grid>
                 ) : (
                   <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Car className="h-8 w-8" />} message={t('statistics.noMileage', 'No mileage data available')} className="py-8" />

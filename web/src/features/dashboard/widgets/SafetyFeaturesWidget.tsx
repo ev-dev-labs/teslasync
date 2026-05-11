@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/feedback';
 import { useSafety } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { fmtInt } from '@/lib/numberFormat';
+import { cleanSafetyEnum, isSafetyEnumActive, type SafetyEnumField } from '@/lib/safetyEnum';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatusGrid } from './shared';
 import type { StatusCell } from './shared';
@@ -22,11 +23,12 @@ function invertedBoolStatus(val: boolean | null | undefined): StatusCell['status
   return val ? 'inactive' : 'ok';
 }
 
-function stringStatus(val: string | null | undefined): StatusCell['status'] {
-  if (val == null || val === '') return 'unknown';
-  const lower = val.toLowerCase();
-  if (lower === 'off' || lower === 'none' || lower === 'disabled') return 'inactive';
-  return 'ok';
+/** Maps a Phase-42a-mixed safety enum value to a StatusCell.status.
+ *  Accepts unknown so a stray boolean/number from the backend never
+ *  crashes .toLowerCase(). See lib/safetyEnum.ts for the contract. */
+function safetyEnumStatus(val: unknown, field: SafetyEnumField): StatusCell['status'] {
+  if (val == null) return 'unknown';
+  return isSafetyEnumActive(val, field) ? 'ok' : 'inactive';
 }
 
 function buildCells(
@@ -37,8 +39,8 @@ function buildCells(
     {
       id: 'fcw',
       label: t('widget.safety.fcw', 'Forward Collision Warning'),
-      status: stringStatus(data.forward_collision_warning),
-      value: data.forward_collision_warning ?? '—',
+      status: safetyEnumStatus(data.forward_collision_warning, 'forward_collision_warning'),
+      value: cleanSafetyEnum(data.forward_collision_warning, 'forward_collision_warning'),
     },
     {
       id: 'aeb',
@@ -53,8 +55,8 @@ function buildCells(
     {
       id: 'lda',
       label: t('widget.safety.lda', 'Lane Departure Avoidance'),
-      status: stringStatus(data.lane_departure_avoidance),
-      value: data.lane_departure_avoidance ?? '—',
+      status: safetyEnumStatus(data.lane_departure_avoidance, 'lane_departure_avoidance'),
+      value: cleanSafetyEnum(data.lane_departure_avoidance, 'lane_departure_avoidance'),
     },
     {
       id: 'elda',
@@ -89,14 +91,14 @@ function buildCells(
     {
       id: 'slw',
       label: t('widget.safety.slw', 'Speed Limit Warning'),
-      status: stringStatus(data.speed_limit_warning),
-      value: data.speed_limit_warning ?? '—',
+      status: safetyEnumStatus(data.speed_limit_warning, 'speed_limit_warning'),
+      value: cleanSafetyEnum(data.speed_limit_warning, 'speed_limit_warning'),
     },
     {
       id: 'cfd',
       label: t('widget.safety.cfd', 'Cruise Follow Distance'),
-      status: data.cruise_follow_distance != null ? 'ok' : 'unknown',
-      value: data.cruise_follow_distance ?? '—',
+      status: safetyEnumStatus(data.cruise_follow_distance, 'cruise_follow_distance'),
+      value: cleanSafetyEnum(data.cruise_follow_distance, 'cruise_follow_distance'),
     },
   ];
 }

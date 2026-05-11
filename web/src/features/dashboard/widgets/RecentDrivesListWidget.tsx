@@ -5,10 +5,11 @@ import { useQuery } from '@tanstack/react-query';
 import { Route, ArrowUpRight, MapPin, Clock, Battery } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
 import { formatDurationMinutes } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { Drive } from '../types';
@@ -22,7 +23,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
 
   const isWide = size.cols >= 3;
   const isTall = size.rows >= 2;
@@ -58,10 +59,10 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
       <div className="space-y-1.5 overflow-y-auto h-full">
         {items.length > 0 ? (
           items.map((d) => {
-            const dist = convertDistance(d.distance_mi ?? 0);
+            const dist = convertDistanceFromSI(d.distance_m ?? 0, unitPrefs.distance);
             const batteryUsed =
-              d.start_battery_pct != null && d.end_battery_pct != null
-                ? d.start_battery_pct - d.end_battery_pct
+              d.start_soc_pct != null && d.end_soc_pct != null
+                ? d.start_soc_pct - d.end_soc_pct
                 : null;
 
             return (
@@ -70,12 +71,12 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
                   {/* Left column: distance + duration */}
                   <div className="flex-shrink-0 min-w-[4.5rem]">
                     <p className="text-sm font-semibold text-[var(--text-primary)] tabular-nums">
-                      {fmtNumber(dist, 1)} {distanceUnit}
+                      {fmtNumber(dist, 1)} {unitPrefs.distance}
                     </p>
                     <div className="flex items-center gap-1 mt-0.5">
                       <Clock className="h-2.5 w-2.5 text-[var(--text-muted)]" />
                       <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
-                        {formatDurationMinutes(d.duration_min ?? 0, { subMinuteLabel: '<1m' })}
+                        {formatDurationMinutes((d.duration_s ?? 0) / 60, { subMinuteLabel: '<1m' })}
                       </span>
                     </div>
                   </div>
@@ -103,7 +104,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
                     <div className="flex items-center justify-end gap-1">
                       <Battery className="h-2.5 w-2.5 text-[var(--text-muted)]" />
                       <span className="text-[10px] text-[var(--text-secondary)] tabular-nums">
-                        {d.start_battery_pct ?? '?'}% → {d.end_battery_pct ?? '?'}%
+                        {d.start_soc_pct ?? '?'}% → {d.end_soc_pct ?? '?'}%
                       </span>
                     </div>
                     <div className="flex items-center justify-end gap-1 mt-0.5">

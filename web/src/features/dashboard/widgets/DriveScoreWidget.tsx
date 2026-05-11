@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetGaugeHero, type GaugeHeroConfig, type GaugeHeroStat } from './shared';
@@ -12,7 +12,10 @@ import type { WidgetProps } from './types';
 export default function DriveScoreWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: analytics, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useFleetAnalytics(7);
-  const { convertEfficiency, efficiencyUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
+
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   // Derive a score from efficiency (lower Wh/mi = better score)
   const efficiency = analytics?.avg_efficiency_wh_km ?? 0;
@@ -28,8 +31,8 @@ export default function DriveScoreWidget({ size }: WidgetProps) {
   }), [score, t]);
 
   const stats = useMemo<GaugeHeroStat[]>(() => [
-    { label: t('widget.efficiency', 'Efficiency'), value: fmtNumber(convertEfficiency(efficiency), 0), unit: efficiencyUnit },
-  ], [t, efficiency, convertEfficiency, efficiencyUnit]);
+    { label: t('widget.efficiency', 'Efficiency'), value: fmtNumber(toEfficiencyDisplay(efficiency), 0), unit: efficiencyUnit },
+  ], [t, efficiency, toEfficiencyDisplay, efficiencyUnit]);
 
   return (
     <WidgetShell

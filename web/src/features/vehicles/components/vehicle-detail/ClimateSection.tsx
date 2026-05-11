@@ -4,8 +4,7 @@ import { Wind, Thermometer, CircleDot, Snowflake, Flame } from 'lucide-react'
 import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
-import { useSettings } from '@/hooks/useSettings'
-import { fmtNumber } from '@/lib/numberFormat'
+import { useUnits } from '@/hooks/useUnits'
 import type { ClimateSnapshot } from '@/api/types'
 
 interface ClimateSectionProps {
@@ -14,7 +13,7 @@ interface ClimateSectionProps {
 
 export function ClimateSection({ climateData }: ClimateSectionProps) {
   const { t } = useTranslation()
-  const { convertTemp, tempUnit } = useSettings()
+  const { formatTemperature } = useUnits()
 
   return (
     <GlassPanel className="p-6">
@@ -28,37 +27,31 @@ export function ClimateSection({ climateData }: ClimateSectionProps) {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           <MetricCard
             label={t('common.insideTemp', 'Inside Temp')}
-            value={
-              climateData.inside_temp_c != null
-                ? `${fmtNumber(convertTemp(climateData.inside_temp_c))}${tempUnit}`
-                : '—'
-            }
+            value={formatTemperature(climateData.inside_temp ?? climateData.inside_temp_c)}
             icon={<Thermometer className="h-4 w-4" />}
             color="green"
           />
           <MetricCard
             label={t('common.outsideTemp', 'Outside Temp')}
-            value={
-              climateData.outside_temp_c != null
-                ? `${fmtNumber(convertTemp(climateData.outside_temp_c))}${tempUnit}`
-                : '—'
-            }
+            value={formatTemperature(climateData.outside_temp ?? climateData.outside_temp_c)}
             icon={<Thermometer className="h-4 w-4" />}
             color="cyan"
           />
           <MetricCard
             label={t('vehicles.detail.driverSetpoint', 'Driver Setpoint')}
-            value={
-              climateData.driver_setpoint_c != null
-                ? `${fmtNumber(convertTemp(climateData.driver_setpoint_c))}${tempUnit}`
-                : '—'
-            }
+            value={formatTemperature(climateData.driver_temp_setting ?? climateData.driver_setpoint_c)}
             icon={<Thermometer className="h-4 w-4" />}
             color="purple"
           />
           <MetricCard
             label={t('vehicles.detail.fanSpeed', 'Fan Speed')}
-            value={climateData.fan_status != null ? String(climateData.fan_status) : '—'}
+            value={
+              climateData.hvac_fan_status != null
+                ? String(climateData.hvac_fan_status)
+                : climateData.fan_status != null
+                  ? String(climateData.fan_status)
+                  : '—'
+            }
             icon={<Wind className="h-4 w-4" />}
             color="cyan"
           />
@@ -94,9 +87,13 @@ export function ClimateSection({ climateData }: ClimateSectionProps) {
           />
           <MetricCard
             label={t('vehicles.detail.climateOn', 'Climate On')}
-            value={climateData.is_climate_on ? t('common.on', 'On') : t('common.off', 'Off')}
+            value={
+              (climateData.is_ac_on ?? climateData.is_climate_on)
+                ? t('common.on', 'On')
+                : t('common.off', 'Off')
+            }
             icon={<Flame className="h-4 w-4" />}
-            color={climateData.is_climate_on ? 'green' : 'cyan'}
+            color={(climateData.is_ac_on ?? climateData.is_climate_on) ? 'green' : 'cyan'}
           />
         </div>
       ) : (

@@ -23,7 +23,9 @@ import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useDrivingStats } from '@/api/hooks/useDriving';
 import { useCostBreakdown, useMonthlyMileage } from '@/api/hooks/useAnalytics';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -76,14 +78,14 @@ function VehicleStatusCard({
   vehicle,
   state,
   isLoading,
-  fmtDistance,
-  fmtTemp,
+  formatDistance,
+  formatTemperature,
 }: {
   vehicle: Vehicle | undefined;
   state: VehicleState | undefined;
   isLoading: boolean;
-  fmtDistance: (mi: number, d?: number) => string;
-  fmtTemp: (c: number, d?: number) => string;
+  formatDistance: (mi: number, d?: number) => string;
+  formatTemperature: (c: number, d?: number) => string;
 }) {
   const { t } = useTranslation();
 
@@ -113,9 +115,7 @@ function VehicleStatusCard({
     <GlassPanel className="p-5">
       <div className="mb-4 flex items-center gap-3">
         <div className={cn(
-          'flex h-10 w-10 items-center justify-center rounded-xl',
-          isOnline ? 'bg-neon-green/10 ring-1 ring-neon-green/20' : 'bg-white/[0.04] ring-1 ring-white/[0.06]',
-        )}>
+          'flex h-10 w-10 items-center justify-center rounded-xl', isOnline ? 'bg-neon-green/10 ring-1 ring-neon-green/20' : 'bg-white/[0.04] ring-1 ring-white/[0.06]', )}>
           <Car className={cn('h-5 w-5', isOnline ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
         </div>
         <div className="min-w-0 flex-1">
@@ -143,9 +143,7 @@ function VehicleStatusCard({
           <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]">
             <div
               className={cn(
-                'h-full rounded-full transition-all',
-                batteryLevel > 50 ? 'bg-neon-green' : batteryLevel > 20 ? 'bg-neon-amber' : 'bg-neon-red',
-              )}
+                'h-full rounded-full transition-all', batteryLevel > 50 ? 'bg-neon-green' : batteryLevel > 20 ? 'bg-neon-amber' : 'bg-neon-red', )}
               style={{ width: `${Math.min(batteryLevel, 100)}%` }}
             />
           </div>
@@ -158,7 +156,7 @@ function VehicleStatusCard({
             {t('comparison.range', 'Range')}
           </div>
           <span className="text-sm font-medium text-[var(--text-primary)]">
-            {range != null ? fmtDistance(range) : '—'}
+            {range != null ? formatDistance(range) : '—'}
           </span>
         </div>
 
@@ -169,8 +167,8 @@ function VehicleStatusCard({
             {t('comparison.temp', 'Temperature')}
           </div>
           <span className="text-sm font-medium text-[var(--text-primary)]">
-            {insideTemp != null ? fmtTemp(insideTemp) : '—'}
-            {outsideTemp != null ? ` / ${fmtTemp(outsideTemp)}` : ''}
+            {insideTemp != null ? formatTemperature(insideTemp) : '—'}
+            {outsideTemp != null ? ` / ${formatTemperature(outsideTemp)}` : ''}
           </span>
         </div>
 
@@ -205,9 +203,7 @@ function VehicleStatusCard({
             {t('comparison.status', 'Status')}
           </div>
           <span className={cn(
-            'rounded-full px-2 py-0.5 text-xs font-medium',
-            isOnline ? 'bg-neon-green/10 text-neon-green' : 'bg-white/[0.04] text-[var(--text-muted)]',
-          )}>
+            'rounded-full px-2 py-0.5 text-xs font-medium', isOnline ? 'bg-neon-green/10 text-neon-green' : 'bg-white/[0.04] text-[var(--text-muted)]', )}>
             {vehicle.state ?? t('comparison.unknown', 'Unknown')}
           </span>
         </div>
@@ -223,11 +219,25 @@ export default function FleetComparePage() {
   const navigate = useNavigate();
   usePageTitle(t('comparison.title', 'Fleet Comparison'));
 
-  const {
-    fmtDistance, fmtTemp, convertDistance, convertSpeed,
-    convertEfficiency, distanceUnit, speedUnit,
-    efficiencyUnit, currencySymbol,
-  } = useSettings();
+  const { unitPrefs, formatDistance: formatDistanceUnit, formatEnergy } = useUnits();
+  const formatDistance = (value: number | null | undefined, precision?: number) => formatDistanceUnit(value, { precision });
+  const { formatTemperature: formatTemperatureUnit } = useUnits();
+  const formatTemperature = (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision });
+  const { currencySymbol } = useFormatting();
+
+  const distanceUnit = unitPrefs.distance;
+  const speedUnit = unitPrefs.speed;
+  const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
+  // backend `useDrivingStats` returns explicit-SI fields:
+  //   totalDistanceKm (km), avgSpeedKmh / topSpeedKmh (km/h), avgEfficiencyWhKm (Wh/km)
+  // Legacy toDistanceDisplay/toSpeedDisplay/toEfficiencyDisplay expect mi/mph/Wh-per-mi
+  // input so calling them on these km values silently mis-renders for both pref
+  // unit choices. Migrate to SI boundary helpers.
+  const KM_PER_MILE = 1.609344;
+  const fromKm = (km: number) => convertDistanceFromSI(km * 1000, distanceUnit);
+  const fromKmh = (kmh: number) => convertSpeedFromSI((kmh * 1000) / 3600, speedUnit);
+  const whPerKmToDisplay = (whPerKm: number) =>
+    distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
 
   // Phase-45/23 — reactive chart palette (CB-safe / neon per user pref).
   const palette = useChartPalette();
@@ -384,32 +394,32 @@ export default function FleetComparePage() {
       },
       {
         metric: t('comparison.totalDistance', 'Total Distance'),
-        valueA: `${fmtNumber(convertDistance(dsA?.totalDistanceKm ?? 0))} ${distanceUnit}`,
-        valueB: `${fmtNumber(convertDistance(dsB?.totalDistanceKm ?? 0))} ${distanceUnit}`,
+        valueA: `${fmtNumber(fromKm(dsA?.totalDistanceKm ?? 0))} ${distanceUnit}`,
+        valueB: `${fmtNumber(fromKm(dsB?.totalDistanceKm ?? 0))} ${distanceUnit}`,
         rawA: dsA?.totalDistanceKm ?? 0,
         rawB: dsB?.totalDistanceKm ?? 0,
         winner: 'higher' as WinnerSemantic,
       },
       {
         metric: t('comparison.avgEfficiency', 'Avg Efficiency'),
-        valueA: `${fmtNumber(convertEfficiency(dsA?.avgEfficiencyWhKm ?? 0))} ${efficiencyUnit}`,
-        valueB: `${fmtNumber(convertEfficiency(dsB?.avgEfficiencyWhKm ?? 0))} ${efficiencyUnit}`,
+        valueA: `${fmtNumber(whPerKmToDisplay(dsA?.avgEfficiencyWhKm ?? 0))} ${efficiencyUnit}`,
+        valueB: `${fmtNumber(whPerKmToDisplay(dsB?.avgEfficiencyWhKm ?? 0))} ${efficiencyUnit}`,
         rawA: dsA?.avgEfficiencyWhKm ?? 0,
         rawB: dsB?.avgEfficiencyWhKm ?? 0,
         winner: 'lower' as WinnerSemantic,
       },
       {
         metric: t('comparison.avgSpeed', 'Avg Speed'),
-        valueA: `${fmtNumber(convertSpeed(dsA?.avgSpeedKmh ?? 0))} ${speedUnit}`,
-        valueB: `${fmtNumber(convertSpeed(dsB?.avgSpeedKmh ?? 0))} ${speedUnit}`,
+        valueA: `${fmtNumber(fromKmh(dsA?.avgSpeedKmh ?? 0))} ${speedUnit}`,
+        valueB: `${fmtNumber(fromKmh(dsB?.avgSpeedKmh ?? 0))} ${speedUnit}`,
         rawA: dsA?.avgSpeedKmh ?? 0,
         rawB: dsB?.avgSpeedKmh ?? 0,
         winner: 'neutral' as WinnerSemantic,
       },
       {
         metric: t('comparison.topSpeed', 'Top Speed'),
-        valueA: `${fmtNumber(convertSpeed(dsA?.topSpeedKmh ?? 0))} ${speedUnit}`,
-        valueB: `${fmtNumber(convertSpeed(dsB?.topSpeedKmh ?? 0))} ${speedUnit}`,
+        valueA: `${fmtNumber(fromKmh(dsA?.topSpeedKmh ?? 0))} ${speedUnit}`,
+        valueB: `${fmtNumber(fromKmh(dsB?.topSpeedKmh ?? 0))} ${speedUnit}`,
         rawA: dsA?.topSpeedKmh ?? 0,
         rawB: dsB?.topSpeedKmh ?? 0,
         winner: 'neutral' as WinnerSemantic,
@@ -440,10 +450,10 @@ export default function FleetComparePage() {
       },
       {
         metric: t('comparison.totalEnergy', 'Total Energy'),
-        valueA: `${fmtNumber(cA?.total_kwh ?? 0)} kWh`,
-        valueB: `${fmtNumber(cB?.total_kwh ?? 0)} kWh`,
-        rawA: cA?.total_kwh ?? 0,
-        rawB: cB?.total_kwh ?? 0,
+        valueA: formatEnergy(cA?.total_wh ?? 0),
+        valueB: formatEnergy(cB?.total_wh ?? 0),
+        rawA: cA?.total_wh ?? 0,
+        rawB: cB?.total_wh ?? 0,
         winner: 'neutral' as WinnerSemantic,
       },
       {
@@ -457,7 +467,7 @@ export default function FleetComparePage() {
     ];
   }, [
     drivingStatsA, drivingStatsB, costA, costB,
-    t, convertDistance, convertSpeed, convertEfficiency,
+    t, fromKm, fromKmh, whPerKmToDisplay,
     distanceUnit, speedUnit, efficiencyUnit, currencySymbol,
   ]);
 
@@ -577,15 +587,15 @@ export default function FleetComparePage() {
               vehicle={vehicleA}
               state={stateA}
               isLoading={stateLoadingA && !!vehicleIdA}
-              fmtDistance={fmtDistance}
-              fmtTemp={fmtTemp}
+              formatDistance={formatDistance}
+              formatTemperature={formatTemperature}
             />
             <VehicleStatusCard
               vehicle={vehicleB}
               state={stateB}
               isLoading={stateLoadingB && !!vehicleIdB}
-              fmtDistance={fmtDistance}
-              fmtTemp={fmtTemp}
+              formatDistance={formatDistance}
+              formatTemperature={formatTemperature}
             />
           </Grid>
         </div>
@@ -713,7 +723,7 @@ export default function FleetComparePage() {
             />
             <StatCard
               label={t('comparison.efficiencyDiff', 'Avg Efficiency')}
-              value={`${fmtNumber(convertEfficiency(drivingStatsA?.avgEfficiencyWhKm ?? 0))} vs ${fmtNumber(convertEfficiency(drivingStatsB?.avgEfficiencyWhKm ?? 0))}`}
+              value={`${fmtNumber(whPerKmToDisplay(drivingStatsA?.avgEfficiencyWhKm ?? 0))} vs ${fmtNumber(whPerKmToDisplay(drivingStatsB?.avgEfficiencyWhKm ?? 0))}`}
               unit={efficiencyUnit}
               icon={<Zap className="h-4 w-4" />}
               loading={statsLoading}

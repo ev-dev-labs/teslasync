@@ -22,38 +22,33 @@ import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUnits } from '@/hooks/useUnits';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useEnergyFlow } from '@/api/hooks/useEnergy';
-import { useSettings } from '@/api/hooks/useSettings';
-import {
-  toDisplayDistance,
-  distanceLabel,
-  DistanceUnit,
-} from '@/lib/unitConversion';
 
 /* ───────── Types (match actual API response from energy_handler.go) ───────── */
 
 interface DailyBreakdownEntry {
   date: string;
-  energy_kwh: number;
-  distance_mi: number;
-  efficiency_wh_per_mi: number;
+  energy_wh: number;
+  distance_m: number;
+  efficiency_wh_per_m: number;
   cost: number;
 }
 
 interface EnergyStatsResponse {
   vehicle_id: number;
   period_days: number;
-  total_energy_used_kwh: number;
-  total_energy_charged_kwh: number;
-  total_kwh: number;
+  total_energy_used_wh: number;
+  total_energy_charged_wh: number;
+  total_wh: number;
   total_cost: number;
-  total_distance_mi: number;
-  avg_efficiency_wh_per_mi: number;
+  total_distance_m: number;
+  avg_efficiency_wh_per_m: number;
   co2_saved_kg: number;
   daily_breakdown: DailyBreakdownEntry[];
 }
@@ -113,15 +108,12 @@ export default function EnergyFlowPage() {
   usePageTitle(t('Energy Flow'));
 
   const { data: vehicles } = useVehicles();
-  const { data: settings } = useSettings();
+  const { unitPrefs, formatDistance, formatEnergy } = useUnits();
+  const distanceUnit = unitPrefs.distance;
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const [days, setDays] = useState('7');
 
   const activeId = vehicleId ?? (vehicles?.[0]?.id != null ? String(vehicles[0].id) : null);
-
-  const userDistUnit = settings?.unit_of_length === 'km'
-    ? DistanceUnit.Kilometers
-    : DistanceUnit.Miles;
 
   // Historical stats from GET /vehicles/{id}/energy
   const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
@@ -148,46 +140,41 @@ export default function EnergyFlowPage() {
     () =>
       dailyBreakdown.map((d) => ({
         date: formatDateShort(d.date),
-        energy_kwh: d.energy_kwh,
-        distance: toDisplayDistance(d.distance_mi, DistanceUnit.Miles, userDistUnit, 1),
+        energy_wh: d.energy_wh,
+        distance: d.distance_m,
       })),
-    [dailyBreakdown, userDistUnit],
+    [dailyBreakdown, distanceUnit],
   );
 
   const efficiencyChartData = useMemo(
     () =>
       dailyBreakdown
-        .filter((d) => d.efficiency_wh_per_mi > 0)
+        .filter((d) => d.efficiency_wh_per_m > 0)
         .map((d) => ({
           date: formatDateShort(d.date),
           efficiency:
-            userDistUnit === DistanceUnit.Kilometers
-              ? Number((d.efficiency_wh_per_mi * 0.621371).toFixed(0))
-              : d.efficiency_wh_per_mi,
+            distanceUnit === 'km'
+              ? Number((d.efficiency_wh_per_m * 1000).toFixed(0))
+              : d.efficiency_wh_per_m * 1609.344,
         })),
-    [dailyBreakdown, userDistUnit],
+    [dailyBreakdown],
   );
 
   /* ─── Derived: stat values with unit conversion ─── */
-  const totalDistance = toDisplayDistance(
-    stats?.total_distance_mi ?? 0,
-    DistanceUnit.Miles,
-    userDistUnit,
-    1,
-  );
+  const totalDistance = formatDistance(stats?.total_distance_m ?? 0);
 
   const avgEfficiency = useMemo(() => {
-    const raw = stats?.avg_efficiency_wh_per_mi ?? 0;
-    return userDistUnit === DistanceUnit.Kilometers
-      ? Number((raw * 0.621371).toFixed(0))
-      : Math.round(raw);
-  }, [stats, userDistUnit]);
+    const raw = stats?.avg_efficiency_wh_per_m ?? 0;
+    return distanceUnit === 'km'
+      ? Number((raw * 1000).toFixed(0))
+      : Math.round(raw * 1609.344);
+  }, [stats, distanceUnit]);
 
-  const efficiencyUnit = userDistUnit === DistanceUnit.Kilometers ? 'Wh/km' : 'Wh/mi';
+  const efficiencyUnit = distanceUnit === 'km' ? 'Wh/km' : 'Wh/mi';
 
   const avgEnergyPerDay = useMemo(() => {
     const period = stats?.period_days ?? 0;
-    return period > 0 ? (stats?.total_energy_used_kwh ?? 0) / period : 0;
+    return period > 0 ? (stats?.total_energy_used_wh ?? 0) / period : 0;
   }, [stats]);
 
   /* ─── Table ─── */
@@ -196,9 +183,9 @@ export default function EnergyFlowPage() {
   const sortedDailyRows = useMemo(() => {
     const rows = dailyBreakdown.slice();
     return sortFn(rows, (row, key) => {
-      if (key === 'energy_kwh') return row.energy_kwh;
-      if (key === 'distance_mi') return row.distance_mi;
-      if (key === 'efficiency_wh_per_mi') return row.efficiency_wh_per_mi;
+      if (key === 'energy_wh') return row.energy_wh;
+      if (key === 'distance_m') return row.distance_m;
+      if (key === 'efficiency_wh_per_m') return row.efficiency_wh_per_m;
       return row.date;
     });
   }, [dailyBreakdown, sortFn]);
@@ -216,34 +203,34 @@ export default function EnergyFlowPage() {
         ),
       },
       {
-        key: 'energy_kwh',
-        header: t('Energy (kWh)'),
+        key: 'energy_wh',
+        header: t('Energy'),
         sortable: true,
         render: (row) => (
           <span className="font-mono text-sm font-semibold text-[var(--text-primary)]">
-            {fmtNumber(row.energy_kwh, 2)}
+            {formatEnergy(row.energy_wh)}
           </span>
         ),
       },
       {
-        key: 'distance_mi',
-        header: `${t('Distance')} (${distanceLabel(userDistUnit)})`,
+        key: 'distance_m',
+        header: `${t('Distance')} (${distanceUnit})`,
         sortable: true,
         render: (row) => (
           <span className="font-mono text-sm text-[var(--text-primary)]">
-            {toDisplayDistance(row.distance_mi, DistanceUnit.Miles, userDistUnit, 1)}
+            {formatDistance(row.distance_m)}
           </span>
         ),
       },
       {
-        key: 'efficiency_wh_per_mi',
+        key: 'efficiency_wh_per_m',
         header: efficiencyUnit,
         sortable: true,
         render: (row) => {
           const val =
-            userDistUnit === DistanceUnit.Kilometers
-              ? row.efficiency_wh_per_mi * 0.621371
-              : row.efficiency_wh_per_mi;
+            distanceUnit === 'km'
+              ? row.efficiency_wh_per_m * 1000
+              : row.efficiency_wh_per_m * 1609.344;
           return (
             <span className="font-mono text-sm text-[var(--text-primary)]">
               {fmtNumber(val, 0)}
@@ -252,7 +239,7 @@ export default function EnergyFlowPage() {
         },
       },
     ],
-    [t, userDistUnit, efficiencyUnit],
+    [t, distanceUnit, efficiencyUnit, formatDistance, formatEnergy],
   );
 
   /* ───── Vehicle & Range Controls ───── */
@@ -325,8 +312,8 @@ export default function EnergyFlowPage() {
   }
 
   /* ─── Efficiency thresholds (unit-aware) ─── */
-  const excellentThreshold = userDistUnit === DistanceUnit.Kilometers ? 150 : 240;
-  const goodThreshold = userDistUnit === DistanceUnit.Kilometers ? 200 : 320;
+  const excellentThreshold = distanceUnit === 'km' ? 150 : 240;
+  const goodThreshold = distanceUnit === 'km' ? 200 : 320;
 
   /* ───── Main render ───── */
 
@@ -432,24 +419,22 @@ export default function EnergyFlowPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <MetricCard
             label={t('Total Energy')}
-            value={fmtNumber(stats?.total_energy_used_kwh ?? 0, 1)}
+            value={formatEnergy(stats?.total_energy_used_wh ?? 0)}
             icon={<Zap className="h-4 w-4" />}
             color="cyan"
-            subtitle={t('kWh')}
           />
           <MetricCard
             label={t('Total Charged')}
-            value={fmtNumber(stats?.total_energy_charged_kwh ?? 0, 1)}
+            value={formatEnergy(stats?.total_energy_charged_wh ?? 0)}
             icon={<Plug className="h-4 w-4" />}
             color="green"
-            subtitle={t('kWh')}
           />
           <MetricCard
             label={t('Distance')}
             value={totalDistance}
             icon={<Car className="h-4 w-4" />}
             color="purple"
-            subtitle={distanceLabel(userDistUnit)}
+            subtitle={distanceUnit}
           />
           <MetricCard
             label={t('Efficiency')}
@@ -498,8 +483,8 @@ export default function EnergyFlowPage() {
                 <Legend />
                 <Area
                   {...AREA_DEFAULTS}
-                  dataKey="energy_kwh"
-                  name={t('Energy (kWh)')}
+                  dataKey="energy_wh"
+                  name={t('Energy')}
                   stroke={CHART_COLORS[0]}
                   fill="url(#gradEnergy)"
                 />
@@ -533,7 +518,7 @@ export default function EnergyFlowPage() {
                   <Legend />
                   <Bar
                     dataKey="distance"
-                    name={`${t('Distance')} (${distanceLabel(userDistUnit)})`}
+                    name={`${t('Distance')} (${distanceUnit})`}
                     fill={CHART_COLORS[1]}
                     radius={[4, 4, 0, 0]}
                   />
@@ -616,10 +601,10 @@ export default function EnergyFlowPage() {
             <GlassPanel className="flex flex-col items-center gap-2 p-4">
               <span className="text-xs text-[var(--text-muted)]">{t('Avg Energy/Day')}</span>
               <span className="text-2xl font-bold" style={{ color: CHART_COLORS[3] }}>
-                {fmtNumber(avgEnergyPerDay, 1)}
+                {formatEnergy(avgEnergyPerDay)}
               </span>
               <Badge variant="info" size="sm">
-                {t('kWh/day')}
+                {t('per day')}
               </Badge>
             </GlassPanel>
           </div>

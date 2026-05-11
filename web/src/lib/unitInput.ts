@@ -37,12 +37,24 @@
  */
 
 import type { AppSettings } from '@/api/types'
-import {
-  celsiusToFahrenheit,
-  fahrenheitToCelsius,
-  kmToMiles,
-  milesToKm,
-} from './unitConversion'
+
+const KM_PER_MI = 1.609344
+
+function distanceDisplayToCanonical(displayValue: number): number {
+  return displayValue / KM_PER_MI
+}
+
+function distanceCanonicalToDisplay(canonicalValue: number): number {
+  return canonicalValue * KM_PER_MI
+}
+
+function tempDisplayToCanonical(displayValue: number): number {
+  return ((displayValue - 32) * 5) / 9
+}
+
+function tempCanonicalToDisplay(canonicalValue: number): number {
+  return (canonicalValue * 9) / 5 + 32
+}
 
 export type UnitKind =
   | 'distance'
@@ -132,10 +144,10 @@ export function parseForUnit(
     case 'distance':
     case 'speed':
       // Display unit → canonical (miles/mph).
-      return settings.unit_of_length === 'km' ? kmToMiles(n) : n
+      return settings.unit_of_length === 'km' ? distanceDisplayToCanonical(n) : n
     case 'temperature':
       // Display unit → canonical (°C).
-      return settings.unit_of_temp === 'F' ? fahrenheitToCelsius(n) : n
+      return settings.unit_of_temp === 'F' ? tempDisplayToCanonical(n) : n
     case 'energy':
     case 'percent':
     case 'currency':
@@ -164,9 +176,9 @@ export function formatForUnit(
     switch (unit) {
       case 'distance':
       case 'speed':
-        return settings.unit_of_length === 'km' ? milesToKm(value) : value
+        return settings.unit_of_length === 'km' ? distanceCanonicalToDisplay(value) : value
       case 'temperature':
-        return settings.unit_of_temp === 'F' ? celsiusToFahrenheit(value) : value
+        return settings.unit_of_temp === 'F' ? tempCanonicalToDisplay(value) : value
       case 'energy':
       case 'percent':
       case 'currency':

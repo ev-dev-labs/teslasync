@@ -135,7 +135,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "WITH monthly AS (\n  SELECT DATE_TRUNC('month', d.start_ts) AS m, SUM(d.distance_mi) AS dist\n  FROM drives d\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND d.start_ts >= $__timeFrom()::timestamptz\n    AND d.start_ts <= $__timeTo()::timestamptz\n  GROUP BY DATE_TRUNC('month', d.start_ts)\n),\ncosts AS (\n  SELECT DATE_TRUNC('month', cs.start_ts) AS m,\n    SUM(cs.cost) AS ev\n  FROM charging_sessions cs\n  WHERE cs.vehicle_id = ${vehicle_id}\n    AND cs.start_ts >= $__timeFrom()::timestamptz\n    AND cs.start_ts <= $__timeTo()::timestamptz\n  GROUP BY DATE_TRUNC('month', cs.start_ts)\n)\nSELECT m.m AS time,\n  ROUND((c.ev / NULLIF(m.dist, 0))::numeric, 3) AS \"Cost/km\"\nFROM monthly m LEFT JOIN costs c ON m.m = c.m\nORDER BY m.m",
+          "rawSql": "WITH monthly AS (\n  SELECT DATE_TRUNC('month', d.started_at) AS m, SUM((d.distance_m / 1609.344)) AS dist\n  FROM drives d\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND d.started_at >= $__timeFrom()::timestamptz\n    AND d.started_at <= $__timeTo()::timestamptz\n  GROUP BY DATE_TRUNC('month', d.started_at)\n),\ncosts AS (\n  SELECT DATE_TRUNC('month', cs.started_at) AS m,\n    SUM(cs.cost_decimal) AS ev\n  FROM charging_sessions cs\n  WHERE cs.vehicle_id = ${vehicle_id}\n    AND cs.started_at >= $__timeFrom()::timestamptz\n    AND cs.started_at <= $__timeTo()::timestamptz\n  GROUP BY DATE_TRUNC('month', cs.started_at)\n)\nSELECT m.m AS time,\n  ROUND((c.ev / NULLIF(m.dist, 0))::numeric, 3) AS \"Cost/km\"\nFROM monthly m LEFT JOIN costs c ON m.m = c.m\nORDER BY m.m",
           "refId": "A"
         }
       ],
@@ -204,7 +204,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH ev AS (\n  SELECT SUM(cs.cost) AS total\n  FROM charging_sessions cs\n  WHERE cs.vehicle_id = ${vehicle_id}\n    AND cs.start_ts >= $__timeFrom()::timestamptz\n    AND cs.start_ts <= $__timeTo()::timestamptz\n)\nSELECT ROUND(ev.total::numeric, 2) AS \"Total EV Cost ($)\"\nFROM ev",
+          "rawSql": "WITH ev AS (\n  SELECT SUM(cs.cost_decimal) AS total\n  FROM charging_sessions cs\n  WHERE cs.vehicle_id = ${vehicle_id}\n    AND cs.started_at >= $__timeFrom()::timestamptz\n    AND cs.started_at <= $__timeTo()::timestamptz\n)\nSELECT ROUND(ev.total::numeric, 2) AS \"Total EV Cost ($)\"\nFROM ev",
           "refId": "A"
         }
       ],
@@ -269,7 +269,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH ev AS (\n  SELECT SUM(cs.cost) AS total\n  FROM charging_sessions cs\n  WHERE cs.vehicle_id = ${vehicle_id}\n    AND cs.start_ts >= $__timeFrom()::timestamptz\n    AND cs.start_ts <= $__timeTo()::timestamptz\n),\ngas AS (\n  SELECT COALESCE(SUM(\n    (COALESCE(d.distance_mi, 0) / 1.60934) / NULLIF(gp.efficiency_mpg, 0) * gp.price_per_unit\n  ), 0) AS total\n  FROM drives d\n  JOIN LATERAL (\n    SELECT price_per_unit, efficiency_mpg\n    FROM gas_price_history\n    WHERE effective_from <= d.start_ts\n    ORDER BY effective_from DESC LIMIT 1\n  ) gp ON true\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND d.start_ts >= $__timeFrom()::timestamptz\n    AND d.start_ts <= $__timeTo()::timestamptz\n)\nSELECT ROUND((gas.total - ev.total)::numeric, 2) AS \"Savings ($)\"\nFROM ev, gas",
+          "rawSql": "WITH ev AS (\n  SELECT SUM(cs.cost_decimal) AS total\n  FROM charging_sessions cs\n  WHERE cs.vehicle_id = ${vehicle_id}\n    AND cs.started_at >= $__timeFrom()::timestamptz\n    AND cs.started_at <= $__timeTo()::timestamptz\n),\ngas AS (\n  SELECT COALESCE(SUM(\n    (COALESCE((d.distance_m / 1609.344), 0) / 1.60934) / NULLIF(gp.efficiency_mpg, 0) * gp.price_per_unit\n  ), 0) AS total\n  FROM drives d\n  JOIN LATERAL (\n    SELECT price_per_unit, efficiency_mpg\n    FROM gas_price_history\n    WHERE effective_from <= d.started_at\n    ORDER BY effective_from DESC LIMIT 1\n  ) gp ON true\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND d.started_at >= $__timeFrom()::timestamptz\n    AND d.started_at <= $__timeTo()::timestamptz\n)\nSELECT ROUND((gas.total - ev.total)::numeric, 2) AS \"Savings ($)\"\nFROM ev, gas",
           "refId": "A"
         }
       ],
@@ -338,7 +338,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH gas AS (\n  SELECT COALESCE(SUM(\n    (COALESCE(d.distance_mi, 0) / 1.60934) / NULLIF(gp.efficiency_mpg, 0) * gp.price_per_unit\n  ), 0) AS total\n  FROM drives d\n  JOIN LATERAL (\n    SELECT price_per_unit, efficiency_mpg\n    FROM gas_price_history\n    WHERE effective_from <= d.start_ts\n    ORDER BY effective_from DESC LIMIT 1\n  ) gp ON true\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND d.start_ts >= $__timeFrom()::timestamptz\n    AND d.start_ts <= $__timeTo()::timestamptz\n)\nSELECT ROUND(gas.total::numeric, 2) AS \"Gas Equivalent ($)\"\nFROM gas",
+          "rawSql": "WITH gas AS (\n  SELECT COALESCE(SUM(\n    (COALESCE((d.distance_m / 1609.344), 0) / 1.60934) / NULLIF(gp.efficiency_mpg, 0) * gp.price_per_unit\n  ), 0) AS total\n  FROM drives d\n  JOIN LATERAL (\n    SELECT price_per_unit, efficiency_mpg\n    FROM gas_price_history\n    WHERE effective_from <= d.started_at\n    ORDER BY effective_from DESC LIMIT 1\n  ) gp ON true\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND d.started_at >= $__timeFrom()::timestamptz\n    AND d.started_at <= $__timeTo()::timestamptz\n)\nSELECT ROUND(gas.total::numeric, 2) AS \"Gas Equivalent ($)\"\nFROM gas",
           "refId": "A"
         }
       ],
@@ -474,7 +474,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH charge_costs AS (\n  SELECT DATE_TRUNC('month', cs.start_ts) AS m,\n    SUM(cs.cost) AS ev\n  FROM charging_sessions cs\n  WHERE cs.vehicle_id = ${vehicle_id}\n    AND cs.start_ts >= $__timeFrom()::timestamptz\n    AND cs.start_ts <= $__timeTo()::timestamptz\n  GROUP BY DATE_TRUNC('month', cs.start_ts)\n),\ndrive_gas AS (\n  SELECT DATE_TRUNC('month', d.start_ts) AS m,\n    SUM((COALESCE(d.distance_mi, 0) / 1.60934) / NULLIF(gp.efficiency_mpg, 0) * gp.price_per_unit) AS gas\n  FROM drives d\n  JOIN LATERAL (\n    SELECT price_per_unit, efficiency_mpg\n    FROM gas_price_history\n    WHERE effective_from <= d.start_ts\n    ORDER BY effective_from DESC LIMIT 1\n  ) gp ON true\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND d.start_ts >= $__timeFrom()::timestamptz\n    AND d.start_ts <= $__timeTo()::timestamptz\n  GROUP BY DATE_TRUNC('month', d.start_ts)\n)\nSELECT COALESCE(c.m, dg.m) AS time,\n  ROUND(COALESCE(c.ev, 0)::numeric, 2) AS \"EV Cost\",\n  ROUND(COALESCE(dg.gas, 0)::numeric, 2) AS \"Gas Equivalent\",\n  ROUND((COALESCE(dg.gas, 0) - COALESCE(c.ev, 0))::numeric, 2) AS \"Savings\"\nFROM charge_costs c\nFULL OUTER JOIN drive_gas dg ON c.m = dg.m\nORDER BY 1",
+          "rawSql": "WITH charge_costs AS (\n  SELECT DATE_TRUNC('month', cs.started_at) AS m,\n    SUM(cs.cost_decimal) AS ev\n  FROM charging_sessions cs\n  WHERE cs.vehicle_id = ${vehicle_id}\n    AND cs.started_at >= $__timeFrom()::timestamptz\n    AND cs.started_at <= $__timeTo()::timestamptz\n  GROUP BY DATE_TRUNC('month', cs.started_at)\n),\ndrive_gas AS (\n  SELECT DATE_TRUNC('month', d.started_at) AS m,\n    SUM((COALESCE((d.distance_m / 1609.344), 0) / 1.60934) / NULLIF(gp.efficiency_mpg, 0) * gp.price_per_unit) AS gas\n  FROM drives d\n  JOIN LATERAL (\n    SELECT price_per_unit, efficiency_mpg\n    FROM gas_price_history\n    WHERE effective_from <= d.started_at\n    ORDER BY effective_from DESC LIMIT 1\n  ) gp ON true\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND d.started_at >= $__timeFrom()::timestamptz\n    AND d.started_at <= $__timeTo()::timestamptz\n  GROUP BY DATE_TRUNC('month', d.started_at)\n)\nSELECT COALESCE(c.m, dg.m) AS time,\n  ROUND(COALESCE(c.ev, 0)::numeric, 2) AS \"EV Cost\",\n  ROUND(COALESCE(dg.gas, 0)::numeric, 2) AS \"Gas Equivalent\",\n  ROUND((COALESCE(dg.gas, 0) - COALESCE(c.ev, 0))::numeric, 2) AS \"Savings\"\nFROM charge_costs c\nFULL OUTER JOIN drive_gas dg ON c.m = dg.m\nORDER BY 1",
           "refId": "A"
         }
       ],

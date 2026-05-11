@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { ProgressRing } from '@/components/data-display/ProgressRing';
 import { TeslaCarViz, parseModelKey } from '@/components/data-display/TeslaCarViz';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { useVehicleState, getVehicleStatus } from '@/api/hooks/useVehicles';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { fmtInt } from '@/lib/numberFormat';
 import { batteryColor } from '@/lib/colors';
 import type { Vehicle } from '@/api/types';
 import type { VehicleState } from '@/api/types';
@@ -20,7 +21,7 @@ interface VehicleCardProps {
 
 export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
   const { t } = useTranslation('vehicles');
-  const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings();
+  const { unitPrefs, formatDistance, formatTemperature } = useUnits();
 
   const { data: stateData } = useVehicleState(vehicle.id);
 
@@ -81,14 +82,14 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
                       {state.battery_level}%
                     </p>
                     <p className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)]">
-                      {fmtNumber(convertDistance(state.rated_range))} {distanceUnit}
+                      {formatDistance(state.rated_range)}
                     </p>
                   </div>
                 </div>
 
                 <div className="text-center">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {fmtNumber(convertTemp(state.inside_temp))} {tempUnit}
+                    {formatTemperature(state.inside_temp)}
                   </p>
                   <p className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                     {t('card.interior', 'Interior')}
@@ -97,10 +98,10 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
 
                 <div className="text-center">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {fmtInt(convertDistance(state.odometer))}
+                    {fmtInt(convertDistanceFromSI(state.odometer ?? 0, unitPrefs.distance))}
                   </p>
                   <p className="text-[10px] text-[var(--text-muted)] dark:text-[var(--text-muted)]">
-                    {distanceUnit}
+                    {unitPrefs.distance}
                   </p>
                 </div>
 

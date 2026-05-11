@@ -12,11 +12,12 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/api"
+	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
+	"github.com/ev-dev-labs/teslasync/internal/notification/computed"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/webpush"
 
@@ -66,10 +67,10 @@ func main() {
 	// API server's logger lives in another process and cannot be shared
 	// over a function call boundary. When cfg.APILogs.Enabled=false we
 	// install a nil sink (LoggedTransport then logs zerolog only).
-	var inboundAPILogger api.APICallLogger
+	var inboundAPILogger apilog.Logger
 	if cfg.APILogs.Enabled {
 		apiLogRepo := database.NewAPICallLogRepo(db)
-		inboundAPILogger = api.NewAsyncAPICallLogger(apiLogRepo, api.AsyncLoggerOptions{
+		inboundAPILogger = apilog.NewAsync(apiLogRepo, apilog.AsyncOptions{
 			QueueCapacity: cfg.APILogs.QueueCapacity,
 			BatchSize:     cfg.APILogs.BatchSize,
 			FlushInterval: cfg.APILogs.FlushInterval,
@@ -83,7 +84,7 @@ func main() {
 	} else {
 		log.Info().Msg("notification-worker outbound api_call_logs sink disabled (API_LOGS_INBOUND_ENABLED=false)")
 	}
-	notification.SetSink(api.APICallSinkAdapter(inboundAPILogger, cfg.APILogs.CaptureBodies))
+	notification.SetSink(apilog.SinkAdapter(inboundAPILogger, cfg.APILogs.CaptureBodies))
 
 	// Web Push (VAPID) — same dispatcher hook the API server registers.
 	// The notification worker is the actual MQTT consumer in production
@@ -218,7 +219,7 @@ func main() {
 	alertRuleRepo := database.NewAlertRuleRepo(db)
 	notifRepoForCM := database.NewNotificationRepo(db)
 	vehicleRepo := database.NewVehicleRepo(db)
-	computedEval := api.NewComputedMetricEvaluator(db)
+	computedEval := computed.New(db)
 	const computedMetricInterval = 5 * time.Minute
 	go func() {
 		ticker := time.NewTicker(computedMetricInterval)
@@ -302,7 +303,7 @@ ctx context.Context,
 alertRuleRepo *database.AlertRuleRepo,
 vehicleRepo *database.VehicleRepo,
 notifRepo *database.NotificationRepo,
-evaluator *api.ComputedMetricEvaluator,
+evaluator *computed.Evaluator,
 mqttClient pahomqtt.Client,
 ) {
 rules, err := alertRuleRepo.GetEnabledByKind(ctx, "computed_metric")
@@ -350,20 +351,32 @@ dispatchComputedMetricNotification(rule, vid, result, channels, mqttClient)
 }
 
 func vehiclesForRule(rule *models.AlertRule, all []*models.Vehicle) []int64 {
-if rule.VehicleID != nil {
-return []int64{*rule.VehicleID}
-}
-out := make([]int64, 0, len(all))
-for _, v := range all {
-out = append(out, v.ID)
-}
-return out
+	// Phase-49 / Slice 0005: multi-vehicle picker. Honour the new
+	// sticky-all flag + explicit subset hydrated by the repo.
+	if rule.AllVehicles {
+		out := make([]int64, 0, len(all))
+		for _, v := range all {
+			out = append(out, v.ID)
+		}
+		return out
+	}
+	if len(rule.VehicleIDs) > 0 {
+		out := make([]int64, len(rule.VehicleIDs))
+		copy(out, rule.VehicleIDs)
+		return out
+	}
+	// Legacy fallback: a rule that somehow has neither all_vehicles nor
+	// any junction entries (malformed migration data) targets nothing.
+	if rule.VehicleID != nil {
+		return []int64{*rule.VehicleID}
+	}
+	return nil
 }
 
 func dispatchComputedMetricNotification(
 rule *models.AlertRule,
 vehicleID int64,
-result api.ComputedMetricResult,
+result computed.Result,
 channels []*models.NotificationChannel,
 mqttClient pahomqtt.Client,
 ) {

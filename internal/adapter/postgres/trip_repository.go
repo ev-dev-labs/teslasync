@@ -27,8 +27,8 @@ func (r *tripRepository) GetByID(ctx context.Context, id string) (*trip.Trip, er
 	var t trip.Trip
 	err := r.pool.QueryRow(ctx, queries.GetTripByID, id).Scan(
 		&t.ID, &t.VehicleID, &t.StartLatitude, &t.StartLongitude, &t.EndLatitude, &t.EndLongitude,
-		&t.StartAddress, &t.EndAddress, &t.DistanceMiles, &t.EnergyUsedKWh,
-		&t.EfficiencyWhPerMile, &t.MaxSpeedMph, &t.FSMState, &t.StartedAt, &t.CompletedAt, &t.CreatedAt,
+		&t.StartAddress, &t.EndAddress, &t.DistanceM, &t.EnergyUsedWh,
+		&t.EfficiencyWhPerM, &t.MaxSpeedMps, &t.FSMState, &t.StartedAt, &t.CompletedAt, &t.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -59,8 +59,8 @@ func (r *tripRepository) GetByIDForUpdate(ctx context.Context, id string) (*trip
 	var t trip.Trip
 	err := r.pool.QueryRow(ctx, queries.GetTripByIDForUpdate, id).Scan(
 		&t.ID, &t.VehicleID, &t.StartLatitude, &t.StartLongitude, &t.EndLatitude, &t.EndLongitude,
-		&t.StartAddress, &t.EndAddress, &t.DistanceMiles, &t.EnergyUsedKWh,
-		&t.EfficiencyWhPerMile, &t.MaxSpeedMph, &t.FSMState, &t.StartedAt, &t.CompletedAt, &t.CreatedAt,
+		&t.StartAddress, &t.EndAddress, &t.DistanceM, &t.EnergyUsedWh,
+		&t.EfficiencyWhPerM, &t.MaxSpeedMps, &t.FSMState, &t.StartedAt, &t.CompletedAt, &t.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -74,8 +74,8 @@ func (r *tripRepository) GetByIDForUpdate(ctx context.Context, id string) (*trip
 func (r *tripRepository) Save(ctx context.Context, t *trip.Trip) error {
 	_, err := r.pool.Exec(ctx, queries.UpsertTrip,
 		t.ID, t.VehicleID, t.StartLatitude, t.StartLongitude, t.EndLatitude, t.EndLongitude,
-		t.StartAddress, t.EndAddress, t.DistanceMiles, t.EnergyUsedKWh,
-		t.EfficiencyWhPerMile, t.MaxSpeedMph, t.FSMState, t.StartedAt, t.CompletedAt, t.CreatedAt,
+		t.StartAddress, t.EndAddress, t.DistanceM, t.EnergyUsedWh,
+		t.EfficiencyWhPerM, t.MaxSpeedMps, t.FSMState, t.StartedAt, t.CompletedAt, t.CreatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("saving trip %s: %w", t.ID, err)

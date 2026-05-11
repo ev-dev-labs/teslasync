@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -45,11 +46,13 @@ func (f *fakeStateReader) State(_ context.Context, vehicleID int64, at time.Time
 }
 
 // newSvc builds a VehicleService wired only with the bits the fallback path
-// touches: the SignalStateReader. stateRepo is intentionally nil so the
-// test never reaches a real database; BuildStateFromSignalStore must guard
-// the call. This also doubles as a guard for ADR-001 — if the implementation
-// secretly tried to read a snapshot table through positionRepo/securityRepo
-// it would nil-pointer-panic here.
+// touches: the SignalStateReader. The other fields (db, stateProvider) are
+// intentionally nil so the test never reaches a real database;
+// BuildStateFromSignalStore must guard each call. This also doubles as a
+// guard for ADR-001 — if the implementation secretly tried to read a
+// snapshot table through positionRepo/vehicleRepo it would nil-pointer-panic
+// here. (Phase-42 prompt 0077: the legacy securityRepo + stateRepo fields
+// are gone; the equivalent guard now applies to stateProvider.)
 func newSvc(reader SignalStateReader) *VehicleService {
 	svc := &VehicleService{}
 	if reader != nil {
@@ -381,10 +384,13 @@ func TestBuildStateFromSignalStore_FieldToSignalNameMapping(t *testing.T) {
 
 // TestBuildStateFromSignalStore_DoesNotReadSnapshotTables verifies that
 // BuildStateFromSignalStore reaches for *no* repository besides the optional
-// stateRepo + the SignalStateReader. It does so by constructing a service
-// with every repo nil — any attempt to query positionRepo, securityRepo,
-// vehicleRepo, settingsRepo, etc. would nil-pointer-panic. ADR-001 anchor:
-// only signal_log, no snapshot table reads.
+// stateProvider + the SignalStateReader. It does so by constructing a service
+// with every field nil — any attempt to query positionRepo, vehicleRepo,
+// settingsRepo, etc. would nil-pointer-panic. ADR-001 anchor: only signal_log,
+// no snapshot table reads.
+//
+// Phase-42 (prompt 0077): the legacy securityRepo/stateRepo guard is now
+// stateProvider (nil-safe per its receiver guard).
 func TestBuildStateFromSignalStore_DoesNotReadSnapshotTables(t *testing.T) {
 	const vehicleID int64 = 7
 	store := newStore(t, vehicleID, map[string]interface{}{
@@ -395,7 +401,7 @@ func TestBuildStateFromSignalStore_DoesNotReadSnapshotTables(t *testing.T) {
 		"Odometer":   12345.6,
 		"InsideTemp": 22.7,
 	}}
-	svc := newSvc(fake) // positionRepo, securityRepo, stateRepo, etc. all nil
+	svc := newSvc(fake) // positionRepo, stateProvider, etc. all nil
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -413,5 +419,67 @@ func TestBuildStateFromSignalStore_DoesNotReadSnapshotTables(t *testing.T) {
 	}
 	if fake.calls != 1 {
 		t.Errorf("State: want exactly 1 call, got %d", fake.calls)
+	}
+}
+
+// TestBuildStateFromSignalStore_AcceptsPhase42CodecNumericTypes is the
+// regression for the dashboard-blank bug discovered during the panel-by-panel
+// UI audit: Phase-42 codec stores Float5 fields as float32 and Int3/Int4
+// fields as int32, but the projection layer was narrowing to float64 only,
+// silently dropping every codec value. After the canonical signal.Float64
+// rollout EVERY numeric kind the codec emits MUST land in VehicleState.
+//
+// If this test fails after a future codec change, the answer is to extend
+// internal/signal/coerce.go (and re-run this test), NOT to add a new
+// type-specific branch in vehicle_service.go.
+func TestBuildStateFromSignalStore_AcceptsPhase42CodecNumericTypes(t *testing.T) {
+	const vehicleID int64 = 7
+	store := newStore(t, vehicleID, map[string]interface{}{
+		// Float5 codec fields → float32 in the live store
+		"VehicleSpeed":            float32(42.5),
+		"Odometer":                float32(98765.5),
+		"IdealBatteryRange":       float32(310.25),
+		"RatedRange":              float32(305.5),
+		"InsideTemp":              float32(22.75),
+		"OutsideTemp":             float32(14.5),
+		"Latitude":                float32(37.4419),
+		"Longitude":               float32(-122.143),
+		"ACChargingPower":         float32(7.2),
+		"ChargeRateMilePerHour":   float32(28.5),
+		"TimeToFullCharge":        float32(2.5),
+		// Int3/Int4 codec fields → int32 in the live store
+		"BatteryLevel": int32(72),
+		"GpsHeading":   int32(180),
+	})
+	svc := newSvc(nil)
+	state := svc.BuildStateFromSignalStore(store, &models.Vehicle{ID: vehicleID})
+
+	tol := func(name string, got, want float64) {
+		t.Helper()
+		if diff := got - want; diff > 0.01 || diff < -0.01 {
+			t.Errorf("%s: float32→float64 round-trip failed; got %v want ≈%v", name, got, want)
+		}
+	}
+	tol("Speed", state.Speed, 42.5)
+	tol("Odometer", state.Odometer, 98765.5)
+	tol("IdealRange", state.IdealRange, 310.25)
+	tol("RatedRange", state.RatedRange, 305.5)
+	tol("InsideTemp", state.InsideTemp, 22.75)
+	tol("OutsideTemp", state.OutsideTemp, 14.5)
+	tol("Latitude", state.Latitude, 37.4419)
+	tol("Longitude", state.Longitude, -122.143)
+	tol("ChargerPower", state.ChargerPower, 7.2)
+	tol("ChargeRate", state.ChargeRate, 28.5)
+	tol("TimeToFullChg", state.TimeToFullChg, 2.5)
+
+	if state.BatteryLevel != 72 {
+		t.Errorf("BatteryLevel: int32 narrowing failed, got %v want 72", state.BatteryLevel)
+	}
+	if state.Heading == nil || *state.Heading != 180 {
+		got := "nil"
+		if state.Heading != nil {
+			got = strconv.FormatFloat(*state.Heading, 'f', -1, 64)
+		}
+		t.Errorf("Heading: int32 narrowing failed, got %s want 180", got)
 	}
 }

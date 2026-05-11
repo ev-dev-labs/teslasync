@@ -133,7 +133,7 @@ func (h *AutomationHandler) GetHistoryDetail(w http.ResponseWriter, r *http.Requ
 			to = *record.CompletedAt
 		}
 		// Cap at 100 transitions; no pagination needed for detail view.
-		transitions, _, err = h.fsmTransRepo.Query(r.Context(), *record.VehicleID, "", nil, from, to, 100, 0)
+		transitions, _, err = h.fsmTransRepo.Query(r.Context(), *record.VehicleID, "", from, to, 100, 0)
 		if err != nil {
 			log.Warn().Err(err).Int64("history_id", historyID).Msg("failed to fetch FSM transitions for execution")
 			transitions = []database.FSMTransitionRecord{}

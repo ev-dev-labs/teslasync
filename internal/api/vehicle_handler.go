@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/service"
@@ -31,12 +32,15 @@ type VehicleHandler struct {
 // vehiclePositionMappings projects the signal_log change feed into the
 // Position JSON shape consumed by the frontend. Field names match the
 // legacy Position model JSON tags so the wire contract is unchanged.
+//
+// Phase-42 codec uses LocationLatitude / LocationLongitude (compound
+// flatten — see codec/flatten.go); Elevation is intentionally absent
+// because Tesla Fleet Telemetry does not emit it.
 var vehiclePositionMappings = []signal.FieldMapping{
-	{Signal: "Latitude", Field: "latitude"},
-	{Signal: "Longitude", Field: "longitude"},
+	{Signal: "LocationLatitude", Field: "latitude"},
+	{Signal: "LocationLongitude", Field: "longitude"},
 	{Signal: "GpsHeading", Field: "heading"},
 	{Signal: "VehicleSpeed", Field: "speed_mph"},
-	{Signal: "Elevation", Field: "elevation_m"},
 }
 
 func NewVehicleHandler(vehicleSvc *service.VehicleService, tc *tesla.Client, state signal.StateReader) *VehicleHandler {
@@ -133,7 +137,19 @@ func (h *VehicleHandler) Positions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	limit, _ := pagination(r)
-	from := time.Now().AddDate(0, 0, -7) // default to last 7 days
+	// Default to last 30 days so the Live Map shows the latest known location
+	// even when the vehicle has been offline for a while. The page already
+	// surfaces freshness via the `Xs ago` indicator and `LiveStaleDataBanner`,
+	// so showing a stale-but-real position is better than an empty map.
+	// Allow `?days=N` (1..365) to override the window when callers need a
+	// shorter or longer reach.
+	days := 30
+	if v := r.URL.Query().Get("days"); v != "" {
+		if d, perr := strconv.Atoi(v); perr == nil && d >= 1 && d <= 365 {
+			days = d
+		}
+	}
+	from := time.Now().AddDate(0, 0, -days)
 	to := time.Now()
 
 	// Chart mode: empty CollapseBy so every change-feed emission becomes a

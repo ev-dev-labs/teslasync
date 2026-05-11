@@ -8,15 +8,25 @@ package signal
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
+
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 )
 
 // Value holds a signal's current value and when it was last updated.
+//
+// Raw is `any` so the store can hold the typed primitive that the Tesla
+// pipeline emits at the codec boundary (string, bool, int32, int64,
+// float32, float64, time.Time, or a typed ftproto enum). Callers that
+// need a concrete Go scalar should use the typed convenience getters
+// (GetFloat, GetBool, GetString, GetTime) which verify the stored value
+// against the field's declared protomodel.ValueKind.
 type Value struct {
 	Raw       interface{} `json:"value"`
 	Timestamp time.Time   `json:"timestamp"`
@@ -104,54 +114,174 @@ func (s *Store) Get(vehicleID int64, name string) *Value {
 	return nil
 }
 
-// GetFloat returns a numeric signal value. Returns (0, false) if not found.
-func (s *Store) GetFloat(vehicleID int64, name string) (float64, bool) {
-	v := s.Get(vehicleID, name)
+// Set updates or inserts a single signal value for a vehicle. It is the
+// per-field counterpart of Update used by the new Tesla normalize
+// pipeline, which emits typed primitives one Atomic at a time.
+//
+// nil values and {invalid: true} markers are dropped to preserve the
+// last-known-good contract — an invalid sample must NOT overwrite a
+// previously known good value.
+//
+// The caller-supplied ts becomes the Value.Timestamp so producers that
+// have a precise emit time (e.g. codec.Atomic.EmittedAt sourced from the
+// Payload's CreatedAt) preserve it instead of being restamped to
+// time.Now() at the boundary. Callers that have no precise timestamp
+// SHOULD pass time.Now().UTC() explicitly.
+func (s *Store) Set(vehicleID int64, field string, value any, ts time.Time) {
+	if value == nil {
+		return
+	}
+	if im, isMap := value.(map[string]interface{}); isMap {
+		if inv, has := im["invalid"]; has {
+			if b, isBool := inv.(bool); isBool && b {
+				return
+			}
+		}
+	}
+
+	s.mu.Lock()
+	m, ok := s.vehicles[vehicleID]
+	if !ok {
+		m = make(map[string]*Value)
+		s.vehicles[vehicleID] = m
+	}
+	m[field] = &Value{Raw: value, Timestamp: ts}
+	s.mu.Unlock()
+
+	metrics.VehicleLastSeen.WithLabelValues(strconv.FormatInt(vehicleID, 10)).Set(0)
+}
+
+// GetFloat returns a numeric signal value as float64. When the field is
+// declared in protomodel.SignalsByName, the declared ValueKind must be
+// numeric (Float/Double/Int32/Int64); a mismatch returns (0, false) and
+// logs a warn. Unannotated fields (e.g. ad-hoc test names) fall back to
+// best-effort numeric coercion so callers that do not own a SignalMeta
+// entry are not punished for the missing annotation.
+func (s *Store) GetFloat(vehicleID int64, field string) (float64, bool) {
+	v := s.Get(vehicleID, field)
 	if v == nil {
 		return 0, false
 	}
-	switch val := v.Raw.(type) {
-	case float64:
-		return val, true
-	case int:
-		return float64(val), true
-	case int64:
-		return float64(val), true
+	if meta, ok := protomodel.SignalsByName[field]; ok {
+		switch meta.ValueKind {
+		case protomodel.ValueKindFloat,
+			protomodel.ValueKindDouble,
+			protomodel.ValueKindInt32,
+			protomodel.ValueKindInt64:
+			// declared numeric — fall through to type switch
+		default:
+			log.Warn().
+				Int64("vehicle_id", vehicleID).
+				Str("field", field).
+				Stringer("value_kind", meta.ValueKind).
+				Msg("signal store: GetFloat called on non-numeric ValueKind")
+			return 0, false
+		}
 	}
-	return 0, false
+	f, ok := Float64(v.Raw)
+	if !ok {
+		log.Warn().
+			Int64("vehicle_id", vehicleID).
+			Str("field", field).
+			Str("got_type", fmt.Sprintf("%T", v.Raw)).
+			Msg("signal store: GetFloat type mismatch on stored value")
+		return 0, false
+	}
+	return f, true
 }
 
 // GetInt returns an integer signal value. Returns (0, false) if not found.
-func (s *Store) GetInt(vehicleID int64, name string) (int, bool) {
-	f, ok := s.GetFloat(vehicleID, name)
+func (s *Store) GetInt(vehicleID int64, field string) (int, bool) {
+	f, ok := s.GetFloat(vehicleID, field)
 	if !ok {
 		return 0, false
 	}
 	return int(f), true
 }
 
-// GetString returns a string signal value. Returns ("", false) if not found.
-func (s *Store) GetString(vehicleID int64, name string) (string, bool) {
-	v := s.Get(vehicleID, name)
+// GetString returns the field's value as a string. After the codec change
+// that canonicalizes proto-enum variants to short strings (see
+// protomodel.DecodeValue), both ValueKindString AND ValueKindEnum fields
+// hold native Go strings in the store, so a single accessor serves both.
+//
+// Returns ("", false) when the field is missing OR the stored value is
+// not a string (a producer bug — the codec contract guarantees string
+// for both kinds; a non-string here means an upstream layer wrote a
+// typed value directly without going through the codec).
+func (s *Store) GetString(vehicleID int64, field string) (string, bool) {
+	v := s.Get(vehicleID, field)
 	if v == nil {
 		return "", false
 	}
 	if str, ok := v.Raw.(string); ok {
 		return str, true
 	}
+	log.Warn().
+		Int64("vehicle_id", vehicleID).
+		Str("field", field).
+		Str("got_type", fmt.Sprintf("%T", v.Raw)).
+		Msg("signal store: GetString type mismatch on stored value")
 	return "", false
 }
 
-// GetBool returns a boolean signal value. Returns (false, false) if not found.
-func (s *Store) GetBool(vehicleID int64, name string) (bool, bool) {
-	v := s.Get(vehicleID, name)
+// GetBool returns a boolean signal value. When the field is declared in
+// protomodel.SignalsByName, the declared ValueKind must be Bool; a
+// mismatch returns (false, false) and logs a warn. Unannotated fields
+// fall back to best-effort bool assertion.
+func (s *Store) GetBool(vehicleID int64, field string) (bool, bool) {
+	v := s.Get(vehicleID, field)
 	if v == nil {
 		return false, false
+	}
+	if meta, ok := protomodel.SignalsByName[field]; ok {
+		if meta.ValueKind != protomodel.ValueKindBool {
+			log.Warn().
+				Int64("vehicle_id", vehicleID).
+				Str("field", field).
+				Stringer("value_kind", meta.ValueKind).
+				Msg("signal store: GetBool called on non-bool ValueKind")
+			return false, false
+		}
 	}
 	if b, ok := v.Raw.(bool); ok {
 		return b, true
 	}
+	log.Warn().
+		Int64("vehicle_id", vehicleID).
+		Str("field", field).
+		Str("got_type", fmt.Sprintf("%T", v.Raw)).
+		Msg("signal store: GetBool type mismatch on stored value")
 	return false, false
+}
+
+// GetTime returns a time.Time signal value. When the field is declared
+// in protomodel.SignalsByName, the declared ValueKind must be Time; a
+// mismatch returns (zero-time, false) and logs a warn. Unannotated
+// fields fall back to best-effort time.Time assertion.
+func (s *Store) GetTime(vehicleID int64, field string) (time.Time, bool) {
+	v := s.Get(vehicleID, field)
+	if v == nil {
+		return time.Time{}, false
+	}
+	if meta, ok := protomodel.SignalsByName[field]; ok {
+		if meta.ValueKind != protomodel.ValueKindTime {
+			log.Warn().
+				Int64("vehicle_id", vehicleID).
+				Str("field", field).
+				Stringer("value_kind", meta.ValueKind).
+				Msg("signal store: GetTime called on non-time ValueKind")
+			return time.Time{}, false
+		}
+	}
+	if t, ok := v.Raw.(time.Time); ok {
+		return t, true
+	}
+	log.Warn().
+		Int64("vehicle_id", vehicleID).
+		Str("field", field).
+		Str("got_type", fmt.Sprintf("%T", v.Raw)).
+		Msg("signal store: GetTime type mismatch on stored value")
+	return time.Time{}, false
 }
 
 // GetRawMap returns the raw signal values as a simple map (for API responses).

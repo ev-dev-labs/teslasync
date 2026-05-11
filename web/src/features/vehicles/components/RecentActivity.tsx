@@ -7,7 +7,8 @@ import { FadeIn } from '@/components/motion/FadeIn'
 import { InlineMetric } from '@/components/data-display/InlineMetric'
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber'
 import { TimeStamp } from '@/components/data-display'
-import { useSettings } from '@/hooks/useSettings'
+import { useUnits } from '@/hooks/useUnits'
+import { convertDistanceFromSI } from '@/lib/unitConversion'
 import { fmtInt } from '@/lib/numberFormat'
 import type { Drive, ChargingSession } from '@/api/types'
 
@@ -18,8 +19,7 @@ interface RecentActivityProps {
 
 export function RecentActivity({ drives, sessions }: RecentActivityProps) {
   const { t } = useTranslation()
-  const { convertDistance, distanceUnit } = useSettings()
-
+  const { unitPrefs } = useUnits()
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Recent Drives */}
@@ -51,9 +51,9 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                   <div className="flex-1 text-sm">
                     <p className="text-[var(--text-primary)] font-medium group-hover:text-cyan-300 transition-colors">
                       <AnimatedNumber
-                        value={convertDistance(d.distance_mi)}
+                        value={convertDistanceFromSI(d.distance_m ?? 0, unitPrefs.distance)}
                         decimals={1}
-                        suffix={` ${distanceUnit}`}
+                        suffix={` ${unitPrefs.distance}`}
                       />
                     </p>
                     <p className="text-xs text-[var(--text-muted)]">
@@ -63,11 +63,11 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                   <div className="text-right">
                     <InlineMetric
                       icon={<Clock />}
-                      value={`${Math.floor(d.duration_min / 60)}h ${fmtInt(d.duration_min % 60)}m`}
+                      value={`${Math.floor(d.duration_s / 3600)}h ${fmtInt(Math.floor((d.duration_s % 3600) / 60))}m`}
                     />
-                    {d.start_battery_pct != null && d.end_battery_pct != null && (
+                    {d.start_soc_pct != null && d.end_soc_pct != null && (
                       <span className="text-[10px] text-[var(--text-muted)]">
-                        {d.start_battery_pct}% → {d.end_battery_pct}%
+                        {d.start_soc_pct}% → {d.end_soc_pct}%
                       </span>
                     )}
                   </div>
@@ -111,7 +111,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                   <div className="flex-1 text-sm">
                     <p className="text-[var(--text-primary)] font-medium group-hover:text-emerald-300 transition-colors">
                       <AnimatedNumber
-                        value={s.energy_added_kwh}
+                        value={s.total_energy_added_wh}
                         decimals={1}
                         suffix=" kWh"
                       />
@@ -125,9 +125,9 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                       icon={<Clock />}
                       value={`${Math.floor(s.duration_min / 60)}h ${fmtInt(s.duration_min % 60)}m`}
                     />
-                    {s.end_battery_pct != null && (
+                    {s.end_soc_pct != null && (
                       <span className="text-[10px] text-[var(--text-muted)]">
-                        {s.start_battery_pct}% → {s.end_battery_pct}%
+                        {s.start_soc_pct}% → {s.end_soc_pct}%
                       </span>
                     )}
                   </div>

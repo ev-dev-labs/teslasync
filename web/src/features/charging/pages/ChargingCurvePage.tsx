@@ -18,7 +18,7 @@ import {
   TimeToChargeSection,
   LoadingSkeleton,
 } from '../components/charging-curve';
-import { sessionLabel, generateChargingCurve, avg } from '../components/charging-curve/helpers';
+import { sessionLabel, generateChargingCurve, avg, durationMinutes } from '../components/charging-curve/helpers';
 import type { SummaryStats } from '../components/charging-curve/types';
 
 export default function ChargingCurvePage() {
@@ -70,10 +70,10 @@ export default function ChargingCurvePage() {
 
   const stats = useMemo((): SummaryStats | null => {
     if (!sessions?.length) return null;
-    const totalEnergy = sessions.reduce((sum, s) => sum + (s.energy_added_kwh ?? 0), 0);
-    const totalCost = sessions.reduce((sum, s) => sum + (s.cost ?? 0), 0);
-    const avgDuration = avg(sessions.map((s) => s.duration_min));
-    const powers = sessions.map((s) => s.charger_power_kw_max ?? 0);
+    const totalEnergy = sessions.reduce((sum, s) => sum + (s.total_energy_added_wh ?? 0), 0);
+    const totalCost = sessions.reduce((sum, s) => sum + (s.cost_decimal ?? 0), 0);
+    const avgDuration = avg(sessions.map((s) => durationMinutes(s.started_at, s.ended_at)));
+    const powers = sessions.map((s) => (s.peak_power_w ?? 0) / 1000);
     const avgRate = avg(powers);
     const peakRate = Math.max(...powers);
     return {
@@ -179,8 +179,8 @@ export default function ChargingCurvePage() {
           />
           {selectedSession && (
             <span className="text-xs text-[var(--text-secondary)]">
-              <TimeStamp value={selectedSession.start_ts} />
-              {selectedSession.charger_location && ` · ${selectedSession.charger_location}`}
+              <TimeStamp value={selectedSession.started_at} />
+              {selectedSession.start_place && ` · ${selectedSession.start_place}`}
             </span>
           )}
         </div>

@@ -14,6 +14,7 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
 import type { SecurityEvent } from '@/types/admin';
+import { asNonEmptyString } from '@/lib/typeGuards';
 import { doorClosed, allWindowsClosed, windowSummary } from './helpers';
 
 interface SecurityStatusCardsProps {
@@ -111,7 +112,7 @@ export function SecurityStatusCards({ latest, isLoading }: SecurityStatusCardsPr
           >
             {doorClosed(latest?.doorState)
               ? t('admin.security.closed', 'Closed')
-              : (latest?.doorState ?? '—')}
+              : (asNonEmptyString(latest?.doorState) ?? t('admin.security.open', 'Open'))}
           </p>
           <p className="text-xs text-[var(--text-muted)] mt-1">
             {t('admin.security.card.doorsDesc', 'All vehicle doors')}

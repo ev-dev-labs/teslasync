@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useDrives, useDriveTelemetry } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
@@ -30,7 +31,8 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
-  const { convertSpeed, convertDistance, speedUnit, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   const {
     data: drives,
@@ -71,38 +73,39 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
       const ts = new Date(p.timestamp);
       return {
         time: `${String(ts.getHours()).padStart(2, '0')}:${String(ts.getMinutes()).padStart(2, '0')}`,
-        speed: p.speed != null ? convertSpeed(p.speed) : null,
+        speed: p.speed != null ? convertSpeedFromSI(p.speed, unitPrefs.speed) : null,
         power: p.power ?? null,
         battery: p.batteryLevel ?? p.soc ?? null,
         elevation: p.elevation ?? null,
       };
     });
-  }, [telemetry, convertSpeed]);
+  }, [telemetry, unitPrefs.speed]);
 
   const stats = useMemo((): ChartSummaryStat[] => {
     if (!latestDrive) return [];
     const items: ChartSummaryStat[] = [
       {
         label: t('widget.driveTelemetry.distance', 'Distance'),
-        value: fmtNumber(convertDistance(latestDrive.distanceMi), 1),
-        unit: distanceUnit,
+        value: fmtNumber(convertDistanceFromSI(latestDrive.distanceM, unitPrefs.distance), 1),
+        unit: unitPrefs.distance,
       },
       {
         label: t('widget.driveTelemetry.duration', 'Duration'),
-        value: fmtInt(latestDrive.durationMin),
+        value: fmtInt(latestDrive.durationS / 60),
         unit: t('widget.driveTelemetry.min', 'min'),
       },
     ];
-    if (latestDrive.energyUsedKwh != null && latestDrive.distanceMi > 0) {
-      const whPerMi = (latestDrive.energyUsedKwh * 1000) / latestDrive.distanceMi;
+    if (latestDrive.energyUsedWh != null && latestDrive.distanceM > 0) {
+      const distance = convertDistanceFromSI(latestDrive.distanceM, unitPrefs.distance);
+      const efficiency = distance > 0 ? latestDrive.energyUsedWh / distance : null;
       items.push({
         label: t('widget.driveTelemetry.efficiency', 'Efficiency'),
-        value: fmtNumber(whPerMi, 0),
-        unit: 'Wh/mi',
+        value: efficiency != null ? fmtNumber(efficiency, 0) : '—',
+        unit: efficiencyUnit,
       });
     }
     return items;
-  }, [latestDrive, convertDistance, distanceUnit, t]);
+  }, [latestDrive, unitPrefs.distance, efficiencyUnit, t]);
 
   const tick = isWide ? axisTick : axisTickSm;
 
@@ -185,7 +188,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             stroke={palette.series[0]}
             strokeWidth={2}
             dot={false}
-            name={`${t('widget.driveTelemetry.speed', 'Speed')} (${speedUnit})`}
+            name={`${t('widget.driveTelemetry.speed', 'Speed')} (${unitPrefs.speed})`}
             connectNulls
           />
 
@@ -203,7 +206,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
         </ComposedChart>
       </ResponsiveContainer>
     );
-  }, [chartData, isCompact, isWide, tick, speedUnit, t, palette]);
+  }, [chartData, isCompact, isWide, tick, unitPrefs.speed, t, palette]);
 
   // Compact layout
   if (isCompact) {

@@ -5,7 +5,8 @@ import { DollarSign, Zap, Fuel, TrendingDown } from 'lucide-react';
 import { MetricCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
+import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
@@ -32,7 +33,7 @@ function computeMetrics(
   let totalDistanceMi = 0;
 
   for (const s of sessions) {
-    const energy = s.energy_added_kwh ?? 0;
+    const energy = s.total_energy_added_wh ?? 0;
     totalKwh += energy;
     // Prefer session cost if recorded, otherwise estimate from kWh
     totalCost += s.cost != null ? s.cost : energy * costPerKwh;
@@ -61,14 +62,10 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
-  const {
-    costPerKwh,
-    currencySymbol,
-    formatCurrency,
-    costPerDistanceUnit,
-    estimateGasCost,
-    distanceUnit,
-  } = useSettings();
+  const { costPerKwh } = useFormatting();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const { currencySymbol, formatCurrency, costPerDistanceUnit, estimateGasCost } = useFormatting();
 
   // Fetch last 30 days of charging sessions
   const thirtyDaysAgo = useMemo(() => {

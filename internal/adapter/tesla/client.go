@@ -10,6 +10,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/platform/config"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/ev-dev-labs/teslasync/internal/port/external"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // Client implements external.TeslaClient with rate limiting and circuit breaker.
@@ -29,7 +30,7 @@ func NewClient(cfg config.TeslaConfig) *Client {
 	}
 
 	return &Client{
-		httpClient: &http.Client{Transport: transport},
+		httpClient: &http.Client{Transport: otelhttp.NewTransport(transport)},
 		baseURL:    cfg.BaseURL,
 		authURL:    cfg.AuthURL,
 		cb:         httputil.NewCircuitBreaker("tesla_api", httputil.DefaultCircuitBreakerConfig()),

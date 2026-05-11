@@ -92,11 +92,15 @@ export interface SafetySnapshot {
   automatic_blind_spot_camera?: boolean | null;
   automatic_emergency_braking_off?: boolean | null;
   blind_spot_collision_warning?: boolean | null;
-  cruise_follow_distance?: string | null;
+  // Phase-42a: backend serializes raw signal.SignalValue (interface{}) so
+  // these enum fields may arrive as `string`, native `boolean`, or `number`.
+  // Always run through cleanSafetyEnum() / isSafetyEnumActive() — never
+  // call .startsWith/.toLowerCase directly. See lib/safetyEnum.ts.
+  cruise_follow_distance?: string | boolean | number | null;
   emergency_lane_departure_avoidance?: boolean | null;
-  forward_collision_warning?: string | null;
-  lane_departure_avoidance?: string | null;
-  speed_limit_warning?: string | null;
+  forward_collision_warning?: string | boolean | number | null;
+  lane_departure_avoidance?: string | boolean | number | null;
+  speed_limit_warning?: string | boolean | number | null;
   pin_to_drive_enabled?: boolean | null;
   miles_since_reset?: number | null;
   self_driving_miles_since_reset?: number | null;

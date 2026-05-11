@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Activity, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import type { DriveDetail } from '@/types/driving';
 import type { DriveStats } from './types';
@@ -14,7 +14,13 @@ interface MoreDetailsPanelProps {
 
 export function MoreDetailsPanel({ drive, stats }: MoreDetailsPanelProps) {
   const { t } = useTranslation();
-  const { convertEfficiency, distanceUnit, speedUnit, tempUnit, efficiencyUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
+
+  const distanceUnit = unitPrefs.distance;
+  const speedUnit = unitPrefs.speed;
+  const tempUnit = unitPrefs.temperature;
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   return (
     <FadeIn>
@@ -65,7 +71,7 @@ export function MoreDetailsPanel({ drive, stats }: MoreDetailsPanelProps) {
           <div className="text-center">
             <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.consumptionRate', 'Consumption')}</p>
             <p className="text-lg font-bold text-purple-400">
-              {stats.consumptionWhKm > 0 ? `${fmtNumber(convertEfficiency(stats.consumptionWhKm))}` : '—'}{' '}
+              {stats.consumptionWhKm > 0 ? `${fmtNumber(toEfficiencyDisplay(stats.consumptionWhKm))}` : '—'}{' '}
               <span className="text-xs text-[var(--text-muted)]">{efficiencyUnit}</span>
             </p>
           </div>

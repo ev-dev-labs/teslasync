@@ -1,0 +1,60 @@
+{{- if .Values.grafana.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "teslasync.fullname" . }}-grafana-datasources
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+    grafana_datasource: "1"
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        uid: DS_TESLASYNC_PROMETHEUS
+        type: prometheus
+        access: proxy
+        url: http://{{ include "teslasync.fullname" . }}-prometheus:9090
+        isDefault: true
+        jsonData:
+          # Trace ID exemplars are emitted as `trace_id` labels by the Go SDK
+          # (see internal/metrics) and tail-sampled at the OTel collector
+          # (see helm/teslasync/files/otel-collector/config.yaml). The
+          # exemplar config below lets Grafana follow exemplars from a
+          # latency histogram into the corresponding trace in Tempo.
+          exemplarTraceIdDestinations:
+            - name: trace_id
+              datasourceUid: DS_TESLASYNC_TEMPO
+              urlDisplayLabel: View trace
+      - name: Tempo
+        uid: DS_TESLASYNC_TEMPO
+        type: tempo
+        access: proxy
+        url: http://{{ include "teslasync.fullname" . }}-tempo:3200
+        jsonData:
+          # tracesToLogsV2 lets us jump from a span to the matching log
+          # window. Loki is not part of this chart yet — the panel will be
+          # disabled by Grafana when the Loki datasource isn't present.
+          tracesToLogsV2:
+            datasourceUid: loki
+            spanStartTimeShift: -1m
+            spanEndTimeShift: 1m
+          tracesToMetrics:
+            datasourceUid: DS_TESLASYNC_PROMETHEUS
+            spanStartTimeShift: -1m
+            spanEndTimeShift: 1m
+            tags:
+              - key: service.name
+                value: service
+              - key: span.name
+                value: span_name
+          serviceMap:
+            datasourceUid: DS_TESLASYNC_PROMETHEUS
+          nodeGraph:
+            enabled: true
+          search:
+            hide: false
+          lokiSearch:
+            datasourceUid: loki
+{{- end }}

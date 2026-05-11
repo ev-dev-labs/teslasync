@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { Link } from 'react-router-dom';
@@ -25,7 +25,8 @@ import { FadeIn } from '@/components/motion';
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAlertContext } from '@/hooks/useAlertContext';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -129,7 +130,7 @@ function buildInsights(
   }
 
   if (sessions) {
-    const deepDischarges = sessions.filter((s) => s.start_battery_pct < 10).length;
+    const deepDischarges = sessions.filter((s) => s.start_soc_pct < 10).length;
     if (deepDischarges > 3) {
       items.push({
         icon: <AlertTriangle className="h-4 w-4" />,
@@ -220,7 +221,21 @@ function BatteryHealthSkeleton() {
 export default function BatteryHealthPage() {
   const { t } = useTranslation();
   usePageTitle(t('battery.title', 'Battery Health'));
-  const { convertDistance, distanceUnit, convertTemp, tempUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+
+  const tempUnit = unitPrefs.temperature;
+  // Phase-43 / Prompt 0023 — `toDistanceDisplay` from useSettings expects MILES
+  // input. Backend's analytics range_km is genuinely km (derived SI from
+  // signal_log via `internal/api/battery_degradation_handler.go`). To convert
+  // safely, route km → metres then through `convertDistanceFromSI`. Mixing
+  // the legacy helper with km input was the pre-existing bug this prompt
+  // fixes (same root cause as the Phase-43/0022 driving telemetry fix).
+
+  const fromKm = useCallback(
+    (km: number): number => convertDistanceFromSI(km * 1000, unitPrefs.distance),
+    [unitPrefs.distance],
+  );
 
   /* ── Vehicle selector (Phase 40 / Prompt 16: header picker is the source of truth) ─ */
   // Alert drillthrough URLs (?vehicle_id=…&t=…) flow into the global store
@@ -255,6 +270,22 @@ export default function BatteryHealthPage() {
     [health, t],
   );
 
+  /* ── Derived: degradation projection sanity ────────────────────────
+   * Backend regression on a short history window can produce absurd
+   * slopes (>50 %/yr) and project health to 0 within a month. Treat
+   * those as "not enough data" so we don't surface misleading "0 years
+   * to 80 %" or a predicted line collapsing to the X-axis.
+   */
+  const projectionTrustworthy = useMemo(() => {
+    const pred = degradation?.prediction;
+    if (!pred?.has_enough_data) return false;
+    const slope = Math.abs(pred.slope_per_year ?? 0);
+    if (!Number.isFinite(slope) || slope > 50) return false;
+    const yrs = pred.years_to_80_pct;
+    if (yrs == null || !Number.isFinite(yrs) || yrs <= 0) return false;
+    return true;
+  }, [degradation]);
+
   /* ── Derived: prediction chart ─────────────────────────────────── */
   const predictionChartData = useMemo(() => {
     const hist = (health?.history ?? []).map((h) => ({
@@ -262,27 +293,31 @@ export default function BatteryHealthPage() {
       actual: h.soh_pct,
       predicted: undefined as number | undefined,
     }));
-    const proj = (degradation?.prediction?.projection_points ?? []).map((p) => ({
-      label: p.month.slice(0, 7),
-      actual: undefined as number | undefined,
-      predicted: p.health,
-    }));
+    const proj = projectionTrustworthy
+      ? (degradation?.prediction?.projection_points ?? []).map((p) => ({
+          label: p.month.slice(0, 7),
+          actual: undefined as number | undefined,
+          predicted: p.health,
+        }))
+      : [];
     // Overlap last actual point into prediction for continuity
     if (hist.length > 0 && proj.length > 0) {
       proj[0] = { ...proj[0], actual: hist[hist.length - 1].actual };
     }
     return [...hist, ...proj];
-  }, [health, degradation]);
+  }, [health, degradation, projectionTrustworthy]);
 
   /* ── Derived: range trend ──────────────────────────────────────── */
-  const rangeTrend = useMemo(
-    () =>
-      (health?.history ?? []).map((h) => ({
-        label: formatDateShort(h.date),
-        range: Math.round(convertDistance(h.range_km)),
-      })),
-    [health, convertDistance],
-  );
+  const rangeTrend = useMemo(() => {
+    const points = (health?.history ?? []).map((h) => ({
+      label: formatDateShort(h.date),
+      range: Math.round(fromKm(h.range_km)),
+    }));
+    // Backend may emit history rows with range_km=0 when no derivation
+    // path is available — render empty state instead of a flat-zero chart.
+    if (points.length === 0 || points.every((p) => p.range <= 0)) return [];
+    return points;
+  }, [health, fromKm]);
 
   /* ── Derived: charge level distribution ────────────────────────── */
   const chargeLevelDist = useMemo(() => {
@@ -294,10 +329,10 @@ export default function BatteryHealthPage() {
       endCount: 0,
     }));
     items.forEach((s) => {
-      const si = Math.min(Math.floor(s.start_battery_pct / 10), 9);
+      const si = Math.min(Math.floor(s.start_soc_pct / 10), 9);
       buckets[si].startCount++;
-      if (s.end_battery_pct != null) {
-        const ei = Math.min(Math.floor(s.end_battery_pct / 10), 9);
+      if (s.end_soc_pct != null) {
+        const ei = Math.min(Math.floor(s.end_soc_pct / 10), 9);
         buckets[ei].endCount++;
       }
     });
@@ -308,8 +343,8 @@ export default function BatteryHealthPage() {
   const chargingHabits = useMemo(() => {
     const items = sessions ?? [];
     if (items.length === 0) return null;
-    const startLevels = items.map((s) => s.start_battery_pct);
-    const endLevels = items.filter((s) => s.end_battery_pct != null).map((s) => s.end_battery_pct!);
+    const startLevels = items.map((s) => s.start_soc_pct);
+    const endLevels = items.filter((s) => s.end_soc_pct != null).map((s) => s.end_soc_pct!);
     const avgStart = startLevels.length > 0 ? startLevels.reduce((a, b) => a + b, 0) / startLevels.length : 0;
     const avgEnd = endLevels.length > 0 ? endLevels.reduce((a, b) => a + b, 0) / endLevels.length : 80;
     const superchargerCount = items.filter((s) => s.charger_type?.toLowerCase().includes('tesla')).length;
@@ -325,8 +360,8 @@ export default function BatteryHealthPage() {
     items.forEach((s) => {
       const isDC =
         (s.charger_type != null && s.charger_type.length > 0) ||
-        (s.charger_power_kw_max != null && s.charger_power_kw_max > 20);
-      const energy = s.energy_added_kwh ?? 0;
+        (s.peak_power_w != null && s.peak_power_w > 20);
+      const energy = s.total_energy_added_wh ?? 0;
       if (isDC) { dcEnergy += energy; dcCount++; }
       else { acEnergy += energy; acCount++; }
     });
@@ -342,8 +377,8 @@ export default function BatteryHealthPage() {
     };
   }, [sessions]);
 
-  const yearsTo80 = degradation?.prediction?.has_enough_data
-    ? fmtNumber(degradation.prediction.years_to_80_pct, 1)
+  const yearsTo80 = projectionTrustworthy
+    ? fmtNumber(degradation!.prediction!.years_to_80_pct, 1)
     : '—';
 
   /* ── No vehicle: defensive guard (Phase 40 / Prompt 18) ───────── */
@@ -403,7 +438,14 @@ export default function BatteryHealthPage() {
               </Badge>
             </div>
             <RadialGauge
-              value={100 - (health.estimated_capacity / health.original_capacity * 100 - 100 + 100)}
+              value={
+                health.original_capacity > 0
+                  ? Math.max(
+                      0,
+                      Math.min(100, (health.estimated_capacity / health.original_capacity) * 100),
+                    )
+                  : 0
+              }
               max={100}
               label={t('battery.gauge.capacity', 'Capacity')}
               unit="%"
@@ -516,7 +558,11 @@ export default function BatteryHealthPage() {
           />
           <MetricCard
             label={t('battery.metric.age', 'Battery Age')}
-            value={`${health.battery_age_months} ${t('battery.months', 'months')}`}
+            value={
+              health.battery_age_months > 0
+                ? `${health.battery_age_months} ${t('battery.months', 'months')}`
+                : '—'
+            }
             icon={<Clock className="h-5 w-5" />}
             color="red"
           />
@@ -551,7 +597,7 @@ export default function BatteryHealthPage() {
               label={t('battery.thermal.moduleTempMax', 'Module Temp (Max)')}
               value={
                 chargingLive?.module_temp_max != null
-                  ? `${fmtNumber(convertTemp(chargingLive.module_temp_max), 1)} ${tempUnit}`
+                  ? `${fmtNumber(toTemperatureDisplay(chargingLive.module_temp_max), 1)} ${tempUnit}`
                   : '—'
               }
               subtitle={
@@ -568,7 +614,7 @@ export default function BatteryHealthPage() {
               label={t('battery.thermal.moduleTempMin', 'Module Temp (Min)')}
               value={
                 chargingLive?.module_temp_min != null
-                  ? `${fmtNumber(convertTemp(chargingLive.module_temp_min), 1)} ${tempUnit}`
+                  ? `${fmtNumber(toTemperatureDisplay(chargingLive.module_temp_min), 1)} ${tempUnit}`
                   : '—'
               }
               subtitle={
@@ -598,8 +644,8 @@ export default function BatteryHealthPage() {
               value={
                 chargingLive?.module_temp_max != null && chargingLive?.module_temp_min != null
                   ? `${fmtNumber(
-                      convertTemp(chargingLive.module_temp_max) -
-                        convertTemp(chargingLive.module_temp_min),
+                      toTemperatureDisplay(chargingLive.module_temp_max) -
+                        toTemperatureDisplay(chargingLive.module_temp_min),
                       1,
                     )} ${tempUnit}`
                   : '—'
@@ -715,7 +761,7 @@ export default function BatteryHealthPage() {
                     <Area
                       {...AREA_DEFAULTS}
                       dataKey="range"
-                      name={`${t('battery.chart.range', 'Range')} (${distanceUnit})`}
+                      name={`${t('battery.chart.range', 'Range')} (${unitPrefs.distance})`}
                       stroke={COLOR.GOOD}
                       fill="url(#rangeGrad)"
                     />
@@ -828,9 +874,9 @@ export default function BatteryHealthPage() {
               </p>
               <p className="text-2xl font-bold text-[var(--text-primary)]">
                 {health.history.length > 0
-                  ? fmtInt(convertDistance(health.history[0].range_km))
+                  ? fmtInt(fromKm(health.history[0].range_km))
                   : '—'}
-                <span className="text-sm text-[var(--text-muted)]"> {distanceUnit}</span>
+                <span className="text-sm text-[var(--text-muted)]"> {unitPrefs.distance}</span>
               </p>
             </GlassPanel>
             <GlassPanel className="p-4 text-center">
@@ -839,15 +885,15 @@ export default function BatteryHealthPage() {
               </p>
               <p className="text-2xl font-bold text-emerald-300">
                 {health.history.length > 0
-                  ? fmtInt(convertDistance(health.history[health.history.length - 1].range_km))
+                  ? fmtInt(fromKm(health.history[health.history.length - 1].range_km))
                   : '—'}
-                <span className="text-sm text-[var(--text-muted)]"> {distanceUnit}</span>
+                <span className="text-sm text-[var(--text-muted)]"> {unitPrefs.distance}</span>
               </p>
               {health.history.length >= 2 && (
                 <p className="text-[10px] text-rose-300 mt-1">
-                  -{fmtInt(convertDistance(
+                  -{fmtInt(fromKm(
                     health.history[0].range_km - health.history[health.history.length - 1].range_km,
-                  ))} {distanceUnit} {t('battery.newVsNow.lost', 'lost')}
+                  ))} {unitPrefs.distance} {t('battery.newVsNow.lost', 'lost')}
                 </p>
               )}
             </GlassPanel>

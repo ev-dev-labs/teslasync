@@ -1,156 +1,419 @@
 /**
- * Pure unit conversion helpers.
+ * SI-floor unit conversion module (phase-43, prompt 0010).
  *
- * Internal storage is always: miles, °C, PSI.
- * These functions convert between internal and display units.
- */
-
-import { UNITS } from './constants'
-
-// ---------------------------------------------------------------------------
-// Unit enums (match Tesla proto values used by the API)
-// ---------------------------------------------------------------------------
-
-export enum DistanceUnit {
-  Unknown = 0,
-  Miles = 1,
-  Kilometers = 2,
-}
-
-export enum TemperatureUnit {
-  Unknown = 0,
-  Fahrenheit = 1,
-  Celsius = 2,
-}
-
-export enum PressureUnit {
-  Unknown = 0,
-  PSI = 1,
-  Bar = 2,
-}
-
-// ---------------------------------------------------------------------------
-// Low-level converters (stateless, pure)
-// ---------------------------------------------------------------------------
-
-export function milesToKm(miles: number): number {
-  return miles * UNITS.MI_TO_KM
-}
-
-export function kmToMiles(km: number): number {
-  return km * UNITS.KM_TO_MI
-}
-
-export function celsiusToFahrenheit(c: number): number {
-  return c * 9 / 5 + 32
-}
-
-export function fahrenheitToCelsius(f: number): number {
-  return (f - 32) * 5 / 9
-}
-
-export function psiToBar(psi: number): number {
-  return psi / UNITS.BAR_TO_PSI
-}
-
-export function barToPsi(bar: number): number {
-  return bar * UNITS.BAR_TO_PSI
-}
-
-// ---------------------------------------------------------------------------
-// High-level display converters (internal units → user preference)
-// ---------------------------------------------------------------------------
-
-/** Convert a value from internal units to user's display preference */
-export function convertDistance(miles: number, toUnit: 'mi' | 'km'): number {
-  return toUnit === 'km' ? milesToKm(miles) : miles
-}
-
-export function convertTemp(celsius: number, toUnit: '°C' | '°F'): number {
-  return toUnit === '°F' ? celsiusToFahrenheit(celsius) : celsius
-}
-
-export function convertPressure(psi: number, toUnit: 'PSI' | 'bar'): number {
-  return toUnit === 'bar' ? psiToBar(psi) : psi
-}
-
-// ---------------------------------------------------------------------------
-// Source-aware display converters
-// ---------------------------------------------------------------------------
-
-/**
- * Convert a distance from its source unit to the user's display unit,
- * rounding to the given precision.
+ * Every conversion / formatter in this file accepts canonical SI input
+ * ONLY. There is NO runtime fallback that "guesses the input unit" —
+ * that anti-pattern hid bugs in the legacy code. Producers (api/hooks/*)
+ * deliver SI; renderers convert at the boundary.
  *
- * When both source and target are Unknown (0), the raw value is returned.
+ * Authoritative SI baseline (mirrors `internal/tesla/units` Go package
+ * for the Tesla telemetry pipeline; pressure and energy SI baselines
+ * are scoped to the frontend display contract per prompt 0010):
+ *
+ *   distance     → meters                  (m)
+ *   speed        → meters per second       (m/s)
+ *   temperature  → degrees Celsius         (°C)
+ *   pressure     → kilopascals             (kPa)
+ *   energy       → watt-hours              (Wh)
+ *   duration     → seconds                 (s)
+ *
+ * Public surface (NEW, SI-floor):
+ *
+ *   const SI                 — informational map of canonical SI units.
+ *   type UnitPref            — user display preference bag.
+ *   formatDistance(meters, pref): string
+ *   formatSpeed(mps, pref): string
+ *   formatTemperature(celsius, pref): string
+ *   formatPressure(kpa, pref): string
+ *   formatEnergy(wh, pref): string
+ *   formatDuration(seconds, pref): string
+ *   formatPower(watts, pref): string
+ *   convertDistanceFromSI / convertSpeedFromSI / convertTempFromSI /
+ *   convertPressureFromSI / convertEnergyFromSI / convertDurationFromSI /
+ *   convertPowerFromSI
  */
-export function toDisplayDistance(
-  value: number,
-  fromUnit: DistanceUnit,
-  toUnit: DistanceUnit,
-  precision = 1,
-): number {
-  const miles =
-    fromUnit === DistanceUnit.Kilometers ? kmToMiles(value) : value
-  const display =
-    toUnit === DistanceUnit.Kilometers ? milesToKm(miles) : miles
-  return Number(display.toFixed(precision))
-}
+
+// ---------------------------------------------------------------------------
+// SI canonical baseline (informational; renderers reference this so the
+// canonical input contract is discoverable from a single export).
+// ---------------------------------------------------------------------------
 
 /**
- * Convert a temperature from its source unit to the user's display unit,
- * rounding to the given precision.
+ * Canonical SI input units this module accepts. Provided as a frozen
+ * literal so call sites can `import { SI }` and document the producer
+ * contract at the call boundary.
  */
-export function toDisplayTemperature(
-  value: number,
-  fromUnit: TemperatureUnit,
-  toUnit: TemperatureUnit,
-  precision = 1,
-): number {
-  const celsius =
-    fromUnit === TemperatureUnit.Fahrenheit
-      ? fahrenheitToCelsius(value)
-      : value
-  const display =
-    toUnit === TemperatureUnit.Fahrenheit
-      ? celsiusToFahrenheit(celsius)
-      : celsius
-  return Number(display.toFixed(precision))
-}
+export const SI = Object.freeze({
+  distance: 'm',
+  speed: 'm/s',
+  temperature: '°C',
+  pressure: 'kPa',
+  energy: 'Wh',
+  duration: 's',
+  power: 'W',
+} as const)
+
+// ---------------------------------------------------------------------------
+// User display preference bag.
+// ---------------------------------------------------------------------------
+
+/** Distance display unit (target of formatDistance). */
+export type DistanceUnitPref = 'km' | 'mi' | 'ft'
+/** Speed display unit (target of formatSpeed). */
+export type SpeedUnitPref = 'km/h' | 'mph'
+/** Temperature display unit (target of formatTemperature). */
+export type TemperatureUnitPref = '°C' | '°F'
+/** Pressure display unit (target of formatPressure). */
+export type PressureUnitPref = 'kPa' | 'psi' | 'bar'
+/** Energy display unit (target of formatEnergy). */
+export type EnergyUnitPref = 'Wh' | 'kWh'
+/** Duration display unit (target of formatDuration). */
+export type DurationUnitPref = 's' | 'min' | 'h' | 'd'
+/** Power display unit (target of formatPower). */
+export type PowerUnitPref = 'W' | 'kW'
 
 /**
- * Convert a pressure from its source unit to the user's display unit,
- * rounding to the given precision.
+ * UnitPref aggregates the user's per-quantity display preference plus
+ * locale + precision hints for `Intl.NumberFormat`. Pages compute one
+ * UnitPref per render (typically from `useSettings`) and pass it to
+ * each `formatX` call. There is intentionally no module-level cache —
+ * the caller owns the preference lifecycle.
  */
-export function toDisplayPressure(
-  value: number,
-  fromUnit: PressureUnit,
-  toUnit: PressureUnit,
-  precision = 1,
-): number {
-  const psi =
-    fromUnit === PressureUnit.Bar ? barToPsi(value) : value
-  const display =
-    toUnit === PressureUnit.Bar ? psiToBar(psi) : psi
-  return Number(display.toFixed(precision))
+export interface UnitPref {
+  distance: DistanceUnitPref
+  speed: SpeedUnitPref
+  temperature: TemperatureUnitPref
+  pressure: PressureUnitPref
+  energy: EnergyUnitPref
+  duration: DurationUnitPref
+  power: PowerUnitPref
+  /** BCP-47 locale tag passed to `Intl.NumberFormat`. Undefined = host. */
+  locale?: string
+  /** Default `maximumFractionDigits` when formatX has no per-call override. */
+  precision?: number
+  /** Display fallback when a formatX receives null/undefined/NaN. Default '—'. */
+  emptyDisplay?: string
 }
 
 // ---------------------------------------------------------------------------
-// Unit labels
+// Conversion factors. Values are NIST-grade where applicable. Each
+// converter is a pure unidirectional function: SI input → display unit.
 // ---------------------------------------------------------------------------
 
-export function distanceLabel(unit: DistanceUnit): string {
-  return unit === DistanceUnit.Kilometers ? 'km' : 'mi'
+/** 1 mile = 1609.344 m exactly (international yard, NIST). */
+const METERS_PER_MILE = 1609.344
+/** 1 km = 1000 m exactly. */
+const METERS_PER_KM = 1000
+/** 1 ft = 0.3048 m exactly (international foot, NIST). */
+const METERS_PER_FOOT = 0.3048
+/** 1 psi = 6.894757 kPa (NIST SP 811, rounded to display precision). */
+const KPA_PER_PSI = 6.894757
+/** 1 bar = 100 kPa (BIPM definition). */
+const KPA_PER_BAR = 100
+/** Seconds in a minute / hour / day. */
+const SECONDS_PER_MINUTE = 60
+const SECONDS_PER_HOUR = 3600
+const SECONDS_PER_DAY = 86400
+
+// ---------------------------------------------------------------------------
+// Pure SI → display numeric converters.
+// Every fn assumes SI input. NO branching on a "guess the input unit" flag.
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert distance from SI meters to the user's display unit.
+ * @param meters - distance in meters (SI)
+ * @param to - target display unit
+ */
+export function convertDistanceFromSI(
+  meters: number,
+  to: DistanceUnitPref,
+): number {
+  switch (to) {
+    case 'km':
+      return meters / METERS_PER_KM
+    case 'mi':
+      return meters / METERS_PER_MILE
+    case 'ft':
+      return meters / METERS_PER_FOOT
+  }
 }
 
-export function speedLabel(unit: DistanceUnit): string {
-  return unit === DistanceUnit.Kilometers ? 'km/h' : 'mph'
+/**
+ * Convert speed from SI meters-per-second to the user's display unit.
+ * @param mps - speed in meters per second (SI)
+ * @param to - target display unit
+ */
+export function convertSpeedFromSI(mps: number, to: SpeedUnitPref): number {
+  switch (to) {
+    case 'km/h':
+      return (mps * SECONDS_PER_HOUR) / METERS_PER_KM
+    case 'mph':
+      return (mps * SECONDS_PER_HOUR) / METERS_PER_MILE
+  }
 }
 
-export function temperatureLabel(unit: TemperatureUnit): string {
-  return unit === TemperatureUnit.Fahrenheit ? '°F' : '°C'
+/**
+ * Convert temperature from SI Celsius to the user's display unit.
+ * @param celsius - temperature in degrees Celsius (SI)
+ * @param to - target display unit
+ */
+export function convertTempFromSI(
+  celsius: number,
+  to: TemperatureUnitPref,
+): number {
+  switch (to) {
+    case '°C':
+      return celsius
+    case '°F':
+      return (celsius * 9) / 5 + 32
+  }
 }
 
-export function pressureLabel(unit: PressureUnit): string {
-  return unit === PressureUnit.Bar ? 'bar' : 'PSI'
+/**
+ * Convert pressure from SI kilopascals to the user's display unit.
+ * @param kpa - pressure in kilopascals (SI)
+ * @param to - target display unit
+ */
+export function convertPressureFromSI(
+  kpa: number,
+  to: PressureUnitPref,
+): number {
+  switch (to) {
+    case 'kPa':
+      return kpa
+    case 'psi':
+      return kpa / KPA_PER_PSI
+    case 'bar':
+      return kpa / KPA_PER_BAR
+  }
+}
+
+/**
+ * Convert energy from SI watt-hours to the user's display unit.
+ * @param wh - energy in watt-hours (SI for the FE display contract;
+ *             matches the new Go struct's energy_*_wh JSON tags).
+ * @param to - target display unit
+ */
+export function convertEnergyFromSI(wh: number, to: EnergyUnitPref): number {
+  switch (to) {
+    case 'Wh':
+      return wh
+    case 'kWh':
+      return wh / 1000
+  }
+}
+
+/**
+ * Convert duration from SI seconds to the user's display unit.
+ * @param seconds - duration in seconds (SI)
+ * @param to - target display unit
+ */
+export function convertDurationFromSI(
+  seconds: number,
+  to: DurationUnitPref,
+): number {
+  switch (to) {
+    case 's':
+      return seconds
+    case 'min':
+      return seconds / SECONDS_PER_MINUTE
+    case 'h':
+      return seconds / SECONDS_PER_HOUR
+    case 'd':
+      return seconds / SECONDS_PER_DAY
+  }
+}
+
+/**
+ * Convert power from SI watts to the user's display unit.
+ * @param watts - power in watts (SI)
+ * @param to - target display unit
+ */
+export function convertPowerFromSI(watts: number, to: PowerUnitPref): number {
+  switch (to) {
+    case 'W':
+      return watts
+    case 'kW':
+      return watts / 1000
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Locale-aware string formatters.
+// Each fn returns the locale '—' fallback (or pref.emptyDisplay) for
+// null / undefined / NaN / non-finite inputs and never throws.
+// ---------------------------------------------------------------------------
+
+/** Default fallback string for nullish / NaN inputs. */
+const DEFAULT_EMPTY_DISPLAY = '—'
+
+/** Default precision per quantity when `pref.precision` is unset. */
+const DEFAULT_PRECISION: Record<keyof typeof SI, number> = {
+  distance: 1,
+  speed: 0,
+  temperature: 1,
+  pressure: 1,
+  energy: 2,
+  duration: 0,
+  power: 2,
+}
+
+interface FormatOptions {
+  /** Override `pref.precision` for this single call. */
+  precision?: number
+}
+
+function isFiniteNumber(v: number | null | undefined): v is number {
+  return typeof v === 'number' && Number.isFinite(v)
+}
+
+function formatNumber(
+  value: number,
+  locale: string | undefined,
+  fractionDigits: number,
+): string {
+  // Intl.NumberFormat handles negatives, very large, very small, locale
+  // separators, and grouping. We pin maximum + minimum to the same
+  // digit count to keep tabular layouts aligned.
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(value)
+}
+
+function resolveEmpty(pref: Pick<UnitPref, 'emptyDisplay'> | undefined): string {
+  return pref?.emptyDisplay ?? DEFAULT_EMPTY_DISPLAY
+}
+
+function resolvePrecision(
+  pref: Pick<UnitPref, 'precision'> | undefined,
+  override: number | undefined,
+  fallback: number,
+): number {
+  if (typeof override === 'number' && Number.isFinite(override) && override >= 0) {
+    return Math.floor(override)
+  }
+  if (
+    pref &&
+    typeof pref.precision === 'number' &&
+    Number.isFinite(pref.precision) &&
+    pref.precision >= 0
+  ) {
+    return Math.floor(pref.precision)
+  }
+  return fallback
+}
+
+/**
+ * Format an SI-meters distance for display in the user's unit.
+ * @param meters - distance in meters (SI). Null/undefined/NaN → fallback.
+ * @param pref - user display preference.
+ */
+export function formatDistance(
+  meters: number | null | undefined,
+  pref: UnitPref,
+  options?: FormatOptions,
+): string {
+  if (!isFiniteNumber(meters)) return resolveEmpty(pref)
+  const digits = resolvePrecision(pref, options?.precision, DEFAULT_PRECISION.distance)
+  const value = convertDistanceFromSI(meters, pref.distance)
+  return `${formatNumber(value, pref.locale, digits)} ${pref.distance}`
+}
+
+/**
+ * Format an SI m/s speed for display in the user's unit.
+ * @param mps - speed in meters per second (SI). Null/undefined/NaN → fallback.
+ * @param pref - user display preference.
+ */
+export function formatSpeed(
+  mps: number | null | undefined,
+  pref: UnitPref,
+  options?: FormatOptions,
+): string {
+  if (!isFiniteNumber(mps)) return resolveEmpty(pref)
+  const digits = resolvePrecision(pref, options?.precision, DEFAULT_PRECISION.speed)
+  const value = convertSpeedFromSI(mps, pref.speed)
+  return `${formatNumber(value, pref.locale, digits)} ${pref.speed}`
+}
+
+/**
+ * Format an SI Celsius temperature for display in the user's unit.
+ * @param celsius - temperature in degrees Celsius (SI). Null/undefined/NaN → fallback.
+ * @param pref - user display preference.
+ */
+export function formatTemperature(
+  celsius: number | null | undefined,
+  pref: UnitPref,
+  options?: FormatOptions,
+): string {
+  if (!isFiniteNumber(celsius)) return resolveEmpty(pref)
+  const digits = resolvePrecision(pref, options?.precision, DEFAULT_PRECISION.temperature)
+  const value = convertTempFromSI(celsius, pref.temperature)
+  // No space between number and °unit (typographic convention).
+  return `${formatNumber(value, pref.locale, digits)}${pref.temperature}`
+}
+
+/**
+ * Format an SI kilopascal pressure for display in the user's unit.
+ * @param kpa - pressure in kilopascals (SI). Null/undefined/NaN → fallback.
+ * @param pref - user display preference.
+ */
+export function formatPressure(
+  kpa: number | null | undefined,
+  pref: UnitPref,
+  options?: FormatOptions,
+): string {
+  if (!isFiniteNumber(kpa)) return resolveEmpty(pref)
+  const digits = resolvePrecision(pref, options?.precision, DEFAULT_PRECISION.pressure)
+  const value = convertPressureFromSI(kpa, pref.pressure)
+  return `${formatNumber(value, pref.locale, digits)} ${pref.pressure}`
+}
+
+/**
+ * Format an SI watt-hours energy for display in the user's unit.
+ * @param wh - energy in watt-hours (SI). Null/undefined/NaN → fallback.
+ * @param pref - user display preference.
+ */
+export function formatEnergy(
+  wh: number | null | undefined,
+  pref: UnitPref,
+  options?: FormatOptions,
+): string {
+  if (!isFiniteNumber(wh)) return resolveEmpty(pref)
+  const digits = resolvePrecision(pref, options?.precision, DEFAULT_PRECISION.energy)
+  const value = convertEnergyFromSI(wh, pref.energy)
+  return `${formatNumber(value, pref.locale, digits)} ${pref.energy}`
+}
+
+/**
+ * Format an SI seconds duration for display in the user's unit.
+ * @param seconds - duration in seconds (SI). Null/undefined/NaN → fallback.
+ * @param pref - user display preference.
+ */
+export function formatDuration(
+  seconds: number | null | undefined,
+  pref: UnitPref,
+  options?: FormatOptions,
+): string {
+  if (!isFiniteNumber(seconds)) return resolveEmpty(pref)
+  const digits = resolvePrecision(pref, options?.precision, DEFAULT_PRECISION.duration)
+  const value = convertDurationFromSI(seconds, pref.duration)
+  return `${formatNumber(value, pref.locale, digits)} ${pref.duration}`
+}
+
+/**
+ * Format SI watts for display in the user's unit.
+ * @param watts - power in watts (SI). Null/undefined/NaN → fallback.
+ * @param pref - user display preference.
+ */
+export function formatPower(
+  watts: number | null | undefined,
+  pref: UnitPref,
+  options?: FormatOptions,
+): string {
+  if (!isFiniteNumber(watts)) return resolveEmpty(pref)
+  const digits = resolvePrecision(pref, options?.precision, DEFAULT_PRECISION.power)
+  const value = convertPowerFromSI(watts, pref.power)
+  return `${formatNumber(value, pref.locale, digits)} ${pref.power}`
 }

@@ -3,8 +3,8 @@ import {
   Battery, Gauge, Thermometer, Navigation, BatteryCharging, Eye,
 } from 'lucide-react'
 import { StaggerContainer, StaggerItem } from '@/components/motion'
-import { useSettings } from '@/hooks/useSettings'
-import { fmtNumber, fmtInt } from '@/lib/numberFormat'
+import { useUnits } from '@/hooks/useUnits'
+import { fmtInt, fmtNumber } from '@/lib/numberFormat'
 import { InfoTile } from './InfoTile'
 import type { VehicleState } from '@/api/types'
 
@@ -14,8 +14,7 @@ interface TelemetryGridProps {
 
 export function TelemetryGrid({ state }: TelemetryGridProps) {
   const { t } = useTranslation()
-  const { convertDistance, convertSpeed, convertTemp, distanceUnit, speedUnit, tempUnit } =
-    useSettings()
+  const { formatDistance, formatSpeed, formatTemperature } = useUnits()
 
   return (
     <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
@@ -31,14 +30,14 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
                 ? 'text-amber-300'
                 : 'text-rose-300'
           }
-          sub={`${fmtNumber(convertDistance(state.rated_range))} ${distanceUnit} range`}
+          sub={`${formatDistance(state.rated_range)} ${t('common.range', 'range')}`}
         />
       </StaggerItem>
       <StaggerItem>
         <InfoTile
           icon={Gauge}
           label={t('common.speed', 'Speed')}
-          value={`${fmtNumber(convertSpeed(state.speed))} ${speedUnit}`}
+          value={formatSpeed(state.speed)}
           sub={state.speed > 0 ? 'Driving' : 'Parked'}
         />
       </StaggerItem>
@@ -46,15 +45,15 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
         <InfoTile
           icon={Thermometer}
           label={t('common.inside', 'Inside')}
-          value={`${fmtNumber(convertTemp(state.inside_temp))}${tempUnit}`}
-          sub={`Outside: ${fmtNumber(convertTemp(state.outside_temp))}${tempUnit}`}
+          value={formatTemperature(state.inside_temp)}
+          sub={`${t('common.outside', 'Outside')}: ${formatTemperature(state.outside_temp)}`}
         />
       </StaggerItem>
       <StaggerItem>
         <InfoTile
           icon={Navigation}
           label={t('common.odometer', 'Odometer')}
-          value={`${fmtInt(convertDistance(state.odometer))} ${distanceUnit}`}
+          value={formatDistance(state.odometer, { precision: 0 })}
         />
       </StaggerItem>
       <StaggerItem>

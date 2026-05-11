@@ -8,7 +8,7 @@ import {
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { LEGEND_STYLE } from './helpers';
 import type { ChartDataPoint, DriveStats } from './types';
@@ -20,17 +20,19 @@ interface ElevationChartProps {
 
 export function ElevationChart({ chartData, stats }: ElevationChartProps) {
   const { t } = useTranslation();
-  const { speedUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const speedUnit = unitPrefs.speed;
   const syncProps = useSyncedCursor();
   const syncedX = useSyncedReferenceLineX();
 
   return (
-    <FadeIn>
+    <FadeIn className="h-full">
       {/* chart-a11y:no-table dense per-sample elevation+speed trace; gain/loss/net stats appear above the chart */}
       <ChartContainer
         title={t('driveDetail.elevProfile', 'Elevation Profile')}
         ariaLabel={t('driveDetail.elevProfile.aria', 'Elevation and speed area+line chart over the drive timeline')}
         height={220}
+        className="h-full"
       >
         {chartData.length > 1 ? (
           <>

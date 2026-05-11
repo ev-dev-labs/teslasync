@@ -77,7 +77,28 @@ func accumulateSignals(acc map[string]interface{}, signals map[string]interface{
 // accumulatedSignals contains the merged set of all signals seen in the handler's
 // current accumulation window — used to fill in start values (battery, odometer,
 // location) that may not be in the current batch.
+//
+// Legacy entry point for callers without event-time information; defers to
+// ProcessSignalsAt with empty payloadTs/fieldTs so the helpers fall back to
+// time.Now().UTC() — the historical wall-clock behavior.
 func (t *TelemetrySessionTracker) ProcessSignals(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
-	t.trackDriving(ctx, vehicleID, vin, signals, accumulatedSignals)
-	t.trackCharging(ctx, vehicleID, vin, signals, accumulatedSignals)
+	t.ProcessSignalsAt(ctx, vehicleID, vin, signals, accumulatedSignals, time.Time{}, nil)
+}
+
+// ProcessSignalsAt is the event-time-aware variant. payloadTs is the
+// largest EmittedAt across the batch (provided by the AtomicsObserver
+// pipeline); fieldTs maps each Field to its per-atomic EmittedAt for
+// per-field-derived timestamp attribution (e.g. drive-start at the
+// Gear=D atomic's EmittedAt rather than the batch high-water mark).
+// A zero payloadTs preserves the legacy wall-clock behavior — used by
+// the legacy ProcessSignals wrapper plus the recovery / flush
+// callers that have no signal payload.
+//
+// Phase-42a/0030.bis (commit C2 of v3.4 prod-replay accuracy fix) —
+// without this thread, replaying a 24-minute window produces drives
+// stamped with the replay-runner's clock instead of the original
+// event window.
+func (t *TelemetrySessionTracker) ProcessSignalsAt(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}, payloadTs time.Time, fieldTs map[string]time.Time) {
+	t.trackDriving(ctx, vehicleID, vin, signals, accumulatedSignals, payloadTs, fieldTs)
+	t.trackCharging(ctx, vehicleID, vin, signals, accumulatedSignals, payloadTs, fieldTs)
 }

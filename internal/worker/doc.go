@@ -8,4 +8,6 @@
 // maintenance worker handles data retention enforcement, old record
 // cleanup, and periodic PostgreSQL VACUUM to reclaim storage. Both
 // workers shut down gracefully on context cancellation.
+// Layer: platform
+//
 package worker

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { ChargingSession } from '@/api/types';
+import { distanceAddedM, durationMinutes } from '../charging-curve/helpers';
 import { formatDateShort } from '@/lib/dateFormat';
 import { CHART_COLORS, CHARGER_COLORS } from '@/lib/colors';
 import { KWH_PER_GALLON, CO2_PER_GAL_KG, KG_CO2_PER_TREE_YEAR } from './constants';
@@ -14,7 +15,7 @@ interface UseCostAnalysisDataParams {
   gasPrice: number;
   mpg: number;
   electricityRate: number;
-  convertDistance: (km: number) => number;
+  toDistanceDisplay: (km: number) => number;
   isMiles: boolean;
 }
 
@@ -34,24 +35,22 @@ export function useCostAnalysisData({
   gasPrice,
   mpg,
   electricityRate,
-  convertDistance,
+  toDistanceDisplay,
   isMiles,
 }: UseCostAnalysisDataParams): UseCostAnalysisDataResult {
   const coreStats = useMemo(() => {
     if (!sessions || sessions.length === 0) return null;
-    const totalCost = sessions.reduce((s, c) => s + (c.cost ?? 0), 0);
-    const totalEnergy = sessions.reduce((s, c) => s + c.energy_added_kwh, 0);
-    const avgCostPerKwh = totalEnergy > 0 ? totalCost / totalEnergy : 0;
-    const totalDuration = sessions.reduce((s, c) => s + c.duration_min, 0);
+    const totalCost = sessions.reduce((s, c) => s + (c.cost_decimal ?? 0), 0);
+    const totalEnergy = sessions.reduce((s, c) => s + c.total_energy_added_wh, 0);
+    const avgCostPerKwh = totalEnergy > 0 ? totalCost / (totalEnergy / 1000) : 0;
+    const totalDuration = sessions.reduce((s, c) => s + durationMinutes(c.started_at, c.ended_at), 0);
 
-    let totalDistanceMi = 0;
+    let totalDistanceM = 0;
     sessions.forEach((s) => {
-      if (s.miles_added != null && s.miles_added > 0) {
-        totalDistanceMi += s.miles_added;
-      }
+      totalDistanceM += (distanceAddedM(s) ?? 0);
     });
 
-    const distVal = convertDistance(totalDistanceMi);
+    const distVal = toDistanceDisplay(totalDistanceM / 1609.344);
     const costPerDist = distVal > 0 ? totalCost / distVal : 0;
 
     const gallonsEquiv = totalEnergy / KWH_PER_GALLON;
@@ -64,20 +63,20 @@ export function useCostAnalysisData({
 
     return {
       totalCost, totalEnergy, avgCostPerKwh, totalDuration,
-      totalDistanceMi, costPerDist, gasCost, savings, savingsPercent,
+      totalDistanceM, costPerDist, gasCost, savings, savingsPercent,
       co2SavedKg, treeEquiv, gallonsEquiv, count: sessions.length,
     };
-  }, [sessions, gasPrice, convertDistance]);
+  }, [sessions, gasPrice, toDistanceDisplay]);
 
   const monthlyData = useMemo<MonthlyBucket[]>(() => {
     if (!sessions || sessions.length === 0) return [];
     const buckets: Record<string, { cost: number; energy: number; sessions: number }> = {};
     sessions.forEach((s) => {
-      const d = new Date(s.start_ts);
+      const d = new Date(s.started_at);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       if (!buckets[key]) buckets[key] = { cost: 0, energy: 0, sessions: 0 };
-      buckets[key].cost += s.cost ?? 0;
-      buckets[key].energy += s.energy_added_kwh;
+      buckets[key].cost += s.cost_decimal ?? 0;
+      buckets[key].energy += s.total_energy_added_wh;
       buckets[key].sessions++;
     });
     return Object.entries(buckets)
@@ -89,7 +88,7 @@ export function useCostAnalysisData({
           cost: v.cost,
           energy: v.energy,
           sessions: v.sessions,
-          avgCostPerKwh: v.energy > 0 ? v.cost / v.energy : 0,
+          avgCostPerKwh: v.energy > 0 ? v.cost / (v.energy / 1000) : 0,
           gasEquiv: ge,
           savings: ge - v.cost,
         };
@@ -99,14 +98,14 @@ export function useCostAnalysisData({
   const costPerKwhTrend = useMemo(() => {
     if (!sessions || sessions.length === 0) return [];
     return sessions
-      .filter((s) => s.cost != null && s.energy_added_kwh > 0)
+      .filter((s) => s.cost_decimal != null && s.total_energy_added_wh > 0)
       .sort(
         (a, b) =>
-          new Date(a.start_ts).getTime() - new Date(b.start_ts).getTime(),
+          new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
       )
       .map((s) => ({
-        date: formatDateShort(s.start_ts),
-        costPerKwh: (s.cost ?? 0) / s.energy_added_kwh,
+        date: formatDateShort(s.started_at),
+        costPerKwh: (s.cost_decimal ?? 0) / (s.total_energy_added_wh / 1000),
       }));
   }, [sessions]);
 
@@ -116,8 +115,8 @@ export function useCostAnalysisData({
     sessions.forEach((s) => {
       const cat = categorizeCharger(s);
       if (!groups[cat]) groups[cat] = { cost: 0, energy: 0, sessions: 0 };
-      groups[cat].cost += s.cost ?? 0;
-      groups[cat].energy += s.energy_added_kwh;
+      groups[cat].cost += s.cost_decimal ?? 0;
+      groups[cat].energy += s.total_energy_added_wh;
       groups[cat].sessions++;
     });
     return Object.entries(groups)
@@ -138,10 +137,10 @@ export function useCostAnalysisData({
       buckets[h] = { sessions: 0, totalCost: 0, totalEnergy: 0 };
     }
     sessions.forEach((s) => {
-      const hour = new Date(s.start_ts).getHours();
+      const hour = new Date(s.started_at).getHours();
       buckets[hour].sessions++;
-      buckets[hour].totalCost += s.cost ?? 0;
-      buckets[hour].totalEnergy += s.energy_added_kwh;
+      buckets[hour].totalCost += s.cost_decimal ?? 0;
+      buckets[hour].totalEnergy += s.total_energy_added_wh;
     });
     return Object.entries(buckets)
       .map(([h, v]) => ({
@@ -162,7 +161,7 @@ export function useCostAnalysisData({
     const priciest = [...withSessions].sort((a, b) => b.avgCost - a.avgCost)[0];
     const busiest = [...withSessions].sort((a, b) => b.sessions - a.sessions)[0];
     const offPeakCount = sessions?.filter((s) => {
-      const h = new Date(s.start_ts).getHours();
+      const h = new Date(s.started_at).getHours();
       return h >= 22 || h < 6;
     }).length ?? 0;
     const offPeakPct = sessions && sessions.length > 0
@@ -173,11 +172,11 @@ export function useCostAnalysisData({
 
   const gasComparison = useMemo<GasComparison | null>(() => {
     if (!coreStats) return null;
-    const { totalEnergy, totalCost, totalDistanceMi } = coreStats;
-    const distMiles = convertDistance(totalDistanceMi);
+    const { totalEnergy, totalCost, totalDistanceM } = coreStats;
+    const distMiles = toDistanceDisplay(totalDistanceM / 1609.344);
     const gallonsNeeded = isMiles
       ? distMiles / mpg
-      : convertDistance(totalDistanceMi) / mpg;
+      : toDistanceDisplay(totalDistanceM / 1609.344) / mpg;
     const gasCostCalc = gallonsNeeded * gasPrice;
     const evCostCalc = totalEnergy * electricityRate;
     const monthlySavings =
@@ -196,7 +195,7 @@ export function useCostAnalysisData({
       costPerMileGas: distMiles > 0 ? gasCostCalc / distMiles : 0,
       costPerMileEV: distMiles > 0 ? totalCost / distMiles : 0,
     };
-  }, [coreStats, gasPrice, mpg, electricityRate, isMiles, convertDistance, monthlyData.length]);
+  }, [coreStats, gasPrice, mpg, electricityRate, isMiles, toDistanceDisplay, monthlyData.length]);
 
   const lifetimeMetrics = useMemo<LifetimeMetrics | null>(() => {
     if (!sessions || sessions.length === 0 || !coreStats) return null;
@@ -207,14 +206,14 @@ export function useCostAnalysisData({
     const avgDuration =
       coreStats.count > 0 ? coreStats.totalDuration / coreStats.count : 0;
     const freeCount = sessions.filter(
-      (s) => !s.cost || s.cost === 0,
+      (s) => !s.cost_decimal || s.cost_decimal === 0,
     ).length;
     const freeEnergy = sessions
-      .filter((s) => !s.cost || s.cost === 0)
-      .reduce((sum, s) => sum + s.energy_added_kwh, 0);
-    const maxSessionCost = Math.max(...sessions.map((s) => s.cost ?? 0));
+      .filter((s) => !s.cost_decimal || s.cost_decimal === 0)
+      .reduce((sum, s) => sum + s.total_energy_added_wh, 0);
+    const maxSessionCost = Math.max(...sessions.map((s) => s.cost_decimal ?? 0));
     const minSessionCost = Math.min(
-      ...sessions.filter((s) => (s.cost ?? 0) > 0).map((s) => s.cost!),
+      ...sessions.filter((s) => (s.cost_decimal ?? 0) > 0).map((s) => s.cost_decimal!),
       0,
     );
 

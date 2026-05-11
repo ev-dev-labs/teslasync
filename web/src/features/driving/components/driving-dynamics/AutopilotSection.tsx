@@ -8,23 +8,58 @@ import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useSignalObservations } from '@/api/hooks/useTelemetry';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 
-import { latestNumeric } from '@/lib/signalObservation';
+import { latestNumeric, latestText } from '@/lib/signalObservation';
+import { convertSpeedFromSI } from '@/lib/unitConversion';
 
 interface AutopilotSectionProps {
   vehicleId: number | null | undefined;
 }
 
+// Tesla emits CruiseFollowDistance as a proto enum, e.g.
+// "FollowDistance7" / "FollowDistance3" — meaning 7-bar / 3-bar follow
+// gap. The signal_log encoder preserves that string verbatim. The
+// number suffix is the only useful bit for display, so peel it off
+// rather than rendering "FollowDistance7" raw. Falls back to whatever
+// the backend gave us if the enum schema ever changes.
+function parseFollowDistance(raw: string | null): string | null {
+  if (raw == null) return null;
+  const m = /(\d+)\s*$/.exec(raw);
+  return m ? m[1] : raw;
+}
+
 /**
- * Cruise / autopilot panel. Current vehicle speed comes from the SignalStore
- * via /vehicles/{id}/state (VehicleState.speed). Cruise set-speed & follow
- * distance are cold signals from signal_observations (ADR-005).
+ * Cruise / autopilot panel. Current vehicle speed comes from the
+ * SignalStore via /vehicles/{id}/state. Cruise set-speed and follow
+ * distance are read from /signals/observations against the most recent
+ * signal_log row for each field (ADR-005 cold-signal pattern).
+ *
+ * Unit policy:
+ *   - Both VehicleSpeed and CruiseSetSpeed are normalized to SI m/s on
+ *     ingestion (see internal/tesla/units/units.go and
+ *     internal/tesla/units/conversions.go — VehicleSpeed and
+ *     CruiseSetSpeed are explicitly listed as the two speed-bearing
+ *     fields whose canonical unit is m/s, regardless of whether the
+ *     vehicle reports its display unit as miles or kilometres).
+ *   - Therefore values fetched here go DIRECTLY through the SI →
+ *     display converter; there is NO km/h intermediate. The pre-fix
+ *     code divided by 1.609344 first (mistakenly assuming a km/h source
+ *     because the upstream `state.speed` field name is `speed_mph` —
+ *     which is just a JSON field label, NOT a unit assertion). That
+ *     produced a 0.62× under-display under mph (m/s ÷ 1.609 × 2.237 =
+ *     ×1.39 instead of the correct ×2.237).
+ *   - CruiseFollowDistance is a proto enum (ValueKindEnum), not a
+ *     numeric, so it is read via latestText and stripped of its
+ *     "FollowDistance" prefix.
  */
 export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
   const { t } = useTranslation();
-  const { convertSpeed, speedUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
+
+  const speedUnit = unitPrefs.speed;
 
   const { data: stateData } = useVehicleState(vehicleId ?? 0, { refetchInterval: 5_000 });
   const { data: cruiseSetObs } = useSignalObservations(
@@ -37,19 +72,19 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
   });
 
   const vehicleState = stateData?.state;
-  const speedKph = vehicleState?.speed ?? null;
-  const cruiseSet = latestNumeric(cruiseSetObs);
-  const followDistance = latestNumeric(followObs);
+  const speedMps = vehicleState?.speed ?? null;
+  const cruiseSetMps = latestNumeric(cruiseSetObs);
+  // ValueKindEnum lands in value_text; numeric fallback covers a future
+  // backend that re-encodes the bar-count as ValueKindInt32.
+  const followDistanceRaw =
+    latestText(followObs) ?? (latestNumeric(followObs) != null ? String(latestNumeric(followObs)) : null);
+  const followDistance = parseFollowDistance(followDistanceRaw);
 
   const hasAny =
-    speedKph != null || cruiseSet != null || followDistance != null;
+    speedMps != null || cruiseSetMps != null || followDistance != null;
 
-  // VehicleState.speed is km/h (from VehicleSpeed signal); convertSpeed
-  // expects mph. Convert kph → mph before running through the settings transformer.
-  const currentSpeedDisplay =
-    speedKph != null ? convertSpeed(speedKph / 1.609344) : null;
-  const cruiseSetDisplay =
-    cruiseSet != null ? convertSpeed(cruiseSet / 1.609344) : null;
+  const currentSpeedDisplay = speedMps != null ? toSpeedDisplay(speedMps) : null;
+  const cruiseSetDisplay = cruiseSetMps != null ? toSpeedDisplay(cruiseSetMps) : null;
 
   return (
     <FadeIn delay={0.17}>
@@ -82,9 +117,7 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
             <StatCard
               icon={<Navigation className="h-5 w-5" />}
               label={t('dynamics.followDistance', 'Follow Distance')}
-              value={
-                followDistance != null ? fmtNumber(followDistance, 0) : '—'
-              }
+              value={followDistance ?? '—'}
             />
           </Grid>
         ) : (

@@ -11,4 +11,9 @@
 //   - Client:         composable HTTP client builder
 //
 // See ENGINEERING_GUIDELINES.md Section 6.3 for usage patterns.
+// Layer: platform
+//
+// CANONICAL per ADR-007 — this is the right home for cross-cutting
+// HTTP client utilities (timeouts, circuit breaking, retry, rate
+// limiting, and the APICallSink hook consumed by internal/apilog).
 package httputil

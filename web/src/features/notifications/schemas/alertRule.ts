@@ -63,6 +63,18 @@ export const alertRuleSchema = z
     description: z.string().max(500).optional().nullable(),
     enabled: z.boolean().optional(),
     vehicle_id: z.number().int().positive().optional().nullable(),
+    /**
+     * Phase-49 / Slice 0005 — sticky-all flag. When `true`, rule
+     * applies to every fleet vehicle including ones added later.
+     * Mutually exclusive with a non-empty `vehicle_ids` array
+     * (server-side returns 422 on conflict).
+     */
+    all_vehicles: z.boolean().optional(),
+    /**
+     * Phase-49 / Slice 0005 — explicit subset of vehicle IDs.
+     * Sorted + deduped before submit per slice 0006 / Decision D14.
+     */
+    vehicle_ids: z.array(z.number().int().positive()).optional(),
     signal_name: z
       .string()
       .trim()
@@ -83,6 +95,37 @@ export const alertRuleSchema = z
       .optional(),
     trigger_mode: z.enum(ALERT_RULE_TRIGGER_MODES).optional(),
     snoozed_until: z.string().optional().nullable(),
+    /**
+     * Per-rule cap on how many notifications a `repeat`-mode rule may
+     * emit between falling-edge resets. NULL = unlimited (legacy).
+     * Once-mode rules accept the field but the backend latch caps them
+     * at 1 per resolution regardless of the value.
+     * Phase-49 / Slice 0003 / Decision D5.
+     */
+    max_fires_per_resolution: z
+      .number()
+      .int('Max fires must be a whole number')
+      .positive('Max fires must be greater than 0')
+      .nullable()
+      .optional(),
+    /**
+     * Phase-49 / Slice 0009 — escalation pair (mutual presence).
+     * Repeat-mode rules whose underlying condition stays unresolved
+     * for at least `escalation_after_min` minutes will start firing
+     * at `escalation_severity` instead of the base `severity`. Both
+     * fields MUST be present together or both null. The escalated
+     * severity MUST rank strictly higher than the base severity under
+     * info < warn < critical. Once-mode rules ignore these fields
+     * (the latch caps them at 1 fire per resolution).
+     */
+    escalation_after_min: z
+      .number()
+      .int('Escalate after must be a whole number of minutes')
+      .positive('Escalate after must be greater than 0')
+      .max(1440, 'Escalate after cannot exceed 1440 minutes (24 hours)')
+      .nullable()
+      .optional(),
+    escalation_severity: z.enum(ALERT_RULE_SEVERITIES).nullable().optional(),
     kind: z.enum(ALERT_RULE_KINDS).optional(),
     metric_id: z.string().trim().max(120).optional().nullable(),
     metric_window: z.string().trim().max(60).optional().nullable(),
@@ -90,6 +133,42 @@ export const alertRuleSchema = z
     metric_op: z.enum(COMPUTED_METRIC_OPS).optional().nullable(),
   })
   .superRefine((data, ctx) => {
+    // Phase-49 / Slice 0009 — escalation pair invariants. Run first
+    // so the user gets the clearest error before kind-specific checks.
+    const afterPresent = data.escalation_after_min != null
+    const sevPresent = data.escalation_severity != null
+    if (afterPresent !== sevPresent) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [afterPresent ? 'escalation_severity' : 'escalation_after_min'],
+        message: 'Escalation requires both an escalate-after duration and a severity',
+      })
+    }
+    if (afterPresent && sevPresent) {
+      const triggerMode = data.trigger_mode ?? 'repeat'
+      if (triggerMode !== 'repeat') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['escalation_after_min'],
+          message: 'Escalation only applies to repeat-mode rules',
+        })
+      }
+      const rank: Record<(typeof ALERT_RULE_SEVERITIES)[number], number> = {
+        info: 1,
+        warn: 2,
+        critical: 3,
+      }
+      const baseSev = data.severity ?? 'warn'
+      const escSev = data.escalation_severity!
+      if (rank[escSev] <= rank[baseSev]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['escalation_severity'],
+          message: 'Escalated severity must be higher than the base severity',
+        })
+      }
+    }
+
     const kind = data.kind ?? 'signal'
 
     if (kind === 'computed_metric') {

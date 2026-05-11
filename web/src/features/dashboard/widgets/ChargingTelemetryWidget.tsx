@@ -33,7 +33,7 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
 
   if (data && data.ts !== lastTsRef.current) {
     lastTsRef.current = data.ts;
-    const pw = data.charger_power_kw ?? 0;
+    const pw = data.charger_power_w ?? 0;
     powerHistoryRef.current = [
       ...powerHistoryRef.current.slice(-(MAX_POWER_HISTORY - 1)),
       pw,
@@ -42,7 +42,7 @@ export default function ChargingTelemetryWidget({ vehicleId, size }: WidgetProps
 
   const voltage = data?.charger_voltage ?? 0;
   const current = data?.charger_actual_current ?? 0;
-  const power = data?.charger_power_kw ?? 0;
+  const power = data?.charger_power_w ?? 0;
   const phases = data?.charger_phases ?? 0;
 
   // Derive charger type from voltage/phases heuristic

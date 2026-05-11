@@ -184,7 +184,8 @@ API projection helpers, or frontend display code.
 // Good: keep the raw signal value in all live/history layers.
 h.signalStore.Update(vehicleID, signals)
 h.redisCache.Update(ctx, vehicleID, signals)
-h.signalHistoryWriter.Append(vehicleID, signals)
+// signal_log durable writes are owned by the router signal_log writer
+// (internal/tesla/router/writers/signal_log_writer.go) — see ADR-004 #11.
 ```
 
 ## Ingest Ordering and Failure Behavior

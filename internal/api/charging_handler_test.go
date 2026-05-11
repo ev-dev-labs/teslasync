@@ -41,25 +41,25 @@ func newChargingRequest(t *testing.T, sessionID, target string) *http.Request {
 }
 
 // completedChargingSession is a minimal fixture for tests that exercise the
-// completed-session path (EndTs != nil → enrichLiveCharge is NOT invoked).
+// completed-session path (EndedAt != nil → enrichLiveCharge is NOT invoked).
 func completedChargingSession(sessionID, vehicleID int64, start, end time.Time) *models.ChargingSession {
 	endCopy := end
 	return &models.ChargingSession{
 		ID:        sessionID,
 		VehicleID: vehicleID,
-		StartTs:   start,
-		EndTs:     &endCopy,
+		StartedAt: start,
+		EndedAt:   &endCopy,
 	}
 }
 
 // inProgressChargingSession is a minimal fixture for tests that exercise the
-// in-progress path (EndTs == nil → enrichLiveCharge IS invoked).
+// in-progress path (EndedAt == nil → enrichLiveCharge IS invoked).
 func inProgressChargingSession(sessionID, vehicleID int64, start time.Time) *models.ChargingSession {
 	return &models.ChargingSession{
 		ID:        sessionID,
 		VehicleID: vehicleID,
-		StartTs:   start,
-		EndTs:     nil,
+		StartedAt: start,
+		EndedAt:   nil,
 	}
 }
 
@@ -79,7 +79,7 @@ func TestChargingHandler_SessionDetails_UsesStartSnapshot(t *testing.T) {
 		},
 	}
 	charging := &fakeChargingByIDFetcher{session: session}
-	h := &ChargingHandler{state: fake, charging: charging}
+	h := &ChargingHandler{state: fake, live: newTestLiveStateReader(fake), charging: charging}
 
 	rec := httptest.NewRecorder()
 	h.Get(rec, newChargingRequest(t, "11", ""))
@@ -114,7 +114,7 @@ func TestChargingHandler_Latest_UsesNowSnapshot(t *testing.T) {
 		},
 	}
 	charging := &fakeChargingByIDFetcher{session: session}
-	h := &ChargingHandler{state: fake, charging: charging}
+	h := &ChargingHandler{state: fake, live: newTestLiveStateReader(fake), charging: charging}
 
 	before := time.Now().UTC()
 	rec := httptest.NewRecorder()
@@ -153,7 +153,7 @@ func TestChargingHandler_Telemetry_ChartMode(t *testing.T) {
 		},
 	}
 	charging := &fakeChargingByIDFetcher{session: completedChargingSession(7, 42, t0, t1)}
-	h := &ChargingHandler{state: fake, charging: charging}
+	h := &ChargingHandler{state: fake, live: newTestLiveStateReader(fake), charging: charging}
 
 	rec := httptest.NewRecorder()
 	h.TelemetryReadings(rec, newChargingRequest(t, "7", "/charging/7/telemetry"))
@@ -190,7 +190,7 @@ func TestChargingHandler_Telemetry_PropagatesError(t *testing.T) {
 		},
 	}
 	charging := &fakeChargingByIDFetcher{session: completedChargingSession(7, 42, t0, t1)}
-	h := &ChargingHandler{state: fake, charging: charging}
+	h := &ChargingHandler{state: fake, live: newTestLiveStateReader(fake), charging: charging}
 
 	rec := httptest.NewRecorder()
 	h.TelemetryReadings(rec, newChargingRequest(t, "7", "/charging/7/telemetry"))
@@ -221,7 +221,7 @@ func TestChargingHandler_Latest_PropagatesError(t *testing.T) {
 		},
 	}
 	charging := &fakeChargingByIDFetcher{session: inProgressChargingSession(7, 42, startTs)}
-	h := &ChargingHandler{state: fake, charging: charging}
+	h := &ChargingHandler{state: fake, live: newTestLiveStateReader(fake), charging: charging}
 
 	rec := httptest.NewRecorder()
 	h.Get(rec, newChargingRequest(t, "7", ""))

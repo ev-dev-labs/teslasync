@@ -35,8 +35,8 @@ export function tempNeonColor(
 
 export function displayTemp(
   celsius: number | null,
-  fmtTemp: (c: number) => string,
+  formatTemperature: (c: number) => string,
 ): string {
   if (celsius === null) return '—';
-  return fmtTemp(celsius);
+  return formatTemperature(celsius);
 }

@@ -52,7 +52,7 @@ func TestEnergyFlow_Latest_UsesNow(t *testing.T) {
 			}, nil
 		},
 	}
-	h := &EnergyFlowHandler{state: fake}
+	h := &EnergyFlowHandler{state: fake, live: newTestLiveStateReader(fake)}
 
 	before := time.Now()
 	rec := httptest.NewRecorder()
@@ -113,7 +113,7 @@ func TestEnergyFlow_PropagatesError(t *testing.T) {
 			return nil, wantErr
 		},
 	}
-	h := &EnergyFlowHandler{state: fake}
+	h := &EnergyFlowHandler{state: fake, live: newTestLiveStateReader(fake)}
 
 	rec := httptest.NewRecorder()
 	h.Get(rec, newEnergyFlowRequest(t, "42"))

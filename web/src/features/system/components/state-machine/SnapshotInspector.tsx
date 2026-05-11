@@ -135,7 +135,7 @@ export function SnapshotInspector({
             {t(
               'debugger.inspector.emptyOutsideWindow',
               'Nothing in the current window. Last transition {{rel}}.',
-              { rel: formatRelative(lastTransition.created_at) },
+              { rel: formatRelative(lastTransition.ts) },
             )}
           </div>
           <Button
@@ -195,7 +195,7 @@ export function SnapshotInspector({
           <div>
             <Caption>{t('debugger.inspector.duration', 'Duration')}</Caption>
             <div className="mt-1 text-[var(--text-primary)]">
-              {transition.duration_in_state_ms?.toLocaleString() ?? '—'} ms
+              {(typeof transition.details?.duration_in_state_ms === 'number' ? transition.details.duration_in_state_ms.toLocaleString() : null) ?? '—'} ms
             </div>
           </div>
         </div>

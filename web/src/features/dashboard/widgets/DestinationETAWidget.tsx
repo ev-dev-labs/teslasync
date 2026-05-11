@@ -4,11 +4,12 @@ import { AnimatedNumber } from '@/components/data-display';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useLocationSnapshotLatest, useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 function locationBadge(
   snapshot: { located_at_home?: boolean; located_at_work?: boolean; located_at_favorite?: boolean } | null | undefined,
@@ -24,7 +25,10 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
 
   const {
     data: snapshot,
@@ -47,7 +51,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
   const minutesToArrival = snapshot?.minutes_to_arrival ?? 0;
   const destinationName = snapshot?.destination_name ?? '—';
 
-  const displayDistance = convertDistance(milesToArrival);
+  const displayDistance = toDistanceDisplay(milesToArrival);
   const progressPercent = isNavigating && milesToArrival > 0
     ? Math.max(0, Math.min(100, 100 - (milesToArrival / (milesToArrival + 1)) * 100))
     : 0;

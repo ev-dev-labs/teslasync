@@ -4,7 +4,7 @@ import { Card, CardHeader } from '@/components/ui';
 import { Grid } from '@/components/layout';
 import { KVList } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
 import type { DrivetrainHealthData, DrivingStats } from '@/types/driving';
@@ -26,7 +26,8 @@ export function DetailCards({
   stats,
 }: DetailCardsProps) {
   const { t } = useTranslation();
-  const { fmtTemp } = useSettings();
+  const { formatTemperature: formatTemperatureUnit, formatEnergy } = useUnits();
+  const formatTemperature = (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision });
 
   return (
     <FadeIn delay={0.4}>
@@ -35,10 +36,10 @@ export function DetailCards({
           <CardHeader title={t('drivetrain.temperatures', 'Temperature Details')} />
           <KVList
             items={[
-              { label: t('drivetrain.frontMotorTemp', 'Front Motor Temp'), value: displayTemp(health.frontMotorTempC, fmtTemp) },
-              { label: t('drivetrain.rearMotorTemp', 'Rear Motor Temp'), value: displayTemp(health.rearMotorTempC, fmtTemp) },
-              { label: t('drivetrain.inverterTemp', 'Inverter Temp'), value: displayTemp(health.inverterTempC, fmtTemp) },
-              { label: t('drivetrain.batteryTemp', 'Battery Temp'), value: displayTemp(health.batteryTempC, fmtTemp) },
+              { label: t('drivetrain.frontMotorTemp', 'Front Motor Temp'), value: displayTemp(health.frontMotorTempC, formatTemperature) },
+              { label: t('drivetrain.rearMotorTemp', 'Rear Motor Temp'), value: displayTemp(health.rearMotorTempC, formatTemperature) },
+              { label: t('drivetrain.inverterTemp', 'Inverter Temp'), value: displayTemp(health.inverterTempC, formatTemperature) },
+              { label: t('drivetrain.batteryTemp', 'Battery Temp'), value: displayTemp(health.batteryTempC, formatTemperature) },
             ]}
           />
         </Card>
@@ -61,7 +62,7 @@ export function DetailCards({
               },
               {
                 label: t('drivetrain.regenLabel', 'Total Regen'),
-                value: stats ? `${fmtNumber(stats.totalRegenKwh, 1)} kWh` : '—',
+                value: stats ? formatEnergy(stats.regenEnergyWh, { precision: 1 }) : '—',
               },
               {
                 label: t('drivetrain.co2Label', 'CO₂ Saved'),

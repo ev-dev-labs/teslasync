@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { BatteryCharging } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtWithUnit } from '@/lib/numberFormat';
 import type { DriveDetail } from '@/types/driving';
 import type { DriveStats } from './types';
@@ -14,7 +14,11 @@ interface EnergySummaryPanelProps {
 
 export function EnergySummaryPanel({ drive, stats }: EnergySummaryPanelProps) {
   const { t } = useTranslation();
-  const { convertEfficiency, efficiencyUnit, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
+
+  const distanceUnit = unitPrefs.distance;
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   return (
     <FadeIn>
@@ -37,7 +41,7 @@ export function EnergySummaryPanel({ drive, stats }: EnergySummaryPanelProps) {
           </div>
           <div>
             <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.efficiency', 'Efficiency')}</p>
-            <p className="text-lg font-bold text-purple-400">{stats.consumptionWhKm > 0 ? `${fmtNumber(convertEfficiency(stats.consumptionWhKm))} ${efficiencyUnit}` : '—'}</p>
+            <p className="text-lg font-bold text-purple-400">{stats.consumptionWhKm > 0 ? `${fmtNumber(toEfficiencyDisplay(stats.consumptionWhKm))} ${efficiencyUnit}` : '—'}</p>
           </div>
           <div>
             <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.batteryUsed', 'Battery Used')}</p>

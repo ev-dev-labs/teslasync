@@ -85,7 +85,7 @@ func TestSafetyHandler_History_CarriesForwardEnableFlags(t *testing.T) {
 			return folded, nil
 		},
 	}
-	h := NewSafetyHandler(fake)
+	h := NewSafetyHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	h.List(rec, newSafetyRequest("42", ""))
@@ -179,7 +179,7 @@ func TestSafetyHandler_Latest_UsesNow(t *testing.T) {
 			}, nil
 		},
 	}
-	h := NewSafetyHandler(fake)
+	h := NewSafetyHandler(fake, newTestLiveStateReader(fake))
 
 	before := time.Now()
 	rec := httptest.NewRecorder()
@@ -266,7 +266,7 @@ func TestSafetyHandler_PropagatesError(t *testing.T) {
 				return nil, wantErr
 			},
 		}
-		h := NewSafetyHandler(fake)
+		h := NewSafetyHandler(fake, newTestLiveStateReader(fake))
 
 		rec := httptest.NewRecorder()
 		h.List(rec, newSafetyRequest("42", ""))
@@ -283,7 +283,7 @@ func TestSafetyHandler_PropagatesError(t *testing.T) {
 				return nil, wantErr
 			},
 		}
-		h := NewSafetyHandler(fake)
+		h := NewSafetyHandler(fake, newTestLiveStateReader(fake))
 
 		rec := httptest.NewRecorder()
 		h.Latest(rec, newSafetyRequest("42", "/safety/latest?vehicle_id=42"))

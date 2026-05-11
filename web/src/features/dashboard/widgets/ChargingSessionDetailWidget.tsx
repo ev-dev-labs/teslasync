@@ -98,7 +98,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
     return [
       {
         label: t('widget.chargingSessionDetail.energy', 'Energy Added'),
-        value: fmtNumber(detail.energy_added_kwh ?? 0, 1),
+        value: fmtNumber(detail.total_energy_added_wh ?? 0, 1),
         unit: 'kWh',
       },
       {
@@ -203,7 +203,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
         {detail ? (
           <div className="h-full flex flex-col items-center justify-center gap-1 min-h-[44px]">
             <span className="text-2xl font-bold text-emerald-300">
-              {fmtNumber(detail.energy_added_kwh ?? 0, 1)}
+              {fmtNumber(detail.total_energy_added_wh ?? 0, 1)}
             </span>
             <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
               {t('widget.chargingSessionDetail.unitKwh', 'kWh added')}

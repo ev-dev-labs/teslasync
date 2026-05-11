@@ -3,13 +3,11 @@ package api
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
-	notifFSM "github.com/ev-dev-labs/teslasync/internal/fsm/notification"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
@@ -26,12 +24,16 @@ type TelemetryAlertEvaluator struct {
 	eventHub      *EventHub
 	ruleEngine    *RuleEngine
 	mqttClient    pahomqtt.Client
-	cooldowns     map[string]*notifFSM.CooldownFSM // keyed by "ruleID:vehicleID"
-	cooldownMu    sync.Mutex
 }
 
 // NewTelemetryAlertEvaluator creates an alert evaluator for streaming data.
 func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *EventHub, mqttClient pahomqtt.Client) *TelemetryAlertEvaluator {
+	engine := NewRuleEngine()
+	// Wire the persistent latch/fire-state repo so once-mode latches
+	// survive pod restarts. Phase-49 / Slice 0002. The hydration call
+	// itself is invoked from internal/app/new.go after the evaluator is
+	// constructed, before MQTT subscribers start dispatching telemetry.
+	engine.SetStateRepo(database.NewAlertRuleStateRepo(db))
 	return &TelemetryAlertEvaluator{
 		alertRuleRepo: database.NewAlertRuleRepo(db),
 		notifRepo:     database.NewNotificationRepo(db),
@@ -39,13 +41,15 @@ func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *Even
 		vehicleRepo:   database.NewVehicleRepo(db),
 		eventBus:      eventBus,
 		eventHub:      hub,
-		ruleEngine:    NewRuleEngine(),
-		cooldowns:     make(map[string]*notifFSM.CooldownFSM),
+		ruleEngine:    engine,
 		mqttClient:    mqttClient,
 	}
 }
 
-// LoadState loads cooldown state from DB (called on startup for pod restart recovery).
+// LoadState seeds in-memory rule state from the DB so cooldown tracking
+// begins immediately on startup. Pod-restart-safe latch hydration is
+// performed separately via RuleEngine.HydrateFromDB (called from
+// internal/app/new.go before subscribers attach).
 func (e *TelemetryAlertEvaluator) LoadState(ctx context.Context) {
 	rules, err := e.alertRuleRepo.GetAll(ctx)
 	if err != nil {
@@ -64,6 +68,12 @@ func (e *TelemetryAlertEvaluator) RuleEngine() *RuleEngine {
 // Evaluate checks all alert rules against the given signals for a vehicle.
 // accumulatedSignals is supplied by the telemetry path for callers that need
 // last-known context; the typed rule engine keeps its own transition baseline.
+//
+// Phase-49 / Slice 0004: the second-stage CooldownFSM gate that previously
+// stacked on top of the rule-engine result has been removed. The rule
+// engine is now the SINGLE place that decides whether a matched rule
+// should fire — it owns cooldown, once-mode latch, max-fires-per-resolution,
+// and the engine-level hourly safety cap (formerly CooldownFSM.MaxFiresPerHour).
 func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64, vin string, signals, accumulatedSignals map[string]interface{}) {
 	evalStart := time.Now()
 	rules, err := e.alertRuleRepo.GetAll(ctx)
@@ -77,45 +87,15 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 		if !rule.Enabled {
 			continue
 		}
-		if rule.VehicleID != nil && *rule.VehicleID != vehicleID {
+		if !rule.AppliesTo(vehicleID) {
 			continue
 		}
 		enabledCount++
 
 		metrics.AlertRulesEvaluated.Inc()
 		result := e.ruleEngine.Evaluate(rule, vehicleID, signals)
-		triggered := result.Triggered
-		message := result.Message
-
-		if triggered {
-			// Check cooldown FSM — suppress if within cooldown period
-			cooldownKey := fmt.Sprintf("%d:%d", rule.ID, vehicleID)
-			e.cooldownMu.Lock()
-			cd, exists := e.cooldowns[cooldownKey]
-			if !exists {
-				cfg := notifFSM.DefaultCooldownConfig()
-				if rule.CooldownMin > 0 {
-					cfg.CooldownDuration = time.Duration(rule.CooldownMin) * time.Minute
-				}
-				cd = notifFSM.NewCooldownFSM(rule.ID, vehicleID, cfg)
-				e.cooldowns[cooldownKey] = cd
-			}
-			e.cooldownMu.Unlock()
-
-			if cd.ShouldFire() {
-				e.fireAlert(ctx, rule, vehicleID, vin, message)
-			} else {
-				log.Debug().Int64("rule_id", rule.ID).Int64("vehicle_id", vehicleID).
-					Msg("alert_rules: alert suppressed by cooldown FSM")
-			}
-		} else if isTransitionRule(rule) {
-			// Condition is false for a transition rule — reset cooldown FSM
-			cooldownKey := fmt.Sprintf("%d:%d", rule.ID, vehicleID)
-			e.cooldownMu.Lock()
-			if cd, exists := e.cooldowns[cooldownKey]; exists {
-				cd.Reset()
-			}
-			e.cooldownMu.Unlock()
+		if result.Triggered {
+			e.fireAlert(ctx, rule, vehicleID, vin, result.Message, result.Severity)
 		}
 	}
 	metrics.ActiveAlertRules.Set(float64(enabledCount))
@@ -123,8 +103,17 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 }
 
 // fireAlert broadcasts via SSE and dispatches to notification channels.
-func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.AlertRule, vehicleID int64, vin, message string) {
-	severity := rule.Severity
+// `effectiveSeverity` is the severity returned by the engine, which may
+// differ from `rule.Severity` when the Phase-49 / Slice 0009 escalation
+// gate fired. It is the SOURCE OF TRUTH for every downstream consumer
+// (SSE, event bus, metrics, quiet-hours suppression, notification
+// dispatch). An empty `effectiveSeverity` falls back to the rule's
+// declared severity so legacy callers (none today) keep working.
+func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.AlertRule, vehicleID int64, vin, message, effectiveSeverity string) {
+	severity := effectiveSeverity
+	if severity == "" {
+		severity = rule.Severity
+	}
 	if severity == "" {
 		severity = "warning"
 	}

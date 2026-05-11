@@ -2,9 +2,9 @@ import { useTranslation } from 'react-i18next'
 import { Gauge } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { GlassPanel } from '@/components/ui'
-import { useSettings } from '@/hooks/useSettings'
-import { fmtNumber } from '@/lib/numberFormat'
+import { useUnits } from '@/hooks/useUnits'
 import type { TirePressureSnapshot } from '@/api/types'
+import { TIRE_PRESSURE_PA, paToKpa } from '../vehicle-detail/helpers'
 
 interface TirePressurePanelProps {
   tireData: TirePressureSnapshot | null | undefined
@@ -12,7 +12,7 @@ interface TirePressurePanelProps {
 
 export function TirePressurePanel({ tireData }: TirePressurePanelProps) {
   const { t } = useTranslation()
-  const { convertPressure, pressureUnit } = useSettings()
+  const { formatPressure } = useUnits()
 
   return (
     <GlassPanel className="p-6 h-full">
@@ -21,11 +21,7 @@ export function TirePressurePanel({ tireData }: TirePressurePanelProps) {
         {t('common.tirePressure', 'Tire Pressure')}
       </h3>
       {tireData ? (
-        <TirePressureContent
-          tireData={tireData}
-          convertPressure={convertPressure}
-          pressureUnit={pressureUnit}
-        />
+        <TirePressureContent tireData={tireData} formatPressure={formatPressure} />
       ) : (
         <p className="text-xs text-[var(--text-muted)] text-center py-6">
           No tire pressure data available
@@ -37,52 +33,37 @@ export function TirePressurePanel({ tireData }: TirePressurePanelProps) {
 
 function TirePressureContent({
   tireData,
-  convertPressure,
-  pressureUnit,
+  formatPressure,
 }: {
   tireData: TirePressureSnapshot
-  convertPressure: (bar: number) => number
-  pressureUnit: string
+  formatPressure: (kpa: number | null | undefined) => string
 }) {
-  const toDisplay = (bar: number | null) => (bar != null ? convertPressure(bar) : null)
   const tires = [
-    { label: 'FL', pressure: toDisplay(tireData.front_left) },
-    { label: 'FR', pressure: toDisplay(tireData.front_right) },
-    { label: 'RL', pressure: toDisplay(tireData.rear_left) },
-    { label: 'RR', pressure: toDisplay(tireData.rear_right) },
+    { label: 'FL', pa: tireData.front_left },
+    { label: 'FR', pa: tireData.front_right },
+    { label: 'RL', pa: tireData.rear_left },
+    { label: 'RR', pa: tireData.rear_right },
   ]
 
-  const getColor = (val: number | null) => {
-    if (val == null) return 'text-[var(--text-muted)]'
-    const lowCrit = convertPressure(2.068)
-    const lowWarn = convertPressure(2.413)
-    const highWarn = convertPressure(3.103)
-    const highCrit = convertPressure(3.447)
-    if (val < lowCrit || val > highCrit) return 'text-red-400'
-    if (val < lowWarn || val > highWarn) return 'text-amber-400'
+  const getColor = (pa: number | null) => {
+    if (pa == null) return 'text-[var(--text-muted)]'
+    if (pa < TIRE_PRESSURE_PA.LOW_CRITICAL || pa > TIRE_PRESSURE_PA.HIGH_CRITICAL) return 'text-red-400'
+    if (pa < TIRE_PRESSURE_PA.LOW_WARNING || pa > TIRE_PRESSURE_PA.HIGH_WARNING) return 'text-amber-400'
     return 'text-green-400'
   }
 
-  const getBorder = (val: number | null) => {
-    if (val == null) return 'border-gray-600/30'
-    const lowCrit = convertPressure(2.068)
-    const lowWarn = convertPressure(2.413)
-    const highWarn = convertPressure(3.103)
-    const highCrit = convertPressure(3.447)
-    if (val < lowCrit || val > highCrit) return 'border-red-500/30'
-    if (val < lowWarn || val > highWarn) return 'border-amber-500/30'
+  const getBorder = (pa: number | null) => {
+    if (pa == null) return 'border-gray-600/30'
+    if (pa < TIRE_PRESSURE_PA.LOW_CRITICAL || pa > TIRE_PRESSURE_PA.HIGH_CRITICAL) return 'border-red-500/30'
+    if (pa < TIRE_PRESSURE_PA.LOW_WARNING || pa > TIRE_PRESSURE_PA.HIGH_WARNING) return 'border-amber-500/30'
     return 'border-green-500/30'
   }
 
-  const lowWarn = convertPressure(2.413)
-  const highWarn = convertPressure(3.103)
   const allGood = tires.every(
-    (t) => t.pressure != null && t.pressure >= lowWarn && t.pressure <= highWarn,
+    (t) => t.pa != null && t.pa >= TIRE_PRESSURE_PA.LOW_WARNING && t.pa <= TIRE_PRESSURE_PA.HIGH_WARNING,
   )
-  const lowCrit = convertPressure(2.068)
-  const highCrit = convertPressure(3.447)
   const anyBad = tires.some(
-    (t) => t.pressure != null && (t.pressure < lowCrit || t.pressure > highCrit),
+    (t) => t.pa != null && (t.pa < TIRE_PRESSURE_PA.LOW_CRITICAL || t.pa > TIRE_PRESSURE_PA.HIGH_CRITICAL),
   )
 
   return (
@@ -93,14 +74,13 @@ function TirePressureContent({
             key={t.label}
             className={cn(
               'rounded-xl border bg-white/[0.02] p-4 text-center',
-              getBorder(t.pressure),
+              getBorder(t.pa),
             )}
           >
             <p className="text-[10px] text-[var(--text-muted)] mb-1">{t.label}</p>
-            <p className={cn('text-xl font-bold font-mono', getColor(t.pressure))}>
-              {t.pressure != null ? fmtNumber(t.pressure) : '—'}
+            <p className={cn('text-xl font-bold font-mono', getColor(t.pa))}>
+              {formatPressure(paToKpa(t.pa))}
             </p>
-            <p className="text-[10px] text-[var(--text-muted)]">{pressureUnit}</p>
           </div>
         ))}
       </div>

@@ -9,7 +9,8 @@ import {
   type MetricUnit,
 } from '@/lib/metricSemantics';
 import { fmtNumber } from '@/lib/numberFormat';
-import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
+import { useUnits } from '@/hooks/useUnits';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { cn } from '@/lib/cn';
 
@@ -44,7 +45,13 @@ interface ResolvedUnitLabels {
 }
 
 function useUnitLabels(unit: MetricUnit | undefined): ResolvedUnitLabels {
-  const { distanceUnit, speedUnit, tempUnit, pressureUnit, efficiencyUnit, currencySymbol } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const speedUnit = unitPrefs.speed;
+  const tempUnit = unitPrefs.temperature;
+  const pressureUnit = unitPrefs.pressure;
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const { currencySymbol } = useFormatting();
   switch (unit) {
     case 'currency':
       return { prefix: currencySymbol, suffix: '' };

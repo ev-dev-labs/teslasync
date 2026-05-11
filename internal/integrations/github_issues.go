@@ -20,6 +20,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // GitHubIssuesClient posts issues to the GitHub REST API on behalf of
@@ -66,10 +68,13 @@ func NewGitHubIssuesClient(cfg GitHubIssuesConfig) *GitHubIssuesClient {
 		apiBase = "https://api.github.com"
 	}
 	return &GitHubIssuesClient{
-		repo:       repo,
-		token:      token,
-		httpClient: &http.Client{Timeout: timeout},
-		apiBase:    apiBase,
+		repo:  repo,
+		token: token,
+		httpClient: &http.Client{
+			Timeout:   timeout,
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		},
+		apiBase: apiBase,
 	}
 }
 

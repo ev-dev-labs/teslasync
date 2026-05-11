@@ -5,11 +5,12 @@ import { AnimatedNumber } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useMileageStats } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 /** Round up to the next 10 000-mile milestone above current total. */
 function nextMilestone(totalMi: number): number {
@@ -23,11 +24,12 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
   const {
-    data, isLoading, error,
-    isFetching, isStale, isError, dataUpdatedAt, refetch,
-  } = useMileageStats(id > 0 ? String(id) : '');
+    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useMileageStats(id > 0 ? String(id) : '');
 
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
 
   const isCompact = size.cols <= 1;
 
@@ -44,25 +46,25 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
     return [
       {
         label: t('widget.mileageStats.dailyAvg', 'Daily Avg'),
-        value: fmtNumber(convertDistance(dailyAvgMi), 1),
+        value: fmtNumber(toDistanceDisplay(dailyAvgMi), 1),
         unit: distanceUnit,
         icon: <Route className="h-3.5 w-3.5" />,
       },
       {
         label: t('widget.mileageStats.weeklyAvg', 'Weekly Avg'),
-        value: fmtNumber(convertDistance(dailyAvgMi * 7), 0),
+        value: fmtNumber(toDistanceDisplay(dailyAvgMi * 7), 0),
         unit: distanceUnit,
         icon: <Calendar className="h-3.5 w-3.5" />,
       },
       {
         label: t('widget.mileageStats.monthlyAvg', 'Monthly Avg'),
-        value: fmtNumber(convertDistance(dailyAvgMi * 30), 0),
+        value: fmtNumber(toDistanceDisplay(dailyAvgMi * 30), 0),
         unit: distanceUnit,
         icon: <TrendingUp className="h-3.5 w-3.5" />,
       },
       {
         label: t('widget.mileageStats.nextMilestone', 'Next Milestone'),
-        value: fmtInt(convertDistance(milestone)),
+        value: fmtInt(toDistanceDisplay(milestone)),
         unit: distanceUnit,
         trend: 'up' as const,
         trendValue: monthsToMilestone > 0
@@ -71,7 +73,7 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
         icon: <Target className="h-3.5 w-3.5" />,
       },
     ];
-  }, [data, dailyAvgMi, convertDistance, distanceUnit, milestone, monthsToMilestone, t]);
+  }, [data, dailyAvgMi, toDistanceDisplay, distanceUnit, milestone, monthsToMilestone, t]);
 
   // Compact: daily avg as large number
   if (isCompact) {
@@ -88,7 +90,7 @@ export default function MileageStatsWidget({ vehicleId, size }: WidgetProps) {
         {data ? (
           <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
             <AnimatedNumber
-              value={convertDistance(dailyAvgMi)}
+              value={toDistanceDisplay(dailyAvgMi)}
               className="text-2xl font-bold text-[var(--text-primary)]"
             />
             <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">

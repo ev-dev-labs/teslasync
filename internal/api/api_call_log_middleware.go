@@ -7,10 +7,11 @@
 // with status_code=500.
 //
 // The middleware is non-blocking: enqueues are bounded by a buffered channel
-// and a worker goroutine batch-inserts via pgx.CopyFrom. On queue full the
-// entry is dropped, a Prometheus counter (api_call_log_drops_total) is
-// incremented, and a single zerolog Warn line is emitted (no error returned
-// to the caller, no synchronous DB write on the request goroutine).
+// and a worker goroutine batch-inserts via pgx.CopyFrom. Phase-47/05
+// extracted the async writer engine + outbound SinkAdapter into
+// internal/apilog so workers can use the same primitives without depending
+// on the entire HTTP-handler package. The HTTP middleware itself stays here
+// because it depends on chi + in-process redaction helpers.
 //
 // Bodies are captured up to 10 KB each (request and response) only when the
 // captureBodies flag is true; default is false (operator opt-in).
@@ -23,7 +24,6 @@ package api
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -31,14 +31,12 @@ import (
 	"regexp"
 	"runtime/debug"
 	"sync"
-	"sync/atomic"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	chimw "github.com/go-chi/chi/v5/middleware"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog/log"
 )
 
@@ -50,15 +48,21 @@ const (
 
 	// DefaultAPILogQueueCapacity is the default buffered channel size for
 	// the async writer when not overridden via API_LOG_QUEUE_CAPACITY.
-	DefaultAPILogQueueCapacity = 4096
+	//
+	// Deprecated: use apilog.DefaultQueueCapacity.
+	DefaultAPILogQueueCapacity = apilog.DefaultQueueCapacity
 
 	// DefaultAPILogBatchSize is the default number of entries that the
 	// async writer accumulates before flushing via pgx.CopyFrom.
-	DefaultAPILogBatchSize = 100
+	//
+	// Deprecated: use apilog.DefaultBatchSize.
+	DefaultAPILogBatchSize = apilog.DefaultBatchSize
 
 	// DefaultAPILogFlushInterval is the maximum age of a buffered entry
 	// before the async writer flushes regardless of batch size.
-	DefaultAPILogFlushInterval = 1 * time.Second
+	//
+	// Deprecated: use apilog.DefaultFlushInterval.
+	DefaultAPILogFlushInterval = apilog.DefaultFlushInterval
 
 	// APILogServiceTag is the constant service= value written to
 	// api_call_logs.service for every entry persisted by this middleware.
@@ -68,208 +72,53 @@ const (
 	truncationMarker = "... [truncated]"
 )
 
-// apiCallLogDropsCounter counts entries dropped by the async writer because
-// the buffered channel was full at Enqueue time. This is the contract metric
-// referenced by the Prompt 09 test matrix (T07, T13).
-var apiCallLogDropsCounter = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "api_call_log_drops_total",
-	Help: "Total api_call_log entries dropped due to async writer queue full.",
-})
-
 // redactKeyPattern matches header names, query parameter names and JSON keys
 // that may carry secret material; matching values are replaced with REDACTED.
 var redactKeyPattern = regexp.MustCompile(`(?i)token|key|secret|password|cookie`)
 
-// APICallLogger is the writer port the middleware depends on. Implementations
-// MUST make Enqueue non-blocking (drop-on-full) and Shutdown drain-with-deadline.
-type APICallLogger interface {
-	// Enqueue adds an entry for asynchronous persistence. MUST NOT block the
-	// caller; on queue full the entry is dropped and the drop counter is
-	// incremented. After Shutdown returns, Enqueue is a silent no-op (still
-	// counts as a drop).
-	Enqueue(*models.APICallLog)
+// APICallLogger is the writer port the middleware depends on.
+//
+// Deprecated: use apilog.Logger. Will be removed in phase-48.
+type APICallLogger = apilog.Logger
 
-	// Shutdown closes the input channel, drains pending entries to the
-	// underlying inserter (subject to ctx deadline), and from then on
-	// Enqueue silently drops. Safe to call concurrently with in-flight
-	// Enqueues from request goroutines (those will drop, not panic).
-	Shutdown(ctx context.Context) error
-}
+// APICallLogBatchInserter is the database port the async writer uses to flush a batch.
+//
+// Deprecated: use apilog.BatchInserter. Will be removed in phase-48.
+type APICallLogBatchInserter = apilog.BatchInserter
 
-// APICallLogBatchInserter is the database port the async writer uses to
-// flush a batch of entries. Production wiring uses
-// (*database.APICallLogRepo).CreateBatch which is implemented via
-// pgx.CopyFrom for low-overhead insertion.
-type APICallLogBatchInserter interface {
-	CreateBatch(ctx context.Context, batch []*models.APICallLog) error
-}
+// AsyncLoggerOptions tunes the async writer's queue and flush behavior.
+//
+// Deprecated: use apilog.AsyncOptions. Will be removed in phase-48.
+type AsyncLoggerOptions = apilog.AsyncOptions
 
-// AsyncLoggerOptions tunes the async writer's queue and flush behavior. Zero
-// values fall back to the Default* constants; a zero FlushInterval also falls
-// back. Pass an explicit value via main.go from cfg.APILogs.* to override.
-type AsyncLoggerOptions struct {
-	QueueCapacity int
-	BatchSize     int
-	FlushInterval time.Duration
-}
-
-// asyncAPICallLogger is the production implementation of APICallLogger. It
-// owns a buffered channel, a worker goroutine and a small in-memory batch.
-// Drops are counted in apiCallLogDropsCounter; the worker stops when both
-// the channel is closed and drained.
-type asyncAPICallLogger struct {
-	ch        chan *models.APICallLog
-	inserter  APICallLogBatchInserter
-	batchSize int
-	flushEvry time.Duration
-	done      chan struct{}
-	closed    atomic.Bool
-	closeOnce sync.Once
-
-	// dropWarnRate limits the volume of "queue full" warn logs to one per
-	// second so a sustained burst doesn't flood the log.
-	lastWarnNs atomic.Int64
-}
-
-// NewAsyncAPICallLogger constructs the production async writer. The worker
-// goroutine starts immediately; call Shutdown on graceful termination to
-// drain pending entries.
+// NewAsyncAPICallLogger constructs the production async writer.
+//
+// Deprecated: use apilog.NewAsync. Will be removed in phase-48.
 func NewAsyncAPICallLogger(inserter APICallLogBatchInserter, opts AsyncLoggerOptions) APICallLogger {
-	if inserter == nil {
-		// Without an inserter the entries would have nowhere to go; fail
-		// closed (no-op logger) rather than buffering forever.
-		return &nullAPICallLogger{}
-	}
-
-	cap := opts.QueueCapacity
-	if cap <= 0 {
-		cap = DefaultAPILogQueueCapacity
-	}
-	bs := opts.BatchSize
-	if bs <= 0 {
-		bs = DefaultAPILogBatchSize
-	}
-	fi := opts.FlushInterval
-	if fi <= 0 {
-		fi = DefaultAPILogFlushInterval
-	}
-
-	a := &asyncAPICallLogger{
-		ch:        make(chan *models.APICallLog, cap),
-		inserter:  inserter,
-		batchSize: bs,
-		flushEvry: fi,
-		done:      make(chan struct{}),
-	}
-	go a.run()
-	return a
+	return apilog.NewAsync(inserter, opts)
 }
 
-func (a *asyncAPICallLogger) Enqueue(entry *models.APICallLog) {
-	if entry == nil {
-		return
-	}
-	if a.closed.Load() {
-		apiCallLogDropsCounter.Inc()
-		return
-	}
-	// Non-blocking: select { case a.ch <- entry: default: drop+counter }
-	select {
-	case a.ch <- entry:
-		// queued
-	default:
-		apiCallLogDropsCounter.Inc()
-		a.warnDrop("api_call_log queue full")
-	}
+// APICallSinkAdapter constructs an httputil.APICallSink backed by the
+// supplied logger.
+//
+// Deprecated: use apilog.SinkAdapter. Will be removed in phase-48.
+func APICallSinkAdapter(logger APICallLogger, captureBodies bool) httputil.APICallSink {
+	return apilog.SinkAdapter(logger, captureBodies)
 }
-
-func (a *asyncAPICallLogger) warnDrop(reason string) {
-	now := time.Now().UnixNano()
-	last := a.lastWarnNs.Load()
-	if now-last < int64(time.Second) {
-		return
-	}
-	if !a.lastWarnNs.CompareAndSwap(last, now) {
-		return
-	}
-	log.Warn().Str("reason", reason).Msg("api_call_log entry dropped")
-}
-
-func (a *asyncAPICallLogger) Shutdown(ctx context.Context) error {
-	a.closeOnce.Do(func() {
-		a.closed.Store(true)
-		close(a.ch)
-	})
-	select {
-	case <-a.done:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
-func (a *asyncAPICallLogger) run() {
-	defer close(a.done)
-
-	batch := make([]*models.APICallLog, 0, a.batchSize)
-	ticker := time.NewTicker(a.flushEvry)
-	defer ticker.Stop()
-
-	flush := func() {
-		if len(batch) == 0 {
-			return
-		}
-		// Use a fresh context so a cancelled request context doesn't kill
-		// the flush; cap at 10s to keep DB calls bounded.
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		if err := a.inserter.CreateBatch(ctx, batch); err != nil {
-			log.Error().Err(err).Int("batch", len(batch)).Msg("api_call_log batch insert failed")
-		}
-		// Reset slice but keep underlying array to avoid reallocs.
-		for i := range batch {
-			batch[i] = nil
-		}
-		batch = batch[:0]
-	}
-
-	for {
-		select {
-		case entry, ok := <-a.ch:
-			if !ok {
-				flush()
-				return
-			}
-			batch = append(batch, entry)
-			if len(batch) >= a.batchSize {
-				flush()
-			}
-		case <-ticker.C:
-			flush()
-		}
-	}
-}
-
-// nullAPICallLogger is the disabled-mode logger. Used when API_LOGS_INBOUND_ENABLED=false
-// or when the inserter is nil. All operations are silent no-ops.
-type nullAPICallLogger struct{}
-
-func (n *nullAPICallLogger) Enqueue(*models.APICallLog)     {}
-func (n *nullAPICallLogger) Shutdown(context.Context) error { return nil }
 
 // Package-level logger registry. main.go calls SetAPICallLogger after
 // constructing the async writer; router.go reads the current value when
 // installing the middleware on the /api/v1 group.
 var (
 	apiLoggerMu      sync.RWMutex
-	currentAPILogger APICallLogger = &nullAPICallLogger{}
+	currentAPILogger APICallLogger = apilog.NewNoop()
 )
 
 // SetAPICallLogger replaces the package-level logger and returns the previous
 // value. Safe to call from main.go on startup and on shutdown for cleanup.
 func SetAPICallLogger(l APICallLogger) APICallLogger {
 	if l == nil {
-		l = &nullAPICallLogger{}
+		l = apilog.NewNoop()
 	}
 	apiLoggerMu.Lock()
 	defer apiLoggerMu.Unlock()
@@ -316,7 +165,7 @@ func DefaultAPILogSkip(path string) bool {
 // skip is the per-path predicate; pass nil to use DefaultAPILogSkip.
 func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(path string) bool) func(http.Handler) http.Handler {
 	if logger == nil {
-		logger = &nullAPICallLogger{}
+		logger = apilog.NewNoop()
 	}
 	if skip == nil {
 		skip = DefaultAPILogSkip
@@ -331,9 +180,6 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 			start := time.Now()
 			ww := chimw.NewWrapResponseWriter(w, r.ProtoMajor)
 
-			// Optional body capture. Request body is wrapped with a tee
-			// reader so the handler still sees the full body; response
-			// body is teed via chi's Tee helper into a capped buffer.
 			var (
 				reqBuf  *cappedBuffer
 				respBuf *cappedBuffer
@@ -348,13 +194,6 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 			}
 
 			defer func() {
-				// Two recoveries are at play here:
-				//   1. A handler panic. We convert it to 500 ourselves so
-				//      the recorded entry shows status=500 (RecoveryMiddleware
-				//      one layer up will see no panic and act as no-op).
-				//   2. A recorder-internal panic. Guarded by an inner
-				//      defer/recover so a recorder bug never takes down
-				//      the request goroutine.
 				if rec := recover(); rec != nil {
 					stack := string(debug.Stack())
 					log.Error().
@@ -385,8 +224,6 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 					StatusCode: int16(ww.Status()),
 					DurationMs: int32(duration.Milliseconds()),
 				}
-				// Defensive: status 0 means handler never wrote anything;
-				// chi treats that as 200 by default. Mirror that.
 				if entry.StatusCode == 0 {
 					entry.StatusCode = http.StatusOK
 				}
@@ -477,7 +314,6 @@ func trimSpace(s string) string {
 // appended.
 func redactBodyBytes(b []byte, truncated bool, ct string) string {
 	out := b
-	// Detect JSON either by content-type or by leading byte.
 	isJSON := ct == "application/json" || ct == "text/json" ||
 		(len(b) > 0 && (b[0] == '{' || b[0] == '['))
 	if isJSON {
@@ -492,10 +328,6 @@ func redactBodyBytes(b []byte, truncated bool, ct string) string {
 	return s
 }
 
-// redactJSONBody walks the JSON document and replaces every value whose key
-// matches redactKeyPattern with "REDACTED", recursively into nested objects
-// and arrays of objects. Returns (redacted, true) on success; (nil, false)
-// if the input is not parseable JSON (caller should fall back to raw bytes).
 func redactJSONBody(b []byte) ([]byte, bool) {
 	var v any
 	dec := json.NewDecoder(bytes.NewReader(b))
@@ -566,8 +398,7 @@ func (c *cappedBuffer) Len() int      { return c.buf.Len() }
 func (c *cappedBuffer) Bytes() []byte { return c.buf.Bytes() }
 
 // teeReadCloser wraps a request Body so reads are mirrored into w (capped),
-// then forwards Close to the underlying Body. The handler still sees the
-// full body; w receives at most cappedBuffer.cap bytes.
+// then forwards Close to the underlying Body.
 func teeReadCloser(rc io.ReadCloser, w io.Writer) io.ReadCloser {
 	return &teeReader{r: io.TeeReader(rc, w), c: rc}
 }
@@ -579,86 +410,3 @@ type teeReader struct {
 
 func (t *teeReader) Read(p []byte) (int, error) { return t.r.Read(p) }
 func (t *teeReader) Close() error               { return t.c.Close() }
-
-// ---------------------------------------------------------------------------
-// Outbound APICallSink adapter (Phase 38 / Prompt 12)
-//
-// APICallSinkAdapter wraps an APICallLogger so it satisfies the
-// httputil.APICallSink interface, converting outbound httputil.APICallRecord
-// values into *models.APICallLog entries that flow through the same async
-// writer (and therefore the same api_call_logs hypertable) as the inbound
-// middleware.
-//
-// Layering: the adapter lives in internal/api so internal/platform/httputil
-// never imports internal/database (or internal/models, transitively). The
-// httputil package only knows about its locally-defined APICallSink port.
-//
-// captureBodies is captured by value at adapter-construction time and
-// returned from CaptureBodies() on every round-trip. Operator default is
-// false; flip via API_LOGS_CAPTURE_BODIES at startup. The toggle is read
-// once per round-trip by httputil.LoggedTransport so the operator can
-// reconstruct the adapter to flip it without restarting the API server.
-// ---------------------------------------------------------------------------
-
-// APICallSinkAdapter constructs an httputil.APICallSink backed by the
-// supplied APICallLogger. A nil logger yields a no-op sink so production
-// wiring with API_LOGS_INBOUND_ENABLED=false is safe.
-func APICallSinkAdapter(logger APICallLogger, captureBodies bool) httputil.APICallSink {
-	if logger == nil {
-		return &nullOutboundSink{}
-	}
-	return &apiCallSinkAdapter{
-		logger:        logger,
-		captureBodies: captureBodies,
-	}
-}
-
-// apiCallSinkAdapter is the production binding of httputil.APICallSink to
-// the existing inbound asyncAPICallLogger. Enqueue is non-blocking by
-// inheritance from APICallLogger.Enqueue (drop-on-full).
-type apiCallSinkAdapter struct {
-	logger        APICallLogger
-	captureBodies bool
-}
-
-func (a *apiCallSinkAdapter) Enqueue(record httputil.APICallRecord) {
-	if a == nil || a.logger == nil {
-		return
-	}
-	entry := &models.APICallLog{
-		Ts:         time.Now().UTC(),
-		Service:    record.Service,
-		HTTPMethod: record.Method,
-		Endpoint:   record.URL,
-		StatusCode: int16(record.StatusCode),
-		DurationMs: int32(record.DurationMs),
-	}
-	if record.ErrorMessage != "" {
-		s := record.ErrorMessage
-		entry.ErrorMessage = &s
-	}
-	if len(record.RequestBody) > 0 {
-		s := string(record.RequestBody)
-		entry.RequestBody = &s
-	}
-	if len(record.ResponseBody) > 0 {
-		s := string(record.ResponseBody)
-		entry.ResponseBody = &s
-	}
-	a.logger.Enqueue(entry)
-}
-
-func (a *apiCallSinkAdapter) CaptureBodies() bool {
-	if a == nil {
-		return false
-	}
-	return a.captureBodies
-}
-
-// nullOutboundSink is the disabled-mode adapter: every method is a silent
-// no-op. Used when APICallSinkAdapter is constructed with a nil logger
-// (which happens when API_LOGS_INBOUND_ENABLED=false).
-type nullOutboundSink struct{}
-
-func (n *nullOutboundSink) Enqueue(httputil.APICallRecord) {}
-func (n *nullOutboundSink) CaptureBodies() bool            { return false }

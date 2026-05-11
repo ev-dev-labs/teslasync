@@ -4,7 +4,7 @@ import { Activity, Zap, TrendingUp, Shield } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { MetricBar, InlineMetric } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
 import type { TempSensor } from './constants';
@@ -25,7 +25,8 @@ export function ThermalLoadPanel({
   stats,
 }: ThermalLoadPanelProps) {
   const { t } = useTranslation();
-  const { fmtTemp } = useSettings();
+  const { formatTemperature: formatTemperatureUnit } = useUnits();
+  const formatTemperature = (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision });
 
   return (
     <FadeIn delay={0.2}>
@@ -42,7 +43,7 @@ export function ThermalLoadPanel({
               value={sensor.value ?? 0}
               max={sensor.maxTemp}
               color={tempSeverityColor(sensor.value, sensor.maxTemp)}
-              sublabel={displayTemp(sensor.value, fmtTemp)}
+              sublabel={displayTemp(sensor.value, formatTemperature)}
             />
           ))}
         </div>

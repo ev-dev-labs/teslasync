@@ -188,7 +188,7 @@ func TestChargingGuards(t *testing.T) {
 	})
 
 	t.Run("CanComplete_valid", func(t *testing.T) {
-		s := &ChargingSession{EnergyAddedKWh: 10.5, StartBatteryLevel: 50, EndBatteryLevel: 80}
+		s := &ChargingSession{EnergyAddedWh: 10500, StartBatteryLevel: 50, EndBatteryLevel: 80}
 		ok, err := CanComplete(ctx, s, EventComplete)
 		if err != nil || !ok {
 			t.Error("expected guard to pass")
@@ -196,7 +196,7 @@ func TestChargingGuards(t *testing.T) {
 	})
 
 	t.Run("CanComplete_noEnergy", func(t *testing.T) {
-		s := &ChargingSession{EnergyAddedKWh: 0, StartBatteryLevel: 50, EndBatteryLevel: 50}
+		s := &ChargingSession{EnergyAddedWh: 0, StartBatteryLevel: 50, EndBatteryLevel: 50}
 		ok, _ := CanComplete(ctx, s, EventComplete)
 		if ok {
 			t.Error("expected guard to reject when no energy added")

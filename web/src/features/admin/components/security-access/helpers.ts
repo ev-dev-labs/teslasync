@@ -1,4 +1,5 @@
 import type { SecurityEvent } from '@/types/admin';
+import { asNonEmptyString } from '@/lib/typeGuards';
 
 /* ------------------------------------------------------------------ */
 /*  Helper types                                                       */
@@ -33,9 +34,10 @@ export interface SecurityStats {
 /*  Window helpers                                                     */
 /* ------------------------------------------------------------------ */
 
-export function parseWindowState(val: string | null | undefined): WindowState {
-  if (!val) return 'Unknown';
-  const lower = val.toLowerCase();
+export function parseWindowState(val: unknown): WindowState {
+  const raw = asNonEmptyString(val);
+  if (!raw) return 'Unknown';
+  const lower = raw.toLowerCase();
   if (lower === 'closed' || lower === '0') return 'Closed';
   if (lower.includes('vent')) return 'Venting';
   if (lower.includes('open') || lower !== '0') return 'Open';
@@ -72,13 +74,21 @@ export function windowTextClass(state: WindowState): string {
 /*  Door helpers                                                       */
 /* ------------------------------------------------------------------ */
 
-export function doorClosed(state: string | null | undefined): boolean {
-  if (!state) return true;
-  const lower = state.trim().toLowerCase();
-  if (lower === 'closed' || lower === 'closedall' || lower === '0' || lower === 'false') return true;
+export function doorClosed(state: unknown): boolean {
+  // Native types — backend may emit DoorState as bool/object after Phase-42a.
+  if (state == null) return true;
+  if (typeof state === 'boolean') return !state;
+  if (typeof state === 'number') return state === 0;
+  if (typeof state === 'object' && !Array.isArray(state)) {
+    return Object.values(state as Record<string, unknown>).every((v) => v === false || v == null);
+  }
+  const raw = asNonEmptyString(state);
+  if (!raw) return true;
+  const lower = raw.trim().toLowerCase();
+  if (lower === '' || lower === 'closed' || lower === 'closedall' || lower === '0' || lower === 'false') return true;
   if (lower.startsWith('{')) {
     try {
-      const parsed = JSON.parse(state) as Record<string, unknown>;
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
       return Object.values(parsed).every((v) => v === false || v == null);
     } catch { /* fall through */ }
   }
@@ -123,10 +133,13 @@ export function timeSince(iso: string | null | undefined): string {
 /*  Sentry helpers                                                     */
 /* ------------------------------------------------------------------ */
 
-/** Returns true if the SentryMode enum value means armed (any non-Off state). */
-export function isSentryActive(val: string | null | undefined): boolean {
-  if (!val) return false;
-  return !val.toLowerCase().includes('off');
+/** Returns true if the SentryMode value means armed (any non-Off state).
+ *  Accepts native bool (Phase-42a backend) and string enum values. */
+export function isSentryActive(val: unknown): boolean {
+  if (typeof val === 'boolean') return val;
+  const raw = asNonEmptyString(val);
+  if (!raw) return false;
+  return !raw.toLowerCase().includes('off');
 }
 
 export function buildSentryBuckets(events: SecurityEvent[]): SentryDayBucket[] {
@@ -209,7 +222,7 @@ export function deriveTimeline(events: SecurityEvent[]): TimelineEvent[] {
       timeline.push({
         id: `lock-${curr.id}`,
         kind: 'lock',
-        detail: curr.doorState ?? '—',
+        detail: asNonEmptyString(curr.doorState) ?? '—',
         timestamp: curr.createdAt,
         variant: curr.locked ? 'positive' : 'negative',
       });
@@ -230,7 +243,7 @@ export function deriveTimeline(events: SecurityEvent[]): TimelineEvent[] {
       timeline.push({
         id: `door-${curr.id}`,
         kind: 'door',
-        detail: curr.doorState ?? '—',
+        detail: asNonEmptyString(curr.doorState) ?? (closed ? 'Closed' : 'Open'),
         timestamp: curr.createdAt,
         variant: closed ? 'positive' : 'negative',
       });

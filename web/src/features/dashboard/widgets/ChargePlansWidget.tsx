@@ -6,7 +6,7 @@ import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useChargePlans, useRatePlans } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetDetailCard, type DetailEntry } from './shared';
@@ -70,7 +70,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { formatCurrency } = useSettings();
+  const { formatCurrency } = useFormatting();
 
   const {
     data: plans,

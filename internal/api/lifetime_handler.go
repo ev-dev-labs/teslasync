@@ -136,15 +136,20 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	log.Info().Int64("vehicle_id", vehicleID).Msg("lifetime: computing stats")
 
 	// ── Driving aggregates ──
+	// Phase-42 SI canonical drives (000185): distance_m / duration_s /
+	// max_speed_mps / started_at / ended_at. Aggregate in SI then convert
+	// to km / min / km/h at the response boundary so the JSON contract
+	// (totalDistKm, totalDrivingMin, longestDriveKm, highestSpeedKmh) is
+	// preserved.
 	driveQuery := `
 		SELECT COUNT(*),
-		       COALESCE(SUM(distance_mi), 0),
-		       COALESCE(SUM(duration_min), 0),
-		       COALESCE(MAX(distance_mi), 0),
-		       COALESCE(MAX(max_speed_mph), 0),
-		       MIN(start_ts)
+		       COALESCE(SUM(distance_m) / 1000.0, 0),
+		       COALESCE(SUM(duration_s) / 60.0, 0),
+		       COALESCE(MAX(distance_m) / 1000.0, 0),
+		       COALESCE(MAX(max_speed_mps) * 3.6, 0),
+		       MIN(started_at)
 		FROM drives
-		WHERE end_ts IS NOT NULL AND distance_mi > 0`
+		WHERE ended_at IS NOT NULL AND distance_m > 0`
 	driveArgs := []interface{}{}
 	if vehicleID > 0 {
 		driveQuery += " AND vehicle_id = $1"
@@ -164,16 +169,19 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Average efficiency (Wh/km) — from drives with energy used data
+	// Average efficiency (Wh/km) — from drives with energy used data.
+	// Phase-42 SI canonical: energy_used_wh and distance_m. Wh/km =
+	// energy_used_wh / (distance_m / 1000). The > 1 mile filter becomes
+	// distance_m > 1609.344.
 	effQuery := `
 		SELECT COALESCE(AVG(
-			CASE WHEN distance_mi > 1 AND energy_used_kwh IS NOT NULL
-			     AND energy_used_kwh > 0
-			THEN (energy_used_kwh / (distance_mi * 1.60934)) * 1000
+			CASE WHEN distance_m > 1609.344 AND energy_used_wh IS NOT NULL
+			     AND energy_used_wh > 0
+			THEN energy_used_wh / (distance_m / 1000.0)
 			ELSE NULL END
 		), 0)
 		FROM drives
-		WHERE end_ts IS NOT NULL AND distance_mi > 0`
+		WHERE ended_at IS NOT NULL AND distance_m > 0`
 	effArgs := []interface{}{}
 	if vehicleID > 0 {
 		effQuery += " AND vehicle_id = $1"
@@ -185,13 +193,16 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	}
 
 	// ── Charging aggregates ──
+	// Phase-42 SI canonical charging_sessions (000184):
+	// total_energy_added_wh, cost_decimal NUMERIC, started_at / ended_at.
+	// Duration computed from EXTRACT(EPOCH FROM (ended_at - started_at)) / 60.
 	chargeQuery := `
 		SELECT COUNT(*),
-		       COALESCE(SUM(energy_added_kwh), 0),
-		       COALESCE(SUM(duration_min), 0),
-		       COALESCE(SUM(CASE WHEN cost > 0 THEN cost ELSE 0 END), 0)
+		       COALESCE(SUM(total_energy_added_wh) / 1000.0, 0),
+		       COALESCE(SUM(EXTRACT(EPOCH FROM (ended_at - started_at)) / 60.0), 0),
+		       COALESCE(SUM(CASE WHEN cost_decimal > 0 THEN cost_decimal::float8 ELSE 0 END), 0)
 		FROM charging_sessions
-		WHERE end_ts IS NOT NULL`
+		WHERE ended_at IS NOT NULL`
 	chargeArgs := []interface{}{}
 	if vehicleID > 0 {
 		chargeQuery += " AND vehicle_id = $1"
@@ -265,8 +276,8 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	mostActiveHour := 0
 
 	dowQuery := `
-		SELECT EXTRACT(DOW FROM start_ts)::int as dow, COUNT(*) as cnt
-		FROM drives WHERE end_ts IS NOT NULL AND distance_mi > 0`
+		SELECT EXTRACT(DOW FROM started_at)::int as dow, COUNT(*) as cnt
+		FROM drives WHERE ended_at IS NOT NULL AND distance_m > 0`
 	dowArgs := []interface{}{}
 	if vehicleID > 0 {
 		dowQuery += " AND vehicle_id = $1"
@@ -284,8 +295,8 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	}
 
 	hourQuery := `
-		SELECT EXTRACT(HOUR FROM start_ts)::int as hr, COUNT(*) as cnt
-		FROM drives WHERE end_ts IS NOT NULL AND distance_mi > 0`
+		SELECT EXTRACT(HOUR FROM started_at)::int as hr, COUNT(*) as cnt
+		FROM drives WHERE ended_at IS NOT NULL AND distance_m > 0`
 	hourArgs := []interface{}{}
 	if vehicleID > 0 {
 		hourQuery += " AND vehicle_id = $1"
@@ -308,14 +319,14 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	// Longest drive
 	longestRec := personalRecord{Value: longestDriveKm}
 	longestRecQuery := `
-		SELECT start_ts FROM drives
-		WHERE end_ts IS NOT NULL AND distance_mi > 0`
+		SELECT started_at FROM drives
+		WHERE ended_at IS NOT NULL AND distance_m > 0`
 	longestRecArgs := []interface{}{}
 	if vehicleID > 0 {
 		longestRecQuery += " AND vehicle_id = $1"
 		longestRecArgs = append(longestRecArgs, vehicleID)
 	}
-	longestRecQuery += " ORDER BY distance_mi DESC LIMIT 1"
+	longestRecQuery += " ORDER BY distance_m DESC LIMIT 1"
 	var longestDate time.Time
 	if err := h.db.Pool.QueryRow(ctx, longestRecQuery, longestRecArgs...).Scan(&longestDate); err == nil {
 		s := longestDate.Format("2006-01-02")
@@ -325,32 +336,33 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	// Highest speed
 	speedRec := personalRecord{Value: highestSpeedKmh}
 	speedRecQuery := `
-		SELECT start_ts FROM drives
-		WHERE end_ts IS NOT NULL AND distance_mi > 0 AND max_speed_mph IS NOT NULL`
+		SELECT started_at FROM drives
+		WHERE ended_at IS NOT NULL AND distance_m > 0 AND max_speed_mps IS NOT NULL`
 	speedRecArgs := []interface{}{}
 	if vehicleID > 0 {
 		speedRecQuery += " AND vehicle_id = $1"
 		speedRecArgs = append(speedRecArgs, vehicleID)
 	}
-	speedRecQuery += " ORDER BY max_speed_mph DESC LIMIT 1"
+	speedRecQuery += " ORDER BY max_speed_mps DESC LIMIT 1"
 	var speedDate time.Time
 	if err := h.db.Pool.QueryRow(ctx, speedRecQuery, speedRecArgs...).Scan(&speedDate); err == nil {
 		s := speedDate.Format("2006-01-02")
 		speedRec.Date = &s
 	}
 
-	// Most energy in a single charge
+	// Most energy in a single charge — Phase-42 SI charging_sessions:
+	// total_energy_added_wh, started_at. Convert Wh → kWh at populate.
 	var maxChargeKwh float64
 	var maxChargeDate *string
 	maxChargeQuery := `
-		SELECT energy_added_kwh, start_ts FROM charging_sessions
-		WHERE end_ts IS NOT NULL AND energy_added_kwh > 0`
+		SELECT total_energy_added_wh / 1000.0, started_at FROM charging_sessions
+		WHERE ended_at IS NOT NULL AND total_energy_added_wh > 0`
 	maxChargeArgs := []interface{}{}
 	if vehicleID > 0 {
 		maxChargeQuery += " AND vehicle_id = $1"
 		maxChargeArgs = append(maxChargeArgs, vehicleID)
 	}
-	maxChargeQuery += " ORDER BY energy_added_kwh DESC LIMIT 1"
+	maxChargeQuery += " ORDER BY total_energy_added_wh DESC LIMIT 1"
 	var mcDate time.Time
 	if err := h.db.Pool.QueryRow(ctx, maxChargeQuery, maxChargeArgs...).Scan(&maxChargeKwh, &mcDate); err == nil {
 		s := mcDate.Format("2006-01-02")

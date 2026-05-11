@@ -9,10 +9,14 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	Port             int
-	LogLevel         string
-	CORSOrigins      string
-	VehiclePhotoDir  string
+	Port                 int
+	LogLevel             string
+	CORSOrigins          string
+	VehiclePhotoDir      string
+	Environment          string
+	ServiceVersion       string
+	OTLPEndpoint         string
+	OTELTracesSamplerArg string
 	// RequireCookieConsent (Phase-46 / Prompt 70) opts the deployment
 	// into the GDPR / ePrivacy cookie-consent banner. Default false so
 	// the typical self-hosted single-user instance is unaffected — only
@@ -293,10 +297,14 @@ type RetentionConfig struct {
 // these fields first or log only non-sensitive values.
 func Load() (*Config, error) {
 	cfg := &Config{
-		Port:            envInt("TESLASYNC_PORT", 4000),
-		LogLevel:        envStr("TESLASYNC_LOG_LEVEL", "info"),
-		CORSOrigins:     envStr("CORS_ORIGINS", ""),
-		VehiclePhotoDir: envStr("TESLASYNC_VEHICLE_PHOTO_DIR", "/var/lib/teslasync/photos"),
+		Port:                 envInt("TESLASYNC_PORT", 4000),
+		LogLevel:             envStr("TESLASYNC_LOG_LEVEL", "info"),
+		CORSOrigins:          envStr("CORS_ORIGINS", ""),
+		VehiclePhotoDir:      envStr("TESLASYNC_VEHICLE_PHOTO_DIR", "/var/lib/teslasync/photos"),
+		Environment:          envStr("TESLASYNC_ENVIRONMENT", envStr("ENVIRONMENT", "development")),
+		ServiceVersion:       envStr("TESLASYNC_SERVICE_VERSION", envStr("VERSION", "dev")),
+		OTLPEndpoint:         envStr("OTEL_EXPORTER_OTLP_ENDPOINT", envStr("OTEL_ENDPOINT", "http://otel-collector:4317")),
+		OTELTracesSamplerArg: envStr("OTEL_TRACES_SAMPLER_ARG", "1.0"),
 		// Phase-46 / Prompt 70 — default OFF so self-hosted installs
 		// keep working without a banner. Set TESLASYNC_REQUIRE_COOKIE_CONSENT=true
 		// only on multi-user / public-facing deployments where GDPR /

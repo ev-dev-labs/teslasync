@@ -5,9 +5,18 @@
  *   • BroadcastChannel — cross-tab sync (`@/lib/broadcast`).
  *   • ResizeObserver — Recharts ResponsiveContainer + Leaflet sizing.
  *   • Intl.RelativeTimeFormat — humanized "5 minutes ago" timestamps.
- *   • crypto.randomUUID — TanStack Query keys, command palette IDs.
  *   • CSS `:has()` selector — emergent layout adjustments.
  *   • structuredClone — TanStack Query cache hydration.
+ *
+ * `crypto.randomUUID` was previously listed but is intentionally NOT
+ * a hard requirement: it is restricted to secure contexts (HTTPS or
+ * literal `localhost`) and is therefore undefined when self-hosted
+ * TeslaSync is accessed via a LAN IP (e.g. http://192.168.1.42:3002)
+ * or a custom hostname over plain HTTP. Both call sites in the app
+ * now route through `@/lib/safeUUID#safeRandomUUID`, which falls
+ * back to `crypto.getRandomValues` (available in non-secure contexts)
+ * and ultimately `Math.random` so the banner does not fire on
+ * supported browsers behind a non-HTTPS deployment.
  *
  * On unsupported browsers (old Safari, Firefox ESR < 102, IE / Edge
  * Legacy on enterprise networks) the SPA either renders a white page
@@ -59,15 +68,6 @@ export function detectMissingFeatures(): string[] {
     }
   } catch {
     missing.push('Intl.RelativeTimeFormat')
-  }
-
-  try {
-    const cryptoObj = (globalThis as { crypto?: { randomUUID?: unknown } }).crypto
-    if (!cryptoObj || typeof cryptoObj.randomUUID !== 'function') {
-      missing.push('crypto.randomUUID')
-    }
-  } catch {
-    missing.push('crypto.randomUUID')
   }
 
   try {

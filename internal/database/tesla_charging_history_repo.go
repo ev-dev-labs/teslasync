@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/jackc/pgx/v5"
 )
 
 // TeslaChargingHistoryRepo provides data access for Tesla Supercharger/DC charging history.
@@ -22,7 +22,7 @@ func NewTeslaChargingHistoryRepo(db *DB) *TeslaChargingHistoryRepo {
 func (r *TeslaChargingHistoryRepo) GetAll(ctx context.Context, vin string, limit, offset int) ([]*models.TeslaChargingHistoryEntry, error) {
 	query := `SELECT id, session_id, vin, site_location_name, charge_start_datetime, charge_stop_datetime,
 		country, state, county, postal_code, billing_type, fee_type, currency_code, pricing_type,
-		rate_base, usage_kwh, total_due, has_invoice, invoice_content_id, fetched_at, created_at
+		rate_base, usage_wh, total_due, has_invoice, invoice_content_id, fetched_at, created_at
 		FROM tesla_charging_history`
 	args := []interface{}{}
 	argIdx := 1
@@ -50,7 +50,7 @@ func (r *TeslaChargingHistoryRepo) GetAll(ctx context.Context, vin string, limit
 			&e.ChargeStartDatetime, &e.ChargeStopDatetime,
 			&e.Country, &e.State, &e.County, &e.PostalCode,
 			&e.BillingType, &e.FeeType, &e.CurrencyCode, &e.PricingType,
-			&e.RateBase, &e.UsageKWh, &e.TotalDue,
+			&e.RateBase, &e.UsageWh, &e.TotalDue,
 			&e.HasInvoice, &e.InvoiceContentID,
 			&e.FetchedAt, &e.CreatedAt,
 		); err != nil {
@@ -65,7 +65,7 @@ func (r *TeslaChargingHistoryRepo) GetAll(ctx context.Context, vin string, limit
 func (r *TeslaChargingHistoryRepo) GetBySessionID(ctx context.Context, sessionID int64) (*models.TeslaChargingHistoryEntry, error) {
 	query := `SELECT id, session_id, vin, site_location_name, charge_start_datetime, charge_stop_datetime,
 		country, state, county, postal_code, billing_type, fee_type, currency_code, pricing_type,
-		rate_base, usage_kwh, total_due, has_invoice, invoice_content_id, fetched_at, created_at
+		rate_base, usage_wh, total_due, has_invoice, invoice_content_id, fetched_at, created_at
 		FROM tesla_charging_history WHERE session_id = $1`
 	e := &models.TeslaChargingHistoryEntry{}
 	err := r.db.Pool.QueryRow(ctx, query, sessionID).Scan(
@@ -73,7 +73,7 @@ func (r *TeslaChargingHistoryRepo) GetBySessionID(ctx context.Context, sessionID
 		&e.ChargeStartDatetime, &e.ChargeStopDatetime,
 		&e.Country, &e.State, &e.County, &e.PostalCode,
 		&e.BillingType, &e.FeeType, &e.CurrencyCode, &e.PricingType,
-		&e.RateBase, &e.UsageKWh, &e.TotalDue,
+		&e.RateBase, &e.UsageWh, &e.TotalDue,
 		&e.HasInvoice, &e.InvoiceContentID,
 		&e.FetchedAt, &e.CreatedAt,
 	)
@@ -88,8 +88,8 @@ func (r *TeslaChargingHistoryRepo) GetBySessionID(ctx context.Context, sessionID
 
 // GetSummary returns aggregated stats for Tesla charging history, optionally filtered by VIN.
 func (r *TeslaChargingHistoryRepo) GetSummary(ctx context.Context, vin string) (*models.TeslaChargingHistorySummary, error) {
-	query := `SELECT COUNT(*), SUM(usage_kwh), SUM(total_due),
-		CASE WHEN SUM(usage_kwh) > 0 THEN SUM(total_due) / SUM(usage_kwh) ELSE NULL END
+	query := `SELECT COUNT(*), SUM(usage_wh), SUM(total_due),
+		CASE WHEN SUM(usage_wh) > 0 THEN SUM(total_due) / (SUM(usage_wh) / 1000.0) ELSE NULL END
 		FROM tesla_charging_history`
 	args := []interface{}{}
 	if vin != "" {
@@ -99,7 +99,7 @@ func (r *TeslaChargingHistoryRepo) GetSummary(ctx context.Context, vin string) (
 
 	s := &models.TeslaChargingHistorySummary{}
 	err := r.db.Pool.QueryRow(ctx, query, args...).Scan(
-		&s.TotalSessions, &s.TotalKWh, &s.TotalSpend, &s.AvgCostPerKWh,
+		&s.TotalSessions, &s.TotalWh, &s.TotalSpend, &s.AvgCostPerKWh,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get tesla charging history summary: %w", err)
@@ -116,7 +116,7 @@ func (r *TeslaChargingHistoryRepo) UpsertBatch(ctx context.Context, entries []*m
 	query := `INSERT INTO tesla_charging_history (
 		session_id, vin, site_location_name, charge_start_datetime, charge_stop_datetime,
 		country, state, county, postal_code, billing_type, fee_type, currency_code, pricing_type,
-		rate_base, usage_kwh, total_due, has_invoice, invoice_content_id, fetched_at
+		rate_base, usage_wh, total_due, has_invoice, invoice_content_id, fetched_at
 	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
 	ON CONFLICT (session_id) DO UPDATE SET
 		site_location_name = EXCLUDED.site_location_name,
@@ -131,7 +131,7 @@ func (r *TeslaChargingHistoryRepo) UpsertBatch(ctx context.Context, entries []*m
 		currency_code = EXCLUDED.currency_code,
 		pricing_type = EXCLUDED.pricing_type,
 		rate_base = EXCLUDED.rate_base,
-		usage_kwh = EXCLUDED.usage_kwh,
+		usage_wh = EXCLUDED.usage_wh,
 		total_due = EXCLUDED.total_due,
 		has_invoice = EXCLUDED.has_invoice,
 		invoice_content_id = EXCLUDED.invoice_content_id,
@@ -145,7 +145,7 @@ func (r *TeslaChargingHistoryRepo) UpsertBatch(ctx context.Context, entries []*m
 			e.ChargeStartDatetime, e.ChargeStopDatetime,
 			e.Country, e.State, e.County, e.PostalCode,
 			e.BillingType, e.FeeType, e.CurrencyCode, e.PricingType,
-			e.RateBase, e.UsageKWh, e.TotalDue,
+			e.RateBase, e.UsageWh, e.TotalDue,
 			e.HasInvoice, e.InvoiceContentID,
 			now,
 		)

@@ -1,0 +1,475 @@
+package normalize
+
+import (
+	"context"
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"io/fs"
+	"math"
+	"path/filepath"
+	"sort"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/rs/zerolog"
+
+	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
+	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
+)
+
+// ---------------------------------------------------------------------------
+// Test fakes
+// ---------------------------------------------------------------------------
+
+// fakeRepo is an in-memory unithistory.Repo used by every Pipeline
+// test. It records every Record / At call in op-arrival order so the
+// tests can assert the SettingUnitFirst ordering invariant directly
+// (Record before At for the same EmittedAt).
+//
+// Behaviour:
+//   - Record appends an Entry to entries and a "record" op to ops.
+//   - At scans entries for the row with the largest effective_from
+//     <= t for (vehicleID, kind) and returns its Value, or
+//     unithistory.ErrNotFound when no such row exists. Records the
+//     "at" op regardless of outcome so the test can see the call
+//     even on miss.
+//   - Latest is unused by the dispatch loop but must be present to
+//     satisfy the interface.
+type fakeRepo struct {
+	mu      sync.Mutex
+	entries []unithistory.Entry
+	ops     []fakeOp
+}
+
+type fakeOp struct {
+	kind    string             // "record" or "at"
+	field   string             // optional context label
+	at      time.Time          // populated for "at"
+	atKind  unithistory.Kind   // populated for "at"
+	atVeh   int64              // populated for "at"
+	entry   unithistory.Entry  // populated for "record"
+}
+
+func (r *fakeRepo) Record(_ context.Context, e unithistory.Entry) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.entries = append(r.entries, e)
+	r.ops = append(r.ops, fakeOp{kind: "record", entry: e})
+	return nil
+}
+
+func (r *fakeRepo) At(_ context.Context, vehicleID int64, kind unithistory.Kind, t time.Time) (units.ActiveUnit, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.ops = append(r.ops, fakeOp{kind: "at", at: t, atKind: kind, atVeh: vehicleID})
+	var best *unithistory.Entry
+	for i := range r.entries {
+		e := &r.entries[i]
+		if e.VehicleID != vehicleID || e.Kind != kind {
+			continue
+		}
+		if e.EffectiveFrom.After(t) {
+			continue
+		}
+		if best == nil || e.EffectiveFrom.After(best.EffectiveFrom) {
+			best = e
+		}
+	}
+	if best == nil {
+		return "", unithistory.ErrNotFound
+	}
+	return best.Value, nil
+}
+
+func (r *fakeRepo) Latest(_ context.Context, vehicleID int64, kind unithistory.Kind) (unithistory.Entry, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var best *unithistory.Entry
+	for i := range r.entries {
+		e := &r.entries[i]
+		if e.VehicleID != vehicleID || e.Kind != kind {
+			continue
+		}
+		if best == nil || e.EffectiveFrom.After(best.EffectiveFrom) {
+			best = e
+		}
+	}
+	if best == nil {
+		return unithistory.Entry{}, unithistory.ErrNotFound
+	}
+	return *best, nil
+}
+
+func (r *fakeRepo) opsCopy() []fakeOp {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := make([]fakeOp, len(r.ops))
+	copy(out, r.ops)
+	return out
+}
+
+// fakeRouter records every Route call the dispatcher makes. Used as
+// the Routable for every Pipeline test in this file. Substitutes
+// for *router.Router because routing.yaml ships empty as of
+// Prompt 0025 — a real *router.Router would reject every dispatch
+// with ErrNoRoute and never exercise the writer path under test.
+type fakeRouter struct {
+	mu     sync.Mutex
+	routes []codec.Atomic
+	err    error // optional: returned from every Route call
+}
+
+func (r *fakeRouter) Route(_ context.Context, atomic codec.Atomic) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.routes = append(r.routes, atomic)
+	return r.err
+}
+
+func (r *fakeRouter) routesCopy() []codec.Atomic {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := make([]codec.Atomic, len(r.routes))
+	copy(out, r.routes)
+	return out
+}
+
+// ---------------------------------------------------------------------------
+// TestPipelineHappyPath
+// ---------------------------------------------------------------------------
+
+// TestPipelineHappyPath exercises the three primary dispatch arms in
+// one payload:
+//
+//  1. A Setting*Unit atomic (SettingDistanceUnit=km) is recorded to
+//     the unit-history repo via observeSettingUnit and is NOT
+//     routed.
+//  2. A unit-bearing atomic (Odometer=100 km) looks up the active
+//     unit at its EmittedAt, converts to SI (meters), and is routed
+//     to the fake router with the converted value.
+//  3. A dimensionless atomic (BatteryHeaterOn=true) bypasses the
+//     unit-conversion path and is routed unchanged.
+//
+// The assertions cover the SettingUnitFirst ordering (Record happens
+// before At), the conversion correctness (100 km → 100000 m), the
+// router population (exactly two Routes — Odometer + BatteryHeaterOn,
+// NOT the Setting*Unit), and the pass-through invariance for
+// dimensionless atomics.
+func TestPipelineHappyPath(t *testing.T) {
+	t.Parallel()
+
+	const vehicleID int64 = 42
+	tNow := time.Date(2026, 5, 3, 12, 0, 0, 0, time.UTC)
+	// Sibling timestamps are used so the unit-history At lookup at
+	// the Odometer's EmittedAt sees the SettingDistanceUnit row.
+	tSetting := tNow
+	tValues := tNow.Add(1 * time.Second)
+
+	atomics := []codec.Atomic{
+		{Field: "SettingDistanceUnit", Value: "Kilometers", EmittedAt: tSetting, VehicleID: "VIN-HAPPY"},
+		{Field: "Odometer", Value: float64(100), EmittedAt: tValues, VehicleID: "VIN-HAPPY"},
+		{Field: "BatteryHeaterOn", Value: true, EmittedAt: tValues, VehicleID: "VIN-HAPPY"},
+	}
+
+	repo := &fakeRepo{}
+	rt := &fakeRouter{}
+	p := New(repo, rt, zerolog.Nop())
+
+	if err := p.processAtomics(context.Background(), atomics, vehicleID); err != nil {
+		t.Fatalf("processAtomics returned error: %v", err)
+	}
+
+	// Setting*Unit must have been Recorded once with the expected
+	// (Kind, Value) and source.
+	repo.mu.Lock()
+	if len(repo.entries) != 1 {
+		repo.mu.Unlock()
+		t.Fatalf("expected exactly 1 unit_history entry, got %d: %+v", len(repo.entries), repo.entries)
+	}
+	gotEntry := repo.entries[0]
+	repo.mu.Unlock()
+	if gotEntry.VehicleID != vehicleID {
+		t.Errorf("entry.VehicleID = %d, want %d", gotEntry.VehicleID, vehicleID)
+	}
+	if gotEntry.Kind != unithistory.KindDistance {
+		t.Errorf("entry.Kind = %q, want %q", gotEntry.Kind, unithistory.KindDistance)
+	}
+	if gotEntry.Value != units.ActiveUnitKilometers {
+		t.Errorf("entry.Value = %q, want %q", gotEntry.Value, units.ActiveUnitKilometers)
+	}
+	if gotEntry.Source != unithistory.SourceTelemetry {
+		t.Errorf("entry.Source = %q, want %q", gotEntry.Source, unithistory.SourceTelemetry)
+	}
+	if !gotEntry.EffectiveFrom.Equal(tSetting) {
+		t.Errorf("entry.EffectiveFrom = %s, want %s", gotEntry.EffectiveFrom, tSetting)
+	}
+
+	// Router must have received exactly two atomics: Odometer +
+	// BatteryHeaterOn. SettingDistanceUnit must NOT have been routed.
+	got := rt.routesCopy()
+	if len(got) != 2 {
+		t.Fatalf("router received %d routes, want 2: %+v", len(got), got)
+	}
+	for _, a := range got {
+		if a.Field == "SettingDistanceUnit" {
+			t.Fatalf("router received Setting*Unit atomic — should have been observed only: %+v", a)
+		}
+	}
+
+	// Odometer should be converted: 100 km -> 100000 m.
+	odo := findRouted(got, "Odometer")
+	if odo == nil {
+		t.Fatalf("router did not receive Odometer atomic; got %+v", got)
+	}
+	odoSI, ok := odo.Value.(float64)
+	if !ok {
+		t.Fatalf("Odometer routed Value type = %T, want float64", odo.Value)
+	}
+	if math.Abs(odoSI-100000.0) > 1e-9 {
+		t.Errorf("Odometer SI value = %v, want 100000 (100km in meters)", odoSI)
+	}
+
+	// BatteryHeaterOn should be routed unchanged.
+	heater := findRouted(got, "BatteryHeaterOn")
+	if heater == nil {
+		t.Fatalf("router did not receive BatteryHeaterOn atomic; got %+v", got)
+	}
+	if v, ok := heater.Value.(bool); !ok || !v {
+		t.Errorf("BatteryHeaterOn routed Value = %v (%T), want true (bool)", heater.Value, heater.Value)
+	}
+}
+
+// findRouted returns the routed atomic for field name, or nil.
+func findRouted(routes []codec.Atomic, field string) *codec.Atomic {
+	for i := range routes {
+		if routes[i].Field == field {
+			return &routes[i]
+		}
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// TestSettingUnitProcessedFirstInSamePayload
+// ---------------------------------------------------------------------------
+
+// TestSettingUnitProcessedFirstInSamePayload locks the SettingUnitFirst
+// ordering invariant: when a payload contains both a Setting*Unit
+// atomic and a unit-bearing atomic with the SAME EmittedAt — and the
+// Setting*Unit appears AFTER the unit-bearing one in the input slice
+// — the dispatcher MUST reorder so the Setting*Unit is recorded
+// FIRST, so the subsequent At lookup for the unit-bearing atomic
+// resolves the new unit context.
+//
+// The test fixture is the worst-case fresh-vehicle scenario: the
+// repo has no prior history, so without reordering the VehicleSpeed
+// atomic's At lookup would return ErrNotFound and the value would
+// be dropped (or, if the repo had a stale "mi" row, it would be
+// converted with the wrong unit). The assertions verify both:
+//
+//  1. The op sequence in the fake repo is [record(distance), at(distance)]
+//     — locks the ordering at the call-graph level.
+//  2. The router received the VehicleSpeed atomic with the value
+//     correctly converted from km/h to m/s (27.7 * 1000/3600 ≈ 7.6944),
+//     proving the At lookup found the freshly-Recorded "km" row.
+func TestSettingUnitProcessedFirstInSamePayload(t *testing.T) {
+	t.Parallel()
+
+	const vehicleID int64 = 7
+	tBoth := time.Date(2026, 5, 3, 14, 0, 0, 0, time.UTC)
+
+	// Input order: VehicleSpeed FIRST, SettingDistanceUnit SECOND.
+	// The dispatcher MUST swap them so SettingDistanceUnit is
+	// processed first.
+	atomics := []codec.Atomic{
+		{Field: "VehicleSpeed", Value: float64(27.7), EmittedAt: tBoth, VehicleID: "VIN-ORDER"},
+		{Field: "SettingDistanceUnit", Value: "Kilometers", EmittedAt: tBoth, VehicleID: "VIN-ORDER"},
+	}
+
+	repo := &fakeRepo{}
+	rt := &fakeRouter{}
+	p := New(repo, rt, zerolog.Nop())
+
+	if err := p.processAtomics(context.Background(), atomics, vehicleID); err != nil {
+		t.Fatalf("processAtomics returned error: %v", err)
+	}
+
+	// Op-sequence assertion: the FIRST op MUST be "record" (the
+	// Setting*Unit observer), the SECOND MUST be "at" (the
+	// VehicleSpeed unit-history lookup).
+	ops := repo.opsCopy()
+	if len(ops) != 2 {
+		t.Fatalf("expected 2 repo ops (record then at), got %d: %+v", len(ops), ops)
+	}
+	if ops[0].kind != "record" {
+		t.Errorf("ops[0].kind = %q, want %q (Setting*Unit must be Recorded BEFORE the speed lookup)", ops[0].kind, "record")
+	}
+	if ops[1].kind != "at" {
+		t.Errorf("ops[1].kind = %q, want %q (speed lookup must follow the Setting*Unit Record)", ops[1].kind, "at")
+	}
+	// Belt + suspenders: the recorded entry MUST be the km row
+	// the speed lookup later resolves.
+	if ops[0].entry.Value != units.ActiveUnitKilometers {
+		t.Errorf("Recorded Value = %q, want %q", ops[0].entry.Value, units.ActiveUnitKilometers)
+	}
+	if ops[0].entry.Kind != unithistory.KindDistance {
+		t.Errorf("Recorded Kind = %q, want %q", ops[0].entry.Kind, unithistory.KindDistance)
+	}
+	if !ops[1].at.Equal(tBoth) || ops[1].atKind != unithistory.KindDistance || ops[1].atVeh != vehicleID {
+		t.Errorf("At lookup did not match (vehicle=%d, kind=%s, t=%s); got %+v", vehicleID, unithistory.KindDistance, tBoth, ops[1])
+	}
+
+	// Router must have received the VehicleSpeed atomic with the
+	// value converted from km/h to m/s. 27.7 km/h * 1000/3600 = 7.6944.
+	routes := rt.routesCopy()
+	if len(routes) != 1 {
+		t.Fatalf("router received %d routes, want 1 (VehicleSpeed only): %+v", len(routes), routes)
+	}
+	if routes[0].Field != "VehicleSpeed" {
+		t.Fatalf("router received %q, want VehicleSpeed", routes[0].Field)
+	}
+	siValue, ok := routes[0].Value.(float64)
+	if !ok {
+		t.Fatalf("VehicleSpeed routed Value type = %T, want float64", routes[0].Value)
+	}
+	want := 27.7 * (1000.0 / 3600.0)
+	if math.Abs(siValue-want) > 1e-9 {
+		t.Errorf("VehicleSpeed SI = %v, want %v (27.7 km/h in m/s)", siValue, want)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestSinglePipelineInvariant
+// ---------------------------------------------------------------------------
+
+// TestSinglePipelineInvariant is the architecture lock that prevents
+// the "two pipelines" regression. It scans every non-test .go file in
+// this package and asserts:
+//
+//   - the only exported methods on *Pipeline that return an error are
+//     in the locked allow-set {Process, ProcessAtomics}; and
+//   - no other top-level exported function in the package returns an
+//     error.
+//
+// Either of those would constitute a third public ingest entry,
+// which ADR-004 #2 explicitly forbids. The two allowed entries are:
+// Process (bytes-in, MQTT path) and ProcessAtomics (atomics-in, HTTP
+// webhook path; added in Phase-42a/0060). The test is reflective
+// rather than convention-only because text-grep gates can be defeated
+// by a rename (e.g. naming the third entry HandleBatch); reading the
+// AST catches the structural shape regardless of naming.
+func TestSinglePipelineInvariant(t *testing.T) {
+	// LOCKED set of permitted public ingest methods on *Pipeline.
+	// Any new entry MUST be authored via an explicit ADR amendment +
+	// prompt; do NOT add to this set casually.
+	allowedPublicEntries := map[string]bool{
+		"Process":        true, // bytes-in, MQTT subscriber path
+		"ProcessAtomics": true, // atomics-in, HTTP webhook adapter path (Phase-42a/0060)
+	}
+
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, ".", func(fi fs.FileInfo) bool {
+		return !strings.HasSuffix(fi.Name(), "_test.go")
+	}, parser.AllErrors)
+	if err != nil {
+		t.Fatalf("parser.ParseDir: %v", err)
+	}
+
+	var offenders []string
+	for _, pkg := range pkgs {
+		// Iterate files in deterministic order so the offender list
+		// is stable across runs (helps human review of failures).
+		filenames := make([]string, 0, len(pkg.Files))
+		for fname := range pkg.Files {
+			filenames = append(filenames, fname)
+		}
+		sort.Strings(filenames)
+
+		for _, fname := range filenames {
+			file := pkg.Files[fname]
+			for _, decl := range file.Decls {
+				fn, ok := decl.(*ast.FuncDecl)
+				if !ok {
+					continue
+				}
+				if !fn.Name.IsExported() {
+					continue
+				}
+				if !returnsError(fn) {
+					continue
+				}
+
+				if fn.Recv != nil {
+					recv := receiverTypeName(fn.Recv)
+					if recv != "*Pipeline" {
+						// Methods on other types (e.g. Metrics) are
+						// out of scope for the single-ingest lock.
+						continue
+					}
+					if allowedPublicEntries[fn.Name.Name] {
+						continue
+					}
+					offenders = append(offenders, fmt.Sprintf("%s: (p *Pipeline).%s returns error (only Process, ProcessAtomics are allowed)", filepath.Base(fname), fn.Name.Name))
+				} else {
+					offenders = append(offenders, fmt.Sprintf("%s: package-level %s returns error (no public ingest entries other than Pipeline.Process / Pipeline.ProcessAtomics are allowed)", filepath.Base(fname), fn.Name.Name))
+				}
+			}
+		}
+	}
+
+	if len(offenders) > 0 {
+		t.Fatalf("normalize package has additional public ingest entries — only (p *Pipeline) Process and (p *Pipeline) ProcessAtomics may return error:\n  - %s", strings.Join(offenders, "\n  - "))
+	}
+}
+
+// returnsError reports whether fn's signature contains an `error`
+// return value (anywhere in its result list — typically the last
+// position, but the check is positional-agnostic for robustness).
+func returnsError(fn *ast.FuncDecl) bool {
+	if fn.Type == nil || fn.Type.Results == nil {
+		return false
+	}
+	for _, field := range fn.Type.Results.List {
+		if isErrorType(field.Type) {
+			return true
+		}
+	}
+	return false
+}
+
+// isErrorType reports whether expr is the predeclared `error` type.
+// Pointer/qualified variants (*error, pkg.error) are intentionally
+// NOT matched — Go's idiomatic error type is the unqualified ident.
+func isErrorType(expr ast.Expr) bool {
+	id, ok := expr.(*ast.Ident)
+	if !ok {
+		return false
+	}
+	return id.Name == "error"
+}
+
+// receiverTypeName renders a method's receiver as a short string
+// like "*Pipeline" or "Pipeline" for comparison against the lock's
+// allow-list. Returns "" if the receiver shape is unrecognised
+// (which is itself a programmer-bug case worth surfacing — but for
+// this test we conservatively skip such methods).
+func receiverTypeName(recv *ast.FieldList) string {
+	if recv == nil || len(recv.List) == 0 {
+		return ""
+	}
+	t := recv.List[0].Type
+	switch x := t.(type) {
+	case *ast.StarExpr:
+		if id, ok := x.X.(*ast.Ident); ok {
+			return "*" + id.Name
+		}
+	case *ast.Ident:
+		return x.Name
+	}
+	return ""
+}

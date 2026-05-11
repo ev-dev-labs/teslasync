@@ -151,6 +151,63 @@ func TestForwardFold_KeepsTrailingAllNilRowsAfterFirstNonNil(t *testing.T) {
 	}
 }
 
+// TestForwardFold_PreservesTypedPrimitives_Phase42 locks in the post-phase-42
+// typed-primitive contract: the codec emits already-typed atomic values
+// (float64, float32, int32, int64, bool, string, time.Time, ...) and pivot
+// is responsible for storing them as-is — no string parsing, no compound
+// flatten, no kind coercion. forwardFold is value-type-agnostic; this test
+// flows a heterogeneous mix through the algorithm and asserts identity is
+// preserved per primitive kind.
+func TestForwardFold_PreservesTypedPrimitives_Phase42(t *testing.T) {
+	mappings := []FieldMapping{
+		{Signal: "VehicleSpeed", Field: "speed_mph"},          // float64
+		{Signal: "BatteryHeaterOn", Field: "battery_heater"},  // bool
+		{Signal: "Gear", Field: "gear"},                       // string (enum)
+		{Signal: "ChargeAmps", Field: "charge_amps"},          // int32
+		{Signal: "RatedRange", Field: "rated_range_km"},       // float32
+		{Signal: "GpsHeading", Field: "gps_heading_deg"},      // int64
+		{Signal: "ChargingState", Field: "charging_state_at"}, // time.Time
+	}
+	gpsHeading := int64(180)
+	chargeAmps := int32(32)
+	chargingStateAt := time.Date(2026, time.April, 30, 11, 59, 0, 0, time.UTC)
+	events := []rawEvent{
+		{Ts: ts(5), Signal: "VehicleSpeed", Value: 65.0},
+		{Ts: ts(5), Signal: "BatteryHeaterOn", Value: true},
+		{Ts: ts(5), Signal: "Gear", Value: "D"},
+		{Ts: ts(5), Signal: "ChargeAmps", Value: chargeAmps},
+		{Ts: ts(5), Signal: "RatedRange", Value: float32(420.5)},
+		{Ts: ts(5), Signal: "GpsHeading", Value: gpsHeading},
+		{Ts: ts(5), Signal: "ChargingState", Value: chargingStateAt},
+	}
+	got := forwardFold(nil, events, mappings, ts(0), ts(60))
+	if len(got) != 1 {
+		t.Fatalf("expected 1 merged row at ts(5), got %d (%+v)", len(got), got)
+	}
+	row := got[0]
+	if v, ok := row.Fields["speed_mph"].(float64); !ok || v != 65.0 {
+		t.Errorf("expected speed_mph=float64(65), got %T(%v)", row.Fields["speed_mph"], row.Fields["speed_mph"])
+	}
+	if v, ok := row.Fields["battery_heater"].(bool); !ok || v != true {
+		t.Errorf("expected battery_heater=bool(true), got %T(%v)", row.Fields["battery_heater"], row.Fields["battery_heater"])
+	}
+	if v, ok := row.Fields["gear"].(string); !ok || v != "D" {
+		t.Errorf("expected gear=string(\"D\"), got %T(%v)", row.Fields["gear"], row.Fields["gear"])
+	}
+	if v, ok := row.Fields["charge_amps"].(int32); !ok || v != 32 {
+		t.Errorf("expected charge_amps=int32(32), got %T(%v)", row.Fields["charge_amps"], row.Fields["charge_amps"])
+	}
+	if v, ok := row.Fields["rated_range_km"].(float32); !ok || v != 420.5 {
+		t.Errorf("expected rated_range_km=float32(420.5), got %T(%v)", row.Fields["rated_range_km"], row.Fields["rated_range_km"])
+	}
+	if v, ok := row.Fields["gps_heading_deg"].(int64); !ok || v != 180 {
+		t.Errorf("expected gps_heading_deg=int64(180), got %T(%v)", row.Fields["gps_heading_deg"], row.Fields["gps_heading_deg"])
+	}
+	if v, ok := row.Fields["charging_state_at"].(time.Time); !ok || !v.Equal(chargingStateAt) {
+		t.Errorf("expected charging_state_at=time.Time(%v), got %T(%v)", chargingStateAt, row.Fields["charging_state_at"], row.Fields["charging_state_at"])
+	}
+}
+
 func TestCollapseTimeline_EmptyCollapseFieldsReturnsUnchanged(t *testing.T) {
 	rows := []TimelineRow{
 		{Timestamp: ts(10), Fields: map[string]SignalValue{"title": "x"}},

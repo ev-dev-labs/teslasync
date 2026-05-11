@@ -5,11 +5,12 @@ import { EmptyState } from '@/components/feedback';
 import { useDrivetrainHealth } from '@/api/hooks/useDriving';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetGaugeHero, type GaugeHeroStat } from './shared';
 import type { WidgetProps } from './types';
+import { convertTempFromSI } from '@/lib/unitConversion';
 
 function healthScore(overall: string | undefined): number {
   if (overall === 'good') return 95;
@@ -26,7 +27,10 @@ function healthColor(score: number): string {
 
 export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { convertTemp, tempUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+
+  const tempUnit = unitPrefs.temperature;
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vehicleIdStr = vid != null ? String(vid) : undefined;
@@ -66,24 +70,24 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
   const stats: GaugeHeroStat[] = useMemo(() => [
     {
       label: t('widget.drivetrainHealth.motorTemp', 'Motor Temp'),
-      value: motorTemp != null ? fmtNumber(convertTemp(motorTemp), 0) : '—',
+      value: motorTemp != null ? fmtNumber(toTemperatureDisplay(motorTemp), 0) : '—',
       unit: tempUnit,
     },
     {
       label: t('widget.drivetrainHealth.statorTemp', 'Stator Temp'),
-      value: statorTemp != null ? fmtNumber(convertTemp(statorTemp), 0) : '—',
+      value: statorTemp != null ? fmtNumber(toTemperatureDisplay(statorTemp), 0) : '—',
       unit: tempUnit,
     },
     {
       label: t('widget.drivetrainHealth.inverterHealth', 'Inverter'),
-      value: inverterTemp != null ? fmtNumber(convertTemp(inverterTemp), 0) : '—',
+      value: inverterTemp != null ? fmtNumber(toTemperatureDisplay(inverterTemp), 0) : '—',
       unit: tempUnit,
     },
     {
       label: t('widget.drivetrainHealth.driveState', 'Drive State'),
       value: driveState ?? '—',
     },
-  ], [health, motor, motorTemp, statorTemp, inverterTemp, driveState, convertTemp, tempUnit, t]);
+  ], [health, motor, motorTemp, statorTemp, inverterTemp, driveState, toTemperatureDisplay, tempUnit, t]);
 
   const updatedAt = Math.max(healthUpdatedAt ?? 0, motorUpdatedAt ?? 0);
 

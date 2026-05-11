@@ -2,7 +2,8 @@ import { AnimatedNumber } from '@/components/data-display';
 import { motion } from '@/components/motion';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
 import type { YearReview } from '@/api/types';
 
 interface Props {
@@ -12,9 +13,10 @@ interface Props {
 
 export function StatHeroSlide({ data, field }: Props) {
   const { t } = useTranslation();
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
 
-  const config = getStatConfig(data, field, t, convertDistance, distanceUnit);
+  const config = getStatConfig(data, field, t, distanceUnit);
 
   return (
     <div className="flex flex-col items-center justify-center h-full px-8 text-center">
@@ -65,12 +67,12 @@ function getStatConfig(
   data: YearReview,
   field: string,
   t: TFunction,
-  convertDistance: (km: number) => number,
-  distanceUnit: string,
+  distanceUnit: DistanceUnitPref,
 ) {
   switch (field) {
     case 'distance': {
-      const dist = convertDistance(data.total_distance_km);
+      // backend `total_distance_km` is SI km; convert via meter floor.
+      const dist = convertDistanceFromSI(data.total_distance_km * 1000, distanceUnit);
       const earthLaps = data.total_distance_km / 40075;
       return {
         emoji: '🛣️',

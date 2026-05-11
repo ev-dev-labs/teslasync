@@ -4,8 +4,7 @@ import { cn } from '@/lib/cn'
 import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
-import { useSettings } from '@/hooks/useSettings'
-import { fmtNumber } from '@/lib/numberFormat'
+import { useUnits } from '@/hooks/useUnits'
 import type { ClimateSnapshot } from '@/api/types'
 
 interface ClimatePanelProps {
@@ -14,7 +13,7 @@ interface ClimatePanelProps {
 
 export function ClimatePanel({ climateData }: ClimatePanelProps) {
   const { t } = useTranslation()
-  const { convertTemp, tempUnit } = useSettings()
+  const { formatTemperature } = useUnits()
 
   return (
     <GlassPanel className="p-6 h-full">
@@ -27,21 +26,11 @@ export function ClimatePanel({ climateData }: ClimatePanelProps) {
           <div className="grid grid-cols-2 gap-3">
             <MetricCard
               label={t('common.insideTemp', 'Cabin')}
-              value={
-                climateData.inside_temp_c != null
-                  ? fmtNumber(convertTemp(climateData.inside_temp_c))
-                  : '—'
-              }
-              subtitle={tempUnit}
+              value={formatTemperature(climateData.inside_temp_c)}
             />
             <MetricCard
               label={t('common.outsideTemp', 'Outside')}
-              value={
-                climateData.outside_temp_c != null
-                  ? fmtNumber(convertTemp(climateData.outside_temp_c))
-                  : '—'
-              }
-              subtitle={tempUnit}
+              value={formatTemperature(climateData.outside_temp_c)}
             />
           </div>
 
@@ -52,9 +41,7 @@ export function ClimatePanel({ climateData }: ClimatePanelProps) {
                 {t('telemetry.driverSetpoint', 'Driver Setpoint')}
               </span>
               <span className="text-sm font-mono text-[var(--text-primary)]">
-                {climateData.driver_setpoint_c != null
-                  ? `${fmtNumber(convertTemp(climateData.driver_setpoint_c))} ${tempUnit}`
-                  : '—'}
+                {formatTemperature(climateData.driver_setpoint_c)}
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -62,9 +49,7 @@ export function ClimatePanel({ climateData }: ClimatePanelProps) {
                 {t('telemetry.passengerSetpoint', 'Passenger Setpoint')}
               </span>
               <span className="text-sm font-mono text-[var(--text-primary)]">
-                {climateData.passenger_setpoint_c != null
-                  ? `${fmtNumber(convertTemp(climateData.passenger_setpoint_c))} ${tempUnit}`
-                  : '—'}
+                {formatTemperature(climateData.passenger_setpoint_c)}
               </span>
             </div>
           </div>

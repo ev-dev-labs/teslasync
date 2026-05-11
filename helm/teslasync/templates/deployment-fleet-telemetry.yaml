@@ -50,6 +50,18 @@ spec:
           secret:
             secretName: {{ .Values.fleetTelemetry.tls.secretName }}
         {{- end }}
+      {{- with .Values.fleetTelemetry.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.fleetTelemetry.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.fleetTelemetry.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 ---
 apiVersion: v1
 kind: Service
@@ -60,11 +72,18 @@ metadata:
     app.kubernetes.io/component: fleet-telemetry
 spec:
   type: {{ .Values.fleetTelemetry.service.type | default "ClusterIP" }}
+  {{- with .Values.fleetTelemetry.service.externalIPs }}
+  externalIPs:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   ports:
     - port: {{ .Values.fleetTelemetry.service.port | default 4443 }}
       targetPort: wss
       protocol: TCP
       name: wss
+      {{- if and (eq (.Values.fleetTelemetry.service.type | default "ClusterIP") "NodePort") .Values.fleetTelemetry.service.nodePort }}
+      nodePort: {{ .Values.fleetTelemetry.service.nodePort }}
+      {{- end }}
     - port: 9090
       targetPort: metrics
       protocol: TCP

@@ -3,10 +3,11 @@ import { CircleDot } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useLatestTirePressure } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertPressureFromSI } from '@/lib/unitConversion';
 
 /** Pressure thresholds in bar for color coding */
 const THRESHOLD = {
@@ -97,7 +98,10 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { data: tireData, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useLatestTirePressure(id, 10_000);
-  const { convertPressure, pressureUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toPressureDisplay = (value: number) => convertPressureFromSI(value, unitPrefs.pressure);
+
+  const pressureUnit = unitPrefs.pressure;
 
   const isCompact = size.cols <= 1;
 
@@ -111,8 +115,8 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
   const allNormal = tires.every((tire) => tire.status === 'green');
   const hasWarning = tires.some((tire) => tire.status !== 'green');
 
-  const fmtPressure = (val: number | null): string =>
-    val != null ? `${fmtNumber(convertPressure(val), 1)}` : '—';
+  const formatPressure = (val: number | null): string =>
+    val != null ? `${fmtNumber(toPressureDisplay(val), 1)}` : '—';
 
   // Most recent reading time across all tires
   const latestReading = tireData
@@ -143,13 +147,13 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
               <div>
                 <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('widget.tireFL', 'FL')}</p>
                 <p className={`text-sm font-bold ${STATUS_COLORS[tires[0].status].text}`}>
-                  {fmtPressure(tires[0].value)}
+                  {formatPressure(tires[0].value)}
                 </p>
               </div>
               <div>
                 <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('widget.tireRL', 'RL')}</p>
                 <p className={`text-sm font-bold ${STATUS_COLORS[tires[2].status].text}`}>
-                  {fmtPressure(tires[2].value)}
+                  {formatPressure(tires[2].value)}
                 </p>
               </div>
             </div>
@@ -164,13 +168,13 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
               <div>
                 <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('widget.tireFR', 'FR')}</p>
                 <p className={`text-sm font-bold ${STATUS_COLORS[tires[1].status].text}`}>
-                  {fmtPressure(tires[1].value)}
+                  {formatPressure(tires[1].value)}
                 </p>
               </div>
               <div>
                 <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('widget.tireRR', 'RR')}</p>
                 <p className={`text-sm font-bold ${STATUS_COLORS[tires[3].status].text}`}>
-                  {fmtPressure(tires[3].value)}
+                  {formatPressure(tires[3].value)}
                 </p>
               </div>
             </div>

@@ -4,21 +4,37 @@ import "time"
 
 // Drive represents a single driving session.
 //
-// Mirrors the post-migration `drives` table (see migration 000142_baseline_typed
-// and .github/prompts/db-refactor/phase-3-schema/_baseline_source/11-drives.sql).
-// ADR-001: typed-by-default — no raw_json, no JSONB carve-outs.
-// ADR-005: distance/speed are stored in miles per repo convention; UI converts
-// via useSettings.convertDistance.
+// Mirrors the SI canonical `drives` table (migration 000185_drives_si). All
+// quantitative fields are SI canonical:
 //
-// Mutability: rows are mutable because re-scoring updates the score column.
+//   - DurationS         seconds (BIGINT in DB)
+//   - DistanceM         meters
+//   - EnergyUsedWh      watt-hours
+//   - RegenEnergyWh     watt-hours
+//   - AvgSpeedMps       meters per second
+//   - MaxSpeedMps       meters per second
+//   - AvgPowerW         watts
+//   - OutsideTempAvgC   degrees Celsius (already SI)
+//
+// ADR-001: typed-by-default — no raw_json, no JSONB carve-outs.
+// Phase-48 (SI canonical mega-PR): renamed fields and dropped per-call
+// boundary conversion. Frontend converts at the display boundary using
+// useUnits()/lib/unitConversion's SI-floor formatters.
+//
+// Phase-42 (mig 000185 forward-only): the inside cabin temp, score, ended
+// status, created_at, and updated_at columns were dropped. The fields
+// remain on the struct as nullable for JSON shape stability and surface
+// nil/derived values from scanDrive.
+//
+// Mutability: rows are mutable while a drive is in progress.
 // EndTs is NULL while a drive is in progress (same pattern as ChargingSession).
 type Drive struct {
-	ID          int64      `db:"id"           json:"id"`
-	VehicleID   int64      `db:"vehicle_id"   json:"vehicle_id"`
-	StartTs     time.Time  `db:"start_ts"     json:"start_ts"`
-	EndTs       *time.Time `db:"end_ts"       json:"end_ts"`
-	DurationMin float64    `db:"duration_min" json:"duration_min"`
-	DistanceMi  float64    `db:"distance_mi"  json:"distance_mi"`
+	ID        int64      `db:"id"          json:"id"`
+	VehicleID int64      `db:"vehicle_id"  json:"vehicle_id"`
+	StartTs   time.Time  `db:"start_ts"    json:"start_ts"`
+	EndTs     *time.Time `db:"end_ts"      json:"end_ts"`
+	DurationS int64      `db:"duration_s"  json:"duration_s"`
+	DistanceM float64    `db:"distance_m"  json:"distance_m"`
 
 	StartAddress *string  `db:"start_address" json:"start_address,omitempty"`
 	EndAddress   *string  `db:"end_address"   json:"end_address,omitempty"`
@@ -30,11 +46,11 @@ type Drive struct {
 	StartBatteryPct *int16 `db:"start_battery_pct" json:"start_battery_pct,omitempty"`
 	EndBatteryPct   *int16 `db:"end_battery_pct"   json:"end_battery_pct,omitempty"`
 
-	EnergyUsedKwh *float64 `db:"energy_used_kwh" json:"energy_used_kwh,omitempty"`
-	RegenKwh      *float64 `db:"regen_kwh"       json:"regen_kwh,omitempty"`
-	AvgSpeedMph   *float64 `db:"avg_speed_mph"   json:"avg_speed_mph,omitempty"`
-	MaxSpeedMph   *float64 `db:"max_speed_mph"   json:"max_speed_mph,omitempty"`
-	AvgPowerKw    *float64 `db:"avg_power_kw"    json:"avg_power_kw,omitempty"`
+	EnergyUsedWh  *float64 `db:"energy_used_wh"  json:"energy_used_wh,omitempty"`
+	RegenEnergyWh *float64 `db:"regen_energy_wh" json:"regen_energy_wh,omitempty"`
+	AvgSpeedMps   *float64 `db:"avg_speed_mps"   json:"avg_speed_mps,omitempty"`
+	MaxSpeedMps   *float64 `db:"max_speed_mps"   json:"max_speed_mps,omitempty"`
+	AvgPowerW     *float64 `db:"avg_power_w"     json:"avg_power_w,omitempty"`
 
 	OutsideTempAvgC *float64 `db:"outside_temp_avg_c" json:"outside_temp_avg_c,omitempty"`
 	InsideTempAvgC  *float64 `db:"inside_temp_avg_c"  json:"inside_temp_avg_c,omitempty"`

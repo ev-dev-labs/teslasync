@@ -135,6 +135,40 @@ var (
 		Help:      "Alert rule evaluations skipped because the rule is snoozed",
 	})
 
+	// AlertRulesMaxFiresCapHit counts rule evaluations suppressed because
+	// the rule already hit its `max_fires_per_resolution` cap and the
+	// condition has not yet resolved (falling edge clears the counter).
+	// Phase-49 / Slice 0003 / Decision D5.
+	AlertRulesMaxFiresCapHit = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "cep_rules_max_fires_cap_hit_total",
+		Help:      "Alert rule evaluations suppressed because the per-resolution fire cap was reached",
+	})
+
+	// AlertRulesHourlyCapHit counts rule evaluations suppressed by the
+	// engine-level safety cap that limits a (rule, vehicle) pair to a
+	// fixed number of fires per rolling 1h window. Phase-49 / Slice 0004
+	// merged this from the now-deleted CooldownFSM.MaxFiresPerHour into
+	// the rule engine; the cap defaults to 4 (matching the legacy FSM
+	// default) and is overridable by tests via RuleEngine.SetMaxFiresPerHour.
+	AlertRulesHourlyCapHit = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "cep_rules_hourly_cap_hit_total",
+		Help:      "Alert rule evaluations suppressed because the engine-level hourly fire cap was reached",
+	})
+
+	// AlertRulesEscalated counts repeat-mode alert rule fires that were
+	// promoted to the rule's `escalation_severity` because the underlying
+	// condition stayed unresolved for at least `escalation_after_min`
+	// minutes. Incremented exactly once per dispatched escalated alert
+	// (NOT per evaluation, NOT per cap-suppressed evaluation). Phase-49
+	// / Slice 0009 / Decision D8.
+	AlertRulesEscalated = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "alert_rules_escalated_total",
+		Help:      "Alert rule fires promoted to the escalation severity after the configured duration",
+	})
+
 	AlertRuleEvalDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 		Namespace: "teslasync",
 		Name:      "cep_eval_duration_seconds",

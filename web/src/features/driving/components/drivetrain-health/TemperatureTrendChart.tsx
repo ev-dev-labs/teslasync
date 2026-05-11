@@ -16,9 +16,10 @@ import {
   ReferenceLine,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 
 import type { ChartDataPoint } from './constants';
+import { convertTempFromSI } from '@/lib/unitConversion';
 
 interface TemperatureTrendChartProps {
   data: ChartDataPoint[];
@@ -26,7 +27,10 @@ interface TemperatureTrendChartProps {
 
 export function TemperatureTrendChart({ data }: TemperatureTrendChartProps) {
   const { t } = useTranslation();
-  const { convertTemp, tempUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+
+  const tempUnit = unitPrefs.temperature;
 
   if (data.length <= 1) return null;
 
@@ -69,7 +73,7 @@ export function TemperatureTrendChart({ data }: TemperatureTrendChartProps) {
               dot={{ r: 3, fill: '#06b6d4' }}
             />
             <ReferenceLine
-              y={convertTemp(35)}
+              y={toTemperatureDisplay(35)}
               stroke="#f59e0b"
               strokeDasharray="4 4"
               label={{
@@ -79,7 +83,7 @@ export function TemperatureTrendChart({ data }: TemperatureTrendChartProps) {
               }}
             />
             <ReferenceLine
-              y={convertTemp(0)}
+              y={toTemperatureDisplay(0)}
               stroke="#06b6d4"
               strokeDasharray="4 4"
               label={{

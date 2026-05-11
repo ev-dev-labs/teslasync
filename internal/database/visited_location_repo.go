@@ -8,6 +8,14 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
+// Phase-42 / Prompt 0076 covenant #11: the legacy visited_locations and
+// addresses tables are dropped without a recreate (ADR-004 #4 forward-only).
+// All visited-location queries now derive on demand from the SI canonical
+// drives table (migration 000185_drives_si) by grouping on end_place
+// — the geocoded place name persisted at end-of-drive. Synthetic IDs come
+// from MIN(d.id) per (vehicle_id, end_place) so callers that round-trip
+// through the locations URL stay anchored to a stable underlying drive.
+
 type VisitedLocationRepo struct {
 	db *DB
 }
@@ -17,86 +25,28 @@ func NewVisitedLocationRepo(db *DB) *VisitedLocationRepo {
 }
 
 func (r *VisitedLocationRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.VisitedLocation, error) {
-	locs, err := r.getByVehicleFromTable(ctx, vehicleID, limit)
-	if err != nil {
-		return nil, err
-	}
-	if len(locs) > 0 {
-		return locs, nil
-	}
-	// Fallback: derive from completed drives grouped by end_address
 	return r.deriveFromDrives(ctx, &vehicleID, limit)
 }
 
 func (r *VisitedLocationRepo) GetAll(ctx context.Context, limit int) ([]*models.VisitedLocation, error) {
-	locs, err := r.getAllFromTable(ctx, limit)
-	if err != nil {
-		return nil, err
-	}
-	if len(locs) > 0 {
-		return locs, nil
-	}
 	return r.deriveFromDrives(ctx, nil, limit)
 }
 
-func (r *VisitedLocationRepo) getByVehicleFromTable(ctx context.Context, vehicleID int64, limit int) ([]*models.VisitedLocation, error) {
-	query := `SELECT vl.id, vl.vehicle_id, vl.address_id, COALESCE(a.display_name, 'Unknown'), vl.visit_count,
-		vl.total_duration_min, vl.last_visited, vl.created_at
-		FROM visited_locations vl LEFT JOIN addresses a ON a.id = vl.address_id
-		WHERE vl.vehicle_id=$1 ORDER BY vl.visit_count DESC LIMIT $2`
-	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var locs []*models.VisitedLocation
-	for rows.Next() {
-		l := &models.VisitedLocation{}
-		if err := rows.Scan(&l.ID, &l.VehicleID, &l.AddressID, &l.AddressName, &l.VisitCount,
-			&l.TotalDurationMin, &l.LastVisited, &l.CreatedAt); err != nil {
-			return nil, err
-		}
-		locs = append(locs, l)
-	}
-	return locs, rows.Err()
-}
-
-func (r *VisitedLocationRepo) getAllFromTable(ctx context.Context, limit int) ([]*models.VisitedLocation, error) {
-	query := `SELECT vl.id, vl.vehicle_id, vl.address_id, COALESCE(a.display_name, 'Unknown'), vl.visit_count,
-		vl.total_duration_min, vl.last_visited, vl.created_at
-		FROM visited_locations vl LEFT JOIN addresses a ON a.id = vl.address_id
-		ORDER BY vl.visit_count DESC LIMIT $1`
-	rows, err := r.db.Pool.Query(ctx, query, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var locs []*models.VisitedLocation
-	for rows.Next() {
-		l := &models.VisitedLocation{}
-		if err := rows.Scan(&l.ID, &l.VehicleID, &l.AddressID, &l.AddressName, &l.VisitCount,
-			&l.TotalDurationMin, &l.LastVisited, &l.CreatedAt); err != nil {
-			return nil, err
-		}
-		locs = append(locs, l)
-	}
-	return locs, rows.Err()
-}
-
-// deriveFromDrives aggregates visited locations from the drives table
-// by grouping on end_address. Used as fallback when visited_locations is empty.
+// deriveFromDrives aggregates visited locations from the SI canonical drives
+// table by grouping on (vehicle_id, end_place). Used as the SOLE path now
+// that the legacy visited_locations table is gone.
 func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *int64, limit int) ([]*models.VisitedLocation, error) {
-	query := `SELECT d.vehicle_id, d.end_address,
+	query := `SELECT MIN(d.id) AS id,
+			d.vehicle_id,
+			d.end_place,
 			COUNT(*) AS visit_count,
-			COALESCE(SUM(d.duration_min), 0) AS total_duration_min,
-			MAX(d.end_ts) AS last_visited,
-			MIN(d.start_ts) AS first_visited
+			COALESCE(SUM(d.duration_s), 0) AS total_duration_s,
+			MAX(d.ended_at) AS last_visited,
+			MIN(d.started_at) AS first_visited
 		FROM drives d
-		WHERE d.end_ts IS NOT NULL
-		  AND d.end_address IS NOT NULL
-		  AND d.end_address != ''`
+		WHERE d.ended_at IS NOT NULL
+		  AND d.end_place IS NOT NULL
+		  AND d.end_place != ''`
 
 	var args []interface{}
 	argN := 1
@@ -105,7 +55,7 @@ func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *i
 		args = append(args, *vehicleID)
 		argN = 2
 	}
-	query += fmt.Sprintf(` GROUP BY d.vehicle_id, d.end_address
+	query += fmt.Sprintf(` GROUP BY d.vehicle_id, d.end_place
 		ORDER BY visit_count DESC
 		LIMIT $%d`, argN)
 	args = append(args, limit)
@@ -120,8 +70,8 @@ func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *i
 	for rows.Next() {
 		l := &models.VisitedLocation{}
 		var firstVisited time.Time
-		if err := rows.Scan(&l.VehicleID, &l.AddressName, &l.VisitCount,
-			&l.TotalDurationMin, &l.LastVisited, &firstVisited); err != nil {
+		if err := rows.Scan(&l.ID, &l.VehicleID, &l.AddressName, &l.VisitCount,
+			&l.TotalDurationS, &l.LastVisited, &firstVisited); err != nil {
 			return nil, err
 		}
 		l.CreatedAt = firstVisited
@@ -130,23 +80,17 @@ func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *i
 	return locs, rows.Err()
 }
 
-// UpsertFromDrive records a visit at the drive's end_address.
-// Called when a drive completes to keep visited_locations up to date.
-func (r *VisitedLocationRepo) UpsertFromDrive(ctx context.Context, vehicleID int64, address string, durationMin float64) error {
-	if address == "" {
-		return nil
-	}
-	query := `INSERT INTO visited_locations (vehicle_id, visit_count, total_duration_min, last_visited)
-		VALUES ($1, 1, $2, NOW())
-		ON CONFLICT (vehicle_id, address_id) DO UPDATE
-		SET visit_count = visited_locations.visit_count + 1,
-			total_duration_min = visited_locations.total_duration_min + $2,
-			last_visited = NOW()`
-
-	// visited_locations requires address_id (FK to addresses).
-	// Since drives store address as a string, not an FK, we use the
-	// deriveFromDrives fallback instead. This method is a no-op placeholder
-	// until we wire up proper address_id creation.
-	_ = query
+// UpsertFromDrive is a no-op stub kept for caller compatibility.
+//
+// Phase-42 / Prompt 0076: the legacy visited_locations table is dropped
+// without a recreate. Visit counts are computed on demand from drives via
+// deriveFromDrives, so an explicit upsert call is no longer needed; this
+// method is preserved as a no-op so existing callers (out of allowed-files
+// scope for this prompt) continue to compile and call it harmlessly.
+func (r *VisitedLocationRepo) UpsertFromDrive(ctx context.Context, vehicleID int64, address string, durationS float64) error {
+	_ = ctx
+	_ = vehicleID
+	_ = address
+	_ = durationS
 	return nil
 }

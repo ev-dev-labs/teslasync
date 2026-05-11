@@ -4,30 +4,44 @@ import { fmtNumber } from '@/lib/numberFormat';
 import type { CurvePoint } from './types';
 
 export function isDcSession(s: ChargingSession): boolean {
-  return !!(s.charger_type || (s.charger_power_kw_max && s.charger_power_kw_max > 20));
+  return !!(s.charger_type || (s.peak_power_w && s.peak_power_w > 20_000));
 }
 
 export function getChargerLabel(s: ChargingSession): string {
   if (s.charger_type === 'Tesla' || (s.charger_type ?? '').toLowerCase().includes('tesla'))
     return 'Supercharger';
   if (s.charger_type) return 'DC Fast';
-  if (s.charger_power_kw_max && s.charger_power_kw_max > 20) return 'DC Fast';
+  if (s.peak_power_w && s.peak_power_w > 20_000) return 'DC Fast';
   return 'Home / AC';
 }
 
+export function durationMinutes(startedAt: string, endedAt: string | null): number {
+  if (!endedAt) return 0;
+  const start = new Date(startedAt).getTime();
+  const end = new Date(endedAt).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
+  return Math.round((end - start) / 60000);
+}
+
+export function distanceAddedM(s: ChargingSession): number | null {
+  if (s.start_odometer_m == null || s.end_odometer_m == null) return null;
+  const delta = s.end_odometer_m - s.start_odometer_m;
+  return delta > 0 ? delta : null;
+}
+
 export function sessionLabel(s: ChargingSession): string {
-  const date = formatDateShort(s.start_ts);
+  const date = formatDateShort(s.started_at);
   const label = getChargerLabel(s);
-  const energy = s.energy_added_kwh != null ? fmtNumber(s.energy_added_kwh, 1) : '?';
+  const energy = s.total_energy_added_wh != null ? fmtNumber(s.total_energy_added_wh / 1000, 1) : '?';
   return `${date} — ${label} — ${energy} kWh`;
 }
 
 /** Simulate a power-vs-SOC curve based on session metadata. */
 export function generateChargingCurve(session: ChargingSession): CurvePoint[] {
   const points: CurvePoint[] = [];
-  const startSoc = session.start_battery_pct;
-  const endSoc = session.end_battery_pct ?? 100;
-  const peakPower = session.charger_power_kw_max ?? 11;
+  const startSoc = session.start_soc_pct ?? 0;
+  const endSoc = session.end_soc_pct ?? 100;
+  const peakPower = (session.peak_power_w ?? 11_000) / 1000;
   const dc = isDcSession(session);
 
   for (let soc = startSoc; soc <= endSoc; soc += 1) {

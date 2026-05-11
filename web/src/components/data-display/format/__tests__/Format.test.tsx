@@ -22,35 +22,29 @@ vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
 }));
 
-const mockSettings = (overrides: Partial<ReturnType<typeof useSettings>> = {}) => {
+const mockSettings = (overrides: Partial<ReturnType<typeof useSettings>> & Record<string, unknown> = {}) => {
+  const distanceUnit = overrides.distanceUnit === 'mi' || overrides.speedUnit === 'mph' ? 'mi' : 'km'
+  const tempUnit = overrides.tempUnit === '°F' ? 'F' : 'C'
+  const pressureUnit = overrides.pressureUnit === 'psi' ? 'psi' : 'bar'
+  const currencySymbol = typeof overrides.currencySymbol === 'string' ? overrides.currencySymbol : '$'
   const base = {
-    settings: {} as never,
-    isMiles: false,
-    isFahrenheit: false,
-    isPSI: false,
+    settings: {
+      unit_of_length: distanceUnit,
+      unit_of_temp: tempUnit,
+      unit_of_pressure: pressureUnit,
+      preferred_range: 'rated',
+      currency_symbol: currencySymbol,
+      base_cost_per_kwh: 0.12,
+      decimal_precision: 1,
+      locale: 'en-US',
+    } as never,
+    isMiles: distanceUnit === 'mi',
+    isFahrenheit: tempUnit === 'F',
+    isPSI: pressureUnit === 'psi',
     decimals: 1,
     locale: 'en-US',
-    convertDistance: (mi: number) => mi * 1.60934,
-    convertSpeed: (mph: number) => mph * 1.60934,
-    convertTemp: (c: number) => c,
-    convertEfficiency: (whPerMi: number) => whPerMi,
-    convertPressure: (bar: number) => bar,
-    distanceUnit: 'km',
-    speedUnit: 'km/h',
-    tempUnit: '°C',
-    efficiencyUnit: 'Wh/km',
-    pressureUnit: 'bar',
+    density: 'comfortable' as const,
     rangeType: 'rated' as const,
-    fmtDistance: () => '',
-    fmtSpeed: () => '',
-    fmtTemp: () => '',
-    fmtPressure: () => '',
-    costPerKwh: 0.12,
-    currencySymbol: '$',
-    formatEnergyCost: () => '',
-    formatCurrency: () => '',
-    costPerDistanceUnit: () => null,
-    estimateGasCost: () => null,
     ...overrides,
   };
   vi.mocked(useSettings).mockReturnValue(base as never);
@@ -106,7 +100,7 @@ describe('DateTime', () => {
 describe('Distance', () => {
   it('renders metric distance from km input', () => {
     mockSettings({
-      convertDistance: (mi) => mi * 1.60934,
+      toDistanceDisplay: (mi) => mi * 1.60934,
       distanceUnit: 'km',
     });
     const { container } = render(<Distance km={100} precision={1} />);
@@ -116,7 +110,7 @@ describe('Distance', () => {
 
   it('renders imperial distance from miles input', () => {
     mockSettings({
-      convertDistance: (mi) => mi,
+      toDistanceDisplay: (mi) => mi,
       distanceUnit: 'mi',
     });
     const { container } = render(<Distance miles={62.1371} precision={1} />);
@@ -126,7 +120,7 @@ describe('Distance', () => {
 
   it('converts km input to miles when user prefers imperial', () => {
     mockSettings({
-      convertDistance: (mi) => mi,
+      toDistanceDisplay: (mi) => mi,
       distanceUnit: 'mi',
     });
     const { container } = render(<Distance km={100} precision={1} />);
@@ -154,7 +148,7 @@ describe('Distance', () => {
 
   it('prefers miles when both miles and km are supplied', () => {
     mockSettings({
-      convertDistance: (mi) => mi,
+      toDistanceDisplay: (mi) => mi,
       distanceUnit: 'mi',
     });
     const { container } = render(<Distance miles={50} km={9999} precision={0} />);
@@ -166,7 +160,7 @@ describe('Distance', () => {
 describe('Speed', () => {
   it('renders mph input as imperial', () => {
     mockSettings({
-      convertSpeed: (mph) => mph,
+      toSpeedDisplay: (mph) => mph,
       speedUnit: 'mph',
     });
     const { container } = render(<Speed mph={60} precision={0} />);
@@ -175,7 +169,7 @@ describe('Speed', () => {
 
   it('renders kmh input flipped through metric settings', () => {
     mockSettings({
-      convertSpeed: (mph) => mph * 1.60934,
+      toSpeedDisplay: (mph) => mph * 1.60934,
       speedUnit: 'km/h',
     });
     const { container } = render(<Speed kmh={100} precision={0} />);
@@ -192,7 +186,7 @@ describe('Speed', () => {
 describe('Temperature', () => {
   it('renders 20°C as 20°C in metric settings', () => {
     mockSettings({
-      convertTemp: (c) => c,
+      toTemperatureDisplay: (c) => c,
       tempUnit: '°C',
     });
     const { container } = render(<Temperature c={20} precision={0} />);
@@ -201,7 +195,7 @@ describe('Temperature', () => {
 
   it('renders 20°C as 68°F in imperial settings', () => {
     mockSettings({
-      convertTemp: (c) => (c * 9) / 5 + 32,
+      toTemperatureDisplay: (c) => (c * 9) / 5 + 32,
       tempUnit: '°F',
     });
     const { container } = render(<Temperature c={20} precision={0} />);
@@ -210,7 +204,7 @@ describe('Temperature', () => {
 
   it('accepts Fahrenheit input and respects user preference', () => {
     mockSettings({
-      convertTemp: (c) => c,
+      toTemperatureDisplay: (c) => c,
       tempUnit: '°C',
     });
     const { container } = render(<Temperature f={68} precision={0} />);
@@ -228,7 +222,7 @@ describe('Temperature', () => {
 describe('Pressure', () => {
   it('renders bar input as bar in metric settings', () => {
     mockSettings({
-      convertPressure: (bar) => bar,
+      toPressureDisplay: (bar) => bar,
       pressureUnit: 'bar',
     });
     const { container } = render(<Pressure bar={2.4} precision={1} />);
@@ -237,7 +231,7 @@ describe('Pressure', () => {
 
   it('converts bar to PSI when user prefers psi', () => {
     mockSettings({
-      convertPressure: (bar) => bar * 14.5038,
+      toPressureDisplay: (bar) => bar * 14.5038,
       pressureUnit: 'psi',
     });
     const { container } = render(<Pressure bar={2.4} precision={0} />);
@@ -247,7 +241,7 @@ describe('Pressure', () => {
 
   it('accepts PSI input and converts to bar before display', () => {
     mockSettings({
-      convertPressure: (bar) => bar,
+      toPressureDisplay: (bar) => bar,
       pressureUnit: 'bar',
     });
     const { container } = render(<Pressure psi={35} precision={1} />);

@@ -40,6 +40,7 @@ import (
 // downstream to fall back to defaults or display "Unknown".
 type VehicleConfigHandler struct {
 	state signal.StateReader
+	live  signal.LiveStateReader
 }
 
 // Signal → JSON field mappings for the vehicle-config timeline + state
@@ -51,8 +52,8 @@ var vehicleConfigMappings = []signal.FieldMapping{
 	{Signal: "VehicleConfig", Field: "config"},
 }
 
-func NewVehicleConfigHandler(state signal.StateReader) *VehicleConfigHandler {
-	return &VehicleConfigHandler{state: state}
+func NewVehicleConfigHandler(state signal.StateReader, live signal.LiveStateReader) *VehicleConfigHandler {
+	return &VehicleConfigHandler{state: state, live: live}
 }
 
 // List returns vehicle config history from the signal-log change feed
@@ -130,7 +131,7 @@ func (h *VehicleConfigHandler) Latest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	snap, err := h.state.State(r.Context(), vehicleID, time.Now())
+	snap, err := h.live.LiveState(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest vehicle config")
 		writeError(w, http.StatusInternalServerError, "failed to get latest vehicle config")

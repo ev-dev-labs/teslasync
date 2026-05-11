@@ -1,16 +1,18 @@
 export interface ChargingSession {
   id: string;
-  vehicleId: string;
-  chargerType: string;
-  startBatteryPct: number;
-  endBatteryPct: number;
-  energyAddedKwh: number;
-  chargerPowerKwMax: number;
-  costCents: number;
-  fsmState: string;
-  subFsmState?: string;
+  vehicle_id: string;
+  charger_type: string | null;
+  start_soc_pct: number;
+  end_soc_pct: number | null;
+  total_energy_added_wh: number;
+  peak_power_w: number | null;
+  cost_decimal: number | null;
+  started_at: string;
+  ended_at?: string | null;
+  start_ts: string;
   startedAt: string;
-  completedAt?: string;
+  duration_min: number;
+  cost?: number | null;
 }
 
 /* ── Cost Forecast ────────────────────────────────────────── */

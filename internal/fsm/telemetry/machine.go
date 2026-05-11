@@ -229,12 +229,16 @@ func (f *ConnectionFSM) transition(trigger Trigger) {
 
 	if f.transRepo != nil {
 		repo := f.transRepo
+		details := snapshot
+		if details == nil {
+			details = map[string]interface{}{}
+		}
+		details["duration_in_state_ms"] = durationInState
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			if err := repo.Insert(ctx, vehicleID, "telemetry_connection", nil,
-				string(from), string(to), string(trigger), "",
-				"immediate", snapshot, durationInState); err != nil {
+			if err := repo.Insert(ctx, vehicleID, time.Now(), "telemetry_connection",
+				string(from), string(to), string(trigger), details); err != nil {
 				log.Warn().Err(err).Int64("vehicle_id", vehicleID).
 					Msg("telemetry_conn_fsm: failed to log transition")
 			}

@@ -140,7 +140,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT value_num AS acceleration_gs\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'LongitudinalAcceleration'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND value_num IS NOT NULL",
+          "rawSql": "SELECT COALESCE(float_value, int_value::float8) AS acceleration_gs\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'LongitudinalAcceleration'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND COALESCE(float_value, int_value::float8) IS NOT NULL",
           "refId": "A"
         }
       ],
@@ -210,7 +210,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  ROUND(AVG(ABS(value_num))::numeric, 3) AS \"Mean |g|\",\n  ROUND(STDDEV(value_num)::numeric, 3) AS \"Std Dev (g)\",\n  ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY ABS(value_num))::numeric, 3) AS \"P95 |g|\",\n  ROUND(MAX(ABS(value_num))::numeric, 3) AS \"Peak |g|\",\n  COUNT(*) AS \"Samples\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('LateralAcceleration', 'LongitudinalAcceleration')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "SELECT\n  ROUND(AVG(ABS(COALESCE(float_value, int_value::float8)))::numeric, 3) AS \"Mean |g|\",\n  ROUND(STDDEV(COALESCE(float_value, int_value::float8))::numeric, 3) AS \"Std Dev (g)\",\n  ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY ABS(COALESCE(float_value, int_value::float8)))::numeric, 3) AS \"P95 |g|\",\n  ROUND(MAX(ABS(COALESCE(float_value, int_value::float8)))::numeric, 3) AS \"Peak |g|\",\n  COUNT(*) AS \"Samples\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('LateralAcceleration', 'LongitudinalAcceleration')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -343,7 +343,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  d.start_ts AS time,\n  COUNT(*) FILTER (WHERE sl.value_num < -0.3)::bigint AS \"Hard Brakes\",\n  COUNT(*) FILTER (WHERE sl.value_num < -0.2 AND sl.value_num >= -0.3)::bigint AS \"Moderate Brakes\",\n  ROUND(AVG(sl.value_num) FILTER (WHERE sl.value_num < 0)::numeric, 3) AS \"Avg Decel (g)\"\nFROM signal_log sl\nJOIN drives d ON sl.vehicle_id = d.vehicle_id\n  AND sl.created_at BETWEEN d.start_ts AND d.end_ts\nWHERE d.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(d.start_ts)\n  AND sl.signal = 'LongitudinalAcceleration'\n  AND sl.value_num IS NOT NULL\nGROUP BY d.id, d.start_ts\nORDER BY d.start_ts",
+          "rawSql": "SELECT\n  d.started_at AS time,\n  COUNT(*) FILTER (WHERE COALESCE(sl.float_value, sl.int_value::float8) < -0.3)::bigint AS \"Hard Brakes\",\n  COUNT(*) FILTER (WHERE COALESCE(sl.float_value, sl.int_value::float8) < -0.2 AND COALESCE(sl.float_value, sl.int_value::float8) >= -0.3)::bigint AS \"Moderate Brakes\",\n  ROUND(AVG(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE COALESCE(sl.float_value, sl.int_value::float8) < 0)::numeric, 3) AS \"Avg Decel (g)\"\nFROM signal_log sl\nJOIN drives d ON sl.vehicle_id = d.vehicle_id\n  AND sl.ts BETWEEN d.started_at AND d.ended_at\nWHERE d.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(d.started_at)\n  AND sl.field = 'LongitudinalAcceleration'\n  AND COALESCE(sl.float_value, sl.int_value::float8) IS NOT NULL\nGROUP BY d.id, d.started_at\nORDER BY d.started_at",
           "refId": "A"
         }
       ],
@@ -459,7 +459,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH classified AS (\n  SELECT\n    CASE\n      WHEN avg_speed_mph < 25 AND COALESCE(energy_used_kwh * 1000 / NULLIF(distance_mi * 1.60934, 0), 0) < 150 THEN 'Gentle'\n      WHEN avg_speed_mph > 50 OR COALESCE(energy_used_kwh * 1000 / NULLIF(distance_mi * 1.60934, 0), 0) > 250 THEN 'Aggressive'\n      ELSE 'Moderate'\n    END AS style\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(start_ts)\n    AND distance_mi > 1\n    AND avg_speed_mph IS NOT NULL\n)\nSELECT style, ROUND(100.0 * COUNT(*) / NULLIF((SELECT COUNT(*) FROM classified), 0), 1) AS percent\nFROM classified\nGROUP BY style",
+          "rawSql": "WITH classified AS (\n  SELECT\n    CASE\n      WHEN (avg_speed_mps * 2.2369362920544) < 25 AND COALESCE((energy_used_wh / 1000.0) * 1000 / NULLIF((distance_m / 1609.344) * 1.60934, 0), 0) < 150 THEN 'Gentle'\n      WHEN (avg_speed_mps * 2.2369362920544) > 50 OR COALESCE((energy_used_wh / 1000.0) * 1000 / NULLIF((distance_m / 1609.344) * 1.60934, 0), 0) > 250 THEN 'Aggressive'\n      ELSE 'Moderate'\n    END AS style\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(started_at)\n    AND (distance_m / 1609.344) > 1\n    AND (avg_speed_mps * 2.2369362920544) IS NOT NULL\n)\nSELECT style, ROUND(100.0 * COUNT(*) / NULLIF((SELECT COUNT(*) FROM classified), 0), 1) AS percent\nFROM classified\nGROUP BY style",
           "refId": "A"
         }
       ],
@@ -577,7 +577,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  ROUND(avg_speed_mph::numeric, 1) AS \"Avg Speed\",\n  CASE WHEN distance_mi > 0 AND energy_used_kwh IS NOT NULL\n    THEN ROUND((energy_used_kwh * 1000 / (distance_mi * 1.60934))::numeric, 0)\n    ELSE NULL END AS \"Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_ts)\n  AND distance_mi > 1\n  AND avg_speed_mph > 0\n  AND energy_used_kwh IS NOT NULL",
+          "rawSql": "SELECT\n  ROUND((avg_speed_mps * 2.2369362920544)::numeric, 1) AS \"Avg Speed\",\n  CASE WHEN (distance_m / 1609.344) > 0 AND (energy_used_wh / 1000.0) IS NOT NULL\n    THEN ROUND(((energy_used_wh / 1000.0) * 1000 / ((distance_m / 1609.344) * 1.60934))::numeric, 0)\n    ELSE NULL END AS \"Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND (distance_m / 1609.344) > 1\n  AND (avg_speed_mps * 2.2369362920544) > 0\n  AND (energy_used_wh / 1000.0) IS NOT NULL",
           "refId": "A"
         }
       ],

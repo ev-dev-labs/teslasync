@@ -1,0 +1,90 @@
+{{- if .Values.observability.tempo.enabled -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "teslasync.fullname" . }}-tempo
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: tempo
+spec:
+  serviceName: {{ include "teslasync.fullname" . }}-tempo
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: tempo
+  template:
+    metadata:
+      labels:
+        {{- include "teslasync.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: tempo
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/tempo-configmap.yaml") . | sha256sum }}
+    spec:
+      securityContext:
+        fsGroup: 10001
+        runAsUser: 10001
+        runAsGroup: 10001
+      containers:
+        - name: tempo
+          image: "{{ .Values.observability.tempo.image.repository }}:{{ .Values.observability.tempo.image.tag }}"
+          imagePullPolicy: {{ .Values.observability.tempo.image.pullPolicy | default "IfNotPresent" }}
+          args:
+            - "-config.file=/etc/tempo/tempo.yaml"
+          ports:
+            - name: http
+              containerPort: 3200
+              protocol: TCP
+            - name: otlp-grpc
+              containerPort: 4317
+              protocol: TCP
+            - name: otlp-http
+              containerPort: 4318
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3200
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: 3200
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.observability.tempo.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/tempo
+              readOnly: true
+            - name: storage
+              mountPath: /var/tempo
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "teslasync.fullname" . }}-tempo
+        {{- if not .Values.observability.tempo.persistence.enabled }}
+        - name: storage
+          emptyDir: {}
+        {{- else if not .Values.observability.tempo.persistence.useStatefulSetVolumeClaimTemplate }}
+        - name: storage
+          persistentVolumeClaim:
+            claimName: {{ include "teslasync.fullname" . }}-tempo
+        {{- end }}
+  {{- if and .Values.observability.tempo.persistence.enabled .Values.observability.tempo.persistence.useStatefulSetVolumeClaimTemplate }}
+  volumeClaimTemplates:
+    - metadata:
+        name: storage
+      spec:
+        accessModes:
+          - {{ .Values.observability.tempo.persistence.accessMode | default "ReadWriteOnce" }}
+        resources:
+          requests:
+            storage: {{ .Values.observability.tempo.persistence.size | default "10Gi" }}
+        {{- with .Values.observability.tempo.persistence.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
+  {{- end }}
+{{- end }}

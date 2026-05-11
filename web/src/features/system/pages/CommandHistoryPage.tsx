@@ -17,7 +17,7 @@ import { StatCard, Timeline } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
+import { useUrlBatch, useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useCommandHistory, type CommandLogEntry } from '@/api/hooks/useCommands';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
@@ -104,7 +104,7 @@ export default function CommandHistoryPage() {
   // Vehicle selection
   const { data: vehicles } = useVehicles();
   const vehicleList = vehicles ?? [];
-  const [selectedVehicleId, setSelectedVehicleId] = useUrlString('vehicle_id', '');
+  const [selectedVehicleId] = useUrlString('vehicle_id', '');
   const activeVehicleId =
     selectedVehicleId || (vehicleList.length > 0 ? String(vehicleList[0].id) : undefined);
 
@@ -113,9 +113,17 @@ export default function CommandHistoryPage() {
   const allCommands = commands ?? [];
 
   // Filters
-  const [statusFilter, setStatusFilter] = useUrlEnum<StatusFilter>('status', STATUS_FILTERS, 'all');
+  const [statusFilter] = useUrlEnum<StatusFilter>('status', STATUS_FILTERS, 'all');
   const [searchQuery, setSearchQuery] = useUrlString('q', '');
   const [page, setPage] = useUrlNumber('page', 1);
+
+  // useUrlBatch — atomically write multiple URL params in one navigation.
+  // Using two single-key setters in the same handler races: the second
+  // setSearchParams call sees the same `prev` snapshot and discards the
+  // first write (see useUrlState.ts:60-67). That's why clicking Success/
+  // Failed previously did nothing — `setPage(1)` clobbered the status
+  // change.
+  const setUrl = useUrlBatch();
 
   // Phase-46 / Prompt 18 — defer the search query so the input stays
   // responsive while the timeline + stats + pagination chain re-renders
@@ -123,18 +131,20 @@ export default function CommandHistoryPage() {
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const isSearchPending = !Object.is(searchQuery, deferredSearchQuery);
 
-  // Reset page when filters change
+  // Reset page when filters change — write both keys atomically.
   const handleStatusChange = (key: string) => {
-    setStatusFilter(key as StatusFilter);
-    setPage(1);
+    setUrl({ status: key === 'all' ? null : (key as StatusFilter), page: null });
   };
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
-    setPage(1);
+    // Search is fed back through the same input on the very next render —
+    // the user can't switch pages between keystrokes, so resetting page
+    // independently here is safe (no concurrent multi-key write to race
+    // with). useDeferredValue handles the typing-vs-render perf concern.
+    if (page !== 1) setPage(1);
   };
   const handleVehicleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedVehicleId(e.target.value);
-    setPage(1);
+    setUrl({ vehicle_id: e.target.value, page: null });
   };
 
   // Filtered commands

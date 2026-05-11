@@ -7,4 +7,6 @@
 // fans out a single Tesla API response into per-metric topics plus a
 // full JSON payload, enabling fine-grained subscription by home
 // automation systems, dashboards, or other MQTT subscribers.
+// Layer: platform
+//
 package mqtt

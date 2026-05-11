@@ -87,3 +87,4 @@ ENGINEERING_GUIDELINES.md
 .github/issues/
 scripts/check-loc.js
 /.github/prompts
+/.github/prompts/db-refactor/logs

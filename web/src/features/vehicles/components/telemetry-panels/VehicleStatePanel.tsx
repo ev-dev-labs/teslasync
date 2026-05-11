@@ -4,8 +4,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { GlassPanel } from '@/components/ui'
-import { useSettings } from '@/hooks/useSettings'
-import { fmtNumber } from '@/lib/numberFormat'
+import { useUnits } from '@/hooks/useUnits'
 
 interface VehicleStatePanelProps {
   live: Record<string, unknown>
@@ -14,7 +13,7 @@ interface VehicleStatePanelProps {
 
 export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps) {
   const { t } = useTranslation()
-  const { convertSpeed, speedUnit } = useSettings()
+  const { formatSpeed } = useUnits()
 
   return (
     <GlassPanel className="p-6 h-full">
@@ -136,7 +135,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
             )}
           >
             {live.speedLimitMode
-              ? `${fmtNumber(convertSpeed(live.currentSpeedLimit as number))} ${speedUnit}`
+              ? formatSpeed(live.currentSpeedLimit as number)
               : t('common.off', 'Off')}
           </span>
         </div>

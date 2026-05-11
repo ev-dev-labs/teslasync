@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next'
-import { Cog, Activity, Thermometer, Gauge, Settings, Zap } from 'lucide-react'
+import { Cog, Activity, Thermometer, Gauge, Settings, Zap, Battery } from 'lucide-react'
 
 import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
-import { useSettings } from '@/hooks/useSettings'
+import { useUnits } from '@/hooks/useUnits'
 import { fmtNumber, fmtInt } from '@/lib/numberFormat'
 import type { MotorSnapshot } from '@/api/types'
 
@@ -14,12 +14,18 @@ interface MotorSectionProps {
 
 export function MotorSection({ motorData }: MotorSectionProps) {
   const { t } = useTranslation()
-  const { convertTemp, tempUnit } = useSettings()
+  const { formatTemperature } = useUnits()
 
   const maxMotorTemp =
     motorData
       ? Math.max(motorData.motor_temp_c_front ?? -Infinity, motorData.motor_temp_c_rear ?? -Infinity)
       : null
+
+  // Powertrain bus-derived power proxy: pack voltage * front motor current.
+  // Per web/src/api/types.ts MotorSnapshot doc, power_kw / regen_kw have no
+  // backing signal in the codec → signal_log path, so we surface the two
+  // raw inputs (voltage and current) rather than fabricate a derived value.
+  const vbat = motorData?.vbat_rear ?? motorData?.vbat_front ?? null
 
   return (
     <GlassPanel className="p-6">
@@ -38,14 +44,18 @@ export function MotorSection({ motorData }: MotorSectionProps) {
             color="cyan"
           />
           <MetricCard
-            label={t('vehicles.detail.power', 'Power')}
-            value={motorData.power_kw != null ? `${fmtNumber(motorData.power_kw)} kW` : '—'}
-            icon={<Zap className="h-4 w-4" />}
+            label={t('vehicles.detail.packVoltage', 'Pack Voltage')}
+            value={vbat != null ? `${fmtNumber(vbat)} V` : '—'}
+            icon={<Battery className="h-4 w-4" />}
             color="purple"
           />
           <MetricCard
-            label={t('vehicles.detail.regen', 'Regen')}
-            value={motorData.regen_kw != null ? `${fmtNumber(motorData.regen_kw)} kW` : '—'}
+            label={t('vehicles.detail.motorCurrentFront', 'Motor Current (F)')}
+            value={
+              motorData.motor_current_front != null
+                ? `${fmtNumber(motorData.motor_current_front)} A`
+                : '—'
+            }
             icon={<Zap className="h-4 w-4" />}
             color="green"
           />
@@ -81,7 +91,7 @@ export function MotorSection({ motorData }: MotorSectionProps) {
             label={t('vehicles.detail.motorTemp', 'Motor Temp (peak)')}
             value={
               maxMotorTemp != null && isFinite(maxMotorTemp)
-                ? `${fmtNumber(convertTemp(maxMotorTemp))}${tempUnit}`
+                ? formatTemperature(maxMotorTemp)
                 : '—'
             }
             icon={<Thermometer className="h-4 w-4" />}

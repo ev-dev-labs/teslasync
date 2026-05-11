@@ -29,6 +29,7 @@ import (
 // fixing the carry-forward bug end-to-end.
 type TirePressureHandler struct {
 	state signal.StateReader
+	live  signal.LiveStateReader
 }
 
 // Signal → JSON field mappings for TPMS timeline / state projection.
@@ -45,8 +46,8 @@ var tirePressureMappings = []signal.FieldMapping{
 	{Signal: "TpmsLastSeenPressureTimeRr", Field: "last_seen_rr"},
 }
 
-func NewTirePressureHandler(state signal.StateReader) *TirePressureHandler {
-	return &TirePressureHandler{state: state}
+func NewTirePressureHandler(state signal.StateReader, live signal.LiveStateReader) *TirePressureHandler {
+	return &TirePressureHandler{state: state, live: live}
 }
 
 // List returns TPMS history from the signal-log change feed via
@@ -99,7 +100,7 @@ func (h *TirePressureHandler) Latest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	snap, err := h.state.State(r.Context(), vehicleID, time.Now())
+	snap, err := h.live.LiveState(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest tire pressure")
 		writeError(w, http.StatusInternalServerError, "failed to get latest tire pressure")

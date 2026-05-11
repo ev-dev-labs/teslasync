@@ -2,26 +2,6 @@ package models
 
 import "time"
 
-// FleetTelemetrySubscription records a subscription request to Tesla Fleet Telemetry.
-type FleetTelemetrySubscription struct {
-	ID              int64          `json:"id" db:"id"`
-	VehicleID       *int64         `json:"vehicle_id,omitempty" db:"vehicle_id"`
-	VIN             string         `json:"vin" db:"vin"`
-	Signals         []string       `json:"signals" db:"signals"`
-	IntervalSeconds int            `json:"interval_seconds" db:"interval_seconds"`
-	FieldIntervals  map[string]int `json:"field_intervals,omitempty" db:"field_intervals"`
-	Hostname        string         `json:"hostname" db:"hostname"`
-	Port            int            `json:"port" db:"port"`
-	Protocol        string         `json:"protocol" db:"protocol"`
-	CaPEM           *string        `json:"ca_pem,omitempty" db:"ca_pem"`
-	SubscribedAt    time.Time      `json:"subscribed_at" db:"subscribed_at"`
-	ExpiresAt       *time.Time     `json:"expires_at,omitempty" db:"expires_at"`
-	Status          string         `json:"status" db:"status"`
-	ResponseCode    *int           `json:"response_code,omitempty" db:"response_code"`
-	ResponseBody    *string        `json:"response_body,omitempty" db:"response_body"`
-	CreatedAt       time.Time      `json:"created_at" db:"created_at"`
-}
-
 // RawTelemetrySignal previously stored a raw signal batch from Tesla fleet
 // telemetry for debugging. ADR-001/ADR-005 eliminated the `signals` JSONB
 // blob — typed columns now hold each signal. This struct is retained for

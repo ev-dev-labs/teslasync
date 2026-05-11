@@ -10,6 +10,8 @@ import { StatCard } from '@/components/data-display/StatCard';
 import { Badge } from '@/components/ui/Badge';
 import { Grid } from '@/components/layout/Grid';
 import { FSM_REGISTRY } from '@/types/fsm';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import type { VehicleStatus } from '@/api/types';
 
 export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
@@ -55,7 +57,30 @@ function toStatus(state: string): VehicleStatus {
 export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
   ({ vehicle, vehicleState, photoUrl, className, ...props }, ref) => {
     const { t } = useTranslation();
+    const { unitPrefs } = useUnits();
     const vs = vehicleState;
+
+    /* Convert SI base units (meters, °C) to user's display units. The state
+     * endpoint follows the Phase-43 SI-floor convention — odometer arrives in
+     * METERS (e.g. 42 934 591 ≈ 42 934 km) and rated_range likewise. Always
+     * pull the unit suffix from `unitPrefs` so the label tracks the user's
+     * Settings preference, never a hardcoded "mi". */
+    const distanceLabel = unitPrefs.distance;        // 'mi' | 'km'
+    const temperatureLabel = unitPrefs.temperature;  // '°F' | '°C'
+
+    const odometerDisplay = vs
+      ? Math.round(convertDistanceFromSI(vs.odometer ?? 0, distanceLabel)).toLocaleString(unitPrefs.locale)
+      : '—';
+    const rangeDisplay = vs
+      ? Math.round(convertDistanceFromSI(vs.rated_range ?? 0, distanceLabel))
+      : 0;
+    const insideTempDisplay = vs ? Math.round(convertTempFromSI(vs.inside_temp ?? 0, temperatureLabel)) : 0;
+    const outsideTempDisplay = vs ? Math.round(convertTempFromSI(vs.outside_temp ?? 0, temperatureLabel)) : 0;
+
+    /* Range gauge max scales with display unit so the arc fills meaningfully
+     * — Tesla long-range packs cap around 400 mi ≈ 644 km. */
+    const rangeMax = distanceLabel === 'km' ? 644 : 400;
+    const tempMax = temperatureLabel === '°C' ? 50 : 122;
 
     return (
       <GlassPanel
@@ -110,26 +135,26 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
               size={100}
             />
             <RadialGauge
-              value={Math.round(vs.rated_range)}
-              max={400}
+              value={rangeDisplay}
+              max={rangeMax}
               label={t('vehicleHero.gauge.range', 'Range')}
-              unit="mi"
+              unit={distanceLabel}
               color="#4ade80"
               size={100}
             />
             <RadialGauge
-              value={Math.round(vs.inside_temp)}
-              max={150}
+              value={insideTempDisplay}
+              max={tempMax}
               label={t('vehicleHero.gauge.inside', 'Inside')}
-              unit="°F"
+              unit={temperatureLabel}
               color="#f59e0b"
               size={100}
             />
             <RadialGauge
-              value={Math.round(vs.outside_temp)}
-              max={150}
+              value={outsideTempDisplay}
+              max={tempMax}
               label={t('vehicleHero.gauge.outside', 'Outside')}
-              unit="°F"
+              unit={temperatureLabel}
               color="#a78bfa"
               size={100}
             />
@@ -139,17 +164,17 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
         {/* Detail cards */}
         {vs && (
           <Grid cols={{ default: 2, md: 4 }} gap={3}>
-            <StatCard label={t('vehicleHero.stat.insideTemp', 'Inside Temp')} value={Math.round(vs.inside_temp)} unit="°F" />
-            <StatCard label={t('vehicleHero.stat.outsideTemp', 'Outside Temp')} value={Math.round(vs.outside_temp)} unit="°F" />
+            <StatCard label={t('vehicleHero.stat.insideTemp', 'Inside Temp')} value={insideTempDisplay} unit={temperatureLabel} />
+            <StatCard label={t('vehicleHero.stat.outsideTemp', 'Outside Temp')} value={outsideTempDisplay} unit={temperatureLabel} />
             <StatCard
               label={t('vehicleHero.stat.odometer', 'Odometer')}
-              value={vs.odometer.toLocaleString()}
-              unit="mi"
+              value={odometerDisplay}
+              unit={distanceLabel}
             />
             <StatCard
               label={t('vehicleHero.stat.range', 'Range')}
-              value={Math.round(vs.rated_range)}
-              unit="mi"
+              value={rangeDisplay}
+              unit={distanceLabel}
             />
             <StatCard
               label={t('vehicleHero.stat.status', 'Status')}

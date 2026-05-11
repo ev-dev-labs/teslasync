@@ -19,6 +19,7 @@ type Processor struct {
 	vehicleRepo  *database.VehicleRepo
 	driveRepo    *database.DriveRepo
 	chargingRepo *database.ChargingRepo
+	tripRepo     *database.TripRepo
 	db           *database.DB
 }
 
@@ -28,6 +29,7 @@ func NewProcessor(db *database.DB) *Processor {
 		vehicleRepo:  database.NewVehicleRepo(db),
 		driveRepo:    database.NewDriveRepo(db),
 		chargingRepo: database.NewChargingRepo(db),
+		tripRepo:     database.NewTripRepo(db),
 		db:           db,
 	}
 }
@@ -46,6 +48,8 @@ func (p *Processor) Process(ctx context.Context, req *JobRequest) (*ProcessResul
 		return p.processDrives(ctx, req)
 	case string(TypeCharging):
 		return p.processCharging(ctx, req)
+	case string(TypeTrips):
+		return p.processTrips(ctx, req)
 	case string(TypeBackup):
 		return p.processBackup(ctx, req)
 	case string(TypeAnalytics):
@@ -65,28 +69,42 @@ func (p *Processor) Process(ctx context.Context, req *JobRequest) (*ProcessResul
 // drives export. Lifted to package scope so cellLookup helpers can be
 // pure functions instead of closures over inline anonymous structs.
 type driveRow struct {
-	ID        int64   `json:"id"`
-	VehicleID int64   `json:"vehicle_id"`
-	StartDate string  `json:"start_date"`
-	EndDate   string  `json:"end_date"`
-	Distance  float64 `json:"distance"`
-	Duration  float64 `json:"duration_min"`
-	SpeedMax  float64 `json:"speed_max"`
+	ID          int64   `json:"id"`
+	VehicleID   int64   `json:"vehicle_id"`
+	StartDate   string  `json:"start_date"`
+	EndDate     string  `json:"end_date"`
+	DistanceM   float64 `json:"distance_m"`
+	DurationS   float64 `json:"duration_s"`
+	MaxSpeedMps float64 `json:"max_speed_mps"`
+}
+
+type tripRow struct {
+	ID             int64   `json:"id"`
+	VehicleID      int64   `json:"vehicle_id"`
+	Name           string  `json:"name"`
+	StartedAt      string  `json:"started_at"`
+	EndedAt        string  `json:"ended_at"`
+	TotalDistanceM float64 `json:"total_distance_m"`
+	TotalEnergyWh  float64 `json:"total_energy_wh"`
+	TotalDurationS int64   `json:"total_duration_s"`
+	DriveCount     int64   `json:"drive_count"`
+	ChargeCount    int64   `json:"charge_count"`
+	TotalCost      float64 `json:"total_cost"`
 }
 
 // chargingRow is the canonical in-memory shape for a single charging
 // session row in the charging export. Lifted to package scope for the
 // same reason as driveRow.
 type chargingRow struct {
-	ID           int64   `json:"id"`
-	VehicleID    int64   `json:"vehicle_id"`
-	StartDate    string  `json:"start_date"`
-	EndDate      string  `json:"end_date"`
-	EnergyAdded  float64 `json:"energy_added_kwh"`
-	StartBattery int     `json:"start_battery"`
-	EndBattery   int     `json:"end_battery"`
-	ChargerPower float64 `json:"charger_power"`
-	Duration     float64 `json:"duration_min"`
+	ID          int64   `json:"id"`
+	VehicleID   int64   `json:"vehicle_id"`
+	StartedAt   string  `json:"started_at"`
+	EndedAt     string  `json:"ended_at"`
+	EnergyAdded float64 `json:"total_energy_added_wh"`
+	StartSocPct float64 `json:"start_soc_pct"`
+	EndSocPct   float64 `json:"end_soc_pct"`
+	PeakPowerW  float64 `json:"peak_power_w"`
+	DurationS   float64 `json:"duration_s"`
 }
 
 func (p *Processor) processDrives(ctx context.Context, req *JobRequest) (*ProcessResult, error) {
@@ -125,12 +143,12 @@ func (p *Processor) processDrives(ctx context.Context, req *JobRequest) (*Proces
 			}
 			for _, d := range drives {
 				ed := driveRow{
-					ID:        d.ID,
-					VehicleID: d.VehicleID,
-					StartDate: d.StartTs.Format("2006-01-02T15:04:05Z"),
-					Distance:  d.DistanceMi,
-					Duration:  d.DurationMin,
-					SpeedMax:  ptrFloat(d.MaxSpeedMph),
+					ID:          d.ID,
+					VehicleID:   d.VehicleID,
+					StartDate:   d.StartTs.Format("2006-01-02T15:04:05Z"),
+					DistanceM:   d.DistanceM,
+					DurationS:   float64(d.DurationS),
+					MaxSpeedMps: ptrFloat(d.MaxSpeedMps),
 				}
 				if d.EndTs != nil {
 					ed.EndDate = d.EndTs.Format("2006-01-02T15:04:05Z")
@@ -184,7 +202,7 @@ func (p *Processor) processDrives(ctx context.Context, req *JobRequest) (*Proces
 	}
 
 	return &ProcessResult{
-		FileName:    fmt.Sprintf("teslasync-drives.%s", ext),
+		FileName:    fmt.Sprintf("teslasync-drives-v2.%s", ext),
 		Data:        buf.Bytes(),
 		RecordCount: len(allDrives),
 	}, nil
@@ -204,12 +222,12 @@ func csvCellForDrive(d driveRow, col string) string {
 		return d.StartDate
 	case "end_date":
 		return d.EndDate
-	case "distance":
-		return fmt.Sprintf("%.2f", d.Distance)
-	case "duration_min":
-		return fmt.Sprintf("%.1f", d.Duration)
-	case "speed_max":
-		return fmt.Sprintf("%.1f", d.SpeedMax)
+	case "distance_m":
+		return fmt.Sprintf("%.2f", d.DistanceM)
+	case "duration_s":
+		return fmt.Sprintf("%.0f", d.DurationS)
+	case "max_speed_mps":
+		return fmt.Sprintf("%.2f", d.MaxSpeedMps)
 	default:
 		return ""
 	}
@@ -228,12 +246,152 @@ func jsonCellForDrive(d driveRow, col string) any {
 		return d.StartDate
 	case "end_date":
 		return d.EndDate
-	case "distance":
-		return d.Distance
-	case "duration_min":
-		return d.Duration
-	case "speed_max":
-		return d.SpeedMax
+	case "distance_m":
+		return d.DistanceM
+	case "duration_s":
+		return d.DurationS
+	case "max_speed_mps":
+		return d.MaxSpeedMps
+	default:
+		return nil
+	}
+}
+
+func (p *Processor) processTrips(ctx context.Context, req *JobRequest) (*ProcessResult, error) {
+	cols, err := resolveColumnSelection(string(TypeTrips), req.Columns)
+	if err != nil {
+		return nil, err
+	}
+
+	var startTime, endTime time.Time
+	if req.StartDate != nil {
+		startTime = *req.StartDate
+	}
+	if req.EndDate != nil {
+		endTime = *req.EndDate
+	}
+
+	var summaries []*database.TripSummary
+	if req.VehicleID != nil {
+		summaries, err = p.tripRepo.GetByVehicle(ctx, *req.VehicleID, 10000, 0, startTime, endTime)
+	} else {
+		summaries, err = p.tripRepo.GetAll(ctx, 10000, 0, startTime, endTime)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("fetch trips: %w", err)
+	}
+
+	rows := make([]tripRow, 0, len(summaries))
+	for _, s := range summaries {
+		row := tripRow{
+			ID:             s.Trip.ID,
+			VehicleID:      s.Trip.VehicleID,
+			Name:           s.Trip.Name,
+			StartedAt:      s.Trip.StartedAt.Format("2006-01-02T15:04:05Z"),
+			TotalDistanceM: s.TotalDistanceM,
+			TotalEnergyWh:  s.TotalEnergyWh,
+			TotalDurationS: s.TotalDurationS,
+			DriveCount:     s.DriveCount,
+			ChargeCount:    s.ChargeCount,
+			TotalCost:      s.TotalCost,
+		}
+		if s.Trip.EndedAt != nil {
+			row.EndedAt = s.Trip.EndedAt.Format("2006-01-02T15:04:05Z")
+		}
+		rows = append(rows, row)
+	}
+
+	colNames := columnNames(cols)
+	var buf bytes.Buffer
+	ext := req.Format
+	if req.Format == "json" {
+		if len(req.Columns) == 0 {
+			if err := json.NewEncoder(&buf).Encode(rows); err != nil {
+				return nil, fmt.Errorf("encode json: %w", err)
+			}
+		} else {
+			ordered := make([]map[string]any, 0, len(rows))
+			for _, tr := range rows {
+				row := make(map[string]any, len(colNames))
+				for _, c := range colNames {
+					row[c] = jsonCellForTrip(tr, c)
+				}
+				ordered = append(ordered, row)
+			}
+			if err := json.NewEncoder(&buf).Encode(ordered); err != nil {
+				return nil, fmt.Errorf("encode json: %w", err)
+			}
+		}
+	} else {
+		ext = "csv"
+		cw := csv.NewWriter(&buf)
+		_ = cw.Write(colNames)
+		for _, tr := range rows {
+			row := make([]string, len(colNames))
+			for i, c := range colNames {
+				row[i] = csvCellForTrip(tr, c)
+			}
+			_ = cw.Write(row)
+		}
+		cw.Flush()
+	}
+
+	return &ProcessResult{FileName: fmt.Sprintf("teslasync-trips-v2.%s", ext), Data: buf.Bytes(), RecordCount: len(rows)}, nil
+}
+
+func csvCellForTrip(t tripRow, col string) string {
+	switch col {
+	case "id":
+		return strconv.FormatInt(t.ID, 10)
+	case "vehicle_id":
+		return strconv.FormatInt(t.VehicleID, 10)
+	case "name":
+		return t.Name
+	case "started_at":
+		return t.StartedAt
+	case "ended_at":
+		return t.EndedAt
+	case "total_distance_m":
+		return fmt.Sprintf("%.2f", t.TotalDistanceM)
+	case "total_energy_wh":
+		return fmt.Sprintf("%.2f", t.TotalEnergyWh)
+	case "total_duration_s":
+		return strconv.FormatInt(t.TotalDurationS, 10)
+	case "drive_count":
+		return strconv.FormatInt(t.DriveCount, 10)
+	case "charge_count":
+		return strconv.FormatInt(t.ChargeCount, 10)
+	case "total_cost":
+		return fmt.Sprintf("%.2f", t.TotalCost)
+	default:
+		return ""
+	}
+}
+
+func jsonCellForTrip(t tripRow, col string) any {
+	switch col {
+	case "id":
+		return t.ID
+	case "vehicle_id":
+		return t.VehicleID
+	case "name":
+		return t.Name
+	case "started_at":
+		return t.StartedAt
+	case "ended_at":
+		return t.EndedAt
+	case "total_distance_m":
+		return t.TotalDistanceM
+	case "total_energy_wh":
+		return t.TotalEnergyWh
+	case "total_duration_s":
+		return t.TotalDurationS
+	case "drive_count":
+		return t.DriveCount
+	case "charge_count":
+		return t.ChargeCount
+	case "total_cost":
+		return t.TotalCost
 	default:
 		return nil
 	}
@@ -275,17 +433,17 @@ func (p *Processor) processCharging(ctx context.Context, req *JobRequest) (*Proc
 			}
 			for _, s := range sessions {
 				es := chargingRow{
-					ID:           s.ID,
-					VehicleID:    s.VehicleID,
-					StartDate:    s.StartTs.Format("2006-01-02T15:04:05Z"),
-					EnergyAdded:  ptrFloat(s.EnergyAddedKwh),
-					StartBattery: ptrInt16(s.StartBatteryPct),
-					EndBattery:   ptrInt16(s.EndBatteryPct),
-					ChargerPower: ptrFloat(s.ChargerPowerKwMax),
-					Duration:     ptrFloat(s.DurationMin),
+					ID:          s.ID,
+					VehicleID:   s.VehicleID,
+					StartedAt:   s.StartedAt.Format("2006-01-02T15:04:05Z"),
+					EnergyAdded: ptrFloat(s.TotalEnergyAddedWh),
+					StartSocPct: ptrFloat(s.StartSocPct),
+					EndSocPct:   ptrFloat(s.EndSocPct),
+					PeakPowerW:  ptrFloat(s.PeakPowerW),
 				}
-				if s.EndTs != nil {
-					es.EndDate = s.EndTs.Format("2006-01-02T15:04:05Z")
+				if s.EndedAt != nil {
+					es.EndedAt = s.EndedAt.Format("2006-01-02T15:04:05Z")
+					es.DurationS = s.EndedAt.Sub(s.StartedAt).Seconds()
 				}
 				allSessions = append(allSessions, es)
 			}
@@ -333,7 +491,7 @@ func (p *Processor) processCharging(ctx context.Context, req *JobRequest) (*Proc
 	}
 
 	return &ProcessResult{
-		FileName:    fmt.Sprintf("teslasync-charging.%s", ext),
+		FileName:    fmt.Sprintf("teslasync-charging-v2.%s", ext),
 		Data:        buf.Bytes(),
 		RecordCount: len(allSessions),
 	}, nil
@@ -346,20 +504,20 @@ func csvCellForCharging(s chargingRow, col string) string {
 		return strconv.FormatInt(s.ID, 10)
 	case "vehicle_id":
 		return strconv.FormatInt(s.VehicleID, 10)
-	case "start_date":
-		return s.StartDate
-	case "end_date":
-		return s.EndDate
-	case "energy_added_kwh":
+	case "started_at":
+		return s.StartedAt
+	case "ended_at":
+		return s.EndedAt
+	case "total_energy_added_wh":
 		return fmt.Sprintf("%.2f", s.EnergyAdded)
-	case "start_battery":
-		return strconv.Itoa(s.StartBattery)
-	case "end_battery":
-		return strconv.Itoa(s.EndBattery)
-	case "charger_power":
-		return fmt.Sprintf("%.1f", s.ChargerPower)
-	case "duration_min":
-		return fmt.Sprintf("%.1f", s.Duration)
+	case "start_soc_pct":
+		return fmt.Sprintf("%.1f", s.StartSocPct)
+	case "end_soc_pct":
+		return fmt.Sprintf("%.1f", s.EndSocPct)
+	case "peak_power_w":
+		return fmt.Sprintf("%.1f", s.PeakPowerW)
+	case "duration_s":
+		return fmt.Sprintf("%.0f", s.DurationS)
 	default:
 		return ""
 	}
@@ -373,20 +531,20 @@ func jsonCellForCharging(s chargingRow, col string) any {
 		return s.ID
 	case "vehicle_id":
 		return s.VehicleID
-	case "start_date":
-		return s.StartDate
-	case "end_date":
-		return s.EndDate
-	case "energy_added_kwh":
+	case "started_at":
+		return s.StartedAt
+	case "ended_at":
+		return s.EndedAt
+	case "total_energy_added_wh":
 		return s.EnergyAdded
-	case "start_battery":
-		return s.StartBattery
-	case "end_battery":
-		return s.EndBattery
-	case "charger_power":
-		return s.ChargerPower
-	case "duration_min":
-		return s.Duration
+	case "start_soc_pct":
+		return s.StartSocPct
+	case "end_soc_pct":
+		return s.EndSocPct
+	case "peak_power_w":
+		return s.PeakPowerW
+	case "duration_s":
+		return s.DurationS
 	default:
 		return nil
 	}
@@ -432,7 +590,7 @@ func (p *Processor) processBackup(ctx context.Context, req *JobRequest) (*Proces
 
 	backup["_meta"] = map[string]interface{}{
 		"exported_at": time.Now().UTC(),
-		"version":     "1.0.0",
+		"version":     "2.0.0",
 		"tables":      len(allowedBackupTables),
 	}
 

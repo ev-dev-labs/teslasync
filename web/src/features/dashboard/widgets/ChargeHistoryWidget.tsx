@@ -26,7 +26,7 @@ export default function ChargeHistoryWidget({ vehicleId, size }: WidgetProps) {
       (charges ?? [])
         .map((s, i) => ({
           i: String(i),
-          energy: s.energy_added_kwh ?? 0,
+          energy: s.total_energy_added_wh ?? 0,
         }))
         .reverse(),
     [charges],

@@ -1,0 +1,83 @@
+# OpenTelemetry Collector configuration for TeslaSync.
+#
+# Pipeline shape:
+#   receivers (otlp)
+#     -> processors (batch, memory_limiter, tail_sampling)
+#     -> exporters (otlphttp -> Tempo, prometheus -> /metrics)
+#
+# Sampling policy is documented in docs/runbooks/phase-44-trace-sampling.md.
+# Prompt 0050 wires this file into the Helm chart; prompt 0051 adds the
+# Tempo backend; prompt 0052 wires the Grafana datasource.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+
+  batch:
+    timeout: 10s
+    send_batch_size: 8192
+    send_batch_max_size: 10000
+
+  # Tail-based sampling mirrors the sampling matrix in
+  # docs/runbooks/phase-44-trace-sampling.md:
+  #   - Always keep traces with span status = ERROR.
+  #   - Always keep traces whose root span exceeds 1s.
+  #   - Always keep traces from the /api/v1/auth/login endpoint
+  #     (low-volume but security-critical).
+  #   - Sample 1% of everything else.
+  tail_sampling:
+    decision_wait: 30s
+    num_traces: 50000
+    expected_new_traces_per_sec: 200
+    policies:
+      - name: errors-always
+        type: status_code
+        status_code:
+          status_codes: [ERROR]
+      - name: slow-always
+        type: latency
+        latency:
+          threshold_ms: 1000
+      - name: auth-login-always
+        type: string_attribute
+        string_attribute:
+          key: http.route
+          values:
+            - "/api/v1/auth/login"
+      - name: baseline-1pct
+        type: probabilistic
+        probabilistic:
+          sampling_percentage: 1
+
+exporters:
+  otlphttp/tempo:
+    endpoint: http://tempo.observability.svc.cluster.local:4318
+    tls:
+      insecure: true
+
+  prometheus:
+    endpoint: 0.0.0.0:9464
+    namespace: otelcol
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, tail_sampling, batch]
+      exporters: [otlphttp/tempo]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
+  telemetry:
+    logs:
+      level: info

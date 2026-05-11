@@ -1,6 +1,6 @@
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
-import { kmToMiles } from '@/lib/unitConversion';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 interface DistanceProps {
   /** Canonical input in miles (matches the codebase internal unit). */
@@ -17,15 +17,17 @@ interface DistanceProps {
  * Always exposes the raw caller-supplied value via the `title` attribute.
  */
 export function Distance({ miles, km, precision, className }: DistanceProps) {
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
 
   let sourceMiles: number | null = null;
   let title: string | undefined;
   if (miles != null && Number.isFinite(miles)) {
-    sourceMiles = miles;
+    sourceMiles = miles * 1609.344;
     title = `${miles.toFixed(2)} mi`;
   } else if (km != null && Number.isFinite(km)) {
-    sourceMiles = kmToMiles(km);
+    sourceMiles = km * 1000;
     title = `${km.toFixed(2)} km`;
   }
 
@@ -33,7 +35,7 @@ export function Distance({ miles, km, precision, className }: DistanceProps) {
     return <span className={className}>—</span>;
   }
 
-  const display = fmtNumber(convertDistance(sourceMiles), precision);
+  const display = fmtNumber(toDistanceDisplay(sourceMiles), precision);
   return (
     <span className={className} title={title}>
       {display} {distanceUnit}

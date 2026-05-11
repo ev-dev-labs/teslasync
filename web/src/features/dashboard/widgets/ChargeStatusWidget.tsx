@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { Zap, BatteryCharging } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -12,7 +13,10 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
-  const { convertDistance, distanceUnit } = useSettings();
+  /* SI-floor: state.rated_range and state.charge_rate arrive in METERS / m·h⁻¹.
+   * convertDistanceFromSI handles the meters→user-unit conversion. */
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
   const state = stateData?.state;
 
   return (
@@ -41,7 +45,7 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
               <div>
                 <p className="text-[10px] text-[var(--text-muted)]">{t('widget.rate', 'Rate')}</p>
                 <p className="text-sm font-bold text-[var(--text-primary)]">
-                  {fmtInt(convertDistance(state.charge_rate ?? 0))} {distanceUnit}/h
+                  {fmtInt(convertDistanceFromSI(state.charge_rate ?? 0, distanceUnit))} {distanceUnit}/h
                 </p>
               </div>
               <div>
@@ -67,7 +71,7 @@ export default function ChargeStatusWidget({ vehicleId }: WidgetProps) {
               {t('widget.notCharging', 'Not Charging')}
             </p>
             <p className="text-xs text-[var(--text-muted)]">
-              {state.battery_level}% · {fmtNumber(convertDistance(state.rated_range), 0)} {distanceUnit}
+              {state.battery_level}% · {fmtNumber(convertDistanceFromSI(state.rated_range ?? 0, distanceUnit), 0)} {distanceUnit}
             </p>
           </div>
         ) : (

@@ -7,11 +7,12 @@ import {
 } from '@/components/charts';
 import { useSpeedProfile } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertSpeedFromSI } from '@/lib/unitConversion';
 
 interface ChartDatum {
   bucket: string;
@@ -21,13 +22,13 @@ interface ChartDatum {
 
 function buildChartData(
   data: ReturnType<typeof useSpeedProfile>['data'],
-  convertSpeed: (mph: number) => number,
+  toSpeedDisplay: (mph: number) => number,
 ): ChartDatum[] {
   const distribution = data?.distribution ?? [];
   const totalReadings = distribution.reduce((sum, b) => sum + (b.readings ?? 0), 0);
 
   return distribution.map((b) => {
-    const label = formatBucketLabel(b.speed_bucket ?? b.speedBucket ?? '', convertSpeed);
+    const label = formatBucketLabel(b.speed_bucket ?? b.speedBucket ?? '', toSpeedDisplay);
     const freq = totalReadings > 0 ? ((b.readings ?? 0) / totalReadings) * 100 : 0;
     const eff = b.avg_power_kw ?? b.avgPowerKw ?? 0;
     return { bucket: label, frequency: freq, efficiency: eff };
@@ -37,25 +38,25 @@ function buildChartData(
 /** Convert bucket label to user's speed unit, e.g. "20-40" → "32-64" */
 function formatBucketLabel(
   bucket: string,
-  convertSpeed: (mph: number) => number,
+  toSpeedDisplay: (mph: number) => number,
 ): string {
   const parts = bucket.split('-');
   if (parts.length === 2) {
     const lo = parseFloat(parts[0]);
     const hi = parseFloat(parts[1]);
     if (!isNaN(lo) && !isNaN(hi)) {
-      return `${fmtInt(convertSpeed(lo))}-${fmtInt(convertSpeed(hi))}`;
+      return `${fmtInt(toSpeedDisplay(lo))}-${fmtInt(toSpeedDisplay(hi))}`;
     }
   }
   // "80+" style bucket
   const num = parseFloat(bucket);
   if (!isNaN(num)) {
-    return `${fmtInt(convertSpeed(num))}+`;
+    return `${fmtInt(toSpeedDisplay(num))}+`;
   }
   return bucket;
 }
 
-/** Find the bucket with the best (lowest avg_power_kw) efficiency */
+/** Find the bucket with the best (lowest avg_power_w) efficiency */
 function findSweetSpot(chartData: ChartDatum[]): string {
   const withEff = chartData.filter((d) => d.efficiency > 0);
   if (withEff.length === 0) return '—';
@@ -70,7 +71,10 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { convertSpeed, speedUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
+
+  const speedUnit = unitPrefs.speed;
 
   const {
     data,
@@ -84,20 +88,20 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
   } = useSpeedProfile(vid > 0 ? String(vid) : undefined);
 
   const chartData = useMemo(
-    () => buildChartData(data, convertSpeed),
-    [data, convertSpeed],
+    () => buildChartData(data, toSpeedDisplay),
+    [data, toSpeedDisplay],
   );
 
   const sweetSpot = useMemo(() => {
     const optimal = data?.optimalSpeedKmh ?? 0;
     if (optimal > 0) {
       // API provides optimal speed in km/h — convert from km/h to mph first then apply user conversion
-      // Since convertSpeed expects mph input, convert km/h → mph first
+      // Since toSpeedDisplay expects mph input, convert km/h → mph first
       const optimalMph = optimal / 1.60934;
-      return `${fmtInt(convertSpeed(optimalMph))}`;
+      return `${fmtInt(toSpeedDisplay(optimalMph))}`;
     }
     return findSweetSpot(chartData);
-  }, [data, chartData, convertSpeed]);
+  }, [data, chartData, toSpeedDisplay]);
 
   const peakFreq = useMemo(() => {
     let max = 0;

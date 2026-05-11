@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { Headphones, Navigation2, MapPin } from 'lucide-react'
 import { GlassPanel, Badge } from '@/components/ui'
-import { useSettings } from '@/hooks/useSettings'
+import { useUnits } from '@/hooks/useUnits'
 import { cleanNil } from '@/lib/cleanNil'
 import { fmtNumber, fmtInt } from '@/lib/numberFormat'
 import type { MediaSnapshot, LocationSnapshot } from '@/api/types'
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 interface MediaNavigationPanelProps {
   mediaData: MediaSnapshot | null | undefined
@@ -13,8 +14,9 @@ interface MediaNavigationPanelProps {
 
 export function MediaNavigationPanel({ mediaData, locationData }: MediaNavigationPanelProps) {
   const { t } = useTranslation()
-  const { convertDistance, distanceUnit } = useSettings()
-
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
   return (
     <GlassPanel className="p-6 h-full">
       <h3 className="section-title flex items-center gap-2 mb-5">
@@ -76,7 +78,7 @@ export function MediaNavigationPanel({ mediaData, locationData }: MediaNavigatio
                   <div className="flex items-center gap-3 mt-2 text-xs text-[var(--text-secondary)]">
                     {locationData.miles_to_arrival != null && (
                       <span>
-                        {fmtNumber(convertDistance(locationData.miles_to_arrival))}{' '}
+                        {fmtNumber(toDistanceDisplay(locationData.miles_to_arrival))}{' '}
                         {distanceUnit}
                       </span>
                     )}

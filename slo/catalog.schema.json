@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://teslasync.dev/slo/catalog.schema.json",
+  "title": "TeslaSync SLO Catalog",
+  "description": "Declarative catalogue of service-level objectives consumed by phase-44 codegen tooling (Prometheus rules, burn-rate alerts, Grafana dashboards).",
+  "type": "object",
+  "required": ["version", "slos"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version. Bump only when a breaking change is introduced."
+    },
+    "slos": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/slo"}
+    }
+  },
+  "$defs": {
+    "slo": {
+      "type": "object",
+      "required": ["name", "description", "sli", "objective", "window", "owner"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "snake_case identifier; must be unique within the catalogue."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10
+        },
+        "sli": {
+          "type": "object",
+          "required": ["good_events", "valid_events"],
+          "additionalProperties": false,
+          "properties": {
+            "good_events": {
+              "type": "string",
+              "minLength": 1,
+              "description": "PromQL expression returning the rate of GOOD events (numerator)."
+            },
+            "valid_events": {
+              "type": "string",
+              "minLength": 1,
+              "description": "PromQL expression returning the rate of VALID events (denominator)."
+            }
+          }
+        },
+        "objective": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 100,
+          "description": "Target success percentage (0 < objective < 100)."
+        },
+        "window": {
+          "type": "string",
+          "pattern": "^[0-9]+[mhdw]$",
+          "description": "Rolling window for the objective (e.g. 30d, 7d, 24h)."
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tags": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

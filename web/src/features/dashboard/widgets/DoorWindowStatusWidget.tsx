@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { DoorOpen } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { useVehicles, useSecurityLatest } from '@/api/hooks/useVehicles';
+import { asNonEmptyString } from '@/lib/typeGuards';
 import { WidgetStatusGrid, type StatusCell } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -22,24 +23,34 @@ function toValueLabel(state: DoorWindowState, t: (key: string, fallback: string)
   return '—';
 }
 
-function parseWindowState(val: string | undefined | null): DoorWindowState {
-  if (val == null || val === '') return 'unknown';
-  const lower = val.toLowerCase();
+function parseWindowState(val: unknown): DoorWindowState {
+  // Native bool — Phase-42a backend may emit window state as boolean.
+  if (typeof val === 'boolean') return val ? 'open' : 'closed';
+  const raw = asNonEmptyString(val);
+  if (!raw) return 'unknown';
+  const lower = raw.toLowerCase();
   if (lower === 'closed') return 'closed';
   if (lower.includes('vent') || lower.includes('partial')) return 'partial';
   return 'open';
 }
 
-function parseDoorStates(doorState: string | undefined | null): Record<string, DoorWindowState> {
+function parseDoorStates(doorState: unknown): Record<string, DoorWindowState> {
   const result: Record<string, DoorWindowState> = {
     fl: 'unknown',
     fr: 'unknown',
     rl: 'unknown',
     rr: 'unknown',
   };
-  if (!doorState) return result;
+  // Native bool — backend may emit DoorState as boolean (Phase-42a typed values).
+  if (typeof doorState === 'boolean') {
+    return doorState
+      ? { fl: 'open', fr: 'open', rl: 'open', rr: 'open' }
+      : { fl: 'closed', fr: 'closed', rl: 'closed', rr: 'closed' };
+  }
+  const raw = asNonEmptyString(doorState);
+  if (!raw) return result;
 
-  const parts = doorState.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const parts = raw.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
 
   const hasAllClosed = parts.some((p) => p === 'all_closed' || p === 'allclosed');
   if (hasAllClosed) {

@@ -77,7 +77,7 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 	type batteryPoint struct {
 		Date        string  `json:"date"`
 		HealthScore float64 `json:"health_score"`
-		CapacityKWh float64 `json:"capacity_kwh"`
+		CapacityWh  float64 `json:"capacity_wh"`
 		Degradation float64 `json:"degradation_pct"`
 		RangeKm     float64 `json:"range_km"`
 		CycleCount  int     `json:"cycle_count"`
@@ -105,12 +105,12 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 			log.Error().Err(snapErr).Int64("vehicleID", v.ID).Msg("analytics: failed to get latest signal snapshot")
 		} else if snap != nil {
 			if bl, ok := toFloatOk(snap["BatteryLevel"]); ok && bl > 0 {
-				const nomCap = 75.0
+				const nomCap = 75000.0
 				const nomRange = 531.0
 				batteryTrend = append(batteryTrend, batteryPoint{
 					Date:        time.Now().Format("2006-01-02"),
 					HealthScore: bl,
-					CapacityKWh: bl * nomCap / 100,
+					CapacityWh:  bl * nomCap / 100,
 					Degradation: 100 - bl,
 					RangeKm:     bl * nomRange / 100,
 				})
@@ -123,27 +123,29 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 			if d.StartTs.Before(cutoff) {
 				continue
 			}
-			dist += d.DistanceMi
+			distKm := d.DistanceM / 1000.0
+			dist += distKm
 			driveCount++
 
 			// Hour & DOW
 			hour := d.StartTs.Hour()
 			hourCounts[hour]++
-			hourDistance[hour] += d.DistanceMi
+			hourDistance[hour] += distKm
 			dow := int(d.StartTs.Weekday())
 			dowCounts[dow]++
-			dowDistance[dow] += d.DistanceMi
+			dowDistance[dow] += distKm
 
 			// Performance metrics
-			if d.MaxSpeedMph != nil {
-				allSpeedMax = append(allSpeedMax, *d.MaxSpeedMph)
+			if d.MaxSpeedMps != nil {
+				// km/h for the speed-stats output bucket
+				allSpeedMax = append(allSpeedMax, *d.MaxSpeedMps*3.6)
 			}
-			allDriveDurations = append(allDriveDurations, d.DurationMin)
-			allDriveDistances = append(allDriveDistances, d.DistanceMi)
+			allDriveDurations = append(allDriveDurations, float64(d.DurationS)/60.0)
+			allDriveDistances = append(allDriveDistances, distKm)
 
-			// Efficiency per drive (Wh/mi from EnergyUsedKwh)
-			if d.EnergyUsedKwh != nil && d.DistanceMi > 0 {
-				eff := (*d.EnergyUsedKwh * 1000) / d.DistanceMi
+			// Efficiency per drive (Wh/km from EnergyUsedWh)
+			if d.EnergyUsedWh != nil && d.DistanceM > 0 {
+				eff := (*d.EnergyUsedWh) / distKm
 				if eff > 0 && eff < 1000 {
 					allDriveEfficiencies = append(allDriveEfficiencies, eff)
 				}
@@ -157,13 +159,13 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 				insideTemps = append(insideTemps, *d.InsideTempAvgC)
 			}
 			// Temp vs efficiency scatter
-			if d.OutsideTempAvgC != nil && d.DistanceMi > 1 && d.EnergyUsedKwh != nil {
-				eff := (*d.EnergyUsedKwh * 1000) / d.DistanceMi
+			if d.OutsideTempAvgC != nil && distKm > 1 && d.EnergyUsedWh != nil {
+				eff := (*d.EnergyUsedWh) / distKm
 				if eff > 0 && eff < 1000 {
 					tempVsEfficiency = append(tempVsEfficiency, map[string]interface{}{
 						"temp":       math.Round(*d.OutsideTempAvgC*10) / 10,
 						"efficiency": math.Round(eff*10) / 10,
-						"distance":   math.Round(d.DistanceMi*10) / 10,
+						"distance":   math.Round(distKm*10) / 10,
 					})
 				}
 			}
@@ -174,19 +176,19 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 				dailyDriveAgg[dateKey] = map[string]interface{}{"drives": 0, "distance": 0.0}
 			}
 			dailyDriveAgg[dateKey]["drives"] = dailyDriveAgg[dateKey]["drives"].(int) + 1
-			dailyDriveAgg[dateKey]["distance"] = dailyDriveAgg[dateKey]["distance"].(float64) + d.DistanceMi
+			dailyDriveAgg[dateKey]["distance"] = dailyDriveAgg[dateKey]["distance"].(float64) + distKm
 		}
 
 		var energy, cost float64
 		for _, s := range sessions {
-			if s.StartTs.Before(cutoff) {
+			if s.StartedAt.Before(cutoff) {
 				continue
 			}
-			if s.EnergyAddedKwh != nil {
-				energy += *s.EnergyAddedKwh
+			if s.TotalEnergyAddedWh != nil {
+				energy += (*s.TotalEnergyAddedWh / 1000.0)
 			}
-			if s.Cost != nil {
-				cost += *s.Cost
+			if s.CostDecimal != nil {
+				cost += *s.CostDecimal
 			}
 
 			// Charger type analytics
@@ -197,45 +199,45 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 			chargerTypeMap[ct]++
 
 			// Charge power and duration
-			if s.ChargerPowerKwMax != nil {
-				chargePowers = append(chargePowers, *s.ChargerPowerKwMax)
+			if s.PeakPowerW != nil {
+				chargePowers = append(chargePowers, (*s.PeakPowerW / 1000.0))
 			}
-			if s.DurationMin != nil {
-				chargeDurations = append(chargeDurations, *s.DurationMin)
+			if dur := s.DurationMinutes(); dur != nil {
+				chargeDurations = append(chargeDurations, *dur)
 			}
-			if s.EnergyAddedKwh != nil {
-				chargeEnergies = append(chargeEnergies, *s.EnergyAddedKwh)
+			if s.TotalEnergyAddedWh != nil {
+				chargeEnergies = append(chargeEnergies, (*s.TotalEnergyAddedWh / 1000.0))
 			}
-			if s.Cost != nil {
-				chargeCosts = append(chargeCosts, *s.Cost)
+			if s.CostDecimal != nil {
+				chargeCosts = append(chargeCosts, *s.CostDecimal)
 			}
-			if s.StartBatteryPct != nil {
-				chargeStartBat = append(chargeStartBat, int(*s.StartBatteryPct))
+			if s.StartSocPct != nil {
+				chargeStartBat = append(chargeStartBat, int(*s.StartSocPct))
 			}
 
 			// Hour of day
-			chHour := s.StartTs.Hour()
+			chHour := s.StartedAt.Hour()
 			hourChargeCounts[chHour]++
-			if s.EnergyAddedKwh != nil {
-				hourChargeEnergy[chHour] += *s.EnergyAddedKwh
+			if s.TotalEnergyAddedWh != nil {
+				hourChargeEnergy[chHour] += (*s.TotalEnergyAddedWh / 1000.0)
 			}
 
 			// Monthly aggregation
-			monthKey := s.StartTs.Format("2006-01")
+			monthKey := s.StartedAt.Format("2006-01")
 			if monthlyChargeAgg[monthKey] == nil {
 				monthlyChargeAgg[monthKey] = map[string]interface{}{
 					"energy": 0.0, "cost": 0.0, "sessions": 0, "power_sum": 0.0,
 				}
 			}
-			if s.EnergyAddedKwh != nil {
-				monthlyChargeAgg[monthKey]["energy"] = monthlyChargeAgg[monthKey]["energy"].(float64) + *s.EnergyAddedKwh
+			if s.TotalEnergyAddedWh != nil {
+				monthlyChargeAgg[monthKey]["energy"] = monthlyChargeAgg[monthKey]["energy"].(float64) + (*s.TotalEnergyAddedWh / 1000.0)
 			}
-			if s.Cost != nil {
-				monthlyChargeAgg[monthKey]["cost"] = monthlyChargeAgg[monthKey]["cost"].(float64) + *s.Cost
+			if s.CostDecimal != nil {
+				monthlyChargeAgg[monthKey]["cost"] = monthlyChargeAgg[monthKey]["cost"].(float64) + *s.CostDecimal
 			}
 			monthlyChargeAgg[monthKey]["sessions"] = monthlyChargeAgg[monthKey]["sessions"].(int) + 1
-			if s.ChargerPowerKwMax != nil {
-				monthlyChargeAgg[monthKey]["power_sum"] = monthlyChargeAgg[monthKey]["power_sum"].(float64) + *s.ChargerPowerKwMax
+			if s.PeakPowerW != nil {
+				monthlyChargeAgg[monthKey]["power_sum"] = monthlyChargeAgg[monthKey]["power_sum"].(float64) + (*s.PeakPowerW / 1000.0)
 			}
 		}
 
@@ -261,7 +263,7 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 
 		// Battery trend from cagg_battery_daily
 		if h.db != nil {
-			const btCap = 75.0
+			const btCap = 75000.0
 			const btRange = 531.0
 			btRows, btErr := h.db.Pool.Query(r.Context(),
 				`SELECT bucket, end_soc, min_soc, max_soc
@@ -283,7 +285,7 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 					batteryTrend = append(batteryTrend, batteryPoint{
 						Date:        bucket.Format("2006-01-02"),
 						HealthScore: soc,
-						CapacityKWh: soc * btCap / 100,
+						CapacityWh:  soc * btCap / 100,
 						Degradation: 100 - soc,
 						RangeKm:     soc * btRange / 100,
 					})

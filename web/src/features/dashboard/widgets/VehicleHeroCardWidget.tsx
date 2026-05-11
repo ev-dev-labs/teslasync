@@ -6,7 +6,8 @@ import { AnimatedNumber } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -21,7 +22,10 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
   const id = vehicle?.id ?? 0;
   const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
   const state = stateData?.state;
-  const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings();
+  /* SI-floor: state.ideal_range in METERS, state.{inside,outside}_temp in °C. */
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const tempUnit = unitPrefs.temperature;
 
   const isCompact = size.cols <= 1 && size.rows <= 1;
   const isWide = size.cols >= 3;
@@ -35,18 +39,18 @@ export default function VehicleHeroCardWidget({ vehicleId, size }: WidgetProps) 
   }, [state]);
 
   const range = useMemo(
-    () => (state ? Math.round(convertDistance(state.ideal_range)) : null),
-    [state, convertDistance],
+    () => (state ? Math.round(convertDistanceFromSI(state.ideal_range ?? 0, distanceUnit)) : null),
+    [state, distanceUnit],
   );
 
   const insideTemp = useMemo(
-    () => (state?.inside_temp != null ? Math.round(convertTemp(state.inside_temp)) : null),
-    [state, convertTemp],
+    () => (state?.inside_temp != null ? Math.round(convertTempFromSI(state.inside_temp, tempUnit)) : null),
+    [state, tempUnit],
   );
 
   const outsideTemp = useMemo(
-    () => (state?.outside_temp != null ? Math.round(convertTemp(state.outside_temp)) : null),
-    [state, convertTemp],
+    () => (state?.outside_temp != null ? Math.round(convertTempFromSI(state.outside_temp, tempUnit)) : null),
+    [state, tempUnit],
   );
 
   return (

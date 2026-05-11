@@ -67,9 +67,44 @@ func TestRepoColumnsMatchSchema(t *testing.T) {
 		table  string
 		column string
 	}{
-		// drives — field renames from db-refactor
+		// drives — Phase-42 mig 000185 SI canonical schema.
 		{"drives", "id"},
 		{"drives", "vehicle_id"},
+		{"drives", "started_at"},
+		{"drives", "ended_at"},
+		{"drives", "duration_s"},
+		{"drives", "distance_m"},
+		{"drives", "avg_speed_mps"},
+		{"drives", "max_speed_mps"},
+		{"drives", "start_soc_pct"},
+		{"drives", "end_soc_pct"},
+		{"drives", "energy_used_wh"},
+		{"drives", "regen_energy_wh"},
+		{"drives", "avg_power_w"},
+		{"drives", "ambient_temp_c_avg"},
+
+		// fsm_transitions
+		{"fsm_transitions", "id"},
+		{"fsm_transitions", "ts"},
+		{"fsm_transitions", "vehicle_id"},
+		{"fsm_transitions", "from_state"},
+		{"fsm_transitions", "to_state"},
+		{"fsm_transitions", "trigger"},
+	}
+
+	// Also assert these columns do NOT exist (commonly confused old names
+	// or columns dropped by the SI canonical migration 000185).
+	mustNotExist := []struct {
+		table  string
+		column string
+	}{
+		// drives — old date/ambiguous names
+		{"drives", "start_date"},
+		{"drives", "end_date"},
+		{"drives", "distance"},
+		{"drives", "speed_max"},
+
+		// drives — pre-SI legacy column names (mig 000185 renamed these).
 		{"drives", "start_ts"},
 		{"drives", "end_ts"},
 		{"drives", "duration_min"},
@@ -84,59 +119,7 @@ func TestRepoColumnsMatchSchema(t *testing.T) {
 		{"drives", "outside_temp_avg_c"},
 		{"drives", "inside_temp_avg_c"},
 		{"drives", "score"},
-
-		// charging_sessions
-		{"charging_sessions", "id"},
-		{"charging_sessions", "vehicle_id"},
-		{"charging_sessions", "start_ts"},
-		{"charging_sessions", "end_ts"},
-		{"charging_sessions", "duration_min"},
-		{"charging_sessions", "energy_added_kwh"},
-		{"charging_sessions", "start_battery_pct"},
-		{"charging_sessions", "end_battery_pct"},
-		{"charging_sessions", "charger_power_kw_max"},
-		{"charging_sessions", "charger_power_kw_avg"},
-		{"charging_sessions", "charger_type"},
-		{"charging_sessions", "cost"},
-
-		// positions
-		{"positions", "vehicle_id"},
-		{"positions", "ts"},
-		{"positions", "latitude"},
-		{"positions", "longitude"},
-		{"positions", "speed_mph"},
-		{"positions", "elevation_m"},
-		{"positions", "heading"},
-
-		// fsm_transitions
-		{"fsm_transitions", "id"},
-		{"fsm_transitions", "ts"},
-		{"fsm_transitions", "vehicle_id"},
-		{"fsm_transitions", "from_state"},
-		{"fsm_transitions", "to_state"},
-		{"fsm_transitions", "trigger"},
-
-		// security_events
-		{"security_events", "vehicle_id"},
-		{"security_events", "ts"},
-		{"security_events", "event_type"},
-		{"security_events", "locked"},
-		{"security_events", "sentry_mode"},
-		{"security_events", "doors_open"},
-		{"security_events", "windows_open"},
-		{"security_events", "user_present"},
-	}
-
-	// Also assert these columns do NOT exist (commonly confused old names).
-	mustNotExist := []struct {
-		table  string
-		column string
-	}{
-		// drives — old date/ambiguous names
-		{"drives", "start_date"},
-		{"drives", "end_date"},
-		{"drives", "distance"},
-		{"drives", "speed_max"},
+		{"drives", "ended_status"},
 
 		// fsm_transitions — removed fields
 		{"fsm_transitions", "fsm_instance_id"},

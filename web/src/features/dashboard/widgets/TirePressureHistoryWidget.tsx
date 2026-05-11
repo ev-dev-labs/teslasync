@@ -7,11 +7,12 @@ import {
 } from '@/components/charts';
 import { useTirePressureHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertPressureFromSI } from '@/lib/unitConversion';
 
 /** Recommended PSI range in bar (2.4–2.8 bar ≈ 35–41 psi) */
 const RECOMMENDED_RANGE_BAR = { low: 2.4, high: 2.8 } as const;
@@ -33,17 +34,17 @@ interface ChartDatum {
 
 function buildChartData(
   data: ReturnType<typeof useTirePressureHistory>['data'],
-  convertPressure: (bar: number) => number,
+  toPressureDisplay: (bar: number) => number,
 ): ChartDatum[] {
   const items = data ?? [];
   return items
     .filter((d) => d.timestamp)
     .map((d) => ({
       time: d.timestamp,
-      fl: d.frontLeft != null ? convertPressure(d.frontLeft) : null,
-      fr: d.frontRight != null ? convertPressure(d.frontRight) : null,
-      rl: d.rearLeft != null ? convertPressure(d.rearLeft) : null,
-      rr: d.rearRight != null ? convertPressure(d.rearRight) : null,
+      fl: d.frontLeft != null ? toPressureDisplay(d.frontLeft) : null,
+      fr: d.frontRight != null ? toPressureDisplay(d.frontRight) : null,
+      rl: d.rearLeft != null ? toPressureDisplay(d.rearLeft) : null,
+      rr: d.rearRight != null ? toPressureDisplay(d.rearRight) : null,
     }))
     .sort((a, b) => a.time.localeCompare(b.time));
 }
@@ -69,7 +70,10 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { convertPressure, pressureUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toPressureDisplay = (value: number) => convertPressureFromSI(value, unitPrefs.pressure);
+
+  const pressureUnit = unitPrefs.pressure;
 
   const {
     data,
@@ -82,8 +86,8 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
   } = useTirePressureHistory(vid > 0 ? String(vid) : '');
 
   const chartData = useMemo(
-    () => buildChartData(data, convertPressure),
-    [data, convertPressure],
+    () => buildChartData(data, toPressureDisplay),
+    [data, toPressureDisplay],
   );
 
   const hasData = chartData.length > 0;
@@ -95,18 +99,18 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
   const latestRL = useMemo(() => latestNonNull(chartData, 'rl'), [chartData]);
   const latestRR = useMemo(() => latestNonNull(chartData, 'rr'), [chartData]);
 
-  const refLow = convertPressure(RECOMMENDED_RANGE_BAR.low);
-  const refHigh = convertPressure(RECOMMENDED_RANGE_BAR.high);
+  const refLow = toPressureDisplay(RECOMMENDED_RANGE_BAR.low);
+  const refHigh = toPressureDisplay(RECOMMENDED_RANGE_BAR.high);
 
-  const fmtPressure = (val: number | null): string =>
+  const formatPressure = (val: number | null): string =>
     val != null ? fmtNumber(val, 1) : '—';
 
   const stats: ChartSummaryStat[] = hasData
     ? [
-        { label: t('widget.tirePressureHistory.fl', 'FL'), value: fmtPressure(latestFL), unit: pressureUnit },
-        { label: t('widget.tirePressureHistory.fr', 'FR'), value: fmtPressure(latestFR), unit: pressureUnit },
-        { label: t('widget.tirePressureHistory.rl', 'RL'), value: fmtPressure(latestRL), unit: pressureUnit },
-        { label: t('widget.tirePressureHistory.rr', 'RR'), value: fmtPressure(latestRR), unit: pressureUnit },
+        { label: t('widget.tirePressureHistory.fl', 'FL'), value: formatPressure(latestFL), unit: pressureUnit },
+        { label: t('widget.tirePressureHistory.fr', 'FR'), value: formatPressure(latestFR), unit: pressureUnit },
+        { label: t('widget.tirePressureHistory.rl', 'RL'), value: formatPressure(latestRL), unit: pressureUnit },
+        { label: t('widget.tirePressureHistory.rr', 'RR'), value: formatPressure(latestRR), unit: pressureUnit },
       ]
     : [];
 

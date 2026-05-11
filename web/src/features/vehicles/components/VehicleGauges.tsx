@@ -5,7 +5,8 @@ import { FadeIn } from '@/components/motion/FadeIn'
 import { TeslaCarViz, parseModelKey } from '@/components/data-display/TeslaCarViz'
 import { RadialGauge } from '@/components/charts/RadialGauge'
 import { MetricBar } from '@/components/data-display/MetricBar'
-import { useSettings } from '@/hooks/useSettings'
+import { useUnits } from '@/hooks/useUnits'
+import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion'
 import { fmtNumber } from '@/lib/numberFormat'
 import { batteryColor } from '@/lib/colors'
 import type { Vehicle, VehicleState } from '@/api/types'
@@ -18,6 +19,18 @@ const COLOR = {
   MUTED: '#6b7280',
   BAD: '#ef4444',
 }
+
+/**
+ * Phase-43 / Prompt 0020 — gauge upper bounds expressed in SI so the
+ * RadialGauge percent fill reflects the same physical quantity regardless of
+ * the user's display preference (km/h vs mph, km vs mi).
+ *   600 mi  ≈ 965_606 m         — practical upper bound for rated range
+ *   250 mph ≈ 111.76 m/s        — practical upper bound for vehicle speed
+ *   100 mph ≈ 160_934.4 m/h     — supercharger-class charge-rate ceiling
+ */
+const MAX_RANGE_METERS = 600 * 1609.344
+const MAX_SPEED_MPS = 250 * 0.44704
+const MAX_CHARGE_RATE_METERS_PER_HOUR = 100 * 1609.344
 
 function boolColor(flag: boolean): string {
   return flag ? '#10b981' : '#ef4444'
@@ -34,7 +47,7 @@ interface VehicleGaugesProps {
 
 export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
   const { t } = useTranslation()
-  const { convertDistance, convertSpeed, distanceUnit, speedUnit } = useSettings()
+  const { unitPrefs, formatDistance } = useUnits()
 
   const chips = [
     {
@@ -58,6 +71,17 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
       color: COLOR.PURPLE,
     },
   ]
+
+  // Pre-convert SI values to user-pref numerics so RadialGauge / MetricBar
+  // receive matching value/max pairs in the SAME unit.
+  const rangeDisplay = convertDistanceFromSI(state.rated_range, unitPrefs.distance)
+  const rangeMax = convertDistanceFromSI(MAX_RANGE_METERS, unitPrefs.distance)
+  const speedDisplay = convertSpeedFromSI(state.speed, unitPrefs.speed)
+  const speedMax = convertSpeedFromSI(MAX_SPEED_MPS, unitPrefs.speed)
+  // ChargeRate is delivered as distance-per-hour (m/h) — convert through the
+  // distance pref, then label as `<unit>/h` to match the Tesla UX.
+  const chargeRateDisplay = convertDistanceFromSI(state.charge_rate, unitPrefs.distance)
+  const chargeRateMax = convertDistanceFromSI(MAX_CHARGE_RATE_METERS_PER_HOUR, unitPrefs.distance)
 
   return (
     <FadeIn delay={0.05}>
@@ -91,18 +115,18 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                 size={110}
               />
               <RadialGauge
-                value={Math.round(convertDistance(state.rated_range))}
-                max={Math.round(convertDistance(600))}
+                value={Math.round(rangeDisplay)}
+                max={Math.round(rangeMax)}
                 label={t('common.range', 'Range')}
-                unit={distanceUnit}
+                unit={unitPrefs.distance}
                 color={COLOR.CYAN}
                 size={110}
               />
               <RadialGauge
-                value={Math.round(convertSpeed(state.speed))}
-                max={Math.round(convertSpeed(250))}
+                value={Math.round(speedDisplay)}
+                max={Math.round(speedMax)}
                 label={t('common.speed', 'Speed')}
-                unit={speedUnit}
+                unit={unitPrefs.speed}
                 color={state.speed > 0 ? COLOR.PURPLE : COLOR.DARK}
                 size={110}
               />
@@ -126,19 +150,19 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                 sublabel={`${fmtNumber(state.battery_level, 0)}%`}
               />
               <MetricBar
-                value={convertDistance(state.rated_range)}
-                max={convertDistance(600)}
+                value={rangeDisplay}
+                max={rangeMax}
                 color={COLOR.CYAN}
                 label={t('common.estimatedRange', 'Estimated Range')}
-                sublabel={`${fmtNumber(convertDistance(state.rated_range))} ${distanceUnit}`}
+                sublabel={formatDistance(state.rated_range)}
               />
               {state.is_charging && (
                 <MetricBar
-                  value={convertSpeed(state.charge_rate)}
-                  max={state.charger_power || 100}
+                  value={chargeRateDisplay}
+                  max={chargeRateMax}
                   color="#10b981"
                   label={t('common.chargeRate', 'Charge Rate')}
-                  sublabel={`${fmtNumber(convertSpeed(state.charge_rate))} ${speedUnit} added`}
+                  sublabel={`${formatDistance(state.charge_rate)}/h`}
                 />
               )}
             </div>

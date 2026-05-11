@@ -9,11 +9,12 @@ function clamp(v: number, min: number, max: number) {
 }
 
 type DriveLike = {
-  distance_mi?: number | null
-  distanceMi?: number | null
-  duration_min?: number | null
-  max_speed_mph?: number | null
-  maxSpeedMph?: number | null
+  distance_m?: number | null
+  distanceM?: number | null
+  duration_s?: number | null
+  durationS?: number | null
+  max_speed_mps?: number | null
+  maxSpeedMps?: number | null
   start_battery_pct?: number | null
   startBatteryPct?: number | null
   end_battery_pct?: number | null
@@ -22,32 +23,39 @@ type DriveLike = {
 }
 
 export function computeDriveScore(drive: DriveLike): { total: number; efficiency: number; speed: number; range: number; trip: number } {
-  const distance = drive.distance_mi ?? drive.distanceMi ?? 0
-  const durationMin = drive.duration_min ?? 0
-  const avgSpeed = durationMin > 0 ? (distance / (durationMin / 60)) : 0
-  const maxSpeed = drive.max_speed_mph ?? drive.maxSpeedMph ?? avgSpeed
+  // Phase-48 Slice 1: Drive fields are SI canonical (meters, seconds, m/s).
+  const distanceM = drive.distance_m ?? drive.distanceM ?? 0
+  const distanceKm = distanceM / 1000
+  const durationS = drive.duration_s ?? drive.durationS ?? 0
+  const durationHours = durationS / 3600
+  const avgSpeedMps = durationS > 0 ? distanceM / durationS : 0
+  const maxSpeedMps = drive.max_speed_mps ?? drive.maxSpeedMps ?? avgSpeedMps
   const startBattery = drive.start_battery_pct ?? drive.startBatteryPct ?? 100
   const endBattery = drive.end_battery_pct ?? drive.endBatteryPct ?? startBattery
 
   // Efficiency component (40 pts): closer to optimal 150 Wh/km is better
   const batteryUsed = Math.max(startBattery - endBattery, 0)
   // Estimate Wh/km: assume ~75 kWh usable battery, each % = 750 Wh
-  const whPerKm = distance > 0 ? (batteryUsed * 750) / distance : 250
+  const whPerKm = distanceKm > 0 ? (batteryUsed * 750) / distanceKm : 250
   const optimalWhKm = 150
   const effDeviation = Math.abs(whPerKm - optimalWhKm) / optimalWhKm
   const efficiency = clamp(40 * (1 - effDeviation), 0, 40)
 
   // Speed discipline (20 pts): avg/max ratio — smooth driving scores higher
-  const speedRatio = maxSpeed > 0 ? avgSpeed / maxSpeed : 0.5
+  const speedRatio = maxSpeedMps > 0 ? avgSpeedMps / maxSpeedMps : 0.5
   const speed = clamp(20 * speedRatio, 0, 20)
 
   // Range preservation (20 pts): less battery used per km
-  const batteryPerKm = distance > 0 ? batteryUsed / distance : 1
+  const batteryPerKm = distanceKm > 0 ? batteryUsed / distanceKm : 1
   // Best case: 0.1%/km, worst case: 1%/km
   const rangeScore = clamp(20 * (1 - (batteryPerKm - 0.1) / 0.9), 0, 20)
 
   // Trip length (20 pts): longer trips score higher (plateau at 50km)
-  const tripScore = clamp(20 * Math.min(distance / 50, 1), 0, 20)
+  const tripScore = clamp(20 * Math.min(distanceKm / 50, 1), 0, 20)
+
+  // Reference durationHours so it's part of the contract; reserved for
+  // future heuristics (e.g. dwell penalty for slow city driving).
+  void durationHours
 
   const total = Math.round(clamp(efficiency + speed + rangeScore + tripScore, 0, 100))
 

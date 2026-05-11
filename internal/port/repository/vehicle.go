@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/domain/vehicle"
 )
@@ -17,8 +16,7 @@ type VehicleRepository interface {
 	GetByIDForUpdate(ctx context.Context, id string) (*vehicle.Vehicle, error)
 }
 
-// VehicleStateRepository provides vehicle state snapshot operations.
-type VehicleStateRepository interface {
-	SaveSnapshot(ctx context.Context, vehicleID string, state map[string]interface{}, timestamp time.Time) error
-	GetLatestSnapshot(ctx context.Context, vehicleID string) (map[string]interface{}, error)
-}
+// Phase-42 (prompt 0077): VehicleStateRepository was deleted alongside the
+// vehicle_states table. Current vehicle state is now derived from the
+// in-memory FSM (internal/api/fsm_handler.go) and durably logged via
+// fsm_transitions; the snapshot-row contract had no SI replacement.

@@ -86,7 +86,14 @@ export default function StateMachineDebuggerPage() {
   /* ─── FSM filters ─── */
   const initialFsm = (searchParams.get('fsm') ?? 'all') as FSMType;
   const [fsmType, setFsmType] = useState<FSMType>(initialFsm);
-  const [hours, setHours] = useState('24');
+  /* Default 7d so the debugger surfaces recent dev/replay activity by default;
+   * 24h was misleading whenever the last transition was older than a day.
+   * Persisted to ?range= so shared permalinks preserve the operator's window. */
+  const [hours, setHours] = useState<string>(() => {
+    const fromUrl = searchParams.get('range');
+    const allowed = new Set(HOURS_OPTIONS.map((opt) => opt.value));
+    return fromUrl && allowed.has(fromUrl) ? fromUrl : '168';
+  });
   const [serverPage, setServerPage] = useState(1);
   const [perPage, setPerPage] = useState(50);
 
@@ -153,7 +160,7 @@ export default function StateMachineDebuggerPage() {
       const key = tr.to_state;
       counts.set(key, (counts.get(key) ?? 0) + 1);
       const list = byState.get(key) ?? [];
-      list.push(new Date(tr.created_at).getTime());
+      list.push(new Date(tr.ts).getTime());
       byState.set(key, list);
     }
 
@@ -222,30 +229,30 @@ export default function StateMachineDebuggerPage() {
         header: t('fsm.time', 'Time'),
         render: (row: FSMTransition) => (
           <TimeStamp
-            value={row.created_at}
+            value={row.ts}
             className="text-[var(--text-secondary)] font-mono text-xs whitespace-nowrap"
           />
         ),
       },
       {
-        key: 'fsm_type',
-        header: t('fsm.type', 'FSM Type'),
+        key: 'fsm_name',
+        header: t('fsm.type', 'FSM'),
         render: (row: FSMTransition) => (
-          <span className="text-[var(--text-secondary)] text-xs font-mono capitalize">{row.fsm_type?.replace('_', ' ') ?? 'vehicle'}</span>
+          <span className="text-[var(--text-secondary)] text-xs font-mono capitalize">{row.fsm_name?.replace('_', ' ') ?? 'vehicle'}</span>
         ),
       },
       {
         key: 'from_state',
         header: t('fsm.from', 'From'),
         render: (row: FSMTransition) => (
-          <StateBadge state={row.from_state} fsmType={row.fsm_type || 'vehicle'} />
+          <StateBadge state={row.from_state} fsmType={row.fsm_name || 'vehicle'} />
         ),
       },
       {
         key: 'to_state',
         header: t('fsm.to', 'To'),
         render: (row: FSMTransition) => (
-          <StateBadge state={row.to_state} fsmType={row.fsm_type || 'vehicle'} />
+          <StateBadge state={row.to_state} fsmType={row.fsm_name || 'vehicle'} />
         ),
       },
       {
@@ -291,6 +298,17 @@ export default function StateMachineDebuggerPage() {
     label: o.label,
   }));
 
+  /* Resolve the active range's human label for empty-state copy so users see
+   * "No transitions in Last 24 hours" rather than a generic "no data" message. */
+  const activeRangeLabel = useMemo(
+    () => HOURS_OPTIONS.find((o) => o.value === hours)?.label ?? hours,
+    [hours],
+  );
+  const emptyRangeMessage = t('fsm.noTransitionsInRange', {
+    range: activeRangeLabel,
+    defaultValue: 'No transitions in {{range}}. Try expanding the time range.',
+  });
+
   const fsmTypeOptions = FSM_TYPE_OPTIONS.map((o) => ({
     value: o.value,
     label: o.label,
@@ -307,14 +325,14 @@ export default function StateMachineDebuggerPage() {
 
   // Map transitions for timeline chart: use to_state as the grouping key
   const timelineTransitions = useMemo(() =>
-    transitions.map(tr => ({ ...tr, fsm_type: tr.to_state })),
+    transitions.map(tr => ({ ...tr, fsm_name: tr.to_state })),
     [transitions],
   );
 
   /* ─── Phase 40 / Prompt 58 — derived selection + step navigation ─── */
   const sortedByTime = useMemo(
     () => [...transitions].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      (a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime(),
     ),
     [transitions],
   );
@@ -335,7 +353,7 @@ export default function StateMachineDebuggerPage() {
 
   const visibleTransitions = useMemo(() => {
     if (!bufferClearedAt) return sortedByTime;
-    return sortedByTime.filter((tr) => new Date(tr.created_at) >= bufferClearedAt);
+    return sortedByTime.filter((tr) => new Date(tr.ts) >= bufferClearedAt);
   }, [sortedByTime, bufferClearedAt]);
 
   /* Phase 45 / Prompt 35 — single source of truth for windowing. The page,
@@ -351,7 +369,7 @@ export default function StateMachineDebuggerPage() {
     if (windowed.inWindow.length > 0) return null;
     if (!windowed.lastTransition) return null;
     return nextWiderPreset(
-      new Date(windowed.lastTransition.created_at).getTime(),
+      new Date(windowed.lastTransition.ts).getTime(),
       windowed.anchor,
       windowMinutes,
     );
@@ -394,8 +412,8 @@ export default function StateMachineDebuggerPage() {
   }, []);
 
   /* ─── Snapshot hooks: live (when no `at`) + selected/previous (when frozen) ─── */
-  const selectedAtIso = selectedTransition?.created_at ?? '';
-  const previousAtIso = previousTransition?.created_at ?? '';
+  const selectedAtIso = selectedTransition?.ts ?? '';
+  const previousAtIso = previousTransition?.ts ?? '';
   const numericVehicleId = Number(activeId) || 0;
 
   const { data: selectedSnapshot, isFetching: snapshotFetching } = useSignalSnapshot(
@@ -412,19 +430,21 @@ export default function StateMachineDebuggerPage() {
     { enabled: numericVehicleId > 0 && Boolean(previousAtIso) },
   );
 
-  /* ─── Permalink: keep ?vehicle / ?fsm / ?selected / ?at in sync ─── */
+  /* ─── Permalink: keep ?vehicle / ?fsm / ?range / ?selected / ?at in sync ─── */
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
     if (activeId) next.set('vehicle', activeId);
     else next.delete('vehicle');
     if (fsmType && fsmType !== 'all') next.set('fsm', fsmType);
     else next.delete('fsm');
+    if (hours && hours !== '168') next.set('range', hours);
+    else next.delete('range');
     if (selectedId != null) next.set('selected', String(selectedId));
     else next.delete('selected');
     if (!isLive && selectedAtIso) next.set('at', selectedAtIso);
     else next.delete('at');
     setSearchParams(next, { replace: true });
-  }, [activeId, fsmType, selectedId, isLive, selectedAtIso, searchParams, setSearchParams]);
+  }, [activeId, fsmType, hours, selectedId, isLive, selectedAtIso, searchParams, setSearchParams]);
 
   const permalinkUrl = useMemo(() => {
     if (typeof window === 'undefined') return '';
@@ -621,7 +641,7 @@ export default function StateMachineDebuggerPage() {
           />
           <div data-tour="debugger-source-badges">
           <SnapshotInspector
-            fsmType={selectedTransition?.fsm_type || (fsmType === 'all' ? 'vehicle' : fsmType)}
+            fsmType={selectedTransition?.fsm_name || (fsmType === 'all' ? 'vehicle' : fsmType)}
             transition={selectedTransition}
             snapshot={selectedSnapshot ?? null}
             previousSnapshot={previousSnapshot ?? null}
@@ -690,7 +710,7 @@ export default function StateMachineDebuggerPage() {
                 </div>
               </div>
             ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noStats', 'No transition data recorded')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyRangeMessage} />
             )}
           </ChartContainer>
         </FadeIn>
@@ -710,7 +730,7 @@ export default function StateMachineDebuggerPage() {
                 keyExtractor={(row) => row.to_state}
               />
             ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noTransitions', 'No transitions recorded')} />
+              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyRangeMessage} />
             )}
           </GlassPanel>
         </FadeIn>
@@ -744,7 +764,7 @@ export default function StateMachineDebuggerPage() {
 
       {/* ──── Section 8: Transition Timeline Chart ──── */}
       <FadeIn delay={0.3}>
-        <FSMTimelineChart transitions={timelineTransitions} hours={Number(hours)} />
+        <FSMTimelineChart transitions={timelineTransitions} hours={Number(hours)} emptyMessage={emptyRangeMessage} />
       </FadeIn>
 
       {/* ──── Section 9: Transition Table ──── */}
@@ -786,7 +806,7 @@ export default function StateMachineDebuggerPage() {
               />
             </>
           ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noTimeline', 'No transitions in selected time range')} />
+            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyRangeMessage} />
           )}
         </GlassPanel>
       </FadeIn>
@@ -822,56 +842,56 @@ function TransitionDetail({ transition }: { transition: FSMTransition }) {
         <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.vehicleId', 'Vehicle ID')}</span>
         <span className="text-[var(--text-primary)] font-mono">{transition.vehicle_id}</span>
       </div>
-      {transition.fsm_instance_id != null && (
+      {transition.fsm_name && (
         <div>
-          <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.instanceId', 'Instance ID')}</span>
-          <span className="text-[var(--text-primary)] font-mono">{transition.fsm_instance_id}</span>
+          <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.name', 'FSM Name')}</span>
+          <span className="text-[var(--text-primary)] font-mono">{transition.fsm_name}</span>
         </div>
       )}
       <div>
         <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.from', 'From State')}</span>
-        <StateBadge state={transition.from_state} fsmType={transition.fsm_type || 'vehicle'} />
+        <StateBadge state={transition.from_state} fsmType={transition.fsm_name || 'vehicle'} />
       </div>
       <div>
         <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.to', 'To State')}</span>
-        <StateBadge state={transition.to_state} fsmType={transition.fsm_type || 'vehicle'} />
+        <StateBadge state={transition.to_state} fsmType={transition.fsm_name || 'vehicle'} />
       </div>
       <div>
         <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.trigger', 'Trigger')}</span>
         <span className="text-[var(--text-primary)] font-mono">{transition.trigger}</span>
       </div>
-      {transition.guard && (
+      {typeof transition.details?.guard === 'string' && transition.details.guard && (
         <div>
           <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.guard', 'Guard')}</span>
-          <span className="text-[var(--text-primary)] font-mono">{transition.guard}</span>
+          <span className="text-[var(--text-primary)] font-mono">{String(transition.details.guard)}</span>
         </div>
       )}
-      {transition.duration_in_state_ms > 0 && (
+      {typeof transition.details?.duration_in_state_ms === 'number' && transition.details.duration_in_state_ms > 0 && (
         <div>
           <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.duration', 'Duration in State')}</span>
-          <span className="text-[var(--text-primary)] font-mono">{formatDuration(transition.duration_in_state_ms / 1000)}</span>
+          <span className="text-[var(--text-primary)] font-mono">{formatDuration((transition.details.duration_in_state_ms as number) / 1000)}</span>
         </div>
       )}
       <div className="sm:col-span-2 lg:col-span-4">
         <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.timestamp', 'Timestamp')}</span>
         <TimeStamp
-          value={transition.created_at}
+          value={transition.ts}
           format="absolute"
           className="text-[var(--text-primary)] font-mono"
         />
         <span className="ml-2">
           <TimeStamp
-            value={transition.created_at}
+            value={transition.ts}
             format="relative"
             className="text-[var(--text-muted)]"
           />
         </span>
       </div>
-      {transition.context_snapshot && Object.keys(transition.context_snapshot).length > 0 && (
+      {transition.details && Object.keys(transition.details).length > 0 && (
         <div className="sm:col-span-2 lg:col-span-4">
-          <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.context', 'Context Snapshot')}</span>
+          <span className="text-[var(--text-muted)] block mb-1">{t('fsm.detail.context', 'Details')}</span>
           <div className="flex flex-wrap gap-2 mt-1">
-            {Object.entries(transition.context_snapshot).map(([key, val]) => (
+            {Object.entries(transition.details).map(([key, val]) => (
               <span key={key} className="px-2 py-0.5 rounded bg-white/[0.04] text-[var(--text-secondary)] font-mono text-[10px]">
                 {key}: {String(val)}
               </span>

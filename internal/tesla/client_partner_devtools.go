@@ -6,11 +6,18 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // RegisterPartner calls POST /api/1/partner_accounts to register this app in the current region.
 // It requires the partner token (client_credentials), not the user's OAuth token.
-func (c *Client) RegisterPartner(ctx context.Context, partnerToken, domain string) ([]byte, int, error) {
+func (c *Client) RegisterPartner(ctx context.Context, partnerToken, domain string) (respBody []byte, statusCode int, err error) {
+	ctx, span := startSpan(ctx, "tesla.RegisterPartner",
+		attribute.String("tesla.partner.domain", domain),
+	)
+	defer endSpan(span, &err)
+
 	body := fmt.Sprintf(`{"domain":"%s"}`, domain)
 	return c.doRequestWithToken(ctx, http.MethodPost, "/api/1/partner_accounts", bytes.NewReader([]byte(body)), partnerToken)
 }

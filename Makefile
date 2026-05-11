@@ -1,4 +1,4 @@
-.PHONY: all build build-worker build-export-worker run test lint clean docker docker-up docker-down migrate web check coverage quality pre-commit
+.PHONY: all build build-worker build-export-worker run test lint clean docker docker-up docker-down migrate web check coverage quality pre-commit gen-tesla gen-tesla-check arch-baseline arch-check
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -105,6 +105,27 @@ helm-install:
 ## helm-uninstall: Uninstall Helm chart
 helm-uninstall:
 	helm uninstall teslasync
+
+## gen-tesla: Regenerate Tesla protomodel sources from the vendored proto
+gen-tesla:
+	go generate ./internal/tesla/protomodel/...
+
+## gen-tesla-check: Fail if generated Tesla protomodel sources drift from the proto
+gen-tesla-check: gen-tesla
+	@if ! git diff --quiet -- internal/tesla/protomodel/; then \
+		echo "ERROR: generated files are out of sync with proto"; \
+		git --no-pager diff -- internal/tesla/protomodel/; \
+		exit 1; \
+	fi
+
+## arch-baseline: Refresh the architecture metrics baseline (JSON + Markdown)
+arch-baseline:
+	go run ./tools/archmetrics > tools/archmetrics/baseline.json
+	go run ./tools/archmetrics -report > tools/archmetrics/baseline.md
+
+## arch-check: Fail if architecture regresses against the committed baseline
+arch-check:
+	go run ./tools/archmetrics -compare tools/archmetrics/baseline.json
 
 ## help: Show this help message
 help:

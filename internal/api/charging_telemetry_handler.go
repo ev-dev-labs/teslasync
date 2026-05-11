@@ -22,6 +22,7 @@ import (
 // state at time.Now() via StateReader.State.
 type ChargingTelemetryHandler struct {
 	state signal.StateReader
+	live  signal.LiveStateReader
 }
 
 // Signal → JSON field mappings for charging telemetry projection.
@@ -29,24 +30,24 @@ type ChargingTelemetryHandler struct {
 var chargingTelemetryMappings = []signal.FieldMapping{
 	{Signal: "ChargerVoltage", Field: "charger_voltage"},
 	{Signal: "ChargerActualCurrent", Field: "charger_actual_current"},
-	{Signal: "ChargeRateMilePerHour", Field: "charge_rate_mph"},
+	{Signal: "ChargeRateMilePerHour", Field: "range_added_meters_per_hour"},
 	{Signal: "PackVoltage", Field: "pack_voltage"},
 	{Signal: "PackCurrent", Field: "pack_current"},
 	{Signal: "Soc", Field: "soc"},
 	{Signal: "BatteryLevel", Field: "battery_level"},
-	{Signal: "ACChargingEnergyIn", Field: "charge_energy_added_kwh"},
+	{Signal: "ACChargingEnergyIn", Field: "charge_energy_added_wh"},
 	{Signal: "DCChargingEnergyIn", Field: "energy_added_dc"},
 	{Signal: "TimeToFullCharge", Field: "time_to_full_charge"},
 	{Signal: "BrickVoltageMax", Field: "brick_voltage_max"},
 	{Signal: "BrickVoltageMin", Field: "brick_voltage_min"},
-	{Signal: "ACChargingPower", Field: "charger_power_kw"},
+	{Signal: "ACChargingPower", Field: "charger_power_w"},
 	{Signal: "ChargerPhases", Field: "charger_phases"},
 	{Signal: "IdealBatteryRange", Field: "battery_range_mi"},
 	{Signal: "ChargeState", Field: "charging_state"},
 }
 
-func NewChargingTelemetryHandler(state signal.StateReader) *ChargingTelemetryHandler {
-	return &ChargingTelemetryHandler{state: state}
+func NewChargingTelemetryHandler(state signal.StateReader, live signal.LiveStateReader) *ChargingTelemetryHandler {
+	return &ChargingTelemetryHandler{state: state, live: live}
 }
 
 // List returns charging telemetry history from the signal-log change feed.
@@ -89,7 +90,7 @@ func (h *ChargingTelemetryHandler) Latest(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	snap, err := h.state.State(r.Context(), vehicleID, time.Now())
+	snap, err := h.live.LiveState(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest charging telemetry")
 		writeError(w, http.StatusInternalServerError, "failed to get latest charging telemetry")
@@ -103,10 +104,10 @@ func (h *ChargingTelemetryHandler) Latest(w http.ResponseWriter, r *http.Request
 		}
 	}
 	// Merge DC power: for DC fast-charging, DCChargingPower is the active value.
-	// Override charger_power_kw (from ACChargingPower) when DC power is positive.
+	// Override charger_power_w (from ACChargingPower) when DC power is positive.
 	if dcVal, ok := snap["DCChargingPower"]; ok {
 		if dc, dcOk := toFloatOk(dcVal); dcOk && dc > 0 {
-			result["charger_power_kw"] = dcVal
+			result["charger_power_w"] = dcVal
 		}
 	}
 	writeJSON(w, http.StatusOK, result)

@@ -80,20 +80,67 @@ TeslaSync is a **self-hosted Tesla Fleet Intelligence Platform** — Go 1.25 bac
 Collects, analyzes, and visualizes Tesla vehicle data via Fleet API + Fleet Telemetry streaming.
 **Repository:** `github.com/ev-dev-labs/teslasync`
 
-## ⚠️ ACTIVE MIGRATION: Phase-42 — Tesla Fleet Telemetry Pipeline Rewrite
+## ⚠️ ACTIVE MIGRATION: Phase-48 — SI Canonical Mega-PR (no legacy)
 
-> **Status:** prompts authored under `.github/prompts/db-refactor/phase-42/`,
-> reviewed by Staff + Principal Engineer + Principal Architect, awaiting
-> execution. **Forward-only — no legacy retention.** When phase-42 lands,
-> ADR-004 (`.github/ARCHITECTURE.md`) and `.github/instructions/tesla-pipeline.instructions.md`
-> become the canonical sources. Until then, the rules below apply to any
-> concurrent agent work.
+> **Status:** methodology committed, execution pending. Branch
+> `refactor/signals-rewrite`, methodology at
+> `.github/prompts/db-refactor/phase-48-si-canonical/0000-methodology.prompt.md`,
+> pre-execution decisions locked at HEAD `66b5705c`. User mandate (verbatim):
+> *"we need just the new one. and all must use the new one. no legacy"* —
+> single mega-PR across 6 vertical slices, no temporary dual-shape adapters
+> beyond the explicit Slice 4 share-link transition.
+>
+> Renames every legacy unit-suffixed Go field
+> (`DistanceMi`, `DurationMin`, `EnergyUsedKwh`, `RegenKwh`, `AvgSpeedMph`,
+> `MaxSpeedMph`, `AvgPowerKw` and 97 peers across `Trip`, `ChargingSession`,
+> `EnergyDailySummary`, etc.) to SI canonical (`DistanceM`, `DurationS`,
+> `EnergyUsedWh`, …`Mps`, …`W`). Frontend `useSettings.ts` legacy converter
+> block + `unitConversion.ts` `@deprecated` block are DELETED in Slice 5 —
+> DO NOT add new callers of the legacy helpers.
+
+```
+❌ DO NOT add new Go struct fields with `Mi`/`Min`/`Mph`/`Kwh`/`Kw`/`Psi` suffixes
+   — use `M`, `S`, `Mps`, `Wh`, `W`, `Kpa` instead.
+❌ DO NOT add new JSON/DB column names ending in `_mi`/`_min`/`_mph`/`_kwh`/`_kw`/`_psi`
+   — use `_m`/`_s`/`_mps`/`_wh`/`_w`/`_kpa`.
+❌ DO NOT call `useSettings()`'s legacy converter block
+   (`convertDistance`/`convertSpeed`/`convertTemp`/`convertEfficiency`/
+   `convertPressure`/`fmtDistance`/`fmtSpeed`/`fmtTemp`/`fmtPressure`)
+   — being deleted in Slice 5.
+❌ DO NOT call any `@deprecated`-marked function in
+   `web/src/lib/unitConversion.ts` (block at L397+).
+✅ DO read SI directly from the API. Phase-42 migration 000185 already
+   stores everything as SI in the database.
+✅ DO convert at the display boundary using `useUnits()` (web/src/hooks/useUnits.ts)
+   + the SI converters/formatters in `web/src/lib/unitConversion.ts` (L1-395).
+✅ DO check the methodology document's 6-slice plan + 5 risk register
+   (R1 write-path corruption, R2 charge_rate_mph misname, R3 OpenAPI
+   contract, R4 camelCaseKeys dual-shape, R5 useSettings non-unit responsibilities)
+   before starting any change that touches a unit-suffixed field.
+```
+
+If you find yourself touching a Drive/Charging/Trip/Energy struct field
+mid-stream, STOP and read
+`.github/prompts/db-refactor/phase-48-si-canonical/0000-methodology.prompt.md`.
+Slice ordering matters — out-of-order edits introduce write-path corruption.
+
+## ✅ COMPLETED MIGRATION: Phase-42 — Tesla Fleet Telemetry Pipeline Rewrite
+
+> **Status:** COMPLETE. Phase-42 final-gate v2 PASSED at commit `b1dd7ea4`
+> (see `.github/prompts/db-refactor/logs/phase-42-9999v2-final-gate.log`).
+> The v1 gate (`9999-final-gate.log`) is BLOCKED on log-discipline gaps;
+> v2 supersedes it via artifact-coverage verification.
+> ADR-004 (`.github/ARCHITECTURE.md`) and
+> `.github/instructions/tesla-pipeline.instructions.md` are now the canonical
+> sources for all Tesla pipeline work. Pre-tag the repo as `phase-42-complete`
+> before starting subsequent phases — phase-42 contains one-way DROP CASCADE
+> + tombstone operations.
 
 ```
 ❌ DO NOT add new code under `internal/telemetry/*`
-   — the directory is being deleted by phase-42 prompt 0080.
+   — the directory was deleted by phase-42 prompt 0080.
 ❌ DO NOT add new hand-written enum parsers under `internal/enums/parse_*`
-   — being replaced by generated code from the vendored Tesla proto.
+   — replaced by generated code from the vendored Tesla proto.
 ❌ DO NOT add new tables that mirror Fleet Telemetry fields directly
    — phase-42 routes everything through `internal/tesla/normalize.Pipeline`.
 ❌ DO NOT bypass `signal.Store` (L1) by writing to Redis or signal_log directly
@@ -114,9 +161,12 @@ Collects, analyzes, and visualizes Tesla vehicle data via Fleet API + Fleet Tele
 ```
 
 If you find yourself wanting to bend any of these rules, STOP and consult
-the user — phase-42 may need to be revisited rather than worked around.
+the user — phase-42's locked decisions in ADR-004 may need to be revisited
+rather than worked around.
 
 ## Architecture
+
+> Telemetry-pipeline rules: see .github/instructions/tesla-pipeline.instructions.md
 
 ```
 React SPA (Vite 5) ──▶ Nginx reverse proxy ──▶ Go API Server (:8080)
@@ -384,6 +434,46 @@ completion logic.
 ❌ DO NOT claim FSM/reconciliation is active-active across pods without vehicle-owner routing, leases, or pod affinity
 ❌ DO NOT treat Redis Pub/Sub SSE as durable replay; clients recover missed state through polling/live reads
 ```
+
+### Telemetry Pipeline End-to-End (Phase-42)
+
+> Full diagram + decision record: `.github/ARCHITECTURE.md` ADR-004.
+> Detailed file-level rules: `.github/instructions/tesla-pipeline.instructions.md`.
+
+**The flow (memorize this — every backend change touches it):**
+
+```
+Vehicle ─mTLS▶ Fleet Telemetry ─MQTT▶ PipelineSubscriber ─▶ Codec ─▶ normalize.Pipeline ─▶ Router ─▶ Writers ─▶ {dest tables, signal_log}
+                                       (telemetry/{VIN}/v/  (per-field    (ToSI per vehicle units)   (routing.yaml)              │
+                                          {Field};            JSON body                                                            │
+                                          filter              → []Atomic)                                                          │
+                                          {base}/+/v/+)                                                                            │
+                                                                                                                                   ├─▶ signal.Store (L1, in-process)
+                                                                                                                                   ├─▶ Redis HSET vehicle:{id}:signals (L2, cross-pod)
+                                                                                                                                   └─▶ Redis Pub/Sub ─▶ SSE hub ─▶ SPA EventSource
+                                                                                                                                                                FSM (drive/charge/park, 15s reconciliation)
+                                                                                                                                                                REST handlers (history reads from signal_log)
+```
+
+**Five rules every agent must internalize:**
+
+1. **`normalize.Pipeline.ProcessAtomics` is THE one ingest entry.** Adding any other path is forbidden — a reflective coverage test enforces this and `mqtt.Pipeline` exposes only this method. Vendor-specific decode goes in `internal/tesla/*`; vendor-agnostic signal primitives go in `internal/signal/*`.
+2. **The pipeline writes SI on disk.** Meters, m/s, °C, Pa, Wh. Never miles, mph, °F, psi, kWh in any DB column, API field, Go struct field, or TS interface. User display preference is applied **only** at the React render boundary by `useUnits()` / `useFormatting()`.
+3. **`routing.yaml` is field-static and vehicle-agnostic.** Per-vehicle or value-conditional routing is forbidden by ADR-004 #8. To route a new field: re-vendor proto → `go generate ./internal/tesla/protomodel/...` → add a routing.yaml entry → done.
+4. **Failure semantics are split.** Codec failures (malformed JSON, kind mismatch, unknown enum) wrap `codec.ErrPayloadDrop` and route to the DLQ via `handlePipelineError` (the broker is acked so it never redelivers a poison pill). Writer failures (DB down, schema mismatch) MUST be logged + counted via `tesla_router_writer_failures_total` and NEVER propagate to MQTT redelivery — otherwise a stuck table blocks the whole stream.
+5. **Live state is layered, not replaced.** L1 `signal.Store` for hot paths (FSM, sessions). L2 Redis for cross-pod + restart recovery. Durable `signal_log` for charts, replay, point-in-time. Don't bypass L1 by reading Redis directly in FSM/telemetry/session code paths.
+
+**The proto identifier paradox:** Tesla's vendored proto has misnamed fields (e.g. field 256 `ChargeRateMilePerHour` whose wire content is *meters of range added per hour*). The proto identifier is upstream-owned and immutable — our generator MUST emit it verbatim. The semantic truth lives in three places: the SignalMeta `UnitKind` (e.g. `UnitKindDistance` not `UnitKindSpeed`), the JSON wire field name (`range_added_meters_per_hour`), and an audit-pin test (`TestRangeAddedMetersPerHour_R2_AuditPin`). Renaming the proto identifier silently breaks runtime telemetry plumbing — see the Phase-48 R2 finding.
+
+**Boot-time sanity** (look for these lines in `docker logs teslasync-api`):
+```
+"phase-42 PipelineSubscriber started" topic=telemetry/+/v/+ max_redeliveries=5
+"phase-42a: fleet-telemetry PipelineSubscriber active" writer_count=12
+"signal store hydrated from signal_log via stateReader"
+"FSM vehicle state engine active — declarative transition table with 20 transitions"
+"SSE event hub: Redis Pub/Sub subscription started"
+```
+If any of these are missing, the pipeline is degraded — investigate before assuming the system is healthy.
 
 ## Engineering Principles
 

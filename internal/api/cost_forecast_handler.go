@@ -90,14 +90,18 @@ func (h *CostForecastHandler) GetForecast(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 
 	// ── 1. Monthly cost aggregation ──────────────────────────
+	// Phase-42 (000184_charging_si): SI canonical columns. cost_decimal
+	// replaces cost; total_energy_added_wh / 1000.0 yields kWh; started_at
+	// replaces the legacy timestamp column. The historicalMonth.KWh JSON shape (kWh, not Wh)
+	// is preserved by the conversion at the SQL boundary.
 	rows, err := h.db.Pool.Query(ctx, `
-		SELECT DATE_TRUNC('month', start_ts) AS month,
-		       SUM(cost) AS total_cost,
-		       SUM(energy_added_kwh) AS total_kwh,
-		       COUNT(*) AS sessions,
-		       AVG(cost / NULLIF(energy_added_kwh, 0)) AS avg_cost_per_kwh
+		SELECT DATE_TRUNC('month', started_at)                                AS month,
+		       SUM(cost_decimal)                                              AS total_cost,
+		       SUM(total_energy_added_wh) / 1000.0                            AS total_kwh,
+		       COUNT(*)                                                       AS sessions,
+		       AVG(cost_decimal / NULLIF(total_energy_added_wh / 1000.0, 0))  AS avg_cost_per_kwh
 		FROM charging_sessions
-		WHERE vehicle_id = $1 AND cost > 0
+		WHERE vehicle_id = $1 AND cost_decimal > 0
 		GROUP BY month ORDER BY month`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("cost-forecast: monthly query failed")
@@ -267,16 +271,21 @@ func (h *CostForecastHandler) computeBreakdown(ctx interface{ Deadline() (time.T
 	var homeCost, homekWh, scCost, sckWh float64
 	var homeCount, scCount int
 
+	// Phase-42 (000184_charging_si): SI canonical columns. The home/supercharger
+	// split previously bucketed by the legacy max-kW power column <= 22 (kW); under SI
+	// the same threshold becomes peak_power_w <= 22000 (W). Energy converted
+	// from total_energy_added_wh -> kWh at SQL boundary so home/sc kWh
+	// totals match the legacy units consumed by chargerCategory.AvgCostPerKWh.
 	_ = h.db.Pool.QueryRow(ctx, `
 		SELECT
-			COALESCE(SUM(cost) FILTER (WHERE charger_power_kw_max <= 22 OR charger_power_kw_max IS NULL), 0),
-			COALESCE(SUM(energy_added_kwh) FILTER (WHERE charger_power_kw_max <= 22 OR charger_power_kw_max IS NULL), 0),
-			COUNT(*) FILTER (WHERE charger_power_kw_max <= 22 OR charger_power_kw_max IS NULL),
-			COALESCE(SUM(cost) FILTER (WHERE charger_power_kw_max > 22), 0),
-			COALESCE(SUM(energy_added_kwh) FILTER (WHERE charger_power_kw_max > 22), 0),
-			COUNT(*) FILTER (WHERE charger_power_kw_max > 22)
+			COALESCE(SUM(cost_decimal) FILTER (WHERE peak_power_w <= 22000 OR peak_power_w IS NULL), 0),
+			COALESCE(SUM(total_energy_added_wh / 1000.0) FILTER (WHERE peak_power_w <= 22000 OR peak_power_w IS NULL), 0),
+			COUNT(*) FILTER (WHERE peak_power_w <= 22000 OR peak_power_w IS NULL),
+			COALESCE(SUM(cost_decimal) FILTER (WHERE peak_power_w > 22000), 0),
+			COALESCE(SUM(total_energy_added_wh / 1000.0) FILTER (WHERE peak_power_w > 22000), 0),
+			COUNT(*) FILTER (WHERE peak_power_w > 22000)
 		FROM charging_sessions
-		WHERE vehicle_id = $1 AND cost > 0`, vehicleID).Scan(
+		WHERE vehicle_id = $1 AND cost_decimal > 0`, vehicleID).Scan(
 		&homeCost, &homekWh, &homeCount,
 		&scCost, &sckWh, &scCount,
 	)
@@ -324,11 +333,17 @@ func (h *CostForecastHandler) computeGasComparison(ctx interface{ Deadline() (ti
 	const defaultConsumption = 0.085 // L/km (gas car)
 
 	// Average km/month from drives
+	// Phase-42 (000185_drives_si): drives.distance_m and drives.started_at replace the legacy mileage and timestamp columns.
+	// Pre-existing bug preserved: the variable is named totalKm but treats the
+	// numeric value as miles downstream (defaultConsumption is L/km but is
+	// multiplied by mileage in miles). To keep the JSON output (avgKmPerMonth)
+	// numerically identical to the legacy behavior, we convert meters back to
+	// miles at the SQL boundary rather than to kilometers.
 	var totalKm float64
 	var firstDrive, lastDrive *time.Time
 	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT COALESCE(SUM(distance_mi), 0), MIN(start_ts), MAX(start_ts)
-		FROM drives WHERE vehicle_id = $1 AND distance_mi > 0`, vehicleID).Scan(
+		SELECT COALESCE(SUM(distance_m) / 1609.344, 0), MIN(started_at), MAX(started_at)
+		FROM drives WHERE vehicle_id = $1 AND distance_m > 0`, vehicleID).Scan(
 		&totalKm, &firstDrive, &lastDrive,
 	)
 

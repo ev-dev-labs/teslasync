@@ -8,11 +8,12 @@ import {
 } from '@/components/charts';
 import { useMotorHistory } from '@/api/hooks/useVehicles';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertTempFromSI } from '@/lib/unitConversion';
 
 interface ChartDatum {
   time: string;
@@ -26,7 +27,7 @@ interface ChartDatum {
 /** Convert raw MotorSnapshot[] into sorted chart data. */
 function buildChartData(
   data: ReturnType<typeof useMotorHistory>['data'],
-  convertTemp: (c: number) => number,
+  toTemperatureDisplay: (c: number) => number,
 ): ChartDatum[] {
   const items = data ?? [];
   return items
@@ -38,7 +39,7 @@ function buildChartData(
       return {
         time: ts,
         torque: d.di_torque ?? null,
-        statorTemp: statorRaw != null ? convertTemp(statorRaw) : null,
+        statorTemp: statorRaw != null ? toTemperatureDisplay(statorRaw) : null,
         gear: d.gear ?? d.shift_state ?? null,
         lateralG: (raw.lateral_accel as number | null) ?? null,
         longitudinalG: (raw.longitudinal_accel as number | null) ?? null,
@@ -63,7 +64,10 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { convertTemp, tempUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+
+  const tempUnit = unitPrefs.temperature;
 
   const {
     data,
@@ -76,8 +80,8 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
   } = useMotorHistory(vid, 200);
 
   const chartData = useMemo(
-    () => buildChartData(data, convertTemp),
-    [data, convertTemp],
+    () => buildChartData(data, toTemperatureDisplay),
+    [data, toTemperatureDisplay],
   );
 
   const hasData = chartData.length > 0;
@@ -99,7 +103,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
     return null;
   }, [chartData]);
 
-  const dangerThreshold = useMemo(() => convertTemp(DANGER_TEMP_C), [convertTemp]);
+  const dangerThreshold = useMemo(() => toTemperatureDisplay(DANGER_TEMP_C), [toTemperatureDisplay]);
 
   // Compute Y-axis domain for stator temp so ReferenceArea renders correctly
   const tempMax = useMemo(() => {

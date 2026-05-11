@@ -17,9 +17,9 @@ interface LiveTelemetryProps {
   tireData: TirePressureData | undefined;
   mediaData: MediaData | undefined;
   locationData: LocationData | undefined;
-  convertTemp: (c: number) => number;
-  convertDistance: (km: number) => number;
-  convertPressure: (bar: number) => number;
+  toTemperatureDisplay: (c: number) => number;
+  toDistanceDisplay: (km: number) => number;
+  toPressureDisplay: (bar: number) => number;
   tempUnit: string;
   distanceUnit: string;
   pressureUnit: string;
@@ -27,7 +27,7 @@ interface LiveTelemetryProps {
 
 export function LiveTelemetry({
   motorData, climateData, securityData, tireData, mediaData, locationData,
-  convertTemp, convertDistance, convertPressure, tempUnit, distanceUnit, pressureUnit,
+  toTemperatureDisplay, toDistanceDisplay, toPressureDisplay, tempUnit, distanceUnit, pressureUnit,
 }: LiveTelemetryProps) {
   const { t } = useTranslation('dashboard');
 
@@ -44,30 +44,30 @@ export function LiveTelemetry({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Drivetrain */}
-        <DrivetrainPanel data={motorData} convertTemp={convertTemp} tempUnit={tempUnit} />
+        <DrivetrainPanel data={motorData} toTemperatureDisplay={toTemperatureDisplay} tempUnit={tempUnit} />
 
         {/* Climate */}
-        <ClimatePanel data={climateData} convertTemp={convertTemp} tempUnit={tempUnit} />
+        <ClimatePanel data={climateData} toTemperatureDisplay={toTemperatureDisplay} tempUnit={tempUnit} />
 
         {/* Security */}
         <SecurityPanel data={securityData} />
 
         {/* Tire Pressure */}
-        <TirePressurePanel data={tireData} convertPressure={convertPressure} pressureUnit={pressureUnit} />
+        <TirePressurePanel data={tireData} toPressureDisplay={toPressureDisplay} pressureUnit={pressureUnit} />
 
         {/* Media */}
         <MediaPanel data={mediaData} />
 
         {/* Navigation */}
-        <NavigationPanel data={locationData} convertDistance={convertDistance} distanceUnit={distanceUnit} />
+        <NavigationPanel data={locationData} toDistanceDisplay={toDistanceDisplay} distanceUnit={distanceUnit} />
       </div>
     </div>
   );
 }
 
 /* ———— Drivetrain Panel ———— */
-function DrivetrainPanel({ data, convertTemp, tempUnit }: {
-  data: MotorData | undefined; convertTemp: (c: number) => number; tempUnit: string;
+function DrivetrainPanel({ data, toTemperatureDisplay, tempUnit }: {
+  data: MotorData | undefined; toTemperatureDisplay: (c: number) => number; tempUnit: string;
 }) {
   const { t } = useTranslation('dashboard');
   return (
@@ -78,7 +78,7 @@ function DrivetrainPanel({ data, convertTemp, tempUnit }: {
       {data ? (
         <div className="space-y-2.5">
           <TelemetryRow label={t('telemetry.torque', 'Torque')} value={data.di_torque != null ? `${data.di_torque} Nm` : '—'} />
-          <TelemetryRow label={t('telemetry.motorTemp', 'Motor Temp')} value={data.di_stator_temp != null ? `${fmtInt(convertTemp(data.di_stator_temp))}${tempUnit}` : '—'} />
+          <TelemetryRow label={t('telemetry.motorTemp', 'Motor Temp')} value={data.di_stator_temp != null ? `${fmtInt(toTemperatureDisplay(data.di_stator_temp))}${tempUnit}` : '—'} />
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-secondary)]">{t('telemetry.gear', 'Gear')}</span>
             {cleanNil(data.gear) ? (
@@ -100,8 +100,8 @@ function DrivetrainPanel({ data, convertTemp, tempUnit }: {
 }
 
 /* ———— Climate Panel ———— */
-function ClimatePanel({ data, convertTemp, tempUnit }: {
-  data: ClimateData | undefined; convertTemp: (c: number) => number; tempUnit: string;
+function ClimatePanel({ data, toTemperatureDisplay, tempUnit }: {
+  data: ClimateData | undefined; toTemperatureDisplay: (c: number) => number; tempUnit: string;
 }) {
   const { t } = useTranslation('dashboard');
   return (
@@ -111,8 +111,8 @@ function ClimatePanel({ data, convertTemp, tempUnit }: {
       </h4>
       {data ? (
         <div className="space-y-2.5">
-          <TelemetryRow label={t('telemetry.cabin', 'Cabin')} value={data.inside_temp != null ? `${fmtInt(convertTemp(data.inside_temp))}${tempUnit}` : '—'} />
-          <TelemetryRow label={t('telemetry.outside', 'Outside')} value={data.outside_temp != null ? `${fmtInt(convertTemp(data.outside_temp))}${tempUnit}` : '—'} />
+          <TelemetryRow label={t('telemetry.cabin', 'Cabin')} value={data.inside_temp != null ? `${fmtInt(toTemperatureDisplay(data.inside_temp))}${tempUnit}` : '—'} />
+          <TelemetryRow label={t('telemetry.outside', 'Outside')} value={data.outside_temp != null ? `${fmtInt(toTemperatureDisplay(data.outside_temp))}${tempUnit}` : '—'} />
           <TelemetryRow label={t('telemetry.hvac', 'HVAC Power')} value={data.hvac_power != null ? `${fmtNumber(data.hvac_power, 1)} kW` : '—'} />
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -211,8 +211,8 @@ function SecurityPanel({ data }: { data: SecurityData | undefined }) {
 }
 
 /* ———— Tire Pressure Panel ———— */
-function TirePressurePanel({ data, convertPressure, pressureUnit }: {
-  data: TirePressureData | undefined; convertPressure: (bar: number) => number; pressureUnit: string;
+function TirePressurePanel({ data, toPressureDisplay, pressureUnit }: {
+  data: TirePressureData | undefined; toPressureDisplay: (bar: number) => number; pressureUnit: string;
 }) {
   const { t } = useTranslation('dashboard');
 
@@ -257,7 +257,7 @@ function TirePressurePanel({ data, convertPressure, pressureUnit }: {
             <div key={tire.label} className="text-center p-2 rounded-lg bg-white/[0.03] border border-white/[0.04]">
               <p className="text-[10px] text-[var(--text-muted)] uppercase">{tire.label}</p>
               <p className={`text-sm font-bold ${getPressureColor(tire.value)}`}>
-                {tire.value != null ? fmtNumber(convertPressure(tire.value), 1) : '—'}
+                {tire.value != null ? fmtNumber(toPressureDisplay(tire.value), 1) : '—'}
               </p>
               <p className="text-[9px] text-[var(--text-muted)]">{pressureUnit}</p>
             </div>
@@ -323,8 +323,8 @@ function MediaPanel({ data }: { data: MediaData | undefined }) {
 }
 
 /* ———— Navigation Panel ———— */
-function NavigationPanel({ data, convertDistance, distanceUnit }: {
-  data: LocationData | undefined; convertDistance: (km: number) => number; distanceUnit: string;
+function NavigationPanel({ data, toDistanceDisplay, distanceUnit }: {
+  data: LocationData | undefined; toDistanceDisplay: (km: number) => number; distanceUnit: string;
 }) {
   const { t } = useTranslation('dashboard');
   return (
@@ -338,7 +338,7 @@ function NavigationPanel({ data, convertDistance, distanceUnit }: {
           <TelemetryRow
             label={t('telemetry.distance', 'Distance')}
             value={data.miles_to_arrival != null
-              ? `${fmtNumber(convertDistance(data.miles_to_arrival), 1)} ${distanceUnit}`
+              ? `${fmtNumber(toDistanceDisplay(data.miles_to_arrival), 1)} ${distanceUnit}`
               : '—'}
           />
           <TelemetryRow

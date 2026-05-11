@@ -68,16 +68,17 @@ func (p *Predictor) refresh(ctx context.Context) {
 
 	patterns := make(map[string]*VehiclePattern)
 
-	// Learn departure patterns from drives table
+	// Learn departure patterns from drives table.
+	// Phase-42 (Prompt 0076): drives.start_ts → drives.started_at (SI rename).
 	departureRows, err := p.pool.Query(ctx, `
 		SELECT v.vin,
-		       EXTRACT(HOUR FROM d.start_ts) AS hour,
-		       EXTRACT(DOW FROM d.start_ts) AS dow,
+		       EXTRACT(HOUR FROM d.started_at) AS hour,
+		       EXTRACT(DOW FROM d.started_at) AS dow,
 		       COUNT(*) AS freq
 		FROM drives d
 		JOIN vehicles v ON d.vehicle_id = v.id
-		WHERE d.start_ts > NOW() - make_interval(days => $1)
-		  AND d.start_ts IS NOT NULL
+		WHERE d.started_at > NOW() - make_interval(days => $1)
+		  AND d.started_at IS NOT NULL
 		GROUP BY v.vin, hour, dow
 		HAVING COUNT(*) >= 2
 		ORDER BY v.vin, freq DESC
@@ -111,16 +112,17 @@ func (p *Predictor) refresh(ctx context.Context) {
 		})
 	}
 
-	// Learn charging patterns from charging_sessions table
+	// Learn charging patterns from charging_sessions table.
+	// Phase-42 (Prompt 0076): charging_sessions.start_ts → started_at (SI rename).
 	chargeRows, err := p.pool.Query(ctx, `
 		SELECT v.vin,
-		       EXTRACT(HOUR FROM cs.start_ts) AS hour,
-		       EXTRACT(DOW FROM cs.start_ts) AS dow,
+		       EXTRACT(HOUR FROM cs.started_at) AS hour,
+		       EXTRACT(DOW FROM cs.started_at) AS dow,
 		       COUNT(*) AS freq
 		FROM charging_sessions cs
 		JOIN vehicles v ON cs.vehicle_id = v.id
-		WHERE cs.start_ts > NOW() - make_interval(days => $1)
-		  AND cs.start_ts IS NOT NULL
+		WHERE cs.started_at > NOW() - make_interval(days => $1)
+		  AND cs.started_at IS NOT NULL
 		GROUP BY v.vin, hour, dow
 		HAVING COUNT(*) >= 2
 		ORDER BY v.vin, freq DESC

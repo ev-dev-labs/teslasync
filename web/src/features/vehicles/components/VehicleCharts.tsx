@@ -14,12 +14,13 @@ import {
 import { GlassPanel } from '@/components/ui/GlassPanel'
 import { FadeIn } from '@/components/motion/FadeIn'
 import { MetricCard } from '@/components/data-display/MetricCard'
-import { useSettings } from '@/hooks/useSettings'
+import { useUnits } from '@/hooks/useUnits'
 import { cleanNil } from '@/lib/cleanNil'
 import { fmtNumber } from '@/lib/numberFormat'
 import { formatTime } from '@/lib/dateFormat'
 import { parseSettingEnum } from '@/lib/parseSettingEnum'
 import type { VehicleState, Position, VehicleConfigSnapshot, UserPreferenceSnapshot } from '@/api/types'
+import { convertSpeedFromSI } from '@/lib/unitConversion';
 
 interface VehicleChartsProps {
   state: VehicleState
@@ -35,7 +36,9 @@ export function VehicleCharts({
   userPrefData,
 }: VehicleChartsProps) {
   const { t } = useTranslation()
-  const { convertSpeed, speedUnit } = useSettings()
+  const { unitPrefs } = useUnits();
+  const speedUnit = unitPrefs.speed;
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark')
 
   const trail: LatLngExpression[] =
@@ -47,7 +50,7 @@ export function VehicleCharts({
     positions
       ?.map((p) => ({
         time: formatTime(p.ts),
-        speed: p.speed_mph != null ? convertSpeed(p.speed_mph) : null,
+        speed: p.speed_mph != null ? toSpeedDisplay(p.speed_mph) : null,
       }))
       .reverse() ?? []
 

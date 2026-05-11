@@ -26,14 +26,11 @@ function makeTransition(overrides: Partial<FSMTransition>): FSMTransition {
   return {
     id: 1,
     vehicle_id: 1,
-    fsm_type: 'vehicle',
+    fsm_name: 'vehicle',
     from_state: 'parked',
     to_state: 'driving',
     trigger: 'speed_changed',
-    guard: '',
-    mode: 'auto',
-    duration_in_state_ms: 1000,
-    created_at: new Date().toISOString(),
+    ts: new Date().toISOString(),
     ...overrides,
   };
 }
@@ -57,8 +54,8 @@ describe('StateTimeline', () => {
   it('renders one tick per in-window transition and reports clicks', () => {
     const anchor = new Date('2025-01-15T12:00:00Z');
     const onSelect = vi.fn();
-    const t1 = makeTransition({ id: 11, created_at: '2025-01-15T11:55:00Z' });
-    const t2 = makeTransition({ id: 12, created_at: '2025-01-15T11:58:00Z' });
+    const t1 = makeTransition({ id: 11, ts: '2025-01-15T11:55:00Z' });
+    const t2 = makeTransition({ id: 12, ts: '2025-01-15T11:58:00Z' });
 
     render(
       <StateTimeline
@@ -79,7 +76,7 @@ describe('StateTimeline', () => {
 
   it('renders the selected tick with the highlight class', () => {
     const anchor = new Date('2025-01-15T12:00:00Z');
-    const t1 = makeTransition({ id: 21, created_at: '2025-01-15T11:55:00Z' });
+    const t1 = makeTransition({ id: 21, ts: '2025-01-15T11:55:00Z' });
     render(
       <StateTimeline
         transitions={[t1]}

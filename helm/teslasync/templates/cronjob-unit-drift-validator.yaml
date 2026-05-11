@@ -1,0 +1,64 @@
+{{- if .Values.unitDriftValidator.enabled }}
+{{- if not (and .Values.operator .Values.operator.token) }}
+{{- fail "unitDriftValidator.enabled=true but operator.token is empty — the validator binary refuses to start without TESLASYNC_OPERATOR_TOKEN. Set operator.token (and rotate it on admin offboarding)." }}
+{{- end }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "teslasync.fullname" . }}-unit-drift-validator
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: unit-drift-validator
+spec:
+  schedule: {{ .Values.unitDriftValidator.schedule | quote }}
+  # Forbid prevents a long-running validator from overlapping itself if the
+  # cluster pauses the job for any reason. The validator is read-only so a
+  # missed run is recoverable on the next tick.
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: {{ .Values.unitDriftValidator.startingDeadlineSeconds }}
+  successfulJobsHistoryLimit: {{ .Values.unitDriftValidator.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.unitDriftValidator.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            {{- include "teslasync.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: unit-drift-validator
+        spec:
+          {{- include "teslasync.imagePullSecrets" . | nindent 10 }}
+          serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+          restartPolicy: Never
+          initContainers:
+            - name: wait-for-db
+              image: busybox:1.36
+              command:
+                - sh
+                - -c
+                - 'until nc -z {{ include "teslasync.postgresql.host" . }} {{ include "teslasync.postgresql.port" . }}; do echo "waiting for database..."; sleep 2; done'
+          containers:
+            - name: unit-drift-validator
+              image: {{ include "teslasync.backend.image" . | quote }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              # Override the default backend entrypoint with the validator
+              # binary. The image bakes both binaries (cmd/teslasync + cmd/
+              # unit-drift-validator), so this CronJob simply re-uses the same
+              # tag the API server runs on.
+              command:
+                - /usr/local/bin/unit-drift-validator
+              {{- with .Values.unitDriftValidator.extraArgs }}
+              args:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              envFrom:
+                - configMapRef:
+                    name: {{ include "teslasync.fullname" . }}
+                - secretRef:
+                    name: {{ include "teslasync.secretName" . }}
+              resources:
+                {{- toYaml .Values.unitDriftValidator.resources | nindent 16 }}
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
+{{- end }}

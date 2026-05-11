@@ -19,7 +19,8 @@ import {
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -60,7 +61,12 @@ export default function MileagePage() {
   const { t } = useTranslation();
   usePageTitle(t('mileage.title', 'Mileage'));
 
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  // backend (deleted) MileageEntry / MileageStats fields are SI km. Endpoint
+  // returns 404 today so values render through EmptyState; helper kept for
+  // when the replacement endpoint lands.
+  const fromKm = (km: number) => convertDistanceFromSI(km * 1000, distanceUnit);
 
   // Phase-45/23 — reactive chart palette (CB-safe / neon per user pref).
   const palette = useChartPalette();
@@ -86,14 +92,14 @@ export default function MileagePage() {
 
   /* Odometer over time (area chart) */
   const odometerData = useMemo(
-    () => (entries ?? []).map((e) => ({ date: formatDate(e.date), odometer: convertDistance(e.odometer) })),
-    [entries, convertDistance],
+    () => (entries ?? []).map((e) => ({ date: formatDate(e.date), odometer: fromKm(e.odometer) })),
+    [entries, fromKm],
   );
 
   /* Daily distance (bar chart) */
   const dailyData = useMemo(
-    () => (entries ?? []).map((e) => ({ date: formatDate(e.date), distance: convertDistance(e.distance) })),
-    [entries, convertDistance],
+    () => (entries ?? []).map((e) => ({ date: formatDate(e.date), distance: fromKm(e.distance) })),
+    [entries, fromKm],
   );
 
   /* Monthly summary rows */
@@ -109,11 +115,11 @@ export default function MileagePage() {
     }
     return [...map.entries()].map(([month, v]) => ({
       month,
-      distance: convertDistance(v.distance),
+      distance: fromKm(v.distance),
       drives: v.drives,
-      dailyAvg: v.drives > 0 ? convertDistance(v.distance / v.drives) : 0,
+      dailyAvg: v.drives > 0 ? fromKm(v.distance / v.drives) : 0,
     }));
-  }, [entries, convertDistance]);
+  }, [entries, fromKm]);
 
   const monthColumns: Column<MonthRow>[] = useMemo(() => [
     { key: 'month', header: t('Month'), render: (r) => r.month, sortable: true },
@@ -152,7 +158,7 @@ export default function MileagePage() {
               <>
                 <MetricCard
                   label={t('mileage.totalDistance', 'Total Distance')}
-                  value={`${fmtInt(convertDistance(stats?.total_distance ?? 0))} ${distanceUnit}`}
+                  value={`${fmtInt(fromKm(stats?.total_distance ?? 0))} ${distanceUnit}`}
                   icon={<Gauge className="h-4 w-4" />}
                   color="cyan"
                 />
@@ -164,13 +170,13 @@ export default function MileagePage() {
                 />
                 <MetricCard
                   label={t('mileage.dailyAvg', 'Daily Avg')}
-                  value={`${fmtNumber(convertDistance(stats?.avg_daily ?? 0))} ${distanceUnit}`}
+                  value={`${fmtNumber(fromKm(stats?.avg_daily ?? 0))} ${distanceUnit}`}
                   icon={<Calendar className="h-4 w-4" />}
                   color="purple"
                 />
                 <MetricCard
                   label={t('mileage.annualProjection', 'Annual Projection')}
-                  value={`${fmtInt(convertDistance((stats?.avg_daily ?? 0) * 365))} ${distanceUnit}`}
+                  value={`${fmtInt(fromKm((stats?.avg_daily ?? 0) * 365))} ${distanceUnit}`}
                   icon={<BarChart3 className="h-4 w-4" />}
                   color="cyan"
                 />

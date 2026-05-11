@@ -12,7 +12,8 @@ import {
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import type { FleetAnalytics } from '@/api/types';
 import { SectionTitle } from './helpers';
 import { QUICK_LINKS } from './constants';
@@ -20,15 +21,17 @@ import { OverviewVehicleComparison } from './OverviewVehicleComparison';
 
 export function OverviewTab({ data }: { data: FleetAnalytics | undefined }) {
   const { t } = useTranslation();
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
 
   const vehicles = data?.vehicle_comparison ?? [];
   const monthlyTrend = data?.charging_analytics?.monthly_trend ?? [];
   const dowData = data?.drive_analytics?.day_of_week ?? [];
 
   const vehicleDistData = useMemo(
-    () => vehicles.map((v) => ({ name: v.name, distance: convertDistance(safe(v.distance)) })),
-    [vehicles, convertDistance],
+    // backend `vehicle_comparison[].distance` is SI km — convert via meter floor.
+    () => vehicles.map((v) => ({ name: v.name, distance: convertDistanceFromSI(safe(v.distance) * 1000, distanceUnit) })),
+    [vehicles, distanceUnit],
   );
 
   return (

@@ -33,6 +33,7 @@ import (
 // car as missing from the map.
 type LocationSnapshotHandler struct {
 	state signal.StateReader
+	live  signal.LiveStateReader
 }
 
 // Signal → JSON field mappings for the location timeline + state
@@ -40,18 +41,18 @@ type LocationSnapshotHandler struct {
 // (snake_case; the frontend camelCaseKeys transform produces matching
 // camelCase keys on the wire).
 var locationMappings = []signal.FieldMapping{
-	// Position & GPS
-	{Signal: "Latitude", Field: "latitude"},
-	{Signal: "Longitude", Field: "longitude"},
+	// Position & GPS — Phase-42 codec compound-flatten names. Elevation
+	// is intentionally absent (Tesla Fleet Telemetry does not emit it).
+	{Signal: "LocationLatitude", Field: "latitude"},
+	{Signal: "LocationLongitude", Field: "longitude"},
 	{Signal: "GpsHeading", Field: "heading"},
 	{Signal: "GpsState", Field: "gps_state"},
-	{Signal: "Elevation", Field: "elevation_m"},
 	{Signal: "VehicleSpeed", Field: "speed_mph"},
 	// Navigation & route
 	{Signal: "DestinationName", Field: "destination_name"},
 	{Signal: "MilesToArrival", Field: "miles_to_arrival"},
 	{Signal: "MinutesToArrival", Field: "minutes_to_arrival"},
-	{Signal: "RouteTrafficMinutesDelay", Field: "route_traffic_delay_min"},
+	{Signal: "RouteTrafficMinutesDelay", Field: "route_traffic_delay_s"},
 	{Signal: "RouteLastUpdated", Field: "route_last_updated"},
 	// Destination / origin coordinates. The Tesla Location compound
 	// (lat,lng pair) is unpacked into these scalar signal names by the
@@ -68,8 +69,8 @@ var locationMappings = []signal.FieldMapping{
 	{Signal: "HomelinkNearby", Field: "homelink_nearby"},
 }
 
-func NewLocationSnapshotHandler(state signal.StateReader) *LocationSnapshotHandler {
-	return &LocationSnapshotHandler{state: state}
+func NewLocationSnapshotHandler(state signal.StateReader, live signal.LiveStateReader) *LocationSnapshotHandler {
+	return &LocationSnapshotHandler{state: state, live: live}
 }
 
 // List returns location history from the signal-log change feed via
@@ -106,6 +107,7 @@ func (h *LocationSnapshotHandler) List(w http.ResponseWriter, r *http.Request) {
 		if ts, ok := row["ts"]; ok {
 			row["created_at"] = ts
 		}
+		convertRouteTrafficDelayToSeconds(row)
 		row["id"] = i + 1
 	}
 	writeJSON(w, http.StatusOK, rows)
@@ -126,7 +128,7 @@ func (h *LocationSnapshotHandler) Latest(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	snap, err := h.state.State(r.Context(), vehicleID, time.Now())
+	snap, err := h.live.LiveState(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest location data")
 		writeError(w, http.StatusInternalServerError, "failed to get latest location data")
@@ -139,5 +141,16 @@ func (h *LocationSnapshotHandler) Latest(w http.ResponseWriter, r *http.Request)
 			result[m.Field] = v
 		}
 	}
+	convertRouteTrafficDelayToSeconds(result)
 	writeJSON(w, http.StatusOK, result)
+}
+
+func convertRouteTrafficDelayToSeconds(row map[string]interface{}) {
+	v, ok := row["route_traffic_delay_s"]
+	if !ok {
+		return
+	}
+	if minutes, ok := toFloatOk(v); ok {
+		row["route_traffic_delay_s"] = minutes * 60
+	}
 }

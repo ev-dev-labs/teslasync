@@ -286,6 +286,140 @@ func TestRedisSignalKeys_RespectsLimit(t *testing.T) {
 	}
 }
 
+func TestRedisSignalsPurge_DeletesExistingKey(t *testing.T) {
+	h, mr, _ := newTestDevToolsHandler(t, "hybrid", true, false)
+	if err := h.redisCache.Update(context.Background(), 7, map[string]interface{}{
+		"BatteryLevel": 72.0,
+	}); err != nil {
+		t.Fatalf("seed Update error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodDelete, "/dev-tools/redis-signals?vehicle_id=7", nil)
+	w := httptest.NewRecorder()
+	h.RedisSignalsPurge(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", w.Code, w.Body.String())
+	}
+	var resp struct {
+		VehicleID int64 `json:"vehicle_id"`
+		Purged    bool  `json:"purged"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal error = %v", err)
+	}
+	if resp.VehicleID != 7 || !resp.Purged {
+		t.Fatalf("response = %+v, want {VehicleID:7, Purged:true}", resp)
+	}
+	if mr.Exists("vehicle:7:signals") {
+		t.Fatalf("vehicle:7:signals still exists in redis after purge")
+	}
+}
+
+func TestRedisSignalsPurge_NoOpWhenMissing(t *testing.T) {
+	h, _, _ := newTestDevToolsHandler(t, "hybrid", true, false)
+
+	req := httptest.NewRequest(http.MethodDelete, "/dev-tools/redis-signals?vehicle_id=999", nil)
+	w := httptest.NewRecorder()
+	h.RedisSignalsPurge(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	var resp struct {
+		VehicleID int64 `json:"vehicle_id"`
+		Purged    bool  `json:"purged"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal error = %v", err)
+	}
+	if resp.VehicleID != 999 || resp.Purged {
+		t.Fatalf("response = %+v, want {VehicleID:999, Purged:false}", resp)
+	}
+}
+
+func TestRedisSignalsPurge_503WhenNoCache(t *testing.T) {
+	h, _, _ := newTestDevToolsHandler(t, "hybrid", false, false)
+	req := httptest.NewRequest(http.MethodDelete, "/dev-tools/redis-signals?vehicle_id=1", nil)
+	w := httptest.NewRecorder()
+	h.RedisSignalsPurge(w, req)
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503", w.Code)
+	}
+}
+
+func TestRedisSignalsPurge_400OnBadVehicleID(t *testing.T) {
+	h, _, _ := newTestDevToolsHandler(t, "hybrid", true, false)
+	cases := []string{"", "abc", "0", "-1"}
+	for _, vid := range cases {
+		t.Run("vid="+vid, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodDelete, "/dev-tools/redis-signals?vehicle_id="+vid, nil)
+			w := httptest.NewRecorder()
+			h.RedisSignalsPurge(w, req)
+			if w.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400", w.Code)
+			}
+		})
+	}
+}
+
+func TestRedisSignalsPurgeAll_DeletesEveryVehicleKey(t *testing.T) {
+	h, mr, _ := newTestDevToolsHandler(t, "hybrid", true, false)
+	for _, vid := range []int64{1, 7, 42} {
+		if err := h.redisCache.Update(context.Background(), vid, map[string]interface{}{"BatteryLevel": 50.0}); err != nil {
+			t.Fatalf("Update(%d) error = %v", vid, err)
+		}
+	}
+	mr.HSet("other:cache", "x", "1")
+
+	req := httptest.NewRequest(http.MethodDelete, "/dev-tools/redis-signals/keys", nil)
+	w := httptest.NewRecorder()
+	h.RedisSignalsPurgeAll(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", w.Code, w.Body.String())
+	}
+	var resp struct {
+		Purged  int  `json:"purged"`
+		Scanned int  `json:"scanned"`
+		Limit   int  `json:"limit"`
+		HasMore bool `json:"has_more"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal error = %v", err)
+	}
+	if resp.Purged != 3 {
+		t.Fatalf("purged = %d, want 3", resp.Purged)
+	}
+	if resp.Scanned != 3 {
+		t.Fatalf("scanned = %d, want 3", resp.Scanned)
+	}
+	if resp.Limit != 1000 {
+		t.Fatalf("limit = %d, want 1000", resp.Limit)
+	}
+	if resp.HasMore {
+		t.Fatalf("has_more = true, want false (3 < 1000 limit)")
+	}
+	for _, vid := range []int64{1, 7, 42} {
+		if mr.Exists("vehicle:" + itoa(int(vid)) + ":signals") {
+			t.Fatalf("vehicle:%d:signals still exists after PurgeAll", vid)
+		}
+	}
+	if !mr.Exists("other:cache") {
+		t.Fatalf("PurgeAll collateral-deleted other:cache (non-vehicle key)")
+	}
+}
+
+func TestRedisSignalsPurgeAll_503WhenNoCache(t *testing.T) {
+	h, _, _ := newTestDevToolsHandler(t, "hybrid", false, false)
+	req := httptest.NewRequest(http.MethodDelete, "/dev-tools/redis-signals/keys", nil)
+	w := httptest.NewRecorder()
+	h.RedisSignalsPurgeAll(w, req)
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503", w.Code)
+	}
+}
+
 func itoa(i int) string {
 	const digits = "0123456789"
 	if i == 0 {

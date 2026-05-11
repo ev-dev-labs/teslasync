@@ -23,12 +23,14 @@ import {
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useUnits } from '@/hooks/useUnits';
 import { useUrlEnum } from '@/hooks/useUrlState';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
+import { convertSpeedFromSI } from '@/lib/unitConversion';
 import { request } from '@/api/client';
 
 /* ------------------------------------------------------------------ */
@@ -73,6 +75,11 @@ interface PositionRecord {
 export default function MapOverviewPage() {
   const { t } = useTranslation('maps');
   usePageTitle(t('mapOverview.pageTitle', 'Map Overview'));
+
+  /* ---- unit prefs (Phase-43 SI-floor display) ---- */
+  const { unitPrefs } = useUnits();
+  const speedUnit = unitPrefs.speed;
+  const distanceUnit = unitPrefs.distance;
 
   /* ---- vehicle selector — Phase 40 / Prompt 16: header VehiclePicker is the source of truth ---- */
   const { vehicleId } = useSelectedVehicle();
@@ -205,7 +212,8 @@ export default function MapOverviewPage() {
         header: t('mapOverview.colSpeed', 'Speed'),
         render: (r) => (
           <span className="text-xs">
-            {fmtNumber(r.speed ?? 0, 1)} {t('mapOverview.speedUnit', 'mph')}
+            {fmtNumber(convertSpeedFromSI(r.speed ?? 0, speedUnit), 1)}{' '}
+            {t('mapOverview.speedUnitValue', { defaultValue: '{{unit}}', unit: speedUnit })}
           </span>
         ),
       },
@@ -219,7 +227,7 @@ export default function MapOverviewPage() {
         ),
       },
     ],
-    [t],
+    [t, speedUnit],
   );
 
   // Defensive guard: no vehicle selected (Phase 40 / Prompt 18).
@@ -320,7 +328,7 @@ export default function MapOverviewPage() {
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <MetricCard
               label={t('mapOverview.currentSpeed', 'Current Speed')}
-              value={`${fmtNumber(latest.speed ?? 0, 1)} ${t('mapOverview.speedUnit', 'mph')}`}
+              value={`${fmtNumber(convertSpeedFromSI(latest.speed ?? 0, speedUnit), 1)} ${t('mapOverview.speedUnitValue', { defaultValue: '{{unit}}', unit: speedUnit })}`}
               icon={<Gauge className="h-4 w-4" />}
               color="cyan"
             />
@@ -431,8 +439,9 @@ export default function MapOverviewPage() {
                   {t('mapOverview.odometer', 'Odometer')}
                 </span>
                 <span className="text-sm font-semibold text-[var(--text-primary)]">
-                  {latest ? fmtNumber(latest.odometer, 1) : '—'}{' '}
-                  {t('mapOverview.distanceUnit', 'mi')}
+                  {latest && typeof latest.odometer === 'number'
+                    ? `${fmtNumber(latest.odometer, 1)} ${t('mapOverview.distanceUnitValue', { defaultValue: '{{unit}}', unit: distanceUnit })}`
+                    : '—'}
                 </span>
               </div>
             </div>

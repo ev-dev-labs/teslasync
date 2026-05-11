@@ -117,7 +117,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(d.day, c.day) AS \"Date\",\n  COALESCE(d.drives, 0) AS \"Drives\",\n  ROUND(COALESCE(d.distance_mi, 0)::numeric, 1) AS \"Distance (km)\",\n  COALESCE(c.charges, 0) AS \"Charges\",\n  ROUND(COALESCE(c.energy_added, 0)::numeric, 1) AS \"Energy Added (kWh)\",\n  ROUND(COALESCE(c.cost, 0)::numeric, 2) AS \"Cost ($)\"\nFROM (\n  SELECT start_ts::date AS day, COUNT(*) AS drives, SUM(distance_mi) AS distance_mi\n  FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)\n  GROUP BY start_ts::date\n) d\nFULL OUTER JOIN (\n  SELECT start_ts::date AS day, COUNT(*) AS charges, SUM(energy_added_kwh) AS energy_added, SUM(cost) AS cost\n  FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)\n  GROUP BY start_ts::date\n) c ON d.day = c.day\nORDER BY COALESCE(d.day, c.day) DESC",
+          "rawSql": "SELECT\n  COALESCE(d.day, c.day) AS \"Date\",\n  COALESCE(d.drives, 0) AS \"Drives\",\n  ROUND(COALESCE(d.distance_mi, 0)::numeric, 1) AS \"Distance (km)\",\n  COALESCE(c.charges, 0) AS \"Charges\",\n  ROUND(COALESCE(c.energy_added, 0)::numeric, 1) AS \"Energy Added (kWh)\",\n  ROUND(COALESCE(c.cost, 0)::numeric, 2) AS \"Cost ($)\"\nFROM (\n  SELECT started_at::date AS day, COUNT(*) AS drives, SUM((distance_m / 1609.344)) AS distance_mi\n  FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n  GROUP BY started_at::date\n) d\nFULL OUTER JOIN (\n  SELECT started_at::date AS day, COUNT(*) AS charges, SUM((total_energy_added_wh / 1000.0)) AS energy_added, SUM(cost_decimal) AS cost\n  FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n  GROUP BY started_at::date\n) c ON d.day = c.day\nORDER BY COALESCE(d.day, c.day) DESC",
           "refId": "A"
         }
       ],
@@ -196,7 +196,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT start_ts::date AS time, SUM(distance_mi) AS \"Distance (km)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) GROUP BY start_ts::date ORDER BY time",
+          "rawSql": "SELECT started_at::date AS time, SUM((distance_m / 1609.344)) AS \"Distance (km)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) GROUP BY started_at::date ORDER BY time",
           "refId": "A"
         },
         {
@@ -207,7 +207,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT start_ts::date AS time, SUM(energy_added_kwh) AS \"Energy Added (kWh)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) GROUP BY start_ts::date ORDER BY time",
+          "rawSql": "SELECT started_at::date AS time, SUM((total_energy_added_wh / 1000.0)) AS \"Energy Added (kWh)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) GROUP BY started_at::date ORDER BY time",
           "refId": "B"
         }
       ],
@@ -282,7 +282,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  d.day::text AS \"Date\",\n  ROUND(d.distance_mi::numeric, 1) AS \"Distance (km)\",\n  ROUND(COALESCE(c.energy_added, 0)::numeric, 1) AS \"Energy Added (kWh)\"\nFROM (\n  SELECT start_ts::date AS day, SUM(distance_mi) AS distance_mi\n  FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)\n  GROUP BY start_ts::date\n) d\nLEFT JOIN (\n  SELECT start_ts::date AS day, SUM(energy_added_kwh) AS energy_added\n  FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)\n  GROUP BY start_ts::date\n) c ON d.day = c.day\nORDER BY d.day",
+          "rawSql": "SELECT\n  d.day::text AS \"Date\",\n  ROUND(d.distance_mi::numeric, 1) AS \"Distance (km)\",\n  ROUND(COALESCE(c.energy_added, 0)::numeric, 1) AS \"Energy Added (kWh)\"\nFROM (\n  SELECT started_at::date AS day, SUM((distance_m / 1609.344)) AS distance_mi\n  FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n  GROUP BY started_at::date\n) d\nLEFT JOIN (\n  SELECT started_at::date AS day, SUM((total_energy_added_wh / 1000.0)) AS energy_added\n  FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n  GROUP BY started_at::date\n) c ON d.day = c.day\nORDER BY d.day",
           "refId": "A"
         }
       ],
@@ -349,7 +349,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "(SELECT start_ts AS \"Time\", 'Drive' AS \"Type\", start_battery_pct AS \"Start SoC\", end_battery_pct AS \"End SoC\"\n FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts))\nUNION ALL\n(SELECT start_ts AS \"Time\", 'Charge' AS \"Type\", start_battery_pct AS \"Start SoC\", end_battery_pct AS \"End SoC\"\n FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts))\nORDER BY \"Time\" DESC LIMIT 30",
+          "rawSql": "(SELECT started_at AS \"Time\", 'Drive' AS \"Type\", start_soc_pct AS \"Start SoC\", end_soc_pct AS \"End SoC\"\n FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at))\nUNION ALL\n(SELECT started_at AS \"Time\", 'Charge' AS \"Type\", start_soc_pct AS \"Start SoC\", end_soc_pct AS \"End SoC\"\n FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at))\nORDER BY \"Time\" DESC LIMIT 30",
           "refId": "A"
         }
       ],

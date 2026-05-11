@@ -1,4 +1,4 @@
-import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
 import { fmtNumber } from '@/lib/numberFormat';
 
 interface CurrencyProps {
@@ -35,7 +35,7 @@ export function Currency({
   className,
   fallback = '—',
 }: CurrencyProps) {
-  const { currencySymbol } = useSettings();
+  const { currencySymbol } = useFormatting();
   if (value == null || !Number.isFinite(value)) {
     return <span className={className}>{fallback}</span>;
   }

@@ -17,9 +17,9 @@ interface VehicleHeroProps {
   vehicle: Vehicle;
   state: VehicleState | null;
   firmwareVersion: string;
-  convertDistance: (km: number) => number;
-  convertSpeed: (kmh: number) => number;
-  convertTemp: (c: number) => number;
+  toDistanceDisplay: (km: number) => number;
+  toSpeedDisplay: (kmh: number) => number;
+  toTemperatureDisplay: (c: number) => number;
   isFahrenheit: boolean;
   distanceUnit: string;
   speedUnit: string;
@@ -30,7 +30,7 @@ interface VehicleHeroProps {
 
 export function VehicleHero({
   vehicle, state, firmwareVersion,
-  convertDistance, convertSpeed, convertTemp,
+  toDistanceDisplay, toSpeedDisplay, toTemperatureDisplay,
   isFahrenheit, distanceUnit, speedUnit, tempUnit,
   lastFetchedAt,
 }: VehicleHeroProps) {
@@ -64,12 +64,12 @@ export function VehicleHero({
                 color={state.battery_level > 50 ? '#10b981' : '#f59e0b'} size={70}
               />
               <RadialGauge
-                value={Math.round(convertDistance(state.rated_range))} max={600}
+                value={Math.round(toDistanceDisplay(state.rated_range))} max={600}
                 label={t('hero.range', 'Range')} unit={distanceUnit} color="#00f0ff" size={70}
               />
               {(status === 'driving' || state.speed > 0) && (
                 <RadialGauge
-                  value={Math.round(convertSpeed(state.speed))} max={250}
+                  value={Math.round(toSpeedDisplay(state.speed))} max={250}
                   label={t('hero.speed', 'Speed')} unit={speedUnit} color="#a855f7" size={70}
                 />
               )}
@@ -80,11 +80,11 @@ export function VehicleHero({
                 />
               )}
               <RadialGauge
-                value={Math.round(convertTemp(state.inside_temp))} max={isFahrenheit ? 122 : 50}
+                value={Math.round(toTemperatureDisplay(state.inside_temp))} max={isFahrenheit ? 122 : 50}
                 label={t('hero.inside', 'Inside')} unit={tempUnit} color="#f97316" size={70}
               />
               <RadialGauge
-                value={Math.round(convertTemp(state.outside_temp))} max={isFahrenheit ? 122 : 50}
+                value={Math.round(toTemperatureDisplay(state.outside_temp))} max={isFahrenheit ? 122 : 50}
                 label={t('hero.outside', 'Outside')} unit={tempUnit} color="#3b82f6" size={70}
               />
             </div>
@@ -104,7 +104,7 @@ export function VehicleHero({
                   <div>
                     <p className="text-[var(--text-secondary)]">{t('hero.chargeRate', 'Rate')}</p>
                     <p className="text-sm font-bold text-white">
-                      {fmtInt(convertDistance(state.charge_rate ?? 0))} {distanceUnit}/h
+                      {fmtInt(toDistanceDisplay(state.charge_rate ?? 0))} {distanceUnit}/h
                     </p>
                   </div>
                   <div>
@@ -126,7 +126,7 @@ export function VehicleHero({
             {/* Context-aware stat grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {buildStatCards(vehicle, state, firmwareVersion, {
-                convertDistance, convertSpeed, convertTemp,
+                toDistanceDisplay, toSpeedDisplay, toTemperatureDisplay,
                 distanceUnit, speedUnit, tempUnit,
               }, t).map((item) => (
                 <div
@@ -188,7 +188,7 @@ interface StatItem { icon: LucideIcon; label: string; value: string; color: stri
 
 function buildStatCards(
   _vehicle: Vehicle, s: VehicleState, firmware: string,
-  u: { convertDistance: (v: number) => number; convertSpeed: (v: number) => number; convertTemp: (v: number) => number;
+  u: { toDistanceDisplay: (v: number) => number; toSpeedDisplay: (v: number) => number; toTemperatureDisplay: (v: number) => number;
        distanceUnit: string; speedUnit: string; tempUnit: string },
   t: (key: string, fallback: string) => string,
 ): StatItem[] {
@@ -198,24 +198,24 @@ function buildStatCards(
 
   if (isDriving) {
     cards.push(
-      { icon: Gauge, label: 'Speed', value: `${fmtNumber(u.convertSpeed(s.speed), 0)} ${u.speedUnit}`, color: '#a855f7' },
+      { icon: Gauge, label: 'Speed', value: `${fmtNumber(u.toSpeedDisplay(s.speed), 0)} ${u.speedUnit}`, color: '#a855f7' },
       { icon: Zap, label: 'Power', value: `${fmtNumber(s.power)} kW`, color: s.power > 0 ? '#f59e0b' : s.power < 0 ? '#10b981' : '#374151' },
-      { icon: Navigation, label: 'Odometer', value: `${fmtInt(u.convertDistance(s.odometer))} ${u.distanceUnit}`, color: '#a855f7' },
-      { icon: Activity, label: 'Ideal Range', value: `${fmtNumber(u.convertDistance(s.ideal_range), 0)} ${u.distanceUnit}`, color: '#00f0ff' },
+      { icon: Navigation, label: 'Odometer', value: `${fmtInt(u.toDistanceDisplay(s.odometer))} ${u.distanceUnit}`, color: '#a855f7' },
+      { icon: Activity, label: 'Ideal Range', value: `${fmtNumber(u.toDistanceDisplay(s.ideal_range), 0)} ${u.distanceUnit}`, color: '#00f0ff' },
     );
   } else if (isCharging) {
     cards.push(
-      { icon: Zap, label: 'Charge Rate', value: `${fmtInt(u.convertDistance(s.charge_rate ?? 0))} ${u.distanceUnit}/h`, color: '#10b981' },
+      { icon: Zap, label: 'Charge Rate', value: `${fmtInt(u.toDistanceDisplay(s.charge_rate ?? 0))} ${u.distanceUnit}/h`, color: '#10b981' },
       { icon: Clock, label: 'Time to Full', value: s.time_to_full_charge > 0 ? `${fmtNumber(s.time_to_full_charge, 1)}h` : '—', color: '#f59e0b' },
-      { icon: Activity, label: 'Ideal Range', value: `${fmtNumber(u.convertDistance(s.ideal_range), 0)} ${u.distanceUnit}`, color: '#00f0ff' },
-      { icon: Navigation, label: 'Odometer', value: `${fmtInt(u.convertDistance(s.odometer))} ${u.distanceUnit}`, color: '#a855f7' },
+      { icon: Activity, label: 'Ideal Range', value: `${fmtNumber(u.toDistanceDisplay(s.ideal_range), 0)} ${u.distanceUnit}`, color: '#00f0ff' },
+      { icon: Navigation, label: 'Odometer', value: `${fmtInt(u.toDistanceDisplay(s.odometer))} ${u.distanceUnit}`, color: '#a855f7' },
     );
   } else {
     cards.push(
-      { icon: Thermometer, label: 'Inside', value: s.inside_temp != null ? `${fmtNumber(u.convertTemp(s.inside_temp), 1)}${u.tempUnit}` : '—', color: '#f97316' },
-      { icon: Thermometer, label: 'Outside', value: s.outside_temp != null ? `${fmtNumber(u.convertTemp(s.outside_temp), 1)}${u.tempUnit}` : '—', color: '#3b82f6' },
-      { icon: Navigation, label: 'Odometer', value: `${fmtInt(u.convertDistance(s.odometer))} ${u.distanceUnit}`, color: '#a855f7' },
-      { icon: Activity, label: 'Ideal Range', value: `${fmtNumber(u.convertDistance(s.ideal_range), 0)} ${u.distanceUnit}`, color: '#00f0ff' },
+      { icon: Thermometer, label: 'Inside', value: s.inside_temp != null ? `${fmtNumber(u.toTemperatureDisplay(s.inside_temp), 1)}${u.tempUnit}` : '—', color: '#f97316' },
+      { icon: Thermometer, label: 'Outside', value: s.outside_temp != null ? `${fmtNumber(u.toTemperatureDisplay(s.outside_temp), 1)}${u.tempUnit}` : '—', color: '#3b82f6' },
+      { icon: Navigation, label: 'Odometer', value: `${fmtInt(u.toDistanceDisplay(s.odometer))} ${u.distanceUnit}`, color: '#a855f7' },
+      { icon: Activity, label: 'Ideal Range', value: `${fmtNumber(u.toDistanceDisplay(s.ideal_range), 0)} ${u.distanceUnit}`, color: '#00f0ff' },
     );
   }
 

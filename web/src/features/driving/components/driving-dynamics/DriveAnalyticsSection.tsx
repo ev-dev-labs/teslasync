@@ -51,8 +51,8 @@ interface DriveAnalyticsSectionProps {
   endDate: string;
   onStartDateChange: (d: string) => void;
   onEndDateChange: (d: string) => void;
-  convertDistance: (v: number) => number;
-  convertSpeed: (v: number) => number;
+  toDistanceDisplay: (v: number) => number;
+  toSpeedDisplay: (v: number) => number;
   distanceUnit: string;
   speedUnit: string;
 }
@@ -63,8 +63,8 @@ export default function DriveAnalyticsSection({
   endDate,
   onStartDateChange,
   onEndDateChange,
-  convertDistance,
-  convertSpeed,
+  toDistanceDisplay,
+  toSpeedDisplay,
   distanceUnit,
   speedUnit,
 }: DriveAnalyticsSectionProps) {
@@ -76,12 +76,12 @@ export default function DriveAnalyticsSection({
       count: 0,
     }));
     for (const d of filteredDrives) {
-      const spd = d.avgSpeedMph != null ? convertSpeed(d.avgSpeedMph) : null;
+      const spd = d.avgSpeedMps != null ? toSpeedDisplay(d.avgSpeedMps) : null;
       if (spd == null) continue;
       for (let i = 0; i < SPEED_BUCKETS_RANGES.length; i++) {
         const r = SPEED_BUCKETS_RANGES[i];
-        const hi = r.max === Infinity ? Infinity : convertSpeed(r.max);
-        const lo = convertSpeed(r.min);
+        const hi = r.max === Infinity ? Infinity : toSpeedDisplay(r.max);
+        const lo = toSpeedDisplay(r.min);
         if (spd >= lo && spd < hi) {
           buckets[i].count += 1;
           break;
@@ -89,23 +89,23 @@ export default function DriveAnalyticsSection({
       }
     }
     return buckets;
-  }, [filteredDrives, convertSpeed, speedUnit]);
+  }, [filteredDrives, toSpeedDisplay, speedUnit]);
 
   const accelPatterns = useMemo<AccelPoint[]>(() =>
     filteredDrives
-      .filter((d) => d.avgPowerKw != null)
+      .filter((d) => d.avgPowerW != null)
       .map((d) => ({
-        distance: Math.round(convertDistance(d.distanceMi)),
-        powerMax: d.avgPowerKw as number,
+        distance: Math.round(toDistanceDisplay(d.distanceM)),
+        powerMax: (d.avgPowerW as number) / 1000,
       })),
-  [filteredDrives, convertDistance]);
+  [filteredDrives, toDistanceDisplay]);
 
   const powerProfile = useMemo<PowerPoint[]>(() => {
     const recent = filteredDrives.slice(-20);
     return recent.map((d, i) => ({
       index: i + 1,
       label: formatDateShort(d.startTs),
-      powerMax: d.avgPowerKw ?? 0,
+      powerMax: (d.avgPowerW ?? 0) / 1000,
       powerMin: 0,
     }));
   }, [filteredDrives]);

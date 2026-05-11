@@ -34,7 +34,14 @@ export const getDrives = (vehicleId: number, limit = 50, offset = 0, start?: str
 
 export const drivingKeys = {
   drives: (vehicleId?: string) => ['drives', vehicleId] as const,
-  drive: (id: string) => ['drives', id] as const,
+  // Detail key is namespaced under 'drive' (singular) so it never collides
+  // with `drives(vehicleId)` when the vehicleId numerically equals the drive
+  // id. The collision swapped the cached value between `Drive[]` (list) and
+  // `DriveDetail` (object) on every navigation between /drives and
+  // /drives/{id}, surfacing as "No telemetry recorded" + NaNm + "In progress"
+  // because `Drive[].distanceM`, `.endTs`, `.durationS`, `.telemetry` are
+  // all undefined on an array.
+  drive: (id: string) => ['drive', id] as const,
   score: (vehicleId?: string) => ['drive-score', vehicleId] as const,
   stats: (vehicleId?: string) => ['driving-stats', vehicleId] as const,
   dynamics: (vehicleId?: string) => ['driving-dynamics', vehicleId] as const,
@@ -247,6 +254,7 @@ export function useBulkDeleteDrives() {
       }),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['drives'] });
+      qc.invalidateQueries({ queryKey: ['drive'] });
       success('toast.bulk.delete.success', '{{count}} deleted', {
         count: res.deleted ?? 0,
       });

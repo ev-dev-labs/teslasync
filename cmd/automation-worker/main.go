@@ -14,7 +14,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/api"
+	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/ev-dev-labs/teslasync/internal/automation"
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 	"github.com/ev-dev-labs/teslasync/internal/automation/safety"
@@ -69,10 +69,10 @@ func main() {
 	// asyncAPICallLogger because the API server's logger lives in another
 	// process. When cfg.APILogs.Enabled=false we install a nil sink
 	// (LoggedTransport then logs zerolog only).
-	var inboundAPILogger api.APICallLogger
+	var inboundAPILogger apilog.Logger
 	if cfg.APILogs.Enabled {
 		apiLogRepo := database.NewAPICallLogRepo(db)
-		inboundAPILogger = api.NewAsyncAPICallLogger(apiLogRepo, api.AsyncLoggerOptions{
+		inboundAPILogger = apilog.NewAsync(apiLogRepo, apilog.AsyncOptions{
 			QueueCapacity: cfg.APILogs.QueueCapacity,
 			BatchSize:     cfg.APILogs.BatchSize,
 			FlushInterval: cfg.APILogs.FlushInterval,
@@ -86,7 +86,7 @@ func main() {
 	} else {
 		log.Info().Msg("automation-worker outbound api_call_logs sink disabled (API_LOGS_INBOUND_ENABLED=false)")
 	}
-	outboundAPILogSink := api.APICallSinkAdapter(inboundAPILogger, cfg.APILogs.CaptureBodies)
+	outboundAPILogSink := apilog.SinkAdapter(inboundAPILogger, cfg.APILogs.CaptureBodies)
 	notification.SetSink(outboundAPILogSink)
 	tesla.SetAuthSink(outboundAPILogSink, cfg.Tesla.Timeout)
 

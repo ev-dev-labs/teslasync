@@ -25,14 +25,11 @@ function makeTransition(overrides: Partial<FSMTransition>): FSMTransition {
   return {
     id: 1,
     vehicle_id: 1,
-    fsm_type: 'vehicle',
+    fsm_name: 'vehicle',
     from_state: 'parked',
     to_state: 'driving',
     trigger: 'speed_changed',
-    guard: '',
-    mode: 'auto',
-    duration_in_state_ms: 1000,
-    created_at: new Date().toISOString(),
+    ts: new Date().toISOString(),
     ...overrides,
   };
 }
@@ -50,7 +47,7 @@ describe('StateTimeline empty state (Phase 45 / Prompt 35)', () => {
   it('renders the "last transition" hint AND a "Widen window" button when a wider preset is provided', () => {
     const last = makeTransition({
       id: 88,
-      created_at: new Date(Date.now() - 30 * 60_000).toISOString(),
+      ts: new Date(Date.now() - 30 * 60_000).toISOString(),
     });
     const onWiden = vi.fn();
     const onJump = vi.fn();
@@ -79,7 +76,7 @@ describe('StateTimeline empty state (Phase 45 / Prompt 35)', () => {
   it('invokes onWidenWindow exactly once when the widen button is clicked', () => {
     const last = makeTransition({
       id: 88,
-      created_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+      ts: new Date(Date.now() - 5 * 60_000).toISOString(),
     });
     const onWiden = vi.fn();
     render(
@@ -99,7 +96,7 @@ describe('StateTimeline empty state (Phase 45 / Prompt 35)', () => {
   it('invokes onJumpToLast exactly once when the jump button is clicked', () => {
     const last = makeTransition({
       id: 88,
-      created_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+      ts: new Date(Date.now() - 5 * 60_000).toISOString(),
     });
     const onJump = vi.fn();
     render(
@@ -118,7 +115,7 @@ describe('StateTimeline empty state (Phase 45 / Prompt 35)', () => {
   it('renders the jump button but NOT the widen button when no preset fits (last transition >24h old)', () => {
     const last = makeTransition({
       id: 88,
-      created_at: new Date(Date.now() - 25 * 60 * 60_000).toISOString(),
+      ts: new Date(Date.now() - 25 * 60 * 60_000).toISOString(),
     });
     const onJump = vi.fn();
     render(

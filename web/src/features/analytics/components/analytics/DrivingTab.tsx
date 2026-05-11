@@ -10,15 +10,21 @@ import {
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import type { FleetAnalytics } from '@/api/types';
 import { SectionTitle } from './helpers';
 import { DrivingPerformanceCards } from './DrivingPerformanceCards';
 import { DrivingTemperatureStats } from './DrivingTemperatureStats';
 
+const KM_PER_MILE = 1.609344;
+
 export function DrivingTab({ data }: { data: FleetAnalytics | undefined }) {
   const { t } = useTranslation();
-  const { convertDistance, convertTemp, convertEfficiency, distanceUnit, tempUnit, efficiencyUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const tempUnit = unitPrefs.temperature;
+  const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   const da = data?.drive_analytics;
   const speedDist = da?.speed_distribution ?? [];
@@ -103,9 +109,10 @@ export function DrivingTab({ data }: { data: FleetAnalytics | undefined }) {
               <Tooltip content={<ChartTooltip />} />
               <Scatter
                 data={tempEff.map((d) => ({
-                  temp: convertTemp(safe(d.temp)),
-                  efficiency: convertEfficiency(safe(d.efficiency)),
-                  distance: convertDistance(safe(d.distance)),
+                  // backend `temp_vs_efficiency` is { °C, Wh/km, km } — convert at boundary.
+                  temp: convertTempFromSI(safe(d.temp), tempUnit),
+                  efficiency: distanceUnit === 'mi' ? safe(d.efficiency) * KM_PER_MILE : safe(d.efficiency),
+                  distance: convertDistanceFromSI(safe(d.distance) * 1000, distanceUnit),
                 }))}
                 fill={CHART_COLORS[1]}
               />

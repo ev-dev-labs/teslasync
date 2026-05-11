@@ -173,11 +173,11 @@ func TestService_GetStats(t *testing.T) {
 
 	// Add trips
 	_ = tripRepo.Save(context.Background(), &trip.Trip{
-		ID: "t1", VehicleID: "v1", DistanceMiles: 50.0, EnergyUsedKWh: 15.0,
+		ID: "t1", VehicleID: "v1", DistanceM: 50000.0, EnergyUsedWh: 15000.0,
 		StartedAt: time.Now(),
 	})
 	_ = tripRepo.Save(context.Background(), &trip.Trip{
-		ID: "t2", VehicleID: "v1", DistanceMiles: 30.0, EnergyUsedKWh: 9.0,
+		ID: "t2", VehicleID: "v1", DistanceM: 30000.0, EnergyUsedWh: 9000.0,
 		StartedAt: time.Now(),
 	})
 
@@ -198,11 +198,11 @@ func TestService_GetStats(t *testing.T) {
 	if stats.TotalTrips != 2 {
 		t.Errorf("expected 2 trips, got %d", stats.TotalTrips)
 	}
-	if stats.TotalMiles != 80.0 {
-		t.Errorf("expected 80.0 miles, got %f", stats.TotalMiles)
+	if stats.TotalM != 80000.0 {
+		t.Errorf("expected 80000.0 m, got %f", stats.TotalM)
 	}
-	if stats.TotalEnergyKWh != 24.0 {
-		t.Errorf("expected 24.0 kWh, got %f", stats.TotalEnergyKWh)
+	if stats.TotalEnergyWh != 24000.0 {
+		t.Errorf("expected 24000.0 Wh, got %f", stats.TotalEnergyWh)
 	}
 	if stats.TotalChargingSessions != 1 {
 		t.Errorf("expected 1 charging session, got %d", stats.TotalChargingSessions)
@@ -210,9 +210,9 @@ func TestService_GetStats(t *testing.T) {
 	if stats.TotalCostCents != 1500 {
 		t.Errorf("expected 1500 cost cents, got %d", stats.TotalCostCents)
 	}
-	// AvgEfficiency = (24.0 * 1000) / 80.0 = 300
-	if stats.AvgEfficiency != 300.0 {
-		t.Errorf("expected avg efficiency 300.0, got %f", stats.AvgEfficiency)
+	// AvgEfficiency = 24000 Wh / 80000 m = 0.3 Wh/m
+	if stats.AvgEfficiency != 0.3 {
+		t.Errorf("expected avg efficiency 0.3, got %f", stats.AvgEfficiency)
 	}
 }
 
@@ -248,11 +248,11 @@ func TestService_GetStats_MultipleVehicles(t *testing.T) {
 	})
 
 	_ = tripRepo.Save(context.Background(), &trip.Trip{
-		ID: "t1", VehicleID: "v1", DistanceMiles: 100.0, EnergyUsedKWh: 30.0,
+		ID: "t1", VehicleID: "v1", DistanceM: 100000.0, EnergyUsedWh: 30000.0,
 		StartedAt: time.Now(),
 	})
 	_ = tripRepo.Save(context.Background(), &trip.Trip{
-		ID: "t2", VehicleID: "v2", DistanceMiles: 50.0, EnergyUsedKWh: 15.0,
+		ID: "t2", VehicleID: "v2", DistanceM: 50000.0, EnergyUsedWh: 15000.0,
 		StartedAt: time.Now(),
 	})
 
@@ -274,8 +274,8 @@ func TestService_GetStats_MultipleVehicles(t *testing.T) {
 	if stats.TotalTrips != 2 {
 		t.Errorf("expected 2 trips, got %d", stats.TotalTrips)
 	}
-	if stats.TotalMiles != 150.0 {
-		t.Errorf("expected 150.0 miles, got %f", stats.TotalMiles)
+	if stats.TotalM != 150000.0 {
+		t.Errorf("expected 150000.0 m, got %f", stats.TotalM)
 	}
 	if stats.TotalChargingSessions != 2 {
 		t.Errorf("expected 2 charging sessions, got %d", stats.TotalChargingSessions)

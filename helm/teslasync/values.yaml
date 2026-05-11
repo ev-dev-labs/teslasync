@@ -86,7 +86,11 @@ securityContext:
     drop:
       - ALL
 
-nodeSelector: {}
+# Pin api + workers (notification, export, automation, command-proxy) to carbon
+# so all teslasync workloads colocate on the node that hosts TimescaleDB, MQTT,
+# and Redis. Empty {} restores default Kubernetes scheduling.
+nodeSelector:
+  kubernetes.io/hostname: carbon
 tolerations: []
 affinity: {}
 
@@ -139,7 +143,9 @@ web:
       drop:
         - ALL
 
-  nodeSelector: {}
+  # Colocate web with the rest of the teslasync stack on carbon.
+  nodeSelector:
+    kubernetes.io/hostname: carbon
   tolerations: []
   affinity: {}
 
@@ -344,8 +350,29 @@ fleetTelemetry:
   image: tesla/fleet-telemetry:latest
 
   service:
-    type: ClusterIP
+    # NodePort opens port 30443 on every node's host network. The router
+    # forwards WAN 8443 → carbon:30443 (carbon's real MAC keeps Deco happy).
+    # nodePort must be in k3s's default range 30000-32767 unless the
+    # apiserver --service-node-port-range flag has been customized.
+    type: NodePort
     port: 4443
+    nodePort: 30443
+    # -- Optional: bind the Service port to one or more host IPs via kube-proxy
+    # iptables. Useful when the cluster is behind a router/firewall that requires
+    # a real node MAC for port-forwarding (e.g., TP-Link Deco) and a virtual
+    # MetalLB IP isn't acceptable. Leave empty unless you know you need this.
+    # The IPs MUST belong to a node already running the fleet-telemetry pod.
+    # Example: ["192.168.68.112"]  (carbon's host IP)
+    externalIPs: []
+
+  # -- Pin the fleet-telemetry pod to a specific node. Required when
+  # service.externalIPs is set so the bound IP belongs to the same node that
+  # actually runs the pod.
+  nodeSelector:
+    kubernetes.io/hostname: carbon
+
+  tolerations: []
+  affinity: {}
 
   tls:
     # -- K8s TLS secret containing tls.crt and tls.key for the Fleet Telemetry server.
@@ -355,13 +382,19 @@ fleetTelemetry:
 
   # -- MQTT topic base for fleet-telemetry's MQTT dispatcher.
   # Fleet Telemetry publishes each signal to: {topicBase}/{VIN}/v/{field_name}
-  # TeslaSync's MQTT subscriber listens on: {topicBase}/+/v/#
+  # TeslaSync's MQTT subscriber listens on: {topicBase}/+/v/+
+  #   - segment 2: VIN (single-level wildcard)
+  #   - segment 4: canonical proto field name (single-level wildcard)
   # Must match FLEET_TELEMETRY_TOPIC_BASE env var on the TeslaSync API.
   topicBase: "telemetry"
 
-  # -- Signal batching window in milliseconds.
-  # Fleet Telemetry publishes each field as a separate MQTT message.
-  # TeslaSync batches fields per VIN within this window before processing.
+  # -- DEPRECATED — no-op on the per-field MQTT path. The legacy
+  # proto-batch subscriber buffered atomics into per-VIN payloads
+  # within this window before invoking the codec; the new per-field
+  # subscriber processes each {VIN, field} message individually
+  # (one codec.Atomic per MQTT message, one signal_log row per
+  # codec.Atomic). The knob is kept for compat with legacy values
+  # files but no production code reads it.
   batchMs: 100
 
   # -- Time without signals before a vehicle is considered stale.
@@ -883,6 +916,62 @@ mqtt:
     host: ""
     port: 1883
 
+  # ─── Phase-42 / ADR-004 #8 ───────────────────────────────────────────────
+  # Surfaced as TESLA_MQTT_MAX_REDELIVERIES in the configmap. Read by
+  # cmd/teslasync once the PipelineSubscriber is wired in (see
+  # internal/mqtt.PipelineSubscriberConfig). Default 5 matches the
+  # in-code default in `withDefaults()`.
+  maxRedeliveries: 5
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase-42 operator surface
+#
+# These knobs power the resubscribe + unit-drift workflows introduced in
+# Phase-42 (ADR-004 #5 + #9). Both cmd/resubscribe and cmd/unit-drift-validator
+# refuse to run without `operator.token` — leave it empty to keep them disabled.
+# ─────────────────────────────────────────────────────────────────────────────
+operator:
+  # -- Operator token used by cmd/resubscribe and cmd/unit-drift-validator.
+  # Rendered into the Secret as TESLASYNC_OPERATOR_TOKEN when non-empty.
+  # Generate with `openssl rand -hex 32` and store in your secret manager.
+  token: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Unit-drift validator (Phase-42 / ADR-004 #9)
+#
+# Nightly CronJob that runs cmd/unit-drift-validator against the live database.
+# Detects silent unit corruption — e.g., a US car whose Setting*Unit signals
+# stopped seeding `vehicle_unit_history` and is now emitting miles into a
+# field the pipeline assumes is metric. The job is read-only and emits two
+# Prometheus counters (tesla_unit_drift_suspected_total +
+# tesla_unit_history_canary_total). See docs/observability/phase-42-metrics.md.
+#
+# Disabled by default so existing installs are not surprised by a new
+# scheduled job. Enable on production deploys after seeding `operator.token`.
+# ─────────────────────────────────────────────────────────────────────────────
+unitDriftValidator:
+  enabled: false
+  # Cron schedule. Default 02:30 UTC daily — outside the typical nightly
+  # backup window but well after the midnight settlement boundary.
+  schedule: "30 2 * * *"
+  # Drop the job if it cannot start within this window (concurrent runs are
+  # already prevented by concurrencyPolicy: Forbid below).
+  startingDeadlineSeconds: 600
+  # successfulJobsHistoryLimit / failedJobsHistoryLimit: keep enough Job
+  # records to investigate a regression without polluting the namespace.
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  # Pass extra CLI flags to the validator binary (see cmd/unit-drift-validator).
+  # Common: --window=24h --max-vehicles=100 --dry-run
+  extraArgs: []
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Data Retention
 #
@@ -1005,3 +1094,120 @@ jaeger:
     requests:
       cpu: 50m
       memory: 64Mi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Observability stack (phase-44)
+#
+# Adds an OpenTelemetry collector that receives OTLP from app pods,
+# applies tail-sampling per docs/runbooks/phase-44-trace-sampling.md,
+# and forwards to Tempo (deployed in 0051). Disabled by default so the
+# chart is install-clean on a stock cluster.
+# ─────────────────────────────────────────────────────────────────────────────
+observability:
+  otelCollector:
+    enabled: false
+    image:
+      repository: otel/opentelemetry-collector-contrib
+      tag: 0.116.1
+      pullPolicy: IfNotPresent
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  # Self-hosted Tempo backend for trace storage. The OTel collector
+  # forwards sampled traces here over OTLP. Single-binary mode + local
+  # filesystem storage; PV-backed for durability across pod restarts.
+  tempo:
+    enabled: false
+    image:
+      repository: grafana/tempo
+      tag: 2.7.0
+      pullPolicy: IfNotPresent
+    # Block retention window. Tempo's compactor enforces this.
+    retention: "168h"
+    persistence:
+      enabled: true
+      # When true, use the StatefulSet volumeClaimTemplate (recommended for
+      # production) rather than a separate PVC. False uses a manual PVC,
+      # which is easier to clean up on a single-node dev cluster.
+      useStatefulSetVolumeClaimTemplate: false
+      accessMode: ReadWriteOnce
+      size: 10Gi
+      storageClass: ""
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+    # ───────────────────────────────────────────────────────────────────
+    # Tempo metrics_generator — emits RED metrics + service-graph metrics
+    # derived from sampled spans. Without this enabled, Tempo only stores
+    # raw traces; the new infra dashboards (Service RED, Service Graph)
+    # will show "No data" because they query traces_spanmetrics_* and
+    # traces_service_graph_* series that nothing is producing.
+    #
+    # The series are written to a Prometheus that supports the remote-
+    # write receiver. For kube-prometheus-stack you must enable
+    # `prometheus.prometheusSpec.enableRemoteWriteReceiver: true` on the
+    # Prometheus CR (it's off by default).
+    # ───────────────────────────────────────────────────────────────────
+    metricsGenerator:
+      # Per-tenant `processors` opt-in. Empty list disables generation
+      # for that tenant; Tempo will still START but won't emit any
+      # series. Defaults to both processors enabled.
+      processors:
+        - service-graphs
+        - span-metrics
+      serviceGraphs:
+        # Extra labels copied from span attributes onto every generated
+        # service-graph series. Keep small — each value combination is a
+        # distinct time series. Empty list = client/server/connection_type
+        # only.
+        dimensions: []
+      spanMetrics:
+        # Extra labels copied onto traces_spanmetrics_* series in
+        # addition to the always-emitted service / span_name / span_kind
+        # / status_code. These let dashboards split RED metrics by HTTP
+        # method, route, DB system, etc. Keep cardinality reasonable.
+        dimensions:
+          - http.method
+          - http.route
+          - http.status_code
+          - db.system
+          - messaging.system
+          - messaging.destination
+        # Latency histogram bucket edges in seconds. Tempo's defaults
+        # (0.002 → 15s) are reasonable for most APIs; this list mirrors
+        # the prom-default exponential ladder so existing alert rules
+        # work unchanged.
+        histogramBuckets:
+          - 0.002
+          - 0.004
+          - 0.008
+          - 0.016
+          - 0.032
+          - 0.064
+          - 0.128
+          - 0.256
+          - 0.512
+          - 1.024
+          - 2.048
+          - 4.096
+          - 8.192
+          - 15.0
+      # Where to ship the generated series. Disabled by default so the
+      # chart installs clean on a stock cluster; enable + set url= once
+      # a Prometheus with remote-write receiver is reachable.
+      remoteWrite:
+        enabled: false
+        url: "http://prometheus-operated.monitoring.svc.cluster.local:9090/api/v1/write"
+        sendExemplars: true
+        # Optional HTTP headers (e.g., Tenant-ID for Mimir/Cortex).
+        headers: {}

@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
@@ -51,7 +52,7 @@ func (f *fakeAPILogStore) Enqueue(e *models.APICallLog) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.AlwaysFull || f.closed {
-		apiCallLogDropsCounter.Inc()
+		apilog.DropsCounter.Inc()
 		return
 	}
 	f.entries = append(f.entries, e)
@@ -493,7 +494,7 @@ func TestT07_QueueFull_DropsEntry_RequestStillSucceeds(t *testing.T) {
 	srv := httptest.NewServer(newTestRouterWithLogger(t, store, false))
 	defer srv.Close()
 
-	before := counterValue(apiCallLogDropsCounter)
+	before := counterValue(apilog.DropsCounter)
 	resp, err := http.Get(srv.URL + "/api/v1/vehicles")
 	if err != nil {
 		t.Fatalf("GET failed: %v", err)
@@ -502,7 +503,7 @@ func TestT07_QueueFull_DropsEntry_RequestStillSucceeds(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status=%d, want 200", resp.StatusCode)
 	}
-	after := counterValue(apiCallLogDropsCounter)
+	after := counterValue(apilog.DropsCounter)
 	if delta := after - before; delta != 1 {
 		t.Errorf("api_call_log_drops_total delta=%v, want 1", delta)
 	}
@@ -602,7 +603,7 @@ func TestT09_Shutdown_DrainsPendingEntries_LaterEnqueueDropped(t *testing.T) {
 		t.Errorf("inserted=%d, want 3 (drain)", got)
 	}
 
-	before := counterValue(apiCallLogDropsCounter)
+	before := counterValue(apilog.DropsCounter)
 	// MUST NOT panic
 	logger.Enqueue(&models.APICallLog{
 		Service:    APILogServiceTag,
@@ -610,7 +611,7 @@ func TestT09_Shutdown_DrainsPendingEntries_LaterEnqueueDropped(t *testing.T) {
 		Endpoint:   "/api/v1/post-shutdown",
 		StatusCode: 200,
 	})
-	after := counterValue(apiCallLogDropsCounter)
+	after := counterValue(apilog.DropsCounter)
 	if delta := after - before; delta != 1 {
 		t.Errorf("post-shutdown drop delta=%v, want 1", delta)
 	}
@@ -736,13 +737,13 @@ func TestT13_PrometheusCounter_IncrementsOnDrop_NotOnSuccess(t *testing.T) {
 	srv := httptest.NewServer(newTestRouterWithLogger(t, store, false))
 	defer srv.Close()
 
-	before := counterValue(apiCallLogDropsCounter)
+	before := counterValue(apilog.DropsCounter)
 	resp, err := http.Get(srv.URL + "/api/v1/vehicles")
 	if err != nil {
 		t.Fatalf("GET failed: %v", err)
 	}
 	resp.Body.Close()
-	after := counterValue(apiCallLogDropsCounter)
+	after := counterValue(apilog.DropsCounter)
 	if delta := after - before; delta != 0 {
 		t.Errorf("drop counter delta=%v on success path, want 0", delta)
 	}

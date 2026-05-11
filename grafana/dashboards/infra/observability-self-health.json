@@ -1,0 +1,238 @@
+{
+  "uid": "teslasync-infra-otel-self-health",
+  "title": "TeslaSync - Observability Self-Health (OTel Collector + Tempo)",
+  "tags": [
+    "teslasync",
+    "infra",
+    "tempo",
+    "otel-collector",
+    "self-health"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "OTel Collector — Receivers",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Spans accepted/s",
+      "description": "Spans hitting the OTLP receiver before any processor. Sum across gRPC + HTTP transports.",
+      "gridPos": { "x": 0, "y": 1, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "ops" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(otelcol_receiver_accepted_spans[5m]))", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Spans refused/s",
+      "description": "Spans the receiver rejected (memory_limiter pressure, malformed payloads). Should be ~0.",
+      "gridPos": { "x": 6, "y": 1, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.1 }, { "color": "red", "value": 1 }] }, "unit": "ops" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(otelcol_receiver_refused_spans[5m]))", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Memory limiter pressure",
+      "description": "Number of times the memory_limiter forced GC. Persistent non-zero means collector is undersized.",
+      "gridPos": { "x": 12, "y": 1, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.01 }, { "color": "red", "value": 0.1 }] }, "unit": "ops" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(otelcol_processor_refused_spans{processor=\"memory_limiter\"}[5m]))", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Process RSS",
+      "description": "Resident-set size of the collector process.",
+      "gridPos": { "x": 18, "y": 1, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "bytes" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "process_resident_memory_bytes{job=~\".*otel.*|.*otelcol.*\"}", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 200,
+      "type": "row",
+      "title": "Tail-Sampling Processor",
+      "gridPos": { "x": 0, "y": 5, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Sampling decisions (kept vs dropped)",
+      "description": "Per-policy decision rate from the tail_sampling processor. Policies: errors-always, slow-always, auth-login-always, baseline-1pct.",
+      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 30, "lineWidth": 2, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "normal" } }, "unit": "ops" } },
+      "options": { "legend": { "calcs": ["max"], "displayMode": "table", "placement": "right" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum by (policy) (rate(otelcol_processor_tail_sampling_count_traces_sampled[5m]))", "legendFormat": "kept: {{policy}}", "refId": "A" }
+      ],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Decision-buffer depth",
+      "description": "Number of traces buffered awaiting decision. If this approaches `num_traces` (50000) the buffer is overflowing → bump num_traces or shorten decision_wait.",
+      "gridPos": { "x": 12, "y": 6, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 35000 }, { "color": "red", "value": 45000 }] }, "unit": "none" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(otelcol_processor_tail_sampling_count_traces_buffered)", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Sampling rate (kept / accepted)",
+      "description": "Effective sampling rate post tail policies. Lower than 1% means baseline policy is doing most of the work; higher means error / slow policies are firing a lot.",
+      "gridPos": { "x": 18, "y": 6, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "percentunit" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(otelcol_processor_tail_sampling_count_traces_sampled[5m])) / clamp_min(sum(rate(otelcol_receiver_accepted_spans[5m])), 0.001)", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 300,
+      "type": "row",
+      "title": "Exporters → Tempo",
+      "gridPos": { "x": 0, "y": 14, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Exported spans (sent vs failed)",
+      "description": "Spans the otlphttp/tempo exporter sent successfully vs failed. Failed spans = backend rejection or network drop; usually accompanied by retry-queue growth.",
+      "gridPos": { "x": 0, "y": 15, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "ops" } },
+      "options": { "legend": { "calcs": ["max"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(otelcol_exporter_sent_spans[5m]))", "legendFormat": "sent", "refId": "A" },
+        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(otelcol_exporter_send_failed_spans[5m]))", "legendFormat": "failed", "refId": "B" }
+      ],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Exporter queue size",
+      "description": "Spans waiting to be sent to Tempo. Sustained growth = backend slow / unreachable; persistent ~capacity = exporter underprovisioned.",
+      "gridPos": { "x": 12, "y": 15, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "none" } },
+      "options": { "legend": { "calcs": ["max"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "otelcol_exporter_queue_size", "legendFormat": "{{exporter}}", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 400,
+      "type": "row",
+      "title": "Tempo Backend",
+      "gridPos": { "x": 0, "y": 23, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Distributor: bytes in",
+      "description": "Bytes received by Tempo's distributor (where OTLP traces enter). Should track collector exporter throughput.",
+      "gridPos": { "x": 0, "y": 24, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "Bps" } },
+      "options": { "legend": { "calcs": ["max"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(tempo_distributor_bytes_received_total[5m]))", "legendFormat": "bytes/s", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Ingester: live traces",
+      "description": "Traces currently held in memory by the ingester (before flush to blocks). Flushed every `max_block_duration` (5m).",
+      "gridPos": { "x": 8, "y": 24, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "none" } },
+      "options": { "legend": { "calcs": ["max"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(tempo_ingester_traces_created_total) - sum(tempo_ingester_blocks_flushed_total)", "legendFormat": "live traces", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Compactor: blocks compacted",
+      "description": "Compactor running keeps query latency low. Flatline = compactor stuck (check pod logs for permission errors on /var/tempo/blocks).",
+      "gridPos": { "x": 16, "y": 24, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "ops" } },
+      "options": { "legend": { "calcs": ["max"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(tempo_compactor_blocks_compacted[5m]))", "legendFormat": "compacted/s", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 500,
+      "type": "row",
+      "title": "Metrics Generator (span_metrics + service_graphs)",
+      "gridPos": { "x": 0, "y": 32, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Active series produced",
+      "description": "Total number of series the metrics_generator is exposing right now. Cardinality runaway here directly impacts your Prometheus storage; if this grows unbounded, prune the dimensions list in helm values.",
+      "gridPos": { "x": 0, "y": 33, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 50000 }, { "color": "red", "value": 200000 }] }, "unit": "none" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(tempo_metrics_generator_registry_active_series)", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Series remote-write throughput",
+      "description": "Samples being shipped to the configured Prometheus remote-write endpoint. Zero = remote_write disabled in helm values OR target is rejecting.",
+      "gridPos": { "x": 6, "y": 33, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "ops" } },
+      "options": { "legend": { "calcs": ["max"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(tempo_metrics_generator_registry_collections_total[5m]))", "legendFormat": "collections/s", "refId": "A" },
+        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(prometheus_remote_storage_samples_total{instance=~\".*tempo.*\"}[5m]))", "legendFormat": "samples sent/s", "refId": "B" }
+      ],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "Spans dropped by generator",
+      "description": "Spans the metrics_generator dropped (cardinality limit, queue full). Sustained non-zero usually means the active-series cap was hit.",
+      "gridPos": { "x": 18, "y": 33, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 100 }] }, "unit": "ops" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(tempo_metrics_generator_processor_service_graphs_dropped_spans[5m])) + sum(rate(tempo_metrics_generator_processor_span_metrics_dropped_spans[5m]))", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    }
+  ]
+}

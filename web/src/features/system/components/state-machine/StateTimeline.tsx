@@ -77,12 +77,12 @@ export function StateTimeline({
     const startTs = endTs - windowMinutes * 60_000;
     const span = endTs - startTs || 1;
     const sorted = [...transitions].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      (a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime(),
     );
     return {
       ticks: sorted.map((tr) => ({
         tr,
-        leftPct: ((new Date(tr.created_at).getTime() - startTs) / span) * 100,
+        leftPct: ((new Date(tr.ts).getTime() - startTs) / span) * 100,
       })),
       end: new Date(endTs),
       start: new Date(startTs),
@@ -109,7 +109,7 @@ export function StateTimeline({
               {' · '}
               <span className="text-[var(--text-secondary)]">
                 {t('debugger.timeline.lastSeen', 'Last transition {{rel}}', {
-                  rel: formatRelative(lastTransition!.created_at),
+                  rel: formatRelative(lastTransition!.ts),
                 })}
               </span>
             </>
@@ -165,7 +165,7 @@ export function StateTimeline({
           return (
             <Tooltip
               key={tr.id}
-              content={`${tr.from_state} → ${tr.to_state} · ${new Date(tr.created_at).toLocaleTimeString()}`}
+              content={`${tr.from_state} → ${tr.to_state} · ${new Date(tr.ts).toLocaleTimeString()}`}
             >
               <button
                 type="button"

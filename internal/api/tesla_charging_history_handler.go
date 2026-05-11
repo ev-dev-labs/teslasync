@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
 )
 
 // TeslaChargingHistoryHandler serves Tesla Supercharger/DC charging history.
@@ -189,19 +189,19 @@ type teslaChargingHistoryResponse struct {
 }
 
 type teslaChargingHistoryItem struct {
-	SessionID           int64                    `json:"sessionId"`
-	VIN                 string                   `json:"vin"`
-	SiteLocationName    string                   `json:"siteLocationName"`
-	ChargeStartDateTime string                   `json:"chargeStartDateTime"`
-	ChargeStopDateTime  string                   `json:"chargeStopDateTime"`
-	Country             string                   `json:"country"`
-	State               string                   `json:"state"`
-	County              string                   `json:"county"`
-	PostalCode          string                   `json:"postalCode"`
-	BillingType         string                   `json:"billingType"`
-	Fees                []teslaChargingFee        `json:"fees"`
-	Invoices            []teslaChargingInvoice    `json:"invoices"`
-	VehicleMakeType     string                   `json:"vehicleMakeType"`
+	SessionID           int64                  `json:"sessionId"`
+	VIN                 string                 `json:"vin"`
+	SiteLocationName    string                 `json:"siteLocationName"`
+	ChargeStartDateTime string                 `json:"chargeStartDateTime"`
+	ChargeStopDateTime  string                 `json:"chargeStopDateTime"`
+	Country             string                 `json:"country"`
+	State               string                 `json:"state"`
+	County              string                 `json:"county"`
+	PostalCode          string                 `json:"postalCode"`
+	BillingType         string                 `json:"billingType"`
+	Fees                []teslaChargingFee     `json:"fees"`
+	Invoices            []teslaChargingInvoice `json:"invoices"`
+	VehicleMakeType     string                 `json:"vehicleMakeType"`
 }
 
 type teslaChargingFee struct {
@@ -267,7 +267,7 @@ func parseTeslaChargingEntries(items []teslaChargingHistoryItem, rawPage []byte)
 				e.CurrencyCode = &fee.CurrencyCode
 				e.PricingType = &fee.PricingType
 				e.RateBase = fee.RateBase
-				e.UsageKWh = fee.UsageBase
+				e.UsageWh = kwhPtrToWhPtr(fee.UsageBase)
 				e.TotalDue = fee.TotalDue
 				break
 			}
@@ -279,7 +279,7 @@ func parseTeslaChargingEntries(items []teslaChargingHistoryItem, rawPage []byte)
 			e.CurrencyCode = &fee.CurrencyCode
 			e.PricingType = &fee.PricingType
 			e.RateBase = fee.RateBase
-			e.UsageKWh = fee.UsageBase
+			e.UsageWh = kwhPtrToWhPtr(fee.UsageBase)
 			e.TotalDue = fee.TotalDue
 		}
 
@@ -293,4 +293,12 @@ func parseTeslaChargingEntries(items []teslaChargingHistoryItem, rawPage []byte)
 	}
 
 	return results
+}
+
+func kwhPtrToWhPtr(v *float64) *float64 {
+	if v == nil {
+		return nil
+	}
+	wh := *v * 1000.0
+	return &wh
 }

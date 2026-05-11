@@ -6,12 +6,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // SubscribeFleetTelemetry configures vehicles to connect to a self-hosted fleet-telemetry server.
 // This endpoint must be called through the Vehicle Command HTTP Proxy for signing.
 // POST /api/1/vehicles/fleet_telemetry_config
-func (c *Client) SubscribeFleetTelemetry(ctx context.Context, config FleetTelemetrySubscription) ([]byte, int, error) {
+func (c *Client) SubscribeFleetTelemetry(ctx context.Context, config FleetTelemetrySubscription) (respBody []byte, statusCode int, err error) {
+	ctx, span := startSpan(ctx, "tesla.SubscribeFleetTelemetry",
+		attribute.Int("tesla.fleet_telemetry.vin_count", len(config.VINs)),
+	)
+	defer endSpan(span, &err)
+
 	body, err := json.Marshal(config)
 	if err != nil {
 		return nil, 0, fmt.Errorf("marshal fleet telemetry config: %w", err)

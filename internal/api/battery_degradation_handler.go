@@ -56,11 +56,11 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 	ctx := r.Context()
 
 	// Look up vehicle-specific battery capacity (nil-safe; falls back to
-	// the same default that lookupVehicleCapacity uses on lookup error).
-	capacityKWh := 75.0
+	// the same default that lookupVehicleCapacityWh uses on lookup error).
+	capacityWh := 75000.0
 	capacitySource := "default"
 	if h.db != nil {
-		capacityKWh, capacitySource = lookupVehicleCapacity(ctx, h.db, vehicleID)
+		capacityWh, capacitySource = lookupVehicleCapacityWh(ctx, h.db, vehicleID)
 	}
 
 	// Battery health history — reconstruct from signal_log
@@ -76,7 +76,7 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 			writeError(w, http.StatusInternalServerError, "failed to get battery data")
 			return
 		}
-		snapshots = synthesizeBatterySnapshots(entries, capacityKWh)
+		snapshots = synthesizeBatterySnapshots(entries, capacityWh)
 	}
 	if snapshots == nil {
 		snapshots = []batterySnapshotData{}
@@ -98,25 +98,33 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 
 	var habits chargingHabits
 	if h.db != nil {
+		// Phase-42 SI charging_sessions (migration 000184): peak_power_w
+		// (Watts; >50000W == DC fast charging), total_energy_added_wh
+		// (Watt-hours), start_soc_pct/end_soc_pct (DOUBLE PRECISION).
+		// Convert energy back to kWh at the response boundary so the
+		// JSON key avg_energy_per_session keeps its kilowatt-hour
+		// semantics for the frontend.
+		var avgEnergyWh float64
 		err = h.db.Pool.QueryRow(ctx, `
 			SELECT
-				COUNT(*) FILTER (WHERE charger_power_kw_max > 50),
-				COUNT(*) FILTER (WHERE charger_power_kw_max <= 50 OR charger_power_kw_max IS NULL),
-				COUNT(*) FILTER (WHERE start_battery_pct < 10),
-				COUNT(*) FILTER (WHERE end_battery_pct > 95),
-				COUNT(*) FILTER (WHERE end_battery_pct > 90),
-				COALESCE(AVG(energy_added_kwh), 0),
+				COUNT(*) FILTER (WHERE peak_power_w > 50000),
+				COUNT(*) FILTER (WHERE peak_power_w <= 50000 OR peak_power_w IS NULL),
+				COUNT(*) FILTER (WHERE start_soc_pct < 10),
+				COUNT(*) FILTER (WHERE end_soc_pct > 95),
+				COUNT(*) FILTER (WHERE end_soc_pct > 90),
+				COALESCE(AVG(total_energy_added_wh), 0),
 				COUNT(*)
 			FROM charging_sessions
 			WHERE vehicle_id = $1`, vehicleID).Scan(
 			&habits.FastChargeCount, &habits.SlowChargeCount,
 			&habits.DeepDischargeCount, &habits.ChargeToFullCount,
-			&habits.HighSocCount, &habits.AvgEnergyPerSession,
+			&habits.HighSocCount, &avgEnergyWh,
 			&habits.TotalCount)
 		if err != nil {
 			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get charging habits")
 			// Non-fatal
 		}
+		habits.AvgEnergyPerSession = avgEnergyWh / 1000.0
 	}
 	habits.AvgEnergyPerSession = math.Round(habits.AvgEnergyPerSession*10) / 10
 
@@ -126,7 +134,7 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 	if len(snapshots) > 0 {
 		latest := snapshots[len(snapshots)-1]
 		currentHealth = latest.HealthScore
-		currentCapacity = latest.CapacityKWh
+		currentCapacity = latest.CapacityWh
 		currentDegradation = latest.DegradationPct
 		currentRange = latest.EstRangeKm
 		currentCycles = latest.CycleCount
@@ -163,7 +171,7 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		}
 		if energy != nil && *energy > 0 {
 			currentCapacity = *energy
-			currentHealth = (currentCapacity / capacityKWh) * 100
+			currentHealth = (currentCapacity / capacityWh) * 100
 			if currentHealth > 100 {
 				currentHealth = 100
 			}
@@ -172,12 +180,12 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		if rng != nil {
 			currentRange = *rng
 		}
-		// Cycle count from charge sessions
+		// Cycle count from charge sessions (Phase-42 SI: start_soc_pct/end_soc_pct).
 		if h.db != nil {
 			var delta *float64
 			_ = h.db.Pool.QueryRow(ctx,
-				`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0)) 
-				 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
+				`SELECT SUM(GREATEST(end_soc_pct - start_soc_pct, 0))
+				 FROM charging_sessions WHERE vehicle_id = $1 AND end_soc_pct > start_soc_pct`,
 				vehicleID).Scan(&delta)
 			if delta != nil {
 				currentCycles = int(*delta / 100)
@@ -188,7 +196,7 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		if currentHealth > 0 {
 			snapshots = []batterySnapshotData{{
 				HealthScore:    currentHealth,
-				CapacityKWh:    currentCapacity,
+				CapacityWh:     currentCapacity,
 				DegradationPct: currentDegradation,
 				EstRangeKm:     currentRange,
 				CycleCount:     currentCycles,
@@ -263,8 +271,8 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		"risk_factors":                   riskFactors,
 		"recommendations":                recommendations,
 		// Capacity estimate metadata
-		"battery_capacity_kwh": capacityKWh,
-		"capacity_source":      capacitySource,
+		"battery_capacity_wh": capacityWh,
+		"capacity_source":     capacitySource,
 	})
 }
 
@@ -285,20 +293,20 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 	ctx := r.Context()
 
 	// Look up vehicle-specific battery capacity (nil-safe; falls back to
-	// the same default that lookupVehicleCapacity uses on lookup error).
-	capacityKWh := 75.0
+	// the same default that lookupVehicleCapacityWh uses on lookup error).
+	capacityWh := 75000.0
 	capacitySource := "default"
 	if h.db != nil {
-		capacityKWh, capacitySource = lookupVehicleCapacity(ctx, h.db, vehicleID)
+		capacityWh, capacitySource = lookupVehicleCapacityWh(ctx, h.db, vehicleID)
 	}
 
 	// Battery history — reconstruct from signal_log
 	type histEntry struct {
-		Date        string  `json:"date"`
-		Odometer    float64 `json:"odometer"`
-		SohPct      float64 `json:"soh_pct"`
-		CapacityKWh float64 `json:"capacity_kwh"`
-		RangeKm     float64 `json:"range_km"`
+		Date       string  `json:"date"`
+		Odometer   float64 `json:"odometer"`
+		SohPct     float64 `json:"soh_pct"`
+		CapacityWh float64 `json:"capacity_wh"`
+		RangeKm    float64 `json:"range_km"`
 	}
 
 	var history []histEntry
@@ -316,19 +324,19 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 			writeError(w, http.StatusInternalServerError, "failed to get battery data")
 			return
 		}
-		snaps := synthesizeBatterySnapshots(entries, capacityKWh)
+		snaps := synthesizeBatterySnapshots(entries, capacityWh)
 		for _, s := range snaps {
 			if firstDate.IsZero() {
 				firstDate = s.CreatedAt
 			}
 			soh := s.HealthScore
-			cap := s.CapacityKWh
+			cap := s.CapacityWh
 			rng := s.EstRangeKm
 			history = append(history, histEntry{
-				Date:        s.CreatedAt.Format("2006-01-02"),
-				SohPct:      math.Round(soh*10) / 10,
-				CapacityKWh: math.Round(cap*10) / 10,
-				RangeKm:     math.Round(rng*10) / 10,
+				Date:       s.CreatedAt.Format("2006-01-02"),
+				SohPct:     math.Round(soh*10) / 10,
+				CapacityWh: math.Round(cap*10) / 10,
+				RangeKm:    math.Round(rng*10) / 10,
 			})
 			latestSOH = soh
 			latestCapacity = cap
@@ -367,7 +375,7 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		}
 		if energy != nil && *energy > 0 {
 			latestCapacity = *energy
-			latestSOH = (latestCapacity / capacityKWh) * 100
+			latestSOH = (latestCapacity / capacityWh) * 100
 			if latestSOH > 100 {
 				latestSOH = 100
 			}
@@ -378,8 +386,8 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		if h.db != nil {
 			var delta *float64
 			_ = h.db.Pool.QueryRow(ctx,
-				`SELECT SUM(GREATEST(end_battery_pct - start_battery_pct, 0))
-				 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_pct > start_battery_pct`,
+				`SELECT SUM(GREATEST(end_soc_pct - start_soc_pct, 0))
+				 FROM charging_sessions WHERE vehicle_id = $1 AND end_soc_pct > start_soc_pct`,
 				vehicleID).Scan(&delta)
 			if delta != nil {
 				latestCycles = int(*delta / 100)
@@ -387,24 +395,26 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		}
 		if latestSOH > 0 {
 			history = []histEntry{{
-				Date:        time.Now().Format("2006-01-02"),
-				SohPct:      math.Round(latestSOH*10) / 10,
-				CapacityKWh: math.Round(latestCapacity*10) / 10,
-				RangeKm:     math.Round(latestRange*10) / 10,
+				Date:       time.Now().Format("2006-01-02"),
+				SohPct:     math.Round(latestSOH*10) / 10,
+				CapacityWh: math.Round(latestCapacity*10) / 10,
+				RangeKm:    math.Round(latestRange*10) / 10,
 			}}
 			firstDate = time.Now().AddDate(0, -1, 0)
 		}
 	}
 
-	// Charging habit stats
+	// Charging habit stats. Phase-42 SI charging_sessions schema (000184):
+	// peak_power_w (Watts; 50000W == 50kW DC fast threshold), start_soc_pct
+	// and end_soc_pct (DOUBLE PRECISION).
 	var fastCount, slowCount, deepDischarge, fullCharge int
 	if h.db != nil {
 		_ = h.db.Pool.QueryRow(ctx, `
 			SELECT
-				COUNT(*) FILTER (WHERE charger_power_kw_max > 50),
-				COUNT(*) FILTER (WHERE charger_power_kw_max <= 50 OR charger_power_kw_max IS NULL),
-				COUNT(*) FILTER (WHERE start_battery_pct < 10),
-				COUNT(*) FILTER (WHERE end_battery_pct > 95)
+				COUNT(*) FILTER (WHERE peak_power_w > 50000),
+				COUNT(*) FILTER (WHERE peak_power_w <= 50000 OR peak_power_w IS NULL),
+				COUNT(*) FILTER (WHERE start_soc_pct < 10),
+				COUNT(*) FILTER (WHERE end_soc_pct > 95)
 			FROM charging_sessions
 			WHERE vehicle_id = $1`, vehicleID).Scan(&fastCount, &slowCount, &deepDischarge, &fullCharge)
 	}
@@ -450,12 +460,12 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		degradationRate = (100 - latestSOH) / (float64(ageMonths) / 12)
 	}
 
-	// Avg depth of discharge
+	// Avg depth of discharge — Phase-42 SI drives (000185): start_soc_pct/end_soc_pct.
 	var avgDoD *float64
 	if h.db != nil {
 		_ = h.db.Pool.QueryRow(ctx,
-			`SELECT AVG(GREATEST(start_battery_pct - end_battery_pct, 0))
-			 FROM drives WHERE vehicle_id = $1 AND start_battery_pct > end_battery_pct`,
+			`SELECT AVG(GREATEST(start_soc_pct - end_soc_pct, 0))
+			 FROM drives WHERE vehicle_id = $1 AND start_soc_pct > end_soc_pct`,
 			vehicleID).Scan(&avgDoD)
 	}
 	dod := 0.0
@@ -505,7 +515,7 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"current_soh":            math.Round(latestSOH*10) / 10,
 		"estimated_capacity":     math.Round(latestCapacity*10) / 10,
-		"original_capacity":      capacityKWh,
+		"original_capacity":      capacityWh,
 		"degradation_rate_yr":    math.Round(degradationRate*100) / 100,
 		"battery_age_months":     ageMonths,
 		"total_cycles":           latestCycles,
@@ -517,7 +527,7 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		"temp_exposure_reason":   tempExposureReason,
 		"history":                history,
 		// Capacity estimate metadata
-		"battery_capacity_kwh": capacityKWh,
-		"capacity_source":      capacitySource,
+		"battery_capacity_wh": capacityWh,
+		"capacity_source":     capacitySource,
 	})
 }

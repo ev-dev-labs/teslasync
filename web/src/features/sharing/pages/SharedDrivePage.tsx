@@ -22,14 +22,95 @@ import {
 import Logo from '@/components/ui/Logo';
 import { useSharedDrive } from '@/api/hooks/useSharing';
 import { FadeIn } from '@/components/motion';
-import { formatDurationMinutes } from '@/lib/dateFormat';
+import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { useUnits } from '@/hooks/useUnits';
+import {
+  convertDistanceFromSI,
+  convertSpeedFromSI,
+  type DistanceUnitPref,
+} from '@/lib/unitConversion';
+import type { SharedDriveData, SharedDriveDataV1 } from '@/types/sharing';
 
 /* ------------------------------------------------------------------ */
-/*  Helpers                                                           */
+/*  Boundary constants                                                */
 /* ------------------------------------------------------------------ */
 
-function formatDistance(km: number): string {
-  return km >= 10 ? `${Math.round(km)} km` : `${km.toFixed(1)} km`;
+// Kilometres-per-mile factor, used inline to convert Wh/km → Wh/mi for
+// users on imperial preference (no SI helper exists for energy-per-distance
+// efficiency yet — same precedent as Phase-43/0025 FleetComparePage and
+// /0027 TemperatureImpactPage).
+const KM_PER_MILE = 1.609344;
+
+// Metres-per-foot factor, used inline to convert SI-meter elevations to
+// feet for imperial users. Elevation has no dedicated formatter in
+// `lib/unitConversion` (DistanceUnitPref's 'ft' variant exists but is not
+// derived by the standard distance preference), so a one-shot inline
+// conversion keeps the public report honest about units.
+const METERS_PER_FOOT = 0.3048;
+
+const METERS_PER_KM = 1000;
+const KMH_PER_MPS = 3.6;
+
+/* ------------------------------------------------------------------ */
+/*  Unit-aware helpers                                                */
+/* ------------------------------------------------------------------ */
+
+function elevationLabel(distancePref: DistanceUnitPref): string {
+  return distancePref === 'mi' ? 'ft' : 'm';
+}
+
+function convertElevation(meters: number, distancePref: DistanceUnitPref): number {
+  return distancePref === 'mi' ? meters / METERS_PER_FOOT : meters;
+}
+
+function efficiencyUnit(distancePref: DistanceUnitPref): string {
+  return distancePref === 'mi' ? 'Wh/mi' : 'Wh/km';
+}
+
+function toEfficiencyDisplay(whPerKm: number, distancePref: DistanceUnitPref): number {
+  return distancePref === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
+}
+
+
+function normalizeSharedDriveData(data: SharedDriveData | SharedDriveDataV1 | undefined): SharedDriveData | undefined {
+  if (!data) return undefined;
+  if ('payload_version' in data && data.payload_version === 'v2') return data;
+  const v1 = data as SharedDriveDataV1;
+  return {
+    payload_version: 'v1',
+    title: v1.title,
+    description: v1.description,
+    drive: {
+      date: v1.drive.date,
+      distance_m: v1.drive.distance_km * METERS_PER_KM,
+      duration_s: Math.round(v1.drive.duration_min * 60),
+      start_address: v1.drive.start_address,
+      end_address: v1.drive.end_address,
+      start_battery: v1.drive.start_battery,
+      end_battery: v1.drive.end_battery,
+      elevation_gain: v1.drive.elevation_gain,
+      elevation_loss: v1.drive.elevation_loss,
+      max_speed_mps: v1.drive.max_speed_kmh == null ? null : v1.drive.max_speed_kmh / KMH_PER_MPS,
+      avg_speed_mps: v1.drive.avg_speed_kmh == null ? null : v1.drive.avg_speed_kmh / KMH_PER_MPS,
+      efficiency_wh_per_m: v1.drive.efficiency_wh_km == null ? null : v1.drive.efficiency_wh_km / METERS_PER_KM,
+    },
+    vehicle: v1.vehicle,
+    map_points: v1.map_points,
+    elevation_profile: (v1.elevation_profile ?? []).map((p) => ({
+      distance_m: p.distance_km * METERS_PER_KM,
+      elevation_m: p.elevation_m,
+    })),
+    speed_profile: (v1.speed_profile ?? []).map((p) => ({
+      distance_m: p.distance_km * METERS_PER_KM,
+      speed_mps: p.speed_kmh / KMH_PER_MPS,
+    })),
+    telemetry: (v1.telemetry ?? []).map((p) => ({
+      distance_m: p.distance_km * METERS_PER_KM,
+      battery_level: p.battery_level,
+      power: p.power,
+      elevation: p.elevation,
+    })),
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -69,7 +150,13 @@ function ExpiredShareView() {
 export default function SharedDrivePage() {
   const { token } = useParams<{ token: string }>();
   const { t } = useTranslation();
-  const { data, isLoading, error } = useSharedDrive(token ?? '');
+  const { data: rawData, isLoading, error } = useSharedDrive(token ?? '');
+  const data = useMemo(() => normalizeSharedDriveData(rawData), [rawData]);
+  const { unitPrefs, formatDistance, formatSpeed } = useUnits();
+  const distancePref = unitPrefs.distance;
+  const speedPref = unitPrefs.speed;
+  const elevPref = elevationLabel(distancePref);
+  const effPref = efficiencyUnit(distancePref);
 
   /* ---- Map data ---- */
   const mapPoints: LatLngExpression[] = useMemo(() => {
@@ -93,21 +180,29 @@ export default function SharedDrivePage() {
     : undefined;
 
   /* ---- Elevation chart data ---- */
+  // Pre-convert at memo time so chart consumers receive already-display-unit
+  // values; tickFormatter / Tooltip only render the unit suffix.
   const elevationData = useMemo(
     () => (data?.elevation_profile ?? []).map((p) => ({
-      distance: p.distance_km,
-      elevation: p.elevation_m,
+      // Wire ships per-point distance in km via haversineKm; lift to display
+      // unit once and pass downstream to the renderer.
+      distance: convertDistanceFromSI(p.distance_m, distancePref),
+      // Wire ships elevation_m as SI metres; convert to feet for imperial
+      // viewers.
+      elevation: convertElevation(p.elevation_m, distancePref),
     })),
-    [data?.elevation_profile],
+    [data?.elevation_profile, distancePref],
   );
 
   /* ---- Speed chart data ---- */
   const speedData = useMemo(
     () => (data?.speed_profile ?? []).map((p) => ({
-      distance: p.distance_km,
-      speed: p.speed_kmh,
+      distance: convertDistanceFromSI(p.distance_m, distancePref),
+      // Wire field is named speed_kmh; convert km/h → m/s at boundary then
+      // convert again to the preferred display unit via convertSpeedFromSI.
+      speed: convertSpeedFromSI(p.speed_mps, speedPref),
     })),
-    [data?.speed_profile],
+    [data?.speed_profile, distancePref, speedPref],
   );
 
   /* ---- Loading state ---- */
@@ -195,18 +290,18 @@ export default function SharedDrivePage() {
           <Grid cols={{ default: 2, md: 4 }} gap={4}>
             <StatCard
               label={t('share.distance', 'Distance')}
-              value={formatDistance(drive.distance_km)}
+              value={formatDistance(drive.distance_m, { precision: 1 })}
               icon={<MapPin className="h-4 w-4" />}
             />
             <StatCard
               label={t('share.duration', 'Duration')}
-              value={formatDurationMinutes(drive.duration_min)}
+              value={formatDurationSecondsAsMinutes(drive.duration_s)}
               icon={<Clock className="h-4 w-4" />}
             />
-            {drive.efficiency_wh_km != null && (
+            {drive.efficiency_wh_per_m != null && (
               <StatCard
                 label={t('share.efficiency', 'Efficiency')}
-                value={`${Math.round(drive.efficiency_wh_km)} Wh/km`}
+                value={`${Math.round(toEfficiencyDisplay(drive.efficiency_wh_per_m * METERS_PER_KM, distancePref))} ${effPref}`}
                 icon={<Zap className="h-4 w-4" />}
               />
             )}
@@ -217,24 +312,24 @@ export default function SharedDrivePage() {
                 icon={<Battery className="h-4 w-4" />}
               />
             )}
-            {drive.max_speed_kmh != null && (
+            {drive.max_speed_mps != null && (
               <StatCard
                 label={t('share.maxSpeed', 'Max Speed')}
-                value={`${Math.round(drive.max_speed_kmh)} km/h`}
+                value={formatSpeed(drive.max_speed_mps, { precision: 0 })}
                 icon={<Gauge className="h-4 w-4" />}
               />
             )}
-            {drive.avg_speed_kmh != null && (
+            {drive.avg_speed_mps != null && (
               <StatCard
                 label={t('share.avgSpeed', 'Avg Speed')}
-                value={`${Math.round(drive.avg_speed_kmh)} km/h`}
+                value={formatSpeed(drive.avg_speed_mps, { precision: 0 })}
                 icon={<TrendingUp className="h-4 w-4" />}
               />
             )}
             {drive.elevation_gain != null && (
               <StatCard
                 label={t('share.elevGain', 'Elevation Gain')}
-                value={`${Math.round(drive.elevation_gain)} m`}
+                value={`${Math.round(convertElevation(drive.elevation_gain, distancePref))} ${elevPref}`}
                 icon={<Mountain className="h-4 w-4" />}
               />
             )}
@@ -276,13 +371,13 @@ export default function SharedDrivePage() {
                   <XAxis
                     dataKey="distance"
                     {...axisTick}
-                    tickFormatter={(v: number) => `${Math.round(v)} km`}
+                    tickFormatter={(v: number) => `${Math.round(v)} ${distancePref}`}
                   />
-                  <YAxis {...axisTick} tickFormatter={(v: number) => `${Math.round(v)} m`} />
+                  <YAxis {...axisTick} tickFormatter={(v: number) => `${Math.round(v)} ${elevPref}`} />
                   <Tooltip
                     contentStyle={{ background: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: 8 }}
-                    labelFormatter={(v: number) => `${v.toFixed(1)} km`}
-                    formatter={(v: number) => [`${Math.round(v)} m`, 'Elevation']}
+                    labelFormatter={(v: number) => `${v.toFixed(1)} ${distancePref}`}
+                    formatter={(v: number) => [`${Math.round(v)} ${elevPref}`, t('share.elevTooltipLabel', 'Elevation')]}
                   />
                   <Area
                     {...AREA_DEFAULTS}
@@ -311,13 +406,13 @@ export default function SharedDrivePage() {
                   <XAxis
                     dataKey="distance"
                     {...axisTick}
-                    tickFormatter={(v: number) => `${Math.round(v)} km`}
+                    tickFormatter={(v: number) => `${Math.round(v)} ${distancePref}`}
                   />
                   <YAxis {...axisTick} tickFormatter={(v: number) => `${Math.round(v)}`} />
                   <Tooltip
                     contentStyle={{ background: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: 8 }}
-                    labelFormatter={(v: number) => `${v.toFixed(1)} km`}
-                    formatter={(v: number) => [`${Math.round(v)} km/h`, 'Speed']}
+                    labelFormatter={(v: number) => `${v.toFixed(1)} ${distancePref}`}
+                    formatter={(v: number) => [`${Math.round(v)} ${speedPref}`, t('share.speedTooltipLabel', 'Speed')]}
                   />
                   <Line
                     {...AREA_DEFAULTS}

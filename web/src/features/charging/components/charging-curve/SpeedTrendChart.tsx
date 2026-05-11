@@ -31,10 +31,10 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
     if (!sessions.length) return [];
     const byMonth = new Map<string, { dc: number[]; ac: number[] }>();
     sessions.forEach((s) => {
-      const month = (s.start_ts ?? '').slice(0, 7);
+      const month = (s.started_at ?? '').slice(0, 7);
       if (!byMonth.has(month)) byMonth.set(month, { dc: [], ac: [] });
       const group = byMonth.get(month)!;
-      const power = s.charger_power_kw_max ?? 0;
+      const power = s.peak_power_w ?? 0;
       if (isDcSession(s)) group.dc.push(power);
       else group.ac.push(power);
     });

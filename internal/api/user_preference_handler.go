@@ -39,6 +39,7 @@ import (
 // silently flipping a metric-units owner's whole UI to imperial.
 type UserPreferenceHandler struct {
 	state signal.StateReader
+	live  signal.LiveStateReader
 }
 
 // Signal → JSON field mappings for the user-preference timeline + state
@@ -53,8 +54,8 @@ var userPrefMappings = []signal.FieldMapping{
 	{Signal: "SettingTirePressureUnit", Field: "setting_tire_pressure_unit"},
 }
 
-func NewUserPreferenceHandler(state signal.StateReader) *UserPreferenceHandler {
-	return &UserPreferenceHandler{state: state}
+func NewUserPreferenceHandler(state signal.StateReader, live signal.LiveStateReader) *UserPreferenceHandler {
+	return &UserPreferenceHandler{state: state, live: live}
 }
 
 // List returns user preference history from the signal-log change feed
@@ -113,7 +114,7 @@ func (h *UserPreferenceHandler) Latest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	snap, err := h.state.State(r.Context(), vehicleID, time.Now())
+	snap, err := h.live.LiveState(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest user preference data")
 		writeError(w, http.StatusInternalServerError, "failed to get latest user preference data")

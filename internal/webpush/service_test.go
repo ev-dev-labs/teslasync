@@ -3,9 +3,12 @@ package webpush
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
+	"reflect"
+	"strings"
 	"sync"
 	"testing"
 
@@ -245,4 +248,56 @@ func indexOf(s, sub string) int {
 		}
 	}
 	return -1
+}
+
+// ---------------------------------------------------------------------
+// Phase-49 / Slice 0010 — duplicate notification icon fix.
+//
+// Both regression tests below exist to keep a future contributor from
+// re-introducing the user-reported "two lightning bolts on the same
+// notification" bug by accident:
+//
+//   - TestPayload_NoIconField pins the Go struct shape. Re-adding an
+//     `Icon` field would let Go-side code start populating it without
+//     any test failure unless this assertion exists.
+//   - TestPayload_JSONShape_OmitsIcon pins the wire format. Even a
+//     zero-valued `Icon string `json:"icon,omitempty"`` would not appear
+//     in marshalled JSON, but a non-omitempty variant or a struct-tag
+//     typo that shifted the json key would surface here.
+//
+// If you intentionally want to bring per-event contextual icons back,
+// design the new payload field with an explicit category (e.g.
+// `EventKind string`) and a SW mapping table — see prompt 0010 for the
+// rationale.
+// ---------------------------------------------------------------------
+
+func TestPayload_NoIconField(t *testing.T) {
+	t.Parallel()
+	typ := reflect.TypeOf(Payload{})
+	if _, ok := typ.FieldByName("Icon"); ok {
+		t.Fatal("Payload must NOT have an `Icon` field — see Phase-49 / Slice 0010 / sw.ts comment")
+	}
+}
+
+func TestPayload_JSONShape_OmitsIcon(t *testing.T) {
+	t.Parallel()
+	body, err := json.Marshal(Payload{
+		Title:    "Drive Started",
+		Body:     "Your Roadster is moving",
+		URL:      "/drives/42",
+		Badge:    "/icons/badge-72.png",
+		Tag:      "drive-42",
+		Severity: "info",
+	})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if strings.Contains(string(body), `"icon"`) {
+		t.Fatalf(`marshalled payload must not contain an "icon" key, got: %s`, body)
+	}
+	// Sanity-check: badge MUST still serialise (it correctly populates
+	// the Android status-bar slot and is not part of this slice's removal).
+	if !strings.Contains(string(body), `"badge"`) {
+		t.Fatalf(`marshalled payload must still contain a "badge" key, got: %s`, body)
+	}
 }

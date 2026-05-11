@@ -50,10 +50,10 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
   const chartData = useMemo<ChartDatum[]>(() =>
     (sessions ?? [])
       .map((s, i) => ({
-        label: s.start_ts
-          ? new Date(s.start_ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+        label: s.started_at
+          ? new Date(s.started_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
           : `#${i + 1}`,
-        energy: s.energy_added_kwh ?? 0,
+        energy: s.total_energy_added_wh ?? 0,
         type: classifyChargerType(s),
       }))
       .reverse(),

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
 )
 
@@ -29,8 +30,23 @@ func (h *DriveHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to list drives")
 		return
 	}
+	// Guarantee a JSON array (`[]`) instead of `null` so SPA hooks that
+	// call `.map`/`.length` on the response don't crash on empty results.
+	if drives == nil {
+		drives = []*models.Drive{}
+	}
 	writeJSON(w, http.StatusOK, drives)
 }
+
+// Constants used by the SI-canonical drives queries (migration 000185).
+// Defined once here so the SQL stays readable.
+const (
+	driveStatsMetersPerMile  = 1609.344
+	driveStatsMpsPerMph      = 0.44704
+	driveStatsKilo           = 1000.0
+	driveStatsTwoMilesMeters = 2.0 * driveStatsMetersPerMile // ~3218.688 m
+	driveStatsSpeedLimitMps  = 130.0 * driveStatsMpsPerMph   // ~58.1152 m/s
+)
 
 // Stats returns aggregate driving statistics for a vehicle.
 func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
@@ -47,49 +63,65 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
+	// Phase-42 SI canonical drives schema (migration 000185): distance in
+	// meters, duration in seconds, speeds in m/s, power in W. Convert to
+	// the legacy display units (mi, min, mph, kW) in Go before populating
+	// the response so the JSON shape consumed by the frontend is preserved.
 	var totalDrives int
-	var totalDistKm, totalDurMin, avgSpeedKmh, topSpeedKmh *float64
+	var totalDistMeters, totalDurSec, avgSpeedMpsVal, topSpeedMpsVal *float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*),
-		       SUM(distance_mi),
-		       SUM(duration_min),
-		       AVG(CASE WHEN duration_min > 0 THEN distance_mi / (duration_min / 60) ELSE NULL END),
-		       MAX(max_speed_mph)
+		       SUM(distance_m),
+		       SUM(duration_s)::float8,
+		       AVG(CASE WHEN duration_s > 0 THEN distance_m / duration_s ELSE NULL END),
+		       MAX(max_speed_mps)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
-	).Scan(&totalDrives, &totalDistKm, &totalDurMin, &avgSpeedKmh, &topSpeedKmh)
+		WHERE vehicle_id = $1 AND ended_at IS NOT NULL`, vehicleID,
+	).Scan(&totalDrives, &totalDistMeters, &totalDurSec, &avgSpeedMpsVal, &topSpeedMpsVal)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("drive stats: failed to query")
 		writeError(w, http.StatusInternalServerError, "failed to get driving stats")
 		return
 	}
 
-	// Efficiency: battery % used per 100 km → approximate Wh/km
+	// Convert selected SI aggregates only where existing non-Phase-48 fields
+	// intentionally remain outside this slice. Duration and regen are exposed
+	// in SI canonical fields.
+	totalDistMi := scaleNullable(totalDistMeters, 1.0/driveStatsMetersPerMile)
+	avgSpeedMph := scaleNullable(avgSpeedMpsVal, 1.0/driveStatsMpsPerMph)
+	topSpeedMph := scaleNullable(topSpeedMpsVal, 1.0/driveStatsMpsPerMph)
+
+	// Efficiency: battery % used per 100 km → approximate Wh/km.
+	// SoC delta is REAL percent in SI; distance converted from meters to
+	// miles inline so the original formula stays one expression.
 	var avgEfficiency *float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT AVG(
-			CASE WHEN distance_mi > 2 AND start_battery_pct IS NOT NULL AND end_battery_pct IS NOT NULL
-			THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 * 0.75
+			CASE WHEN distance_m > $2 AND start_soc_pct IS NOT NULL AND end_soc_pct IS NOT NULL
+			THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $3) * 100 * 0.75
 			ELSE NULL END
 		)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
+		WHERE vehicle_id = $1 AND ended_at IS NOT NULL`,
+		vehicleID, driveStatsTwoMilesMeters, driveStatsMetersPerMile,
 	).Scan(&avgEfficiency)
 	if err != nil {
 		log.Debug().Err(err).Msg("drive stats: efficiency query")
 	}
 
-	// Regen: estimate from negative power readings
-	var totalRegenKwh *float64
+	// Regen: estimate from negative average-power readings.
+	// avg_power_w * duration_s / 3600 = Watt-hours.
+	var totalRegenWh *float64
 	err = h.db.Pool.QueryRow(ctx, `
-		SELECT SUM(CASE WHEN avg_power_kw IS NOT NULL AND avg_power_kw < 0
-		           THEN ABS(avg_power_kw) * duration_min / 60 ELSE 0 END)
+		SELECT SUM(CASE WHEN avg_power_w IS NOT NULL AND avg_power_w < 0
+		           THEN ABS(avg_power_w) * duration_s / 3600.0 ELSE 0 END)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
-	).Scan(&totalRegenKwh)
+		WHERE vehicle_id = $1 AND ended_at IS NOT NULL`, vehicleID,
+	).Scan(&totalRegenWh)
 	if err != nil {
 		log.Debug().Err(err).Msg("drive stats: regen query")
 	}
+	totalRegenEnergyWh := scaleNullable(totalRegenWh, 1.0)
 
 	sf := func(v *float64) float64 {
 		if v == nil {
@@ -101,8 +133,8 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		return math.Round(*v*100) / 100
 	}
 
-	totalDist := sf(totalDistKm)
-	regenKwh := sf(totalRegenKwh)
+	totalDist := sf(totalDistMi)
+	regenEnergyWh := sf(totalRegenEnergyWh)
 
 	// CO2 saved: ~120g CO2/km for an average ICE car, minus ~50g/km for EV
 	co2SavedKg := totalDist * 0.070 // net 70g/km saved
@@ -111,9 +143,9 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	regenRatio := 0.0
 	if totalDist > 0 {
 		// Approximate total energy used: ~150 Wh/km average
-		totalEnergyKwh := totalDist * 0.15
-		if totalEnergyKwh > 0 {
-			regenRatio = regenKwh / totalEnergyKwh
+		totalEnergyWh := totalDist * 150
+		if totalEnergyWh > 0 {
+			regenRatio = regenEnergyWh / totalEnergyWh
 			if regenRatio > 1 {
 				regenRatio = 1
 			}
@@ -123,14 +155,25 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"total_drives":         totalDrives,
 		"total_distance_km":    math.Round(totalDist*100) / 100,
-		"total_duration_min":   sf(totalDurMin),
+		"total_duration_s":     sf(totalDurSec),
 		"avg_efficiency_wh_km": sf(avgEfficiency),
-		"avg_speed_kmh":        sf(avgSpeedKmh),
-		"top_speed_kmh":        sf(topSpeedKmh),
+		"avg_speed_kmh":        sf(avgSpeedMph),
+		"top_speed_kmh":        sf(topSpeedMph),
 		"regen_ratio":          math.Round(regenRatio*1000) / 1000,
-		"total_regen_kwh":      math.Round(regenKwh*100) / 100,
+		"regen_energy_wh":      math.Round(regenEnergyWh*100) / 100,
 		"co2_saved_kg":         math.Round(co2SavedKg*100) / 100,
 	})
+}
+
+// scaleNullable applies a multiplicative factor to a nullable float pointer.
+// Used to convert SI values queried from the drives table into the legacy
+// display units the existing JSON response shape exposes.
+func scaleNullable(v *float64, factor float64) *float64 {
+	if v == nil {
+		return nil
+	}
+	scaled := *v * factor
+	return &scaled
 }
 
 // Score returns a computed driving score for a vehicle.
@@ -148,24 +191,29 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Aggregate stats for completed drives
+	// Aggregate stats for completed drives. Phase-42 SI columns: distance_m,
+	// start/end_soc_pct, avg_power_w. Convert power Watts → kW in Go (the
+	// downstream Smoothness math expects the prior kW magnitudes).
 	var totalDrives int
-	var avgWhKm, avgPowerMax, avgPowerMin *float64
+	var avgWhKm, avgPowerMaxW, avgPowerMinW *float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*),
-		       AVG(CASE WHEN distance_mi > 2 AND start_battery_pct IS NOT NULL AND end_battery_pct IS NOT NULL
-		            THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 * 0.75
+		       AVG(CASE WHEN distance_m > $2 AND start_soc_pct IS NOT NULL AND end_soc_pct IS NOT NULL
+		            THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $3) * 100 * 0.75
 		            ELSE NULL END),
-		       MAX(avg_power_kw),
-		       MIN(avg_power_kw)
+		       MAX(avg_power_w),
+		       MIN(avg_power_w)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
-	).Scan(&totalDrives, &avgWhKm, &avgPowerMax, &avgPowerMin)
+		WHERE vehicle_id = $1 AND ended_at IS NOT NULL`,
+		vehicleID, driveStatsTwoMilesMeters, driveStatsMetersPerMile,
+	).Scan(&totalDrives, &avgWhKm, &avgPowerMaxW, &avgPowerMinW)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("score: failed to query aggregates")
 		writeError(w, http.StatusInternalServerError, "failed to compute score")
 		return
 	}
+	avgPowerMax := scaleNullable(avgPowerMaxW, 1.0/driveStatsKilo)
+	avgPowerMin := scaleNullable(avgPowerMinW, 1.0/driveStatsKilo)
 
 	if totalDrives == 0 {
 		writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -180,13 +228,15 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Speed discipline: fraction of drives where max_speed_mph < 130
+	// Speed discipline: fraction of drives with max speed under ~130 mph
+	// (Phase-42 SI: max_speed_mps < 130*mpsPerMph m/s).
 	var disciplinedCount int
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_ts IS NOT NULL
-		  AND (max_speed_mph IS NULL OR max_speed_mph < 130)`, vehicleID,
+		WHERE vehicle_id = $1 AND ended_at IS NOT NULL
+		  AND (max_speed_mps IS NULL OR max_speed_mps < $2)`,
+		vehicleID, driveStatsSpeedLimitMps,
 	).Scan(&disciplinedCount)
 	if err != nil {
 		log.Error().Err(err).Msg("score: speed discipline query")
@@ -266,24 +316,28 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 	trend := "flat"
 	if totalDrives >= 10 {
 		scoreForBatch := func(offset int) float64 {
-			var batchWhKm, batchPMax, batchPMin *float64
+			var batchWhKm, batchPMaxW, batchPMinW *float64
 			var batchTotal, batchDisciplined int
 			_ = h.db.Pool.QueryRow(ctx, `
 				SELECT COUNT(*),
-				       AVG(CASE WHEN distance_mi > 2 AND start_battery_pct IS NOT NULL AND end_battery_pct IS NOT NULL
-				            THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 * 0.75
+				       AVG(CASE WHEN distance_m > $3 AND start_soc_pct IS NOT NULL AND end_soc_pct IS NOT NULL
+				            THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $4) * 100 * 0.75
 				            ELSE NULL END),
-				       AVG(avg_power_kw),
-				       AVG(avg_power_kw)
-				FROM (SELECT * FROM drives WHERE vehicle_id = $1 AND end_ts IS NOT NULL
-				      ORDER BY end_ts DESC LIMIT 10 OFFSET $2) sub`, vehicleID, offset,
-			).Scan(&batchTotal, &batchWhKm, &batchPMax, &batchPMin)
+				       AVG(avg_power_w),
+				       AVG(avg_power_w)
+				FROM (SELECT * FROM drives WHERE vehicle_id = $1 AND ended_at IS NOT NULL
+				      ORDER BY ended_at DESC LIMIT 10 OFFSET $2) sub`,
+				vehicleID, offset, driveStatsTwoMilesMeters, driveStatsMetersPerMile,
+			).Scan(&batchTotal, &batchWhKm, &batchPMaxW, &batchPMinW)
 			_ = h.db.Pool.QueryRow(ctx, `
 				SELECT COUNT(*)
-				FROM (SELECT * FROM drives WHERE vehicle_id = $1 AND end_ts IS NOT NULL
-				      ORDER BY end_ts DESC LIMIT 10 OFFSET $2) sub
-				WHERE max_speed_mph IS NULL OR max_speed_mph < 130`, vehicleID, offset,
+				FROM (SELECT * FROM drives WHERE vehicle_id = $1 AND ended_at IS NOT NULL
+				      ORDER BY ended_at DESC LIMIT 10 OFFSET $2) sub
+				WHERE max_speed_mps IS NULL OR max_speed_mps < $3`,
+				vehicleID, offset, driveStatsSpeedLimitMps,
 			).Scan(&batchDisciplined)
+			batchPMax := scaleNullable(batchPMaxW, 1.0/driveStatsKilo)
+			batchPMin := scaleNullable(batchPMinW, 1.0/driveStatsKilo)
 
 			eff := 50.0
 			if batchWhKm != nil && !math.IsNaN(*batchWhKm) {
@@ -350,24 +404,37 @@ func (h *DriveHandler) Dynamics(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Derive approximations from drive stats
+	// Phase-42 SI columns: max_speed_mps, distance_m, duration_s, avg_power_w.
+	// Convert to legacy units (mph, kW) in Go so the downstream G-force math
+	// (which uses km/h → m/s and kW → W intermediate steps) keeps the same
+	// expression structure and the same numeric answer.
 	var totalDrives int
-	var maxSpeedMax, avgSpeed, maxPowerMax, avgPowerMax, avgPowerMin *float64
+	var maxSpeedMaxMps, avgSpeedMpsRaw, maxPowerMaxW, avgPowerMaxW, avgPowerMinW *float64
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*),
-		       MAX(max_speed_mph),
-		       AVG(CASE WHEN duration_min > 0 THEN distance_mi / (duration_min / 60) ELSE NULL END),
-		       MAX(avg_power_kw),
-		       AVG(avg_power_kw),
-		       AVG(avg_power_kw)
+		       MAX(max_speed_mps),
+		       AVG(CASE WHEN duration_s > 0 THEN distance_m / duration_s ELSE NULL END),
+		       MAX(avg_power_w),
+		       AVG(avg_power_w),
+		       AVG(avg_power_w)
 		FROM drives
-		WHERE vehicle_id = $1 AND end_ts IS NOT NULL`, vehicleID,
-	).Scan(&totalDrives, &maxSpeedMax, &avgSpeed, &maxPowerMax, &avgPowerMax, &avgPowerMin)
+		WHERE vehicle_id = $1 AND ended_at IS NOT NULL`, vehicleID,
+	).Scan(&totalDrives, &maxSpeedMaxMps, &avgSpeedMpsRaw, &maxPowerMaxW, &avgPowerMaxW, &avgPowerMinW)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("dynamics: failed to query")
 		writeError(w, http.StatusInternalServerError, "failed to compute dynamics")
 		return
 	}
+	maxSpeedMax := scaleNullable(maxSpeedMaxMps, 1.0/driveStatsMpsPerMph)
+	_ = maxSpeedMax // retained as legacy unused symbol; original handler scanned it but never read it
+	// avgSpeed is read by safeVal as "km/h"; the prior code computed mph here
+	// (mile-distance over hour-duration) and labelled the variable "km/h",
+	// a long-standing pre-existing quirk in this handler. Convert m/s → mph
+	// to preserve the downstream numeric path bit-for-bit.
+	avgSpeed := scaleNullable(avgSpeedMpsRaw, 1.0/driveStatsMpsPerMph)
+	maxPowerMax := scaleNullable(maxPowerMaxW, 1.0/driveStatsKilo)
+	avgPowerMax := scaleNullable(avgPowerMaxW, 1.0/driveStatsKilo)
+	avgPowerMin := scaleNullable(avgPowerMinW, 1.0/driveStatsKilo)
 
 	if totalDrives == 0 {
 		writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -405,7 +472,7 @@ func (h *DriveHandler) Dynamics(w http.ResponseWriter, r *http.Request) {
 		avgAccG = (pAvg / (vehicleMassKg * vAvgMs)) / gravity
 	}
 
-	// Braking G from regen power (negative avg_power_kw)
+	// Braking G from regen power (negative average-power values)
 	maxBrakeG := 0.0
 	avgBrakeG := 0.0
 	if vAvgMs > 1 {

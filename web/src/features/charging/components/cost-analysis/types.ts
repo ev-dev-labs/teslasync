@@ -29,7 +29,7 @@ export interface CoreStats {
   totalEnergy: number;
   avgCostPerKwh: number;
   totalDuration: number;
-  totalDistanceMi: number;
+  totalDistanceM: number;
   costPerDist: number;
   gasCost: number;
   savings: number;

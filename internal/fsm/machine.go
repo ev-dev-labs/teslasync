@@ -18,8 +18,9 @@ const (
 )
 
 type pendingTransition struct {
-	To    State
-	Since time.Time
+	To      State
+	Trigger Trigger
+	Since   time.Time
 }
 
 // VehicleFSM is the top-level state machine for a single vehicle.
@@ -77,9 +78,30 @@ func (m *VehicleFSM) LastTransitionAt() time.Time {
 	return m.lastTransitionAt
 }
 
-// ProcessSignals is the single entry point for telemetry signal batches.
-// It detects triggers, evaluates the transition table, and commits valid transitions.
+// ProcessSignals is the single entry point for telemetry signal batches
+// driven by callers that have no event-time information (legacy poll
+// path, tests). It defers to ProcessSignalsAt with a zero payloadTs
+// which falls back to wall-clock inside buildSignalContextAt.
 func (m *VehicleFSM) ProcessSignals(ctx context.Context, vehicleID int64, signals map[string]interface{}) error {
+	return m.ProcessSignalsAt(ctx, vehicleID, signals, time.Time{})
+}
+
+// ProcessSignalsAt is the event-time-aware variant. payloadTs is the
+// signal-batch timestamp threaded down from the AtomicsObserver
+// pipeline (max EmittedAt across the batch's atomics). When non-zero
+// it stamps both the SignalContext.Now used by transition guards and
+// the ts persisted to fsm_transitions via fsmAction.Execute. A zero
+// payloadTs preserves the legacy wall-clock behavior — required for
+// non-pipeline callers that have no event-time (HandleTimeout-driven
+// reconciler ticks, test fixtures).
+//
+// Phase-42a/0030.bis (commit C2 of v3.4 prod-replay accuracy fix)
+// — replaying a 24-minute window of historical signals with the
+// legacy buildSignalContext stamped every transition with the
+// replay-runner's wall-clock, producing micro-drives at the runner's
+// time rather than the original event window. Rule: any caller that
+// has the originating signal's EmittedAt MUST pass it through.
+func (m *VehicleFSM) ProcessSignalsAt(ctx context.Context, vehicleID int64, signals map[string]interface{}, payloadTs time.Time) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -88,7 +110,36 @@ func (m *VehicleFSM) ProcessSignals(ctx context.Context, vehicleID int64, signal
 		m.isGearCapable = true
 	}
 
-	sctx := m.buildSignalContext(signals)
+	sctx := m.buildSignalContextAt(signals, payloadTs)
+
+	// C3 (v3.4 prod-replay accuracy fix): cancel any pending Park-debounce
+	// when the same batch carries contradicting evidence (Gear=D/R or
+	// VehicleSpeed > 1.0). Without this, a spurious single-frame Gear=P
+	// would silently arm the debounce and CheckPending would later commit
+	// Driving→Parked even though the vehicle had been moving the entire
+	// 30s window. Holding the lock through this block is safe because
+	// m.mu is already acquired at function entry.
+	if m.pending != nil && m.pending.To == Parked {
+		contradicts := false
+		if sctx.HasGearInBatch {
+			switch sctx.Gear {
+			case enums.GearDrive, enums.GearReverse:
+				contradicts = true
+			}
+		}
+		if !contradicts && sctx.Speed > 1.0 {
+			contradicts = true
+		}
+		if contradicts {
+			m.logger.Debug().
+				Int64("vehicle_id", vehicleID).
+				Str("pending_to", string(m.pending.To)).
+				Str("gear", sctx.Gear).
+				Float64("speed", sctx.Speed).
+				Msg("fsm: cancelling pending Park (contradicting evidence)")
+			m.pending = nil
+		}
+	}
 
 	m.logger.Debug().
 		Int64("vehicle_id", vehicleID).
@@ -186,8 +237,14 @@ func (m *VehicleFSM) handleDebounced(_ context.Context, vehicleID int64, tr Tran
 	}
 
 	if m.pending == nil || m.pending.To != tr.To {
-		// New candidate — start the debounce timer
-		m.pending = &pendingTransition{To: tr.To, Since: now}
+		// New candidate — start the debounce timer.
+		// C3 (v3.4): preserve the originating Trigger so CheckPending
+		// commits with the same trigger semantics. Without this,
+		// debounced Gear=P transitions would commit with TriggerSpeedZero
+		// in the persisted fsm_transitions row — useless for audit and
+		// silently breaks any downstream consumer that reads the trigger
+		// (e.g. drive-merge logic in C3 below).
+		m.pending = &pendingTransition{To: tr.To, Trigger: tr.Trigger, Since: now}
 		m.logger.Debug().
 			Int64("vehicle_id", vehicleID).
 			Str("to", string(tr.To)).
@@ -231,16 +288,18 @@ func (m *VehicleFSM) CheckPending(ctx context.Context, vehicleID int64, sctx *Si
 
 	// Confirmed — commit
 	to := m.pending.To
+	trigger := m.pending.Trigger
 	m.logger.Debug().
 		Int64("vehicle_id", vehicleID).
 		Str("to", string(to)).
+		Str("trigger", trigger.String()).
 		Msg("fsm: committing confirmed debounced transition")
 	m.pending = nil
 
 	tr := Transition{
 		From:    m.current,
 		To:      to,
-		Trigger: TriggerSpeedZero, // debounced transitions are always speed-based
+		Trigger: trigger,
 		Mode:    Immediate,
 	}
 	return m.commit(ctx, vehicleID, tr, sctx)
@@ -296,11 +355,27 @@ func (m *VehicleFSM) commit(ctx context.Context, vehicleID int64, tr Transition,
 }
 
 func (m *VehicleFSM) buildSignalContext(signals map[string]interface{}) *SignalContext {
+	return m.buildSignalContextAt(signals, time.Time{})
+}
+
+// buildSignalContextAt is the event-time-aware constructor. When
+// payloadTs is zero it falls back to wall-clock so non-pipeline
+// callers (HandleTimeout, HandleSignalReceived, tests) keep their
+// existing semantics. When non-zero it stamps SignalContext.Now with
+// payloadTs so transition guards (Debounced timers, CheckPending) and
+// the persisted fsm_transitions row reflect the originating signal's
+// event-time. Per Phase-42a/0030.bis (commit C2 of v3.4 prod-replay
+// accuracy fix), any caller threading EmittedAt MUST pass it here.
+func (m *VehicleFSM) buildSignalContextAt(signals map[string]interface{}, payloadTs time.Time) *SignalContext {
+	now := payloadTs
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
 	sctx := &SignalContext{
-		CurrentState: m.current,
+		CurrentState:  m.current,
 		IsGearCapable: m.isGearCapable,
 		Signals:       signals,
-		Now:           time.Now().UTC(),
+		Now:           now,
 	}
 
 	// Gear

@@ -58,6 +58,8 @@ func (r *PositionRepo) InsertFromMap(ctx context.Context, vehicleID int64, ts ti
 	return insertRowFromMap(ctx, r.db, "positions", vehicleID, ts, row)
 }
 
-func (r *SecurityRepo) InsertFromMap(ctx context.Context, vehicleID int64, ts time.Time, row map[string]any) error {
-	return insertRowFromMap(ctx, r.db, "security_events", vehicleID, ts, row)
-}
+// Phase-42 (prompt 0077): SecurityRepo.InsertFromMap was deleted alongside
+// security_repo.go and the security_events typed-table fan-out (the
+// "case security_events" branch in telemetry_handler_ingest.go). Security
+// signals (Locked, SentryMode, DoorState, FdWindow, etc.) flow through the
+// typed signal_log pipeline (000167+).

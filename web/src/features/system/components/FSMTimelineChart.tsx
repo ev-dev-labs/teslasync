@@ -10,6 +10,7 @@ import type { FSMTransition } from '@/types/fsm';
 interface FSMTimelineChartProps {
   transitions: FSMTransition[];
   hours: number;
+  emptyMessage?: string;
 }
 
 interface TimelineBucket {
@@ -17,7 +18,7 @@ interface TimelineBucket {
   [fsmType: string]: string | number;
 }
 
-export function FSMTimelineChart({ transitions, hours }: FSMTimelineChartProps) {
+export function FSMTimelineChart({ transitions, hours, emptyMessage }: FSMTimelineChartProps) {
   const { t } = useTranslation();
 
   const { buckets, fsmTypes } = useMemo(() => {
@@ -29,9 +30,9 @@ export function FSMTimelineChart({ transitions, hours }: FSMTimelineChartProps) 
     const now = Date.now();
     const start = now - hours * 60 * 60_000;
 
-    // Collect FSM types
+    // Collect FSM names
     const typeSet = new Set<string>();
-    for (const tr of transitions) typeSet.add(tr.fsm_type);
+    for (const tr of transitions) typeSet.add(tr.fsm_name);
     const types = Array.from(typeSet).sort();
 
     // Create buckets
@@ -45,11 +46,11 @@ export function FSMTimelineChart({ transitions, hours }: FSMTimelineChartProps) 
 
     // Fill buckets
     for (const tr of transitions) {
-      const ts = new Date(tr.created_at).getTime();
+      const ts = new Date(tr.ts).getTime();
       const key = Math.floor(ts / bucketMs) * bucketMs;
       const bucket = bucketMap.get(key);
       if (bucket) {
-        bucket[tr.fsm_type] = (bucket[tr.fsm_type] ?? 0) + 1;
+        bucket[tr.fsm_name] = (bucket[tr.fsm_name] ?? 0) + 1;
       }
     }
 
@@ -93,7 +94,7 @@ export function FSMTimelineChart({ transitions, hours }: FSMTimelineChartProps) 
           </AreaChart>
         </ResponsiveContainer>
       ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('fsm.noTimelineData', 'No transition data for timeline')} />
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyMessage ?? t('fsm.noTimelineData', 'No transition data for timeline')} />
       )}
     </ChartContainer>
   );

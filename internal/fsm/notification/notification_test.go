@@ -2,63 +2,7 @@ package notification
 
 import (
 	"testing"
-	"time"
 )
-
-// ─── Cooldown FSM Tests ─────────────────────────────────
-
-func TestCooldown_Armed_ConditionMet_Fires(t *testing.T) {
-	c := NewCooldownFSM(1, 1, DefaultCooldownConfig())
-	if !c.ShouldFire() {
-		t.Fatal("expected fire from Armed state")
-	}
-	if c.State() != Fired {
-		t.Fatalf("expected Fired, got %s", c.State())
-	}
-}
-
-func TestCooldown_Fired_WithinCooldown_Suppressed(t *testing.T) {
-	c := NewCooldownFSM(1, 1, CooldownConfig{CooldownDuration: 15 * time.Minute, MaxFiresPerHour: 10})
-	c.ShouldFire() // fire
-	if c.ShouldFire() {
-		t.Fatal("expected suppression within cooldown")
-	}
-	if c.State() != Suppressed {
-		t.Fatalf("expected Suppressed, got %s", c.State())
-	}
-}
-
-func TestCooldown_MaxFiresPerHour_Suppressed(t *testing.T) {
-	c := NewCooldownFSM(1, 1, CooldownConfig{CooldownDuration: 0, MaxFiresPerHour: 2})
-	c.ShouldFire() // 1
-	c.ShouldFire() // 2
-	if c.ShouldFire() {
-		t.Fatal("expected suppression at max fires per hour")
-	}
-}
-
-func TestCooldown_CooldownExpires_ReArmed(t *testing.T) {
-	c := NewCooldownFSM(1, 1, CooldownConfig{CooldownDuration: 1 * time.Millisecond, MaxFiresPerHour: 100})
-	c.ShouldFire()
-	time.Sleep(5 * time.Millisecond)
-	if !c.ShouldFire() {
-		t.Fatal("expected fire after cooldown expired")
-	}
-}
-
-func TestCooldown_Stats(t *testing.T) {
-	c := NewCooldownFSM(1, 1, CooldownConfig{CooldownDuration: time.Hour, MaxFiresPerHour: 10})
-	c.ShouldFire() // fire
-	c.ShouldFire() // suppressed
-	c.ShouldFire() // suppressed
-	fires, suppressed, _ := c.Stats()
-	if fires != 1 {
-		t.Fatalf("expected 1 fire, got %d", fires)
-	}
-	if suppressed != 2 {
-		t.Fatalf("expected 2 suppressed, got %d", suppressed)
-	}
-}
 
 // ─── Delivery FSM Tests ─────────────────────────────────
 

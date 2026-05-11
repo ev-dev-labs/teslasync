@@ -10,9 +10,10 @@ import {
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
 import { fmtNumber } from '@/lib/numberFormat';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import type { WidgetProps } from './types';
@@ -25,26 +26,26 @@ interface DailyEfficiency {
   rollingAvg: number | null;
 }
 
-/** Estimate Wh/mi for a single drive from energy + distance data. */
+/** Estimate Wh/km for a single drive from energy + distance data. */
 function estimateEfficiency(d: Drive): number | null {
-  const distance = d.distance_mi;
-  if (!distance || distance < 0.5) return null; // skip tiny drives
+  const distanceKm = convertDistanceFromSI(d.distance_m ?? 0, 'km');
+  if (!distanceKm || distanceKm < 0.8) return null; // skip tiny drives
 
-  if (d.energy_used_kwh != null && d.energy_used_kwh > 0) {
-    const whPerMi = (d.energy_used_kwh * 1000) / distance;
-    if (whPerMi < 50 || whPerMi > 800) return null;
-    return whPerMi;
+  if (d.energy_used_wh != null && d.energy_used_wh > 0) {
+    const whPerKm = d.energy_used_wh / distanceKm;
+    if (whPerKm < 30 || whPerKm > 500) return null;
+    return whPerKm;
   }
 
   // Fallback: estimate from battery pct
-  const startBatt = d.start_battery_pct;
-  const endBatt = d.end_battery_pct;
+  const startBatt = d.start_soc_pct;
+  const endBatt = d.end_soc_pct;
   if (startBatt == null || endBatt == null) return null;
   const battUsed = startBatt - endBatt;
   if (battUsed <= 0) return null;
-  const whPerMi = (battUsed * 0.75 * 1000) / distance;
-  if (whPerMi < 50 || whPerMi > 800) return null;
-  return whPerMi;
+  const whPerKm = (battUsed * 0.75 * 1000) / distanceKm;
+  if (whPerKm < 30 || whPerKm > 500) return null;
+  return whPerKm;
 }
 
 /** Group drives by date and compute daily averages + rolling average. */
@@ -96,7 +97,8 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { convertEfficiency, efficiencyUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['drives', id, 'efficiency-chart-60'],
@@ -116,18 +118,18 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
     return buildDailyEfficiency(recent, 7);
   }, [drives]);
 
-  // Convert to user units
+  // Convert Wh/km to the user's distance unit.
   const displayData = useMemo(
     () =>
       chartData.map((d) => ({
         ...d,
-        efficiency: Math.round(convertEfficiency(d.efficiency) * 10) / 10,
+        efficiency: Math.round((unitPrefs.distance === 'mi' ? d.efficiency * 1.609344 : d.efficiency) * 10) / 10,
         rollingAvg:
           d.rollingAvg != null
-            ? Math.round(convertEfficiency(d.rollingAvg) * 10) / 10
+            ? Math.round((unitPrefs.distance === 'mi' ? d.rollingAvg * 1.609344 : d.rollingAvg) * 10) / 10
             : null,
       })),
-    [chartData, convertEfficiency],
+    [chartData, unitPrefs.distance],
   );
 
   const overallAvg = useMemo(() => {

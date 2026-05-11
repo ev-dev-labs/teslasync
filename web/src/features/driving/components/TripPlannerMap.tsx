@@ -117,7 +117,7 @@ export function TripPlannerMap({ origin, destination, legs, chargeStops }: TripP
                     <p className="font-medium">{stop.name}</p>
                     <p className="text-[var(--text-muted)]">
                       {Math.round(stop.charge_from_soc)}% → {Math.round(stop.charge_to_soc)}%
-                      ({Math.round(stop.charge_duration_min)} min)
+                      ({Math.round(stop.charge_duration_s / 60)} min)
                     </p>
                   </div>
                 </Popup>

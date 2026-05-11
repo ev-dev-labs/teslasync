@@ -16,11 +16,15 @@ import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { useLifetimeStats } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
 import { AchievementBadge } from '../components/AchievementBadge';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
+
+const SECONDS_PER_HOUR = 3600;
+const METERS_PER_KM = 1000;
 
 /* ── Helpers ──────────────────────────────────────────────────────── */
 
@@ -36,7 +40,13 @@ function fmtDate(d: string | null): string {
 export default function LifetimeStatsPage() {
   const { t } = useTranslation();
   usePageTitle(t('lifetime.title', 'Lifetime Stats'));
-  const { convertDistance, distanceUnit, convertSpeed, speedUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const speedUnit = unitPrefs.speed;
+  // backend `total_distance_km` and `longest_drive_record.value` are SI km;
+  // `highest_speed_record.value` is SI km/h. Convert via meter/second floor.
+  const fromKm = (km: number) => convertDistanceFromSI(km * METERS_PER_KM, distanceUnit);
+  const fromKmh = (kmh: number) => convertSpeedFromSI((kmh * METERS_PER_KM) / SECONDS_PER_HOUR, speedUnit);
 
   const [vehicleId, setVehicleId] = useState('');
   const { data: vehicles } = useVehicles();
@@ -129,7 +139,7 @@ export default function LifetimeStatsPage() {
             <Car className="h-8 w-8 text-neon-cyan" />
             <span className="text-4xl md:text-5xl font-bold text-[var(--text-primary)]">
               <AnimatedNumber
-                value={stats ? convertDistance(stats.total_distance_km) : 0}
+                value={stats ? fromKm(stats.total_distance_km) : 0}
                 duration={1.5}
                 decimals={0}
               />
@@ -170,7 +180,7 @@ export default function LifetimeStatsPage() {
           />
           <StatCard
             label={t('lifetime.totalDistance', 'Total Distance')}
-            value={fmtNumber(stats ? convertDistance(stats.total_distance_km) : 0, 0)}
+            value={fmtNumber(stats ? fromKm(stats.total_distance_km) : 0, 0)}
             unit={distanceUnit}
             icon={<Gauge className="h-4 w-4" />}
           />
@@ -307,13 +317,13 @@ export default function LifetimeStatsPage() {
             <Grid cols={{ default: 1, md: 3 }} gap={4}>
               <RecordCard
                 title={t('lifetime.longestDrive', 'Longest Drive')}
-                value={`${fmtNumber(convertDistance(stats.longest_drive_record?.value ?? 0), 1)} ${distanceUnit}`}
+                value={`${fmtNumber(fromKm(stats.longest_drive_record?.value ?? 0), 1)} ${distanceUnit}`}
                 date={stats.longest_drive_record?.date}
                 icon={<Car className="h-5 w-5 text-cyan-400" />}
               />
               <RecordCard
                 title={t('lifetime.highestSpeed', 'Highest Speed')}
-                value={`${fmtNumber(convertSpeed(stats.highest_speed_record?.value ?? 0), 0)} ${speedUnit}`}
+                value={`${fmtNumber(fromKmh(stats.highest_speed_record?.value ?? 0), 0)} ${speedUnit}`}
                 date={stats.highest_speed_record?.date}
                 icon={<Gauge className="h-5 w-5 text-red-400" />}
               />

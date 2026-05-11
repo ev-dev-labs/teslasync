@@ -1,19 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
 import { FleetStatsBar } from '../components/FleetStatsBar';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { Drive, ChargingSession } from '../types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 export default function FleetStatsWidget(_props: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const { data: analytics, isFetching: analyticsFetching, isStale: analyticsStale, isError: analyticsError, dataUpdatedAt: analyticsUpdatedAt, refetch: refetchAnalytics } = useFleetAnalytics(30);
-  const {
-    convertDistance, convertEfficiency, distanceUnit, efficiencyUnit,
-  } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const toEfficiencyDisplay = (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm;
 
   const primaryId = vehicles?.[0]?.id ?? 0;
   const { data: recentDrives } = useQuery({
@@ -39,8 +43,8 @@ export default function FleetStatsWidget(_props: WidgetProps) {
         unreadAlerts={0}
         recentDrives={recentDrives as Parameters<typeof FleetStatsBar>[0]['recentDrives']}
         recentCharges={recentCharges as Parameters<typeof FleetStatsBar>[0]['recentCharges']}
-        convertDistance={convertDistance}
-        convertEfficiency={convertEfficiency}
+        toDistanceDisplay={toDistanceDisplay}
+        toEfficiencyDisplay={toEfficiencyDisplay}
         distanceUnit={distanceUnit}
         efficiencyUnit={efficiencyUnit}
       />

@@ -123,7 +123,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(ROUND(convert_distance(SUM(distance_mi))::numeric, 1), 0) AS \"Distance (km)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND start_ts >= NOW() - INTERVAL '7 days'",
+          "rawSql": "SELECT COALESCE(ROUND(convert_distance(SUM((distance_m / 1609.344)))::numeric, 1), 0) AS \"Distance (km)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND started_at >= NOW() - INTERVAL '7 days'",
           "refId": "A"
         }
       ],
@@ -183,7 +183,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) AS \"Drives\" FROM drives WHERE vehicle_id = ${vehicle_id} AND start_ts >= NOW() - INTERVAL '7 days'",
+          "rawSql": "SELECT COUNT(*) AS \"Drives\" FROM drives WHERE vehicle_id = ${vehicle_id} AND started_at >= NOW() - INTERVAL '7 days'",
           "refId": "A"
         }
       ],
@@ -243,7 +243,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(ROUND(SUM(energy_used_kwh)::numeric, 1), 0) AS \"Energy (kWh)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND start_ts >= NOW() - INTERVAL '7 days'",
+          "rawSql": "SELECT COALESCE(ROUND(SUM((energy_used_wh / 1000.0))::numeric, 1), 0) AS \"Energy (kWh)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND started_at >= NOW() - INTERVAL '7 days'",
           "refId": "A"
         }
       ],
@@ -303,7 +303,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(ROUND(SUM(duration_min)::numeric, 0), 0) AS \"Drive Time (min)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND start_ts >= NOW() - INTERVAL '7 days'",
+          "rawSql": "SELECT COALESCE(ROUND(SUM((duration_s / 60.0))::numeric, 0), 0) AS \"Drive Time (min)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND started_at >= NOW() - INTERVAL '7 days'",
           "refId": "A"
         }
       ],
@@ -420,7 +420,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH this_week AS (\n  SELECT EXTRACT(ISODOW FROM start_ts)::int AS dow,\n    SUM(distance_mi) AS distance_mi\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND start_ts >= DATE_TRUNC('week', NOW())\n  GROUP BY 1\n),\nlast_week AS (\n  SELECT EXTRACT(ISODOW FROM start_ts)::int AS dow,\n    SUM(distance_mi) AS distance_mi\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND start_ts >= DATE_TRUNC('week', NOW()) - INTERVAL '7 days'\n    AND start_ts < DATE_TRUNC('week', NOW())\n  GROUP BY 1\n)\nSELECT\n  TO_CHAR(DATE_TRUNC('week', NOW()) + ((d - 1) || ' days')::interval, 'Dy') AS \"Day\",\n  COALESCE(ROUND(convert_distance(tw.distance_mi)::numeric, 1), 0) AS \"This Week\",\n  COALESCE(ROUND(convert_distance(lw.distance_mi)::numeric, 1), 0) AS \"Last Week\"\nFROM generate_series(1, 7) AS d\nLEFT JOIN this_week tw ON tw.dow = d\nLEFT JOIN last_week lw ON lw.dow = d\nORDER BY d",
+          "rawSql": "WITH this_week AS (\n  SELECT EXTRACT(ISODOW FROM started_at)::int AS dow,\n    SUM((distance_m / 1609.344)) AS distance_mi\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND started_at >= DATE_TRUNC('week', NOW())\n  GROUP BY 1\n),\nlast_week AS (\n  SELECT EXTRACT(ISODOW FROM started_at)::int AS dow,\n    SUM((distance_m / 1609.344)) AS distance_mi\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND started_at >= DATE_TRUNC('week', NOW()) - INTERVAL '7 days'\n    AND started_at < DATE_TRUNC('week', NOW())\n  GROUP BY 1\n)\nSELECT\n  TO_CHAR(DATE_TRUNC('week', NOW()) + ((d - 1) || ' days')::interval, 'Dy') AS \"Day\",\n  COALESCE(ROUND(convert_distance(tw.distance_mi)::numeric, 1), 0) AS \"This Week\",\n  COALESCE(ROUND(convert_distance(lw.distance_mi)::numeric, 1), 0) AS \"Last Week\"\nFROM generate_series(1, 7) AS d\nLEFT JOIN this_week tw ON tw.dow = d\nLEFT JOIN last_week lw ON lw.dow = d\nORDER BY d",
           "refId": "A"
         }
       ],
@@ -520,7 +520,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  DATE(start_ts) AS time,\n  COALESCE(ROUND(convert_distance(SUM(distance_mi))::numeric, 1), 0) AS \"Distance (km)\",\n  COALESCE(ROUND(SUM(energy_used_kwh)::numeric, 1), 0) AS \"Energy (kWh)\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND start_ts >= NOW() - INTERVAL '7 days'\nGROUP BY DATE(start_ts)\nORDER BY time",
+          "rawSql": "SELECT\n  DATE(started_at) AS time,\n  COALESCE(ROUND(convert_distance(SUM((distance_m / 1609.344)))::numeric, 1), 0) AS \"Distance (km)\",\n  COALESCE(ROUND(SUM((energy_used_wh / 1000.0))::numeric, 1), 0) AS \"Energy (kWh)\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND started_at >= NOW() - INTERVAL '7 days'\nGROUP BY DATE(started_at)\nORDER BY time",
           "refId": "A"
         }
       ],
@@ -685,7 +685,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT 'Drive' AS \"Type\", start_ts AS \"Start\", start_address AS \"From\", end_address AS \"To\",\n  convert_distance(distance_mi) AS \"Distance\", duration_min AS \"Duration (min)\", NULL::float8 AS \"Energy Added\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND start_ts >= NOW() - INTERVAL '7 days'\nUNION ALL\nSELECT 'Charge' AS \"Type\", start_ts AS \"Start\", charger_location AS \"From\", charger_location AS \"To\",\n  NULL::float8 AS \"Distance\", duration_min AS \"Duration (min)\", energy_added_kwh AS \"Energy Added\"\nFROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND start_ts >= NOW() - INTERVAL '7 days'\nORDER BY \"Start\" DESC",
+          "rawSql": "SELECT 'Drive' AS \"Type\", started_at AS \"Start\", start_place AS \"From\", end_place AS \"To\",\n  convert_distance((distance_m / 1609.344)) AS \"Distance\", (duration_s / 60.0) AS \"Duration (min)\", NULL::float8 AS \"Energy Added\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND started_at >= NOW() - INTERVAL '7 days'\nUNION ALL\nSELECT 'Charge' AS \"Type\", started_at AS \"Start\", (NULL::text) AS \"From\", (NULL::text) AS \"To\",\n  NULL::float8 AS \"Distance\", (EXTRACT(EPOCH FROM (ended_at - started_at)) / 60.0) AS \"Duration (min)\", (total_energy_added_wh / 1000.0) AS \"Energy Added\"\nFROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND started_at >= NOW() - INTERVAL '7 days'\nORDER BY \"Start\" DESC",
           "refId": "A"
         }
       ],

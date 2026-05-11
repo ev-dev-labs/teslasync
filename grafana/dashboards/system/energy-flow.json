@@ -109,7 +109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  AVG(value_num) FILTER (WHERE signal = 'BatteryLevel') AS \"🔋 Avg SOC\",\n  AVG(value_num) FILTER (WHERE signal = 'PackVoltage') AS \"⚡ Avg Pack V\",\n  AVG(value_num) FILTER (WHERE signal = 'PackCurrent') AS \"🔌 Avg Pack A\",\n  AVG(value_num) FILTER (WHERE signal = 'EnergyRemaining') AS \"🔋 Energy kWh\",\n  MAX(value_num) FILTER (WHERE signal = 'DCChargingPower') AS \"⚡ Peak DC kW\",\n  MAX(value_num) FILTER (WHERE signal = 'ACChargingPower') AS \"🔌 Peak AC kW\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('BatteryLevel', 'PackVoltage', 'PackCurrent', 'EnergyRemaining', 'DCChargingPower', 'ACChargingPower')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "SELECT\n  AVG(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'BatteryLevel') AS \"🔋 Avg SOC\",\n  AVG(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'PackVoltage') AS \"⚡ Avg Pack V\",\n  AVG(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'PackCurrent') AS \"🔌 Avg Pack A\",\n  AVG(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'EnergyRemaining') AS \"🔋 Energy kWh\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DCChargingPower') AS \"⚡ Peak DC kW\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'ACChargingPower') AS \"🔌 Peak AC kW\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('BatteryLevel', 'PackVoltage', 'PackCurrent', 'EnergyRemaining', 'DCChargingPower', 'ACChargingPower')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -189,7 +189,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'PackVoltage') AS \"Pack Voltage (V)\",\n  MAX(value_num) FILTER (WHERE signal = 'PackCurrent') AS \"Pack Current (A)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('PackVoltage', 'PackCurrent')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'PackVoltage') AS \"Pack Voltage (V)\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'PackCurrent') AS \"Pack Current (A)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('PackVoltage', 'PackCurrent')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -269,7 +269,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'DCChargingPower') AS \"DC Power (kW)\",\n  MAX(value_num) FILTER (WHERE signal = 'ACChargingPower') AS \"AC Power (kW)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DCChargingPower', 'ACChargingPower')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DCChargingPower') AS \"DC Power (kW)\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'ACChargingPower') AS \"AC Power (kW)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('DCChargingPower', 'ACChargingPower')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -349,7 +349,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'BatteryLevel') AS \"SOC %\",\n  convert_distance(MAX(value_num) FILTER (WHERE signal = 'EstBatteryRange')) AS \"Est Range\",\n  convert_distance(MAX(value_num) FILTER (WHERE signal = 'RatedRange')) AS \"Rated Range\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('BatteryLevel', 'EstBatteryRange', 'RatedRange')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'BatteryLevel') AS \"SOC %\",\n  convert_distance(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'EstBatteryRange')) AS \"Est Range\",\n  convert_distance(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'RatedRange')) AS \"Rated Range\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('BatteryLevel', 'EstBatteryRange', 'RatedRange')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -429,7 +429,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMax') AS \"Max Cell V\",\n  MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMin') AS \"Min Cell V\",\n  (MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMax') - MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMin')) AS \"Spread\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('BrickVoltageMax', 'BrickVoltageMin')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nHAVING MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMax') IS NOT NULL\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'BrickVoltageMax') AS \"Max Cell V\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'BrickVoltageMin') AS \"Min Cell V\",\n  (MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'BrickVoltageMax') - MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'BrickVoltageMin')) AS \"Spread\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('BrickVoltageMax', 'BrickVoltageMin')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nHAVING MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'BrickVoltageMax') IS NOT NULL\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -509,7 +509,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time,\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'ModuleTempMax')) AS \"Max Module Temp\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'ModuleTempMin')) AS \"Min Module Temp\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('ModuleTempMax', 'ModuleTempMin')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nHAVING MAX(value_num) FILTER (WHERE signal = 'ModuleTempMax') IS NOT NULL\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'ModuleTempMax')) AS \"Max Module Temp\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'ModuleTempMin')) AS \"Min Module Temp\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('ModuleTempMax', 'ModuleTempMin')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nHAVING MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'ModuleTempMax') IS NOT NULL\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -568,7 +568,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(last(value_str, created_at) FILTER (WHERE signal = 'BMSState'), 'N/A') AS \"BMS State\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'BmsFullchargecomplete') THEN 'Yes' ELSE 'No' END AS \"Full Charge\",\n  CASE WHEN last(value_bool, created_at) FILTER (WHERE signal = 'BatteryHeaterOn') THEN 'On' ELSE 'Off' END AS \"Battery Heater\",\n  ROUND(last(value_num, created_at) FILTER (WHERE signal = 'IsolationResistance')::numeric) AS \"Isolation Ω\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('BMSState', 'BmsFullchargecomplete', 'BatteryHeaterOn', 'IsolationResistance')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "SELECT\n  COALESCE(last(str_value, ts) FILTER (WHERE field = 'BMSState'), 'N/A') AS \"BMS State\",\n  CASE WHEN last(bool_value, ts) FILTER (WHERE field = 'BmsFullchargecomplete') THEN 'Yes' ELSE 'No' END AS \"Full Charge\",\n  CASE WHEN last(bool_value, ts) FILTER (WHERE field = 'BatteryHeaterOn') THEN 'On' ELSE 'Off' END AS \"Battery Heater\",\n  ROUND(last(COALESCE(float_value, int_value::float8), ts) FILTER (WHERE field = 'IsolationResistance')::numeric) AS \"Isolation Ω\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('BMSState', 'BmsFullchargecomplete', 'BatteryHeaterOn', 'IsolationResistance')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -627,7 +627,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(last(value_str, created_at) FILTER (WHERE signal = 'PowershareStatus'), 'N/A') AS \"Status\",\n  COALESCE(last(value_str, created_at) FILTER (WHERE signal = 'PowershareType'), 'N/A') AS \"Type\",\n  last(value_num, created_at) FILTER (WHERE signal = 'PowershareHoursLeft') AS \"Hours Left\",\n  ROUND(last(value_num, created_at) FILTER (WHERE signal = 'PowershareInstantaneousPowerKW')::numeric, 1) AS \"Power kW\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('PowershareStatus', 'PowershareType', 'PowershareHoursLeft', 'PowershareInstantaneousPowerKW')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nHAVING last(value_str, created_at) FILTER (WHERE signal = 'PowershareStatus') IS NOT NULL",
+          "rawSql": "SELECT\n  COALESCE(last(str_value, ts) FILTER (WHERE field = 'PowershareStatus'), 'N/A') AS \"Status\",\n  COALESCE(last(str_value, ts) FILTER (WHERE field = 'PowershareType'), 'N/A') AS \"Type\",\n  last(COALESCE(float_value, int_value::float8), ts) FILTER (WHERE field = 'PowershareHoursLeft') AS \"Hours Left\",\n  ROUND(last(COALESCE(float_value, int_value::float8), ts) FILTER (WHERE field = 'PowershareInstantaneousPowerKW')::numeric, 1) AS \"Power kW\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('PowershareStatus', 'PowershareType', 'PowershareHoursLeft', 'PowershareInstantaneousPowerKW')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nHAVING last(str_value, ts) FILTER (WHERE field = 'PowershareStatus') IS NOT NULL",
           "refId": "A"
         }
       ],

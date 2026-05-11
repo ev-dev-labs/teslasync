@@ -6,10 +6,11 @@ import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertTempFromSI } from '@/lib/unitConversion';
 
 const TORQUE_MAX = 600;
 
@@ -21,7 +22,10 @@ function torqueColor(nm: number): string {
 
 export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { convertTemp, tempUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+
+  const tempUnit = unitPrefs.temperature;
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
 
@@ -109,7 +113,7 @@ export default function MotorPerformanceWidget({ vehicleId, size }: WidgetProps)
           <div className="grid grid-cols-2 gap-3 w-full">
             <StatCard
               label={t('widget.motorPerformance.statorTemp', 'Stator Temp')}
-              value={statorTemp != null ? fmtNumber(convertTemp(statorTemp), 0) : '—'}
+              value={statorTemp != null ? fmtNumber(toTemperatureDisplay(statorTemp), 0) : '—'}
               unit={statorTemp != null ? tempUnit : undefined}
             />
             <StatCard

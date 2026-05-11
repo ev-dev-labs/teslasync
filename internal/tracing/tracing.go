@@ -3,20 +3,38 @@ package tracing
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
+	"github.com/ev-dev-labs/teslasync/internal/config"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// defaultHeadSamplingRatio is the head-sampling ratio applied when the
+// caller did not provide a valid OTEL_TRACES_SAMPLER_ARG. The collector
+// applies tail-based sampling on top of this baseline (errors and slow
+// requests are kept regardless).
+const defaultHeadSamplingRatio = 0.01
+
 // Init initializes the OpenTelemetry tracer provider with an OTLP gRPC exporter.
-// Returns a shutdown function that must be called on application exit.
-func Init(ctx context.Context, serviceName, endpoint string, insecureTLS bool) (func(context.Context) error, error) {
+// It returns a shutdown function that must be called on application exit.
+func Init(ctx context.Context, cfg *config.Config) (func(context.Context) error, error) {
+	if cfg == nil || !cfg.OpenTelemetry.Enabled || strings.TrimSpace(cfg.OTLPEndpoint) == "" {
+		otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+			propagation.TraceContext{},
+			propagation.Baggage{},
+		))
+		return func(context.Context) error { return nil }, nil
+	}
+
+	endpoint, insecureTLS := normalizeEndpoint(cfg.OTLPEndpoint, cfg.OpenTelemetry.Insecure)
 	opts := []otlptracegrpc.Option{
 		otlptracegrpc.WithEndpoint(endpoint),
 	}
@@ -30,21 +48,37 @@ func Init(ctx context.Context, serviceName, endpoint string, insecureTLS bool) (
 		return nil, fmt.Errorf("create otlp exporter: %w", err)
 	}
 
-	res, err := resource.Merge(
-		resource.Default(),
-		resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceName(serviceName),
+	res, err := resource.New(ctx,
+		resource.WithFromEnv(),
+		resource.WithProcess(),
+		resource.WithTelemetrySDK(),
+		resource.WithAttributes(
+			attribute.String("service.name", cfg.OpenTelemetry.ServiceName),
+			attribute.String("service.version", cfg.ServiceVersion),
+			attribute.String("deployment.environment", cfg.Environment),
 		),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create resource: %w", err)
 	}
 
+	samplerArg := cfg.OTELTracesSamplerArg
+	ratio, err := strconv.ParseFloat(strings.TrimSpace(samplerArg), 64)
+	if err != nil || ratio < 0 || ratio > 1 {
+		ratio = defaultHeadSamplingRatio
+	}
+	// Parent-based head sampling: respect upstream sampling decisions
+	// propagated via traceparent so HTTP entry → DB → MQTT spans share
+	// one decision. Tail-based filtering (errors, > 1s) is applied
+	// downstream by the OTel collector — see
+	// helm/teslasync/files/otel-collector/config.yaml and
+	// docs/runbooks/phase-44-trace-sampling.md.
+	sampler := sdktrace.ParentBased(sdktrace.TraceIDRatioBased(ratio))
+	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
+		sdktrace.WithSpanProcessor(bsp),
 		sdktrace.WithResource(res),
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithSampler(sampler),
 	)
 
 	otel.SetTracerProvider(tp)
@@ -54,4 +88,15 @@ func Init(ctx context.Context, serviceName, endpoint string, insecureTLS bool) (
 	))
 
 	return tp.Shutdown, nil
+}
+
+func normalizeEndpoint(endpoint string, insecureTLS bool) (string, bool) {
+	endpoint = strings.TrimSpace(endpoint)
+	if strings.HasPrefix(endpoint, "http://") {
+		return strings.TrimPrefix(endpoint, "http://"), true
+	}
+	if strings.HasPrefix(endpoint, "https://") {
+		return strings.TrimPrefix(endpoint, "https://"), insecureTLS
+	}
+	return endpoint, insecureTLS
 }

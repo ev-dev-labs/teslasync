@@ -35,16 +35,19 @@ func (h *ChargingOptimizerHandler) GetOptimization(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	// Phase-42 (000184_charging_si): SI canonical columns. Convert
+	// total_energy_added_wh -> kWh and peak_power_w -> kW at the SQL boundary
+	// to keep sessionRow.kwh / .power semantics. cost reads from cost_decimal.
 	rows, err := h.db.Pool.Query(ctx, `
-		SELECT id, start_ts,
-		       COALESCE(cost, 0),
-		       COALESCE(energy_added_kwh, 0),
-		       COALESCE(charger_power_kw_max, 0),
-		       COALESCE(end_battery_pct, 0),
-		       COALESCE(start_battery_pct, 0)
+		SELECT id, started_at,
+		       COALESCE(cost_decimal, 0),
+		       COALESCE(total_energy_added_wh, 0) / 1000.0,
+		       COALESCE(peak_power_w, 0) / 1000.0,
+		       COALESCE(end_soc_pct, 0)::int,
+		       COALESCE(start_soc_pct, 0)::int
 		FROM charging_sessions
 		WHERE vehicle_id = $1
-		ORDER BY start_ts DESC`, vehicleID)
+		ORDER BY started_at DESC`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("charging-optimizer: query failed")
 		writeError(w, http.StatusInternalServerError, "failed to get charging data")
@@ -73,7 +76,8 @@ func (h *ChargingOptimizerHandler) GetOptimization(w http.ResponseWriter, r *htt
 		return
 	}
 
-	// Enrich sessions with lat/lon/temp from signal_log (single set-based query)
+	// Enrich sessions with lat/lon/temp from signal_log (single set-based query).
+	// Phase-42: the legacy cs start-timestamp column becomes cs.started_at; signal_log columns unchanged.
 	locRows, err := h.db.Pool.Query(ctx, `
 		SELECT cs.id,
 		       lat.value_num AS latitude,
@@ -83,23 +87,23 @@ func (h *ChargingOptimizerHandler) GetOptimization(w http.ResponseWriter, r *htt
 		LEFT JOIN LATERAL (
 			SELECT value_num FROM signal_log
 			WHERE vehicle_id = cs.vehicle_id AND signal = 'Latitude'
-			  AND created_at <= cs.start_ts
+			  AND created_at <= cs.started_at
 			ORDER BY created_at DESC LIMIT 1
 		) lat ON true
 		LEFT JOIN LATERAL (
 			SELECT value_num FROM signal_log
 			WHERE vehicle_id = cs.vehicle_id AND signal = 'Longitude'
-			  AND created_at <= cs.start_ts
+			  AND created_at <= cs.started_at
 			ORDER BY created_at DESC LIMIT 1
 		) lon ON true
 		LEFT JOIN LATERAL (
 			SELECT value_num FROM signal_log
 			WHERE vehicle_id = cs.vehicle_id AND signal = 'OutsideTemp'
-			  AND created_at <= cs.start_ts
+			  AND created_at <= cs.started_at
 			ORDER BY created_at DESC LIMIT 1
 		) temp ON true
 		WHERE cs.vehicle_id = $1
-		  AND cs.start_ts >= NOW() - INTERVAL '90 days'`, vehicleID)
+		  AND cs.started_at >= NOW() - INTERVAL '90 days'`, vehicleID)
 	if err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("charging-optimizer: signal_log location query failed")
 	} else {

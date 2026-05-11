@@ -31,7 +31,7 @@ import { Icons } from '@/lib/icons';
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-type ExportType = 'drives' | 'charging' | 'analytics' | 'full_backup' | 'maintenance' | 'energy';
+type ExportType = 'drives' | 'charging' | 'trips' | 'analytics' | 'full_backup' | 'maintenance' | 'energy';
 type ExportFormat = 'csv' | 'json';
 type ExportStatus = 'queued' | 'processing' | 'ready' | 'failed' | 'expired';
 
@@ -82,6 +82,7 @@ const EXPORT_TYPES: {
 }[] = [
   { value: 'drives', labelKey: 'dataExport.types.drives', label: 'Drives', icon: Icons.vehicle, descKey: 'dataExport.types.drivesDesc', desc: 'Export drive sessions, routes, and efficiency data', color: 'cyan' },
   { value: 'charging', labelKey: 'dataExport.types.charging', label: 'Charging', icon: Icons.charging, descKey: 'dataExport.types.chargingDesc', desc: 'Export charging sessions and energy data', color: 'green' },
+  { value: 'trips', labelKey: 'dataExport.types.trips', label: 'Trips', icon: Icons.trip, descKey: 'dataExport.types.tripsDesc', desc: 'Export trip summaries with SI aggregate columns', color: 'cyan' },
   { value: 'analytics', labelKey: 'dataExport.types.analytics', label: 'Analytics', icon: Icons.analytics, descKey: 'dataExport.types.analyticsDesc', desc: 'Export analytics and aggregated statistics', color: 'purple' },
   { value: 'full_backup', labelKey: 'dataExport.types.fullBackup', label: 'Full Backup', icon: Icons.database, descKey: 'dataExport.types.fullBackupDesc', desc: 'Complete database backup of all vehicle data', color: 'amber' },
   { value: 'maintenance', labelKey: 'dataExport.types.maintenance', label: 'Maintenance', icon: Icons.maintenance, descKey: 'dataExport.types.maintenanceDesc', desc: 'Export maintenance and service records', color: 'red' },
@@ -118,6 +119,7 @@ const STATUS_CONFIG: Record<ExportStatus, {
 const TYPE_BADGE_VARIANT: Record<ExportType, 'info' | 'success' | 'warning' | 'danger' | 'neutral'> = {
   drives: 'info',
   charging: 'success',
+  trips: 'info',
   analytics: 'neutral',
   full_backup: 'warning',
   maintenance: 'danger',
@@ -305,9 +307,9 @@ function FormatInfoCards() {
           {t('dataExport.csvDesc', 'Comma-separated values, compatible with Excel and Google Sheets')}
         </p>
         <div className="rounded-lg bg-[var(--surface-overlay)] p-3 font-mono text-[11px] text-[var(--text-muted)]">
-          <p>date,distance_km,efficiency</p>
-          <p>2025-01-15,45.2,152</p>
-          <p>2025-01-16,32.8,148</p>
+          <p>date,distance_m,efficiency_wh_per_m</p>
+          <p>2025-01-15,45200,0.152</p>
+          <p>2025-01-16,32800,0.148</p>
         </div>
       </GlassPanel>
 
@@ -323,7 +325,7 @@ function FormatInfoCards() {
         </p>
         <div className="rounded-lg bg-[var(--surface-overlay)] p-3 font-mono text-[11px] text-[var(--text-muted)]">
           <p>{`[{ "date": "2025-01-15",`}</p>
-          <p>{`   "distance_km": 45.2,`}</p>
+          <p>{`   "distance_m": 45200,`}</p>
           <p>{`   "efficiency": 152 }]`}</p>
         </div>
       </GlassPanel>

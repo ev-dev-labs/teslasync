@@ -13,6 +13,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/rs/zerolog/log"
 	"github.com/sony/gobreaker"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/time/rate"
 )
 
@@ -66,11 +68,11 @@ func NewClient(cfg config.TeslaConfig) *Client {
 	}
 	proxyClient := &http.Client{
 		Timeout:   cfg.Timeout,
-		Transport: proxyTransport,
+		Transport: otelhttp.NewTransport(proxyTransport),
 	}
 
 	c := &Client{
-		httpClient:      &http.Client{Timeout: cfg.Timeout},
+		httpClient:      &http.Client{Timeout: cfg.Timeout, Transport: otelhttp.NewTransport(http.DefaultTransport)},
 		proxyClient:     proxyClient,
 		baseURL:         cfg.BaseURL,
 		commandProxyURL: cfg.CommandProxyURL,
@@ -158,7 +160,9 @@ func (c *Client) BucketSnapshot() BucketSnapshot {
 func (c *Client) BaseURL() string { return c.baseURL }
 
 // GetUserRegion calls GET /api/1/users/region to detect the account's Fleet API region.
-func (c *Client) GetUserRegion(ctx context.Context) ([]byte, int, error) {
+func (c *Client) GetUserRegion(ctx context.Context) (body []byte, status int, err error) {
+	ctx, span := startSpan(ctx, "tesla.GetUserRegion")
+	defer endSpan(span, &err)
 	return c.doRequest(ctx, http.MethodGet, "/api/1/users/region", nil)
 }
 
@@ -212,10 +216,18 @@ func (c *Client) RevokeVehicleInvitation(ctx context.Context, vin, invitationID 
 var ErrRateLimited = fmt.Errorf("rate limited (429): too many requests")
 
 // doRequest performs an authenticated API request through the circuit breaker.
-func (c *Client) doRequest(ctx context.Context, method, path string, body io.Reader) ([]byte, int, error) {
-	// Rate limit all Tesla API calls
-	if err := c.limiter.Wait(ctx); err != nil {
-		return nil, 0, fmt.Errorf("rate limiter: %w", err)
+func (c *Client) doRequest(ctx context.Context, method, path string, body io.Reader) (respBody []byte, statusCode int, err error) {
+	ctx, span := startSpan(ctx, "tesla.HTTP "+method+" "+path,
+		attribute.String("http.request.method", method),
+		attribute.String("tesla.api.path", path),
+	)
+	defer func() {
+		recordHTTPStatus(span, method, c.baseURL+path, statusCode)
+		endSpan(span, &err)
+	}()
+
+	if waitErr := c.limiter.Wait(ctx); waitErr != nil {
+		return nil, 0, fmt.Errorf("rate limiter: %w", waitErr)
 	}
 
 	url := c.baseURL + path
@@ -228,10 +240,10 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 		body = bytes.NewReader(reqBodyBytes)
 	}
 
-	result, err := c.cb.Execute(func() (interface{}, error) {
-		req, err := http.NewRequestWithContext(ctx, method, url, body)
-		if err != nil {
-			return nil, fmt.Errorf("create request: %w", err)
+	result, cbErr := c.cb.Execute(func() (interface{}, error) {
+		req, reqErr := http.NewRequestWithContext(ctx, method, url, body)
+		if reqErr != nil {
+			return nil, fmt.Errorf("create request: %w", reqErr)
 		}
 
 		c.mu.RLock()
@@ -241,15 +253,15 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("Content-Type", "application/json")
 
-		resp, err := c.httpClient.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("do request: %w", err)
+		resp, doErr := c.httpClient.Do(req)
+		if doErr != nil {
+			return nil, fmt.Errorf("do request: %w", doErr)
 		}
 		defer resp.Body.Close()
 
-		data, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("read body: %w", err)
+		data, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			return nil, fmt.Errorf("read body: %w", readErr)
 		}
 
 		if resp.StatusCode == http.StatusUnauthorized {
@@ -269,25 +281,23 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 
 	durationMs := int(time.Since(start).Milliseconds())
 
-	if err != nil {
+	if cbErr != nil {
 		// Log failed requests too
-		if c.logCallback != nil {
-			statusCode := 0
-			var respBody []byte
-			if result != nil {
-				if resp, ok := result.(*apiResponse); ok {
-					statusCode = resp.StatusCode
-					respBody = resp.Body
-				}
-			}
-			c.logCallback(method, url, statusCode, reqBodyBytes, respBody, durationMs, err)
-		}
+		errStatus := 0
+		var errRespBody []byte
 		if result != nil {
 			if resp, ok := result.(*apiResponse); ok {
-				return resp.Body, resp.StatusCode, err
+				errStatus = resp.StatusCode
+				errRespBody = resp.Body
 			}
 		}
-		return nil, 0, err
+		if c.logCallback != nil {
+			c.logCallback(method, url, errStatus, reqBodyBytes, errRespBody, durationMs, cbErr)
+		}
+		err = cbErr
+		statusCode = errStatus
+		respBody = errRespBody
+		return respBody, statusCode, err
 	}
 
 	resp := result.(*apiResponse)
@@ -297,7 +307,9 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 		c.logCallback(method, url, resp.StatusCode, reqBodyBytes, resp.Body, durationMs, nil)
 	}
 
-	return resp.Body, resp.StatusCode, nil
+	respBody = resp.Body
+	statusCode = resp.StatusCode
+	return respBody, statusCode, nil
 }
 
 type apiResponse struct {

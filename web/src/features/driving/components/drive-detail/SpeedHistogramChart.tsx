@@ -16,7 +16,7 @@ export function SpeedHistogramChart({ speedHistData }: SpeedHistogramChartProps)
   const { t } = useTranslation();
 
   return (
-    <FadeIn>
+    <FadeIn className="h-full">
       <ChartContainer
         title={t('driveDetail.speedHistogram', 'Speed Histogram')}
         ariaLabel={t('driveDetail.speedHistogram.aria', 'Speed-bucket distribution histogram')}
@@ -26,6 +26,7 @@ export function SpeedHistogramChart({ speedHistData }: SpeedHistogramChartProps)
           { key: 'pct', label: t('driveDetail.col.pct', '% of drive') },
         ]}
         height={220}
+        className="h-full"
       >
         {speedHistData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">

@@ -10,7 +10,11 @@ import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useTrips } from '@/api/hooks/useTrips';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import {
+  convertDistanceFromSI,
+  type DistanceUnitPref,
+} from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBatch, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
@@ -19,6 +23,12 @@ import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
 import { PullToRefresh } from '@/components/mobile';
 import type { Trip } from '@/api/types';
+
+// Phase-43/0025 + 0026: Wh/km -> Wh/(display unit) conversion uses an
+// inline factor because @/lib/unitConversion does not yet expose a
+// convertEfficiencyFromSI helper. Same precedent as
+// FleetComparePage.whPerKmToDisplay.
+const KM_PER_MILE = 1.609344;
 
 function formatDuration(startDate: string, endDate: string | null): string {
   if (!endDate) return 'In progress';
@@ -50,7 +60,10 @@ export default function TripListPage() {
   const [endDate, setEndDate] = useUrlString('to', defaultEnd);
   const setRangeBatch = useUrlBatch();
 
-  const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  // useSettings retained for the legacy efficiencyUnit label string only.
+
+  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   const tripsQuery = useTrips({
     vehicle_id: vehicleId ?? undefined,
@@ -64,8 +77,8 @@ export default function TripListPage() {
   const allTrips = trips ?? [];
 
   // Summary stats
-  const totalDist = allTrips.reduce((s, t) => s + t.total_distance_km, 0);
-  const totalEnergy = allTrips.reduce((s, t) => s + t.total_energy_kwh, 0);
+  const totalDist = allTrips.reduce((s, t) => s + t.total_distance_m, 0);
+  const totalEnergy = allTrips.reduce((s, t) => s + t.total_energy_wh, 0);
   const totalCost = allTrips.reduce((s, t) => s + t.total_cost, 0);
   const totalDrives = allTrips.reduce((s, t) => s + t.drive_count, 0);
 
@@ -73,14 +86,14 @@ export default function TripListPage() {
   const chartData = useMemo(
     () =>
       [...allTrips]
-        .sort((a, b) => b.total_distance_km - a.total_distance_km)
+        .sort((a, b) => b.total_distance_m - a.total_distance_m)
         .slice(0, 10)
         .map((trip) => ({
           name: trip.name ?? `Trip ${trip.id}`,
-          distance: convertDistance(trip.total_distance_km),
-          energy: trip.total_energy_kwh,
+          distance: convertDistanceFromSI(trip.total_distance_m, unitPrefs.distance),
+          energy: trip.total_energy_wh,
         })),
-    [allTrips, convertDistance],
+    [allTrips, unitPrefs.distance],
   );
 
   const vehicleOptions = (vehicles ?? []).map((v) => ({
@@ -95,13 +108,13 @@ export default function TripListPage() {
         name: trip.name ?? `Trip ${trip.id}`,
         start_date: trip.start_date,
         end_date: trip.end_date ?? '',
-        distance_km: trip.total_distance_km,
-        energy_kwh: trip.total_energy_kwh,
+        distance_m: trip.total_distance_m,
+        energy_wh: trip.total_energy_wh,
         cost: trip.total_cost,
         drives: trip.drive_count,
         charges: trip.charge_count,
       })),
-      'teslasync-trips.csv',
+      'teslasync-trips-v2.csv',
     );
   };
 
@@ -114,6 +127,8 @@ export default function TripListPage() {
     allTrips.length < pageSize
       ? (page - 1) * pageSize + allTrips.length
       : page * pageSize + 1;
+
+  const totalDistDisplay = convertDistanceFromSI(totalDist * 1000, unitPrefs.distance);
 
   return (
     <PageContainer
@@ -171,14 +186,14 @@ export default function TripListPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-6">
             <MetricCard
               label={t('trips.stats.distance', 'Total Distance')}
-              value={`${fmtInt(convertDistance(totalDist))} ${distanceUnit}`}
+              value={`${fmtInt(totalDistDisplay)} ${unitPrefs.distance}`}
               icon={<MapPin className="h-4 w-4" />}
               color="cyan"
               subtitle={t('trips.stats.tripCount', '{{count}} trips', { count: allTrips.length })}
             />
             <MetricCard
               label={t('trips.stats.energy', 'Energy Used')}
-              value={`${fmtNumber(totalEnergy)} kWh`}
+              value={`${fmtNumber(totalEnergy)} Wh`}
               icon={<Zap className="h-4 w-4" />}
               color="amber"
               subtitle={t('trips.stats.driveCount', '{{count}} drives', { count: totalDrives })}
@@ -189,8 +204,8 @@ export default function TripListPage() {
               icon={<DollarSign className="h-4 w-4" />}
               color="green"
               subtitle={
-                totalDist > 0
-                  ? `$${fmtNumber((totalCost / convertDistance(totalDist)) * 100)}/100${distanceUnit}`
+                totalDistDisplay > 0
+                  ? `$${fmtNumber((totalCost / totalDistDisplay) * 100)}/100${unitPrefs.distance}`
                   : '$0'
               }
             />
@@ -213,7 +228,7 @@ export default function TripListPage() {
           data={chartData.map((c) => ({ name: c.name, distance: c.distance }))}
           dataColumns={[
             { key: 'name', label: t('trips.chart.col.trip', 'Trip') },
-            { key: 'distance', label: `${t('trips.chart.distance', 'Distance')} (${distanceUnit})` },
+            { key: 'distance', label: `${t('trips.chart.distance', 'Distance')} (${unitPrefs.distance})` },
           ]}
           height={280}
           className="mb-6"
@@ -243,7 +258,7 @@ export default function TripListPage() {
                 <Bar
                   dataKey="distance"
                   fill="url(#tripGrad)"
-                  name={`${t('trips.chart.distance', 'Distance')} (${distanceUnit})`}
+                  name={`${t('trips.chart.distance', 'Distance')} (${unitPrefs.distance})`}
                   radius={[0, 4, 4, 0]}
                 />
               </BarChart>
@@ -268,9 +283,7 @@ export default function TripListPage() {
                 <TripRow
                   key={trip.id}
                   trip={trip}
-                  convertDistance={convertDistance}
-                  convertEfficiency={convertEfficiency}
-                  distanceUnit={distanceUnit}
+                  distancePref={unitPrefs.distance}
                   efficiencyUnit={efficiencyUnit}
                 />
               ))}
@@ -301,18 +314,18 @@ export default function TripListPage() {
 
 interface TripRowProps {
   trip: Trip;
-  convertDistance: (km: number) => number;
-  convertEfficiency: (whPerKm: number) => number;
-  distanceUnit: string;
+  distancePref: DistanceUnitPref;
   efficiencyUnit: string;
 }
 
-function TripRow({ trip, convertDistance, convertEfficiency, distanceUnit, efficiencyUnit }: TripRowProps) {
+function TripRow({ trip, distancePref, efficiencyUnit }: TripRowProps) {
   const { t } = useTranslation();
 
-  const whPerKm = trip.total_distance_km > 0
-    ? (trip.total_energy_kwh / trip.total_distance_km) * 1000
+  const whPerKm = trip.total_distance_m > 0
+    ? (trip.total_energy_wh / (trip.total_distance_m / 1000))
     : 0;
+  const efficiencyDisplay = distancePref === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
+  const distanceDisplay = convertDistanceFromSI(trip.total_distance_m, distancePref);
 
   return (
     <GlassPanel className="p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -342,7 +355,7 @@ function TripRow({ trip, convertDistance, convertEfficiency, distanceUnit, effic
       <div className="flex items-center gap-4 sm:gap-6 text-right w-full sm:w-auto justify-end">
         <div>
           <p className="text-sm font-bold text-[var(--text-primary)]">
-            {fmtInt(convertDistance(trip.total_distance_km))} {distanceUnit}
+            {fmtInt(distanceDisplay)} {distancePref}
           </p>
           <p className="text-[10px] text-[var(--text-muted)]">
             {t('trips.row.drives', '{{count}} drives', { count: trip.drive_count })}
@@ -350,11 +363,11 @@ function TripRow({ trip, convertDistance, convertEfficiency, distanceUnit, effic
         </div>
         <div>
           <p className="text-sm font-bold text-amber-400">
-            {fmtNumber(trip.total_energy_kwh)} kWh
+            {fmtNumber(trip.total_energy_wh)} Wh
           </p>
           <p className="text-[10px] text-[var(--text-muted)]">
-            {trip.total_distance_km > 0
-              ? `${fmtInt(convertEfficiency(whPerKm))} ${efficiencyUnit}`
+            {trip.total_distance_m > 0
+              ? `${fmtInt(efficiencyDisplay)} ${efficiencyUnit}`
               : `0 ${efficiencyUnit}`}
           </p>
         </div>

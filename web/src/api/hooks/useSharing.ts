@@ -5,6 +5,7 @@ import { useToast } from '@/components/feedback/Toast';
 import type {
   ShareToken,
   SharedDriveData,
+  SharedDriveDataV1,
   CreateShareRequest,
   CreateShareResponse,
 } from '@/types/sharing';
@@ -68,7 +69,7 @@ export function useRevokeShareLink(driveId: string) {
 export function useSharedDrive(token: string) {
   return useQuery({
     queryKey: sharingKeys.shared(token),
-    queryFn: ({ signal }) => request<SharedDriveData>(`/share/${token}`, { signal }),
+    queryFn: ({ signal }) => request<SharedDriveData | SharedDriveDataV1>(`/share/${token}`, { signal }),
     enabled: !!token,
     retry: false,
     staleTime: STALE_TIMES.SLOW,

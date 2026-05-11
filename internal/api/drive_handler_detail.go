@@ -36,9 +36,10 @@ type driveByIDFetcher interface {
 
 // NewDriveDetail constructs the migrated drive handler. It internally
 // composes the legacy *DriveHandler (so listing / stats / score routes still
-// resolve via promotion) and wires the cold-path StateReader. See ADR-002.
-func NewDriveDetail(db *database.DB, state signal.StateReader) *driveDetailHandler {
-	base := NewDriveHandler(db)
+// resolve via promotion) and wires both the cold-path StateReader and the
+// layered LiveStateReader. See ADR-002 / ADR-007.
+func NewDriveDetail(db *database.DB, state signal.StateReader, live signal.LiveStateReader) *driveDetailHandler {
+	base := NewDriveHandler(db, live)
 	return &driveDetailHandler{
 		DriveHandler: base,
 		state:        state,
@@ -53,6 +54,19 @@ func NewDriveDetail(db *database.DB, state signal.StateReader) *driveDetailHandl
 // NOTE: per-row "power" is NOT mapped from a Tesla signal — Fleet Telemetry
 // does not emit PackPower. Power is computed from PackVoltage × PackCurrent
 // by derivePowerKw() AFTER projection. See enrichLiveDrive (same formula).
+//
+// Elevation is intentionally absent: Tesla Fleet Telemetry does not emit
+// an Elevation atomic (see internal/tesla/codec/flatten.go and the
+// protomodel signal catalogue). Re-adding the mapping would silently
+// produce a flat-zero chart and mislead operators into expecting data
+// that does not flow.
+//
+// Latitude/Longitude use the codec's compound-flatten names
+// (LocationLatitude / LocationLongitude). The bare "Latitude" / "Longitude"
+// names from the legacy ingest path no longer flow through the Phase-42
+// pipeline (see internal/tesla/codec/flatten.go:11-23 — flattenLocation
+// emits "{fieldName}Latitude" prefixed with the source field, and the
+// Location compound's source field is "Location").
 var driveTelemetryFieldMappings = []signal.FieldMapping{
 	{Signal: "VehicleSpeed", Field: "speed"},
 	{Signal: "PackCurrent", Field: "pack_current"},
@@ -63,7 +77,6 @@ var driveTelemetryFieldMappings = []signal.FieldMapping{
 	{Signal: "IdealBatteryRange", Field: "ideal_range"},
 	{Signal: "RatedRange", Field: "rated_range"},
 	{Signal: "EstBatteryRange", Field: "est_range"},
-	{Signal: "Elevation", Field: "elevation"},
 	{Signal: "InsideTemp", Field: "inside_temp"},
 	{Signal: "OutsideTemp", Field: "outside_temp"},
 	{Signal: "HvacLeftTemperatureRequest", Field: "driver_temp"},
@@ -73,8 +86,8 @@ var driveTelemetryFieldMappings = []signal.FieldMapping{
 	{Signal: "TpmsPressureFr", Field: "tire_pressure_fr"},
 	{Signal: "TpmsPressureRl", Field: "tire_pressure_rl"},
 	{Signal: "TpmsPressureRr", Field: "tire_pressure_rr"},
-	{Signal: "Latitude", Field: "latitude"},
-	{Signal: "Longitude", Field: "longitude"},
+	{Signal: "LocationLatitude", Field: "latitude"},
+	{Signal: "LocationLongitude", Field: "longitude"},
 }
 
 // derivePowerKw populates a "power" field on each telemetry row by
@@ -83,7 +96,7 @@ var driveTelemetryFieldMappings = []signal.FieldMapping{
 // downstream chart consumers can distinguish drive (+) from regen (−).
 //
 // This mirrors the formula used by enrichLiveDrive() for live drive
-// AvgPowerKw and by signalPowerKW() in telemetry_sessions_signal_helpers.go
+// average-power and by signalPowerKW() in telemetry_sessions_signal_helpers.go
 // — Tesla Fleet Telemetry does not emit a per-row PackPower signal.
 func derivePowerKw(rows []map[string]interface{}) {
 	for _, row := range rows {
@@ -97,12 +110,21 @@ func derivePowerKw(rows []map[string]interface{}) {
 
 // drivePositionFieldMappings projects the signal_log change feed into the
 // legacy Position model JSON tags so the frontend contract is unchanged.
+//
+// LocationLatitude / LocationLongitude are the codec's compound-flatten
+// names (see flatten.go:11-23 — flattenLocation prefixes children with
+// the source field name, and the Location compound's source field is
+// "Location"). VehicleSpeed and Elevation are kept here as the legacy
+// position projection contract — speed populates Position.SpeedMph (the
+// position track's per-fix speed); Elevation is currently a no-op in
+// Phase-42 (no codec atomic emits it) but remains in the mapping so a
+// future Elevation source (e.g. derived from positions writer's GPS
+// fix) can populate it without changing the handler.
 var drivePositionFieldMappings = []signal.FieldMapping{
-	{Signal: "Latitude", Field: "latitude"},
-	{Signal: "Longitude", Field: "longitude"},
+	{Signal: "LocationLatitude", Field: "latitude"},
+	{Signal: "LocationLongitude", Field: "longitude"},
 	{Signal: "GpsHeading", Field: "heading"},
 	{Signal: "VehicleSpeed", Field: "speed_mph"},
-	{Signal: "Elevation", Field: "elevation_m"},
 }
 
 // timelineRowsToFlat converts ordered TimelineRows into the legacy
@@ -210,8 +232,8 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 		"vehicle_id":         drive.VehicleID,
 		"start_ts":           drive.StartTs,
 		"end_ts":             drive.EndTs,
-		"duration_min":       drive.DurationMin,
-		"distance_mi":        drive.DistanceMi,
+		"duration_s":         drive.DurationS,
+		"distance_m":         drive.DistanceM,
 		"start_address":      drive.StartAddress,
 		"end_address":        drive.EndAddress,
 		"start_lat":          drive.StartLat,
@@ -220,11 +242,11 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 		"end_lon":            drive.EndLon,
 		"start_battery_pct":  drive.StartBatteryPct,
 		"end_battery_pct":    drive.EndBatteryPct,
-		"energy_used_kwh":    drive.EnergyUsedKwh,
-		"regen_kwh":          drive.RegenKwh,
-		"avg_speed_mph":      drive.AvgSpeedMph,
-		"max_speed_mph":      drive.MaxSpeedMph,
-		"avg_power_kw":       drive.AvgPowerKw,
+		"energy_used_wh":     drive.EnergyUsedWh,
+		"regen_energy_wh":    drive.RegenEnergyWh,
+		"avg_speed_mps":      drive.AvgSpeedMps,
+		"max_speed_mps":      drive.MaxSpeedMps,
+		"avg_power_w":        drive.AvgPowerW,
 		"outside_temp_avg_c": drive.OutsideTempAvgC,
 		"inside_temp_avg_c":  drive.InsideTempAvgC,
 		"score":              drive.Score,
@@ -242,6 +264,10 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 // The drive struct is mutated in place. Returns an error if the start
 // snapshot lookup fails — the caller should respond 500 because the live
 // derivation depends on it (distance/battery deltas need a baseline).
+//
+// Inputs are SI canonical post-Phase-42 (Odometer in meters, VehicleSpeed
+// in m/s, PackVoltage*PackCurrent in Watts), so values are written
+// directly to the SI-canonical Drive fields with no unit conversion.
 func (h *driveDetailHandler) enrichLiveDrive(ctx context.Context, drive *models.Drive, now time.Time) error {
 	startState, err := h.state.State(ctx, drive.VehicleID, drive.StartTs)
 	if err != nil {
@@ -251,15 +277,14 @@ func (h *driveDetailHandler) enrichLiveDrive(ctx context.Context, drive *models.
 
 	currentSnap := h.currentSignals(ctx, drive.VehicleID)
 
-	// Duration — always computable from wall clock.
-	durationMin := now.Sub(drive.StartTs).Minutes()
-	drive.DurationMin = safeFloat(durationMin)
+	// Duration — always computable from wall clock (SI seconds).
+	drive.DurationS = int64(now.Sub(drive.StartTs).Seconds() + 0.5)
 
-	// Distance from odometer delta.
+	// Distance from odometer delta (meters; codec emits SI).
 	startOdo, startOdoOk := signalFloat(startSnap, "Odometer")
 	currentOdo, currentOdoOk := signalFloat(currentSnap, "Odometer")
 	if startOdoOk && currentOdoOk && currentOdo > startOdo {
-		drive.DistanceMi = safeFloat(currentOdo - startOdo)
+		drive.DistanceM = safeFloat(currentOdo - startOdo)
 	}
 
 	// Battery levels.
@@ -272,33 +297,37 @@ func (h *driveDetailHandler) enrichLiveDrive(ctx context.Context, drive *models.
 		drive.EndBatteryPct = &v
 	}
 
-	// Average speed (distance / hours).
-	if drive.DistanceMi > 0 && durationMin > 0 {
-		avgSpeed := safeFloat(drive.DistanceMi / (durationMin / 60.0))
-		drive.AvgSpeedMph = &avgSpeed
+	// Average speed (distance / duration) in m/s.
+	if drive.DistanceM > 0 && drive.DurationS > 0 {
+		avgSpeed := safeFloat(drive.DistanceM / float64(drive.DurationS))
+		drive.AvgSpeedMps = &avgSpeed
 	}
 
-	// Current speed as max (best approximation during live drive).
+	// Current speed as max (best approximation during live drive); m/s.
 	if currentSpeed, ok := signalFloat(currentSnap, "VehicleSpeed"); ok {
-		if drive.MaxSpeedMph == nil || currentSpeed > *drive.MaxSpeedMph {
+		if drive.MaxSpeedMps == nil || currentSpeed > *drive.MaxSpeedMps {
 			v := safeFloat(currentSpeed)
-			drive.MaxSpeedMph = &v
+			drive.MaxSpeedMps = &v
 		}
 	}
 
 	// Current position as end position.
-	if lat, ok := signalFloat(currentSnap, "Latitude"); ok {
+	// LocationLatitude / LocationLongitude are the codec's compound-
+	// flatten names (Phase-42); the legacy "Latitude" / "Longitude"
+	// reads no longer match what the L1 signal store carries because
+	// codec/flatten.go:18-22 emits the prefixed names.
+	if lat, ok := signalFloat(currentSnap, "LocationLatitude"); ok {
 		drive.EndLat = &lat
 	}
-	if lon, ok := signalFloat(currentSnap, "Longitude"); ok {
+	if lon, ok := signalFloat(currentSnap, "LocationLongitude"); ok {
 		drive.EndLon = &lon
 	}
 
-	// Power.
+	// Power in Watts (V × A).
 	if voltage, vOk := signalFloat(currentSnap, "PackVoltage"); vOk {
 		if current, cOk := signalFloat(currentSnap, "PackCurrent"); cOk {
-			power := safeFloat(voltage * current / 1000.0)
-			drive.AvgPowerKw = &power
+			power := safeFloat(voltage * current)
+			drive.AvgPowerW = &power
 		}
 	}
 
@@ -312,21 +341,18 @@ func (h *driveDetailHandler) enrichLiveDrive(ctx context.Context, drive *models.
 	return nil
 }
 
-// currentSignals returns the latest signal values for a vehicle, preferring
-// Redis (sub-ms) with StateReader.State(time.Now()) as fallback. A failed
-// fallback degrades to an empty map rather than blocking the live-drive
+// currentSignals returns the latest signal values for a vehicle via the
+// LiveStateReader boundary (L1 in-process Store + L2 Redis HSET, with
+// signal_log fallback for keys not present in either layer). A reader
+// failure degrades to an empty map rather than blocking the live-drive
 // derivation; the caller treats missing signals as "no current sample".
 func (h *driveDetailHandler) currentSignals(ctx context.Context, vehicleID int64) map[string]interface{} {
-	if h.redisCache != nil {
-		snap, err := h.redisCache.GetAll(ctx, vehicleID)
-		if err == nil && snap != nil {
-			return snap
-		}
-		log.Debug().Err(err).Int64("vehicleID", vehicleID).Msg("live drive: Redis unavailable, falling back to signal_log")
+	if h.live == nil {
+		return map[string]interface{}{}
 	}
-	state, err := h.state.State(ctx, vehicleID, time.Now().UTC())
+	state, err := h.live.LiveState(ctx, vehicleID)
 	if err != nil {
-		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("live drive: failed to get current snapshot from signal_log")
+		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("live drive: failed to get current snapshot from live signal layer")
 		return map[string]interface{}{}
 	}
 	return stateToSignalMap(state)

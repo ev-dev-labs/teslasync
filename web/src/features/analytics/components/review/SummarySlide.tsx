@@ -1,7 +1,8 @@
 import { AnimatedNumber } from '@/components/data-display';
 import { motion } from '@/components/motion';
 import { useTranslation } from 'react-i18next';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import type { YearReview } from '@/api/types';
 import { Zap, Car, Plug, Leaf } from 'lucide-react';
 
@@ -11,7 +12,8 @@ interface Props {
 
 export function SummarySlide({ data }: Props) {
   const { t } = useTranslation();
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
 
   const stats = [
     {
@@ -23,7 +25,8 @@ export function SummarySlide({ data }: Props) {
     {
       icon: Car,
       label: distanceUnit,
-      value: convertDistance(data.total_distance_km),
+      // backend `total_distance_km` is SI km; convert via meter floor.
+      value: convertDistanceFromSI(data.total_distance_km * 1000, distanceUnit),
       decimals: 0,
     },
     {

@@ -55,17 +55,17 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Type == "" {
-		writeError(w, http.StatusBadRequest, "type is required (drives, charging, backup, analytics)")
+		writeError(w, http.StatusBadRequest, "type is required (drives, charging, trips, backup, analytics)")
 		return
 	}
 
 	validTypes := map[string]bool{
-		"drives": true, "charging": true, "backup": true, "analytics": true,
+		"drives": true, "charging": true, "trips": true, "backup": true, "analytics": true,
 		"import_drives": true, "import_charging": true,
 		"account": true,
 	}
 	if !validTypes[req.Type] {
-		writeError(w, http.StatusBadRequest, "invalid type: must be one of drives, charging, backup, analytics, account")
+		writeError(w, http.StatusBadRequest, "invalid type: must be one of drives, charging, trips, backup, analytics, account")
 		return
 	}
 
@@ -416,13 +416,13 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.
 	}
 
 	type exportDrive struct {
-		ID         int64   `json:"id"`
-		VehicleID  int64   `json:"vehicle_id"`
-		StartDate  string  `json:"start_date"`
-		EndDate    string  `json:"end_date"`
-		Distance   float64 `json:"distance"`
-		Duration   float64 `json:"duration_min"`
-		SpeedMax   float64 `json:"speed_max"`
+		ID        int64   `json:"id"`
+		VehicleID int64   `json:"vehicle_id"`
+		StartDate string  `json:"start_date"`
+		EndDate   string  `json:"end_date"`
+		DistanceM float64 `json:"distance_m"`
+		DurationS int64   `json:"duration_s"`
+		SpeedMax  float64 `json:"max_speed_mps"`
 	}
 
 	var allDrives []exportDrive
@@ -437,9 +437,9 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.
 				ID:        d.ID,
 				VehicleID: d.VehicleID,
 				StartDate: d.StartTs.Format("2006-01-02T15:04:05Z"),
-				Distance:  d.DistanceMi,
-				Duration:  d.DurationMin,
-				SpeedMax:  ptrFloat(d.MaxSpeedMph),
+				DistanceM: d.DistanceM,
+				DurationS: d.DurationS,
+				SpeedMax:  ptrFloat(d.MaxSpeedMps),
 			}
 			if d.EndTs != nil {
 				ed.EndDate = d.EndTs.Format("2006-01-02T15:04:05Z")
@@ -458,15 +458,15 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", "attachment; filename=teslasync-drives.csv")
 	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "distance", "duration_min", "speed_max"})
+	_ = cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "distance_m", "duration_s", "max_speed_mps"})
 	for _, d := range allDrives {
 		_ = cw.Write([]string{
 			strconv.FormatInt(d.ID, 10),
 			strconv.FormatInt(d.VehicleID, 10),
 			d.StartDate,
 			d.EndDate,
-			fmt.Sprintf("%.2f", d.Distance),
-			fmt.Sprintf("%.1f", d.Duration),
+			fmt.Sprintf("%.2f", d.DistanceM),
+			strconv.FormatInt(d.DurationS, 10),
 			fmt.Sprintf("%.1f", d.SpeedMax),
 		})
 	}
@@ -481,15 +481,15 @@ func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *databas
 	}
 
 	type exportSession struct {
-		ID           int64   `json:"id"`
-		VehicleID    int64   `json:"vehicle_id"`
-		StartDate    string  `json:"start_date"`
-		EndDate      string  `json:"end_date"`
-		EnergyAdded  float64 `json:"energy_added_kwh"`
-		StartBattery int     `json:"start_battery"`
-		EndBattery   int     `json:"end_battery"`
-		ChargerPower float64 `json:"charger_power_kw_max"`
-		Duration     float64 `json:"duration_min"`
+		ID          int64   `json:"id"`
+		VehicleID   int64   `json:"vehicle_id"`
+		StartedAt   string  `json:"started_at"`
+		EndedAt     string  `json:"ended_at"`
+		EnergyAdded float64 `json:"total_energy_added_wh"`
+		StartSocPct float64 `json:"start_soc_pct"`
+		EndSocPct   float64 `json:"end_soc_pct"`
+		PeakPowerW  float64 `json:"peak_power_w"`
+		DurationS   float64 `json:"duration_s"`
 	}
 
 	var allSessions []exportSession
@@ -501,17 +501,17 @@ func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *databas
 		}
 		for _, s := range sessions {
 			es := exportSession{
-				ID:           s.ID,
-				VehicleID:    s.VehicleID,
-				StartDate:    s.StartTs.Format("2006-01-02T15:04:05Z"),
-				EnergyAdded:  ptrFloat(s.EnergyAddedKwh),
-				StartBattery: ptrInt16(s.StartBatteryPct),
-				EndBattery:   ptrInt16(s.EndBatteryPct),
-				ChargerPower: ptrFloat(s.ChargerPowerKwMax),
-				Duration:     ptrFloat(s.DurationMin),
+				ID:          s.ID,
+				VehicleID:   s.VehicleID,
+				StartedAt:   s.StartedAt.Format("2006-01-02T15:04:05Z"),
+				EnergyAdded: ptrFloat(s.TotalEnergyAddedWh),
+				StartSocPct: ptrFloat(s.StartSocPct),
+				EndSocPct:   ptrFloat(s.EndSocPct),
+				PeakPowerW:  ptrFloat(s.PeakPowerW),
 			}
-			if s.EndTs != nil {
-				es.EndDate = s.EndTs.Format("2006-01-02T15:04:05Z")
+			if s.EndedAt != nil {
+				es.EndedAt = s.EndedAt.Format("2006-01-02T15:04:05Z")
+				es.DurationS = s.EndedAt.Sub(s.StartedAt).Seconds()
 			}
 			allSessions = append(allSessions, es)
 		}
@@ -527,18 +527,18 @@ func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *databas
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", "attachment; filename=teslasync-charging.csv")
 	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "energy_added_kwh", "start_battery", "end_battery", "charger_power_kw_max", "duration_min"})
+	_ = cw.Write([]string{"id", "vehicle_id", "started_at", "ended_at", "total_energy_added_wh", "start_soc_pct", "end_soc_pct", "peak_power_w", "duration_s"})
 	for _, s := range allSessions {
 		_ = cw.Write([]string{
 			strconv.FormatInt(s.ID, 10),
 			strconv.FormatInt(s.VehicleID, 10),
-			s.StartDate,
-			s.EndDate,
+			s.StartedAt,
+			s.EndedAt,
 			fmt.Sprintf("%.2f", s.EnergyAdded),
-			strconv.Itoa(s.StartBattery),
-			strconv.Itoa(s.EndBattery),
-			fmt.Sprintf("%.1f", s.ChargerPower),
-			fmt.Sprintf("%.1f", s.Duration),
+			fmt.Sprintf("%.1f", s.StartSocPct),
+			fmt.Sprintf("%.1f", s.EndSocPct),
+			fmt.Sprintf("%.1f", s.PeakPowerW),
+			fmt.Sprintf("%.0f", s.DurationS),
 		})
 	}
 	cw.Flush()
@@ -549,6 +549,17 @@ func ptrFloat(p *float64) float64 {
 		return *p
 	}
 	return 0
+}
+
+// ptrFloatMpsToMphAPI converts a nullable SI speed value (m/s) to mph for
+// the legacy CSV/JSON export shape served by the public /exports endpoints.
+// Slice 4 of phase-48 will rename the export column to max_speed_mps and
+// drop this conversion.
+func ptrFloatMpsToMphAPI(p *float64) float64 {
+	if p == nil {
+		return 0
+	}
+	return *p / 0.44704
 }
 
 func ptrInt16(p *int16) int {

@@ -5,12 +5,12 @@ import { Badge } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useTrips } from '@/api/hooks/useTrips';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { formatDurationRange } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { kmToMiles } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -21,7 +21,10 @@ function formatDate(iso: string): string {
 
 export default function TripSummaryWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
 
   const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useTrips({
     limit: 5,
@@ -33,7 +36,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
 
   const isCompact = size.cols <= 1;
 
-  const displayDist = (km: number) => convertDistance(kmToMiles(km ?? 0));
+  const displayDist = (meters: number) => toDistanceDisplay(meters ?? 0);
 
   return (
     <WidgetShell
@@ -74,7 +77,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
               <div className={isCompact ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-4 gap-2'}>
                 <StatCard
                   label={t('widget.distance', 'Distance')}
-                  value={`${fmtNumber(displayDist(lastTrip.total_distance_km ?? 0), 1)} ${distanceUnit}`}
+                  value={`${fmtNumber(displayDist(lastTrip.total_distance_m ?? 0), 1)} ${distanceUnit}`}
                   icon={<MapPin className="h-3 w-3" />}
                 />
                 <StatCard
@@ -118,7 +121,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
                   {!isCompact && (
                     <div className="flex items-center gap-3 flex-shrink-0 ml-2">
                       <span className="text-xs text-[var(--text-secondary)] tabular-nums">
-                        {fmtNumber(displayDist(trip.total_distance_km ?? 0), 1)} {distanceUnit}
+                        {fmtNumber(displayDist(trip.total_distance_m ?? 0), 1)} {distanceUnit}
                       </span>
                       <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
                         {formatDurationRange(trip.start_date, trip.end_date)}
@@ -130,7 +133,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
                   )}
                   {isCompact && (
                     <span className="text-xs text-[var(--text-secondary)] tabular-nums flex-shrink-0 ml-2">
-                      {fmtNumber(displayDist(trip.total_distance_km ?? 0), 1)} {distanceUnit}
+                      {fmtNumber(displayDist(trip.total_distance_m ?? 0), 1)} {distanceUnit}
                     </span>
                   )}
                 </div>

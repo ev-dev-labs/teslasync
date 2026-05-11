@@ -13,11 +13,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rs/zerolog"
+
 	"github.com/ev-dev-labs/teslasync/internal/api"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	platformdb "github.com/ev-dev-labs/teslasync/internal/platform/database"
-	"github.com/ev-dev-labs/teslasync/internal/telemetry"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/normalize"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/router/writers"
+	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
 )
 
 // TestTelemetryReplay is the Phase 6.32 merge-gate integration test. It replays
@@ -80,7 +86,7 @@ func TestTelemetryReplay(t *testing.T) {
 
 			before := snapshotCounts(t, pool, vehicleID)
 
-			if err := h.ProcessBatch(ctx, batch.VIN, batch.NamedValues()); err != nil {
+			if err := h.ProcessBatch(ctx, batch.VIN, batch.Atomics()); err != nil {
 				t.Fatalf("ProcessBatch: %v", err)
 			}
 
@@ -150,10 +156,22 @@ type fixtureBatch struct {
 	Signals []fixtureSignal `json:"signals"`
 }
 
-func (b fixtureBatch) NamedValues() []telemetry.NamedValue {
-	out := make([]telemetry.NamedValue, 0, len(b.Signals))
+// Atomics renders the fixture's signals into the codec.Atomic shape that
+// TelemetryHandler.ProcessBatch consumes. EmittedAt is set to time.Now()
+// because fixtures are JSON snapshots without a producer-side timestamp;
+// VehicleID carries the fixture VIN so downstream string-keyed assertions
+// (e.g. signal_log per-vehicle counts) line up with the rest of the test
+// harness.
+func (b fixtureBatch) Atomics() []codec.Atomic {
+	now := time.Now().UTC()
+	out := make([]codec.Atomic, 0, len(b.Signals))
 	for _, s := range b.Signals {
-		out = append(out, telemetry.NamedValue{Name: s.Name, Value: s.Value})
+		out = append(out, codec.Atomic{
+			Field:     s.Name,
+			Value:     s.Value,
+			EmittedAt: now,
+			VehicleID: b.VIN,
+		})
 	}
 	return out
 }
@@ -223,9 +241,46 @@ func setupFreshDB(t *testing.T, cfg config.DatabaseConfig) *database.DB {
 
 // buildHandler constructs a TelemetryHandler with no MQTT / no SSE hub — the
 // integration test exercises only the persistence pipeline.
+//
+// Phase-42a/0060: HTTP webhook ingest now dispatches through normalize.Pipeline,
+// so the handler MUST be wired with a pipeline via SetPipeline; otherwise
+// ProcessBatch returns errPipelineNotWired and the test would receive an
+// HTTP 503 from the ingest path instead of writing to typed columns. The
+// pipeline is constructed with the same 12-writer set as cmd/teslasync's
+// production wiring (no observers — the integration test only asserts on
+// row counts in typed tables, which writers populate directly).
 func buildHandler(t *testing.T, db *database.DB) *api.TelemetryHandler {
 	t.Helper()
-	return api.NewTelemetryHandler(db, nil, nil, time.Minute, nil)
+
+	pipelineWriters := map[router.Destination]router.Writer{
+		router.DestPositions:         writers.NewPositionsWriter(db.Pool),
+		router.DestClimateSnapshot:   writers.NewClimateWriter(db.Pool),
+		router.DestMotorSnapshot:     writers.NewMotorWriter(db.Pool),
+		router.DestTirePressure:      writers.NewTirePressureWriter(db.Pool),
+		router.DestMediaSnapshot:     writers.NewMediaWriter(db.Pool),
+		router.DestSafetySnapshot:    writers.NewSafetyWriter(db.Pool),
+		router.DestLocationSnapshot:  writers.NewLocationWriter(db.Pool),
+		router.DestSecurityEvent:     writers.NewSecurityEventWriter(db.Pool),
+		router.DestChargingTelemetry: writers.NewChargingTelemetryWriter(db.Pool),
+		router.DestDriveTelemetry:    writers.NewDriveTelemetryWriter(db.Pool),
+		router.DestSignalLog:         writers.NewSignalLogWriter(db.Pool),
+		router.DestUnitHistory:       writers.NewUnitHistoryWriter(),
+	}
+
+	pipelineRouter, err := router.New(pipelineWriters)
+	if err != nil {
+		t.Fatalf("router.New: %v", err)
+	}
+
+	unitCache := unithistory.NewCache(nil)
+	unitRepo := unithistory.NewRepo(db.Pool, unitCache)
+
+	logger := zerolog.Nop()
+	pipeline := normalize.New(unitRepo, pipelineRouter, &logger)
+
+	h := api.NewTelemetryHandler(db, nil, nil, time.Minute, nil)
+	h.SetPipeline(pipeline)
+	return h
 }
 
 // ensureVehicle inserts a vehicle row with the given VIN if absent and returns

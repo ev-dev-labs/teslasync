@@ -126,12 +126,12 @@ export function useWeeklyDigest() {
       weekDrives.length > 0
         ? weekDrives.reduce((best, d) => (d.distance > best.distance ? d : best))
         : undefined;
-    const chargeEnergyAdded = weekCharging.reduce((s, c) => s + c.energy_added_kwh, 0);
-    const prevChargeEnergy = prevWeekCharging.reduce((s, c) => s + c.energy_added_kwh, 0);
+    const chargeEnergyAdded = weekCharging.reduce((s, c) => s + c.total_energy_added_wh, 0);
+    const prevChargeEnergy = prevWeekCharging.reduce((s, c) => s + c.total_energy_added_wh, 0);
     const avgChargeRate =
       weekCharging.length > 0
         ? weekCharging.reduce(
-            (s, c) => s + (c.duration_min > 0 ? (c.energy_added_kwh / c.duration_min) * 60 : 0),
+            (s, c) => s + (c.duration_min > 0 ? (c.total_energy_added_wh / c.duration_min) * 60 : 0),
             0,
           ) / weekCharging.length
         : 0;
@@ -190,7 +190,7 @@ export function useWeeklyDigest() {
     const bins = DAY_LABELS.map((label) => ({ day: label, energy: 0 }));
     for (const c of weekCharging) {
       const idx = dayOfWeekIndex(c.start_ts);
-      bins[idx].energy += c.energy_added_kwh;
+      bins[idx].energy += c.total_energy_added_wh;
     }
     return bins;
   }, [weekCharging]);

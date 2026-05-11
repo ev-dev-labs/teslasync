@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/feedback';
 import { useSafetyHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { fmtInt } from '@/lib/numberFormat';
+import { cleanSafetyEnum, isSafetyEnumActive } from '@/lib/safetyEnum';
 import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed } from './shared';
 import type { EventFeedItem } from './shared';
@@ -31,25 +32,19 @@ function classifySnapshot(snap: Record<string, unknown>): SafetyEvent {
       severity: 'critical',
     };
   }
-  if (
-    snap.forward_collision_warning != null &&
-    String(snap.forward_collision_warning).toLowerCase() !== 'off'
-  ) {
+  if (isSafetyEnumActive(snap.forward_collision_warning, 'forward_collision_warning')) {
     return {
       type: 'fcw',
-      title: `FCW: ${String(snap.forward_collision_warning ?? '—')}`,
+      title: `FCW: ${cleanSafetyEnum(snap.forward_collision_warning, 'forward_collision_warning')}`,
       icon: <ShieldAlert className="h-3.5 w-3.5" />,
       color: '#f59e0b',
       severity: 'warning',
     };
   }
-  if (
-    snap.lane_departure_avoidance != null &&
-    String(snap.lane_departure_avoidance).toLowerCase() !== 'off'
-  ) {
+  if (isSafetyEnumActive(snap.lane_departure_avoidance, 'lane_departure_avoidance')) {
     return {
       type: 'lane',
-      title: `Lane Departure: ${String(snap.lane_departure_avoidance ?? '—')}`,
+      title: `Lane Departure: ${cleanSafetyEnum(snap.lane_departure_avoidance, 'lane_departure_avoidance')}`,
       icon: <Navigation className="h-3.5 w-3.5" />,
       color: '#3b82f6',
       severity: 'warning',

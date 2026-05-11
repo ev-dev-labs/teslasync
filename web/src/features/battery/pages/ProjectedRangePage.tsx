@@ -24,6 +24,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
+import { useUnits } from '@/hooks/useUnits';
 
 /* ── Types ── */
 
@@ -49,7 +50,7 @@ interface RangeProjection {
   factors: RangeFactor[];
   projection_curve: CurvePoint[];
   current_battery_pct: number;
-  usable_capacity_kwh: number;
+  usable_capacity_wh: number;
   health_factor: number;
   scenarios: RangeScenario[];
   efficiency_matrix: EfficiencyBucket[];
@@ -90,7 +91,7 @@ function interpolateRange(
   speedKmh: number,
   tempC: number,
   batteryPct: number,
-  capacityKwh: number,
+  capacityWh: number,
 ): { effWhKm: number; rangeKm: number } {
   const tempBucket = tempC < 0 ? 'freezing' : tempC < 10 ? 'cold' : tempC < 25 ? 'mild' : 'hot';
   const speedBucket = speedKmh < 50 ? 'city' : speedKmh < 90 ? 'suburban' : 'highway';
@@ -98,7 +99,7 @@ function interpolateRange(
   const match = matrix.find((b) => b.temp_bucket === tempBucket && b.speed_bucket === speedBucket);
   let eff = match?.wh_km ?? (155 + (speedKmh - 35) * 0.5 + Math.max(0, 20 - tempC) * 1.5);
   if (eff <= 0) eff = 170;
-  const rangeKm = capacityKwh * 1000 * (batteryPct / 100) / eff;
+  const rangeKm = capacityWh * (batteryPct / 100) / eff;
   return { effWhKm: Math.round(eff * 10) / 10, rangeKm: Math.round(rangeKm * 10) / 10 };
 }
 
@@ -107,6 +108,7 @@ function interpolateRange(
 export default function ProjectedRangePage() {
   const { t } = useTranslation();
   usePageTitle(t('range.title', 'Projected Range'));
+  const { formatEnergy } = useUnits();
 
   // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
   const { vehicleId: globalVehicleId } = useSelectedVehicle();
@@ -128,7 +130,7 @@ export default function ProjectedRangePage() {
       data.efficiency_matrix ?? [],
       whatIfSpeed, whatIfTemp,
       data.current_battery_pct ?? data.battery_level ?? 80,
-      data.usable_capacity_kwh ?? 75,
+      data.usable_capacity_wh ?? 75000,
     );
   }, [data, whatIfSpeed, whatIfTemp]);
 
@@ -171,7 +173,7 @@ export default function ProjectedRangePage() {
             <MetricCard label={t('range.battery', 'Battery')} value={`${fmtNumber(data?.current_battery_pct ?? data?.battery_level, 0)}%`} icon={<BatteryFull className="h-4 w-4" />} color="purple" />
           </StaggerItem>
           <StaggerItem>
-            <MetricCard label={t('range.usableCapacity', 'Usable Capacity')} value={`${fmtNumber(data?.usable_capacity_kwh, 1)} kWh`} icon={<Zap className="h-4 w-4" />} color="amber" />
+            <MetricCard label={t('range.usableCapacity', 'Usable Capacity')} value={formatEnergy(data?.usable_capacity_wh)} icon={<Zap className="h-4 w-4" />} color="amber" />
           </StaggerItem>
           <StaggerItem>
             <MetricCard label={t('range.healthFactor', 'Health Factor')} value={`${fmtNumber((data?.health_factor ?? 1) * 100, 1)}%`} icon={<Shield className="h-4 w-4" />} color="green" />

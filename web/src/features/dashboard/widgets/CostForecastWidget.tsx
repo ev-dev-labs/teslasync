@@ -7,7 +7,7 @@ import {
 } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useCostForecast } from '@/api/hooks/useCharging';
-import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -42,17 +42,10 @@ export default function CostForecastWidget({ vehicleId, size }: WidgetProps) {
   const vid = vehicleId ?? vehicles?.[0]?.id ?? null;
 
   const {
-    data,
-    isLoading,
-    error,
-    isFetching,
-    isStale,
-    isError,
-    dataUpdatedAt,
-    refetch,
-  } = useCostForecast(vid != null ? String(vid) : null);
+    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useCostForecast(vid != null ? String(vid) : null);
 
-  const { formatCurrency, currencySymbol } = useSettings();
+  const { formatCurrency } = useFormatting();
+  const { currencySymbol } = useFormatting();
 
   const chartData = useMemo(
     () => buildChartData(data?.historical ?? [], data?.forecast ?? []),

@@ -232,7 +232,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMax') - MAX(value_num) FILTER (WHERE signal = 'BrickVoltageMin') AS \"Voltage Delta (V)\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal IN ('BrickVoltageMax', 'BrickVoltageMin') AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "SELECT MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'BrickVoltageMax') - MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'BrickVoltageMin') AS \"Voltage Delta (V)\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field IN ('BrickVoltageMax', 'BrickVoltageMin') AND ts BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -358,7 +358,9 @@
       },
       "description": "Heatmap showing temperature readings per cell over time. Hot spots indicate cells under thermal stress.",
       "fieldConfig": {
-        "defaults": {},
+        "defaults": {
+          "noValue": "No cell temperature data available"
+        },
         "overrides": []
       },
       "gridPos": {
@@ -386,7 +388,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1E-09
+          "le": 1e-09
         },
         "legend": {
           "show": true
@@ -405,12 +407,6 @@
           "axisPlacement": "left",
           "reverse": false
         }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "No cell temperature data available"
-        },
-        "overrides": []
       },
       "targets": [
         {

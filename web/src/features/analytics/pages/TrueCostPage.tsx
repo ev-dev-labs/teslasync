@@ -14,6 +14,8 @@ import {
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useCostBreakdown } from '@/api/hooks/useAnalytics';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
 /* ── Component ── */
@@ -21,6 +23,8 @@ import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 export default function TrueCostPage() {
   const { t } = useTranslation();
   usePageTitle(t('tco.title', 'Total Cost of Ownership'));
+  const { unitPrefs, formatEnergy } = useUnits();
+  const distanceUnit = unitPrefs.distance;
 
   const { data: vehicles } = useVehicles();
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
@@ -68,7 +72,7 @@ export default function TrueCostPage() {
                 </div>
                 <p className="text-2xl font-bold text-cyan-300">{fmtCurrency(tco.total_charging_cost)}</p>
                 <p className="text-xs text-[var(--text-muted)] mt-1">
-                  {fmtNumber(tco.total_kwh)} kWh · {tco.total_sessions} {t('tco.sessions', 'sessions')}
+                  {formatEnergy(tco.total_wh)} · {tco.total_sessions} {t('tco.sessions', 'sessions')}
                 </p>
               </GlassPanel>
             </StaggerItem>
@@ -253,7 +257,7 @@ export default function TrueCostPage() {
                     {fmtCurrency(tco.total_savings + tco.maintenance_savings_estimate)}
                   </p>
                   <p className="text-xs text-[var(--text-muted)] mt-1">
-                    {fmtInt(tco.total_km)} km · {tco.first_date} → {tco.last_date}
+                    {fmtInt(convertDistanceFromSI((tco.total_km ?? 0) * 1000, distanceUnit))} {distanceUnit} · {tco.first_date} → {tco.last_date}
                   </p>
                 </div>
               </div>

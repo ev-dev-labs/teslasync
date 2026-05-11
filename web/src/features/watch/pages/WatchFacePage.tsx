@@ -4,6 +4,12 @@ import { useWatchSummary, useWatchCommand } from '@/api/hooks/useWatch';
 import { Spinner } from '@/components/feedback';
 import { Badge, Button as ControlButton } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { useUnits } from '@/hooks/useUnits';
+import {
+  convertDistanceFromSI,
+  convertTempFromSI,
+  type DistanceUnitPref,
+} from '@/lib/unitConversion';
 import { Zap, Lock, Unlock, Thermometer, Shield } from 'lucide-react';
 
 /**
@@ -22,6 +28,7 @@ export default function WatchFacePage() {
   const vehicleId = vehicleIdParam ? Number(vehicleIdParam) : undefined;
   const { data, isLoading, error } = useWatchSummary(vehicleId);
   const commandMutation = useWatchCommand();
+  const { unitPrefs } = useUnits();
 
   const sendCommand = (command: string) => {
     commandMutation.mutate({ vehicleId, command });
@@ -45,6 +52,20 @@ export default function WatchFacePage() {
     );
   }
 
+  // SI boundary: backend `range_km` is in km (not meters per the
+  // Phase-42 SI convention) — derived in watch_handler.go as
+  // RatedRange*1.60934. Multiply by 1000 to feed convertDistanceFromSI,
+  // mirroring the Phase-43/0023 BatteryHandler.Report fromKm pattern.
+  const displayRange = convertDistanceFromSI(
+    data.range_km * 1000,
+    unitPrefs.distance,
+  );
+  // SI boundary: backend `inside_temp_c` is already °C (SI for temp).
+  const displayInsideTemp = convertTempFromSI(
+    data.inside_temp_c,
+    unitPrefs.temperature,
+  );
+
   return (
     <WatchShell>
       {/* Vehicle name */}
@@ -54,7 +75,11 @@ export default function WatchFacePage() {
 
       {/* Battery gauge — center focus */}
       <div className="flex-1 flex flex-col items-center justify-center min-h-0">
-        <BatteryGauge level={data.battery_level} rangeKm={data.range_km} />
+        <BatteryGauge
+          level={data.battery_level}
+          rangeDisplay={displayRange}
+          distanceUnit={unitPrefs.distance}
+        />
 
         {/* Charging status */}
         {data.is_charging && (
@@ -86,7 +111,7 @@ export default function WatchFacePage() {
         <StatusIcon
           icon={Thermometer}
           active={data.is_climate_on}
-          label={`${Math.round(data.inside_temp_c)}°`}
+          label={`${Math.round(displayInsideTemp)}°`}
           onClick={() => sendCommand(data.is_climate_on ? 'climate_off' : 'climate_on')}
           loading={commandMutation.isPending}
         />
@@ -118,7 +143,15 @@ function WatchShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function BatteryGauge({ level, rangeKm }: { level: number; rangeKm: number }) {
+function BatteryGauge({
+  level,
+  rangeDisplay,
+  distanceUnit,
+}: {
+  level: number;
+  rangeDisplay: number;
+  distanceUnit: DistanceUnitPref;
+}) {
   const color = getBatteryColor(level);
   const dashLength = level * 2.64;
 
@@ -142,7 +175,7 @@ function BatteryGauge({ level, rangeKm }: { level: number; rangeKm: number }) {
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-3xl font-bold">{level}%</span>
         <span className="text-[10px] text-[var(--text-secondary)]">
-          {Math.round(rangeKm)} km
+          {Math.round(rangeDisplay)} {distanceUnit}
         </span>
       </div>
     </div>

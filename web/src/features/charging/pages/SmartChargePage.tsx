@@ -368,7 +368,7 @@ export default function SmartChargePage() {
                   <div className="py-2">{t('chargePlanner.date', 'Date')}</div>
                   <div className="py-2">{t('chargePlanner.window', 'Window')}</div>
                   <div className="py-2">{t('chargePlanner.plan', 'Plan')}</div>
-                  <div className="py-2 text-right">{t('chargePlanner.cost', 'Cost')}</div>
+                  <div className="py-2 text-right">{t('chargePlanner.cost_decimal', 'Cost')}</div>
                   <div className="py-2 text-right">{t('chargePlanner.savedAmount', 'Saved')}</div>
                   <div className="py-2">{t('chargePlanner.status', 'Status')}</div>
                 </div>

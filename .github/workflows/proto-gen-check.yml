@@ -1,0 +1,23 @@
+name: proto-gen-check
+
+on:
+  pull_request:
+    paths:
+      - 'api/proto/tesla/**'
+      - 'internal/tesla/protomodel/**'
+      - 'cmd/protogen-tesla/**'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Verify generated Tesla protomodel matches proto
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      - name: Verify generated files match proto
+        run: make gen-tesla-check

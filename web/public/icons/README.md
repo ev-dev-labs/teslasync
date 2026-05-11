@@ -30,6 +30,43 @@ Both maskable files are referenced twice in the manifest:
 2. Once with `purpose: 'maskable'` so adaptive-icon-aware browsers (Chrome on
    Android, Edge on Windows) pick them up explicitly.
 
+## Why no notification `icon`?
+
+The service worker (`web/src/sw/sw.ts`) deliberately **omits** the `icon`
+field when calling `showNotification()`. This is a fix landed in
+**Phase-49 / Slice 0010** (`notification-icon-fix`).
+
+Background: when both `icon` and `badge` are populated AND the device's
+PWA manifest icon is also installed, Android Chrome renders the same
+artwork twice on the notification card — once on the left (sourced from
+the manifest icon, which Chrome cannot be told to suppress) and once on
+the right (sourced from `icon`). This produced the visible duplicate
+icon shown in support tickets prior to slice 0010.
+
+The fix:
+
+1. Drop `Icon` from `internal/webpush.Payload` (server side) so the
+   field is no longer transmitted on the wire.
+2. Drop `icon?: string` from `PushPayload` (`web/src/sw/sw.ts`) and
+   never assign `options.icon` in the `showNotification(...)` call.
+3. Keep `badge: '/icons/badge-72.png'` because the badge populates the
+   Android status-bar slot — a separate, smaller surface that has no
+   duplicate-rendering issue.
+
+Regression tests pin the contract:
+
+- `internal/webpush/service_test.go` — `TestPayload_NoIconField` and
+  `TestPayload_JSONShape_OmitsIcon` reject any reintroduction of the
+  struct field or its JSON tag.
+- `web/src/sw/__tests__/sw.test.ts` — captures the
+  `showNotification(...)` call and asserts `options.icon === undefined`
+  even when the upstream payload contains a stray `icon` key.
+
+If you need a per-notification visual differentiator in the future,
+prefer `image` (large hero on Android, ignored on desktop) over `icon`,
+and verify on a real Android device that the manifest icon is no
+longer being doubled before merging.
+
 ## Theme colors
 
 The manifest uses:

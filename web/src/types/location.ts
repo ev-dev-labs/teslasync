@@ -4,7 +4,7 @@ export interface Location {
   latitude: number;
   longitude: number;
   visitCount: number;
-  totalDurationMin: number;
+  totalDurationS: number;
   lastVisited: string | null;
 }
 

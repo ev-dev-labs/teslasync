@@ -23,8 +23,9 @@ import {
 } from '@/components/charts';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUnits } from '@/hooks/useUnits';
 import { formatDate } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
@@ -34,7 +35,7 @@ interface VisitedLocation {
   id: number;
   address_name: string;
   visit_count: number;
-  total_duration_min: number;
+  total_duration_s: number;
   last_visited: string | null;
 }
 
@@ -45,6 +46,7 @@ interface Vehicle { id: number; vin: string; display_name: string }
 export default function LocationsPage() {
   const { t } = useTranslation();
   usePageTitle(t('Locations'));
+  const { formatDuration } = useUnits();
 
   const { data: vehicles } = useQuery({
     queryKey: ['vehicles'],
@@ -70,10 +72,10 @@ export default function LocationsPage() {
   const filteredLocations = useFilteredList(locations, search, locationSearchFields);
 
   const totalVisits = locations?.reduce((s, l) => s + l.visit_count, 0) ?? 0;
-  const totalTime = locations?.reduce((s, l) => s + l.total_duration_min, 0) ?? 0;
+  const totalTime = locations?.reduce((s, l) => s + l.total_duration_s, 0) ?? 0;
   const uniquePlaces = locations?.length ?? 0;
   const topLocation = locations?.[0];
-  const avgDurationMin = totalVisits > 0 ? totalTime / totalVisits : 0;
+  const avgDurationS = totalVisits > 0 ? totalTime / totalVisits : 0;
 
   const uniqueCities = useMemo(() => {
     if (!locations?.length) return 0;
@@ -98,7 +100,7 @@ export default function LocationsPage() {
   const timeChartData = useMemo(() =>
     (locations ?? []).slice(0, 10).map(l => ({
       name: (l.address_name ?? '').length > 25 ? (l.address_name ?? '').slice(0, 22) + '…' : (l.address_name ?? ''),
-      hours: +(fmtNumber(l.total_duration_min / 60, 1)),
+      hours: +(fmtNumber(l.total_duration_s / 3600, 1)),
     })),
   [locations]);
 
@@ -127,9 +129,9 @@ export default function LocationsPage() {
           <MetricCard label={t('Unique Places')} value={uniquePlaces} icon={<Navigation className="h-4 w-4" />} color="green" />
           <MetricCard label={t('Unique Cities')} value={uniqueCities} icon={<Building2 className="h-4 w-4" />} color="blue" />
           <MetricCard label={t('Total Visits')} value={totalVisits} icon={<Hash className="h-4 w-4" />} color="cyan" />
-          <MetricCard label={t('Total Time')} value={`${fmtInt(totalTime / 60)}h`} icon={<Clock className="h-4 w-4" />} color="purple" />
+          <MetricCard label={t('Total Time')} value={formatDuration(totalTime)} icon={<Clock className="h-4 w-4" />} color="purple" />
           <MetricCard label={t('Most Visited')} value={topLocation?.address_name ?? '—'} icon={<Trophy className="h-4 w-4" />} color="amber" />
-          <MetricCard label={t('Avg Visit')} value={avgDurationMin > 60 ? `${Math.floor(avgDurationMin / 60)}h ${fmtInt(avgDurationMin % 60)}m` : `${fmtInt(avgDurationMin)}m`} icon={<Clock className="h-4 w-4" />} color="cyan" />
+          <MetricCard label={t('Avg Visit')} value={formatDuration(avgDurationS)} icon={<Clock className="h-4 w-4" />} color="cyan" />
         </div>
       </FadeIn>
 
@@ -232,7 +234,7 @@ export default function LocationsPage() {
                     <div className="flex-1 min-w-0">
                       <span className="text-sm font-medium truncate block text-[var(--text-primary)]">{loc.address_name}</span>
                       <span className="text-[11px] text-[var(--text-muted)]">
-                        {loc.visit_count} {t('visits')} · {fmtInt(loc.total_duration_min / 60)}h {t('total')} · ~{loc.visit_count > 0 ? fmtInt(loc.total_duration_min / loc.visit_count) : 0}m {t('avg')}
+                        {loc.visit_count} {t('visits')} · {formatDuration(loc.total_duration_s)} {t('total')} · ~{formatDuration(loc.visit_count > 0 ? loc.total_duration_s / loc.visit_count : 0)} {t('avg')}
                         {loc.last_visited && ` · ${t('Last')}: ${formatDate(loc.last_visited)}`}
                       </span>
                     </div>

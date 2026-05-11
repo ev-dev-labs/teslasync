@@ -3,7 +3,7 @@ import { Heart, Zap } from 'lucide-react';
 
 import { MetricCard } from '@/components/data-display';
 import { StaggerContainer, StaggerItem } from '@/components/motion';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
 import type { HealthStatus, TempSensor } from './constants';
@@ -23,7 +23,8 @@ export function TemperatureMetricCards({
   peakPower,
 }: TemperatureMetricCardsProps) {
   const { t } = useTranslation();
-  const { fmtTemp } = useSettings();
+  const { formatTemperature: formatTemperatureUnit } = useUnits();
+  const formatTemperature = (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision });
 
   return (
     <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -31,7 +32,7 @@ export function TemperatureMetricCards({
         <StaggerItem key={sensor.key}>
           <MetricCard
             label={t(sensor.labelKey, sensor.defaultLabel)}
-            value={displayTemp(sensor.value, fmtTemp)}
+            value={displayTemp(sensor.value, formatTemperature)}
             icon={sensor.icon}
             color={tempNeonColor(sensor.value, sensor.maxTemp)}
             subtitle={

@@ -22,28 +22,37 @@ vi.mock('react-i18next', () => ({
 }));
 
 const baseSettings = {
-  settings: {} as never,
+  settings: {
+    unit_of_length: 'mi',
+    unit_of_temp: 'C',
+    unit_of_pressure: 'bar',
+    currency_symbol: '$',
+    base_cost_per_kwh: 0.12,
+    decimal_precision: 1,
+    locale: 'en-US',
+    preferred_range: 'rated',
+  } as never,
   isMiles: true,
   isFahrenheit: false,
   isPSI: false,
   decimals: 1,
   locale: 'en-US',
   density: 'comfortable' as const,
-  convertDistance: (mi: number) => mi,
-  convertSpeed: (mph: number) => mph,
-  convertTemp: (c: number) => c,
-  convertEfficiency: (whPerMi: number) => whPerMi,
-  convertPressure: (bar: number) => bar,
+  toDistanceDisplay: (mi: number) => mi,
+  toSpeedDisplay: (mph: number) => mph,
+  toTemperatureDisplay: (c: number) => c,
+  toEfficiencyDisplay: (whPerMi: number) => whPerMi,
+  toPressureDisplay: (bar: number) => bar,
   distanceUnit: 'mi' as const,
   speedUnit: 'mph' as const,
   tempUnit: '°C' as const,
   efficiencyUnit: 'Wh/mi' as const,
   pressureUnit: 'bar' as const,
   rangeType: 'rated' as const,
-  fmtDistance: () => '',
-  fmtSpeed: () => '',
-  fmtTemp: () => '',
-  fmtPressure: () => '',
+  formatDistance: () => '',
+  formatSpeed: () => '',
+  formatTemperature: () => '',
+  formatPressure: () => '',
   costPerKwh: 0.12,
   currencySymbol: '$',
   formatEnergyCost: () => '',
@@ -175,13 +184,13 @@ describe('Delta — edge cases', () => {
 
 describe('Delta — settings-aware unit suffixes', () => {
   it('uses the metric distance unit from settings', () => {
-    vi.mocked(useSettings).mockReturnValue({ ...baseSettings, distanceUnit: 'km' } as never);
+    vi.mocked(useSettings).mockReturnValue({ ...baseSettings, settings: { ...baseSettings.settings, unit_of_length: 'km' } as never } as never);
     const { container } = render(<Delta metric="range" current={280} previous={250} display="absolute" />);
     expect(container.textContent).toContain('30.0 km');
   });
 
   it('uses the user currency symbol', () => {
-    vi.mocked(useSettings).mockReturnValue({ ...baseSettings, currencySymbol: '€' } as never);
+    vi.mocked(useSettings).mockReturnValue({ ...baseSettings, settings: { ...baseSettings.settings, currency_symbol: '€' } as never } as never);
     const { container } = render(<Delta metric="cost" current={12} previous={10} display="absolute" />);
     expect(container.textContent).toContain('€2.0');
   });

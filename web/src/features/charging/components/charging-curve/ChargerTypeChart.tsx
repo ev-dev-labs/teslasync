@@ -18,7 +18,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from '@/components/charts';
-import { avg, getChargerLabel } from './helpers';
+import { avg, durationMinutes, getChargerLabel } from './helpers';
 import type { ChargerTypeStats } from './types';
 
 interface ChargerTypeChartProps {
@@ -40,9 +40,9 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
       ([label, items]): ChargerTypeStats => ({
         label,
         count: items.length,
-        avgKw: avg(items.map((s) => s.charger_power_kw_max ?? 0)),
-        avgKwh: avg(items.map((s) => s.energy_added_kwh ?? 0)),
-        avgDuration: avg(items.map((s) => s.duration_min)),
+        avgKw: avg(items.map((s) => (s.peak_power_w ?? 0) / 1000)),
+        avgKwh: avg(items.map((s) => s.total_energy_added_wh / 1000)),
+        avgDuration: avg(items.map((s) => durationMinutes(s.started_at, s.ended_at))),
       }),
     );
   }, [sessions]);

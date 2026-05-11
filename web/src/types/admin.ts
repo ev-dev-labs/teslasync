@@ -54,8 +54,25 @@ export interface BackupRun {
   durationMs: number | null;
 }
 
+/**
+ * Backend emits the following per-component status values:
+ *   - 'healthy' (current canonical for live components)
+ *   - 'ok' (legacy probe responses + buffer health)
+ *   - 'degraded' / 'warning' (recoverable issues)
+ *   - 'unhealthy' / 'offline' / 'down' / 'failed' (broken)
+ *   - 'unknown' (e.g. tesla_api never polled, last_check is zero)
+ * Kept as a string-literal union (with `string` fallback) because new
+ * status keys are added without coordinated FE/BE migrations.
+ */
+export type ComponentStatus =
+  | 'healthy' | 'ok'
+  | 'degraded' | 'warning'
+  | 'unhealthy' | 'offline' | 'down' | 'failed'
+  | 'unknown'
+  | (string & {});
+
 export interface SystemHealthComponent {
-  status: 'ok' | 'degraded' | 'unhealthy';
+  status: ComponentStatus;
   consecutiveFailures: number;
   lastError: string | null;
   details: Record<string, unknown>;
@@ -154,22 +171,31 @@ export interface UserActivityEntry {
   user_agent: string | null;
 }
 
+// SecurityEvent mirrors `/security/latest` and `/security` rows. After
+// the per-field MQTT cutover (Phase-42a) the backend serializes raw
+// `signal.SignalValue` (`interface{}`) directly, so several fields whose
+// signal *names* sound string-shaped actually arrive as native JSON
+// booleans (e.g. `speed_limit_mode`, `service_mode`). Fields below that
+// can arrive as either a string enum *or* a boolean are declared as a
+// union so consumers MUST type-narrow before calling string methods.
+// See `web/src/lib/typeGuards.ts::asNonEmptyString` for the canonical
+// narrowing helper.
 export interface SecurityEvent {
   id: string;
   locked: boolean | null;
-  sentryMode: string | null;
-  doorState: string | null;
-  fdWindow: string | null;
-  fpWindow: string | null;
-  rdWindow: string | null;
-  rpWindow: string | null;
+  sentryMode: string | boolean | null;
+  doorState: string | boolean | null;
+  fdWindow: string | boolean | null;
+  fpWindow: string | boolean | null;
+  rdWindow: string | boolean | null;
+  rpWindow: string | boolean | null;
   homelinkNearby: boolean | null;
   guestMode: boolean | null;
   homelinkDeviceCount: number | null;
   guestModeMobileAccessState: string | null;
   driverSeatOccupied: boolean | null;
-  centerDisplay: string | null;
-  speedLimitMode: string | null;
+  centerDisplay: string | boolean | null;
+  speedLimitMode: string | boolean | null;
   valetModeEnabled: boolean | null;
   serviceMode: boolean | null;
   pairedPhoneKeyCount: number | null;

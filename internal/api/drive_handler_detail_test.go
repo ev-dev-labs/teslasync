@@ -79,7 +79,7 @@ func TestDriveDetail_Telemetry_ChartMode_NoCollapse(t *testing.T) {
 		},
 	}
 	drives := &fakeDriveByIDFetcher{drive: completedDrive(7, 42, t0, t1)}
-	h := &driveDetailHandler{state: fake, drives: drives}
+	h := &driveDetailHandler{DriveHandler: &DriveHandler{live: newTestLiveStateReader(fake)}, state: fake, drives: drives}
 
 	rec := httptest.NewRecorder()
 	h.TelemetryReadings(rec, newDriveDetailRequest(t, "7", ""))
@@ -115,7 +115,7 @@ func TestDriveDetail_Telemetry_CarriesForwardSeed(t *testing.T) {
 		},
 	}
 	drives := &fakeDriveByIDFetcher{drive: completedDrive(7, 42, t0, t1)}
-	h := &driveDetailHandler{state: fake, drives: drives}
+	h := &driveDetailHandler{DriveHandler: &DriveHandler{live: newTestLiveStateReader(fake)}, state: fake, drives: drives}
 
 	rec := httptest.NewRecorder()
 	h.TelemetryReadings(rec, newDriveDetailRequest(t, "7", ""))
@@ -163,7 +163,7 @@ func TestDriveDetail_Positions_ReturnsRowsForDriveWindow(t *testing.T) {
 		},
 	}
 	drives := &fakeDriveByIDFetcher{drive: completedDrive(11, 42, startTs, endTs)}
-	h := &driveDetailHandler{state: fake, drives: drives}
+	h := &driveDetailHandler{DriveHandler: &DriveHandler{live: newTestLiveStateReader(fake)}, state: fake, drives: drives}
 
 	rec := httptest.NewRecorder()
 	h.Positions(rec, newDriveDetailRequest(t, "11", ""))
@@ -204,7 +204,7 @@ func TestDriveDetail_StartSnapshot_UsesDriveStartTime(t *testing.T) {
 			return signal.State{}, nil
 		},
 	}
-	h := &driveDetailHandler{DriveHandler: &DriveHandler{}, state: fake}
+	h := &driveDetailHandler{DriveHandler: &DriveHandler{live: newTestLiveStateReader(fake)}, state: fake}
 
 	if err := h.enrichLiveDrive(context.Background(), drive, time.Now()); err != nil {
 		t.Fatalf("enrichLiveDrive: %v", err)
@@ -235,7 +235,7 @@ func TestDriveDetail_CurrentSnapshot_UsesNow(t *testing.T) {
 			return signal.State{}, nil
 		},
 	}
-	h := &driveDetailHandler{DriveHandler: &DriveHandler{}, state: fake}
+	h := &driveDetailHandler{DriveHandler: &DriveHandler{live: newTestLiveStateReader(fake)}, state: fake}
 
 	before := time.Now().UTC()
 	if err := h.enrichLiveDrive(context.Background(), drive, time.Now()); err != nil {
@@ -271,7 +271,7 @@ func TestDriveDetail_Telemetry_PropagatesError(t *testing.T) {
 		},
 	}
 	drives := &fakeDriveByIDFetcher{drive: completedDrive(7, 42, t0, t1)}
-	h := &driveDetailHandler{state: fake, drives: drives}
+	h := &driveDetailHandler{DriveHandler: &DriveHandler{live: newTestLiveStateReader(fake)}, state: fake, drives: drives}
 
 	rec := httptest.NewRecorder()
 	h.TelemetryReadings(rec, newDriveDetailRequest(t, "7", ""))
@@ -295,7 +295,7 @@ func TestDriveDetail_StartSnapshot_PropagatesError(t *testing.T) {
 		},
 	}
 	drives := &fakeDriveByIDFetcher{drive: inProgressDrive(7, 42, startTs)}
-	h := &driveDetailHandler{state: fake, drives: drives}
+	h := &driveDetailHandler{DriveHandler: &DriveHandler{live: newTestLiveStateReader(fake)}, state: fake, drives: drives}
 
 	rec := httptest.NewRecorder()
 	h.Get(rec, newDriveDetailRequest(t, "7", ""))
@@ -329,7 +329,7 @@ func TestDriveDetail_Get_EmbeddedPositions_AliasFields(t *testing.T) {
 		},
 	}
 	drives := &fakeDriveByIDFetcher{drive: completedDrive(7, 42, t0, t1)}
-	h := &driveDetailHandler{state: fake, drives: drives}
+	h := &driveDetailHandler{DriveHandler: &DriveHandler{live: newTestLiveStateReader(fake)}, state: fake, drives: drives}
 
 	rec := httptest.NewRecorder()
 	h.Get(rec, newDriveDetailRequest(t, "7", ""))
@@ -386,7 +386,7 @@ func TestDriveDetail_Telemetry_DerivesPowerKw(t *testing.T) {
 		},
 	}
 	drives := &fakeDriveByIDFetcher{drive: completedDrive(7, 42, t0, t1)}
-	h := &driveDetailHandler{state: fake, drives: drives}
+	h := &driveDetailHandler{DriveHandler: &DriveHandler{live: newTestLiveStateReader(fake)}, state: fake, drives: drives}
 
 	rec := httptest.NewRecorder()
 	h.TelemetryReadings(rec, newDriveDetailRequest(t, "7", ""))
@@ -418,11 +418,15 @@ func TestDriveDetail_Telemetry_DerivesPowerKw(t *testing.T) {
 // these mappings the Odometer From→To, Range Start→End, fan/climate, and
 // driver/passenger temperature panels render blank even though the drive
 // has valid telemetry.
+//
+// Phase-42 / PA package note: "elevation" intentionally NOT required —
+// Tesla Fleet Telemetry does not emit elevation; the codec has no
+// Elevation field. The Drive Detail page tolerates its absence.
 func TestDriveDetail_Telemetry_FieldMappingsCoverPageFields(t *testing.T) {
 	required := []string{
 		"speed", "pack_current", "pack_voltage", "battery_level",
 		"soc", "odometer", "ideal_range", "rated_range", "est_range",
-		"elevation", "inside_temp", "outside_temp",
+		"inside_temp", "outside_temp",
 		"driver_temp", "passenger_temp", "fan_status",
 		"tire_pressure_fl", "tire_pressure_fr", "tire_pressure_rl", "tire_pressure_rr",
 		"latitude", "longitude",

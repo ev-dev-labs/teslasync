@@ -27,8 +27,8 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
           <MetricCard
             label={t('vehicles.detail.chargerPower', 'Charger Power')}
             value={
-              chargingTelemetry.charger_power_kw != null
-                ? `${fmtNumber(chargingTelemetry.charger_power_kw)} kW`
+              chargingTelemetry.charger_power_w != null
+                ? `${fmtNumber(chargingTelemetry.charger_power_w)} kW`
                 : '—'
             }
             icon={<Zap className="h-4 w-4" />}
@@ -57,8 +57,8 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
           <MetricCard
             label={t('vehicles.detail.energyAdded', 'Energy Added')}
             value={
-              chargingTelemetry.charge_energy_added_kwh != null
-                ? `${fmtNumber(chargingTelemetry.charge_energy_added_kwh)} kWh`
+              chargingTelemetry.charge_energy_added_wh != null
+                ? `${fmtNumber(chargingTelemetry.charge_energy_added_wh)} kWh`
                 : '—'
             }
             icon={<BatteryCharging className="h-4 w-4" />}
@@ -83,8 +83,8 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
           <MetricCard
             label={t('vehicles.detail.chargeRate', 'Charge Rate')}
             value={
-              chargingTelemetry.charge_rate_mph != null
-                ? `${fmtNumber(chargingTelemetry.charge_rate_mph)} mph`
+              chargingTelemetry.range_added_meters_per_hour != null
+                ? `${fmtNumber(chargingTelemetry.range_added_meters_per_hour)} mph`
                 : '—'
             }
             icon={<Activity className="h-4 w-4" />}
@@ -93,8 +93,8 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
           <MetricCard
             label={t('vehicles.detail.milesAdded', 'Miles Added')}
             value={
-              chargingTelemetry.charge_miles_added != null
-                ? `${fmtNumber(chargingTelemetry.charge_miles_added)} mi`
+              chargingTelemetry.range_added_meters != null
+                ? `${fmtNumber(chargingTelemetry.range_added_meters)} mi`
                 : '—'
             }
             icon={<Zap className="h-4 w-4" />}

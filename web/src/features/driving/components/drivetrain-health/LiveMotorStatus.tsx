@@ -6,10 +6,11 @@ import { Grid } from '@/components/layout';
 import { InlineMetric } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
 import type { MotorSnapshot } from '@/api/types';
+import { convertTempFromSI } from '@/lib/unitConversion';
 
 interface LiveMotorStatusProps {
   motorLatest: MotorSnapshot | null | undefined;
@@ -18,7 +19,10 @@ interface LiveMotorStatusProps {
 
 export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorStatusProps) {
   const { t } = useTranslation();
-  const { convertTemp, tempUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
+
+  const tempUnit = unitPrefs.temperature;
 
   const hasData = motorLatest != null;
 
@@ -111,7 +115,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorS
                 label={t('drivetrain.motorTempFront', 'Front Motor Temp')}
                 value={
                   motorLatest.motor_temp_c_front != null
-                    ? `${fmtNumber(convertTemp(motorLatest.motor_temp_c_front))} ${tempUnit}`
+                    ? `${fmtNumber(toTemperatureDisplay(motorLatest.motor_temp_c_front))} ${tempUnit}`
                     : '—'
                 }
               />
@@ -120,7 +124,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorS
                 label={t('drivetrain.motorTempRear', 'Rear Motor Temp')}
                 value={
                   motorLatest.motor_temp_c_rear != null
-                    ? `${fmtNumber(convertTemp(motorLatest.motor_temp_c_rear))} ${tempUnit}`
+                    ? `${fmtNumber(toTemperatureDisplay(motorLatest.motor_temp_c_rear))} ${tempUnit}`
                     : '—'
                 }
               />
@@ -129,7 +133,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorS
                 label={t('drivetrain.inverterTemp', 'Inverter Temp')}
                 value={
                   motorLatest.inverter_temp_c != null
-                    ? `${fmtNumber(convertTemp(motorLatest.inverter_temp_c))} ${tempUnit}`
+                    ? `${fmtNumber(toTemperatureDisplay(motorLatest.inverter_temp_c))} ${tempUnit}`
                     : '—'
                 }
               />
@@ -138,7 +142,7 @@ export function LiveMotorStatus({ motorLatest, isolationResistance }: LiveMotorS
                 label={t('drivetrain.batteryTemp', 'Battery Temp')}
                 value={
                   motorLatest.battery_temp_c != null
-                    ? `${fmtNumber(convertTemp(motorLatest.battery_temp_c))} ${tempUnit}`
+                    ? `${fmtNumber(toTemperatureDisplay(motorLatest.battery_temp_c))} ${tempUnit}`
                     : '—'
                 }
               />

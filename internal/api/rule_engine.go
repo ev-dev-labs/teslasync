@@ -11,15 +11,45 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/rs/zerolog/log"
 )
 
+// RuleStateStore is the persistence seam for alert latch + fire state. It
+// is satisfied by *database.AlertRuleStateRepo in production and by a
+// small in-memory fake in unit tests. See migration 000193 and Phase-49
+// Slice 0002 for the design rationale.
+//
+// All methods are safe to call from a concurrent context — the SQL
+// implementation uses a race-safe ON CONFLICT upsert (see
+// alertRuleStateMarkFiredSQL) and the tests' fake uses a mutex.
+type RuleStateStore interface {
+	LoadAll(ctx context.Context) ([]*database.AlertRuleState, error)
+	MarkFired(ctx context.Context, ruleID, vehicleID int64, now time.Time, isOnce bool) (bool, error)
+	ClearLatch(ctx context.Context, ruleID, vehicleID int64, now time.Time) error
+}
+
+// defaultMaxFiresPerHour is the engine-level safety cap that limits how
+// many times a single (rule, vehicle) pair can fire inside any rolling
+// 1h window. It supersedes the legacy CooldownFSM hourly limit (also 4)
+// merged into the engine in Phase-49 / Slice 0004. A rule that exceeds
+// it gets suppressed even if cooldown_min and max_fires_per_resolution
+// would otherwise allow the fire — this is the last-line defence against
+// notification storms from a flapping signal.
+const defaultMaxFiresPerHour = 4
+
 // RuleEngine evaluates alert rules against incoming telemetry signals.
-// It tracks per-rule cooldown and previous signal state.
+// It tracks per-rule cooldown and previous signal state in an in-memory
+// write-through cache backed by RuleStateStore (when configured). The
+// in-memory map is the hot-read path; writes go to the store first to
+// enforce cross-pod race safety, then update the cache on success.
 type RuleEngine struct {
-	mu    sync.RWMutex
-	state map[ruleKey]*ruleState // per (ruleID, vehicleID) state
+	mu              sync.RWMutex
+	state           map[ruleKey]*ruleState // per (ruleID, vehicleID) state
+	stateRepo       RuleStateStore         // optional; nil means in-memory-only (legacy/test)
+	maxFiresPerHour int                    // 0 ⇒ defaultMaxFiresPerHour; non-zero overrides
 }
 
 type ruleKey struct {
@@ -30,22 +60,113 @@ type ruleKey struct {
 type ruleState struct {
 	PrevSignals map[string]interface{} // previous signal values for transition baselines
 	LastFiredAt *time.Time             // cooldown tracking
-	// OnceLatched is set after a "once" trigger_mode rule fires; it is cleared
-	// when the rule's condition becomes false (the rising-edge reset).
+	// OnceLatched is true while a once-mode rule is suppressed after firing,
+	// until ClearLatch runs on the falling edge. Sourced from
+	// alert_rule_state.latched_at IS NOT NULL when stateRepo is configured.
 	OnceLatched bool
+	// FireCountSinceReset mirrors alert_rule_state.fire_count_since_reset.
+	// Compared against rule.MaxFiresPerResolution to enforce the per-rule
+	// cap added in Phase-49 / Slice 0003 / Decision D5. Reset to 0 on the
+	// falling edge by ClearLatch (both DB and cache).
+	FireCountSinceReset int
+	// HourWindowStart and FireCountHour back the engine-level hourly safety
+	// cap merged in from CooldownFSM in Phase-49 / Slice 0004. The window
+	// rolls over lazily on the next fire after time.Hour has elapsed; the
+	// counter is intentionally NOT reset on the falling edge so that a
+	// signal flapping repeatedly within an hour still gets suppressed once
+	// the cap is reached. Pure in-memory (no DB persistence) — pod restart
+	// rearms the cap, matching pre-merge CooldownFSM behaviour.
+	HourWindowStart time.Time
+	FireCountHour   int
+	// ConditionStartedAt records when the underlying condition was first
+	// observed as TRUE in the current resolution (the fire that bumped
+	// FireCountSinceReset from 0 → 1). Cleared on the falling edge by
+	// ClearLatch. Read by the escalation gate (Phase-49 / Slice 0009 /
+	// Decision D8) to compute "minutes the condition has stayed
+	// unresolved." Pure in-memory (no DB persistence) — pod restart
+	// resets the escalation timer, same trade-off as HourWindowStart.
+	ConditionStartedAt *time.Time
 }
 
-// NewRuleEngine creates a new alert rule engine.
+// NewRuleEngine creates a new alert rule engine. The returned engine has
+// no persistence wiring; call SetStateRepo + HydrateFromDB to enable
+// pod-restart-safe latch state.
 func NewRuleEngine() *RuleEngine {
 	return &RuleEngine{
 		state: make(map[ruleKey]*ruleState),
 	}
 }
 
+// SetStateRepo wires the persistent latch/fire-state repo. Pass nil to
+// disable persistence (used by unit tests that don't care about restart
+// survival). Production wiring lives in
+// internal/api/telemetry_alerts.go::NewTelemetryAlertEvaluator.
+func (e *RuleEngine) SetStateRepo(repo RuleStateStore) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.stateRepo = repo
+}
+
+// SetMaxFiresPerHour overrides the engine-level hourly fire cap. Pass 0
+// (or omit entirely) to fall back to defaultMaxFiresPerHour. Tests use
+// this to exercise the cap with small numbers without sleeping.
+func (e *RuleEngine) SetMaxFiresPerHour(n int) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.maxFiresPerHour = n
+}
+
+// HydrateFromDB loads every persisted (rule, vehicle) state row into the
+// in-memory cache. Must be called once at engine boot, before MQTT
+// subscribers start dispatching telemetry. No-op when stateRepo is nil.
+//
+// Errors are logged but NOT fatal — degraded behavior (no latch
+// persistence) is preferable to refusing to start.
+func (e *RuleEngine) HydrateFromDB(ctx context.Context) {
+	e.mu.RLock()
+	repo := e.stateRepo
+	e.mu.RUnlock()
+	if repo == nil {
+		return
+	}
+	rows, err := repo.LoadAll(ctx)
+	if err != nil {
+		log.Warn().Err(err).Msg("alert_rules: HydrateFromDB failed — running with empty latch cache")
+		return
+	}
+
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	for _, row := range rows {
+		key := ruleKey{RuleID: row.RuleID, VehicleID: row.VehicleID}
+		st, ok := e.state[key]
+		if !ok {
+			st = &ruleState{}
+			e.state[key] = st
+		}
+		if row.LatchedAt != nil {
+			st.OnceLatched = true
+		}
+		if row.LastFiredAt != nil {
+			t := *row.LastFiredAt
+			st.LastFiredAt = &t
+		}
+		st.FireCountSinceReset = row.FireCountSinceReset
+	}
+	log.Info().Int("rows", len(rows)).Msg("alert_rules: hydrated rule_engine state from alert_rule_state")
+}
+
 // EvalResult holds the outcome of evaluating a rule.
 type EvalResult struct {
 	Triggered bool
 	Message   string
+	// Severity is the EFFECTIVE severity for this fire — it equals the
+	// rule's base severity in the common case, and the rule's
+	// `EscalationSeverity` when the escalation timer fired (Phase-49 /
+	// Slice 0009 / Decision D8). Empty string when the rule did not
+	// trigger; callers MUST fall back to `rule.Severity` defensively if
+	// they ever see an empty severity on a Triggered=true result.
+	Severity string
 }
 
 // Evaluate checks a single rule against the current signal batch.
@@ -68,9 +189,16 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	var prevSignals map[string]interface{}
 	var lastFiredAt *time.Time
 	var onceLatched bool
+	var fireCount int
+	var hourWindowStart time.Time
+	var fireCountHour int
+	maxFiresPerHour := e.maxFiresPerHour
 	if hasState {
 		lastFiredAt = st.LastFiredAt
 		onceLatched = st.OnceLatched
+		fireCount = st.FireCountSinceReset
+		hourWindowStart = st.HourWindowStart
+		fireCountHour = st.FireCountHour
 		prevSignals = cloneSignals(st.PrevSignals)
 	}
 	if len(prevSignals) < 1 {
@@ -105,14 +233,32 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	if !matched {
 		// Falling edge: clear the once-mode latch and reset cooldown for
 		// edge-aware rules so the next rising edge can fire immediately.
+		// Also clears the persistent latch row when stateRepo is wired —
+		// otherwise a pod restart would re-suppress the next rising edge
+		// based on the still-set latched_at column.
 		e.mu.Lock()
+		hadLatch := st != nil && st.OnceLatched
+		hadLastFired := st != nil && st.LastFiredAt != nil && needsFalseEdgeDetection
+		hadFireCount := st != nil && st.FireCountSinceReset > 0
 		if st != nil {
 			st.OnceLatched = false
 			if st.LastFiredAt != nil && needsFalseEdgeDetection {
 				st.LastFiredAt = nil
 			}
+			st.FireCountSinceReset = 0
+			// Phase-49 / Slice 0009 — clear the escalation onset on the
+			// falling edge so the next rising edge starts a fresh
+			// escalation timer. Mirrors FireCountSinceReset reset.
+			st.ConditionStartedAt = nil
 		}
+		repo := e.stateRepo
 		e.mu.Unlock()
+		if repo != nil && (hadLatch || hadLastFired || hadFireCount) {
+			if err := repo.ClearLatch(context.Background(), rule.ID, vehicleID, time.Now().UTC()); err != nil {
+				log.Warn().Err(err).Int64("rule_id", rule.ID).Int64("vehicle_id", vehicleID).
+					Msg("alert_rules: ClearLatch failed; in-memory cleared but DB row stale")
+			}
+		}
 		e.updatePrevSignals(key, signals)
 		return EvalResult{}
 	}
@@ -135,22 +281,133 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 		return EvalResult{}
 	}
 
-	// Fire.
+	// Per-rule max-fires-per-resolution cap (Phase-49 / Slice 0003 / D5).
+	// Once-mode rules are exempt — the latch already caps them at 1, and
+	// applying the cap on top would just be a redundant guard. The
+	// counter resets to 0 on the falling edge (handled above), so a
+	// rule that hit the cap stays suppressed only until the underlying
+	// condition resolves and re-fires.
+	if rule.TriggerMode != "once" &&
+		rule.MaxFiresPerResolution != nil &&
+		fireCount >= *rule.MaxFiresPerResolution {
+		metrics.AlertRulesMaxFiresCapHit.Inc()
+		return EvalResult{}
+	}
+
+	// Engine-level hourly fire cap (Phase-49 / Slice 0004 — replaces
+	// CooldownFSM.MaxFiresPerHour). Computed against an in-memory rolling
+	// 1h window per (rule, vehicle). Once-mode rules are exempt because
+	// the latch already caps them at 1 per resolution. The window is
+	// rolled lazily during MarkFired bookkeeping below; here we only
+	// observe the snapshot taken at evaluation start.
+	if rule.TriggerMode != "once" {
+		capHour := maxFiresPerHour
+		if capHour <= 0 {
+			capHour = defaultMaxFiresPerHour
+		}
+		if !hourWindowStart.IsZero() &&
+			time.Since(hourWindowStart) <= time.Hour &&
+			fireCountHour >= capHour {
+			metrics.AlertRulesHourlyCapHit.Inc()
+			return EvalResult{}
+		}
+	}
+
+	// Fire. Persist the fire BEFORE updating the in-memory cache so that
+	// race-lost peers (MarkFired returns (false, nil) when another pod
+	// already latched) don't dispatch the alert. Repo failures fall back
+	// to in-memory-only behavior — degraded persistence is preferable to
+	// dropping the alert entirely.
 	now := time.Now().UTC()
+	isOnce := rule.TriggerMode == "once"
+
+	e.mu.RLock()
+	repo := e.stateRepo
+	e.mu.RUnlock()
+
+	if repo != nil {
+		ok, err := repo.MarkFired(context.Background(), rule.ID, vehicleID, now, isOnce)
+		if err != nil {
+			log.Warn().Err(err).Int64("rule_id", rule.ID).Int64("vehicle_id", vehicleID).
+				Msg("alert_rules: MarkFired failed; firing anyway with in-memory state only")
+		} else if !ok {
+			// Race lost — peer pod (or earlier batch on this pod with a
+			// stale cache) already latched. Update local cache to match
+			// the persistent truth and suppress.
+			metrics.AlertRulesCooldownSkipped.Inc()
+			e.mu.Lock()
+			if st == nil {
+				st = &ruleState{}
+				e.state[key] = st
+			}
+			if isOnce {
+				st.OnceLatched = true
+			}
+			st.LastFiredAt = &now
+			e.mu.Unlock()
+			return EvalResult{}
+		}
+	}
+
 	e.mu.Lock()
+	// Phase-49 / Slice 0009 — stamp ConditionStartedAt on the FIRST fire
+	// of this resolution (the one that bumps fire_count_since_reset 0→1).
+	// Subsequent fires within the same resolution leave it alone so the
+	// escalation timer measures from "condition first observed true."
+	// Cleared by the falling-edge branch above (and by ClearLatch on
+	// the persistent side). This is in-memory only, mirroring the
+	// HourWindowStart trade-off.
 	if st != nil {
 		st.LastFiredAt = &now
-		if rule.TriggerMode == "once" {
+		if st.FireCountSinceReset == 0 {
+			started := now
+			st.ConditionStartedAt = &started
+		}
+		st.FireCountSinceReset++
+		if isOnce {
 			st.OnceLatched = true
 		}
+		if st.HourWindowStart.IsZero() || now.Sub(st.HourWindowStart) > time.Hour {
+			st.HourWindowStart = now
+			st.FireCountHour = 1
+		} else {
+			st.FireCountHour++
+		}
 	} else {
-		st = &ruleState{LastFiredAt: &now}
-		if rule.TriggerMode == "once" {
+		started := now
+		st = &ruleState{
+			LastFiredAt:         &now,
+			FireCountSinceReset: 1,
+			HourWindowStart:     now,
+			FireCountHour:       1,
+			ConditionStartedAt:  &started,
+		}
+		if isOnce {
 			st.OnceLatched = true
 		}
 		e.state[key] = st
 	}
+	// Re-snapshot ConditionStartedAt under the same lock so the
+	// escalation gate below sees a consistent view (could have been
+	// freshly stamped above on the first-fire path).
+	conditionStartedAtLocal := st.ConditionStartedAt
 	e.mu.Unlock()
+
+	// Phase-49 / Slice 0009 — escalation severity gate. Only meaningful
+	// for repeat-mode rules (DB CHECK constraint enforces that, defence
+	// in depth here too). When the rule has both escalation knobs set
+	// AND the condition has stayed unresolved for at least
+	// EscalationAfterMin minutes, fire AT the higher severity. The
+	// counter is bumped once per dispatched escalated alert (not per
+	// evaluation, so it cannot drift on cap-suppressed evals).
+	effectiveSeverity := rule.Severity
+	if rule.TriggerMode != "once" &&
+		rule.EscalationAfterMin != nil && rule.EscalationSeverity != nil &&
+		conditionStartedAtLocal != nil &&
+		now.Sub(*conditionStartedAtLocal) >= time.Duration(*rule.EscalationAfterMin)*time.Minute {
+		effectiveSeverity = *rule.EscalationSeverity
+		metrics.AlertRulesEscalated.Inc()
+	}
 
 	// Render message template — merge prevSignals with current batch so template
 	// variables resolve even when the signal was from a recent (but not current) batch
@@ -174,6 +431,7 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	return EvalResult{
 		Triggered: true,
 		Message:   message,
+		Severity:  effectiveSeverity,
 	}
 }
 
@@ -226,19 +484,39 @@ func (e *RuleEngine) SetLastFired(ruleID, vehicleID int64, t time.Time) {
 // LoadCooldownFromDB restores cooldown state from the database (pod restart recovery).
 // LastFiredAt is now tracked in-memory only; this method initializes state entries
 // for rules scoped to specific vehicles so cooldown tracking begins immediately.
+//
+// Phase-49 / Slice 0005: iterates `rule.VehicleIDs` for multi-select rules
+// instead of the deprecated single `rule.VehicleID`. Sticky-all rules
+// (`rule.AllVehicles=true`) get a single fleet-baseline entry keyed on
+// vehicleID=0; per-vehicle state rows materialise organically as fires
+// happen against specific vehicles.
 func (e *RuleEngine) LoadCooldownFromDB(ctx context.Context, rules []*models.AlertRule) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	for _, rule := range rules {
-		vid := int64(0)
-		if rule.VehicleID != nil {
-			vid = *rule.VehicleID
-		}
-		key := ruleKey{RuleID: rule.ID, VehicleID: vid}
-		if _, ok := e.state[key]; !ok {
-			e.state[key] = &ruleState{}
+		vids := vehicleIDsForState(rule)
+		for _, vid := range vids {
+			key := ruleKey{RuleID: rule.ID, VehicleID: vid}
+			if _, ok := e.state[key]; !ok {
+				e.state[key] = &ruleState{}
+			}
 		}
 	}
+}
+
+// vehicleIDsForState returns the set of vehicle IDs to seed in the rule
+// state map. Sticky-all rules use the fleet-baseline key (vehicleID=0);
+// explicit-subset rules use each junction entry. Phase-49 / Slice 0005.
+func vehicleIDsForState(rule *models.AlertRule) []int64 {
+	if rule == nil {
+		return nil
+	}
+	if rule.AllVehicles || len(rule.VehicleIDs) == 0 {
+		return []int64{0}
+	}
+	out := make([]int64, len(rule.VehicleIDs))
+	copy(out, rule.VehicleIDs)
+	return out
 }
 
 // LoadPrevSignalsFromStore populates prevSignals for all rules from the SignalStore.

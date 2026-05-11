@@ -1,0 +1,12 @@
+{
+  "vins": {{ json .VINs }},
+  "config": {
+    "hostname": {{ json .Hostname }},
+    "port": {{ .Port }},
+    "fields": {
+{{- range $i, $f := .Fields }}{{ if $i }},{{ end }}
+      {{ json $f.Name }}: { "interval_seconds": {{ $f.IntervalSeconds }} }
+{{- end }}
+    }
+  }
+}

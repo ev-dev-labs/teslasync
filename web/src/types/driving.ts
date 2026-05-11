@@ -3,8 +3,10 @@ export interface Drive {
   vehicleId: number;
   startTs: string;
   endTs: string | null;
-  durationMin: number;
-  distanceMi: number;
+  /** Drive duration in seconds (SI canonical). */
+  durationS: number;
+  /** Distance travelled in meters (SI canonical). */
+  distanceM: number;
   startAddress: string | null;
   endAddress: string | null;
   startLat: number | null;
@@ -13,11 +15,16 @@ export interface Drive {
   endLon: number | null;
   startBatteryPct: number | null;
   endBatteryPct: number | null;
-  energyUsedKwh: number | null;
-  regenKwh: number | null;
-  avgSpeedMph: number | null;
-  maxSpeedMph: number | null;
-  avgPowerKw: number | null;
+  /** Energy used in watt-hours (Wh, SI canonical). */
+  energyUsedWh: number | null;
+  /** Energy recovered via regen in watt-hours (Wh, SI canonical). */
+  regenEnergyWh: number | null;
+  /** Average speed in meters per second (SI canonical). */
+  avgSpeedMps: number | null;
+  /** Maximum speed in meters per second (SI canonical). */
+  maxSpeedMps: number | null;
+  /** Average power in watts (W, SI canonical). */
+  avgPowerW: number | null;
   outsideTempAvgC: number | null;
   insideTempAvgC: number | null;
   score: number | null;
@@ -92,12 +99,12 @@ export interface DriveScore {
 export interface DrivingStats {
   totalDrives: number;
   totalDistanceKm: number;
-  totalDurationMin: number;
+  totalDurationS: number;
   avgEfficiencyWhKm: number;
   avgSpeedKmh: number;
   topSpeedKmh: number;
   regenRatio: number;
-  totalRegenKwh: number;
+  regenEnergyWh: number;
   co2SavedKg: number;
 }
 
@@ -143,7 +150,8 @@ export interface SpeedBucket {
 }
 
 export interface RegenEfficiencyData {
-  totalRegenKwh: number;
+  totalRegenWh: number;
+  totalDriveWh: number;
   regenRatio: number;
   monthlyAvgRegen: number;
   freeCharges: number;
@@ -237,11 +245,11 @@ export interface TripPlanRequest {
 }
 
 export interface TripPlanRoute {
-  total_distance_km: number;
-  total_duration_min: number;
-  driving_duration_min: number;
-  charging_duration_min: number;
-  total_energy_kwh: number;
+  total_distance_m: number;
+  total_duration_s: number;
+  driving_duration_s: number;
+  charging_duration_s: number;
+  total_energy_wh: number;
   estimated_cost: number;
   arrival_soc: number;
   feasible: boolean;
@@ -251,9 +259,9 @@ export interface TripPlanRoute {
 export interface TripLeg {
   from: TripLocation;
   to: TripLocation;
-  distance_km: number;
-  duration_min: number;
-  energy_kwh: number;
+  distance_m: number;
+  duration_s: number;
+  energy_wh: number;
   start_soc: number;
   arrival_soc: number;
 }
@@ -263,8 +271,8 @@ export interface TripChargeStop {
   location: TripLocation;
   charge_from_soc: number;
   charge_to_soc: number;
-  charge_duration_min: number;
-  energy_kwh: number;
+  charge_duration_s: number;
+  energy_wh: number;
   cost: number;
   is_recommended: boolean;
 }
@@ -276,7 +284,7 @@ export interface TripWeatherImpact {
 }
 
 export interface TripSOCPoint {
-  distance_km: number;
+  distance_m: number;
   soc: number;
 }
 

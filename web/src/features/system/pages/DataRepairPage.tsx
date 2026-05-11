@@ -34,8 +34,8 @@ interface ChargingSession {
   start_ts: string;
   start_battery_pct: number;
   end_battery_pct?: number;
-  energy_added_kwh?: number;
-  charger_power_kw_max?: number;
+  total_energy_added_wh?: number;
+  peak_power_w?: number;
   duration_min?: number;
   cost?: number;
 }
@@ -43,13 +43,12 @@ interface ChargingSession {
 interface Drive {
   id: number;
   vehicle_id: number;
-  start_date: string;
-  start_battery_level?: number;
-  end_battery_level?: number;
-  distance?: number;
-  duration_min?: number;
-  speed_max?: number;
-  end_range_km?: number;
+  start_ts: string;
+  start_battery_pct?: number;
+  end_battery_pct?: number;
+  distance_m?: number;
+  duration_s?: number;
+  max_speed_mps?: number;
 }
 
 interface StaleData {
@@ -75,9 +74,9 @@ function ChargingEditForm({ session, onClose, t }: { session: ChargingSession; o
   const toast = useToast();
   const [form, setForm] = useState({
     end_ts: '',
-    energy_added_kwh: String(session.energy_added_kwh ?? ''),
+    total_energy_added_wh: String(session.total_energy_added_wh ?? ''),
     end_battery_pct: String(session.end_battery_pct ?? ''),
-    charger_power_kw_max: String(session.charger_power_kw_max ?? ''),
+    peak_power_w: String(session.peak_power_w ?? ''),
     duration_min: String(session.duration_min ?? ''),
     cost: String(session.cost ?? ''),
   });
@@ -86,9 +85,9 @@ function ChargingEditForm({ session, onClose, t }: { session: ChargingSession; o
     mutationFn: () => {
       const data: Record<string, unknown> = {};
       if (form.end_ts) data.end_ts = form.end_ts;
-      if (form.energy_added_kwh) data.energy_added_kwh = Number(form.energy_added_kwh);
+      if (form.total_energy_added_wh) data.total_energy_added_wh = Number(form.total_energy_added_wh);
       if (form.end_battery_pct) data.end_battery_pct = Number(form.end_battery_pct);
-      if (form.charger_power_kw_max) data.charger_power_kw_max = Number(form.charger_power_kw_max);
+      if (form.peak_power_w) data.peak_power_w = Number(form.peak_power_w);
       if (form.duration_min) data.duration_min = Number(form.duration_min);
       if (form.cost) data.cost = Number(form.cost);
       return request(`/data-repair/charging/${session.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
@@ -113,9 +112,9 @@ function ChargingEditForm({ session, onClose, t }: { session: ChargingSession; o
     <GlassPanel className="p-4 space-y-4 bg-neon-amber/[0.03] border-neon-amber/20">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <Input label={t('End Date (ISO)')} value={form.end_ts} placeholder="2026-03-30T04:00:00Z" onChange={e => setForm(f => ({ ...f, end_ts: e.target.value }))} />
-        <Input label={t('Energy Added (kWh)')} type="number" value={form.energy_added_kwh} onChange={e => setForm(f => ({ ...f, energy_added_kwh: e.target.value }))} />
+        <Input label={t('Energy Added (kWh)')} type="number" value={form.total_energy_added_wh} onChange={e => setForm(f => ({ ...f, total_energy_added_wh: e.target.value }))} />
         <Input label={t('End Battery %')} type="number" value={form.end_battery_pct} onChange={e => setForm(f => ({ ...f, end_battery_pct: e.target.value }))} />
-        <Input label={t('Charger Power (kW)')} type="number" value={form.charger_power_kw_max} onChange={e => setForm(f => ({ ...f, charger_power_kw_max: e.target.value }))} />
+        <Input label={t('Charger Power (kW)')} type="number" value={form.peak_power_w} onChange={e => setForm(f => ({ ...f, peak_power_w: e.target.value }))} />
         <Input label={t('Duration (min)')} type="number" value={form.duration_min} onChange={e => setForm(f => ({ ...f, duration_min: e.target.value }))} />
         <Input label={t('Cost ($)')} type="number" value={form.cost} onChange={e => setForm(f => ({ ...f, cost: e.target.value }))} />
       </div>
@@ -135,23 +134,21 @@ function DriveEditForm({ drive, onClose, t }: { drive: Drive; onClose: () => voi
   const qc = useQueryClient();
   const toast = useToast();
   const [form, setForm] = useState({
-    end_date: '',
-    distance: String(drive.distance ?? ''),
-    duration_min: String(drive.duration_min ?? ''),
-    end_battery_level: String(drive.end_battery_level ?? ''),
-    speed_max: String(drive.speed_max ?? ''),
-    end_range_km: String(drive.end_range_km ?? ''),
+    end_ts: '',
+    distance_m: String(drive.distance_m ?? ''),
+    duration_s: String(drive.duration_s ?? ''),
+    end_battery_pct: String(drive.end_battery_pct ?? ''),
+    max_speed_mps: String(drive.max_speed_mps ?? ''),
   });
 
   const updateMut = useMutation({
     mutationFn: () => {
       const data: Record<string, unknown> = {};
-      if (form.end_date) data.end_date = form.end_date;
-      if (form.distance) data.distance = Number(form.distance);
-      if (form.duration_min) data.duration_min = Number(form.duration_min);
-      if (form.end_battery_level) data.end_battery_level = Number(form.end_battery_level);
-      if (form.speed_max) data.speed_max = Number(form.speed_max);
-      if (form.end_range_km) data.end_range_km = Number(form.end_range_km);
+      if (form.end_ts) data.end_ts = form.end_ts;
+      if (form.distance_m) data.distance_m = Number(form.distance_m);
+      if (form.duration_s) data.duration_s = Number(form.duration_s);
+      if (form.end_battery_pct) data.end_battery_pct = Number(form.end_battery_pct);
+      if (form.max_speed_mps) data.max_speed_mps = Number(form.max_speed_mps);
       return request(`/data-repair/drives/${drive.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     },
     onSuccess: () => { toast.success(t('Drive updated')); qc.invalidateQueries({ queryKey: ['stale-sessions'] }); onClose(); },
@@ -173,12 +170,11 @@ function DriveEditForm({ drive, onClose, t }: { drive: Drive; onClose: () => voi
   return (
     <GlassPanel className="p-4 space-y-4 bg-neon-amber/[0.03] border-neon-amber/20">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <Input label={t('End Date (ISO)')} value={form.end_date} placeholder="2026-03-30T04:00:00Z" onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} />
-        <Input label={t('Distance (km)')} type="number" value={form.distance} onChange={e => setForm(f => ({ ...f, distance: e.target.value }))} />
-        <Input label={t('Duration (min)')} type="number" value={form.duration_min} onChange={e => setForm(f => ({ ...f, duration_min: e.target.value }))} />
-        <Input label={t('End Battery %')} type="number" value={form.end_battery_level} onChange={e => setForm(f => ({ ...f, end_battery_level: e.target.value }))} />
-        <Input label={t('Max Speed (km/h)')} type="number" value={form.speed_max} onChange={e => setForm(f => ({ ...f, speed_max: e.target.value }))} />
-        <Input label={t('End Range (km)')} type="number" value={form.end_range_km} onChange={e => setForm(f => ({ ...f, end_range_km: e.target.value }))} />
+        <Input label={t('End Date (ISO)')} value={form.end_ts} placeholder="2026-03-30T04:00:00Z" onChange={e => setForm(f => ({ ...f, end_ts: e.target.value }))} />
+        <Input label={t('Distance (m)')} type="number" value={form.distance_m} onChange={e => setForm(f => ({ ...f, distance_m: e.target.value }))} />
+        <Input label={t('Duration (s)')} type="number" value={form.duration_s} onChange={e => setForm(f => ({ ...f, duration_s: e.target.value }))} />
+        <Input label={t('End Battery %')} type="number" value={form.end_battery_pct} onChange={e => setForm(f => ({ ...f, end_battery_pct: e.target.value }))} />
+        <Input label={t('Max Speed (m/s)')} type="number" value={form.max_speed_mps} onChange={e => setForm(f => ({ ...f, max_speed_mps: e.target.value }))} />
       </div>
       <div className="flex items-center gap-2 pt-2">
         <Button variant="secondary" size="sm" onClick={() => updateMut.mutate()} loading={updateMut.isPending} icon={<Save className="h-3.5 w-3.5" />}>{t('Save')}</Button>
@@ -292,10 +288,10 @@ export default function DataRepairPage() {
                   >
                     <div className="flex items-center gap-4 flex-wrap">
                       <span className="text-xs font-mono text-[var(--text-muted)] w-12 shrink-0">#{d.id}</span>
-                      <span className="text-xs text-[var(--text-secondary)] w-40 shrink-0">{formatDateTime(d.start_date)}</span>
-                      <span className="text-xs text-[var(--text-primary)] w-16 shrink-0">{d.start_battery_level != null ? `${d.start_battery_level}%` : '—'}</span>
+                      <span className="text-xs text-[var(--text-secondary)] w-40 shrink-0">{formatDateTime(d.start_ts)}</span>
+                      <span className="text-xs text-[var(--text-primary)] w-16 shrink-0">{d.start_battery_pct != null ? `${d.start_battery_pct}%` : '—'}</span>
                       <span className="text-xs text-[var(--text-muted)] w-16 shrink-0">{t('Vehicle')} {d.vehicle_id}</span>
-                      <span className="text-xs text-amber-300 font-medium w-16 shrink-0">{hoursOpen(d.start_date)}</span>
+                      <span className="text-xs text-amber-300 font-medium w-16 shrink-0">{hoursOpen(d.start_ts)}</span>
                       <Badge variant="warning" size="sm"><AlertTriangle className="h-3 w-3 inline mr-0.5" />{t('Open')}</Badge>
                     </div>
                   </GlassPanel>

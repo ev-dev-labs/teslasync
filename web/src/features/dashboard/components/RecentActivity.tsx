@@ -7,6 +7,7 @@ import { Currency } from '@/components/data-display';
 import { AreaChartWrapper } from '@/components/charts/AreaChartWrapper';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { formatDateShort } from '@/lib/dateFormat';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import type { FleetAnalytics, Drive, ChargingSession } from '../types';
 
 /* Relative time helper */
@@ -26,15 +27,14 @@ interface RecentActivityProps {
   recentDrives: Drive[] | undefined;
   recentCharges: ChargingSession[] | undefined;
   analytics: FleetAnalytics | undefined;
-  convertDistance: (km: number) => number;
-  convertEfficiency: (whKm: number) => number;
+  toEfficiencyDisplay: (whKm: number) => number;
   distanceUnit: string;
   efficiencyUnit: string;
 }
 
 export function RecentActivity({
   recentDrives, recentCharges, analytics,
-  convertDistance, convertEfficiency, distanceUnit, efficiencyUnit,
+  toEfficiencyDisplay, distanceUnit, efficiencyUnit,
 }: RecentActivityProps) {
   const { t } = useTranslation('dashboard');
 
@@ -43,17 +43,17 @@ export function RecentActivity({
   recentDrives?.forEach((d) =>
     activityItems.push({
       type: 'drive',
-      title: `${fmtNumber(convertDistance(d.distance_mi ?? 0), 1)} ${distanceUnit} ${t('activity.drive', 'drive')}`,
-      subtitle: `${Math.floor((d.duration_min ?? 0) / 60)}h ${fmtInt((d.duration_min ?? 0) % 60)}m · ${d.start_battery_pct ?? '?'}% → ${d.end_battery_pct ?? '?'}%`,
-      time: new Date(d.start_ts),
+      title: `${fmtNumber(convertDistanceFromSI(d.distance_m ?? 0, distanceUnit === 'mi' ? 'mi' : 'km'), 1)} ${distanceUnit} ${t('activity.drive', 'drive')}`,
+      subtitle: `${Math.floor((d.duration_s ?? 0) / 3600)}h ${fmtInt(Math.floor(((d.duration_s ?? 0) % 3600) / 60))}m · ${d.start_soc_pct ?? '?'}% → ${d.end_soc_pct ?? '?'}%`,
+      time: new Date(d.started_at),
     }),
   );
   recentCharges?.forEach((s) =>
     activityItems.push({
       type: 'charge',
-      title: `${fmtNumber(s.energy_added_kwh ?? 0, 1)} kWh ${t('activity.charged', 'charged')}`,
-      subtitle: `${s.start_battery_pct ?? '?'}% → ${s.end_battery_pct ?? '?'}%${typeof s.cost === 'number' ? ` · $${fmtNumber(s.cost, 2)}` : ''}`,
-      time: new Date(s.start_ts),
+      title: `${fmtNumber(s.total_energy_added_wh ?? 0, 1)} kWh ${t('activity.charged', 'charged')}`,
+      subtitle: `${s.start_soc_pct ?? '?'}% → ${s.end_soc_pct ?? '?'}%${typeof s.cost === 'number' ? ` · $${fmtNumber(s.cost, 2)}` : ''}`,
+      time: new Date(s.started_at),
     }),
   );
   activityItems.sort((a, b) => b.time.getTime() - a.time.getTime());
@@ -61,7 +61,7 @@ export function RecentActivity({
   // Battery trend for chart
   const batteryTrend = recentDrives?.map((d, i) => ({
     i: String(i),
-    v: d.end_battery_pct ?? 50,
+    v: d.end_soc_pct ?? 50,
   })).reverse() ?? [];
 
   return (
@@ -149,7 +149,7 @@ export function RecentActivity({
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{t('perf.mostEfficient', 'Most Efficient')}</p>
                 <p className="text-sm font-semibold text-emerald-300">{analytics.most_efficient_vehicle.name}</p>
                 <p className="text-xs text-[var(--text-muted)]">
-                  {fmtInt(convertEfficiency(analytics.most_efficient_vehicle.efficiency ?? 0))} {efficiencyUnit}
+                  {fmtInt(toEfficiencyDisplay(analytics.most_efficient_vehicle.efficiency ?? 0))} {efficiencyUnit}
                 </p>
               </div>
             )}

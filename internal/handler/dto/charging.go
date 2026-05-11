@@ -9,8 +9,8 @@ type ChargingSessionResponse struct {
 	ChargerType       string    `json:"chargerType"`
 	StartBatteryLevel int       `json:"startBatteryLevel"`
 	EndBatteryLevel   int       `json:"endBatteryLevel"`
-	EnergyAddedKWh    float64   `json:"energyAddedKwh"`
-	MaxPowerKW        float64   `json:"maxPowerKw"`
+	EnergyAddedWh     float64   `json:"energyAddedWh"`
+	MaxPowerW         float64   `json:"maxPowerW"`
 	CostCents         int       `json:"costCents"`
 	FSMState          string    `json:"fsmState"`
 	SubFSMState       string    `json:"subFsmState,omitempty"`

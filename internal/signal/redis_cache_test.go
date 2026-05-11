@@ -4,12 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	miniredis "github.com/alicebob/miniredis/v2"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/redis/go-redis/v9"
+
+	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 )
 
 type fakeRedisHSetCall struct {
@@ -131,6 +136,19 @@ func (f *fakeRedisSignalClient) HLen(ctx context.Context, key string) *redis.Int
 	return redis.NewIntResult(int64(len(hash)), nil)
 }
 
+func (f *fakeRedisSignalClient) Del(ctx context.Context, keys ...string) *redis.IntCmd {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var n int64
+	for _, k := range keys {
+		if _, ok := f.hashes[k]; ok {
+			delete(f.hashes, k)
+			n++
+		}
+	}
+	return redis.NewIntResult(n, nil)
+}
+
 func (f *fakeRedisSignalClient) Scan(ctx context.Context, cursor uint64, match string, count int64) *redis.ScanCmd {
 	// Naive but deterministic: collect every matching key, return in
 	// one shot with cursor=0. Sufficient for tests that don't care about
@@ -199,6 +217,14 @@ func TestRedisSignalCacheTimestampedValuesRoundTrip(t *testing.T) {
 	after := time.Now().UTC()
 
 	stored := redisClient.hashes[redisSignalKey(vehicleID)]["BatteryLevel"]
+	// Phase-42 typed envelope fields MUST be present.
+	for _, want := range []string{`"kind":`, `"v":`, `"ts":`} {
+		if !strings.Contains(stored, want) {
+			t.Fatalf("stored timestamped value %q does not contain Phase-42 typed envelope field %q", stored, want)
+		}
+	}
+	// Pre-Phase-42 envelope fields MUST also be present (dual-write for
+	// mid-rollout decode by old binaries).
 	for _, want := range []string{
 		`"encoding":"teslasync.signal.v1"`,
 		`"timestamp"`,
@@ -206,7 +232,7 @@ func TestRedisSignalCacheTimestampedValuesRoundTrip(t *testing.T) {
 		`"legacy_value":"72"`,
 	} {
 		if !strings.Contains(stored, want) {
-			t.Fatalf("stored timestamped value %q does not contain %q", stored, want)
+			t.Fatalf("stored timestamped value %q does not contain pre-Phase-42 fallback field %q", stored, want)
 		}
 	}
 
@@ -217,7 +243,11 @@ func TestRedisSignalCacheTimestampedValuesRoundTrip(t *testing.T) {
 	if len(values) != 4 {
 		t.Fatalf("GetAllValues() returned %d values, want 4", len(values))
 	}
-	assertFloat64(t, values["BatteryLevel"].Raw, 72)
+	// Untyped Go int input round-trips as int64 because the Phase-42
+	// typed envelope preserves the producer's runtime type. Callers that
+	// want float64 must pass float64 (e.g. real codec output for a
+	// ValueKindFloat field).
+	assertInt64(t, values["BatteryLevel"].Raw, 72)
 	assertBool(t, values["Charging"].Raw, true)
 	assertString(t, values["DriveState"].Raw, "D")
 	assertTimestampBetween(t, values["BatteryLevel"].Timestamp, before, after)
@@ -346,7 +376,8 @@ func TestRedisSignalCacheGetAllRemainsRawCompatibleWithTimestampedValues(t *test
 	if len(rawValues) != 3 {
 		t.Fatalf("GetAll() returned %d values, want 3", len(rawValues))
 	}
-	assertFloat64(t, rawValues["Numeric"], 7)
+	// Phase-42 typed envelope preserves int64 round-trip.
+	assertInt64(t, rawValues["Numeric"], 7)
 	assertBool(t, rawValues["Bool"], false)
 	assertString(t, rawValues["Text"], "parked")
 }
@@ -522,4 +553,694 @@ t.Fatalf("ScanVehicleKeys() error = %v", err)
 if len(got) != 10 {
 t.Fatalf("ScanVehicleKeys(limit=10) returned %d ids, want 10", len(got))
 }
+}
+
+func TestPurge_RemovesExistingKey(t *testing.T) {
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
+
+	if err := cache.Update(ctx, 7, map[string]interface{}{
+		"BatteryLevel": 72.0,
+		"Locked":       true,
+	}); err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	deleted, err := cache.Purge(ctx, 7)
+	if err != nil {
+		t.Fatalf("Purge() error = %v, want nil", err)
+	}
+	if !deleted {
+		t.Fatalf("Purge() = false, want true (key existed)")
+	}
+	if _, ok := redisClient.hashes["vehicle:7:signals"]; ok {
+		t.Fatalf("Purge() left vehicle:7:signals in fake redis")
+	}
+	n, _ := cache.RawFieldCount(ctx, 7)
+	if n != 0 {
+		t.Fatalf("RawFieldCount() after Purge = %d, want 0", n)
+	}
+}
+
+func TestPurge_MissingKeyIsNoop(t *testing.T) {
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
+
+	deleted, err := cache.Purge(ctx, 999)
+	if err != nil {
+		t.Fatalf("Purge() error = %v, want nil for missing key", err)
+	}
+	if deleted {
+		t.Fatalf("Purge() = true, want false (no key existed)")
+	}
+}
+
+func TestPurge_DoesNotTouchOtherVehicles(t *testing.T) {
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
+
+	if err := cache.Update(ctx, 1, map[string]interface{}{"BatteryLevel": 50.0}); err != nil {
+		t.Fatalf("Update(1) error = %v", err)
+	}
+	if err := cache.Update(ctx, 2, map[string]interface{}{"BatteryLevel": 60.0}); err != nil {
+		t.Fatalf("Update(2) error = %v", err)
+	}
+
+	if _, err := cache.Purge(ctx, 1); err != nil {
+		t.Fatalf("Purge(1) error = %v", err)
+	}
+
+	if _, ok := redisClient.hashes["vehicle:1:signals"]; ok {
+		t.Fatalf("Purge(1) left vehicle:1:signals behind")
+	}
+	if _, ok := redisClient.hashes["vehicle:2:signals"]; !ok {
+		t.Fatalf("Purge(1) collateral-deleted vehicle:2:signals")
+	}
+}
+
+func TestPurgeAll_DeletesEveryVehicleKey(t *testing.T) {
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
+
+	for _, vid := range []int64{1, 7, 42, 100} {
+		if err := cache.Update(ctx, vid, map[string]interface{}{"BatteryLevel": 50.0}); err != nil {
+			t.Fatalf("Update(%d) error = %v", vid, err)
+		}
+	}
+	// Sentinel: a non-vehicle key must NOT be touched.
+	redisClient.hashes["other:cache"] = map[string]string{"x": "1"}
+
+	purged, scanned, err := cache.PurgeAll(ctx, 1000)
+	if err != nil {
+		t.Fatalf("PurgeAll() error = %v", err)
+	}
+	if purged != 4 {
+		t.Fatalf("PurgeAll() purged = %d, want 4", purged)
+	}
+	if scanned != 4 {
+		t.Fatalf("PurgeAll() scanned = %d, want 4", scanned)
+	}
+
+	for _, vid := range []int64{1, 7, 42, 100} {
+		key := fmt.Sprintf("vehicle:%d:signals", vid)
+		if _, ok := redisClient.hashes[key]; ok {
+			t.Fatalf("PurgeAll() left %s behind", key)
+		}
+	}
+	if _, ok := redisClient.hashes["other:cache"]; !ok {
+		t.Fatalf("PurgeAll() collateral-deleted other:cache (non-vehicle key)")
+	}
+}
+
+func TestPurgeAll_EmptyCacheIsNoop(t *testing.T) {
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
+
+	purged, scanned, err := cache.PurgeAll(ctx, 1000)
+	if err != nil {
+		t.Fatalf("PurgeAll() error = %v, want nil", err)
+	}
+	if purged != 0 || scanned != 0 {
+		t.Fatalf("PurgeAll() = (%d, %d), want (0, 0) for empty cache", purged, scanned)
+	}
+}
+
+func TestPurgeAll_ReportsScannedAtLimit(t *testing.T) {
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
+
+	// Seed 5 vehicles, then ask for limit=2 — caller should be able to
+	// detect that there are more keys outside this batch by comparing
+	// scanned == limit.
+	for vid := int64(1); vid <= 5; vid++ {
+		if err := cache.Update(ctx, vid, map[string]interface{}{"BatteryLevel": 50.0}); err != nil {
+			t.Fatalf("Update(%d) error = %v", vid, err)
+		}
+	}
+
+	purged, scanned, err := cache.PurgeAll(ctx, 2)
+	if err != nil {
+		t.Fatalf("PurgeAll() error = %v", err)
+	}
+	if scanned != 2 {
+		t.Fatalf("PurgeAll() scanned = %d, want 2 (== limit, signals more remain)", scanned)
+	}
+	if purged != 2 {
+		t.Fatalf("PurgeAll() purged = %d, want 2", purged)
+	}
+	// And confirm 3 vehicles still survive in redis after this batch.
+	survivors := 0
+	for _, vid := range []int64{1, 2, 3, 4, 5} {
+		if _, ok := redisClient.hashes[fmt.Sprintf("vehicle:%d:signals", vid)]; ok {
+			survivors++
+		}
+	}
+	if survivors != 3 {
+		t.Fatalf("survivors after PurgeAll(limit=2) = %d, want 3", survivors)
+	}
+}
+
+// ── Phase-42 typed-envelope and stale-cache contract tests ──────────────
+
+func assertInt32(t *testing.T, got interface{}, want int32) {
+	t.Helper()
+	value, ok := got.(int32)
+	if !ok {
+		t.Fatalf("value type = %T, want int32", got)
+	}
+	if value != want {
+		t.Fatalf("value = %d, want %d", value, want)
+	}
+}
+
+func assertInt64(t *testing.T, got interface{}, want int64) {
+	t.Helper()
+	value, ok := got.(int64)
+	if !ok {
+		t.Fatalf("value type = %T, want int64", got)
+	}
+	if value != want {
+		t.Fatalf("value = %d, want %d", value, want)
+	}
+}
+
+func assertFloat32(t *testing.T, got interface{}, want float32) {
+	t.Helper()
+	value, ok := got.(float32)
+	if !ok {
+		t.Fatalf("value type = %T, want float32", got)
+	}
+	if value != want {
+		t.Fatalf("value = %v, want %v", value, want)
+	}
+}
+
+func assertTime(t *testing.T, got interface{}, want time.Time) {
+	t.Helper()
+	value, ok := got.(time.Time)
+	if !ok {
+		t.Fatalf("value type = %T, want time.Time", got)
+	}
+	if !value.Equal(want) {
+		t.Fatalf("value = %v, want %v (Equal)", value, want)
+	}
+}
+
+// readPromCounter extracts the float64 value from a prometheus.Counter
+// via the dto.Metric pathway. Necessary because prometheus.Counter
+// itself has no public GetValue method. Same pattern used in
+// internal/tesla/unit_history/cache_test.go and internal/tesla/bootstrap.
+func readPromCounter(t *testing.T, c prometheus_Counter) float64 {
+	t.Helper()
+	var m dto.Metric
+	if err := c.Write(&m); err != nil {
+		t.Fatalf("counter.Write: %v", err)
+	}
+	if m.Counter == nil || m.Counter.Value == nil {
+		return 0
+	}
+	return *m.Counter.Value
+}
+
+// prometheus_Counter is the minimal Counter surface readPromCounter
+// needs. Avoids importing the full prometheus package just for one
+// type alias in tests.
+type prometheus_Counter interface {
+	Write(*dto.Metric) error
+}
+
+// TestRedisSignalCacheTypedEnvelopeRoundTripPerKind exercises every
+// protomodel.ValueKind through encode → store → decode and verifies
+// the runtime Go type is preserved end-to-end. This is the core
+// guarantee of the Phase-42 typed envelope: no silent float64 widening,
+// no string-parse fallback, no untyped JSON-number ambiguity.
+func TestRedisSignalCacheTypedEnvelopeRoundTripPerKind(t *testing.T) {
+	ctx := context.Background()
+	vehicleID := int64(101)
+
+	driveStart := time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC)
+	composite := map[string]interface{}{
+		"latitude":  37.0,
+		"longitude": -122.0,
+	}
+
+	tests := []struct {
+		name   string
+		field  string // signal name; "" forces runtime-only kind inference
+		input  interface{}
+		assert func(t *testing.T, got interface{})
+	}{
+		{
+			name:   "string",
+			field:  "RoutelineString_test",
+			input:  "asleep",
+			assert: func(t *testing.T, got interface{}) { assertString(t, got, "asleep") },
+		},
+		{
+			name:   "bool",
+			field:  "Charging",
+			input:  true,
+			assert: func(t *testing.T, got interface{}) { assertBool(t, got, true) },
+		},
+		{
+			name:   "int32",
+			field:  "BatteryHeaterOn_test",
+			input:  int32(7),
+			assert: func(t *testing.T, got interface{}) { assertInt32(t, got, 7) },
+		},
+		{
+			name:   "int64",
+			field:  "MyOdometerCounter_test",
+			input:  int64(123456789012),
+			assert: func(t *testing.T, got interface{}) { assertInt64(t, got, 123456789012) },
+		},
+		{
+			name:   "float32",
+			field:  "BatteryLevel",
+			input:  float32(72.5),
+			assert: func(t *testing.T, got interface{}) { assertFloat32(t, got, 72.5) },
+		},
+		{
+			name:   "float64",
+			field:  "VehicleSpeed_test_double",
+			input:  float64(88.25),
+			assert: func(t *testing.T, got interface{}) { assertFloat64(t, got, 88.25) },
+		},
+		{
+			name:   "enum (string disambiguated by metadata)",
+			field:  "Gear", // protomodel: ValueKindEnum
+			input:  "D",
+			assert: func(t *testing.T, got interface{}) { assertString(t, got, "D") },
+		},
+		{
+			name:   "time",
+			field:  "GpsLastUpdate_test",
+			input:  driveStart,
+			assert: func(t *testing.T, got interface{}) { assertTime(t, got, driveStart) },
+		},
+		{
+			name:   "compound (map)",
+			field:  "ScheduledChargingStartTime",
+			input:  composite,
+			assert: func(t *testing.T, got interface{}) {
+				m, ok := got.(map[string]interface{})
+				if !ok {
+					t.Fatalf("compound Raw = %T, want map[string]interface{}", got)
+				}
+				if !mapEquals(m, composite) {
+					t.Fatalf("compound roundtrip = %v, want %v", m, composite)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			redisClient := newFakeRedisSignalClient()
+			cache := &RedisSignalCache{rdb: redisClient}
+			if err := cache.Update(ctx, vehicleID, map[string]interface{}{tc.field: tc.input}); err != nil {
+				t.Fatalf("Update() error = %v", err)
+			}
+			got, err := cache.GetSignalValue(ctx, vehicleID, tc.field)
+			if err != nil {
+				t.Fatalf("GetSignalValue() error = %v", err)
+			}
+			if got == nil {
+				t.Fatalf("GetSignalValue() returned nil for %s", tc.field)
+			}
+			tc.assert(t, got.Raw)
+
+			// Verify the typed envelope wire shape.
+			stored := redisClient.hashes[redisSignalKey(vehicleID)][tc.field]
+			for _, want := range []string{`"kind":`, `"v":`, `"ts":`} {
+				if !strings.Contains(stored, want) {
+					t.Fatalf("stored value %q missing typed envelope field %q", stored, want)
+				}
+			}
+
+			// Verify the kind matches the inferred ValueKind for this input.
+			wantKind := inferValueKind(tc.field, tc.input)
+			wantKindFragment := fmt.Sprintf(`"kind":%d`, int(wantKind))
+			if !strings.Contains(stored, wantKindFragment) {
+				t.Fatalf("stored value %q missing %q (ValueKind=%s)", stored, wantKindFragment, wantKind)
+			}
+		})
+	}
+}
+
+func mapEquals(a, b map[string]interface{}) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, av := range a {
+		bv, ok := b[k]
+		if !ok {
+			return false
+		}
+		// Loose equality: JSON-decoded numbers come back as float64, so
+		// compare via fmt.Sprint for tolerance across numeric kinds.
+		if fmt.Sprint(av) != fmt.Sprint(bv) {
+			return false
+		}
+	}
+	return true
+}
+
+// TestGetSignalValueFreshReturnsErrStaleAndAdvisoryValue verifies the
+// stale-cache contract: when a value is older than the cache's
+// staleAfter window, GetSignalValueFresh returns BOTH the value (so the
+// caller has an advisory hint) AND ErrStale (so the caller knows it
+// must re-resolve via signal.Store / signal_log). The metric
+// tesla_signal_cache_stale_total{vehicle_id, field} MUST also be
+// incremented exactly once.
+func TestGetSignalValueFreshReturnsErrStaleAndAdvisoryValue(t *testing.T) {
+	ctx := context.Background()
+	vehicleID := int64(202)
+	field := "Odometer"
+
+	redisClient := newFakeRedisSignalClient()
+	cache := NewRedisSignalCacheForTest(redisClient, 100*time.Millisecond)
+
+	staleTimestamp := time.Now().UTC().Add(-1 * time.Hour)
+	encoded, err := encodeTimestampedSignalValueForField(field, float64(125000), staleTimestamp)
+	if err != nil {
+		t.Fatalf("encodeTimestampedSignalValueForField() error = %v", err)
+	}
+	redisClient.hashes[redisSignalKey(vehicleID)] = map[string]string{field: encoded}
+
+	beforeMetric := readPromCounter(t, staleTotal.WithLabelValues(strconv.FormatInt(vehicleID, 10), field))
+
+	value, err := cache.GetSignalValueFresh(ctx, vehicleID, field)
+	if !errors.Is(err, ErrStale) {
+		t.Fatalf("GetSignalValueFresh() err = %v, want ErrStale (errors.Is)", err)
+	}
+	if value == nil {
+		t.Fatal("GetSignalValueFresh() returned nil value with ErrStale; want advisory value preserved")
+	}
+	assertFloat64(t, value.Raw, 125000)
+	if !value.Timestamp.Equal(staleTimestamp) {
+		t.Fatalf("advisory value Timestamp = %v, want %v (preserved verbatim)", value.Timestamp, staleTimestamp)
+	}
+
+	afterMetric := readPromCounter(t, staleTotal.WithLabelValues(strconv.FormatInt(vehicleID, 10), field))
+	if afterMetric-beforeMetric != 1 {
+		t.Fatalf("tesla_signal_cache_stale_total{%d, %s} delta = %v, want exactly 1", vehicleID, field, afterMetric-beforeMetric)
+	}
+}
+
+// TestGetSignalValueFreshTreatsLegacyZeroTimestampAsStale asserts that a
+// pre-Phase-42 legacy scalar (no timestamp) is treated as stale by the
+// freshness-aware reader, since we cannot prove it is fresh. The
+// advisory value still flows back so the caller can compare against an
+// authoritative re-resolution.
+func TestGetSignalValueFreshTreatsLegacyZeroTimestampAsStale(t *testing.T) {
+	ctx := context.Background()
+	vehicleID := int64(203)
+	field := "legacy_speed"
+
+	redisClient := newFakeRedisSignalClient()
+	cache := NewRedisSignalCacheForTest(redisClient, 2*time.Minute)
+	redisClient.hashes[redisSignalKey(vehicleID)] = map[string]string{field: "88.5"}
+
+	beforeMetric := readPromCounter(t, staleTotal.WithLabelValues(strconv.FormatInt(vehicleID, 10), field))
+
+	value, err := cache.GetSignalValueFresh(ctx, vehicleID, field)
+	if !errors.Is(err, ErrStale) {
+		t.Fatalf("GetSignalValueFresh() err = %v, want ErrStale for legacy zero-Timestamp value", err)
+	}
+	if value == nil {
+		t.Fatal("GetSignalValueFresh() returned nil value with ErrStale; want advisory value preserved")
+	}
+	assertFloat64(t, value.Raw, 88.5)
+	if !value.Timestamp.IsZero() {
+		t.Fatalf("legacy advisory Timestamp = %v, want zero (unknown freshness preserved)", value.Timestamp)
+	}
+
+	afterMetric := readPromCounter(t, staleTotal.WithLabelValues(strconv.FormatInt(vehicleID, 10), field))
+	if afterMetric-beforeMetric != 1 {
+		t.Fatalf("stale_total delta = %v, want exactly 1", afterMetric-beforeMetric)
+	}
+}
+
+// TestGetSignalValueFreshReturnsFreshValueWithoutError is the happy
+// path: a value younger than staleAfter MUST come back with err == nil
+// and the metric MUST NOT be incremented.
+func TestGetSignalValueFreshReturnsFreshValueWithoutError(t *testing.T) {
+	ctx := context.Background()
+	vehicleID := int64(204)
+	field := "Charging"
+
+	redisClient := newFakeRedisSignalClient()
+	cache := NewRedisSignalCacheForTest(redisClient, 5*time.Minute)
+	if err := cache.Update(ctx, vehicleID, map[string]interface{}{field: true}); err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	beforeMetric := readPromCounter(t, staleTotal.WithLabelValues(strconv.FormatInt(vehicleID, 10), field))
+
+	value, err := cache.GetSignalValueFresh(ctx, vehicleID, field)
+	if err != nil {
+		t.Fatalf("GetSignalValueFresh() error = %v, want nil for fresh value", err)
+	}
+	if value == nil {
+		t.Fatal("GetSignalValueFresh() returned nil for fresh value")
+	}
+	assertBool(t, value.Raw, true)
+
+	afterMetric := readPromCounter(t, staleTotal.WithLabelValues(strconv.FormatInt(vehicleID, 10), field))
+	if afterMetric != beforeMetric {
+		t.Fatalf("stale_total incremented for fresh value: delta = %v", afterMetric-beforeMetric)
+	}
+}
+
+// TestGetSignalValueFreshReturnsNilForMissingKey verifies that a missing
+// key/field returns (nil, nil) rather than ErrStale.
+func TestGetSignalValueFreshReturnsNilForMissingKey(t *testing.T) {
+	ctx := context.Background()
+	cache := NewRedisSignalCacheForTest(newFakeRedisSignalClient(), 2*time.Minute)
+
+	value, err := cache.GetSignalValueFresh(ctx, 999, "Missing")
+	if err != nil {
+		t.Fatalf("GetSignalValueFresh() error = %v, want nil for missing key", err)
+	}
+	if value != nil {
+		t.Fatalf("GetSignalValueFresh() value = %v, want nil for missing key", value)
+	}
+}
+
+// TestGetSignalValueFreshDisabledWhenStaleAfterIsZero verifies that
+// staleAfter == 0 disables the freshness check entirely (Fresh becomes
+// equivalent to GetSignalValue, returning legacy/stale values without
+// ErrStale). This is the backward-compat escape hatch tests use via
+// direct struct construction.
+func TestGetSignalValueFreshDisabledWhenStaleAfterIsZero(t *testing.T) {
+	ctx := context.Background()
+	vehicleID := int64(205)
+	field := "Odometer"
+
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient} // staleAfter zero-value
+	staleTimestamp := time.Now().UTC().Add(-2 * time.Hour)
+	encoded, err := encodeTimestampedSignalValueForField(field, float64(99000), staleTimestamp)
+	if err != nil {
+		t.Fatalf("encodeTimestampedSignalValueForField() error = %v", err)
+	}
+	redisClient.hashes[redisSignalKey(vehicleID)] = map[string]string{field: encoded}
+
+	value, err := cache.GetSignalValueFresh(ctx, vehicleID, field)
+	if err != nil {
+		t.Fatalf("GetSignalValueFresh() with staleAfter=0 returned err = %v, want nil", err)
+	}
+	if value == nil {
+		t.Fatal("GetSignalValueFresh() returned nil value with staleAfter=0")
+	}
+	assertFloat64(t, value.Raw, 99000)
+}
+
+// NewRedisSignalCacheForTest constructs a cache around a fake/miniredis
+// client with a custom staleAfter. The production NewRedisSignalCache
+// requires *redis.Client which the fake client doesn't satisfy, so this
+// test-only helper bypasses that constraint while still exercising the
+// staleAfter contract end-to-end.
+func NewRedisSignalCacheForTest(rdb redisSignalClient, staleAfter time.Duration) *RedisSignalCache {
+	return &RedisSignalCache{rdb: rdb, staleAfter: staleAfter}
+}
+
+// TestRedisSignalCacheKeyAndChannelInvariance verifies that the public
+// Redis surface — the per-vehicle HSET key and the cross-pod Pub/Sub
+// channel — has not drifted from the layered live-state contract:
+//
+//	HSET key:    vehicle:{vehicleID}:signals
+//	Pub/Sub:     vehicle_signals
+//
+// A failure here means a different binary in the cluster (older, or
+// running a different fork) will look in the wrong place.
+func TestRedisSignalCacheKeyAndChannelInvariance(t *testing.T) {
+	ctx := context.Background()
+	vehicleID := int64(7)
+
+	t.Run("HSET key shape preserved", func(t *testing.T) {
+		redisClient := newFakeRedisSignalClient()
+		cache := &RedisSignalCache{rdb: redisClient}
+		if err := cache.Update(ctx, vehicleID, map[string]interface{}{"x": 1.0}); err != nil {
+			t.Fatalf("Update() error = %v", err)
+		}
+		wantKey := fmt.Sprintf("vehicle:%d:signals", vehicleID)
+		if _, ok := redisClient.hashes[wantKey]; !ok {
+			keys := make([]string, 0, len(redisClient.hashes))
+			for k := range redisClient.hashes {
+				keys = append(keys, k)
+			}
+			t.Fatalf("HSET key %q not present; got keys = %v", wantKey, keys)
+		}
+	})
+
+	t.Run("Pub/Sub channel name preserved", func(t *testing.T) {
+		got := vehicleSignalsChannel
+		if got != "vehicle_signals" {
+			t.Fatalf("vehicleSignalsChannel = %q, want %q", got, "vehicle_signals")
+		}
+	})
+}
+
+// TestRedisSignalCacheTypedEnvelopeMiniredisRoundTrip exercises the
+// typed envelope through a real (in-process) Redis server instead of
+// the fake client. This catches encode-side regressions that the fake
+// client would mask (e.g. binary-unsafe field names, oversize values,
+// HSET semantics drift). Mirrors the miniredis pattern already used by
+// internal/api/devtools_handler_test.go.
+func TestRedisSignalCacheTypedEnvelopeMiniredisRoundTrip(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("miniredis.Run() error = %v", err)
+	}
+	t.Cleanup(mr.Close)
+
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { _ = rdb.Close() })
+
+	cache := NewRedisSignalCache(rdb, WithStaleAfter(2*time.Minute))
+	ctx := context.Background()
+	vehicleID := int64(303)
+
+	if err := cache.Update(ctx, vehicleID, map[string]interface{}{
+		"BatteryLevel": float32(64.0),
+		"Charging":     true,
+		"Gear":         "D",
+	}); err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	gotBattery, err := cache.GetSignalValueFresh(ctx, vehicleID, "BatteryLevel")
+	if err != nil {
+		t.Fatalf("GetSignalValueFresh(BatteryLevel) error = %v", err)
+	}
+	assertFloat32(t, gotBattery.Raw, 64.0)
+
+	gotCharging, err := cache.GetSignalValueFresh(ctx, vehicleID, "Charging")
+	if err != nil {
+		t.Fatalf("GetSignalValueFresh(Charging) error = %v", err)
+	}
+	assertBool(t, gotCharging.Raw, true)
+
+	gotGear, err := cache.GetSignalValueFresh(ctx, vehicleID, "Gear")
+	if err != nil {
+		t.Fatalf("GetSignalValueFresh(Gear) error = %v", err)
+	}
+	assertString(t, gotGear.Raw, "D")
+
+	// Verify the on-wire JSON in miniredis includes the typed envelope.
+	rawBattery := mr.HGet(fmt.Sprintf("vehicle:%d:signals", vehicleID), "BatteryLevel")
+	wantKindFragment := fmt.Sprintf(`"kind":%d`, int(protomodel.ValueKindFloat))
+	if !strings.Contains(rawBattery, wantKindFragment) {
+		t.Fatalf("miniredis stored BatteryLevel %q missing %q", rawBattery, wantKindFragment)
+	}
+	for _, want := range []string{`"v":`, `"ts":`} {
+		if !strings.Contains(rawBattery, want) {
+			t.Fatalf("miniredis stored BatteryLevel %q missing typed envelope field %q", rawBattery, want)
+		}
+	}
+}
+
+// TestRedisSignalCacheStaleMiniredisRejection cross-validates the
+// stale contract end-to-end against a real Redis server. Stores a
+// value with a stale timestamp via HSET, then asserts GetSignalValueFresh
+// returns the advisory value plus ErrStale.
+func TestRedisSignalCacheStaleMiniredisRejection(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("miniredis.Run() error = %v", err)
+	}
+	t.Cleanup(mr.Close)
+
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { _ = rdb.Close() })
+
+	cache := NewRedisSignalCache(rdb, WithStaleAfter(50*time.Millisecond))
+	ctx := context.Background()
+	vehicleID := int64(304)
+	field := "Odometer"
+
+	staleTimestamp := time.Now().UTC().Add(-1 * time.Hour)
+	encoded, err := encodeTimestampedSignalValueForField(field, float64(150000), staleTimestamp)
+	if err != nil {
+		t.Fatalf("encodeTimestampedSignalValueForField() error = %v", err)
+	}
+	mr.HSet(fmt.Sprintf("vehicle:%d:signals", vehicleID), field, encoded)
+
+	value, err := cache.GetSignalValueFresh(ctx, vehicleID, field)
+	if !errors.Is(err, ErrStale) {
+		t.Fatalf("GetSignalValueFresh() err = %v, want ErrStale", err)
+	}
+	if value == nil {
+		t.Fatal("GetSignalValueFresh() returned nil value with ErrStale")
+	}
+	assertFloat64(t, value.Raw, 150000)
+	if !value.Timestamp.Equal(staleTimestamp) {
+		t.Fatalf("advisory Timestamp = %v, want %v", value.Timestamp, staleTimestamp)
+	}
+}
+
+// TestNewRedisSignalCacheDefaultsStaleAfterTo2Minutes documents the
+// constructor default — the live-state contract pins this at the
+// LiveSignalFreshnessThreshold so distributed callers cannot accidentally
+// miss the rejection path.
+func TestNewRedisSignalCacheDefaultsStaleAfterTo2Minutes(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("miniredis.Run() error = %v", err)
+	}
+	t.Cleanup(mr.Close)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { _ = rdb.Close() })
+
+	cache := NewRedisSignalCache(rdb)
+	if cache.staleAfter != 2*time.Minute {
+		t.Fatalf("default staleAfter = %v, want 2m", cache.staleAfter)
+	}
+	if cache.staleAfter != LiveSignalFreshnessThreshold {
+		t.Fatalf("default staleAfter (%v) drifted from LiveSignalFreshnessThreshold (%v)", cache.staleAfter, LiveSignalFreshnessThreshold)
+	}
+}
+
+// TestWithStaleAfterOverride verifies the constructor option.
+func TestWithStaleAfterOverride(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("miniredis.Run() error = %v", err)
+	}
+	t.Cleanup(mr.Close)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { _ = rdb.Close() })
+
+	cache := NewRedisSignalCache(rdb, WithStaleAfter(7*time.Second))
+	if cache.staleAfter != 7*time.Second {
+		t.Fatalf("WithStaleAfter override staleAfter = %v, want 7s", cache.staleAfter)
+	}
 }

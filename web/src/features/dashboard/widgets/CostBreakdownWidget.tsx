@@ -8,7 +8,8 @@ import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useCostBreakdown } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetRankedList, type RankedItem } from './shared';
 import { WidgetBigNumber } from './shared';
@@ -55,11 +56,10 @@ export default function CostBreakdownWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
-  const {
-    formatCurrency,
-    currencySymbol,
-    distanceUnit,
-  } = useSettings();
+  const { formatCurrency } = useFormatting();
+  const { unitPrefs } = useUnits();
+  const distanceUnit = unitPrefs.distance;
+  const { currencySymbol } = useFormatting();
 
   const {
     data,

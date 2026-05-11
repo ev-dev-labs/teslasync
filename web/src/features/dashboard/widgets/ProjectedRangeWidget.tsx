@@ -6,12 +6,12 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useProjectedRange } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSettings } from '@/hooks/useSettings';
-import { kmToMiles } from '@/lib/unitConversion';
+import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 function healthBadge(score: number, t: (k: string, d: string) => string) {
   if (score >= 90) return { text: t('widget.projectedRange.excellent', 'Excellent'), variant: 'success' as const };
@@ -27,34 +27,30 @@ export default function ProjectedRangeWidget({ vehicleId, size }: WidgetProps) {
   const idStr = id != null ? String(id) : null;
 
   const {
-    data,
-    isLoading,
-    isFetching,
-    isStale,
-    isError,
-    dataUpdatedAt,
-    refetch,
-  } = useProjectedRange(idStr);
+    data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useProjectedRange(idStr);
 
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs } = useUnits();
+  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+
+  const distanceUnit = unitPrefs.distance;
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
-  // Data is in km — convert to miles (internal), then to user's preferred unit
+  // Data is in km; convert to SI meters before display conversion.
   const projectedRange = useMemo(
-    () => (data?.current_range_km != null ? convertDistance(kmToMiles(data.current_range_km)) : null),
-    [data?.current_range_km, convertDistance],
+    () => (data?.current_range_km != null ? toDistanceDisplay(data.current_range_km * 1000) : null),
+    [data?.current_range_km, toDistanceDisplay],
   );
 
   const epaRange = useMemo(
-    () => (data?.new_range_km != null ? convertDistance(kmToMiles(data.new_range_km)) : null),
-    [data?.new_range_km, convertDistance],
+    () => (data?.new_range_km != null ? toDistanceDisplay(data.new_range_km * 1000) : null),
+    [data?.new_range_km, toDistanceDisplay],
   );
 
   const avgDaily = useMemo(
-    () => (data?.avg_daily_km != null ? convertDistance(kmToMiles(data.avg_daily_km)) : null),
-    [data?.avg_daily_km, convertDistance],
+    () => (data?.avg_daily_km != null ? toDistanceDisplay(data.avg_daily_km * 1000) : null),
+    [data?.avg_daily_km, toDistanceDisplay],
   );
 
   const healthScore = data?.health_score ?? null;

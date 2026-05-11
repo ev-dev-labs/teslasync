@@ -4,6 +4,7 @@ import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtWithUnit } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui';
 import { getChargerLabel } from './helpers';
+import { durationMinutes } from './helpers';
 
 function SessionDetailRow({
   label,
@@ -35,7 +36,7 @@ export default function SessionDetailPanel({ session, currencySymbol }: SessionD
       </h3>
       <SessionDetailRow
         label={t('charging.curve.date', 'Date')}
-        value={formatDateTime(session.start_ts)}
+        value={formatDateTime(session.started_at)}
       />
       <SessionDetailRow
         label={t('charging.curve.chargerType', 'Charger Type')}
@@ -43,36 +44,36 @@ export default function SessionDetailPanel({ session, currencySymbol }: SessionD
       />
       <SessionDetailRow
         label={t('charging.curve.socRange', 'SOC Range')}
-        value={`${session.start_battery_pct}% → ${session.end_battery_pct ?? '?'}%`}
+        value={`${session.start_soc_pct}% → ${session.end_soc_pct ?? '?'}%`}
       />
       <SessionDetailRow
         label={t('charging.curve.energyAdded', 'Energy Added')}
-        value={fmtWithUnit(session.energy_added_kwh, 'kWh')}
+        value={fmtWithUnit(session.total_energy_added_wh / 1000, 'kWh')}
       />
       <SessionDetailRow
         label={t('charging.curve.peakPower', 'Peak Power')}
-        value={fmtWithUnit(session.charger_power_kw_max ?? 0, 'kW')}
+        value={fmtWithUnit((session.peak_power_w ?? 0) / 1000, 'kW')}
       />
-      {session.charger_power_kw_avg != null && (
+      {session.avg_power_w != null && (
         <SessionDetailRow
           label={t('charging.curve.avgPower', 'Avg Power')}
-          value={fmtWithUnit(session.charger_power_kw_avg, 'kW')}
+          value={fmtWithUnit(session.avg_power_w / 1000, 'kW')}
         />
       )}
       <SessionDetailRow
         label={t('charging.curve.duration', 'Duration')}
-        value={fmtWithUnit(session.duration_min, 'min')}
+        value={fmtWithUnit(durationMinutes(session.started_at, session.ended_at), 'min')}
       />
-      {session.cost != null && (
+      {session.cost_decimal != null && (
         <SessionDetailRow
-          label={t('charging.curve.cost', 'Cost')}
-          value={`${currencySymbol}${fmtNumber(session.cost)}`}
+          label={t('charging.curve.cost_decimal', 'Cost')}
+          value={`${currencySymbol}${fmtNumber(session.cost_decimal)}`}
         />
       )}
-      {session.charger_location && (
+      {session.start_place && (
         <SessionDetailRow
           label={t('charging.curve.location', 'Location')}
-          value={session.charger_location}
+          value={session.start_place}
         />
       )}
     </GlassPanel>

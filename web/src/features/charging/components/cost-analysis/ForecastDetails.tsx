@@ -9,7 +9,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip,
 } from '@/components/charts';
 import { fmtNumber } from '@/lib/numberFormat';
-import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
 import type { CostForecastData } from '@/types/charging';
 
 interface ForecastDetailsProps {
@@ -18,7 +18,7 @@ interface ForecastDetailsProps {
 
 export function ForecastDetails({ forecastData }: ForecastDetailsProps) {
   const { t } = useTranslation();
-  const { currencySymbol } = useSettings();
+  const { currencySymbol } = useFormatting();
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

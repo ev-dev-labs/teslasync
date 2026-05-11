@@ -14,10 +14,11 @@ import { Skeleton, EmptyState, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { useToast } from '@/components/feedback/Toast';
 import { cn } from '@/lib/cn';
+import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
 import { batteryColor } from '@/lib/colors';
 import { request } from '@/api/client';
@@ -59,7 +60,7 @@ export default function VehicleListPage() {
   usePageTitle(t('nav.vehicles', 'Fleet'));
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { convertDistance, distanceUnit } = useSettings();
+  const { unitPrefs, formatDistance } = useUnits();
 
   /* ── Data ── */
   const vehiclesQuery = useQuery({
@@ -253,8 +254,8 @@ export default function VehicleListPage() {
                 color="green"
               />
               <MetricCard
-                label={`${t('vehicles.totalRange', 'Total Range')} (${distanceUnit})`}
-                value={fmtNumber(convertDistance(fleet.totalRange))}
+                label={`${t('vehicles.totalRange', 'Total Range')} (${unitPrefs.distance})`}
+                value={fmtNumber(convertDistanceFromSI(fleet.totalRange, unitPrefs.distance))}
                 icon={<Gauge className="h-5 w-5" />}
                 color="purple"
               />
@@ -307,7 +308,7 @@ export default function VehicleListPage() {
                           {level}%
                         </span>
                         <span className="text-[10px] text-[var(--text-secondary)] w-16 text-right">
-                          {fmtNumber(convertDistance(state.rated_range ?? 0))} {distanceUnit}
+                          {formatDistance(state.rated_range ?? 0)}
                         </span>
                       </div>
                     );
@@ -388,10 +389,10 @@ export default function VehicleListPage() {
                             {state && (
                               <>
                                 <span className="text-xs text-[var(--text-secondary)]">
-                                  {fmtNumber(convertDistance(state.rated_range ?? 0))} {distanceUnit}
+                                  {formatDistance(state.rated_range ?? 0)}
                                 </span>
                                 <span className="text-xs text-[var(--text-secondary)]">
-                                  {fmtNumber(convertDistance(state.odometer ?? 0))} {distanceUnit}
+                                  {formatDistance(state.odometer ?? 0)}
                                 </span>
                                 {state.is_charging && (
                                   <span className="text-xs font-medium text-green-400">

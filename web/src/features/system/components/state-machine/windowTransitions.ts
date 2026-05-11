@@ -49,7 +49,7 @@ export function windowTransitions(
   let lastTs = -Infinity;
   let last: FSMTransition | null = null;
   for (const tr of transitions) {
-    const ts = new Date(tr.created_at).getTime();
+    const ts = new Date(tr.ts).getTime();
     if (!Number.isFinite(ts)) continue;
     if (ts > lastTs) {
       lastTs = ts;
@@ -59,10 +59,10 @@ export function windowTransitions(
     else outsideWindow.push(tr);
   }
   inWindow.sort(
-    (x, y) => new Date(x.created_at).getTime() - new Date(y.created_at).getTime(),
+    (x, y) => new Date(x.ts).getTime() - new Date(y.ts).getTime(),
   );
   outsideWindow.sort(
-    (x, y) => new Date(x.created_at).getTime() - new Date(y.created_at).getTime(),
+    (x, y) => new Date(x.ts).getTime() - new Date(y.ts).getTime(),
   );
   return { inWindow, outsideWindow, lastTransition: last, anchor: a, minutes };
 }

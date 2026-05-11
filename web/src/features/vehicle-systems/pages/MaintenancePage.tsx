@@ -27,7 +27,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime, formatDate } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { getErrorMessage } from '@/lib/errorMessage';
-import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
 import { request } from '@/api/client';
 import {
   Wrench, AlertTriangle, CheckCircle, Clock, ListChecks,
@@ -344,7 +344,7 @@ function ItemsSkeleton() {
 export default function MaintenancePage() {
   const { t } = useTranslation();
   usePageTitle(t('Maintenance'));
-  const { currencySymbol } = useSettings();
+  const { currencySymbol } = useFormatting();
 
   // ── Vehicle selection ──────────────────────────────────────────────────
   const { data: vehicles, error: vehiclesError } = useQuery({

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/rs/zerolog/log"
 )
 
 // RouteEfficiencyHandler serves route-efficiency analytics.
@@ -18,29 +18,35 @@ func NewRouteEfficiencyHandler(db *database.DB) *RouteEfficiencyHandler {
 	return &RouteEfficiencyHandler{db: db}
 }
 
+// routeSummary reads from SI-canonical drives columns. Frontend consumers
+// convert display units at the render boundary.
 type routeSummary struct {
-	StartLocation  string  `json:"start_location"`
-	EndLocation    string  `json:"end_location"`
-	TripCount      int     `json:"trip_count"`
-	AvgDistanceKm  float64 `json:"avg_distance_km"`
-	AvgDurationMin float64 `json:"avg_duration_min"`
-	AvgEfficiency  float64 `json:"avg_efficiency"`
-	BestEfficiency float64 `json:"best_efficiency"`
+	StartLocation   string  `json:"start_location"`
+	EndLocation     string  `json:"end_location"`
+	TripCount       int     `json:"trip_count"`
+	AvgDistanceKm   float64 `json:"avg_distance_km"`
+	AvgDurationS    float64 `json:"avg_duration_s"`
+	AvgEfficiency   float64 `json:"avg_efficiency"`
+	BestEfficiency  float64 `json:"best_efficiency"`
 	WorstEfficiency float64 `json:"worst_efficiency"`
-	AvgSpeed       float64 `json:"avg_speed"`
-	AvgTemp        float64 `json:"avg_temp"`
+	AvgSpeed        float64 `json:"avg_speed"`
+	AvgTemp         float64 `json:"avg_temp"`
 }
 
+// routeDriveDetail field tags are SI-suffixed where they used to map to
+// legacy columns (duration_s, avg_speed_mps, start_soc_pct, end_soc_pct);
+// the frontend RouteDriveDetail type already mismatched the legacy tags so
+// this is forward-compatible.
 type routeDriveDetail struct {
-	ID              int64   `json:"id"`
-	StartDate       string  `json:"start_date"`
-	Distance        float64 `json:"distance"`
-	DurationMin     float64 `json:"duration_min"`
-	SpeedAvg        float64 `json:"avg_speed_mph"`
-	StartBattery    int     `json:"start_battery_pct"`
-	EndBattery      int     `json:"end_battery_pct"`
-	OutsideTempAvg  float64 `json:"outside_temp_avg"`
-	Efficiency      float64 `json:"efficiency"`
+	ID             int64   `json:"id"`
+	StartDate      string  `json:"start_date"`
+	Distance       float64 `json:"distance"`
+	DurationS      float64 `json:"duration_s"`
+	SpeedAvgMps    float64 `json:"avg_speed_mps"`
+	StartSocPct    float64 `json:"start_soc_pct"`
+	EndSocPct      float64 `json:"end_soc_pct"`
+	OutsideTempAvg float64 `json:"outside_temp_avg"`
+	Efficiency     float64 `json:"efficiency"`
 }
 
 // List returns the top routes grouped by start→end address pair.
@@ -58,26 +64,36 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
+	// Phase-42 SI canonical drives (migration 000185): start_place/end_place
+	// for grouping, distance_m/duration_s/avg_speed_mps for metrics,
+	// start_soc_pct/end_soc_pct for SoC, ambient_temp_c_avg for temperature.
+	// Durations and speeds are returned in SI units.
 	rows, err := h.db.Pool.Query(ctx, `
 		SELECT
-		  start_address as start_location,
-		  end_address as end_location,
+		  start_place as start_location,
+		  end_place as end_location,
 		  COUNT(*) as trip_count,
-		  AVG(distance_mi) as avg_distance_km,
-		  AVG(duration_min) as avg_duration_min,
-		  AVG(CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END) as avg_efficiency,
-		  MIN(CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END) as best_efficiency,
-		  MAX(CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END) as worst_efficiency,
-		  AVG(avg_speed_mph) as avg_speed,
-		  AVG(outside_temp_avg_c) as avg_temp
+		  AVG(distance_m / 1000.0) as avg_distance_km,
+		  AVG(duration_s) as avg_duration_s,
+		  AVG(CASE WHEN distance_m > 0
+		           THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
+		           ELSE 0 END) as avg_efficiency,
+		  MIN(CASE WHEN distance_m > 0
+		           THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
+		           ELSE 0 END) as best_efficiency,
+		  MAX(CASE WHEN distance_m > 0
+		           THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
+		           ELSE 0 END) as worst_efficiency,
+		  AVG(avg_speed_mps / $3) as avg_speed,
+		  AVG(ambient_temp_c_avg) as avg_temp
 		FROM drives
 		WHERE vehicle_id = $1
-		  AND start_address IS NOT NULL AND end_address IS NOT NULL
-		  AND distance_mi > 1
-		GROUP BY start_address, end_address
+		  AND start_place IS NOT NULL AND end_place IS NOT NULL
+		  AND distance_m > $4
+		GROUP BY start_place, end_place
 		HAVING COUNT(*) >= 1
 		ORDER BY COUNT(*) DESC
-		LIMIT 15`, vehicleID)
+		LIMIT 15`, vehicleID, driveStatsMetersPerMile, driveStatsMpsPerMph, driveStatsMetersPerMile)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("route efficiency: failed to query routes")
 		writeError(w, http.StatusInternalServerError, "failed to query route efficiency")
@@ -99,7 +115,7 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 			rs.AvgDistanceKm = math.Round(*avgDist*100) / 100
 		}
 		if avgDur != nil {
-			rs.AvgDurationMin = math.Round(*avgDur*100) / 100
+			rs.AvgDurationS = math.Round(*avgDur*100) / 100
 		}
 		if avgEff != nil {
 			rs.AvgEfficiency = math.Round(*avgEff*100) / 100
@@ -155,16 +171,24 @@ func (h *RouteEfficiencyHandler) Detail(w http.ResponseWriter, r *http.Request) 
 
 	ctx := r.Context()
 
+	// Phase-42 SI canonical drives. Distance returned in miles to preserve
+	// the legacy `distance` semantics; duration_s returned as seconds (the
+	// new `duration_s` JSON key); ambient_temp_c_avg in Celsius unchanged.
 	rows, err := h.db.Pool.Query(ctx, `
-		SELECT id, start_ts, distance_mi, duration_min, avg_speed_mph,
-		  start_battery_pct, end_battery_pct, outside_temp_avg_c,
-		  CASE WHEN distance_mi > 0 THEN (start_battery_pct - end_battery_pct)::float / distance_mi * 100 ELSE 0 END as efficiency
+		SELECT id, started_at,
+		  distance_m / $2 as distance_mi_calc,
+		  duration_s::float8 as duration_s,
+		  avg_speed_mps,
+		  start_soc_pct::float8, end_soc_pct::float8, ambient_temp_c_avg,
+		  CASE WHEN distance_m > 0
+		       THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
+		       ELSE 0 END as efficiency
 		FROM drives
 		WHERE vehicle_id = $1
-		  AND start_address = $2 AND end_address = $3
-		  AND distance_mi > 1
-		ORDER BY start_ts DESC
-		LIMIT 20`, vehicleID, startAddr, endAddr)
+		  AND start_place = $3 AND end_place = $4
+		  AND distance_m > $2
+		ORDER BY started_at DESC
+		LIMIT 20`, vehicleID, driveStatsMetersPerMile, startAddr, endAddr)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).
 			Str("start", startAddr).Str("end", endAddr).
@@ -178,25 +202,25 @@ func (h *RouteEfficiencyHandler) Detail(w http.ResponseWriter, r *http.Request) 
 	for rows.Next() {
 		var d routeDriveDetail
 		var startDate time.Time
-		var spdAvg, tempAvg, eff *float64
-		var startBat, endBat *int
-		if err := rows.Scan(&d.ID, &startDate, &d.Distance, &d.DurationMin,
-			&spdAvg, &startBat, &endBat, &tempAvg, &eff); err != nil {
+		var spdAvgMps, tempAvg, eff *float64
+		var startSoc, endSoc *float64
+		if err := rows.Scan(&d.ID, &startDate, &d.Distance, &d.DurationS,
+			&spdAvgMps, &startSoc, &endSoc, &tempAvg, &eff); err != nil {
 			log.Error().Err(err).Msg("route efficiency: scan detail row")
 			writeError(w, http.StatusInternalServerError, "failed to scan route detail")
 			return
 		}
 		d.StartDate = startDate.Format(time.RFC3339)
 		d.Distance = math.Round(d.Distance*100) / 100
-		d.DurationMin = math.Round(d.DurationMin*100) / 100
-		if spdAvg != nil {
-			d.SpeedAvg = math.Round(*spdAvg*10) / 10
+		d.DurationS = math.Round(d.DurationS)
+		if spdAvgMps != nil {
+			d.SpeedAvgMps = math.Round(*spdAvgMps*100) / 100
 		}
-		if startBat != nil {
-			d.StartBattery = *startBat
+		if startSoc != nil {
+			d.StartSocPct = math.Round(*startSoc*10) / 10
 		}
-		if endBat != nil {
-			d.EndBattery = *endBat
+		if endSoc != nil {
+			d.EndSocPct = math.Round(*endSoc*10) / 10
 		}
 		if tempAvg != nil {
 			d.OutsideTempAvg = math.Round(*tempAvg*10) / 10
