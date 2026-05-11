@@ -8,6 +8,8 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Select, DataTable, type Column } from '@/components/ui';
+import { RangePicker } from '@/components/forms';
+import { useRangeState } from '@/hooks/useRangeState';
 import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -109,26 +111,41 @@ export default function TimelinePage() {
   // Phase 40 / Prompt 33 — vehicle id is in the URL so deep links work.
   const [vehicleId, setVehicleId] = useUrlString('vehicle_id', '');
 
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'timeline.range',
+    defaultPresetId: '7d',
+  });
+
+  // Backend accepts `?days=N` (trailing window). Compute inclusive day
+  // count from the picker's range. Custom historical windows that don't
+  // end today still degrade to a trailing window — `presetsOnly` mode
+  // hides the calendar to keep the UX honest.
+  const days = useMemo(() => {
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T00:00:00`).getTime();
+    return Math.max(1, Math.round((endMs - startMs) / 86_400_000) + 1);
+  }, [start, end]);
+
   const { data: vehicles, error: vehiclesError } = useVehicles();
 
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
   const enabled = activeId !== '';
 
   const timelineQuery = useQuery({
-    queryKey: ['vehicle-timeline', activeId],
+    queryKey: ['vehicle-timeline', activeId, days],
     queryFn: () =>
       request<{ transitions: TransitionRecord[] }>(
-        `/vehicle-states/timeline?vehicle_id=${activeId}`,
+        `/vehicle-states/timeline?vehicle_id=${activeId}&days=${days}`,
       ),
     enabled,
   });
   const { data: timelineData, isLoading: tlLoading, error: timelineError, refetch } = timelineQuery;
 
   const { data: summaryData, isLoading: sumLoading, error: summaryError } = useQuery({
-    queryKey: ['vehicle-summary', activeId],
+    queryKey: ['vehicle-summary', activeId, days],
     queryFn: () =>
       request<SummaryResponse>(
-        `/vehicle-states/summary?vehicle_id=${activeId}`,
+        `/vehicle-states/summary?vehicle_id=${activeId}&days=${days}`,
       ),
     enabled,
   });
@@ -294,6 +311,14 @@ export default function TimelinePage() {
 
   const actions = (
     <div className="flex items-center gap-3">
+      <RangePicker
+        value={{ start, end }}
+        onChange={(r) => setRange(r)}
+        presetIds={['today', 'yesterday', '7d', '30d', '90d', 'mtd', 'ytd']}
+        presetsOnly
+        align="end"
+        triggerTestId="timeline-range"
+      />
       <DataFreshnessAuto query={timelineQuery} />
       {vehicleOptions.length > 1 && (
         <Select
