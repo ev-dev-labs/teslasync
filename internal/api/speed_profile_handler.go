@@ -4,6 +4,7 @@ import (
 	"math"
 	"net/http"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -56,13 +57,23 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Optional date bounds via standard ?start=YYYY-MM-DD&end=YYYY-MM-DD
+	// When omitted the handler returns the full historical dataset (no
+	// trailing-window default). When set the bounds apply uniformly to all
+	// three sub-queries below so distribution, categories, and the
+	// per-drive scatter all reflect the same window.
+	startTime, endTime := parseDateRange(r)
+	hasRange := !startTime.IsZero() && !endTime.IsZero()
+
 	ctx := r.Context()
 
 	// Phase-42 SI canonical drives. Speed buckets are expressed in mps
 	// (1 mph = 0.44704 mps) so the bucket boundary literals 6.7056, 13.4112,
 	// 20.1168, 26.8224, 33.528 correspond to 15/30/45/60/75 mph. avg_power
 	// is averaged in Watts.
-	distRows, err := h.db.Pool.Query(ctx, `
+	var distRows pgx.Rows
+	if hasRange {
+		distRows, err = h.db.Pool.Query(ctx, `
 		SELECT
 		  CASE
 		    WHEN avg_speed_mps < 6.7056  THEN '0-15'
@@ -77,9 +88,28 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		FROM drives
 		WHERE vehicle_id = $1
 		  AND avg_speed_mps IS NOT NULL AND avg_speed_mps > 0
-		  AND started_at > NOW() - INTERVAL '30 days'
+		  AND started_at BETWEEN $2 AND $3
+		GROUP BY speed_bucket
+		ORDER BY MIN(avg_speed_mps)`, vehicleID, startTime, endTime)
+	} else {
+		distRows, err = h.db.Pool.Query(ctx, `
+		SELECT
+		  CASE
+		    WHEN avg_speed_mps < 6.7056  THEN '0-15'
+		    WHEN avg_speed_mps < 13.4112 THEN '15-30'
+		    WHEN avg_speed_mps < 20.1168 THEN '30-45'
+		    WHEN avg_speed_mps < 26.8224 THEN '45-60'
+		    WHEN avg_speed_mps < 33.528  THEN '60-75'
+		    ELSE '75+'
+		  END AS speed_bucket,
+		  COUNT(*) AS readings,
+		  AVG(avg_power_w) AS avg_power_w
+		FROM drives
+		WHERE vehicle_id = $1
+		  AND avg_speed_mps IS NOT NULL AND avg_speed_mps > 0
 		GROUP BY speed_bucket
 		ORDER BY MIN(avg_speed_mps)`, vehicleID)
+	}
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("speed profile: failed to query distribution")
 		writeError(w, http.StatusInternalServerError, "failed to query speed distribution")
@@ -112,7 +142,9 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// in km/h via distance_m / duration_s * 3.6 (preserves the previous
 	// "speed in metric" semantics returned by the legacy
 	// distance/duration formula at the response level).
-	catRows, err := h.db.Pool.Query(ctx, `
+	var catRows pgx.Rows
+	if hasRange {
+		catRows, err = h.db.Pool.Query(ctx, `
 		SELECT
 		  CASE
 		    WHEN avg_speed_mps < 13.4112 THEN 'City (<30)'
@@ -127,8 +159,26 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		           ELSE 0 END) AS battery_pct_per_100km
 		FROM drives
 		WHERE vehicle_id = $1 AND distance_m > $3 AND duration_s > 60
-		  AND started_at > NOW() - interval '90 days'
+		  AND started_at BETWEEN $4 AND $5
+		GROUP BY category`, vehicleID, driveStatsMetersPerMile, driveStatsMetersPerMile, startTime, endTime)
+	} else {
+		catRows, err = h.db.Pool.Query(ctx, `
+		SELECT
+		  CASE
+		    WHEN avg_speed_mps < 13.4112 THEN 'City (<30)'
+		    WHEN avg_speed_mps < 26.8224 THEN 'Suburban (30-60)'
+		    WHEN avg_speed_mps < 40.2336 THEN 'Highway (60-90)'
+		    ELSE 'High Speed (90+)'
+		  END AS category,
+		  COUNT(*) AS drive_count,
+		  AVG(distance_m / NULLIF(duration_s, 0) * 3.6) AS avg_speed_kmh,
+		  AVG(CASE WHEN distance_m > 0
+		           THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
+		           ELSE 0 END) AS battery_pct_per_100km
+		FROM drives
+		WHERE vehicle_id = $1 AND distance_m > $3 AND duration_s > 60
 		GROUP BY category`, vehicleID, driveStatsMetersPerMile, driveStatsMetersPerMile)
+	}
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("speed profile: failed to query efficiency categories")
 		writeError(w, http.StatusInternalServerError, "failed to query efficiency categories")
@@ -161,7 +211,25 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	// Phase-42 SI: scan distance in meters, return distance in miles to keep
 	// the legacy `distance` semantics; avg_speed_mps emitted directly.
-	ptRows, err := h.db.Pool.Query(ctx, `
+	// When start/end are supplied we narrow the scatter window to match
+	// the distribution/categories windows so the picker controls all three
+	// views uniformly. Otherwise we keep the historical "last 100 drives"
+	// behaviour with no time bound.
+	var ptRows pgx.Rows
+	if hasRange {
+		ptRows, err = h.db.Pool.Query(ctx, `
+		SELECT avg_speed_mps,
+		  distance_m / $2 AS distance_mi_calc,
+		  CASE WHEN distance_m > 0
+		       THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
+		       ELSE 0 END AS efficiency
+		FROM drives
+		WHERE vehicle_id = $1 AND distance_m > $3 AND duration_s > 300
+		  AND avg_speed_mps IS NOT NULL
+		  AND started_at BETWEEN $4 AND $5
+		ORDER BY started_at DESC LIMIT 100`, vehicleID, driveStatsMetersPerMile, 5*driveStatsMetersPerMile, startTime, endTime)
+	} else {
+		ptRows, err = h.db.Pool.Query(ctx, `
 		SELECT avg_speed_mps,
 		  distance_m / $2 AS distance_mi_calc,
 		  CASE WHEN distance_m > 0
@@ -171,6 +239,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		WHERE vehicle_id = $1 AND distance_m > $3 AND duration_s > 300
 		  AND avg_speed_mps IS NOT NULL
 		ORDER BY started_at DESC LIMIT 100`, vehicleID, driveStatsMetersPerMile, 5*driveStatsMetersPerMile)
+	}
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("speed profile: failed to query efficiency points")
 		writeError(w, http.StatusInternalServerError, "failed to query efficiency points")

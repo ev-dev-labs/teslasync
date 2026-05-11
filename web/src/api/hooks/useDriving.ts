@@ -139,13 +139,16 @@ export function useDrivetrainHealth(vehicleId?: string) {
   });
 }
 
-export function useSpeedProfile(vehicleId?: string) {
+export function useSpeedProfile(vehicleId?: string, start?: string, end?: string) {
   return useQuery({
-    queryKey: drivingKeys.speedProfile(vehicleId),
-    queryFn: ({ signal }) =>
-      request<SpeedProfileData>(
-        vehicleId ? `/analytics/speed-profile?vehicle_id=${vehicleId}` : '/analytics/speed-profile', { signal },
-      ),
+    queryKey: [...drivingKeys.speedProfile(vehicleId), start, end],
+    queryFn: ({ signal }) => {
+      if (!vehicleId) return request<SpeedProfileData>('/analytics/speed-profile', { signal });
+      const params = new URLSearchParams({ vehicle_id: vehicleId });
+      if (start) params.set('start', start);
+      if (end) params.set('end', end);
+      return request<SpeedProfileData>(`/analytics/speed-profile?${params}`, { signal });
+    },
     enabled: !!vehicleId,
   });
 }
