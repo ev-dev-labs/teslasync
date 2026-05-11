@@ -103,6 +103,8 @@ export default function CostAnalysisPage() {
             <RangePicker
               value={{ start: startDate, end: endDate }}
               onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+              align="end"
+              triggerTestId="cost-analysis-range"
             />
             <SavedViewMenu
               route="/cost-analysis"

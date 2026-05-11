@@ -147,6 +147,15 @@ export default function ChargingListPage() {
       subtitle={t('charging.list.subtitle', 'Cost analysis, charger breakdown, energy patterns, and performance tracking')}
       actions={
         <div className="flex items-center gap-3">
+          <RangePicker
+            value={{ start: startDate, end: endDate }}
+            onChange={(r) => {
+              setRangeBatch({ from: r.start, to: r.end });
+              setPage(1);
+            }}
+            align="end"
+            triggerTestId="charging-list-range"
+          />
           <DataFreshnessAuto query={chargingQuery} />
           <SavedViewMenu
             route="/charging"
@@ -157,18 +166,6 @@ export default function ChargingListPage() {
       }
     >
       <PullToRefresh onRefresh={async () => { await refetch(); }}>
-      <FadeIn>
-        <div data-tour="charging-filters">
-          <RangePicker
-            value={{ start: startDate, end: endDate }}
-            onChange={(r) => {
-              setRangeBatch({ from: r.start, to: r.end });
-              setPage(1);
-            }}
-          />
-        </div>
-      </FadeIn>
-
       <QueryError error={error as Error} onRetry={refetch} />
 
       <FadeIn><HeroGauges stats={stats} /></FadeIn>

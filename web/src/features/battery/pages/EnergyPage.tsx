@@ -342,6 +342,8 @@ export default function EnergyPage() {
           <RangePicker
             value={{ start: startDate, end: endDate }}
             onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+            align="end"
+            triggerTestId="energy-range"
           />
           <SavedViewMenu
             route="/energy"

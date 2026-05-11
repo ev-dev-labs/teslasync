@@ -322,16 +322,25 @@ export default function MediaPlayerPage() {
       loading={isLoading}
       error={latestError as Error | null}
       actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            options={vehicles.map((v) => ({
-              value: String(v.id),
-              label: v.display_name || v.vin,
-            }))}
-            value={activeId}
-            onChange={(e) => setVehicleId(e.target.value)}
+        <div className="flex flex-wrap items-center gap-3">
+          {vehicles && vehicles.length > 1 && (
+            <Select
+              options={vehicles.map((v) => ({
+                value: String(v.id),
+                label: v.display_name || v.vin,
+              }))}
+              value={activeId}
+              onChange={(e) => setVehicleId(e.target.value)}
+            />
+          )}
+          <RangePicker
+            value={{ start, end }}
+            onChange={(r) => setRange(r)}
+            presetIds={PRESET_IDS}
+            align="end"
+            triggerTestId="media-player-range"
           />
-        ) : undefined
+        </div>
       }
     >
       {anyError && (
@@ -339,16 +348,6 @@ export default function MediaPlayerPage() {
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
         </AlertBanner>
       )}
-
-      {/* ── Time range selector ──────────────────────────────── */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <RangePicker
-          value={{ start, end }}
-          onChange={(r) => setRange(r)}
-          presetIds={PRESET_IDS}
-          triggerTestId="media-player-range"
-        />
-      </div>
 
       {/* ── Now Playing card ─────────────────────────────────── */}
       <FadeIn>

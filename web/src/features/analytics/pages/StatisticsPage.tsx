@@ -179,7 +179,7 @@ export default function StatisticsPage() {
           {vehicleOptions.length > 1 && (
             <Select value={activeId} onChange={(e) => setVehicleId(e.target.value)} options={vehicleOptions} />
           )}
-          <RangePicker value={{ start: startDate, end: endDate }} onChange={(r) => setRangeBatch({ from: r.start, to: r.end })} />
+          <RangePicker value={{ start: startDate, end: endDate }} onChange={(r) => setRangeBatch({ from: r.start, to: r.end })} align="end" triggerTestId="statistics-range" />
           <Button size="sm" onClick={() => { void refetch(); }}>
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>

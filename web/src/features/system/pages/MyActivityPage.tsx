@@ -72,16 +72,17 @@ export default function MyActivityPage() {
         'Recent actions you have taken in TeslaSync.',
       )}
       loading={isLoading}
+      actions={
+        <RangePicker
+          value={{ start, end }}
+          onChange={(r) => setRangeBatch({ start: r.start, end: r.end })}
+          align="end"
+          triggerTestId="my-activity-range"
+        />
+      }
     >
       <FadeIn>
         <GlassPanel className="space-y-4 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <RangePicker
-              value={{ start, end }}
-              onChange={(r) => setRangeBatch({ start: r.start, end: r.end })}
-            />
-          </div>
-
           {featureDisabled ? (
             <EmptyState
               icon={<Icons.securityCheck className="h-8 w-8" />}

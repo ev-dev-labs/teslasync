@@ -25,7 +25,7 @@ import {
 import { AnimatedNumber, StatCard, MetricBar, InlineMetric, KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { RangePicker } from '@/components/forms';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { useDriveScore, useDrives } from '@/api/hooks/useDriving';
 import { useUnits } from '@/hooks/useUnits';
@@ -747,21 +747,19 @@ export default function DriveScorePage() {
       title={t('driveScore.title', 'Drive Score')}
       subtitle={t('driveScore.subtitle', 'Your driving rating and breakdown')}
       loading={isLoading}
+      actions={
+        <RangePicker
+          value={{ start: startDate, end: endDate }}
+          onChange={(r) => {
+            setStartDate(r.start);
+            setEndDate(r.end);
+            handleDateApply();
+          }}
+          align="end"
+          triggerTestId="drive-score-range"
+        />
+      }
     >
-      {/* -------- Section 9: Date range filter -------- */}
-      <FadeIn>
-        <GlassPanel className="mb-6">
-          <RangePicker
-            value={{ start: startDate, end: endDate }}
-            onChange={(r) => {
-              setStartDate(r.start);
-              setEndDate(r.end);
-              handleDateApply();
-            }}
-          />
-        </GlassPanel>
-      </FadeIn>
-
       {/* -------- Empty guard -------- */}
       {!isLoading && scoredDrives.length === 0 && (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

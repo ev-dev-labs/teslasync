@@ -137,6 +137,15 @@ export default function TripListPage() {
       loading={isLoading}
       actions={
         <div className="flex items-center gap-3">
+          <RangePicker
+            value={{ start: startDate, end: endDate }}
+            onChange={(r) => {
+              setRangeBatch({ from: r.start, to: r.end });
+              setPage(1);
+            }}
+            align="end"
+            triggerTestId="trip-list-range"
+          />
           <DataFreshnessAuto query={tripsQuery} />
           <SavedViewMenu
             route="/trips"
@@ -163,16 +172,6 @@ export default function TripListPage() {
       )}
 
       {/* Date Range Filter */}
-      <FadeIn>
-        <RangePicker
-          value={{ start: startDate, end: endDate }}
-          onChange={(r) => {
-            setRangeBatch({ from: r.start, to: r.end });
-            setPage(1);
-          }}
-        />
-      </FadeIn>
-
       {/* Stats Cards */}
       <FadeIn delay={0.05}>
         {isLoading ? (

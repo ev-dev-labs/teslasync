@@ -273,6 +273,7 @@ export default function EnergyFlowPage() {
       onChange={(r) => setRange(r)}
       presetIds={PRESET_IDS}
       presetsOnly
+      align="end"
       triggerTestId="energy-flow-range"
     />
   );

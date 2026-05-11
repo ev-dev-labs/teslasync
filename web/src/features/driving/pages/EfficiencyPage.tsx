@@ -216,21 +216,21 @@ export default function EfficiencyPage() {
       subtitle={t('efficiency.subtitle', 'Energy consumption and driving efficiency analysis')}
       error={null}
       actions={
-        <SavedViewMenu
-          route="/efficiency"
-          currentQuery={savedView.currentQuery}
-          onApply={savedView.apply}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <RangePicker
+            value={{ start: startDate, end: endDate }}
+            onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+            align="end"
+            triggerTestId="efficiency-range"
+          />
+          <SavedViewMenu
+            route="/efficiency"
+            currentQuery={savedView.currentQuery}
+            onApply={savedView.apply}
+          />
+        </div>
       }
     >
-      {/* Date filter */}
-      <FadeIn>
-        <RangePicker
-          value={{ start: startDate, end: endDate }}
-          onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
-        />
-      </FadeIn>
-
       {/* Hero gauges */}
       <FadeIn>
         <GlassPanel className="p-4 sm:p-6">
