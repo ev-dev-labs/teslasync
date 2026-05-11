@@ -10,7 +10,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ChartTooltip, chartGrid, axisTickSm,
 } from '@/components/charts';
-import { RangePicker } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -118,12 +118,15 @@ export default function ChargingHeatmapPage() {
         title={t('charging.heatmap.title', 'Charging Patterns')}
         subtitle={t('charging.heatmap.subtitle', 'When and where you charge')}
         actions={
-          <RangePicker
-            value={{ start, end }}
-            onChange={setRange}
-            align="end"
-            triggerTestId="charging-heatmap-range"
-          />
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <VehicleSelect />
+            <RangePicker
+              value={{ start, end }}
+              onChange={setRange}
+              align="end"
+              triggerTestId="charging-heatmap-range"
+            />
+          </div>
         }
       >
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -142,12 +145,15 @@ export default function ChargingHeatmapPage() {
       subtitle={t('charging.heatmap.subtitle', 'When and where you charge')}
       error={error as Error | null}
       actions={
-        <RangePicker
-          value={{ start, end }}
-          onChange={setRange}
-          align="end"
-          triggerTestId="charging-heatmap-range"
-        />
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
+          <RangePicker
+            value={{ start, end }}
+            onChange={setRange}
+            align="end"
+            triggerTestId="charging-heatmap-range"
+          />
+        </div>
       }
     >
       {/* ── Stat cards ── */}

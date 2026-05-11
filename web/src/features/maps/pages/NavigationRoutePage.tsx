@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
+import { VehicleSelect } from '@/components/forms';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -528,6 +529,7 @@ export default function NavigationRoutePage() {
       error={vehiclesError as Error | null}
       actions={
         <span className="flex items-center gap-3">
+          <VehicleSelect />
           <LiveIndicator variant="compact" />
           <Button
             variant="ghost"

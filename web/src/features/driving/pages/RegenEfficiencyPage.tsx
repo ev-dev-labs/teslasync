@@ -4,7 +4,6 @@ import { Zap, Activity, Calendar } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
-import { Select } from '@/components/ui/Select';
 import {
   ChartContainer, ChartTooltip, AREA_DEFAULTS, renderAnnotationLines,
   ComposedChart, Line, Bar,
@@ -17,7 +16,7 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { RangePicker } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useRegenEfficiency, useDrives } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -53,7 +52,7 @@ export default function RegenEfficiencyPage() {
   const { t } = useTranslation();
   usePageTitle(t('regen.title', 'Regenerative Braking'));
 
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
   const { start, end, setRange } = useRangeState({
@@ -125,10 +124,6 @@ export default function RegenEfficiencyPage() {
       }));
   }, [drives, toDistanceDisplay, distanceUnit]);
 
-  const vehicleOptions = vehicles.map((v) => ({
-    value: String(v.id), label: v.display_name || v.vin,
-  }));
-
   return (
     <PageContainer
       title={t('regen.title', 'Regenerative Braking')}
@@ -136,9 +131,7 @@ export default function RegenEfficiencyPage() {
       error={error as Error | null}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
-          {vehicles.length > 0 && (
-            <Select value={String(vehicleId ?? '')} onChange={(e) => setVehicleId(Number(e.target.value))} options={vehicleOptions} />
-          )}
+          <VehicleSelect />
           <RangePicker
             value={{ start, end }}
             onChange={setRange}

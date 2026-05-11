@@ -13,12 +13,12 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Select, Pagination } from '@/components/ui';
+import { GlassPanel, Badge, Pagination } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion';
-import { RangePicker } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -59,7 +59,7 @@ export default function SoftwareUpdatesPage() {
   const { t } = useTranslation();
   usePageTitle(t('softwareUpdates.title', 'Software Updates'));
 
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const { vehicleId, vehicles } = useSelectedVehicle();
   const [page, setPage] = useState(1);
   const pageSize = 50;
   const { start, end, setRange } = useRangeState({
@@ -101,13 +101,7 @@ export default function SoftwareUpdatesPage() {
       loading={isLoading}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
-          {vehicles.length > 0 && (
-            <Select
-              value={String(vehicleId ?? '')}
-              onChange={e => setVehicleId(Number(e.target.value))}
-              options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
-            />
-          )}
+          <VehicleSelect />
           <RangePicker
             value={{ start, end }}
             onChange={(r) => {

@@ -27,7 +27,7 @@ import { InlineMetric } from '@/components/data-display/InlineMetric';
 import { MetricBar } from '@/components/data-display/MetricBar';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { RangePicker } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { FilterBar } from '@/components/forms/FilterBar';
 import { ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms/ActiveFilterChips';
@@ -428,6 +428,7 @@ export default function DrivesListPage() {
       copyLink
       actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
           <DataFreshnessAuto query={drivesQuery} />
           <div data-tour="drives-saved-views">
             <SavedViewMenu

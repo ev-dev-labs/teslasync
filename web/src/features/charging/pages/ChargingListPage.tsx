@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { QueryError } from '@/components/feedback';
-import { RangePicker } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { SavedViewMenu } from '@/components/data-display';
 import { DataFreshnessAuto } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
@@ -147,6 +147,7 @@ export default function ChargingListPage() {
       subtitle={t('charging.list.subtitle', 'Cost analysis, charger breakdown, energy patterns, and performance tracking')}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
           <RangePicker
             value={{ start: startDate, end: endDate }}
             onChange={(r) => {

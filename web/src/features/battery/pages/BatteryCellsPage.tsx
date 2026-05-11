@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
+import { VehicleSelect } from '@/components/forms';
 import { GlassPanel, Badge, Button, DataTable, type Column, useSortToggle } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
@@ -386,6 +387,7 @@ export default function BatteryCellsPage() {
       subtitle={t('Individual cell voltage monitoring and analysis')}
       loading={isLoading}
       error={error instanceof Error ? error : null}
+      actions={<VehicleSelect />}
     >
       {/* ── Summary Metrics ─── */}
       <FadeIn>

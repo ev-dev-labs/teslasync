@@ -4,7 +4,7 @@ import { DollarSign } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
-import { RangePicker } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { SavedViewMenu } from '@/components/data-display';
 import { PrintButton } from '@/components/ui';
 import { useChargingSessionsPaginated, useCostForecast } from '@/api/hooks/useCharging';
@@ -100,6 +100,7 @@ export default function CostAnalysisPage() {
       actions={
         <div className="flex flex-wrap items-center gap-3">
           <div data-print-hide className="flex flex-wrap items-center gap-3">
+            <VehicleSelect />
             <RangePicker
               value={{ start: startDate, end: endDate }}
               onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}

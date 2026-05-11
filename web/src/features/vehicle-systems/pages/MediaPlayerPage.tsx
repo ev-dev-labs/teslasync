@@ -10,9 +10,8 @@ import { cn } from '@/lib/cn';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
-import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
-import { RangePicker } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { MetricCard } from '@/components/data-display/MetricCard';
@@ -100,7 +99,7 @@ export default function MediaPlayerPage() {
   const { t } = useTranslation();
   usePageTitle(t('Media Player'));
 
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const { vehicleId } = useSelectedVehicle();
   const { start, end, setRange } = useRangeState({
     persistKey: 'media-player.range',
     defaultPresetId: '7d',
@@ -313,16 +312,7 @@ export default function MediaPlayerPage() {
       error={latestError as Error | null}
       actions={
         <div className="flex flex-wrap items-center gap-3">
-          {vehicles.length > 0 && (
-            <Select
-              options={vehicles.map((v) => ({
-                value: String(v.id),
-                label: v.display_name || v.vin,
-              }))}
-              value={activeId}
-              onChange={(e) => setVehicleId(Number(e.target.value))}
-            />
-          )}
+          <VehicleSelect />
           <RangePicker
             value={{ start, end }}
             onChange={(r) => setRange(r)}

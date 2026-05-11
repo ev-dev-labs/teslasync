@@ -5,9 +5,8 @@ import { AlertTriangle, AlertCircle } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Select } from '@/components/ui/Select';
 import { AlertBanner } from '@/components/feedback/AlertBanner';
-import { RangePicker } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { VehicleTwin } from '@/components/vehicles';
 
@@ -52,7 +51,7 @@ export default function SecurityAccessPage() {
   usePageTitle(t('admin.security.title', 'Security & Access'));
 
   /* ---- Vehicle selection (persisted across pages) ---- */
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const { vehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
 
   /* Surface useVehicles errors via the same vehiclesError binding the
@@ -106,15 +105,6 @@ export default function SecurityAccessPage() {
   } : null), [latest]);
   const timelineEvents = useMemo(() => deriveTimeline(history), [history]);
 
-  const vehicleOptions = useMemo(
-    () =>
-      vehicles.map((v) => ({
-        value: String(v.id),
-        label: v.display_name || v.vin,
-      })),
-    [vehicles],
-  );
-
   /* ---------------------------------------------------------------- */
   /*  Render                                                           */
   /* ---------------------------------------------------------------- */
@@ -127,13 +117,7 @@ export default function SecurityAccessPage() {
       error={null}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
-          {vehicles.length > 0 && (
-            <Select
-              options={vehicleOptions}
-              value={activeId}
-              onChange={(e) => setVehicleId(Number(e.target.value))}
-            />
-          )}
+          <VehicleSelect />
           <RangePicker
             value={{ start, end }}
             onChange={setRange}

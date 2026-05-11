@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Moon, Eye, Clock, Zap, DollarSign, Thermometer } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Select, DataTable, Badge, type Column } from '@/components/ui';
-import { RangePicker } from '@/components/forms';
+import { GlassPanel, DataTable, Badge, type Column } from '@/components/ui';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -44,7 +44,7 @@ export default function SleepEfficiencyPage() {
 
   const tempUnit = unitPrefs.temperature;
 
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
 
   // Date range — canonical RangePicker. The backend handler now accepts
@@ -161,14 +161,7 @@ export default function SleepEfficiencyPage() {
       error={error instanceof Error ? error : null}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
-          {vehicles.length > 0 && (
-            <Select
-              value={vehicleId != null ? String(vehicleId) : ''}
-              onChange={(e) => setVehicleId(Number(e.target.value))}
-              options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-              aria-label={t('sleep.selectVehicle', 'Select vehicle')}
-            />
-          )}
+          <VehicleSelect ariaLabel={t('sleep.selectVehicle', 'Select vehicle')} />
           <RangePicker
             value={{ start, end }}
             onChange={setRange}

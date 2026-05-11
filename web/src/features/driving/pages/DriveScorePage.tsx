@@ -24,7 +24,7 @@ import {
 } from '@/components/charts';
 import { AnimatedNumber, StatCard, MetricBar, InlineMetric, KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
-import { RangePicker } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { useDriveScore, useDrives } from '@/api/hooks/useDriving';
@@ -748,16 +748,19 @@ export default function DriveScorePage() {
       subtitle={t('driveScore.subtitle', 'Your driving rating and breakdown')}
       loading={isLoading}
       actions={
-        <RangePicker
-          value={{ start: startDate, end: endDate }}
-          onChange={(r) => {
-            setStartDate(r.start);
-            setEndDate(r.end);
-            handleDateApply();
-          }}
-          align="end"
-          triggerTestId="drive-score-range"
-        />
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
+          <RangePicker
+            value={{ start: startDate, end: endDate }}
+            onChange={(r) => {
+              setStartDate(r.start);
+              setEndDate(r.end);
+              handleDateApply();
+            }}
+            align="end"
+            triggerTestId="drive-score-range"
+          />
+        </div>
       }
     >
       {/* -------- Empty guard -------- */}

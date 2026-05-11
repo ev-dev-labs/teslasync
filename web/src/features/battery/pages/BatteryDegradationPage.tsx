@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
+import { VehicleSelect } from '@/components/forms';
 import {
   GlassPanel, Badge, DataTable, type Column,
 } from '@/components/ui';
@@ -233,8 +234,11 @@ export default function BatteryDegradationPage() {
       loading={isLoading}
       error={error as Error | null}
       actions={
-        // Battery health analytics derive from a daily cagg; force amber after 24h.
-        <DataFreshnessAuto query={healthQuery} forceStaleAfterMs={24 * 60 * 60 * 1000} />
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
+          {/* Battery health analytics derive from a daily cagg; force amber after 24h. */}
+          <DataFreshnessAuto query={healthQuery} forceStaleAfterMs={24 * 60 * 60 * 1000} />
+        </div>
       }
     >
       {/* ── Summary Metrics ───────────────────────────── */}

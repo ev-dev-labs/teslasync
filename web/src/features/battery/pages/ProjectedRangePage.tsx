@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
+import { VehicleSelect } from '@/components/forms';
 import { GlassPanel, Badge, Slider } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
@@ -159,6 +160,7 @@ export default function ProjectedRangePage() {
       subtitle={t('range.subtitle', 'Personalized range estimates based on your driving patterns, weather, and conditions')}
       loading={isLoading}
       error={error instanceof Error ? error : null}
+      actions={<VehicleSelect />}
     >
       {/* ── Hero: Current range vs Tesla estimate ───── */}
       <FadeIn>

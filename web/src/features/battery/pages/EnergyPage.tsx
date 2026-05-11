@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Zap, Leaf, Fuel, Sun, Moon, ArrowRight, Activity } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, Select, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, DataTable, type Column } from '@/components/ui';
 import {
   RadialGauge, ChartContainer, ChartLegend, ChartTooltip, ChartGradient,
   chartGrid, axisTickSm, renderAnnotationLines,
@@ -16,7 +16,7 @@ import {
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, QueryError, EmptyState, ChartBlockSkeleton, StatGridSkeleton, PageHeaderSkeleton } from '@/components/feedback';
 import { Currency, SavedViewMenu } from '@/components/data-display';
-import { RangePicker } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 
 import { useEnergyStats } from '@/api/hooks/useEnergy';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
@@ -141,7 +141,7 @@ export default function EnergyPage() {
   const savedView = useSavedViewUrl();
 
   /* ── Vehicle selector ─────────────────────────────────────────── */
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const { vehicleId } = useSelectedVehicle();
 
   /* ── Date range ───────────────────────────────────────────────── */
   const defaultStartDate = useMemo(() => {
@@ -330,14 +330,7 @@ export default function EnergyPage() {
       error={statsError as Error | null}
       actions={
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          {vehicles.length > 0 && (
-            <Select
-              value={String(vehicleId ?? '')}
-              onChange={(e) => setVehicleId(Number(e.target.value))}
-              options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-              className="text-sm"
-            />
-          )}
+          <VehicleSelect />
           <RangePicker
             value={{ start: startDate, end: endDate }}
             onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}

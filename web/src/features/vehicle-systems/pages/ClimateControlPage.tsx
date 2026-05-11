@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
+import { VehicleSelect } from '@/components/forms';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -423,6 +424,7 @@ export default function ClimateControlPage() {
       error={error as Error | null}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
           <Button
             variant="ghost"
             size="sm"

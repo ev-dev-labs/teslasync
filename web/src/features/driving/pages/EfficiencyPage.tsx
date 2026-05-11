@@ -14,7 +14,7 @@ import {
 } from '@/components/charts';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
-import { RangePicker } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
@@ -217,6 +217,7 @@ export default function EfficiencyPage() {
       error={null}
       actions={
         <div className="flex flex-wrap items-center gap-3">
+          <VehicleSelect />
           <RangePicker
             value={{ start: startDate, end: endDate }}
             onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
