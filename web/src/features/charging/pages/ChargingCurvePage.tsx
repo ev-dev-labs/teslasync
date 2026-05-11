@@ -4,10 +4,12 @@ import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
+import { RangePicker } from '@/components/forms';
 import {
   SummaryStatsGrid,
   SessionCurveChart,
@@ -34,8 +36,15 @@ export default function ChargingCurvePage() {
 
   const activeVehicleId = vehicleId ?? vehicles?.[0]?.id ?? null;
 
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'charging-curve.range',
+    defaultPresetId: 'all',
+  });
+
   const { data: sessions, isLoading } = useChargingSessionsPaginated(activeVehicleId, {
     limit: 200,
+    start,
+    end,
   });
 
   const vehicleOptions = useMemo(
@@ -116,24 +125,36 @@ export default function ChargingCurvePage() {
     return (
       <FadeIn>
         <div className="mx-auto max-w-7xl px-4 py-6">
-          <h1 className="text-2xl font-bold text-white">
-            {t('charging.curve.title', 'Charging Curve')}
-          </h1>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            {t('charging.curve.subtitle', 'Power vs state-of-charge across sessions')}
-          </p>
-
-          {vehicleOptions.length > 1 && (
-            <div className="mt-4">
-              <Select
-                value={String(activeVehicleId ?? '')}
-                onChange={handleVehicleChange}
-                options={vehicleOptions}
-                placeholder={t('charging.selectVehicle', 'Select vehicle')}
-                className="w-48"
-              />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-white">
+                {t('charging.curve.title', 'Charging Curve')}
+              </h1>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                {t('charging.curve.subtitle', 'Power vs state-of-charge across sessions')}
+              </p>
             </div>
-          )}
+            <div className="flex items-center gap-3">
+              <RangePicker
+                value={{ start, end }}
+                onChange={(r) => {
+                  setRange(r);
+                  setSelectedSessionId(null);
+                }}
+                align="end"
+                triggerTestId="charging-curve-range"
+              />
+              {vehicleOptions.length > 1 && (
+                <Select
+                  value={String(activeVehicleId ?? '')}
+                  onChange={handleVehicleChange}
+                  options={vehicleOptions}
+                  placeholder={t('charging.selectVehicle', 'Select vehicle')}
+                  className="w-48"
+                />
+              )}
+            </div>
+          </div>
 
           <GlassPanel className="mt-8 flex flex-col items-center justify-center py-16">
             <p className="text-lg font-medium text-[var(--text-secondary)]">
@@ -156,15 +177,26 @@ export default function ChargingCurvePage() {
       title={t('charging.curve.title', 'Charging Curve')}
       subtitle={t('charging.curve.subtitle', 'Power vs state-of-charge across sessions')}
       actions={
-        vehicleOptions.length > 1 ? (
-          <Select
-            value={String(activeVehicleId ?? '')}
-            onChange={handleVehicleChange}
-            options={vehicleOptions}
-            placeholder={t('charging.selectVehicle', 'Select vehicle')}
-            className="w-48"
+        <div className="flex items-center gap-3">
+          <RangePicker
+            value={{ start, end }}
+            onChange={(r) => {
+              setRange(r);
+              setSelectedSessionId(null);
+            }}
+            align="end"
+            triggerTestId="charging-curve-range"
           />
-        ) : undefined
+          {vehicleOptions.length > 1 ? (
+            <Select
+              value={String(activeVehicleId ?? '')}
+              onChange={handleVehicleChange}
+              options={vehicleOptions}
+              placeholder={t('charging.selectVehicle', 'Select vehicle')}
+              className="w-48"
+            />
+          ) : null}
+        </div>
       }
     >
       <div className="space-y-6">
