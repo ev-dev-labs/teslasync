@@ -16,6 +16,7 @@ import { FadeIn } from '@/components/motion';
 import { VisuallyHidden } from '@/components/a11y';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/cn';
 import {
   useChatSessions,
@@ -57,7 +58,15 @@ export default function ChatbotPage() {
   const [sessionId, setSessionId] = useState('');
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<UIChatMessage[]>([]);
-  const [showSessions, setShowSessions] = useState(true);
+  const isMobile = useIsMobile();
+  // History panel: hidden by default on mobile (overlay drawer), open by default on desktop.
+  const [showSessions, setShowSessions] = useState(!isMobile);
+  // When the viewport breakpoint flips (rotation, resize) snap the panel to
+  // the appropriate default so we don't strand a mobile user with a 288px
+  // sidebar consuming the whole screen.
+  useEffect(() => {
+    setShowSessions(!isMobile);
+  }, [isMobile]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -308,25 +317,58 @@ export default function ChatbotPage() {
       }
     >
       <div
-        className="flex flex-1 gap-4 min-h-0"
-        style={{ height: 'calc(100vh - 14rem)' }}
+        className="flex flex-1 gap-4 min-h-0 relative"
+        style={{ height: 'calc(100dvh - 12rem)' }}
       >
         {showSessions && (
-          <FadeIn>
-            <SessionList
-              sessions={sessions}
-              activeSessionId={sessionId}
-              onSelect={loadSession}
-              onNewChat={startNewSession}
-              onRename={handleRename}
-              onDelete={handleDelete}
-              isLoading={sessionsQuery.isLoading}
-              className="h-full"
-            />
-          </FadeIn>
+          isMobile ? (
+            <div
+              className="fixed inset-0 z-40 flex"
+              role="dialog"
+              aria-modal="true"
+              aria-label={t('chatbot.history', 'History')}
+            >
+              <div
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                onClick={() => setShowSessions(false)}
+                aria-hidden="true"
+              />
+              <div className="relative h-full w-[85vw] max-w-sm">
+                <SessionList
+                  sessions={sessions}
+                  activeSessionId={sessionId}
+                  onSelect={(id) => {
+                    loadSession(id);
+                    setShowSessions(false);
+                  }}
+                  onNewChat={() => {
+                    startNewSession();
+                    setShowSessions(false);
+                  }}
+                  onRename={handleRename}
+                  onDelete={handleDelete}
+                  isLoading={sessionsQuery.isLoading}
+                  className="h-full w-full"
+                />
+              </div>
+            </div>
+          ) : (
+            <FadeIn>
+              <SessionList
+                sessions={sessions}
+                activeSessionId={sessionId}
+                onSelect={loadSession}
+                onNewChat={startNewSession}
+                onRename={handleRename}
+                onDelete={handleDelete}
+                isLoading={sessionsQuery.isLoading}
+                className="h-full"
+              />
+            </FadeIn>
+          )
         )}
 
-        <GlassPanel className="flex flex-col flex-1 !p-0 overflow-hidden">
+        <GlassPanel className="flex flex-col flex-1 min-w-0 !p-0 overflow-hidden">
           <div
             role="log"
             aria-live="polite"
@@ -401,11 +443,11 @@ export default function ChatbotPage() {
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="p-4 border-t border-[var(--glass-border)]">
+          <div className="p-3 sm:p-4 border-t border-[var(--glass-border)]">
             <VisuallyHidden as="label" htmlFor="chatbot-input">
               {t('chatbot.inputLabel', 'Message')}
             </VisuallyHidden>
-            <div className="flex items-end gap-3">
+            <div className="flex items-end gap-2 sm:gap-3">
               <Textarea
                 ref={inputRef}
                 id="chatbot-input"
@@ -414,10 +456,10 @@ export default function ChatbotPage() {
                 onKeyDown={handleKeyDown}
                 placeholder={t(
                   'chatbot.placeholder',
-                  'Ask about your fleet… (Shift+Enter for newline)',
+                  'Ask about your fleet…',
                 )}
                 rows={1}
-                className="flex-1 resize-none min-h-[40px] max-h-40"
+                className="flex-1 min-w-0 resize-none min-h-[40px] max-h-40"
                 aria-label={t('chatbot.inputLabel', 'Message')}
               />
               {isStreaming ? (
@@ -427,8 +469,9 @@ export default function ChatbotPage() {
                   icon={<Square className="h-4 w-4" />}
                   aria-label={t('chatbot.actions.stopStreaming', 'Stop streaming')}
                   title={t('chatbot.actions.stopHint', 'Stop reveal (Esc)')}
+                  className="shrink-0"
                 >
-                  {t('chatbot.actions.stop', 'Stop')}
+                  <span className="hidden sm:inline">{t('chatbot.actions.stop', 'Stop')}</span>
                 </Button>
               ) : (
                 <Button
@@ -437,6 +480,7 @@ export default function ChatbotPage() {
                   variant="primary"
                   icon={<Send className="h-4 w-4" />}
                   aria-label={t('chatbot.actions.send', 'Send message')}
+                  className="shrink-0"
                 />
               )}
             </div>
