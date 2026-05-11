@@ -312,63 +312,66 @@ export default function SignalExplorerPage() {
           />
         </div>
 
-        {/* Date range — hidden in live mode */}
-        {!isLive && (
-        <div>
-          <span className="block text-[10px] font-medium uppercase tracking-wider mb-1.5 text-[var(--text-muted)]">
-            {t('Time Range')}
-          </span>
-          <RangePicker
-            value={{ start, end }}
-            onChange={handleRangeChange}
-            presetIds={['today', 'yesterday', '7d', '30d', '90d', 'all']}
-            triggerTestId="signal-explorer-range"
-          />
-        </div>
-        )}
-
-        {/* Query controls */}
-        <div className="flex items-end gap-3 justify-end">
-          <Select
-            label={t('Per Page')}
-            value={String(perPage)}
-            onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
-            options={[
-              { value: '25', label: '25' },
-              { value: '50', label: '50' },
-              { value: '100', label: '100' },
-              { value: '500', label: '500' },
-            ]}
-            className="w-24"
-          />
-          <Button
-            variant="primary"
-            icon={<Activity className="h-4 w-4" />}
-            onClick={handleExplore}
-            disabled={!canExplore || isLive}
-            loading={hasData && dataLoading}
-          >
-            {t('Explore')}
-          </Button>
-          <Button
-            variant={isLive ? 'danger' : 'outline'}
-            icon={<Radio className="h-4 w-4" />}
-            onClick={() => setIsLive(prev => !prev)}
-            disabled={selectedSignals.length === 0}
-          >
-            {isLive ? (
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                {t('Stop Live')}
-              </span>
-            ) : t('Live')}
-          </Button>
-          <HelpTooltip
-            i18nKey="help.signal.live"
-            defaultValue="Live mode streams real-time signal values via SSE. Maintains a rolling 5-minute window throttled to 2 Hz updates."
-            ariaLabel={t('help.signal.live.aria', { defaultValue: 'More info about live signal streaming' })}
-            placement="left"
-          />
+        {/* Time range + per-page + explore + live — single compact row */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex items-end gap-2">
+            {!isLive && (
+              <label className="space-y-1">
+                <span className="block text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                  {t('Time Range')}
+                </span>
+                <RangePicker
+                  value={{ start, end }}
+                  onChange={handleRangeChange}
+                  presetIds={['today', 'yesterday', '7d', '30d', '90d', 'all']}
+                  align="start"
+                  triggerTestId="signal-explorer-range"
+                />
+              </label>
+            )}
+          </div>
+          <div className="flex items-end gap-3">
+            <Select
+              label={t('Per Page')}
+              value={String(perPage)}
+              onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
+              options={[
+                { value: '25', label: '25' },
+                { value: '50', label: '50' },
+                { value: '100', label: '100' },
+                { value: '500', label: '500' },
+              ]}
+              className="w-24"
+            />
+            <Button
+              variant="primary"
+              icon={<Activity className="h-4 w-4" />}
+              onClick={handleExplore}
+              disabled={!canExplore || isLive}
+              loading={hasData && dataLoading}
+            >
+              {t('Explore')}
+            </Button>
+            <Button
+              variant={isLive ? 'danger' : 'outline'}
+              icon={<Radio className="h-4 w-4" />}
+              onClick={() => setIsLive(prev => !prev)}
+              disabled={selectedSignals.length === 0}
+            >
+              {isLive ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                  {t('Stop Live')}
+                </span>
+              ) : t('Live')}
+            </Button>
+            <HelpTooltip
+              i18nKey="help.signal.live"
+              defaultValue="Live mode streams real-time signal values via SSE. Maintains a rolling 5-minute window throttled to 2 Hz updates."
+              ariaLabel={t('help.signal.live.aria', { defaultValue: 'More info about live signal streaming' })}
+              placement="left"
+            />
+          </div>
         </div>
       </GlassPanel>
 
