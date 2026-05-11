@@ -90,6 +90,13 @@ const navI18nKeys: Record<string, string> = {
   'Projected Range': 'nav.projectedRange',
   'Statistics': 'nav.statistics',
   'Alerts': 'nav.alerts',
+  'Inbox': 'nav.notificationsInbox',
+  'Channels': 'nav.notificationsChannels',
+  'Webhooks': 'nav.notificationsWebhooks',
+  'Browser': 'nav.notificationsBrowser',
+  'Quiet Hours': 'nav.notificationsQuietHours',
+  'Rules': 'nav.notificationsRules',
+  'Studio': 'nav.notificationsStudio',
   'Commands': 'nav.commands',
   'Command History': 'nav.commandHistory',
   'Geofences': 'nav.geofences',
@@ -159,10 +166,17 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/commands': ['commands', 'control', 'remote'],
   '/command-history': ['command log', 'remote history'],
   '/automations': ['automation', 'rules', 'workflows'],
-  '/alerts': ['alerts', 'warnings', 'notifications'],
-  '/alert-studio': ['alert rules', 'studio', 'conditions'],
+  '/notifications': ['notifications', 'messages', 'inbox'],
+  '/notifications/inbox': ['inbox', 'notifications', 'messages'],
+  '/notifications/archived': ['archived', 'notifications'],
+  '/notifications/alerts': ['alerts', 'warnings', 'critical'],
+  '/notifications/channels': ['channels', 'discord', 'slack', 'telegram', 'email', 'ntfy', 'pushover', 'webhook'],
+  '/notifications/webhooks': ['webhooks', 'hmac', 'http endpoint'],
+  '/notifications/browser': ['browser notifications', 'desktop push', 'permission'],
+  '/notifications/quiet-hours': ['quiet hours', 'do not disturb', 'dnd', 'schedule'],
+  '/notifications/rules': ['alert rules', 'rules', 'conditions'],
+  '/notifications/studio': ['alert studio', 'studio', 'rule builder'],
   '/geofences': ['geofence', 'zones', 'places'],
-  '/notifications': ['notifications', 'messages'],
   '/guard-mode': ['guard', 'sentry', 'security'],
   '/chatbot': ['ai', 'assistant', 'chat'],
   '/media-player': ['media', 'music', 'player'],
@@ -347,13 +361,18 @@ export const navSections = [
     ],
   },
   {
-    title: 'Alerts',
+    title: 'Notifications',
     items: [
+      { to: '/notifications/inbox', icon: Icons.notifications, label: 'Inbox', color: 'text-purple-400' },
+      { to: '/notifications/alerts', icon: Icons.notificationsActive, label: 'Alerts', color: 'text-red-400' },
+      { to: '/notifications/channels', icon: Icons.send, label: 'Channels', color: 'text-cyan-400' },
+      { to: '/notifications/webhooks', icon: Icons.cloud, label: 'Webhooks', color: 'text-sky-400' },
+      { to: '/notifications/quiet-hours', icon: Icons.clock, label: 'Quiet Hours', color: 'text-indigo-400' },
+      { to: '/notifications/browser', icon: Icons.notificationsActive, label: 'Browser', color: 'text-fuchsia-400' },
+      { to: '/notifications/rules', icon: Icons.filter, label: 'Rules', color: 'text-amber-400' },
+      { to: '/notifications/studio', icon: Icons.notificationsAdd, label: 'Studio', color: 'text-neon-cyan' },
       { to: '/automations', icon: Icons.workflow, label: 'Automations', color: 'text-neon-cyan' },
-      { to: '/alerts', icon: Icons.notifications, label: 'Alerts', color: 'text-red-400' },
-      { to: '/alert-studio', icon: Icons.notificationsAdd, label: 'Alert Studio', color: 'text-neon-cyan' },
       { to: '/geofences', icon: Icons.fence, label: 'Geofences', color: 'text-lime-400' },
-      { to: '/notifications', icon: Icons.notificationsActive, label: 'Notifications', color: 'text-purple-400' },
     ],
   },
   {
@@ -475,7 +494,7 @@ function findNavItemByExactPath(to: string) {
  * which renders the same bell + badge but opens an in-place triage panel
  * on desktop click (latest 10 unread + Mark-all-read + View-all). On
  * mobile (viewport ≤ 640 px) the popover is bypassed and the trigger
- * navigates straight to /notifications, preserving the original UX
+ * navigates straight to /notifications/inbox, preserving the original UX
  * where popover positioning would clip on narrow viewports.
  */
 
@@ -981,7 +1000,7 @@ export default function Layout() {
         <span className={cn('relative z-10 min-w-0 truncate transition-colors', isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]')}>
           {navLabel(label)}
         </span>
-        {to === '/alerts' && unreadAlerts > 0 && (
+        {to === '/notifications/alerts' && unreadAlerts > 0 && (
           <span className="relative z-10 ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-red/20 px-1.5 text-[10px] font-bold text-neon-red ring-1 ring-neon-red/30">
             {unreadAlerts > 9 ? '9+' : unreadAlerts}
           </span>

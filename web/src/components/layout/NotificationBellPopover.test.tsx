@@ -294,7 +294,7 @@ describe('NotificationBellPopover', () => {
     expect(bulkMarkReadMutate).not.toHaveBeenCalled()
   })
 
-  it('"View all" navigates to /notifications and closes the popover', async () => {
+  it('"View all" navigates to /notifications/inbox and closes the popover', async () => {
     renderPopover('/dashboard')
     fireEvent.click(
       screen.getByRole('button', { name: /3 unread notifications/i }),
@@ -302,12 +302,12 @@ describe('NotificationBellPopover', () => {
     await screen.findByRole('dialog')
     fireEvent.click(screen.getByRole('button', { name: /View all/i }))
     await waitFor(() =>
-      expect(screen.getByTestId('location').textContent).toBe('/notifications'),
+      expect(screen.getByTestId('location').textContent).toBe('/notifications/inbox'),
     )
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('clicking a row navigates to /notifications and closes the popover', async () => {
+  it('clicking a row navigates to /notifications/inbox and closes the popover', async () => {
     renderPopover('/dashboard')
     fireEvent.click(
       screen.getByRole('button', { name: /3 unread notifications/i }),
@@ -317,7 +317,7 @@ describe('NotificationBellPopover', () => {
     const row = screen.getByRole('button', { name: /Battery low/i })
     fireEvent.click(row)
     await waitFor(() =>
-      expect(screen.getByTestId('location').textContent).toBe('/notifications'),
+      expect(screen.getByTestId('location').textContent).toBe('/notifications/inbox'),
     )
     expect(screen.queryByRole('dialog')).toBeNull()
   })
@@ -369,7 +369,7 @@ describe('NotificationBellPopover', () => {
     // No dialog opens
     expect(screen.queryByRole('dialog')).toBeNull()
     await waitFor(() =>
-      expect(screen.getByTestId('location').textContent).toBe('/notifications'),
+      expect(screen.getByTestId('location').textContent).toBe('/notifications/inbox'),
     )
   })
 

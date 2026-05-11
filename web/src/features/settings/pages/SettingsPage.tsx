@@ -21,8 +21,6 @@ import {
   ActiveOrdersSection,
   GeneralSettings,
   GasPriceSettings,
-  NotificationSettings,
-  QuietHoursPanel,
   AppearanceSettings,
   AdvancedSettings,
   SettingsSearch,
@@ -35,10 +33,6 @@ import { TOTPEnrollmentSection } from '../components/TOTPEnrollmentSection'
 // rationale as TOTPEnrollmentSection above; the components barrel
 // is not in the prompt's allowed-files regex.
 import { SettingsExportImport } from '../components/SettingsExportImport'
-// Phase-46 / Prompt 37 — Webhook channels. Direct import for the
-// same reason: the `../components` barrel is outside this prompt's
-// allowed-files regex.
-import { WebhookChannelsSection } from '../components/WebhookChannelsSection'
 // Phase-46 / Prompt 42 — Active sessions / device management. Same
 // direct-import rationale: barrel is outside the prompt's
 // allowed-files regex.
@@ -51,6 +45,12 @@ import { ResetSection } from '../components/ResetSection'
 // GDPR consent management). Direct import for the same barrel-scope
 // rationale.
 import { PrivacySection } from '../components/PrivacySection'
+// Notifications consolidation — three Settings sub-sections (Browser
+// Notifications, Webhooks, Quiet Hours) were promoted to first-class
+// pages under the Notifications side-nav group. Settings now surfaces
+// link cards so longtime users still find them from the Settings page.
+import { Bell, Send as WebhookIcon, Moon } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 export default function SettingsPage() {
   const { t } = useTranslation('settings')
@@ -141,13 +141,43 @@ export default function SettingsPage() {
         <GasPriceSettings />
       </section>
       <section id="notifications">
-        <NotificationSettings />
-      </section>
-      <section id="webhooks">
-        <WebhookChannelsSection />
-      </section>
-      <section id="quiet-hours">
-        <QuietHoursPanel />
+        <FadeIn delay={0.06}>
+          <GlassPanel className="p-5 space-y-3">
+            <div className="flex items-center gap-3">
+              <IconBox color="purple"><Bell className="h-5 w-5" /></IconBox>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('moved.notifications.title', 'Notifications moved')}</h2>
+                <p className="text-xs text-[var(--text-muted)]">{t('moved.notifications.body', 'Browser notifications, webhooks, and quiet hours each have their own page now.')}</p>
+              </div>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Link
+                to="/notifications/browser"
+                className="flex items-center gap-2 rounded-lg border border-[var(--glass-border)] bg-white/[0.02] px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+              >
+                <Bell className="h-4 w-4 shrink-0 text-purple-300" />
+                <span className="truncate">{t('moved.notifications.browser', 'Browser notifications')}</span>
+                <ExternalLink className="ml-auto h-3 w-3 shrink-0 text-[var(--text-muted)]" />
+              </Link>
+              <Link
+                to="/notifications/webhooks"
+                className="flex items-center gap-2 rounded-lg border border-[var(--glass-border)] bg-white/[0.02] px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+              >
+                <WebhookIcon className="h-4 w-4 shrink-0 text-sky-300" />
+                <span className="truncate">{t('moved.notifications.webhooks', 'Webhooks')}</span>
+                <ExternalLink className="ml-auto h-3 w-3 shrink-0 text-[var(--text-muted)]" />
+              </Link>
+              <Link
+                to="/notifications/quiet-hours"
+                className="flex items-center gap-2 rounded-lg border border-[var(--glass-border)] bg-white/[0.02] px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+              >
+                <Moon className="h-4 w-4 shrink-0 text-indigo-300" />
+                <span className="truncate">{t('moved.notifications.quietHours', 'Quiet hours')}</span>
+                <ExternalLink className="ml-auto h-3 w-3 shrink-0 text-[var(--text-muted)]" />
+              </Link>
+            </div>
+          </GlassPanel>
+        </FadeIn>
       </section>
       <section id="appearance">
         <AppearanceSettings />

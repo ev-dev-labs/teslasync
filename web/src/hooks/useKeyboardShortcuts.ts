@@ -20,7 +20,7 @@ export const GOTO_SHORTCUTS: Record<string, { path: string; label: string }> = {
   'a': { path: '/analytics', label: 'Analytics' },
   'e': { path: '/efficiency', label: 'Efficiency' },
   's': { path: '/settings', label: 'Settings' },
-  'n': { path: '/notifications', label: 'Notifications' },
+  'n': { path: '/notifications/inbox', label: 'Notifications' },
   'l': { path: '/live-signals', label: 'Live Signals' },
   'o': { path: '/automations', label: 'Automations' },
   'x': { path: '/commands', label: 'Commands' },

@@ -106,10 +106,15 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'AutomationBuilderPage', load: () => import('../features/automations/pages/AutomationBuilderPage') },
 
   // Notifications
-  { name: 'Alerts', load: () => import('../features/notifications/pages/AlertsPage') },
+  { name: 'AlertsListPage', load: () => import('../features/notifications/pages/AlertsListPage') },
   { name: 'AlertStudio', load: () => import('../features/notifications/pages/AlertStudioPage') },
   { name: 'AlertRulesPage', load: () => import('../features/notifications/pages/AlertRulesPage') },
-  { name: 'Notifications', load: () => import('../features/notifications/pages/NotificationsPage') },
+  { name: 'InboxPage', load: () => import('../features/notifications/pages/InboxPage') },
+  { name: 'ArchivedPage', load: () => import('../features/notifications/pages/ArchivedPage') },
+  { name: 'ChannelsPage', load: () => import('../features/notifications/pages/ChannelsPage') },
+  { name: 'WebhooksPage', load: () => import('../features/notifications/pages/WebhooksPage') },
+  { name: 'BrowserNotificationsPage', load: () => import('../features/notifications/pages/BrowserNotificationsPage') },
+  { name: 'QuietHoursPage', load: () => import('../features/notifications/pages/QuietHoursPage') },
 
   // Telemetry
   { name: 'SignalExplorer', load: () => import('../features/telemetry/pages/SignalExplorerPage') },

@@ -228,7 +228,7 @@ export const commandRegistry: CommandDefinition[] = [
     icon: Icons.notifications,
     section: 'actions',
     keywords: ['alert', 'rule', 'new', 'create', 'notification', 'notify'],
-    perform: (ctx) => ctx.navigate('/alert-studio'),
+    perform: (ctx) => ctx.navigate('/notifications/studio'),
   },
   {
     id: 'action.alerts.test',
@@ -246,7 +246,7 @@ export const commandRegistry: CommandDefinition[] = [
     icon: Icons.notificationsActive,
     section: 'actions',
     keywords: ['notifications', 'history', 'log', 'past'],
-    perform: (ctx) => ctx.navigate('/notifications'),
+    perform: (ctx) => ctx.navigate('/notifications/inbox'),
   },
   {
     id: 'action.commands.history',

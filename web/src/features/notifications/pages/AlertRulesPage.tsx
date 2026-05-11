@@ -148,7 +148,7 @@ export default function AlertRulesPage() {
               )}
               actionTo={{
                 label: t('alertRules.empty.cta', 'Open Alert Studio'),
-                to: '/alert-studio',
+                to: '/notifications/studio',
               }}
             />
           ) : (
@@ -255,7 +255,7 @@ export default function AlertRulesPage() {
 
         <div className="mt-4 flex justify-end">
           <Link
-            to="/alert-studio"
+            to="/notifications/studio"
             className="inline-flex items-center gap-2 rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
           >
             <Icons.add className="h-4 w-4" />

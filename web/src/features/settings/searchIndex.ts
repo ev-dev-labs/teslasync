@@ -223,7 +223,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Notifications ───────────────────────────────────────────────
     {
       id: 'notifications.browser-permission',
-      href: '/settings#notifications',
+      href: '/notifications/browser',
       section: 'notifications',
       title: t('search.entries.notifications.browser.title', 'Browser notifications'),
       description: t('search.entries.notifications.browser.desc', 'Enable browser notifications when the tab is in the background.'),
@@ -231,7 +231,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'notifications.alerts',
-      href: '/settings#notifications',
+      href: '/notifications/browser',
       section: 'notifications',
       title: t('search.entries.notifications.alerts.title', 'Alert notifications'),
       description: t('search.entries.notifications.alerts.desc', 'Get notified when an alert rule fires.'),
@@ -239,7 +239,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'notifications.export-status',
-      href: '/settings#notifications',
+      href: '/notifications/browser',
       section: 'notifications',
       title: t('search.entries.notifications.exportStatus.title', 'Export completion notifications'),
       description: t('search.entries.notifications.exportStatus.desc', 'Get notified when a CSV/JSON export finishes.'),
@@ -247,7 +247,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'notifications.tab-badge',
-      href: '/settings#notifications',
+      href: '/notifications/browser',
       section: 'notifications',
       title: t('search.entries.notifications.tabBadge.title', 'Browser tab unread badge'),
       description: t('search.entries.notifications.tabBadge.desc', 'Show unread count in the browser tab title and favicon.'),
@@ -255,7 +255,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'notifications.critical-flash',
-      href: '/settings#notifications',
+      href: '/notifications/browser',
       section: 'notifications',
       title: t('search.entries.notifications.criticalFlash.title', 'Critical alert tab flash'),
       description: t('search.entries.notifications.criticalFlash.desc', 'Flash the browser tab title on critical alerts.'),
@@ -263,7 +263,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'notifications.sound-master',
-      href: '/settings#notifications',
+      href: '/notifications/browser',
       section: 'notifications',
       title: t('search.entries.notifications.soundMaster.title', 'Notification sounds'),
       description: t('search.entries.notifications.soundMaster.desc', 'Play short audio cues when alerts and completion events arrive.'),
@@ -271,7 +271,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'notifications.sound-channels',
-      href: '/settings#notifications',
+      href: '/notifications/browser',
       section: 'notifications',
       title: t('search.entries.notifications.soundChannels.title', 'Per-channel notification sounds'),
       description: t('search.entries.notifications.soundChannels.desc', 'Toggle sound separately for critical, warning, and info alerts plus charge/drive/automation completions.'),
@@ -279,7 +279,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'notifications.sound-volume',
-      href: '/settings#notifications',
+      href: '/notifications/browser',
       section: 'notifications',
       title: t('search.entries.notifications.soundVolume.title', 'Notification sound volume'),
       description: t('search.entries.notifications.soundVolume.desc', 'Adjust how loud notification cues play.'),
@@ -289,7 +289,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Quiet hours / Do-Not-Disturb (Phase-46 / Prompt 19) ──────────
     {
       id: 'quiet-hours.windows',
-      href: '/settings#quiet-hours',
+      href: '/notifications/quiet-hours',
       section: 'quiet-hours',
       title: t('search.entries.quietHours.windows.title', 'Quiet hours windows'),
       description: t('search.entries.quietHours.windows.desc', 'Defer non-critical notifications during sleep, work meetings, or any time-of-day window.'),
@@ -297,7 +297,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'quiet-hours.bypass-severities',
-      href: '/settings#quiet-hours',
+      href: '/notifications/quiet-hours',
       section: 'quiet-hours',
       title: t('search.entries.quietHours.bypass.title', 'Quiet hours bypass severities'),
       description: t('search.entries.quietHours.bypass.desc', 'Choose which severities (e.g. critical) still ring through during quiet hours.'),
@@ -305,7 +305,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'quiet-hours.timezone',
-      href: '/settings#quiet-hours',
+      href: '/notifications/quiet-hours',
       section: 'quiet-hours',
       title: t('search.entries.quietHours.timezone.title', 'Quiet hours timezone'),
       description: t('search.entries.quietHours.timezone.desc', 'Pick the IANA timezone the start/end times are evaluated against.'),
@@ -450,7 +450,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Webhook channels (Phase-46 / Prompt 37) ─────────────────────
     {
       id: 'webhooks.list',
-      href: '/settings#webhooks',
+      href: '/notifications/webhooks',
       section: 'webhooks',
       title: t('search.entries.webhooks.list.title', 'Webhook channels'),
       description: t(
@@ -470,7 +470,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'webhooks.signing',
-      href: '/settings#webhooks',
+      href: '/notifications/webhooks',
       section: 'webhooks',
       title: t('search.entries.webhooks.signing.title', 'Webhook HMAC signing'),
       description: t(
@@ -481,7 +481,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'webhooks.test',
-      href: '/settings#webhooks',
+      href: '/notifications/webhooks',
       section: 'webhooks',
       title: t('search.entries.webhooks.test.title', 'Test a webhook channel'),
       description: t(

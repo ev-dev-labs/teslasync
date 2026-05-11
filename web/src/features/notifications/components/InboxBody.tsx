@@ -1,47 +1,51 @@
 /**
- * NotificationsPage — three-tab notifications hub.
+ * InboxBody — shared notification-log inbox surface.
  *
- *   Inbox     — non-archived notification log entries with filter, search,
- *               bulk select/archive/mark-read, and day grouping.
- *   Archived  — same shape but scoped to archived rows; bulk Restore.
- *   Channels  — extracted CRUD for delivery destinations (Discord, Slack…).
+ * Owns:
+ *   - URL-backed filter + view state (severity, vehicle, rule, search,
+ *     read state, from/to, view mode)
+ *   - Bulk selection + bulk actions (mark read, archive/restore, delete)
+ *   - Auto-mark-read on open (opt-out via localStorage)
+ *   - Per-row context menu (view context, mark read/unread, archive/restore,
+ *     delete)
+ *   - Day-grouped flat list AND threaded grouped list
  *
- * The inbox tab also implements two opt-in auto-mark-read policies, controlled
- * by client-side localStorage preferences (defaults on):
- *   - mark all visible rows as read when the inbox is opened
- *   - mark a row as read when it is clicked
- *
- * These defaults can be overridden by writing the keys
- * `teslasync.notifications.markOnOpen` / `teslasync.notifications.markOnClick`
- * to localStorage with the value 'false'. A future Settings page can surface
- * them as toggles without changing this file's contract.
- *
- * deferred-filter:no server-driven — filter state (severity, vehicle, rule,
- * search, read, from/to) is forwarded to `useNotificationLogs(filters)` and
- * the API returns the matching rows. A client-side `useDeferredValue` would
- * be redundant: the heavy work happens server-side and the network round-trip
- * is already an asynchronous gap that lets the input stay responsive.
+ * Used by InboxPage (`archived=false`) and ArchivedPage (`archived=true`).
+ * Was previously an inner component of the now-removed NotificationsPage.
  */
 
-import { useEffect, useMemo, useRef, useCallback, type MouseEvent as ReactMouseEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Archive, ArchiveRestore, Bell, MailOpen, Mail, Trash2, CheckCheck, Layers, List, ExternalLink } from 'lucide-react';
+import {
+  Archive,
+  ArchiveRestore,
+  Bell,
+  MailOpen,
+  Mail,
+  Trash2,
+  CheckCheck,
+  Layers,
+  List,
+  ExternalLink,
+} from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { PageContainer } from '@/components/layout';
-import { Button, GlassPanel, TabNav, useContextMenu, type ContextMenuItem } from '@/components/ui';
+import { Button, GlassPanel, useContextMenu, type ContextMenuItem } from '@/components/ui';
 import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { useToast } from '@/components/feedback/Toast';
 import { FadeIn } from '@/components/motion/FadeIn';
-import { usePageTitle } from '@/hooks/usePageTitle';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
 import { useAnnouncer } from '@/hooks/useAnnouncer';
 import { useUrlEnum, useUrlString, useUrlArray, useUrlBatch } from '@/hooks/useUrlState';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import {
-  useAlertRules,
   useNotificationLogs,
   useNotificationGroups,
   useArchiveNotifications,
@@ -54,15 +58,10 @@ import {
 } from '@/api/hooks/useNotifications';
 import type { NotificationLog, AlertRule, Vehicle, Alert } from '@/api/types';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
-import { NotificationFilterBar } from '../components/NotificationFilterBar';
-import { NotificationRow } from '../components/NotificationRow';
-import { NotificationGroupRow } from '../components/NotificationGroupRow';
-import { NotificationChannelsView } from '../components/NotificationChannelsView';
+import { NotificationFilterBar } from './NotificationFilterBar';
+import { NotificationRow } from './NotificationRow';
+import { NotificationGroupRow } from './NotificationGroupRow';
 import { PullToRefresh, SwipeRow } from '@/components/mobile';
-
-type InboxTab = 'inbox' | 'archived' | 'channels';
-
-const INBOX_TABS = ['inbox', 'archived', 'channels'] as const satisfies readonly InboxTab[];
 
 const SEVERITY_VALUES = ['info', 'warn', 'critical'] as const;
 type SeverityValue = (typeof SEVERITY_VALUES)[number];
@@ -132,13 +131,13 @@ function groupByDay<T extends { created_at: string }>(rows: T[]): { day: string;
   return out;
 }
 
-interface InboxBodyProps {
+export interface InboxBodyProps {
   archived: boolean;
   vehicles: Vehicle[];
   rules: AlertRule[];
 }
 
-function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
+export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const { t } = useTranslation();
 
   // ── URL-backed filter state (Phase 40 / Prompt 33) ─────────────────────
@@ -255,10 +254,7 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   }, [archived, isLoading, rows, markReadMut, isGrouped]);
 
   // Phase-45 / Prompt 32 — generic bulk-selection helper replaces the
-  // hand-rolled Set<number> state from Phase-45 / 28. The hook owns the
-  // selection; we expose the same `selected`/`toggleSelected`/`clearSelection`
-  // / `selectAllVisible` accessors so the rest of the page (NotificationRow
-  // props, BulkActionsToolbar, header checkbox) stays untouched.
+  // hand-rolled Set<number> state from Phase-45 / 28.
   const bulkSelection = useBulkSelection<number>();
   const selected = bulkSelection.selectedIds;
   const clearSelection = bulkSelection.clear;
@@ -278,8 +274,6 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
 
   const grouped = useMemo(() => groupByDay(rows), [rows]);
 
-  // Visible-row unread count drives both the "Mark all read" header
-  // affordance and the (n) suffix on the toast that follows the action.
   const unreadCount = useMemo(
     () => rows.reduce((acc, r) => (r.read_at ? acc : acc + 1), 0),
     [rows],
@@ -303,11 +297,6 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       }),
     );
   }, [unarchiveMut, announce, clearSelection, t]);
-  // Bulk mark-read: optimistically flip the selected rows, then surface a
-  // toast with an Undo button that reverses the mutation. If the original
-  // mutation rejects, the optimistic helper rolls back the cache and we
-  // emit the standard error toast — never a phantom "Marked as read" we'd
-  // then have to take back.
   const handleBulkMarkRead = useCallback(async (ids: Array<string | number>) => {
     const numericIds = ids.map(Number);
     try {
@@ -325,23 +314,15 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       title: t('notifications.bulkRead.success', '{{count}} marked as read', {
         count: numericIds.length,
       }),
-      // 5s window to undo, matching the prompt's UX contract — long enough
-      // for a "wait, no" reaction, short enough not to clutter the screen.
       duration: 5000,
       action: {
         label: t('common.undo', 'Undo'),
         onClick: () => { markUnreadMut.mutate(numericIds); },
       },
     });
-  }, [bulkMarkReadMut, markUnreadMut, toast, t]);
-  // "Mark all read" header action — hits the all=true backend path so the
-  // server (not the client) decides which rows are affected. Avoids the
-  // 1000-id cap and removes the need to enumerate every cached id.
+  }, [bulkMarkReadMut, markUnreadMut, toast, t, clearSelection]);
   const handleMarkAllRead = useCallback(async () => {
     if (unreadCount === 0) return;
-    // Snapshot the currently-visible unread ids so Undo can restore exactly
-    // what the user just dismissed (Undo on a server-side "all" mutation
-    // with no client knowledge would be impossible to bound otherwise).
     const visibleUnreadIds = rows.filter(r => !r.read_at).map(r => r.id);
     try {
       await bulkMarkReadMut.mutateAsync({ all: true });
@@ -364,11 +345,11 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           }
         : undefined,
     });
-  }, [bulkMarkReadMut, markUnreadMut, toast, t, rows, unreadCount]);
+  }, [bulkMarkReadMut, markUnreadMut, toast, t, rows, unreadCount, clearSelection]);
   const handleBulkDelete = useCallback(async (ids: Array<string | number>) => {
     await deleteMut.mutateAsync(ids.map(Number));
     clearSelection();
-  }, [deleteMut]);
+  }, [deleteMut, clearSelection]);
 
   const bulkActions = useMemo<BulkAction[]>(() => {
     const list: BulkAction[] = [];
@@ -418,11 +399,6 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     markReadMut.mutate([log.id]);
   };
 
-  // Phase-46 / Prompt 30 — right-click on a notification row surfaces
-  // mark-read / archive / view-context actions via the shared
-  // <ContextMenuRoot/>. Exposing these as a context menu means the inbox
-  // doesn't need to render hover-only icons on every row to advertise
-  // them — they remain reachable but visually quiet by default.
   const navigate = useNavigate();
   const { openMenu: openRowContextMenu } = useContextMenu();
   const buildRowContextMenu = useCallback(
@@ -503,7 +479,6 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     (log: NotificationLog) =>
       (e: ReactMouseEvent<HTMLDivElement>) => {
         const target = e.target as HTMLElement;
-        // Allow native menus on form controls / links / buttons inside the row.
         if (target.closest('input, textarea, select, a, button')) return;
         const items = buildRowContextMenu(log);
         if (items.length === 0) return;
@@ -537,13 +512,6 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       />
 
       <GlassPanel className="p-3 sm:p-4">
-        {/* Select-all row + Mark-all-read header action. The header action
-            sits opposite the count so it stays out of the way of the
-            primary checkbox affordance and only reveals itself on the
-            inbox tab when there's something to mark.
-            Phase-46/27 — when in grouped mode, the per-row select-all
-            checkbox is hidden because group rows aren't individually
-            selectable; the user toggles the view first to bulk-select. */}
         <div className="mb-2 flex items-center gap-3 px-1 pb-2 border-b border-white/[0.04]">
           {!isGrouped && (
             <input
@@ -616,8 +584,6 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           )}
         </div>
 
-        {/* Loading / error / empty states — branched so the right cache
-            and error message surface for whichever view is active. */}
         {((isGrouped && groupsLoading) || (!isGrouped && isLoading)) && (
           <div className="space-y-2">
             {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-14" />)}
@@ -648,9 +614,6 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           />
         )}
 
-        {/* Empty state — flat-mode uses the day-grouped buckets; grouped
-            mode uses the bare groups array. Both surface the same i18n
-            empty copy so the "no rules configured" CTA reads the same. */}
         {!isGrouped && !isLoading && !error && grouped.length === 0 && (
           <EmptyState
             icon={<Bell className="h-8 w-8" />}
@@ -662,7 +625,7 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
               : t('notifications.inbox.empty.message', 'When alert rules fire, the resulting notifications appear here.')}
             actionTo={archived ? undefined : {
               label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
-              to: '/alert-studio',
+              to: '/notifications/studio',
             }}
           />
         )}
@@ -674,15 +637,11 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
             message={t('notifications.group.emptyMessage', 'When alert rules fire repeatedly, related notifications will be grouped here.')}
             actionTo={{
               label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
-              to: '/alert-studio',
+              to: '/notifications/studio',
             }}
           />
         )}
 
-        {/* Body render — flat mode keeps the day-bucket grouping and bulk
-            selection affordances; grouped mode renders one
-            NotificationGroupRow per thread without day buckets (threads
-            already aggregate across time). */}
         {!isGrouped && !isLoading && !error && grouped.length > 0 && (
           <div className="space-y-4">
             {grouped.map(group => (
@@ -765,39 +724,4 @@ function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   );
 }
 
-export default function NotificationsPage() {
-  const { t } = useTranslation();
-  usePageTitle(t('notifications.title', 'Notifications'));
-
-  // Tab is in the URL so a deep link like /notifications?tab=channels works.
-  // push: true on tab changes — primary navigation should add a history entry.
-  const [tab, setTab] = useUrlEnum<InboxTab>('tab', INBOX_TABS, 'inbox');
-  const { data: vehicles = [] } = useVehicles();
-  const { data: rules = [] } = useAlertRules();
-
-  return (
-    <PageContainer
-      title={t('notifications.title', 'Notifications')}
-      subtitle={t('notifications.subtitle', 'Inbox of fired alerts plus delivery channels.')}
-      copyLink
-    >
-      <TabNav
-        active={tab}
-        onChange={(k) => setTab(k as InboxTab, { push: true })}
-        tabs={[
-          { key: 'inbox', label: t('notifications.tab.inbox', 'Inbox'), icon: <Bell className="h-4 w-4" /> },
-          { key: 'archived', label: t('notifications.tab.archived', 'Archived'), icon: <Archive className="h-4 w-4" /> },
-          { key: 'channels', label: t('notifications.tab.channels', 'Channels'), icon: <Bell className="h-4 w-4" /> },
-        ]}
-      />
-
-      {tab === 'inbox' && (
-        <InboxBody key="inbox" archived={false} vehicles={vehicles} rules={rules} />
-      )}
-      {tab === 'archived' && (
-        <InboxBody key="archived" archived={true} vehicles={vehicles} rules={rules} />
-      )}
-      {tab === 'channels' && <NotificationChannelsView />}
-    </PageContainer>
-  );
-}
+export default InboxBody;

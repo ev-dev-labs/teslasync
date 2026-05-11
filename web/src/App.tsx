@@ -100,10 +100,19 @@ const AutomationListPage = lazy(() => import('./features/automations/pages/Autom
 const AutomationBuilderPage = lazy(() => import('./features/automations/pages/AutomationBuilderPage'))
 
 // Notifications & Alerts
-const Alerts = lazy(() => import('./features/notifications/pages/AlertsPage'))
+const AlertsListPage = lazy(() => import('./features/notifications/pages/AlertsListPage'))
 const AlertStudio = lazy(() => import('./features/notifications/pages/AlertStudioPage'))
 const AlertRulesPage = lazy(() => import('./features/notifications/pages/AlertRulesPage'))
-const Notifications = lazy(() => import('./features/notifications/pages/NotificationsPage'))
+const InboxPage = lazy(() => import('./features/notifications/pages/InboxPage'))
+const ArchivedPage = lazy(() => import('./features/notifications/pages/ArchivedPage'))
+const ChannelsPage = lazy(() => import('./features/notifications/pages/ChannelsPage'))
+const WebhooksPage = lazy(() => import('./features/notifications/pages/WebhooksPage'))
+const BrowserNotificationsPage = lazy(() => import('./features/notifications/pages/BrowserNotificationsPage'))
+const QuietHoursPage = lazy(() => import('./features/notifications/pages/QuietHoursPage'))
+const LegacyAlertsRedirect = lazy(() => import('./features/notifications/components/LegacyAlertsRedirect'))
+const LegacyNotificationsRedirect = lazy(() => import('./features/notifications/components/LegacyNotificationsRedirect'))
+const LegacyAlertRulesRedirect = lazy(() => import('./features/notifications/components/LegacyAlertRulesRedirect'))
+const LegacyAlertStudioRedirect = lazy(() => import('./features/notifications/components/LegacyAlertStudioRedirect'))
 
 // Telemetry & Signals
 const SignalExplorer = lazy(() => import('./features/telemetry/pages/SignalExplorerPage'))
@@ -297,15 +306,24 @@ export default function App() {
         <Route path="automations/list" element={<SafeRoute name="AutomationList"><AutomationListPage /></SafeRoute>} />
         <Route path="automations/new" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
         <Route path="automations/:id/edit" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
-        <Route path="alerts" element={<SafeRoute name="Alerts"><Alerts /></SafeRoute>} />
-        <Route path="alert-studio" element={<SafeRoute name="AlertStudio"><AlertStudio /></SafeRoute>} />
-        <Route path="alert-rules" element={<SafeRoute name="AlertRules"><AlertRulesPage /></SafeRoute>} />
+        <Route path="alerts" element={<SafeRoute name="LegacyAlertsRedirect"><LegacyAlertsRedirect /></SafeRoute>} />
+        <Route path="alert-studio" element={<SafeRoute name="LegacyAlertStudioRedirect"><LegacyAlertStudioRedirect /></SafeRoute>} />
+        <Route path="alert-rules" element={<SafeRoute name="LegacyAlertRulesRedirect"><LegacyAlertRulesRedirect /></SafeRoute>} />
+        <Route path="notifications" element={<SafeRoute name="LegacyNotificationsRedirect"><LegacyNotificationsRedirect /></SafeRoute>} />
+        <Route path="notifications/inbox" element={<SafeRoute name="NotificationsInbox"><InboxPage /></SafeRoute>} />
+        <Route path="notifications/archived" element={<SafeRoute name="NotificationsArchived"><ArchivedPage /></SafeRoute>} />
+        <Route path="notifications/alerts" element={<SafeRoute name="NotificationsAlerts"><AlertsListPage /></SafeRoute>} />
+        <Route path="notifications/channels" element={<SafeRoute name="NotificationsChannels"><ChannelsPage /></SafeRoute>} />
+        <Route path="notifications/webhooks" element={<SafeRoute name="NotificationsWebhooks"><WebhooksPage /></SafeRoute>} />
+        <Route path="notifications/browser" element={<SafeRoute name="NotificationsBrowser"><BrowserNotificationsPage /></SafeRoute>} />
+        <Route path="notifications/quiet-hours" element={<SafeRoute name="NotificationsQuietHours"><QuietHoursPage /></SafeRoute>} />
+        <Route path="notifications/rules" element={<SafeRoute name="NotificationsRules"><AlertRulesPage /></SafeRoute>} />
+        <Route path="notifications/studio" element={<SafeRoute name="NotificationsStudio"><AlertStudio /></SafeRoute>} />
         <Route path="geofences" element={<SafeRoute name="Geofences"><Geofences /></SafeRoute>} />
         <Route path="settings" element={<SafeRoute name="Settings"><Settings /></SafeRoute>} />
         <Route path="drives/:id" element={<SafeRoute name="DriveDetail"><DriveDetail /></SafeRoute>} />
         <Route path="drives/:id/replay" element={<SafeRoute name="TripReplay"><TripReplay /></SafeRoute>} />
         <Route path="charging/:id" element={<SafeRoute name="ChargeDetail"><ChargeDetail /></SafeRoute>} />
-        <Route path="notifications" element={<SafeRoute name="Notifications"><Notifications /></SafeRoute>} />
         <Route path="chatbot" element={<SafeRoute name="Chatbot"><Chatbot /></SafeRoute>} />
         <Route path="tire-pressure" element={<SafeRoute name="TirePressure"><TirePressure /></SafeRoute>} />
         <Route path="software-updates" element={<SafeRoute name="SoftwareUpdates"><SoftwareUpdates /></SafeRoute>} />

@@ -110,7 +110,7 @@ self.addEventListener('push', (event: PushEvent) => {
     // See: https://developer.mozilla.org/en-US/docs/Web/API/Notification/badge
     badge: data.badge ?? '/icons/badge-72.png',
     tag: data.tag,
-    data: { url: data.url ?? '/notifications' },
+    data: { url: data.url ?? '/notifications/inbox' },
     // Critical alerts persist on screen until tapped; info / warn use
     // the OS default decay.
     requireInteraction: data.severity === 'critical',
