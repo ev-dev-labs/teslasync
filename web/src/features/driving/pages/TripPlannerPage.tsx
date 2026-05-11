@@ -4,7 +4,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
 import { PageContainer, Grid } from '@/components/layout';
 import {
-  GlassPanel, Button as ControlButton, Input as ControlInput, Select as ControlSelect,
+  GlassPanel, Button as ControlButton, Select as ControlSelect, Slider,
 } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
@@ -159,65 +159,35 @@ export default function TripPlannerPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
             {vehicleOptions.length > 0 && (
-              <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                  {t('tripPlanner.form.vehicle', 'Vehicle')}
-                </label>
-                <ControlSelect
-                  options={vehicleOptions}
-                  value={activeVehicle}
-                  onChange={(e) => setSelectedVehicle(e.target.value)}
-                />
-              </div>
-            )}
-            <div>
-              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                {t('tripPlanner.form.currentSOC', 'Current SOC')}
-              </label>
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <ControlInput
-                    type="range"
-                    min={10}
-                    max={100}
-                    value={currentSOC}
-                    onChange={(e) => setCurrentSOC(Number(e.target.value))}
-                    aria-label={t('tripPlanner.form.currentSOC', 'Current SOC')}
-                    className="h-2 w-full cursor-pointer appearance-none border-0 bg-transparent p-0 accent-emerald-400 dark:bg-transparent"
-                  />
-                </div>
-                <span className="text-sm text-[var(--text-primary)] w-10 text-right">{currentSOC}%</span>
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                {t('tripPlanner.form.minArrival', 'Min Arrival SOC')}
-              </label>
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <ControlInput
-                    type="range"
-                    min={5}
-                    max={50}
-                    value={minArrivalSOC}
-                    onChange={(e) => setMinArrivalSOC(Number(e.target.value))}
-                    aria-label={t('tripPlanner.form.minArrival', 'Min Arrival SOC')}
-                    className="h-2 w-full cursor-pointer appearance-none border-0 bg-transparent p-0 accent-amber-400 dark:bg-transparent"
-                  />
-                </div>
-                <span className="text-sm text-[var(--text-primary)] w-10 text-right">{minArrivalSOC}%</span>
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                {t('tripPlanner.form.drivingSpeed', 'Driving Speed')}
-              </label>
               <ControlSelect
-                options={speedOptions}
-                value={String(speedFactor)}
-                onChange={(e) => setSpeedFactor(Number(e.target.value))}
+                label={t('tripPlanner.form.vehicle', 'Vehicle')}
+                options={vehicleOptions}
+                value={activeVehicle}
+                onChange={(e) => setSelectedVehicle(e.target.value)}
               />
-            </div>
+            )}
+            <Slider
+              label={t('tripPlanner.form.currentSOC', 'Current SOC')}
+              formatValue={(n) => `${n}%`}
+              min={10}
+              max={100}
+              value={currentSOC}
+              onChange={setCurrentSOC}
+            />
+            <Slider
+              label={t('tripPlanner.form.minArrival', 'Min Arrival SOC')}
+              formatValue={(n) => `${n}%`}
+              min={5}
+              max={50}
+              value={minArrivalSOC}
+              onChange={setMinArrivalSOC}
+            />
+            <ControlSelect
+              label={t('tripPlanner.form.drivingSpeed', 'Driving Speed')}
+              options={speedOptions}
+              value={String(speedFactor)}
+              onChange={(e) => setSpeedFactor(Number(e.target.value))}
+            />
           </div>
 
           <div className="flex items-center gap-3">

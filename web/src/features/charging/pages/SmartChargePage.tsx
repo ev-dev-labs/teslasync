@@ -13,7 +13,7 @@ import {
 
 import { PageContainer, Grid } from '@/components/layout';
 import {
-  GlassPanel, Button as ControlButton, Select as ControlSelect, Input as ControlInput,
+  GlassPanel, Button as ControlButton, Select as ControlSelect, Input as ControlInput, Slider,
 } from '@/components/ui';
 import { UnitInput } from '@/components/forms';
 import { StatCard } from '@/components/data-display';
@@ -166,16 +166,15 @@ export default function SmartChargePage() {
               onChange={e => setRatePlanId(e.target.value)}
             />
 
-            <ControlInput
+            <Slider
               id="smart-charge-target-soc"
-              label={`${t('chargePlanner.targetSoc', 'Target SOC')} - ${targetSoc}%`}
-              type="range"
+              label={t('chargePlanner.targetSoc', 'Target SOC')}
+              formatValue={(n) => `${n}%`}
               min={20}
               max={100}
               step={5}
               value={targetSoc}
-              onChange={e => setTargetSoc(Number(e.target.value))}
-              className="h-2 w-full cursor-pointer appearance-none border-0 bg-transparent p-0 accent-cyan-400 dark:bg-transparent"
+              onChange={setTargetSoc}
             />
 
             <ControlInput

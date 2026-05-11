@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Input as ControlInput } from '@/components/ui';
+import { GlassPanel, Badge, Slider } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip,
@@ -323,38 +323,28 @@ export default function ProjectedRangePage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="space-y-4">
               <div>
-                <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1">
-                  <span>{t('range.speed', 'Speed')}</span>
-                  <span className="font-bold text-[var(--text-primary)]">{whatIfSpeed} km/h</span>
-                </div>
-                <ControlInput
-                  type="range"
+                <Slider
+                  label={t('range.speed', 'Speed')}
+                  formatValue={(n) => `${n} km/h`}
                   min={30}
                   max={150}
                   step={5}
                   value={whatIfSpeed}
-                  onChange={(e) => setWhatIfSpeed(Number(e.target.value))}
-                  aria-label={t('range.speed', 'Speed')}
-                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full border-0 bg-[var(--glass-border)] p-0 accent-neon-cyan dark:bg-[var(--glass-border)]"
+                  onChange={setWhatIfSpeed}
                 />
                 <div className="flex justify-between text-[9px] text-[var(--text-muted)] mt-0.5">
                   <span>30</span><span>90</span><span>150</span>
                 </div>
               </div>
               <div>
-                <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1">
-                  <span>{t('range.temperature', 'Temperature')}</span>
-                  <span className="font-bold text-[var(--text-primary)]">{whatIfTemp}°C</span>
-                </div>
-                <ControlInput
-                  type="range"
+                <Slider
+                  label={t('range.temperature', 'Temperature')}
+                  formatValue={(n) => `${n}°C`}
                   min={-20}
                   max={40}
                   step={1}
                   value={whatIfTemp}
-                  onChange={(e) => setWhatIfTemp(Number(e.target.value))}
-                  aria-label={t('range.temperature', 'Temperature')}
-                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full border-0 bg-[var(--glass-border)] p-0 accent-neon-amber dark:bg-[var(--glass-border)]"
+                  onChange={setWhatIfTemp}
                 />
                 <div className="flex justify-between text-[9px] text-[var(--text-muted)] mt-0.5">
                   <span>-20°C</span><span>10°C</span><span>40°C</span>

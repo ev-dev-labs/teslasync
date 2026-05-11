@@ -7,6 +7,7 @@ import {
   Toggle,
   Select as UiSelect,
   Input as UiInput,
+  Slider,
 } from '@/components/ui';
 import { FormSection } from '@/components/forms';
 import type { KioskConfig } from '../hooks/useKioskMode';
@@ -163,19 +164,14 @@ export function KioskSettingsModal({
                 onChange={(e) => onUpdateConfig({ dimAfter: Number(e.target.value) })}
               />
               {config.dimAfter > 0 && (
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-[var(--text-secondary)]">
-                    {t('kiosk.brightness', 'Dimmed Brightness')}: {Math.round(config.dimLevel * 100)}%
-                  </label>
-                  <UiInput
-                    type="range"
-                    min={30}
-                    max={90}
-                    value={config.dimLevel * 100}
-                    onChange={(e) => onUpdateConfig({ dimLevel: Number(e.target.value) / 100 })}
-                    className="w-full border-0 bg-transparent p-0 accent-blue-500 dark:bg-transparent focus:ring-0 focus:ring-offset-0"
-                  />
-                </div>
+                <Slider
+                  label={t('kiosk.brightness', 'Dimmed Brightness')}
+                  formatValue={(n) => `${Math.round(n)}%`}
+                  min={30}
+                  max={90}
+                  value={Math.round(config.dimLevel * 100)}
+                  onChange={(n) => onUpdateConfig({ dimLevel: n / 100 })}
+                />
               )}
             </div>
 
@@ -210,22 +206,14 @@ export function KioskSettingsModal({
 
           {/* Widget panel opacity */}
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-sm text-[var(--text-secondary)]">
-                {t('kiosk.widgetOpacity', 'Widget Opacity')}
-              </label>
-              <span className="text-xs text-[var(--text-muted)] font-mono">
-                {Math.round((config.widgetOpacity ?? 1) * 100)}%
-              </span>
-            </div>
-            <UiInput
-              type="range"
+            <Slider
+              label={t('kiosk.widgetOpacity', 'Widget Opacity')}
+              formatValue={(n) => `${Math.round(n)}%`}
               min={30}
               max={100}
               step={5}
               value={Math.round((config.widgetOpacity ?? 1) * 100)}
-              onChange={(e) => onUpdateConfig({ widgetOpacity: Number(e.target.value) / 100 })}
-              className="w-full border-0 bg-transparent p-0 accent-[var(--theme-primary)] dark:bg-transparent focus:ring-0 focus:ring-offset-0"
+              onChange={(n) => onUpdateConfig({ widgetOpacity: n / 100 })}
             />
             <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
               <span>{t('kiosk.transparent', 'Transparent')}</span>
@@ -235,22 +223,14 @@ export function KioskSettingsModal({
 
           {/* Background opacity */}
           <div className="space-y-1.5 mt-4">
-            <div className="flex items-center justify-between">
-              <label className="text-sm text-[var(--text-secondary)]">
-                {t('kiosk.bgOpacity', 'Background Opacity')}
-              </label>
-              <span className="text-xs text-[var(--text-muted)] font-mono">
-                {Math.round((config.backgroundOpacity ?? 1) * 100)}%
-              </span>
-            </div>
-            <UiInput
-              type="range"
+            <Slider
+              label={t('kiosk.bgOpacity', 'Background Opacity')}
+              formatValue={(n) => `${Math.round(n)}%`}
               min={0}
               max={100}
               step={5}
               value={Math.round((config.backgroundOpacity ?? 1) * 100)}
-              onChange={(e) => onUpdateConfig({ backgroundOpacity: Number(e.target.value) / 100 })}
-              className="w-full border-0 bg-transparent p-0 accent-[var(--theme-primary)] dark:bg-transparent focus:ring-0 focus:ring-offset-0"
+              onChange={(n) => onUpdateConfig({ backgroundOpacity: n / 100 })}
             />
             <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
               <span>{t('kiosk.transparent', 'Transparent')}</span>

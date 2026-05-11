@@ -1,7 +1,5 @@
 import { forwardRef, useCallback, useId, useMemo } from 'react';
 import { cn } from '@/lib/cn';
-import { typography } from '@/lib/tokens';
-import { Caption } from './Typography';
 
 export interface SliderProps {
   /** Current numeric value. */
@@ -48,6 +46,10 @@ export interface SliderProps {
  * string is announced via `aria-valuetext`, and the raw number remains
  * in `aria-valuenow` for assistive tech that prefers it.
  *
+ * Layout: matches `<Input>`/`<Select>` (md size) — same label style
+ * (`text-sm text-secondary`) and same overall row height so a Slider
+ * dropped into a form grid alongside other controls aligns vertically.
+ *
  * Phase-46 / Prompt 23.
  */
 export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
@@ -83,34 +85,44 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
   );
 
   return (
-    <div className={cn('flex flex-col gap-1', className)}>
+    <div className={cn('space-y-1', className)}>
       {showLabel && (
         <div className="flex items-baseline justify-between gap-2">
-          <label htmlFor={inputId} className={cn(typography.role.label)}>
+          <label
+            htmlFor={inputId}
+            className="text-sm font-medium text-[var(--text-secondary)]"
+          >
             {label}
           </label>
-          <Caption className="tabular-nums">{display}</Caption>
+          <span className="text-xs text-[var(--text-muted)] tabular-nums">
+            {display}
+          </span>
         </div>
       )}
-      <input
-        ref={ref}
-        id={inputId}
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        disabled={disabled}
-        onChange={handleChange}
-        aria-label={showLabel ? undefined : label}
-        aria-valuetext={display}
-        className={cn(
-          'h-2 w-full cursor-pointer appearance-none rounded-full bg-[var(--glass-border)]',
-          'accent-cyan-500',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
-          'disabled:cursor-not-allowed disabled:opacity-50',
-        )}
-      />
+      {/* Track wrapper matches the height of an md <Input>/<Select>
+          (~36px, h-9) so the slider visually aligns with adjacent
+          form controls in the same grid row. */}
+      <div className="flex h-9 items-center">
+        <input
+          ref={ref}
+          id={inputId}
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          disabled={disabled}
+          onChange={handleChange}
+          aria-label={showLabel ? undefined : label}
+          aria-valuetext={display}
+          className={cn(
+            'h-2 w-full cursor-pointer appearance-none rounded-full bg-[var(--glass-border)]',
+            'accent-cyan-500',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+            'disabled:cursor-not-allowed disabled:opacity-50',
+          )}
+        />
+      </div>
     </div>
   );
 });
