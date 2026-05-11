@@ -287,42 +287,41 @@ export default function TeslaChargingHistoryPage() {
       error={error as Error | null}
       copyLink
       actions={
-        <RangePicker
-          value={{ start, end }}
-          onChange={setRange}
-          align="end"
-          triggerTestId="tesla-charging-history-range"
-        />
+        <div className="flex items-center gap-3">
+          <Select
+            options={vehicleOptions}
+            value={selectedVin}
+            onChange={(e) => setSelectedVin(e.target.value)}
+            aria-label={t('tesla_charging.selectVehicle', 'Select vehicle')}
+            className="w-44"
+          />
+          <RangePicker
+            value={{ start, end }}
+            onChange={setRange}
+            align="end"
+            triggerTestId="tesla-charging-history-range"
+          />
+          <Button
+            onClick={handleRefresh}
+            disabled={refreshMutation.isPending}
+            variant="primary"
+            icon={<RefreshCw className={cn('h-4 w-4', refreshMutation.isPending && 'animate-spin')} />}
+          >
+            {refreshMutation.isPending
+              ? t('tesla_charging.refreshing', 'Syncing...')
+              : t('tesla_charging.refresh', 'Refresh from Tesla')}
+          </Button>
+        </div>
       }
     >
-      {/* Controls bar */}
-      <FadeIn>
-        <GlassPanel className="p-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <Select
-              options={vehicleOptions}
-              value={selectedVin}
-              onChange={(e) => setSelectedVin(e.target.value)}
-              className="w-56"
-            />
-            <Button
-              onClick={handleRefresh}
-              disabled={refreshMutation.isPending}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className={cn('h-4 w-4', refreshMutation.isPending && 'animate-spin')} />
-              {refreshMutation.isPending
-                ? t('tesla_charging.refreshing', 'Syncing...')
-                : t('tesla_charging.refresh', 'Refresh from Tesla')}
-            </Button>
-            {response && entries.length > 0 && (
-              <span className="ml-auto text-xs text-[var(--text-muted)]">
-                {t('tesla_charging.lastSync', 'Last synced')}: {formatDateTime(entries[0]?.fetched_at)}
-              </span>
-            )}
-          </div>
-        </GlassPanel>
-      </FadeIn>
+      {/* Last-sync line — shows when data is present so users know freshness */}
+      {response && entries.length > 0 && entries[0]?.fetched_at && (
+        <FadeIn>
+          <p className="text-xs text-[var(--text-muted)]">
+            {t('tesla_charging.lastSync', 'Last synced')}: {formatDateTime(entries[0].fetched_at)}
+          </p>
+        </FadeIn>
+      )}
 
       {/* Summary stats */}
       <FadeIn delay={0.05}>
