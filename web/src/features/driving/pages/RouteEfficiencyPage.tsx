@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin, ArrowRight, TrendingUp, Activity } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
-import { Select } from '@/components/ui/Select';
 import { IconBox } from '@/components/ui/IconBox';
+import { VehicleSelect } from '@/components/forms';
 import {
   ChartContainer, ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -17,7 +17,7 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { useRouteEfficiency } from '@/api/hooks/useDriving';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -102,9 +102,7 @@ export default function RouteEfficiencyPage() {
   const { t } = useTranslation();
   usePageTitle(t('routeEfficiency.title', 'Route Efficiency'));
 
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
   const { data, isLoading, error } = useRouteEfficiency(vehicleIdStr);
@@ -135,18 +133,12 @@ export default function RouteEfficiencyPage() {
       }));
   }, [routes, toEfficiencyDisplay]);
 
-  const vehicleOptions = (vehicles ?? []).map((v) => ({
-    value: String(v.id), label: v.display_name || v.vin,
-  }));
-
   return (
     <PageContainer
       title={t('routeEfficiency.title', 'Route Efficiency')}
       subtitle={t('routeEfficiency.subtitle', 'Compare efficiency across your most-driven routes')}
       error={error as Error | null}
-      actions={vehicleOptions.length > 0 ? (
-        <Select value={String(vehicleId ?? '')} onChange={(e) => setSelectedVehicle(Number(e.target.value))} options={vehicleOptions} />
-      ) : undefined}
+      actions={<VehicleSelect />}
       loading={isLoading}
 
     >

@@ -23,7 +23,9 @@ import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { AlertBanner } from '@/components/feedback/AlertBanner';
 import { FadeIn } from '@/components/motion/FadeIn';
+import { VehicleSelect } from '@/components/forms';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateTime, formatDate } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { getErrorMessage } from '@/lib/errorMessage';
@@ -64,12 +66,6 @@ interface ServiceRecord {
   provider: string;
   notes: string;
   created_at: string;
-}
-
-interface Vehicle {
-  id: number;
-  vin: string;
-  display_name: string;
 }
 
 type MaintenanceStatus = 'good' | 'soon' | 'overdue' | 'completed';
@@ -346,13 +342,8 @@ export default function MaintenancePage() {
   usePageTitle(t('Maintenance'));
   const { currencySymbol } = useFormatting();
 
-  // ── Vehicle selection ──────────────────────────────────────────────────
-  const { data: vehicles, error: vehiclesError } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  // ── Vehicle selection (global) ─────────────────────────────────────────
+  const { vehicleId } = useSelectedVehicle();
 
   // ── Data fetching ──────────────────────────────────────────────────────
   const { data: items, isLoading: loadingItems, error: itemsError } = useQuery({
@@ -457,7 +448,7 @@ export default function MaintenancePage() {
     // placeholder — would open scheduling modal
   }, []);
 
-  const anyError = [vehiclesError, itemsError, recordsError].find(Boolean);
+  const anyError = [itemsError, recordsError].find(Boolean);
   const isLoading = loadingItems || loadingRecords;
 
   // ── Render ─────────────────────────────────────────────────────────────
@@ -466,18 +457,7 @@ export default function MaintenancePage() {
       title={t('Maintenance')}
       subtitle={t('Service schedule, records, and upcoming maintenance')}
       loading={isLoading && !items}
-      actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            value={String(vehicleId ?? '')}
-            onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-            options={vehicles.map((v) => ({
-              value: String(v.id),
-              label: v.display_name || v.vin,
-            }))}
-          />
-        ) : undefined
-      }
+      actions={<VehicleSelect />}
     >
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>

@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { PageContainer, Grid } from '@/components/layout';
 import {
@@ -9,7 +10,7 @@ import {
 import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { VehicleSelect } from '@/components/forms';
 import { usePlanTrip } from '@/api/hooks/useDriving';
 import { AddressInput } from '../components/AddressInput';
 import { SOCRouteChart } from '../components/SOCRouteChart';
@@ -38,11 +39,10 @@ export default function TripPlannerPage() {
 
   const distanceUnit = unitPrefs.distance;
 
-  const { data: vehicles } = useVehicles();
+  const { vehicleId, vehicle: currentVehicle } = useSelectedVehicle();
   const planMutation = usePlanTrip();
 
   // Form state
-  const [selectedVehicle, setSelectedVehicle] = useState('');
   const [originText, setOriginText] = useState('');
   const [destText, setDestText] = useState('');
   const [origin, setOrigin] = useState<TripLocation | null>(null);
@@ -54,26 +54,7 @@ export default function TripPlannerPage() {
   // Result state
   const [plan, setPlan] = useState<TripPlan | null>(null);
 
-  const vehicleOptions = useMemo(() =>
-    (vehicles ?? []).map((v) => ({
-      value: String(v.id),
-      label: v.display_name || v.displayName || v.vin,
-    })),
-    [vehicles],
-  );
-
-  // Auto-select first vehicle
-  const activeVehicle = useMemo(() => {
-    if (selectedVehicle) return selectedVehicle;
-    if (vehicleOptions.length > 0) return vehicleOptions[0].value;
-    return '';
-  }, [selectedVehicle, vehicleOptions]);
-
-  // Get current vehicle's battery level if available
-  const currentVehicle = useMemo(
-    () => (vehicles ?? []).find((v) => String(v.id) === activeVehicle),
-    [vehicles, activeVehicle],
-  );
+  const activeVehicle = vehicleId != null ? String(vehicleId) : '';
 
   const handlePlan = useCallback(() => {
     if (!origin || !destination || !activeVehicle) return;
@@ -131,6 +112,7 @@ export default function TripPlannerPage() {
     <PageContainer
       title={t('tripPlanner.title', 'Trip Planner')}
       subtitle={t('tripPlanner.subtitle', 'Plan your route with range estimation and charging stops')}
+      actions={<VehicleSelect />}
     >
       {/* Route Input Form */}
       <FadeIn>
@@ -157,15 +139,7 @@ export default function TripPlannerPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-            {vehicleOptions.length > 0 && (
-              <ControlSelect
-                label={t('tripPlanner.form.vehicle', 'Vehicle')}
-                options={vehicleOptions}
-                value={activeVehicle}
-                onChange={(e) => setSelectedVehicle(e.target.value)}
-              />
-            )}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
             <Slider
               label={t('tripPlanner.form.currentSOC', 'Current SOC')}
               formatValue={(n) => `${n}%`}

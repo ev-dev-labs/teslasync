@@ -26,11 +26,13 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { AlertBanner } from '@/components/feedback/AlertBanner';
 import { FadeIn } from '@/components/motion/FadeIn';
+import { VehicleSelect } from '@/components/forms';
 import { MapContainer, Marker, Circle, Popup, Polyline, vehicleIcon } from '@/components/maps';
 import { MapTileLayer, MapInvalidator } from '@/components/maps';
 import { TimeStamp } from '@/components/data-display';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useGeofences } from '@/api/hooks/useLocations';
 import {
   useGuardConfig,
@@ -91,11 +93,9 @@ export default function GuardModePage() {
   const { t } = useTranslation();
   usePageTitle(t('guard.title', 'Guard Mode'));
 
-  // Vehicle selector
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
-  const activeVehicleId = Number(selectedVehicleId || (vehicles?.[0]?.id ?? 0));
-  const activeVehicle = vehicles?.find((v) => v.id === activeVehicleId);
+  // Vehicle selector — global, shared across all vehicle-scoped pages.
+  const { vehicleId, vehicle: activeVehicle } = useSelectedVehicle();
+  const activeVehicleId = vehicleId ?? 0;
 
   // Guard data
   const { data: guardConfig, isLoading: configLoading } = useGuardConfig(activeVehicleId);
@@ -186,15 +186,7 @@ export default function GuardModePage() {
       title={t('guard.title', 'Guard Mode')}
       subtitle={t('guard.subtitle', 'Anti-theft monitoring and emergency response')}
       loading={isLoading}
-      actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-            value={String(activeVehicleId)}
-            onChange={(e) => setSelectedVehicleId(e.target.value)}
-          />
-        ) : undefined
-      }
+      actions={<VehicleSelect />}
     >
       {/* Triggered alert banner */}
       {isTriggered && latestEvent && (

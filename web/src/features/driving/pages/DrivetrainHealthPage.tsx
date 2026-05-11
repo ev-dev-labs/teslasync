@@ -1,13 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, Cpu, BatteryCharging } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { Select } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
+import { VehicleSelect } from '@/components/forms';
 
 import { useDrivetrainHealth, useDrives, useDrivingStats } from '@/api/hooks/useDriving';
-import { useVehicles, useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
+import { useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -39,10 +40,7 @@ export default function DrivetrainHealthPage() {
   const { t } = useTranslation();
   usePageTitle(t('drivetrain.title', 'Drivetrain Health'));
 
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-
-  const { data: vehicles } = useVehicles();
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
   const { data: health, isLoading: healthLoading } = useDrivetrainHealth(vehicleIdStr);
@@ -56,11 +54,6 @@ export default function DrivetrainHealthPage() {
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
   const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
   const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
-
-  const vehicleOptions = useMemo(() => {
-    if (!vehicles?.length) return [];
-    return vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }));
-  }, [vehicles]);
 
   const overallHealth = health?.overallHealth ?? 'good';
   const healthScore = HEALTH_SCORE[overallHealth];
@@ -127,18 +120,7 @@ export default function DrivetrainHealthPage() {
       subtitle={t('drivetrain.subtitle', 'Motor, inverter, and battery thermal status')}
       loading={healthLoading}
       error={null}
-      actions={
-        vehicleOptions.length > 0 ? (
-          <Select
-            value={String(vehicleId ?? '')}
-            onChange={(e) => setSelectedVehicle(e.target.value ? Number(e.target.value) : null)}
-            options={[
-              { value: '', label: t('drivetrain.allVehicles', 'All Vehicles') },
-              ...vehicleOptions,
-            ]}
-          />
-        ) : undefined
-      }
+      actions={<VehicleSelect />}
     >
       {health ? (
         <>

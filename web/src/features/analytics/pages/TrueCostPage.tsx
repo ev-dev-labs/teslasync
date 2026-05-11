@@ -1,18 +1,18 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DollarSign, Fuel, Zap, TrendingUp, Leaf } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Select } from '@/components/ui';
+import { GlassPanel } from '@/components/ui';
 import { Currency, DataFreshnessAuto } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { VehicleSelect } from '@/components/forms';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   Tooltip, ResponsiveContainer, Legend,
   ChartContainer, ChartTooltip, ChartGradient, chartGrid, axisTick,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useCostBreakdown } from '@/api/hooks/useAnalytics';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
@@ -26,9 +26,7 @@ export default function TrueCostPage() {
   const { unitPrefs, formatEnergy } = useUnits();
   const distanceUnit = unitPrefs.distance;
 
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
 
   const tcoQuery = useCostBreakdown(vehicleIdStr);
@@ -46,13 +44,7 @@ export default function TrueCostPage() {
       error={error instanceof Error ? error : null}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
-          {vehicles && vehicles.length > 1 && (
-            <Select
-              value={String(vehicleId ?? '')}
-              onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-              options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-            />
-          )}
+          <VehicleSelect />
           {/* Cagg-driven; force amber after 6h to surface stale aggregates. */}
           <DataFreshnessAuto query={tcoQuery} forceStaleAfterMs={6 * 60 * 60 * 1000} />
         </div>
