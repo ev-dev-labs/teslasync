@@ -109,7 +109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  (SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'SeatHeaterLeft' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1) AS \"Left\",\n  (SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'SeatHeaterRight' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1) AS \"Right\",\n  (SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'SeatHeaterRearLeft' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1) AS \"Rear Left\",\n  (SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'SeatHeaterRearCenter' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1) AS \"Rear Center\",\n  (SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'SeatHeaterRearRight' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1) AS \"Rear Right\"",
+          "rawSql": "SELECT\n  (SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'SeatHeaterLeft' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"Left\",\n  (SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'SeatHeaterRight' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"Right\",\n  (SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'SeatHeaterRearLeft' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"Rear Left\",\n  (SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'SeatHeaterRearCenter' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"Rear Center\",\n  (SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'SeatHeaterRearRight' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"Rear Right\"",
           "refId": "A"
         }
       ],
@@ -168,7 +168,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  NULL AS \"HVAC Mode\",  -- Signal not available in signal_log\n  CASE WHEN COALESCE((SELECT value_num FROM signal_log WHERE vehicle_id = ${vehicle_id} AND signal = 'HvacSteeringWheelHeatLevel' AND created_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY created_at DESC LIMIT 1), 0) > 0 THEN 'On' ELSE 'Off' END AS \"Steering Wheel Heat\",\n  NULL AS \"Auto Climate\"  -- Signal not available in signal_log",
+          "rawSql": "SELECT\n  NULL AS \"HVAC Mode\",  -- Signal not available in signal_log\n  CASE WHEN COALESCE((SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'HvacSteeringWheelHeatLevel' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1), 0) > 0 THEN 'On' ELSE 'Off' END AS \"Steering Wheel Heat\",\n  NULL AS \"Auto Climate\"  -- Signal not available in signal_log",
           "refId": "A"
         }
       ],
@@ -248,7 +248,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'SeatHeaterLeft') AS \"Left\",\n  MAX(value_num) FILTER (WHERE signal = 'SeatHeaterRight') AS \"Right\",\n  MAX(value_num) FILTER (WHERE signal = 'SeatHeaterRearLeft') AS \"Rear Left\",\n  MAX(value_num) FILTER (WHERE signal = 'SeatHeaterRearCenter') AS \"Rear Center\",\n  MAX(value_num) FILTER (WHERE signal = 'SeatHeaterRearRight') AS \"Rear Right\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('SeatHeaterLeft', 'SeatHeaterRight', 'SeatHeaterRearLeft', 'SeatHeaterRearCenter', 'SeatHeaterRearRight')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'SeatHeaterLeft') AS \"Left\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'SeatHeaterRight') AS \"Right\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'SeatHeaterRearLeft') AS \"Rear Left\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'SeatHeaterRearCenter') AS \"Rear Center\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'SeatHeaterRearRight') AS \"Rear Right\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('SeatHeaterLeft', 'SeatHeaterRight', 'SeatHeaterRearLeft', 'SeatHeaterRearCenter', 'SeatHeaterRearRight')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -328,7 +328,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time,\n  0 AS \"AC Enabled\",  -- Signal not available in signal_log\n  CASE WHEN MAX(value_str) FILTER (WHERE signal = 'DefrostMode') IS NOT NULL AND MAX(value_str) FILTER (WHERE signal = 'DefrostMode') != '' THEN 1 ELSE 0 END AS \"Defrost\",\n  CASE WHEN bool_or(value_bool) FILTER (WHERE signal = 'RearDefrostEnabled') THEN 1 ELSE 0 END AS \"Rear Defrost\",\n  CASE WHEN bool_or(value_bool) FILTER (WHERE signal = 'WiperHeatEnabled') THEN 1 ELSE 0 END AS \"Wiper Heat\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DefrostMode', 'RearDefrostEnabled', 'WiperHeatEnabled')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  0 AS \"AC Enabled\",  -- Signal not available in signal_log\n  CASE WHEN MAX(str_value) FILTER (WHERE field = 'DefrostMode') IS NOT NULL AND MAX(str_value) FILTER (WHERE field = 'DefrostMode') != '' THEN 1 ELSE 0 END AS \"Defrost\",\n  CASE WHEN bool_or(bool_value) FILTER (WHERE field = 'RearDefrostEnabled') THEN 1 ELSE 0 END AS \"Rear Defrost\",\n  CASE WHEN bool_or(bool_value) FILTER (WHERE field = 'WiperHeatEnabled') THEN 1 ELSE 0 END AS \"Wiper Heat\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('DefrostMode', 'RearDefrostEnabled', 'WiperHeatEnabled')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -408,7 +408,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'HvacFanSpeed') AS \"Fan Speed\",\n  MAX(value_num) FILTER (WHERE signal = 'HvacFanStatus') AS \"Fan Status\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('HvacFanSpeed', 'HvacFanStatus')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'HvacFanSpeed') AS \"Fan Speed\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'HvacFanStatus') AS \"Fan Status\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('HvacFanSpeed', 'HvacFanStatus')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -467,7 +467,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS \"Time\",\n  MAX(value_str) FILTER (WHERE signal = 'MediaNowPlayingTitle') AS \"Title\",\n  MAX(value_str) FILTER (WHERE signal = 'MediaNowPlayingArtist') AS \"Artist\",\n  MAX(value_str) FILTER (WHERE signal = 'MediaNowPlayingAlbum') AS \"Album\",\n  MAX(value_str) FILTER (WHERE signal = 'MediaPlaybackStatus') AS \"Status\",\n  MAX(value_str) FILTER (WHERE signal = 'MediaPlaybackSource') AS \"Source\",\n  MAX(value_num) FILTER (WHERE signal = 'MediaAudioVolume') AS \"Volume\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('MediaNowPlayingTitle', 'MediaNowPlayingArtist', 'MediaNowPlayingAlbum', 'MediaPlaybackStatus', 'MediaPlaybackSource', 'MediaAudioVolume')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at DESC",
+          "rawSql": "SELECT ts AS \"Time\",\n  MAX(str_value) FILTER (WHERE field = 'MediaNowPlayingTitle') AS \"Title\",\n  MAX(str_value) FILTER (WHERE field = 'MediaNowPlayingArtist') AS \"Artist\",\n  MAX(str_value) FILTER (WHERE field = 'MediaNowPlayingAlbum') AS \"Album\",\n  MAX(str_value) FILTER (WHERE field = 'MediaPlaybackStatus') AS \"Status\",\n  MAX(str_value) FILTER (WHERE field = 'MediaPlaybackSource') AS \"Source\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'MediaAudioVolume') AS \"Volume\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('MediaNowPlayingTitle', 'MediaNowPlayingArtist', 'MediaNowPlayingAlbum', 'MediaPlaybackStatus', 'MediaPlaybackSource', 'MediaAudioVolume')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts DESC",
           "refId": "A"
         }
       ],
@@ -547,7 +547,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time,\n  value_num AS \"Volume\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'MediaAudioVolume'\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  COALESCE(float_value, int_value::float8) AS \"Volume\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'MediaAudioVolume'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -616,7 +616,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT value_str AS \"Source\", COUNT(*) AS \"Count\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'MediaPlaybackSource'\n  AND value_str IS NOT NULL\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY value_str\nORDER BY COUNT(*) DESC",
+          "rawSql": "SELECT str_value AS \"Source\", COUNT(*) AS \"Count\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'MediaPlaybackSource'\n  AND str_value IS NOT NULL\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY str_value\nORDER BY COUNT(*) DESC",
           "refId": "A"
         }
       ],

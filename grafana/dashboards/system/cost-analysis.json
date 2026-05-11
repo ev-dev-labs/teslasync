@@ -131,7 +131,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT DATE_TRUNC('month', start_ts) AS time, SUM(cost) AS \"Charging Cost ($)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) GROUP BY DATE_TRUNC('month', start_ts) ORDER BY time",
+          "rawSql": "SELECT DATE_TRUNC('month', started_at) AS time, SUM(cost) AS \"Charging Cost ($)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) GROUP BY DATE_TRUNC('month', started_at) ORDER BY time",
           "refId": "A"
         }
       ],
@@ -212,7 +212,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT DATE_TRUNC('month', start_ts) AS time, CASE WHEN SUM(energy_added_kwh) > 0 THEN SUM(cost) / SUM(energy_added_kwh) ELSE 0 END AS \"$/kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) GROUP BY DATE_TRUNC('month', start_ts) ORDER BY time",
+          "rawSql": "SELECT DATE_TRUNC('month', started_at) AS time, CASE WHEN SUM(energy_added_kwh) > 0 THEN SUM(cost) / SUM(energy_added_kwh) ELSE 0 END AS \"$/kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) GROUP BY DATE_TRUNC('month', started_at) ORDER BY time",
           "refId": "A"
         }
       ],
@@ -293,7 +293,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT DATE_TRUNC('month', start_ts) AS time, SUM(cost) AS \"Monthly Cost ($)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT DATE_TRUNC('month', started_at) AS time, SUM(cost) AS \"Monthly Cost ($)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) GROUP BY 1 ORDER BY 1",
           "refId": "A"
         }
       ],
@@ -358,7 +358,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT CASE WHEN charger_type != '' AND charger_type IS NOT NULL THEN charger_type ELSE 'Home/AC' END AS \"Charger\", SUM(cost) AS \"Cost\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) GROUP BY 1 ORDER BY \"Cost\" DESC",
+          "rawSql": "SELECT CASE WHEN charger_type != '' AND charger_type IS NOT NULL THEN charger_type ELSE 'Home/AC' END AS \"Charger\", SUM(cost) AS \"Cost\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) GROUP BY 1 ORDER BY \"Cost\" DESC",
           "refId": "A"
         }
       ],
@@ -423,7 +423,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT CASE WHEN charger_type != '' AND charger_type IS NOT NULL THEN charger_type ELSE 'Home/AC' END AS \"Charger\", SUM(energy_added_kwh) AS \"Energy (kWh)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) GROUP BY 1 ORDER BY 2 DESC",
+          "rawSql": "SELECT CASE WHEN charger_type != '' AND charger_type IS NOT NULL THEN charger_type ELSE 'Home/AC' END AS \"Charger\", SUM(energy_added_kwh) AS \"Energy (kWh)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) GROUP BY 1 ORDER BY 2 DESC",
           "refId": "A"
         }
       ],
@@ -482,7 +482,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT SUM(cost) AS \"Total Cost ($)\", AVG(cost) AS \"Avg Session ($)\", SUM(energy_added_kwh) AS \"Total Energy (kWh)\", CASE WHEN SUM(energy_added_kwh) > 0 THEN SUM(cost)/SUM(energy_added_kwh) ELSE 0 END AS \"Avg $/kWh\", COUNT(*) AS \"Total Sessions\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)",
+          "rawSql": "SELECT SUM(cost) AS \"Total Cost ($)\", AVG(cost) AS \"Avg Session ($)\", SUM(energy_added_kwh) AS \"Total Energy (kWh)\", CASE WHEN SUM(energy_added_kwh) > 0 THEN SUM(cost)/SUM(energy_added_kwh) ELSE 0 END AS \"Avg $/kWh\", COUNT(*) AS \"Total Sessions\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)",
           "refId": "A"
         }
       ],
@@ -550,7 +550,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT DATE(start_ts) AS time, SUM(cost) AS \"Cost ($)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) GROUP BY DATE(start_ts) ORDER BY time",
+          "rawSql": "SELECT DATE(started_at) AS time, SUM(cost) AS \"Cost ($)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) GROUP BY DATE(started_at) ORDER BY time",
           "refId": "A"
         }
       ],

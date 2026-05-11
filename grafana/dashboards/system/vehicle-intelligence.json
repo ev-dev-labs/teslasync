@@ -505,7 +505,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(created_at, '1m') AS time,\n  MAX(CASE WHEN value_bool THEN 1 ELSE 0 END) FILTER (WHERE signal = 'LightsHazardsActive') AS \"Hazards Active\",\n  MAX(CASE WHEN value_bool THEN 1 ELSE 0 END) FILTER (WHERE signal = 'LightsHighBeams') AS \"High Beams\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('LightsHazardsActive', 'LightsHighBeams')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(ts, '1m') AS time,\n  MAX(CASE WHEN bool_value THEN 1 ELSE 0 END) FILTER (WHERE field = 'LightsHazardsActive') AS \"Hazards Active\",\n  MAX(CASE WHEN bool_value THEN 1 ELSE 0 END) FILTER (WHERE field = 'LightsHighBeams') AS \"High Beams\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('LightsHazardsActive', 'LightsHighBeams')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],
@@ -585,7 +585,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(created_at, '1m') AS time,\n  MAX(value_num) AS \"Tonneau Open %\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal = 'TonneauOpenPercent'\n  AND value_num IS NOT NULL\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(ts, '1m') AS time,\n  MAX(COALESCE(float_value, int_value::float8)) AS \"Tonneau Open %\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'TonneauOpenPercent'\n  AND COALESCE(float_value, int_value::float8) IS NOT NULL\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],

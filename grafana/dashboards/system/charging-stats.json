@@ -110,7 +110,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(SUM(energy_added_kwh)::numeric, 1) AS \"⚡ kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)",
+          "rawSql": "SELECT ROUND(SUM(energy_added_kwh)::numeric, 1) AS \"⚡ kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)",
           "refId": "A"
         }
       ],
@@ -171,7 +171,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(SUM(cost)::numeric, 2) AS \"$\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)",
+          "rawSql": "SELECT ROUND(SUM(cost)::numeric, 2) AS \"$\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)",
           "refId": "A"
         }
       ],
@@ -231,7 +231,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND((SUM(cost) / NULLIF(SUM(energy_added_kwh), 0))::numeric, 3) AS \"$/kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND cost IS NOT NULL",
+          "rawSql": "SELECT ROUND((SUM(cost) / NULLIF(SUM(energy_added_kwh), 0))::numeric, 3) AS \"$/kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND cost IS NOT NULL",
           "refId": "A"
         }
       ],
@@ -290,7 +290,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) AS \"🔄 Sessions\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)",
+          "rawSql": "SELECT COUNT(*) AS \"🔄 Sessions\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)",
           "refId": "A"
         }
       ],
@@ -350,7 +350,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(AVG(energy_added_kwh)::numeric, 1) AS \"⚡ kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)",
+          "rawSql": "SELECT ROUND(AVG(energy_added_kwh)::numeric, 1) AS \"⚡ kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)",
           "refId": "A"
         }
       ],
@@ -410,7 +410,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(AVG(duration_min)::numeric) AS \"min\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)",
+          "rawSql": "SELECT ROUND(AVG(duration_min)::numeric) AS \"min\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)",
           "refId": "A"
         }
       ],
@@ -491,7 +491,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(start_ts, '1M') AS time,\n  SUM(energy_added_kwh) AS \"⚡ Energy\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)\nGROUP BY time ORDER BY time",
+          "rawSql": "SELECT\n  $__timeGroup(started_at, '1M') AS time,\n  SUM(energy_added_kwh) AS \"⚡ Energy\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\nGROUP BY time ORDER BY time",
           "refId": "A"
         }
       ],
@@ -572,7 +572,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(start_ts, '1M') AS time,\n  SUM(cost) AS \"💰 Cost\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts) AND cost IS NOT NULL\nGROUP BY time ORDER BY time",
+          "rawSql": "SELECT\n  $__timeGroup(started_at, '1M') AS time,\n  SUM(cost) AS \"💰 Cost\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND cost IS NOT NULL\nGROUP BY time ORDER BY time",
           "refId": "A"
         }
       ],
@@ -629,7 +629,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(charger_type, 'AC') AS \"🏷️ Type\",\n  COUNT(*) AS \"🔄 Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)\nGROUP BY COALESCE(charger_type, 'AC')\nORDER BY 2 DESC",
+          "rawSql": "SELECT\n  COALESCE(charger_type, 'AC') AS \"🏷️ Type\",\n  COUNT(*) AS \"🔄 Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\nGROUP BY COALESCE(charger_type, 'AC')\nORDER BY 2 DESC",
           "refId": "A"
         }
       ],
@@ -699,7 +699,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  EXTRACT(DOW FROM start_ts) AS \"dayofweek\",\n  EXTRACT(HOUR FROM start_ts) AS \"hourofday\",\n  COUNT(*) AS \"count\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_ts)\nGROUP BY 1, 2 ORDER BY 1, 2",
+          "rawSql": "SELECT\n  EXTRACT(DOW FROM started_at) AS \"dayofweek\",\n  EXTRACT(HOUR FROM started_at) AS \"hourofday\",\n  COUNT(*) AS \"count\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\nGROUP BY 1, 2 ORDER BY 1, 2",
           "refId": "A"
         }
       ],
@@ -749,7 +749,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(cs.charger_location, '-') AS \"📍 Location\",\n  COUNT(*) AS \"🔄 Sessions\",\n  ROUND(SUM(cs.energy_added_kwh)::numeric, 1) AS \"⚡ Total kWh\",\n  ROUND(SUM(cs.cost)::numeric, 2) AS \"💰 Total Cost\",\n  ROUND(AVG(cs.energy_added_kwh)::numeric, 1) AS \"⚡ Avg kWh\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id} AND $__timeFilter(cs.start_ts)\nGROUP BY cs.charger_location\nORDER BY 2 DESC\nLIMIT 20",
+          "rawSql": "SELECT\n  COALESCE(cs.charger_location, '-') AS \"📍 Location\",\n  COUNT(*) AS \"🔄 Sessions\",\n  ROUND(SUM(cs.energy_added_kwh)::numeric, 1) AS \"⚡ Total kWh\",\n  ROUND(SUM(cs.cost)::numeric, 2) AS \"💰 Total Cost\",\n  ROUND(AVG(cs.energy_added_kwh)::numeric, 1) AS \"⚡ Avg kWh\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id} AND $__timeFilter(cs.started_at)\nGROUP BY cs.charger_location\nORDER BY 2 DESC\nLIMIT 20",
           "refId": "A"
         }
       ],

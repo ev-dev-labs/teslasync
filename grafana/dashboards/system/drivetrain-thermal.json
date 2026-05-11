@@ -109,7 +109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiStatorTempF')) AS \"Front Stator\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiStatorTempR')) AS \"Rear Stator\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiHeatsinkTF')) AS \"Front Heatsink\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiHeatsinkTR')) AS \"Rear Heatsink\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiInverterTF')) AS \"Front Inverter\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiInverterTR')) AS \"Rear Inverter\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DiStatorTempF', 'DiStatorTempR', 'DiHeatsinkTF', 'DiHeatsinkTR', 'DiInverterTF', 'DiInverterTR')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "SELECT\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiStatorTempF')) AS \"Front Stator\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiStatorTempR')) AS \"Rear Stator\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiHeatsinkTF')) AS \"Front Heatsink\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiHeatsinkTR')) AS \"Rear Heatsink\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiInverterTF')) AS \"Front Inverter\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiInverterTR')) AS \"Rear Inverter\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('DiStatorTempF', 'DiStatorTempR', 'DiHeatsinkTF', 'DiHeatsinkTR', 'DiInverterTF', 'DiInverterTR')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -189,7 +189,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time,\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiStatorTempF')) AS \"Front Stator\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiStatorTempR')) AS \"Rear Stator\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiStatorTempREL')) AS \"Rear L Stator\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiStatorTempRER')) AS \"Rear R Stator\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DiStatorTempF', 'DiStatorTempR', 'DiStatorTempREL', 'DiStatorTempRER')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiStatorTempF')) AS \"Front Stator\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiStatorTempR')) AS \"Rear Stator\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiStatorTempREL')) AS \"Rear L Stator\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiStatorTempRER')) AS \"Rear R Stator\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('DiStatorTempF', 'DiStatorTempR', 'DiStatorTempREL', 'DiStatorTempRER')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -269,7 +269,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time,\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiHeatsinkTF')) AS \"Front Heatsink\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiHeatsinkTR')) AS \"Rear Heatsink\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiHeatsinkTREL')) AS \"Rear L Heatsink\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiHeatsinkTRER')) AS \"Rear R Heatsink\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DiHeatsinkTF', 'DiHeatsinkTR', 'DiHeatsinkTREL', 'DiHeatsinkTRER')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiHeatsinkTF')) AS \"Front Heatsink\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiHeatsinkTR')) AS \"Rear Heatsink\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiHeatsinkTREL')) AS \"Rear L Heatsink\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiHeatsinkTRER')) AS \"Rear R Heatsink\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('DiHeatsinkTF', 'DiHeatsinkTR', 'DiHeatsinkTREL', 'DiHeatsinkTRER')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -349,7 +349,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time,\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiInverterTF')) AS \"Front Inverter\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiInverterTR')) AS \"Rear Inverter\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiInverterTREL')) AS \"Rear L Inverter\",\n  convert_temp(MAX(value_num) FILTER (WHERE signal = 'DiInverterTRER')) AS \"Rear R Inverter\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DiInverterTF', 'DiInverterTR', 'DiInverterTREL', 'DiInverterTRER')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiInverterTF')) AS \"Front Inverter\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiInverterTR')) AS \"Rear Inverter\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiInverterTREL')) AS \"Rear L Inverter\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiInverterTRER')) AS \"Rear R Inverter\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('DiInverterTF', 'DiInverterTR', 'DiInverterTREL', 'DiInverterTRER')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -429,7 +429,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'DiMotorCurrentF') AS \"Front Current\",\n  MAX(value_num) FILTER (WHERE signal = 'DiMotorCurrentR') AS \"Rear Current\",\n  MAX(value_num) FILTER (WHERE signal = 'DiMotorCurrentREL') AS \"Rear L Current\",\n  MAX(value_num) FILTER (WHERE signal = 'DiMotorCurrentRER') AS \"Rear R Current\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DiMotorCurrentF', 'DiMotorCurrentR', 'DiMotorCurrentREL', 'DiMotorCurrentRER')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiMotorCurrentF') AS \"Front Current\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiMotorCurrentR') AS \"Rear Current\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiMotorCurrentREL') AS \"Rear L Current\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiMotorCurrentRER') AS \"Rear R Current\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('DiMotorCurrentF', 'DiMotorCurrentR', 'DiMotorCurrentREL', 'DiMotorCurrentRER')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -509,7 +509,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'DiVBatF') AS \"Front Battery V\",\n  MAX(value_num) FILTER (WHERE signal = 'DiVBatR') AS \"Rear Battery V\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DiVBatF', 'DiVBatR')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiVBatF') AS \"Front Battery V\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiVBatR') AS \"Rear Battery V\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('DiVBatF', 'DiVBatR')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -533,7 +533,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'DiVBatF') AS \"Front (V)\",\n  MAX(value_num) FILTER (WHERE signal = 'DiVBatR') AS \"Rear (V)\",\n  MAX(value_num) FILTER (WHERE signal = 'DiVBatREL') AS \"Rear-Left (V)\",\n  MAX(value_num) FILTER (WHERE signal = 'DiVBatRER') AS \"Rear-Right (V)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DiVBatF', 'DiVBatR', 'DiVBatREL', 'DiVBatRER')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiVBatF') AS \"Front (V)\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiVBatR') AS \"Rear (V)\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiVBatREL') AS \"Rear-Left (V)\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiVBatRER') AS \"Rear-Right (V)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('DiVBatF', 'DiVBatR', 'DiVBatREL', 'DiVBatRER')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "format": "time_series",
           "refId": "A",
           "datasource": {
@@ -572,7 +572,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS time,\n  MAX(value_num) FILTER (WHERE signal = 'DiAxleSpeedF') AS \"Front (RPM)\",\n  MAX(value_num) FILTER (WHERE signal = 'DiAxleSpeedREL') AS \"Rear-Left (RPM)\",\n  MAX(value_num) FILTER (WHERE signal = 'DiAxleSpeedRER') AS \"Rear-Right (RPM)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND signal IN ('DiAxleSpeedF', 'DiAxleSpeedREL', 'DiAxleSpeedRER')\n  AND created_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY created_at\nORDER BY created_at",
+          "rawSql": "SELECT ts AS time,\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiAxleSpeedF') AS \"Front (RPM)\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiAxleSpeedREL') AS \"Rear-Left (RPM)\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiAxleSpeedRER') AS \"Rear-Right (RPM)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('DiAxleSpeedF', 'DiAxleSpeedREL', 'DiAxleSpeedRER')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "format": "time_series",
           "refId": "A",
           "datasource": {
