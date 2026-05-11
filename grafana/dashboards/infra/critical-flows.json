@@ -1,0 +1,188 @@
+{
+  "uid": "teslasync-infra-critical-flows",
+  "title": "TeslaSync - Critical Flow Latency (Phase-44 instrumented)",
+  "tags": [
+    "teslasync",
+    "infra",
+    "tempo",
+    "tracing",
+    "critical-flows"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Flow 1: GET /vehicles/{id}/state — vehicle_state_read",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "vehicle_state_read req/s",
+      "description": "Server-span call rate for the vehicle_state_read flow. Uses span_metrics; the dimension `http.route = /api/v1/vehicles/{id}/state` is copied onto the metric by the configured dimensions list.",
+      "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "reqps" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(traces_spanmetrics_calls_total{http_route=~\".*/vehicles/.*/state\", span_kind=\"SPAN_KIND_SERVER\"}[5m]))", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Error %",
+      "description": "Errored fraction of vehicle_state_read calls.",
+      "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] }, "unit": "percent" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "100 * sum(rate(traces_spanmetrics_calls_total{http_route=~\".*/vehicles/.*/state\", span_kind=\"SPAN_KIND_SERVER\", status_code=\"STATUS_CODE_ERROR\"}[5m])) / clamp_min(sum(rate(traces_spanmetrics_calls_total{http_route=~\".*/vehicles/.*/state\", span_kind=\"SPAN_KIND_SERVER\"}[5m])), 0.001)", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "vehicle_state_read latency P50/P95/P99 (with exemplars)",
+      "description": "Click any exemplar dot to jump to the trace in Tempo.",
+      "gridPos": { "x": 8, "y": 1, "w": 16, "h": 8 },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "s" } },
+      "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "histogram_quantile(0.50, sum by (le) (rate(traces_spanmetrics_latency_bucket{http_route=~\".*/vehicles/.*/state\", span_kind=\"SPAN_KIND_SERVER\"}[5m])))", "legendFormat": "P50", "refId": "A", "exemplar": true },
+        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{http_route=~\".*/vehicles/.*/state\", span_kind=\"SPAN_KIND_SERVER\"}[5m])))", "legendFormat": "P95", "refId": "B", "exemplar": true },
+        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "histogram_quantile(0.99, sum by (le) (rate(traces_spanmetrics_latency_bucket{http_route=~\".*/vehicles/.*/state\", span_kind=\"SPAN_KIND_SERVER\"}[5m])))", "legendFormat": "P99", "refId": "C", "exemplar": true }
+      ],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 4,
+      "type": "traces",
+      "title": "vehicle_state_read — Recent slow traces (>1s)",
+      "description": "Always-sampled per the OTel collector's `slow-always` policy. Click a row to view the flame graph.",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 8 },
+      "options": {},
+      "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ span.http.route =~ \".*/vehicles/.*/state\" && duration > 1s }", "limit": 30, "refId": "A" }],
+      "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }
+    },
+
+    {
+      "id": 200,
+      "type": "row",
+      "title": "Flow 2: POST /commands/{vehicleId}/wake — wake_command",
+      "gridPos": { "x": 0, "y": 17, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "wake_command req/s",
+      "description": "Wake-command call rate.",
+      "gridPos": { "x": 0, "y": 18, "w": 4, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "reqps" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(traces_spanmetrics_calls_total{http_route=~\".*/commands/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\"}[5m]))", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Error %",
+      "description": "Failed wake-command fraction. Common error sources: vehicle asleep beyond timeout, Tesla API auth refresh failure, fleet API rate limit.",
+      "gridPos": { "x": 4, "y": 18, "w": 4, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] }, "unit": "percent" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "100 * sum(rate(traces_spanmetrics_calls_total{http_route=~\".*/commands/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\", status_code=\"STATUS_CODE_ERROR\"}[5m])) / clamp_min(sum(rate(traces_spanmetrics_calls_total{http_route=~\".*/commands/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\"}[5m])), 0.001)", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "wake_command latency P50/P95/P99 (with exemplars)",
+      "description": "Wake commands are SLOW by design — vehicles can take 5-30s to respond. P95 above 30s usually means the Tesla API is timing out.",
+      "gridPos": { "x": 8, "y": 18, "w": 16, "h": 8 },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "s" } },
+      "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "histogram_quantile(0.50, sum by (le) (rate(traces_spanmetrics_latency_bucket{http_route=~\".*/commands/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\"}[5m])))", "legendFormat": "P50", "refId": "A", "exemplar": true },
+        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{http_route=~\".*/commands/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\"}[5m])))", "legendFormat": "P95", "refId": "B", "exemplar": true },
+        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "histogram_quantile(0.99, sum by (le) (rate(traces_spanmetrics_latency_bucket{http_route=~\".*/commands/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\"}[5m])))", "legendFormat": "P99", "refId": "C", "exemplar": true }
+      ],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 8,
+      "type": "traces",
+      "title": "wake_command — Recent error traces",
+      "description": "Failed wake commands. Always-sampled (status=error policy).",
+      "gridPos": { "x": 0, "y": 26, "w": 24, "h": 8 },
+      "options": {},
+      "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ span.http.route =~ \".*/commands/.*/wake.*\" && status = error }", "limit": 30, "refId": "A" }],
+      "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }
+    },
+
+    {
+      "id": 300,
+      "type": "row",
+      "title": "Flow 3: MQTT consume → normalize → store — mqtt_pipeline",
+      "gridPos": { "x": 0, "y": 34, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "mqtt_pipeline span/s",
+      "description": "Producer/consumer span rate. SPAN_KIND_CONSUMER + SPAN_KIND_INTERNAL combined.",
+      "gridPos": { "x": 0, "y": 35, "w": 4, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "ops" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(traces_spanmetrics_calls_total{messaging_system=\"mqtt\"}[5m])) or sum(rate(traces_spanmetrics_calls_total{span_name=~\"normalize.*|mqtt.*\"}[5m]))", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "Error %",
+      "description": "MQTT pipeline error fraction.",
+      "gridPos": { "x": 4, "y": 35, "w": 4, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] }, "unit": "percent" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "100 * (sum(rate(traces_spanmetrics_calls_total{messaging_system=\"mqtt\", status_code=\"STATUS_CODE_ERROR\"}[5m])) or sum(rate(traces_spanmetrics_calls_total{span_name=~\"normalize.*|mqtt.*\", status_code=\"STATUS_CODE_ERROR\"}[5m]))) / clamp_min((sum(rate(traces_spanmetrics_calls_total{messaging_system=\"mqtt\"}[5m])) or sum(rate(traces_spanmetrics_calls_total{span_name=~\"normalize.*|mqtt.*\"}[5m]))), 0.001)", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "mqtt_pipeline latency by span_name (P95)",
+      "description": "Per-stage p95 latency. Compare consume vs normalize vs store to find the bottleneck stage.",
+      "gridPos": { "x": 8, "y": 35, "w": 16, "h": 8 },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "s" } },
+      "options": { "legend": { "calcs": ["max"], "displayMode": "table", "placement": "right" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "topk(10, histogram_quantile(0.95, sum by (span_name, le) (rate(traces_spanmetrics_latency_bucket{span_name=~\"mqtt.*|normalize.*|signal.*store.*\"}[5m]))))", "legendFormat": "{{span_name}}", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 12,
+      "type": "traces",
+      "title": "mqtt_pipeline — Recent slow traces (>500ms)",
+      "description": "End-to-end MQTT message processing traces above 500ms.",
+      "gridPos": { "x": 0, "y": 43, "w": 24, "h": 8 },
+      "options": {},
+      "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ name =~ \"mqtt.*|normalize.*\" && duration > 500ms }", "limit": 30, "refId": "A" }],
+      "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }
+    }
+  ]
+}

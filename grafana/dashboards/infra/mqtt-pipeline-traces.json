@@ -1,0 +1,148 @@
+{
+  "uid": "teslasync-infra-mqtt-pipeline-traces",
+  "title": "TeslaSync - MQTT Pipeline Trace View (Tempo)",
+  "tags": [
+    "teslasync",
+    "infra",
+    "tempo",
+    "tracing",
+    "mqtt"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "editable": true,
+  "graphTooltip": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "destination",
+        "label": "MQTT topic / destination",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+        "query": { "qryType": 1, "query": "label_values(traces_spanmetrics_calls_total{messaging_destination!=\"\"}, messaging_destination)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+        "current": { "text": "All", "value": "$__all" },
+        "includeAll": true, "multi": true, "refresh": 2, "sort": 1, "regex": "", "hide": 0, "skipUrlSync": false, "allValue": ".+"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Pipeline Overview",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Messages/s",
+      "description": "MQTT messaging-system span rate. CONSUMER + PRODUCER + INTERNAL combined.",
+      "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "ops" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(traces_spanmetrics_calls_total{messaging_system=\"mqtt\", messaging_destination=~\"$destination\"}[5m]))", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Error %",
+      "description": "Failed-message fraction. Common causes: poison pill, downstream signal_log insert failure.",
+      "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "red", "value": 2 }] }, "unit": "percent" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "100 * sum(rate(traces_spanmetrics_calls_total{messaging_system=\"mqtt\", messaging_destination=~\"$destination\", status_code=\"STATUS_CODE_ERROR\"}[5m])) / clamp_min(sum(rate(traces_spanmetrics_calls_total{messaging_system=\"mqtt\", messaging_destination=~\"$destination\"}[5m])), 0.001)", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "End-to-end P95",
+      "description": "P95 latency of the consumer-side span (consume → normalize → store). This is the user-visible end-to-end ingest latency.",
+      "gridPos": { "x": 8, "y": 1, "w": 4, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "red", "value": 2 }] }, "unit": "s" } },
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{messaging_system=\"mqtt\", messaging_destination=~\"$destination\", span_kind=\"SPAN_KIND_CONSUMER\"}[5m])))", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Throughput by destination (top 10)",
+      "description": "Per-topic message rate. Sudden drop on a specific topic = vehicle gone offline / Tesla streaming endpoint changed.",
+      "gridPos": { "x": 12, "y": 1, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "ops" } },
+      "options": { "legend": { "calcs": ["max"], "displayMode": "table", "placement": "right" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "topk(10, sum by (messaging_destination) (rate(traces_spanmetrics_calls_total{messaging_system=\"mqtt\", messaging_destination=~\"$destination\"}[5m])))", "legendFormat": "{{messaging_destination}}", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 200,
+      "type": "row",
+      "title": "Stage Latency Breakdown",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "P95 latency by pipeline stage (span_name)",
+      "description": "Per-stage P95 latency (mqtt.* + normalize.* + signal_store.*). Identifies which stage is the bottleneck.",
+      "gridPos": { "x": 0, "y": 10, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "s" } },
+      "options": { "legend": { "calcs": ["max"], "displayMode": "table", "placement": "right" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "topk(10, histogram_quantile(0.95, sum by (span_name, le) (rate(traces_spanmetrics_latency_bucket{span_name=~\"mqtt\\\\..*|normalize\\\\..*|signal_store\\\\..*|signal_log\\\\..*\"}[5m]))))", "legendFormat": "{{span_name}}", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Stage call rate (span_name)",
+      "description": "Per-stage call rate. The ratio between adjacent stages tells you about fan-out (one consume → many normalize spans, etc.).",
+      "gridPos": { "x": 12, "y": 10, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "ops" } },
+      "options": { "legend": { "calcs": ["max"], "displayMode": "table", "placement": "right" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "topk(10, sum by (span_name) (rate(traces_spanmetrics_calls_total{span_name=~\"mqtt\\\\..*|normalize\\\\..*|signal_store\\\\..*|signal_log\\\\..*\"}[5m])))", "legendFormat": "{{span_name}}", "refId": "A" }],
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
+    },
+    {
+      "id": 300,
+      "type": "row",
+      "title": "Trace Drill-In",
+      "gridPos": { "x": 0, "y": 18, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 7,
+      "type": "traces",
+      "title": "Slow MQTT pipeline traces (>500ms end-to-end)",
+      "description": "Slow message-processing traces. Always-sampled per the OTel collector slow-always policy.",
+      "gridPos": { "x": 0, "y": 19, "w": 24, "h": 10 },
+      "options": {},
+      "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ span.messaging.system = \"mqtt\" && duration > 500ms }", "limit": 30, "refId": "A" }],
+      "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }
+    },
+    {
+      "id": 8,
+      "type": "traces",
+      "title": "Failed MQTT pipeline traces",
+      "description": "All failed pipeline traces. Includes poison-pill messages, schema validation failures, and downstream insert errors.",
+      "gridPos": { "x": 0, "y": 29, "w": 24, "h": 10 },
+      "options": {},
+      "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ span.messaging.system = \"mqtt\" && status = error }", "limit": 30, "refId": "A" }],
+      "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }
+    }
+  ]
+}
