@@ -11,8 +11,10 @@ import { GlassPanel, Button as UiButton, Select as UiSelect, Input as UiInput, B
 import { StatCard, DateTime } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { Spinner, AlertBanner } from '@/components/feedback';
+import { RangePicker } from '@/components/forms';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlString, useUrlBatch } from '@/hooks/useUrlState';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { getAPICallLogs, getAPICallLogStats } from '@/api/devtools';
@@ -63,16 +65,9 @@ function serviceBadgeConfig(service: string): { label: string; variant: LogBadge
   return SERVICE_CONFIG[service] ?? { label: service, variant: 'neutral' };
 }
 
-// localDateTimeToISO converts a `<input type="datetime-local">` value (local
-// wall-clock, no offset, e.g. `2026-04-29T12:00`) to a UTC ISO string the
-// backend can compare against api_call_logs.ts (timestamptz). Returns
-// undefined for empty / unparseable input so the query param is omitted.
-function localDateTimeToISO(local: string): string | undefined {
-  if (!local) return undefined;
-  const d = new Date(local);
-  if (Number.isNaN(d.getTime())) return undefined;
-  return d.toISOString();
-}
+// localDateTimeToISO has been removed — the page now uses the unified
+// <RangePicker> which emits `YYYY-MM-DD`; conversion to UTC ISO happens
+// inline at the query call site.
 
 function JsonViewer({ data, label }: { data: string | null; label: string }) {
   const { t } = useTranslation();
@@ -97,25 +92,20 @@ export default function ApiLogsPage() {
   const { t } = useTranslation();
   usePageTitle(t('apiLogs.title', 'API Logs'));
 
-  const defaultStart = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-  }, []);
-  const defaultEnd = useMemo(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-  }, []);
-
   const [page, setPage] = useUrlNumber('page', 0);
   const [method] = useUrlString('method', '');
   const [status] = useUrlString('status', '');
   const [endpoint] = useUrlString('endpoint', '');
   const [service] = useUrlString('service', '');
-  const [startDate] = useUrlString('from', defaultStart);
-  const [endDate] = useUrlString('to', defaultEnd);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const limit = 25;
+
+  // Unified date range — no hardcoded windows. Picker drives the
+  // `from`/`to` URL params; absence of bounds = full history.
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'api-logs.range',
+    defaultPresetId: 'all',
+  });
 
   // Multi-key URL writer — react-router-dom v6's setSearchParams uses a
   // ref that doesn't refresh between two synchronous calls, so chaining
@@ -125,7 +115,7 @@ export default function ApiLogsPage() {
   // useUrlBatch. See useUrlState.ts §useUrlBatch JSDoc.
   const setUrl = useUrlBatch();
 
-  type FilterKey = 'method' | 'status' | 'endpoint' | 'service' | 'from' | 'to';
+  type FilterKey = 'method' | 'status' | 'endpoint' | 'service';
   const setFilter = useCallback(
     (key: FilterKey, value: string) => {
       setUrl({ [key]: value, page: '' });
@@ -140,7 +130,7 @@ export default function ApiLogsPage() {
   });
 
   const { data, isLoading, error: logsError } = useQuery({
-    queryKey: ['api-logs', page, method, status, endpoint, service, startDate, endDate],
+    queryKey: ['api-logs', page, method, status, endpoint, service, start, end],
     queryFn: () => getAPICallLogs({
       limit,
       offset: page * limit,
@@ -148,12 +138,11 @@ export default function ApiLogsPage() {
       status: status || undefined,
       endpoint: endpoint || undefined,
       service: service || undefined,
-      // datetime-local inputs are local-time (no offset); the backend stores
-      // ts as UTC (timestamptz). Convert via Date() so the comparison window
-      // matches what the user actually picked, not the same wall-clock time
-      // re-interpreted as UTC.
-      start: localDateTimeToISO(startDate),
-      end: localDateTimeToISO(endDate),
+      // RangePicker emits `YYYY-MM-DD`; backend stores ts as UTC timestamptz.
+      // Send local-day boundaries so the comparison window matches the user's
+      // picked dates (start of day .. end of day in their local zone).
+      start: start ? new Date(`${start}T00:00:00`).toISOString() : undefined,
+      end: end ? new Date(`${end}T23:59:59.999`).toISOString() : undefined,
     }),
     refetchInterval: 10_000,
   });
@@ -163,7 +152,7 @@ export default function ApiLogsPage() {
   const logs = data?.data ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
-  const hasFilters = !!(method || status || endpoint || service || startDate || endDate);
+  const hasFilters = !!(method || status || endpoint || service);
 
   const clearFilters = useCallback(() => {
     setUrl({
@@ -171,8 +160,6 @@ export default function ApiLogsPage() {
       status: '',
       endpoint: '',
       service: '',
-      from: '',
-      to: '',
       page: '',
     });
   }, [setUrl]);
@@ -210,6 +197,17 @@ export default function ApiLogsPage() {
     <PageContainer
       title={t('apiLogs.title', 'API Logs')}
       subtitle={t('apiLogs.subtitle', 'Record of all API calls with request/response details')}
+      actions={
+        <RangePicker
+          value={{ start, end }}
+          onChange={(r) => {
+            setRange(r);
+            if (page !== 0) setPage(0);
+          }}
+          align="end"
+          triggerTestId="api-logs-range"
+        />
+      }
     >
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
@@ -329,18 +327,6 @@ export default function ApiLogsPage() {
                 className="pl-8"
               />
             </div>
-            <UiInput
-              type="datetime-local"
-              value={startDate}
-              onChange={(e) => setFilter('from', e.target.value)}
-              placeholder={t('apiLogs.startDate', 'Start date')}
-            />
-            <UiInput
-              type="datetime-local"
-              value={endDate}
-              onChange={(e) => setFilter('to', e.target.value)}
-              placeholder={t('apiLogs.endDate', 'End date')}
-            />
           </div>
         </GlassPanel>
       </FadeIn>
