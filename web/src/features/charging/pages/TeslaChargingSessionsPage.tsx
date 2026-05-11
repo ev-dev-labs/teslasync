@@ -13,6 +13,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { EmptyState, Spinner } from '@/components/feedback';
+import { RangePicker } from '@/components/forms';
 import {
   useTeslaChargingSessions,
   useRefreshTeslaChargingSessions,
@@ -20,6 +21,7 @@ import {
 } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -61,7 +63,22 @@ export default function TeslaChargingSessionsPage() {
   const { data: response, isLoading, error } = useTeslaChargingSessions(selectedVin || undefined);
   const refreshMutation = useRefreshTeslaChargingSessions();
 
-  const sessions = response?.sessions ?? [];
+  const allSessions = response?.sessions ?? [];
+  // Range filter (client-side) on charge_start_datetime.
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'tesla-charging-sessions.range',
+    defaultPresetId: 'all',
+  });
+  const sessions = useMemo(() => {
+    if (!allSessions.length) return allSessions;
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    return allSessions.filter((s) => {
+      if (!s.charge_start_datetime) return false;
+      const t = new Date(s.charge_start_datetime).getTime();
+      return t >= startMs && t <= endMs;
+    });
+  }, [allSessions, start, end]);
   const summary = response?.summary ?? {
     total_sessions: 0, total_wh: null, total_cost: null, avg_cost_per_kwh: null, peak_power_kw: null,
   };
@@ -266,6 +283,14 @@ export default function TeslaChargingSessionsPage() {
       subtitle={t('tesla_sessions.subtitle', 'Detailed charging session data from Tesla (business accounts only)')}
       loading={isLoading}
       error={error as Error | null}
+      actions={
+        <RangePicker
+          value={{ start, end }}
+          onChange={setRange}
+          align="end"
+          triggerTestId="tesla-charging-sessions-range"
+        />
+      }
     >
       {/* Info banner */}
       <FadeIn>

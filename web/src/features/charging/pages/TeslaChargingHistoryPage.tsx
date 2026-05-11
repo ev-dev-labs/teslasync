@@ -13,8 +13,9 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
+import { SearchInput, FilterBar, ActiveFilterChips, RangePicker, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlEnum, useUrlString } from '@/hooks/useUrlState';
 import {
   useTeslaChargingHistory,
@@ -71,7 +72,22 @@ export default function TeslaChargingHistoryPage() {
   const { data: response, isLoading, error } = useTeslaChargingHistory(selectedVin || undefined);
   const refreshMutation = useRefreshTeslaChargingHistory();
 
-  const entries = response?.entries ?? [];
+  const allEntries = response?.entries ?? [];
+  // Range filter (client-side) on charge_start_datetime.
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'tesla-charging-history.range',
+    defaultPresetId: 'all',
+  });
+  const entries = useMemo(() => {
+    if (!allEntries.length) return allEntries;
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    return allEntries.filter((e) => {
+      if (!e.charge_start_datetime) return false;
+      const t = new Date(e.charge_start_datetime).getTime();
+      return t >= startMs && t <= endMs;
+    });
+  }, [allEntries, start, end]);
   const summary = response?.summary ?? { total_sessions: 0, total_wh: null, total_spend: null, avg_cost_per_kwh: null };
 
   const vehicleOptions = useMemo(() => {
@@ -270,6 +286,14 @@ export default function TeslaChargingHistoryPage() {
       loading={isLoading}
       error={error as Error | null}
       copyLink
+      actions={
+        <RangePicker
+          value={{ start, end }}
+          onChange={setRange}
+          align="end"
+          triggerTestId="tesla-charging-history-range"
+        />
+      }
     >
       {/* Controls bar */}
       <FadeIn>
