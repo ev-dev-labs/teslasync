@@ -16,7 +16,9 @@ import {
 import { StatCard, Timeline } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer } from '@/components/motion';
+import { RangePicker } from '@/components/forms';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlBatch, useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useCommandHistory, type CommandLogEntry } from '@/api/hooks/useCommands';
@@ -148,8 +150,19 @@ export default function CommandHistoryPage() {
   };
 
   // Filtered commands
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'command-history.range',
+    defaultPresetId: 'all',
+  });
   const filtered = useMemo(() => {
     let result = allCommands;
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    result = result.filter((c) => {
+      if (!c.created_at) return false;
+      const t = new Date(c.created_at).getTime();
+      return t >= startMs && t <= endMs;
+    });
     if (statusFilter !== 'all') {
       result = result.filter((c) => c.status === statusFilter);
     }
@@ -162,7 +175,7 @@ export default function CommandHistoryPage() {
       );
     }
     return result;
-  }, [allCommands, statusFilter, deferredSearchQuery]);
+  }, [allCommands, start, end, statusFilter, deferredSearchQuery]);
 
   // Pagination
   const paginatedCommands = useMemo(
@@ -234,13 +247,24 @@ export default function CommandHistoryPage() {
       loading={isLoading}
       error={error ?? undefined}
       actions={
-        <Link
-          to="/commands"
-          className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-        >
-          <Gamepad2 className="h-3.5 w-3.5" />
-          {t('commandHistory.backToCommands', 'Commands')}
-        </Link>
+        <div className="flex items-center gap-3">
+          <RangePicker
+            value={{ start, end }}
+            onChange={(r) => {
+              setRange(r);
+              if (page !== 1) setPage(1);
+            }}
+            align="end"
+            triggerTestId="command-history-range"
+          />
+          <Link
+            to="/commands"
+            className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            <Gamepad2 className="h-3.5 w-3.5" />
+            {t('commandHistory.backToCommands', 'Commands')}
+          </Link>
+        </div>
       }
     >
       {/* ── Section 1: Stats ────────────────────────────────────────────── */}

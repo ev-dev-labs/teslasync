@@ -38,8 +38,9 @@ import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
-import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
+import { SearchInput, FilterBar, ActiveFilterChips, RangePicker, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
+import { useRangeState } from '@/hooks/useRangeState';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
@@ -562,7 +563,23 @@ export default function AlertsPage() {
 
   // Queries
   const alertsQuery = useAlerts();
-  const { data: alerts, isLoading, error } = alertsQuery;
+  const { data: rawAlerts, isLoading, error } = alertsQuery;
+
+  // Range filter (client-side, applied before all downstream derivations).
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'alerts.range',
+    defaultPresetId: 'all',
+  });
+  const alerts = useMemo(() => {
+    if (!rawAlerts?.length) return rawAlerts;
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    return rawAlerts.filter((a) => {
+      if (!a.created_at) return false;
+      const t = new Date(a.created_at).getTime();
+      return t >= startMs && t <= endMs;
+    });
+  }, [rawAlerts, start, end]);
   const { data: rules } = useAlertRules();
   const markReadMut = useMarkAlertRead();
   const ackMut = useAcknowledgeAlertHook();
@@ -694,6 +711,15 @@ export default function AlertsPage() {
       copyLink
       actions={
         <div className="flex items-center gap-3">
+          <RangePicker
+            value={{ start, end }}
+            onChange={(r) => {
+              setRange(r);
+              if (alertPage !== 1) setAlertPage(1);
+            }}
+            align="end"
+            triggerTestId="alerts-range"
+          />
           <DataFreshnessAuto query={alertsQuery} />
           {quietActive && <Badge variant="info" size="sm">{t('Quiet hours')}</Badge>}
           {unreadCount > 0 && <Badge variant="info" size="sm">{unreadCount} {t('unread')}</Badge>}
