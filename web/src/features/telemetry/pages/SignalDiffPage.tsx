@@ -353,7 +353,7 @@ export default function SignalDiffPage() {
       title={t('signalDiff.title', 'Signal Diff')}
       subtitle={t('signalDiff.subtitle', 'Compare signal values between two snapshots in time')}
       actions={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <SavedViewMenu
             route="/telemetry/signal-diff"
             currentQuery={currentQuery}

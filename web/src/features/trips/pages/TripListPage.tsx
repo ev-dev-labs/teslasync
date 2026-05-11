@@ -136,7 +136,7 @@ export default function TripListPage() {
       subtitle={t('trips.subtitle', 'Multi-drive trip reports with distance and cost tracking')}
       loading={isLoading}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <RangePicker
             value={{ start: startDate, end: endDate }}
             onChange={(r) => {

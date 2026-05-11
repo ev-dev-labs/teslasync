@@ -427,7 +427,7 @@ export default function DrivesListPage() {
       error={drivesError as Error | null}
       copyLink
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <DataFreshnessAuto query={drivesQuery} />
           <div data-tour="drives-saved-views">
             <SavedViewMenu

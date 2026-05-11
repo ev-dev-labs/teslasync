@@ -246,7 +246,7 @@ export default function MapOverviewPage() {
       loading={vehiclesLoading}
       error={vehiclesError as Error | null}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <DataFreshnessAuto query={vehiclesQuery} />
           <LiveIndicator variant="compact" />
         </div>

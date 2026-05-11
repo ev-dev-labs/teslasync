@@ -153,7 +153,7 @@ export default function SpeedProfilePage() {
       subtitle={t('speedProfile.subtitle', 'Speed distribution and driving pattern analysis')}
       error={error as Error | null}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           {vehicles.length > 0 && (
             <Select value={String(vehicleId ?? '')} onChange={(e) => setVehicleId(Number(e.target.value))} options={vehicleOptions} />
           )}

@@ -287,7 +287,7 @@ export default function TeslaChargingHistoryPage() {
       error={error as Error | null}
       copyLink
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <Select
             options={vehicleOptions}
             value={selectedVin}

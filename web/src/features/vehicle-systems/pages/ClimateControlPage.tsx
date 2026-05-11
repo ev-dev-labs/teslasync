@@ -422,7 +422,7 @@ export default function ClimateControlPage() {
       loading={isLoading}
       error={error as Error | null}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <Button
             variant="ghost"
             size="sm"

@@ -131,7 +131,7 @@ export default function MQTTInspectorPage() {
       title={t('mqtt.title', 'MQTT Inspector')}
       subtitle={t('mqtt.subtitle', 'MQTT connection status and streaming telemetry')}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <span className="text-xs text-[var(--text-muted)]">
             <RefreshCw className="inline h-3 w-3 mr-1" />
             {t('mqtt.refreshInterval', 'Refreshes every 5s')}

@@ -45,7 +45,7 @@ export default function TrueCostPage() {
       loading={isLoading}
       error={error instanceof Error ? error : null}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           {vehicles && vehicles.length > 1 && (
             <Select
               value={String(vehicleId ?? '')}

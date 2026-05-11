@@ -146,7 +146,7 @@ export default function ChargingListPage() {
       title={t('charging.list.title', 'Charging Sessions')}
       subtitle={t('charging.list.subtitle', 'Cost analysis, charger breakdown, energy patterns, and performance tracking')}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <RangePicker
             value={{ start: startDate, end: endDate }}
             onChange={(r) => {

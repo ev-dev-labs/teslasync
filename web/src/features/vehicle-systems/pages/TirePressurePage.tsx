@@ -328,7 +328,7 @@ export default function TirePressurePage() {
       loading={isLoading}
       error={latestError as Error | null}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           {vehicles.length > 0 && (
             <Select
               value={activeVehicleId != null ? String(activeVehicleId) : ''}

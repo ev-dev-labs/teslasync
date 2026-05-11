@@ -100,7 +100,7 @@ export default function SoftwareUpdatesPage() {
       subtitle={t('Track firmware versions and update history')}
       loading={isLoading}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           {vehicles.length > 0 && (
             <Select
               value={String(vehicleId ?? '')}

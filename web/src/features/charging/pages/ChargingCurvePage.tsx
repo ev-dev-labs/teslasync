@@ -177,7 +177,7 @@ export default function ChargingCurvePage() {
       title={t('charging.curve.title', 'Charging Curve')}
       subtitle={t('charging.curve.subtitle', 'Power vs state-of-charge across sessions')}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <RangePicker
             value={{ start, end }}
             onChange={(r) => {

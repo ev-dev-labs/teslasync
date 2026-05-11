@@ -251,7 +251,7 @@ export default function CommandHistoryPage() {
       loading={isLoading}
       error={error ?? undefined}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           {vehicles.length > 0 && (
             <ControlSelect
               options={vehicles.map((v) => ({

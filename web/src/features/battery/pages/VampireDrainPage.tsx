@@ -110,7 +110,7 @@ export default function VampireDrainPage() {
       loading={isLoading}
       error={error instanceof Error ? error : null}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           {vehicles && vehicles.length > 1 && (
             <Select
               options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}

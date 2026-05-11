@@ -405,7 +405,7 @@ export default function TripReplayPage() {
           : `Drive #${id}`,
       }}
       actions={
-        <div className="flex items-center gap-2" data-tour="drive-replay-share">
+        <div className="flex flex-wrap items-center justify-end gap-2" data-tour="drive-replay-share">
           <Link to={`/drives/${id}`}>
             <Button variant="ghost" size="sm">
               <ArrowLeft className="mr-1 h-4 w-4" />

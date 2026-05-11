@@ -58,7 +58,7 @@ export default function CommandsPage() {
       subtitle={t('commands.subtitle', 'Remote control center for your Tesla fleet')}
       loading={isLoading}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <Link
             to="/command-history"
             className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"

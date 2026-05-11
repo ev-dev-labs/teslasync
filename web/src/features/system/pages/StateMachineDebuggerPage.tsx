@@ -457,7 +457,7 @@ export default function StateMachineDebuggerPage() {
       subtitle={t('fsm.subtitle', 'Multi-FSM transition analysis — vehicle, drive, charge, command, notification')}
       loading={stateLoading && transLoading && statsLoading}
       actions={
-        <div className="flex items-center gap-2" data-tour="debugger-share">
+        <div className="flex flex-wrap items-center justify-end gap-2" data-tour="debugger-share">
           <span className="hidden items-center gap-1 text-xs text-[var(--text-muted)] sm:flex">
             <RefreshCw className={cn('h-3 w-3', stateFetching && 'animate-spin')} />
             {t('fsm.autoRefresh', 'Live 10s')}

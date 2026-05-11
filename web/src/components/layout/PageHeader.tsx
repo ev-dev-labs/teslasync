@@ -37,7 +37,7 @@ export function PageHeader({
           </div>
         </div>
         {(actions || copyLink) && (
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 min-w-0 max-w-full">
             {copyLink && <CopyLinkButton />}
             {actions}
           </div>

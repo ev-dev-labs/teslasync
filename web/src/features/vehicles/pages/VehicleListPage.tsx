@@ -179,7 +179,7 @@ export default function VehicleListPage() {
       title={t('nav.vehicles', 'Fleet')}
       subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
       actions={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <DataFreshnessAuto query={vehiclesQuery} />
           {vehicleList.length >= 2 && (
             <Button
