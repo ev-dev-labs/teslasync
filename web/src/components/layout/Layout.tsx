@@ -215,6 +215,7 @@ const PINNED_NAV_STORAGE_KEY = 'teslasync-pinned-nav-paths'
 
 const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; ring: string; dot: string }> = {
   Overview: { accent: 'text-sky-300', surface: 'bg-sky-400/10', ring: 'ring-sky-400/20', dot: 'bg-sky-400' },
+  Maps: { accent: 'text-green-400', surface: 'bg-green-400/10', ring: 'ring-green-400/20', dot: 'bg-green-400' },
   Fleet: { accent: 'text-cyan-300', surface: 'bg-cyan-400/10', ring: 'ring-cyan-400/20', dot: 'bg-cyan-400' },
   Driving: { accent: 'text-violet-300', surface: 'bg-violet-400/10', ring: 'ring-violet-400/20', dot: 'bg-violet-400' },
   'Driving Insights': { accent: 'text-purple-300', surface: 'bg-purple-400/10', ring: 'ring-purple-400/20', dot: 'bg-purple-400' },
@@ -250,9 +251,18 @@ export const navSections = [
     title: 'Overview',
     items: [
       { to: '/', icon: Icons.layoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
-      { to: '/live', icon: Icons.radar, label: 'Live Map', color: 'text-emerald-400' },
       { to: '/weekly-digest', icon: Icons.calendarCheck, label: 'Weekly Digest', color: 'text-purple-400' },
       { to: '/timeline', icon: Icons.clock, label: 'Timeline', color: 'text-sky-400' },
+    ],
+  },
+  {
+    title: 'Maps',
+    items: [
+      { to: '/live', icon: Icons.radar, label: 'Live Map', color: 'text-emerald-400' },
+      { to: '/locations', icon: Icons.location, label: 'Locations', color: 'text-emerald-400' },
+      { to: '/navigation', icon: Icons.signpost, label: 'Navigation', color: 'text-teal-400' },
+      { to: '/trip-planner', icon: Icons.mapPinned, label: 'Trip Planner', color: 'text-emerald-400' },
+      { to: '/geofences', icon: Icons.fence, label: 'Geofences', color: 'text-lime-400' },
     ],
   },
   {
@@ -261,8 +271,6 @@ export const navSections = [
       { to: '/vehicles', icon: Icons.vehicle, label: 'Fleet', color: 'text-sky-400', dataTour: 'vehicle-section' },
       { to: '/period-compare', icon: Icons.calendar, label: 'Period Comparison', color: 'text-orange-400' },
       { to: '/vehicle-comparison', icon: Icons.arrowLeftRight, label: 'Fleet Comparison', color: 'text-orange-400', minVehicles: 2 },
-      { to: '/locations', icon: Icons.location, label: 'Locations', color: 'text-emerald-400' },
-      { to: '/navigation', icon: Icons.signpost, label: 'Navigation', color: 'text-teal-400' },
     ],
   },
   {
@@ -270,7 +278,6 @@ export const navSections = [
     items: [
       { to: '/drives', icon: Icons.drive, label: 'Drives', color: 'text-violet-400' },
       { to: '/trips', icon: Icons.trip, label: 'Trips', color: 'text-teal-400' },
-      { to: '/trip-planner', icon: Icons.mapPinned, label: 'Trip Planner', color: 'text-emerald-400' },
       { to: '/mileage', icon: Icons.trip, label: 'Mileage', color: 'text-teal-400' },
       { to: '/lifetime-stats', icon: Icons.award, label: 'Lifetime Stats', color: 'text-yellow-400' },
     ],
@@ -372,7 +379,6 @@ export const navSections = [
       { to: '/notifications/rules', icon: Icons.filter, label: 'Rules', color: 'text-amber-400' },
       { to: '/notifications/studio', icon: Icons.notificationsAdd, label: 'Studio', color: 'text-neon-cyan' },
       { to: '/automations', icon: Icons.workflow, label: 'Automations', color: 'text-neon-cyan' },
-      { to: '/geofences', icon: Icons.fence, label: 'Geofences', color: 'text-lime-400' },
     ],
   },
   {
@@ -395,7 +401,6 @@ export const navSections = [
     items: [
       { to: '/tesla-account', icon: Icons.user, label: 'Tesla Account', color: 'text-blue-400' },
       { to: '/fleet-api', icon: Icons.cloud, label: 'Fleet API', color: 'text-sky-400' },
-      { to: '/api-logs', icon: Icons.fileText, label: 'API Logs', color: 'text-amber-400' },
     ],
   },
   {
@@ -427,6 +432,7 @@ export const navSections = [
       { to: '/mqtt-inspector', icon: Icons.radio, label: 'MQTT Inspector', color: 'text-blue-400' },
       { to: '/redis-signals', icon: Icons.server, label: 'Redis Signals', color: 'text-orange-400' },
       { to: '/admin/telemetry/coverage', icon: Icons.cloud, label: 'Telemetry Coverage', color: 'text-sky-400' },
+      { to: '/api-logs', icon: Icons.fileText, label: 'API Logs', color: 'text-amber-400' },
     ],
   },
   {
