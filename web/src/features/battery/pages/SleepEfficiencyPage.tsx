@@ -47,8 +47,12 @@ export default function SleepEfficiencyPage() {
   const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
 
-  // Date range — canonical RangePicker. The backend hook accepts a `days`
-  // count, so we derive it from the selected window (inclusive day count).
+  // Date range — canonical RangePicker. The backend handler now accepts
+  // explicit start/end (YYYY-MM-DD) so historical presets like
+  // `yesterday`/`lastMonth` and custom calendar picks return the actual
+  // chosen window. The derived `days` count is still passed for
+  // backward-compat with older API builds and used internally by the
+  // backend to populate `period_days` in the response.
   const { start, end, setRange } = useRangeState({
     persistKey: 'sleep-efficiency.range',
     defaultPresetId: '30d',
@@ -61,7 +65,7 @@ export default function SleepEfficiencyPage() {
     return Math.max(1, diff);
   }, [start, end]);
 
-  const sleepQuery = useSleepEfficiency(vehicleIdStr, days);
+  const sleepQuery = useSleepEfficiency(vehicleIdStr, days, start, end);
   const { data: sleep, isLoading, error } = sleepQuery;
 
   /* ── Derived data ── */

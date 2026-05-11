@@ -4,6 +4,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
@@ -35,11 +36,30 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Canonical filter shape: explicit start/end (YYYY-MM-DD) takes
+	// precedence so the UI's RangePicker can request arbitrary historical
+	// windows. The legacy `days` param remains as a backward-compatible
+	// fallback for dashboard widgets that pass a rolling-from-now window.
 	days := 30
-	if d := r.URL.Query().Get("days"); d != "" {
-		if v, err := strconv.Atoi(d); err == nil && v > 0 && v <= 365 {
-			days = v
+	var from, to time.Time
+	if s, e := parseDateRange(r); !s.IsZero() {
+		from = s
+		if !e.IsZero() {
+			to = e
+		} else {
+			to = time.Now().UTC()
 		}
+		if d := int(math.Round(to.Sub(from).Hours() / 24)); d > 0 {
+			days = d
+		}
+	} else {
+		if d := r.URL.Query().Get("days"); d != "" {
+			if v, err := strconv.Atoi(d); err == nil && v > 0 && v <= 365 {
+				days = v
+			}
+		}
+		from = time.Now().UTC().Add(-time.Duration(days) * 24 * time.Hour)
+		to = time.Now().UTC()
 	}
 
 	ctx := r.Context()
@@ -63,8 +83,8 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		 FROM fsm_transitions
 		 WHERE vehicle_id = $1
 		   AND fsm_name = 'vehicle'
-		   AND ts > NOW() - make_interval(days => $2)
-		 GROUP BY to_state`, vehicleID, days)
+		   AND ts > $2 AND ts <= $3
+		 GROUP BY to_state`, vehicleID, from, to)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("sleep: failed to get fsm_transitions")
 		writeError(w, http.StatusInternalServerError, "failed to get sleep data")

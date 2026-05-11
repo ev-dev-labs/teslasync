@@ -90,8 +90,13 @@ export default function StateMachineDebuggerPage() {
 
   /* Time range — canonical RangePicker. Default 7d so the debugger surfaces
    * recent dev/replay activity by default; 24h was misleading whenever the
-   * last transition was older than a day. The backend hook accepts an `hours`
-   * count, so we derive it inclusively from the picked window. */
+   * last transition was older than a day. The backend handler now accepts
+   * explicit start/end (YYYY-MM-DD) so historical presets like
+   * `yesterday`/`lastMonth` and custom calendar picks return the actual
+   * chosen window — not a rolling-from-now slice. We still derive an
+   * `hours` value so the FSMTimelineChart bucket sizing stays correct
+   * and so the request remains backward-compatible with older API
+   * builds that ignore start/end. */
   const { start, end, setRange } = useRangeState({
     persistKey: 'fsm-debugger.range',
     defaultPresetId: '7d',
@@ -133,7 +138,7 @@ export default function StateMachineDebuggerPage() {
   const {
     data: transData,
     isLoading: transLoading,
-  } = useFSMTransitions(activeId, fsmType, hours, serverPage, perPage);
+  } = useFSMTransitions(activeId, fsmType, hours, serverPage, perPage, start, end);
 
   /* ─── Derived data ─── */
   const stateResponse = stateData as unknown as StateResponse | undefined;

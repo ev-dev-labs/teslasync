@@ -1431,19 +1431,35 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					return
 				}
 				fsmName := req.URL.Query().Get("fsm_name")
-				hours := 1
-				if h := req.URL.Query().Get("hours"); h != "" {
-					if v, err := strconv.Atoi(h); err == nil && v >= 0 {
-						hours = v
+
+				// Canonical filter shape: explicit start/end (YYYY-MM-DD) takes
+				// precedence so the UI's RangePicker can request arbitrary
+				// historical windows (yesterday, lastMonth, custom calendar
+				// pick) — not just rolling-from-now ranges. The legacy `hours`
+				// param remains as a backward-compatible fallback so dashboard
+				// widgets and old permalinks keep working without changes.
+				var from, to time.Time
+				if s, e := parseDateRange(req); !s.IsZero() {
+					from = s
+					if !e.IsZero() {
+						to = e
+					} else {
+						to = time.Now().UTC()
 					}
-				}
-				var from time.Time
-				if hours == 0 {
-					from = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 				} else {
-					from = time.Now().UTC().Add(-time.Duration(hours) * time.Hour)
+					hours := 1
+					if h := req.URL.Query().Get("hours"); h != "" {
+						if v, err := strconv.Atoi(h); err == nil && v >= 0 {
+							hours = v
+						}
+					}
+					if hours == 0 {
+						from = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+					} else {
+						from = time.Now().UTC().Add(-time.Duration(hours) * time.Hour)
+					}
+					to = time.Now().UTC()
 				}
-				to := time.Now().UTC()
 				page := 1
 				if p := req.URL.Query().Get("page"); p != "" {
 					if v, err := strconv.Atoi(p); err == nil && v > 0 {
