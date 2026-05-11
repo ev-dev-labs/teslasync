@@ -17,6 +17,8 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { RangePicker } from '@/components/forms';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useRegenEfficiency, useDrives } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
@@ -56,10 +58,29 @@ export default function RegenEfficiencyPage() {
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
-  const { data, isLoading, error } = useRegenEfficiency(vehicleIdStr);
-  const { data: drives } = useDrives(vehicleIdStr);
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'regen-efficiency.range',
+    defaultPresetId: 'all',
+  });
+
+  const { data, isLoading, error } = useRegenEfficiency(vehicleIdStr, start, end);
+  const { data: allDrives } = useDrives(vehicleIdStr);
   const lifetimeRegenKwh: number | null = null;
   const lifetimeDriveKwh: number | null = null;
+
+  // Narrow drives feeding the client-side monthly trend chart and the
+  // recent-drives table to the picked window so they stay in sync with the
+  // backend-side gauges/cards.
+  const drives = useMemo(() => {
+    if (!allDrives?.length) return allDrives;
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    return allDrives.filter((d) => {
+      if (!d.startTs) return false;
+      const t = new Date(d.startTs).getTime();
+      return t >= startMs && t <= endMs;
+    });
+  }, [allDrives, start, end]);
 
   const { unitPrefs, formatEnergy, formatPower } = useUnits();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
@@ -115,9 +136,19 @@ export default function RegenEfficiencyPage() {
       title={t('regen.title', 'Regenerative Braking')}
       subtitle={t('regen.subtitle', 'Energy recovery analysis and regen efficiency')}
       error={error as Error | null}
-      actions={vehicleOptions.length > 0 ? (
-        <Select value={String(vehicleId ?? '')} onChange={(e) => setSelectedVehicle(Number(e.target.value))} options={vehicleOptions} />
-      ) : undefined}
+      actions={
+        <div className="flex items-center gap-3">
+          <RangePicker
+            value={{ start, end }}
+            onChange={setRange}
+            align="end"
+            triggerTestId="regen-efficiency-range"
+          />
+          {vehicleOptions.length > 0 ? (
+            <Select value={String(vehicleId ?? '')} onChange={(e) => setSelectedVehicle(Number(e.target.value))} options={vehicleOptions} />
+          ) : null}
+        </div>
+      }
       loading={isLoading}
 
     >

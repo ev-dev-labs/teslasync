@@ -153,13 +153,16 @@ export function useSpeedProfile(vehicleId?: string, start?: string, end?: string
   });
 }
 
-export function useRegenEfficiency(vehicleId?: string) {
+export function useRegenEfficiency(vehicleId?: string, start?: string, end?: string) {
   return useQuery({
-    queryKey: drivingKeys.regenEfficiency(vehicleId),
-    queryFn: ({ signal }) =>
-      request<RegenEfficiencyData>(
-        vehicleId ? `/analytics/regen?vehicle_id=${vehicleId}` : '/analytics/regen', { signal },
-      ),
+    queryKey: [...drivingKeys.regenEfficiency(vehicleId), start, end],
+    queryFn: ({ signal }) => {
+      if (!vehicleId) return request<RegenEfficiencyData>('/analytics/regen', { signal });
+      const params = new URLSearchParams({ vehicle_id: vehicleId });
+      if (start) params.set('start', start);
+      if (end) params.set('end', end);
+      return request<RegenEfficiencyData>(`/analytics/regen?${params}`, { signal });
+    },
     enabled: !!vehicleId,
   });
 }

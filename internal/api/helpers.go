@@ -137,6 +137,17 @@ func parseDateRange(r *http.Request) (startTime, endTime time.Time) {
 	return
 }
 
+// nullableTime returns t when use is true, otherwise an interface-typed nil
+// suitable for passing to pgx.Query. Combined with `$N::timestamptz IS NULL`
+// SQL guards this lets a single prepared statement express
+// "scope by [start, end] when supplied; full-history when not".
+func nullableTime(use bool, t time.Time) interface{} {
+	if !use {
+		return nil
+	}
+	return t
+}
+
 // EstimateBatteryCapacityWh returns the best-effort battery capacity in Wh
 // and a source string indicating how the estimate was derived.
 // Uses VIN position 8 decode first, falls back to model name, then 75000 Wh default.
