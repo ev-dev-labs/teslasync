@@ -429,6 +429,15 @@ export default function DrivesListPage() {
       actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
           <VehicleSelect />
+          <RangePicker
+            value={{ start: startDate, end: endDate }}
+            onChange={(r) => {
+              setRangeBatch({ from: r.start, to: r.end });
+              setPage(1);
+            }}
+            align="end"
+            triggerTestId="drives-range-picker"
+          />
           <DataFreshnessAuto query={drivesQuery} />
           <div data-tour="drives-saved-views">
             <SavedViewMenu
@@ -441,7 +450,7 @@ export default function DrivesListPage() {
       }
     >
       <PullToRefresh onRefresh={async () => { await refetchDrives(); }}>
-      {/* Date range + search filter */}
+      {/* Address search filter — Vehicle + Date moved to actions row */}
       <FadeIn>
         <FilterBar>
           <div className="relative w-full sm:w-72">
@@ -461,13 +470,6 @@ export default function DrivesListPage() {
               />
             )}
           </div>
-          <RangePicker
-            value={{ start: startDate, end: endDate }}
-            onChange={(r) => {
-              setRangeBatch({ from: r.start, to: r.end });
-              setPage(1);
-            }}
-          />
         </FilterBar>
         <ActiveFilterChips
           className="mt-3"
