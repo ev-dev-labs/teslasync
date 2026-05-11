@@ -1,7 +1,7 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -9,7 +9,7 @@ import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { RangePicker } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import {
   SummaryStatsGrid,
   SessionCurveChart,
@@ -30,11 +30,10 @@ export default function ChargingCurvePage() {
 
   /* ── Vehicle & Session selection ─────────────────────────────────────── */
 
-  const { data: vehicles } = useVehicles();
-  const [vehicleId, setVehicleId] = useState<number | null>(null);
+  const { vehicleId } = useSelectedVehicle();
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
 
-  const activeVehicleId = vehicleId ?? vehicles?.[0]?.id ?? null;
+  const activeVehicleId = vehicleId ?? null;
 
   const { start, end, setRange } = useRangeState({
     persistKey: 'charging-curve.range',
@@ -47,15 +46,6 @@ export default function ChargingCurvePage() {
     end,
   });
 
-  const vehicleOptions = useMemo(
-    () =>
-      (vehicles ?? []).map((v) => ({
-        value: String(v.id),
-        label: v.display_name || v.vin,
-      })),
-    [vehicles],
-  );
-
   const sessionOptions = useMemo(
     () =>
       (sessions ?? []).map((s) => ({
@@ -64,12 +54,6 @@ export default function ChargingCurvePage() {
       })),
     [sessions],
   );
-
-  const handleVehicleChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    const id = Number(e.target.value);
-    setVehicleId(id);
-    setSelectedSessionId(null);
-  };
 
   const handleSessionChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setSelectedSessionId(Number(e.target.value) || null);
@@ -134,7 +118,8 @@ export default function ChargingCurvePage() {
                 {t('charging.curve.subtitle', 'Power vs state-of-charge across sessions')}
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <VehicleSelect />
               <RangePicker
                 value={{ start, end }}
                 onChange={(r) => {
@@ -144,15 +129,6 @@ export default function ChargingCurvePage() {
                 align="end"
                 triggerTestId="charging-curve-range"
               />
-              {vehicleOptions.length > 1 && (
-                <Select
-                  value={String(activeVehicleId ?? '')}
-                  onChange={handleVehicleChange}
-                  options={vehicleOptions}
-                  placeholder={t('charging.selectVehicle', 'Select vehicle')}
-                  className="w-48"
-                />
-              )}
             </div>
           </div>
 
@@ -178,6 +154,7 @@ export default function ChargingCurvePage() {
       subtitle={t('charging.curve.subtitle', 'Power vs state-of-charge across sessions')}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
           <RangePicker
             value={{ start, end }}
             onChange={(r) => {
@@ -187,15 +164,6 @@ export default function ChargingCurvePage() {
             align="end"
             triggerTestId="charging-curve-range"
           />
-          {vehicleOptions.length > 1 ? (
-            <Select
-              value={String(activeVehicleId ?? '')}
-              onChange={handleVehicleChange}
-              options={vehicleOptions}
-              placeholder={t('charging.selectVehicle', 'Select vehicle')}
-              className="w-48"
-            />
-          ) : null}
         </div>
       }
     >

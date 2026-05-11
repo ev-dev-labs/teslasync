@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -9,8 +9,8 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Select, DataTable, useSortToggle, type Column } from '@/components/ui';
-import { RangePicker } from '@/components/forms';
+import { GlassPanel, Badge, DataTable, useSortToggle, type Column } from '@/components/ui';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { useRangeState } from '@/hooks/useRangeState';
 import { MetricCard } from '@/components/data-display';
 import {
@@ -25,11 +25,11 @@ import { FadeIn } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { useEnergyFlow } from '@/api/hooks/useEnergy';
 
 /* ───────── Types (match actual API response from energy_handler.go) ───────── */
@@ -105,10 +105,9 @@ export default function EnergyFlowPage() {
   const { t } = useTranslation();
   usePageTitle(t('Energy Flow'));
 
-  const { data: vehicles } = useVehicles();
+  const { vehicleId } = useSelectedVehicle();
   const { unitPrefs, formatDistance, formatEnergy } = useUnits();
   const distanceUnit = unitPrefs.distance;
-  const [vehicleId, setVehicleId] = useState<string | null>(null);
   const { start, end, setRange } = useRangeState({
     persistKey: 'energy-flow.range',
     defaultPresetId: '7d',
@@ -124,7 +123,7 @@ export default function EnergyFlowPage() {
     return Math.max(1, Math.round((endMs - startMs) / 86_400_000) + 1);
   }, [start, end]);
 
-  const activeId = vehicleId ?? (vehicles?.[0]?.id != null ? String(vehicles[0].id) : null);
+  const activeId = vehicleId != null ? String(vehicleId) : null;
 
   // Historical stats from GET /vehicles/{id}/energy
   const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
@@ -255,18 +254,6 @@ export default function EnergyFlowPage() {
 
   /* ───── Vehicle & Range Controls ───── */
 
-  const vehicleSelect =
-    vehicles && vehicles.length > 1 ? (
-      <Select
-        options={(vehicles ?? []).map((v) => ({
-          value: String(v.id),
-          label: v.display_name || v.vin,
-        }))}
-        value={String(activeId ?? '')}
-        onChange={(e) => setVehicleId(e.target.value)}
-      />
-    ) : undefined;
-
   const rangeButtons = (
     <RangePicker
       value={{ start, end }}
@@ -279,8 +266,8 @@ export default function EnergyFlowPage() {
   );
 
   const actions = (
-    <div className="flex items-center gap-3">
-      {vehicleSelect}
+    <div className="flex flex-wrap items-center gap-3">
+      <VehicleSelect />
       {rangeButtons}
     </div>
   );

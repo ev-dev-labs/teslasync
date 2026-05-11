@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
@@ -8,10 +9,9 @@ import { KVList, StatusBadge } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
 import { VehicleTwin, VehiclePaintPicker } from '@/components/vehicles';
-import { Select } from '@/components/ui';
+import { VehicleSelect } from '@/components/forms';
 import { buildTwinState, parseWindowState } from '@/lib/vehicleState';
 import { Info, Car } from 'lucide-react';
-import { useState } from 'react';
 
 const REFRESH_INTERVAL = 5_000;
 
@@ -28,9 +28,8 @@ export default function DigitalTwinPage() {
   const { t } = useTranslation();
   usePageTitle(t('digitalTwin.title', 'Digital Twin'));
 
-  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
-  const [selectedIdx, setSelectedIdx] = useState(0);
-  const vehicle = (vehicles ?? [])[selectedIdx];
+  const { vehicle } = useSelectedVehicle();
+  const { isLoading: vehiclesLoading } = useVehicles();
   const vehicleId = vehicle?.id ?? 0;
 
   const { data: securityData } = useSecurityLatest(vehicleId, REFRESH_INTERVAL);
@@ -41,14 +40,6 @@ export default function DigitalTwinPage() {
   const twinState = useMemo(
     () => buildTwinState(securityData, vehicleState, chargingData),
     [securityData, vehicleState, chargingData],
-  );
-
-  const vehicleOptions = useMemo(
-    () => (vehicles ?? []).map((v, i) => ({
-      value: String(i),
-      label: v.display_name || v.vin || `Vehicle ${v.id}`,
-    })),
-    [vehicles],
   );
 
   const doorItems = useMemo(() => [
@@ -83,20 +74,8 @@ export default function DigitalTwinPage() {
       title={t('digitalTwin.title', 'Digital Twin')}
       subtitle={t('digitalTwin.subtitle', 'Real-time vehicle physical state')}
       loading={vehiclesLoading}
+      actions={<VehicleSelect />}
     >
-      {/* Vehicle selector (when multiple vehicles) */}
-      {vehicleOptions.length > 1 && (
-        <FadeIn>
-          <div className="mb-4 max-w-xs">
-            <Select
-              options={vehicleOptions}
-              value={String(selectedIdx)}
-              onChange={(val) => setSelectedIdx(Number(val))}
-            />
-          </div>
-        </FadeIn>
-      )}
-
       {!vehicle && !vehiclesLoading ? (
         <GlassPanel className="p-8">
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Car className="h-8 w-8" />} message={t('digitalTwin.noVehicles', 'No vehicles found. Add a vehicle to see its digital twin.')} />

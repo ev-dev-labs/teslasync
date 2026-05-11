@@ -15,12 +15,12 @@ import { PageContainer, Grid } from '@/components/layout';
 import {
   GlassPanel, Button as ControlButton, Select as ControlSelect, Input as ControlInput, Slider,
 } from '@/components/ui';
-import { UnitInput } from '@/components/forms';
+import { UnitInput, VehicleSelect } from '@/components/forms';
 import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { EmptyState, Spinner } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import {
   useOptimizeCharge,
   useApplySchedule,
@@ -59,13 +59,13 @@ export default function SmartChargePage() {
   usePageTitle(t('chargePlanner.title', 'Smart Charge'));
 
   // Data hooks
-  const { data: vehicles } = useVehicles();
+  const { vehicleId: selectedId } = useSelectedVehicle();
   const { data: ratePlans } = useRatePlans();
   const optimizeMutation = useOptimizeCharge();
   const applyMutation = useApplySchedule();
 
-  // Form state
-  const [vehicleId, setVehicleId] = useState<string>('');
+  // Form state — vehicleId comes from the global selection.
+  const vehicleIdNum = selectedId ?? undefined;
   const [targetSoc, setTargetSoc] = useState(80);
   const [departBy, setDepartBy] = useState(defaultDepartBy);
   const [ratePlanId, setRatePlanId] = useState('pge-ev2a');
@@ -76,16 +76,7 @@ export default function SmartChargePage() {
   const [result, setResult] = useState<OptimizeChargeResponse | null>(null);
   const [applied, setApplied] = useState(false);
 
-  const vehicleIdNum = vehicleId ? Number(vehicleId) : undefined;
   const { data: plans } = useChargePlans(vehicleIdNum);
-
-  const vehicleOptions = useMemo(() =>
-    (vehicles ?? []).map(v => ({
-      value: String(v.id),
-      label: v.display_name || `Vehicle ${v.id}`,
-    })),
-    [vehicles],
-  );
 
   const ratePlanOptions = useMemo(() =>
     (ratePlans ?? []).map(p => ({
@@ -137,6 +128,7 @@ export default function SmartChargePage() {
     <PageContainer
       title={t('chargePlanner.title', 'Smart Charge')}
       subtitle={t('chargePlanner.subtitle', 'Optimize charging schedule for the cheapest TOU rates')}
+      actions={<VehicleSelect />}
     >
       {/* ── Settings Section ── */}
       <FadeIn>
@@ -147,14 +139,6 @@ export default function SmartChargePage() {
           </h2>
 
           <Grid cols={{ default: 1, sm: 2, lg: 4 }} gap={4}>
-            <ControlSelect
-              label={t('chargePlanner.vehicle', 'Vehicle')}
-              options={vehicleOptions}
-              value={vehicleId}
-              onChange={e => setVehicleId(e.target.value)}
-              placeholder={t('chargePlanner.selectVehicle', 'Select vehicle...')}
-            />
-
             <ControlSelect
               label={t('chargePlanner.ratePlan', 'Rate Plan')}
               options={ratePlanOptions.length > 0 ? ratePlanOptions : [
@@ -204,7 +188,7 @@ export default function SmartChargePage() {
           <div className="mt-4 flex justify-end">
             <ControlButton
               onClick={handleOptimize}
-              disabled={!vehicleId || optimizeMutation.isPending}
+              disabled={!vehicleIdNum || optimizeMutation.isPending}
               className="gap-2"
             >
               {optimizeMutation.isPending ? (

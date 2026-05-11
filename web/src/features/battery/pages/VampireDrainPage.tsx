@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { BatteryWarning, Clock, Zap, Activity, Lightbulb, ShieldAlert } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Select, DataTable, type Column, useSortToggle } from '@/components/ui';
+import { GlassPanel, Badge, DataTable, type Column, useSortToggle } from '@/components/ui';
 import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip, AREA_DEFAULTS,
@@ -14,8 +14,9 @@ import {
 } from '@/components/charts';
 import { Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { VehicleSelect } from '@/components/forms';
 
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -52,11 +53,8 @@ export default function VampireDrainPage() {
   const { t } = useTranslation();
   usePageTitle(t('vampire.title', 'Vampire Drain'));
 
-  const [vehicleId, setVehicleId] = useState<string>('');
-
-  const { data: vehicles } = useVehicles();
-
-  const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
+  const { vehicleId } = useSelectedVehicle();
+  const activeId = vehicleId != null ? String(vehicleId) : '';
 
   const vampireQuery = useQuery<VampireDrainStats>({
     queryKey: ['vampire-drain-stats', activeId],
@@ -111,13 +109,7 @@ export default function VampireDrainPage() {
       error={error instanceof Error ? error : null}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
-          {vehicles && vehicles.length > 1 && (
-            <Select
-              options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-              value={activeId}
-              onChange={(e) => setVehicleId(e.target.value)}
-            />
-          )}
+          <VehicleSelect />
           <DataFreshnessAuto query={vampireQuery} />
         </div>
       }

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -8,13 +8,14 @@ import {
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, HelpTooltip, Select, type HelpTooltipProps } from '@/components/ui';
+import { GlassPanel, HelpTooltip, type HelpTooltipProps } from '@/components/ui';
 import { StatCard, AnimatedNumber, ProgressRing, Currency, DataFreshnessAuto } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { VehicleSelect } from '@/components/forms';
 
 import { useLifetimeStats } from '@/api/hooks/useAnalytics';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
@@ -48,18 +49,9 @@ export default function LifetimeStatsPage() {
   const fromKm = (km: number) => convertDistanceFromSI(km * METERS_PER_KM, distanceUnit);
   const fromKmh = (kmh: number) => convertSpeedFromSI((kmh * METERS_PER_KM) / SECONDS_PER_HOUR, speedUnit);
 
-  const [vehicleId, setVehicleId] = useState('');
-  const { data: vehicles } = useVehicles();
-  const lifetimeQuery = useLifetimeStats(vehicleId || undefined);
+  const { vehicleId } = useSelectedVehicle();
+  const lifetimeQuery = useLifetimeStats(vehicleId != null ? String(vehicleId) : undefined);
   const { data, isLoading, error } = lifetimeQuery;
-
-  const vehicleOptions = useMemo(() => {
-    const opts = [{ value: '', label: t('lifetime.allVehicles', 'All Vehicles') }];
-    for (const v of vehicles ?? []) {
-      opts.push({ value: String(v.id), label: v.display_name || `Vehicle ${v.id}` });
-    }
-    return opts;
-  }, [vehicles, t]);
 
   const stats = data;
   const achievements = stats?.achievements ?? [];
@@ -117,21 +109,13 @@ export default function LifetimeStatsPage() {
       loading={isLoading}
       error={error instanceof Error ? error : error ? new Error(String(error)) : null}
       actions={
-        // Lifetime stats are cagg-driven; force amber after 6h.
-        <DataFreshnessAuto query={lifetimeQuery} forceStaleAfterMs={6 * 60 * 60 * 1000} />
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
+          {/* Lifetime stats are cagg-driven; force amber after 6h. */}
+          <DataFreshnessAuto query={lifetimeQuery} forceStaleAfterMs={6 * 60 * 60 * 1000} />
+        </div>
       }
     >
-      {/* Vehicle filter */}
-      {(vehicles ?? []).length > 1 && (
-        <div className="mb-6 max-w-xs">
-          <Select
-            options={vehicleOptions}
-            value={vehicleId}
-            onChange={(e) => setVehicleId(e.target.value)}
-          />
-        </div>
-      )}
-
       {/* ── Hero Section ─────────────────────────────────────────── */}
       <FadeIn>
         <GlassPanel className="p-8 text-center">

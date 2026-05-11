@@ -1,12 +1,12 @@
-import { type ReactNode, useState, useMemo } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { UserCheck, Armchair, Lock, Navigation, Cpu, AlertCircle } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
-import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
+import { VehicleSelect } from '@/components/forms';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { TimeStamp } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts/RadialGauge';
@@ -31,6 +31,7 @@ import {
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useSecurityLatest } from '@/api/hooks/useVehicles';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -61,12 +62,6 @@ interface SafetySnapshot {
   miles_since_reset?: number | null;
   self_driving_miles_since_reset?: number | null;
   created_at?: string;
-}
-
-interface Vehicle {
-  id: number;
-  vin: string;
-  display_name: string;
 }
 
 interface FeatureCardDef {
@@ -429,14 +424,9 @@ export default function SafetySettingsPage() {
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
 
-  /* --- vehicle selector --- */
-  const { data: vehicles, error: vehiclesError } = useQuery<Vehicle[]>({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-    staleTime: 30_000,
-  });
-  const [vehicleId, setVehicleId] = useState<string>('');
-  const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
+  /* --- vehicle selector (global) --- */
+  const { vehicleId: selectedId } = useSelectedVehicle();
+  const activeId = selectedId != null ? String(selectedId) : '';
 
   /* --- security data (live safety signals) --- */
   const { data: securityData } = useSecurityLatest(
@@ -468,7 +458,7 @@ export default function SafetySettingsPage() {
   });
 
   /* --- derived data --- */
-  const anyError = [vehiclesError, latestError, historyError].find(Boolean);
+  const anyError = [latestError, historyError].find(Boolean);
   const isLoading = latestLoading || historyLoading;
 
   const enabled = useMemo(() => (latest ? enabledCount(latest) : 0), [latest]);
@@ -508,18 +498,7 @@ export default function SafetySettingsPage() {
       subtitle={t('ADAS features, safety score, and driving stats')}
       loading={false}
       error={latestError as Error | null}
-      actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            options={vehicles.map((v) => ({
-              value: String(v.id),
-              label: v.display_name || v.vin,
-            }))}
-            value={activeId}
-            onChange={(e) => setVehicleId(e.target.value)}
-          />
-        ) : undefined
-      }
+      actions={<VehicleSelect />}
     >
       {/* Error banner */}
       {anyError && (

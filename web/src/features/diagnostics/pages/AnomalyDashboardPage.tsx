@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Shield, AlertTriangle, Activity, Zap,
@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Select } from '@/components/ui';
+import { GlassPanel, Badge } from '@/components/ui';
+import { VehicleSelect } from '@/components/forms';
 import { StatCard } from '@/components/data-display';
 import {
   ChartTooltip, axisTickSm, CHART_COLORS,
@@ -17,7 +18,7 @@ import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { useAnomalies, type AnomalyEntry } from '@/api/hooks/useAnomalies';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -65,10 +66,8 @@ export default function AnomalyDashboardPage() {
   const { t } = useTranslation();
   usePageTitle(t('anomaly.title', 'Anomaly Detection'));
 
-  const { data: vehicles } = useVehicles();
-  const [vehicleId, setVehicleId] = useState<number | null>(null);
-  const activeId = vehicleId ?? vehicles?.[0]?.id ?? null;
-  const activeIdStr = activeId != null ? String(activeId) : null;
+  const { vehicleId: selectedId } = useSelectedVehicle();
+  const activeIdStr = selectedId != null ? String(selectedId) : null;
 
   const { data, isLoading, error } = useAnomalies(activeIdStr);
 
@@ -92,18 +91,7 @@ export default function AnomalyDashboardPage() {
       subtitle={t('anomaly.subtitle', 'Automatic health monitoring and signal anomaly detection')}
       loading={isLoading}
       error={error as Error | null}
-      actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            options={vehicles.map((v) => ({
-              value: String(v.id),
-              label: v.display_name || v.vin,
-            }))}
-            value={String(activeId ?? '')}
-            onChange={(e) => setVehicleId(Number(e.target.value))}
-          />
-        ) : undefined
-      }
+      actions={<VehicleSelect />}
     >
       {/* ── Summary Stats ──────────────────────────────── */}
       <FadeIn>
