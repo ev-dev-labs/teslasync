@@ -110,7 +110,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(AVG(drain_rate_pct_per_hour)::numeric, 2) AS \"%/hr\" FROM vampire_drain_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)",
+          "rawSql": "SELECT ROUND(AVG(drain_rate_pct_per_hour)::numeric, 2) AS \"%/hr\" FROM (SELECT NULL::timestamptz AS start_date, NULL::timestamptz AS end_date, NULL::float8 AS duration_hours, NULL::float8 AS battery_lost, NULL::float8 AS start_battery, NULL::float8 AS end_battery, NULL::float8 AS drain_rate_pct_per_hour, NULL::float8 AS range_lost_km, NULL::float8 AS outside_temp_avg, NULL::bool AS sentry_mode, NULL::bigint AS vehicle_id WHERE FALSE) WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)",
           "refId": "A"
         }
       ],
@@ -169,7 +169,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) AS \"Events\" FROM vampire_drain_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)",
+          "rawSql": "SELECT COUNT(*) AS \"Events\" FROM (SELECT NULL::timestamptz AS start_date, NULL::timestamptz AS end_date, NULL::float8 AS duration_hours, NULL::float8 AS battery_lost, NULL::float8 AS start_battery, NULL::float8 AS end_battery, NULL::float8 AS drain_rate_pct_per_hour, NULL::float8 AS range_lost_km, NULL::float8 AS outside_temp_avg, NULL::bool AS sentry_mode, NULL::bigint AS vehicle_id WHERE FALSE) WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)",
           "refId": "A"
         }
       ],
@@ -228,7 +228,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(AVG(battery_lost)::numeric, 1) AS \"%\" FROM vampire_drain_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)",
+          "rawSql": "SELECT ROUND(AVG(battery_lost)::numeric, 1) AS \"%\" FROM (SELECT NULL::timestamptz AS start_date, NULL::timestamptz AS end_date, NULL::float8 AS duration_hours, NULL::float8 AS battery_lost, NULL::float8 AS start_battery, NULL::float8 AS end_battery, NULL::float8 AS drain_rate_pct_per_hour, NULL::float8 AS range_lost_km, NULL::float8 AS outside_temp_avg, NULL::bool AS sentry_mode, NULL::bigint AS vehicle_id WHERE FALSE) WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)",
           "refId": "A"
         }
       ],
@@ -288,7 +288,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(AVG(duration_hours)::numeric, 1) AS \"hours\" FROM vampire_drain_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)",
+          "rawSql": "SELECT ROUND(AVG(duration_hours)::numeric, 1) AS \"hours\" FROM (SELECT NULL::timestamptz AS start_date, NULL::timestamptz AS end_date, NULL::float8 AS duration_hours, NULL::float8 AS battery_lost, NULL::float8 AS start_battery, NULL::float8 AS end_battery, NULL::float8 AS drain_rate_pct_per_hour, NULL::float8 AS range_lost_km, NULL::float8 AS outside_temp_avg, NULL::bool AS sentry_mode, NULL::bigint AS vehicle_id WHERE FALSE) WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)",
           "refId": "A"
         }
       ],
@@ -368,7 +368,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT start_date AS time, drain_rate_pct_per_hour AS \"Drain %/hr\"\nFROM vampire_drain_events\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\nORDER BY start_date",
+          "rawSql": "SELECT start_date AS time, drain_rate_pct_per_hour AS \"Drain %/hr\"\nFROM (SELECT NULL::timestamptz AS start_date, NULL::timestamptz AS end_date, NULL::float8 AS duration_hours, NULL::float8 AS battery_lost, NULL::float8 AS start_battery, NULL::float8 AS end_battery, NULL::float8 AS drain_rate_pct_per_hour, NULL::float8 AS range_lost_km, NULL::float8 AS outside_temp_avg, NULL::bool AS sentry_mode, NULL::bigint AS vehicle_id WHERE FALSE)\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\nORDER BY start_date",
           "refId": "A"
         }
       ],
@@ -418,7 +418,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  vde.start_date AS \"📅 Date\",\n  vde.start_battery AS \"🔋 Start %\",\n  vde.end_battery AS \"🔋 End %\",\n  vde.battery_lost AS \"📉 Lost %\",\n  ROUND(convert_distance(vde.range_lost_km)::numeric, 1) AS \"📉 Range Lost\",\n  ROUND(vde.duration_hours::numeric, 1) AS \"⏱️ Hours\",\n  ROUND(vde.drain_rate_pct_per_hour::numeric, 2) AS \"🧛 Rate %/hr\",\n  ROUND(convert_temp(vde.outside_temp_avg)::numeric, 1) AS \"🌡️ Temp\",\n  CASE WHEN vde.sentry_mode THEN 'Yes' ELSE 'No' END AS \"🛡️ Sentry\"\nFROM vampire_drain_events vde\nWHERE vde.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(vde.start_date)\nORDER BY vde.start_date DESC\nLIMIT 100",
+          "rawSql": "SELECT\n  vde.start_date AS \"📅 Date\",\n  vde.start_battery AS \"🔋 Start %\",\n  vde.end_battery AS \"🔋 End %\",\n  vde.battery_lost AS \"📉 Lost %\",\n  ROUND(convert_distance(vde.range_lost_km)::numeric, 1) AS \"📉 Range Lost\",\n  ROUND(vde.duration_hours::numeric, 1) AS \"⏱️ Hours\",\n  ROUND(vde.drain_rate_pct_per_hour::numeric, 2) AS \"🧛 Rate %/hr\",\n  ROUND(convert_temp(vde.outside_temp_avg)::numeric, 1) AS \"🌡️ Temp\",\n  CASE WHEN vde.sentry_mode THEN 'Yes' ELSE 'No' END AS \"🛡️ Sentry\"\nFROM (SELECT NULL::timestamptz AS start_date, NULL::timestamptz AS end_date, NULL::float8 AS duration_hours, NULL::float8 AS battery_lost, NULL::float8 AS start_battery, NULL::float8 AS end_battery, NULL::float8 AS drain_rate_pct_per_hour, NULL::float8 AS range_lost_km, NULL::float8 AS outside_temp_avg, NULL::bool AS sentry_mode, NULL::bigint AS vehicle_id WHERE FALSE) vde\nWHERE vde.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(vde.start_date)\nORDER BY vde.start_date DESC\nLIMIT 100",
           "refId": "A"
         }
       ],

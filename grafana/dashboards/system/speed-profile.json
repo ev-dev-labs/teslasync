@@ -217,7 +217,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  (FLOOR(avg_speed_mph * 1.60934 / 10) * 10 || '-' || (FLOOR(avg_speed_mph * 1.60934 / 10) * 10 + 10))::text AS speed_range,\n  COUNT(*)::bigint AS count\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND avg_speed_mph > 0\nGROUP BY FLOOR(avg_speed_mph * 1.60934 / 10)\nORDER BY FLOOR(avg_speed_mph * 1.60934 / 10)",
+          "rawSql": "SELECT\n  (FLOOR((avg_speed_mps * 2.2369362920544) * 1.60934 / 10) * 10 || '-' || (FLOOR((avg_speed_mps * 2.2369362920544) * 1.60934 / 10) * 10 + 10))::text AS speed_range,\n  COUNT(*)::bigint AS count\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND (avg_speed_mps * 2.2369362920544) > 0\nGROUP BY FLOOR((avg_speed_mps * 2.2369362920544) * 1.60934 / 10)\nORDER BY FLOOR((avg_speed_mps * 2.2369362920544) * 1.60934 / 10)",
           "refId": "A"
         }
       ],

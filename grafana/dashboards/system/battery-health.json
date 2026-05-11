@@ -735,7 +735,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  CASE\n    WHEN end_battery_pct < 20 THEN '0-19%'\n    WHEN end_battery_pct < 40 THEN '20-39%'\n    WHEN end_battery_pct < 60 THEN '40-59%'\n    WHEN end_battery_pct < 80 THEN '60-79%'\n    WHEN end_battery_pct < 90 THEN '80-89%'\n    ELSE '90-100%'\n  END AS \"Range\",\n  COUNT(*) AS \"🔄 Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND end_battery_pct IS NOT NULL\nGROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT\n  CASE\n    WHEN end_soc_pct < 20 THEN '0-19%'\n    WHEN end_soc_pct < 40 THEN '20-39%'\n    WHEN end_soc_pct < 60 THEN '40-59%'\n    WHEN end_soc_pct < 80 THEN '60-79%'\n    WHEN end_soc_pct < 90 THEN '80-89%'\n    ELSE '90-100%'\n  END AS \"Range\",\n  COUNT(*) AS \"🔄 Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND end_soc_pct IS NOT NULL\nGROUP BY 1 ORDER BY 1",
           "refId": "A"
         }
       ],

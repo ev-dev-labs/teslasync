@@ -229,7 +229,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  started_at AS time,\n  CASE WHEN COALESCE(energy_used_kwh, 0) + COALESCE(regen_kwh, 0) > 0\n    THEN ROUND((COALESCE(regen_kwh, 0) / (COALESCE(energy_used_kwh, 0) + COALESCE(regen_kwh, 0)) * 100)::numeric, 1)\n    ELSE NULL END AS \"Regen %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND regen_kwh IS NOT NULL\nORDER BY started_at",
+          "rawSql": "SELECT\n  started_at AS time,\n  CASE WHEN COALESCE((energy_used_wh / 1000.0), 0) + COALESCE((regen_energy_wh / 1000.0), 0) > 0\n    THEN ROUND((COALESCE((regen_energy_wh / 1000.0), 0) / (COALESCE((energy_used_wh / 1000.0), 0) + COALESCE((regen_energy_wh / 1000.0), 0)) * 100)::numeric, 1)\n    ELSE NULL END AS \"Regen %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND (regen_energy_wh / 1000.0) IS NOT NULL\nORDER BY started_at",
           "refId": "A"
         }
       ],
@@ -501,7 +501,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  started_at AS \"Date\",\n  ROUND(distance_mi::numeric, 1) AS \"Distance (km)\",\n  ROUND(COALESCE(avg_speed_mph, 0)::numeric, 0) AS \"Avg Speed\",\n  ROUND(ABS(LEAST(COALESCE(NULL, 0), 0))::numeric, 1) AS \"Peak Regen kW\",\n  ROUND(COALESCE(NULL, 0)::numeric, 1) AS \"Peak Power kW\",\n  CASE WHEN COALESCE(NULL, 0) > 0\n    THEN ROUND((100.0 * ABS(LEAST(COALESCE(NULL, 0), 0)) / NULL)::numeric, 1)\n    ELSE 0 END AS \"Regen Ratio %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\nORDER BY started_at DESC\nLIMIT 30",
+          "rawSql": "SELECT\n  started_at AS \"Date\",\n  ROUND((distance_m / 1609.344)::numeric, 1) AS \"Distance (km)\",\n  ROUND(COALESCE((avg_speed_mps * 2.2369362920544), 0)::numeric, 0) AS \"Avg Speed\",\n  ROUND(ABS(LEAST(COALESCE(NULL, 0), 0))::numeric, 1) AS \"Peak Regen kW\",\n  ROUND(COALESCE(NULL, 0)::numeric, 1) AS \"Peak Power kW\",\n  CASE WHEN COALESCE(NULL, 0) > 0\n    THEN ROUND((100.0 * ABS(LEAST(COALESCE(NULL, 0), 0)) / NULL)::numeric, 1)\n    ELSE 0 END AS \"Regen Ratio %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\nORDER BY started_at DESC\nLIMIT 30",
           "refId": "A"
         }
       ],

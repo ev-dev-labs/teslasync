@@ -121,7 +121,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT vd.start_date AS \"time\",\n  ROUND(vd.duration_hours::numeric, 1) AS duration_hours,\n  ROUND(vd.battery_lost::numeric, 1) AS soc_loss\nFROM vampire_drain_events vd\nWHERE vd.vehicle_id = ${vehicle_id}\n  AND vd.start_date >= $__timeFrom()::timestamptz\n  AND vd.start_date <= $__timeTo()::timestamptz\nORDER BY vd.start_date",
+          "rawSql": "SELECT vd.start_date AS \"time\",\n  ROUND(vd.duration_hours::numeric, 1) AS duration_hours,\n  ROUND(vd.battery_lost::numeric, 1) AS soc_loss\nFROM (SELECT NULL::timestamptz AS start_date, NULL::timestamptz AS end_date, NULL::float8 AS duration_hours, NULL::float8 AS battery_lost, NULL::float8 AS start_battery, NULL::float8 AS end_battery, NULL::float8 AS drain_rate_pct_per_hour, NULL::float8 AS range_lost_km, NULL::float8 AS outside_temp_avg, NULL::bool AS sentry_mode, NULL::bigint AS vehicle_id WHERE FALSE) vd\nWHERE vd.vehicle_id = ${vehicle_id}\n  AND vd.start_date >= $__timeFrom()::timestamptz\n  AND vd.start_date <= $__timeTo()::timestamptz\nORDER BY vd.start_date",
           "refId": "A"
         }
       ],
@@ -197,7 +197,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT vd.start_date AS \"time\",\n  ROUND(vd.duration_hours::numeric, 1) AS duration_hours,\n  ROUND(vd.battery_lost::numeric, 1) AS soc_loss\nFROM vampire_drain_events vd\nWHERE vd.vehicle_id = ${vehicle_id}\n  AND vd.start_date >= $__timeFrom()::timestamptz\n  AND vd.start_date <= $__timeTo()::timestamptz\nORDER BY vd.start_date",
+          "rawSql": "SELECT vd.start_date AS \"time\",\n  ROUND(vd.duration_hours::numeric, 1) AS duration_hours,\n  ROUND(vd.battery_lost::numeric, 1) AS soc_loss\nFROM (SELECT NULL::timestamptz AS start_date, NULL::timestamptz AS end_date, NULL::float8 AS duration_hours, NULL::float8 AS battery_lost, NULL::float8 AS start_battery, NULL::float8 AS end_battery, NULL::float8 AS drain_rate_pct_per_hour, NULL::float8 AS range_lost_km, NULL::float8 AS outside_temp_avg, NULL::bool AS sentry_mode, NULL::bigint AS vehicle_id WHERE FALSE) vd\nWHERE vd.vehicle_id = ${vehicle_id}\n  AND vd.start_date >= $__timeFrom()::timestamptz\n  AND vd.start_date <= $__timeTo()::timestamptz\nORDER BY vd.start_date",
           "refId": "A"
         }
       ],
@@ -352,7 +352,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT vd.start_date AS \"time\",\n  ROUND(vd.duration_hours::numeric, 1) AS duration_hours,\n  ROUND(vd.battery_lost::numeric, 1) AS soc_loss\nFROM vampire_drain_events vd\nWHERE vd.vehicle_id = ${vehicle_id}\n  AND vd.start_date >= $__timeFrom()::timestamptz\n  AND vd.start_date <= $__timeTo()::timestamptz\nORDER BY vd.start_date",
+          "rawSql": "SELECT vd.start_date AS \"time\",\n  ROUND(vd.duration_hours::numeric, 1) AS duration_hours,\n  ROUND(vd.battery_lost::numeric, 1) AS soc_loss\nFROM (SELECT NULL::timestamptz AS start_date, NULL::timestamptz AS end_date, NULL::float8 AS duration_hours, NULL::float8 AS battery_lost, NULL::float8 AS start_battery, NULL::float8 AS end_battery, NULL::float8 AS drain_rate_pct_per_hour, NULL::float8 AS range_lost_km, NULL::float8 AS outside_temp_avg, NULL::bool AS sentry_mode, NULL::bigint AS vehicle_id WHERE FALSE) vd\nWHERE vd.vehicle_id = ${vehicle_id}\n  AND vd.start_date >= $__timeFrom()::timestamptz\n  AND vd.start_date <= $__timeTo()::timestamptz\nORDER BY vd.start_date",
           "refId": "A"
         }
       ],
@@ -445,7 +445,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT vd.start_date AS \"time\",\n  ROUND(vd.duration_hours::numeric, 1) AS duration_hours,\n  ROUND(vd.battery_lost::numeric, 1) AS soc_loss\nFROM vampire_drain_events vd\nWHERE vd.vehicle_id = ${vehicle_id}\n  AND vd.start_date >= $__timeFrom()::timestamptz\n  AND vd.start_date <= $__timeTo()::timestamptz\nORDER BY vd.start_date",
+          "rawSql": "SELECT vd.start_date AS \"time\",\n  ROUND(vd.duration_hours::numeric, 1) AS duration_hours,\n  ROUND(vd.battery_lost::numeric, 1) AS soc_loss\nFROM (SELECT NULL::timestamptz AS start_date, NULL::timestamptz AS end_date, NULL::float8 AS duration_hours, NULL::float8 AS battery_lost, NULL::float8 AS start_battery, NULL::float8 AS end_battery, NULL::float8 AS drain_rate_pct_per_hour, NULL::float8 AS range_lost_km, NULL::float8 AS outside_temp_avg, NULL::bool AS sentry_mode, NULL::bigint AS vehicle_id WHERE FALSE) vd\nWHERE vd.vehicle_id = ${vehicle_id}\n  AND vd.start_date >= $__timeFrom()::timestamptz\n  AND vd.start_date <= $__timeTo()::timestamptz\nORDER BY vd.start_date",
           "refId": "A"
         }
       ],

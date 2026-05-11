@@ -109,7 +109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NULL::float8 AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND distance_mi > 1",
+          "rawSql": "SELECT NULL::float8 AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND (distance_m / 1609.344) > 1",
           "refId": "A"
         }
       ],
@@ -168,7 +168,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NULL::float8 AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND distance_mi > 5",
+          "rawSql": "SELECT NULL::float8 AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND (distance_m / 1609.344) > 5",
           "refId": "A"
         }
       ],
@@ -227,7 +227,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NULL::float8 AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND distance_mi > 5",
+          "rawSql": "SELECT NULL::float8 AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND (distance_m / 1609.344) > 5",
           "refId": "A"
         }
       ],
@@ -287,7 +287,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_temp(AVG(outside_temp_avg_c))::numeric, 1) AS \"Temp\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND outside_temp_avg_c IS NOT NULL",
+          "rawSql": "SELECT ROUND(convert_temp(AVG(ambient_temp_c_avg))::numeric, 1) AS \"Temp\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND ambient_temp_c_avg IS NOT NULL",
           "refId": "A"
         }
       ],
@@ -367,7 +367,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(started_at, '1d') AS time,\n  NULL::float8 AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND distance_mi > 1\nGROUP BY time ORDER BY time",
+          "rawSql": "SELECT\n  $__timeGroup(started_at, '1d') AS time,\n  NULL::float8 AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND (distance_m / 1609.344) > 1\nGROUP BY time ORDER BY time",
           "refId": "A"
         }
       ],
@@ -447,7 +447,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  started_at AS time,\n  ROUND(convert_speed(distance_mi / NULLIF(duration_min, 0) * 60)::numeric, 1) AS \"🚗 Avg Speed\",\n  NULL::float8 AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND distance_mi > 5\nORDER BY started_at",
+          "rawSql": "SELECT\n  started_at AS time,\n  ROUND(convert_speed((distance_m / 1609.344) / NULLIF((duration_s / 60.0), 0) * 60)::numeric, 1) AS \"🚗 Avg Speed\",\n  NULL::float8 AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND (distance_m / 1609.344) > 5\nORDER BY started_at",
           "refId": "A"
         }
       ],
@@ -527,7 +527,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  started_at AS time,\n  ROUND(convert_temp(outside_temp_avg_c)::numeric, 1) AS \"🌡️ Temp\",\n  NULL::float8 AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND distance_mi > 5 AND outside_temp_avg_c IS NOT NULL\nORDER BY started_at",
+          "rawSql": "SELECT\n  started_at AS time,\n  ROUND(convert_temp(ambient_temp_c_avg)::numeric, 1) AS \"🌡️ Temp\",\n  NULL::float8 AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND (distance_m / 1609.344) > 5 AND ambient_temp_c_avg IS NOT NULL\nORDER BY started_at",
           "refId": "A"
         }
       ],

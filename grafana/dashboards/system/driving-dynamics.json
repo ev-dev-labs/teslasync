@@ -459,7 +459,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH classified AS (\n  SELECT\n    CASE\n      WHEN avg_speed_mph < 25 AND COALESCE(energy_used_kwh * 1000 / NULLIF(distance_mi * 1.60934, 0), 0) < 150 THEN 'Gentle'\n      WHEN avg_speed_mph > 50 OR COALESCE(energy_used_kwh * 1000 / NULLIF(distance_mi * 1.60934, 0), 0) > 250 THEN 'Aggressive'\n      ELSE 'Moderate'\n    END AS style\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(started_at)\n    AND distance_mi > 1\n    AND avg_speed_mph IS NOT NULL\n)\nSELECT style, ROUND(100.0 * COUNT(*) / NULLIF((SELECT COUNT(*) FROM classified), 0), 1) AS percent\nFROM classified\nGROUP BY style",
+          "rawSql": "WITH classified AS (\n  SELECT\n    CASE\n      WHEN (avg_speed_mps * 2.2369362920544) < 25 AND COALESCE((energy_used_wh / 1000.0) * 1000 / NULLIF((distance_m / 1609.344) * 1.60934, 0), 0) < 150 THEN 'Gentle'\n      WHEN (avg_speed_mps * 2.2369362920544) > 50 OR COALESCE((energy_used_wh / 1000.0) * 1000 / NULLIF((distance_m / 1609.344) * 1.60934, 0), 0) > 250 THEN 'Aggressive'\n      ELSE 'Moderate'\n    END AS style\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(started_at)\n    AND (distance_m / 1609.344) > 1\n    AND (avg_speed_mps * 2.2369362920544) IS NOT NULL\n)\nSELECT style, ROUND(100.0 * COUNT(*) / NULLIF((SELECT COUNT(*) FROM classified), 0), 1) AS percent\nFROM classified\nGROUP BY style",
           "refId": "A"
         }
       ],
@@ -577,7 +577,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  ROUND(avg_speed_mph::numeric, 1) AS \"Avg Speed\",\n  CASE WHEN distance_mi > 0 AND energy_used_kwh IS NOT NULL\n    THEN ROUND((energy_used_kwh * 1000 / (distance_mi * 1.60934))::numeric, 0)\n    ELSE NULL END AS \"Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND distance_mi > 1\n  AND avg_speed_mph > 0\n  AND energy_used_kwh IS NOT NULL",
+          "rawSql": "SELECT\n  ROUND((avg_speed_mps * 2.2369362920544)::numeric, 1) AS \"Avg Speed\",\n  CASE WHEN (distance_m / 1609.344) > 0 AND (energy_used_wh / 1000.0) IS NOT NULL\n    THEN ROUND(((energy_used_wh / 1000.0) * 1000 / ((distance_m / 1609.344) * 1.60934))::numeric, 0)\n    ELSE NULL END AS \"Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND (distance_m / 1609.344) > 1\n  AND (avg_speed_mps * 2.2369362920544) > 0\n  AND (energy_used_wh / 1000.0) IS NOT NULL",
           "refId": "A"
         }
       ],

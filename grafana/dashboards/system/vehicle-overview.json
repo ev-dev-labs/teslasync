@@ -536,7 +536,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_distance(SUM(distance_mi))::numeric, 1) AS \"Distance\" FROM drives WHERE vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT ROUND(convert_distance(SUM((distance_m / 1609.344)))::numeric, 1) AS \"Distance\" FROM drives WHERE vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -655,7 +655,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(SUM(energy_added_kwh)::numeric, 1) AS \"⚡ kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT ROUND(SUM((total_energy_added_wh / 1000.0))::numeric, 1) AS \"⚡ kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -716,7 +716,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(SUM(cost)::numeric, 2) AS \"$\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT ROUND(SUM(cost_decimal)::numeric, 2) AS \"$\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -775,7 +775,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND((convert_efficiency(SUM(energy_added_kwh) * 1000 / NULLIF(SUM(d.distance_mi), 0)))::numeric, 1) AS \"⚡ Efficiency\" FROM charging_sessions cs JOIN drives d ON d.vehicle_id = cs.vehicle_id WHERE cs.vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT ROUND((convert_efficiency(SUM((total_energy_added_wh / 1000.0)) * 1000 / NULLIF(SUM((d.distance_m / 1609.344)), 0)))::numeric, 1) AS \"⚡ Efficiency\" FROM charging_sessions cs JOIN drives d ON d.vehicle_id = cs.vehicle_id WHERE cs.vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -875,7 +875,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT d.started_at AS \"📅 Date\",\n  COALESCE(d.start_address, 'Unknown') AS \"📍 From\",\n  COALESCE(d.end_address, 'Unknown') AS \"📍 To\",\n  ROUND(convert_distance(d.distance_mi)::numeric, 1) AS \"📏 Distance\",\n  ROUND(d.duration_min::numeric) AS \"⏱️ Duration\",\n  d.start_battery_pct AS \"🔋 Start %\",\n  d.end_battery_pct AS \"🔋 End %\"\nFROM drives d\nWHERE d.vehicle_id = ${vehicle_id}\nORDER BY d.started_at DESC LIMIT 1",
+          "rawSql": "SELECT d.started_at AS \"📅 Date\",\n  COALESCE(d.start_place, 'Unknown') AS \"📍 From\",\n  COALESCE(d.end_place, 'Unknown') AS \"📍 To\",\n  ROUND(convert_distance((d.distance_m / 1609.344))::numeric, 1) AS \"📏 Distance\",\n  ROUND((d.duration_s / 60.0)::numeric) AS \"⏱️ Duration\",\n  d.start_soc_pct AS \"🔋 Start %\",\n  d.end_soc_pct AS \"🔋 End %\"\nFROM drives d\nWHERE d.vehicle_id = ${vehicle_id}\nORDER BY d.started_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -925,7 +925,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT cs.started_at AS \"📅 Date\",\n  COALESCE(cs.charger_location, 'Unknown') AS \"📍 Location\",\n  ROUND(cs.energy_added_kwh::numeric, 1) AS \"⚡ kWh\",\n  cs.start_battery_pct AS \"🔋 Start %\",\n  cs.end_battery_pct AS \"🔋 End %\",\n  ROUND(cs.duration_min::numeric) AS \"⏱️ Duration\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id}\nORDER BY cs.started_at DESC LIMIT 1",
+          "rawSql": "SELECT cs.started_at AS \"📅 Date\",\n  COALESCE((NULL::text), 'Unknown') AS \"📍 Location\",\n  ROUND((cs.total_energy_added_wh / 1000.0)::numeric, 1) AS \"⚡ kWh\",\n  cs.start_soc_pct AS \"🔋 Start %\",\n  cs.end_soc_pct AS \"🔋 End %\",\n  ROUND((EXTRACT(EPOCH FROM (cs.ended_at - cs.started_at)) / 60.0)::numeric) AS \"⏱️ Duration\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id}\nORDER BY cs.started_at DESC LIMIT 1",
           "refId": "A"
         }
       ],

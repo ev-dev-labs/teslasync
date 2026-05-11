@@ -235,7 +235,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  TO_CHAR(cs.started_at, 'Dy') AS \"Day\",\n  EXTRACT(ISODOW FROM cs.started_at)::double precision AS day_num,\n  COUNT(*)::bigint AS \"Sessions\",\n  ROUND(SUM(COALESCE(cs.energy_added_kwh, 0))::numeric, 1) AS \"Energy (kWh)\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id}\n  AND cs.started_at >= $__timeFrom()::timestamptz\n  AND cs.started_at <= $__timeTo()::timestamptz\nGROUP BY TO_CHAR(cs.started_at, 'Dy'), EXTRACT(ISODOW FROM cs.started_at)\nORDER BY EXTRACT(ISODOW FROM cs.started_at)",
+          "rawSql": "SELECT\n  TO_CHAR(cs.started_at, 'Dy') AS \"Day\",\n  EXTRACT(ISODOW FROM cs.started_at)::double precision AS day_num,\n  COUNT(*)::bigint AS \"Sessions\",\n  ROUND(SUM(COALESCE((cs.total_energy_added_wh / 1000.0), 0))::numeric, 1) AS \"Energy (kWh)\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id}\n  AND cs.started_at >= $__timeFrom()::timestamptz\n  AND cs.started_at <= $__timeTo()::timestamptz\nGROUP BY TO_CHAR(cs.started_at, 'Dy'), EXTRACT(ISODOW FROM cs.started_at)\nORDER BY EXTRACT(ISODOW FROM cs.started_at)",
           "refId": "A"
         }
       ],

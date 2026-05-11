@@ -100,7 +100,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  cs.started_at AS \"📅 Date\",\n  COALESCE(cs.charger_location, '-') AS \"📍 Location\",\n  ROUND(cs.energy_added_kwh::numeric, 1) AS \"⚡ kWh Added\",\n  ROUND(cs.cost::numeric, 2) AS \"💰 Cost\",\n  cs.start_battery_pct AS \"🔋 Start %\",\n  cs.end_battery_pct AS \"🔋 End %\",\n  ROUND(cs.charger_power_kw_max::numeric) AS \"🔌 Power\",\n  COALESCE(cs.charger_type, 'AC') AS \"🏷️ Type\",\n  COALESCE(cs.charger_type, '-') AS \"🏷️ Brand\",\n  ROUND(cs.duration_min::numeric) AS \"⏱️ Duration\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(cs.started_at)\nORDER BY cs.started_at DESC\nLIMIT 200",
+          "rawSql": "SELECT\n  cs.started_at AS \"📅 Date\",\n  COALESCE((NULL::text), '-') AS \"📍 Location\",\n  ROUND((cs.total_energy_added_wh / 1000.0)::numeric, 1) AS \"⚡ kWh Added\",\n  ROUND(cs.cost_decimal::numeric, 2) AS \"💰 Cost\",\n  cs.start_soc_pct AS \"🔋 Start %\",\n  cs.end_soc_pct AS \"🔋 End %\",\n  ROUND((cs.peak_power_w / 1000.0)::numeric) AS \"🔌 Power\",\n  COALESCE(cs.charger_type, 'AC') AS \"🏷️ Type\",\n  COALESCE(cs.charger_type, '-') AS \"🏷️ Brand\",\n  ROUND((EXTRACT(EPOCH FROM (cs.ended_at - cs.started_at)) / 60.0)::numeric) AS \"⏱️ Duration\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(cs.started_at)\nORDER BY cs.started_at DESC\nLIMIT 200",
           "refId": "A"
         }
       ],
