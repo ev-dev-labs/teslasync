@@ -10,8 +10,10 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ChartTooltip, chartGrid, axisTickSm,
 } from '@/components/charts';
+import { RangePicker } from '@/components/forms';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { durationMinutes } from '../components/charging-curve/helpers';
 import { useSettings } from '@/hooks/useSettings';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -65,8 +67,15 @@ export default function ChargingHeatmapPage() {
   // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
   const { vehicleId } = useSelectedVehicle();
 
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'charging-heatmap.range',
+    defaultPresetId: 'all',
+  });
+
   const { data: sessions, isLoading, error } = useChargingSessionsPaginated(vehicleId, {
     limit: 2000,
+    start,
+    end,
   });
 
   const stats = useMemo(() => {
@@ -105,7 +114,18 @@ export default function ChargingHeatmapPage() {
 
   if (isLoading) {
     return (
-      <PageContainer title={t('charging.heatmap.title', 'Charging Patterns')} subtitle={t('charging.heatmap.subtitle', 'When and where you charge')}>
+      <PageContainer
+        title={t('charging.heatmap.title', 'Charging Patterns')}
+        subtitle={t('charging.heatmap.subtitle', 'When and where you charge')}
+        actions={
+          <RangePicker
+            value={{ start, end }}
+            onChange={setRange}
+            align="end"
+            triggerTestId="charging-heatmap-range"
+          />
+        }
+      >
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} height={80} />
@@ -121,6 +141,14 @@ export default function ChargingHeatmapPage() {
       title={t('charging.heatmap.title', 'Charging Patterns')}
       subtitle={t('charging.heatmap.subtitle', 'When and where you charge')}
       error={error as Error | null}
+      actions={
+        <RangePicker
+          value={{ start, end }}
+          onChange={setRange}
+          align="end"
+          triggerTestId="charging-heatmap-range"
+        />
+      }
     >
       {/* ── Stat cards ── */}
       <StaggerContainer className="grid grid-cols-2 gap-4 lg:grid-cols-4">
