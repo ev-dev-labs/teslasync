@@ -30,3 +30,52 @@ datasources:
     jsonData:
       timeInterval: "15s"
       httpMethod: POST
+      # Trace ID exemplars are emitted as `trace_id` labels by the Go
+      # SDK (see internal/metrics) and as `traces_spanmetrics_*`
+      # exemplars by Tempo's metrics_generator. The link below lets
+      # Grafana follow an exemplar dot from a latency histogram into
+      # the corresponding trace in Tempo.
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: DS_TESLASYNC_TEMPO
+          urlDisplayLabel: View trace
+
+  # ─────────────────────────────────────────────────────────────────
+  # Tempo — distributed tracing backend.
+  #
+  # In dev (docker-compose) tracing currently flows through Jaeger;
+  # this datasource entry is kept so dashboards that reference Tempo
+  # by uid `DS_TESLASYNC_TEMPO` load without errors. To actually
+  # populate trace panels in dev, run a Tempo container reachable at
+  # `tempo:3200` (e.g., via a future `--profile observability` add).
+  # In prod (Helm) Tempo is deployed as a StatefulSet and reachable
+  # via the chart-name service; the same uid is wired in
+  # helm/teslasync/templates/grafana-datasources-configmap.yaml.
+  # ─────────────────────────────────────────────────────────────────
+  - name: TeslaSync Tempo
+    uid: DS_TESLASYNC_TEMPO
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    isDefault: false
+    editable: true
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: DS_TESLASYNC_LOKI
+        spanStartTimeShift: -1m
+        spanEndTimeShift: 1m
+      tracesToMetrics:
+        datasourceUid: DS_TESLASYNC_PROMETHEUS
+        spanStartTimeShift: -1m
+        spanEndTimeShift: 1m
+        tags:
+          - key: service.name
+            value: service
+          - key: span.name
+            value: span_name
+      serviceMap:
+        datasourceUid: DS_TESLASYNC_PROMETHEUS
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false

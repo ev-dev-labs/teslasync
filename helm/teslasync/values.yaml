@@ -1146,3 +1146,68 @@ observability:
       requests:
         cpu: 100m
         memory: 256Mi
+    # ───────────────────────────────────────────────────────────────────
+    # Tempo metrics_generator — emits RED metrics + service-graph metrics
+    # derived from sampled spans. Without this enabled, Tempo only stores
+    # raw traces; the new infra dashboards (Service RED, Service Graph)
+    # will show "No data" because they query traces_spanmetrics_* and
+    # traces_service_graph_* series that nothing is producing.
+    #
+    # The series are written to a Prometheus that supports the remote-
+    # write receiver. For kube-prometheus-stack you must enable
+    # `prometheus.prometheusSpec.enableRemoteWriteReceiver: true` on the
+    # Prometheus CR (it's off by default).
+    # ───────────────────────────────────────────────────────────────────
+    metricsGenerator:
+      # Per-tenant `processors` opt-in. Empty list disables generation
+      # for that tenant; Tempo will still START but won't emit any
+      # series. Defaults to both processors enabled.
+      processors:
+        - service-graphs
+        - span-metrics
+      serviceGraphs:
+        # Extra labels copied from span attributes onto every generated
+        # service-graph series. Keep small — each value combination is a
+        # distinct time series. Empty list = client/server/connection_type
+        # only.
+        dimensions: []
+      spanMetrics:
+        # Extra labels copied onto traces_spanmetrics_* series in
+        # addition to the always-emitted service / span_name / span_kind
+        # / status_code. These let dashboards split RED metrics by HTTP
+        # method, route, DB system, etc. Keep cardinality reasonable.
+        dimensions:
+          - http.method
+          - http.route
+          - http.status_code
+          - db.system
+          - messaging.system
+          - messaging.destination
+        # Latency histogram bucket edges in seconds. Tempo's defaults
+        # (0.002 → 15s) are reasonable for most APIs; this list mirrors
+        # the prom-default exponential ladder so existing alert rules
+        # work unchanged.
+        histogramBuckets:
+          - 0.002
+          - 0.004
+          - 0.008
+          - 0.016
+          - 0.032
+          - 0.064
+          - 0.128
+          - 0.256
+          - 0.512
+          - 1.024
+          - 2.048
+          - 4.096
+          - 8.192
+          - 15.0
+      # Where to ship the generated series. Disabled by default so the
+      # chart installs clean on a stock cluster; enable + set url= once
+      # a Prometheus with remote-write receiver is reachable.
+      remoteWrite:
+        enabled: false
+        url: "http://prometheus-operated.monitoring.svc.cluster.local:9090/api/v1/write"
+        sendExemplars: true
+        # Optional HTTP headers (e.g., Tenant-ID for Mimir/Cortex).
+        headers: {}

@@ -39,4 +39,43 @@ data:
           source: tempo
       storage:
         path: /var/tempo/generator/wal
+        {{- if .Values.observability.tempo.metricsGenerator.remoteWrite.enabled }}
+        remote_write:
+          - url: {{ .Values.observability.tempo.metricsGenerator.remoteWrite.url | quote }}
+            send_exemplars: {{ .Values.observability.tempo.metricsGenerator.remoteWrite.sendExemplars }}
+            {{- with .Values.observability.tempo.metricsGenerator.remoteWrite.headers }}
+            headers:
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
+        {{- end }}
+      processor:
+        # Service-graph processor builds the call topology
+        # (traces_service_graph_request_*). Connection types: messaging,
+        # database, virtual_node. dimensions= adds extra labels copied
+        # from span attributes; keep this list small to control series
+        # cardinality (each unique combination is a new time series).
+        service_graphs:
+          dimensions:
+            {{- toYaml .Values.observability.tempo.metricsGenerator.serviceGraphs.dimensions | nindent 12 }}
+        # Span-metrics processor emits RED metrics
+        # (traces_spanmetrics_calls_total, traces_spanmetrics_latency_*).
+        # dimensions= are copied from span attributes; status_code +
+        # span_kind are emitted by default and don't need to be listed.
+        span_metrics:
+          dimensions:
+            {{- toYaml .Values.observability.tempo.metricsGenerator.spanMetrics.dimensions | nindent 12 }}
+          {{- with .Values.observability.tempo.metricsGenerator.spanMetrics.histogramBuckets }}
+          histogram_buckets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+    # Per-tenant overrides. Tempo's metrics_generator only emits series
+    # for tenants that explicitly opt in via the `processors` list under
+    # overrides — the metrics_generator block above only configures HOW
+    # to generate; this block decides WHICH tenants to generate for.
+    # Single-tenant install uses `overrides.defaults`.
+    overrides:
+      defaults:
+        metrics_generator:
+          processors:
+            {{- toYaml .Values.observability.tempo.metricsGenerator.processors | nindent 12 }}
 {{- end }}

@@ -12,7 +12,7 @@ data:
     apiVersion: 1
     datasources:
       - name: Prometheus
-        uid: prometheus
+        uid: DS_TESLASYNC_PROMETHEUS
         type: prometheus
         access: proxy
         url: http://{{ include "teslasync.fullname" . }}-prometheus:9090
@@ -25,10 +25,10 @@ data:
           # latency histogram into the corresponding trace in Tempo.
           exemplarTraceIdDestinations:
             - name: trace_id
-              datasourceUid: tempo
+              datasourceUid: DS_TESLASYNC_TEMPO
               urlDisplayLabel: View trace
       - name: Tempo
-        uid: tempo
+        uid: DS_TESLASYNC_TEMPO
         type: tempo
         access: proxy
         url: http://{{ include "teslasync.fullname" . }}-tempo:3200
@@ -41,9 +41,16 @@ data:
             spanStartTimeShift: -1m
             spanEndTimeShift: 1m
           tracesToMetrics:
-            datasourceUid: prometheus
+            datasourceUid: DS_TESLASYNC_PROMETHEUS
+            spanStartTimeShift: -1m
+            spanEndTimeShift: 1m
+            tags:
+              - key: service.name
+                value: service
+              - key: span.name
+                value: span_name
           serviceMap:
-            datasourceUid: prometheus
+            datasourceUid: DS_TESLASYNC_PROMETHEUS
           nodeGraph:
             enabled: true
           search:
