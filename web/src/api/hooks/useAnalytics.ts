@@ -7,7 +7,8 @@ import type { FleetAnalytics } from '@/api/types';
 
 export const analyticsKeys = {
   summary: (days: number) => ['analytics', 'summary', days] as const,
-  fleet: (days: number, start?: string) => ['analytics', 'fleet', days, start] as const,
+  fleet: (days: number | undefined, start?: string, end?: string) =>
+    ['analytics', 'fleet', days, start, end] as const,
   mileage: (vehicleId: string) => ['analytics', 'mileage', vehicleId] as const,
   monthlyMileage: (vehicleId: string) => ['analytics', 'monthly-mileage', vehicleId] as const,
   cost: (vehicleId: string) => ['analytics', 'cost', vehicleId] as const,
@@ -24,12 +25,34 @@ export function useAnalyticsSummary(days = 30) {
   });
 }
 
-/** Full fleet analytics with drive/charging/battery deep analytics. */
-export function useFleetAnalytics(days = 30, start?: string) {
-  const qs = start ? `start=${start}` : `days=${days}`;
+/**
+ * Full fleet analytics with drive/charging/battery deep analytics.
+ *
+ * Three calling shapes are supported:
+ *   - `useFleetAnalytics()`               → no bounds; backend returns full history
+ *   - `useFleetAnalytics(30)`             → trailing 30-day window (legacy widget shape)
+ *   - `useFleetAnalytics({ start, end })` → explicit range from RangePicker
+ *
+ * Backend `/analytics/fleet` precedence: `start`/`end` win over `days`; if no
+ * bound is supplied the handler returns full history (no hard-coded window).
+ */
+export function useFleetAnalytics(
+  arg: number | { days?: number; start?: string; end?: string } = {},
+  startLegacy?: string,
+) {
+  const opts: { days?: number; start?: string; end?: string } =
+    typeof arg === 'number' ? { days: arg, start: startLegacy } : arg;
+
+  const params = new URLSearchParams();
+  if (opts.start) params.set('start', opts.start);
+  if (opts.end) params.set('end', opts.end);
+  if (!opts.start && !opts.end && opts.days != null) params.set('days', String(opts.days));
+  const qs = params.toString();
+
   return useQuery({
-    queryKey: analyticsKeys.fleet(days, start),
-    queryFn: ({ signal }) => request<FleetAnalytics>(`/analytics/fleet?${qs}`, { signal }),
+    queryKey: analyticsKeys.fleet(opts.days, opts.start, opts.end),
+    queryFn: ({ signal }) =>
+      request<FleetAnalytics>(qs ? `/analytics/fleet?${qs}` : '/analytics/fleet', { signal }),
   });
 }
 
