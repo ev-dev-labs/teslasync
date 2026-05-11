@@ -142,6 +142,18 @@ export function getDatePreset(id: string): DatePreset | undefined {
 }
 
 /**
+ * Resolve the start date for the "All time" preset. Defaults to
+ * `'2015-01-01'` (≈ Tesla data history baseline) but can be clamped to a
+ * smarter floor — typically the user's first data point — so a user whose
+ * data starts in 2024 doesn't see 9 years of empty buckets.
+ */
+export function resolveAllTimeStart(minDate?: string): string {
+  const baseline = '2015-01-01';
+  if (!minDate) return baseline;
+  return minDate > baseline ? minDate : baseline;
+}
+
+/**
  * Return the id of the preset whose resolved range matches (start, end), or
  * undefined if no preset matches. Caller passes `now` (or omits to use the
  * current wall clock).

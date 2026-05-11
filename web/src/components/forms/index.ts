@@ -8,6 +8,7 @@ export {
 } from './CurrencyInput';
 export { DatePresetChips, type DatePresetChipsProps, type DatePresetSelection } from './DatePresetChips';
 export { DateRangeFilter } from './DateRangeFilter';
+export { RangePicker, type RangePickerProps, type RangePickerValue } from './RangePicker';
 export { FilterBar, type FilterBarProps } from './FilterBar';
 export { FormField, type FormFieldProps } from './FormField';
 export { FormSection } from './FormSection';

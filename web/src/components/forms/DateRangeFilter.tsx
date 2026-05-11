@@ -42,6 +42,14 @@ interface DateRangeFilterProps {
  * (Today / 7d / 30d / MTD / YTD / All). Override via `presetIds` to surface
  * a different selection (e.g. ['7d','30d','90d','1y']).
  */
+/**
+ * @deprecated Prefer the new `<RangePicker>` from `@/components/forms/RangePicker`.
+ * It collapses the always-visible date inputs + chips + Apply button into a
+ * single trigger that opens a popover with preset list + 2-month calendar.
+ *
+ * `DateRangeFilter` will be removed once all consumers migrate. Keep using it
+ * if you specifically need the inline (non-popover) layout.
+ */
 export function DateRangeFilter({
   startDate,
   endDate,

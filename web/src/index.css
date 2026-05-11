@@ -1286,3 +1286,49 @@ figure[data-print-card]:fullscreen p {
        element and surrounding whitespace. */
   }
 }
+
+/* react-day-picker theming for the RangePicker popover.
+   Keeps the calendar consistent with the dark glass surface tokens. */
+.rdp-tesla {
+  --rdp-cell-size: 36px;
+  --rdp-accent-color: var(--accent, #2563eb);
+  --rdp-background-color: rgba(255, 255, 255, 0.06);
+  --rdp-accent-color-dark: var(--accent, #2563eb);
+  --rdp-background-color-dark: rgba(255, 255, 255, 0.08);
+  --rdp-outline: 2px solid var(--accent, #2563eb);
+  --rdp-outline-selected: 2px solid var(--accent, #2563eb);
+  margin: 0;
+  color: var(--text-primary);
+}
+.rdp-tesla .rdp-day_today:not(.rdp-day_selected) {
+  font-weight: 700;
+  color: var(--accent, #2563eb);
+}
+.rdp-tesla .rdp-day_selected,
+.rdp-tesla .rdp-day_selected:focus-visible,
+.rdp-tesla .rdp-day_selected:hover {
+  background-color: var(--accent, #2563eb);
+  color: white;
+}
+.rdp-tesla .rdp-day_range_middle {
+  background-color: rgba(37, 99, 235, 0.18);
+  color: var(--text-primary);
+}
+.rdp-tesla .rdp-button:focus-visible {
+  outline: 2px solid var(--accent, #2563eb);
+  outline-offset: 2px;
+}
+.rdp-tesla .rdp-head_cell {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.rdp-tesla .rdp-caption_label {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.rdp-tesla .rdp-nav_button {
+  color: var(--text-secondary);
+}
+.rdp-tesla .rdp-nav_button:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
