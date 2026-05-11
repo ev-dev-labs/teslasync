@@ -7,10 +7,12 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Select } from '@/components/ui/Select';
 import { AlertBanner } from '@/components/feedback/AlertBanner';
+import { RangePicker } from '@/components/forms';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { VehicleTwin } from '@/components/vehicles';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useSecurityEvents } from '@/api/hooks/useAdmin';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { buildTwinStateFromAdmin } from '@/lib/vehicleState';
@@ -66,7 +68,23 @@ export default function SecurityAccessPage() {
   });
 
   /* ---- Security event history ---- */
-  const { data: history = [], isLoading: loadingHistory, error: historyError } = useSecurityEvents(activeId);
+  const { data: rawHistory = [], isLoading: loadingHistory, error: historyError } = useSecurityEvents(activeId);
+
+  /* ---- Range filter (client-side on history) ---- */
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'security-access.range',
+    defaultPresetId: 'all',
+  });
+  const history = useMemo(() => {
+    if (!rawHistory.length) return rawHistory;
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    return rawHistory.filter((e) => {
+      if (!e.createdAt) return false;
+      const t = new Date(e.createdAt).getTime();
+      return t >= startMs && t <= endMs;
+    });
+  }, [rawHistory, start, end]);
 
   const anyError = [vehiclesError, latestError, historyError].find(Boolean);
   const isLoading = loadingLatest || loadingHistory;
@@ -107,13 +125,21 @@ export default function SecurityAccessPage() {
       loading={isLoading}
       error={null}
       actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            options={vehicleOptions}
-            value={activeId}
-            onChange={(e) => setVehicleId(e.target.value)}
+        <div className="flex items-center gap-3">
+          {vehicles && vehicles.length > 1 ? (
+            <Select
+              options={vehicleOptions}
+              value={activeId}
+              onChange={(e) => setVehicleId(e.target.value)}
+            />
+          ) : null}
+          <RangePicker
+            value={{ start, end }}
+            onChange={setRange}
+            align="end"
+            triggerTestId="security-access-range"
           />
-        ) : undefined
+        </div>
       }
     >
       {anyError && (

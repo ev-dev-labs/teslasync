@@ -203,24 +203,21 @@ export function RangePicker({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={t('date.range.trigger', 'Date range')}
+        title={`${triggerSubLabel} · ${dayCount}`}
         data-testid={triggerTestId}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          'inline-flex flex-col items-start gap-0.5 rounded-lg ring-1 ring-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-left',
+          'inline-flex items-center gap-1.5 rounded-lg ring-1 ring-white/[0.08] bg-white/[0.04] text-left',
           'hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
           'forced-colors:border forced-colors:border-[ButtonBorder]',
-          size === 'md' ? 'min-h-[44px]' : 'min-h-[36px]',
+          size === 'md' ? 'h-10 px-3 text-sm' : 'h-8 px-2.5 text-xs',
           className,
         )}
       >
-        <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-primary)]">
-          <CalendarIcon className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" aria-hidden="true" />
-          {triggerLabel}
-          <ChevronDown className="h-3 w-3 text-[var(--text-muted)] shrink-0" aria-hidden="true" />
-        </span>
-        <span className="text-[10px] leading-tight text-[var(--text-muted)]">
-          {triggerSubLabel} · {dayCount}
-        </span>
+        <CalendarIcon className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" aria-hidden="true" />
+        <span className="font-medium text-[var(--text-primary)] truncate">{triggerLabel}</span>
+        <span className="text-[var(--text-muted)] hidden sm:inline truncate">· {triggerSubLabel}</span>
+        <ChevronDown className="h-3 w-3 text-[var(--text-muted)] shrink-0" aria-hidden="true" />
       </button>
 
       <Popover
