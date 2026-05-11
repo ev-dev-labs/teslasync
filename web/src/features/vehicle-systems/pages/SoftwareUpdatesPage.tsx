@@ -18,9 +18,11 @@ import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion';
+import { RangePicker } from '@/components/forms';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { formatDate } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
@@ -62,10 +64,23 @@ export default function SoftwareUpdatesPage() {
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
   const [page, setPage] = useState(1);
   const pageSize = 50;
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'software-updates.range',
+    defaultPresetId: 'all',
+  });
 
   const { data: updates, isLoading, error: dataError } = useQuery({
-    queryKey: ['software-updates', vehicleId, page],
-    queryFn: () => request<SoftwareUpdate[]>(`/software-updates?vehicle_id=${vehicleId}&limit=${pageSize}&offset=${(page - 1) * pageSize}`),
+    queryKey: ['software-updates', vehicleId, page, start, end],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        vehicle_id: String(vehicleId),
+        limit: String(pageSize),
+        offset: String((page - 1) * pageSize),
+        start,
+        end,
+      });
+      return request<SoftwareUpdate[]>(`/software-updates?${params.toString()}`);
+    },
     enabled: vehicleId !== null,
   });
 
@@ -87,13 +102,24 @@ export default function SoftwareUpdatesPage() {
       subtitle={t('Track firmware versions and update history')}
       loading={isLoading}
       actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            value={String(vehicleId ?? '')}
-            onChange={e => setSelectedVehicle(Number(e.target.value))}
-            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+        <div className="flex items-center gap-3">
+          <RangePicker
+            value={{ start, end }}
+            onChange={(r) => {
+              setRange(r);
+              if (page !== 1) setPage(1);
+            }}
+            align="end"
+            triggerTestId="software-updates-range"
           />
-        ) : undefined
+          {vehicles && vehicles.length > 1 ? (
+            <Select
+              value={String(vehicleId ?? '')}
+              onChange={e => setSelectedVehicle(Number(e.target.value))}
+              options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
+          ) : null}
+        </div>
       }
     >
       {anyError && (
