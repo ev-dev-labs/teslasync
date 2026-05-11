@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, Activity, Calendar } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -20,7 +20,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { RangePicker } from '@/components/forms';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useRegenEfficiency, useDrives } from '@/api/hooks/useDriving';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateShort } from '@/lib/dateFormat';
@@ -53,9 +53,7 @@ export default function RegenEfficiencyPage() {
   const { t } = useTranslation();
   usePageTitle(t('regen.title', 'Regenerative Braking'));
 
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
   const { start, end, setRange } = useRangeState({
@@ -127,7 +125,7 @@ export default function RegenEfficiencyPage() {
       }));
   }, [drives, toDistanceDisplay, distanceUnit]);
 
-  const vehicleOptions = (vehicles ?? []).map((v) => ({
+  const vehicleOptions = vehicles.map((v) => ({
     value: String(v.id), label: v.display_name || v.vin,
   }));
 
@@ -138,9 +136,9 @@ export default function RegenEfficiencyPage() {
       error={error as Error | null}
       actions={
         <div className="flex items-center gap-3">
-          {vehicleOptions.length > 0 ? (
-            <Select value={String(vehicleId ?? '')} onChange={(e) => setSelectedVehicle(Number(e.target.value))} options={vehicleOptions} />
-          ) : null}
+          {vehicles.length > 0 && (
+            <Select value={String(vehicleId ?? '')} onChange={(e) => setVehicleId(Number(e.target.value))} options={vehicleOptions} />
+          )}
           <RangePicker
             value={{ start, end }}
             onChange={setRange}

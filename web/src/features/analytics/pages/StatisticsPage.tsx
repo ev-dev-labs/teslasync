@@ -19,7 +19,7 @@ import { Skeleton, EmptyState, ChartBlockSkeleton, StatGridSkeleton } from '@/co
 import { FadeIn } from '@/components/motion';
 import { RangePicker } from '@/components/forms';
 
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useFleetAnalytics, useMileageStats, useStateSummary } from '@/api/hooks/useAnalytics';
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -95,7 +95,18 @@ export default function StatisticsPage() {
     distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
   const savedView = useSavedViewUrl();
 
-  const [vehicleId, setVehicleId] = useUrlString('vehicle_id', '');
+  const [, setUrlVehicleId] = useUrlString('vehicle_id', '');
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const activeId = vehicleId != null ? String(vehicleId) : '';
+
+  const onPickVehicle = (id: string) => {
+    const n = Number(id);
+    if (Number.isFinite(n) && n > 0) {
+      setVehicleId(n);
+      setUrlVehicleId(id);
+    }
+  };
+
   const defaultStart = useMemo(() => {
     const d = new Date(); d.setFullYear(d.getFullYear() - 1);
     return d.toISOString().slice(0, 10);
@@ -104,9 +115,6 @@ export default function StatisticsPage() {
   const [startDate] = useUrlString('from', defaultStart);
   const [endDate] = useUrlString('to', defaultEnd);
   const setRangeBatch = useUrlBatch();
-
-  const { data: vehicles } = useVehicles();
-  const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
   // Phase-45/23 — reactive chart palette (CB-safe / neon per user pref).
   const palette = useChartPalette();
@@ -163,7 +171,7 @@ export default function StatisticsPage() {
     }));
   }, [fleet, fromKm]);
 
-  const vehicleOptions = (vehicles ?? []).map((v) => ({
+  const vehicleOptions = vehicles.map((v) => ({
     value: String(v.id),
     label: v.display_name || v.vin,
   }));
@@ -176,8 +184,8 @@ export default function StatisticsPage() {
       error={error as Error | null}
       actions={
         <div className={cn('flex flex-wrap items-center gap-2')}>
-          {vehicleOptions.length > 1 && (
-            <Select value={activeId} onChange={(e) => setVehicleId(e.target.value)} options={vehicleOptions} />
+          {vehicles.length > 0 && (
+            <Select value={activeId} onChange={(e) => onPickVehicle(e.target.value)} options={vehicleOptions} />
           )}
           <RangePicker value={{ start: startDate, end: endDate }} onChange={(r) => setRangeBatch({ from: r.start, to: r.end })} align="end" triggerTestId="statistics-range" />
           <Button size="sm" onClick={() => { void refetch(); }}>

@@ -1,4 +1,4 @@
-import { useState, useMemo, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Zap, Leaf, Fuel, Sun, Moon, ArrowRight, Activity } from 'lucide-react';
@@ -20,7 +20,8 @@ import { RangePicker } from '@/components/forms';
 
 import { useEnergyStats } from '@/api/hooks/useEnergy';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
-import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
+import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
@@ -140,9 +141,7 @@ export default function EnergyPage() {
   const savedView = useSavedViewUrl();
 
   /* ── Vehicle selector ─────────────────────────────────────────── */
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
 
   /* ── Date range ───────────────────────────────────────────────── */
   const defaultStartDate = useMemo(() => {
@@ -331,10 +330,10 @@ export default function EnergyPage() {
       error={statsError as Error | null}
       actions={
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          {vehicles && vehicles.length > 1 && (
+          {vehicles.length > 0 && (
             <Select
               value={String(vehicleId ?? '')}
-              onChange={(e) => setSelectedVehicle(Number(e.target.value))}
+              onChange={(e) => setVehicleId(Number(e.target.value))}
               options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
               className="text-sm"
             />

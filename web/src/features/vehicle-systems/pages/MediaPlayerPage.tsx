@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -14,6 +14,7 @@ import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { RangePicker } from '@/components/forms';
 import { useRangeState } from '@/hooks/useRangeState';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -48,12 +49,6 @@ interface MediaSnapshot {
   audio_volume_max?: number;
   audio_volume_increment?: number;
   created_at: string;
-}
-
-interface Vehicle {
-  id: number;
-  vin: string;
-  display_name: string;
 }
 
 interface SourceSlice {
@@ -105,7 +100,7 @@ export default function MediaPlayerPage() {
   const { t } = useTranslation();
   usePageTitle(t('Media Player'));
 
-  const [vehicleId, setVehicleId] = useState<string | null>(null);
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const { start, end, setRange } = useRangeState({
     persistKey: 'media-player.range',
     defaultPresetId: '7d',
@@ -115,12 +110,7 @@ export default function MediaPlayerPage() {
 
   /* ── Queries ──────────────────────────────────────────────── */
 
-  const { data: vehicles } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
-
-  const activeId = vehicleId ?? (vehicles?.[0] ? String(vehicles[0].id) : '');
+  const activeId = vehicleId != null ? String(vehicleId) : '';
 
   const {
     data: latest,
@@ -323,14 +313,14 @@ export default function MediaPlayerPage() {
       error={latestError as Error | null}
       actions={
         <div className="flex flex-wrap items-center gap-3">
-          {vehicles && vehicles.length > 1 && (
+          {vehicles.length > 0 && (
             <Select
               options={vehicles.map((v) => ({
                 value: String(v.id),
                 label: v.display_name || v.vin,
               }))}
               value={activeId}
-              onChange={(e) => setVehicleId(e.target.value)}
+              onChange={(e) => setVehicleId(Number(e.target.value))}
             />
           )}
           <RangePicker

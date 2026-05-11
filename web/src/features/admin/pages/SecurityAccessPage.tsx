@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, AlertCircle } from 'lucide-react';
@@ -13,12 +13,13 @@ import { VehicleTwin } from '@/components/vehicles';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSecurityEvents } from '@/api/hooks/useAdmin';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { buildTwinStateFromAdmin } from '@/lib/vehicleState';
 import { request } from '@/api/client';
 import type { SecurityEvent } from '@/types/admin';
-import type { Vehicle } from '@/types/vehicle';
 
 import {
   doorClosed,
@@ -50,14 +51,14 @@ export default function SecurityAccessPage() {
   const { t } = useTranslation();
   usePageTitle(t('admin.security.title', 'Security & Access'));
 
-  /* ---- Vehicle list ---- */
-  const { data: vehicles, error: vehiclesError } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Pick<Vehicle, 'id' | 'vin' | 'display_name'>[]>('/vehicles'),
-  });
+  /* ---- Vehicle selection (persisted across pages) ---- */
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const activeId = vehicleId != null ? String(vehicleId) : '';
 
-  const [vehicleId, setVehicleId] = useState<string>('');
-  const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
+  /* Surface useVehicles errors via the same vehiclesError binding the
+     legacy code used so the AlertBanner below keeps reporting list-load
+     failures. React Query dedupes by queryKey so this is a free piggy-back. */
+  const { error: vehiclesError } = useVehicles();
 
   /* ---- Latest security state (polled) ---- */
   const { data: latest, isLoading: loadingLatest, error: latestError } = useQuery({
@@ -107,7 +108,7 @@ export default function SecurityAccessPage() {
 
   const vehicleOptions = useMemo(
     () =>
-      (vehicles ?? []).map((v) => ({
+      vehicles.map((v) => ({
         value: String(v.id),
         label: v.display_name || v.vin,
       })),
@@ -126,13 +127,13 @@ export default function SecurityAccessPage() {
       error={null}
       actions={
         <div className="flex items-center gap-3">
-          {vehicles && vehicles.length > 1 ? (
+          {vehicles.length > 0 && (
             <Select
               options={vehicleOptions}
               value={activeId}
-              onChange={(e) => setVehicleId(e.target.value)}
+              onChange={(e) => setVehicleId(Number(e.target.value))}
             />
-          ) : null}
+          )}
           <RangePicker
             value={{ start, end }}
             onChange={setRange}

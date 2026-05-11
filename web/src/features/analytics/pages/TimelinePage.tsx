@@ -19,6 +19,7 @@ import {
 } from '@/components/charts';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUrlString } from '@/hooks/useUrlState';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -108,8 +109,23 @@ function formatDurationFromSeconds(seconds: number): string {
 export default function TimelinePage() {
   const { t } = useTranslation();
   usePageTitle(t('timeline.title', 'Timeline'));
-  // Phase 40 / Prompt 33 — vehicle id is in the URL so deep links work.
-  const [vehicleId, setVehicleId] = useUrlString('vehicle_id', '');
+
+  // Vehicle selection: useSelectedVehicle reads ?vehicle_id from the URL
+  // (alert deep-links), persists across pages via localStorage, and falls
+  // back to the first vehicle. We additionally mirror the picker's value
+  // to the URL on change so the page URL stays bookmarkable.
+  const [, setUrlVehicleId] = useUrlString('vehicle_id', '');
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const activeId = vehicleId != null ? String(vehicleId) : '';
+  const enabled = activeId !== '';
+
+  const onPickVehicle = (id: string) => {
+    const n = Number(id);
+    if (Number.isFinite(n) && n > 0) {
+      setVehicleId(n);
+      setUrlVehicleId(id);
+    }
+  };
 
   const { start, end, setRange } = useRangeState({
     persistKey: 'timeline.range',
@@ -126,10 +142,7 @@ export default function TimelinePage() {
     return Math.max(1, Math.round((endMs - startMs) / 86_400_000) + 1);
   }, [start, end]);
 
-  const { data: vehicles, error: vehiclesError } = useVehicles();
-
-  const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
-  const enabled = activeId !== '';
+  const { error: vehiclesError } = useVehicles();
 
   const timelineQuery = useQuery({
     queryKey: ['vehicle-timeline', activeId, days],
@@ -304,18 +317,18 @@ export default function TimelinePage() {
 
   /* ─── Actions (vehicle selector + refresh) ─── */
 
-  const vehicleOptions = (vehicles ?? []).map((v) => ({
+  const vehicleOptions = vehicles.map((v) => ({
     value: String(v.id),
     label: v.display_name || v.vin,
   }));
 
   const actions = (
     <div className="flex items-center gap-3">
-      {vehicleOptions.length > 1 && (
+      {vehicles.length > 0 && (
         <Select
           options={vehicleOptions}
           value={activeId}
-          onChange={(e) => setVehicleId(e.target.value)}
+          onChange={(e) => onPickVehicle(e.target.value)}
           placeholder={t('timeline.selectVehicle', 'Select Vehicle')}
         />
       )}

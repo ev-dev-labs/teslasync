@@ -18,6 +18,7 @@ import { SearchInput, FilterBar, ActiveFilterChips, RangePicker, type FilterChip
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import {
   ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -40,8 +41,6 @@ interface VisitedLocation {
   last_visited: string | null;
 }
 
-interface Vehicle { id: number; vin: string; display_name: string }
-
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function LocationsPage() {
@@ -49,12 +48,12 @@ export default function LocationsPage() {
   usePageTitle(t('Locations'));
   const { formatDuration } = useUnits();
 
-  const { data: vehicles } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
-  const [selectedVehicle, setSelectedVehicle] = useUrlNumber('vehicle_id', 0);
-  const vehicleId = selectedVehicle > 0 ? selectedVehicle : (vehicles?.[0]?.id ?? null);
+  const [, setUrlVehicleId] = useUrlNumber('vehicle_id', 0);
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const onPickVehicle = (id: number) => {
+    setVehicleId(id);
+    setUrlVehicleId(id);
+  };
   const [page, setPage] = useUrlNumber('page', 1);
   const pageSize = 50;
   const [search, setSearch] = useUrlString('q', '');
@@ -132,13 +131,13 @@ export default function LocationsPage() {
       error={error as Error | null}
       actions={
         <div className="flex items-center gap-3">
-          {vehicles && vehicles.length > 1 ? (
+          {vehicles.length > 0 && (
             <Select
               value={String(vehicleId ?? '')}
-              onChange={e => setSelectedVehicle(Number(e.target.value))}
+              onChange={e => onPickVehicle(Number(e.target.value))}
               options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
             />
-          ) : null}
+          )}
           <RangePicker
             value={{ start, end }}
             onChange={(r) => {

@@ -4,7 +4,7 @@
  * Shows current version, update progress, and timeline of all updates.
  */
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,7 +20,7 @@ import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion';
 import { RangePicker } from '@/components/forms';
 
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { formatDate } from '@/lib/dateFormat';
@@ -59,9 +59,7 @@ export default function SoftwareUpdatesPage() {
   const { t } = useTranslation();
   usePageTitle(t('softwareUpdates.title', 'Software Updates'));
 
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const [page, setPage] = useState(1);
   const pageSize = 50;
   const { start, end, setRange } = useRangeState({
@@ -103,13 +101,13 @@ export default function SoftwareUpdatesPage() {
       loading={isLoading}
       actions={
         <div className="flex items-center gap-3">
-          {vehicles && vehicles.length > 1 ? (
+          {vehicles.length > 0 && (
             <Select
               value={String(vehicleId ?? '')}
-              onChange={e => setSelectedVehicle(Number(e.target.value))}
+              onChange={e => setVehicleId(Number(e.target.value))}
               options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
             />
-          ) : null}
+          )}
           <RangePicker
             value={{ start, end }}
             onChange={(r) => {
