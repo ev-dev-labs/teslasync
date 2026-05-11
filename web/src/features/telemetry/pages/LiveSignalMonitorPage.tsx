@@ -4,9 +4,11 @@ import { Activity, Pause, Play, Trash2, ArrowDown, ArrowDownUp } from 'lucide-re
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Badge, Button, Input, DataTable, type Column } from '@/components/ui';
+import { VehicleSelect } from '@/components/forms';
 import { StatCard, FreshnessIndicator } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
@@ -93,6 +95,8 @@ export default function LiveSignalMonitorPage() {
   const { t } = useTranslation();
   usePageTitle(t('liveMonitor.title', 'Live Monitor'));
 
+  const { vehicleId } = useSelectedVehicle();
+
   const [entries, setEntries] = useState<SignalEntry[]>([]);
   const [paused, setPaused] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -102,13 +106,40 @@ export default function LiveSignalMonitorPage() {
   const tableRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(false);
   const rateRef = useRef<number[]>([]);
+  // Track the active vehicle in a ref so the SSE callback (registered once)
+  // always reads the latest selection without re-subscribing on every change.
+  const vehicleIdRef = useRef<number | null>(vehicleId);
+  vehicleIdRef.current = vehicleId;
 
   pausedRef.current = paused;
+
+  // When the user switches vehicles, drop the buffered entries so we don't
+  // intermix signals from the previous vehicle into the new view.
+  useEffect(() => {
+    setEntries([]);
+    idRef.current = 0;
+    rateRef.current = [];
+  }, [vehicleId]);
 
   /* ---- SSE handler ---- */
   const handleVehicleUpdate = useCallback((data: unknown) => {
     if (pausedRef.current) return;
     const payload = data as Record<string, unknown>;
+
+    // Drop events for vehicles other than the currently selected one. The
+    // SSE channel multiplexes every vehicle in the fleet, so this filter is
+    // what gives the page its per-vehicle scope.
+    const selected = vehicleIdRef.current;
+    if (selected != null) {
+      const eventVehicleId = payload?.vehicle_id;
+      if (typeof eventVehicleId === 'number' && eventVehicleId !== selected) {
+        return;
+      }
+      if (typeof eventVehicleId === 'string' && Number(eventVehicleId) !== selected) {
+        return;
+      }
+    }
+
     const now = new Date().toISOString();
     const newEntries: SignalEntry[] = [];
 
@@ -183,9 +214,12 @@ export default function LiveSignalMonitorPage() {
       title={t('liveMonitor.title', 'Live Signal Monitor')}
       subtitle={t('liveMonitor.subtitle', 'Real-time scrolling view of incoming vehicle signals')}
       actions={
-        <Badge variant={connected ? 'success' : 'danger'} dot>
-          {connected ? t('liveMonitor.connected', 'Connected') : t('liveMonitor.disconnected', 'Disconnected')}
-        </Badge>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
+          <Badge variant={connected ? 'success' : 'danger'} dot>
+            {connected ? t('liveMonitor.connected', 'Connected') : t('liveMonitor.disconnected', 'Disconnected')}
+          </Badge>
+        </div>
       }
     >
       {/* Stats */}
