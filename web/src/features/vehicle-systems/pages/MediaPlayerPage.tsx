@@ -10,9 +10,10 @@ import { cn } from '@/lib/cn';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
+import { RangePicker } from '@/components/forms';
+import { useRangeState } from '@/hooks/useRangeState';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -63,13 +64,7 @@ interface SourceSlice {
 
 /* ── Constants ─────────────────────────────────────────────────── */
 
-const TIME_RANGES = [
-  { label: '24h', days: 1 },
-  { label: '7d', days: 7 },
-  { label: '15d', days: 15 },
-  { label: '30d', days: 30 },
-  { label: 'All', days: 0 },
-] as const;
+const PRESET_IDS = ['today', '7d', '30d', '90d', 'mtd', 'ytd', 'all'];
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 
@@ -111,7 +106,10 @@ export default function MediaPlayerPage() {
   usePageTitle(t('Media Player'));
 
   const [vehicleId, setVehicleId] = useState<string | null>(null);
-  const [range, setRange] = useState<number>(7);
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'media-player.range',
+    defaultPresetId: '7d',
+  });
   const [tableSortKey, setTableSortKey] = useState('created_at');
   const [tableSortDir, setTableSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -149,10 +147,13 @@ export default function MediaPlayerPage() {
 
   const filtered = useMemo(() => {
     if (!history?.length) return [];
-    if (range === 0) return history;
-    const cutoff = Date.now() - range * 86_400_000;
-    return history.filter((s) => new Date(s.created_at).getTime() >= cutoff);
-  }, [history, range]);
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    return history.filter((s) => {
+      const t = new Date(s.created_at).getTime();
+      return t >= startMs && t <= endMs;
+    });
+  }, [history, start, end]);
 
   /* ── Derived stats ────────────────────────────────────────── */
 
@@ -341,16 +342,12 @@ export default function MediaPlayerPage() {
 
       {/* ── Time range selector ──────────────────────────────── */}
       <div className="flex items-center gap-2 flex-wrap">
-        {TIME_RANGES.map((tr) => (
-          <Button
-            key={tr.label}
-            variant={range === tr.days ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setRange(tr.days)}
-          >
-            {t(tr.label)}
-          </Button>
-        ))}
+        <RangePicker
+          value={{ start, end }}
+          onChange={(r) => setRange(r)}
+          presetIds={PRESET_IDS}
+          triggerTestId="media-player-range"
+        />
       </div>
 
       {/* ── Now Playing card ─────────────────────────────────── */}

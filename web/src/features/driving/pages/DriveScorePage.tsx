@@ -24,7 +24,7 @@ import {
 } from '@/components/charts';
 import { AnimatedNumber, StatCard, MetricBar, InlineMetric, KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
-import { DateRangeFilter } from '@/components/forms';
+import { RangePicker } from '@/components/forms';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { useDriveScore, useDrives } from '@/api/hooks/useDriving';
@@ -751,13 +751,13 @@ export default function DriveScorePage() {
       {/* -------- Section 9: Date range filter -------- */}
       <FadeIn>
         <GlassPanel className="mb-6">
-          <DateRangeFilter
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-            onApply={handleDateApply}
-            presets
+          <RangePicker
+            value={{ start: startDate, end: endDate }}
+            onChange={(r) => {
+              setStartDate(r.start);
+              setEndDate(r.end);
+              handleDateApply();
+            }}
           />
         </GlassPanel>
       </FadeIn>

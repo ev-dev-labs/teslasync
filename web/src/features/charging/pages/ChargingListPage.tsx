@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { QueryError } from '@/components/feedback';
-import { DateRangeFilter } from '@/components/forms';
+import { RangePicker } from '@/components/forms';
 import { SavedViewMenu } from '@/components/data-display';
 import { DataFreshnessAuto } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
@@ -69,8 +69,8 @@ export default function ChargingListPage() {
     return d.toISOString().split('T')[0];
   }, []);
   const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate, setStartDate] = useUrlString('from', defaultStartDate);
-  const [endDate, setEndDate] = useUrlString('to', defaultEndDate);
+  const [startDate] = useUrlString('from', defaultStartDate);
+  const [endDate] = useUrlString('to', defaultEndDate);
   const setRangeBatch = useUrlBatch();
 
   const chargingQuery = useChargingSessionsPaginated(vehicleId, {
@@ -159,13 +159,12 @@ export default function ChargingListPage() {
       <PullToRefresh onRefresh={async () => { await refetch(); }}>
       <FadeIn>
         <div data-tour="charging-filters">
-          <DateRangeFilter
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-            onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
-            onApply={() => setPage(1)}
+          <RangePicker
+            value={{ start: startDate, end: endDate }}
+            onChange={(r) => {
+              setRangeBatch({ from: r.start, to: r.end });
+              setPage(1);
+            }}
           />
         </div>
       </FadeIn>

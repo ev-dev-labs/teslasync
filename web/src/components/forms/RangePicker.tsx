@@ -67,6 +67,12 @@ export interface RangePickerProps {
   className?: string;
   /** Test id forwarded to the trigger. */
   triggerTestId?: string;
+  /**
+   * When true, hide the calendar grid and footer Apply/Cancel buttons.
+   * Use this for pages whose backend only accepts trailing-period queries
+   * (e.g. `?days=N`) and cannot honor an arbitrary custom range.
+   */
+  presetsOnly?: boolean;
 }
 
 function isoFromDate(d: Date): string {
@@ -116,6 +122,7 @@ export function RangePicker({
   align = 'start',
   className,
   triggerTestId,
+  presetsOnly = false,
 }: RangePickerProps) {
   const { t, i18n } = useTranslation();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -256,55 +263,57 @@ export function RangePicker({
           </ul>
 
           {/* Calendar + footer */}
-          <div className="flex flex-col flex-1 min-w-0">
-            <div className="p-2">
-              <DayPicker
-                mode="range"
-                selected={staged}
-                onSelect={setStaged}
-                numberOfMonths={typeof window !== 'undefined' && window.innerWidth >= 768 ? 2 : 1}
-                fromDate={minDateObj}
-                toDate={maxDateObj}
-                showOutsideDays={false}
-                className="rdp-tesla"
-                weekStartsOn={(i18n.language?.startsWith('en') ? 0 : 1) as 0 | 1}
-              />
-            </div>
+          {!presetsOnly && (
+            <div className="flex flex-col flex-1 min-w-0">
+              <div className="p-2">
+                <DayPicker
+                  mode="range"
+                  selected={staged}
+                  onSelect={setStaged}
+                  numberOfMonths={typeof window !== 'undefined' && window.innerWidth >= 768 ? 2 : 1}
+                  fromDate={minDateObj}
+                  toDate={maxDateObj}
+                  showOutsideDays={false}
+                  className="rdp-tesla"
+                  weekStartsOn={(i18n.language?.startsWith('en') ? 0 : 1) as 0 | 1}
+                />
+              </div>
 
-            <div className="flex flex-col gap-2 border-t border-[var(--glass-border)] px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-              {enableCompare ? (
-                <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                  <input
-                    type="checkbox"
-                    checked={compare}
-                    onChange={(e) => onCompareChange?.(e.target.checked)}
-                    className="h-3.5 w-3.5"
-                  />
-                  {t('date.range.compare', 'Compare to previous period')}
-                </label>
-              ) : (
-                <span className="text-[10px] text-[var(--text-muted)]">
-                  {stagedDays
-                    ? t('date.range.summaryDays', '{{count}} days', { count: stagedDays })
-                    : ''}
-                </span>
-              )}
-              <div className="flex items-center justify-end gap-2">
-                <Button type="button" size="sm" variant="ghost" onClick={handleCancel}>
-                  {t('date.range.cancel', 'Cancel')}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="primary"
-                  onClick={handleApply}
-                  disabled={!stagedDirty}
-                >
-                  {t('date.range.apply', 'Apply')}
-                </Button>
+              <div className="flex flex-col gap-2 border-t border-[var(--glass-border)] px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                {enableCompare ? (
+                  <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+                    <input
+                      type="checkbox"
+                      checked={compare}
+                      onChange={(e) => onCompareChange?.(e.target.checked)}
+                      className="h-3.5 w-3.5"
+                    />
+                    {t('date.range.compare', 'Compare to previous period')}
+                  </label>
+                ) : (
+                  <span className="text-[10px] text-[var(--text-muted)]">
+                    {stagedDays
+                      ? t('date.range.summaryDays', '{{count}} days', { count: stagedDays })
+                      : ''}
+                  </span>
+                )}
+                <div className="flex items-center justify-end gap-2">
+                  <Button type="button" size="sm" variant="ghost" onClick={handleCancel}>
+                    {t('date.range.cancel', 'Cancel')}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="primary"
+                    onClick={handleApply}
+                    disabled={!stagedDirty}
+                  >
+                    {t('date.range.apply', 'Apply')}
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </Popover>
     </>

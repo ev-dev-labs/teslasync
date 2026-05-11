@@ -17,7 +17,7 @@ import {
 } from '@/components/charts';
 import { Skeleton, EmptyState, ChartBlockSkeleton, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { DateRangeFilter } from '@/components/forms';
+import { RangePicker } from '@/components/forms';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFleetAnalytics, useMileageStats, useStateSummary } from '@/api/hooks/useAnalytics';
@@ -101,8 +101,8 @@ export default function StatisticsPage() {
     return d.toISOString().slice(0, 10);
   }, []);
   const defaultEnd = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const [startDate, setStartDate] = useUrlString('from', defaultStart);
-  const [endDate, setEndDate] = useUrlString('to', defaultEnd);
+  const [startDate] = useUrlString('from', defaultStart);
+  const [endDate] = useUrlString('to', defaultEnd);
   const setRangeBatch = useUrlBatch();
 
   const { data: vehicles } = useVehicles();
@@ -179,7 +179,7 @@ export default function StatisticsPage() {
           {vehicleOptions.length > 1 && (
             <Select value={activeId} onChange={(e) => setVehicleId(e.target.value)} options={vehicleOptions} />
           )}
-          <DateRangeFilter startDate={startDate} endDate={endDate} onStartDateChange={setStartDate} onEndDateChange={setEndDate} onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })} />
+          <RangePicker value={{ start: startDate, end: endDate }} onChange={(r) => setRangeBatch({ from: r.start, to: r.end })} />
           <Button size="sm" onClick={() => { void refetch(); }}>
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>

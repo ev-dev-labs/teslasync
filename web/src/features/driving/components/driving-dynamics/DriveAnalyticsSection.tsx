@@ -22,7 +22,7 @@ import {
   ReferenceLine,
   Legend,
 } from '@/components/charts';
-import { DateRangeFilter } from '@/components/forms';
+import { RangePicker } from '@/components/forms';
 import { FadeIn } from '@/components/motion';
 import { formatDateShort } from '@/lib/dateFormat';
 import type { Drive } from '@/types/driving';
@@ -119,12 +119,12 @@ export default function DriveAnalyticsSection({
             {t('dynamics.driveAnalytics', 'Drive Analytics')}
           </h2>
         </div>
-        <DateRangeFilter
-          startDate={startDate}
-          endDate={endDate}
-          onStartDateChange={onStartDateChange}
-          onEndDateChange={onEndDateChange}
-          presets
+        <RangePicker
+          value={{ start: startDate, end: endDate }}
+          onChange={(r) => {
+            onStartDateChange(r.start);
+            onEndDateChange(r.end);
+          }}
         />
       </FadeIn>
 

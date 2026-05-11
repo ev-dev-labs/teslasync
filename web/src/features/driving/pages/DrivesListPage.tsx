@@ -27,7 +27,7 @@ import { InlineMetric } from '@/components/data-display/InlineMetric';
 import { MetricBar } from '@/components/data-display/MetricBar';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { DateRangeFilter } from '@/components/forms/DateRangeFilter';
+import { RangePicker } from '@/components/forms';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { FilterBar } from '@/components/forms/FilterBar';
 import { ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms/ActiveFilterChips';
@@ -460,13 +460,12 @@ export default function DrivesListPage() {
               />
             )}
           </div>
-          <DateRangeFilter
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-            onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
-            onApply={() => setPage(1)}
+          <RangePicker
+            value={{ start: startDate, end: endDate }}
+            onChange={(r) => {
+              setRangeBatch({ from: r.start, to: r.end });
+              setPage(1);
+            }}
           />
         </FilterBar>
         <ActiveFilterChips

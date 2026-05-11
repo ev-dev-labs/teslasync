@@ -9,7 +9,9 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, Select, DataTable, useSortToggle, type Column } from '@/components/ui';
+import { GlassPanel, Badge, Select, DataTable, useSortToggle, type Column } from '@/components/ui';
+import { RangePicker } from '@/components/forms';
+import { useRangeState } from '@/hooks/useRangeState';
 import { MetricCard } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip, ChartGradient,
@@ -55,11 +57,7 @@ interface EnergyStatsResponse {
 
 /* ───────── Constants ───────── */
 
-const TIME_RANGES = [
-  { value: '1', label: '24h' },
-  { value: '7', label: '7d' },
-  { value: '30', label: '30d' },
-] as const;
+const PRESET_IDS = ['today', '7d', '30d', '90d', 'mtd', 'ytd'];
 
 /* ───────── Flow Arrow ───────── */
 
@@ -111,7 +109,20 @@ export default function EnergyFlowPage() {
   const { unitPrefs, formatDistance, formatEnergy } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const [vehicleId, setVehicleId] = useState<string | null>(null);
-  const [days, setDays] = useState('7');
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'energy-flow.range',
+    defaultPresetId: '7d',
+  });
+
+  // Backend currently accepts trailing ?days=N only. We compute days from the
+  // selected start/end (inclusive). Custom historical ranges that don't end
+  // today still resolve to a trailing window — documented limitation that the
+  // presetsOnly RangePicker UI hints at by hiding the calendar grid.
+  const days = useMemo(() => {
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T00:00:00`).getTime();
+    return Math.max(1, Math.round((endMs - startMs) / 86_400_000) + 1);
+  }, [start, end]);
 
   const activeId = vehicleId ?? (vehicles?.[0]?.id != null ? String(vehicles[0].id) : null);
 
@@ -257,18 +268,13 @@ export default function EnergyFlowPage() {
     ) : undefined;
 
   const rangeButtons = (
-    <div className="flex items-center gap-1">
-      {TIME_RANGES.map((r) => (
-        <Button
-          key={r.value}
-          variant={days === r.value ? 'primary' : 'ghost'}
-          size="sm"
-          onClick={() => setDays(r.value)}
-        >
-          {r.label}
-        </Button>
-      ))}
-    </div>
+    <RangePicker
+      value={{ start, end }}
+      onChange={(r) => setRange(r)}
+      presetIds={PRESET_IDS}
+      presetsOnly
+      triggerTestId="energy-flow-range"
+    />
   );
 
   const actions = (

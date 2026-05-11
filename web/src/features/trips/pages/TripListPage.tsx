@@ -5,7 +5,7 @@ import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select, Pagination, Button } from '@/components/ui';
 import { MetricCard, InlineMetric, SavedViewMenu, DataFreshnessAuto } from '@/components/data-display';
 import { ChartContainer, ChartTooltip, ChartGradient, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, axisTickSm, chartGrid, chartAnimation } from '@/components/charts';
-import { DateRangeFilter } from '@/components/forms';
+import { RangePicker } from '@/components/forms';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useTrips } from '@/api/hooks/useTrips';
@@ -56,8 +56,8 @@ export default function TripListPage() {
     return d.toISOString().split('T')[0];
   }, []);
   const defaultEnd = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate, setStartDate] = useUrlString('from', defaultStart);
-  const [endDate, setEndDate] = useUrlString('to', defaultEnd);
+  const [startDate] = useUrlString('from', defaultStart);
+  const [endDate] = useUrlString('to', defaultEnd);
   const setRangeBatch = useUrlBatch();
 
   const { unitPrefs } = useUnits();
@@ -164,13 +164,12 @@ export default function TripListPage() {
 
       {/* Date Range Filter */}
       <FadeIn>
-        <DateRangeFilter
-          startDate={startDate}
-          endDate={endDate}
-          onStartDateChange={setStartDate}
-          onEndDateChange={setEndDate}
-          onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
-          onApply={() => setPage(1)}
+        <RangePicker
+          value={{ start: startDate, end: endDate }}
+          onChange={(r) => {
+            setRangeBatch({ from: r.start, to: r.end });
+            setPage(1);
+          }}
         />
       </FadeIn>
 

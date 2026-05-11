@@ -6,7 +6,9 @@ import {
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Badge, Button, Select } from '@/components/ui';
+import { GlassPanel, Badge, Button } from '@/components/ui';
+import { RangePicker } from '@/components/forms';
+import { useRangeState } from '@/hooks/useRangeState';
 import { StatCard } from '@/components/data-display';
 import {
   ChartContainer, ChartGradient, ChartTooltip,
@@ -46,11 +48,7 @@ function fmtWh(wh: number | null | undefined): string {
   return `${fmtNumber(wh, 0)} Wh`;
 }
 
-const RANGE_OPTIONS = [
-  { value: '1', label: '24 Hours' },
-  { value: '7', label: '7 Days' },
-  { value: '30', label: '30 Days' },
-] as const;
+const PRESET_IDS = ['today', 'yesterday', '7d', '30d', '90d', 'mtd', 'ytd'];
 
 /* ───────── Power Flow Arrows ───────── */
 
@@ -89,14 +87,10 @@ export default function PowerFlowDashboardPage() {
   usePageTitle(t('powerFlow.title', 'Power Flow'));
 
   const [siteId] = useState(DEFAULT_SITE_ID);
-  const [rangeDays, setRangeDays] = useState('1');
-
-  const since = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - Number(rangeDays));
-    return d.toISOString().slice(0, 10);
-  }, [rangeDays]);
-  const until = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const { start: since, end: until, setRange } = useRangeState({
+    persistKey: 'power-flow.range',
+    defaultPresetId: '7d',
+  });
 
   const { data: liveStatus, isLoading: liveLoading } = useTeslaEnergyLiveStatus(siteId);
   const { data: history, isLoading: historyLoading } = useTeslaEnergyLiveStatusHistory(
@@ -310,11 +304,12 @@ export default function PowerFlowDashboardPage() {
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">
               {t('powerFlow.history', 'Power History')}
             </h2>
-            <Select
-              value={rangeDays}
-              onChange={(e) => setRangeDays(e.target.value)}
-              options={RANGE_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
-              className="w-36"
+            <RangePicker
+              value={{ start: since, end: until }}
+              onChange={(r) => setRange(r)}
+              presetIds={PRESET_IDS}
+              align="end"
+              triggerTestId="power-flow-range"
             />
           </div>
 

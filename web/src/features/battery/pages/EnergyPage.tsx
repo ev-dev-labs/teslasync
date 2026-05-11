@@ -16,7 +16,7 @@ import {
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, QueryError, EmptyState, ChartBlockSkeleton, StatGridSkeleton, PageHeaderSkeleton } from '@/components/feedback';
 import { Currency, SavedViewMenu } from '@/components/data-display';
-import { DateRangeFilter } from '@/components/forms';
+import { RangePicker } from '@/components/forms';
 
 import { useEnergyStats } from '@/api/hooks/useEnergy';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
@@ -151,8 +151,8 @@ export default function EnergyPage() {
     return d.toISOString().split('T')[0];
   }, []);
   const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate, setStartDate] = useUrlString('from', defaultStartDate);
-  const [endDate, setEndDate] = useUrlString('to', defaultEndDate);
+  const [startDate] = useUrlString('from', defaultStartDate);
+  const [endDate] = useUrlString('to', defaultEndDate);
   const setRangeBatch = useUrlBatch();
 
   /* Phase-46 / Prompt 67 — URL-persisted hidden-series state for the
@@ -339,12 +339,9 @@ export default function EnergyPage() {
               className="text-sm"
             />
           )}
-          <DateRangeFilter
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-            onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+          <RangePicker
+            value={{ start: startDate, end: endDate }}
+            onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
           />
           <SavedViewMenu
             route="/energy"
