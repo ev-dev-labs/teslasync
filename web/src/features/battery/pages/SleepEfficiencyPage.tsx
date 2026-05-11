@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Moon, Eye, Clock, Zap, DollarSign, Thermometer } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select, DataTable, Badge, type Column } from '@/components/ui';
+import { RangePicker } from '@/components/forms';
 import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -14,11 +15,11 @@ import {
 import { CHART_COLORS } from '@/lib/colors';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
 import { formatDateShort, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { DAYS_OPTIONS } from '@/lib/constants';
 import type { SleepDrainEvent } from '@/types/energy';
 import { convertTempFromSI } from '@/lib/unitConversion';
 
@@ -43,12 +44,22 @@ export default function SleepEfficiencyPage() {
 
   const tempUnit = unitPrefs.temperature;
 
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const [days, setDays] = useState(30);
-
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
+
+  // Date range — canonical RangePicker. The backend hook accepts a `days`
+  // count, so we derive it from the selected window (inclusive day count).
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'sleep-efficiency.range',
+    defaultPresetId: '30d',
+  });
+  const days = useMemo(() => {
+    if (!start || !end) return 30;
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T00:00:00`).getTime();
+    const diff = Math.round((endMs - startMs) / 86_400_000) + 1;
+    return Math.max(1, diff);
+  }, [start, end]);
 
   const sleepQuery = useSleepEfficiency(vehicleIdStr, days);
   const { data: sleep, isLoading, error } = sleepQuery;
@@ -146,18 +157,20 @@ export default function SleepEfficiencyPage() {
       error={error instanceof Error ? error : null}
       actions={
         <div className="flex items-center gap-3">
-          <Select
-            value={String(days)}
-            onChange={(e) => setDays(Number(e.target.value))}
-            options={DAYS_OPTIONS}
-          />
-          {vehicles && vehicles.length > 1 && (
+          {vehicles.length > 0 && (
             <Select
               value={vehicleId != null ? String(vehicleId) : ''}
-              onChange={(e) => setSelectedVehicle(Number(e.target.value))}
+              onChange={(e) => setVehicleId(Number(e.target.value))}
               options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+              aria-label={t('sleep.selectVehicle', 'Select vehicle')}
             />
           )}
+          <RangePicker
+            value={{ start, end }}
+            onChange={setRange}
+            align="end"
+            triggerTestId="sleep-efficiency-range"
+          />
           <DataFreshnessAuto query={sleepQuery} />
         </div>
       }
