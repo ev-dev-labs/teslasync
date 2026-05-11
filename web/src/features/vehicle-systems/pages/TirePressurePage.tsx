@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, Badge, DataTable, Select, type Column } from '@/components/ui';
 import { RangePicker } from '@/components/forms';
 import { useRangeState } from '@/hooks/useRangeState';
 import { MetricCard } from '@/components/data-display';
@@ -201,7 +201,7 @@ export default function TirePressurePage() {
   const gaugeMax = pressureDisplayValue(GAUGE_MAX_PA);
 
   // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
-  const { vehicleId: activeVehicleId } = useSelectedVehicle();
+  const { vehicleId: activeVehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const { start, end, setRange } = useRangeState({
     persistKey: 'tire-pressure.range',
     defaultPresetId: '30d',
@@ -327,6 +327,26 @@ export default function TirePressurePage() {
       subtitle={t('tirePressure.subtitle', 'Monitor tire pressure readings and history')}
       loading={isLoading}
       error={latestError as Error | null}
+      actions={
+        <div className="flex items-center gap-3">
+          {vehicles.length > 0 && (
+            <Select
+              value={activeVehicleId != null ? String(activeVehicleId) : ''}
+              onChange={(e) => setVehicleId(Number(e.target.value))}
+              options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+              aria-label={t('tirePressure.selectVehicle', 'Select vehicle')}
+              className="w-44"
+            />
+          )}
+          <RangePicker
+            value={{ start, end }}
+            onChange={setRange}
+            presetIds={PRESET_IDS}
+            align="end"
+            triggerTestId="tire-pressure-range"
+          />
+        </div>
+      }
     >
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
@@ -446,23 +466,11 @@ export default function TirePressurePage() {
         {/* Pressure History Chart */}
         <GlassPanel className="mb-6 p-5">
           <FadeIn delay={0.2}>
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Gauge className="h-5 w-5 text-cyan-400" />
-                <Badge variant="info" size="sm">
-                  {t('Pressure History')}
-                </Badge>
-              </div>
-
-              <div className="flex gap-1">
-                <RangePicker
-                  value={{ start, end }}
-                  onChange={(r) => setRange(r)}
-                  presetIds={PRESET_IDS}
-                  align="end"
-                  triggerTestId="tire-pressure-range"
-                />
-              </div>
+            <div className="mb-4 flex items-center gap-2">
+              <Gauge className="h-5 w-5 text-cyan-400" />
+              <Badge variant="info" size="sm">
+                {t('Pressure History')}
+              </Badge>
             </div>
 
             {loadingHistory ? (
