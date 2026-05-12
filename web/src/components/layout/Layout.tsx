@@ -236,7 +236,7 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
   Analytics: { accent: 'text-indigo-300', surface: 'bg-indigo-400/10', ring: 'ring-indigo-400/20', dot: 'bg-indigo-400' },
   'Vehicle Commands': { accent: 'text-fuchsia-300', surface: 'bg-fuchsia-400/10', ring: 'ring-fuchsia-400/20', dot: 'bg-fuchsia-400' },
   Alerts: { accent: 'text-orange-300', surface: 'bg-orange-400/10', ring: 'ring-orange-400/20', dot: 'bg-orange-400' },
-  Automation: { accent: 'text-amber-300', surface: 'bg-amber-400/10', ring: 'ring-amber-400/20', dot: 'bg-amber-400' },
+  'Smart Actions': { accent: 'text-amber-300', surface: 'bg-amber-400/10', ring: 'ring-amber-400/20', dot: 'bg-amber-400' },
   Security: { accent: 'text-yellow-300', surface: 'bg-yellow-400/10', ring: 'ring-yellow-400/20', dot: 'bg-yellow-400' },
   Account: { accent: 'text-zinc-300', surface: 'bg-zinc-400/10', ring: 'ring-zinc-400/20', dot: 'bg-zinc-400' },
   Assistant: { accent: 'text-pink-300', surface: 'bg-pink-400/10', ring: 'ring-pink-400/20', dot: 'bg-pink-400' },
@@ -381,6 +381,7 @@ export const navSections = [
     items: [
       { to: '/notifications/inbox', icon: Icons.notifications, label: 'Inbox', color: 'text-purple-400' },
       { to: '/notifications/alerts', icon: Icons.notificationsActive, label: 'Alerts', color: 'text-red-400' },
+      { to: '/notifications/rules', icon: Icons.filter, label: 'Rules', color: 'text-amber-400' },
       { to: '/notifications/channels', icon: Icons.send, label: 'Channels', color: 'text-cyan-400' },
       { to: '/notifications/webhooks', icon: Icons.cloud, label: 'Webhooks', color: 'text-sky-400' },
       { to: '/notifications/quiet-hours', icon: Icons.clock, label: 'Quiet Hours', color: 'text-indigo-400' },
@@ -388,9 +389,8 @@ export const navSections = [
     ],
   },
   {
-    title: 'Automation',
+    title: 'Smart Actions',
     items: [
-      { to: '/notifications/rules', icon: Icons.filter, label: 'Rules', color: 'text-amber-400' },
       { to: '/notifications/studio', icon: Icons.notificationsAdd, label: 'Studio', color: 'text-neon-cyan' },
       { to: '/automations', icon: Icons.workflow, label: 'Automations', color: 'text-neon-cyan' },
     ],
