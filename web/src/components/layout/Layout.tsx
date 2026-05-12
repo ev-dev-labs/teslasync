@@ -200,6 +200,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/signals': ['signals', 'live monitor', 'signal log', 'signal explorer', 'signal diff', 'gap detector', 'telemetry workspace'],
   '/account/2fa': ['2fa', 'two factor', 'two-factor', 'mfa', 'totp', 'authenticator', 'security', 'account', 'verify', 'enroll'],
   '/account/sessions': ['sessions', 'devices', 'sign out', 'logout', 'revoke', 'active sessions', 'security', 'account'],
+  '/account/privacy': ['privacy', 'recent pages', 'recently viewed', 'cookies', 'consent', 'gdpr', 'analytics', 'tracking', 'account'],
   '/live-monitor': ['live signals', 'monitor', 'telemetry'],
   '/signal-log': ['signals', 'signal log', 'telemetry log'],
   '/signal-explorer': ['explore signals', 'signal explorer'],
@@ -425,6 +426,7 @@ export const navSections = [
     items: [
       { to: '/account/2fa',      icon: Icons.securityCheck, label: 'Two-factor Auth', color: 'text-yellow-400', requiresAuth: true },
       { to: '/account/sessions', icon: Icons.monitor,       label: 'Active Sessions', color: 'text-cyan-400',   requiresAuth: true },
+      { to: '/account/privacy',  icon: Icons.security,      label: 'Privacy',         color: 'text-emerald-400' },
     ],
   },
   {

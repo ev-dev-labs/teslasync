@@ -420,6 +420,30 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       keywords: ['logout', 'revoke', 'session', 'everywhere', 'all devices', 'security'],
     },
 
+    // ── Privacy (browser-local data) ────────────────────────────────
+    {
+      id: 'privacy.recentPages.clear',
+      href: '/account/privacy',
+      section: 'privacy',
+      title: t('search.entries.privacy.recentPagesClear.title', 'Clear recently viewed pages'),
+      description: t(
+        'search.entries.privacy.recentPagesClear.desc',
+        'Wipe the local list of pages used by the dashboard widget and the Recent section in the command palette.',
+      ),
+      keywords: ['recent', 'history', 'clear', 'wipe', 'pages', 'palette', 'dashboard'],
+    },
+    {
+      id: 'privacy.consent.manage',
+      href: '/account/privacy',
+      section: 'privacy',
+      title: t('search.entries.privacy.consentManage.title', 'Cookies & analytics consent'),
+      description: t(
+        'search.entries.privacy.consentManage.desc',
+        'Re-grant, withdraw, or reset the cookie / analytics consent banner state for this browser.',
+      ),
+      keywords: ['cookies', 'consent', 'gdpr', 'analytics', 'tracking', 'banner', 'opt-in', 'opt-out'],
+    },
+
     // ── Advanced ────────────────────────────────────────────────────
     {
       id: 'advanced.restoreConfirms',

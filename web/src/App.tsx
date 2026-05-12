@@ -165,8 +165,10 @@ const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
 // Account-level security pages promoted out of Settings (Phase-50 split):
 //   /account/2fa       — Two-factor authentication enrollment / disable
 //   /account/sessions  — Active browser/device sessions + revoke
+//   /account/privacy   — Recently viewed pages + cookies / analytics consent
 const TwoFactorAuth = lazy(() => import('./features/settings/pages/TwoFactorAuthPage'))
 const ActiveSessions = lazy(() => import('./features/settings/pages/ActiveSessionsPage'))
+const Privacy = lazy(() => import('./features/settings/pages/PrivacyPage'))
 
 // Onboarding (Phase 40 / Prompt 18 — first-run experience)
 const Onboarding = lazy(() => import('./features/onboarding/pages/OnboardingPage'))
@@ -333,6 +335,7 @@ export default function App() {
         <Route path="settings" element={<SafeRoute name="Settings"><Settings /></SafeRoute>} />
         <Route path="account/2fa" element={<SafeRoute name="TwoFactorAuth"><TwoFactorAuth /></SafeRoute>} />
         <Route path="account/sessions" element={<SafeRoute name="ActiveSessions"><ActiveSessions /></SafeRoute>} />
+        <Route path="account/privacy" element={<SafeRoute name="Privacy"><Privacy /></SafeRoute>} />
         <Route path="drives/:id" element={<SafeRoute name="DriveDetail"><DriveDetail /></SafeRoute>} />
         <Route path="drives/:id/replay" element={<SafeRoute name="TripReplay"><TripReplay /></SafeRoute>} />
         <Route path="charging/:id" element={<SafeRoute name="ChargeDetail"><ChargeDetail /></SafeRoute>} />

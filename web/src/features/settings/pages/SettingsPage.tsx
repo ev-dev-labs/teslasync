@@ -35,10 +35,10 @@ import { SettingsExportImport } from '../components/SettingsExportImport'
 // rationale as above; the components barrel is outside the prompt's
 // allowed-files regex.
 import { ResetSection } from '../components/ResetSection'
-// Phase-46 / Prompt 70 — Privacy section (now expanded with cookie /
-// GDPR consent management). Direct import for the same barrel-scope
-// rationale.
-import { PrivacySection } from '../components/PrivacySection'
+// Phase-46 / Prompt 70 — PrivacySection moved to its own page
+// (PrivacyPage at /account/privacy). Browser-local privacy controls
+// (recently viewed pages, cookies / GDPR consent) now live under the
+// Account side-nav category alongside 2FA and Active Sessions.
 // Notifications consolidation — three Settings sub-sections (Browser
 // Notifications, Webhooks, Quiet Hours) were promoted to first-class
 // pages under the Notifications side-nav group. Settings now surfaces
@@ -183,9 +183,6 @@ export default function SettingsPage() {
       </section>
       <section id="advanced">
         <AdvancedSettings />
-      </section>
-      <section id="privacy">
-        <PrivacySection />
       </section>
       <section id="backup">
         <SettingsExportImport />
