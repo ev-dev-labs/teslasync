@@ -12,5 +12,6 @@ export { AnomalyInlineRow } from './AnomalyInlineRow';
 export { BackupActionsCard } from './BackupActionsCard';
 export { TeslaAuthCard } from './TeslaAuthCard';
 export { TeslaApiUsageCard } from './TeslaApiUsageCard';
+export { TelemetryPipelineCard } from './TelemetryPipelineCard';
 export { UpdateAvailableCallout } from './UpdateAvailableCallout';
 export { StatusPageSkeleton } from './StatusPageSkeleton';

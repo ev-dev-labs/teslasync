@@ -59,6 +59,7 @@ import {
   BackupActionsCard,
   TeslaAuthCard,
   TeslaApiUsageCard,
+  TelemetryPipelineCard,
   UpdateAvailableCallout,
   StatusPageSkeleton,
 } from '../components/status'
@@ -701,16 +702,14 @@ export default function SystemStatusPage() {
             description={telemetrySummary}
             defaultOpen
           >
-            <DefList
-              rows={[
-                { label: t('Vehicles'), value: vehicleCount > 0 ? `${vehicleCount} connected` : 'none configured' },
-                { label: t('GPS positions'), value: positionCount > 0 ? positionCount.toLocaleString() : '0 (idle)' },
-                { label: t('Drives recorded'), value: drivesCount > 0 ? drivesCount.toLocaleString() : '0' },
-                { label: t('Charging sessions'), value: backupStats?.row_counts?.charging_sessions != null ? String(backupStats.row_counts.charging_sessions) : '—' },
-                { label: t('Signal log entries'), value: backupStats?.row_counts?.signal_log != null ? backupStats.row_counts.signal_log.toLocaleString() : '—' },
-              ]}
+            <TelemetryPipelineCard
+              vehicles={vehicles}
+              positionCount={positionCount}
+              drivesCount={drivesCount}
+              chargingSessionsCount={backupStats?.row_counts?.charging_sessions}
+              signalLogCount={backupStats?.row_counts?.signal_log}
+              now={now}
             />
-            <DetailLink to="/admin/telemetry/coverage" label={t('Open Telemetry Coverage')} />
           </AccordionSection>
         </section>
 
