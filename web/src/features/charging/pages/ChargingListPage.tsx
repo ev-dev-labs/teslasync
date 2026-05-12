@@ -57,10 +57,10 @@ export default function ChargingListPage() {
   // useSelectedVehicle, so prior alert-context handling is no longer needed.
   const { vehicleId } = useSelectedVehicle();
 
-  const [sortBy, setSortBy] = useUrlEnum<SortKey>('sort', SORT_KEYS, 'date');
+  const [sortBy] = useUrlEnum<SortKey>('sort', SORT_KEYS, 'date');
   const [sortDesc, setSortDesc] = useUrlBoolean('sort_desc', true);
   const [chargerFilter, setChargerFilter] = useUrlEnum<ChargerFilter>('charger', CHARGER_FILTERS, 'all');
-  const [searchQuery, setSearchQuery] = useUrlString('q', '');
+  const [searchQuery] = useUrlString('q', '');
   const [page, setPage] = useUrlNumber('page', 1);
   const [pageSize, setPageSize] = useUrlNumber('size', 50);
   const defaultStartDate = useMemo(() => {
@@ -151,8 +151,7 @@ export default function ChargingListPage() {
           <RangePicker
             value={{ start: startDate, end: endDate }}
             onChange={(r) => {
-              setRangeBatch({ from: r.start, to: r.end });
-              setPage(1);
+              setRangeBatch({ from: r.start, to: r.end, page: null });
             }}
             align="end"
             triggerTestId="charging-list-range"
@@ -207,8 +206,8 @@ export default function ChargingListPage() {
         sortDesc={sortDesc}
         chargerFilter={chargerFilter}
         searchQuery={searchQuery}
-        onSearchQueryChange={(v) => { setSearchQuery(v); setPage(1); }}
-        onSortChange={(key) => { setSortBy(key); setSortDesc(true); }}
+        onSearchQueryChange={(v) => { setRangeBatch({ q: v || null, page: null }); }}
+        onSortChange={(key) => { setRangeBatch({ sort: key, sort_desc: 'true' }); }}
         onSortToggle={() => setSortDesc(!sortDesc)}
         onChargerFilterChange={setChargerFilter}
         page={page}

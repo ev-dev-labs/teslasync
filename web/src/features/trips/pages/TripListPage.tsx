@@ -47,7 +47,7 @@ export default function TripListPage() {
   const { vehicleId } = useSelectedVehicle();
 
   const [page, setPage] = useUrlNumber('page', 1);
-  const [pageSize, setPageSize] = useUrlNumber('size', 50);
+  const [pageSize] = useUrlNumber('size', 50);
   const defaultStart = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 365);
@@ -134,8 +134,7 @@ export default function TripListPage() {
           <RangePicker
             value={{ start: startDate, end: endDate }}
             onChange={(r) => {
-              setRangeBatch({ from: r.start, to: r.end });
-              setPage(1);
+              setRangeBatch({ from: r.start, to: r.end, page: null });
             }}
             align="end"
             triggerTestId="trip-list-range"
@@ -277,8 +276,7 @@ export default function TripListPage() {
           total={estimatedTotal}
           onPageChange={setPage}
           onPageSizeChange={(s) => {
-            setPageSize(s);
-            setPage(1);
+            setRangeBatch({ size: String(s), page: null });
           }}
         />
       )}

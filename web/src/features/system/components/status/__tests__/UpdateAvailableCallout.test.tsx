@@ -9,7 +9,7 @@ function withRouter(ui: React.ReactNode) {
 }
 
 describe('UpdateAvailableCallout', () => {
-  it('shows the latest version in the heading and links to the changelog', () => {
+  it('shows the latest version in the heading and links to the GitHub release notes', () => {
     withRouter(
       <UpdateAvailableCallout
         current="1.0.0"
@@ -19,7 +19,10 @@ describe('UpdateAvailableCallout', () => {
     )
     expect(screen.getByText(/Update available — v1\.2\.0/)).toBeInTheDocument()
     expect(screen.getByText(/You're running v1\.0\.0/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /View notes/ })).toHaveAttribute('href', '/changelog')
+    const link = screen.getByRole('link', { name: /View notes/ })
+    expect(link).toHaveAttribute('href', 'https://github.com/ev-dev-labs/teslasync/releases/latest')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'))
   })
 
   it('renders gracefully when current and checkedAt are missing', () => {

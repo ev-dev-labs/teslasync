@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Modal, Button, Badge } from '@/components/ui'
 import {
@@ -44,7 +43,6 @@ const AUTO_SHOW_DELAY_MS = 2_000
 
 export function ChangelogModal() {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const { entries, newEntries, hasUnseen, canAutoShow, hasCompletedOnboarding, markSeen, stampShown } =
     useChangelog()
 
@@ -102,7 +100,11 @@ export function ChangelogModal() {
     setAcknowledged(true)
     markSeen()
     setOpen(false)
-    navigate('/changelog')
+    window.open(
+      'https://github.com/ev-dev-labs/teslasync/releases',
+      '_blank',
+      'noopener,noreferrer',
+    )
   }
 
   // The list shown inside the modal is the unseen subset when there is one;

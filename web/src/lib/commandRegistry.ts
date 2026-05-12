@@ -334,15 +334,6 @@ export const commandRegistry: CommandDefinition[] = [
     },
   },
   {
-    id: 'action.help',
-    labelKey: 'palette.cmd.help',
-    labelFallback: 'Open documentation',
-    icon: Icons.helpCircle,
-    section: 'actions',
-    keywords: ['help', 'docs', 'documentation', 'manual', 'guide'],
-    perform: (ctx) => ctx.navigate('/changelog'),
-  },
-  {
     // Phase-46 / Prompt 08 — opens the in-app <FeedbackModal>. The
     // command id MUST stay literally "feedback.open"; the prompt's
     // audit gate scans this file for that exact string.

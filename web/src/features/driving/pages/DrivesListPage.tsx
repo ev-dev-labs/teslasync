@@ -263,15 +263,15 @@ export default function DrivesListPage() {
     'date',
   );
   const [page, setPage] = useUrlNumber('page', 1);
-  const [pageSize, setPageSize] = useUrlNumber('size', 50);
-  const [search, setSearch] = useUrlString('q', '');
+  const [pageSize] = useUrlNumber('size', 50);
+  const [search] = useUrlString('q', '');
   const defaultStart = useMemo(() => {
     const d = new Date(); d.setDate(d.getDate() - 365);
     return d.toISOString().split('T')[0];
   }, []);
   const defaultEnd = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate, setStartDate] = useUrlString('from', defaultStart);
-  const [endDate, setEndDate] = useUrlString('to', defaultEnd);
+  const [startDate] = useUrlString('from', defaultStart);
+  const [endDate] = useUrlString('to', defaultEnd);
   const setRangeBatch = useUrlBatch();
 
   /* ---- Client-side date filter ---- */
@@ -432,8 +432,7 @@ export default function DrivesListPage() {
           <RangePicker
             value={{ start: startDate, end: endDate }}
             onChange={(r) => {
-              setRangeBatch({ from: r.start, to: r.end });
-              setPage(1);
+              setRangeBatch({ from: r.start, to: r.end, page: null });
             }}
             align="end"
             triggerTestId="drives-range-picker"
@@ -456,7 +455,7 @@ export default function DrivesListPage() {
           <div className="relative w-full sm:w-72">
             <SearchInput
               value={search}
-              onChange={(v) => { setSearch(v); setPage(1); }}
+              onChange={(v) => { setRangeBatch({ q: v || null, page: null }); }}
               placeholder={t('drives.searchPlaceholder', 'Search by start or end address…')}
               className="w-full"
               historyScope="drives"
@@ -480,7 +479,7 @@ export default function DrivesListPage() {
                     key: 'q',
                     label: t('drives.filterLabel.search', 'Search'),
                     value: search,
-                    onRemove: () => { setSearch(''); setPage(1); },
+                    onRemove: () => { setRangeBatch({ q: null, page: null }); },
                   } satisfies FilterChipDescriptor
                 : null,
               startDate && startDate !== defaultStart
@@ -488,7 +487,7 @@ export default function DrivesListPage() {
                     key: 'from',
                     label: t('drives.filterLabel.from', 'From'),
                     value: startDate,
-                    onRemove: () => { setStartDate(defaultStart); setPage(1); },
+                    onRemove: () => { setRangeBatch({ from: null, page: null }); },
                   } satisfies FilterChipDescriptor
                 : null,
               endDate && endDate !== defaultEnd
@@ -496,15 +495,13 @@ export default function DrivesListPage() {
                     key: 'to',
                     label: t('drives.filterLabel.to', 'To'),
                     value: endDate,
-                    onRemove: () => { setEndDate(defaultEnd); setPage(1); },
+                    onRemove: () => { setRangeBatch({ to: null, page: null }); },
                   } satisfies FilterChipDescriptor
                 : null,
             ].filter(Boolean) as FilterChipDescriptor[]) as readonly FilterChipDescriptor[]
           }
           onClearAll={() => {
-            setSearch('');
-            setRangeBatch({ from: defaultStart, to: defaultEnd });
-            setPage(1);
+            setRangeBatch({ q: null, from: null, to: null, page: null });
           }}
         />
       </FadeIn>
@@ -792,7 +789,7 @@ export default function DrivesListPage() {
             pageSize={pageSize}
             total={sortedDrives.length}
             onPageChange={setPage}
-            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+            onPageSizeChange={(s) => { setRangeBatch({ size: String(s), page: null }); }}
           />
         </>
       ) : (
@@ -803,11 +800,7 @@ export default function DrivesListPage() {
           action={{
             label: t('drives.empty.cta', 'Reset filters'),
             onClick: () => {
-              setSearch('');
-              setStartDate(defaultStart);
-              setEndDate(defaultEnd);
-              setSortBy('date');
-              setPage(1);
+              setRangeBatch({ q: null, from: null, to: null, sort: null, page: null });
             },
           }}
         />

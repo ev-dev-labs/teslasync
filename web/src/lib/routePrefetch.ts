@@ -45,7 +45,6 @@ const PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/battery': () => import('../features/battery/pages/BatteryHealthPage'),
   '/battery-cells': () => import('../features/battery/pages/BatteryCellsPage'),
   '/battery-degradation': () => import('../features/battery/pages/BatteryDegradationPage'),
-  '/changelog': () => import('../features/system/pages/ChangelogPage'),
   '/charging': () => import('../features/charging/pages/ChargingListPage'),
   '/charging-curve': () => import('../features/charging/pages/ChargingCurvePage'),
   '/charging-heatmap': () => import('../features/charging/pages/ChargingHeatmapPage'),

@@ -150,7 +150,6 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'Commands', load: () => import('../features/system/pages/CommandsPage') },
   { name: 'CommandHistory', load: () => import('../features/system/pages/CommandHistoryPage') },
   { name: 'Chatbot', load: () => import('../features/system/pages/ChatbotPage') },
-  { name: 'Changelog', load: () => import('../features/system/pages/ChangelogPage') },
   { name: 'Roadmap', load: () => import('../features/system/pages/RoadmapPage') },
   { name: 'TeslaAccount', load: () => import('../features/system/pages/TeslaAccountPage') },
   { name: 'MyActivity', load: () => import('../features/system/pages/MyActivityPage') },

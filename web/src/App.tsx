@@ -155,7 +155,6 @@ const StateMachineDebugger = lazy(() => import('./features/system/pages/StateMac
 const Commands = lazy(() => import('./features/system/pages/CommandsPage'))
 const CommandHistory = lazy(() => import('./features/system/pages/CommandHistoryPage'))
 const Chatbot = lazy(() => import('./features/system/pages/ChatbotPage'))
-const Changelog = lazy(() => import('./features/system/pages/ChangelogPage'))
 const Roadmap = lazy(() => import('./features/system/pages/RoadmapPage'))
 const TeslaAccount = lazy(() => import('./features/system/pages/TeslaAccountPage'))
 
@@ -361,7 +360,6 @@ export default function App() {
         <Route path="docs/status-api" element={<SafeRoute name="StatusApiDocs"><StatusApiDocs /></SafeRoute>} />
         <Route path="roadmap" element={<SafeRoute name="Roadmap"><Roadmap /></SafeRoute>} />
         <Route path="api-keys" element={<SafeRoute name="APIKeys"><APIKeysPage /></SafeRoute>} />
-        <Route path="changelog" element={<SafeRoute name="Changelog"><Changelog /></SafeRoute>} />
         <Route path="compare" element={<Navigate to="/period-compare" replace />} />
         <Route path="period-compare" element={<SafeRoute name="PeriodCompare"><PeriodCompare /></SafeRoute>} />
         <Route path="admin" element={<Navigate to="/system-status" replace />} />
