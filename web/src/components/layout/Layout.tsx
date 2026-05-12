@@ -239,7 +239,8 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
   'Smart Actions': { accent: 'text-amber-300', surface: 'bg-amber-400/10', ring: 'ring-amber-400/20', dot: 'bg-amber-400' },
   Security: { accent: 'text-yellow-300', surface: 'bg-yellow-400/10', ring: 'ring-yellow-400/20', dot: 'bg-yellow-400' },
   Account: { accent: 'text-zinc-300', surface: 'bg-zinc-400/10', ring: 'ring-zinc-400/20', dot: 'bg-zinc-400' },
-  Assistant: { accent: 'text-pink-300', surface: 'bg-pink-400/10', ring: 'ring-pink-400/20', dot: 'bg-pink-400' },
+  AI: { accent: 'text-purple-300', surface: 'bg-purple-400/10', ring: 'ring-purple-400/20', dot: 'bg-purple-400' },
+  Media: { accent: 'text-pink-300', surface: 'bg-pink-400/10', ring: 'ring-pink-400/20', dot: 'bg-pink-400' },
   Integrations: { accent: 'text-blue-300', surface: 'bg-blue-400/10', ring: 'ring-blue-400/20', dot: 'bg-blue-400' },
   'Settings & Admin': { accent: 'text-slate-300', surface: 'bg-slate-400/10', ring: 'ring-slate-400/20', dot: 'bg-slate-400' },
   Data: { accent: 'text-teal-300', surface: 'bg-teal-400/10', ring: 'ring-teal-400/20', dot: 'bg-teal-400' },
@@ -405,9 +406,14 @@ export const navSections = [
     ],
   },
   {
-    title: 'Assistant',
+    title: 'AI',
     items: [
-      { to: '/chatbot', icon: Icons.bot, label: 'Chatbot', color: 'text-cyan-400' },
+      { to: '/chatbot', icon: Icons.bot, label: 'Chatbot', color: 'text-purple-400' },
+    ],
+  },
+  {
+    title: 'Media',
+    items: [
       { to: '/media-player', icon: Icons.headphones, label: 'Media Player', color: 'text-pink-400' },
     ],
   },
