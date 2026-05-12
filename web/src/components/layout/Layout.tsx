@@ -198,6 +198,8 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/roadmap': ['roadmap', 'plans'],
   '/changelog': ['changes', 'release notes'],
   '/signals': ['signals', 'live monitor', 'signal log', 'signal explorer', 'signal diff', 'gap detector', 'telemetry workspace'],
+  '/account/2fa': ['2fa', 'two factor', 'two-factor', 'mfa', 'totp', 'authenticator', 'security', 'account', 'verify', 'enroll'],
+  '/account/sessions': ['sessions', 'devices', 'sign out', 'logout', 'revoke', 'active sessions', 'security', 'account'],
   '/live-monitor': ['live signals', 'monitor', 'telemetry'],
   '/signal-log': ['signals', 'signal log', 'telemetry log'],
   '/signal-explorer': ['explore signals', 'signal explorer'],
@@ -235,6 +237,7 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
   Alerts: { accent: 'text-orange-300', surface: 'bg-orange-400/10', ring: 'ring-orange-400/20', dot: 'bg-orange-400' },
   Automation: { accent: 'text-amber-300', surface: 'bg-amber-400/10', ring: 'ring-amber-400/20', dot: 'bg-amber-400' },
   Security: { accent: 'text-yellow-300', surface: 'bg-yellow-400/10', ring: 'ring-yellow-400/20', dot: 'bg-yellow-400' },
+  Account: { accent: 'text-zinc-300', surface: 'bg-zinc-400/10', ring: 'ring-zinc-400/20', dot: 'bg-zinc-400' },
   Assistant: { accent: 'text-pink-300', surface: 'bg-pink-400/10', ring: 'ring-pink-400/20', dot: 'bg-pink-400' },
   Integrations: { accent: 'text-blue-300', surface: 'bg-blue-400/10', ring: 'ring-blue-400/20', dot: 'bg-blue-400' },
   'Settings & Admin': { accent: 'text-slate-300', surface: 'bg-slate-400/10', ring: 'ring-slate-400/20', dot: 'bg-slate-400' },
@@ -415,6 +418,13 @@ export const navSections = [
       { to: '/tesla-region', icon: Icons.globe, label: 'Region & API', color: 'text-emerald-400' },
       { to: '/tesla-orders', icon: Icons.shoppingCart, label: 'Active Orders', color: 'text-teal-400' },
       { to: '/gas-price', icon: Icons.fuel, label: 'Gas Price Auto-Poll', color: 'text-orange-400' },
+    ],
+  },
+  {
+    title: 'Account',
+    items: [
+      { to: '/account/2fa',      icon: Icons.securityCheck, label: 'Two-factor Auth', color: 'text-yellow-400', requiresAuth: true },
+      { to: '/account/sessions', icon: Icons.monitor,       label: 'Active Sessions', color: 'text-cyan-400',   requiresAuth: true },
     ],
   },
   {

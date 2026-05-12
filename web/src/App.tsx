@@ -120,6 +120,7 @@ const SignalLogViewer = lazy(() => import('./features/telemetry/pages/SignalLogV
 const SignalDiff = lazy(() => import('./features/telemetry/pages/SignalDiffPage'))
 const SignalGapDetector = lazy(() => import('./features/telemetry/pages/SignalGapDetectorPage'))
 const LiveSignalMonitor = lazy(() => import('./features/telemetry/pages/LiveSignalMonitorPage'))
+const SignalsWorkspace = lazy(() => import('./features/telemetry/pages/SignalsWorkspacePage'))
 const MQTTInspector = lazy(() => import('./features/telemetry/pages/MQTTInspectorPage'))
 
 // Diagnostics
@@ -161,6 +162,11 @@ const MyActivity = lazy(() => import('./features/system/pages/MyActivityPage'))
 
 // Settings
 const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
+// Account-level security pages promoted out of Settings (Phase-50 split):
+//   /account/2fa       — Two-factor authentication enrollment / disable
+//   /account/sessions  — Active browser/device sessions + revoke
+const TwoFactorAuth = lazy(() => import('./features/settings/pages/TwoFactorAuthPage'))
+const ActiveSessions = lazy(() => import('./features/settings/pages/ActiveSessionsPage'))
 
 // Onboarding (Phase 40 / Prompt 18 — first-run experience)
 const Onboarding = lazy(() => import('./features/onboarding/pages/OnboardingPage'))
@@ -325,6 +331,8 @@ export default function App() {
         <Route path="notifications/studio" element={<SafeRoute name="NotificationsStudio"><AlertStudio /></SafeRoute>} />
         <Route path="geofences" element={<SafeRoute name="Geofences"><Geofences /></SafeRoute>} />
         <Route path="settings" element={<SafeRoute name="Settings"><Settings /></SafeRoute>} />
+        <Route path="account/2fa" element={<SafeRoute name="TwoFactorAuth"><TwoFactorAuth /></SafeRoute>} />
+        <Route path="account/sessions" element={<SafeRoute name="ActiveSessions"><ActiveSessions /></SafeRoute>} />
         <Route path="drives/:id" element={<SafeRoute name="DriveDetail"><DriveDetail /></SafeRoute>} />
         <Route path="drives/:id/replay" element={<SafeRoute name="TripReplay"><TripReplay /></SafeRoute>} />
         <Route path="charging/:id" element={<SafeRoute name="ChargeDetail"><ChargeDetail /></SafeRoute>} />
@@ -360,6 +368,7 @@ export default function App() {
         <Route path="dev-tools" element={<SafeRoute name="DevTools"><DevTools /></SafeRoute>} />
         <Route path="api-playground" element={<SafeRoute name="ApiPlayground"><ApiPlayground /></SafeRoute>} />
         <Route path="redis-signals" element={<SafeRoute name="RedisSignalViewer"><RedisSignalViewer /></SafeRoute>} />
+        <Route path="signals" element={<SafeRoute name="SignalsWorkspace"><SignalsWorkspace /></SafeRoute>} />
         <Route path="signal-explorer" element={<SafeRoute name="SignalExplorer"><SignalExplorer /></SafeRoute>} />
         <Route path="signal-log" element={<SafeRoute name="SignalLogViewer"><SignalLogViewer /></SafeRoute>} />
         <Route path="live-monitor" element={<SafeRoute name="LiveSignalMonitor"><LiveSignalMonitor /></SafeRoute>} />

@@ -365,7 +365,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Security (TOTP) ─────────────────────────────────────────────
     {
       id: 'security.totp.enroll',
-      href: '/settings#security',
+      href: '/account/2fa',
       section: 'security',
       title: t('search.entries.security.totpEnroll.title', 'Enable two-factor authentication'),
       description: t(
@@ -376,7 +376,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'security.totp.backupCodes',
-      href: '/settings#security',
+      href: '/account/2fa',
       section: 'security',
       title: t('search.entries.security.totpBackupCodes.title', 'TOTP backup codes'),
       description: t(
@@ -387,7 +387,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'security.totp.disable',
-      href: '/settings#security',
+      href: '/account/2fa',
       section: 'security',
       title: t('search.entries.security.totpDisable.title', 'Disable two-factor authentication'),
       description: t(
@@ -399,7 +399,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // Phase-46 / Prompt 42 — Active sessions / device management.
     {
       id: 'security.sessions.list',
-      href: '/settings#sessions',
+      href: '/account/sessions',
       section: 'security',
       title: t('search.entries.security.sessionsList.title', 'Active sessions'),
       description: t(
@@ -410,7 +410,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'security.sessions.revokeAll',
-      href: '/settings#sessions',
+      href: '/account/sessions',
       section: 'security',
       title: t('search.entries.security.sessionsRevokeAll.title', 'Sign out all other devices'),
       description: t(

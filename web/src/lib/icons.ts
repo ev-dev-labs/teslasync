@@ -281,6 +281,7 @@ export const Icons = {
   speed: Gauge,
   speedCircle: GaugeCircle,
   efficiency: Activity,
+  activity: Activity,
   range: Gauge,
   target: Target,
   workflow: Workflow,

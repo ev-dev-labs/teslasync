@@ -20,18 +20,17 @@ import {
   AdvancedSettings,
   SettingsSearch,
 } from '../components'
-// Phase-46 / Prompt 35 — TOTPEnrollmentSection is intentionally
-// imported directly, NOT through the `../components` barrel, so the
-// barrel index.ts can stay outside the prompt's allowed-files regex.
-import { TOTPEnrollmentSection } from '../components/TOTPEnrollmentSection'
+// Phase-46 / Prompt 35 — TOTPEnrollmentSection moved to its own page
+// (TwoFactorAuthPage). Direct import retained here in case the section
+// is re-introduced as an inline panel.
+//
 // Phase-46 / Prompt 36 — Settings export/import. Same direct-import
 // rationale as TOTPEnrollmentSection above; the components barrel
 // is not in the prompt's allowed-files regex.
 import { SettingsExportImport } from '../components/SettingsExportImport'
-// Phase-46 / Prompt 42 — Active sessions / device management. Same
-// direct-import rationale: barrel is outside the prompt's
-// allowed-files regex.
-import { ActiveSessionsSection } from '../components/ActiveSessionsSection'
+// Phase-46 / Prompt 42 — ActiveSessionsSection moved to its own page
+// (ActiveSessionsPage). Direct import retained for the same reason.
+//
 // Phase-46 / Prompt 50 — Reset to defaults. Same direct-import
 // rationale as above; the components barrel is outside the prompt's
 // allowed-files regex.
@@ -181,12 +180,6 @@ export default function SettingsPage() {
       </section>
       <section id="appearance">
         <AppearanceSettings />
-      </section>
-      <section id="security">
-        <TOTPEnrollmentSection />
-      </section>
-      <section id="sessions">
-        <ActiveSessionsSection />
       </section>
       <section id="advanced">
         <AdvancedSettings />
