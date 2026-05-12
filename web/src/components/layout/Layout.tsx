@@ -210,7 +210,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/mqtt-inspector': ['mqtt', 'broker', 'telemetry stream'],
   '/redis-signals': ['redis', 'cache', 'signals'],
   '/db-health': ['database', 'db', 'postgres'],
-  '/anomaly-detection': ['anomaly', 'outliers', 'diagnostics'],
+  '/anomaly-detection': ['anomaly', 'outliers', 'analytics', 'detection'],
 }
 
 const DEFAULT_PINNED_NAV_PATHS = ['/', '/digital-twin', '/vehicles', '/charging', '/live']
@@ -367,6 +367,7 @@ export const navSections = [
     items: [
       { to: '/analytics', icon: Icons.analytics, label: 'Analytics', color: 'text-indigo-400' },
       { to: '/statistics', icon: Icons.pieChart, label: 'Statistics', color: 'text-cyan-400' },
+      { to: '/anomaly-detection', icon: Icons.scanSearch, label: 'Anomaly Detection', color: 'text-red-400' },
     ],
   },
   {
@@ -462,7 +463,6 @@ export const navSections = [
     items: [
       { to: '/system-status', icon: Icons.efficiency, label: 'Status', color: 'text-emerald-400' },
       { to: '/db-health', icon: Icons.hardDrive, label: 'DB Health', color: 'text-emerald-400' },
-      { to: '/anomaly-detection', icon: Icons.scanSearch, label: 'Anomaly Detection', color: 'text-red-400' },
     ],
   },
   {
