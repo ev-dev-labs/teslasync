@@ -58,8 +58,19 @@ export function StickyChipBar({ chips, topOffset = 0, className }: StickyChipBar
     const el = document.getElementById(id)
     if (!el) return
     const navHeight = navRef.current?.offsetHeight ?? 0
-    const y = el.getBoundingClientRect().top + window.scrollY - topOffset - navHeight - 12
-    window.scrollTo({ top: y, behavior: 'smooth' })
+    // The app's primary scroll container is the <main id="main-content">
+    // element (Layout.tsx). window.scrollY is always 0. Detect the actual
+    // scrollable ancestor and scroll that one; fall back to window.
+    const scrollEl = document.getElementById('main-content')
+    if (scrollEl) {
+      const elTop = el.getBoundingClientRect().top
+      const containerTop = scrollEl.getBoundingClientRect().top
+      const target = scrollEl.scrollTop + (elTop - containerTop) - topOffset - navHeight - 12
+      scrollEl.scrollTo({ top: target, behavior: 'smooth' })
+    } else {
+      const y = el.getBoundingClientRect().top + window.scrollY - topOffset - navHeight - 12
+      window.scrollTo({ top: y, behavior: 'smooth' })
+    }
     setActiveId(id)
   }, [topOffset])
 
