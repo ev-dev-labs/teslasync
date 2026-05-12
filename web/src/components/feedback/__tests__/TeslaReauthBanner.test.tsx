@@ -80,13 +80,13 @@ describe('TeslaReauthBanner', () => {
     expect(screen.getByRole('button', { name: /reconnect/i })).toBeInTheDocument()
   })
 
-  it('navigates to /settings#tesla-account when the Reconnect button is clicked', () => {
+  it('navigates to /tesla-account when the Reconnect button is clicked', () => {
     renderBanner()
     fireExpired()
 
     fireEvent.click(screen.getByRole('button', { name: /reconnect/i }))
 
-    expect(navigateMock).toHaveBeenCalledWith('/settings#tesla-account')
+    expect(navigateMock).toHaveBeenCalledWith('/tesla-account')
   })
 
   it('hides on dismiss without dispatching the recovered event', () => {

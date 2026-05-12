@@ -13,7 +13,7 @@ import { drainQueuedTeslaMutations } from '@/lib/teslaAuthRecovery'
  * and `resilientFetch` dispatches a `teslasync:tesla-auth-expired`
  * document event. This banner picks up the event and renders a sticky
  * top-of-page row with a single-click CTA that deep-links the user to
- * `/settings#tesla-account` to complete the OAuth flow again.
+ * `/tesla-account` to complete the OAuth flow again.
  *
  * Distinct from {@link AuthExpiredOverlay} — that's a full-screen
  * blocker for Authentik session expiry. Tesla token expiry is a
@@ -57,7 +57,7 @@ export function TeslaReauthBanner() {
   if (!visible) return null
 
   const handleReconnect = () => {
-    navigate('/settings#tesla-account')
+    navigate('/tesla-account')
   }
 
   const handleDismiss = () => {

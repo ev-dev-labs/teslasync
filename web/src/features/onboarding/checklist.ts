@@ -270,7 +270,7 @@ export function useChecklistTasks(): ChecklistState {
         descriptionFallback: 'Link your Tesla account to start syncing data.',
         ctaKey: 'checklist.tasks.connectVehicle.cta',
         ctaFallback: 'Connect',
-        ctaTo: '/settings#tesla-account',
+        ctaTo: '/tesla-account',
         complete: (vehicles?.length ?? 0) > 0,
         icon: Car,
       },
