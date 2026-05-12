@@ -127,7 +127,7 @@ const MQTTInspector = lazy(() => import('./features/telemetry/pages/MQTTInspecto
 const AnomalyDashboard = lazy(() => import('./features/diagnostics/pages/AnomalyDashboardPage'))
 
 // Admin & DevTools
-const Admin = lazy(() => import('./features/admin/pages/AdminPage'))
+const NotificationsAudit = lazy(() => import('./features/notifications/pages/AuditLogPage'))
 const DevTools = lazy(() => import('./features/admin/pages/DevToolsPage'))
 const APIKeysPage = lazy(() => import('./features/admin/pages/APIKeysPage'))
 const ApiLogs = lazy(() => import('./features/admin/pages/ApiLogsPage'))
@@ -333,6 +333,7 @@ export default function App() {
         <Route path="notifications/quiet-hours" element={<SafeRoute name="NotificationsQuietHours"><QuietHoursPage /></SafeRoute>} />
         <Route path="notifications/rules" element={<SafeRoute name="NotificationsRules"><AlertRulesPage /></SafeRoute>} />
         <Route path="notifications/studio" element={<SafeRoute name="NotificationsStudio"><AlertStudio /></SafeRoute>} />
+        <Route path="notifications/audit" element={<SafeRoute name="NotificationsAudit"><NotificationsAudit /></SafeRoute>} />
         <Route path="geofences" element={<SafeRoute name="Geofences"><Geofences /></SafeRoute>} />
         <Route path="settings" element={<SafeRoute name="Settings"><Settings /></SafeRoute>} />
         <Route path="account/2fa" element={<SafeRoute name="TwoFactorAuth"><TwoFactorAuth /></SafeRoute>} />
@@ -363,7 +364,7 @@ export default function App() {
         <Route path="changelog" element={<SafeRoute name="Changelog"><Changelog /></SafeRoute>} />
         <Route path="compare" element={<Navigate to="/period-compare" replace />} />
         <Route path="period-compare" element={<SafeRoute name="PeriodCompare"><PeriodCompare /></SafeRoute>} />
-        <Route path="admin" element={<SafeRoute name="Admin"><Admin /></SafeRoute>} />
+        <Route path="admin" element={<Navigate to="/system-status" replace />} />
         <Route path="admin/feedback" element={<SafeRoute name="FeedbackQueue"><FeedbackQueue /></SafeRoute>} />
         <Route path="admin/telemetry/coverage" element={<SafeRoute name="FleetTelemetryCoverage"><FleetTelemetryCoverage /></SafeRoute>} />
         <Route path="api-logs" element={<SafeRoute name="ApiLogs"><ApiLogs /></SafeRoute>} />

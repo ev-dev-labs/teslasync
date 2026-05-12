@@ -2,6 +2,42 @@
 
 All notable changes to TeslaSync are documented here.
 
+## [Unreleased] — System Status polish + /admin removal
+
+System Status (`/system-status`) is now the single operator-facing
+console. The legacy `/admin` page (almost entirely duplicated by
+`/system-status` plus existing dedicated pages) has been removed, with
+its two unique pieces relocated.
+
+Frontend changes:
+
+- **`/admin` page removed.** The route now redirects to `/system-status`.
+  The "Admin" sidebar entry, the `m` keyboard shortcut, and the
+  prefetch/registry entries that pointed at it are all gone.
+- **Frontend Errors panel** — now lives inside the *Recent errors*
+  accordion on `/system-status` as `FrontendErrorsCard` (last-hour
+  summary + top offenders, same `useWebErrorsSummary()` data source).
+- **Audit Log** — promoted to its own dedicated page at
+  `/notifications/audit` with search + filter chips + paginated table.
+  A new sidebar entry under Notifications links to it.
+- **HealthRow alignment** fix — labels were rendering centred when the
+  row was clickable (browsers default `<button>` to `text-align:center`).
+  Forced `text-left` on the row base + label span.
+- **System Status spacing**: title now shares the body column
+  (`max-w-5xl mx-auto` on `PageContainer`); StatusHero padding/icon/
+  heading sizes tightened; sticky chip pills tightened.
+- **Background workers card** — dropped the now-dead "Open Admin"
+  footer link (the workers accordion on `/system-status` is the
+  management surface).
+- **Maintenance ActionItem** CTA repointed to
+  `/system-status#maintenance` (operator can edit inline via the
+  ScheduledMaintenanceCard already on the page).
+
+Deleted files:
+
+- `web/src/features/admin/pages/AdminPage.tsx`
+- `web/src/features/admin/components/MaintenanceModePanel.tsx`
+
 ## [Unreleased] - Phase-48 SI canonical
 
 Phase-48 completes the forward-only SI canonical mega-PR: production APIs,

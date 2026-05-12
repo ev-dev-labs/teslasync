@@ -27,7 +27,6 @@
 
 const PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/': () => import('../features/dashboard/pages/DashboardPage'),
-  '/admin': () => import('../features/admin/pages/AdminPage'),
   '/admin/feedback': () => import('../features/admin/pages/FeedbackQueuePage'),
   '/admin/telemetry/coverage': () => import('../features/admin/pages/FleetTelemetryCoveragePage'),
   '/alert-rules': () => import('../features/notifications/components/LegacyAlertRulesRedirect'),
@@ -89,6 +88,7 @@ const PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/notifications': () => import('../features/notifications/components/LegacyNotificationsRedirect'),
   '/notifications/alerts': () => import('../features/notifications/pages/AlertsListPage'),
   '/notifications/archived': () => import('../features/notifications/pages/ArchivedPage'),
+  '/notifications/audit': () => import('../features/notifications/pages/AuditLogPage'),
   '/notifications/browser': () => import('../features/notifications/pages/BrowserNotificationsPage'),
   '/notifications/channels': () => import('../features/notifications/pages/ChannelsPage'),
   '/notifications/inbox': () => import('../features/notifications/pages/InboxPage'),

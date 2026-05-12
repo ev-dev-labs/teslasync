@@ -115,6 +115,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'WebhooksPage', load: () => import('../features/notifications/pages/WebhooksPage') },
   { name: 'BrowserNotificationsPage', load: () => import('../features/notifications/pages/BrowserNotificationsPage') },
   { name: 'QuietHoursPage', load: () => import('../features/notifications/pages/QuietHoursPage') },
+  { name: 'AuditLog', load: () => import('../features/notifications/pages/AuditLogPage') },
 
   // Telemetry
   { name: 'SignalExplorer', load: () => import('../features/telemetry/pages/SignalExplorerPage') },
@@ -128,7 +129,6 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'AnomalyDashboard', load: () => import('../features/diagnostics/pages/AnomalyDashboardPage') },
 
   // Admin
-  { name: 'Admin', load: () => import('../features/admin/pages/AdminPage') },
   { name: 'DevTools', load: () => import('../features/admin/pages/DevToolsPage') },
   { name: 'APIKeysPage', load: () => import('../features/admin/pages/APIKeysPage') },
   { name: 'ApiLogs', load: () => import('../features/admin/pages/ApiLogsPage') },

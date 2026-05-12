@@ -17,7 +17,7 @@
  */
 
 import { Link } from 'react-router-dom'
-import { Activity, AlertTriangle, Boxes, ExternalLink, Server } from 'lucide-react'
+import { Activity, AlertTriangle, Boxes, Server } from 'lucide-react'
 
 import type { WorkersHealth, WorkerStatus } from '@/api/types'
 
@@ -269,13 +269,6 @@ export function BackgroundWorkersCard({ health }: BackgroundWorkersCardProps) {
       )}
 
       <div className="flex flex-wrap gap-2 pt-2 border-t border-white/[0.06]">
-        <Link
-          to="/admin"
-          className="inline-flex items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-1.5 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/30 hover:bg-cyan-500/20 min-h-[36px]"
-        >
-          Open Admin
-          <ExternalLink className="h-3.5 w-3.5" />
-        </Link>
         <Link
           to="/api-logs"
           className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-cyan-300 hover:text-cyan-200 hover:bg-white/[0.04] min-h-[36px]"

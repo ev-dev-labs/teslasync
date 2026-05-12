@@ -21,7 +21,6 @@ export interface RouteEntry {
 
 export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/', name: 'Dashboard', label: 'Dashboard', i18nKey: 'routes.dashboard' },
-  { path: '/admin', name: 'Admin', label: 'Admin', i18nKey: 'routes.admin' },
   { path: '/admin/feedback', name: 'FeedbackQueue', label: 'Feedback Queue', i18nKey: 'routes.feedbackQueue' },
   { path: '/admin/telemetry/coverage', name: 'FleetTelemetryCoverage', label: 'Fleet Telemetry Coverage', i18nKey: 'routes.fleetTelemetryCoverage' },
   { path: '/alert-rules', name: 'LegacyAlertRulesRedirect', label: 'Legacy Alert Rules Redirect', i18nKey: 'routes.legacyAlertRulesRedirect' },
@@ -83,6 +82,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/notifications', name: 'LegacyNotificationsRedirect', label: 'Legacy Notifications Redirect', i18nKey: 'routes.legacyNotificationsRedirect' },
   { path: '/notifications/alerts', name: 'NotificationsAlerts', label: 'Notifications Alerts', i18nKey: 'routes.notificationsAlerts' },
   { path: '/notifications/archived', name: 'NotificationsArchived', label: 'Notifications Archived', i18nKey: 'routes.notificationsArchived' },
+  { path: '/notifications/audit', name: 'NotificationsAudit', label: 'Audit Log', i18nKey: 'routes.notificationsAudit' },
   { path: '/notifications/browser', name: 'NotificationsBrowser', label: 'Notifications Browser', i18nKey: 'routes.notificationsBrowser' },
   { path: '/notifications/channels', name: 'NotificationsChannels', label: 'Notifications Channels', i18nKey: 'routes.notificationsChannels' },
   { path: '/notifications/inbox', name: 'NotificationsInbox', label: 'Notifications Inbox', i18nKey: 'routes.notificationsInbox' },

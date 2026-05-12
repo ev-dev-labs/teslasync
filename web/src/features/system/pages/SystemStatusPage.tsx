@@ -67,6 +67,7 @@ import {
   ScheduledMaintenanceCard,
   SubscribeCard,
   SLOTrackingCard,
+  FrontendErrorsCard,
 } from '../components/status'
 import { useStatusLiveSSE } from '../hooks/useStatusLiveSSE'
 
@@ -596,7 +597,7 @@ export default function SystemStatusPage() {
                 severity="info"
                 title={t('Maintenance mode is active')}
                 description={maintenance?.maintenance_message || t('System is in operator-set maintenance mode')}
-                cta={{ label: t('Manage'), to: '/admin' }}
+                cta={{ label: t('Manage'), to: '/system-status#maintenance' }}
               />
             )}
             {hasUpdate && (
@@ -891,6 +892,7 @@ export default function SystemStatusPage() {
               </div>
             )}
             <DetailLink to="/api-logs?level=error" label={t('Open error logs')} />
+            <FrontendErrorsCard />
           </AccordionSection>
         </section>
 

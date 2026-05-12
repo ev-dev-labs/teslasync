@@ -180,7 +180,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/chatbot': ['ai', 'assistant', 'chat'],
   '/media-player': ['media', 'music', 'player'],
   '/tesla-account': ['account', 'tesla login', 'oauth'],
-  '/system-status': ['system', 'status', 'health'],
+  '/system-status': ['system', 'status', 'health', 'admin', 'administration', 'overview'],
   '/api-logs': ['api logs', 'requests', 'debug'],
   '/fleet-api': ['fleet api', 'tesla api'],
   '/tesla-features': ['feature flags', 'tesla features', 'feature config', 'flags'],
@@ -189,7 +189,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/gas-price': ['gas price', 'fuel', 'eia', 'gasoline', 'auto poll', 'comparison'],
   '/settings': ['settings', 'preferences', 'configuration'],
   '/api-keys': ['keys', 'tokens', 'api key'],
-  '/admin': ['admin', 'administration'],
+  '/notifications/audit': ['audit', 'audit log', 'activity log', 'admin'],
   '/data-export': ['export', 'download', 'csv'],
   '/backup': ['backup', 'restore'],
   '/data-repair': ['repair', 'data repair', 'fix sessions'],
@@ -390,6 +390,7 @@ export const navSections = [
       { to: '/notifications/webhooks', icon: Icons.cloud, label: 'Webhooks', color: 'text-sky-400' },
       { to: '/notifications/quiet-hours', icon: Icons.clock, label: 'Quiet Hours', color: 'text-indigo-400' },
       { to: '/notifications/browser', icon: Icons.notificationsActive, label: 'Browser', color: 'text-fuchsia-400' },
+      { to: '/notifications/audit', icon: Icons.history, label: 'Audit Log', color: 'text-amber-400' },
     ],
   },
   {
@@ -453,7 +454,6 @@ export const navSections = [
     items: [
       { to: '/settings', icon: Icons.settings, label: 'Settings', color: 'text-[var(--text-muted)]' },
       { to: '/me/activity', icon: Icons.history, label: 'My Activity', color: 'text-cyan-400', requiresAuth: true },
-      { to: '/admin', icon: Icons.keyRound, label: 'Admin', color: 'text-red-400' },
       { to: '/api-keys', icon: Icons.key, label: 'API Keys', color: 'text-amber-400' },
     ],
   },

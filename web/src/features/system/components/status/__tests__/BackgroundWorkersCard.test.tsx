@@ -155,14 +155,11 @@ describe('BackgroundWorkersCard', () => {
     expect(dashes.length).toBeGreaterThanOrEqual(1)
   })
 
-  it('renders footer links to Admin and API logs', () => {
+  it('renders footer link to API logs', () => {
     const health = makeHealth([
       makeInstance({ name: 'notification-worker', host: 'http://notification-worker:8081/healthz' }),
     ])
     harness(<BackgroundWorkersCard health={health} />)
-
-    const adminLink = screen.getByRole('link', { name: /Open Admin/ })
-    expect(adminLink).toHaveAttribute('href', '/admin')
 
     const logsLink = screen.getByRole('link', { name: /API logs/ })
     expect(logsLink).toHaveAttribute('href', '/api-logs')

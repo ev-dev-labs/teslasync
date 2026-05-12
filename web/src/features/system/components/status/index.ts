@@ -21,3 +21,4 @@ export { IncidentForm } from './IncidentForm';
 export { ScheduledMaintenanceCard } from './ScheduledMaintenanceCard';
 export { SubscribeCard } from './SubscribeCard';
 export { SLOTrackingCard } from './SLOTrackingCard';
+export { FrontendErrorsCard } from './FrontendErrorsCard';

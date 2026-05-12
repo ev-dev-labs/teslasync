@@ -24,7 +24,6 @@ export const GOTO_SHORTCUTS: Record<string, { path: string; label: string }> = {
   'l': { path: '/live-signals', label: 'Live Signals' },
   'o': { path: '/automations', label: 'Automations' },
   'x': { path: '/commands', label: 'Commands' },
-  'm': { path: '/admin', label: 'Admin' },
   'i': { path: '/climate', label: 'Climate' },
 };
 
