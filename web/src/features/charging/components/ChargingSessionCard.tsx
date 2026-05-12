@@ -60,6 +60,15 @@ export function ChargingSessionCard({ session, toDistanceDisplay, distanceUnit, 
   const addedM = distanceAddedM(session);
   const milesGained = addedM != null ? toDistanceDisplay(addedM / 1000) : null;
 
+  const startSoc = session.start_soc_pct;
+  const endSoc = session.end_soc_pct ?? session.start_soc_pct;
+  const ringValue = endSoc ?? 0;
+  const ringCenter = endSoc != null ? `${endSoc}%` : '—';
+  const ringFootnote =
+    startSoc != null && session.end_soc_pct != null && startSoc !== session.end_soc_pct
+      ? `${startSoc}→${session.end_soc_pct}`
+      : undefined;
+
   const showCheckbox = typeof onToggleSelect === 'function';
 
   return (
@@ -79,12 +88,13 @@ export function ChargingSessionCard({ session, toDistanceDisplay, distanceUnit, 
       <GlassPanel hover glow="green" className="p-4 transition-all duration-normal group cursor-pointer">
         <div className="flex items-center gap-4">
           <ProgressRing
-            value={session.end_soc_pct ?? session.start_soc_pct}
+            value={ringValue}
             max={100}
-            size={48}
+            size={56}
             strokeWidth={4}
             color={CHARGER_COLORS[cat]}
-            label={`${session.end_soc_pct ?? session.start_soc_pct}%`}
+            centerLabel={ringCenter}
+            label={ringFootnote}
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1 flex-wrap">
