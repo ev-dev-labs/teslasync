@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Command, ArrowRight, Zap, ChevronLeft, Car, ArrowRightLeft,
   Route, BatteryCharging, Bell, BellRing, MapPin, Workflow, Compass, MapPinned,
-  FileText, CalendarDays,
+  FileText, CalendarDays, X,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
@@ -28,6 +28,13 @@ import {
 import { useGlobalSearch } from '@/api/hooks/useSearch'
 import type { SearchHitType } from '@/api/types'
 import { markCommandPaletteDiscovered } from '@/features/onboarding/checklist'
+import {
+  parsePrefix,
+  getScopeMeta,
+  itemMatchesScope,
+  PALETTE_SCOPE_HINTS,
+  type PaletteScope,
+} from '@/lib/palettePrefix'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -515,19 +522,31 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
   // Debounce by 200 ms so each keystroke does not fan out to the backend's
   // ~9 ILIKE sub-queries. The hook itself enforces the >= 2 char floor.
 
+  // Parse a recognized scope prefix off the front of the query. When a scope
+  // is active, the palette restricts results to items whose `type` belongs to
+  // that scope (e.g. ">" → only `command`-typed items). The remainder of the
+  // query is the actual search term passed to the scorer + debounced search.
+  const parsedQuery = useMemo(() => parsePrefix(query), [query])
+  const activeScope: PaletteScope | null = parsedQuery.scope
+  const scopedTerm = parsedQuery.term
+
   const [debouncedQuery, setDebouncedQuery] = useState('')
   useEffect(() => {
-    const trimmed = query.trim()
+    // Use the *scoped* term so a prefix like "/" doesn't get sent to the
+    // backend search endpoint as part of the query string.
+    const trimmed = scopedTerm.trim()
     if (trimmed.length === 0) {
       setDebouncedQuery('')
       return
     }
     const handle = window.setTimeout(() => setDebouncedQuery(trimmed), 200)
     return () => window.clearTimeout(handle)
-  }, [query])
+  }, [scopedTerm])
 
   const { data: searchData } = useGlobalSearch(debouncedQuery, {
-    disabled: mode !== 'search',
+    // When a scope is active the search hits are filtered out anyway —
+    // skip the network round-trip entirely.
+    disabled: mode !== 'search' || activeScope !== null,
     limit: 5,
   })
 
@@ -564,7 +583,15 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
   )
 
   const filtered = useMemo(() => {
-    if (!query.trim()) return allItems
+    // First narrow by scope (if any). Without an active scope this is a no-op.
+    const scopedItems = activeScope === null
+      ? allItems
+      : allItems.filter(cmd => itemMatchesScope(cmd.type, activeScope))
+
+    // Empty term: show every item in the scope (or every item if no scope).
+    // Server search hits are kept out of unscoped empty-query results too —
+    // that path was already empty-string-keyed in `useGlobalSearch`.
+    if (!scopedTerm.trim()) return scopedItems
     // Frecency snapshot used as a tiebreaker — among items with identical
     // match scores, the more frecent one ranks higher. We read once per
     // query change, not per item, to avoid N localStorage hits.
@@ -572,7 +599,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
     const frecencyScores = getAllCommandScores()
     // Score every item with the same fuzzy matcher used for registry commands
     // so "btr" matches "Battery Health" via subsequence, not just substring.
-    const scored = allItems
+    const scored = scopedItems
       .map(cmd => {
         // Server-ranked entity hits skip local filtering — the backend
         // already matched on the user's query and computed scores per
@@ -589,10 +616,10 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
         // unrelated items (State Machine, Theme: Dark) ahead of true label
         // matches. See commandRegistry.test.ts "label prefix outranks
         // keyword prefix".
-        let best = scoreCommand(query, cmd.label, cmd.keywords)
+        let best = scoreCommand(scopedTerm, cmd.label, cmd.keywords)
         // Sublabel/section as a lighter substring fallback
         if (best === 0) {
-          const q = query.toLowerCase()
+          const q = scopedTerm.toLowerCase()
           if ((cmd.sublabel ?? '').toLowerCase().includes(q)) best = 10
           else if (cmd.section.toLowerCase().includes(q)) best = 5
         }
@@ -606,7 +633,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
       .filter(s => s.score > 0)
       .sort((a, b) => (b.score - a.score) || (b.frecency - a.frecency))
     return scored.map(s => s.cmd)
-  }, [allItems, query, recentVersion])
+  }, [allItems, activeScope, scopedTerm, recentVersion])
 
   const displayItems = mode === 'vehicle-select' ? vehicleItems : filtered
 
@@ -649,6 +676,12 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
       if (e.key === 'Escape') {
         if (mode === 'vehicle-select') {
           goBack()
+        } else if (open && activeScope !== null) {
+          // First ESC with an active scope clears the scope chip + term so
+          // the user lands back on the unfiltered palette. A second ESC
+          // closes the palette outright.
+          setQuery('')
+          setSelectedIndex(0)
         } else {
           setOpen(false)
         }
@@ -656,7 +689,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [mode, goBack])
+  }, [mode, goBack, open, activeScope])
 
   // useKeyboardShortcuts dispatches this custom event when the user presses
   // Ctrl+K outside a form field. Listening here keeps the palette in sync
@@ -703,6 +736,12 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
     } else if (e.key === 'Backspace' && query === '' && mode === 'vehicle-select') {
       e.preventDefault()
       goBack()
+    } else if (e.key === 'Backspace' && activeScope !== null && scopedTerm === '' && mode === 'search') {
+      // When the scope chip is the only thing in the input, Backspace clears
+      // the chip — same behaviour as removing a token from a tag input.
+      e.preventDefault()
+      setQuery('')
+      setSelectedIndex(0)
     }
   }
 
@@ -726,7 +765,11 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
     return cfg ? t(cfg.labelKey, cfg.labelFallback) : pendingCommand
   }, [pendingCommand, t])
 
-  // Group items by section for display
+  // Group items by section for display. Each group also carries an index so
+  // we can build a stable React key — the same section can appear more than
+  // once when items of one section are interleaved with another by ranking
+  // (e.g. "Most Used" then "Pages" then more "Pages" further down). Using
+  // section name alone as a key triggers React's duplicate-key warning.
   const groupedItems = useMemo(() => {
     const groups: { section: string; items: { item: PaletteItem; globalIndex: number }[] }[] = []
     let currentSection = ''
@@ -789,13 +832,43 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
                 ) : (
                   <>
                     <Search className="h-5 w-5 flex-shrink-0 text-[var(--text-muted)]" />
+                    {activeScope !== null && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuery('')
+                          setSelectedIndex(0)
+                          inputRef.current?.focus()
+                        }}
+                        aria-label={t('palette.clearScope', { scope: getScopeMeta(activeScope).label, defaultValue: `Clear ${getScopeMeta(activeScope).label} filter` })}
+                        className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-[rgba(var(--theme-primary-rgb),0.25)] bg-[rgba(var(--theme-primary-rgb),0.10)] px-2 py-1 text-[11px] font-medium text-[var(--theme-primary)] hover:bg-[rgba(var(--theme-primary-rgb),0.18)] transition-colors"
+                        data-palette-scope-chip={activeScope}
+                      >
+                        <span className="font-mono">{getScopeMeta(activeScope).prefix}</span>
+                        <span>{t(`palette.scope.${activeScope}`, getScopeMeta(activeScope).label)}</span>
+                        <X className="h-3 w-3 opacity-70" aria-hidden />
+                      </button>
+                    )}
                     <div className="flex-1">
                       <Input
                         ref={inputRef}
-                        value={query}
-                        onChange={e => setQuery(e.target.value)}
+                        value={scopedTerm}
+                        onChange={e => {
+                          const next = e.target.value
+                          if (activeScope === null) {
+                            setQuery(next)
+                          } else {
+                            // Keep the chip visible by reconstructing the
+                            // raw query with the active prefix in front.
+                            setQuery(`${getScopeMeta(activeScope).prefix} ${next}`)
+                          }
+                        }}
                         onKeyDown={handleInputKey}
-                        placeholder={t('palette.placeholder', 'Search pages, commands…')}
+                        placeholder={
+                          activeScope !== null
+                            ? t(`palette.placeholder.${activeScope}`, getScopeMeta(activeScope).placeholder)
+                            : t('palette.placeholder', 'Search pages, commands…')
+                        }
                         className="!rounded-none !border-0 !bg-transparent !p-0 text-sm text-[var(--text-primary)] !shadow-none !ring-0 placeholder:text-[var(--text-muted)]"
                       />
                     </div>
@@ -812,12 +885,17 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
                   <div className="py-8 text-center text-sm text-[var(--text-muted)]">
                     {mode === 'vehicle-select'
                       ? t('palette.noVehicles', 'No vehicles available')
-                      : t('palette.noResults', { query, defaultValue: `No results for "${query}"` })
+                      : activeScope !== null && !scopedTerm
+                        ? t(`palette.scope.${activeScope}.empty`, {
+                            scope: getScopeMeta(activeScope).label,
+                            defaultValue: `No ${getScopeMeta(activeScope).label.toLowerCase()} available`,
+                          })
+                        : t('palette.noResults', { query: scopedTerm || query, defaultValue: `No results for "${scopedTerm || query}"` })
                     }
                   </div>
                 ) : (
-                  groupedItems.map(group => (
-                    <div key={group.section}>
+                  groupedItems.map((group, groupIndex) => (
+                    <div key={`${group.section}-${groupIndex}`}>
                       <div className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                         {group.section}
                       </div>
@@ -893,20 +971,55 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
               </div>
 
               {/* Footer */}
-              <div className="flex items-center gap-4 border-t border-[var(--glass-border)] px-5 py-3 text-[10px] text-[var(--text-muted)]">
-                <span className="flex items-center gap-1">
-                  <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">↑↓</kbd> {t('palette.navigate', 'Navigate')}
-                </span>
-                <span className="flex items-center gap-1">
-                  <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">↵</kbd> {t('palette.select', 'Select')}
-                </span>
-                <span className="flex items-center gap-1">
-                  <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">ESC</kbd> {mode === 'vehicle-select' ? t('palette.back', 'Back') : t('palette.close', 'Close')}
-                </span>
-                {mode === 'search' && vehicleList.length > 0 && (
-                  <span className="ml-auto flex items-center gap-1 text-[var(--theme-primary)]">
-                    <Zap className="h-3 w-3" /> {vehicleList.length} {vehicleList.length === 1 ? t('palette.vehicle', 'vehicle') : t('palette.vehicles', 'vehicles')}
+              <div className="border-t border-[var(--glass-border)] px-5 py-3 text-[10px] text-[var(--text-muted)]">
+                <div className="flex items-center gap-4 flex-wrap">
+                  <span className="flex items-center gap-1">
+                    <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">↑↓</kbd> {t('palette.navigate', 'Navigate')}
                   </span>
+                  <span className="flex items-center gap-1">
+                    <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">↵</kbd> {t('palette.select', 'Select')}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">ESC</kbd>{' '}
+                    {mode === 'vehicle-select'
+                      ? t('palette.back', 'Back')
+                      : activeScope !== null
+                        ? t('palette.clearFilter', 'Clear filter')
+                        : t('palette.close', 'Close')}
+                  </span>
+                  {mode === 'search' && vehicleList.length > 0 && (
+                    <span className="ml-auto flex items-center gap-1 text-[var(--theme-primary)]">
+                      <Zap className="h-3 w-3" /> {vehicleList.length} {vehicleList.length === 1 ? t('palette.vehicle', 'vehicle') : t('palette.vehicles', 'vehicles')}
+                    </span>
+                  )}
+                </div>
+                {/* Scope-prefix hint strip — only shown on the empty-query
+                    landing state so it teaches the shortcut without
+                    distracting from search results. */}
+                {mode === 'search' && activeScope === null && query === '' && (
+                  <div
+                    className="mt-2 flex items-center gap-3 flex-wrap text-[var(--text-muted)]"
+                    data-palette-scope-hints
+                  >
+                    <span className="text-[10px] uppercase tracking-wider opacity-70">
+                      {t('palette.filterBy', 'Filter')}
+                    </span>
+                    {PALETTE_SCOPE_HINTS.map(hint => (
+                      <button
+                        key={hint.scope}
+                        type="button"
+                        onClick={() => {
+                          setQuery(`${hint.prefix} `)
+                          setSelectedIndex(0)
+                          inputRef.current?.focus()
+                        }}
+                        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] hover:bg-[var(--surface-2)] hover:text-[var(--text-secondary)] transition-colors"
+                      >
+                        <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[10px]">{hint.prefix}</kbd>
+                        <span>{t(`palette.scope.${hint.scope}`, hint.label)}</span>
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
