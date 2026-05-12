@@ -330,7 +330,7 @@ export function useChecklistTasks(): ChecklistState {
         descriptionFallback: 'Get alerts in your browser even when TeslaSync is closed.',
         ctaKey: 'checklist.tasks.enablePush.cta',
         ctaFallback: 'Enable',
-        ctaTo: '/settings#notifications',
+        ctaTo: '/notifications/browser',
         complete: pushGranted,
         icon: BellPlus,
       },
