@@ -8,7 +8,7 @@
  * referenced anchors.
  */
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { cn } from '@/lib/cn'
 
 export interface ChipItem {
@@ -25,6 +25,7 @@ export interface StickyChipBarProps {
 
 export function StickyChipBar({ chips, topOffset = 0, className }: StickyChipBarProps) {
   const [activeId, setActiveId] = useState<string>(chips[0]?.id ?? '')
+  const navRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     if (chips.length === 0) return
@@ -56,13 +57,15 @@ export function StickyChipBar({ chips, topOffset = 0, className }: StickyChipBar
   const handleClick = useCallback((id: string) => {
     const el = document.getElementById(id)
     if (!el) return
-    const y = el.getBoundingClientRect().top + window.scrollY - topOffset - 16
+    const navHeight = navRef.current?.offsetHeight ?? 0
+    const y = el.getBoundingClientRect().top + window.scrollY - topOffset - navHeight - 12
     window.scrollTo({ top: y, behavior: 'smooth' })
     setActiveId(id)
   }, [topOffset])
 
   return (
     <nav
+      ref={navRef}
       aria-label="Jump to section"
       className={cn(
         'sticky z-30 -mx-4 border-b border-white/[0.06] bg-[var(--bg-1)]/85 backdrop-blur',

@@ -555,6 +555,7 @@ export default function SystemStatusPage() {
             icon={<Server className="h-5 w-5" />}
             title={t('Services & components')}
             description={servicesSummary}
+            defaultOpen
             badges={<StatusBadge status={totalCount === 0 ? 'unknown' : okCount === totalCount ? 'healthy' : 'degraded'} />}
           >
             {components.length > 0 ? (
@@ -584,6 +585,7 @@ export default function SystemStatusPage() {
             icon={<Database className="h-5 w-5" />}
             title={t('Database & connections')}
             description={databaseSummary}
+            defaultOpen
             badges={<StatusBadge status={dbStatus} />}
           >
             <DefList
@@ -606,6 +608,7 @@ export default function SystemStatusPage() {
             icon={<Activity className="h-5 w-5" />}
             title={t('Telemetry pipeline')}
             description={telemetrySummary}
+            defaultOpen
           >
             <DefList
               rows={[
@@ -626,6 +629,7 @@ export default function SystemStatusPage() {
             icon={<Bell className="h-5 w-5" />}
             title={t('Notifications & audit')}
             description={notificationsSummary}
+            defaultOpen
             badges={notifStats?.failed ? <Badge variant="warning">{notifStats.failed} failed</Badge> : undefined}
           >
             <DefList
@@ -646,6 +650,7 @@ export default function SystemStatusPage() {
             icon={<Boxes className="h-5 w-5" />}
             title={t('Background workers')}
             description={workersSummary}
+            defaultOpen
             badges={<StatusBadge status={workersStatus} />}
           >
             {workers?.workers && workers.workers.length > 0 ? (
@@ -680,6 +685,7 @@ export default function SystemStatusPage() {
                   ? t('Configured · no successful run yet')
                   : t('Not configured')
             }
+            defaultOpen
             badges={hasStaleBackup
               ? <Badge variant="warning">stale</Badge>
               : hasNoBackup
@@ -710,6 +716,7 @@ export default function SystemStatusPage() {
                 credit: apiUsage.monthly_credit.toFixed(2),
               })
               : t('No data')}
+            defaultOpen
             badges={apiOverBudget ? <Badge variant="warning">over budget</Badge> : undefined}
           >
             <DefList
@@ -734,6 +741,7 @@ export default function SystemStatusPage() {
             description={errorStats
               ? t('{{count}} since {{uptime}} ago', { count: errorStats.total_errors, uptime: errorStats.uptime })
               : t('No data')}
+            defaultOpen
             badges={errorStats && errorStats.total_errors > 0
               ? <Badge variant={errorsStatus === 'healthy' ? 'neutral' : 'warning'}>{errorStats.total_errors}</Badge>
               : <Badge variant="success">clean</Badge>}
@@ -776,6 +784,7 @@ export default function SystemStatusPage() {
             icon={<Package className="h-5 w-5" />}
             title={t('System info')}
             description={t('Version, build, runtime')}
+            defaultOpen
           >
             <SystemInfoRows version={version} extHealth={extHealth} />
           </AccordionSection>
