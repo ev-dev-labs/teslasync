@@ -26,6 +26,9 @@ export interface APICallLogStats {
   avgDurationMs: number;
   last24h: number;
   errorCount: number;
+  // Optional grouped breakdowns also returned by the backend.
+  by_method?: Record<string, number>;
+  by_service?: Record<string, number>;
 }
 
 export interface BackupConfig {

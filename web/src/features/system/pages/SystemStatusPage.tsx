@@ -58,6 +58,7 @@ import {
   AnomalyInlineRow,
   BackupActionsCard,
   TeslaAuthCard,
+  TeslaApiUsageCard,
   UpdateAvailableCallout,
   StatusPageSkeleton,
 } from '../components/status'
@@ -819,17 +820,7 @@ export default function SystemStatusPage() {
             defaultOpen
             badges={apiOverBudget ? <Badge variant="warning">over budget</Badge> : undefined}
           >
-            <DefList
-              rows={[
-                { label: t('Total requests'), value: apiUsage ? apiUsage.total_requests.toLocaleString() : '—' },
-                { label: t('Skipped polls'), value: apiUsage ? apiUsage.skipped_polls.toLocaleString() : '—' },
-                { label: t('Estimated cost'), value: apiUsage ? `$${apiUsage.estimated_cost.toFixed(2)}` : '—' },
-                { label: t('Monthly credit'), value: apiUsage ? `$${apiUsage.monthly_credit.toFixed(2)}` : '—' },
-                { label: t('Cost per request'), value: apiUsage ? `$${apiUsage.cost_per_request.toFixed(5)}` : '—' },
-                { label: t('Estimated remaining'), value: apiUsage ? `$${apiUsage.estimated_remaining.toFixed(2)}` : '—' },
-              ]}
-            />
-            <DetailLink to="/api-logs" label={t('Open API Logs')} />
+            <TeslaApiUsageCard apiUsage={apiUsage} now={now} />
           </AccordionSection>
         </section>
 

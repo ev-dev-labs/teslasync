@@ -11,5 +11,6 @@ export { DiagnosticsSection } from './DiagnosticsSection';
 export { AnomalyInlineRow } from './AnomalyInlineRow';
 export { BackupActionsCard } from './BackupActionsCard';
 export { TeslaAuthCard } from './TeslaAuthCard';
+export { TeslaApiUsageCard } from './TeslaApiUsageCard';
 export { UpdateAvailableCallout } from './UpdateAvailableCallout';
 export { StatusPageSkeleton } from './StatusPageSkeleton';

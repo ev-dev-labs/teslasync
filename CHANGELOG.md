@@ -51,6 +51,7 @@ Migration guide for external consumers:
 - **Print stylesheet** — `@media print` rules drop the frosted-glass background, hide interactive scaffolding (refresh button, sticky compact hero, chip bar), and render a clean dark-on-white snapshot suitable for reports
 - **Scroll-margin-top on sections** — Chip-bar nav now lands cleanly below sticky elements (`scroll-mt-24` applied to all `<section>` elements)
 - **`tesla-auth` chip** — Added to the chip bar between Telemetry and Notifications
+- **Tesla API usage enriched card** — Replaces the bare 6-row spend list with an operator-focused detail card: budget-progress bar, billing-window countdown ("Day 15 of 31 · resets in 16 days"), three at-a-glance bands (this month / last 24 h / forecast EOM), per-day burn rate, top services, by-method split, average latency, error-rate severity (amber ≥ 1 %, red ≥ 5 %), useful-vs-skipped poll breakdown, and a clear over-budget call-out — all without backend changes (combines `/system/api-usage` with `/api-logs/stats`)
 
 The following Phase 2 spec items were deliberately deferred because the
 backend doesn't yet expose the data they require:
