@@ -52,8 +52,15 @@ import { formatBytes } from '@/lib/numberFormat'
 import { cn } from '@/lib/cn'
 
 import { formatUptime } from '../components/status/helpers'
-import { AccordionSection } from '../components/status'
-import { DiagnosticsSection } from '../components/status'
+import {
+  AccordionSection,
+  DiagnosticsSection,
+  AnomalyInlineRow,
+  BackupActionsCard,
+  TeslaAuthCard,
+  UpdateAvailableCallout,
+  StatusPageSkeleton,
+} from '../components/status'
 
 // Shared cadence
 const STATUS_REFRESH_MS = 30_000
@@ -69,6 +76,7 @@ export default function SystemStatusPage() {
   const {
     data: health,
     isLoading,
+    isFetching,
     error,
     refetch: refetchHealth,
     dataUpdatedAt,
@@ -351,6 +359,7 @@ export default function SystemStatusPage() {
     { id: 'services', label: 'Services' },
     { id: 'database', label: 'Database' },
     { id: 'telemetry', label: 'Telemetry' },
+    { id: 'tesla-auth', label: 'Tesla auth' },
     { id: 'notifications', label: 'Notifications' },
     { id: 'workers', label: 'Workers' },
     { id: 'backups', label: 'Backups' },
@@ -366,6 +375,17 @@ export default function SystemStatusPage() {
   const hasStaleBackup = backupStaleDays != null && backupStaleDays > STALE_BACKUP_DAYS
   const hasNoBackup = backupRuns != null && backupRuns.length === 0 && (backupConfigs?.length ?? 0) > 0
   const hasMaintenance = maintenance?.mode === 'maintenance'
+
+  // Health staleness — surface in hero subline if /health errored or
+  // we haven't received fresh data in over 2 minutes.
+  const healthStale = !!error || (dataUpdatedAt > 0 && now - dataUpdatedAt > 2 * 60_000)
+  const heroSubline = error
+    ? `Health check failed — ${(error as Error).message}`
+    : healthStale
+      ? `Last checked ${lastCheckedLabel ?? 'unknown'} (stale)`
+      : lastCheckedLabel
+        ? `Last checked ${lastCheckedLabel}`
+        : 'Awaiting first check'
 
   // Health-row contextual summaries
   const servicesSummary =
@@ -393,88 +413,133 @@ export default function SystemStatusPage() {
     <PageContainer
       title={t('System Status')}
       subtitle={t('At-a-glance health for your TeslaSync instance')}
-      loading={isLoading}
-      error={error as Error | null}
+      loading={false}
+      error={null}
       actions={
-        <Button variant="ghost" size="sm" onClick={handleRefresh} className="gap-2" aria-label={t('Refresh')}>
-          <RefreshCw className="h-4 w-4" />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isFetching}
+          className="gap-2"
+          aria-label={t('Refresh')}
+          aria-busy={isFetching}
+        >
+          <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
           {t('Refresh')}
         </Button>
       }
     >
-      <StickyCompactHero
-        targetId="status-hero"
-        status={overallStatus}
-        lastCheckedLabel={lastCheckedLabel}
-        onRefresh={handleRefresh}
-      />
+      {/* Print stylesheet — clean printable status snapshot.
+          Hides interactive scaffolding, expands accordions, drops the
+          frosted-glass background for paper. */}
+      <style>{`
+        @media print {
+          [data-status-print-hide] { display: none !important; }
+          [data-status-accordion] details { open: true; }
+          [data-status-accordion] summary svg { display: none; }
+          .glass-panel, [class*="bg-white/"], [class*="bg-black/"] {
+            background: #fff !important; color: #000 !important;
+            box-shadow: none !important; backdrop-filter: none !important;
+          }
+          body, html { background: #fff !important; color: #000 !important; }
+        }
+      `}</style>
 
-      <div className="space-y-5 max-w-3xl mx-auto">
-        {/* 1 ─ Hero ───────────────────────────────────────────── */}
-        <FadeIn>
-          <StatusHero
-            id="status-hero"
-            status={overallStatus}
-            subline={lastCheckedLabel ? `Last checked ${lastCheckedLabel}` : 'Awaiting first check'}
-            cta={{ label: t('Run health check'), onClick: handleRefresh }}
-          />
-        </FadeIn>
+      {isLoading ? (
+        <StatusPageSkeleton />
+      ) : (
+        <>
+          <div data-status-print-hide>
+            <StickyCompactHero
+              targetId="status-hero"
+              status={overallStatus}
+              lastCheckedLabel={lastCheckedLabel}
+              onRefresh={handleRefresh}
+            />
+          </div>
 
-        {/* 2 ─ Sticky chip bar ─────────────────────────────────── */}
-        <StickyChipBar chips={chips} />
+          <div className="space-y-5 max-w-3xl mx-auto [&_section]:scroll-mt-24">
+            {/* 1 ─ Hero ───────────────────────────────────────────── */}
+            <FadeIn>
+              <StatusHero
+                id="status-hero"
+                status={healthStale ? 'unknown' : overallStatus}
+                subline={heroSubline}
+                cta={{ label: t('Run health check'), onClick: handleRefresh, loading: isFetching }}
+              />
+            </FadeIn>
 
-        {/* 3 ─ Health rows ─────────────────────────────────────── */}
-        <section id="health" aria-label="Health summary">
-          <GlassPanel className="p-2 md:p-3">
-            <h3 className="px-3 pt-2 text-sm font-semibold text-[var(--text-primary)]">
-              {t('Health')}
-            </h3>
-            <div className="space-y-1 p-1">
-              <HealthRow
-                status={totalCount === 0 ? 'unknown' : okCount === totalCount ? 'healthy' : okCount > totalCount / 2 ? 'degraded' : 'unhealthy'}
-                icon={<Server className="h-4 w-4" />}
-                label={t('Services')}
-                summary={servicesSummary}
-                onClick={() => scrollToSection('services')}
-              />
-              <HealthRow
-                status={dbStatus}
-                icon={<Database className="h-4 w-4" />}
-                label={t('Database')}
-                summary={databaseSummary}
-                onClick={() => scrollToSection('database')}
-              />
-              <HealthRow
-                status="healthy"
-                icon={<Activity className="h-4 w-4" />}
-                label={t('Telemetry')}
-                summary={telemetrySummary}
-                onClick={() => scrollToSection('telemetry')}
-              />
-              <HealthRow
-                status={notifStatus}
-                icon={<Bell className="h-4 w-4" />}
-                label={t('Notifications')}
-                summary={notificationsSummary}
-                onClick={() => scrollToSection('notifications')}
-              />
-              <HealthRow
-                status={workersStatus}
-                icon={<Boxes className="h-4 w-4" />}
-                label={t('Workers')}
-                summary={workersSummary}
-                onClick={() => scrollToSection('workers')}
-              />
-              <HealthRow
-                status={teslaAuthStatus}
-                icon={<ShieldCheck className="h-4 w-4" />}
-                label={t('Tesla auth')}
-                summary={teslaAuthSummary}
-                to="/tesla-account"
-              />
+            {/* 1b ─ Update available callout (in-page) ───────────── */}
+            {hasUpdate && (
+              <FadeIn>
+                <UpdateAvailableCallout
+                  current={updateCheck?.current}
+                  latest={updateCheck?.latest}
+                  checkedAt={updateCheck?.checked_at}
+                />
+              </FadeIn>
+            )}
+
+            {/* 2 ─ Sticky chip bar ─────────────────────────────────── */}
+            <div data-status-print-hide>
+              <StickyChipBar chips={chips} />
             </div>
-          </GlassPanel>
-        </section>
+
+            {/* 3 ─ Health rows ─────────────────────────────────────── */}
+            <section id="health" aria-label="Health summary">
+              <GlassPanel className="p-2 md:p-3">
+                <h3 className="px-3 pt-2 text-sm font-semibold text-[var(--text-primary)]">
+                  {t('Health')}
+                </h3>
+                <div className="space-y-1 p-1">
+                  <HealthRow
+                    status={totalCount === 0 ? 'unknown' : okCount === totalCount ? 'healthy' : okCount > totalCount / 2 ? 'degraded' : 'unhealthy'}
+                    icon={<Server className="h-4 w-4" />}
+                    label={t('Services')}
+                    summary={servicesSummary}
+                    onClick={() => scrollToSection('services')}
+                  />
+                  <HealthRow
+                    status={dbStatus}
+                    icon={<Database className="h-4 w-4" />}
+                    label={t('Database')}
+                    summary={databaseSummary}
+                    onClick={() => scrollToSection('database')}
+                  />
+                  <HealthRow
+                    status="healthy"
+                    icon={<Activity className="h-4 w-4" />}
+                    label={t('Telemetry')}
+                    summary={telemetrySummary}
+                    onClick={() => scrollToSection('telemetry')}
+                  />
+                  <HealthRow
+                    status={notifStatus}
+                    icon={<Bell className="h-4 w-4" />}
+                    label={t('Notifications')}
+                    summary={notificationsSummary}
+                    onClick={() => scrollToSection('notifications')}
+                  />
+                  <HealthRow
+                    status={workersStatus}
+                    icon={<Boxes className="h-4 w-4" />}
+                    label={t('Workers')}
+                    summary={workersSummary}
+                    onClick={() => scrollToSection('workers')}
+                  />
+                  {/* Anomaly row — renders only when anomalies_last_24h > 0 */}
+                  <AnomalyInlineRow />
+                  <HealthRow
+                    status={teslaAuthStatus}
+                    icon={<ShieldCheck className="h-4 w-4" />}
+                    label={t('Tesla auth')}
+                    summary={teslaAuthSummary}
+                    onClick={() => scrollToSection('tesla-auth')}
+                  />
+                </div>
+              </GlassPanel>
+            </section>
 
         {/* 4 ─ Action items (always render) ─────────────────────── */}
         <section id="action-items" aria-label="Operator action items">
@@ -648,6 +713,15 @@ export default function SystemStatusPage() {
           </AccordionSection>
         </section>
 
+        {/* 8b ─ Tesla auth (dedicated card) ─────────────────────── */}
+        <section id="tesla-auth" aria-label="Tesla account authentication">
+          <TeslaAuthCard
+            authenticated={auth?.authenticated}
+            expiresAt={auth?.expires_at}
+            now={now}
+          />
+        </section>
+
         {/* 9 ─ Notifications ──────────────────────────────────── */}
         <section id="notifications">
           <AccordionSection
@@ -717,16 +791,17 @@ export default function SystemStatusPage() {
                 ? <Badge variant="warning">none</Badge>
                 : undefined}
           >
-            <DefList
-              rows={[
-                { label: t('Configured schedules'), value: String(backupConfigs?.length ?? 0) },
-                { label: t('Total runs'), value: String(backupRuns?.length ?? 0) },
-                { label: t('Last successful'), value: lastSuccessfulBackup?.completedAt ? new Date(lastSuccessfulBackup.completedAt).toLocaleString() : '—' },
-                { label: t('Last successful size'), value: lastSuccessfulBackup?.fileSize ? formatBytes(lastSuccessfulBackup.fileSize) : '—' },
-                { label: t('Failures (recent)'), value: String((backupRuns ?? []).filter((r) => r.status === 'failed').length) },
-              ]}
-            />
-            <DetailLink to="/backup" label={t('Open Backups')} />
+            <BackupActionsCard>
+              <DefList
+                rows={[
+                  { label: t('Configured schedules'), value: String(backupConfigs?.length ?? 0) },
+                  { label: t('Total runs'), value: String(backupRuns?.length ?? 0) },
+                  { label: t('Last successful'), value: lastSuccessfulBackup?.completedAt ? new Date(lastSuccessfulBackup.completedAt).toLocaleString() : '—' },
+                  { label: t('Last successful size'), value: lastSuccessfulBackup?.fileSize ? formatBytes(lastSuccessfulBackup.fileSize) : '—' },
+                  { label: t('Failures (recent)'), value: String((backupRuns ?? []).filter((r) => r.status === 'failed').length) },
+                ]}
+              />
+            </BackupActionsCard>
           </AccordionSection>
         </section>
 
@@ -823,6 +898,8 @@ export default function SystemStatusPage() {
           />
         </section>
       </div>
+        </>
+      )}
     </PageContainer>
   )
 }

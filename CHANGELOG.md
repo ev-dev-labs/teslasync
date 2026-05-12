@@ -40,6 +40,32 @@ Migration guide for external consumers:
 
 ### 🚀 New Features
 
+#### System Status — Phase 2 (operator-grade enhancements)
+- **Tesla auth dedicated card** — Promotes account auth from a single health row to a fuller card with token-expiry countdown (healthy / expiring within 7 days / expired / disconnected) and a primary "Re-authenticate" CTA
+- **Inline anomaly row** — New `<AnomalyInlineRow>` surfaces the most recent anomaly detected for the primary vehicle as a Health row (links to `/anomaly-detection`); renders nothing when there are no anomalies in the last 24h
+- **Update-available callout** — Prominent in-page callout above the chip bar when `/system/update-check` reports a new release; links to `/changelog` (distinct from the global `<NewVersionBanner>` for client bundle reloads)
+- **Run quick backup** — New "Run quick backup now" button inside the Backups accordion (mutation via `POST /backup/quick`); disables-while-pending, surfaces success/failure via toasts, and invalidates `backup-runs` queries on settle
+- **Refresh button optimistic state** — Refresh action shows a spinning icon and is disabled while `isFetching` is true; the hero CTA mirrors the same loading state
+- **Skeleton loaders** — Replaced the generic `loading` spinner with a layout-shaped `<StatusPageSkeleton>` that mirrors the page rhythm (hero → chips → 6 health rows → action items → resources → 4 accordions) so there is no layout shift on first load
+- **Health staleness indicator** — Hero subline shows "(stale)" when `/system/health` errors or hasn't refreshed in over 2 minutes, and the hero status downgrades to `unknown` so operators don't trust stale data
+- **Print stylesheet** — `@media print` rules drop the frosted-glass background, hide interactive scaffolding (refresh button, sticky compact hero, chip bar), and render a clean dark-on-white snapshot suitable for reports
+- **Scroll-margin-top on sections** — Chip-bar nav now lands cleanly below sticky elements (`scroll-mt-24` applied to all `<section>` elements)
+- **`tesla-auth` chip** — Added to the chip bar between Telemetry and Notifications
+
+The following Phase 2 spec items were deliberately deferred because the
+backend doesn't yet expose the data they require:
+- **Incident lifecycle / post-mortem timelines** — would require new
+  CRUD endpoints; calling currently-unhealthy components "incidents"
+  would be misleading.
+- **SLO tracking with per-window % uptime** — `/system/health` is a
+  single snapshot; daily/weekly/monthly % can't be derived from one
+  point.
+- **Public Status API (`/api/v1/status/...`) + docs page** — no backend
+  routes yet; the existing `/system/health` and `/system/version`
+  cover most operator integration needs in the meantime.
+- **Keyboard shortcuts (R/?/J/K)** — high collision risk with form
+  inputs and modals; revisit when there's a global command palette.
+
 #### Materialized Views & Fast Analytics
 - **3 materialized views** — `mv_energy_daily`, `mv_position_hourly`, `mv_signal_stats` for sub-second dashboard and analytics queries
 - Maintenance worker automatically refreshes materialized views on schedule
