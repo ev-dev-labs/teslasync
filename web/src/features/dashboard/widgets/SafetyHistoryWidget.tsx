@@ -232,7 +232,7 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
       ) : (
         <div className="flex flex-col gap-3 h-full min-h-0">
           {/* Stat cards row */}
-          <div className="grid grid-cols-3 gap-2 flex-shrink-0">
+          <div className="grid grid-cols-1 @xs:grid-cols-3 gap-2 flex-shrink-0">
             <StatCard
               label={t('widget.safetyTotal', 'Events (30d)')}
               value={fmtInt(stats.totalEvents)}

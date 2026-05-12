@@ -20,10 +20,10 @@ function MetricRow({ metric }: { metric: ComparisonMetric }) {
   const direction = higherIsBetter ? 'higher_better' : 'lower_better';
 
   return (
-    <div className="flex items-center justify-between py-2.5 border-b border-white/[0.06] last:border-b-0">
-      <div className="flex flex-col gap-0.5">
-        <span className="text-xs text-[var(--text-muted)]">{metric.label}</span>
-        <span className="text-base font-semibold text-[var(--text-primary)]">
+    <div className="flex items-center justify-between gap-3 py-2.5 border-b border-white/[0.06] last:border-b-0">
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="truncate text-xs text-[var(--text-muted)]">{metric.label}</span>
+        <span className="truncate text-base font-semibold text-[var(--text-primary)]">
           {metric.formattedCurrent}
           {metric.unit && (
             <span className="ml-0.5 text-xs font-normal text-[var(--text-muted)]">

@@ -48,17 +48,17 @@ export function WidgetDetailCard({
         <div
           key={entry.label}
           className={cn(
-            'flex items-center justify-between py-2 px-1',
+            'flex items-center justify-between gap-3 py-2 px-1',
             i < visible.length - 1 && 'border-b border-white/[0.06]',
           )}
         >
-          <span className="text-[10px] uppercase text-[var(--text-muted)] tracking-wide">
+          <span className="min-w-0 truncate text-[10px] uppercase text-[var(--text-muted)] tracking-wide">
             {entry.label}
           </span>
-          <span className="flex items-center gap-2">
+          <span className="flex min-w-0 items-center gap-2">
             <span
               className={cn(
-                'text-sm text-[var(--text-primary)]',
+                'truncate text-sm text-[var(--text-primary)]',
                 entry.mono && 'font-mono',
               )}
             >

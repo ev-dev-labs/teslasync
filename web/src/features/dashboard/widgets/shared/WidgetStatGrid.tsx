@@ -25,11 +25,19 @@ function autoCols(count: number): 2 | 3 | 4 {
   return 2;
 }
 
-const colsClass: Record<1 | 2 | 3 | 4, string> = {
+// Container-query class table. Each cell selects a column count based on
+// the *widget's own rendered width* (via `@container` on WidgetShell's
+// content area), not the viewport. This means a 4-up stat grid collapses
+// to 2-up on narrow widgets — whether they are narrow because the user is
+// on a phone or because the widget only spans 1 column on a wide desktop.
+const containerColsClass: Record<1 | 2 | 3 | 4, string> = {
   1: 'grid-cols-1',
+  // 2-col baseline; never collapses below 2
   2: 'grid-cols-2',
-  3: 'grid-cols-3',
-  4: 'grid-cols-4',
+  // 3-col target: 1 col under @xs (~16rem≈256px), 2 cols under @sm (~24rem≈384px), 3 above
+  3: 'grid-cols-1 @xs:grid-cols-2 @sm:grid-cols-3',
+  // 4-col target: 2 cols under @sm, 4 above
+  4: 'grid-cols-2 @sm:grid-cols-4',
 };
 
 export function WidgetStatGrid({ stats, compact, cols }: WidgetStatGridProps) {
@@ -40,7 +48,7 @@ export function WidgetStatGrid({ stats, compact, cols }: WidgetStatGridProps) {
   const resolvedCols = compact ? 1 : (cols ?? autoCols(stats.length));
 
   return (
-    <div className={cn('grid', colsClass[resolvedCols], compact ? 'gap-2' : 'gap-3')}>
+    <div className={cn('grid', containerColsClass[resolvedCols], compact ? 'gap-2' : 'gap-3')}>
       {stats.map((stat) => (
         <StatCard
           key={stat.label}

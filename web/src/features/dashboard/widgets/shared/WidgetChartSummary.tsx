@@ -32,11 +32,20 @@ export function WidgetChartSummary({
   return (
     <div className="flex h-full flex-col">
       {stats.length > 0 && (
-        <div className={cn('flex gap-4', compact && 'grid grid-cols-2 gap-2')}>
+        <div
+          className={cn(
+            // Stat row: 2-col grid by default (mobile-safe). On wider widgets
+            // (@sm ≈ 24rem) it relaxes to a horizontal flex row so values can
+            // breathe. In compact mode (caller-driven) we always force 2-col.
+            compact
+              ? 'grid grid-cols-2 gap-2'
+              : 'grid grid-cols-2 gap-2 @sm:flex @sm:gap-4',
+          )}
+        >
           {stats.map((stat) => (
-            <div key={stat.label} className="flex flex-col">
-              <span className="text-[10px] text-[var(--text-muted)]">{stat.label}</span>
-              <span className="text-sm font-semibold text-[var(--text-primary)]">
+            <div key={stat.label} className="flex min-w-0 flex-col">
+              <span className="truncate text-[10px] text-[var(--text-muted)]">{stat.label}</span>
+              <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
                 {stat.value}
                 {stat.unit && (
                   <span className="ml-0.5 text-[10px] font-normal text-[var(--text-muted)]">

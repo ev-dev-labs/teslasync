@@ -211,7 +211,7 @@ export default function CostBreakdownWidget({ vehicleId, size }: WidgetProps) {
           />
 
           {/* Stat cards */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 @xs:grid-cols-3 gap-2">
             <StatCard
               label={t('widget.costBreakdown.totalCost', 'Total Cost')}
               value={formatCurrency(data?.total_charging_cost ?? 0)}

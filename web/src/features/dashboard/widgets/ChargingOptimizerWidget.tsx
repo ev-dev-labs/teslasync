@@ -128,7 +128,7 @@ export default function ChargingOptimizerWidget({ vehicleId, size }: WidgetProps
       ) : (
         <div className="flex flex-col gap-3 h-full">
           {/* Key metrics row */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 @xs:grid-cols-3 gap-2">
             <div className="flex flex-col items-center gap-1 rounded-lg bg-white/[0.03] p-2 min-h-[44px]">
               <Clock className="h-4 w-4 text-emerald-400" />
               <span className="text-sm font-semibold text-[var(--text-primary)]">

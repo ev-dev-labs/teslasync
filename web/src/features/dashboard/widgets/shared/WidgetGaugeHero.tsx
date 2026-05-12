@@ -23,6 +23,8 @@ interface WidgetGaugeHeroProps {
 }
 
 export function WidgetGaugeHero({ gauge, stats, compact, children }: WidgetGaugeHeroProps) {
+  // Compact size never grows; the standard size renders smaller on narrow
+  // widgets via container queries (handled below by the wrapper).
   const size = compact ? 70 : 100;
 
   return (
@@ -37,11 +39,11 @@ export function WidgetGaugeHero({ gauge, stats, compact, children }: WidgetGauge
       />
 
       {!compact && stats && stats.length > 0 && (
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
           {stats.map((stat) => (
-            <div key={stat.label} className="flex flex-col items-center text-center">
-              <span className="text-xs text-[var(--text-secondary)]">{stat.label}</span>
-              <span className="text-sm font-semibold text-[var(--text-primary)]">
+            <div key={stat.label} className="flex min-w-0 flex-col items-center text-center">
+              <span className="truncate text-xs text-[var(--text-secondary)]">{stat.label}</span>
+              <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
                 {stat.value}
                 {stat.unit && (
                   <span className="ml-0.5 text-xs font-normal text-[var(--text-secondary)]">{stat.unit}</span>

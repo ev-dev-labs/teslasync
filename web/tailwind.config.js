@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 import plugin from 'tailwindcss/plugin';
+import containerQueries from '@tailwindcss/container-queries';
 
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
@@ -184,5 +185,9 @@ export default {
     plugin(function forcedColorsVariant({ addVariant }) {
       addVariant('forced-colors', '@media (forced-colors: active)');
     }),
+    // Container queries — used by dashboard widget primitives so grids
+    // collapse based on the widget's own rendered width (not the viewport),
+    // since a widget's pixel width depends on the dashboard grid placement.
+    containerQueries,
   ],
 }

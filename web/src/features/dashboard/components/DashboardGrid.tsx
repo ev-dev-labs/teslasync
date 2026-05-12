@@ -222,15 +222,32 @@ export function DashboardGrid({
     requestAnimationFrame(() => { interactingRef.current = false; });
   }, [onLayoutChange]);
 
-  // Compute widget size from live layouts so widgets adapt during resize
+  // Determine which breakpoint RGL is currently rendering for. Mirrors
+  // react-grid-layout's `getBreakpointFromWidth`: pick the largest
+  // breakpoint whose threshold is <= current container width. Falls back
+  // to xs (the smallest) when width is 0 / unknown.
+  const activeBreakpoint = useMemo(() => {
+    // Order from largest threshold to smallest so the first match wins.
+    const ordered = (Object.entries(GRID_BREAKPOINTS) as Array<[keyof typeof GRID_BREAKPOINTS, number]>)
+      .sort((a, b) => b[1] - a[1]);
+    for (const [bp, threshold] of ordered) {
+      if (width >= threshold) return bp;
+    }
+    return 'xs' as const;
+  }, [width]);
+
+  // Compute widget size from live layouts so widgets adapt during resize.
+  // Reads from the *active* breakpoint's layout (not always lg) so widgets
+  // on mobile receive size.cols matching what the user actually sees,
+  // which is what their compact-mode heuristics depend on.
   const getWidgetSizeLive = useCallback((instanceId: string): { cols: number; rows: number } => {
-    const lgLayout = (liveLayouts.lg ?? []) as RGLLayout[];
-    const item = lgLayout.find((l) => l.i === instanceId);
+    const layout = (liveLayouts[activeBreakpoint] ?? liveLayouts.lg ?? []) as RGLLayout[];
+    const item = layout.find((l) => l.i === instanceId);
     if (item) return { cols: item.w, rows: item.h };
     const widget = dashboard.widgets.find((w) => w.id === instanceId);
     const def = widget ? getWidgetDef(widget.widgetId) : undefined;
     return def?.defaultSize ?? { cols: 1, rows: 1 };
-  }, [liveLayouts, dashboard.widgets]);
+  }, [liveLayouts, dashboard.widgets, activeBreakpoint]);
 
   // Kiosk panel background boost: increases GlassPanel bg from default 5% white
   const kioskPanelStyle = useMemo(() => {

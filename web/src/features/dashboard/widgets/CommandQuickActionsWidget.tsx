@@ -72,8 +72,8 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
             isCompact
               ? 'grid grid-cols-2 gap-1.5 h-full items-center'
               : isWide
-                ? 'grid grid-cols-4 gap-2'
-                : 'grid grid-cols-3 gap-2'
+                ? 'grid grid-cols-2 @xs:grid-cols-4 gap-2'
+                : 'grid grid-cols-2 @xs:grid-cols-3 gap-2'
           }
         >
           {visibleCommands.map((cmd) => {
