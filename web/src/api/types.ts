@@ -1312,6 +1312,18 @@ export interface BackupStats {
   row_counts: Record<string, number>
 }
 
+export interface ErrorStatsByCode {
+  count: number
+  last_seen: string
+  last_message: string
+}
+
+export interface ErrorStats {
+  total_errors: number
+  uptime: string
+  by_code: Record<string, ErrorStatsByCode>
+}
+
 export interface MapConfig {
   provider: 'free' | 'azure' | 'google'
   api_key: string
