@@ -241,7 +241,9 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
   Account: { accent: 'text-zinc-300', surface: 'bg-zinc-400/10', ring: 'ring-zinc-400/20', dot: 'bg-zinc-400' },
   AI: { accent: 'text-purple-300', surface: 'bg-purple-400/10', ring: 'ring-purple-400/20', dot: 'bg-purple-400' },
   Entertainment: { accent: 'text-pink-300', surface: 'bg-pink-400/10', ring: 'ring-pink-400/20', dot: 'bg-pink-400' },
-  Integrations: { accent: 'text-blue-300', surface: 'bg-blue-400/10', ring: 'ring-blue-400/20', dot: 'bg-blue-400' },
+  'Tesla Account': { accent: 'text-blue-300', surface: 'bg-blue-400/10', ring: 'ring-blue-400/20', dot: 'bg-blue-400' },
+  'Tesla API': { accent: 'text-sky-300', surface: 'bg-sky-400/10', ring: 'ring-sky-400/20', dot: 'bg-sky-400' },
+  Integrations: { accent: 'text-stone-300', surface: 'bg-stone-400/10', ring: 'ring-stone-400/20', dot: 'bg-stone-400' },
   'Settings & Admin': { accent: 'text-slate-300', surface: 'bg-slate-400/10', ring: 'ring-slate-400/20', dot: 'bg-slate-400' },
   Data: { accent: 'text-teal-300', surface: 'bg-teal-400/10', ring: 'ring-teal-400/20', dot: 'bg-teal-400' },
   Diagnostics: { accent: 'text-neon-cyan', surface: 'bg-cyan-400/10', ring: 'ring-cyan-400/20', dot: 'bg-neon-cyan' },
@@ -418,13 +420,23 @@ export const navSections = [
     ],
   },
   {
-    title: 'Integrations',
+    title: 'Tesla Account',
     items: [
       { to: '/tesla-account', icon: Icons.user, label: 'Tesla Account', color: 'text-blue-400' },
+      { to: '/tesla-orders', icon: Icons.shoppingCart, label: 'Active Orders', color: 'text-teal-400' },
+    ],
+  },
+  {
+    title: 'Tesla API',
+    items: [
       { to: '/fleet-api', icon: Icons.cloud, label: 'Fleet API', color: 'text-sky-400' },
       { to: '/tesla-features', icon: Icons.flag, label: 'Feature Flags', color: 'text-purple-400' },
       { to: '/tesla-region', icon: Icons.globe, label: 'Region & API', color: 'text-emerald-400' },
-      { to: '/tesla-orders', icon: Icons.shoppingCart, label: 'Active Orders', color: 'text-teal-400' },
+    ],
+  },
+  {
+    title: 'Integrations',
+    items: [
       { to: '/gas-price', icon: Icons.fuel, label: 'Gas Price Auto-Poll', color: 'text-orange-400' },
     ],
   },
