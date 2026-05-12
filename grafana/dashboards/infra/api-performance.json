@@ -835,9 +835,9 @@
       "tags": [],
       "targetBlank": false,
       "title": "◀ Prev",
-      "tooltip": "TeslaSync - Telemetry Pipeline",
+      "tooltip": "TeslaSync - Trace Explorer (Tempo TraceQL)",
       "type": "link",
-      "url": "/d/teslasync-infra-telemetry"
+      "url": "/d/teslasync-infra-trace-explorer"
     },
     {
       "asDropdown": true,
@@ -859,9 +859,9 @@
       "tags": [],
       "targetBlank": false,
       "title": "Next ▶",
-      "tooltip": "TeslaSync - Rules Engine",
+      "tooltip": "TeslaSync - Auth Login Deep-Dive (always-sampled)",
       "type": "link",
-      "url": "/d/teslasync-infra-cep"
+      "url": "/d/teslasync-infra-auth-deep-dive"
     }
   ]
 }

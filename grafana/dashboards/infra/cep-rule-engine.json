@@ -464,9 +464,9 @@
       "tags": [],
       "targetBlank": false,
       "title": "◀ Prev",
-      "tooltip": "TeslaSync - API Performance",
+      "tooltip": "TeslaSync - Auth Login Deep-Dive (always-sampled)",
       "type": "link",
-      "url": "/d/teslasync-infra-api-perf"
+      "url": "/d/teslasync-infra-auth-deep-dive"
     },
     {
       "asDropdown": true,
@@ -488,9 +488,9 @@
       "tags": [],
       "targetBlank": false,
       "title": "Next ▶",
-      "tooltip": "TeslaSync - Infrastructure Health",
+      "tooltip": "TeslaSync - Critical Flow Latency (Phase-44 instrumented)",
       "type": "link",
-      "url": "/d/teslasync-infra-health"
+      "url": "/d/teslasync-infra-critical-flows"
     }
   ]
 }

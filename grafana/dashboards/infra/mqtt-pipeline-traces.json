@@ -144,5 +144,43 @@
       "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ span.messaging.system = \"mqtt\" && status = error }", "limit": 30, "refId": "A" }],
       "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }
     }
+  ],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync - Infrastructure Health",
+      "type": "link",
+      "url": "/d/teslasync-infra-health"
+    },
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "⚡ TeslaSync",
+      "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync - Observability Self-Health (OTel Collector + Tempo)",
+      "type": "link",
+      "url": "/d/teslasync-infra-otel-self-health"
+    }
   ]
 }

@@ -572,5 +572,43 @@
         "current": { "text": "Prometheus", "value": "prometheus" }
       }
     ]
-  }
+  },
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync - DB & Tesla API Span Breakdown (Tempo)",
+      "type": "link",
+      "url": "/d/teslasync-infra-db-tesla-breakdown"
+    },
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "⚡ TeslaSync",
+      "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync - Infrastructure Health",
+      "type": "link",
+      "url": "/d/teslasync-infra-health"
+    }
+  ]
 }

@@ -790,5 +790,43 @@
         "uid": "DS_TESLASYNC_PROMETHEUS"
       }
     }
+  ],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync - Observability Self-Health (OTel Collector + Tempo)",
+      "type": "link",
+      "url": "/d/teslasync-infra-otel-self-health"
+    },
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "⚡ TeslaSync",
+      "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync - Service RED (Tempo span-metrics)",
+      "type": "link",
+      "url": "/d/teslasync-infra-service-red"
+    }
   ]
 }

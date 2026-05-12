@@ -1070,9 +1070,9 @@
       "tags": [],
       "targetBlank": false,
       "title": "◀ Prev",
-      "tooltip": "TeslaSync - Infrastructure Health",
+      "tooltip": "TeslaSync - Service RED (Tempo span-metrics)",
       "type": "link",
-      "url": "/d/teslasync-infra-health"
+      "url": "/d/teslasync-infra-service-red"
     },
     {
       "asDropdown": true,
@@ -1094,9 +1094,9 @@
       "tags": [],
       "targetBlank": false,
       "title": "Next ▶",
-      "tooltip": "TeslaSync - SSE & Real-Time",
+      "tooltip": "TeslaSync - SLO / Error Budget Board",
       "type": "link",
-      "url": "/d/teslasync-infra-sse"
+      "url": "/d/teslasync-infra-slo-burn"
     }
   ]
 }

@@ -234,5 +234,43 @@
       "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(tempo_metrics_generator_processor_service_graphs_dropped_spans[5m])) + sum(rate(tempo_metrics_generator_processor_span_metrics_dropped_spans[5m]))", "refId": "A" }],
       "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     }
+  ],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync - MQTT Pipeline Trace View (Tempo)",
+      "type": "link",
+      "url": "/d/teslasync-infra-mqtt-pipeline-traces"
+    },
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "⚡ TeslaSync",
+      "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync - Service Graph & Dependencies (Tempo)",
+      "type": "link",
+      "url": "/d/teslasync-infra-service-graph"
+    }
   ]
 }

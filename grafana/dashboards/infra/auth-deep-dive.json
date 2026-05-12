@@ -166,5 +166,43 @@
       "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ span.http.route = \"/api/v1/auth/login\" && duration > 1s }", "limit": 30, "refId": "A" }],
       "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }
     }
+  ],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync - API Performance",
+      "type": "link",
+      "url": "/d/teslasync-infra-api-perf"
+    },
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "⚡ TeslaSync",
+      "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync - Rules Engine",
+      "type": "link",
+      "url": "/d/teslasync-infra-cep"
+    }
   ]
 }
