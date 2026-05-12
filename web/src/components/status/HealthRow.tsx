@@ -57,7 +57,7 @@ export function HealthRow({ status, icon, label, summary, to, external = false, 
           {icon}
         </span>
       )}
-      <span className="flex-1 truncate text-sm font-medium text-[var(--text-primary)]">
+      <span className="min-w-0 flex-1 truncate text-left text-sm font-medium text-[var(--text-primary)]">
         {label}
       </span>
       <span className={cn('shrink-0 text-xs', summaryClass)}>
@@ -70,7 +70,7 @@ export function HealthRow({ status, icon, label, summary, to, external = false, 
   )
 
   const baseClasses = cn(
-    'flex w-full items-center gap-3 rounded-lg px-3 py-3',
+    'flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left',
     'min-h-[44px]',
     (to || onClick) && 'transition-colors hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
   )
