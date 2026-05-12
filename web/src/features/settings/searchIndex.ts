@@ -454,10 +454,13 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       keywords: ['confirm', 'dialog', 'silence', 'dont ask', 'reset', 'restore'],
     },
 
-    // ── Backup & Restore (Phase-46 / Prompt 36) ─────────────────────
+    // ── Backup & Restore — moved to dedicated /backup page ──────────
+    // Was Phase-46 / Prompt 36 inside SettingsPage; promoted to live
+    // alongside the operational backup runs in features/admin/pages/
+    // BackupRestorePage so the DATA category owns every backup surface.
     {
       id: 'backup.export',
-      href: '/settings#backup',
+      href: '/backup',
       section: 'backup',
       title: t('search.entries.backup.export.title', 'Export settings as JSON'),
       description: t('search.entries.backup.export.desc', 'Download a portable bundle of general settings, alert rules, geofences, and quiet-hours windows.'),
@@ -465,7 +468,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'backup.import',
-      href: '/settings#backup',
+      href: '/backup',
       section: 'backup',
       title: t('search.entries.backup.import.title', 'Import settings from JSON'),
       description: t('search.entries.backup.import.desc', 'Restore alert rules, geofences, and quiet-hours windows from a previously exported bundle.'),

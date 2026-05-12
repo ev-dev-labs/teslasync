@@ -20,14 +20,10 @@ import {
   AdvancedSettings,
   SettingsSearch,
 } from '../components'
-// Phase-46 / Prompt 35 — TOTPEnrollmentSection moved to its own page
-// (TwoFactorAuthPage). Direct import retained here in case the section
-// is re-introduced as an inline panel.
-//
-// Phase-46 / Prompt 36 — Settings export/import. Same direct-import
-// rationale as TOTPEnrollmentSection above; the components barrel
-// is not in the prompt's allowed-files regex.
-import { SettingsExportImport } from '../components/SettingsExportImport'
+// Phase-46 / Prompt 36 — Settings export/import has moved to the
+// dedicated Backup & Restore page (/backup) so the DATA category owns
+// every backup/restore surface. The component is still imported there
+// from features/settings/components.
 // Phase-46 / Prompt 42 — ActiveSessionsSection moved to its own page
 // (ActiveSessionsPage). Direct import retained for the same reason.
 //
@@ -183,9 +179,6 @@ export default function SettingsPage() {
       </section>
       <section id="advanced">
         <AdvancedSettings />
-      </section>
-      <section id="backup">
-        <SettingsExportImport />
       </section>
       <section id="reset">
         <ResetSection />
