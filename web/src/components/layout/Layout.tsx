@@ -234,7 +234,7 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
   'Vehicle State': { accent: 'text-teal-300', surface: 'bg-teal-400/10', ring: 'ring-teal-400/20', dot: 'bg-teal-400' },
   'Health & Service': { accent: 'text-red-300', surface: 'bg-red-400/10', ring: 'ring-red-400/20', dot: 'bg-red-400' },
   Analytics: { accent: 'text-indigo-300', surface: 'bg-indigo-400/10', ring: 'ring-indigo-400/20', dot: 'bg-indigo-400' },
-  Controls: { accent: 'text-fuchsia-300', surface: 'bg-fuchsia-400/10', ring: 'ring-fuchsia-400/20', dot: 'bg-fuchsia-400' },
+  'Vehicle Commands': { accent: 'text-fuchsia-300', surface: 'bg-fuchsia-400/10', ring: 'ring-fuchsia-400/20', dot: 'bg-fuchsia-400' },
   Alerts: { accent: 'text-orange-300', surface: 'bg-orange-400/10', ring: 'ring-orange-400/20', dot: 'bg-orange-400' },
   Automation: { accent: 'text-amber-300', surface: 'bg-amber-400/10', ring: 'ring-amber-400/20', dot: 'bg-amber-400' },
   Security: { accent: 'text-yellow-300', surface: 'bg-yellow-400/10', ring: 'ring-yellow-400/20', dot: 'bg-yellow-400' },
@@ -370,7 +370,7 @@ export const navSections = [
     ],
   },
   {
-    title: 'Controls',
+    title: 'Vehicle Commands',
     items: [
       { to: '/commands', icon: Icons.gamepad, label: 'Commands', color: 'text-fuchsia-400', dataTour: 'commands-section' },
       { to: '/command-history', icon: Icons.history, label: 'Command History', color: 'text-violet-400' },
