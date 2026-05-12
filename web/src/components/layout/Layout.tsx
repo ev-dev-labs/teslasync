@@ -30,7 +30,6 @@ import { TourLauncher } from '@/features/onboarding/TourLauncher'
 import {
   TOUR_START_EVENT,
   TOURS,
-  dispatchTourLauncherOpen,
   dispatchTourStart,
   isTourCompleted as isTourCompletedById,
   type TourStartEventDetail,
@@ -198,6 +197,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/api-playground': ['playground', 'api test'],
   '/roadmap': ['roadmap', 'plans'],
   '/changelog': ['changes', 'release notes'],
+  '/signals': ['signals', 'live monitor', 'signal log', 'signal explorer', 'signal diff', 'gap detector', 'telemetry workspace'],
   '/live-monitor': ['live signals', 'monitor', 'telemetry'],
   '/signal-log': ['signals', 'signal log', 'telemetry log'],
   '/signal-explorer': ['explore signals', 'signal explorer'],
@@ -233,6 +233,7 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
   Analytics: { accent: 'text-indigo-300', surface: 'bg-indigo-400/10', ring: 'ring-indigo-400/20', dot: 'bg-indigo-400' },
   Controls: { accent: 'text-fuchsia-300', surface: 'bg-fuchsia-400/10', ring: 'ring-fuchsia-400/20', dot: 'bg-fuchsia-400' },
   Alerts: { accent: 'text-orange-300', surface: 'bg-orange-400/10', ring: 'ring-orange-400/20', dot: 'bg-orange-400' },
+  Automation: { accent: 'text-amber-300', surface: 'bg-amber-400/10', ring: 'ring-amber-400/20', dot: 'bg-amber-400' },
   Security: { accent: 'text-yellow-300', surface: 'bg-yellow-400/10', ring: 'ring-yellow-400/20', dot: 'bg-yellow-400' },
   Assistant: { accent: 'text-pink-300', surface: 'bg-pink-400/10', ring: 'ring-pink-400/20', dot: 'bg-pink-400' },
   Integrations: { accent: 'text-blue-300', surface: 'bg-blue-400/10', ring: 'ring-blue-400/20', dot: 'bg-blue-400' },
@@ -380,6 +381,11 @@ export const navSections = [
       { to: '/notifications/webhooks', icon: Icons.cloud, label: 'Webhooks', color: 'text-sky-400' },
       { to: '/notifications/quiet-hours', icon: Icons.clock, label: 'Quiet Hours', color: 'text-indigo-400' },
       { to: '/notifications/browser', icon: Icons.notificationsActive, label: 'Browser', color: 'text-fuchsia-400' },
+    ],
+  },
+  {
+    title: 'Automation',
+    items: [
       { to: '/notifications/rules', icon: Icons.filter, label: 'Rules', color: 'text-amber-400' },
       { to: '/notifications/studio', icon: Icons.notificationsAdd, label: 'Studio', color: 'text-neon-cyan' },
       { to: '/automations', icon: Icons.workflow, label: 'Automations', color: 'text-neon-cyan' },
@@ -431,11 +437,7 @@ export const navSections = [
   {
     title: 'Diagnostics',
     items: [
-      { to: '/live-monitor', icon: Icons.radioTower, label: 'Live Monitor', color: 'text-neon-green', dataTour: 'live-signals-section' },
-      { to: '/signal-log', icon: Icons.database, label: 'Signal Log', color: 'text-cyan-400' },
-      { to: '/signal-explorer', icon: Icons.preferences, label: 'Signal Explorer', color: 'text-neon-cyan' },
-      { to: '/signal-diff', icon: Icons.split, label: 'Signal Diff', color: 'text-violet-400' },
-      { to: '/signal-gaps', icon: Icons.wifi, label: 'Gap Detector', color: 'text-amber-400' },
+      { to: '/signals', icon: Icons.activity, label: 'Signals', color: 'text-neon-cyan', dataTour: 'live-signals-section' },
       { to: '/state-debugger', icon: Icons.bug, label: 'State Machine', color: 'text-purple-400' },
       { to: '/mqtt-inspector', icon: Icons.radio, label: 'MQTT Inspector', color: 'text-blue-400' },
       { to: '/redis-signals', icon: Icons.server, label: 'Redis Signals', color: 'text-orange-400' },
@@ -1321,40 +1323,15 @@ export default function Layout() {
           </div>
         </nav>
 
-        {/* Bottom status — keyboard hint + tour launcher.
-            The previous "Update available" banner, "Live vehicle mini-status",
-            and "Connection / vehicles / uptime" panels were removed because
-            their info is now surfaced in the footer StatusBar
-            (VersionSegment shows the update dot + uptime, ConnectionSegment
-            shows API status, and ActiveVehicleSegment shows the active
-            vehicle with its battery + range). */}
-        <div className="border-t border-[var(--glass-border)] px-4 py-3 space-y-2 shrink-0 safe-bottom">
-          <p data-tour="keyboard-hint" className="text-center text-[10px] text-[var(--text-muted)] mt-1">
-            {t('shortcuts.hint', 'Press')} <kbd className="px-1 rounded bg-[var(--surface-2)] text-[var(--text-secondary)]">?</kbd> {t('shortcuts.hintSuffix', 'for shortcuts')}
-            <span className="mx-1.5 text-[var(--text-muted)]/60">·</span>
-            <button
-              type="button"
-              onClick={() => dispatchTourLauncherOpen()}
-              className="inline-flex items-center gap-1 rounded text-[10px] text-[var(--text-muted)] underline-offset-2 hover:text-[var(--text-secondary)] hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]"
-              aria-label={t('tour.launcher.openAria', 'Open tour launcher')}
-              data-tour-launcher-trigger
-            >
-              <Icons.helpCircle className="h-3 w-3" aria-hidden />
-              {t('tour.launcher.openShort', 'Take a tour')}
-            </button>
-            <span className="mx-1.5 text-[var(--text-muted)]/60">·</span>
-            <button
-              type="button"
-              onClick={() => setFeedbackOpen(true)}
-              className="inline-flex items-center gap-1 rounded text-[10px] text-[var(--text-muted)] underline-offset-2 hover:text-[var(--text-secondary)] hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]"
-              aria-label={t('feedback.openAria', 'Open feedback / bug report form')}
-              data-testid="sidebar-feedback-trigger"
-            >
-              <Icons.bug className="h-3 w-3" aria-hidden />
-              {t('feedback.openShort', 'Report bug')}
-            </button>
-          </p>
-        </div>
+        {/* Sidebar footer note:
+            "Press ? for shortcuts · Take a tour · Report bug" was moved to
+            the global StatusBar (`HelpSegment`) so the sidebar bottom is no
+            longer reserved for ambient help affordances. The previous
+            "Update available" banner, "Live vehicle mini-status", and
+            "Connection / vehicles / uptime" panels were already removed
+            because their info is surfaced in the StatusBar (VersionSegment
+            shows the update dot + uptime, ConnectionSegment shows API
+            status, ActiveVehicleSegment shows the active vehicle). */}
       </aside>
 
       {/* Mobile top bar */}

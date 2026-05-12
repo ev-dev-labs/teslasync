@@ -5,6 +5,7 @@ import { LiveTelemetrySegment } from './status-bar/LiveTelemetrySegment';
 import { ActiveVehicleSegment } from './status-bar/ActiveVehicleSegment';
 import { BackgroundWorkSegment } from './status-bar/BackgroundWorkSegment';
 import { VersionSegment } from './status-bar/VersionSegment';
+import { HelpSegment } from './status-bar/HelpSegment';
 import { cn } from '@/lib/cn';
 
 /**
@@ -94,6 +95,8 @@ export function StatusBar({ compact = false, className }: StatusBarProps) {
             vehicles. We always render the dividers around segments that
             unconditionally render to keep the layout stable. */}
         <ActiveVehicleSegment iconOnly={iconOnly} />
+        <Divider />
+        <HelpSegment iconOnly={iconOnly} />
         <Divider />
         <VersionSegment iconOnly={iconOnly} />
       </div>
