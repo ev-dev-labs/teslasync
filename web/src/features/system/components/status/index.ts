@@ -9,6 +9,7 @@ export { DiagnosticsSection } from './DiagnosticsSection';
 
 // Phase 2 additions
 export { AnomalyInlineRow } from './AnomalyInlineRow';
+export { BackgroundWorkersCard } from './BackgroundWorkersCard';
 export { BackupActionsCard } from './BackupActionsCard';
 export { TeslaAuthCard } from './TeslaAuthCard';
 export { TeslaApiUsageCard } from './TeslaApiUsageCard';

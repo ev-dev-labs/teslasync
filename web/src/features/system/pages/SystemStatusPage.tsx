@@ -56,6 +56,7 @@ import {
   AccordionSection,
   DiagnosticsSection,
   AnomalyInlineRow,
+  BackgroundWorkersCard,
   BackupActionsCard,
   TeslaAuthCard,
   TeslaApiUsageCard,
@@ -752,21 +753,7 @@ export default function SystemStatusPage() {
             defaultOpen
             badges={<StatusBadge status={workersStatus} />}
           >
-            {workers?.workers && workers.workers.length > 0 ? (
-              <ul className="divide-y divide-white/[0.05]">
-                {workers.workers.map((w) => (
-                  <li key={w.name} className="flex items-center gap-3 py-2 text-sm">
-                    <StatusDot status={w.status === 'healthy' ? 'healthy' : 'unhealthy'} />
-                    <span className="flex-1 truncate font-medium text-[var(--text-primary)]">{w.name}</span>
-                    {w.latency_ms != null && (
-                      <span className="text-xs text-[var(--text-muted)] tabular-nums">{w.latency_ms}ms</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-[var(--text-muted)]">No workers reporting.</p>
-            )}
+            <BackgroundWorkersCard health={workers} />
           </AccordionSection>
         </section>
 
