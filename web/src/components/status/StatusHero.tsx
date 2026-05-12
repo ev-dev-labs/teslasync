@@ -64,19 +64,19 @@ export function StatusHero({
   return (
     <GlassPanel
       id={id}
-      className={cn('p-6 md:p-8', className)}
+      className={cn('p-4 md:p-5', className)}
       style={{ boxShadow: `0 0 60px ${cfg.glowRgba}` }}
     >
-      <div className="flex flex-col items-center gap-5 text-center md:flex-row md:items-center md:gap-8 md:text-left">
+      <div className="flex flex-col items-center gap-4 text-center md:flex-row md:items-center md:gap-6 md:text-left">
         <div
           className={cn(
-            'flex h-24 w-24 shrink-0 items-center justify-center rounded-full ring-2',
+            'flex h-14 w-14 shrink-0 items-center justify-center rounded-full ring-2',
             cfg.bg,
             cfg.ring,
           )}
           aria-hidden
         >
-          <Icon className={cn('h-12 w-12', cfg.text)} />
+          <Icon className={cn('h-7 w-7', cfg.text)} />
         </div>
 
         <div
@@ -84,7 +84,7 @@ export function StatusHero({
           role="status"
           aria-live="polite"
         >
-          <h2 className={cn('text-2xl md:text-3xl font-bold leading-tight', cfg.text)}>
+          <h2 className={cn('text-xl md:text-2xl font-bold leading-tight', cfg.text)}>
             {heading}
           </h2>
           {subline && (

@@ -86,7 +86,7 @@ export function StickyChipBar({ chips, topOffset = 0, className }: StickyChipBar
     >
       <div
         className={cn(
-          'flex gap-2 overflow-x-auto px-4 py-2',
+          'flex gap-1.5 overflow-x-auto px-4 py-1.5',
           'scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent',
         )}
       >
@@ -98,8 +98,8 @@ export function StickyChipBar({ chips, topOffset = 0, className }: StickyChipBar
               type="button"
               onClick={() => handleClick(chip.id)}
               className={cn(
-                'shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-                'min-h-[36px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+                'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                'min-h-[32px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
                 active
                   ? 'bg-cyan-400/15 text-cyan-200 ring-1 ring-cyan-400/30'
                   : 'bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 hover:text-[var(--text-primary)]',

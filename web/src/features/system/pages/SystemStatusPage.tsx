@@ -452,6 +452,7 @@ export default function SystemStatusPage() {
       subtitle={t('At-a-glance health for your TeslaSync instance')}
       loading={false}
       error={null}
+      className="max-w-5xl mx-auto"
       actions={
         <div className="flex items-center gap-2">
           <LiveStatusPill state={liveState} lastUpdateAt={liveLastUpdate} now={now} />
@@ -500,7 +501,7 @@ export default function SystemStatusPage() {
             />
           </div>
 
-          <div className="space-y-5 max-w-3xl mx-auto [&_section]:scroll-mt-24">
+          <div className="space-y-5 [&_section]:scroll-mt-24">
             {/* 1 ─ Hero ───────────────────────────────────────────── */}
             <FadeIn>
               <StatusHero
