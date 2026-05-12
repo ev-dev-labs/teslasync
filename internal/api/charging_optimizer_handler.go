@@ -77,30 +77,32 @@ func (h *ChargingOptimizerHandler) GetOptimization(w http.ResponseWriter, r *htt
 	}
 
 	// Enrich sessions with lat/lon/temp from signal_log (single set-based query).
-	// Phase-42: the legacy cs start-timestamp column becomes cs.started_at; signal_log columns unchanged.
+	// Phase-42: signal_log canonical schema — `field`, `ts`, and split typed value
+	// columns (float_value/int_value/...). Numeric reads use COALESCE so signals
+	// stored as int (e.g., temperatures sent as °F whole numbers) still resolve.
 	locRows, err := h.db.Pool.Query(ctx, `
 		SELECT cs.id,
-		       lat.value_num AS latitude,
-		       lon.value_num AS longitude,
-		       temp.value_num AS outside_temp
+		       lat.value AS latitude,
+		       lon.value AS longitude,
+		       temp.value AS outside_temp
 		FROM charging_sessions cs
 		LEFT JOIN LATERAL (
-			SELECT value_num FROM signal_log
-			WHERE vehicle_id = cs.vehicle_id AND signal = 'Latitude'
-			  AND created_at <= cs.started_at
-			ORDER BY created_at DESC LIMIT 1
+			SELECT COALESCE(float_value, int_value::float8) AS value FROM signal_log
+			WHERE vehicle_id = cs.vehicle_id AND field = 'Latitude'
+			  AND ts <= cs.started_at
+			ORDER BY ts DESC LIMIT 1
 		) lat ON true
 		LEFT JOIN LATERAL (
-			SELECT value_num FROM signal_log
-			WHERE vehicle_id = cs.vehicle_id AND signal = 'Longitude'
-			  AND created_at <= cs.started_at
-			ORDER BY created_at DESC LIMIT 1
+			SELECT COALESCE(float_value, int_value::float8) AS value FROM signal_log
+			WHERE vehicle_id = cs.vehicle_id AND field = 'Longitude'
+			  AND ts <= cs.started_at
+			ORDER BY ts DESC LIMIT 1
 		) lon ON true
 		LEFT JOIN LATERAL (
-			SELECT value_num FROM signal_log
-			WHERE vehicle_id = cs.vehicle_id AND signal = 'OutsideTemp'
-			  AND created_at <= cs.started_at
-			ORDER BY created_at DESC LIMIT 1
+			SELECT COALESCE(float_value, int_value::float8) AS value FROM signal_log
+			WHERE vehicle_id = cs.vehicle_id AND field = 'OutsideTemp'
+			  AND ts <= cs.started_at
+			ORDER BY ts DESC LIMIT 1
 		) temp ON true
 		WHERE cs.vehicle_id = $1
 		  AND cs.started_at >= NOW() - INTERVAL '90 days'`, vehicleID)

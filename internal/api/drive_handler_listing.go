@@ -555,12 +555,12 @@ func (h *DriveHandler) AccelerationDistribution(w http.ResponseWriter, r *http.R
 	ctx := r.Context()
 
 	rows, err := h.db.Pool.Query(ctx, `
-		SELECT created_at, value_num
+		SELECT ts, COALESCE(float_value, int_value::float8)
 		FROM signal_log
-		WHERE vehicle_id = $1 AND signal = 'VehicleSpeed'
-		  AND value_num IS NOT NULL
-		  AND created_at >= $2 AND created_at <= $3
-		ORDER BY created_at ASC`, vehicleID, startTime, endTime)
+		WHERE vehicle_id = $1 AND field = 'VehicleSpeed'
+		  AND (float_value IS NOT NULL OR int_value IS NOT NULL)
+		  AND ts >= $2 AND ts <= $3
+		ORDER BY ts ASC`, vehicleID, startTime, endTime)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("acceleration distribution: query failed")
 		writeError(w, http.StatusInternalServerError, "failed to get acceleration distribution")
