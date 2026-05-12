@@ -239,7 +239,7 @@ describe('DraftRestorePrompt', () => {
     fireEvent.click(screen.getByTestId(`draft-restore-resume-${ENV_KEY_RULE_42}`))
 
     const loc = getLocation()
-    expect(loc?.pathname).toBe('/notifications/studio')
+    expect(loc?.pathname).toBe('/alert-studio')
     expect(loc?.search).toBe('?id=42')
   })
 

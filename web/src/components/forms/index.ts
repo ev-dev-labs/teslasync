@@ -12,6 +12,7 @@ export { RangePicker, type RangePickerProps, type RangePickerValue } from './Ran
 export { FilterBar, type FilterBarProps } from './FilterBar';
 export { FormField, type FormFieldProps } from './FormField';
 export { FormSection } from './FormSection';
+export { PillFilterBar, type PillFilterBarProps, type PillItem } from './PillFilterBar';
 export { SearchInput, type SearchInputProps } from './SearchInput';
 export {
   TagInput,

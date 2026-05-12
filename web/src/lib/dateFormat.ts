@@ -103,6 +103,148 @@ export function formatRelative(iso: string | Date | null | undefined, opts?: For
   return formatDate(iso, opts)
 }
 
+/**
+ * Relative *day*-precision label used by date-grouped feeds. Unlike
+ * `formatRelative`, this never falls back to an absolute date — it
+ * always returns a relative phrase ("Today", "Yesterday", "3d ago",
+ * "2w ago", "5mo ago", "1y ago"). Pair it with a separate absolute
+ * date label (e.g. group header showing "Apr 24, 2026 · 18d ago").
+ *
+ * Day deltas are computed in the *target* timezone (defaults to the
+ * browser's local zone). Pass `tz` to anchor day boundaries to a
+ * specific zone — e.g. the active vehicle's IANA zone — so a drive
+ * recorded at 11pm vehicle-local doesn't get reported as "Yesterday"
+ * just because the user's browser already rolled to the next day.
+ */
+export function formatRelativeDays(
+  iso: string | Date | null | undefined,
+  opts?: FormatOptions,
+): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  const targetKey = ymdInTz(d, opts?.tz)
+  const todayKey = ymdInTz(new Date(), opts?.tz)
+  if (!targetKey || !todayKey) return '—'
+  const diffDays = daysBetweenYmd(targetKey, todayKey)
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Yesterday'
+  if (diffDays < 0) return `in ${Math.abs(diffDays)}d`
+  if (diffDays < 7) return `${diffDays}d ago`
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`
+  return `${Math.floor(diffDays / 365)}y ago`
+}
+
+/* ------------------------------------------------------------------ */
+/*  Timezone-aware day primitives                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Cache of `Intl.DateTimeFormat` instances keyed by `tz|locale|fields`.
+ * `Intl.DateTimeFormat` constructors are expensive enough that re-creating
+ * one per call (e.g. once per drive in a 10K-row list) is a real cost.
+ * Module-level memoization keeps the helpers cheap to call in tight loops.
+ */
+const FORMATTER_CACHE = new Map<string, Intl.DateTimeFormat>()
+
+function getFormatter(opts: Intl.DateTimeFormatOptions, locale?: string): Intl.DateTimeFormat {
+  const key = `${locale ?? ''}|${JSON.stringify(opts)}`
+  let fmt = FORMATTER_CACHE.get(key)
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat(locale ?? undefined, opts)
+    FORMATTER_CACHE.set(key, fmt)
+  }
+  return fmt
+}
+
+/**
+ * Extract a `YYYY-MM-DD` string from a Date in the requested timezone.
+ * Falls back to the browser's local zone when `tz` is unset. Used as the
+ * shared day-key primitive that `formatRelativeDays` and the per-feature
+ * day-grouping helpers (e.g. `localDayKey` in `drivesAggregation`) build
+ * on, so every "what day is this drive on?" question gives the same
+ * answer across the page.
+ */
+export function ymdInTz(d: Date, tz?: string): string | null {
+  if (isNaN(d.getTime())) return null
+  if (!tz) {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+  // Use formatToParts so we get raw numeric components — toLocaleDateString
+  // would inject locale separators we'd then have to parse back out.
+  try {
+    const fmt = getFormatter({
+      timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+    }, 'en-US')
+    const parts = fmt.formatToParts(d)
+    const get = (type: string) => parts.find(p => p.type === type)?.value
+    const y = get('year')
+    const m = get('month')
+    const day = get('day')
+    if (!y || !m || !day) return null
+    return `${y}-${m}-${day}`
+  } catch {
+    // Invalid IANA tz — fall back to browser-local rather than throwing.
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+}
+
+/**
+ * Render a `YYYY-MM-DD` day key as a friendly date label without
+ * round-tripping through a `Date` (which would re-introduce timezone
+ * shift bugs at midnight boundaries). `style: 'long'` returns
+ * "Apr 24, 2026", `style: 'short'` returns "Apr 24". Locale-aware via
+ * `opts.locale`.
+ */
+export function formatDayKey(
+  key: string,
+  opts?: FormatOptions & { style?: 'short' | 'long' },
+): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key)
+  if (!m) return FALLBACK
+  const [, ys, ms, ds] = m
+  const year = Number(ys)
+  const month = Number(ms)
+  const day = Number(ds)
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return FALLBACK
+  // Anchor at UTC noon of the requested calendar day, then format in UTC
+  // so the formatter doesn't shift the wall-clock back into a previous
+  // day in negative-offset zones. Noon-anchoring also avoids the
+  // `new Date('2026-04-24')` UTC-midnight pitfall.
+  const noon = new Date(Date.UTC(year, month - 1, day, 12))
+  const style = opts?.style ?? 'long'
+  const fmtOpts: Intl.DateTimeFormatOptions = style === 'short'
+    ? { timeZone: 'UTC', month: 'short', day: 'numeric' }
+    : { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' }
+  return getFormatter(fmtOpts, opts?.locale).format(noon)
+}
+
+/**
+ * Compute the inclusive day delta `today - target` from two day keys in
+ * `YYYY-MM-DD` form. Used by `formatRelativeDays`. Positive when
+ * `target` is earlier than `today`. Returns `0` if either key is malformed.
+ */
+function daysBetweenYmd(target: string, today: string): number {
+  const a = parseYmdToUtcMillis(target)
+  const b = parseYmdToUtcMillis(today)
+  if (a == null || b == null) return 0
+  return Math.round((b - a) / 86_400_000)
+}
+
+function parseYmdToUtcMillis(key: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key)
+  if (!m) return null
+  const [, ys, ms, ds] = m
+  return Date.UTC(Number(ys), Number(ms) - 1, Number(ds))
+}
+
 /** Relative time matching dashboard activity feeds: "Just now", "5m ago", or "Apr 4, 02:30 AM" */
 export function formatRelativeTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {
   if (!iso) return '—'

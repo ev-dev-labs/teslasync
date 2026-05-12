@@ -190,6 +190,8 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
   Energy:         { accent: 'text-lime-700 dark:text-lime-300',       surface: 'bg-lime-400/10',    ring: 'ring-lime-400/20',    dot: 'bg-lime-400',    icon: Icons.bolt,            gradient: 'from-lime-500/20 via-lime-400/5 to-transparent' },
   Service:        { accent: 'text-rose-700 dark:text-rose-300',       surface: 'bg-rose-400/10',    ring: 'ring-rose-400/20',    dot: 'bg-rose-400',    icon: Icons.maintenance,     gradient: 'from-rose-500/20 via-rose-400/5 to-transparent' },
   Reports:        { accent: 'text-green-700 dark:text-green-300',     surface: 'bg-green-400/10',   ring: 'ring-green-400/20',   dot: 'bg-green-400',   icon: Icons.analytics,       gradient: 'from-green-500/20 via-green-400/5 to-transparent' },
+  Cabin:          { accent: 'text-sky-700 dark:text-sky-300',         surface: 'bg-sky-400/10',     ring: 'ring-sky-400/20',     dot: 'bg-sky-400',     icon: Icons.cabin,           gradient: 'from-sky-500/20 via-sky-400/5 to-transparent' },
+  Commands:       { accent: 'text-fuchsia-700 dark:text-fuchsia-300', surface: 'bg-fuchsia-400/10', ring: 'ring-fuchsia-400/20', dot: 'bg-fuchsia-400', icon: Icons.gamepad,         gradient: 'from-fuchsia-500/20 via-fuchsia-400/5 to-transparent' },
   Controls:       { accent: 'text-fuchsia-700 dark:text-fuchsia-300', surface: 'bg-fuchsia-400/10', ring: 'ring-fuchsia-400/20', dot: 'bg-fuchsia-400', icon: Icons.gamepad,         gradient: 'from-fuchsia-500/20 via-fuchsia-400/5 to-transparent' },
   Automation:     { accent: 'text-purple-700 dark:text-purple-300',   surface: 'bg-purple-400/10',  ring: 'ring-purple-400/20',  dot: 'bg-purple-400',  icon: Icons.workflow,        gradient: 'from-purple-500/25 via-purple-400/8 to-transparent' },
   Notifications:  { accent: 'text-orange-700 dark:text-orange-300',   surface: 'bg-orange-400/10',  ring: 'ring-orange-400/20',  dot: 'bg-orange-400',  icon: Icons.notifications,   gradient: 'from-orange-500/20 via-orange-400/5 to-transparent' },
@@ -285,6 +287,13 @@ export const navSections = [
     ],
   },
   {
+    title: 'Cabin',
+    items: [
+      { to: '/climate-control', icon: Icons.climate, label: 'Climate Control', color: 'text-sky-400' },
+      { to: '/media-player', icon: Icons.headphones, label: 'Media Player', color: 'text-pink-400' },
+    ],
+  },
+  {
     title: 'Reports',
     items: [
       { to: '/statistics', icon: Icons.pieChart, label: 'Statistics', color: 'text-cyan-400' },
@@ -297,11 +306,9 @@ export const navSections = [
     ],
   },
   {
-    title: 'Controls',
+    title: 'Commands',
     items: [
       { to: '/commands', icon: Icons.gamepad, label: 'Send Commands', color: 'text-fuchsia-400', dataTour: 'commands-section' },
-      { to: '/climate-control', icon: Icons.climate, label: 'Climate Control', color: 'text-sky-400' },
-      { to: '/media-player', icon: Icons.headphones, label: 'Media Player', color: 'text-pink-400' },
       { to: '/command-history', icon: Icons.history, label: 'Command History', color: 'text-violet-400' },
     ],
   },
@@ -813,8 +820,13 @@ export default function Layout() {
       .map(path => findNavItemByExactPath(path))
       .filter((entry): entry is { section: NavSection; item: NavItem } => Boolean(entry))
       .map(entry => entry.item)
-      .filter(item => isVisibleNavItem(item, vehicleCount, isForwardAuth)),
-    [recentNavPaths, vehicleCount, isForwardAuth],
+      .filter(item => isVisibleNavItem(item, vehicleCount, isForwardAuth))
+      // Don't echo the current page in "Recently Used" — it's already
+      // highlighted in its canonical section below, so duplicating it
+      // here just adds visual noise and a confusing two-column "active"
+      // indicator. Quick-jump rows for *other* recent pages remain.
+      .filter(item => !isActiveNavPath(location.pathname, item.to)),
+    [recentNavPaths, vehicleCount, isForwardAuth, location.pathname],
   )
 
   useEffect(() => {
@@ -826,6 +838,33 @@ export default function Layout() {
       return next
     })
   }, [activeSectionTitle])
+
+  // Scroll the active sidebar link into view whenever the route changes.
+  // Runs on the next tick so the section-expansion effect above has a
+  // chance to mount the active link before we look it up. Honours
+  // `prefers-reduced-motion` and uses `block: 'nearest'` so the surrounding
+  // sections stay put when the active link is already visible.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const id = window.requestAnimationFrame(() => {
+      const sidebar = document.querySelector('[data-role="sidebar"]')
+      if (!sidebar) return
+      const active = sidebar.querySelector<HTMLElement>('a[aria-current="page"]')
+      if (!active) return
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      try {
+        active.scrollIntoView({
+          block: 'nearest',
+          inline: 'nearest',
+          behavior: reduced ? 'auto' : 'auto',
+        })
+      } catch {
+        // Older Safari can throw on scrollIntoViewOptions — fall back to bool form.
+        active.scrollIntoView(false)
+      }
+    })
+    return () => window.cancelAnimationFrame(id)
+  }, [location.pathname, expandedSections])
 
   useEffect(() => {
     try {
@@ -1069,23 +1108,19 @@ export default function Layout() {
           {activeNavEntry && (
             <div
               className={cn(
-                'rounded-2xl border border-[var(--glass-border)] px-3 py-2.5 ring-1',
+                'rounded-2xl border border-[var(--glass-border)] px-3 py-2 ring-1',
                 activeSectionStyle?.surface ?? 'bg-[rgba(var(--theme-primary-rgb),0.07)]',
                 activeSectionStyle?.ring ?? 'ring-[rgba(var(--theme-primary-rgb),0.18)]',
               )}
+              aria-label={t('nav.currentSection', 'Current')}
             >
-              <div className="flex items-start gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
-                    {t('nav.currentSection', 'Current')}
-                  </p>
-                  <p className="mt-1 truncate text-sm font-semibold text-[var(--text-primary)]">
-                    {navLabel(activeNavEntry.item.label)}
-                  </p>
-                  <p className="truncate text-[11px] text-[var(--text-muted)]">
-                    {activeNavEntry.section.title}
-                  </p>
-                </div>
+              <div className="flex items-center gap-2">
+                <p
+                  className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--text-primary)]"
+                  title={`${navLabel(activeNavEntry.item.label)} — ${activeNavEntry.section.title}`}
+                >
+                  {navLabel(activeNavEntry.item.label)}
+                </p>
                 {activeNavPath && (
                   <Button
                     type="button"
@@ -1095,7 +1130,7 @@ export default function Layout() {
                     aria-label={activeIsPinned ? t('nav.unpinCurrent', 'Remove current page from pinned') : t('nav.pinCurrent', 'Pin current page')}
                     onClick={() => activeIsPinned ? unpinNavPath(activeNavPath) : pinNavPath(activeNavPath)}
                     className={cn(
-                      'h-8 shrink-0 rounded-lg px-2 text-[11px] hover:bg-white/[0.08]',
+                      'h-7 shrink-0 rounded-lg px-2 text-[11px] hover:bg-white/[0.08]',
                       activeIsPinned ? 'text-amber-300' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                     )}
                   >

@@ -34,6 +34,11 @@ export {
 } from './cursorSync';
 export { ChartBrush, type ChartBrushProps } from './ChartBrush';
 export { ChartLegend, type ChartLegendProps, type ChartLegendToggleSource } from './ChartLegend';
+export {
+  MetricSwitcherChart,
+  type MetricSwitcherChartProps,
+  type MetricSwitcherMetric,
+} from './MetricSwitcherChart';
 export { useChartLegendState, type ChartLegendState } from './useChartLegendState';
 export {
   ChartHiddenSeriesContext,

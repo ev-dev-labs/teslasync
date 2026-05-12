@@ -20,17 +20,20 @@ import { PinButton } from '@/components/ui/PinButton';
 import { PrintButton } from '@/components/ui/PrintButton';
 import { useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 
-import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
 import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
-import { DataFreshnessAuto } from '@/components/data-display';
+import {
+  DataFreshnessAuto,
+  KpiOverviewCard,
+  MetricCard,
+} from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { fmtInt } from '@/lib/numberFormat';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
+import { InlineCallout } from '@/components/feedback/InlineCallout';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
-import { RadialGauge } from '@/components/charts/RadialGauge';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { SearchInput, FilterBar, ActiveFilterChips, RangePicker, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
@@ -42,6 +45,7 @@ import {
 import { useToast } from '@/components/feedback/Toast';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { CHART_COLORS } from '@/lib/colors';
+import { priorPeriod } from '@/lib/drivesAggregation';
 import {
   useAlerts, useMarkAlertRead, useAlertRules,
   useAcknowledgeAlert as useAcknowledgeAlertHook,
@@ -149,6 +153,30 @@ export default function AlertsListPage() {
   const warningCount = useMemo(() => alerts?.filter(a => a.severity === 'warning').length ?? 0, [alerts]);
   const readCount = useMemo(() => alerts?.filter(a => a.is_read === true).length ?? 0, [alerts]);
   const enabledRules = rules?.filter(r => r.enabled).length ?? 0;
+  const readRatePct = totalCount > 0 ? Math.round((readCount / totalCount) * 100) : null;
+
+  /* ── Prior-period stats for KPI deltas ──────────────────────── */
+  const prior = useMemo(() => priorPeriod(start, end), [start, end]);
+  const priorAlerts = useMemo(() => {
+    if (!rawAlerts?.length || !prior) return [];
+    const startMs = new Date(`${prior.start}T00:00:00`).getTime();
+    const endMs = new Date(`${prior.end}T23:59:59.999`).getTime();
+    return rawAlerts.filter((a) => {
+      if (!a.created_at) return false;
+      const t = new Date(a.created_at).getTime();
+      return t >= startMs && t <= endMs;
+    });
+  }, [rawAlerts, prior]);
+  const priorTotal = priorAlerts.length;
+  const priorUnread = useMemo(() => priorAlerts.filter(a => !a.is_read).length, [priorAlerts]);
+  const priorCritical = useMemo(() => priorAlerts.filter(a => a.severity === 'critical' && !a.is_read).length, [priorAlerts]);
+  const priorWarning = useMemo(() => priorAlerts.filter(a => a.severity === 'warning').length, [priorAlerts]);
+  const priorInfo = useMemo(() => priorAlerts.filter(a => (a.severity ?? 'info') === 'info').length, [priorAlerts]);
+  const priorRead = useMemo(() => priorAlerts.filter(a => a.is_read === true).length, [priorAlerts]);
+  const priorReadRatePct = priorTotal > 0 ? Math.round((priorRead / priorTotal) * 100) : null;
+  const priorHasData = priorTotal > 0;
+  const periodLabel = `${start} – ${end}`;
+  const priorLabel = prior ? `vs ${prior.start} – ${prior.end}` : undefined;
 
   const alertsByType = useMemo(() => {
     if (!alerts?.length) return [];
@@ -248,8 +276,6 @@ export default function AlertsListPage() {
           />
           <DataFreshnessAuto query={alertsQuery} />
           {quietActive && <Badge variant="info" size="sm">{t('Quiet hours')}</Badge>}
-          {unreadCount > 0 && <Badge variant="info" size="sm">{unreadCount} {t('unread')}</Badge>}
-          {criticalCount > 0 && <Badge variant="danger" size="sm">{criticalCount} {t('critical')}</Badge>}
           <div data-print-hide className="flex items-center gap-2">
             {/* Saved-view route key is intentionally pinned to '/alerts' so
                 pre-existing user-saved views from the legacy /alerts route
@@ -265,85 +291,129 @@ export default function AlertsListPage() {
       }
     >
       <FadeIn>
-        <GlassPanel className="p-3 sm:p-4">
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-center">
-            <div>
-              <span className="text-lg font-bold text-cyan-300"><AnimatedNumber value={totalCount} /></span>
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">{t('Total')}</span>
-            </div>
-            <div className="h-8 w-px bg-white/[0.06] hidden sm:block" />
-            <div>
-              <span className="text-lg font-bold text-amber-300"><AnimatedNumber value={weekAlertCount} /></span>
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">{t('This Week')}</span>
-            </div>
-            <div className="h-8 w-px bg-white/[0.06] hidden sm:block" />
-            <div>
-              <span className="text-lg font-bold text-purple-300"><AnimatedNumber value={unreadCount} /></span>
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">{t('Unread')}</span>
-            </div>
-            <div className="h-8 w-px bg-white/[0.06] hidden sm:block" />
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1 text-xs"><Icons.info className="h-3 w-3 text-cyan-300" /><span className="font-mono text-cyan-300">{infoCount}</span></span>
-              <span className="flex items-center gap-1 text-xs"><Icons.severityWarn className="h-3 w-3 text-amber-300" /><span className="font-mono text-amber-300">{warningCount}</span></span>
-              <span className="flex items-center gap-1 text-xs"><Icons.alertCircle className="h-3 w-3 text-rose-300" /><span className="font-mono text-rose-300">{criticalCount}</span></span>
-            </div>
-          </div>
-        </GlassPanel>
-      </FadeIn>
-
-      <FadeIn>
-        <GlassPanel className="p-4 sm:p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 items-center">
-            <RadialGauge value={totalCount} max={Math.max(totalCount, 20)} label={t('Total')} unit="" color="#00f0ff" />
-            <RadialGauge value={unreadCount} max={Math.max(totalCount, 1)} label={t('Unread')} unit="" color="#f59e0b" />
-            <RadialGauge value={criticalCount} max={Math.max(totalCount, 1)} label={t('Critical')} unit="" color="#ef4444" />
-            <div className="flex flex-col items-center text-center">
-              <div className="flex items-center gap-2">
-                <Icons.info className="h-4 w-4 text-neon-cyan" />
-                <span className="text-lg font-bold text-cyan-300"><AnimatedNumber value={infoCount} /></span>
-              </div>
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">{t('Info')}</span>
-            </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="flex items-center gap-2">
-                <Icons.severityWarn className="h-4 w-4 text-neon-amber" />
-                <span className="text-lg font-bold text-amber-300"><AnimatedNumber value={warningCount} /></span>
-              </div>
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">{t('Warnings')}</span>
-            </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="flex items-center gap-2">
-                <Icons.success className="h-4 w-4 text-neon-green" />
-                <span className="text-lg font-bold text-emerald-300"><AnimatedNumber value={readCount} /></span>
-              </div>
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">{t('Resolved')}</span>
-            </div>
-          </div>
-        </GlassPanel>
-      </FadeIn>
-
-      <FadeIn>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <a href="/notifications/studio">
-            <GlassPanel className="p-3 text-center cursor-pointer hover:border-neon-cyan/30 transition-colors">
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1 block">{t('Active Rules')}</span>
-              <span className="text-sm font-bold text-cyan-300">{enabledRules}/{rules?.length ?? 0}</span>
-              <span className="text-[9px] text-cyan-300 mt-1 block">→ {t('Alert Studio')}</span>
-            </GlassPanel>
-          </a>
-          <GlassPanel className="p-3 text-center">
-            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1 block">{t('Read Rate')}</span>
-            <span className="text-sm font-bold text-emerald-300">{totalCount > 0 ? `${fmtInt((readCount / totalCount) * 100)}%` : '—'}</span>
+        {totalCount > 0 || priorHasData ? (
+          <KpiOverviewCard
+            id="alerts-overview"
+            testId="alerts-overview"
+            header={{
+              title: t('alerts.overview', 'Overview'),
+              currentLabel: periodLabel,
+              comparisonLabel: priorLabel,
+            }}
+            kpis={
+              <>
+                <MetricCard
+                  label={t('Total')}
+                  value={fmtInt(totalCount)}
+                  color="cyan"
+                  delta={priorHasData ? {
+                    metric: { direction: 'neutral' },
+                    previous: priorTotal,
+                    current: totalCount,
+                    display: 'percent',
+                  } : undefined}
+                />
+                <MetricCard
+                  label={t('Critical')}
+                  value={fmtInt(criticalCount)}
+                  color="red"
+                  delta={priorHasData ? {
+                    metric: { direction: 'lower_better' },
+                    previous: priorCritical,
+                    current: criticalCount,
+                    display: 'percent',
+                  } : undefined}
+                />
+                <MetricCard
+                  label={t('Warnings')}
+                  value={fmtInt(warningCount)}
+                  color="amber"
+                  delta={priorHasData ? {
+                    metric: { direction: 'lower_better' },
+                    previous: priorWarning,
+                    current: warningCount,
+                    display: 'percent',
+                  } : undefined}
+                />
+                <MetricCard
+                  label={t('Info')}
+                  value={fmtInt(infoCount)}
+                  color="cyan"
+                  delta={priorHasData ? {
+                    metric: { direction: 'neutral' },
+                    previous: priorInfo,
+                    current: infoCount,
+                    display: 'percent',
+                  } : undefined}
+                />
+                <MetricCard
+                  label={t('Unread')}
+                  value={fmtInt(unreadCount)}
+                  color="purple"
+                  delta={priorHasData ? {
+                    metric: { direction: 'lower_better' },
+                    previous: priorUnread,
+                    current: unreadCount,
+                    display: 'percent',
+                  } : undefined}
+                />
+                <MetricCard
+                  label={t('alerts.readRate', 'Read rate')}
+                  value={readRatePct != null ? `${readRatePct}%` : '—'}
+                  color="green"
+                  delta={priorHasData && readRatePct != null && priorReadRatePct != null ? {
+                    metric: { direction: 'higher_better' },
+                    previous: priorReadRatePct,
+                    current: readRatePct,
+                    display: 'absolute',
+                  } : undefined}
+                />
+              </>
+            }
+            secondary={
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
+                <a href="/notifications/studio" className="hover:text-cyan-300 transition-colors">
+                  {t('Active Rules')} <span className="font-mono text-[var(--text-secondary)]">{enabledRules}/{rules?.length ?? 0}</span> →
+                </a>
+                <span aria-hidden>·</span>
+                <span>
+                  {t('Most Common')}: <span className="text-[var(--text-secondary)]">{alertsByType[0]?.name ?? '—'}</span>
+                </span>
+                <span aria-hidden>·</span>
+                <span>
+                  {t('Last 7 Days')}: <span className="font-mono text-[var(--text-secondary)]">{fmtInt(weekAlertCount)}</span>
+                </span>
+                {quietActive && (
+                  <>
+                    <span aria-hidden>·</span>
+                    <span className="text-amber-300">{t('Quiet hours active')}</span>
+                  </>
+                )}
+              </span>
+            }
+            footer={criticalCount > 0 ? (
+              <InlineCallout
+                variant="danger"
+                icon={<Icons.alertCircle className="h-4 w-4" />}
+                action={{
+                  label: t('alerts.viewCritical', 'View critical'),
+                  onClick: () => { setFilter('critical'); setAlertPage(1); },
+                }}
+              >
+                {t('alerts.criticalCallout', '{{count}} critical alert needs attention', { count: criticalCount })}
+              </InlineCallout>
+            ) : undefined}
+          />
+        ) : (
+          <GlassPanel className="p-6">
+            <EmptyState
+              /* no-action: transient empty state — surfaces when no alerts in the selected range */
+              icon={<Icons.notificationsMuted className="h-8 w-8" />}
+              title={t('No alerts')}
+              message={t('alerts.noAlertsInRange', 'No alerts in this range. Your fleet is running smoothly.')}
+            />
           </GlassPanel>
-          <GlassPanel className="p-3 text-center">
-            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1 block">{t('Most Common')}</span>
-            <span className="text-sm font-bold text-purple-300">{alertsByType[0]?.name ?? '—'}</span>
-          </GlassPanel>
-          <GlassPanel className="p-3 text-center">
-            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1 block">{t('Last 7 Days')}</span>
-            <span className="text-sm font-bold text-amber-300">{weekAlertCount}</span>
-          </GlassPanel>
-        </div>
+        )}
       </FadeIn>
 
       {totalCount > 0 && (
