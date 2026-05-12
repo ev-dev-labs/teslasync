@@ -175,7 +175,13 @@ export default function SystemStatusPage() {
     return Math.floor((now - new Date(lastSuccessfulBackup.completedAt).getTime()) / (24 * 60 * 60 * 1000))
   }, [lastSuccessfulBackup, now])
 
-  const components = health ? Object.entries(health.components) : []
+  // camelCaseKeys() in lib/resilience.ts adds both snake_case and camelCase
+  // aliases to every response. For component listings we only want the
+  // canonical snake_case keys; the camelCase aliases are pure duplicates
+  // that contain at least one uppercase letter.
+  const components = health
+    ? Object.entries(health.components).filter(([k]) => !/[A-Z]/.test(k))
+    : []
   const okCount = components.filter(([, c]) => c.status === 'ok' || c.status === 'healthy').length
   const totalCount = components.length
 
