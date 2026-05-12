@@ -11,6 +11,8 @@ import { EmptyState } from '@/components/feedback';
 import { VehicleTwin, VehiclePaintPicker } from '@/components/vehicles';
 import { VehicleSelect } from '@/components/forms';
 import { buildTwinState, parseWindowState } from '@/lib/vehicleState';
+import { deriveVehicleStatus } from '@/api/types';
+import type { VehicleStatus } from '@/api/types';
 import { Info, Car } from 'lucide-react';
 
 const REFRESH_INTERVAL = 5_000;
@@ -41,6 +43,21 @@ export default function DigitalTwinPage() {
     () => buildTwinState(securityData, vehicleState, chargingData),
     [securityData, vehicleState, chargingData],
   );
+
+  // Derive a single source-of-truth status for the badge. The previous
+  // logic only recognized the literal strings 'online' / 'asleep' from
+  // /vehicles/{id}/state and silently fell through to 'offline' for
+  // everything else — including the very common cases where the vehicle
+  // was actually driving or charging, or where the state endpoint had
+  // not yet hydrated but security/charging streams were already flowing.
+  const badgeStatus = useMemo<VehicleStatus>(() => {
+    if (twinState.isCharging) return 'charging';
+    if (twinState.isDriving) return 'driving';
+    const fromState = deriveVehicleStatus(vehicleState);
+    if (fromState !== 'offline') return fromState;
+    if (vehicleStateData?.live || securityData || chargingData) return 'online';
+    return 'offline';
+  }, [twinState.isCharging, twinState.isDriving, vehicleState, vehicleStateData?.live, securityData, chargingData]);
 
   const doorItems = useMemo(() => [
     { label: t('digitalTwin.doorDriverFront', 'Driver Front'), value: twinState.doors.driverFront === null ? '—' : twinState.doors.driverFront ? t('common.open', 'Open') : t('common.closed', 'Closed') },
@@ -148,9 +165,7 @@ export default function DigitalTwinPage() {
                 <KVList items={securityItems} columns={2} />
                 {vehicle && (
                   <div className="mt-3 pt-3 border-t border-[var(--border-subtle)]">
-                    <StatusBadge
-                      status={vehicleState?.is_charging ? 'charging' : vehicleState?.state === 'online' ? 'online' : vehicleState?.state === 'asleep' ? 'asleep' : 'offline'}
-                    />
+                    <StatusBadge status={badgeStatus} />
                   </div>
                 )}
               </GlassPanel>
