@@ -5,7 +5,6 @@ export { ServiceHealthSection } from './ServiceHealthSection';
 export { InfrastructureSection } from './InfrastructureSection';
 export { DataPipelineSection } from './DataPipelineSection';
 export { OperationsSection } from './OperationsSection';
-export { DiagnosticsSection } from './DiagnosticsSection';
 
 // Phase 2 additions
 export { AnomalyInlineRow } from './AnomalyInlineRow';

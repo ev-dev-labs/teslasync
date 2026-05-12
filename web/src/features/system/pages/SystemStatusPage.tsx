@@ -54,7 +54,6 @@ import { cn } from '@/lib/cn'
 import { formatUptime } from '../components/status/helpers'
 import {
   AccordionSection,
-  DiagnosticsSection,
   AnomalyInlineRow,
   BackgroundWorkersCard,
   BackupActionsCard,
@@ -368,7 +367,6 @@ export default function SystemStatusPage() {
     { id: 'backups', label: 'Backups' },
     { id: 'tesla-api', label: 'Tesla API' },
     { id: 'errors', label: 'Errors' },
-    { id: 'diagnostics', label: 'Diagnostics' },
     { id: 'system', label: 'System' },
     { id: 'uptime', label: 'Uptime' },
   ], [])
@@ -850,12 +848,7 @@ export default function SystemStatusPage() {
           </AccordionSection>
         </section>
 
-        {/* 14 ─ Diagnostics ───────────────────────────────────── */}
-        <section id="diagnostics">
-          <DiagnosticsSection />
-        </section>
-
-        {/* 15 ─ System info ────────────────────────────────────── */}
+        {/* 14 ─ System info ────────────────────────────────────── */}
         <section id="system">
           <AccordionSection
             icon={<Package className="h-5 w-5" />}
@@ -867,7 +860,7 @@ export default function SystemStatusPage() {
           </AccordionSection>
         </section>
 
-        {/* 16 ─ 30-day uptime heatmap ─────────────────────────── */}
+        {/* 15 ─ 30-day uptime heatmap ─────────────────────────── */}
         <section id="uptime">
           <UptimeHeatmap
             days={uptimeDays}
