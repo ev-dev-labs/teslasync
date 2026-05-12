@@ -155,6 +155,24 @@ export default function SystemStatusPage() {
     qc.invalidateQueries({ queryKey: ['system-status'] })
   }, [refetchHealth, qc])
 
+  // ── in-page scroll for Health rows (matches StickyChipBar logic) ─
+  // The app's primary scroll container is <main id="main-content">.
+  // window.scrollY is always 0 here, so we have to scroll that element
+  // directly. We use a fixed ~64px offset for the sticky chip bar.
+  const scrollToSection = useCallback((id: string) => {
+    const el = document.getElementById(id)
+    if (!el) return
+    const scrollEl = document.getElementById('main-content')
+    if (scrollEl) {
+      const elTop = el.getBoundingClientRect().top
+      const containerTop = scrollEl.getBoundingClientRect().top
+      const target = scrollEl.scrollTop + (elTop - containerTop) - 76
+      scrollEl.scrollTo({ top: target, behavior: 'smooth' })
+    } else {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [])
+
   // ── derived metrics ─────────────────────────────────────────────
   const teslaTokenWarn = useMemo(() => {
     if (!auth?.expires_at) return null
@@ -417,34 +435,35 @@ export default function SystemStatusPage() {
                 icon={<Server className="h-4 w-4" />}
                 label={t('Services')}
                 summary={servicesSummary}
-                to="/live-monitor"
+                onClick={() => scrollToSection('services')}
               />
               <HealthRow
                 status={dbStatus}
                 icon={<Database className="h-4 w-4" />}
                 label={t('Database')}
                 summary={databaseSummary}
-                to="/db-health"
+                onClick={() => scrollToSection('database')}
               />
               <HealthRow
                 status="healthy"
                 icon={<Activity className="h-4 w-4" />}
                 label={t('Telemetry')}
                 summary={telemetrySummary}
-                to="/admin/telemetry/coverage"
+                onClick={() => scrollToSection('telemetry')}
               />
               <HealthRow
                 status={notifStatus}
                 icon={<Bell className="h-4 w-4" />}
                 label={t('Notifications')}
                 summary={notificationsSummary}
-                to="/notifications"
+                onClick={() => scrollToSection('notifications')}
               />
               <HealthRow
                 status={workersStatus}
                 icon={<Boxes className="h-4 w-4" />}
                 label={t('Workers')}
                 summary={workersSummary}
+                onClick={() => scrollToSection('workers')}
               />
               <HealthRow
                 status={teslaAuthStatus}
