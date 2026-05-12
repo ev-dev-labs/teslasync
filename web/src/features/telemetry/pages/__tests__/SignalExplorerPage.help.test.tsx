@@ -16,12 +16,21 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import '../../../../i18n';
 
 import SignalExplorerPage from '../SignalExplorerPage';
 
 vi.mock('@/api/hooks/useTelemetry', () => ({
-  useSignals: () => ({ data: undefined, error: null, isLoading: false }),
+  useSignals: () => ({ data: ['battery_level', 'speed'], error: null, isLoading: false }),
+}));
+
+vi.mock('@/api/hooks/useVehicles', () => ({
+  useVehicles: () => ({
+    data: [{ id: 1, vin: '5YJ', display_name: 'Test', tesla_id: 1 }],
+    error: null,
+    isLoading: false,
+  }),
 }));
 
 vi.mock('@/hooks/useRealtimeEvents', () => ({
@@ -49,7 +58,9 @@ function renderPage() {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/telemetry/signal-explorer']}>
-        <SignalExplorerPage />
+        <SelectedVehicleProvider>
+          <SignalExplorerPage />
+        </SelectedVehicleProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
