@@ -1575,6 +1575,45 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				Get("/queues/{worker}/jobs", queueStatusHandler.ServeJobs)
 		})
 
+		// Phase-2 / Status API — operator-grade /api/v1/status/* endpoints.
+		// Stable contract for external integrations (Grafana, Uptime Kuma,
+		// Home Assistant, etc.). The SPA's System Status page also subscribes
+		// to /status/live (SSE) so it can drop polling. Inherits the parent
+		// /api/v1 ForwardAuth gate.
+		ver := opt.AppVersion
+		if ver == "" {
+			ver = "dev"
+		}
+		incidentsRepo := database.NewIncidentRepo(db)
+		incidentsHandler := NewIncidentsHandler(incidentsRepo)
+		statusV1 := NewStatusV1Handler(StatusV1Config{
+			Health:           health,
+			AppVersion:       ver,
+			MaintenanceState: maintenanceProvider,
+			IncidentStore:    incidentsHandler,
+			StartedAt:        startTime,
+		})
+		r.Route("/status", func(r chi.Router) {
+			r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/", statusV1.Overall)
+			r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/components", statusV1.Components)
+			r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/resources", statusV1.Resources)
+			r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/uptime", statusV1.Uptime)
+			// SSE endpoint — no per-IP rate limit because it's a long-lived
+			// connection. The connection itself acts as the throttle.
+			r.Get("/live", statusV1.Live)
+			// Incidents CRUD + timeline append.
+			r.Route("/incidents", func(r chi.Router) {
+				r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/", incidentsHandler.List)
+				r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/", incidentsHandler.Create)
+				r.Route("/{id}", func(r chi.Router) {
+					r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/", incidentsHandler.Get)
+					r.With(httprate.LimitByIP(60, 1*time.Minute)).Patch("/", incidentsHandler.Patch)
+					r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/updates", incidentsHandler.AppendUpdate)
+					r.With(httprate.LimitByIP(30, 1*time.Minute)).Delete("/", incidentsHandler.Delete)
+				})
+			})
+		})
+
 		// Per-user activity feed (Phase-40 / Prompt 49 — Recent Activity Discoverability).
 		// Returns the requesting caller's audit_logs entries scoped by the
 		// configured ForwardAuth header value. Sibling to /system/audit, which

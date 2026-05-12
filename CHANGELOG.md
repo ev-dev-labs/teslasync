@@ -56,19 +56,30 @@ Migration guide for external consumers:
 - **Background workers enriched card** — Replaces the bare worker rollup with an instance-aware view so operators running multiple replicas can immediately tell which instance is healthy and which isn't. Groups rows by worker `name`, shows per-instance host (e.g. `nw-1:8081`), latency, status chip, and inline error message when a probe fails. Top-line shows two-axis count ("2 of 3 types healthy · 4 of 6 instances healthy") plus a "Replicated" indicator. When no group has multiple instances yet, a callout explains how to enable horizontal scaling via `NOTIFICATION_WORKER_HOSTS` / `EXPORT_WORKER_HOSTS` / `AUTOMATION_WORKER_HOSTS` (comma-separated). Backend `WorkersHealthHandler` extended to honour the plural `*_HOSTS` env vars (and a comma-separated value in the singular `*_HOST` for forward compatibility); each replica is probed independently and emitted as its own row sharing the worker name. Backward-compatible: single-host deployments behave exactly as before
 - **Diagnostics section removed** — The legacy `<DiagnosticsSection>` (API usage gauge + bar chart + worker health card grid) duplicated content already shown by the new `<TeslaApiUsageCard>` (Tesla API accordion) and `<BackgroundWorkersCard>` (Workers accordion). Deleted the section, the chip-bar entry, and the unused component file. The deeper API-spend visualisation (radial budget gauge, requests-vs-skipped bar) lives on the dedicated API logs and dev-tools pages
 
-The following Phase 2 spec items were deliberately deferred because the
-backend doesn't yet expose the data they require:
-- **Incident lifecycle / post-mortem timelines** — would require new
-  CRUD endpoints; calling currently-unhealthy components "incidents"
-  would be misleading.
-- **SLO tracking with per-window % uptime** — `/system/health` is a
-  single snapshot; daily/weekly/monthly % can't be derived from one
-  point.
-- **Public Status API (`/api/v1/status/...`) + docs page** — no backend
-  routes yet; the existing `/system/health` and `/system/version`
-  cover most operator integration needs in the meantime.
-- **Keyboard shortcuts (R/?/J/K)** — high collision risk with form
-  inputs and modals; revisit when there's a global command palette.
+#### System Status — Phase 2 follow-up (previously deferred items now shipped)
+- **Public Status API v1** — New `/api/v1/status/*` route group exposes a stable JSON contract for operator integrations (Grafana, Uptime Kuma, Home Assistant, etc.):
+  - `GET /api/v1/status` — full snapshot (status, components, resources, maintenance, active incidents, counts)
+  - `GET /api/v1/status/components` — health components only
+  - `GET /api/v1/status/resources` — runtime memory / goroutines / DB pool / uptime
+  - `GET /api/v1/status/uptime?window=24h|7d|30d|90d|1y` — % uptime per window with `historical_source` disclosure
+  - `GET /api/v1/status/incidents?active=true` — list (with `count` envelope)
+  - `GET /api/v1/status/live` — Server-Sent Events stream pushing `event: status` snapshots every 30 s plus `event: heartbeat` keepalives every 25 s
+  - Reads rate-limited at 120 req/min; writes (incidents) at 30–60 req/min; SSE unrate-limited
+- **Status API docs page** — New `/docs/status-api` static reference describes every endpoint, payload schema, status enum, severity enum, and a worked SSE consumer example
+- **SSE live-status pill** — Replaces 30 s polling with a server push consumer (`useStatusLiveSSE` hook with exponential backoff 1 s → 30 s cap, visibility-aware resume); a `<LiveStatusPill>` in the page actions slot shows 🟢 Live / 🟡 Reconnecting / ⚪ Offline plus a relative "updated 12 s ago" timestamp; manual `Reconnect` button forces a re-attempt
+- **Incident lifecycle (manual logging)** — New `status_incidents` table (migration 000198) with full CRUD via `/api/v1/status/incidents`:
+  - States: investigating → identified → monitoring → resolved
+  - Severity: minor / major / critical
+  - Inline `updates` JSONB array (timestamp · status snapshot · message · author) so timelines render in a single query
+  - `auto_dedupe_key` UNIQUE column reserved for future health-monitor auto-detection
+  - HTTP author resolution from `X-Forwarded-User` / `Remote-User` headers, falls back to `"operator"`
+- **`<IncidentsCard>`** — Slot above the chip bar, renders nothing when no active incidents, otherwise lists each with severity badge, status chip, started-at relative time, top-most update message preview, and a "Log incident" CTA opening `<IncidentForm>` (manual creation modal: title / severity / status / affected components / initial message)
+- **`<IncidentTimelinePage>`** — Permalink page at `/system-status/incidents/:id` showing full lifecycle timeline, append-update form (with optional status change), resolve action with `<ConfirmDialog>`, and back-link to status page
+- **`<ScheduledMaintenanceCard>`** — Operator-initiated maintenance windows via existing `/admin/system-mode` endpoint; supports `until` schedule, custom message, "Activate now" toggle, "Schedule update", and "Clear maintenance" actions; renders 24 h pre-banner ("Maintenance scheduled in 18 h") that bumps to amber when within the window
+- **`<SubscribeCard>`** — Discoverability tile linking to existing notification channels (`/settings/notifications` for email / push / Discord / Slack / webhook); intentionally a pure router rather than duplicating the channel CRUD
+- **`<SLOTrackingCard>`** — Multi-window uptime % visualisation (24 h / 7 d / 30 d / 90 d / 1 y) with personal target line (default 99 %, persisted in `localStorage` as `teslasync.status.slo.target`); calls `/api/v1/status/uptime?window=...` and surfaces healthy-vs-total component count alongside the percentage; tone toggles green/amber/red against the operator's own target
+- **R-key keyboard shortcut** — Pressing `R` (when not in an input/textarea) refreshes the page; documented in actions slot tooltip; safe-by-default — no other shortcuts wired to avoid collision risk
+
 
 #### Materialized Views & Fast Analytics
 - **3 materialized views** — `mv_energy_daily`, `mv_position_hourly`, `mv_signal_stats` for sub-second dashboard and analytics queries

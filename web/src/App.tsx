@@ -145,6 +145,8 @@ const FleetTelemetryCoverage = lazy(() => import('./features/admin/pages/FleetTe
 
 // System & Ops
 const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
+const IncidentTimeline = lazy(() => import('./features/system/pages/IncidentTimelinePage'))
+const StatusApiDocs = lazy(() => import('./features/system/pages/StatusApiDocsPage'))
 const DataExport = lazy(() => import('./features/system/pages/DataExportPage'))
 const ExportsPage = lazy(() => import('./features/exports/pages/ExportsPage'))
 const DataRepair = lazy(() => import('./features/system/pages/DataRepairPage'))
@@ -354,6 +356,8 @@ export default function App() {
         <Route path="statistics" element={<SafeRoute name="Statistics"><Statistics /></SafeRoute>} />
         <Route path="lifetime-stats" element={<SafeRoute name="LifetimeStats"><LifetimeStats /></SafeRoute>} />
         <Route path="system-status" element={<SafeRoute name="SystemStatus"><SystemStatus /></SafeRoute>} />
+        <Route path="system-status/incidents/:id" element={<SafeRoute name="IncidentTimeline"><IncidentTimeline /></SafeRoute>} />
+        <Route path="docs/status-api" element={<SafeRoute name="StatusApiDocs"><StatusApiDocs /></SafeRoute>} />
         <Route path="roadmap" element={<SafeRoute name="Roadmap"><Roadmap /></SafeRoute>} />
         <Route path="api-keys" element={<SafeRoute name="APIKeys"><APIKeysPage /></SafeRoute>} />
         <Route path="changelog" element={<SafeRoute name="Changelog"><Changelog /></SafeRoute>} />

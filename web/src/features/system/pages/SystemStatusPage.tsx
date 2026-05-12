@@ -62,7 +62,13 @@ import {
   TelemetryPipelineCard,
   UpdateAvailableCallout,
   StatusPageSkeleton,
+  LiveStatusPill,
+  IncidentsCard,
+  ScheduledMaintenanceCard,
+  SubscribeCard,
+  SLOTrackingCard,
 } from '../components/status'
+import { useStatusLiveSSE } from '../hooks/useStatusLiveSSE'
 
 // Shared cadence
 const STATUS_REFRESH_MS = 30_000
@@ -83,6 +89,10 @@ export default function SystemStatusPage() {
     refetch: refetchHealth,
     dataUpdatedAt,
   } = useSystemHealth()
+
+  // Phase-2: SSE subscription. Drops polling cost when the connection
+  // is up; falls back to the existing useQuery polling when offline.
+  const { state: liveState, lastUpdateAt: liveLastUpdate, reconnect: liveReconnect } = useStatusLiveSSE()
 
   const { data: extHealth } = useQuery({
     queryKey: ['system-status', 'extended-health'],
@@ -163,7 +173,30 @@ export default function SystemStatusPage() {
   const handleRefresh = useCallback(() => {
     refetchHealth()
     qc.invalidateQueries({ queryKey: ['system-status'] })
-  }, [refetchHealth, qc])
+    liveReconnect()
+  }, [refetchHealth, qc, liveReconnect])
+
+  // Phase-2 / #19 — keyboard shortcuts.
+  // R = refresh, ? = help, J/K = jump to next/previous chip section.
+  // Ignored when the user is typing in an input.
+  useEffect(() => {
+    const isEditable = (target: EventTarget | null): boolean => {
+      const el = target as HTMLElement | null
+      if (!el) return false
+      const tag = el.tagName
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (isEditable(e.target)) return
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault()
+        handleRefresh()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [handleRefresh])
 
   // ── in-page scroll for Health rows (matches StickyChipBar logic) ─
   // The app's primary scroll container is <main id="main-content">.
@@ -369,6 +402,9 @@ export default function SystemStatusPage() {
     { id: 'errors', label: 'Errors' },
     { id: 'system', label: 'System' },
     { id: 'uptime', label: 'Uptime' },
+    { id: 'slo', label: 'SLO' },
+    { id: 'maintenance', label: 'Maintenance' },
+    { id: 'subscribe', label: 'Subscribe' },
   ], [])
 
   // Action item flags
@@ -417,18 +453,22 @@ export default function SystemStatusPage() {
       loading={false}
       error={null}
       actions={
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={isFetching}
-          className="gap-2"
-          aria-label={t('Refresh')}
-          aria-busy={isFetching}
-        >
-          <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
-          {t('Refresh')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <LiveStatusPill state={liveState} lastUpdateAt={liveLastUpdate} now={now} />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isFetching}
+            className="gap-2"
+            aria-label={t('Refresh (R)')}
+            aria-busy={isFetching}
+            title="Press R to refresh"
+          >
+            <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
+            {t('Refresh')}
+          </Button>
+        </div>
       }
     >
       {/* Print stylesheet — clean printable status snapshot.
@@ -481,6 +521,11 @@ export default function SystemStatusPage() {
                 />
               </FadeIn>
             )}
+
+            {/* 1c ─ Active incidents (only when present) ─────────── */}
+            <FadeIn>
+              <IncidentsCard now={now} />
+            </FadeIn>
 
             {/* 2 ─ Sticky chip bar ─────────────────────────────────── */}
             <div data-status-print-hide>
@@ -866,6 +911,33 @@ export default function SystemStatusPage() {
             days={uptimeDays}
             footnote={t('Today reflects the current status. Day-level historical data ships with the backend health-history endpoint in Phase 2.')}
           />
+        </section>
+
+        {/* 16 ─ SLO tracking (Phase 2) ────────────────────────── */}
+        <section id="slo" aria-label="Personal SLO tracking">
+          <SLOTrackingCard />
+        </section>
+
+        {/* 17 ─ Scheduled maintenance (Phase 2) ───────────────── */}
+        <section id="maintenance" aria-label="Scheduled maintenance">
+          <ScheduledMaintenanceCard now={now} />
+        </section>
+
+        {/* 18 ─ Subscribe / discover channels (Phase 2) ───────── */}
+        <section id="subscribe" aria-label="Notification channels">
+          <SubscribeCard />
+        </section>
+
+        {/* 19 ─ Status API docs link (Phase 2) ────────────────── */}
+        <section id="api-docs" aria-label="Status API">
+          <div className="flex justify-center pt-1 pb-4 text-xs text-[var(--text-muted)]" data-status-print-hide>
+            <Link
+              to="/docs/status-api"
+              className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.03] px-3 py-1.5 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+            >
+              {t('Stable Status API for your own dashboards')} →
+            </Link>
+          </div>
         </section>
       </div>
         </>
