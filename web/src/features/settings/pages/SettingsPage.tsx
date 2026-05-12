@@ -12,11 +12,10 @@ import { useToast } from '@/components/feedback/Toast'
 import { EditConflictBanner } from '@/components/feedback'
 import { useEditLease } from '@/hooks/useEditLease'
 import { cn } from '@/lib/cn'
-import { Zap, ExternalLink, Download, PlayCircle, Rocket, Shield, Flag, Globe, ShoppingCart } from 'lucide-react'
+import { Zap, ExternalLink, Download, PlayCircle, Rocket, Shield, Flag, Globe, ShoppingCart, Fuel } from 'lucide-react'
 
 import {
   GeneralSettings,
-  GasPriceSettings,
   AppearanceSettings,
   AdvancedSettings,
   SettingsSearch,
@@ -92,21 +91,22 @@ export default function SettingsPage() {
         resourceLabel={t('editConflict.resource.settings', 'Your settings')}
       />
 
-      {/* Tesla integration sections (Tesla Account, Feature Flags, Region & API,
-          Active Orders) were promoted from inline panels to first-class pages
-          under the Integrations side-nav group. We keep a discoverability
-          card here so longtime users can still find them from /settings. */}
+      {/* Tesla + EIA integration sections (Tesla Account, Feature Flags,
+          Region & API, Active Orders, Gas Price Auto-Poll) were promoted
+          from inline panels to first-class pages under the Integrations
+          side-nav group. We keep a discoverability card here so longtime
+          users can still find them from /settings. */}
       <section id="tesla-account">
         <FadeIn delay={0.04}>
           <GlassPanel className="p-5 space-y-3">
             <div className="flex items-center gap-3">
               <IconBox color="blue"><Shield className="h-5 w-5" /></IconBox>
               <div className="flex-1 min-w-0">
-                <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('moved.tesla.title', 'Tesla integration moved')}</h2>
-                <p className="text-xs text-[var(--text-muted)]">{t('moved.tesla.body', 'Tesla account, feature flags, region, and active orders each have their own page now.')}</p>
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('moved.integrations.title', 'Integrations moved')}</h2>
+                <p className="text-xs text-[var(--text-muted)]">{t('moved.integrations.body', 'Tesla account, feature flags, region, active orders, and gas-price auto-poll each have their own page now.')}</p>
               </div>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
               <Link
                 to="/tesla-account"
                 className="flex items-center gap-2 rounded-lg border border-[var(--glass-border)] bg-white/[0.02] px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
@@ -137,6 +137,14 @@ export default function SettingsPage() {
               >
                 <ShoppingCart className="h-4 w-4 shrink-0 text-teal-300" />
                 <span className="truncate">{t('moved.tesla.orders', 'Active orders')}</span>
+                <ExternalLink className="ml-auto h-3 w-3 shrink-0 text-[var(--text-muted)]" />
+              </Link>
+              <Link
+                to="/gas-price"
+                className="flex items-center gap-2 rounded-lg border border-[var(--glass-border)] bg-white/[0.02] px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+              >
+                <Fuel className="h-4 w-4 shrink-0 text-orange-300" />
+                <span className="truncate">{t('moved.gas.title', 'Gas price auto-poll')}</span>
                 <ExternalLink className="ml-auto h-3 w-3 shrink-0 text-[var(--text-muted)]" />
               </Link>
             </div>
@@ -171,9 +179,6 @@ export default function SettingsPage() {
 
       <section id="general">
         <GeneralSettings />
-      </section>
-      <section id="gas-price">
-        <GasPriceSettings />
       </section>
       <section id="notifications">
         <FadeIn delay={0.06}>

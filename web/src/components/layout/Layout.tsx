@@ -187,6 +187,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/tesla-features': ['feature flags', 'tesla features', 'feature config', 'flags'],
   '/tesla-region': ['region', 'tesla region', 'fleet api endpoint', 'api region'],
   '/tesla-orders': ['orders', 'tesla orders', 'active orders', 'delivery', 'vehicle delivery'],
+  '/gas-price': ['gas price', 'fuel', 'eia', 'gasoline', 'auto poll', 'comparison'],
   '/settings': ['settings', 'preferences', 'configuration'],
   '/api-keys': ['keys', 'tokens', 'api key'],
   '/admin': ['admin', 'administration'],
@@ -407,6 +408,7 @@ export const navSections = [
       { to: '/tesla-features', icon: Icons.flag, label: 'Feature Flags', color: 'text-purple-400' },
       { to: '/tesla-region', icon: Icons.globe, label: 'Region & API', color: 'text-emerald-400' },
       { to: '/tesla-orders', icon: Icons.shoppingCart, label: 'Active Orders', color: 'text-teal-400' },
+      { to: '/gas-price', icon: Icons.fuel, label: 'Gas Price Auto-Poll', color: 'text-orange-400' },
     ],
   },
   {

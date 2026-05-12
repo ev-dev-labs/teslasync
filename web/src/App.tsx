@@ -134,6 +134,7 @@ const FleetAPI = lazy(() => import('./features/admin/pages/FleetAPIPage'))
 const TeslaFeatureFlags = lazy(() => import('./features/admin/pages/TeslaFeatureFlagsPage'))
 const TeslaRegion = lazy(() => import('./features/admin/pages/TeslaRegionPage'))
 const TeslaOrders = lazy(() => import('./features/admin/pages/TeslaOrdersPage'))
+const GasPriceAutoPoll = lazy(() => import('./features/admin/pages/GasPriceAutoPollPage'))
 const SecurityAccess = lazy(() => import('./features/admin/pages/SecurityAccessPage'))
 const BackupRestore = lazy(() => import('./features/admin/pages/BackupRestorePage'))
 const ApiPlayground = lazy(() => import('./features/admin/pages/ApiPlaygroundPage'))
@@ -355,6 +356,7 @@ export default function App() {
         <Route path="tesla-features" element={<SafeRoute name="TeslaFeatureFlags"><TeslaFeatureFlags /></SafeRoute>} />
         <Route path="tesla-region" element={<SafeRoute name="TeslaRegion"><TeslaRegion /></SafeRoute>} />
         <Route path="tesla-orders" element={<SafeRoute name="TeslaOrders"><TeslaOrders /></SafeRoute>} />
+        <Route path="gas-price" element={<SafeRoute name="GasPriceAutoPoll"><GasPriceAutoPoll /></SafeRoute>} />
         <Route path="dev-tools" element={<SafeRoute name="DevTools"><DevTools /></SafeRoute>} />
         <Route path="api-playground" element={<SafeRoute name="ApiPlayground"><ApiPlayground /></SafeRoute>} />
         <Route path="redis-signals" element={<SafeRoute name="RedisSignalViewer"><RedisSignalViewer /></SafeRoute>} />

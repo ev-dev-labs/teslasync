@@ -213,7 +213,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Gas price auto-poll ─────────────────────────────────────────
     {
       id: 'gas-price.auto-poll',
-      href: '/settings#gas-price',
+      href: '/gas-price',
       section: 'gas-price',
       title: t('search.entries.gasPrice.title', 'Gas price auto-poll'),
       description: t('search.entries.gasPrice.desc', 'Automatically fetch US average gas prices from EIA.'),

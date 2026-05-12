@@ -90,6 +90,7 @@ import {
   Flag,
   Flame,
   FolderOpen,
+  Fuel,
   Gamepad2,
   Gauge,
   GaugeCircle,
@@ -264,6 +265,7 @@ export const Icons = {
   signpost: Signpost,
   fence: Fence,
   flag: Flag,
+  fuel: Fuel,
   satellite: Satellite,
   radar: Radar,
 
