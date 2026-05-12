@@ -131,6 +131,9 @@ const DevTools = lazy(() => import('./features/admin/pages/DevToolsPage'))
 const APIKeysPage = lazy(() => import('./features/admin/pages/APIKeysPage'))
 const ApiLogs = lazy(() => import('./features/admin/pages/ApiLogsPage'))
 const FleetAPI = lazy(() => import('./features/admin/pages/FleetAPIPage'))
+const TeslaFeatureFlags = lazy(() => import('./features/admin/pages/TeslaFeatureFlagsPage'))
+const TeslaRegion = lazy(() => import('./features/admin/pages/TeslaRegionPage'))
+const TeslaOrders = lazy(() => import('./features/admin/pages/TeslaOrdersPage'))
 const SecurityAccess = lazy(() => import('./features/admin/pages/SecurityAccessPage'))
 const BackupRestore = lazy(() => import('./features/admin/pages/BackupRestorePage'))
 const ApiPlayground = lazy(() => import('./features/admin/pages/ApiPlaygroundPage'))
@@ -349,6 +352,9 @@ export default function App() {
         <Route path="admin/telemetry/coverage" element={<SafeRoute name="FleetTelemetryCoverage"><FleetTelemetryCoverage /></SafeRoute>} />
         <Route path="api-logs" element={<SafeRoute name="ApiLogs"><ApiLogs /></SafeRoute>} />
         <Route path="fleet-api" element={<SafeRoute name="FleetAPI"><FleetAPI /></SafeRoute>} />
+        <Route path="tesla-features" element={<SafeRoute name="TeslaFeatureFlags"><TeslaFeatureFlags /></SafeRoute>} />
+        <Route path="tesla-region" element={<SafeRoute name="TeslaRegion"><TeslaRegion /></SafeRoute>} />
+        <Route path="tesla-orders" element={<SafeRoute name="TeslaOrders"><TeslaOrders /></SafeRoute>} />
         <Route path="dev-tools" element={<SafeRoute name="DevTools"><DevTools /></SafeRoute>} />
         <Route path="api-playground" element={<SafeRoute name="ApiPlayground"><ApiPlayground /></SafeRoute>} />
         <Route path="redis-signals" element={<SafeRoute name="RedisSignalViewer"><RedisSignalViewer /></SafeRoute>} />

@@ -43,7 +43,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Tesla account ───────────────────────────────────────────────
     {
       id: 'tesla.connect',
-      href: '/settings#tesla-account',
+      href: '/tesla-account',
       section: 'tesla',
       title: t('search.entries.tesla.connect.title', 'Connect Tesla account'),
       description: t('search.entries.tesla.connect.desc', 'Authorize TeslaSync to access your Tesla account.'),
@@ -51,7 +51,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'tesla.refresh-token',
-      href: '/settings#tesla-account',
+      href: '/tesla-account',
       section: 'tesla',
       title: t('search.entries.tesla.refreshToken.title', 'Tesla refresh token'),
       description: t('search.entries.tesla.refreshToken.desc', 'Manually refresh the cached Tesla OAuth token.'),
@@ -59,7 +59,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'tesla.disconnect',
-      href: '/settings#tesla-account',
+      href: '/tesla-account',
       section: 'tesla',
       title: t('search.entries.tesla.disconnect.title', 'Disconnect Tesla account'),
       description: t('search.entries.tesla.disconnect.desc', 'Sign out and remove the cached OAuth token.'),
@@ -67,7 +67,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'tesla.sync-vehicles',
-      href: '/settings#tesla-account',
+      href: '/tesla-account',
       section: 'tesla',
       title: t('search.entries.tesla.syncVehicles.title', 'Sync vehicles from Tesla'),
       description: t('search.entries.tesla.syncVehicles.desc', 'Pull the current vehicle list from the Tesla Fleet API.'),
@@ -77,7 +77,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Region & API ────────────────────────────────────────────────
     {
       id: 'region.fleet-api',
-      href: '/settings#region',
+      href: '/tesla-region',
       section: 'region',
       title: t('search.entries.region.title', 'Region & Fleet API endpoint'),
       description: t('search.entries.region.desc', 'Tesla account region and the resolved Fleet API base URL.'),
@@ -87,7 +87,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Feature flags ───────────────────────────────────────────────
     {
       id: 'features.flags',
-      href: '/settings#features',
+      href: '/tesla-features',
       section: 'features',
       title: t('search.entries.features.title', 'Feature flags'),
       description: t('search.entries.features.desc', 'Tesla account feature configuration synced from the Fleet API.'),
@@ -97,7 +97,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Active orders ───────────────────────────────────────────────
     {
       id: 'orders.active',
-      href: '/settings#orders',
+      href: '/tesla-orders',
       section: 'orders',
       title: t('search.entries.orders.title', 'Active orders'),
       description: t('search.entries.orders.desc', 'Vehicle orders and delivery tracking from Tesla.'),

@@ -184,6 +184,9 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/system-status': ['system', 'status', 'health'],
   '/api-logs': ['api logs', 'requests', 'debug'],
   '/fleet-api': ['fleet api', 'tesla api'],
+  '/tesla-features': ['feature flags', 'tesla features', 'feature config', 'flags'],
+  '/tesla-region': ['region', 'tesla region', 'fleet api endpoint', 'api region'],
+  '/tesla-orders': ['orders', 'tesla orders', 'active orders', 'delivery', 'vehicle delivery'],
   '/settings': ['settings', 'preferences', 'configuration'],
   '/api-keys': ['keys', 'tokens', 'api key'],
   '/admin': ['admin', 'administration'],
@@ -401,6 +404,9 @@ export const navSections = [
     items: [
       { to: '/tesla-account', icon: Icons.user, label: 'Tesla Account', color: 'text-blue-400' },
       { to: '/fleet-api', icon: Icons.cloud, label: 'Fleet API', color: 'text-sky-400' },
+      { to: '/tesla-features', icon: Icons.flag, label: 'Feature Flags', color: 'text-purple-400' },
+      { to: '/tesla-region', icon: Icons.globe, label: 'Region & API', color: 'text-emerald-400' },
+      { to: '/tesla-orders', icon: Icons.shoppingCart, label: 'Active Orders', color: 'text-teal-400' },
     ],
   },
   {
