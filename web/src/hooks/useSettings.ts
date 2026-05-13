@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getSettings } from '@/api/settings'
 import type { AppSettings } from '@/api/types'
 import { setGlobalPrecision, setGlobalLocale } from '../lib/numberFormat'
+import { resolveLocale } from '../lib/locale'
 import { subscribe } from '../lib/broadcast'
 import { TOPICS } from '../lib/broadcastTopics'
 
@@ -68,9 +69,17 @@ export function useSettings() {
     retry: 1,
   })
 
-  const s = settings ?? defaults
+  const raw = settings ?? defaults
+  // Backend may return `locale: ''` when the column has never been
+  // written. `??` does NOT catch empty strings, so any consumer that
+  // does `settings.locale ?? 'en-US'` (or passes it directly to
+  // `Intl.NumberFormat`) would break. Normalise once, here, so every
+  // downstream consumer sees a valid BCP-47 tag.
+  const s: AppSettings = raw.locale && raw.locale.trim().length > 0
+    ? raw
+    : { ...raw, locale: defaults.locale }
   const decimals = s.decimal_precision ?? 2
-  const locale = s.locale ?? 'en-US'
+  const locale = resolveLocale(s.locale)
   const density: 'compact' | 'comfortable' | 'spacious' =
     s.ui_density === 'compact' || s.ui_density === 'spacious' ? s.ui_density : 'comfortable'
 

@@ -42,7 +42,12 @@ function intlOpts(base: Intl.DateTimeFormatOptions, opts?: FormatOptions): Intl.
 }
 
 function intlLocale(opts?: FormatOptions): string | undefined {
-  return opts?.locale
+  const raw = opts?.locale
+  // Empty / whitespace-only strings would throw RangeError if handed to
+  // `Intl.*`. Treat them as "no override" so the runtime falls back to
+  // the browser's default locale.
+  if (typeof raw === 'string' && raw.trim().length > 0) return raw
+  return undefined
 }
 
 /** Full date + time: "Apr 4, 2026, 2:30 AM" */
@@ -149,10 +154,14 @@ export function formatRelativeDays(
 const FORMATTER_CACHE = new Map<string, Intl.DateTimeFormat>()
 
 function getFormatter(opts: Intl.DateTimeFormatOptions, locale?: string): Intl.DateTimeFormat {
-  const key = `${locale ?? ''}|${JSON.stringify(opts)}`
+  // Empty / whitespace-only locale strings would throw `RangeError: Invalid
+  // language tag: ` if passed to `Intl.DateTimeFormat`. Coerce to undefined
+  // so the runtime falls back to the host default.
+  const safeLocale = typeof locale === 'string' && locale.trim().length > 0 ? locale : undefined
+  const key = `${safeLocale ?? ''}|${JSON.stringify(opts)}`
   let fmt = FORMATTER_CACHE.get(key)
   if (!fmt) {
-    fmt = new Intl.DateTimeFormat(locale ?? undefined, opts)
+    fmt = new Intl.DateTimeFormat(safeLocale, opts)
     FORMATTER_CACHE.set(key, fmt)
   }
   return fmt

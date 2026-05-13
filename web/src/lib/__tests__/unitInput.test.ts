@@ -211,6 +211,22 @@ describe('formatForUnit', () => {
     expect(formatForUnit(3.14159, 'energy', s({ decimal_precision: 0 }))).toBe('3')
   })
 
+  it('does NOT throw when settings.locale is empty / whitespace (regression: SmartCharge crash)', () => {
+    // The settings API can return locale: '' when the column is unset.
+    // `??` does not catch empty strings, so prior to the fix this would
+    // call `new Intl.NumberFormat('')` and throw `RangeError: Invalid
+    // language tag: `, blowing up the SmartCharge page on mount.
+    expect(() => formatForUnit(75, 'energy', s({ locale: '', decimal_precision: 1 }))).not.toThrow()
+    expect(formatForUnit(75, 'energy', s({ locale: '', decimal_precision: 1 }))).toBe('75')
+    expect(() => formatForUnit(75, 'energy', s({ locale: '   ', decimal_precision: 1 }))).not.toThrow()
+    expect(formatForUnit(75, 'energy', s({ locale: '   ', decimal_precision: 1 }))).toBe('75')
+  })
+
+  it('parseForUnit also tolerates empty / whitespace locale', () => {
+    expect(() => parseForUnit('1234.5', 'energy', s({ locale: '' }))).not.toThrow()
+    expect(parseForUnit('1234.5', 'energy', s({ locale: '' }))).toBe(1234.5)
+  })
+
   it('round-trips parse → format for canonical-equivalent values', () => {
     const settings = s({ unit_of_length: 'km', decimal_precision: 2 })
     const parsed = parseForUnit('100', 'speed', settings)
