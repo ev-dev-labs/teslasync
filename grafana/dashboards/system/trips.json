@@ -137,58 +137,6 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
-      },
-      {
-        "current": {
-          "text": "mi",
-          "value": "mi",
-          "selected": true
-        },
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "name": "unit_length",
-        "label": "Distance",
-        "options": [
-          {
-            "text": "km",
-            "value": "km",
-            "selected": false
-          },
-          {
-            "text": "mi",
-            "value": "mi",
-            "selected": true
-          }
-        ],
-        "query": "km,mi",
-        "type": "custom"
-      },
-      {
-        "current": {
-          "text": "C",
-          "value": "C",
-          "selected": true
-        },
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "name": "unit_temp",
-        "label": "Temperature",
-        "options": [
-          {
-            "text": "C",
-            "value": "C",
-            "selected": true
-          },
-          {
-            "text": "F",
-            "value": "F",
-            "selected": false
-          }
-        ],
-        "query": "C,F",
-        "type": "custom"
       }
     ]
   },

@@ -533,7 +533,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  convert_speed(COALESCE(float_value, int_value::float8)) AS \"Speed\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'VehicleSpeed'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  convert_speed_mps(COALESCE(float_value, int_value::float8)) AS \"Speed\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'VehicleSpeed'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -695,58 +695,6 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
-      },
-      {
-        "current": {
-          "text": "mi",
-          "value": "mi",
-          "selected": true
-        },
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "name": "unit_length",
-        "label": "Distance",
-        "options": [
-          {
-            "text": "km",
-            "value": "km",
-            "selected": false
-          },
-          {
-            "text": "mi",
-            "value": "mi",
-            "selected": true
-          }
-        ],
-        "query": "km,mi",
-        "type": "custom"
-      },
-      {
-        "current": {
-          "text": "C",
-          "value": "C",
-          "selected": true
-        },
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "name": "unit_temp",
-        "label": "Temperature",
-        "options": [
-          {
-            "text": "C",
-            "value": "C",
-            "selected": true
-          },
-          {
-            "text": "F",
-            "value": "F",
-            "selected": false
-          }
-        ],
-        "query": "C,F",
-        "type": "custom"
       }
     ]
   },

@@ -103,7 +103,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Cabin Temp (°C)"
+              "options": "Cabin Temp"
             },
             "properties": [
               {
@@ -118,7 +118,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Outside Temp (°C)"
+              "options": "Outside Temp"
             },
             "properties": [
               {
@@ -794,56 +794,27 @@
         "type": "query"
       },
       {
-        "current": {
-          "text": "mi",
-          "value": "mi",
-          "selected": true
+        "name": "unit_temp",
+        "type": "query",
+        "label": "",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "hide": 0,
-        "includeAll": false,
+        "query": "SELECT COALESCE((SELECT value_text FROM settings WHERE key = 'unit_of_temp'), 'C')",
+        "hide": 2,
+        "refresh": 1,
         "multi": false,
-        "name": "unit_length",
-        "label": "Distance",
-        "options": [
-          {
-            "text": "km",
-            "value": "km",
-            "selected": false
-          },
-          {
-            "text": "mi",
-            "value": "mi",
-            "selected": true
-          }
-        ],
-        "query": "km,mi",
-        "type": "custom"
-      },
-      {
+        "includeAll": false,
         "current": {
           "text": "C",
           "value": "C",
-          "selected": true
+          "selected": false
         },
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "name": "unit_temp",
-        "label": "Temperature",
-        "options": [
-          {
-            "text": "C",
-            "value": "C",
-            "selected": true
-          },
-          {
-            "text": "F",
-            "value": "F",
-            "selected": false
-          }
-        ],
-        "query": "C,F",
-        "type": "custom"
+        "options": [],
+        "regex": "",
+        "skipUrlSync": true,
+        "sort": 0
       }
     ]
   },

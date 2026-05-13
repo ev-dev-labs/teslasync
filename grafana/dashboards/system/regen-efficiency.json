@@ -27,8 +27,8 @@
       "keepTime": true,
       "tags": [],
       "targetBlank": false,
-      "title": "◀ Prev",
-      "tooltip": "TeslaSync 📊 Quick Stats",
+      "title": "\u25c0 Prev",
+      "tooltip": "TeslaSync \ud83d\udcca Quick Stats",
       "type": "link",
       "url": "/d/teslasync-quick-stats"
     },
@@ -41,7 +41,7 @@
         "teslasync"
       ],
       "targetBlank": false,
-      "title": "⚡ TeslaSync",
+      "title": "\u26a1 TeslaSync",
       "type": "dashboards"
     },
     {
@@ -51,7 +51,7 @@
       "keepTime": true,
       "tags": [],
       "targetBlank": false,
-      "title": "Next ▶",
+      "title": "Next \u25b6",
       "tooltip": "Route Efficiency",
       "type": "link",
       "url": "/d/teslasync-route-efficiency"
@@ -63,7 +63,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
       },
-      "description": "Monthly trend of regenerative braking energy recovered. Bar = kWh recovered per month, line = regen efficiency percentage. Regen kWh is estimated from negative power_min readings (braking power × drive duration).",
+      "description": "Monthly trend of regenerative braking energy recovered. Bar = kWh recovered per month, line = regen efficiency percentage. Regen kWh is estimated from negative power_min readings (braking power \u00d7 drive duration).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -241,7 +241,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
       },
-      "description": "Overall regen efficiency — percentage of total braking energy recovered via regen.",
+      "description": "Overall regen efficiency \u2014 percentage of total braking energy recovered via regen.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -393,7 +393,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "lengthmi"
+                "value": "none"
               },
               {
                 "id": "decimals",
@@ -501,7 +501,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  started_at AS \"Date\",\n  ROUND((distance_m / 1609.344)::numeric, 1) AS \"Distance (km)\",\n  ROUND(COALESCE((avg_speed_mps * 2.2369362920544), 0)::numeric, 0) AS \"Avg Speed\",\n  ROUND(ABS(LEAST(COALESCE(NULL, 0), 0))::numeric, 1) AS \"Peak Regen kW\",\n  ROUND(COALESCE(NULL, 0)::numeric, 1) AS \"Peak Power kW\",\n  CASE WHEN COALESCE(NULL, 0) > 0\n    THEN ROUND((100.0 * ABS(LEAST(COALESCE(NULL, 0), 0)) / NULL)::numeric, 1)\n    ELSE 0 END AS \"Regen Ratio %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\nORDER BY started_at DESC\nLIMIT 30",
+          "rawSql": "SELECT\n  started_at AS \"Date\",\n  ROUND((distance_m / 1609.344)::numeric, 1) AS \"Distance (${unit_length})\",\n  ROUND(COALESCE((avg_speed_mps * 2.2369362920544), 0)::numeric, 0) AS \"Avg Speed\",\n  ROUND(ABS(LEAST(COALESCE(NULL, 0), 0))::numeric, 1) AS \"Peak Regen kW\",\n  ROUND(COALESCE(NULL, 0)::numeric, 1) AS \"Peak Power kW\",\n  CASE WHEN COALESCE(NULL, 0) > 0\n    THEN ROUND((100.0 * ABS(LEAST(COALESCE(NULL, 0), 0)) / NULL)::numeric, 1)\n    ELSE 0 END AS \"Regen Ratio %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\nORDER BY started_at DESC\nLIMIT 30",
           "refId": "A"
         }
       ],
@@ -537,6 +537,30 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "mi",
+          "value": "mi"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT COALESCE((SELECT value_text FROM settings WHERE key = 'unit_of_length'), 'mi')",
+        "query": "SELECT COALESCE((SELECT value_text FROM settings WHERE key = 'unit_of_length'), 'mi')",
+        "hide": 2,
+        "includeAll": false,
+        "label": "",
+        "multi": false,
+        "name": "unit_length",
+        "options": [],
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": true,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
@@ -546,7 +570,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync ♻️ Regen Efficiency",
+  "title": "TeslaSync \u267b\ufe0f Regen Efficiency",
   "uid": "teslasync-regen-efficiency",
   "version": 1,
   "weekStart": ""

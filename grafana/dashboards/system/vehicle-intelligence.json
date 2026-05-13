@@ -27,8 +27,8 @@
       "keepTime": true,
       "tags": [],
       "targetBlank": false,
-      "title": "◀ Prev",
-      "tooltip": "TeslaSync 🧛 Vampire Drain",
+      "title": "\u25c0 Prev",
+      "tooltip": "TeslaSync \ud83e\udddb Vampire Drain",
       "type": "link",
       "url": "/d/teslasync-vampire-drain"
     },
@@ -41,7 +41,7 @@
         "teslasync"
       ],
       "targetBlank": false,
-      "title": "⚡ TeslaSync",
+      "title": "\u26a1 TeslaSync",
       "type": "dashboards"
     },
     {
@@ -51,8 +51,8 @@
       "keepTime": true,
       "tags": [],
       "targetBlank": false,
-      "title": "Next ▶",
-      "tooltip": "TeslaSync 🚘 Vehicle Overview",
+      "title": "Next \u25b6",
+      "tooltip": "TeslaSync \ud83d\ude98 Vehicle Overview",
       "type": "link",
       "url": "/d/teslasync-vehicle-overview"
     }
@@ -109,7 +109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
+          "rawSql": "WITH latest AS (\n  SELECT DISTINCT ON (field) field, str_value, ts\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('VehicleName','Version','Trim','ExteriorColor','RoofColor')\n    AND str_value IS NOT NULL\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  ORDER BY field, ts DESC\n)\nSELECT field AS \"Setting\", str_value AS \"Value\", ts AS \"Last Updated\"\nFROM latest\nORDER BY field;",
           "refId": "A"
         }
       ],
@@ -168,7 +168,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
+          "rawSql": "SELECT NOW() AS time, str_value AS \"Version\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'Version'\n  AND str_value IS NOT NULL\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts DESC\nLIMIT 1;",
           "refId": "A"
         }
       ],
@@ -227,7 +227,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
+          "rawSql": "WITH latest AS (\n  SELECT DISTINCT ON (field) field, str_value, bool_value, int_value, ts\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('Locked','PinToDriveEnabled','ValetModeEnabled','SentryMode','SpeedLimitMode')\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  ORDER BY field, ts DESC\n)\nSELECT\n  field AS \"Setting\",\n  COALESCE(str_value, bool_value::text, int_value::text) AS \"Value\",\n  ts AS \"Last Updated\"\nFROM latest\nORDER BY field;",
           "refId": "A"
         }
       ],
@@ -286,7 +286,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
+          "rawSql": "WITH latest AS (\n  SELECT DISTINCT ON (field) field, str_value, ts\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('DestinationName','RouteLastUpdated','RouteTrafficMinutesDelay')\n    AND str_value IS NOT NULL\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  ORDER BY field, ts DESC\n)\nSELECT field AS \"Setting\", str_value AS \"Value\", ts AS \"Last Updated\"\nFROM latest\nORDER BY field;",
           "refId": "A"
         }
       ],
@@ -345,12 +345,12 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
+          "rawSql": "WITH latest AS (\n  SELECT DISTINCT ON (field) field, str_value, bool_value, int_value, ts\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('Setting24HourTime','Gui24HourTime','GuiDistanceUnits',\n                  'GuiTemperatureUnits','GuiChargeRateUnits','GuiRangeDisplay')\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  ORDER BY field, ts DESC\n)\nSELECT\n  field AS \"Setting\",\n  COALESCE(str_value, bool_value::text, int_value::text) AS \"Value\",\n  ts AS \"Last Updated\"\nFROM latest\nORDER BY field;",
           "refId": "A"
         }
       ],
       "title": "User Preferences",
-      "type": "stat",
+      "type": "table",
       "transparent": false
     },
     {
@@ -423,14 +423,14 @@
             "uid": "DS_TESLASYNC_POSTGRESQL"
           },
           "editorMode": "code",
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: table removed in migration (ADR-002)",
+          "rawSql": "SELECT\n  end_place AS \"Destination\",\n  COUNT(*) AS \"Visits\",\n  ROUND(AVG(EXTRACT(EPOCH FROM (ended_at - started_at)) / 60.0)::numeric, 1) AS \"Avg Drive (min)\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND end_place IS NOT NULL\n  AND end_place <> ''\n  AND ended_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY end_place\nORDER BY COUNT(*) DESC\nLIMIT 10;",
           "refId": "A"
         }
       ],
-      "title": "Location at Home/Work",
-      "type": "timeseries",
+      "title": "Top Destinations",
+      "type": "table",
       "transparent": false
     },
     {
@@ -622,58 +622,6 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
-      },
-      {
-        "current": {
-          "text": "mi",
-          "value": "mi",
-          "selected": true
-        },
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "name": "unit_length",
-        "label": "Distance",
-        "options": [
-          {
-            "text": "km",
-            "value": "km",
-            "selected": false
-          },
-          {
-            "text": "mi",
-            "value": "mi",
-            "selected": true
-          }
-        ],
-        "query": "km,mi",
-        "type": "custom"
-      },
-      {
-        "current": {
-          "text": "C",
-          "value": "C",
-          "selected": true
-        },
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "name": "unit_temp",
-        "label": "Temperature",
-        "options": [
-          {
-            "text": "C",
-            "value": "C",
-            "selected": true
-          },
-          {
-            "text": "F",
-            "value": "F",
-            "selected": false
-          }
-        ],
-        "query": "C,F",
-        "type": "custom"
       }
     ]
   },
@@ -683,7 +631,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync 🧠 Vehicle Intelligence",
+  "title": "TeslaSync \ud83e\udde0 Vehicle Intelligence",
   "uid": "teslasync-vehicle-intelligence",
   "version": 1,
   "weekStart": ""

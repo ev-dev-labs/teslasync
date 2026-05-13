@@ -179,7 +179,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_distance(COALESCE(float_value, int_value::float8))::numeric, 1) AS \"Range\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'RatedRange' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(convert_distance_m(COALESCE(float_value, int_value::float8))::numeric, 1) AS \"Range\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'RatedRange' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -239,7 +239,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_distance(COALESCE(float_value, int_value::float8))::numeric, 1) AS \"📏 Odometer\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'Odometer' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(convert_distance_m(COALESCE(float_value, int_value::float8))::numeric, 1) AS \"📏 Odometer\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'Odometer' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -984,7 +984,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  (SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'DiTorqueActualF' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"Torque (Nm)\",\n  convert_temp((SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'DiStatorTempF' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1)) AS \"Stator Temp\",\n  convert_speed((SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'VehicleSpeed' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1)) AS \"Speed\",\n  (SELECT str_value FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'Gear' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"Gear\"",
+          "rawSql": "SELECT\n  (SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'DiTorqueActualF' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"Torque (Nm)\",\n  convert_temp((SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'DiStatorTempF' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1)) AS \"Stator Temp\",\n  convert_speed_mps((SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'VehicleSpeed' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1)) AS \"Speed\",\n  (SELECT str_value FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'Gear' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"Gear\"",
           "refId": "A"
         }
       ],
@@ -1139,58 +1139,6 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
-      },
-      {
-        "current": {
-          "text": "mi",
-          "value": "mi",
-          "selected": true
-        },
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "name": "unit_length",
-        "label": "Distance",
-        "options": [
-          {
-            "text": "km",
-            "value": "km",
-            "selected": false
-          },
-          {
-            "text": "mi",
-            "value": "mi",
-            "selected": true
-          }
-        ],
-        "query": "km,mi",
-        "type": "custom"
-      },
-      {
-        "current": {
-          "text": "C",
-          "value": "C",
-          "selected": true
-        },
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "name": "unit_temp",
-        "label": "Temperature",
-        "options": [
-          {
-            "text": "C",
-            "value": "C",
-            "selected": true
-          },
-          {
-            "text": "F",
-            "value": "F",
-            "selected": false
-          }
-        ],
-        "query": "C,F",
-        "type": "custom"
       }
     ]
   },

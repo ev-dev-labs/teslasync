@@ -151,7 +151,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '10s') AS time,\n  MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'Latitude') AS latitude,\n  MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'Longitude') AS longitude,\n  convert_speed(MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'VehicleSpeed')) AS speed,\n  MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'BatteryLevel') AS battery_level\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.started_at AND COALESCE(d.ended_at, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.field IN ('Latitude', 'Longitude', 'VehicleSpeed', 'BatteryLevel')\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '10s') AS time,\n  MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'Latitude') AS latitude,\n  MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'Longitude') AS longitude,\n  convert_speed_mps(MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'VehicleSpeed')) AS speed,\n  MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'BatteryLevel') AS battery_level\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.started_at AND COALESCE(d.ended_at, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.field IN ('Latitude', 'Longitude', 'VehicleSpeed', 'BatteryLevel')\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],
@@ -257,7 +257,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '30s') AS time,\n  convert_speed(MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'VehicleSpeed')) AS \"Speed\"\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.started_at AND COALESCE(d.ended_at, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.field IN ('VehicleSpeed')\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '30s') AS time,\n  convert_speed_mps(MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'VehicleSpeed')) AS \"Speed\"\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.started_at AND COALESCE(d.ended_at, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.field IN ('VehicleSpeed')\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],
@@ -403,7 +403,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '30s') AS time,\n  MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'DiTorqueActualF') AS \"Torque (Nm)\",\n  convert_speed(MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'VehicleSpeed')) AS \"Speed\"\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.started_at AND COALESCE(d.ended_at, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.field IN ('DiTorqueActualF', 'VehicleSpeed')\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '30s') AS time,\n  MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'DiTorqueActualF') AS \"Torque (Nm)\",\n  convert_speed_mps(MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'VehicleSpeed')) AS \"Speed\"\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.started_at AND COALESCE(d.ended_at, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.field IN ('DiTorqueActualF', 'VehicleSpeed')\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],
@@ -435,58 +435,6 @@
           "value": "1"
         },
         "label": "Vehicle ID"
-      },
-      {
-        "current": {
-          "text": "mi",
-          "value": "mi",
-          "selected": true
-        },
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "name": "unit_length",
-        "label": "Distance",
-        "options": [
-          {
-            "text": "km",
-            "value": "km",
-            "selected": false
-          },
-          {
-            "text": "mi",
-            "value": "mi",
-            "selected": true
-          }
-        ],
-        "query": "km,mi",
-        "type": "custom"
-      },
-      {
-        "current": {
-          "text": "C",
-          "value": "C",
-          "selected": true
-        },
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "name": "unit_temp",
-        "label": "Temperature",
-        "options": [
-          {
-            "text": "C",
-            "value": "C",
-            "selected": true
-          },
-          {
-            "text": "F",
-            "value": "F",
-            "selected": false
-          }
-        ],
-        "query": "C,F",
-        "type": "custom"
       }
     ]
   },

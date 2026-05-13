@@ -131,7 +131,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  convert_pressure(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsPressureFl')) AS \"Front Left\",\n  convert_pressure(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsPressureFr')) AS \"Front Right\",\n  convert_pressure(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsPressureRl')) AS \"Rear Left\",\n  convert_pressure(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsPressureRr')) AS \"Rear Right\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('TpmsPressureFl', 'TpmsPressureFr', 'TpmsPressureRl', 'TpmsPressureRr')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  convert_pressure_pa(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsPressureFl')) AS \"Front Left\",\n  convert_pressure_pa(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsPressureFr')) AS \"Front Right\",\n  convert_pressure_pa(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsPressureRl')) AS \"Rear Left\",\n  convert_pressure_pa(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsPressureRr')) AS \"Rear Right\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('TpmsPressureFl', 'TpmsPressureFr', 'TpmsPressureRl', 'TpmsPressureRr')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -191,7 +191,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_pressure(COALESCE(float_value, int_value::float8)) AS \"Front Left\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'TpmsPressureFl' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure_pa(COALESCE(float_value, int_value::float8)) AS \"Front Left\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'TpmsPressureFl' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -251,7 +251,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_pressure(COALESCE(float_value, int_value::float8)) AS \"Front Right\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'TpmsPressureFr' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure_pa(COALESCE(float_value, int_value::float8)) AS \"Front Right\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'TpmsPressureFr' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -311,7 +311,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_pressure(COALESCE(float_value, int_value::float8)) AS \"Rear Left\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'TpmsPressureRl' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure_pa(COALESCE(float_value, int_value::float8)) AS \"Rear Left\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'TpmsPressureRl' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -371,7 +371,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_pressure(COALESCE(float_value, int_value::float8)) AS \"Rear Right\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'TpmsPressureRr' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure_pa(COALESCE(float_value, int_value::float8)) AS \"Rear Right\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'TpmsPressureRr' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -439,58 +439,6 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
-      },
-      {
-        "current": {
-          "text": "mi",
-          "value": "mi",
-          "selected": true
-        },
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "name": "unit_length",
-        "label": "Distance",
-        "options": [
-          {
-            "text": "km",
-            "value": "km",
-            "selected": false
-          },
-          {
-            "text": "mi",
-            "value": "mi",
-            "selected": true
-          }
-        ],
-        "query": "km,mi",
-        "type": "custom"
-      },
-      {
-        "current": {
-          "text": "C",
-          "value": "C",
-          "selected": true
-        },
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "name": "unit_temp",
-        "label": "Temperature",
-        "options": [
-          {
-            "text": "C",
-            "value": "C",
-            "selected": true
-          },
-          {
-            "text": "F",
-            "value": "F",
-            "selected": false
-          }
-        ],
-        "query": "C,F",
-        "type": "custom"
       }
     ]
   },
