@@ -37,6 +37,13 @@ type Request struct {
 	// active Do-Not-Disturb window. Empty values are treated as 'info'.
 	// Phase-46 / Prompt 19.
 	Severity string `json:"severity,omitempty"`
+	// SuppressTransportTitle asks transports that render a separate
+	// title field (Discord/Slack/Telegram/ntfy/webhook) to deliver
+	// body-only output: no bold header line, no X-Title header. The
+	// canonical Title is still passed in for transports that REQUIRE
+	// one (WebPush, email Subject, Pushover) and for notification_logs
+	// persistence. Phase-50 / ADR-005.
+	SuppressTransportTitle bool `json:"suppress_transport_title,omitempty"`
 }
 
 // InternalTopic is the MQTT topic used for internal notification dispatch.
@@ -46,15 +53,15 @@ const InternalTopic = "teslasync/internal/notifications"
 func Send(req *Request) error {
 	switch req.ChannelType {
 	case "discord":
-		return sendDiscord(req.Config["webhook_url"], req.Title, req.Message)
+		return sendDiscord(req.Config["webhook_url"], req.Title, req.Message, req.SuppressTransportTitle)
 	case "slack":
-		return sendSlack(req.Config["webhook_url"], req.Title, req.Message)
+		return sendSlack(req.Config["webhook_url"], req.Title, req.Message, req.SuppressTransportTitle)
 	case "telegram":
-		return sendTelegram(req.Config["bot_token"], req.Config["chat_id"], req.Title, req.Message)
+		return sendTelegram(req.Config["bot_token"], req.Config["chat_id"], req.Title, req.Message, req.SuppressTransportTitle)
 	case "webhook":
-		return sendWebhook(req.Config["url"], req.Config["method"], req.Title, req.Message)
+		return sendWebhook(req.Config["url"], req.Config["method"], req.Title, req.Message, req.SuppressTransportTitle)
 	case "ntfy":
-		return sendNtfy(req.Config["server_url"], req.Config["topic"], req.Title, req.Message)
+		return sendNtfy(req.Config["server_url"], req.Config["topic"], req.Title, req.Message, req.SuppressTransportTitle)
 	case "pushover":
 		return sendPushover(req.Config["app_token"], req.Config["user_key"], req.Title, req.Message)
 	case "email":
@@ -176,36 +183,68 @@ func senderClient() *http.Client {
 	return httpClient
 }
 
-func sendDiscord(webhookURL, title, message string) error {
-	payload := map[string]interface{}{
-		"content": fmt.Sprintf("**%s**\n%s", title, message),
+// sendDiscord posts a Markdown-formatted content payload to a Discord
+// webhook URL. The canonical layout is `**<title>**\n<message>` so the
+// title renders bold. When `suppressTitle` is set (rule.IncludeTitle =
+// false) we drop the bold header AND the leading newline so the body
+// stands alone — empty body is treated as a no-op rather than sending
+// a blank message. Phase-50 / ADR-005.
+func sendDiscord(webhookURL, title, message string, suppressTitle bool) error {
+	content := fmt.Sprintf("**%s**\n%s", title, message)
+	if suppressTitle {
+		if message == "" {
+			return nil
+		}
+		content = message
 	}
+	payload := map[string]interface{}{"content": content}
 	return postJSON(webhookURL, payload)
 }
 
-func sendSlack(webhookURL, title, message string) error {
-	payload := map[string]interface{}{
-		"text": fmt.Sprintf("*%s*\n%s", title, message),
+func sendSlack(webhookURL, title, message string, suppressTitle bool) error {
+	text := fmt.Sprintf("*%s*\n%s", title, message)
+	if suppressTitle {
+		if message == "" {
+			return nil
+		}
+		text = message
 	}
+	payload := map[string]interface{}{"text": text}
 	return postJSON(webhookURL, payload)
 }
 
-func sendTelegram(botToken, chatID, title, message string) error {
+func sendTelegram(botToken, chatID, title, message string, suppressTitle bool) error {
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", botToken)
+	text := fmt.Sprintf("*%s*\n%s", title, message)
+	if suppressTitle {
+		if message == "" {
+			return nil
+		}
+		text = message
+	}
 	payload := map[string]interface{}{
 		"chat_id":    chatID,
-		"text":       fmt.Sprintf("*%s*\n%s", title, message),
+		"text":       text,
 		"parse_mode": "Markdown",
 	}
 	return postJSON(url, payload)
 }
 
-func sendWebhook(url, method, title, message string) error {
+// sendWebhook posts a JSON body to a user-configured URL. The payload
+// always carries both `title` and `message` keys so receivers can
+// branch on them; when `suppressTitle` is set we emit an empty string
+// for the title key (rather than dropping it) to keep the schema
+// stable for consumers that pre-declare a typed struct.
+func sendWebhook(url, method, title, message string, suppressTitle bool) error {
 	if method == "" {
 		method = "POST"
 	}
+	effectiveTitle := title
+	if suppressTitle {
+		effectiveTitle = ""
+	}
 	payload := map[string]interface{}{
-		"title":   title,
+		"title":   effectiveTitle,
 		"message": message,
 		"source":  "teslasync",
 	}
@@ -230,13 +269,17 @@ func sendWebhook(url, method, title, message string) error {
 	return nil
 }
 
-func sendNtfy(serverURL, topic, title, message string) error {
+// sendNtfy posts the message body to a ntfy topic. When `suppressTitle`
+// is set we omit the `Title` header so ntfy renders the body alone.
+func sendNtfy(serverURL, topic, title, message string, suppressTitle bool) error {
 	url := fmt.Sprintf("%s/%s", serverURL, topic)
 	req, err := http.NewRequest("POST", url, bytes.NewReader([]byte(message)))
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Title", title)
+	if !suppressTitle && title != "" {
+		req.Header.Set("Title", title)
+	}
 	resp, err := senderClient().Do(req)
 	if err != nil {
 		return err

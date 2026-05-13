@@ -298,6 +298,10 @@ export interface AlertRule {
   value_max?: number | null;
   severity: AlertRuleSeverity;
   cooldown_min: number;
+  /** Phase-50 / ADR-014 — per-rule notification body template. */
+  msg_template?: string | null;
+  /** Phase-50 / ADR-014 — transport title toggle (default TRUE). */
+  include_title?: boolean;
   created_at: string;
   updated_at: string;
 }

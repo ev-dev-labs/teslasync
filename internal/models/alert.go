@@ -7,12 +7,17 @@ import (
 
 // AlertRule mirrors the post-migration `alert_rules` schema (Phase 3, ADR-001).
 // Typed alert rule storage: handlers reject legacy CEP request fields such as
-// rule_def, conditions, threshold, msg_template, and notify_channels.
+// rule_def, conditions, threshold, and notify_channels. Per-rule message
+// templates (`msg_template`) were removed in ADR-001 and RESTORED in
+// Phase-50 / ADR-005 as a typed TEXT field (NOT JSONB) together with
+// `include_title`.
 //
 // Schema source: .github/prompts/db-refactor/schema/18-alert-rules.sql
 // Multi-select extension: migration 000195 (Phase-49 / Slice 0005) adds
 // `all_vehicles` + the `alert_rule_vehicles` junction table; the legacy
 // `vehicle_id` column is kept for one release for rolling-deploy safety.
+// Message template + include_title extension: migration 000200 (Phase-50 /
+// ADR-005). See internal/alertmsg for the rendering contract.
 type AlertRule struct {
 	ID          int64   `db:"id"           json:"id"`
 	Name        string  `db:"name"         json:"name"`
@@ -93,6 +98,29 @@ type AlertRule struct {
 	// (Phase-49 / Slice 0009 / Decision D8).
 	EscalationAfterMin *int    `db:"escalation_after_min" json:"escalation_after_min,omitempty"`
 	EscalationSeverity *string `db:"escalation_severity"  json:"escalation_severity,omitempty"`
+
+	// MsgTemplate is the per-rule notification body template (Phase-50 /
+	// ADR-005). NULL means "use the op-aware default rendered by
+	// internal/alertmsg". When non-empty, the template supports {{key}}
+	// substitution against the merged signal context plus a curated set of
+	// built-in placeholders (VehicleName, RuleName, Severity, Threshold,
+	// Value, PrevValue, Now, MetricValue, MetricPrevValue, MetricChangePct).
+	// Length is capped at 1024 chars by the API boundary; unknown
+	// placeholders are left as literal text rather than rejected.
+	//
+	// ADR-005 restores this column after Phase-3 / ADR-001 removed it. The
+	// field is typed TEXT (NOT JSONB), so ADR-001's anti-JSONB stance is
+	// preserved.
+	MsgTemplate *string `db:"msg_template"  json:"msg_template,omitempty"`
+
+	// IncludeTitle controls whether transports that render a separate
+	// title field (Discord/Slack/Telegram/ntfy/webhook) include the bold
+	// header line. Defaults to TRUE for backward compatibility with rules
+	// authored before Phase-50. When FALSE, those transports deliver
+	// body-only output; the canonical title is still persisted in
+	// notification_logs and broadcast over SSE so the in-app UI is
+	// unaffected. Phase-50 / ADR-005.
+	IncludeTitle bool `db:"include_title" json:"include_title"`
 
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`

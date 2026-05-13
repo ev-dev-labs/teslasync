@@ -326,6 +326,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// at the AlertHandler call site, which has its own narrow contract.
 	alertLiveSignalStore := liveSignalStore
 	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts, alertLiveSignalStore)
+	alertMessageHandler := NewAlertMessageHandler()
 	commandHandler := NewCommandHandler(db, teslaClient)
 	guardHandler := NewGuardHandler(database.NewGuardRepo(db.Pool), database.NewVehicleRepo(db), teslaClient, cfg)
 	energyHandler := NewEnergyHandler(energySvc)
@@ -1097,6 +1098,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/enable", alertHandler.BulkEnableRules)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/disable", alertHandler.BulkDisableRules)
 			r.Post("/test", alertHandler.TestRule)
+			// Phase-50 / ADR-005 — alert message template helpers.
+			// These are static read paths registered BEFORE the
+			// catch-all `/{alertID}` route below so chi resolves them
+			// correctly. They are intentionally unauthenticated only
+			// to the same degree the surrounding /alerts subtree is —
+			// the route group inherits whatever middleware is mounted
+			// above.
+			r.Get("/message-presets", alertMessageHandler.MessagePresets)
+			r.Get("/message-placeholders", alertMessageHandler.MessagePlaceholders)
+			r.Post("/message-preview", alertMessageHandler.MessagePreview)
 			// Phase-46 / Prompt 20 — alert acknowledgement + audit timeline.
 			// Registered AFTER the static `/rules`, `/metrics`, `/test` routes
 			// above so chi's static-first matching routes them correctly.

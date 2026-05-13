@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -345,7 +346,21 @@ continue
 if !result.Triggered {
 continue
 }
-dispatchComputedMetricNotification(rule, vid, result, channels, mqttClient)
+// Resolve a friendly vehicle name for the message template,
+// falling back silently when the vehicle is missing — the
+// renderer is tolerant of an empty VehicleName.
+vehicleName := ""
+for _, v := range allVehicles {
+if v != nil && v.ID == vid {
+if v.DisplayName != "" {
+vehicleName = v.DisplayName
+} else {
+vehicleName = v.VIN
+}
+break
+}
+}
+dispatchComputedMetricNotification(rule, vid, vehicleName, result, channels, mqttClient)
 }
 }
 }
@@ -376,22 +391,43 @@ func vehiclesForRule(rule *models.AlertRule, all []*models.Vehicle) []int64 {
 func dispatchComputedMetricNotification(
 rule *models.AlertRule,
 vehicleID int64,
+vehicleName string,
 result computed.Result,
 channels []*models.NotificationChannel,
 mqttClient pahomqtt.Client,
 ) {
+// Phase-50 / ADR-005: route computed-metric dispatch through the
+// shared alertmsg package so the message is rendered identically to
+// the telemetry path. Without this, a custom msg_template on a
+// computed-metric rule would be ignored and the IncludeTitle toggle
+// would never reach the transports.
+msgCtx := alertmsg.BuildContext(rule, vehicleName, nil, map[string]any{
+"Severity":        rule.Severity,
+"MetricValue":     result.Value,
+"MetricPrevValue": result.PreviousValue,
+"MetricChangePct": result.PercentChange,
+})
+title := alertmsg.RenderTitle(rule, msgCtx)
+body := alertmsg.RenderBody(rule, msgCtx)
+if !rule.IncludeTitle && body == "" {
+body = rule.Name
+}
+suppressTransportTitle := !rule.IncludeTitle
+
 dispatched := 0
 for _, ch := range channels {
 if ch == nil || !ch.Enabled {
 continue
 }
 req := &notification.Request{
-ChannelType: ch.Type,
-Config:      ch.Config,
-Title:       rule.Name,
-Message:     result.Message,
-ChannelID:   ch.ID,
-AlertID:     rule.ID,
+ChannelType:            ch.Type,
+Config:                 ch.Config,
+Title:                  title,
+Message:                body,
+ChannelID:              ch.ID,
+AlertID:                rule.ID,
+Severity:               rule.Severity,
+SuppressTransportTitle: suppressTransportTitle,
 }
 if pubErr := notification.Publish(mqttClient, req); pubErr != nil {
 log.Error().

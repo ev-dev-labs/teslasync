@@ -16,6 +16,10 @@ import (
 )
 
 func TestAlertRuleContractRejectsForbiddenFields(t *testing.T) {
+	// Phase-50 / ADR-005: msg_template was RESTORED as a typed TEXT
+	// column on alert_rules, so it is no longer in this rejection
+	// list. The remaining entries are the other legacy CEP fields
+	// retired by ADR-001 (Phase-3 typed alert rule migration).
 	forbiddenFields := []struct {
 		name  string
 		value string
@@ -23,7 +27,6 @@ func TestAlertRuleContractRejectsForbiddenFields(t *testing.T) {
 		{"conditions", "[]"},
 		{"expression", `"VehicleSpeed > 70"`},
 		{"for_duration_s", "60"},
-		{"msg_template", `"legacy message"`},
 		{"notify_channels", "[1,2]"},
 		{"type", `"signal"`},
 		{"threshold", "70"},
@@ -248,9 +251,9 @@ func TestAlertTestContract(t *testing.T) {
 			wantStatus: http.StatusOK,
 		},
 		{
-			name:       "rejects msg_template",
-			body:       `{"message":"Test alert message","msg_template":"legacy"}`,
-			wantStatus: http.StatusBadRequest,
+			name:       "accepts msg_template (Phase-50 / ADR-005)",
+			body:       `{"message":"Test alert message","msg_template":"{{VehicleName}} hit {{Value}}","include_title":false}`,
+			wantStatus: http.StatusOK,
 		},
 		{
 			name:       "rejects notify_channels",

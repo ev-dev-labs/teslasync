@@ -519,6 +519,20 @@ export interface AlertRule {
    */
   escalation_after_min?: number | null
   escalation_severity?: AlertRuleSeverity | null
+  /**
+   * Phase-50 / ADR-014 — per-rule notification body template. NULL
+   * means "use the op-aware default rendered by internal/alertmsg".
+   * Supports `{{key}}` substitution; whitespace inside the braces is
+   * allowed. Max length: 1024 chars.
+   */
+  msg_template?: string | null
+  /**
+   * Phase-50 / ADR-014 — when FALSE, transports that render a separate
+   * title field (Discord/Slack/Telegram/ntfy/webhook) deliver
+   * body-only notifications. Transports that REQUIRE a title (WebPush,
+   * email Subject, Pushover) ignore this flag. Defaults to TRUE.
+   */
+  include_title?: boolean
   created_at: string
   updated_at: string
 }
@@ -564,6 +578,10 @@ export interface AlertRuleInput {
    */
   escalation_after_min?: number | null
   escalation_severity?: AlertRuleSeverity | null
+  /** Phase-50 / ADR-014 — see AlertRule.msg_template. */
+  msg_template?: string | null
+  /** Phase-50 / ADR-014 — see AlertRule.include_title. */
+  include_title?: boolean
 }
 
 export interface ComputedMetricSummary {
@@ -603,6 +621,72 @@ export interface AlertTestTarget {
 export interface AlertTestRequest {
   message?: string
   target?: AlertTestTarget | null
+  /**
+   * Phase-50 / ADR-014 — when set, the Test Rule endpoint previews the
+   * given template instead of the legacy free-form `message`. Empty
+   * string is normalised to "use the op-aware default".
+   */
+  msg_template?: string | null
+  /** Phase-50 / ADR-014 — see AlertRule.include_title. */
+  include_title?: boolean
+}
+
+/**
+ * Phase-50 / ADR-014 — autocomplete suggestion served by
+ * GET /api/v1/alerts/message-placeholders. Mirrors
+ * internal/alertmsg.Placeholder.
+ */
+export interface AlertMessagePlaceholder {
+  key: string
+  label: string
+  description?: string
+  group: string
+  example?: string
+}
+
+/**
+ * Phase-50 / ADR-014 — curated message-template preset served by
+ * GET /api/v1/alerts/message-presets. Mirrors internal/alertmsg.Preset.
+ */
+export interface AlertMessagePreset {
+  id: string
+  name: string
+  description?: string
+  template: string
+  kind?: '' | 'signal' | 'computed_metric'
+  tags?: string[]
+}
+
+/**
+ * Phase-50 / ADR-014 — request body for POST /api/v1/alerts/message-preview.
+ * Accepts the editor's draft rule shape so the preview renders against
+ * the same inputs the production dispatch path uses.
+ */
+export interface AlertMessagePreviewRequest {
+  name?: string
+  kind?: AlertRuleKind
+  signal_name?: string
+  op?: AlertRuleOp
+  severity?: AlertRuleSeverity
+  vehicle_name?: string
+  value_num?: number | null
+  value_text?: string | null
+  value_bool?: boolean | null
+  value_min?: number | null
+  value_max?: number | null
+  metric_id?: string | null
+  metric_window?: string | null
+  metric_threshold?: number | null
+  metric_op?: ComputedMetricOp | null
+  msg_template?: string | null
+  include_title?: boolean
+  /** Optional sample signal values to feed the renderer. */
+  signals?: Record<string, unknown>
+}
+
+export interface AlertMessagePreviewResponse {
+  title: string
+  body: string
 }
 
 export interface StatsSummary {

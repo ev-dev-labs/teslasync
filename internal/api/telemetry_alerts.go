@@ -6,6 +6,7 @@ import (
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
@@ -95,7 +96,7 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 		metrics.AlertRulesEvaluated.Inc()
 		result := e.ruleEngine.Evaluate(rule, vehicleID, signals)
 		if result.Triggered {
-			e.fireAlert(ctx, rule, vehicleID, vin, result.Message, result.Severity)
+			e.fireAlert(ctx, rule, vehicleID, vin, result.Context, result.Severity)
 		}
 	}
 	metrics.ActiveAlertRules.Set(float64(enabledCount))
@@ -109,7 +110,15 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 // (SSE, event bus, metrics, quiet-hours suppression, notification
 // dispatch). An empty `effectiveSeverity` falls back to the rule's
 // declared severity so legacy callers (none today) keep working.
-func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.AlertRule, vehicleID int64, vin, message, effectiveSeverity string) {
+//
+// Phase-50 / ADR-005: `evalContext` is the merged-signals map returned
+// from RuleEngine.Evaluate. We build the canonical title/body via the
+// internal/alertmsg package so every dispatch path (telemetry, computed
+// metric, preview) renders identically. The rule's IncludeTitle flag is
+// passed through to notification.Request.SuppressTransportTitle — the
+// canonical title is still persisted in notification_logs and broadcast
+// over SSE regardless.
+func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.AlertRule, vehicleID int64, vin string, evalContext map[string]any, effectiveSeverity string) {
 	severity := effectiveSeverity
 	if severity == "" {
 		severity = rule.Severity
@@ -118,7 +127,8 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 		severity = "warning"
 	}
 
-	// Resolve vehicle display name for context
+	// Resolve vehicle display name for context (best-effort: VIN
+	// fallback when the DB row lacks a friendly DisplayName).
 	vehicleName := ""
 	if v, err := e.vehicleRepo.GetByID(ctx, vehicleID); err == nil && v != nil && v.DisplayName != "" {
 		vehicleName = v.DisplayName
@@ -126,18 +136,31 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 		vehicleName = vin
 	}
 
-	// Prefix message with vehicle name so users know which vehicle triggered it
-	title := rule.Name
-	if vehicleName != "" {
-		title = fmt.Sprintf("[%s] %s", vehicleName, rule.Name)
-		message = fmt.Sprintf("%s — %s", vehicleName, message)
+	// Build the canonical render context. We start from the engine's
+	// merged signals so the user's template can reference any in-batch
+	// or previously-seen signal. The dispatch-time built-ins (Severity
+	// + VehicleName) overwrite the rule-level defaults the alertmsg
+	// package would otherwise stamp.
+	msgCtx := alertmsg.BuildContext(rule, vehicleName, evalContext, map[string]any{
+		"Severity": severity,
+	})
+	title := alertmsg.RenderTitle(rule, msgCtx)
+	body := alertmsg.RenderBody(rule, msgCtx)
+	// When include_title is FALSE we promise the transport will deliver
+	// a body-only notification. If the op-aware default produced an
+	// empty body (state-change rules), fall back to the rule name so
+	// the user sees something. We do NOT fall back when include_title
+	// is TRUE — the bold header IS the message in that case.
+	if !rule.IncludeTitle && body == "" {
+		body = rule.Name
 	}
 
 	// 1. Record the alert firing timestamp
 	now := time.Now().UTC()
 
 	log.Info().Int64("rule_id", rule.ID).Str("name", rule.Name).Str("severity", severity).
-		Int64("vehicle_id", vehicleID).Str("message", message).Msg("alert_rules: alert fired")
+		Int64("vehicle_id", vehicleID).Str("title", title).Str("body", body).
+		Bool("include_title", rule.IncludeTitle).Msg("alert_rules: alert fired")
 
 	// Prometheus metrics
 	metrics.AlertsFired.WithLabelValues(severity).Inc()
@@ -157,7 +180,10 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 		}
 	}
 
-	// 2. Broadcast via SSE (always — let frontend decide to show/suppress)
+	// 2. Broadcast via SSE — always uses the canonical title so the
+	//    in-app UI keeps its row header even when the per-rule toggle
+	//    suppresses the transport bold-header. include_title is
+	//    deliberately a transport-layer concern only.
 	if e.eventHub != nil {
 		e.eventHub.Broadcast("alert", map[string]interface{}{
 			"vehicle_id":       vehicleID,
@@ -166,7 +192,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 			"type":             rule.SignalName,
 			"severity":         severity,
 			"title":            title,
-			"message":          message,
+			"message":          body,
 			"rule_id":          rule.ID,
 			"timestamp":        now,
 			"quiet_suppressed": quietSuppressed,
@@ -182,7 +208,8 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 			Data: map[string]interface{}{
 				"rule_id":   rule.ID,
 				"rule_type": rule.Op,
-				"message":   message,
+				"title":     title,
+				"message":   body,
 				"severity":  severity,
 				"source":    "alert_rule_engine",
 			},
@@ -191,8 +218,9 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 
 	// 4. Dispatch to notification channels (skip during quiet hours for non-critical)
 	if !quietSuppressed {
+		suppressTransportTitle := !rule.IncludeTitle
 		safeGo("notification-dispatch", func() {
-			e.dispatchNotifications(title, message, severity, rule.ID)
+			e.dispatchNotifications(title, body, severity, rule.ID, suppressTransportTitle)
 		})
 	}
 
@@ -203,7 +231,13 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 // dispatchNotifications publishes alert to the notification worker via MQTT.
 // The worker handles delivery, retry, rate limiting, and metrics — fully decoupled.
 // Falls back to direct send if MQTT is unavailable.
-func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity string, ruleID int64) {
+//
+// Phase-50 / ADR-005: `suppressTransportTitle` is forwarded to the
+// per-transport sender so Discord/Slack/Telegram/ntfy/webhook deliver
+// body-only output when the rule has IncludeTitle=false. Transports
+// that REQUIRE a title (WebPush, email Subject, Pushover) ignore the
+// flag and use the canonical title regardless.
+func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity string, ruleID int64, suppressTransportTitle bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -217,12 +251,13 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity
 			continue
 		}
 		req := &notification.Request{
-			ChannelType: ch.Type,
-			Config:      ch.Config,
-			Title:       title,
-			Message:     message,
-			ChannelID:   ch.ID,
-			AlertID:     ruleID,
+			ChannelType:            ch.Type,
+			Config:                 ch.Config,
+			Title:                  title,
+			Message:                message,
+			ChannelID:              ch.ID,
+			AlertID:                ruleID,
+			SuppressTransportTitle: suppressTransportTitle,
 		}
 		if err := notification.Publish(e.mqttClient, req); err != nil {
 			log.Warn().Int64("channel_id", ch.ID).Str("type", ch.Type).Err(err).Msg("alert_rules: notification dispatch failed")
@@ -238,6 +273,10 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity
 	// over every push_subscriptions row and delivers to each browser. When
 	// VAPID is not configured the dispatcher is a no-op, so this stays
 	// safe in dev installs without push.
+	//
+	// WebPush always requires a title (validated by internal/webpush
+	// Service.Send) so SuppressTransportTitle is intentionally NOT
+	// honoured here — the canonical title goes through regardless.
 	pushReq := &notification.Request{
 		ChannelType: notification.ChannelTypeWebPush,
 		Config: map[string]string{

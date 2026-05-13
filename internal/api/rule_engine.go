@@ -159,7 +159,12 @@ func (e *RuleEngine) HydrateFromDB(ctx context.Context) {
 // EvalResult holds the outcome of evaluating a rule.
 type EvalResult struct {
 	Triggered bool
-	Message   string
+	// Message is the body text produced by the engine for backward
+	// compatibility with callers that don't yet route through the
+	// alertmsg package. The canonical title/body are now produced at
+	// dispatch time using EvalResult.Context — callers should prefer
+	// alertmsg.RenderTitle / alertmsg.RenderBody over this field.
+	Message string
 	// Severity is the EFFECTIVE severity for this fire — it equals the
 	// rule's base severity in the common case, and the rule's
 	// `EscalationSeverity` when the escalation timer fired (Phase-49 /
@@ -167,6 +172,12 @@ type EvalResult struct {
 	// trigger; callers MUST fall back to `rule.Severity` defensively if
 	// they ever see an empty severity on a Triggered=true result.
 	Severity string
+	// Context is the merged signal map (previous + current batch) the
+	// engine evaluated against, exposed so the dispatch layer can build
+	// a notification body via alertmsg.RenderBody / alertmsg.Substitute
+	// without re-cloning state. Nil when Triggered is false.
+	// Phase-50 / ADR-005.
+	Context map[string]any
 }
 
 // Evaluate checks a single rule against the current signal batch.
@@ -410,7 +421,9 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	}
 
 	// Render message template — merge prevSignals with current batch so template
-	// variables resolve even when the signal was from a recent (but not current) batch
+	// variables resolve even when the signal was from a recent (but not current) batch.
+	// The merged map is also returned in EvalResult.Context so the dispatch
+	// layer can render title/body via internal/alertmsg without re-cloning.
 	mergedSignals := make(map[string]interface{}, len(signals))
 	if prevSignals != nil {
 		for k, v := range prevSignals {
@@ -420,8 +433,11 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	for k, v := range signals {
 		mergedSignals[k] = v
 	}
-	// MsgTemplate was removed from AlertRule; derive a default template
-	// that includes the rule name and the triggering signal value.
+	// Legacy Message field — kept populated for backward compatibility
+	// with callers that haven't yet been routed through alertmsg. The
+	// new dispatch path (telemetry_alerts.fireAlert / preview endpoint)
+	// ignores this and re-renders via alertmsg.RenderBody using
+	// EvalResult.Context. Phase-50 / ADR-005.
 	defaultTmpl := rule.Name + ": {{" + rule.SignalName + "}}"
 	message := renderTemplate(defaultTmpl, mergedSignals)
 	if len(message) < 1 {
@@ -432,6 +448,7 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 		Triggered: true,
 		Message:   message,
 		Severity:  effectiveSeverity,
+		Context:   mergedSignals,
 	}
 }
 

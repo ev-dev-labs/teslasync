@@ -47,6 +47,18 @@ type createAlertRuleRequest struct {
 	// the row reaches the DB.
 	EscalationAfterMin *int    `json:"escalation_after_min"`
 	EscalationSeverity *string `json:"escalation_severity"`
+
+	// MsgTemplate is the per-rule notification body template
+	// (Phase-50 / ADR-005). NULL means "use the op-aware default
+	// rendered by internal/alertmsg". An empty string is normalised
+	// to NULL on Create; on Update, the handler distinguishes the two
+	// via field-presence fingerprinting in the same shape as the
+	// other *string fields. Max length: alertmsg.MaxTemplateLength.
+	MsgTemplate *string `json:"msg_template"`
+	// IncludeTitle toggles whether transports that render a separate
+	// title field (Discord/Slack/Telegram/ntfy/webhook) include the
+	// bold header line. Defaults to TRUE on Create when omitted.
+	IncludeTitle *bool `json:"include_title"`
 }
 
 type updateAlertRuleRequest struct {
@@ -98,6 +110,13 @@ type updateAlertRuleRequest struct {
 	// row reaches the DB.
 	EscalationAfterMin *int    `json:"escalation_after_min"`
 	EscalationSeverity *string `json:"escalation_severity"`
+
+	// MsgTemplate + IncludeTitle — see createAlertRuleRequest.
+	// Phase-50 / ADR-005. Omission preserves the existing template /
+	// toggle; an explicit empty string for MsgTemplate is normalised
+	// to NULL by the handler (clears the template).
+	MsgTemplate  *string `json:"msg_template"`
+	IncludeTitle *bool   `json:"include_title"`
 }
 
 // snoozeAlertRuleRequest is the body for POST /alerts/rules/{ruleID}/snooze.
@@ -121,6 +140,15 @@ type alertTestRequest struct {
 	MetricThreshold *float64 `json:"metric_threshold"`
 	MetricOp        *string  `json:"metric_op"`
 	VehicleID       *int64   `json:"vehicle_id"`
+
+	// Phase-50 / ADR-005: the Test Message form lets the user preview
+	// a custom template + toggle BEFORE saving the rule. When set, the
+	// handler renders Title/Body via internal/alertmsg using these
+	// fields instead of the legacy Message string. MsgTemplate is
+	// substituted against the same built-in placeholders the real
+	// dispatch path supports.
+	MsgTemplate  *string `json:"msg_template"`
+	IncludeTitle *bool   `json:"include_title"`
 }
 
 type alertTestTargetRequest struct {
