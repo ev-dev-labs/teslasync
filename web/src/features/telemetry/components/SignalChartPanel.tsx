@@ -6,6 +6,16 @@
  * the "live" visual treatment (red pulse, event/point counters, no
  * series animation) but the underlying chart structure is identical.
  *
+ * Phase-51 adds a `chartMode` prop:
+ *   - 'overlay' — single LineChart with all series stacked (legacy)
+ *   - 'grid'    — SmallMultiplesChart, one cell per series
+ *   - 'auto'    — overlay until `gridAutoThreshold` is exceeded, then grid
+ *
+ * The grid mode keeps the panel header and (for live mode) the pulse
+ * indicator, only the chart body swaps. This lets the workspace page
+ * stay legible when the user pins many signals at once without forcing
+ * them to manage display modes themselves.
+ *
  * Used by:
  *   - SignalExplorerPage    (live + historical)
  *   - SignalsWorkspacePage  (live + historical)
@@ -28,11 +38,14 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  SmallMultiplesChart,
 } from '@/components/charts';
 import { CHART_COLORS } from '@/lib/colors';
 import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { SignalStat } from '../hooks/useLiveSignalStream';
+
+export type SignalChartMode = 'overlay' | 'grid' | 'auto';
 
 export interface SignalChartPanelProps {
   selectedSignals: string[];
@@ -48,6 +61,18 @@ export interface SignalChartPanelProps {
   title?: string;
   /** Height in px (default 350). */
   height?: number;
+  /**
+   * Display mode. `'auto'` switches to small-multiples grid once
+   * `selectedSignals.length > gridAutoThreshold`. Default `'auto'`.
+   */
+  chartMode?: SignalChartMode;
+  /** Threshold for `chartMode='auto'` to flip overlay → grid. Default 8. */
+  gridAutoThreshold?: number;
+  /**
+   * Cell height for grid mode. Defaults to 140px so a 3-row stack
+   * roughly matches the overlay mode's 350px footprint.
+   */
+  gridCellHeight?: number;
   className?: string;
 }
 
@@ -61,6 +86,9 @@ export function SignalChartPanel({
   liveEventCount,
   title,
   height = 350,
+  chartMode = 'auto',
+  gridAutoThreshold = 8,
+  gridCellHeight = 140,
   className,
 }: SignalChartPanelProps) {
   const { t } = useTranslation();
@@ -70,6 +98,15 @@ export function SignalChartPanel({
     const ranges = stats.map((s) => Math.abs(s.max - s.min) || 1);
     return ranges[0] / ranges[1] > 10 || ranges[1] / ranges[0] > 10;
   }, [stats]);
+
+  // Resolve auto → overlay/grid. Grid requires at least 2 signals to
+  // be meaningful (one cell isn't "small multiples"); for a single
+  // signal we always render the larger overlay chart.
+  const effectiveMode: 'overlay' | 'grid' = useMemo(() => {
+    if (chartMode === 'overlay') return 'overlay';
+    if (chartMode === 'grid') return selectedSignals.length >= 2 ? 'grid' : 'overlay';
+    return selectedSignals.length > gridAutoThreshold ? 'grid' : 'overlay';
+  }, [chartMode, selectedSignals.length, gridAutoThreshold]);
 
   const resolvedTitle = title ?? (isLive ? t('Live Signal Stream') : t('Signal Chart'));
 
@@ -100,36 +137,45 @@ export function SignalChartPanel({
             <Skeleton className="h-full w-full" />
           </div>
         ) : data.length > 0 ? (
-          <ResponsiveContainer width="100%" height={height}>
-            <LineChart data={data} margin={{ top: 10, right: useRightAxis ? 20 : 10, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-              <XAxis
-                dataKey="timestamp"
-                tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                tickFormatter={(v: string) => new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-              />
-              <YAxis yAxisId="left" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-              {useRightAxis ? (
-                <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-              ) : null}
-              <Tooltip content={<ChartTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 11, cursor: 'pointer' }} iconType="circle" />
-              {selectedSignals.map((sig, i) => (
-                <Line
-                  key={sig}
-                  type="monotone"
-                  dataKey={sig}
-                  stroke={CHART_COLORS[i % CHART_COLORS.length]}
-                  strokeWidth={1.5}
-                  dot={false}
-                  name={sig}
-                  yAxisId={useRightAxis && i === 1 ? 'right' : 'left'}
-                  connectNulls
-                  isAnimationActive={!isLive}
+          effectiveMode === 'grid' ? (
+            <SmallMultiplesChart
+              data={data}
+              series={selectedSignals}
+              cellHeight={gridCellHeight}
+              syncId={`signal-chart-${isLive ? 'live' : 'historical'}`}
+            />
+          ) : (
+            <ResponsiveContainer width="100%" height={height}>
+              <LineChart data={data} margin={{ top: 10, right: useRightAxis ? 20 : 10, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                <XAxis
+                  dataKey="timestamp"
+                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                  tickFormatter={(v: string) => new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+                <YAxis yAxisId="left" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                {useRightAxis ? (
+                  <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                ) : null}
+                <Tooltip content={<ChartTooltip />} />
+                <Legend wrapperStyle={{ fontSize: 11, cursor: 'pointer' }} iconType="circle" />
+                {selectedSignals.map((sig, i) => (
+                  <Line
+                    key={sig}
+                    type="monotone"
+                    dataKey={sig}
+                    stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                    strokeWidth={1.5}
+                    dot={false}
+                    name={sig}
+                    yAxisId={useRightAxis && i === 1 ? 'right' : 'left'}
+                    connectNulls
+                    isAnimationActive={!isLive}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          )
         ) : isLive ? (
           <div className="flex items-center justify-center" style={{ height }}>
             <span className="text-[var(--text-muted)] flex items-center gap-2">

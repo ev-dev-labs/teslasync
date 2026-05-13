@@ -5,6 +5,11 @@
  * Signal column by its position in the caller's `selectedSignals` list so
  * the table stays visually aligned with `SignalChartPanel`.
  *
+ * The page-global signal selector (e.g. the "Add signals" picker on
+ * `SignalsWorkspacePage`) controls which signals are present in `rows`,
+ * so this component intentionally has no per-panel filter UI — adding
+ * one would just duplicate the global selector.
+ *
  * Used by:
  *   - SignalLogViewerPage  (full-page query)
  *   - SignalExplorerPage   (history slice of the explore mode)
@@ -88,12 +93,22 @@ export function SignalHistoryTable({
       header: t('Signal'),
       render: (r) => {
         const idx = selectedSignals.indexOf(r.signal);
+        const color = idx >= 0 ? CHART_COLORS[idx % CHART_COLORS.length] : undefined;
         return (
-          <span
-            className={cn('font-mono text-xs', idx < 0 && 'text-[var(--text-primary)]')}
-            style={idx >= 0 ? { color: CHART_COLORS[idx % CHART_COLORS.length] } : undefined}
-          >
-            {r.signal}
+          <span className="inline-flex items-center gap-1.5">
+            {color && (
+              <span
+                aria-hidden="true"
+                className="inline-block h-2 w-2 shrink-0 rounded-full"
+                style={{ background: color }}
+              />
+            )}
+            <span
+              className={cn('font-mono text-xs', idx < 0 && 'text-[var(--text-primary)]')}
+              style={color ? { color } : undefined}
+            >
+              {r.signal}
+            </span>
           </span>
         );
       },
@@ -138,7 +153,6 @@ export function SignalHistoryTable({
               data={rows}
               keyExtractor={(r) => `${r.created_at}-${r.signal}`}
               compact
-              pagination={{ defaultPageSize: 50 }}
               showColumnsMenu
               stickyHeader
               maxHeight={520}

@@ -34,8 +34,8 @@ import type {
 export const signalKeys = {
   available: (vehicleId: number) => ['typed-signals', 'available', vehicleId] as const,
   live: (vehicleId: number) => ['typed-signals', 'live', vehicleId] as const,
-  history: (vehicleId: number, name: string, hours: number, from?: string, to?: string) =>
-    ['typed-signals', 'history', vehicleId, name, hours, from ?? '', to ?? ''] as const,
+  history: (vehicleId: number, name: string, hours: number, from?: string, to?: string, limit?: number) =>
+    ['typed-signals', 'history', vehicleId, name, hours, from ?? '', to ?? '', limit ?? 0] as const,
 }
 
 /** Time window for /history queries. `hours` (default) is converted into
@@ -285,7 +285,7 @@ export function useSignalHistory(
 ) {
   const hours = range.hours ?? 24
   return useQuery({
-    queryKey: signalKeys.history(vehicleId, signalName, hours, range.from, range.to),
+    queryKey: signalKeys.history(vehicleId, signalName, hours, range.from, range.to, range.limit),
     queryFn: async ({ signal }): Promise<SignalHistoryResponseTyped> => {
       const usp = new URLSearchParams()
       if (range.from && range.to) {

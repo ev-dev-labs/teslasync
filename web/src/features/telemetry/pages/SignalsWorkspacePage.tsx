@@ -4,8 +4,7 @@
  * Composes the seven shared telemetry components so this page is a thin
  * orchestrator instead of duplicating five pages' worth of UI:
  *
- *   - SignalCatalogPanel    — staleness-aware catalog (left rail)
- *   - SignalSelector        — capped multi-select (workspace toolbar)
+ *   - SignalCategoryTree    — tree picker inside "Add signals" Accordion (Phase-51)
  *   - SignalChartPanel      — multi-line chart (live + historical)
  *   - SignalStatsPanel      — per-signal min/max/avg/count
  *   - SignalHistoryTable    — paginated history with row expansion
@@ -27,11 +26,11 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Activity,
   AlertCircle,
-  AlertTriangle,
   ArrowUpDown,
   Bell,
   Database,
   GitCompare,
+  ListTree,
   Pin,
   PinOff,
   Radio,
@@ -39,7 +38,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, Badge, Button, Select, HelpTooltip, CopyButton } from '@/components/ui';
+import { GlassPanel, Badge, Button, Select, HelpTooltip, CopyButton, TabNav, Accordion } from '@/components/ui';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { StatCard, BulkActionsToolbar, SavedViewMenu } from '@/components/data-display';
 import type { BulkAction } from '@/components/data-display/BulkActionsToolbar';
@@ -48,7 +47,7 @@ import { FadeIn } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useUrlArray, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
+import { useUrlArray, useUrlBoolean, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useSignals, useSignalDiffServer, type SignalDiffRow } from '@/api/hooks/useTelemetry';
@@ -61,9 +60,8 @@ import type { SignalHistoryResp } from '@/api/types';
 import { adaptSignalHistoryResp, type SignalLogEntry } from '@/components/SignalQueryControls';
 
 import { SignalDiffTable } from '../components/SignalDiffTable';
-import { SignalCatalogPanel } from '../components/SignalCatalogPanel';
-import { SignalSelector } from '../components/SignalSelector';
-import { SignalChartPanel } from '../components/SignalChartPanel';
+import { SignalCategoryTree } from '../components/SignalCategoryTree';
+import { SignalChartPanel, type SignalChartMode } from '../components/SignalChartPanel';
 import { SignalStatsPanel } from '../components/SignalStatsPanel';
 import { SignalHistoryTable } from '../components/SignalHistoryTable';
 import { LiveSignalTail } from '../components/LiveSignalTail';
@@ -74,8 +72,17 @@ import {
   toLocalDatetimeInput,
 } from '../components/SignalCompareControls';
 import { useLiveSignalStream, type SignalStat } from '../hooks/useLiveSignalStream';
+import { pLimit } from '@/lib/pLimit';
 
-const MAX_SELECTED_SIGNALS = 5;
+// Bound the parallel signal-history fetches so a "select all 80 signals"
+// click can't fire 80 simultaneous requests at the backend. 6 keeps the
+// page responsive on HTTP/1.1 (browser per-host limit) and well under
+// any reasonable HTTP/2 concurrency budget.
+const HISTORY_FETCH_CONCURRENCY = 6;
+// Cap per-signal limit so an interleaved "Select all" doesn't pull
+// hundreds of thousands of rows. Stays in line with the backend
+// observations endpoint cap.
+const HISTORY_PER_SIGNAL_LIMIT_MAX = 1000;
 const LIVE_TAIL_MAX = 500;
 
 const PER_PAGE_OPTIONS = [
@@ -103,13 +110,20 @@ export default function SignalsWorkspacePage() {
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
   const { data: availableSignals, error: signalsError } = useSignals(vehicleId);
 
-  const toggleSignal = useCallback((name: string) => {
-    setSelectedSignals((prev) => {
-      if (prev.includes(name)) return prev.filter((s) => s !== name);
-      if (prev.length >= MAX_SELECTED_SIGNALS) return prev;
-      return [...prev, name];
-    });
-  }, [setSelectedSignals]);
+  // ── Catalog tree state (URL-synced) ──────────────────────────
+  const [catalogSearch, setCatalogSearch] = useUrlString('catq', '');
+  const [expandedCategories, setExpandedCategories] = useUrlArray('cats');
+  const [catalogOpen, setCatalogOpen] = useUrlBoolean('catopen', false);
+
+  // ── Chart display mode (URL-synced) ──────────────────────────
+  // Valid: 'overlay' | 'grid' | 'auto'. Anything else falls back to 'auto'.
+  const [chartModeRaw, setChartModeRaw] = useUrlString('chart', 'auto');
+  const chartMode: SignalChartMode =
+    chartModeRaw === 'overlay' || chartModeRaw === 'grid' ? chartModeRaw : 'auto';
+  const setChartMode = useCallback(
+    (next: SignalChartMode) => setChartModeRaw(next),
+    [setChartModeRaw],
+  );
 
   // ── Time range ───────────────────────────────────────────────
   const { start, end, setRange } = useRangeState({
@@ -203,10 +217,16 @@ export default function SignalsWorkspacePage() {
   const { data: historicalRows, isLoading: historicalLoading, isFetching: historicalFetching, error: historicalError } = useQuery<CombinedHistoryRow[]>({
     queryKey: ['signals-workspace-history', vehicleId, exploreKey],
     queryFn: async () => {
+      // Bound parallel signal fetches: a "select all" with 80 signals
+      // would otherwise fire 80 simultaneous HTTP requests.
+      const limit = pLimit(HISTORY_FETCH_CONCURRENCY);
+      const perSignalLimit = Math.min(perPage * 10, HISTORY_PER_SIGNAL_LIMIT_MAX);
       const results = await Promise.all(
         selectedSignals.map((sig) =>
-          request<SignalHistoryResp>(
-            `/signals/${vehicleId}/${sig}/history?from=${fromIso}&to=${toIso}&limit=${perPage * 10}`,
+          limit(() =>
+            request<SignalHistoryResp>(
+              `/signals/${vehicleId}/${sig}/history?from=${fromIso}&to=${toIso}&limit=${perSignalLimit}`,
+            ),
           ),
         ),
       );
@@ -380,7 +400,7 @@ export default function SignalsWorkspacePage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 sm:gap-4">
           <StatCard
             label={t('signalsWorkspace.selected', 'Selected')}
-            value={`${selectedSignals.length} / ${MAX_SELECTED_SIGNALS}`}
+            value={fmtInt(selectedSignals.length)}
             icon={<ArrowUpDown className="h-4 w-4" />}
           />
           <StatCard
@@ -402,33 +422,39 @@ export default function SignalsWorkspacePage() {
       </FadeIn>
 
       {/* ── Master / detail layout ─────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
-        {/* Catalog left rail */}
-        <div className="lg:col-span-5 order-2 lg:order-1">
-          <SignalCatalogPanel
+      <div className="space-y-5">
+        {/* Catalog — collapsible "Add signals" disclosure (Phase-51) */}
+        <Accordion
+          title={t('signalsWorkspace.addSignals', 'Add signals')}
+          icon={<ListTree className="h-4 w-4" />}
+          open={catalogOpen}
+          onOpenChange={setCatalogOpen}
+          badge={
+            <Badge variant={selectedSignals.length > 0 ? 'info' : 'neutral'} size="sm">
+              {selectedSignals.length > 0
+                ? t('signalsWorkspace.signalsSelected', '{{count}} selected', {
+                    count: selectedSignals.length,
+                  })
+                : t('signalsWorkspace.noneSelected', 'None selected')}
+            </Badge>
+          }
+          bodyClassName="px-3 py-3 sm:px-4 sm:py-4"
+        >
+          <SignalCategoryTree
             vehicleId={vehicleId}
-            title={t('signalsWorkspace.catalogTitle', 'Catalog')}
-            showSummary={false}
-            selection={{
-              selectedSignals,
-              onToggle: toggleSignal,
-              max: MAX_SELECTED_SIGNALS,
-            }}
-            tableMaxHeight="60vh"
+            selectedSignals={selectedSignals}
+            onChange={setSelectedSignals}
+            searchValue={catalogSearch}
+            onSearchChange={setCatalogSearch}
+            expandedGroupIds={expandedCategories}
+            onExpandedChange={setExpandedCategories}
+            maxHeightClassName="max-h-[55vh]"
           />
-        </div>
+        </Accordion>
 
-        {/* Workspace right column */}
-        <div className="space-y-5 lg:col-span-7 order-1 lg:order-2">
-          {/* Selector + toolbar */}
-          <GlassPanel className="p-4 sm:p-5 space-y-4">
-            <SignalSelector
-              options={availableSignals ?? []}
-              value={selectedSignals}
-              onChange={(next) => setSelectedSignals(next.slice(0, MAX_SELECTED_SIGNALS))}
-              max={MAX_SELECTED_SIGNALS}
-            />
-
+        {/* Workspace toolbar — Time range / Per page / Run / Live / Compare.
+            Signal selection lives entirely in the "Add signals" Accordion above. */}
+        <GlassPanel className="p-4 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="flex flex-wrap items-end gap-2">
                 {!isCompare ? (
@@ -574,20 +600,45 @@ export default function SignalsWorkspacePage() {
           {/* LIVE / HISTORICAL — chart + stats + tail or history */}
           {!isCompare ? (
             <>
-              {(hasHistorical || isLive) && activeStats.length > 0 ? (
-                <SignalStatsPanel stats={activeStats} loading={historicalLoading && !isLive} />
+              {(hasHistorical || isLive) && selectedSignals.length > 0 ? (
+                <SignalStatsPanel
+                  stats={activeStats}
+                  selectedSignals={selectedSignals}
+                  loading={historicalLoading && !isLive}
+                />
               ) : null}
 
               {hasHistorical || isLive ? (
-                <SignalChartPanel
-                  selectedSignals={selectedSignals}
-                  data={activeChart}
-                  stats={activeStats}
-                  isLive={isLive}
-                  loading={historicalLoading && !isLive}
-                  pointsLoaded={historicalRows?.length}
-                  liveEventCount={live.chartPointCount}
-                />
+                <>
+                  {selectedSignals.length >= 2 ? (
+                    <div className="flex items-center justify-end">
+                      <div className="inline-flex items-center gap-2">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                          {t('signalsWorkspace.chartMode', 'Chart layout')}
+                        </span>
+                        <TabNav
+                          tabs={[
+                            { key: 'auto', label: t('signalsWorkspace.chartAuto', 'Auto') },
+                            { key: 'overlay', label: t('signalsWorkspace.chartOverlay', 'Overlay') },
+                            { key: 'grid', label: t('signalsWorkspace.chartGrid', 'Grid') },
+                          ]}
+                          active={chartMode}
+                          onChange={(k) => setChartMode(k as SignalChartMode)}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                  <SignalChartPanel
+                    selectedSignals={selectedSignals}
+                    data={activeChart}
+                    stats={activeStats}
+                    isLive={isLive}
+                    loading={historicalLoading && !isLive}
+                    pointsLoaded={historicalRows?.length}
+                    liveEventCount={live.chartPointCount}
+                    chartMode={chartMode}
+                  />
+                </>
               ) : null}
 
               {isLive ? (
@@ -620,7 +671,7 @@ export default function SignalsWorkspacePage() {
                       title={t('signalsWorkspace.emptyTitle', 'Pick signals and run a query')}
                       message={t(
                         'signalsWorkspace.emptyDesc',
-                        'Select up to 5 signals from the catalog, choose a time range, then click Run for historical data — or toggle Live to stream in real time.',
+                        'Pick signals from the catalog, choose a time range, then click Run for historical data — or toggle Live to stream in real time.',
                       )}
                     />
                   </GlassPanel>
@@ -633,14 +684,7 @@ export default function SignalsWorkspacePage() {
           <div className="text-[10px] text-[var(--text-muted)] text-right">
             <RefreshCw className="inline h-3 w-3 mr-1" />
             {t('signalGap.refreshInterval', 'Catalog refreshes every 5s')}
-            {selectedSignals.length === MAX_SELECTED_SIGNALS ? (
-              <span className="ml-3 inline-flex items-center gap-1 text-amber-400">
-                <AlertTriangle className="h-3 w-3" />
-                {t('signalsWorkspace.capReached', 'Selection cap reached — deselect to add another')}
-              </span>
-            ) : null}
           </div>
-        </div>
       </div>
     </PageContainer>
   );
