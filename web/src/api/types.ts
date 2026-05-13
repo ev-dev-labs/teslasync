@@ -248,7 +248,6 @@ export interface AppSettings {
   quiet_hours_start: string
   quiet_hours_end: string
   alert_digest_mode: string
-  google_maps_api_key?: string
   polling_config?: PollingConfig
   /** Unicode currency glyph (e.g. "$", "€"). Stored verbatim — no ISO 4217 lookup. */
   currency_symbol?: string

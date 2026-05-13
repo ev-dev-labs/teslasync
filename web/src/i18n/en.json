@@ -1844,10 +1844,6 @@
         "mpg": {
           "title": "Comparison vehicle MPG",
           "desc": "Average MPG of the equivalent gas car for savings calculations."
-        },
-        "googleMaps": {
-          "title": "Google Maps API key",
-          "desc": "Optional key enabling satellite views and Places autocomplete."
         }
       },
       "gasPrice": {
@@ -6726,10 +6722,6 @@
     "perLiter": "/ liter",
     "comparisonMPG": "Comparison Vehicle MPG",
     "mpgPlaceholder": "Average MPG of equivalent gas car",
-    "googleMapsApiKey": "Google Maps API Key",
-    "googleMapsPlaceholder": "Enter your Google Maps API key",
-    "googleMapsHint": "Optional — enables satellite views, Places autocomplete, and enhanced geocoding.",
-    "getKeyAt": "Get a key at",
     "save": "Save Settings",
     "settingsSaved": "Settings saved",
     "newVersion": {

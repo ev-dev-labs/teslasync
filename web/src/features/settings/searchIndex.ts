@@ -201,14 +201,6 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       description: t('search.entries.general.mpg.desc', 'Average MPG of the equivalent gas car for savings calculations.'),
       keywords: ['fuel economy', 'efficiency', 'mpg'],
     },
-    {
-      id: 'general.google-maps',
-      href: '/settings#general',
-      section: 'general',
-      title: t('search.entries.general.googleMaps.title', 'Google Maps API key'),
-      description: t('search.entries.general.googleMaps.desc', 'Optional key enabling satellite views and Places autocomplete.'),
-      keywords: ['maps', 'api key', 'satellite', 'places'],
-    },
 
     // ── Gas price auto-poll ─────────────────────────────────────────
     {
