@@ -121,17 +121,43 @@ func urlParamInt64(r *http.Request, key string) (int64, error) {
 	return strconv.ParseInt(chi.URLParam(r, key), 10, 64)
 }
 
-// parseDateRange extracts optional start/end date query params (format: 2006-01-02).
-// End date is set to end of day (23:59:59) to include the full day.
+// parseDateRange extracts optional start/end date query params.
+//
+// Two formats are accepted, in this order of precedence per parameter:
+//
+//  1. RFC 3339 instants (e.g. "2026-05-13T07:00:00Z") — used verbatim
+//     for `start`. For `end`, the FE convention is to send the next
+//     local midnight (i.e. an EXCLUSIVE upper bound) so the window
+//     spans `[start, end)` in calendar-day terms. Existing handlers
+//     filter with `ts BETWEEN $2 AND $3` (inclusive); to keep that
+//     contract working we subtract 1 microsecond from the RFC 3339
+//     end so the boundary instant itself is excluded. Net effect:
+//     callers get correct `[start, next_local_midnight)` semantics
+//     regardless of which SQL operator they use. This is the form
+//     the React `useRangeState` hook produces via its
+//     `startInstant` / `endInstantExclusive` outputs and is the
+//     recommended shape for all new UI surfaces.
+//
+//  2. Date-only "YYYY-MM-DD" — backward-compatible legacy form. Parsed
+//     as UTC midnight (start) / UTC end-of-day (end, inclusive).
+//     Suitable for fixed-window reports and audit endpoints that
+//     don't care about timezone. New UI surfaces should switch to
+//     RFC 3339 instants — the legacy form silently dropped today's
+//     local rows for any user east or west of UTC (e.g. a PST user's
+//     evening drives recorded at next-day UTC).
 func parseDateRange(r *http.Request) (startTime, endTime time.Time) {
 	if s := r.URL.Query().Get("start"); s != "" {
-		if t, err := time.Parse("2006-01-02", s); err == nil {
+		if t, err := time.Parse(time.RFC3339, s); err == nil {
+			startTime = t
+		} else if t, err := time.Parse("2006-01-02", s); err == nil {
 			startTime = t
 		}
 	}
 	if s := r.URL.Query().Get("end"); s != "" {
-		if t, err := time.Parse("2006-01-02", s); err == nil {
-			endTime = t.Add(24*time.Hour - time.Second) // end of day
+		if t, err := time.Parse(time.RFC3339, s); err == nil {
+			endTime = t.Add(-time.Microsecond) // exclusive → inclusive for BETWEEN
+		} else if t, err := time.Parse("2006-01-02", s); err == nil {
+			endTime = t.Add(24*time.Hour - time.Second) // end of day (UTC)
 		}
 	}
 	return

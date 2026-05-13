@@ -11,8 +11,8 @@ export const fsmKeys = {
     hours: number,
     page: number,
     perPage: number,
-    startDate?: string,
-    endDate?: string,
+    startInstant?: string,
+    endInstant?: string,
   ) =>
     [
       'fsm-transitions',
@@ -21,8 +21,8 @@ export const fsmKeys = {
       hours,
       page,
       perPage,
-      startDate ?? '',
-      endDate ?? '',
+      startInstant ?? '',
+      endInstant ?? '',
     ] as const,
 };
 
@@ -36,24 +36,32 @@ export function useFSMStats(entityId: string) {
   });
 }
 
+/**
+ * Fetches the FSM transition log filtered to a calendar window.
+ *
+ * `startInstant` / `endInstantExclusive` MUST be RFC 3339 instants
+ * (e.g. `2026-05-12T07:00:00.000Z`) representing the half-open
+ * `[start, end)` window already resolved to the user's display
+ * timezone. Build them from `useRangeState`'s `startInstant` /
+ * `endInstantExclusive` so calendar-day strings never reach the wire
+ * — the legacy `YYYY-MM-DD` shape silently dropped today's local rows
+ * for any user not on UTC.
+ */
 export function useFSMTransitions(
   entityId: string,
   fsmType: FSMType,
   hours: number,
   page: number,
   perPage: number,
-  startDate?: string,
-  endDate?: string,
+  startInstant?: string,
+  endInstantExclusive?: string,
 ) {
   const nameParam = fsmType === 'all' ? '' : `&fsm_name=${fsmType}`;
-  // When the caller passes an explicit start/end (canonical RangePicker
-  // window), prefer those over the rolling-from-now `hours` so historical
-  // presets like `yesterday`/`lastMonth` and custom calendar picks return
-  // the actual chosen window. The `hours` param is still sent for backward
-  // compatibility with backends that may not yet support start/end (and is
-  // ignored by the modern handler when start/end are present).
   const dateParams =
-    startDate && endDate ? `&start=${startDate}&end=${endDate}` : '';
+    startInstant && endInstantExclusive
+      ? `&start=${encodeURIComponent(startInstant)}` +
+        `&end=${encodeURIComponent(endInstantExclusive)}`
+      : '';
   return useQuery({
     queryKey: fsmKeys.transitions(
       entityId,
@@ -61,8 +69,8 @@ export function useFSMTransitions(
       hours,
       page,
       perPage,
-      startDate,
-      endDate,
+      startInstant,
+      endInstantExclusive,
     ),
     queryFn: ({ signal }) =>
       request<FSMTransitionResponse>(

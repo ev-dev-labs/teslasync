@@ -27,6 +27,7 @@ import {
   resolveAllTimeStart,
   type DatePresetRange,
 } from '@/lib/datePresets';
+import { calendarRangeToInstants } from '@/lib/dateRange';
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -62,6 +63,15 @@ export interface UseRangeStateOptions {
    * Defaults to `false` so unused UI doesn't appear on opt-in pages.
    */
   enableCompare?: boolean;
+  /**
+   * IANA timezone the calendar dates are interpreted in when computing
+   * `startInstant` / `endInstantExclusive`. Defaults to the browser's
+   * resolved timezone. Vehicle-centric pages should pass the vehicle's
+   * IANA tz (via `useTimezone('vehicle')`) so the API filter spans the
+   * user's intended wall-clock window — sending UTC midnight silently
+   * dropped today's local rows for any user not on UTC.
+   */
+  timezone?: string;
 }
 
 export interface RangeValue {
@@ -72,6 +82,19 @@ export interface RangeValue {
 export interface UseRangeStateReturn {
   start: string;
   end: string;
+  /**
+   * RFC 3339 instant of `start`'s local midnight in the configured tz.
+   * Pass directly to API hooks — never the raw `start` calendar string.
+   */
+  startInstant: string;
+  /**
+   * RFC 3339 instant of the day AFTER `end`'s local midnight (exclusive)
+   * in the configured tz. Half-open `[startInstant, endInstantExclusive)`
+   * is the canonical API window; inclusive end-of-day is a footgun.
+   */
+  endInstantExclusive: string;
+  /** IANA timezone used to compute `startInstant`/`endInstantExclusive`. */
+  timezone: string;
   /** Derived id from {@link matchPresetId} (undefined for custom ranges). */
   presetId: string | undefined;
   /** When `enableCompare` is true: whether the user opted into comparison. */
@@ -152,6 +175,7 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     persistKey,
     minDate,
     enableCompare = false,
+    timezone,
   } = opts;
 
   const [params, setParams] = useSearchParams();
@@ -283,9 +307,31 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     [effective.start, effective.end],
   );
 
+  const resolvedTimezone = useMemo(() => {
+    if (timezone && timezone.trim()) return timezone;
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    } catch {
+      return 'UTC';
+    }
+  }, [timezone]);
+
+  const { startInstant, endInstantExclusive } = useMemo(
+    () =>
+      calendarRangeToInstants({
+        startDate: effective.start,
+        endDate: effective.end,
+        timezone: resolvedTimezone,
+      }),
+    [effective.start, effective.end, resolvedTimezone],
+  );
+
   return {
     start: effective.start,
     end: effective.end,
+    startInstant,
+    endInstantExclusive,
+    timezone: resolvedTimezone,
     presetId,
     compare,
     comparePrev,
