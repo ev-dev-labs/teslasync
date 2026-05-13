@@ -23,6 +23,51 @@ export interface SignalLogEntry {
   value_bool?: boolean | null
 }
 
+/* ── BE → FE adapter ── */
+//
+// The `/api/v1/signals/{vid}/{name}/history` endpoint returns the
+// Phase-42 typed shape `{ts, kind, value}` — a single `value` whose
+// type is dictated by the row's `value_kind` discriminator. The rest
+// of the telemetry UI (chart, stats, table) was built for the older
+// `{created_at, value_num/str/bool}` rows. Without this adapter the
+// chart axis renders "Invalid Date" and every cell shows "—" with a
+// "string" type badge — the symptom that motivated this helper.
+import type { SignalHistoryPoint, SignalHistoryResp } from '@/api/types'
+
+export function adaptSignalHistoryPoint(point: SignalHistoryPoint, signal: string): SignalLogEntry {
+  const entry: SignalLogEntry = {
+    created_at: point.ts,
+    signal,
+    value_num: null,
+    value_str: null,
+    value_bool: null,
+  }
+  switch (typeof point.value) {
+    case 'number':
+      entry.value_num = Number.isFinite(point.value) ? point.value : null
+      break
+    case 'boolean':
+      entry.value_bool = point.value
+      break
+    case 'string':
+      // The typed BE returns ValueKindTime / ValueKindString as strings;
+      // surface both via value_str so the table renders them and the
+      // chart's numeric guard correctly skips non-numeric series.
+      entry.value_str = point.value
+      break
+    default:
+      // null / undefined → leave all three nulled out
+      break
+  }
+  return entry
+}
+
+export function adaptSignalHistoryResp(resp: SignalHistoryResp | null | undefined): SignalLogEntry[] {
+  if (!resp || !Array.isArray(resp.data)) return []
+  const signal = resp.signal ?? ''
+  return resp.data.map((p) => adaptSignalHistoryPoint(p, signal))
+}
+
 export interface SignalHistoryPagination {
   page: number
   per_page: number

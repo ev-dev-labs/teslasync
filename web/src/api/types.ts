@@ -2112,15 +2112,29 @@ export interface AutomationHistoryStats {
 }
 
 /** Per-signal history response from /signals/{vehicleID}/{signalName}/history */
+// SignalHistoryResp matches the typed `/api/v1/signals/{vid}/{name}/history`
+// response added by Phase-42 (signal_handler.go). Each row carries the
+// row's source-of-truth `value_kind` discriminator and the typed value
+// in a single `value` field — UI code should call
+// `adaptSignalHistoryRow` to project it into the legacy
+// `SignalLogEntry` shape consumed by SignalHistoryTable, the chart,
+// and stats panels.
 export interface SignalHistoryResp {
+  vehicle_id: number
   signal: string
+  /** Expected ValueKind for the signal (per protomodel registry). */
+  expected_kind?: string
+  from?: string
+  to?: string
   count: number
-  data: Array<{
-    created_at: string
-    value_num?: number | null
-    value_str?: string | null
-    value_bool?: boolean | null
-  }>
+  data: SignalHistoryPoint[]
+}
+
+export interface SignalHistoryPoint {
+  ts: string
+  /** Row's source-of-truth ValueKind (e.g. "ValueKindDouble"). */
+  kind: string
+  value: number | string | boolean | null
 }
 
 export interface AutomationHistoryListResponse {

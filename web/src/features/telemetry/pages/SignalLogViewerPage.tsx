@@ -30,7 +30,7 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
-import type { SignalLogEntry } from '@/components/SignalQueryControls';
+import { adaptSignalHistoryResp, type SignalLogEntry } from '@/components/SignalQueryControls';
 import type { SignalHistoryResp } from '@/api/types';
 
 import { SignalSelector } from '../components/SignalSelector';
@@ -90,15 +90,7 @@ export default function SignalLogViewerPage() {
         ),
       );
       return results
-        .flatMap((resp) =>
-          (resp?.data ?? []).map((row) => ({
-            created_at: row.created_at,
-            signal: resp?.signal ?? '',
-            value_num: row.value_num ?? null,
-            value_str: row.value_str ?? null,
-            value_bool: row.value_bool ?? null,
-          })),
-        )
+        .flatMap((resp) => adaptSignalHistoryResp(resp))
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
     enabled: queryKey !== null,

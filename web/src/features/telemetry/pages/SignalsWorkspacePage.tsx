@@ -58,7 +58,7 @@ import { getErrorMessage } from '@/lib/errorMessage';
 import { fmtInt } from '@/lib/numberFormat';
 import { downloadCSV, objectsToCSV } from '@/lib/csvExport';
 import type { SignalHistoryResp } from '@/api/types';
-import type { SignalLogEntry } from '@/components/SignalQueryControls';
+import { adaptSignalHistoryResp, type SignalLogEntry } from '@/components/SignalQueryControls';
 
 import { SignalDiffTable } from '../components/SignalDiffTable';
 import { SignalCatalogPanel } from '../components/SignalCatalogPanel';
@@ -211,15 +211,7 @@ export default function SignalsWorkspacePage() {
         ),
       );
       return results
-        .flatMap((resp) =>
-          (resp?.data ?? []).map((row) => ({
-            created_at: row.created_at,
-            signal: resp?.signal ?? '',
-            value_num: row.value_num ?? null,
-            value_str: row.value_str ?? null,
-            value_bool: row.value_bool ?? null,
-          })),
-        )
+        .flatMap((resp) => adaptSignalHistoryResp(resp))
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
     enabled: !isLive && !isCompare && exploreKey !== null,
