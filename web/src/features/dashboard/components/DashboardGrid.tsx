@@ -170,8 +170,15 @@ export function DashboardGrid({
     layoutRef.current = dashboard.layouts;
   }, [dashboard.layouts]);
 
-  // react-grid-layout v2: hook provides containerRef + measured width
-  const { containerRef, width } = useContainerWidth({ initialWidth: 1200 });
+  // react-grid-layout v2: hook provides containerRef + measured width.
+  // Initial width = the browser's viewport (or 1200 in SSR) so the very
+  // first render already picks the correct breakpoint on mobile devices —
+  // otherwise the dashboard mounts as `lg` (RGL render), then re-mounts as
+  // `xs` (flex-stack render) once ResizeObserver measures the real width,
+  // remounting every widget (chart/map flicker, Suspense fallback flash).
+  const { containerRef, width } = useContainerWidth({
+    initialWidth: typeof window !== 'undefined' ? window.innerWidth : 1200,
+  });
 
   // v2 drag/resize config objects (stable references via useMemo)
   const dragConfig = useMemo(() => ({
@@ -249,6 +256,47 @@ export function DashboardGrid({
     return def?.defaultSize ?? { cols: 1, rows: 1 };
   }, [liveLayouts, dashboard.widgets, activeBreakpoint]);
 
+  // ── Mobile (xs) stack mode ────────────────────────────────────────────
+  //
+  // On the smallest breakpoint each widget is a single full-width column
+  // anyway, so RGL's fixed `h × ROW_HEIGHT` row sizing is the wrong tool —
+  // it pins each widget to its desktop-sized height (e.g. vehicle-hero
+  // h=9 → 720px) which leaves hundreds of pixels of *empty space* below
+  // the actual widget content (each widget then renders an "elongated
+  // blank space" page on a phone).
+  //
+  // Render the same widget JSX inside a vanilla flex column so each
+  // widget's intrinsic content height drives the row height, with a
+  // floor (`min-h-[12rem]` / 192px) reserved for chart and map widgets
+  // whose Recharts `ResponsiveContainer height="100%"` / map canvases
+  // need a definite parent height to compute against. The wrapper is a
+  // flex column so descendants relying on `h-full` resolve via flex
+  // stretch (default `align-items: stretch`).
+  const isMobileStack = activeBreakpoint === 'xs';
+
+  // Preserve the user's saved mobile order if they ever rearranged on
+  // mobile (xs layout y/x); otherwise fall back to widget insertion
+  // order so freshly-added widgets keep showing up at the bottom.
+  const orderedWidgets = useMemo(() => {
+    if (!isMobileStack) return dashboard.widgets;
+    const xsLayout = (liveLayouts.xs ?? []) as RGLLayout[];
+    if (xsLayout.length === 0) return dashboard.widgets;
+    const orderMap = new Map<string, number>();
+    xsLayout.forEach((l, i) => {
+      // Encode (y, x, index) into a single sortable scalar so equal y/x
+      // values fall back to layout-array order for determinism.
+      orderMap.set(l.i, l.y * 10000 + l.x * 100 + i / 1000);
+    });
+    return [...dashboard.widgets].sort((a, b) => {
+      const aOrder = orderMap.get(a.id);
+      const bOrder = orderMap.get(b.id);
+      if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
+      if (aOrder !== undefined) return -1;
+      if (bOrder !== undefined) return 1;
+      return 0;
+    });
+  }, [isMobileStack, dashboard.widgets, liveLayouts.xs]);
+
   // Kiosk panel background boost: increases GlassPanel bg from default 5% white
   const kioskPanelStyle = useMemo(() => {
     if (kioskWidgetOpacity == null) return undefined;
@@ -268,14 +316,105 @@ export function DashboardGrid({
     ? getWidgetDef(fullscreenInstance.widgetId)
     : null;
 
+  // Render a single widget's body. Used by both the desktop RGL grid path
+  // and the mobile flex-stack path so behaviour stays in sync. The
+  // `mobile` flag swaps `h-full` (RGL gives a definite height) for a
+  // flex-1/min-h pair (mobile auto-height parent gives a min-height
+  // floor that descendants resolve via flex stretch).
+  const renderWidgetBody = useCallback((widget: WidgetInstance, mobile: boolean) => {
+    const def = getWidgetDef(widget.widgetId);
+    if (!def) return null;
+    const Component = def.component;
+    const size = getWidgetSizeLive(widget.id);
+
+    return (
+      <div
+        key={widget.id}
+        className={cn(
+          'widget-container relative group',
+          // Mobile: become a flex column so the GlassPanel + nested
+          // `h-full` widget content resolve to the wrapper's min-height.
+          mobile && 'flex flex-col min-h-[12rem]',
+        )}
+      >
+        {/* Edit mode chrome — drag handle has no effect on touch, kept
+            for the settings/remove icons it also exposes. */}
+        {editMode && (
+          <WidgetChrome
+            widget={widget}
+            def={def}
+            onRemove={() => onRemoveWidget(widget.id)}
+            onSettings={() => onOpenSettings(widget.id)}
+          />
+        )}
+
+        {/* Fullscreen button (view mode) */}
+        {!editMode && (
+          <UiButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setFullscreenWidget(widget.id)}
+            className="absolute top-2 right-2 z-10 h-auto p-1.5 rounded-lg bg-[var(--surface-overlay)]
+              text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--surface-overlay)]
+              opacity-0 group-hover:opacity-100 transition-all"
+            aria-label={`Expand ${def.name}`}
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+          </UiButton>
+        )}
+
+        {/* Visual resize affordance — desktop edit mode only; resize
+            isn't wired up on the mobile stack path. */}
+        {editMode && !mobile && (
+          <div className="absolute bottom-0 left-0 right-0 h-1.5 z-20
+            bg-gradient-to-r from-transparent via-[var(--theme-primary)]/20 to-transparent
+            opacity-0 group-hover:opacity-100 transition-opacity rounded-b-xl pointer-events-none" />
+        )}
+
+        <GlassPanel
+          className={cn(
+            'w-full overflow-y-auto rounded-xl',
+            mobile ? 'flex-1 min-h-0' : 'h-full',
+            showWidgetBorders && 'border border-[var(--border-subtle)]',
+          )}
+          style={kioskPanelStyle}
+        >
+          <SectionErrorBoundary
+            name={`widget:${def.id}:${widget.id}`}
+            fallbackTitle={`${def.name} failed to load`}
+          >
+            <Suspense
+              fallback={
+                <div className="h-full flex items-center justify-center">
+                  <Skeleton className="h-3/4 w-3/4 rounded-xl" />
+                </div>
+              }
+            >
+              <Component
+                vehicleId={widget.config?.vehicleId ?? dashboardVehicleId}
+                config={widget.config}
+                size={size}
+              />
+            </Suspense>
+          </SectionErrorBoundary>
+        </GlassPanel>
+      </div>
+    );
+  }, [
+    editMode, getWidgetSizeLive, dashboardVehicleId, kioskPanelStyle,
+    showWidgetBorders, onRemoveWidget, onOpenSettings,
+  ]);
+
   return (
     <>
       <div
         ref={containerRef as React.RefObject<HTMLDivElement>}
         className={cn('relative', editMode && 'edit-mode', isDragging && 'dragging-active')}
       >
-      {/* Edit mode grid dot pattern */}
-      {editMode && (
+      {/* Edit mode grid dot pattern — only meaningful for the absolute-
+          positioned RGL path; on the mobile stack widgets flow naturally. */}
+      {editMode && !isMobileStack && (
         <div
           className="absolute inset-0 pointer-events-none z-0 rounded-xl"
           style={{
@@ -284,94 +423,34 @@ export function DashboardGrid({
           }}
         />
       )}
-      <ResponsiveGridLayout
-        width={width}
-        layouts={liveLayouts}
-        breakpoints={GRID_BREAKPOINTS}
-        cols={GRID_COLS}
-        rowHeight={ROW_HEIGHT}
-        dragConfig={dragConfig}
-        resizeConfig={resizeConfig}
-        compactor={verticalCompactor}
-        onLayoutChange={handleLayoutChange}
-        onDragStart={handleDragStart}
-        onDragStop={handleDragStop}
-        onResizeStart={handleResizeStart}
-        onResizeStop={handleResizeStop}
-        margin={compactMode ? [8, 8] as [number, number] : GRID_MARGIN}
-        containerPadding={[0, 0]}
-      >
-        {dashboard.widgets.map((widget) => {
-          const def = getWidgetDef(widget.widgetId);
-          if (!def) return null;
-          const Component = def.component;
-          const size = getWidgetSizeLive(widget.id);
-
-          return (
-            <div key={widget.id} className="widget-container relative group">
-              {/* Edit mode chrome */}
-              {editMode && (
-                <WidgetChrome
-                  widget={widget}
-                  def={def}
-                  onRemove={() => onRemoveWidget(widget.id)}
-                  onSettings={() => onOpenSettings(widget.id)}
-                />
-              )}
-
-              {/* Fullscreen button (view mode) */}
-              {!editMode && (
-                <UiButton
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setFullscreenWidget(widget.id)}
-                  className="absolute top-2 right-2 z-10 h-auto p-1.5 rounded-lg bg-[var(--surface-overlay)]
-                    text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--surface-overlay)]
-                    opacity-0 group-hover:opacity-100 transition-all"
-                  aria-label={`Expand ${def.name}`}
-                >
-                  <Maximize2 className="h-3.5 w-3.5" />
-                </UiButton>
-              )}
-
-              {/* Visual resize affordance bar at bottom edge in edit mode */}
-              {editMode && (
-                <div className="absolute bottom-0 left-0 right-0 h-1.5 z-20
-                  bg-gradient-to-r from-transparent via-[var(--theme-primary)]/20 to-transparent
-                  opacity-0 group-hover:opacity-100 transition-opacity rounded-b-xl pointer-events-none" />
-              )}
-
-              <GlassPanel
-                className={cn(
-                  'h-full w-full overflow-y-auto rounded-xl',
-                  showWidgetBorders && 'border border-[var(--border-subtle)]',
-                )}
-                style={kioskPanelStyle}
-              >
-                <SectionErrorBoundary
-                  name={`widget:${def.id}:${widget.id}`}
-                  fallbackTitle={`${def.name} failed to load`}
-                >
-                  <Suspense
-                    fallback={
-                      <div className="h-full flex items-center justify-center">
-                        <Skeleton className="h-3/4 w-3/4 rounded-xl" />
-                      </div>
-                    }
-                  >
-                    <Component
-                      vehicleId={widget.config?.vehicleId ?? dashboardVehicleId}
-                      config={widget.config}
-                      size={size}
-                    />
-                  </Suspense>
-                </SectionErrorBoundary>
-              </GlassPanel>
-            </div>
-          );
-        })}
-      </ResponsiveGridLayout>
+      {isMobileStack ? (
+        <div
+          className="flex flex-col gap-3"
+          data-testid="dashboard-mobile-stack"
+        >
+          {orderedWidgets.map((widget) => renderWidgetBody(widget, true))}
+        </div>
+      ) : (
+        <ResponsiveGridLayout
+          width={width}
+          layouts={liveLayouts}
+          breakpoints={GRID_BREAKPOINTS}
+          cols={GRID_COLS}
+          rowHeight={ROW_HEIGHT}
+          dragConfig={dragConfig}
+          resizeConfig={resizeConfig}
+          compactor={verticalCompactor}
+          onLayoutChange={handleLayoutChange}
+          onDragStart={handleDragStart}
+          onDragStop={handleDragStop}
+          onResizeStart={handleResizeStart}
+          onResizeStop={handleResizeStop}
+          margin={compactMode ? [8, 8] as [number, number] : GRID_MARGIN}
+          containerPadding={[0, 0]}
+        >
+          {dashboard.widgets.map((widget) => renderWidgetBody(widget, false))}
+        </ResponsiveGridLayout>
+      )}
       </div>
 
       {/* Fullscreen overlay */}
