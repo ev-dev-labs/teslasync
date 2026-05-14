@@ -64,12 +64,20 @@ export type AiStreamEvent =
       args: unknown;
       summary: string;
     }
+  | { type: 'done'; finish_reason: string; usage: { in: number; out: number } }
   | {
-      type: 'done';
-      finish_reason: string;
-      usage: { in: number; out: number };
-    }
-  | { type: 'error'; message: string };
+      type: 'error';
+      message: string;
+      // F9: structured rate-limit / cost-cap fields. Optional —
+      // legacy plain-error frames still parse cleanly. The frontend
+      // AiLimitBanner reads these to render the right banner level
+      // and a retry countdown. See [limit.Decision] for the closed
+      // value set the backend writes.
+      reason?: string;
+      retry_after_s?: number;
+      banner_level?: 'warn' | 'critical' | '';
+      baseline_available?: boolean;
+    };
 
 // AiStreamState is the user-facing lifecycle. `paused-confirm` is set
 // by the hook when a `confirm_request` event arrives — the component
@@ -110,6 +118,22 @@ export interface UseAiStreamArgs {
   onEvent: (ev: AiStreamEvent) => void;
 }
 
+// AiLimitInfo is the structured rate-limit / cost-cap info parsed
+// from a terminal `error` SSE frame. F9 added structured fields to
+// the error frame so the AiLimitBanner can render the right colour
+// + a retry countdown without scraping the human-readable message.
+//
+// Only present when the error frame carried a `reason` field; legacy
+// plain-error frames yield `limit === null` and the page should fall
+// back to the generic ErrorDisplay.
+export interface AiLimitInfo {
+  reason: string;
+  retryAfterS: number;
+  bannerLevel: 'warn' | 'critical' | '';
+  baselineAvailable: boolean;
+  message: string;
+}
+
 // UseAiStreamResult is the return shape. `start` and `cancel` are
 // stable functional handles; `state` and `text` re-render the
 // component on change.
@@ -125,6 +149,13 @@ export interface UseAiStreamResult {
   text: string;
   /** The error message if `state === 'error'`, else null. */
   error: string | null;
+  /**
+   * F9: structured rate-limit / cost-cap info if the last terminal
+   * error carried one. `null` otherwise. The AiLimitBanner consumes
+   * this field directly. Pages should pivot to their non-AI baseline
+   * when `limit !== null && limit.baselineAvailable`.
+   */
+  limit: AiLimitInfo | null;
 }
 
 // SSE_DELIM is the standard event terminator: a blank line. The
@@ -152,6 +183,7 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
   const [state, setState] = useState<AiStreamState>('idle');
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [limit, setLimit] = useState<AiLimitInfo | null>(null);
 
   // Latest callback ref so closing over `onEvent` does not stale-pin
   // the parser. Same trick used by useEffect-flavoured event
@@ -194,6 +226,7 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
     setState('streaming');
     setText('');
     setError(null);
+    setLimit(null);
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -290,6 +323,19 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
           setState('done');
           break;
         case 'error':
+          // F9: capture the structured limit fields so the
+          // AiLimitBanner can render the right banner. Plain-error
+          // frames (no `reason`) yield limit === null, which the
+          // banner treats as "do not render".
+          if (ev.reason) {
+            setLimit({
+              reason: ev.reason,
+              retryAfterS: ev.retry_after_s ?? 0,
+              bannerLevel: ev.banner_level ?? '',
+              baselineAvailable: ev.baseline_available ?? true,
+              message: ev.message,
+            });
+          }
           finalizeError(ev.message);
           break;
         default:
@@ -305,7 +351,7 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
     }
   }, [url, body, state]);
 
-  return { start, cancel, state, text, error };
+  return { start, cancel, state, text, error, limit };
 }
 
 /**
@@ -396,8 +442,26 @@ function toTypedEvent(event: string, data: unknown): AiStreamEvent | null {
         },
       };
     }
-    case 'error':
-      return { type: 'error', message: typeof d.message === 'string' ? d.message : 'unknown' };
+    case 'error': {
+      const message = typeof d.message === 'string' ? d.message : 'unknown';
+      const reason = typeof d.reason === 'string' ? d.reason : undefined;
+      const retryAfterS = typeof d.retry_after_s === 'number' ? d.retry_after_s : undefined;
+      const bannerLevelRaw = typeof d.banner_level === 'string' ? d.banner_level : undefined;
+      const bannerLevel: 'warn' | 'critical' | '' | undefined =
+        bannerLevelRaw === 'warn' || bannerLevelRaw === 'critical' || bannerLevelRaw === ''
+          ? bannerLevelRaw
+          : undefined;
+      const baselineAvailable =
+        typeof d.baseline_available === 'boolean' ? d.baseline_available : undefined;
+      return {
+        type: 'error',
+        message,
+        reason,
+        retry_after_s: retryAfterS,
+        banner_level: bannerLevel,
+        baseline_available: baselineAvailable,
+      };
+    }
     default:
       return null;
   }

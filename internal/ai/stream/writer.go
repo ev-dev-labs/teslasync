@@ -314,12 +314,19 @@ func (w *Writer) WriteConfirmRequest(continuationID, toolName string, args json.
 // reason and usage. Always closes the Writer afterwards (idempotent
 // with [Close]).
 //
+// Idempotency: after the Writer has already been closed (typically
+// because [WriteError] or [WriteLimitError] fired earlier in the
+// dispatcher pipeline) calling WriteDoneFull is a no-op that returns
+// nil. This lets the dispatcher's `defer w.WriteDone()` coexist with
+// an early limit-error short-circuit without overwriting the real
+// return error with [ErrWriterClosed].
+//
 // To match [dispatch.StreamWriter], the no-arg form is exposed via
 // the [WriteDone] method below; this Done-with-args form is the one
 // production handlers should call directly.
 func (w *Writer) WriteDoneFull(finishReason string, usageIn, usageOut int) error {
 	if w.closed.Load() {
-		return ErrWriterClosed
+		return nil // idempotent — see method doc.
 	}
 	err := w.Send(EventDone, donePayload{
 		FinishReason: finishReason,
@@ -352,6 +359,88 @@ func (w *Writer) WriteError(err error) error {
 	sendErr := w.Send(EventError, errorPayload{Message: msg})
 	w.shutdown()
 	return sendErr
+}
+
+// LimitDecisionPayload is the SSE-wire shape of a [limit.Decision].
+// Defined as a public type (not the limit.Decision itself) so the
+// stream package does not import internal/ai/limit — the dispatcher
+// translates limit.Decision into this shape at the call boundary.
+//
+// Field names are SSE-wire stable; the TS hook AiStreamEvent union
+// in web/src/hooks/useAiStream.ts mirrors them and the contract test
+// at tools/aistream-contract enforces the mirror.
+type LimitDecisionPayload struct {
+	// Reason is the stable lowercase token from limit.Decision.
+	// See [limit.Decision] for the closed value set.
+	Reason string `json:"reason"`
+
+	// RetryAfterS is the number of seconds the client should wait
+	// before retrying the same call. 0 means "do not auto-retry".
+	RetryAfterS int `json:"retry_after_s,omitempty"`
+
+	// BannerLevel is the recommended frontend banner urgency:
+	// "" (none), "warn" (amber), "critical" (red).
+	BannerLevel string `json:"banner_level,omitempty"`
+
+	// BaselineAvailable is true when the user can fall back to a
+	// non-AI baseline for this feature. The frontend banner shows
+	// a "Use baseline" button only when this is true.
+	BaselineAvailable bool `json:"baseline_available"`
+}
+
+// WriteLimitError emits a terminal `error` SSE event whose payload
+// carries the structured rate-limiter / cost-cap [limit.Decision]
+// fields in addition to a human-readable message. This is the
+// primary surface the dispatcher uses when the provider chain
+// returns a [*limit.LimitError] (R8 mitigation):
+//
+//   - The frontend's useAiStream parses the structured fields and
+//     surfaces them via the AiLimitBanner component.
+//   - The Writer is closed after Send so subsequent calls (including
+//     a deferred [WriteDone]) are no-ops returning nil — see
+//     [WriteDoneFull] for the idempotency contract.
+//
+// payload.BaselineAvailable=true is the F9 default — exhaustion of
+// AI MUST NOT break the app per ADR-015 §I3. Strategies for which
+// no baseline exists override this at the decorator wiring layer.
+func (w *Writer) WriteLimitError(message string, payload LimitDecisionPayload) error {
+	if w.closed.Load() {
+		return ErrWriterClosed
+	}
+	if message == "" {
+		if payload.Reason != "" {
+			message = "ai limit hit: " + payload.Reason
+		} else {
+			message = "ai limit hit"
+		}
+	}
+	sendErr := w.Send(EventError, limitErrorPayload{
+		Message:           message,
+		Reason:            payload.Reason,
+		RetryAfterS:       payload.RetryAfterS,
+		BannerLevel:       payload.BannerLevel,
+		BaselineAvailable: payload.BaselineAvailable,
+	})
+	w.shutdown()
+	return sendErr
+}
+
+// EmitLimitError satisfies the dispatch.LimitErrorEmitter optional
+// interface so the dispatcher can dispatch a structured limit-error
+// SSE frame without importing the stream package's payload type.
+// The five-scalar signature matches dispatch.LimitErrorEmitter
+// verbatim — Go's structural interface check pairs them at runtime.
+//
+// Implementation is the thin adapter to [WriteLimitError]; the
+// payload struct is constructed inline so the SSE wire shape stays
+// owned by the stream package.
+func (w *Writer) EmitLimitError(message, reason string, retryAfterS int, bannerLevel string, baselineAvailable bool) error {
+	return w.WriteLimitError(message, LimitDecisionPayload{
+		Reason:            reason,
+		RetryAfterS:       retryAfterS,
+		BannerLevel:       bannerLevel,
+		BaselineAvailable: baselineAvailable,
+	})
 }
 
 // Close tears the stream down: stops accepting new sends, drains the
@@ -520,6 +609,20 @@ type donePayload struct {
 
 type errorPayload struct {
 	Message string `json:"message"`
+}
+
+// limitErrorPayload extends errorPayload with the structured fields
+// pulled from a [limit.Decision] so the SPA's AiLimitBanner can
+// render the right banner level + countdown without parsing the
+// human-readable message. The Reason taxonomy is defined on
+// [limit.Decision]; new reasons require a parallel update to the
+// frontend i18n table.
+type limitErrorPayload struct {
+	Message           string `json:"message"`
+	Reason            string `json:"reason,omitempty"`
+	RetryAfterS       int    `json:"retry_after_s,omitempty"`
+	BannerLevel       string `json:"banner_level,omitempty"`
+	BaselineAvailable bool   `json:"baseline_available"`
 }
 
 // --- Prometheus metrics ---

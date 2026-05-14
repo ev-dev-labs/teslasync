@@ -48,6 +48,7 @@ import { AIProviderSection, type AIProviderDraft } from './AIProviderSection'
 import { AIFeatureToggleList } from './AIFeatureToggleList'
 import { AIRestorePanel } from './AIRestorePanel'
 import { AIUsageCard } from './AIUsageCard'
+import { useAiUsageToday } from '@/api/hooks/useAiUsage'
 
 type AiMode = 'off' | 'local' | 'cloud'
 
@@ -366,6 +367,18 @@ export function AISettings() {
 
         {showProviderSection && <AIUsageCard />}
 
+        {/*
+          Phase-50 / 0010 — F9 cost-cap spend bar. Lives only in cloud
+          mode (local providers don't bill per token) and only when
+          the user has set a non-zero cap. Reads today's spend from
+          the same /ai/usage/today endpoint as AIUsageCard so the
+          numbers match exactly. The bar is a passive read — it does
+          not gate saving the cap.
+        */}
+        {isCloud && provider.cost_cap_cents > 0 && (
+          <AICostCapSpendBar capCents={provider.cost_cap_cents} />
+        )}
+
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border-subtle)]">
           <Button
             type="button"
@@ -427,5 +440,104 @@ function ModeRadio(props: {
         <span className="text-xs text-[var(--text-muted)]">{description}</span>
       </Stack>
     </label>
+  )
+}
+
+/**
+ * AICostCapSpendBar — Phase-50 / 0010 (F9) live "today" spend bar.
+ *
+ * Shows the user how close they are to their daily $ cap. The
+ * cost-cap decorator on the backend rejects new calls once the cap
+ * is reached; this bar lets the user see it coming. Visible only in
+ * cloud mode AND when capCents > 0 (the parent component gates this).
+ *
+ * Color rules:
+ *   pct < 80   → cyan-300  (informational)
+ *   pct ≥ 80   → amber-300 (warn — same threshold as the backend's
+ *                            BannerLevel:"warn")
+ *   pct ≥ 100  → rose-300  (critical — calls are now being rejected)
+ *
+ * Reads from /ai/usage/today via the existing hook so the value
+ * matches what AIUsageCard shows. When the API returns no rows yet,
+ * cost_micro_cents is 0 and the bar renders empty.
+ */
+function AICostCapSpendBar({ capCents }: { capCents: number }) {
+  const { t } = useTranslation('settings')
+  const { data, isLoading } = useAiUsageToday()
+
+  // Backend stores spend in micro-cents (1e-4 cent). Cap is supplied
+  // in whole cents. Convert both to dollars for display.
+  const todayMicroCents = data?.cost_micro_cents ?? 0
+  const capMicroCents = capCents * 10_000 // 1 cent = 10_000 micro-cents
+  const pct = capMicroCents > 0 ? Math.min(100, (todayMicroCents / capMicroCents) * 100) : 0
+  const todayDollars = todayMicroCents / 1_000_000
+  const capDollars = capCents / 100
+
+  const level: 'ok' | 'warn' | 'critical' =
+    pct >= 100 ? 'critical' : pct >= 80 ? 'warn' : 'ok'
+
+  const fillClass =
+    level === 'critical'
+      ? 'bg-rose-300'
+      : level === 'warn'
+        ? 'bg-amber-300'
+        : 'bg-cyan-300'
+  const textClass =
+    level === 'critical'
+      ? 'text-rose-300'
+      : level === 'warn'
+        ? 'text-amber-300'
+        : 'text-cyan-300'
+
+  return (
+    <div
+      className="space-y-2 rounded-lg border border-[var(--border-subtle)] p-3"
+      data-testid="ai-cost-cap-spend-bar"
+      data-spend-level={level}
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <Caption>
+          {t('ai.settings.costCap.todayTitle', 'Today’s AI spend')}
+        </Caption>
+        <span className={`text-xs font-medium ${textClass}`}>
+          {isLoading
+            ? t('ai.settings.costCap.loading', 'Loading…')
+            : t('ai.settings.costCap.amount', '${{spent}} / ${{cap}}', {
+                spent: todayDollars.toFixed(2),
+                cap: capDollars.toFixed(2),
+                defaultValue: `$${todayDollars.toFixed(2)} / $${capDollars.toFixed(2)}`,
+              })}
+        </span>
+      </div>
+      <div
+        className="h-2 w-full overflow-hidden rounded-full bg-white/10"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(pct)}
+        aria-label={t('ai.settings.costCap.barLabel', 'AI cost cap usage')}
+      >
+        <div
+          className={`h-full transition-all duration-500 ${fillClass}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {level === 'critical' && (
+        <HelperText>
+          {t(
+            'ai.settings.costCap.criticalHint',
+            'Cap reached — new AI calls will be rejected until the cap resets at UTC midnight or you raise it.',
+          )}
+        </HelperText>
+      )}
+      {level === 'warn' && (
+        <HelperText>
+          {t(
+            'ai.settings.costCap.warnHint',
+            'You are nearing today’s cap. Calls will pause once you reach it.',
+          )}
+        </HelperText>
+      )}
+    </div>
   )
 }

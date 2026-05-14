@@ -38,6 +38,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/limit"
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
@@ -126,6 +127,37 @@ type StreamWriter interface {
 	// WriteDone closes the stream. The dispatcher always calls
 	// this exactly once before Run returns (success or failure).
 	WriteDone() error
+}
+
+// LimitErrorEmitter is the OPTIONAL interface a [StreamWriter] may
+// implement to receive structured rate-limiter / cost-cap rejection
+// payloads. The dispatcher type-asserts on it after detecting a
+// [*limit.LimitError] from the provider chain (R8 mitigation, F9):
+//
+//   - If the writer satisfies this interface, the dispatcher calls
+//     EmitLimitError with the message + the structured fields and
+//     RETURNS NIL from Run() — the limit case is a normal terminal
+//     event on the SSE wire, not a Run error.
+//   - If the writer does NOT satisfy this interface, the dispatcher
+//     bubbles the LimitError up its return chain. Production wiring
+//     uses [*stream.Writer], which DOES satisfy it.
+//
+// Method takes individual scalars rather than a struct so the
+// stream package can implement it without importing the dispatch
+// package — no shared type, no import cycle, no leak of dispatch
+// concepts down the layer stack.
+type LimitErrorEmitter interface {
+	// EmitLimitError writes a terminal error frame carrying the
+	// structured limit payload + a human message. The writer MUST
+	// close the underlying stream after returning.
+	//
+	// Field semantics (match [limit.Decision]):
+	//   message            — human-readable error string
+	//   reason             — stable lowercase token taxonomy
+	//   retryAfterS        — seconds until safe to retry; 0 = never
+	//   bannerLevel        — "warn" | "critical" | "" (none)
+	//   baselineAvailable  — true when feature has a non-AI fallback
+	EmitLimitError(message, reason string, retryAfterS int, bannerLevel string, baselineAvailable bool) error
 }
 
 // Dispatcher orchestrates the chat loop for one feature run. It
@@ -225,6 +257,32 @@ func (d *Dispatcher) Run(ctx context.Context, s strategy.Strategy, in strategy.S
 		}
 		resp, err := d.provider.Chat(ctx, req)
 		if err != nil {
+			// F9: a [*limit.LimitError] is the rate-limiter or cost-
+			// cap saying "do not dispatch this call". It is NOT a
+			// Run error per se — the SSE wire surfaces it as a
+			// structured terminal `error` frame so the SPA can
+			// render the AiLimitBanner + pivot to the non-AI
+			// baseline (ADR-015 §I3).
+			var le *limit.LimitError
+			if errors.As(err, &le) {
+				if emitter, ok := w.(LimitErrorEmitter); ok {
+					if emitErr := emitter.EmitLimitError(
+						le.Error(),
+						le.Decision.Reason,
+						int(le.Decision.RetryAfter.Seconds()),
+						le.Decision.BannerLevel,
+						le.Decision.BaselineAvailable,
+					); emitErr != nil {
+						return fmt.Errorf("dispatch: emit limit error (iter %d): %w", iter, emitErr)
+					}
+					return nil
+				}
+				// Writer doesn't expose a structured emit hook —
+				// bubble the LimitError so a less feature-rich
+				// writer (e.g. CaptureWriter in tests) still sees a
+				// non-nil err and can decide its own fate.
+				return fmt.Errorf("dispatch: provider chat (iter %d): %w", iter, err)
+			}
 			return fmt.Errorf("dispatch: provider chat (iter %d): %w", iter, err)
 		}
 

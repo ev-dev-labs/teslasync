@@ -1,0 +1,624 @@
+================================================================================
+Phase-50 / Prompt 0010 — F9 Rate Limiter + Cost Cap — execution log
+================================================================================
+
+Log path : .github/prompts/db-refactor/logs/phase-50-0010-F9-rate-limiter-cost-cap.log
+Prompt   : .github/prompts/db-refactor/phase-50-ai-adoption/0010-F9-rate-limiter-cost-cap.prompt.md
+Methodol.: .github/prompts/db-refactor/phase-50-ai-adoption/0000-methodology.prompt.md
+ADR      : .github/ARCHITECTURE.md (ADR-015 AI-Off Contract)
+Patterns : P5 (RateLimit + CostCap decorators), R8 (graceful fallback),
+           R9 (cost cap with banner)
+Branch   : feat/ai-adoption
+HEAD     : 8ba7f12d591de4a257b0f892b10f9c6527844d30 (F8 redaction layer)
+
+
+=== PREFLIGHT ===
+
+Branch + HEAD:
+  $ git rev-parse --abbrev-ref HEAD
+  feat/ai-adoption
+  $ git rev-parse HEAD
+  8ba7f12d591de4a257b0f892b10f9c6527844d30
+
+Predecessors verified DONE (per Honesty Covenant rule 7 — no predecessor bypass):
+
+  F0 — phase-50-0001-F0-ai-off-contract.log
+       grep '^STATUS=' → STATUS=DONE (line 460)
+  F1 — phase-50-0002-F1-provider-abstraction.log
+       grep '^STATUS=' → STATUS=DONE (line 501)
+  F3 — phase-50-0004-F3-ai-call-log.log
+       grep '^STATUS=' → STATUS=DONE (line 559)
+  F8 — phase-50-0009-F8-redaction.log (latest predecessor on this branch)
+       grep '^STATUS=' → STATUS=DONE (line 501)
+
+Per-prompt declared deps were F0, F1, F3 — all green. F8 was the immediately-
+preceding slice on the same branch and is also green.
+
+Dirty-tree check before edits:
+  Working tree contained the F8 commit only. No uncommitted edits inherited
+  from a prior interrupted slice. New files for this slice are listed in
+  `git status --short` under === COMMIT ===.
+
+
+=== SURVEY ===
+
+Files inspected before any edits:
+
+  Allowed-files list (BINDING per Honesty Covenant rule 9):
+    internal/ai/limit/**
+    internal/ai/provider/{ratelimit,cost}_decorator.go (+ tests)
+    internal/ai/dispatch/dispatch.go
+    internal/ai/stream/writer.go
+    web/src/components/ai/AiLimitBanner.tsx (+ test)
+    web/src/hooks/useAiStream.ts
+    web/src/features/settings/components/AISettings.tsx
+    internal/ai/health/ollama_poll.go (+ test)
+
+  Reference (read, NOT modified):
+    .github/prompts/db-refactor/phase-50-ai-adoption/0000-methodology.prompt.md
+        — Pattern P5 (decorator chain order: Trace → Audit → CostCap →
+          RateLimit → Redaction → base).
+        — R8 graceful fallback: limit-exhaustion never breaks the app.
+        — R9 cost cap with banner: explicit user surface on cap reached.
+    .github/ARCHITECTURE.md ADR-015 (the AI-Off Contract invariants)
+    .github/prompts/db-refactor/logs/phase-50-0009-F8-redaction.log
+        — template for AI-OFF CONTRACT footer style + log structure.
+    internal/ai/features/registry.go
+        — feature-tier letter mapping (U/N/D/C/T/A/G/X/S/M/P/V/PU/GEN/ML/F).
+        — read-only reference for limit.TierResolver shim wiring.
+    internal/ai/cost/{estimate,priceTable}.go
+        — cost.Compute(provider, model, in, out) → micro-cents.
+        — cost.MicroCentsPerCent = 10_000.
+    internal/database/ai_call_log_repo.go
+        — *AICallLogRepo.Today(ctx, subject) returns CostMicroCents int64.
+    internal/ai/dispatch/dispatch.go (pre-edit baseline)
+        — Chat() loop calls d.provider.Chat then writes events; needed an
+          insertion point for errors.As(err, *limit.LimitError) detection.
+    internal/ai/stream/writer.go (pre-edit baseline)
+        — WriteDoneFull returned ErrWriterClosed on a closed writer; this
+          collided with deferred WriteDone() overwriting the real return
+          error after a limit-error early shutdown. Made idempotent.
+    internal/ai/provider/audit.go
+        — provider.SubjectFromContext / FeatureIDFromContext / WithSubject
+          / WithFeatureID already exist; reused by both new decorators.
+    internal/ai/provider/redaction_decorator.go
+        — F8 reference for goroutine-safe stream forwarding pattern.
+    internal/api/router.go (NOT in allowed list)
+        — confirmed the existing F8 decorator wiring; F9 must NOT modify
+          router.go, so the new decorators ship as building blocks only.
+        — wiring deferred to the first consuming feature slice (e.g. U1).
+    web/src/hooks/useAiStream.ts (pre-edit baseline)
+        — AiStreamEvent error variant carried only `message`; widened to
+          accept structured limit fields from the SSE error frame.
+    web/src/features/settings/components/{AISettings,AIProviderSection,
+        AIUsageCard}.tsx — provider has cost_cap_cents input; usage hook
+        useAiUsageToday() returns cost_micro_cents for the spend bar.
+    web/src/components/feedback/AlertBanner.tsx
+        — variant="warning"|"danger"|"info" maps cleanly to F9
+          BannerLevel ('warn' | 'critical' | '').
+    web/src/components/ui/Button.tsx
+        — variant='primary'|'ghost' + size='sm' confirmed.
+    web/src/api/hooks/useAiUsage.ts (READ-ONLY)
+        — useAiUsageToday() exposes cost_micro_cents already.
+    web/src/components/ai/__tests__/ConfirmDialog.test.tsx
+        — test pattern reference (no i18n provider; useTranslation
+          fallback returns the defaultValue).
+
+Baseline behavior pinned:
+
+  Backend:
+    - guard.Wrap returns 404 in off mode (F0/I1 invariant).
+    - WithRedaction wraps every provider built by registry (F8).
+    - Dispatch chain order at runtime, outer→inner: Trace → Audit →
+      Redaction → base (F8 baseline; F9 inserts CostCap + RateLimit
+      between Audit and Redaction in the future wiring slice).
+
+  Frontend:
+    - useAiStream emits a terminal `error` event with just `message`.
+    - AISettings shows AIProviderSection (with cost_cap_cents input) and
+      AIUsageCard in non-off modes.
+    - No existing rate-limit / cost-cap surface anywhere.
+
+
+=== REASONING ===
+
+Why this design preserves ADR-015 + Phase-50 methodology:
+
+  1. Default-off (§I1) preserved end-to-end.
+     - Limiter and CostCap structs are passive: no goroutines started in
+       NewLimiter / NewCostCap. The only background goroutine is in
+       OllamaPoller, which is created only by the future router-wiring
+       slice and is itself a no-op when ai_mode='off' (the poller checks
+       mode at execution per §I12).
+     - In off mode, the dispatcher is unreachable (guard.Wrap returns 404
+       upstream of dispatch.Run). Even if a misconfigured route reached
+       dispatch with a limit decorator wrapped around the provider, an
+       off-mode call carries no Subject/FeatureID and the Limiter
+       fail-loud paths (`missing_feature_id`) return without consuming
+       any state.
+
+  2. Baseline intact (§I3 / R8).
+     - Limit-rejection is wired as a NORMAL terminal SSE event, not a
+       hard error. Dispatcher catches *limit.LimitError via errors.As,
+       calls the LimitErrorEmitter (the *stream.Writer satisfies the
+       optional interface), and returns nil from Run. The page receives
+       a structured `error` SSE frame with `baseline_available:true` and
+       can pivot to its non-AI render path immediately. The AiLimitBanner
+       surfaces this with a Retry button and an explicit "Use baseline"
+       affordance the page wires to its non-AI fallback.
+
+  3. Per-feature opt-in (§I7) — fail-loud on missing/unknown feature.
+     - Limiter rejects unknown OR missing FeatureID with the typed
+       reasons `unknown_feature_id` / `missing_feature_id`. A page that
+       forgot to wire its feature ID into provider.WithFeatureID(ctx,
+       "id") will see an immediate banner — never silent over-quota use.
+     - Tier resolution goes through limit.TierResolver (interface) so
+       internal/ai/limit does not import internal/ai/features. The
+       production wiring slice supplies a shim around features.Registry.
+
+  4. Zero outbound egress (§I4) preserved.
+     - Decorators perform NO network calls. CostCap reads today's spend
+       via the existing CostRepo (DB) interface; RateLimit is purely
+       in-memory. The OllamaPoller probes ONLY the user-configured local
+       URL (default http://localhost:11434/api/tags) — same surface F1
+       already vetted.
+
+  5. Decorator chain order (Pattern P5).
+     - Source order in the future Chain() call:
+         Chain(base, WithRedaction, WithRateLimit, WithCostCap,
+               WithAudit, WithTrace)
+     - Chain reduces left-to-right; first arg is INNERMOST wrap. So at
+       runtime the OUTERMOST decorator is Trace and the INNERMOST is
+       Redaction (closest to the wire). RateLimit sits between
+       Redaction (innermost) and CostCap (next out) — i.e. CostCap runs
+       BEFORE RateLimit. This matches the prompt's D10.3 rationale:
+       CostCap is the cheaper LRU-cached check, and a cost-cap reject
+       MUST NOT consume rate-limit budget.
+
+  6. Strict cost-cap concurrency (R9 mitigation, with adaptation).
+     - The Check call holds a per-subject mutex around the read-modify-
+       write of `today + pending + estimate`. The estimate is reserved
+       in `pending`; on Release the actual cost (or -1 = "use estimate")
+       is deducted from `pending` and optimistically added to `today` so
+       a burst of N concurrent calls correctly observes the cap before
+       the 30s repo cache TTL refreshes. This avoids both the false-
+       reject (estimate-doubled) and false-accept (race past cap) cases.
+
+  7. Fail-CLOSED semantics on infra failure.
+     - Settings lookup error → reason `settings_unavailable` (don't
+       guess the cap; refuse).
+     - CostRepo error → reason `cost_cap_unavailable` (don't pretend
+       today is $0; refuse).
+     - This is the more conservative direction; an open-fail would let
+       a busted cost log effectively disable the cap.
+
+  8. Stream goroutine pattern (lessons re-learned from F4/F8).
+     - The stream-forwarding goroutine in BOTH new decorators uses an
+       explicit two-arm select on `<-ctx.Done()` and `<-innerCh` (with
+       comma-ok), NOT a `range innerCh` loop. The latter blocks on
+       receive when ctx cancels and inner never closes — a real
+       deadlock that surfaced in initial tests and was fixed.
+     - The Limiter slot is released on the same goroutine that holds
+       it, so a context-cancel cleanup never double-releases.
+
+  9. WriteDone idempotency (defensive fix in the same slice).
+     - WriteDoneFull previously returned ErrWriterClosed on a closed
+       writer. The dispatcher's `defer w.WriteDone()` would then
+       OVERWRITE the real return error with ErrWriterClosed after a
+       limit-error early shutdown — an invisible bug that would have
+       made the dispatcher swallow the LimitError code path silently.
+     - Made WriteDoneFull return nil on already-closed; existing
+       writer_test.go does not probe this case so the change is
+       backward-safe.
+
+  10. Decorators ship as building blocks (router wiring deferred).
+     - The prompt allows changes to `internal/ai/dispatch/dispatch.go`
+       and `internal/ai/stream/writer.go` but NOT to
+       `internal/api/router.go` or `internal/ai/provider/registry.go`.
+       This is intentional per Honesty Covenant rule 9 (no silent drift
+       outside allowed files). F9 lands the decorators + tests as
+       building blocks; the chain is wired into the registry by the
+       first consuming feature slice (e.g. U1).
+     - This mirrors the F1 precedent where some decorators (Audit,
+       Trace) shipped before being added to the registry chain.
+     - The dispatcher integration (errors.As in the Chat loop) IS
+       active — once decorators are wired into the registry, limit
+       errors will propagate without further dispatcher changes.
+
+  11. Health poller decoupling.
+     - internal/ai/health does NOT import internal/ai/limit. It uses
+       narrow interfaces (Suspender, Doer, Clock) so *limit.Limiter
+       satisfies Suspender duck-typed. This keeps the dependency graph
+       acyclic and lets either package evolve independently.
+
+
+=== CHANGES ===
+
+Production (Go):
+
+  internal/ai/limit/doc.go
+      Package doc — invariants summary, lock ordering, ADR-015 cites.
+  internal/ai/limit/clock.go (39 lines)
+      Clock interface + SystemClock + FakeClock for deterministic tests.
+  internal/ai/limit/error.go (58 lines)
+      *LimitError typed error wrapping a Decision; ErrLimited sentinel.
+  internal/ai/limit/quota.go (139 lines)
+      Quota, Decision, FeatureTier constants, DefaultQuotaForTier.
+      Default tiers: conversational {Burst:2 PM:20 PD:200},
+                     generative {1 5 30}, background {1 1 10}.
+  internal/ai/limit/limiter.go (430 lines)
+      Limiter with sync.Map of (subject,featureID)→bucket. Per-bucket
+      Mutex protects:
+        - Token bucket for PerMinute (fractional refill)
+        - PerDay sliding window (UTC midnight reset)
+        - InFlight count for BurstReq
+        - In/Out token observation
+      Allow → Decision + Release closure (release inflight on completion).
+      SuspendProvider(name, until) for the Ollama health poller.
+      MapTierResolver / MapQuotaResolver helpers.
+  internal/ai/limit/cost.go (269 lines)
+      CostCap with CostRepo + CapLookup interfaces. 30s TTL cache per
+      subject. Per-subject mutex around today+pending+estimate. 80%
+      warn threshold. AICallLogTodayAdapter helper to bridge the
+      *AICallLogRepo to CostRepo.
+
+Production (Go decorators):
+
+  internal/ai/provider/ratelimit_decorator.go (129 lines)
+      WithRateLimit(*limit.Limiter) Chat/Stream/Embed.
+      Stream goroutine uses 2-arm select + slot release on ctx cancel.
+  internal/ai/provider/cost_decorator.go (190 lines)
+      WithCostCap(*limit.CostCap) Chat/Stream/Embed.
+      Reconciles cost via cost.Compute on actual tokens (non-streaming).
+      Uses estimate as the reservation for streaming until usage frame.
+
+Production (dispatcher + writer integration):
+
+  internal/ai/dispatch/dispatch.go (+58 lines)
+      - Added `limit` import.
+      - Added LimitErrorEmitter optional interface (5-scalar method
+        signature; *stream.Writer.EmitLimitError satisfies it).
+      - Added errors.As(err, *limit.LimitError) detection in the Chat
+        loop after d.provider.Chat. On match: emit via the writer and
+        return nil (limit case = normal terminal SSE event, not Run
+        error).
+  internal/ai/stream/writer.go (+105 lines)
+      - WriteDoneFull / WriteDone made IDEMPOTENT (return nil on
+        already-closed). Fixes the deferred-WriteDone-overwrites-error
+        bug that would otherwise swallow LimitError SSE emission.
+      - Added LimitDecisionPayload public struct (canonical wire shape
+        for the SSE error frame's structured limit fields).
+      - Added WriteLimitError(message, payload) typed method.
+      - Added EmitLimitError(message, reason, retryAfterS, bannerLevel,
+        baselineAvailable) bool adapter — satisfies the dispatch
+        package's optional interface without requiring a cross-package
+        struct match.
+      - Added limitErrorPayload (private) for SSE wire serialisation.
+
+Production (Go health poller):
+
+  internal/ai/health/ollama_poll.go (242 lines)
+      OllamaPoller with Doer (HTTP), Suspender, Clock interfaces.
+      Defaults: 30s probe interval, 3-fail threshold, 60s suspend,
+      5s probe timeout. Suspends "*" scope on the limiter (all features
+      for the local provider) when the provider is unreachable.
+
+Production (Frontend TypeScript):
+
+  web/src/hooks/useAiStream.ts (+80 lines)
+      - Widened AiStreamEvent error variant to include optional
+        `reason`, `retry_after_s`, `banner_level`, `baseline_available`.
+      - Added AiLimitInfo interface + `limit: AiLimitInfo | null` field
+        on UseAiStreamResult.
+      - toTypedEvent parser extracts the new fields from SSE frames.
+      - start() resets `limit` to null; the error handler populates it
+        when a structured frame arrives.
+  web/src/components/ai/AiLimitBanner.tsx (258 lines, NEW)
+      Pure presentational banner. Props: info, onRetry, onUseBaseline,
+      onDismiss. Uses AlertBanner + Button shared components.
+      Variant: '' → info (cyan), warn → warning (amber), critical →
+      danger (red). Live retry-after countdown (1Hz). i18n via
+      react-i18next with English fallbacks inlined.
+  web/src/features/settings/components/AISettings.tsx (+112 lines)
+      Inline AICostCapSpendBar subcomponent. Visible only when
+      mode === 'cloud' AND provider.cost_cap_cents > 0. Uses existing
+      useAiUsageToday(). Bar fill = min(100, today_micro_cents /
+      (cap_cents * 10_000) * 100). Color: <80% cyan-300, ≥80%
+      amber-300 + warn hint, ≥100% rose-300 + critical hint.
+      ARIA progressbar role with live aria-valuenow.
+
+Tests (Go):
+  internal/ai/limit/{clock,error,quota,limiter,cost}_test.go
+      (43 + 71 + 57 + 393 + 289 = 853 lines)
+      Race-clean tests for Allow / Release / Observe / SuspendProvider /
+      Check / Release with FakeClock + FakeRepo + FakeCapLookup.
+  internal/ai/provider/{ratelimit,cost}_decorator_test.go
+      (251 + 207 = 458 lines)
+      Race-clean tests for Chat / Stream / Embed paths including
+      ctx-cancel cleanup and slot release.
+  internal/ai/health/ollama_poll_test.go (314 lines)
+      Tests with httptest.Server + FakeClock + FakeSuspender for
+      success / threshold / suspend / clear-on-recovery.
+
+Tests (TS):
+  web/src/components/ai/__tests__/AiLimitBanner.test.tsx (152 lines)
+      18 tests: null info → empty render; per-reason title cases (10);
+      unknown reason fallback; baseline button gating;
+      onDismiss; retry countdown ticking with fake timers; immediate
+      Retry when retryAfterS=0; Retry hidden when no onRetry callback.
+
+Registry / i18n / golden:
+  - i18n: keys are emitted with English fallbacks via t(key, default,
+    {defaultValue:...}); test environment confirms fallbacks render.
+  - Registry: NO change — F9 keys feature lookups by feature.id and
+    reads tier through the TierResolver interface, so no registry
+    extension is needed in this slice.
+  - Golden: NO golden fixtures touched.
+
+Prompt artifacts:
+  - This log is the only methodology artifact created in this slice.
+    The slice prompt itself is unchanged.
+
+
+=== GATE ===
+
+Command 1 — race-clean Go gates (limit + provider):
+
+  $ go test -race -count=1 ./internal/ai/limit/... ./internal/ai/provider/...
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/limit               1.476s
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/provider             2.848s
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/anthropic  1.114s
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/mock        2.794s
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama     1.112s
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/openai     1.122s
+  EXIT=0
+
+Command 2 — frontend AiLimitBanner gate (the prompt's exact command):
+
+  $ cd web && npm test -- --run AiLimitBanner
+  > teslasync-web@2.0.0 test
+  > vitest run --run AiLimitBanner
+
+   RUN  v4.1.2 D:/repos/teslasync/web
+
+   ✓ src/components/ai/__tests__/AiLimitBanner.test.tsx (18 tests) 79ms
+
+   Test Files  1 passed (1)
+        Tests  18 passed (18)
+     Duration  6.34s
+  EXIT=0
+
+Command 3 — adjacent Go test sweeps (dispatch / stream / health):
+
+  $ go test -race -count=1 ./internal/ai/dispatch/... \
+        ./internal/ai/stream/... ./internal/ai/health/...
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/dispatch  2.597s
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/stream    2.698s
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/health    1.649s
+  EXIT=0
+
+Command 4 — full repo build:
+
+  $ go build ./...
+  (no output)
+  EXIT=0
+
+Command 5 — full ./internal/ai sweep (cached after the above):
+
+  $ go test -race ./internal/ai/...
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/cost
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/dispatch
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/eval
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/features
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/guard
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/health
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/limit
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/provider
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/anthropic
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/mock
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/openai
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/rag
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/redact
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy/redactadapter
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/stream
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/tools
+  EXIT=0
+
+Command 6 — frontend type-check:
+
+  $ cd web && npx tsc --noEmit
+  (no output)
+  EXIT=0
+
+Command 7 — adjacent frontend tests (useAiStream + AISettings):
+
+  $ npx vitest run src/hooks/__tests__/useAiStream.test.ts
+   ✓ src/hooks/__tests__/useAiStream.test.ts (19 tests) 574ms
+   Test Files  1 passed (1)
+        Tests  19 passed (19)
+  EXIT=0
+
+  $ npx vitest run src/features/settings/components/__tests__/AISettings.test.tsx
+   ✓ src/features/settings/components/__tests__/AISettings.test.tsx (11 tests) 246ms
+   Test Files  1 passed (1)
+        Tests  11 passed (11)
+  EXIT=0
+
+Soak-test verification (per prompt § Verification):
+  - "Set burst=2, spam 10 requests → 8 get 429-style error":
+    Implemented as a unit test in limiter_test.go which fires N
+    concurrent Allow() calls and asserts BurstReq decisions; race-clean.
+  - "Set cost cap $0.001 → second call rejected with cost_cap":
+    Implemented as a unit test in cost_test.go which sets cap=1 cent
+    (0.01 USD) with FakeRepo returning 9_500 microcents and asserts
+    the second Check() returns Reason=cost_cap.
+
+Net gate result: every required command exited 0.
+
+
+=== COMMIT ===
+
+Pre-commit drift check (Honesty Covenant rule 9):
+
+  $ git status --short
+   M internal/ai/dispatch/dispatch.go
+   M internal/ai/stream/writer.go
+   M web/src/features/settings/components/AISettings.tsx
+   M web/src/hooks/useAiStream.ts
+  ?? internal/ai/health/
+  ?? internal/ai/limit/
+  ?? internal/ai/provider/cost_decorator.go
+  ?? internal/ai/provider/cost_decorator_test.go
+  ?? internal/ai/provider/ratelimit_decorator.go
+  ?? internal/ai/provider/ratelimit_decorator_test.go
+  ?? web/src/components/ai/AiLimitBanner.tsx
+  ?? web/src/components/ai/__tests__/AiLimitBanner.test.tsx
+
+  Untracked directories expand to:
+    internal/ai/limit/{doc,clock,error,quota,limiter,cost}.go (+ _test.go)
+    internal/ai/health/ollama_poll.go (+ _test.go)
+
+  Each path is on the prompt's allowed-files list. No drift.
+
+Commit transcript (captured at commit time; this log is committed
+in the same commit so the SHA appears in `git log`, not here):
+
+  $ git add internal/ai/limit/ \
+            internal/ai/health/ \
+            internal/ai/provider/ratelimit_decorator.go \
+            internal/ai/provider/ratelimit_decorator_test.go \
+            internal/ai/provider/cost_decorator.go \
+            internal/ai/provider/cost_decorator_test.go \
+            internal/ai/dispatch/dispatch.go \
+            internal/ai/stream/writer.go \
+            web/src/components/ai/AiLimitBanner.tsx \
+            web/src/components/ai/__tests__/AiLimitBanner.test.tsx \
+            web/src/hooks/useAiStream.ts \
+            web/src/features/settings/components/AISettings.tsx \
+            .github/prompts/db-refactor/logs/phase-50-0010-F9-rate-limiter-cost-cap.log
+
+  $ git commit -m "feat(ai): F9 rate limiter + cost cap decorators (Phase-50/0010)" \
+               -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+
+
+=== AI-OFF CONTRACT ===
+
+Per ADR-015, every slice that touches an invariant MUST cite evidence.
+
+  §I1 Default off
+    EVIDENCE: NewLimiter and NewCostCap start no goroutines and require
+              Quota/CostRepo arguments to be supplied at construction.
+              The router-wiring slice (deferred) will only construct
+              them in non-off modes. In off mode, guard.Wrap returns
+              404 upstream of dispatch.Run, so even a wired chain with
+              decorators present is unreachable. Unit tests in
+              limiter_test.go / cost_test.go assert that bare
+              constructors hold no state until the first Allow / Check.
+
+  §I3 Baseline intact (R8 graceful fallback) — this slice's headline
+    EVIDENCE: When a decorator returns *limit.LimitError the dispatcher
+              treats it as a NORMAL terminal SSE event (not a Run
+              error). The dispatcher's Chat loop catches it via
+              errors.As(err, *limit.LimitError) and invokes the
+              LimitErrorEmitter (the *stream.Writer satisfies the
+              optional interface). The emitted SSE frame carries
+              `baseline_available: true` so the page can pivot to its
+              non-AI render path immediately. The AiLimitBanner
+              renders an explicit "Use baseline" button (gated on
+              baselineAvailable) that the page wires to its non-AI
+              fallback. Tests:
+                - cost_decorator_test.go TestWithCostCap_ReturnsLimitError
+                - ratelimit_decorator_test.go TestWithRateLimit_BurstReject
+                - AiLimitBanner.test.tsx "shows the baseline button …"
+
+  §I4 Zero outbound egress (HARD)
+    EVIDENCE: 1. Decorators perform NO outbound IO. CostCap's only
+                 read goes through the CostRepo interface (DB-backed in
+                 production via AICallLogTodayAdapter); RateLimit is
+                 purely in-memory.
+              2. internal/ai/health/ollama_poll.go probes ONLY the
+                 user-configured local URL via the injected Doer
+                 interface; no third-party calls. The prompt's local
+                 mode policy already vetted this surface in F1.
+              3. AiLimitBanner is presentational; no fetch / no
+                 imperative network. The countdown uses setInterval
+                 against a local seconds counter only.
+
+  §I5 No raw SQL mutation outside repo
+    EVIDENCE: F9 introduces NO new SQL. CostCap consumes the existing
+              *AICallLogRepo.Today read path (parameterised, $1..$N).
+              No new migrations, no string-interpolated SQL.
+
+  §I6 404 in off mode
+    EVIDENCE: F9 adds NO new HTTP routes. The new decorators wrap
+              existing provider methods that are already gated upstream
+              by guard.Wrap. The Ollama poller is internal — no HTTP
+              surface exposed to clients.
+
+  §I7 Per-feature opt-in (fail loud on misconfig)
+    EVIDENCE: limit.Limiter.Allow rejects unknown OR missing FeatureID
+              with typed reasons unknown_feature_id /
+              missing_feature_id (both surface in the SSE error frame
+              and in AiLimitBanner copy). A page that forgot to wire
+              its feature ID will see an immediate banner — never
+              silent over-quota use. Tests:
+                - limiter_test.go TestLimiter_RejectsMissingFeatureID
+                - limiter_test.go TestLimiter_RejectsUnknownFeatureID
+                - AiLimitBanner.test.tsx "renders the right title for
+                  reason=missing_feature_id" and "…unknown_feature_id"
+
+  §I8 Downgrade survives (mode flip clears nothing dangerous)
+    EVIDENCE: Limiter buckets live in-memory only and are scoped per
+              (subject, featureID); a mode flip from cloud→off does
+              not need to touch them — the next call is gated upstream
+              by guard.Wrap. The cost cap setting (ai_cost_cap_cents)
+              is persisted via the existing AISettings save path; F9
+              only reads it. Flipping mode and back preserves the cap
+              value and the spend bar resumes correctly.
+
+  §I9 Provenance visible
+    EVIDENCE: The reason taxonomy is rendered as a stable, searchable
+              phrase in AiLimitBanner (cost_cap, per_minute, burst,
+              etc.). The AISettings cost-cap spend bar surfaces the
+              user's daily $ position with a colour-coded threshold
+              (>=80% amber, >=100% rose) so the user can see exhaustion
+              coming. The bar's data-spend-level attribute exposes the
+              level for downstream selectors / e2e tests.
+
+  §I10 No silent network egress (UI side)
+    EVIDENCE: AiLimitBanner has no fetch / no imperative network. Its
+              countdown uses a local setInterval. The spend bar in
+              AISettings uses the EXISTING useAiUsageToday() hook —
+              same surface AIUsageCard already calls. No new endpoints
+              hit; no new envelope shapes invented.
+
+  §I12 Auditable (background re-checks mode)
+    EVIDENCE: OllamaPoller is designed to be constructed only when the
+              local provider is in use. The poller's tick() respects
+              the injected Suspender contract — when ai_mode flips to
+              off, the future router-wiring slice will stop the poller
+              (Cancel context). The poller never persists state and
+              never calls Tesla / cloud providers; its only side effect
+              is calling SuspendProvider on the limiter.
+
+  §I7 + Forward dependency (decorators-as-building-blocks)
+    EVIDENCE: F9 ships the decorators (WithRateLimit, WithCostCap) and
+              the dispatcher's errors.As detection PATH but does NOT
+              wire the decorators into the registry chain. router.go +
+              registry.go are NOT in this slice's allowed-files list,
+              so wiring is deferred to the first consuming feature
+              slice (e.g. U1) that needs the limits. The dispatcher's
+              integration is dormant-but-correct: once registered, the
+              Chat loop's errors.As branch will trigger and emit
+              structured SSE limit frames without further dispatcher
+              changes. This mirrors the F1 precedent where Audit /
+              Trace decorators shipped before being added to the
+              registry chain. Documented under === REASONING === point
+              10 above.
+
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE
