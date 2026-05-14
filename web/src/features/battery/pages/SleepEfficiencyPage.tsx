@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Moon, Eye, Clock, Zap, DollarSign, Thermometer } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Select, DataTable, Badge, type Column } from '@/components/ui';
+import { GlassPanel, DataTable, Badge, type Column } from '@/components/ui';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -14,11 +15,12 @@ import {
 import { CHART_COLORS } from '@/lib/colors';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useFormatting } from '@/hooks/useFormatting';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
 import { formatDateShort, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { DAYS_OPTIONS } from '@/lib/constants';
 import type { SleepDrainEvent } from '@/types/energy';
 import { convertTempFromSI } from '@/lib/unitConversion';
 
@@ -39,18 +41,33 @@ export default function SleepEfficiencyPage() {
   const { t } = useTranslation();
   usePageTitle(t('sleep.title', 'Sleep Efficiency'));
   const { unitPrefs } = useUnits();
+  const { formatCurrency } = useFormatting();
   const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
 
   const tempUnit = unitPrefs.temperature;
 
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const [days, setDays] = useState(30);
-
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
 
-  const sleepQuery = useSleepEfficiency(vehicleIdStr, days);
+  // Date range — canonical RangePicker. The backend handler now accepts
+  // explicit start/end (YYYY-MM-DD) so historical presets like
+  // `yesterday`/`lastMonth` and custom calendar picks return the actual
+  // chosen window. The derived `days` count is still passed for
+  // backward-compat with older API builds and used internally by the
+  // backend to populate `period_days` in the response.
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'sleep-efficiency.range',
+    defaultPresetId: '30d',
+  });
+  const days = useMemo(() => {
+    if (!start || !end) return 30;
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T00:00:00`).getTime();
+    const diff = Math.round((endMs - startMs) / 86_400_000) + 1;
+    return Math.max(1, diff);
+  }, [start, end]);
+
+  const sleepQuery = useSleepEfficiency(vehicleIdStr, days, start, end);
   const { data: sleep, isLoading, error } = sleepQuery;
 
   /* ── Derived data ── */
@@ -145,19 +162,14 @@ export default function SleepEfficiencyPage() {
       loading={isLoading}
       error={error instanceof Error ? error : null}
       actions={
-        <div className="flex items-center gap-3">
-          <Select
-            value={String(days)}
-            onChange={(e) => setDays(Number(e.target.value))}
-            options={DAYS_OPTIONS}
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect ariaLabel={t('sleep.selectVehicle', 'Select vehicle')} />
+          <RangePicker
+            value={{ start, end }}
+            onChange={setRange}
+            align="end"
+            triggerTestId="sleep-efficiency-range"
           />
-          {vehicles && vehicles.length > 1 && (
-            <Select
-              value={vehicleId != null ? String(vehicleId) : ''}
-              onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-              options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-            />
-          )}
           <DataFreshnessAuto query={sleepQuery} />
         </div>
       }
@@ -207,7 +219,7 @@ export default function SleepEfficiencyPage() {
               <MetricCard
                 icon={<DollarSign className="h-4 w-4" />}
                 label={t('sleep.sentryMonthlyCost', 'Sentry Monthly Cost')}
-                value={`$${fmtNumber(sleep.sentry_monthly_cost)}`}
+                value={formatCurrency(sleep.sentry_monthly_cost)}
                 color="red"
                 help={{
                   i18nKey: 'help.sleepEfficiency.sentryCost',
@@ -308,7 +320,7 @@ export default function SleepEfficiencyPage() {
                       <p className="text-xs text-[var(--text-muted)]">{t('sleep.extraMonthly', 'Extra monthly')}</p>
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-rose-300">${fmtNumber(sleep.sentry_extra_monthly_cost)}</p>
+                      <p className="text-lg font-bold text-rose-300">{formatCurrency(sleep.sentry_extra_monthly_cost)}</p>
                       <p className="text-xs text-[var(--text-muted)]">{t('sleep.extraCostMo', 'Extra cost/mo')}</p>
                     </div>
                   </div>

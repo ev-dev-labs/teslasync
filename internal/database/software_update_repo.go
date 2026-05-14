@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -17,10 +18,19 @@ func NewSoftwareUpdateRepo(db *DB) *SoftwareUpdateRepo {
 	return &SoftwareUpdateRepo{db: db}
 }
 
-func (r *SoftwareUpdateRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.SoftwareUpdate, error) {
+func (r *SoftwareUpdateRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int, start, end time.Time) ([]*models.SoftwareUpdate, error) {
+	hasRange := !start.IsZero() && !end.IsZero()
+	var startArg, endArg interface{}
+	if hasRange {
+		startArg = start
+		endArg = end
+	}
 	query := `SELECT id, vehicle_id, version, status, scheduled_at, installed_at, created_at
-		FROM software_updates WHERE vehicle_id=$1 ORDER BY created_at DESC LIMIT $2`
-	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit)
+		FROM software_updates
+		WHERE vehicle_id=$1
+		  AND ($3::timestamptz IS NULL OR created_at BETWEEN $3 AND $4)
+		ORDER BY created_at DESC LIMIT $2`
+	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit, startArg, endArg)
 	if err != nil {
 		return nil, err
 	}
@@ -37,10 +47,18 @@ func (r *SoftwareUpdateRepo) GetByVehicle(ctx context.Context, vehicleID int64, 
 	return updates, rows.Err()
 }
 
-func (r *SoftwareUpdateRepo) GetAll(ctx context.Context, limit int) ([]*models.SoftwareUpdate, error) {
+func (r *SoftwareUpdateRepo) GetAll(ctx context.Context, limit int, start, end time.Time) ([]*models.SoftwareUpdate, error) {
+	hasRange := !start.IsZero() && !end.IsZero()
+	var startArg, endArg interface{}
+	if hasRange {
+		startArg = start
+		endArg = end
+	}
 	query := `SELECT id, vehicle_id, version, status, scheduled_at, installed_at, created_at
-		FROM software_updates ORDER BY created_at DESC LIMIT $1`
-	rows, err := r.db.Pool.Query(ctx, query, limit)
+		FROM software_updates
+		WHERE ($2::timestamptz IS NULL OR created_at BETWEEN $2 AND $3)
+		ORDER BY created_at DESC LIMIT $1`
+	rows, err := r.db.Pool.Query(ctx, query, limit, startArg, endArg)
 	if err != nil {
 		return nil, err
 	}

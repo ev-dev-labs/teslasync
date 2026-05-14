@@ -24,6 +24,7 @@ import { useSharedDrive } from '@/api/hooks/useSharing';
 import { FadeIn } from '@/components/motion';
 import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 import { useUnits } from '@/hooks/useUnits';
+import { fmtNumber } from '@/lib/numberFormat';
 import {
   convertDistanceFromSI,
   convertSpeedFromSI,
@@ -376,7 +377,7 @@ export default function SharedDrivePage() {
                   <YAxis {...axisTick} tickFormatter={(v: number) => `${Math.round(v)} ${elevPref}`} />
                   <Tooltip
                     contentStyle={{ background: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: 8 }}
-                    labelFormatter={(v: number) => `${v.toFixed(1)} ${distancePref}`}
+                    labelFormatter={(v: number) => `${fmtNumber(v, 1)} ${distancePref}`}
                     formatter={(v: number) => [`${Math.round(v)} ${elevPref}`, t('share.elevTooltipLabel', 'Elevation')]}
                   />
                   <Area
@@ -411,7 +412,7 @@ export default function SharedDrivePage() {
                   <YAxis {...axisTick} tickFormatter={(v: number) => `${Math.round(v)}`} />
                   <Tooltip
                     contentStyle={{ background: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: 8 }}
-                    labelFormatter={(v: number) => `${v.toFixed(1)} ${distancePref}`}
+                    labelFormatter={(v: number) => `${fmtNumber(v, 1)} ${distancePref}`}
                     formatter={(v: number) => [`${Math.round(v)} ${speedPref}`, t('share.speedTooltipLabel', 'Speed')]}
                   />
                   <Line

@@ -127,10 +127,27 @@ export function useProjectedRange(vehicleId: string | null) {
   });
 }
 
-export function useSleepEfficiency(vehicleId: string | null, days = 30) {
+export function useSleepEfficiency(
+  vehicleId: string | null,
+  days = 30,
+  startDate?: string,
+  endDate?: string,
+) {
+  // When the caller passes an explicit start/end (canonical RangePicker
+  // window), prefer those over the rolling-from-now `days` so historical
+  // presets like `yesterday`/`lastMonth` and custom calendar picks return
+  // the actual chosen window. The `days` param is still sent for backward
+  // compatibility with backends that may not yet support start/end (and is
+  // ignored by the modern handler when start/end are present).
+  const dateParams =
+    startDate && endDate ? `&start=${startDate}&end=${endDate}` : '';
   return useQuery({
-    queryKey: ['sleep-efficiency', vehicleId, days],
-    queryFn: ({ signal }) => request<SleepEfficiencyData>(`/analytics/sleep?vehicle_id=${vehicleId}&days=${days}`, { signal }),
+    queryKey: ['sleep-efficiency', vehicleId, days, startDate ?? '', endDate ?? ''],
+    queryFn: ({ signal }) =>
+      request<SleepEfficiencyData>(
+        `/analytics/sleep?vehicle_id=${vehicleId}&days=${days}${dateParams}`,
+        { signal },
+      ),
     enabled: vehicleId !== null,
   });
 }

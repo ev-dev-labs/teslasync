@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
+import { VehicleSelect } from '@/components/forms';
 import { GlassPanel, Badge, Button, DataTable, type Column } from '@/components/ui';
 import { MetricCard, LiveIndicator, DataFreshnessAuto, TimeStamp } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner, LiveStaleDataBanner } from '@/components/feedback';
@@ -246,7 +247,8 @@ export default function MapOverviewPage() {
       loading={vehiclesLoading}
       error={vehiclesError as Error | null}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
           <DataFreshnessAuto query={vehiclesQuery} />
           <LiveIndicator variant="compact" />
         </div>

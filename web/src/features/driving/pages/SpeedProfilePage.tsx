@@ -1,9 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge, Zap, TrendingUp, Car } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Select } from '@/components/ui/Select';
 import {
   ChartContainer, ChartTooltip,
   BarChart, Bar, ScatterChart, Scatter,
@@ -14,8 +13,10 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { RangePicker, VehicleSelect } from '@/components/forms';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useSpeedProfile, useDrives } from '@/api/hooks/useDriving';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { cn } from '@/lib/cn';
@@ -61,13 +62,30 @@ export default function SpeedProfilePage() {
   const { t } = useTranslation();
   usePageTitle(t('speedProfile.title', 'Speed Profile'));
 
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
-  const { data, isLoading, error } = useSpeedProfile(vehicleIdStr);
-  const { data: drives } = useDrives(vehicleIdStr);
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'speed-profile.range',
+    defaultPresetId: 'all',
+  });
+
+  const { data, isLoading, error } = useSpeedProfile(vehicleIdStr, start, end);
+  const { data: allDrives } = useDrives(vehicleIdStr);
+
+  // Narrow the drives feeding the per-bucket efficiency table and the
+  // scatter plot to the picked window so they stay visually consistent
+  // with the backend-side distribution/categories windows.
+  const drives = useMemo(() => {
+    if (!allDrives?.length) return allDrives;
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    return allDrives.filter((d) => {
+      if (!d.startTs) return false;
+      const t = new Date(d.startTs).getTime();
+      return t >= startMs && t <= endMs;
+    });
+  }, [allDrives, start, end]);
 
   const { unitPrefs } = useUnits();
   const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
@@ -124,18 +142,22 @@ export default function SpeedProfilePage() {
     return result;
   }, [drives, data]);
 
-  const vehicleOptions = (vehicles ?? []).map((v) => ({
-    value: String(v.id), label: v.display_name || v.vin,
-  }));
-
   return (
     <PageContainer
       title={t('speedProfile.title', 'Speed Profile')}
       subtitle={t('speedProfile.subtitle', 'Speed distribution and driving pattern analysis')}
       error={error as Error | null}
-      actions={vehicleOptions.length > 0 ? (
-        <Select value={String(vehicleId ?? '')} onChange={(e) => setSelectedVehicle(Number(e.target.value))} options={vehicleOptions} />
-      ) : undefined}
+      actions={
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
+          <RangePicker
+            value={{ start, end }}
+            onChange={setRange}
+            align="end"
+            triggerTestId="speed-profile-range"
+          />
+        </div>
+      }
       loading={isLoading}
 
     >

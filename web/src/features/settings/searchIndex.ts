@@ -43,7 +43,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Tesla account ───────────────────────────────────────────────
     {
       id: 'tesla.connect',
-      href: '/settings#tesla-account',
+      href: '/tesla-account',
       section: 'tesla',
       title: t('search.entries.tesla.connect.title', 'Connect Tesla account'),
       description: t('search.entries.tesla.connect.desc', 'Authorize TeslaSync to access your Tesla account.'),
@@ -51,7 +51,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'tesla.refresh-token',
-      href: '/settings#tesla-account',
+      href: '/tesla-account',
       section: 'tesla',
       title: t('search.entries.tesla.refreshToken.title', 'Tesla refresh token'),
       description: t('search.entries.tesla.refreshToken.desc', 'Manually refresh the cached Tesla OAuth token.'),
@@ -59,7 +59,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'tesla.disconnect',
-      href: '/settings#tesla-account',
+      href: '/tesla-account',
       section: 'tesla',
       title: t('search.entries.tesla.disconnect.title', 'Disconnect Tesla account'),
       description: t('search.entries.tesla.disconnect.desc', 'Sign out and remove the cached OAuth token.'),
@@ -67,7 +67,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'tesla.sync-vehicles',
-      href: '/settings#tesla-account',
+      href: '/tesla-account',
       section: 'tesla',
       title: t('search.entries.tesla.syncVehicles.title', 'Sync vehicles from Tesla'),
       description: t('search.entries.tesla.syncVehicles.desc', 'Pull the current vehicle list from the Tesla Fleet API.'),
@@ -77,7 +77,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Region & API ────────────────────────────────────────────────
     {
       id: 'region.fleet-api',
-      href: '/settings#region',
+      href: '/tesla-region',
       section: 'region',
       title: t('search.entries.region.title', 'Region & Fleet API endpoint'),
       description: t('search.entries.region.desc', 'Tesla account region and the resolved Fleet API base URL.'),
@@ -87,7 +87,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Feature flags ───────────────────────────────────────────────
     {
       id: 'features.flags',
-      href: '/settings#features',
+      href: '/tesla-features',
       section: 'features',
       title: t('search.entries.features.title', 'Feature flags'),
       description: t('search.entries.features.desc', 'Tesla account feature configuration synced from the Fleet API.'),
@@ -97,7 +97,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Active orders ───────────────────────────────────────────────
     {
       id: 'orders.active',
-      href: '/settings#orders',
+      href: '/tesla-orders',
       section: 'orders',
       title: t('search.entries.orders.title', 'Active orders'),
       description: t('search.entries.orders.desc', 'Vehicle orders and delivery tracking from Tesla.'),
@@ -201,19 +201,11 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       description: t('search.entries.general.mpg.desc', 'Average MPG of the equivalent gas car for savings calculations.'),
       keywords: ['fuel economy', 'efficiency', 'mpg'],
     },
-    {
-      id: 'general.google-maps',
-      href: '/settings#general',
-      section: 'general',
-      title: t('search.entries.general.googleMaps.title', 'Google Maps API key'),
-      description: t('search.entries.general.googleMaps.desc', 'Optional key enabling satellite views and Places autocomplete.'),
-      keywords: ['maps', 'api key', 'satellite', 'places'],
-    },
 
     // ── Gas price auto-poll ─────────────────────────────────────────
     {
       id: 'gas-price.auto-poll',
-      href: '/settings#gas-price',
+      href: '/gas-price',
       section: 'gas-price',
       title: t('search.entries.gasPrice.title', 'Gas price auto-poll'),
       description: t('search.entries.gasPrice.desc', 'Automatically fetch US average gas prices from EIA.'),
@@ -223,7 +215,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Notifications ───────────────────────────────────────────────
     {
       id: 'notifications.browser-permission',
-      href: '/settings#notifications',
+      href: '/notifications/browser',
       section: 'notifications',
       title: t('search.entries.notifications.browser.title', 'Browser notifications'),
       description: t('search.entries.notifications.browser.desc', 'Enable browser notifications when the tab is in the background.'),
@@ -231,7 +223,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'notifications.alerts',
-      href: '/settings#notifications',
+      href: '/notifications/browser',
       section: 'notifications',
       title: t('search.entries.notifications.alerts.title', 'Alert notifications'),
       description: t('search.entries.notifications.alerts.desc', 'Get notified when an alert rule fires.'),
@@ -239,7 +231,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'notifications.export-status',
-      href: '/settings#notifications',
+      href: '/notifications/browser',
       section: 'notifications',
       title: t('search.entries.notifications.exportStatus.title', 'Export completion notifications'),
       description: t('search.entries.notifications.exportStatus.desc', 'Get notified when a CSV/JSON export finishes.'),
@@ -247,7 +239,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'notifications.tab-badge',
-      href: '/settings#notifications',
+      href: '/notifications/browser',
       section: 'notifications',
       title: t('search.entries.notifications.tabBadge.title', 'Browser tab unread badge'),
       description: t('search.entries.notifications.tabBadge.desc', 'Show unread count in the browser tab title and favicon.'),
@@ -255,7 +247,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'notifications.critical-flash',
-      href: '/settings#notifications',
+      href: '/notifications/browser',
       section: 'notifications',
       title: t('search.entries.notifications.criticalFlash.title', 'Critical alert tab flash'),
       description: t('search.entries.notifications.criticalFlash.desc', 'Flash the browser tab title on critical alerts.'),
@@ -263,7 +255,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'notifications.sound-master',
-      href: '/settings#notifications',
+      href: '/notifications/browser',
       section: 'notifications',
       title: t('search.entries.notifications.soundMaster.title', 'Notification sounds'),
       description: t('search.entries.notifications.soundMaster.desc', 'Play short audio cues when alerts and completion events arrive.'),
@@ -271,7 +263,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'notifications.sound-channels',
-      href: '/settings#notifications',
+      href: '/notifications/browser',
       section: 'notifications',
       title: t('search.entries.notifications.soundChannels.title', 'Per-channel notification sounds'),
       description: t('search.entries.notifications.soundChannels.desc', 'Toggle sound separately for critical, warning, and info alerts plus charge/drive/automation completions.'),
@@ -279,7 +271,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'notifications.sound-volume',
-      href: '/settings#notifications',
+      href: '/notifications/browser',
       section: 'notifications',
       title: t('search.entries.notifications.soundVolume.title', 'Notification sound volume'),
       description: t('search.entries.notifications.soundVolume.desc', 'Adjust how loud notification cues play.'),
@@ -289,7 +281,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Quiet hours / Do-Not-Disturb (Phase-46 / Prompt 19) ──────────
     {
       id: 'quiet-hours.windows',
-      href: '/settings#quiet-hours',
+      href: '/notifications/quiet-hours',
       section: 'quiet-hours',
       title: t('search.entries.quietHours.windows.title', 'Quiet hours windows'),
       description: t('search.entries.quietHours.windows.desc', 'Defer non-critical notifications during sleep, work meetings, or any time-of-day window.'),
@@ -297,7 +289,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'quiet-hours.bypass-severities',
-      href: '/settings#quiet-hours',
+      href: '/notifications/quiet-hours',
       section: 'quiet-hours',
       title: t('search.entries.quietHours.bypass.title', 'Quiet hours bypass severities'),
       description: t('search.entries.quietHours.bypass.desc', 'Choose which severities (e.g. critical) still ring through during quiet hours.'),
@@ -305,7 +297,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'quiet-hours.timezone',
-      href: '/settings#quiet-hours',
+      href: '/notifications/quiet-hours',
       section: 'quiet-hours',
       title: t('search.entries.quietHours.timezone.title', 'Quiet hours timezone'),
       description: t('search.entries.quietHours.timezone.desc', 'Pick the IANA timezone the start/end times are evaluated against.'),
@@ -365,7 +357,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Security (TOTP) ─────────────────────────────────────────────
     {
       id: 'security.totp.enroll',
-      href: '/settings#security',
+      href: '/account/2fa',
       section: 'security',
       title: t('search.entries.security.totpEnroll.title', 'Enable two-factor authentication'),
       description: t(
@@ -376,7 +368,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'security.totp.backupCodes',
-      href: '/settings#security',
+      href: '/account/2fa',
       section: 'security',
       title: t('search.entries.security.totpBackupCodes.title', 'TOTP backup codes'),
       description: t(
@@ -387,7 +379,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'security.totp.disable',
-      href: '/settings#security',
+      href: '/account/2fa',
       section: 'security',
       title: t('search.entries.security.totpDisable.title', 'Disable two-factor authentication'),
       description: t(
@@ -399,7 +391,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // Phase-46 / Prompt 42 — Active sessions / device management.
     {
       id: 'security.sessions.list',
-      href: '/settings#sessions',
+      href: '/account/sessions',
       section: 'security',
       title: t('search.entries.security.sessionsList.title', 'Active sessions'),
       description: t(
@@ -410,7 +402,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'security.sessions.revokeAll',
-      href: '/settings#sessions',
+      href: '/account/sessions',
       section: 'security',
       title: t('search.entries.security.sessionsRevokeAll.title', 'Sign out all other devices'),
       description: t(
@@ -418,6 +410,30 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
         'Revoke every TeslaSync session except the current browser. Useful after a lost laptop or shared computer.',
       ),
       keywords: ['logout', 'revoke', 'session', 'everywhere', 'all devices', 'security'],
+    },
+
+    // ── Privacy (browser-local data) ────────────────────────────────
+    {
+      id: 'privacy.recentPages.clear',
+      href: '/account/privacy',
+      section: 'privacy',
+      title: t('search.entries.privacy.recentPagesClear.title', 'Clear recently viewed pages'),
+      description: t(
+        'search.entries.privacy.recentPagesClear.desc',
+        'Wipe the local list of pages used by the dashboard widget and the Recent section in the command palette.',
+      ),
+      keywords: ['recent', 'history', 'clear', 'wipe', 'pages', 'palette', 'dashboard'],
+    },
+    {
+      id: 'privacy.consent.manage',
+      href: '/account/privacy',
+      section: 'privacy',
+      title: t('search.entries.privacy.consentManage.title', 'Cookies & analytics consent'),
+      description: t(
+        'search.entries.privacy.consentManage.desc',
+        'Re-grant, withdraw, or reset the cookie / analytics consent banner state for this browser.',
+      ),
+      keywords: ['cookies', 'consent', 'gdpr', 'analytics', 'tracking', 'banner', 'opt-in', 'opt-out'],
     },
 
     // ── Advanced ────────────────────────────────────────────────────
@@ -430,10 +446,13 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       keywords: ['confirm', 'dialog', 'silence', 'dont ask', 'reset', 'restore'],
     },
 
-    // ── Backup & Restore (Phase-46 / Prompt 36) ─────────────────────
+    // ── Backup & Restore — moved to dedicated /backup page ──────────
+    // Was Phase-46 / Prompt 36 inside SettingsPage; promoted to live
+    // alongside the operational backup runs in features/admin/pages/
+    // BackupRestorePage so the DATA category owns every backup surface.
     {
       id: 'backup.export',
-      href: '/settings#backup',
+      href: '/backup',
       section: 'backup',
       title: t('search.entries.backup.export.title', 'Export settings as JSON'),
       description: t('search.entries.backup.export.desc', 'Download a portable bundle of general settings, alert rules, geofences, and quiet-hours windows.'),
@@ -441,7 +460,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'backup.import',
-      href: '/settings#backup',
+      href: '/backup',
       section: 'backup',
       title: t('search.entries.backup.import.title', 'Import settings from JSON'),
       description: t('search.entries.backup.import.desc', 'Restore alert rules, geofences, and quiet-hours windows from a previously exported bundle.'),
@@ -450,7 +469,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     // ── Webhook channels (Phase-46 / Prompt 37) ─────────────────────
     {
       id: 'webhooks.list',
-      href: '/settings#webhooks',
+      href: '/notifications/webhooks',
       section: 'webhooks',
       title: t('search.entries.webhooks.list.title', 'Webhook channels'),
       description: t(
@@ -470,7 +489,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'webhooks.signing',
-      href: '/settings#webhooks',
+      href: '/notifications/webhooks',
       section: 'webhooks',
       title: t('search.entries.webhooks.signing.title', 'Webhook HMAC signing'),
       description: t(
@@ -481,7 +500,7 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
     },
     {
       id: 'webhooks.test',
-      href: '/settings#webhooks',
+      href: '/notifications/webhooks',
       section: 'webhooks',
       title: t('search.entries.webhooks.test.title', 'Test a webhook channel'),
       description: t(

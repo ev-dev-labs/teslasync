@@ -27,8 +27,8 @@
       "keepTime": true,
       "tags": [],
       "targetBlank": false,
-      "title": "◀ Prev",
-      "tooltip": "TeslaSync 🚘 Vehicle Overview",
+      "title": "\u25c0 Prev",
+      "tooltip": "TeslaSync \ud83d\ude98 Vehicle Overview",
       "type": "link",
       "url": "/d/teslasync-vehicle-overview"
     },
@@ -41,7 +41,7 @@
         "teslasync"
       ],
       "targetBlank": false,
-      "title": "⚡ TeslaSync",
+      "title": "\u26a1 TeslaSync",
       "type": "dashboards"
     },
     {
@@ -51,8 +51,8 @@
       "keepTime": true,
       "tags": [],
       "targetBlank": false,
-      "title": "Next ▶",
-      "tooltip": "TeslaSync 🔍 Anomaly Detection",
+      "title": "Next \u25b6",
+      "tooltip": "TeslaSync \ud83d\udd0d Anomaly Detection",
       "type": "link",
       "url": "/d/teslasync-anomaly-detection"
     }
@@ -123,11 +123,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(ROUND(convert_distance(SUM((distance_m / 1609.344)))::numeric, 1), 0) AS \"Distance (km)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND started_at >= NOW() - INTERVAL '7 days'",
+          "rawSql": "SELECT COALESCE(ROUND(convert_distance(SUM((distance_m / 1609.344)))::numeric, 1), 0) AS \"Distance (${unit_length})\" FROM drives WHERE vehicle_id = ${vehicle_id} AND started_at >= NOW() - INTERVAL '7 days'",
           "refId": "A"
         }
       ],
-      "title": "Distance (km)",
+      "title": "Distance (${unit_length})",
       "type": "stat",
       "transparent": false
     },
@@ -464,7 +464,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Distance (km)"
+              "options": "Distance (${unit_length})"
             },
             "properties": [
               {
@@ -520,7 +520,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  DATE(started_at) AS time,\n  COALESCE(ROUND(convert_distance(SUM((distance_m / 1609.344)))::numeric, 1), 0) AS \"Distance (km)\",\n  COALESCE(ROUND(SUM((energy_used_wh / 1000.0))::numeric, 1), 0) AS \"Energy (kWh)\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND started_at >= NOW() - INTERVAL '7 days'\nGROUP BY DATE(started_at)\nORDER BY time",
+          "rawSql": "SELECT\n  DATE(started_at) AS time,\n  COALESCE(ROUND(convert_distance(SUM((distance_m / 1609.344)))::numeric, 1), 0) AS \"Distance (${unit_length})\",\n  COALESCE(ROUND(SUM((energy_used_wh / 1000.0))::numeric, 1), 0) AS \"Energy (kWh)\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND started_at >= NOW() - INTERVAL '7 days'\nGROUP BY DATE(started_at)\nORDER BY time",
           "refId": "A"
         }
       ],
@@ -621,7 +621,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "lengthkm"
+                "value": "none"
               }
             ]
           },
@@ -722,6 +722,30 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "mi",
+          "value": "mi"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT COALESCE((SELECT value_text FROM settings WHERE key = 'unit_of_length'), 'mi')",
+        "query": "SELECT COALESCE((SELECT value_text FROM settings WHERE key = 'unit_of_length'), 'mi')",
+        "hide": 2,
+        "includeAll": false,
+        "label": "",
+        "multi": false,
+        "name": "unit_length",
+        "options": [],
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": true,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
@@ -731,7 +755,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync 📅 Weekly Digest",
+  "title": "TeslaSync \ud83d\udcc5 Weekly Digest",
   "uid": "teslasync-weekly-digest",
   "version": 1,
   "weekStart": ""

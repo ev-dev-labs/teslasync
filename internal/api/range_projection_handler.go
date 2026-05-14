@@ -137,26 +137,31 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	// Recent driving efficiency. Phase-42 SI canonical drives (000185):
 	// energy_used_wh (Watt-hours), distance_m (meters), avg_speed_mps,
-	// ambient_temp_c_avg. avgEffWhKm is computed as Wh / km using the
-	// existing pre-existing-bug-preserving SQL shape (the AVG(...) ORDER BY
-	// LIMIT 30 pattern is preserved from the legacy query per covenant —
-	// fix is out of scope for this prompt). avgSpeedKmh is averaged in mps
-	// and converted to km/h at the response boundary so downstream
-	// buildRangeFactors keeps its km/h-input contract.
+	// ambient_temp_c_avg. avgEffWhKm is computed as Wh / km. Phase-42:
+	// the legacy "AVG() ORDER BY LIMIT 30" pattern was invalid SQL — fixed
+	// here by selecting the most-recent 30 drives in a CTE first, then
+	// averaging. avgSpeedKmh is averaged in mps and converted to km/h at
+	// the response boundary so downstream buildRangeFactors keeps its
+	// km/h-input contract.
 	var avgEffWhKm *float64
 	var avgTempC *float64
 	var avgSpeedKmh *float64
 	if h.db != nil {
 		if err := h.db.Pool.QueryRow(ctx, `
+		WITH recent AS (
+			SELECT energy_used_wh, distance_m
+			FROM drives
+			WHERE vehicle_id = $1 AND distance_m > $2
+			ORDER BY started_at DESC
+			LIMIT 30
+		)
 		SELECT AVG(
 			CASE WHEN distance_m > 0 THEN
 				COALESCE(energy_used_wh, 0)
 				/ NULLIF(distance_m / 1000.0, 0)
 			END
 		)
-		FROM drives
-		WHERE vehicle_id = $1 AND distance_m > $2
-		ORDER BY started_at DESC LIMIT 30`, vehicleID, driveStatsMetersPerMile).Scan(&avgEffWhKm); err != nil {
+		FROM recent`, vehicleID, driveStatsMetersPerMile).Scan(&avgEffWhKm); err != nil {
 			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: avg efficiency query failed")
 		}
 

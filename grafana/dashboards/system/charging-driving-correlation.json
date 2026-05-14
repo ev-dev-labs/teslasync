@@ -27,8 +27,8 @@
       "keepTime": true,
       "tags": [],
       "targetBlank": false,
-      "title": "◀ Prev",
-      "tooltip": "TeslaSync 🔔 Alerts & Notifications",
+      "title": "\u25c0 Prev",
+      "tooltip": "TeslaSync \ud83d\udd14 Alerts & Notifications",
       "type": "link",
       "url": "/d/teslasync-alerts-notifications"
     },
@@ -41,7 +41,7 @@
         "teslasync"
       ],
       "targetBlank": false,
-      "title": "⚡ TeslaSync",
+      "title": "\u26a1 TeslaSync",
       "type": "dashboards"
     },
     {
@@ -51,8 +51,8 @@
       "keepTime": true,
       "tags": [],
       "targetBlank": false,
-      "title": "Next ▶",
-      "tooltip": "TeslaSync 🖥️ System Health",
+      "title": "Next \u25b6",
+      "tooltip": "TeslaSync \ud83d\udda5\ufe0f System Health",
       "type": "link",
       "url": "/d/teslasync-system-health"
     }
@@ -117,7 +117,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(d.day, c.day) AS \"Date\",\n  COALESCE(d.drives, 0) AS \"Drives\",\n  ROUND(COALESCE(d.distance_mi, 0)::numeric, 1) AS \"Distance (km)\",\n  COALESCE(c.charges, 0) AS \"Charges\",\n  ROUND(COALESCE(c.energy_added, 0)::numeric, 1) AS \"Energy Added (kWh)\",\n  ROUND(COALESCE(c.cost, 0)::numeric, 2) AS \"Cost ($)\"\nFROM (\n  SELECT started_at::date AS day, COUNT(*) AS drives, SUM((distance_m / 1609.344)) AS distance_mi\n  FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n  GROUP BY started_at::date\n) d\nFULL OUTER JOIN (\n  SELECT started_at::date AS day, COUNT(*) AS charges, SUM((total_energy_added_wh / 1000.0)) AS energy_added, SUM(cost_decimal) AS cost\n  FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n  GROUP BY started_at::date\n) c ON d.day = c.day\nORDER BY COALESCE(d.day, c.day) DESC",
+          "rawSql": "SELECT\n  COALESCE(d.day, c.day) AS \"Date\",\n  COALESCE(d.drives, 0) AS \"Drives\",\n  ROUND(COALESCE(d.distance_mi, 0)::numeric, 1) AS \"Distance (${unit_length})\",\n  COALESCE(c.charges, 0) AS \"Charges\",\n  ROUND(COALESCE(c.energy_added, 0)::numeric, 1) AS \"Energy Added (kWh)\",\n  ROUND(COALESCE(c.cost, 0)::numeric, 2) AS \"Cost ($)\"\nFROM (\n  SELECT started_at::date AS day, COUNT(*) AS drives, SUM((distance_m / 1609.344)) AS distance_mi\n  FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n  GROUP BY started_at::date\n) d\nFULL OUTER JOIN (\n  SELECT started_at::date AS day, COUNT(*) AS charges, SUM((total_energy_added_wh / 1000.0)) AS energy_added, SUM(cost_decimal) AS cost\n  FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n  GROUP BY started_at::date\n) c ON d.day = c.day\nORDER BY COALESCE(d.day, c.day) DESC",
           "refId": "A"
         }
       ],
@@ -196,7 +196,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT started_at::date AS time, SUM((distance_m / 1609.344)) AS \"Distance (km)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) GROUP BY started_at::date ORDER BY time",
+          "rawSql": "SELECT started_at::date AS time, SUM((distance_m / 1609.344)) AS \"Distance (${unit_length})\" FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) GROUP BY started_at::date ORDER BY time",
           "refId": "A"
         },
         {
@@ -282,7 +282,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  d.day::text AS \"Date\",\n  ROUND(d.distance_mi::numeric, 1) AS \"Distance (km)\",\n  ROUND(COALESCE(c.energy_added, 0)::numeric, 1) AS \"Energy Added (kWh)\"\nFROM (\n  SELECT started_at::date AS day, SUM((distance_m / 1609.344)) AS distance_mi\n  FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n  GROUP BY started_at::date\n) d\nLEFT JOIN (\n  SELECT started_at::date AS day, SUM((total_energy_added_wh / 1000.0)) AS energy_added\n  FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n  GROUP BY started_at::date\n) c ON d.day = c.day\nORDER BY d.day",
+          "rawSql": "SELECT\n  d.day::text AS \"Date\",\n  ROUND(d.distance_mi::numeric, 1) AS \"Distance (${unit_length})\",\n  ROUND(COALESCE(c.energy_added, 0)::numeric, 1) AS \"Energy Added (kWh)\"\nFROM (\n  SELECT started_at::date AS day, SUM((distance_m / 1609.344)) AS distance_mi\n  FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n  GROUP BY started_at::date\n) d\nLEFT JOIN (\n  SELECT started_at::date AS day, SUM((total_energy_added_wh / 1000.0)) AS energy_added\n  FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n  GROUP BY started_at::date\n) c ON d.day = c.day\nORDER BY d.day",
           "refId": "A"
         }
       ],
@@ -386,6 +386,30 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "mi",
+          "value": "mi"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT COALESCE((SELECT value_text FROM settings WHERE key = 'unit_of_length'), 'mi')",
+        "query": "SELECT COALESCE((SELECT value_text FROM settings WHERE key = 'unit_of_length'), 'mi')",
+        "hide": 2,
+        "includeAll": false,
+        "label": "",
+        "multi": false,
+        "name": "unit_length",
+        "options": [],
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": true,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
@@ -395,7 +419,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync 🔄 Charging vs Driving",
+  "title": "TeslaSync \ud83d\udd04 Charging vs Driving",
   "uid": "teslasync-charging-driving",
   "version": 1,
   "weekStart": ""

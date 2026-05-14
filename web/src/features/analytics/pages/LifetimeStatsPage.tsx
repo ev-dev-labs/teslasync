@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -8,39 +8,35 @@ import {
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, HelpTooltip, Select, type HelpTooltipProps } from '@/components/ui';
+import { GlassPanel, HelpTooltip, type HelpTooltipProps } from '@/components/ui';
 import { StatCard, AnimatedNumber, ProgressRing, Currency, DataFreshnessAuto } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { VehicleSelect } from '@/components/forms';
 
 import { useLifetimeStats } from '@/api/hooks/useAnalytics';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
 import { AchievementBadge } from '../components/AchievementBadge';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 const SECONDS_PER_HOUR = 3600;
 const METERS_PER_KM = 1000;
-
-/* ── Helpers ──────────────────────────────────────────────────────── */
-
-function fmtDate(d: string | null): string {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString(undefined, {
-    year: 'numeric', month: 'short', day: 'numeric',
-  });
-}
 
 /* ── Page ─────────────────────────────────────────────────────────── */
 
 export default function LifetimeStatsPage() {
   const { t } = useTranslation();
+  const { formatDate: fmtDate } = useDateFormat();
   usePageTitle(t('lifetime.title', 'Lifetime Stats'));
   const { unitPrefs } = useUnits();
+  const { formatCurrency } = useFormatting();
   const distanceUnit = unitPrefs.distance;
   const speedUnit = unitPrefs.speed;
   // backend `total_distance_km` and `longest_drive_record.value` are SI km;
@@ -48,18 +44,9 @@ export default function LifetimeStatsPage() {
   const fromKm = (km: number) => convertDistanceFromSI(km * METERS_PER_KM, distanceUnit);
   const fromKmh = (kmh: number) => convertSpeedFromSI((kmh * METERS_PER_KM) / SECONDS_PER_HOUR, speedUnit);
 
-  const [vehicleId, setVehicleId] = useState('');
-  const { data: vehicles } = useVehicles();
-  const lifetimeQuery = useLifetimeStats(vehicleId || undefined);
+  const { vehicleId } = useSelectedVehicle();
+  const lifetimeQuery = useLifetimeStats(vehicleId != null ? String(vehicleId) : undefined);
   const { data, isLoading, error } = lifetimeQuery;
-
-  const vehicleOptions = useMemo(() => {
-    const opts = [{ value: '', label: t('lifetime.allVehicles', 'All Vehicles') }];
-    for (const v of vehicles ?? []) {
-      opts.push({ value: String(v.id), label: v.display_name || `Vehicle ${v.id}` });
-    }
-    return opts;
-  }, [vehicles, t]);
 
   const stats = data;
   const achievements = stats?.achievements ?? [];
@@ -117,21 +104,13 @@ export default function LifetimeStatsPage() {
       loading={isLoading}
       error={error instanceof Error ? error : error ? new Error(String(error)) : null}
       actions={
-        // Lifetime stats are cagg-driven; force amber after 6h.
-        <DataFreshnessAuto query={lifetimeQuery} forceStaleAfterMs={6 * 60 * 60 * 1000} />
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
+          {/* Lifetime stats are cagg-driven; force amber after 6h. */}
+          <DataFreshnessAuto query={lifetimeQuery} forceStaleAfterMs={6 * 60 * 60 * 1000} />
+        </div>
       }
     >
-      {/* Vehicle filter */}
-      {(vehicles ?? []).length > 1 && (
-        <div className="mb-6 max-w-xs">
-          <Select
-            options={vehicleOptions}
-            value={vehicleId}
-            onChange={(e) => setVehicleId(e.target.value)}
-          />
-        </div>
-      )}
-
       {/* ── Hero Section ─────────────────────────────────────────── */}
       <FadeIn>
         <GlassPanel className="p-8 text-center">
@@ -193,7 +172,7 @@ export default function LifetimeStatsPage() {
           />
           <StatCard
             label={t('lifetime.totalSavings', 'Total Savings')}
-            value={`$${fmtNumber(stats?.total_savings ?? 0, 0)}`}
+            value={formatCurrency(stats?.total_savings ?? 0, 0)}
             icon={<DollarSign className="h-4 w-4" />}
             sublabel={t('lifetime.vsGas', 'vs gasoline')}
           />
@@ -495,6 +474,7 @@ function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
 function RecordCard({ title, value, date, icon }: {
   title: string; value: string; date: string | null | undefined; icon: React.ReactNode;
 }) {
+  const { formatDate: fmtDate } = useDateFormat();
   return (
     <div className="flex items-center gap-4 rounded-lg bg-white/[0.03] p-4">
       {icon}

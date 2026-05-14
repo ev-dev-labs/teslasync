@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { AlertOctagon, AlertTriangle, Info } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Select } from '@/components/ui';
-import { FilterBar, SearchInput, DateRangeFilter, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
+import { FilterBar, SearchInput, RangePicker, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import type { NotificationFilters } from '@/api/hooks/useNotifications';
 import type { Vehicle, AlertRule } from '@/api/types';
 
@@ -214,11 +214,12 @@ export function NotificationFilterBar({
         />
       </FilterBar>
 
-      <DateRangeFilter
-        startDate={filters.from?.slice(0, 10) ?? ''}
-        endDate={filters.to?.slice(0, 10) ?? ''}
-        onStartDateChange={setFrom}
-        onEndDateChange={setTo}
+      <RangePicker
+        value={{ start: filters.from?.slice(0, 10) ?? '', end: filters.to?.slice(0, 10) ?? '' }}
+        onChange={(r) => {
+          setFrom(r.start);
+          setTo(r.end);
+        }}
       />
 
       <ActiveFilterChips filters={activeFilterChips} onClearAll={handleClearAll} />

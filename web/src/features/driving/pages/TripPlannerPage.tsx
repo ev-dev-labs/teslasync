@@ -1,15 +1,17 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
 import { PageContainer, Grid } from '@/components/layout';
 import {
-  GlassPanel, Button as ControlButton, Input as ControlInput, Select as ControlSelect,
+  GlassPanel, Button as ControlButton, Select as ControlSelect, Slider,
 } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { VehicleSelect } from '@/components/forms';
 import { usePlanTrip } from '@/api/hooks/useDriving';
 import { AddressInput } from '../components/AddressInput';
 import { SOCRouteChart } from '../components/SOCRouteChart';
@@ -29,20 +31,21 @@ import {
 import { request } from '@/api/client';
 import type { TripLocation, TripPlan, TripPlanRequest } from '@/types/driving';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { fmtNumber } from '@/lib/numberFormat';
 
 export default function TripPlannerPage() {
   const { t } = useTranslation();
   usePageTitle(t('tripPlanner.title', 'Trip Planner'));
-  const { unitPrefs } = useUnits();
+  const { unitPrefs, formatEnergy } = useUnits();
+  const { formatCurrency } = useFormatting();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
 
   const distanceUnit = unitPrefs.distance;
 
-  const { data: vehicles } = useVehicles();
+  const { vehicleId, vehicle: currentVehicle } = useSelectedVehicle();
   const planMutation = usePlanTrip();
 
   // Form state
-  const [selectedVehicle, setSelectedVehicle] = useState('');
   const [originText, setOriginText] = useState('');
   const [destText, setDestText] = useState('');
   const [origin, setOrigin] = useState<TripLocation | null>(null);
@@ -54,26 +57,7 @@ export default function TripPlannerPage() {
   // Result state
   const [plan, setPlan] = useState<TripPlan | null>(null);
 
-  const vehicleOptions = useMemo(() =>
-    (vehicles ?? []).map((v) => ({
-      value: String(v.id),
-      label: v.display_name || v.displayName || v.vin,
-    })),
-    [vehicles],
-  );
-
-  // Auto-select first vehicle
-  const activeVehicle = useMemo(() => {
-    if (selectedVehicle) return selectedVehicle;
-    if (vehicleOptions.length > 0) return vehicleOptions[0].value;
-    return '';
-  }, [selectedVehicle, vehicleOptions]);
-
-  // Get current vehicle's battery level if available
-  const currentVehicle = useMemo(
-    () => (vehicles ?? []).find((v) => String(v.id) === activeVehicle),
-    [vehicles, activeVehicle],
-  );
+  const activeVehicle = vehicleId != null ? String(vehicleId) : '';
 
   const handlePlan = useCallback(() => {
     if (!origin || !destination || !activeVehicle) return;
@@ -131,6 +115,7 @@ export default function TripPlannerPage() {
     <PageContainer
       title={t('tripPlanner.title', 'Trip Planner')}
       subtitle={t('tripPlanner.subtitle', 'Plan your route with range estimation and charging stops')}
+      actions={<VehicleSelect />}
     >
       {/* Route Input Form */}
       <FadeIn>
@@ -157,67 +142,29 @@ export default function TripPlannerPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-            {vehicleOptions.length > 0 && (
-              <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                  {t('tripPlanner.form.vehicle', 'Vehicle')}
-                </label>
-                <ControlSelect
-                  options={vehicleOptions}
-                  value={activeVehicle}
-                  onChange={(e) => setSelectedVehicle(e.target.value)}
-                />
-              </div>
-            )}
-            <div>
-              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                {t('tripPlanner.form.currentSOC', 'Current SOC')}
-              </label>
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <ControlInput
-                    type="range"
-                    min={10}
-                    max={100}
-                    value={currentSOC}
-                    onChange={(e) => setCurrentSOC(Number(e.target.value))}
-                    aria-label={t('tripPlanner.form.currentSOC', 'Current SOC')}
-                    className="h-2 w-full cursor-pointer appearance-none border-0 bg-transparent p-0 accent-emerald-400 dark:bg-transparent"
-                  />
-                </div>
-                <span className="text-sm text-[var(--text-primary)] w-10 text-right">{currentSOC}%</span>
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                {t('tripPlanner.form.minArrival', 'Min Arrival SOC')}
-              </label>
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <ControlInput
-                    type="range"
-                    min={5}
-                    max={50}
-                    value={minArrivalSOC}
-                    onChange={(e) => setMinArrivalSOC(Number(e.target.value))}
-                    aria-label={t('tripPlanner.form.minArrival', 'Min Arrival SOC')}
-                    className="h-2 w-full cursor-pointer appearance-none border-0 bg-transparent p-0 accent-amber-400 dark:bg-transparent"
-                  />
-                </div>
-                <span className="text-sm text-[var(--text-primary)] w-10 text-right">{minArrivalSOC}%</span>
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                {t('tripPlanner.form.drivingSpeed', 'Driving Speed')}
-              </label>
-              <ControlSelect
-                options={speedOptions}
-                value={String(speedFactor)}
-                onChange={(e) => setSpeedFactor(Number(e.target.value))}
-              />
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
+            <Slider
+              label={t('tripPlanner.form.currentSOC', 'Current SOC')}
+              formatValue={(n) => `${n}%`}
+              min={10}
+              max={100}
+              value={currentSOC}
+              onChange={setCurrentSOC}
+            />
+            <Slider
+              label={t('tripPlanner.form.minArrival', 'Min Arrival SOC')}
+              formatValue={(n) => `${n}%`}
+              min={5}
+              max={50}
+              value={minArrivalSOC}
+              onChange={setMinArrivalSOC}
+            />
+            <ControlSelect
+              label={t('tripPlanner.form.drivingSpeed', 'Driving Speed')}
+              options={speedOptions}
+              value={String(speedFactor)}
+              onChange={(e) => setSpeedFactor(Number(e.target.value))}
+            />
           </div>
 
           <div className="flex items-center gap-3">
@@ -310,12 +257,12 @@ export default function TripPlannerPage() {
             />
             <StatCard
               label={t('tripPlanner.stats.energy', 'Energy')}
-              value={`${(route.total_energy_wh / 1000).toFixed(1)} kWh`}
+              value={formatEnergy(route.total_energy_wh, { precision: 1 })}
               icon={<Battery className="h-4 w-4" />}
             />
             <StatCard
               label={t('tripPlanner.stats.cost', 'Est. Cost')}
-              value={route.estimated_cost > 0 ? `$${route.estimated_cost.toFixed(2)}` : t('common.free', 'Free')}
+              value={route.estimated_cost > 0 ? formatCurrency(route.estimated_cost) : t('common.free', 'Free')}
               icon={<DollarSign className="h-4 w-4" />}
             />
           </Grid>
@@ -348,7 +295,7 @@ export default function TripPlannerPage() {
                 {weather.avg_temp_c != null && (
                   <p className="text-xs text-[var(--text-muted)] mt-1">
                     {t('tripPlanner.weather.factor', 'Efficiency factor: {{factor}}×', {
-                      factor: weather.efficiency_factor.toFixed(2),
+                      factor: fmtNumber(weather.efficiency_factor, 2),
                     })}
                   </p>
                 )}

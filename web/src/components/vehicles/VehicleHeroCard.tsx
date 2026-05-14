@@ -2,7 +2,7 @@ import { forwardRef, type HTMLAttributes } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { fmtNumber } from '@/lib/numberFormat';
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
@@ -69,7 +69,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
     const temperatureLabel = unitPrefs.temperature;  // '°F' | '°C'
 
     const odometerDisplay = vs
-      ? Math.round(convertDistanceFromSI(vs.odometer ?? 0, distanceLabel)).toLocaleString(unitPrefs.locale)
+      ? fmtInt(Math.round(convertDistanceFromSI(vs.odometer ?? 0, distanceLabel)))
       : '—';
     const rangeDisplay = vs
       ? Math.round(convertDistanceFromSI(vs.rated_range ?? 0, distanceLabel))

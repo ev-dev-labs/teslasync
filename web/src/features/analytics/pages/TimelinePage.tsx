@@ -8,6 +8,8 @@ import {
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Select, DataTable, type Column } from '@/components/ui';
+import { RangePicker } from '@/components/forms';
+import { useRangeState } from '@/hooks/useRangeState';
 import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -17,10 +19,11 @@ import {
 } from '@/components/charts';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUrlString } from '@/hooks/useUrlState';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+import { fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
@@ -106,29 +109,56 @@ function formatDurationFromSeconds(seconds: number): string {
 export default function TimelinePage() {
   const { t } = useTranslation();
   usePageTitle(t('timeline.title', 'Timeline'));
-  // Phase 40 / Prompt 33 — vehicle id is in the URL so deep links work.
-  const [vehicleId, setVehicleId] = useUrlString('vehicle_id', '');
 
-  const { data: vehicles, error: vehiclesError } = useVehicles();
-
-  const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
+  // Vehicle selection: useSelectedVehicle reads ?vehicle_id from the URL
+  // (alert deep-links), persists across pages via localStorage, and falls
+  // back to the first vehicle. We additionally mirror the picker's value
+  // to the URL on change so the page URL stays bookmarkable.
+  const [, setUrlVehicleId] = useUrlString('vehicle_id', '');
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const activeId = vehicleId != null ? String(vehicleId) : '';
   const enabled = activeId !== '';
 
+  const onPickVehicle = (id: string) => {
+    const n = Number(id);
+    if (Number.isFinite(n) && n > 0) {
+      setVehicleId(n);
+      setUrlVehicleId(id);
+    }
+  };
+
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'timeline.range',
+    defaultPresetId: '7d',
+  });
+
+  // Backend accepts `?days=N` (trailing window). Compute inclusive day
+  // count from the picker's range. Custom historical windows that don't
+  // end today still degrade to a trailing window — `presetsOnly` mode
+  // hides the calendar to keep the UX honest.
+  const days = useMemo(() => {
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T00:00:00`).getTime();
+    return Math.max(1, Math.round((endMs - startMs) / 86_400_000) + 1);
+  }, [start, end]);
+
+  const { error: vehiclesError } = useVehicles();
+
   const timelineQuery = useQuery({
-    queryKey: ['vehicle-timeline', activeId],
+    queryKey: ['vehicle-timeline', activeId, days],
     queryFn: () =>
       request<{ transitions: TransitionRecord[] }>(
-        `/vehicle-states/timeline?vehicle_id=${activeId}`,
+        `/vehicle-states/timeline?vehicle_id=${activeId}&days=${days}`,
       ),
     enabled,
   });
   const { data: timelineData, isLoading: tlLoading, error: timelineError, refetch } = timelineQuery;
 
   const { data: summaryData, isLoading: sumLoading, error: summaryError } = useQuery({
-    queryKey: ['vehicle-summary', activeId],
+    queryKey: ['vehicle-summary', activeId, days],
     queryFn: () =>
       request<SummaryResponse>(
-        `/vehicle-states/summary?vehicle_id=${activeId}`,
+        `/vehicle-states/summary?vehicle_id=${activeId}&days=${days}`,
       ),
     enabled,
   });
@@ -287,22 +317,30 @@ export default function TimelinePage() {
 
   /* ─── Actions (vehicle selector + refresh) ─── */
 
-  const vehicleOptions = (vehicles ?? []).map((v) => ({
+  const vehicleOptions = vehicles.map((v) => ({
     value: String(v.id),
     label: v.display_name || v.vin,
   }));
 
   const actions = (
     <div className="flex items-center gap-3">
-      <DataFreshnessAuto query={timelineQuery} />
-      {vehicleOptions.length > 1 && (
+      {vehicles.length > 0 && (
         <Select
           options={vehicleOptions}
           value={activeId}
-          onChange={(e) => setVehicleId(e.target.value)}
+          onChange={(e) => onPickVehicle(e.target.value)}
           placeholder={t('timeline.selectVehicle', 'Select Vehicle')}
         />
       )}
+      <RangePicker
+        value={{ start, end }}
+        onChange={(r) => setRange(r)}
+        presetIds={['today', 'yesterday', '7d', '30d', '90d', 'mtd', 'ytd']}
+        presetsOnly
+        align="end"
+        triggerTestId="timeline-range"
+      />
+      <DataFreshnessAuto query={timelineQuery} />
       <Button variant="ghost" onClick={() => refetch()}>
         <RefreshCw className="h-4 w-4" />
       </Button>
@@ -381,7 +419,7 @@ export default function TimelinePage() {
                       backgroundColor:
                         STATE_COLORS[row.state] ?? STATE_COLORS.offline,
                     }}
-                    title={`${row.state}: ${formatDurationFromSeconds(row.total_seconds)} (${row.percentage.toFixed(1)}%)`}
+                    title={`${row.state}: ${formatDurationFromSeconds(row.total_seconds)} (${fmtPercent(row.percentage, 1)})`}
                   />
                 );
               })}

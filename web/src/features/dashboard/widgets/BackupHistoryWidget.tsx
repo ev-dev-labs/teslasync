@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useTeslaBackupHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
 import { fmtInt } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
@@ -19,18 +20,6 @@ function fmtDuration(seconds: number): string {
   return `${mins}m`;
 }
 
-/** Format ISO timestamp as a short locale date/time. */
-function fmtEventTime(iso: string): string {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
 /** 30 days ago in ISO date form. */
 function thirtyDaysAgo(): string {
   const d = new Date();
@@ -40,6 +29,7 @@ function thirtyDaysAgo(): string {
 
 export default function BackupHistoryWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { formatDateTime: fmtEventTime } = useDateFormat();
 
   // ── Energy sites (to get siteId) ──
   const {

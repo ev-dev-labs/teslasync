@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
+import { useFormatting } from '@/hooks/useFormatting';
 import { Clock } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
 import type { ChargingOptimizerData } from '@/types/charging';
 
 interface CostHeatmapProps {
@@ -11,6 +11,7 @@ interface CostHeatmapProps {
 
 export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
   const { t } = useTranslation();
+  const { formatCurrency } = useFormatting();
   const maxCost = peakCostPerKwh || 0.30;
 
   return (
@@ -47,7 +48,7 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
                         ? `rgba(${Math.round(intensity * 239)}, ${Math.round((1 - intensity) * 187)}, ${Math.round((1 - intensity) * 100)}, ${Math.min(0.9, 0.15 + sessions * 0.12)})`
                         : 'rgba(255,255,255,0.02)',
                     }}
-                    title={sessions > 0 ? `${dayLabel} ${hourIdx}:00 — ${sessions} sessions, $${fmtNumber(cost, 3)}/kWh` : `${dayLabel} ${hourIdx}:00`}
+                    title={sessions > 0 ? `${dayLabel} ${hourIdx}:00 — ${sessions} sessions, ${formatCurrency(cost, 3)}/kWh` : `${dayLabel} ${hourIdx}:00`}
                   />
                 );
               })}

@@ -65,7 +65,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
   const { costPerKwh } = useFormatting();
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
-  const { currencySymbol, formatCurrency, costPerDistanceUnit, estimateGasCost } = useFormatting();
+  const { formatCurrency, costPerDistanceUnit, estimateGasCost } = useFormatting();
 
   // Fetch last 30 days of charging sessions
   const thirtyDaysAgo = useMemo(() => {
@@ -172,7 +172,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
                 })}
                 value={
                   metrics.costPerDistance != null
-                    ? `${currencySymbol}${fmtNumber(metrics.costPerDistance, 3)}`
+                    ? formatCurrency(metrics.costPerDistance, 3)
                     : '—'
                 }
                 icon={<Fuel className="h-3.5 w-3.5" />}
@@ -200,7 +200,7 @@ export default function ChargeCostTrackerWidget({ vehicleId, size }: WidgetProps
             <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] px-1">
               <span>
                 {metrics.costPerDistance != null
-                  ? `${currencySymbol}${fmtNumber(metrics.costPerDistance, 3)}/${distanceUnit}`
+                  ? `${formatCurrency(metrics.costPerDistance, 3)}/${distanceUnit}`
                   : '—'}
               </span>
               <span>

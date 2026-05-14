@@ -184,5 +184,43 @@
       "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ name =~ \"mqtt.*|normalize.*\" && duration > 500ms }", "limit": 30, "refId": "A" }],
       "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }
     }
+  ],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync - Rules Engine",
+      "type": "link",
+      "url": "/d/teslasync-infra-cep"
+    },
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "⚡ TeslaSync",
+      "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync - DB & Tesla API Span Breakdown (Tempo)",
+      "type": "link",
+      "url": "/d/teslasync-infra-db-tesla-breakdown"
+    }
   ]
 }

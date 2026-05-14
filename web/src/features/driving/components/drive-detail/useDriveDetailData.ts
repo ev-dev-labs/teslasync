@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useDrive } from '@/api/hooks/useDriving';
 import { useVehicle } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import {
   convertDistanceFromSI,
   convertSpeedFromSI,
@@ -28,6 +29,7 @@ export function useDriveDetailData(id: string) {
   // Prompt 0020 Drive.distance_m (genuine miles after the SQL adapter
   // boundary in internal/database/drive_repo.go).
   const { unitPrefs } = useUnits();
+  const { formatTime } = useDateFormat();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
 
   const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
@@ -82,7 +84,7 @@ export function useDriveDetailData(id: string) {
     const tele = drive.telemetry ?? [];
     if (tele.length > 0) {
       return tele.map((tp) => ({
-        time: new Date(tp.createdAt ?? tp.created_at ?? tp.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: formatTime(tp.createdAt ?? tp.created_at ?? tp.timestamp),
         speed: convertSpeedFromSI(tp.speed ?? 0, unitPrefs.speed),
         battery: tp.batteryLevel ?? 0,
         elevation: tp.elevation ?? 0,
@@ -107,7 +109,7 @@ export function useDriveDetailData(id: string) {
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- positions may have snake_case fallback fields
     return (drive.positions ?? []).map((p: any) => ({
-      time: new Date(p.createdAt ?? p.created_at ?? p.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      time: formatTime(p.createdAt ?? p.created_at ?? p.timestamp),
       // Position.speed comes from drivePositionFieldMappings VehicleSpeed -> speed_mph
       // -> aliasPositionFields renames to 'speed'. The value is still m/s SI; the
       // legacy '_mph' suffix from the mapping is misleading per ADR-004 #6.
@@ -132,7 +134,7 @@ export function useDriveDetailData(id: string) {
       climateOn: p.isClimateOn ?? null,
       fanStatus: p.fanStatus ?? null,
     }));
-  }, [drive, unitPrefs.speed, unitPrefs.temperature, unitPrefs.distance, unitPrefs.pressure]);
+  }, [drive, unitPrefs.speed, unitPrefs.temperature, unitPrefs.distance, unitPrefs.pressure, formatTime]);
 
   /* ---- Computed stats ---- */
   const stats = useMemo<DriveStats | null>(() => {

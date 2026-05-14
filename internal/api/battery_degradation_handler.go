@@ -484,12 +484,12 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		var avgTemp *float64
 		var sampleCount int
 		_ = h.db.Pool.QueryRow(ctx, `
-			SELECT AVG(value_num), COUNT(*)
+			SELECT AVG(COALESCE(float_value, int_value::float8)), COUNT(*)
 			FROM signal_log
 			WHERE vehicle_id = $1
-			  AND signal IN ('ModuleTempMax', 'ModuleTempAvg')
-			  AND created_at > NOW() - INTERVAL '90 days'
-			  AND value_num IS NOT NULL`,
+			  AND field IN ('ModuleTempMax', 'ModuleTempAvg')
+			  AND ts > NOW() - INTERVAL '90 days'
+			  AND (float_value IS NOT NULL OR int_value IS NOT NULL)`,
 			vehicleID).Scan(&avgTemp, &sampleCount)
 		if avgTemp != nil && sampleCount >= 10 {
 			t := *avgTemp

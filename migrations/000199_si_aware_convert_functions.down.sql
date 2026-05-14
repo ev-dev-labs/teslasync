@@ -1,0 +1,8 @@
+-- Intentionally a no-op.
+--
+-- Dashboard JSON files are versioned outside the database migration
+-- transaction. If we DROP these helper functions on rollback, any dashboard
+-- panel that has already been updated to call them would start erroring with
+-- "function does not exist". Leaving the helper functions in place is safe
+-- (they are pure, STABLE, and have no side effects) and avoids a class of
+-- partial-rollback failures.

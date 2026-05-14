@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { FUEL } from '@/lib/constants'
+import { fmtNumber } from '@/lib/numberFormat'
 import { convertDistanceFromSI } from '@/lib/unitConversion'
 import { useSettings } from './useSettings'
 import { useUnits } from './useUnits'
@@ -19,14 +20,19 @@ export function useFormatting(): UseFormattingResult {
 
   const costPerKwh = settings.base_cost_per_kwh ?? 0.12
   const currencySymbol = settings.currency_symbol && settings.currency_symbol.trim() ? settings.currency_symbol : '$'
+  const userPrecision = typeof settings.decimal_precision === 'number' && Number.isFinite(settings.decimal_precision) && settings.decimal_precision >= 0
+    ? Math.floor(settings.decimal_precision)
+    : 2
 
   const formatEnergyCost = useCallback((kwh: number): string => {
     const cost = kwh * costPerKwh
-    return `${currencySymbol}${cost.toFixed(2)}`
-  }, [costPerKwh, currencySymbol])
+    return `${currencySymbol}${fmtNumber(cost, userPrecision)}`
+  }, [costPerKwh, currencySymbol, userPrecision])
 
-  const formatCurrency = useCallback((amount: number, decimals = 2): string =>
-    `${currencySymbol}${amount.toFixed(decimals)}`, [currencySymbol])
+  const formatCurrency = useCallback((amount: number, decimals?: number): string => {
+    const d = decimals ?? userPrecision
+    return `${currencySymbol}${fmtNumber(amount, d)}`
+  }, [currencySymbol, userPrecision])
 
   /**
    * Calculate cost per user-preferred distance unit from SI meters.

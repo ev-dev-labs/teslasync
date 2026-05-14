@@ -37,6 +37,7 @@
  */
 
 import type { AppSettings } from '@/api/types'
+import { resolveLocale } from './locale'
 
 const KM_PER_MI = 1.609344
 
@@ -136,7 +137,7 @@ export function parseForUnit(
 
   const n = options.strict
     ? Number(raw)
-    : parseLocaleNumber(raw, settings.locale ?? 'en-US')
+    : parseLocaleNumber(raw, resolveLocale(settings.locale))
 
   if (!Number.isFinite(n)) return null
 
@@ -169,7 +170,7 @@ export function formatForUnit(
   settings: AppSettings,
 ): string {
   if (value == null || !Number.isFinite(value)) return ''
-  const locale = settings.locale ?? 'en-US'
+  const locale = resolveLocale(settings.locale)
   const decimals = settings.decimal_precision ?? 2
 
   const display = (() => {

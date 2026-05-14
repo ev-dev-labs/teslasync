@@ -8,6 +8,7 @@ import { useMaintenance, useServiceRecords } from '@/api/hooks/useVehicleSystems
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
@@ -38,6 +39,7 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
 
   const distanceUnit = unitPrefs.distance;
   const { formatCurrency } = useFormatting();
+  const { formatDate } = useDateFormat();
 
   const {
     data: maintenanceItems,
@@ -93,12 +95,12 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
           ? `${odometerDisplay} ${distanceUnit} · ${rec.notes}`
           : `${odometerDisplay} ${distanceUnit}`,
         time: rec.date
-          ? new Date(rec.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+          ? formatDate(rec.date)
           : '—',
         color: '#10b981',
       };
     });
-  }, [recentRecords, items, toDistanceDisplay, distanceUnit]);
+  }, [recentRecords, items, toDistanceDisplay, distanceUnit, formatDate]);
 
   const updatedAt = Math.max(maintUpdatedAt ?? 0, recordsUpdatedAt ?? 0);
   const hasData = items.length > 0 || records.length > 0;

@@ -17,13 +17,14 @@ import {
 } from '@/components/charts';
 import { Skeleton, EmptyState, ChartBlockSkeleton, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { DateRangeFilter } from '@/components/forms';
+import { RangePicker } from '@/components/forms';
 
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useFleetAnalytics, useMileageStats, useStateSummary } from '@/api/hooks/useAnalytics';
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
@@ -85,6 +86,7 @@ export default function StatisticsPage() {
   const { t } = useTranslation();
   usePageTitle(t('statistics.title', 'Statistics'));
   const { unitPrefs } = useUnits();
+  const { formatCurrency } = useFormatting();
   const distanceUnit = unitPrefs.distance;
   const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
   // backend `total_distance` and `vehicle_comparison[].distance` are SI km;
@@ -95,18 +97,26 @@ export default function StatisticsPage() {
     distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
   const savedView = useSavedViewUrl();
 
-  const [vehicleId, setVehicleId] = useUrlString('vehicle_id', '');
+  const [, setUrlVehicleId] = useUrlString('vehicle_id', '');
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const activeId = vehicleId != null ? String(vehicleId) : '';
+
+  const onPickVehicle = (id: string) => {
+    const n = Number(id);
+    if (Number.isFinite(n) && n > 0) {
+      setVehicleId(n);
+      setUrlVehicleId(id);
+    }
+  };
+
   const defaultStart = useMemo(() => {
     const d = new Date(); d.setFullYear(d.getFullYear() - 1);
     return d.toISOString().slice(0, 10);
   }, []);
   const defaultEnd = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const [startDate, setStartDate] = useUrlString('from', defaultStart);
-  const [endDate, setEndDate] = useUrlString('to', defaultEnd);
+  const [startDate] = useUrlString('from', defaultStart);
+  const [endDate] = useUrlString('to', defaultEnd);
   const setRangeBatch = useUrlBatch();
-
-  const { data: vehicles } = useVehicles();
-  const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
   // Phase-45/23 — reactive chart palette (CB-safe / neon per user pref).
   const palette = useChartPalette();
@@ -163,7 +173,7 @@ export default function StatisticsPage() {
     }));
   }, [fleet, fromKm]);
 
-  const vehicleOptions = (vehicles ?? []).map((v) => ({
+  const vehicleOptions = vehicles.map((v) => ({
     value: String(v.id),
     label: v.display_name || v.vin,
   }));
@@ -176,10 +186,10 @@ export default function StatisticsPage() {
       error={error as Error | null}
       actions={
         <div className={cn('flex flex-wrap items-center gap-2')}>
-          {vehicleOptions.length > 1 && (
-            <Select value={activeId} onChange={(e) => setVehicleId(e.target.value)} options={vehicleOptions} />
+          {vehicles.length > 0 && (
+            <Select value={activeId} onChange={(e) => onPickVehicle(e.target.value)} options={vehicleOptions} />
           )}
-          <DateRangeFilter startDate={startDate} endDate={endDate} onStartDateChange={setStartDate} onEndDateChange={setEndDate} onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })} />
+          <RangePicker value={{ start: startDate, end: endDate }} onChange={(r) => setRangeBatch({ from: r.start, to: r.end })} align="end" triggerTestId="statistics-range" />
           <Button size="sm" onClick={() => { void refetch(); }}>
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>
@@ -204,7 +214,7 @@ export default function StatisticsPage() {
               <MetricCard label={t('statistics.totalDistance', 'Total Distance')} value={`${fmtInt(fromKm(stats.total_distance))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
               <MetricCard label={t('statistics.totalDrives', 'Total Drives')} value={fmtInt(stats.total_drives)} icon={<TrendingUp className="h-4 w-4" />} color="green" />
               <MetricCard label={t('statistics.totalEnergy', 'Total Energy')} value={`${fmtNumber(stats.energy_used)} kWh`} icon={<Zap className="h-4 w-4" />} color="amber" />
-              <MetricCard label={t('statistics.totalCost', 'Total Cost')} value={`$${fmtInt(stats.total_cost)}`} icon={<DollarSign className="h-4 w-4" />} color="red" />
+              <MetricCard label={t('statistics.totalCost', 'Total Cost')} value={formatCurrency(stats.total_cost, 0)} icon={<DollarSign className="h-4 w-4" />} color="red" />
               <MetricCard label={t('statistics.co2Saved', 'CO₂ Saved')} value={`${fmtNumber(stats.co2_saved)} kg`} icon={<Leaf className="h-4 w-4" />} color="green" />
             </div>
           </FadeIn>
@@ -214,7 +224,7 @@ export default function StatisticsPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <MetricCard label={t('statistics.avgDriveDistance', 'Avg Drive Distance')} value={`${fmtNumber(fromKm(avgDriveDistance))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
               <MetricCard label={t('statistics.avgEfficiency', 'Avg Efficiency')} value={`${fmtNumber(whPerKmToDisplay(stats.avg_efficiency))} ${efficiencyUnit}`} icon={<Gauge className="h-4 w-4" />} color="green" />
-              <MetricCard label={t('statistics.costPerKm', 'Cost per km')} value={stats.total_distance > 0 ? `$${fmtNumber(stats.total_cost / stats.total_distance, 3)}` : '—'} icon={<DollarSign className="h-4 w-4" />} color="amber" />
+              <MetricCard label={t('statistics.costPerKm', 'Cost per km')} value={stats.total_distance > 0 ? formatCurrency(stats.total_cost / stats.total_distance, 3) : '—'} icon={<DollarSign className="h-4 w-4" />} color="amber" />
             </div>
           </FadeIn>
 

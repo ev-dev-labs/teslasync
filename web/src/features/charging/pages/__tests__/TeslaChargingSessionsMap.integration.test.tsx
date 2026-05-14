@@ -70,6 +70,18 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({
+    formatCurrency: (amount: number, decimals = 2) =>
+      `$${Number(amount).toFixed(decimals)}`,
+    formatEnergyCost: (kwh: number) => `$${(kwh * 0.12).toFixed(2)}`,
+    currencySymbol: '$',
+    costPerKwh: 0.12,
+    costPerDistanceUnit: () => null,
+    estimateGasCost: () => null,
+  }),
+}));
+
 import TeslaChargingSessionsMap from '../TeslaChargingSessionsMap';
 
 function makeSessions(n: number, opts?: { invalidEvery?: number }): TeslaChargingSession[] {

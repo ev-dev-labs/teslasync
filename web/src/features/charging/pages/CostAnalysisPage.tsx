@@ -4,7 +4,7 @@ import { DollarSign } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
-import { DateRangeFilter } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { SavedViewMenu } from '@/components/data-display';
 import { PrintButton } from '@/components/ui';
 import { useChargingSessionsPaginated, useCostForecast } from '@/api/hooks/useCharging';
@@ -50,8 +50,8 @@ export default function CostAnalysisPage() {
     return d.toISOString().split('T')[0];
   }, []);
   const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate, setStartDate] = useUrlString('from', defaultStartDate);
-  const [endDate, setEndDate] = useUrlString('to', defaultEndDate);
+  const [startDate] = useUrlString('from', defaultStartDate);
+  const [endDate] = useUrlString('to', defaultEndDate);
   const setRangeBatch = useUrlBatch();
 
   // ── Gas calculator inputs ────────────────────────────────────────────
@@ -100,13 +100,12 @@ export default function CostAnalysisPage() {
       actions={
         <div className="flex flex-wrap items-center gap-3">
           <div data-print-hide className="flex flex-wrap items-center gap-3">
-            <DateRangeFilter
-              startDate={startDate}
-              endDate={endDate}
-              onStartDateChange={setStartDate}
-              onEndDateChange={setEndDate}
-              onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
-              presets
+            <VehicleSelect />
+            <RangePicker
+              value={{ start: startDate, end: endDate }}
+              onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+              align="end"
+              triggerTestId="cost-analysis-range"
             />
             <SavedViewMenu
               route="/cost-analysis"

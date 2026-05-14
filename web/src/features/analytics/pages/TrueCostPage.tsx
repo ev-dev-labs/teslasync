@@ -1,20 +1,22 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DollarSign, Fuel, Zap, TrendingUp, Leaf } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Select } from '@/components/ui';
+import { GlassPanel } from '@/components/ui';
 import { Currency, DataFreshnessAuto } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { VehicleSelect } from '@/components/forms';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   Tooltip, ResponsiveContainer, Legend,
   ChartContainer, ChartTooltip, ChartGradient, chartGrid, axisTick,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useCostBreakdown } from '@/api/hooks/useAnalytics';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
+import { useSettings } from '@/hooks/useSettings';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
@@ -24,17 +26,21 @@ export default function TrueCostPage() {
   const { t } = useTranslation();
   usePageTitle(t('tco.title', 'Total Cost of Ownership'));
   const { unitPrefs, formatEnergy } = useUnits();
+  const { formatCurrency } = useFormatting();
+  const { settings } = useSettings();
   const distanceUnit = unitPrefs.distance;
+  const gasUnit = settings.gas_unit ?? 'gallon';
+  const gasUnitLabel = gasUnit === 'liter'
+    ? t('common.unit.liter', 'L')
+    : t('common.unit.gallon', 'gal');
 
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
 
   const tcoQuery = useCostBreakdown(vehicleIdStr);
   const { data: tco, isLoading, error } = tcoQuery;
 
-  const fmtCurrency = (v: number) => `$${fmtNumber(v)}`;
+  const fmtCurrency = (v: number) => formatCurrency(v);
 
   const monthlyBreakdown = tco?.monthly_breakdown ?? [];
 
@@ -45,14 +51,8 @@ export default function TrueCostPage() {
       loading={isLoading}
       error={error instanceof Error ? error : null}
       actions={
-        <div className="flex items-center gap-3">
-          {vehicles && vehicles.length > 1 && (
-            <Select
-              value={String(vehicleId ?? '')}
-              onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-              options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-            />
-          )}
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
           {/* Cagg-driven; force amber after 6h to surface stale aggregates. */}
           <DataFreshnessAuto query={tcoQuery} forceStaleAfterMs={6 * 60 * 60 * 1000} />
         </div>
@@ -87,7 +87,7 @@ export default function TrueCostPage() {
                 </div>
                 <p className="text-2xl font-bold text-rose-300">{fmtCurrency(tco.equivalent_gas_cost)}</p>
                 <p className="text-xs text-[var(--text-muted)] mt-1">
-                  @ ${tco.gas_price}/{t('tco.gal', 'gal')} · {tco.gas_efficiency_mpg} MPG
+                  @ {formatCurrency(tco.gas_price)}/{gasUnitLabel} · {tco.gas_efficiency_mpg} MPG
                 </p>
               </GlassPanel>
             </StaggerItem>
@@ -141,7 +141,7 @@ export default function TrueCostPage() {
                       </defs>
                       {chartGrid}
                       <XAxis dataKey="month" tick={axisTick} tickLine={false} axisLine={false} />
-                      <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v}`} />
+                      <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatCurrency(v, 0)} />
                       <Tooltip content={<ChartTooltip />} />
                       <Area
                         type="monotone"
@@ -179,7 +179,7 @@ export default function TrueCostPage() {
                     ]}>
                       {chartGrid}
                       <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={false} />
-                      <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${fmtNumber(v, 3)}`} />
+                      <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatCurrency(v, 3)} />
                       <Tooltip content={<ChartTooltip />} />
                       <Bar dataKey="cost" name={t('tco.costKm', 'Cost/km')} radius={[6, 6, 0, 0]} animationDuration={800} />
                     </BarChart>
@@ -212,7 +212,7 @@ export default function TrueCostPage() {
                       <BarChart data={monthlyBreakdown}>
                         {chartGrid}
                         <XAxis dataKey="month" tick={axisTick} tickLine={false} axisLine={false} />
-                        <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v}`} />
+                        <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatCurrency(v, 0)} />
                         <Tooltip content={<ChartTooltip />} />
                         <Legend wrapperStyle={{ fontSize: 11 }} />
                         <Bar dataKey="ev_cost" name={t('tco.evCost', 'EV Cost')} fill="#00f0ff" radius={[4, 4, 0, 0]} animationDuration={800} />

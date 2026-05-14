@@ -228,7 +228,7 @@ export const commandRegistry: CommandDefinition[] = [
     icon: Icons.notifications,
     section: 'actions',
     keywords: ['alert', 'rule', 'new', 'create', 'notification', 'notify'],
-    perform: (ctx) => ctx.navigate('/alert-studio'),
+    perform: (ctx) => ctx.navigate('/notifications/studio'),
   },
   {
     id: 'action.alerts.test',
@@ -246,7 +246,7 @@ export const commandRegistry: CommandDefinition[] = [
     icon: Icons.notificationsActive,
     section: 'actions',
     keywords: ['notifications', 'history', 'log', 'past'],
-    perform: (ctx) => ctx.navigate('/notifications'),
+    perform: (ctx) => ctx.navigate('/notifications/inbox'),
   },
   {
     id: 'action.commands.history',
@@ -332,15 +332,6 @@ export const commandRegistry: CommandDefinition[] = [
     perform: () => {
       window.dispatchEvent(new CustomEvent('toggle-keyboard-shortcuts'))
     },
-  },
-  {
-    id: 'action.help',
-    labelKey: 'palette.cmd.help',
-    labelFallback: 'Open documentation',
-    icon: Icons.helpCircle,
-    section: 'actions',
-    keywords: ['help', 'docs', 'documentation', 'manual', 'guide'],
-    perform: (ctx) => ctx.navigate('/changelog'),
   },
   {
     // Phase-46 / Prompt 08 — opens the in-app <FeedbackModal>. The

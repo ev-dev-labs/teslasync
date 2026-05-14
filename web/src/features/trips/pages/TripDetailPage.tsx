@@ -7,6 +7,7 @@ import { StatCard, KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useTrip } from '@/api/hooks/useTrips';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -22,6 +23,7 @@ export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: trip, isLoading, error } = useTrip(id!);
   const { unitPrefs } = useUnits();
+  const { formatCurrency } = useFormatting();
   // useSettings retained for the legacy efficiencyUnit label string only;
   // the numeric conversion runs through KM_PER_MILE per the locked-policy
   // continuation from Phase-43/0025.
@@ -63,7 +65,7 @@ export default function TripDetailPage() {
             />
             <StatCard
               label={t('trips.detail.cost', 'Cost')}
-              value={`$${fmtNumber(trip.total_cost)}`}
+              value={formatCurrency(trip.total_cost)}
             />
           </Grid>
 

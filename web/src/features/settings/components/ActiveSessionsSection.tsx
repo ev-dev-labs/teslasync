@@ -54,6 +54,7 @@ import {
   useRevokeSession,
   useRevokeAllOtherSessions,
 } from '@/api/hooks/useSessions'
+import { useDateFormat } from '@/hooks/useDateFormat'
 import type { ActiveSession } from '@/api/types'
 
 /**
@@ -86,31 +87,9 @@ function describeDevice(userAgent: string): string {
   return `${browser} on ${os}`
 }
 
-/**
- * Format an ISO timestamp using the user's locale + 24h-style
- * default. We keep this deliberately short so the column doesn't
- * explode at narrower viewports — the table already shows enough
- * context for the user to disambiguate.
- */
-function formatTimestamp(iso: string): string {
-  if (!iso) return '—'
-  try {
-    const d = new Date(iso)
-    if (Number.isNaN(d.getTime())) return iso
-    return d.toLocaleString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    })
-  } catch {
-    return iso
-  }
-}
-
 export function ActiveSessionsSection() {
   const { t } = useTranslation('settings')
+  const { formatDateTime: formatTimestamp } = useDateFormat()
 
   const sessions = useSessions()
   const revokeMut = useRevokeSession()

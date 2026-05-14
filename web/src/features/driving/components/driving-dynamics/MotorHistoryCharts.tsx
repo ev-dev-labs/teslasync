@@ -22,6 +22,7 @@ import {
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { MotorSnapshot } from '@/api/types';
 
 interface MotorHistoryChartsProps {
@@ -32,6 +33,7 @@ interface MotorHistoryChartsProps {
 
 export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsProps) {
   const { t } = useTranslation();
+  const { formatTime } = useDateFormat();
 
   // Phase-46 / Prompt 67 — URL-persisted hidden-series state for the
   // power-vs-regen trace; users often want to isolate one or the other
@@ -41,31 +43,31 @@ export default function MotorHistoryCharts({ motorHistory }: MotorHistoryChartsP
   const powerChartData = useMemo(
     () =>
       (motorHistory ?? []).map((s) => ({
-        time: new Date(s.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: formatTime(s.ts),
         power: s.power_kw ?? null,
         regen: s.regen_kw ?? null,
       })),
-    [motorHistory],
+    [motorHistory, formatTime],
   );
 
   const torqueChartData = useMemo(
     () =>
       (motorHistory ?? []).map((s) => ({
-        time: new Date(s.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: formatTime(s.ts),
         front: s.torque_nm_front ?? null,
         rear: s.torque_nm_rear ?? null,
       })),
-    [motorHistory],
+    [motorHistory, formatTime],
   );
 
   const rpmChartData = useMemo(
     () =>
       (motorHistory ?? []).map((s) => ({
-        time: new Date(s.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: formatTime(s.ts),
         front: s.motor_rpm_front ?? null,
         rear: s.motor_rpm_rear ?? null,
       })),
-    [motorHistory],
+    [motorHistory, formatTime],
   );
 
   const noData = (

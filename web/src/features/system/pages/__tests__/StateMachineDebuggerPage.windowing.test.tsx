@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import type { ReactNode } from 'react';
 import type { FSMTransition, FSMTransitionResponse, FSMStats } from '@/types/fsm';
 
@@ -21,6 +22,7 @@ vi.mock('react-i18next', () => ({
       }
       return _key;
     },
+    i18n: { language: 'en', changeLanguage: () => Promise.resolve() },
   }),
   Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
   initReactI18next: { type: '3rdParty', init: () => undefined },
@@ -152,7 +154,9 @@ function renderPage() {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/system/fsm']}>
-        <StateMachineDebuggerPage />
+        <SelectedVehicleProvider>
+          <StateMachineDebuggerPage />
+        </SelectedVehicleProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );

@@ -175,8 +175,8 @@ function FullView({
         {model}{trimBadging ? ` ${trimBadging}` : ''}
       </p>
 
-      {/* Metrics row */}
-      <div className={`grid ${isWide ? 'grid-cols-4' : 'grid-cols-3'} gap-2`}>
+      {/* Metrics row — collapses to 2 cols on very narrow widget widths */}
+      <div className={`grid ${isWide ? 'grid-cols-2 @xs:grid-cols-4' : 'grid-cols-2 @xs:grid-cols-3'} gap-2`}>
         <MetricCell
           icon={<Battery className="h-3 w-3" />}
           label={t('widget.battery', 'Battery')}

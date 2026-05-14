@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/cn';
-import { formatBytes } from '@/lib/numberFormat';
+import { formatBytes, fmtInt as libFmtInt } from '@/lib/numberFormat';
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -138,7 +138,7 @@ function daysAgo(days: number): string {
 
 function fmtInt(n: number | undefined): string {
   if (n == null) return '—';
-  return n.toLocaleString();
+  return libFmtInt(n);
 }
 
 /* ------------------------------------------------------------------ */

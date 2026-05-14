@@ -22,7 +22,8 @@ func NewAlertRuleRepo(db *DB) *AlertRuleRepo {
 // scanAlertRule below. Add new columns here AND in scanAlertRule when extending
 // the schema (migration 000158_alert_rule_kinds added kind/metric_*; migration
 // 000194 added max_fires_per_resolution; migration 000195 added all_vehicles;
-// migration 000196 added escalation_after_min/escalation_severity).
+// migration 000196 added escalation_after_min/escalation_severity; migration
+// 000200 / Phase-50 added msg_template + include_title).
 const alertRuleColumns = `id, name, description, enabled, vehicle_id, all_vehicles,
 	signal_name, op,
 	value_num, value_text, value_bool, value_min, value_max,
@@ -30,6 +31,7 @@ const alertRuleColumns = `id, name, description, enabled, vehicle_id, all_vehicl
 	kind, metric_id, metric_window, metric_threshold, metric_op,
 	max_fires_per_resolution,
 	escalation_after_min, escalation_severity,
+	msg_template, include_title,
 	created_at, updated_at`
 
 func scanAlertRule(row interface{ Scan(dest ...any) error }, ar *models.AlertRule) error {
@@ -41,6 +43,7 @@ func scanAlertRule(row interface{ Scan(dest ...any) error }, ar *models.AlertRul
 		&ar.Kind, &ar.MetricID, &ar.MetricWindow, &ar.MetricThreshold, &ar.MetricOp,
 		&ar.MaxFiresPerResolution,
 		&ar.EscalationAfterMin, &ar.EscalationSeverity,
+		&ar.MsgTemplate, &ar.IncludeTitle,
 		&ar.CreatedAt, &ar.UpdatedAt,
 	)
 }
@@ -253,7 +256,8 @@ func (r *AlertRuleRepo) Update(ctx context.Context, id int64, rule *models.Alert
 			kind=$18, metric_id=$19, metric_window=$20, metric_threshold=$21, metric_op=$22,
 			max_fires_per_resolution=$23,
 			escalation_after_min=$24, escalation_severity=$25,
-			updated_at=$26
+			msg_template=$26, include_title=$27,
+			updated_at=$28
 			WHERE id=$1`,
 			id, rule.Name, rule.Description, rule.Enabled, rule.VehicleID,
 			rule.AllVehicles,
@@ -263,6 +267,7 @@ func (r *AlertRuleRepo) Update(ctx context.Context, id int64, rule *models.Alert
 			rule.Kind, rule.MetricID, rule.MetricWindow, rule.MetricThreshold, rule.MetricOp,
 			rule.MaxFiresPerResolution,
 			rule.EscalationAfterMin, rule.EscalationSeverity,
+			rule.MsgTemplate, rule.IncludeTitle,
 			time.Now().UTC())
 		if err != nil {
 			return err
@@ -333,9 +338,10 @@ func (r *AlertRuleRepo) Create(ctx context.Context, rule *models.AlertRule) erro
 			kind, metric_id, metric_window, metric_threshold, metric_op,
 			max_fires_per_resolution,
 			escalation_after_min, escalation_severity,
+			msg_template, include_title,
 			created_at, updated_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-				$16, $17, $18, $19, $20, $21, $22, $23, $24, NOW(), NOW())
+				$16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, NOW(), NOW())
 			RETURNING id, created_at, updated_at`
 		err := tx.QueryRow(ctx, query, rule.Name, rule.Description, rule.Enabled,
 			rule.VehicleID, rule.AllVehicles,
@@ -344,7 +350,8 @@ func (r *AlertRuleRepo) Create(ctx context.Context, rule *models.AlertRule) erro
 			rule.TriggerMode, rule.SnoozedUntil,
 			rule.Kind, rule.MetricID, rule.MetricWindow, rule.MetricThreshold, rule.MetricOp,
 			rule.MaxFiresPerResolution,
-			rule.EscalationAfterMin, rule.EscalationSeverity).
+			rule.EscalationAfterMin, rule.EscalationSeverity,
+			rule.MsgTemplate, rule.IncludeTitle).
 			Scan(&rule.ID, &rule.CreatedAt, &rule.UpdatedAt)
 		if err != nil {
 			return err

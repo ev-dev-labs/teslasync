@@ -248,7 +248,6 @@ export interface AppSettings {
   quiet_hours_start: string
   quiet_hours_end: string
   alert_digest_mode: string
-  google_maps_api_key?: string
   polling_config?: PollingConfig
   /** Unicode currency glyph (e.g. "$", "€"). Stored verbatim — no ISO 4217 lookup. */
   currency_symbol?: string
@@ -519,6 +518,20 @@ export interface AlertRule {
    */
   escalation_after_min?: number | null
   escalation_severity?: AlertRuleSeverity | null
+  /**
+   * Phase-50 / ADR-014 — per-rule notification body template. NULL
+   * means "use the op-aware default rendered by internal/alertmsg".
+   * Supports `{{key}}` substitution; whitespace inside the braces is
+   * allowed. Max length: 1024 chars.
+   */
+  msg_template?: string | null
+  /**
+   * Phase-50 / ADR-014 — when FALSE, transports that render a separate
+   * title field (Discord/Slack/Telegram/ntfy/webhook) deliver
+   * body-only notifications. Transports that REQUIRE a title (WebPush,
+   * email Subject, Pushover) ignore this flag. Defaults to TRUE.
+   */
+  include_title?: boolean
   created_at: string
   updated_at: string
 }
@@ -564,6 +577,10 @@ export interface AlertRuleInput {
    */
   escalation_after_min?: number | null
   escalation_severity?: AlertRuleSeverity | null
+  /** Phase-50 / ADR-014 — see AlertRule.msg_template. */
+  msg_template?: string | null
+  /** Phase-50 / ADR-014 — see AlertRule.include_title. */
+  include_title?: boolean
 }
 
 export interface ComputedMetricSummary {
@@ -603,6 +620,72 @@ export interface AlertTestTarget {
 export interface AlertTestRequest {
   message?: string
   target?: AlertTestTarget | null
+  /**
+   * Phase-50 / ADR-014 — when set, the Test Rule endpoint previews the
+   * given template instead of the legacy free-form `message`. Empty
+   * string is normalised to "use the op-aware default".
+   */
+  msg_template?: string | null
+  /** Phase-50 / ADR-014 — see AlertRule.include_title. */
+  include_title?: boolean
+}
+
+/**
+ * Phase-50 / ADR-014 — autocomplete suggestion served by
+ * GET /api/v1/alerts/message-placeholders. Mirrors
+ * internal/alertmsg.Placeholder.
+ */
+export interface AlertMessagePlaceholder {
+  key: string
+  label: string
+  description?: string
+  group: string
+  example?: string
+}
+
+/**
+ * Phase-50 / ADR-014 — curated message-template preset served by
+ * GET /api/v1/alerts/message-presets. Mirrors internal/alertmsg.Preset.
+ */
+export interface AlertMessagePreset {
+  id: string
+  name: string
+  description?: string
+  template: string
+  kind?: '' | 'signal' | 'computed_metric'
+  tags?: string[]
+}
+
+/**
+ * Phase-50 / ADR-014 — request body for POST /api/v1/alerts/message-preview.
+ * Accepts the editor's draft rule shape so the preview renders against
+ * the same inputs the production dispatch path uses.
+ */
+export interface AlertMessagePreviewRequest {
+  name?: string
+  kind?: AlertRuleKind
+  signal_name?: string
+  op?: AlertRuleOp
+  severity?: AlertRuleSeverity
+  vehicle_name?: string
+  value_num?: number | null
+  value_text?: string | null
+  value_bool?: boolean | null
+  value_min?: number | null
+  value_max?: number | null
+  metric_id?: string | null
+  metric_window?: string | null
+  metric_threshold?: number | null
+  metric_op?: ComputedMetricOp | null
+  msg_template?: string | null
+  include_title?: boolean
+  /** Optional sample signal values to feed the renderer. */
+  signals?: Record<string, unknown>
+}
+
+export interface AlertMessagePreviewResponse {
+  title: string
+  body: string
 }
 
 export interface StatsSummary {
@@ -1310,6 +1393,18 @@ export interface BackupStats {
   database_size: string
   table_count: number
   row_counts: Record<string, number>
+}
+
+export interface ErrorStatsByCode {
+  count: number
+  last_seen: string
+  last_message: string
+}
+
+export interface ErrorStats {
+  total_errors: number
+  uptime: string
+  by_code: Record<string, ErrorStatsByCode>
 }
 
 export interface MapConfig {
@@ -2100,15 +2195,29 @@ export interface AutomationHistoryStats {
 }
 
 /** Per-signal history response from /signals/{vehicleID}/{signalName}/history */
+// SignalHistoryResp matches the typed `/api/v1/signals/{vid}/{name}/history`
+// response added by Phase-42 (signal_handler.go). Each row carries the
+// row's source-of-truth `value_kind` discriminator and the typed value
+// in a single `value` field — UI code should call
+// `adaptSignalHistoryRow` to project it into the legacy
+// `SignalLogEntry` shape consumed by SignalHistoryTable, the chart,
+// and stats panels.
 export interface SignalHistoryResp {
+  vehicle_id: number
   signal: string
+  /** Expected ValueKind for the signal (per protomodel registry). */
+  expected_kind?: string
+  from?: string
+  to?: string
   count: number
-  data: Array<{
-    created_at: string
-    value_num?: number | null
-    value_str?: string | null
-    value_bool?: boolean | null
-  }>
+  data: SignalHistoryPoint[]
+}
+
+export interface SignalHistoryPoint {
+  ts: string
+  /** Row's source-of-truth ValueKind (e.g. "ValueKindDouble"). */
+  kind: string
+  value: number | string | boolean | null
 }
 
 export interface AutomationHistoryListResponse {

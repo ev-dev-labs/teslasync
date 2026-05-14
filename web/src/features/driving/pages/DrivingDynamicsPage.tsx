@@ -2,10 +2,11 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PageContainer } from '@/components/layout';
-import { Select } from '@/components/ui';
+import { VehicleSelect } from '@/components/forms';
 
 import { useDrives, useDrivingCoach } from '@/api/hooks/useDriving';
-import { useVehicles, useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
+import { useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { convertDistanceFromSI, convertSpeedFromSI, convertTempFromSI } from '@/lib/unitConversion';
@@ -29,15 +30,8 @@ export default function DrivingDynamicsPage() {
   usePageTitle(t('dynamics.title', 'Driving Dynamics'));
 
   /* ---- vehicle selection ---- */
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-
-  const vehicleOptions = useMemo(
-    () =>
-      (vehicles ?? []).map((v) => ({
-        value: String(v.id), label: v.display_name ?? `Vehicle ${v.id}`, })), [vehicles], );
 
   /* ---- data hooks ---- */
   const vehicleIdNum = vehicleId ?? 0;
@@ -88,16 +82,7 @@ export default function DrivingDynamicsPage() {
       subtitle={t('dynamics.subtitle', 'Live motor telemetry, G-forces & driving analysis')}
       loading={motorLoading}
       error={null}
-      actions={
-        vehicleOptions.length > 1 ? (
-          <Select
-            options={vehicleOptions}
-            value={vehicleId != null ? String(vehicleId) : ''}
-            onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-            placeholder={t('dynamics.selectVehicle', 'Select vehicle')}
-          />
-        ) : undefined
-      }
+      actions={<VehicleSelect />}
     >
       <div className="space-y-6">
         <LiveMotorStatus motorLatest={motorLatest} toTemperatureDisplay={toTemperatureDisplay} tempUnit={tempUnit} />

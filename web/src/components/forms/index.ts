@@ -8,17 +8,21 @@ export {
 } from './CurrencyInput';
 export { DatePresetChips, type DatePresetChipsProps, type DatePresetSelection } from './DatePresetChips';
 export { DateRangeFilter } from './DateRangeFilter';
+export { RangePicker, type RangePickerProps, type RangePickerValue } from './RangePicker';
 export { FilterBar, type FilterBarProps } from './FilterBar';
 export { FormField, type FormFieldProps } from './FormField';
 export { FormSection } from './FormSection';
+export { PillFilterBar, type PillFilterBarProps, type PillItem } from './PillFilterBar';
 export { SearchInput, type SearchInputProps } from './SearchInput';
+export { TagInput, type TagInputProps, type TagInputHandle, type TagSeparator } from './TagInput';
 export {
-  TagInput,
-  type TagInputProps,
-  type TagInputHandle,
-  type TagSeparator,
-} from './TagInput';
+  TreeSelect,
+  type TreeSelectProps,
+  type TreeGroup,
+  type TreeLeaf,
+} from './TreeSelect';
 export { UnitInput, type UnitInputProps } from './UnitInput';
+export { VehicleSelect, type VehicleSelectProps } from './VehicleSelect';
 export {
   VehicleMultiSelect,
   hydrateVehicleSelection,

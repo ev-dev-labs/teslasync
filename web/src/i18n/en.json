@@ -158,7 +158,17 @@
     "range": {
       "start": "Start date",
       "end": "End date",
-      "apply": "Apply"
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "trigger": "Date range",
+      "pickRange": "Pick a date range",
+      "selectStart": "Select start date",
+      "selectEnd": "Select end date",
+      "compare": "Compare to previous period",
+      "vsPrevious": "vs {{start}} – {{end}}",
+      "summaryDays_one": "{{count}} day",
+      "summaryDays_other": "{{count}} days",
+      "popoverLabel": "Date range picker"
     }
   },
   "nav": {
@@ -188,6 +198,15 @@
     "commands": "Commands",
     "geofences": "Geofences",
     "notifications": "Notifications",
+    "notificationsInbox": "Inbox",
+    "notificationsArchived": "Archived",
+    "notificationsAlerts": "Alerts",
+    "notificationsChannels": "Channels",
+    "notificationsWebhooks": "Webhooks",
+    "notificationsBrowser": "Browser",
+    "notificationsQuietHours": "Quiet Hours",
+    "notificationsRules": "Rules",
+    "notificationsStudio": "Studio",
     "notificationsUnread": "{{count}} unread notifications",
     "settings": "Settings",
     "myActivity": "My Activity",
@@ -1825,10 +1844,6 @@
         "mpg": {
           "title": "Comparison vehicle MPG",
           "desc": "Average MPG of the equivalent gas car for savings calculations."
-        },
-        "googleMaps": {
-          "title": "Google Maps API key",
-          "desc": "Optional key enabling satellite views and Places autocomplete."
         }
       },
       "gasPrice": {
@@ -5980,7 +5995,9 @@
     "max": "Max",
     "title": "Drive History",
     "subtitle": "Trip scoring, efficiency analysis, distance patterns, and performance data",
-    "searchPlaceholder": "Search by start or end address…",
+    "searchPlaceholder": "Search drives — try \"score:D\", \"Office\", \"29.1\"",
+    "noPriorData": "No drives in prior period: {{start}} – {{end}}",
+    "priorPeriod": "prior period: {{start}} – {{end}}",
     "totalDrives": "Total Drives",
     "total": "Total",
     "best": "Best",
@@ -6705,10 +6722,6 @@
     "perLiter": "/ liter",
     "comparisonMPG": "Comparison Vehicle MPG",
     "mpgPlaceholder": "Average MPG of equivalent gas car",
-    "googleMapsApiKey": "Google Maps API Key",
-    "googleMapsPlaceholder": "Enter your Google Maps API key",
-    "googleMapsHint": "Optional — enables satellite views, Places autocomplete, and enhanced geocoding.",
-    "getKeyAt": "Get a key at",
     "save": "Save Settings",
     "settingsSaved": "Settings saved",
     "newVersion": {

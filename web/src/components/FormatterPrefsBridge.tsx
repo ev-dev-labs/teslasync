@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useSettings as useSettingsQuery } from '@/api/hooks/useSettings'
 import { subscribe } from '@/lib/broadcast'
 import { TOPICS } from '@/lib/broadcastTopics'
+import { resolveLocale } from '@/lib/locale'
 import {
   setGlobalLocale,
   setGlobalPrecision,
@@ -60,7 +61,7 @@ export function FormatterPrefsBridge(): null {
   const lastDecimals = useRef<number | null>(null)
   useEffect(() => {
     if (!settings) return
-    const locale = settings.locale ?? 'en-US'
+    const locale = resolveLocale(settings.locale)
     const decimals = settings.decimal_precision ?? 2
     if (locale !== lastLocale.current && locale !== getGlobalLocale()) {
       setGlobalLocale(locale)

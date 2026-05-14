@@ -7,6 +7,7 @@ import { Timeline } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { request } from '@/api/client';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
@@ -37,17 +38,6 @@ function parseScheduleSignals(
   };
 }
 
-function formatScheduleTime(iso: string | null): string {
-  if (!iso) return '—';
-  try {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return iso;
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return iso;
-  }
-}
-
 function modeLabel(mode: string | null, t: (k: string, f: string) => string): string {
   switch (mode) {
     case 'StartAt':
@@ -75,6 +65,7 @@ function modeBadgeVariant(mode: string | null): 'success' | 'warning' | 'neutral
 
 export default function ChargingScheduleWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { formatTime: formatScheduleTime } = useDateFormat();
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 

@@ -8,6 +8,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
 import { formatDurationMinutes } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
@@ -24,6 +25,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
+  const { formatDateShort } = useDateFormat();
 
   const isWide = size.cols >= 3;
   const isTall = size.rows >= 2;
@@ -114,10 +116,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
                         </span>
                       )}
                       <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
-                        {new Date(d.start_ts).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
+                        {formatDateShort(d.start_ts)}
                       </span>
                     </div>
                   </div>

@@ -1,0 +1,3 @@
+BEGIN;
+DROP TABLE IF EXISTS status_incidents;
+COMMIT;

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { fmtNumber } from '@/lib/numberFormat';
 import type { HourlyRate } from '@/types/charging';
 
 interface RateTimelineProps {
@@ -97,7 +98,7 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
                 <div className="bg-[var(--surface-overlay)] rounded px-2 py-1 text-xs whitespace-nowrap border border-[var(--border-subtle)]">
                   <div className="text-[var(--text-primary)] font-medium">{formatHour(rate.hour)}</div>
                   <div className={cn(tierTextColors[rate.tier] ?? 'text-[var(--text-secondary)]')}>
-                    {rate.rate_cents.toFixed(1)}¢/kWh
+                    {fmtNumber(rate.rate_cents, 1)}¢/kWh
                   </div>
                 </div>
               </div>

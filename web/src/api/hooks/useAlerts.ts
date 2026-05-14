@@ -49,3 +49,11 @@ export type {
   AcknowledgeAlertInput,
   CommentAlertInput,
 } from './useNotifications';
+
+// Phase-50 / ADR-014 — message-template editor hooks.
+export {
+  alertMessageKeys,
+  useAlertMessagePresets,
+  useAlertMessagePlaceholders,
+  useAlertMessagePreview,
+} from './useAlertMessageHelpers';

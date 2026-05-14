@@ -1461,9 +1461,9 @@
       "tags": [],
       "targetBlank": false,
       "title": "◀ Prev",
-      "tooltip": "TeslaSync - Rules Engine",
+      "tooltip": "TeslaSync - Fleet Telemetry Server",
       "type": "link",
-      "url": "/d/teslasync-infra-cep"
+      "url": "/d/teslasync-infra-fleet-telemetry"
     },
     {
       "asDropdown": true,
@@ -1485,9 +1485,9 @@
       "tags": [],
       "targetBlank": false,
       "title": "Next ▶",
-      "tooltip": "TeslaSync - Sessions & Business Metrics",
+      "tooltip": "TeslaSync - MQTT Pipeline Trace View (Tempo)",
       "type": "link",
-      "url": "/d/teslasync-infra-sessions"
+      "url": "/d/teslasync-infra-mqtt-pipeline-traces"
     }
   ]
 }

@@ -9,6 +9,7 @@ import {
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { request } from '@/api/client';
 import { CHARGER_COLORS } from '@/lib/colors';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -39,6 +40,7 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
+  const { formatDateShort } = useDateFormat();
 
   const { data: sessions, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['charging', id, 'session-chart-10'],
@@ -51,13 +53,13 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
     (sessions ?? [])
       .map((s, i) => ({
         label: s.started_at
-          ? new Date(s.started_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+          ? formatDateShort(s.started_at)
           : `#${i + 1}`,
         energy: s.total_energy_added_wh ?? 0,
         type: classifyChargerType(s),
       }))
       .reverse(),
-    [sessions],
+    [sessions, formatDateShort],
   );
 
   const hasData = chartData.length > 0;

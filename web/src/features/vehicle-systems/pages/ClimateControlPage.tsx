@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
+import { VehicleSelect } from '@/components/forms';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -422,7 +423,8 @@ export default function ClimateControlPage() {
       loading={isLoading}
       error={error as Error | null}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
           <Button
             variant="ghost"
             size="sm"
@@ -1171,7 +1173,7 @@ export default function ClimateControlPage() {
                   tick={axisTick}
                   tickFormatter={(v: string) => formatTime(v)}
                 />
-                <YAxis tick={axisTick} unit="°C" />
+                <YAxis tick={axisTick} unit={tempUnit} />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend />
                 <Line

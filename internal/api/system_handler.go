@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -244,6 +245,25 @@ func DegradedStatusHandler(health *resilience.HealthMonitor) http.HandlerFunc {
 }
 
 // WorkersHealthHandler checks the health of background worker services.
+//
+// Multi-instance support
+// ----------------------
+// Each worker (notification, export, automation) can be horizontally
+// scaled. The handler discovers per-instance hosts in this order:
+//
+//  1. *_HOSTS (plural, comma-separated) — explicit list of hostnames.
+//     Example: NOTIFICATION_WORKER_HOSTS="nw-1,nw-2,nw-3".
+//  2. *_HOST (singular, comma-separated also accepted) — backward
+//     compatible with single-host deployments. A comma-separated value
+//     is split here too so operators can extend without renaming.
+//  3. Built-in default (single hostname matching the docker-compose
+//     service name).
+//
+// Each instance is probed independently and emitted as its own
+// WorkerStatus row sharing the worker name. The frontend groups by
+// name and renders per-instance status. Probes run sequentially;
+// at 3s timeout × ~3 workers × ~3 instances worst case the total
+// stays well under the panel's 30s refresh cadence.
 func WorkersHealthHandler() http.HandlerFunc {
 	type workerStatus struct {
 		Name    string `json:"name"`
@@ -260,31 +280,69 @@ func WorkersHealthHandler() http.HandlerFunc {
 		return fallback
 	}
 
-	workers := []struct {
+	// resolveHosts honours the *_HOSTS plural override and also accepts
+	// a comma-separated value in the singular *_HOST for forward
+	// compatibility. Returns at least one entry (the fallback).
+	resolveHosts := func(pluralKey, singularKey, fallback string) []string {
+		raw := os.Getenv(pluralKey)
+		if raw == "" {
+			raw = envOrDefault(singularKey, fallback)
+		}
+		out := make([]string, 0, 2)
+		seen := make(map[string]struct{})
+		for _, part := range strings.Split(raw, ",") {
+			h := strings.TrimSpace(part)
+			if h == "" {
+				continue
+			}
+			if _, dup := seen[h]; dup {
+				continue
+			}
+			seen[h] = struct{}{}
+			out = append(out, h)
+		}
+		if len(out) == 0 {
+			out = append(out, fallback)
+		}
+		return out
+	}
+
+	type workerProbe struct {
 		name string
 		url  string
-	}{
-		{
-			"notification-worker",
-			fmt.Sprintf("http://%s:%s/healthz",
-				envOrDefault("NOTIFICATION_WORKER_HOST", "notification-worker"),
-				envOrDefault("NOTIFICATION_WORKER_PORT", "8081")),
-		},
-		{
-			"export-worker",
-			fmt.Sprintf("http://%s:%s/healthz",
-				envOrDefault("EXPORT_WORKER_HOST", "export-worker"),
-				envOrDefault("EXPORT_WORKER_PORT", "8082")),
-		},
-		{
-			"automation-worker",
-			fmt.Sprintf("http://%s:%s/healthz",
-				envOrDefault("AUTOMATION_WORKER_HOST", "automation-worker"),
-				envOrDefault("AUTOMATION_WORKER_PORT", "8083")),
-		},
+	}
+
+	buildProbes := func(name, hostsKey, hostKey, hostFallback, portKey, portFallback string) []workerProbe {
+		port := envOrDefault(portKey, portFallback)
+		hosts := resolveHosts(hostsKey, hostKey, hostFallback)
+		out := make([]workerProbe, 0, len(hosts))
+		for _, host := range hosts {
+			out = append(out, workerProbe{
+				name: name,
+				url:  fmt.Sprintf("http://%s:%s/healthz", host, port),
+			})
+		}
+		return out
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Resolve per-request so test goroutines and operators changing
+		// env at runtime see fresh values. Cost is trivial — three env
+		// lookups + a slice walk.
+		probes := make([]workerProbe, 0, 6)
+		probes = append(probes,
+			buildProbes("notification-worker",
+				"NOTIFICATION_WORKER_HOSTS", "NOTIFICATION_WORKER_HOST", "notification-worker",
+				"NOTIFICATION_WORKER_PORT", "8081")...)
+		probes = append(probes,
+			buildProbes("export-worker",
+				"EXPORT_WORKER_HOSTS", "EXPORT_WORKER_HOST", "export-worker",
+				"EXPORT_WORKER_PORT", "8082")...)
+		probes = append(probes,
+			buildProbes("automation-worker",
+				"AUTOMATION_WORKER_HOSTS", "AUTOMATION_WORKER_HOST", "automation-worker",
+				"AUTOMATION_WORKER_PORT", "8083")...)
+
 		// system-dns-check is the prompt-mandated service name for this
 		// per-call worker /healthz probe. The 3s timeout matches the
 		// historical bare-client budget.
@@ -294,9 +352,9 @@ func WorkersHealthHandler() http.HandlerFunc {
 			Sink:          currentOutboundSink(),
 			EnableLogging: true,
 		})
-		results := make([]workerStatus, len(workers))
+		results := make([]workerStatus, len(probes))
 
-		for i, wk := range workers {
+		for i, wk := range probes {
 			ws := workerStatus{Name: wk.name, Host: wk.url}
 			start := time.Now()
 			resp, err := client.Get(wk.url)

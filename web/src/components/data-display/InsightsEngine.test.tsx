@@ -1,6 +1,18 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { InsightsEngine } from './InsightsEngine'
+
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({
+    formatCurrency: (amount: number, decimals = 2) =>
+      `$${Number(amount).toFixed(decimals)}`,
+    formatEnergyCost: (kwh: number) => `$${(kwh * 0.12).toFixed(2)}`,
+    currencySymbol: '$',
+    costPerKwh: 0.12,
+    costPerDistanceUnit: () => null,
+    estimateGasCost: () => null,
+  }),
+}))
 
 describe('InsightsEngine', () => {
   it('renders nothing with empty data', () => {

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useFormatting } from '@/hooks/useFormatting';
 import { Plug, Zap, DollarSign, Gauge, Timer, TrendingUp } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
@@ -19,6 +20,7 @@ import { ChargingDetailSection } from './ChargingDetailSection';
 
 export function ChargingTab({ data }: { data: FleetAnalytics | undefined }) {
   const { t } = useTranslation();
+  const { formatCurrency } = useFormatting();
 
   const ca = data?.charging_analytics;
   const chargerTypes = ca?.charger_types ?? [];
@@ -47,7 +49,7 @@ export function ChargingTab({ data }: { data: FleetAnalytics | undefined }) {
         />
         <MetricCard
           label={t('analytics.charging.totalCost', 'Total Cost')}
-          value={`$${fmtNumber(data?.total_cost, 2)}`}
+          value={formatCurrency(data?.total_cost ?? 0, 2)}
           icon={<DollarSign className="h-4 w-4" />}
           color="amber"
         />

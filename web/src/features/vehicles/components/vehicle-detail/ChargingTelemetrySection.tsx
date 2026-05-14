@@ -5,6 +5,7 @@ import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
 import { fmtNumber } from '@/lib/numberFormat'
+import { useUnits } from '@/hooks/useUnits'
 import type { ChargingTelemetry } from '@/api/types'
 
 interface ChargingTelemetrySectionProps {
@@ -13,6 +14,7 @@ interface ChargingTelemetrySectionProps {
 
 export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetrySectionProps) {
   const { t } = useTranslation()
+  const { formatDistance, formatSpeed } = useUnits()
 
   return (
     <GlassPanel className="p-6">
@@ -84,17 +86,17 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
             label={t('vehicles.detail.chargeRate', 'Charge Rate')}
             value={
               chargingTelemetry.range_added_meters_per_hour != null
-                ? `${fmtNumber(chargingTelemetry.range_added_meters_per_hour)} mph`
+                ? formatSpeed(chargingTelemetry.range_added_meters_per_hour / 3600)
                 : '—'
             }
             icon={<Activity className="h-4 w-4" />}
             color="cyan"
           />
           <MetricCard
-            label={t('vehicles.detail.milesAdded', 'Miles Added')}
+            label={t('vehicles.detail.rangeAdded', 'Range Added')}
             value={
               chargingTelemetry.range_added_meters != null
-                ? `${fmtNumber(chargingTelemetry.range_added_meters)} mi`
+                ? formatDistance(chargingTelemetry.range_added_meters)
                 : '—'
             }
             icon={<Zap className="h-4 w-4" />}

@@ -5,4 +5,20 @@ export { ServiceHealthSection } from './ServiceHealthSection';
 export { InfrastructureSection } from './InfrastructureSection';
 export { DataPipelineSection } from './DataPipelineSection';
 export { OperationsSection } from './OperationsSection';
-export { DiagnosticsSection } from './DiagnosticsSection';
+
+// Phase 2 additions
+export { AnomalyInlineRow } from './AnomalyInlineRow';
+export { BackgroundWorkersCard } from './BackgroundWorkersCard';
+export { BackupActionsCard } from './BackupActionsCard';
+export { TeslaAuthCard } from './TeslaAuthCard';
+export { TeslaApiUsageCard } from './TeslaApiUsageCard';
+export { TelemetryPipelineCard } from './TelemetryPipelineCard';
+export { UpdateAvailableCallout } from './UpdateAvailableCallout';
+export { StatusPageSkeleton } from './StatusPageSkeleton';
+export { LiveStatusPill } from './LiveStatusPill';
+export { IncidentsCard } from './IncidentsCard';
+export { IncidentForm } from './IncidentForm';
+export { ScheduledMaintenanceCard } from './ScheduledMaintenanceCard';
+export { SubscribeCard } from './SubscribeCard';
+export { SLOTrackingCard } from './SLOTrackingCard';
+export { FrontendErrorsCard } from './FrontendErrorsCard';

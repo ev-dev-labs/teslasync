@@ -12,6 +12,7 @@ import { FadeIn } from '@/components/motion'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { getRedisSignals, purgeRedisSignals, purgeAllRedisSignals, type RedisSignalEntry } from '@/api/devtools'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useDateFormat } from '@/hooks/useDateFormat'
 import { fmtInt } from '@/lib/numberFormat'
 import { INTERVALS } from '@/lib/constants'
 import { isApiError, type ApiError } from '@/lib/resilience'
@@ -136,6 +137,7 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
 export default function RedisSignalViewerPage() {
   const { t } = useTranslation()
   usePageTitle(t('redis.title', 'Redis Signal Viewer'))
+  const { formatTime } = useDateFormat()
 
   const { data: vehicles } = useVehicles()
   const vehicleList = vehicles ?? []
@@ -412,7 +414,7 @@ export default function RedisSignalViewerPage() {
               {meta.l1_last_seen_at && (
                 <Badge size="sm" variant="info">
                   {t('redis.headerChip.l1Seen', 'L1 last: {{date}}', {
-                    date: new Date(meta.l1_last_seen_at).toLocaleTimeString(),
+                    date: formatTime(meta.l1_last_seen_at),
                   })}
                 </Badge>
               )}

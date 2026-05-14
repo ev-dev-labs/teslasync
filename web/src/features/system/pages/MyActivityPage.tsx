@@ -19,7 +19,7 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { DateRangeFilter } from '@/components/forms/DateRangeFilter';
+import { RangePicker } from '@/components/forms';
 import { RecentActivityFeed } from '@/components/data-display/RecentActivityFeed';
 import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -49,8 +49,8 @@ export default function MyActivityPage() {
     return { start: isoDate(start), end: isoDate(today) };
   }, []);
 
-  const [start, setStart] = useUrlString('start', defaults.start);
-  const [end, setEnd] = useUrlString('end', defaults.end);
+  const [start] = useUrlString('start', defaults.start);
+  const [end] = useUrlString('end', defaults.end);
   const setRangeBatch = useUrlBatch();
 
   const { data, isLoading, error, refetch } = useMyRecentActivity({
@@ -72,19 +72,17 @@ export default function MyActivityPage() {
         'Recent actions you have taken in TeslaSync.',
       )}
       loading={isLoading}
+      actions={
+        <RangePicker
+          value={{ start, end }}
+          onChange={(r) => setRangeBatch({ start: r.start, end: r.end })}
+          align="end"
+          triggerTestId="my-activity-range"
+        />
+      }
     >
       <FadeIn>
         <GlassPanel className="space-y-4 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <DateRangeFilter
-              startDate={start}
-              endDate={end}
-              onStartDateChange={(value) => setStart(value)}
-              onEndDateChange={(value) => setEnd(value)}
-              onRangeChange={(r) => setRangeBatch({ start: r.start, end: r.end })}
-            />
-          </div>
-
           {featureDisabled ? (
             <EmptyState
               icon={<Icons.securityCheck className="h-8 w-8" />}

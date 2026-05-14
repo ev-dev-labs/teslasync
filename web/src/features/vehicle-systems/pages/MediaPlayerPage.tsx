@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -10,9 +10,10 @@ import { cn } from '@/lib/cn';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
+import { RangePicker, VehicleSelect } from '@/components/forms';
+import { useRangeState } from '@/hooks/useRangeState';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -28,7 +29,7 @@ import {
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { request } from '@/api/client';
 
 /* ── Types ─────────────────────────────────────────────────────── */
@@ -49,12 +50,6 @@ interface MediaSnapshot {
   created_at: string;
 }
 
-interface Vehicle {
-  id: number;
-  vin: string;
-  display_name: string;
-}
-
 interface SourceSlice {
   name: string;
   value: number;
@@ -63,13 +58,7 @@ interface SourceSlice {
 
 /* ── Constants ─────────────────────────────────────────────────── */
 
-const TIME_RANGES = [
-  { label: '24h', days: 1 },
-  { label: '7d', days: 7 },
-  { label: '15d', days: 15 },
-  { label: '30d', days: 30 },
-  { label: 'All', days: 0 },
-] as const;
+const PRESET_IDS = ['today', '7d', '30d', '90d', 'mtd', 'ytd', 'all'];
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 
@@ -110,19 +99,17 @@ export default function MediaPlayerPage() {
   const { t } = useTranslation();
   usePageTitle(t('Media Player'));
 
-  const [vehicleId, setVehicleId] = useState<string | null>(null);
-  const [range, setRange] = useState<number>(7);
+  const { vehicleId } = useSelectedVehicle();
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'media-player.range',
+    defaultPresetId: '7d',
+  });
   const [tableSortKey, setTableSortKey] = useState('created_at');
   const [tableSortDir, setTableSortDir] = useState<'asc' | 'desc'>('desc');
 
   /* ── Queries ──────────────────────────────────────────────── */
 
-  const { data: vehicles } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
-
-  const activeId = vehicleId ?? (vehicles?.[0] ? String(vehicles[0].id) : '');
+  const activeId = vehicleId != null ? String(vehicleId) : '';
 
   const {
     data: latest,
@@ -149,10 +136,13 @@ export default function MediaPlayerPage() {
 
   const filtered = useMemo(() => {
     if (!history?.length) return [];
-    if (range === 0) return history;
-    const cutoff = Date.now() - range * 86_400_000;
-    return history.filter((s) => new Date(s.created_at).getTime() >= cutoff);
-  }, [history, range]);
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    return history.filter((s) => {
+      const t = new Date(s.created_at).getTime();
+      return t >= startMs && t <= endMs;
+    });
+  }, [history, start, end]);
 
   /* ── Derived stats ────────────────────────────────────────── */
 
@@ -321,16 +311,16 @@ export default function MediaPlayerPage() {
       loading={isLoading}
       error={latestError as Error | null}
       actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            options={vehicles.map((v) => ({
-              value: String(v.id),
-              label: v.display_name || v.vin,
-            }))}
-            value={activeId}
-            onChange={(e) => setVehicleId(e.target.value)}
+        <div className="flex flex-wrap items-center gap-3">
+          <VehicleSelect />
+          <RangePicker
+            value={{ start, end }}
+            onChange={(r) => setRange(r)}
+            presetIds={PRESET_IDS}
+            align="end"
+            triggerTestId="media-player-range"
           />
-        ) : undefined
+        </div>
       }
     >
       {anyError && (
@@ -338,20 +328,6 @@ export default function MediaPlayerPage() {
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
         </AlertBanner>
       )}
-
-      {/* ── Time range selector ──────────────────────────────── */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {TIME_RANGES.map((tr) => (
-          <Button
-            key={tr.label}
-            variant={range === tr.days ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setRange(tr.days)}
-          >
-            {t(tr.label)}
-          </Button>
-        ))}
-      </div>
 
       {/* ── Now Playing card ─────────────────────────────────── */}
       <FadeIn>
@@ -465,7 +441,7 @@ export default function MediaPlayerPage() {
             label={t('Volume Step', 'Volume Step')}
             value={
               latest?.audio_volume_increment != null
-                ? latest.audio_volume_increment.toFixed(2)
+                ? fmtNumber(latest.audio_volume_increment, 2)
                 : '—'
             }
             icon={<Volume2 className="h-5 w-5" />}

@@ -8,6 +8,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { Drive } from '../types';
@@ -17,6 +18,7 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
+  const { formatDateShort } = useDateFormat();
 
   const { data: drives, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['drives', id, 'recent-5'],
@@ -60,10 +62,7 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
                   </p>
                 </div>
                 <span className="text-[10px] text-[var(--text-muted)] shrink-0">
-                  {new Date(d.start_ts).toLocaleDateString(undefined, {
-                    month: 'short',
-                    day: 'numeric',
-                  })}
+                  {formatDateShort(d.start_ts)}
                 </span>
               </div>
             </Link>

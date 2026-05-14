@@ -11,20 +11,34 @@ import (
 )
 
 func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
-	var cutoff time.Time
+	// Bounds: clients can scope the window via either an explicit
+	// `days=N` (legacy widget contract — gives a trailing N-day window
+	// rooted at now) or a date range via `start=YYYY-MM-DD` and/or
+	// `end=YYYY-MM-DD` from the unified RangePicker. When NONE of those
+	// params is supplied we return full history rather than silently
+	// applying a hardcoded default — per the no-hardcoded-day-windows
+	// rule established for filter UI in the web app.
+	//
+	// Either bound may be zero to mean "unbounded on that side". A
+	// supplied `end` is treated as inclusive end-of-day so the picker's
+	// YYYY-MM-DD upper bound matches user intent.
+	var cutoff, endCutoff time.Time
 	if s := r.URL.Query().Get("start"); s != "" {
 		if t, err := time.Parse("2006-01-02", s); err == nil {
 			cutoff = t
 		}
 	}
-	if cutoff.IsZero() {
-		days := 30
+	if e := r.URL.Query().Get("end"); e != "" {
+		if t, err := time.Parse("2006-01-02", e); err == nil {
+			endCutoff = t.Add(24*time.Hour - time.Nanosecond)
+		}
+	}
+	if cutoff.IsZero() && endCutoff.IsZero() {
 		if d := r.URL.Query().Get("days"); d != "" {
 			if parsed, err := strconv.Atoi(d); err == nil && parsed > 0 && parsed <= 3650 {
-				days = parsed
+				cutoff = time.Now().UTC().AddDate(0, 0, -parsed)
 			}
 		}
-		cutoff = time.Now().UTC().AddDate(0, 0, -days)
 	}
 
 	vehicles, err := h.vehicleRepo.GetAll(r.Context())
@@ -85,12 +99,12 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 	var batteryTrend []batteryPoint
 
 	for _, v := range vehicles {
-		drives, err := h.driveRepo.GetByVehicle(r.Context(), v.ID, 2000, 0, cutoff, time.Time{})
+		drives, err := h.driveRepo.GetByVehicle(r.Context(), v.ID, 2000, 0, cutoff, endCutoff)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicleID", v.ID).Msg("analytics: failed to get drives")
 			drives = nil
 		}
-		sessions, err := h.chargingRepo.GetByVehicle(r.Context(), v.ID, 2000, 0, cutoff, time.Time{})
+		sessions, err := h.chargingRepo.GetByVehicle(r.Context(), v.ID, 2000, 0, cutoff, endCutoff)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicleID", v.ID).Msg("analytics: failed to get charging sessions")
 			sessions = nil
@@ -120,7 +134,10 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 		var dist float64
 		var driveCount int
 		for _, d := range drives {
-			if d.StartTs.Before(cutoff) {
+			if !cutoff.IsZero() && d.StartTs.Before(cutoff) {
+				continue
+			}
+			if !endCutoff.IsZero() && d.StartTs.After(endCutoff) {
 				continue
 			}
 			distKm := d.DistanceM / 1000.0
@@ -181,7 +198,10 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 
 		var energy, cost float64
 		for _, s := range sessions {
-			if s.StartedAt.Before(cutoff) {
+			if !cutoff.IsZero() && s.StartedAt.Before(cutoff) {
+				continue
+			}
+			if !endCutoff.IsZero() && s.StartedAt.After(endCutoff) {
 				continue
 			}
 			if s.TotalEnergyAddedWh != nil {
@@ -265,12 +285,24 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 		if h.db != nil {
 			const btCap = 75000.0
 			const btRange = 531.0
-			btRows, btErr := h.db.Pool.Query(r.Context(),
-				`SELECT bucket, end_soc, min_soc, max_soc
+			// Build conditional SQL: cutoff/endCutoff are independently
+			// optional, so only emit the bound clauses when set rather
+			// than passing time.Time{} sentinel values that would silently
+			// filter out all rows.
+			query := `SELECT bucket, end_soc, min_soc, max_soc
 				 FROM cagg_battery_daily
-				 WHERE vehicle_id = $1 AND bucket >= $2
-				 ORDER BY bucket ASC`,
-				v.ID, cutoff)
+				 WHERE vehicle_id = $1`
+			args := []any{v.ID}
+			if !cutoff.IsZero() {
+				args = append(args, cutoff)
+				query += " AND bucket >= $" + strconv.Itoa(len(args))
+			}
+			if !endCutoff.IsZero() {
+				args = append(args, endCutoff)
+				query += " AND bucket <= $" + strconv.Itoa(len(args))
+			}
+			query += " ORDER BY bucket ASC"
+			btRows, btErr := h.db.Pool.Query(r.Context(), query, args...)
 			if btErr == nil {
 				for btRows.Next() {
 					var bucket time.Time
@@ -516,10 +548,26 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 		return batteryTrend[i].Date < batteryTrend[j].Date
 	})
 
+	// period_days describes the inclusive day count of the requested
+	// window. When neither bound is set we return 0 as a sentinel for
+	// "all time" rather than the (millions-of-days-since-year-1)
+	// nonsense produced by time.Since(time.Time{}).
+	periodDays := 0
+	if !cutoff.IsZero() {
+		end := endCutoff
+		if end.IsZero() {
+			end = time.Now().UTC()
+		}
+		periodDays = int(end.Sub(cutoff).Hours()/24) + 1
+	} else if !endCutoff.IsZero() {
+		// Lower bound unknown — treat the day count as "up to end".
+		periodDays = 0
+	}
+
 	// === Build total response ===
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		// Core fleet stats (existing)
-		"period_days":             int(time.Since(cutoff).Hours()/24) + 1,
+		"period_days":             periodDays,
 		"total_vehicles":          len(vehicles),
 		"total_distance_km":       math.Round(fleetDist*10) / 10,
 		"total_drives":            fleetDrives,

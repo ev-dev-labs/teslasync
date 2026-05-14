@@ -1,17 +1,19 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, Cpu, BatteryCharging } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { Select } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
+import { VehicleSelect, RangePicker } from '@/components/forms';
 
 import { useDrivetrainHealth, useDrives, useDrivingStats } from '@/api/hooks/useDriving';
-import { useVehicles, useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
+import { useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateShort } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useUrlString, useUrlBatch } from '@/hooks/useUrlState';
 import { convertDistanceFromSI, convertTempFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 
 import {
@@ -37,13 +39,21 @@ import {
 
 export default function DrivetrainHealthPage() {
   const { t } = useTranslation();
+  const { formatTime, formatDateShort } = useDateFormat();
   usePageTitle(t('drivetrain.title', 'Drivetrain Health'));
 
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-
-  const { data: vehicles } = useVehicles();
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
+
+  const defaultStartDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split('T')[0];
+  }, []);
+  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [startDate] = useUrlString('from', defaultStartDate);
+  const [endDate] = useUrlString('to', defaultEndDate);
+  const setRangeBatch = useUrlBatch();
 
   const { data: health, isLoading: healthLoading } = useDrivetrainHealth(vehicleIdStr);
   const { data: drives } = useDrives(vehicleIdStr);
@@ -56,11 +66,6 @@ export default function DrivetrainHealthPage() {
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
   const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
   const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
-
-  const vehicleOptions = useMemo(() => {
-    if (!vehicles?.length) return [];
-    return vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }));
-  }, [vehicles]);
 
   const overallHealth = health?.overallHealth ?? 'good';
   const healthScore = HEALTH_SCORE[overallHealth];
@@ -77,7 +82,15 @@ export default function DrivetrainHealthPage() {
 
   const chartData: ChartDataPoint[] = useMemo(() => {
     if (!drives?.length) return [];
+    // Filter drives to selected date range; chart shows the resulting series
+    // (capped at 30 points so the trend stays readable on small viewports).
+    const startMs = new Date(`${startDate}T00:00:00`).getTime();
+    const endMs = new Date(`${endDate}T23:59:59`).getTime();
     return drives
+      .filter((d) => {
+        const t = new Date(d.startTs).getTime();
+        return Number.isFinite(t) && t >= startMs && t <= endMs;
+      })
       .slice()
       .sort((a, b) => new Date(a.startTs).getTime() - new Date(b.startTs).getTime())
       .slice(-30)
@@ -88,7 +101,7 @@ export default function DrivetrainHealthPage() {
         outsideTemp: d.outsideTempAvgC ?? null,
         distance: toDistanceDisplay(d.distanceM),
       }));
-  }, [drives, toDistanceDisplay]);
+  }, [drives, startDate, endDate, toDistanceDisplay, formatDateShort]);
 
   const tempTrendData = useMemo(() => chartData.filter((d) => d.outsideTemp !== null), [chartData]);
 
@@ -111,7 +124,7 @@ export default function DrivetrainHealthPage() {
     const history = motorHistory ?? [];
     if (history.length === 0) return [];
     return history.map((s) => ({
-      time: s.ts ? new Date(s.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+      time: s.ts ? formatTime(s.ts) : '',
       stator: s.motor_temp_c_front != null ? toTemperatureDisplay(s.motor_temp_c_front) : null,
       statorRel: s.motor_temp_c_rear != null ? toTemperatureDisplay(s.motor_temp_c_rear) : null,
       statorRer: s.inverter_temp_c != null ? toTemperatureDisplay(s.inverter_temp_c) : null,
@@ -119,7 +132,7 @@ export default function DrivetrainHealthPage() {
       speed: null, // no direct power signal in motor pivot; field unused by charts
       axle: s.motor_rpm_front ?? s.motor_rpm_rear ?? null,
     }));
-  }, [motorHistory, toTemperatureDisplay, toSpeedDisplay]);
+  }, [motorHistory, toTemperatureDisplay, toSpeedDisplay, formatTime]);
 
   return (
     <PageContainer
@@ -128,16 +141,15 @@ export default function DrivetrainHealthPage() {
       loading={healthLoading}
       error={null}
       actions={
-        vehicleOptions.length > 0 ? (
-          <Select
-            value={String(vehicleId ?? '')}
-            onChange={(e) => setSelectedVehicle(e.target.value ? Number(e.target.value) : null)}
-            options={[
-              { value: '', label: t('drivetrain.allVehicles', 'All Vehicles') },
-              ...vehicleOptions,
-            ]}
+        <div className="flex flex-wrap items-center gap-3">
+          <VehicleSelect />
+          <RangePicker
+            value={{ start: startDate, end: endDate }}
+            onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+            align="end"
+            triggerTestId="drivetrain-health-range-picker"
           />
-        ) : undefined
+        </div>
       }
     >
       {health ? (

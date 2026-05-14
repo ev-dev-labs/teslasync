@@ -6,6 +6,16 @@ import {
   FRESHNESS_COLORS,
   type FreshnessQuery,
 } from '../DataFreshness'
+import {
+  formatDate,
+  formatDateTime,
+  formatTime,
+  formatDateShort,
+  formatDateWithDay,
+  formatRelative,
+  formatRelativeTime,
+  formatRelativeDays,
+} from '@/lib/dateFormat'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -26,6 +36,25 @@ vi.mock('react-i18next', () => ({
 const reducedMotionMock = vi.fn<() => boolean | null>(() => false)
 vi.mock('framer-motion', () => ({
   useReducedMotion: () => reducedMotionMock(),
+}))
+
+// `<DataFreshness>` reads locale + tz via `useDateFormat()` for its
+// `title` attribute. Mock the hook so tests don't need a TanStack Query
+// provider or a Router (both required by `useSettings` + `useTimezone`).
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({
+    opts: {},
+    tz: 'UTC',
+    locale: 'en-US',
+    formatDate,
+    formatDateTime,
+    formatTime,
+    formatDateShort,
+    formatDateWithDay,
+    formatRelative,
+    formatRelativeTime,
+    formatRelativeDays,
+  }),
 }))
 
 describe('FRESHNESS_COLORS', () => {

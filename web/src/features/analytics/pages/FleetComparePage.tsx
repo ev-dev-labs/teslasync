@@ -223,7 +223,7 @@ export default function FleetComparePage() {
   const formatDistance = (value: number | null | undefined, precision?: number) => formatDistanceUnit(value, { precision });
   const { formatTemperature: formatTemperatureUnit } = useUnits();
   const formatTemperature = (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision });
-  const { currencySymbol } = useFormatting();
+  const { currencySymbol, formatCurrency } = useFormatting();
 
   const distanceUnit = unitPrefs.distance;
   const speedUnit = unitPrefs.speed;
@@ -442,8 +442,8 @@ export default function FleetComparePage() {
       },
       {
         metric: t('comparison.chargingCost', 'Charging Cost'),
-        valueA: `${currencySymbol}${fmtNumber(cA?.total_charging_cost ?? 0)}`,
-        valueB: `${currencySymbol}${fmtNumber(cB?.total_charging_cost ?? 0)}`,
+        valueA: formatCurrency(cA?.total_charging_cost ?? 0, 0),
+        valueB: formatCurrency(cB?.total_charging_cost ?? 0, 0),
         rawA: cA?.total_charging_cost ?? 0,
         rawB: cB?.total_charging_cost ?? 0,
         winner: 'lower' as WinnerSemantic,
@@ -730,7 +730,7 @@ export default function FleetComparePage() {
             />
             <StatCard
               label={t('comparison.costDiff', 'Charging Cost')}
-              value={`${currencySymbol}${fmtNumber(costA?.total_charging_cost ?? 0)} vs ${currencySymbol}${fmtNumber(costB?.total_charging_cost ?? 0)}`}
+              value={`${formatCurrency(costA?.total_charging_cost ?? 0, 0)} vs ${formatCurrency(costB?.total_charging_cost ?? 0, 0)}`}
               icon={<DollarSign className="h-4 w-4" />}
             />
             <StatCard

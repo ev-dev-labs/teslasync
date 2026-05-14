@@ -6,6 +6,7 @@ import { GlassPanel, DataTable, type Column } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
 import { formatDateTime } from '@/lib/dateFormat'
 import { fmtNumber } from '@/lib/numberFormat'
+import { useFormatting } from '@/hooks/useFormatting'
 import type { ChargingSession } from '@/api/types'
 import { durationStr } from './helpers'
 
@@ -15,6 +16,7 @@ interface RecentChargesSectionProps {
 
 function useChargeColumns(): Column<ChargingSession>[] {
   const { t } = useTranslation()
+  const { formatCurrency } = useFormatting()
   return [
     {
       key: 'date',
@@ -35,7 +37,7 @@ function useChargeColumns(): Column<ChargingSession>[] {
     {
       key: 'cost',
       header: t('common.cost', 'Cost'),
-      render: (s) => (s.cost != null ? `$${fmtNumber(s.cost)}` : '—'),
+      render: (s) => (s.cost != null ? formatCurrency(s.cost) : '—'),
     },
     {
       key: 'battery',

@@ -25,6 +25,7 @@
 import { useCallback, useId, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Database, Download, Upload, FileJson, AlertTriangle } from 'lucide-react';
+import { fmtInt } from '@/lib/numberFormat';
 
 import {
   GlassPanel,
@@ -359,7 +360,7 @@ export function SettingsExportImport() {
                   <Text variant="bodySm">
                     {t('backup.import.previewHeader', 'Previewing {{name}} ({{size}} bytes)', {
                       name: pending.filename,
-                      size: pending.sizeBytes.toLocaleString(),
+                      size: fmtInt(pending.sizeBytes),
                     })}
                   </Text>
                   {summary && (

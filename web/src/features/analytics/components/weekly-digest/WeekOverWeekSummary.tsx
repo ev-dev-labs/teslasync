@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useFormatting } from '@/hooks/useFormatting';
 import { Car, Activity, Zap, Fuel, BarChart3, Leaf } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
@@ -13,6 +14,7 @@ interface WeekOverWeekSummaryProps {
 
 export function WeekOverWeekSummary({ metrics }: WeekOverWeekSummaryProps) {
   const { t } = useTranslation();
+  const { formatCurrency } = useFormatting();
 
   return (
     <FadeIn delay={0.3}>
@@ -43,7 +45,7 @@ export function WeekOverWeekSummary({ metrics }: WeekOverWeekSummaryProps) {
           />
           <StatCard
             label={t('analytics.weeklyDigest.cost', 'Cost')}
-            value={`$${fmtNumber(metrics.chargingCost, 2)}`}
+            value={formatCurrency(metrics.chargingCost, 2)}
             icon={<Fuel className="h-4 w-4" />}
             trend={trendFor(metrics.chargingCost, metrics.prevChargingCost, true)}
           />

@@ -15,7 +15,7 @@ import { cn } from '@/lib/cn'
  * ReleaseNotes — Phase-40 / Prompt 67.
  *
  * Compact, collapsible release-notes accordion. Consumes the auto-generated
- * `@/generated/changelog` module so the data is identical to ChangelogPage
+ * `@/generated/changelog` module so the data is identical to the in-app
  * and the "what's new" modal — no more drift between three hand-curated
  * lists.
  *

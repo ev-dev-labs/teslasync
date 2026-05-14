@@ -2,6 +2,7 @@ import { AnimatedNumber } from '@/components/data-display';
 import { motion } from '@/components/motion';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid } from '@/components/charts';
 import { useTranslation } from 'react-i18next';
+import { fmtNumber } from '@/lib/numberFormat';
 import type { YearReview } from '@/api/types';
 import { useMemo } from 'react';
 
@@ -55,7 +56,7 @@ export function StatChartSlide({ data }: Props) {
         transition={{ delay: 0.5, duration: 0.4 }}
         className="text-[var(--text-muted)] mb-6"
       >
-        {t('yearReview.avgPerWeek', { count: data.avg_drives_per_week.toFixed(1), defaultValue: '{{count}} drives per week on average' })}
+        {t('yearReview.avgPerWeek', { count: fmtNumber(data.avg_drives_per_week, 1), defaultValue: '{{count}} drives per week on average' })}
       </motion.p>
 
       <motion.div

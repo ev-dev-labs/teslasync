@@ -1,13 +1,15 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import {
   SummaryStatsGrid,
   SessionCurveChart,
@@ -28,24 +30,21 @@ export default function ChargingCurvePage() {
 
   /* ── Vehicle & Session selection ─────────────────────────────────────── */
 
-  const { data: vehicles } = useVehicles();
-  const [vehicleId, setVehicleId] = useState<number | null>(null);
+  const { vehicleId } = useSelectedVehicle();
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
 
-  const activeVehicleId = vehicleId ?? vehicles?.[0]?.id ?? null;
+  const activeVehicleId = vehicleId ?? null;
+
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'charging-curve.range',
+    defaultPresetId: 'all',
+  });
 
   const { data: sessions, isLoading } = useChargingSessionsPaginated(activeVehicleId, {
     limit: 200,
+    start,
+    end,
   });
-
-  const vehicleOptions = useMemo(
-    () =>
-      (vehicles ?? []).map((v) => ({
-        value: String(v.id),
-        label: v.display_name || v.vin,
-      })),
-    [vehicles],
-  );
 
   const sessionOptions = useMemo(
     () =>
@@ -55,12 +54,6 @@ export default function ChargingCurvePage() {
       })),
     [sessions],
   );
-
-  const handleVehicleChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    const id = Number(e.target.value);
-    setVehicleId(id);
-    setSelectedSessionId(null);
-  };
 
   const handleSessionChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setSelectedSessionId(Number(e.target.value) || null);
@@ -96,8 +89,6 @@ export default function ChargingCurvePage() {
     [selectedSession],
   );
 
-  const currencySymbol = '$';
-
   /* ── Render ──────────────────────────────────────────────────────────── */
 
   if (isLoading) {
@@ -116,24 +107,28 @@ export default function ChargingCurvePage() {
     return (
       <FadeIn>
         <div className="mx-auto max-w-7xl px-4 py-6">
-          <h1 className="text-2xl font-bold text-white">
-            {t('charging.curve.title', 'Charging Curve')}
-          </h1>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            {t('charging.curve.subtitle', 'Power vs state-of-charge across sessions')}
-          </p>
-
-          {vehicleOptions.length > 1 && (
-            <div className="mt-4">
-              <Select
-                value={String(activeVehicleId ?? '')}
-                onChange={handleVehicleChange}
-                options={vehicleOptions}
-                placeholder={t('charging.selectVehicle', 'Select vehicle')}
-                className="w-48"
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-white">
+                {t('charging.curve.title', 'Charging Curve')}
+              </h1>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                {t('charging.curve.subtitle', 'Power vs state-of-charge across sessions')}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <VehicleSelect />
+              <RangePicker
+                value={{ start, end }}
+                onChange={(r) => {
+                  setRange(r);
+                  setSelectedSessionId(null);
+                }}
+                align="end"
+                triggerTestId="charging-curve-range"
               />
             </div>
-          )}
+          </div>
 
           <GlassPanel className="mt-8 flex flex-col items-center justify-center py-16">
             <p className="text-lg font-medium text-[var(--text-secondary)]">
@@ -156,15 +151,18 @@ export default function ChargingCurvePage() {
       title={t('charging.curve.title', 'Charging Curve')}
       subtitle={t('charging.curve.subtitle', 'Power vs state-of-charge across sessions')}
       actions={
-        vehicleOptions.length > 1 ? (
-          <Select
-            value={String(activeVehicleId ?? '')}
-            onChange={handleVehicleChange}
-            options={vehicleOptions}
-            placeholder={t('charging.selectVehicle', 'Select vehicle')}
-            className="w-48"
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
+          <RangePicker
+            value={{ start, end }}
+            onChange={(r) => {
+              setRange(r);
+              setSelectedSessionId(null);
+            }}
+            align="end"
+            triggerTestId="charging-curve-range"
           />
-        ) : undefined
+        </div>
       }
     >
       <div className="space-y-6">
@@ -186,7 +184,7 @@ export default function ChargingCurvePage() {
         </div>
 
         {/* Summary Stats */}
-        <SummaryStatsGrid stats={stats} currencySymbol={currencySymbol} />
+        <SummaryStatsGrid stats={stats} />
 
         {/* Single Session Curve + Detail Sidebar */}
         <FadeIn delay={0.1}>
@@ -195,7 +193,7 @@ export default function ChargingCurvePage() {
               <div className="lg:col-span-2">
                 <SessionCurveChart curveData={curveData} />
               </div>
-              <SessionDetailPanel session={selectedSession} currencySymbol={currencySymbol} />
+              <SessionDetailPanel session={selectedSession} />
             </div>
           ) : (
             <GlassPanel className="flex h-48 items-center justify-center" data-tour="charging-curve">

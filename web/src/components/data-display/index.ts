@@ -38,6 +38,13 @@ export {
 } from './DataFreshness';
 export { LiveIndicator, type LiveIndicatorVariant } from './LiveIndicator';
 export { Delta, type DeltaProps } from './Delta';
+export { ComparisonHeader, type ComparisonHeaderProps } from './ComparisonHeader';
+export { KpiOverviewCard, type KpiOverviewCardProps } from './KpiOverviewCard';
+export {
+  DateGroupedList,
+  type DateGroupedListProps,
+  type DateGroupedListGroup,
+} from './DateGroupedList';
 export { TimeStamp, type TimeStampProps, type TimeStampFormat } from './TimeStamp';
 export {
   BulkActionsToolbar,
@@ -78,6 +85,14 @@ export {
   type TimelinePreviewPoint,
 } from './TimelineScrubber';
 
+// Shared row + atom primitives for history-style list pages
+// (Drives, Charging, Trips, …). Each is unit-tested in isolation
+// and consumed via the page-level wrappers (DriveCard, ChargingSessionCard).
+export { HistoryListRow, type HistoryListRowProps } from './HistoryListRow';
+export { ScoreBadge, type ScoreBadgeProps } from './ScoreBadge';
+export { BatteryDelta, type BatteryDeltaProps } from './BatteryDelta';
+export { RouteDisplay, type RouteDisplayProps, type RouteEndpoint, endpointLabel } from './RouteDisplay';
+
 // Centralized format components — see ./format for details
 export {
   DateTime,
@@ -93,5 +108,7 @@ export {
   Percentage,
   FormattedNumber,
   Duration,
+  Range,
+  useRangeLabel,
 } from './format';
 export type { DateTimeVariant, DurationVariant } from './format';

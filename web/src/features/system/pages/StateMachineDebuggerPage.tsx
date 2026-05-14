@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { RefreshCw, ChevronDown, ChevronRight, Activity, Zap, AlertTriangle } from 'lucide-react';
 import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel, Button, DataTable, HelpTooltip, Select, Pagination, CopyButton } from '@/components/ui';
+import { RangePicker } from '@/components/forms';
 import type { Column } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
@@ -14,14 +15,16 @@ import {
 } from '@/components/charts';
 import { useVehicleStateMachine } from '@/api/hooks/useAdmin';
 import { useFSMStats, useFSMTransitions } from '@/api/hooks/useFSM';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSignalSnapshot } from '@/api/hooks/useTelemetry';
 import type { VehicleState } from '@/api/types';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRangeState } from '@/hooks/useRangeState';
+import { useTimezone } from '@/lib/timezone';
 import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { FSMTransition, FSMType } from '@/types/fsm';
-import { HOURS_OPTIONS, FSM_TYPE_OPTIONS } from '@/types/fsm';
+import { FSM_TYPE_OPTIONS } from '@/types/fsm';
 import { StateBadge } from '../components/StateBadge';
 import { TimeStamp } from '@/components/data-display';
 import { FSMStateDiagram } from '../components/FSMStateDiagram';
@@ -77,23 +80,39 @@ export default function StateMachineDebuggerPage() {
   const { t } = useTranslation();
   usePageTitle(t('fsm.title', 'FSM Debugger'));
 
-  /* ─── Vehicle selector ─── */
-  const { data: vehicles } = useVehicles();
+  /* ─── Vehicle selector — global sticky picker (Phase 40 / Prompt 16) ─── */
+  const { vehicleId: selectedVehicleId, vehicles, setVehicleId: setStoreVehicleId } = useSelectedVehicle();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [vehicleId, setVehicleId] = useState<string>(() => searchParams.get('vehicle') ?? '');
-  const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
+  const activeId = selectedVehicleId != null ? String(selectedVehicleId) : '';
 
   /* ─── FSM filters ─── */
   const initialFsm = (searchParams.get('fsm') ?? 'all') as FSMType;
   const [fsmType, setFsmType] = useState<FSMType>(initialFsm);
-  /* Default 7d so the debugger surfaces recent dev/replay activity by default;
-   * 24h was misleading whenever the last transition was older than a day.
-   * Persisted to ?range= so shared permalinks preserve the operator's window. */
-  const [hours, setHours] = useState<string>(() => {
-    const fromUrl = searchParams.get('range');
-    const allowed = new Set(HOURS_OPTIONS.map((opt) => opt.value));
-    return fromUrl && allowed.has(fromUrl) ? fromUrl : '168';
+
+  /* Time range — canonical RangePicker. Default 7d so the debugger surfaces
+   * recent dev/replay activity by default; 24h was misleading whenever the
+   * last transition was older than a day. The backend handler now accepts
+   * RFC 3339 instants and treats the window as half-open `[start, end)` so
+   * historical presets like `yesterday`/`lastMonth` and custom calendar
+   * picks return the actual chosen window — not a rolling-from-now slice
+   * — and crucially never silently drop today's local rows for users east
+   * or west of UTC (the original "missing today's transitions" symptom on
+   * the production deploy was a PST user's evening drives recorded at
+   * next-day UTC falling outside the UTC-midnight filter). The
+   * `FSMTimelineChart` still consumes `hours` for bucket sizing. */
+  const vehicleTz = useTimezone('vehicle');
+  const { start, end, startInstant, endInstantExclusive, setRange } = useRangeState({
+    persistKey: 'fsm-debugger.range',
+    defaultPresetId: '7d',
+    timezone: vehicleTz,
   });
+  const hours = useMemo(() => {
+    if (!start || !end) return 0; // empty range == "all time" for the API
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    return Math.max(1, Math.round((endMs - startMs) / 3_600_000));
+  }, [start, end]);
+
   const [serverPage, setServerPage] = useState(1);
   const [perPage, setPerPage] = useState(50);
 
@@ -124,7 +143,7 @@ export default function StateMachineDebuggerPage() {
   const {
     data: transData,
     isLoading: transLoading,
-  } = useFSMTransitions(activeId, fsmType, Number(hours), serverPage, perPage);
+  } = useFSMTransitions(activeId, fsmType, hours, serverPage, perPage, startInstant, endInstantExclusive);
 
   /* ─── Derived data ─── */
   const stateResponse = stateData as unknown as StateResponse | undefined;
@@ -288,22 +307,19 @@ export default function StateMachineDebuggerPage() {
     [t, transitions, serverPage, perPage, selectedId],
   );
 
-  const vehicleOptions = (vehicles ?? []).map((v) => ({
+  const vehicleOptions = vehicles.map((v) => ({
     value: String(v.id),
     label: v.display_name || v.vin,
   }));
 
-  const hoursOptions = HOURS_OPTIONS.map((o) => ({
-    value: o.value,
-    label: o.label,
-  }));
-
   /* Resolve the active range's human label for empty-state copy so users see
-   * "No transitions in Last 24 hours" rather than a generic "no data" message. */
-  const activeRangeLabel = useMemo(
-    () => HOURS_OPTIONS.find((o) => o.value === hours)?.label ?? hours,
-    [hours],
-  );
+   * "No transitions in the selected window" rather than a generic message.
+   * Uses the date span when defined; falls back to "All time" when empty. */
+  const activeRangeLabel = useMemo(() => {
+    if (!start || !end) return t('fsm.allTime', 'All time');
+    if (start === end) return start;
+    return `${start} → ${end}`;
+  }, [start, end, t]);
   const emptyRangeMessage = t('fsm.noTransitionsInRange', {
     range: activeRangeLabel,
     defaultValue: 'No transitions in {{range}}. Try expanding the time range.',
@@ -430,21 +446,24 @@ export default function StateMachineDebuggerPage() {
     { enabled: numericVehicleId > 0 && Boolean(previousAtIso) },
   );
 
-  /* ─── Permalink: keep ?vehicle / ?fsm / ?range / ?selected / ?at in sync ─── */
+  /* ─── Permalink: keep ?vehicle_id / ?fsm / ?selected / ?at in sync ───
+   * Vehicle id is owned by useSelectedVehicle (writes ?vehicle_id when
+   * navigated). Time range is persisted by useRangeState in localStorage,
+   * so it does not need a URL slot here. */
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
-    if (activeId) next.set('vehicle', activeId);
-    else next.delete('vehicle');
     if (fsmType && fsmType !== 'all') next.set('fsm', fsmType);
     else next.delete('fsm');
-    if (hours && hours !== '168') next.set('range', hours);
-    else next.delete('range');
     if (selectedId != null) next.set('selected', String(selectedId));
     else next.delete('selected');
     if (!isLive && selectedAtIso) next.set('at', selectedAtIso);
     else next.delete('at');
+    // Drop the legacy ?vehicle / ?range params on first render so old
+    // permalinks don't keep them stale.
+    next.delete('vehicle');
+    next.delete('range');
     setSearchParams(next, { replace: true });
-  }, [activeId, fsmType, hours, selectedId, isLive, selectedAtIso, searchParams, setSearchParams]);
+  }, [fsmType, selectedId, isLive, selectedAtIso, searchParams, setSearchParams]);
 
   const permalinkUrl = useMemo(() => {
     if (typeof window === 'undefined') return '';
@@ -457,7 +476,28 @@ export default function StateMachineDebuggerPage() {
       subtitle={t('fsm.subtitle', 'Multi-FSM transition analysis — vehicle, drive, charge, command, notification')}
       loading={stateLoading && transLoading && statsLoading}
       actions={
-        <div className="flex items-center gap-2" data-tour="debugger-share">
+        <div className="flex flex-wrap items-center justify-end gap-2" data-tour="debugger-share">
+          {vehicleOptions.length > 0 && (
+            <Select
+              options={vehicleOptions}
+              value={activeId}
+              onChange={(e) => {
+                setStoreVehicleId(Number(e.target.value));
+                setServerPage(1);
+              }}
+              aria-label={t('fsm.selectVehicle', 'Select vehicle')}
+              className="w-44"
+            />
+          )}
+          <RangePicker
+            value={{ start, end }}
+            onChange={(r) => {
+              setRange(r);
+              setServerPage(1);
+            }}
+            align="end"
+            triggerTestId="fsm-debugger-range"
+          />
           <span className="hidden items-center gap-1 text-xs text-[var(--text-muted)] sm:flex">
             <RefreshCw className={cn('h-3 w-3', stateFetching && 'animate-spin')} />
             {t('fsm.autoRefresh', 'Live 10s')}
@@ -472,29 +512,11 @@ export default function StateMachineDebuggerPage() {
         </div>
       }
     >
-      {/* ──── Section 1: Filters ──── */}
+      {/* ──── Section 1: Page-specific filters (FSM Type + Per Page) ──── */}
       <FadeIn>
         <GlassPanel className="p-4 sm:p-5">
           {vehicleOptions.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <Select
-                label={t('fsm.vehicle', 'Vehicle')}
-                options={vehicleOptions}
-                value={activeId}
-                onChange={(e) => {
-                  setVehicleId(e.target.value);
-                  setServerPage(1);
-                }}
-              />
-              <Select
-                label={t('fsm.timeRange', 'Time Range')}
-                options={hoursOptions}
-                value={hours}
-                onChange={(e) => {
-                  setHours(e.target.value);
-                  setServerPage(1);
-                }}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label
                   htmlFor="fsm-type-select"

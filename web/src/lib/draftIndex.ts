@@ -93,7 +93,7 @@ interface FallbackMeta {
  * registering with a `recover` option.
  */
 const FALLBACK_RULES: Array<{ test: (key: string) => boolean; meta: FallbackMeta }> = [
-  { test: k => k.startsWith('alertstudio:rule:'),    meta: { label: 'Alert rule draft',     route: '/alert-studio' } },
+  { test: k => k.startsWith('alertstudio:rule:'),    meta: { label: 'Alert rule draft',     route: '/notifications/studio' } },
   { test: k => k.startsWith('automation:edit:'),     meta: { label: 'Automation draft',     route: '/automations' } },
   { test: k => k.startsWith('automation:preset:'),   meta: { label: 'Automation draft',     route: '/automations' } },
   { test: k => k === 'automation:new',               meta: { label: 'New automation draft', route: '/automations/new' } },

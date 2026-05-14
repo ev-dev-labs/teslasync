@@ -32,17 +32,25 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Optional date bounds via standard ?start=YYYY-MM-DD&end=YYYY-MM-DD.
+	// When supplied, all four sub-queries (per-drive list, monthly summary,
+	// lifetime cagg totals) are scoped to the same window so the picker
+	// controls the entire response uniformly. When omitted: full history,
+	// no trailing-window fallback.
+	startTime, endTime := parseDateRange(r)
+	hasRange := !startTime.IsZero() && !endTime.IsZero()
+
 	ctx := r.Context()
 
 	// Look up vehicle-specific battery capacity
 	capacityWh, capacitySource := lookupVehicleCapacityWh(ctx, h.db, vehicleID)
 
-	// Per-drive regen stats (last 90 days). Phase-42 SI canonical drives
-	// schema (migration 000185): distance_m, duration_s, avg_speed_mps,
-	// avg_power_w, start_soc_pct, end_soc_pct, started_at. JSON shape kept
-	// (now-SI-suffixed names: duration_s, avg_speed_mps, avg_power_w,
-	// start_soc_pct, end_soc_pct) — frontend already mismatched these field
-	// names against the legacy backend tags so the rename is forward-compatible.
+	// Per-drive regen stats. Phase-42 SI canonical drives schema (migration
+	// 000185): distance_m, duration_s, avg_speed_mps, avg_power_w,
+	// start_soc_pct, end_soc_pct, started_at. JSON shape kept (now-SI-suffixed
+	// names: duration_s, avg_speed_mps, avg_power_w, start_soc_pct,
+	// end_soc_pct) — frontend already mismatched these field names against
+	// the legacy backend tags so the rename is forward-compatible.
 	type driveRegen struct {
 		ID          int64     `json:"id"`
 		StartDate   time.Time `json:"start_date"`
@@ -66,8 +74,10 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 			     ELSE 0 END as efficiency
 		FROM drives
 		WHERE vehicle_id = $1 AND distance_m > $3
-			AND started_at > NOW() - interval '90 days'
-		ORDER BY started_at DESC`, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters)
+			AND ($4::timestamptz IS NULL OR started_at BETWEEN $4 AND $5)
+		ORDER BY started_at DESC`,
+		vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters,
+		nullableTime(hasRange, startTime), nullableTime(hasRange, endTime))
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get regen drive data")
 		writeError(w, http.StatusInternalServerError, "failed to get regen data")
@@ -108,9 +118,9 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		drives = []driveRegen{}
 	}
 
-	// Monthly regen summary (last 12 months). avg_power_w averaged in W
-	// then converted to kW in Go to keep the response key
-	// avg_regen_power_kw stable for the frontend.
+	// Monthly regen summary. avg_power_w averaged in W then converted to
+	// kW in Go to keep the response key avg_regen_power_kw stable for the
+	// frontend.
 	type monthlySummary struct {
 		Month         string  `json:"month"`
 		DriveCount    int     `json:"drive_count"`
@@ -129,8 +139,10 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 			         ELSE 0 END) as avg_efficiency
 		FROM drives
 		WHERE vehicle_id = $1 AND distance_m > $3
-			AND started_at > NOW() - interval '12 months'
-		GROUP BY month ORDER BY month`, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters)
+			AND ($4::timestamptz IS NULL OR started_at BETWEEN $4 AND $5)
+		GROUP BY month ORDER BY month`,
+		vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters,
+		nullableTime(hasRange, startTime), nullableTime(hasRange, endTime))
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get monthly regen data")
 		writeError(w, http.StatusInternalServerError, "failed to get regen data")
@@ -164,13 +176,20 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Lifetime regen/drive energy from SI-canonical cagg_fleet_stats (Wh).
+	// When a range is supplied we scope to the window via the daily `day`
+	// column so the gauges/cards/MetricBars stay in sync with the per-drive
+	// and monthly views above.
 	var totalRegenWh, totalDriveWh float64
 	if err := h.db.Pool.QueryRow(ctx, `
 		SELECT
 			COALESCE(SUM(total_regen_wh), 0),
 			COALESCE(SUM(total_energy_wh), 0)
 		FROM cagg_fleet_stats
-		WHERE vehicle_id = $1`, vehicleID).Scan(&totalRegenWh, &totalDriveWh); err != nil && err != pgx.ErrNoRows {
+		WHERE vehicle_id = $1
+			AND ($2::date IS NULL OR day BETWEEN $2::date AND $3::date)`,
+		vehicleID,
+		nullableTime(hasRange, startTime), nullableTime(hasRange, endTime),
+	).Scan(&totalRegenWh, &totalDriveWh); err != nil && err != pgx.ErrNoRows {
 		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("regen: cagg_fleet_stats query failed")
 	}
 	regenRatio := 0.0

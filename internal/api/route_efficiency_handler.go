@@ -50,6 +50,9 @@ type routeDriveDetail struct {
 }
 
 // List returns the top routes grouped by start→end address pair.
+// Optional `start` and `end` query params (YYYY-MM-DD) scope the
+// underlying drives by `started_at`. When omitted, the route aggregation
+// covers the full vehicle history (legacy behavior).
 func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
@@ -62,12 +65,17 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	startTime, endTime := parseDateRange(r)
+	hasRange := !startTime.IsZero() && !endTime.IsZero()
+
 	ctx := r.Context()
 
 	// Phase-42 SI canonical drives (migration 000185): start_place/end_place
 	// for grouping, distance_m/duration_s/avg_speed_mps for metrics,
 	// start_soc_pct/end_soc_pct for SoC, ambient_temp_c_avg for temperature.
-	// Durations and speeds are returned in SI units.
+	// Durations and speeds are returned in SI units. Optional date range
+	// follows the regen-handler canonical pattern (`$N::timestamptz IS NULL
+	// OR started_at BETWEEN $N AND $N+1`).
 	rows, err := h.db.Pool.Query(ctx, `
 		SELECT
 		  start_place as start_location,
@@ -90,10 +98,13 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 		WHERE vehicle_id = $1
 		  AND start_place IS NOT NULL AND end_place IS NOT NULL
 		  AND distance_m > $4
+		  AND ($5::timestamptz IS NULL OR started_at BETWEEN $5 AND $6)
 		GROUP BY start_place, end_place
 		HAVING COUNT(*) >= 1
 		ORDER BY COUNT(*) DESC
-		LIMIT 15`, vehicleID, driveStatsMetersPerMile, driveStatsMpsPerMph, driveStatsMetersPerMile)
+		LIMIT 15`,
+		vehicleID, driveStatsMetersPerMile, driveStatsMpsPerMph, driveStatsMetersPerMile,
+		nullableTime(hasRange, startTime), nullableTime(hasRange, endTime))
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("route efficiency: failed to query routes")
 		writeError(w, http.StatusInternalServerError, "failed to query route efficiency")

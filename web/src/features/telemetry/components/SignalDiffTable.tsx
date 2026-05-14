@@ -165,7 +165,7 @@ export function SignalDiffTable({
               {positive ? '+' : ''}
               {fmtNumber(lbl.delta ?? 0)}
               {lbl.pct != null
-                ? ` (${lbl.pct >= 0 ? '+' : ''}${lbl.pct.toFixed(1)}%)`
+                ? ` (${lbl.pct >= 0 ? '+' : ''}${fmtNumber(lbl.pct, 1)}%)`
                 : ''}
             </span>
           );

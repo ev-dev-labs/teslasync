@@ -22,7 +22,7 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
-  const { currencySymbol } = useFormatting();
+  const { currencySymbol, formatCurrency } = useFormatting();
 
   const {
     data,
@@ -81,7 +81,7 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
     },
     {
       label: t('widget.analyticsSummary.costPerDist', 'Cost / {{unit}}', { unit: distanceUnit }),
-      value: costPerDist > 0 ? `${currencySymbol}${fmtNumber(costPerDist, 3)}` : '—',
+      value: costPerDist > 0 ? formatCurrency(costPerDist, 3) : '—',
       icon: <DollarSign className="h-3.5 w-3.5 text-purple-400" />,
     },
   ], [displayDist, displayEff, effUnit, energyKwh, costPerDist, distanceUnit, currencySymbol, t]);

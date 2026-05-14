@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useFormatting } from '@/hooks/useFormatting';
 import { Car, Activity, Zap, Fuel, Leaf, MapPin } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
@@ -14,6 +15,7 @@ interface SummaryHeroCardsProps {
 
 export function SummaryHeroCards({ metrics, funFact }: SummaryHeroCardsProps) {
   const { t } = useTranslation();
+  const { formatCurrency } = useFormatting();
 
   return (
     <FadeIn delay={0.05}>
@@ -46,7 +48,7 @@ export function SummaryHeroCards({ metrics, funFact }: SummaryHeroCardsProps) {
           <HighlightCard
             icon={<Fuel className="h-5 w-5" />}
             label={t('analytics.weeklyDigest.chargingCost', 'Charging Cost')}
-            value={`$${fmtNumber(metrics.chargingCost, 2)}`}
+            value={formatCurrency(metrics.chargingCost, 2)}
             change={trendFor(metrics.chargingCost, metrics.prevChargingCost, true)}
             color="amber"
           />

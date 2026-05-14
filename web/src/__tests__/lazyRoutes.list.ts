@@ -106,10 +106,16 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'AutomationBuilderPage', load: () => import('../features/automations/pages/AutomationBuilderPage') },
 
   // Notifications
-  { name: 'Alerts', load: () => import('../features/notifications/pages/AlertsPage') },
+  { name: 'AlertsListPage', load: () => import('../features/notifications/pages/AlertsListPage') },
   { name: 'AlertStudio', load: () => import('../features/notifications/pages/AlertStudioPage') },
   { name: 'AlertRulesPage', load: () => import('../features/notifications/pages/AlertRulesPage') },
-  { name: 'Notifications', load: () => import('../features/notifications/pages/NotificationsPage') },
+  { name: 'InboxPage', load: () => import('../features/notifications/pages/InboxPage') },
+  { name: 'ArchivedPage', load: () => import('../features/notifications/pages/ArchivedPage') },
+  { name: 'ChannelsPage', load: () => import('../features/notifications/pages/ChannelsPage') },
+  { name: 'WebhooksPage', load: () => import('../features/notifications/pages/WebhooksPage') },
+  { name: 'BrowserNotificationsPage', load: () => import('../features/notifications/pages/BrowserNotificationsPage') },
+  { name: 'QuietHoursPage', load: () => import('../features/notifications/pages/QuietHoursPage') },
+  { name: 'AuditLog', load: () => import('../features/notifications/pages/AuditLogPage') },
 
   // Telemetry
   { name: 'SignalExplorer', load: () => import('../features/telemetry/pages/SignalExplorerPage') },
@@ -123,7 +129,6 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'AnomalyDashboard', load: () => import('../features/diagnostics/pages/AnomalyDashboardPage') },
 
   // Admin
-  { name: 'Admin', load: () => import('../features/admin/pages/AdminPage') },
   { name: 'DevTools', load: () => import('../features/admin/pages/DevToolsPage') },
   { name: 'APIKeysPage', load: () => import('../features/admin/pages/APIKeysPage') },
   { name: 'ApiLogs', load: () => import('../features/admin/pages/ApiLogsPage') },
@@ -145,7 +150,6 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'Commands', load: () => import('../features/system/pages/CommandsPage') },
   { name: 'CommandHistory', load: () => import('../features/system/pages/CommandHistoryPage') },
   { name: 'Chatbot', load: () => import('../features/system/pages/ChatbotPage') },
-  { name: 'Changelog', load: () => import('../features/system/pages/ChangelogPage') },
   { name: 'Roadmap', load: () => import('../features/system/pages/RoadmapPage') },
   { name: 'TeslaAccount', load: () => import('../features/system/pages/TeslaAccountPage') },
   { name: 'MyActivity', load: () => import('../features/system/pages/MyActivityPage') },

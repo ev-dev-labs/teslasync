@@ -173,7 +173,7 @@ describe('draftIndex', () => {
         key: 'alertstudio:rule:new',
         version: 1,
         label: 'Alert rule draft',
-        route: '/alert-studio',
+        route: '/notifications/studio',
         savedAt: 5000,
         fallback: true,
       })

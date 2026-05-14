@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Input as ControlInput } from '@/components/ui';
+import { VehicleSelect } from '@/components/forms';
+import { GlassPanel, Badge, Slider } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip,
@@ -108,7 +109,7 @@ function interpolateRange(
 export default function ProjectedRangePage() {
   const { t } = useTranslation();
   usePageTitle(t('range.title', 'Projected Range'));
-  const { formatEnergy } = useUnits();
+  const { formatEnergy, formatTemperature, formatSpeed, formatDistance } = useUnits();
 
   // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
   const { vehicleId: globalVehicleId } = useSelectedVehicle();
@@ -159,6 +160,7 @@ export default function ProjectedRangePage() {
       subtitle={t('range.subtitle', 'Personalized range estimates based on your driving patterns, weather, and conditions')}
       loading={isLoading}
       error={error instanceof Error ? error : null}
+      actions={<VehicleSelect />}
     >
       {/* ── Hero: Current range vs Tesla estimate ───── */}
       <FadeIn>
@@ -247,11 +249,10 @@ export default function ProjectedRangePage() {
                     </div>
                     {s.is_current && <Badge variant="success" size="sm">{t('range.current', 'Current')}</Badge>}
                   </div>
-                  <p className="text-2xl font-bold text-[var(--text-primary)] tabular-nums">{fmtNumber(s.range_km, 0)} <span className="text-sm font-normal text-[var(--text-muted)]">km</span></p>
-                  <p className="text-xs text-[var(--text-muted)]">{fmtNumber(s.range_mi, 0)} mi</p>
+                  <p className="text-2xl font-bold text-[var(--text-primary)] tabular-nums">{formatDistance(s.range_km * 1000, { precision: 0 })}</p>
                   <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-[var(--text-muted)]">
-                    <span>{s.speed_kmh} km/h</span>
-                    <span>{s.temp_c}°C</span>
+                    <span>{formatSpeed(s.speed_kmh / 3.6, { precision: 0 })}</span>
+                    <span>{formatTemperature(s.temp_c, { precision: 0 })}</span>
                     <span>{fmtNumber(s.efficiency_wh_km)} Wh/km</span>
                     {s.sample_count > 0 && <span>({s.sample_count} drives)</span>}
                   </div>
@@ -323,38 +324,28 @@ export default function ProjectedRangePage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="space-y-4">
               <div>
-                <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1">
-                  <span>{t('range.speed', 'Speed')}</span>
-                  <span className="font-bold text-[var(--text-primary)]">{whatIfSpeed} km/h</span>
-                </div>
-                <ControlInput
-                  type="range"
+                <Slider
+                  label={t('range.speed', 'Speed')}
+                  formatValue={(n) => `${n} km/h`}
                   min={30}
                   max={150}
                   step={5}
                   value={whatIfSpeed}
-                  onChange={(e) => setWhatIfSpeed(Number(e.target.value))}
-                  aria-label={t('range.speed', 'Speed')}
-                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full border-0 bg-[var(--glass-border)] p-0 accent-neon-cyan dark:bg-[var(--glass-border)]"
+                  onChange={setWhatIfSpeed}
                 />
                 <div className="flex justify-between text-[9px] text-[var(--text-muted)] mt-0.5">
                   <span>30</span><span>90</span><span>150</span>
                 </div>
               </div>
               <div>
-                <div className="flex justify-between text-xs text-[var(--text-muted)] mb-1">
-                  <span>{t('range.temperature', 'Temperature')}</span>
-                  <span className="font-bold text-[var(--text-primary)]">{whatIfTemp}°C</span>
-                </div>
-                <ControlInput
-                  type="range"
+                <Slider
+                  label={t('range.temperature', 'Temperature')}
+                  formatValue={(n) => `${n}°C`}
                   min={-20}
                   max={40}
                   step={1}
                   value={whatIfTemp}
-                  onChange={(e) => setWhatIfTemp(Number(e.target.value))}
-                  aria-label={t('range.temperature', 'Temperature')}
-                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full border-0 bg-[var(--glass-border)] p-0 accent-neon-amber dark:bg-[var(--glass-border)]"
+                  onChange={setWhatIfTemp}
                 />
                 <div className="flex justify-between text-[9px] text-[var(--text-muted)] mt-0.5">
                   <span>-20°C</span><span>10°C</span><span>40°C</span>
@@ -364,10 +355,10 @@ export default function ProjectedRangePage() {
             <div className="lg:col-span-2 flex items-center justify-center">
               {whatIfResult ? (
                 <div className="text-center">
-                  <p className="text-4xl font-bold text-cyan-300 tabular-nums">{fmtNumber(whatIfResult.rangeKm, 0)} <span className="text-lg font-normal text-[var(--text-muted)]">km</span></p>
+                  <p className="text-4xl font-bold text-cyan-300 tabular-nums">{formatDistance(whatIfResult.rangeKm * 1000, { precision: 0 })}</p>
                   <p className="text-sm text-[var(--text-muted)] mt-1">{fmtNumber(whatIfResult.effWhKm)} Wh/km</p>
                   <p className="text-xs text-[var(--text-muted)] mt-1">
-                    {t('range.whatIfConditions', 'at {{speed}} km/h, {{temp}}°C', { speed: whatIfSpeed, temp: whatIfTemp })}
+                    {t('range.whatIfConditions', 'at {{speed}}, {{temp}}', { speed: formatSpeed(whatIfSpeed / 3.6, { precision: 0 }), temp: formatTemperature(whatIfTemp, { precision: 0 }) })}
                   </p>
                 </div>
               ) : (

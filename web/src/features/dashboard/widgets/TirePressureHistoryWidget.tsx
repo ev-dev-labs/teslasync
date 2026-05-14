@@ -7,12 +7,12 @@ import {
 } from '@/components/charts';
 import { useTirePressureHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useUnits } from '@/hooks/useUnits';
+import { usePressureFormat } from '@/hooks/usePressureFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import { convertPressureFromSI } from '@/lib/unitConversion';
 
 /** Recommended PSI range in bar (2.4–2.8 bar ≈ 35–41 psi) */
 const RECOMMENDED_RANGE_BAR = { low: 2.4, high: 2.8 } as const;
@@ -34,28 +34,19 @@ interface ChartDatum {
 
 function buildChartData(
   data: ReturnType<typeof useTirePressureHistory>['data'],
-  toPressureDisplay: (bar: number) => number,
+  toPressureValue: (bar: number | null | undefined) => number | null,
 ): ChartDatum[] {
   const items = data ?? [];
   return items
     .filter((d) => d.timestamp)
     .map((d) => ({
       time: d.timestamp,
-      fl: d.frontLeft != null ? toPressureDisplay(d.frontLeft) : null,
-      fr: d.frontRight != null ? toPressureDisplay(d.frontRight) : null,
-      rl: d.rearLeft != null ? toPressureDisplay(d.rearLeft) : null,
-      rr: d.rearRight != null ? toPressureDisplay(d.rearRight) : null,
+      fl: toPressureValue(d.frontLeft),
+      fr: toPressureValue(d.frontRight),
+      rl: toPressureValue(d.rearLeft),
+      rr: toPressureValue(d.rearRight),
     }))
     .sort((a, b) => a.time.localeCompare(b.time));
-}
-
-function formatTime(ts: string): string {
-  try {
-    const d = new Date(ts);
-    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return ts;
-  }
 }
 
 function latestNonNull(data: ChartDatum[], key: keyof Omit<ChartDatum, 'time'>): number | null {
@@ -70,10 +61,10 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { unitPrefs } = useUnits();
-  const toPressureDisplay = (value: number) => convertPressureFromSI(value, unitPrefs.pressure);
+  const { pressureUnit, toPressureValue } = usePressureFormat();
+  const { formatDateTime } = useDateFormat();
 
-  const pressureUnit = unitPrefs.pressure;
+  const formatTime = (ts: string): string => formatDateTime(ts);
 
   const {
     data,
@@ -86,8 +77,8 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
   } = useTirePressureHistory(vid > 0 ? String(vid) : '');
 
   const chartData = useMemo(
-    () => buildChartData(data, toPressureDisplay),
-    [data, toPressureDisplay],
+    () => buildChartData(data, toPressureValue),
+    [data, toPressureValue],
   );
 
   const hasData = chartData.length > 0;
@@ -99,8 +90,8 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
   const latestRL = useMemo(() => latestNonNull(chartData, 'rl'), [chartData]);
   const latestRR = useMemo(() => latestNonNull(chartData, 'rr'), [chartData]);
 
-  const refLow = toPressureDisplay(RECOMMENDED_RANGE_BAR.low);
-  const refHigh = toPressureDisplay(RECOMMENDED_RANGE_BAR.high);
+  const refLow = toPressureValue(RECOMMENDED_RANGE_BAR.low * 100_000) ?? RECOMMENDED_RANGE_BAR.low;
+  const refHigh = toPressureValue(RECOMMENDED_RANGE_BAR.high * 100_000) ?? RECOMMENDED_RANGE_BAR.high;
 
   const formatPressure = (val: number | null): string =>
     val != null ? fmtNumber(val, 1) : '—';

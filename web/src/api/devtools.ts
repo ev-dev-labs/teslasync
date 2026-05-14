@@ -8,6 +8,7 @@ import type {
   CompressionStats,
   ExtendedHealthResponse,
   BackupStats,
+  ErrorStats,
   WorkersHealth,
   VersionInfo,
   UpdateCheckResult,
@@ -131,6 +132,8 @@ export const getCompressionStats = () => request<CompressionStats>('/system/comp
 export const getExtendedHealth = () => request<ExtendedHealthResponse>('/system/health')
 
 export const getBackupStats = () => request<BackupStats>('/system/backup/stats')
+
+export const getErrorStats = () => request<ErrorStats>('/system/errors/stats')
 
 // === Workers Health ===
 /** Fetches health status of background worker services. */

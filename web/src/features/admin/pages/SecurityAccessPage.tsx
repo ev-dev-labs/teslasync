@@ -1,22 +1,24 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, AlertCircle } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Select } from '@/components/ui/Select';
 import { AlertBanner } from '@/components/feedback/AlertBanner';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { VehicleTwin } from '@/components/vehicles';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSecurityEvents } from '@/api/hooks/useAdmin';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { buildTwinStateFromAdmin } from '@/lib/vehicleState';
 import { request } from '@/api/client';
 import type { SecurityEvent } from '@/types/admin';
-import type { Vehicle } from '@/types/vehicle';
 
 import {
   doorClosed,
@@ -48,14 +50,14 @@ export default function SecurityAccessPage() {
   const { t } = useTranslation();
   usePageTitle(t('admin.security.title', 'Security & Access'));
 
-  /* ---- Vehicle list ---- */
-  const { data: vehicles, error: vehiclesError } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Pick<Vehicle, 'id' | 'vin' | 'display_name'>[]>('/vehicles'),
-  });
+  /* ---- Vehicle selection (persisted across pages) ---- */
+  const { vehicleId } = useSelectedVehicle();
+  const activeId = vehicleId != null ? String(vehicleId) : '';
 
-  const [vehicleId, setVehicleId] = useState<string>('');
-  const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
+  /* Surface useVehicles errors via the same vehiclesError binding the
+     legacy code used so the AlertBanner below keeps reporting list-load
+     failures. React Query dedupes by queryKey so this is a free piggy-back. */
+  const { error: vehiclesError } = useVehicles();
 
   /* ---- Latest security state (polled) ---- */
   const { data: latest, isLoading: loadingLatest, error: latestError } = useQuery({
@@ -66,7 +68,23 @@ export default function SecurityAccessPage() {
   });
 
   /* ---- Security event history ---- */
-  const { data: history = [], isLoading: loadingHistory, error: historyError } = useSecurityEvents(activeId);
+  const { data: rawHistory = [], isLoading: loadingHistory, error: historyError } = useSecurityEvents(activeId);
+
+  /* ---- Range filter (client-side on history) ---- */
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'security-access.range',
+    defaultPresetId: 'all',
+  });
+  const history = useMemo(() => {
+    if (!rawHistory.length) return rawHistory;
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    return rawHistory.filter((e) => {
+      if (!e.createdAt) return false;
+      const t = new Date(e.createdAt).getTime();
+      return t >= startMs && t <= endMs;
+    });
+  }, [rawHistory, start, end]);
 
   const anyError = [vehiclesError, latestError, historyError].find(Boolean);
   const isLoading = loadingLatest || loadingHistory;
@@ -87,15 +105,6 @@ export default function SecurityAccessPage() {
   } : null), [latest]);
   const timelineEvents = useMemo(() => deriveTimeline(history), [history]);
 
-  const vehicleOptions = useMemo(
-    () =>
-      (vehicles ?? []).map((v) => ({
-        value: String(v.id),
-        label: v.display_name || v.vin,
-      })),
-    [vehicles],
-  );
-
   /* ---------------------------------------------------------------- */
   /*  Render                                                           */
   /* ---------------------------------------------------------------- */
@@ -107,13 +116,15 @@ export default function SecurityAccessPage() {
       loading={isLoading}
       error={null}
       actions={
-        vehicles && vehicles.length > 1 ? (
-          <Select
-            options={vehicleOptions}
-            value={activeId}
-            onChange={(e) => setVehicleId(e.target.value)}
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
+          <RangePicker
+            value={{ start, end }}
+            onChange={setRange}
+            align="end"
+            triggerTestId="security-access-range"
           />
-        ) : undefined
+        </div>
       }
     >
       {anyError && (

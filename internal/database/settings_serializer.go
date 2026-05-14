@@ -491,13 +491,18 @@ func settingsEquivalent(a, b *models.Settings) bool {
 // compared independently — it is mirrored from VehicleIDs by the repo
 // on read, so two rules with identical AllVehicles + VehicleIDs always
 // have identical VehicleID.
+//
+// Phase-50 / ADR-005: MsgTemplate + IncludeTitle are compared so a
+// reimport that toggles the title or rewords the body is recognised
+// as a behavioural change (and not silently skipped).
 func alertRulesEquivalent(a, b *models.AlertRule) bool {
 	if a == nil || b == nil {
 		return a == b
 	}
 	if a.Name != b.Name || a.Enabled != b.Enabled || a.SignalName != b.SignalName ||
 		a.Op != b.Op || a.Severity != b.Severity || a.CooldownMin != b.CooldownMin ||
-		a.TriggerMode != b.TriggerMode || a.Kind != b.Kind {
+		a.TriggerMode != b.TriggerMode || a.Kind != b.Kind ||
+		a.IncludeTitle != b.IncludeTitle {
 		return false
 	}
 	if a.AllVehicles != b.AllVehicles {
@@ -516,7 +521,8 @@ func alertRulesEquivalent(a, b *models.AlertRule) bool {
 		!ptrStringEq(a.MetricID, b.MetricID) ||
 		!ptrStringEq(a.MetricWindow, b.MetricWindow) ||
 		!ptrFloatEq(a.MetricThreshold, b.MetricThreshold) ||
-		!ptrStringEq(a.MetricOp, b.MetricOp) {
+		!ptrStringEq(a.MetricOp, b.MetricOp) ||
+		!ptrStringEq(a.MsgTemplate, b.MsgTemplate) {
 		return false
 	}
 	return true

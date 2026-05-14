@@ -139,37 +139,44 @@ export function useDrivetrainHealth(vehicleId?: string) {
   });
 }
 
-export function useSpeedProfile(vehicleId?: string) {
+export function useSpeedProfile(vehicleId?: string, start?: string, end?: string) {
   return useQuery({
-    queryKey: drivingKeys.speedProfile(vehicleId),
-    queryFn: ({ signal }) =>
-      request<SpeedProfileData>(
-        vehicleId ? `/analytics/speed-profile?vehicle_id=${vehicleId}` : '/analytics/speed-profile', { signal },
-      ),
+    queryKey: [...drivingKeys.speedProfile(vehicleId), start, end],
+    queryFn: ({ signal }) => {
+      if (!vehicleId) return request<SpeedProfileData>('/analytics/speed-profile', { signal });
+      const params = new URLSearchParams({ vehicle_id: vehicleId });
+      if (start) params.set('start', start);
+      if (end) params.set('end', end);
+      return request<SpeedProfileData>(`/analytics/speed-profile?${params}`, { signal });
+    },
     enabled: !!vehicleId,
   });
 }
 
-export function useRegenEfficiency(vehicleId?: string) {
+export function useRegenEfficiency(vehicleId?: string, start?: string, end?: string) {
   return useQuery({
-    queryKey: drivingKeys.regenEfficiency(vehicleId),
-    queryFn: ({ signal }) =>
-      request<RegenEfficiencyData>(
-        vehicleId ? `/analytics/regen?vehicle_id=${vehicleId}` : '/analytics/regen', { signal },
-      ),
+    queryKey: [...drivingKeys.regenEfficiency(vehicleId), start, end],
+    queryFn: ({ signal }) => {
+      if (!vehicleId) return request<RegenEfficiencyData>('/analytics/regen', { signal });
+      const params = new URLSearchParams({ vehicle_id: vehicleId });
+      if (start) params.set('start', start);
+      if (end) params.set('end', end);
+      return request<RegenEfficiencyData>(`/analytics/regen?${params}`, { signal });
+    },
     enabled: !!vehicleId,
   });
 }
 
-export function useRouteEfficiency(vehicleId?: string) {
+export function useRouteEfficiency(vehicleId?: string, start?: string, end?: string) {
   return useQuery({
-    queryKey: drivingKeys.routeEfficiency(vehicleId),
-    queryFn: ({ signal }) =>
-      request<RouteEfficiencyData>(
-        vehicleId
-          ? `/analytics/route-efficiency?vehicle_id=${vehicleId}`
-          : '/analytics/route-efficiency', { signal },
-      ),
+    queryKey: [...drivingKeys.routeEfficiency(vehicleId), start, end],
+    queryFn: ({ signal }) => {
+      if (!vehicleId) return request<RouteEfficiencyData>('/analytics/route-efficiency', { signal });
+      const params = new URLSearchParams({ vehicle_id: vehicleId });
+      if (start) params.set('start', start);
+      if (end) params.set('end', end);
+      return request<RouteEfficiencyData>(`/analytics/route-efficiency?${params}`, { signal });
+    },
     enabled: !!vehicleId,
   });
 }

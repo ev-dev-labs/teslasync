@@ -396,7 +396,7 @@ export default function DashboardPage() {
         </>
       )}
       {!editMode && unreadAlerts > 0 && (
-        <Link to="/alerts" className="relative">
+        <Link to="/notifications/alerts" className="relative">
           <Icons.notifications className="h-5 w-5 text-[var(--text-secondary)] hover:text-neon-cyan transition-colors" />
           <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-neon-red text-[9px] font-bold text-[var(--text-primary)]">
             {unreadAlerts}

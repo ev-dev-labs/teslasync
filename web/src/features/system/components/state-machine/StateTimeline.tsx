@@ -6,6 +6,7 @@ import { getStateColor } from '@/types/fsm';
 import type { FSMTransition } from '@/types/fsm';
 import { Tooltip, Button } from '@/components/ui';
 import { formatRelative } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 /**
  * Phase 40 / Prompt 58 — horizontal mini-timeline of FSM transitions.
@@ -71,6 +72,7 @@ export function StateTimeline({
   className,
 }: StateTimelineProps) {
   const { t } = useTranslation();
+  const { formatTime } = useDateFormat();
 
   const { ticks, end, start } = useMemo(() => {
     const endTs = (anchor ?? new Date()).getTime();
@@ -151,11 +153,11 @@ export function StateTimeline({
       className={cn('rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3', className)}
     >
       <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-        <span>{start.toLocaleTimeString()}</span>
+        <span>{formatTime(start)}</span>
         <span>
           {t('debugger.timeline.windowLabel', 'Window: {{minutes}} min', { minutes: windowMinutes })}
         </span>
-        <span>{end.toLocaleTimeString()}</span>
+        <span>{formatTime(end)}</span>
       </div>
       <div className="relative h-10">
         <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-[var(--surface-2)]" />
@@ -165,7 +167,7 @@ export function StateTimeline({
           return (
             <Tooltip
               key={tr.id}
-              content={`${tr.from_state} → ${tr.to_state} · ${new Date(tr.ts).toLocaleTimeString()}`}
+              content={`${tr.from_state} → ${tr.to_state} · ${formatTime(new Date(tr.ts))}`}
             >
               <button
                 type="button"

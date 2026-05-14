@@ -7,6 +7,7 @@ import {
   tzAbbreviation,
   type FormatOptions,
 } from '@/lib/dateFormat';
+import { resolveLocale } from '@/lib/locale';
 import { useSettings } from '@/hooks/useSettings';
 import { useTimezone, type TzMode } from '@/lib/timezone';
 
@@ -63,7 +64,8 @@ function DateTimeWithTz({ value, variant = 'full', in: mode, showTz, className }
   const { settings } = useSettings();
   const effectiveMode = (mode ?? settings.tz_display_default ?? 'vehicle') as TzMode;
   const tz = useTimezone(effectiveMode);
-  return renderSpan({ value, variant, className, opts: { tz, locale: settings.locale }, showTz, tz });
+  const locale = resolveLocale(settings.locale);
+  return renderSpan({ value, variant, className, opts: { tz, locale }, showTz, tz });
 }
 
 interface RenderArgs {

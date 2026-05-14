@@ -14,6 +14,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
 import { fmtNumber } from '@/lib/numberFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import type { WidgetProps } from './types';
@@ -49,7 +50,7 @@ function estimateEfficiency(d: Drive): number | null {
 }
 
 /** Group drives by date and compute daily averages + rolling average. */
-function buildDailyEfficiency(drives: Drive[], windowSize: number): DailyEfficiency[] {
+function buildDailyEfficiency(drives: Drive[], windowSize: number, fmtShortDate: (iso: string) => string): DailyEfficiency[] {
   const byDate = new Map<string, number[]>();
 
   for (const d of drives) {
@@ -83,10 +84,7 @@ function buildDailyEfficiency(drives: Drive[], windowSize: number): DailyEfficie
 
     return {
       date: entry.date,
-      label: new Date(entry.date + 'T00:00:00').toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-      }),
+      label: fmtShortDate(entry.date + 'T00:00:00'),
       efficiency: Math.round(entry.avg * 10) / 10,
       rollingAvg: rollingAvg != null ? Math.round(rollingAvg * 10) / 10 : null,
     };
@@ -99,6 +97,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const { formatDateShort } = useDateFormat();
 
   const { data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useQuery({
     queryKey: ['drives', id, 'efficiency-chart-60'],
@@ -115,8 +114,8 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
     const recent = items.filter(
       (d) => d.start_ts && new Date(d.start_ts) >= cutoff,
     );
-    return buildDailyEfficiency(recent, 7);
-  }, [drives]);
+    return buildDailyEfficiency(recent, 7, formatDateShort);
+  }, [drives, formatDateShort]);
 
   // Convert Wh/km to the user's distance unit.
   const displayData = useMemo(

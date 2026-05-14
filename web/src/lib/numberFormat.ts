@@ -79,6 +79,31 @@ export function fmtInt(v: unknown): string {
   return fmtNumber(v, 0)
 }
 
+/**
+ * Compact human-readable number: 12_345 → "12K", 1_234_567 → "1.2M",
+ * 1_200_000_000 → "1.2B". Below `threshold` (default 10_000) the value is
+ * returned verbatim via `fmtInt` so small numbers stay precise. Used by
+ * page hero KPIs that have to gracefully scale from "4 drives" to
+ * "10,247 drives" to "1.2M drives" in the same fixed-width tile.
+ */
+export function fmtCompact(v: unknown, threshold = 10_000): string {
+  const n = safeNumber(v)
+  if (Math.abs(n) < threshold) return fmtInt(n)
+  try {
+    return n.toLocaleString(_globalLocale, {
+      notation: 'compact',
+      compactDisplay: 'short',
+      maximumFractionDigits: 1,
+    })
+  } catch {
+    return n.toLocaleString('en-US', {
+      notation: 'compact',
+      compactDisplay: 'short',
+      maximumFractionDigits: 1,
+    })
+  }
+}
+
 interface FormatBytesOptions {
   zeroAsEmpty?: boolean
   empty?: string

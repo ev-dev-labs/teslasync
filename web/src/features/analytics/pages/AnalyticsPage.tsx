@@ -1,28 +1,30 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Car, Zap, BarChart3, Battery } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { Button, TabNav } from '@/components/ui';
+import { TabNav } from '@/components/ui';
 import { DataFreshnessAuto } from '@/components/data-display';
+import { RangePicker } from '@/components/forms';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
   HeroGauges, OverviewTab, DrivingTab, ChargingTab, BatteryTab,
-  TIME_RANGES,
-  type TimeRange, type TabKey,
+  type TabKey,
 } from '../components/analytics';
 
 export default function AnalyticsPage() {
   const { t } = useTranslation();
   usePageTitle(t('analytics.title', 'Fleet Analytics'));
 
-  const [days, setDays] = useState<TimeRange>('30');
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
-  const daysNum = days === 'all' ? 30 : Number(days);
-  const startParam = days === 'all' ? '2015-01-01' : undefined;
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'analytics.range',
+    defaultPresetId: '30d',
+  });
 
-  const fleetQuery = useFleetAnalytics(daysNum, startParam);
+  const fleetQuery = useFleetAnalytics({ start, end });
   const { data, isLoading, error } = fleetQuery;
 
   const tabs = useMemo(
@@ -38,18 +40,13 @@ export default function AnalyticsPage() {
   const headerActions = (
     <div className="flex items-center gap-3">
       <DataFreshnessAuto query={fleetQuery} />
-      <div className="flex items-center gap-1">
-        {TIME_RANGES.map((r) => (
-          <Button
-            key={r.value}
-            variant={days === r.value ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setDays(r.value)}
-          >
-            {r.label}
-          </Button>
-        ))}
-      </div>
+      <RangePicker
+        value={{ start, end }}
+        onChange={setRange}
+        presetIds={['7d', '30d', '90d', '1y', 'all']}
+        align="end"
+        triggerTestId="analytics-range"
+      />
     </div>
   );
 

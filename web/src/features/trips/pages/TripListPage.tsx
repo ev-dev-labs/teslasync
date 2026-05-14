@@ -2,15 +2,16 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Route, MapPin, Zap, Clock, Calendar, DollarSign, Download } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Select, Pagination, Button } from '@/components/ui';
+import { GlassPanel, Pagination, Button } from '@/components/ui';
 import { MetricCard, InlineMetric, SavedViewMenu, DataFreshnessAuto } from '@/components/data-display';
 import { ChartContainer, ChartTooltip, ChartGradient, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, axisTickSm, chartGrid, chartAnimation } from '@/components/charts';
-import { DateRangeFilter } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useTrips } from '@/api/hooks/useTrips';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
 import {
   convertDistanceFromSI,
   type DistanceUnitPref,
@@ -44,23 +45,22 @@ export default function TripListPage() {
   usePageTitle(t('trips.title', 'Trips'));
   const savedView = useSavedViewUrl();
 
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useUrlNumber('vehicle_id', 0);
-  const vehicleId = selectedVehicle > 0 ? selectedVehicle : (vehicles?.[0]?.id ?? null);
+  const { vehicleId } = useSelectedVehicle();
 
   const [page, setPage] = useUrlNumber('page', 1);
-  const [pageSize, setPageSize] = useUrlNumber('size', 50);
+  const [pageSize] = useUrlNumber('size', 50);
   const defaultStart = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 365);
     return d.toISOString().split('T')[0];
   }, []);
   const defaultEnd = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate, setStartDate] = useUrlString('from', defaultStart);
-  const [endDate, setEndDate] = useUrlString('to', defaultEnd);
+  const [startDate] = useUrlString('from', defaultStart);
+  const [endDate] = useUrlString('to', defaultEnd);
   const setRangeBatch = useUrlBatch();
 
   const { unitPrefs } = useUnits();
+  const { formatCurrency } = useFormatting();
   // useSettings retained for the legacy efficiencyUnit label string only.
 
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
@@ -95,11 +95,6 @@ export default function TripListPage() {
         })),
     [allTrips, unitPrefs.distance],
   );
-
-  const vehicleOptions = (vehicles ?? []).map((v) => ({
-    value: String(v.id),
-    label: v.display_name || v.vin,
-  }));
 
   const handleExportCSV = () => {
     exportAsCSV(
@@ -136,7 +131,16 @@ export default function TripListPage() {
       subtitle={t('trips.subtitle', 'Multi-drive trip reports with distance and cost tracking')}
       loading={isLoading}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
+          <RangePicker
+            value={{ start: startDate, end: endDate }}
+            onChange={(r) => {
+              setRangeBatch({ from: r.start, to: r.end, page: null });
+            }}
+            align="end"
+            triggerTestId="trip-list-range"
+          />
           <DataFreshnessAuto query={tripsQuery} />
           <SavedViewMenu
             route="/trips"
@@ -147,33 +151,7 @@ export default function TripListPage() {
       }
     >
       <PullToRefresh onRefresh={async () => { await refetchTrips(); }}>
-      {/* Vehicle Selector */}
-      {vehicleOptions.length > 1 && (
-        <div className="flex justify-end mb-4">
-          <Select
-            value={String(vehicleId ?? '')}
-            onChange={(e) => {
-              setSelectedVehicle(Number(e.target.value));
-              setPage(1);
-            }}
-            options={vehicleOptions}
-            label={t('trips.vehicle', 'Vehicle')}
-          />
-        </div>
-      )}
-
       {/* Date Range Filter */}
-      <FadeIn>
-        <DateRangeFilter
-          startDate={startDate}
-          endDate={endDate}
-          onStartDateChange={setStartDate}
-          onEndDateChange={setEndDate}
-          onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
-          onApply={() => setPage(1)}
-        />
-      </FadeIn>
-
       {/* Stats Cards */}
       <FadeIn delay={0.05}>
         {isLoading ? (
@@ -200,13 +178,13 @@ export default function TripListPage() {
             />
             <MetricCard
               label={t('trips.stats.cost', 'Total Cost')}
-              value={`$${fmtNumber(totalCost)}`}
+              value={formatCurrency(totalCost)}
               icon={<DollarSign className="h-4 w-4" />}
               color="green"
               subtitle={
                 totalDistDisplay > 0
-                  ? `$${fmtNumber((totalCost / totalDistDisplay) * 100)}/100${unitPrefs.distance}`
-                  : '$0'
+                  ? `${formatCurrency((totalCost / totalDistDisplay) * 100)}/100${unitPrefs.distance}`
+                  : formatCurrency(0)
               }
             />
             <MetricCard
@@ -300,8 +278,7 @@ export default function TripListPage() {
           total={estimatedTotal}
           onPageChange={setPage}
           onPageSizeChange={(s) => {
-            setPageSize(s);
-            setPage(1);
+            setRangeBatch({ size: String(s), page: null });
           }}
         />
       )}
@@ -320,6 +297,7 @@ interface TripRowProps {
 
 function TripRow({ trip, distancePref, efficiencyUnit }: TripRowProps) {
   const { t } = useTranslation();
+  const { formatCurrency } = useFormatting();
 
   const whPerKm = trip.total_distance_m > 0
     ? (trip.total_energy_wh / (trip.total_distance_m / 1000))
@@ -374,7 +352,7 @@ function TripRow({ trip, distancePref, efficiencyUnit }: TripRowProps) {
         {trip.total_cost > 0 && (
           <div>
             <p className="text-sm font-bold text-emerald-400">
-              ${fmtNumber(trip.total_cost)}
+              {formatCurrency(trip.total_cost)}
             </p>
             <p className="text-[10px] text-[var(--text-muted)]">{t('trips.row.cost', 'cost')}</p>
           </div>

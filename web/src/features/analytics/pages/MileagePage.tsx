@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Gauge, TrendingUp, Calendar, BarChart3, AlertCircle } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
+import { VehicleSelect } from '@/components/forms';
 import { GlassPanel, DataTable, type Column } from '@/components/ui';
 import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
@@ -139,7 +140,12 @@ export default function MileagePage() {
       subtitle={t('mileage.subtitle', 'Daily and monthly distance tracking')}
       loading={isLoading}
       error={null}
-      actions={<DataFreshnessAuto query={statsQuery} />}
+      actions={
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect />
+          <DataFreshnessAuto query={statsQuery} />
+        </div>
+      }
     >
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>

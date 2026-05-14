@@ -44,6 +44,7 @@ import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useUrlString } from '@/hooks/useUrlState'
 import { alertRuleSchema } from '../schemas/alertRule'
 import { ComputedMetricEditor } from '../components/ComputedMetricEditor'
+import { AlertMessageEditor } from '../components/AlertMessageEditor'
 import { recommendedTriggerMode } from '../lib/recommendedTriggerMode'
 import { Icons } from '@/lib/icons';
 
@@ -193,6 +194,19 @@ interface EditorState {
   escalation_after_min: string
   escalation_severity: Severity | ''
   message: string
+  /**
+   * Phase-50 / ADR-014 — per-rule notification body template. Empty
+   * string means "use the op-aware default rendered by
+   * internal/alertmsg". Whitespace-only is normalised to '' here AND
+   * by the backend's normalizeMsgTemplate.
+   */
+  msg_template: string
+  /**
+   * Phase-50 / ADR-014 — transport title toggle. When FALSE,
+   * Discord/Slack/Telegram/ntfy/webhook deliver body-only
+   * notifications. Defaults to TRUE.
+   */
+  include_title: boolean
   // kind: 'signal' (default — uses signal_name/op/value_*) or
   // 'computed_metric' (uses metric_id/metric_window/metric_op/metric_threshold).
   // The two modes are mutually exclusive at submit-time; the editor renders a
@@ -229,6 +243,8 @@ function freshEditor(): EditorState {
     escalation_after_min: '',
     escalation_severity: '',
     message: '',
+    msg_template: '',
+    include_title: true,
     kind: 'signal',
     metric_id: '',
     metric_window: '',
@@ -288,6 +304,16 @@ function parseOptionalMaxFires(value: string): number | null {
   if (!trimmed) return null
   const parsed = Number(trimmed)
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+}
+
+// Phase-50 / ADR-014 — collapse a whitespace-only template to NULL so
+// the wire payload tells the backend "use the op-aware default". The
+// backend's `normalizeMsgTemplate` performs the same transformation
+// defensively; doing it client-side too keeps the save mutation diff
+// quiet when the user types and then deletes characters.
+function normalizeMsgTemplateForSave(value: string): string | null {
+  const trimmed = value.trim()
+  return trimmed === '' ? null : trimmed
 }
 
 // buildEscalationPayload converts the editor's tri-input escalation
@@ -441,6 +467,8 @@ function ruleToEditor(rule: AlertRule): EditorState {
       rule.escalation_after_min == null ? '' : String(rule.escalation_after_min),
     escalation_severity: rule.escalation_severity ?? '',
     message: rule.signal_name ? `${rule.name}: {{${rule.signal_name}}}` : '',
+    msg_template: rule.msg_template ?? '',
+    include_title: rule.include_title ?? true,
     kind,
     metric_id: rule.metric_id ?? '',
     metric_window: rule.metric_window ?? '',
@@ -464,6 +492,12 @@ function templateToEditor(template: RuleTemplate, name: string, message: string)
     severity: template.severity,
     cooldown_min: template.cooldown_min,
     message,
+    // Phase-50 / ADR-014 — seed the template from the curated
+    // RuleTemplate.message so users who "clone from template" get a
+    // working starter body. The legacy `message` field is kept in
+    // parallel until the page-wide cleanup ships.
+    msg_template: message,
+    include_title: true,
   }
 }
 
@@ -495,6 +529,11 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
       metric_window: state.metric_window || null,
       metric_op: state.metric_op,
       metric_threshold: threshold,
+      // Phase-50 / ADR-014 — propagate the per-rule template + title
+      // toggle. Empty/whitespace template collapses to null so the
+      // backend renders the op-aware default body.
+      msg_template: normalizeMsgTemplateForSave(state.msg_template),
+      include_title: state.include_title,
     }
   }
 
@@ -517,6 +556,9 @@ function buildSavePayload(state: EditorState): AlertRuleInput {
     max_fires_per_resolution: parseOptionalMaxFires(state.max_fires_per_resolution),
     ...escalation,
     kind: 'signal',
+    // Phase-50 / ADR-014 — see computed_metric branch above.
+    msg_template: normalizeMsgTemplateForSave(state.msg_template),
+    include_title: state.include_title,
   }
 
   if (valueKind === 'number') {
@@ -634,7 +676,13 @@ export default function AlertStudio() {
     // checkbox would render as `undefined` (controlled→uncontrolled
     // warning + crash on toggle). Bumping the version forces those
     // drafts to be discarded so the user lands on a fresh editor.
-    version: 4,
+    //
+    // Phase-50 / ADR-014 — bumped from 4 to 5. Pre-Phase-50 drafts
+    // lack `msg_template` + `include_title`; without the bump the
+    // editor would hydrate an old draft and crash when the
+    // AlertMessageEditor reads `editor.include_title` (undefined →
+    // controlled-checkbox warning).
+    version: 5,
     debounceMs: 800,
     skipPersist: v =>
       saveRuleMut.isPending
@@ -647,6 +695,23 @@ export default function AlertStudio() {
     () => JSON.stringify(editor) !== initialEditorRef.current,
     [editor],
   )
+
+  // Phase-50 / ADR-014 — derive the vehicle name surfaced in the
+  // message-template preview. Mirrors the backend's
+  // `dispatchComputedMetricNotification` vehicle-name resolution:
+  // pick the first explicit selection, else the first fleet vehicle.
+  // The preview is a hint, not a guarantee — the user can target
+  // many vehicles and we show one representative name here.
+  const previewVehicleName = useMemo<string | undefined>(() => {
+    if (editor.vehicle_selection.kind === 'specific') {
+      const firstId = editor.vehicle_selection.vehicle_ids[0]
+      if (firstId != null) {
+        const match = vehicles.find(v => v.id === firstId)
+        if (match?.display_name) return match.display_name
+      }
+    }
+    return vehicles[0]?.display_name
+  }, [editor.vehicle_selection, vehicles])
 
   // Phase-49 / Slice 0006 — apply pending hydration AFTER the `useFormDraft`
   // render-time reset has committed (see `pendingHydrationRef` declaration
@@ -1090,8 +1155,28 @@ export default function AlertStudio() {
   const handleTest = useCallback(() => {
     const message = editor.message.trim() || t('notifications.alertStudio.test.defaultMessage', 'Test notification from Alert Studio')
     const target = buildTestTarget(testChannelIds, allChannelIds)
-    testRuleMut.mutate(target ? { message, target } : { message })
-  }, [allChannelIds, editor.message, t, testChannelIds, testRuleMut])
+    // Phase-50 / ADR-014 — thread the per-rule template + title
+    // toggle through the Test endpoint so the user previews exactly
+    // what production would deliver. The legacy `message` field is
+    // kept as a fallback for transports that ignored msg_template
+    // pre-Phase-50 (none in current backend, but ConditionalMessage
+    // wrapper still expects a string).
+    const msgTemplate = normalizeMsgTemplateForSave(editor.msg_template)
+    const baseBody = {
+      message,
+      msg_template: msgTemplate,
+      include_title: editor.include_title,
+    }
+    testRuleMut.mutate(target ? { ...baseBody, target } : baseBody)
+  }, [
+    allChannelIds,
+    editor.include_title,
+    editor.message,
+    editor.msg_template,
+    t,
+    testChannelIds,
+    testRuleMut,
+  ])
 
   const renderValueEditor = () => {
     if (!editor.signal_name.trim()) {
@@ -1942,19 +2027,35 @@ export default function AlertStudio() {
                 </div>
               )}
               <div className="sm:col-span-2">
-                <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium" htmlFor="alert-test-message">
-                  {t('notifications.alertStudio.editor.testMessageLabel', 'Test Message')}
-                  <span className="text-[var(--text-muted)] ml-1 normal-case tracking-normal">
-                    {t('notifications.alertStudio.editor.signalHint', 'Use {{SignalName}}')}
-                  </span>
-                  <HelpIcon i18nKey="help.fields.alertStudio.testMessage" content="The notification body that gets delivered when this rule fires. Reference signals with double-brace placeholders like {{BatteryLevel}} to interpolate live values." for="alert-test-message" />
-                </label>
-                <UiInput
-                  id="alert-test-message"
-                  className="w-full"
-                  placeholder={t('notifications.alertStudio.editor.testMessagePlaceholder', 'Battery at {{BatteryLevel}}%')}
-                  value={editor.message}
-                  onChange={e => setEditor(s => ({ ...s, message: e.target.value }))}
+                {/* Phase-50 / ADR-014 — replaces the legacy single-line
+                    "Test Message" UiInput with the new per-rule
+                    AlertMessageEditor. The editor manages msg_template +
+                    include_title; the legacy `editor.message` field is
+                    still threaded into the Test endpoint as a fallback
+                    so the test-delivery preview behaviour is preserved
+                    when msg_template is blank. */}
+                <AlertMessageEditor
+                  msgTemplate={editor.msg_template}
+                  includeTitle={editor.include_title}
+                  draft={{
+                    name: editor.name,
+                    kind: editor.kind,
+                    signal_name: editor.signal_name,
+                    op: editor.op,
+                    severity: editor.severity,
+                    vehicle_name: previewVehicleName,
+                    value_num: parseOptionalNumber(editor.value_num),
+                    value_text: editor.value_text || null,
+                    value_bool: editor.value_bool,
+                    value_min: parseOptionalNumber(editor.value_min),
+                    value_max: parseOptionalNumber(editor.value_max),
+                    metric_id: editor.metric_id || null,
+                    metric_window: editor.metric_window || null,
+                    metric_op: editor.metric_op,
+                    metric_threshold: parseOptionalNumber(editor.metric_threshold),
+                  }}
+                  onTemplateChange={next => setEditor(s => ({ ...s, msg_template: next }))}
+                  onIncludeTitleChange={next => setEditor(s => ({ ...s, include_title: next }))}
                 />
               </div>
             </div>

@@ -203,20 +203,30 @@ func (h *AnomalyHandler) detectZScoreAnomalies(ctx interface {
 
 	rows, err := h.db.Pool.Query(ctx, `
 		WITH stats AS (
-			SELECT signal, AVG(value_num) AS mean, STDDEV(value_num) AS stddev, COUNT(*) AS cnt
+			SELECT field,
+			       AVG(COALESCE(float_value, int_value::float8)) AS mean,
+			       STDDEV(COALESCE(float_value, int_value::float8)) AS stddev,
+			       COUNT(*) AS cnt
 			FROM signal_log
-			WHERE vehicle_id = $1 AND created_at > $2 AND value_num IS NOT NULL
-			GROUP BY signal HAVING STDDEV(value_num) > 0 AND COUNT(*) >= 30
+			WHERE vehicle_id = $1 AND ts > $2
+			  AND (float_value IS NOT NULL OR int_value IS NOT NULL)
+			GROUP BY field
+			HAVING STDDEV(COALESCE(float_value, int_value::float8)) > 0
+			   AND COUNT(*) >= 30
 		)
-		SELECT sh.signal, sh.value_num, sh.created_at,
-		       s.mean, s.stddev,
-		       ABS(sh.value_num - s.mean) / s.stddev AS z_score
+		SELECT sh.field,
+		       COALESCE(sh.float_value, sh.int_value::float8) AS value,
+		       sh.ts,
+		       s.mean,
+		       s.stddev,
+		       ABS(COALESCE(sh.float_value, sh.int_value::float8) - s.mean) / s.stddev AS z_score
 		FROM signal_log sh
-		JOIN stats s ON sh.signal = s.signal
+		JOIN stats s ON sh.field = s.field
 		WHERE sh.vehicle_id = $1
-		  AND sh.created_at > $2
-		  AND ABS(sh.value_num - s.mean) / s.stddev > 3
-		ORDER BY sh.created_at DESC
+		  AND sh.ts > $2
+		  AND (sh.float_value IS NOT NULL OR sh.int_value IS NOT NULL)
+		  AND ABS(COALESCE(sh.float_value, sh.int_value::float8) - s.mean) / s.stddev > 3
+		ORDER BY sh.ts DESC
 		LIMIT 100`, vehicleID, since)
 	if err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("anomaly: z-score query failed")
@@ -252,8 +262,9 @@ func (h *AnomalyHandler) detectZScoreAnomalies(ctx interface {
 	// Count signals checked
 	var signalsChecked int
 	_ = h.db.Pool.QueryRow(ctx, `
-		SELECT COUNT(DISTINCT signal) FROM signal_log
-		WHERE vehicle_id = $1 AND created_at > $2 AND value_num IS NOT NULL`,
+		SELECT COUNT(DISTINCT field) FROM signal_log
+		WHERE vehicle_id = $1 AND ts > $2
+		  AND (float_value IS NOT NULL OR int_value IS NOT NULL)`,
 		vehicleID, since).Scan(&signalsChecked)
 
 	return anomalies, signalsChecked
@@ -274,11 +285,11 @@ func (h *AnomalyHandler) detectRangeViolations(ctx interface {
 		var value float64
 		var ts time.Time
 		err := h.db.Pool.QueryRow(ctx, `
-			SELECT value_num, created_at FROM signal_log
-			WHERE vehicle_id = $1 AND signal = $2 AND created_at > $3
-			  AND value_num IS NOT NULL
-			  AND (value_num < $4 OR value_num > $5)
-			ORDER BY created_at DESC LIMIT 1`,
+			SELECT COALESCE(float_value, int_value::float8), ts FROM signal_log
+			WHERE vehicle_id = $1 AND field = $2 AND ts > $3
+			  AND (float_value IS NOT NULL OR int_value IS NOT NULL)
+			  AND (COALESCE(float_value, int_value::float8) < $4 OR COALESCE(float_value, int_value::float8) > $5)
+			ORDER BY ts DESC LIMIT 1`,
 			vehicleID, signal, since, bounds[0], bounds[1]).Scan(&value, &ts)
 		if err != nil {
 			continue
@@ -335,9 +346,9 @@ func (h *AnomalyHandler) detectTrendAnomalies(ctx interface {
 		var avg7d, stddev7d, avg24h *float64
 		err := h.db.Pool.QueryRow(ctx, `
 			SELECT
-				(SELECT AVG(value_num) FROM signal_log WHERE vehicle_id = $1 AND signal = $2 AND created_at > NOW() - INTERVAL '7 days' AND value_num IS NOT NULL),
-				(SELECT STDDEV(value_num) FROM signal_log WHERE vehicle_id = $1 AND signal = $2 AND created_at > NOW() - INTERVAL '7 days' AND value_num IS NOT NULL),
-				(SELECT AVG(value_num) FROM signal_log WHERE vehicle_id = $1 AND signal = $2 AND created_at > NOW() - INTERVAL '24 hours' AND value_num IS NOT NULL)
+				(SELECT AVG(COALESCE(float_value, int_value::float8)) FROM signal_log WHERE vehicle_id = $1 AND field = $2 AND ts > NOW() - INTERVAL '7 days' AND (float_value IS NOT NULL OR int_value IS NOT NULL)),
+				(SELECT STDDEV(COALESCE(float_value, int_value::float8)) FROM signal_log WHERE vehicle_id = $1 AND field = $2 AND ts > NOW() - INTERVAL '7 days' AND (float_value IS NOT NULL OR int_value IS NOT NULL)),
+				(SELECT AVG(COALESCE(float_value, int_value::float8)) FROM signal_log WHERE vehicle_id = $1 AND field = $2 AND ts > NOW() - INTERVAL '24 hours' AND (float_value IS NOT NULL OR int_value IS NOT NULL))
 			`, vehicleID, signal).Scan(&avg7d, &stddev7d, &avg24h)
 		if err != nil || avg7d == nil || stddev7d == nil || avg24h == nil || *stddev7d == 0 {
 			continue

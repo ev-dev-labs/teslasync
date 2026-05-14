@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useFormatting } from '@/hooks/useFormatting';
 import { MapContainer, MarkerCluster } from '@/components/maps';
 import { MapTileLayer } from '@/components/maps';
 import type { TeslaChargingSession } from '@/api/hooks/useCharging';
@@ -12,6 +13,7 @@ interface Props {
 
 export default function TeslaChargingSessionsMap({ sessions }: Props) {
   const { t } = useTranslation();
+  const { formatCurrency } = useFormatting();
   const center = useMemo(() => {
     if (sessions.length === 0) return { lat: 37.77, lng: -122.42 };
     const avgLat = sessions.reduce((sum, s) => sum + (s.latitude ?? 0), 0) / sessions.length;
@@ -50,7 +52,7 @@ export default function TeslaChargingSessionsMap({ sessions }: Props) {
               ? `<p>${fmtNumber(s.total_energy_added_wh, 1)} kWh</p>`
               : '';
           const cost =
-            s.total_cost != null ? `<p>$${fmtNumber(s.total_cost, 2)}</p>` : '';
+            s.total_cost != null ? `<p>${formatCurrency(s.total_cost, 2)}</p>` : '';
           const charger = s.charger_type
             ? `<p style="text-transform:uppercase">${escapeHtml(String(s.charger_type))}</p>`
             : '';
@@ -71,7 +73,7 @@ export default function TeslaChargingSessionsMap({ sessions }: Props) {
             }) as string,
           };
         }),
-    [sessions, t],
+    [sessions, t, formatCurrency],
   );
 
   return (

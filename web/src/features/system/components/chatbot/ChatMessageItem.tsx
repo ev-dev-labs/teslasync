@@ -182,7 +182,7 @@ export function ChatMessageItem({
         )}
 
         {showActions && (
-          <div className="mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          <div className="mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity">
             <CopyButton
               text={message.content}
               iconOnly

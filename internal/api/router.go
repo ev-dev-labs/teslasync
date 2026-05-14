@@ -326,6 +326,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// at the AlertHandler call site, which has its own narrow contract.
 	alertLiveSignalStore := liveSignalStore
 	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts, alertLiveSignalStore)
+	alertMessageHandler := NewAlertMessageHandler()
 	commandHandler := NewCommandHandler(db, teslaClient)
 	guardHandler := NewGuardHandler(database.NewGuardRepo(db.Pool), database.NewVehicleRepo(db), teslaClient, cfg)
 	energyHandler := NewEnergyHandler(energySvc)
@@ -1097,6 +1098,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/enable", alertHandler.BulkEnableRules)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/disable", alertHandler.BulkDisableRules)
 			r.Post("/test", alertHandler.TestRule)
+			// Phase-50 / ADR-005 — alert message template helpers.
+			// These are static read paths registered BEFORE the
+			// catch-all `/{alertID}` route below so chi resolves them
+			// correctly. They are intentionally unauthenticated only
+			// to the same degree the surrounding /alerts subtree is —
+			// the route group inherits whatever middleware is mounted
+			// above.
+			r.Get("/message-presets", alertMessageHandler.MessagePresets)
+			r.Get("/message-placeholders", alertMessageHandler.MessagePlaceholders)
+			r.Post("/message-preview", alertMessageHandler.MessagePreview)
 			// Phase-46 / Prompt 20 — alert acknowledgement + audit timeline.
 			// Registered AFTER the static `/rules`, `/metrics`, `/test` routes
 			// above so chi's static-first matching routes them correctly.
@@ -1431,19 +1442,35 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					return
 				}
 				fsmName := req.URL.Query().Get("fsm_name")
-				hours := 1
-				if h := req.URL.Query().Get("hours"); h != "" {
-					if v, err := strconv.Atoi(h); err == nil && v >= 0 {
-						hours = v
+
+				// Canonical filter shape: explicit start/end (YYYY-MM-DD) takes
+				// precedence so the UI's RangePicker can request arbitrary
+				// historical windows (yesterday, lastMonth, custom calendar
+				// pick) — not just rolling-from-now ranges. The legacy `hours`
+				// param remains as a backward-compatible fallback so dashboard
+				// widgets and old permalinks keep working without changes.
+				var from, to time.Time
+				if s, e := parseDateRange(req); !s.IsZero() {
+					from = s
+					if !e.IsZero() {
+						to = e
+					} else {
+						to = time.Now().UTC()
 					}
-				}
-				var from time.Time
-				if hours == 0 {
-					from = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 				} else {
-					from = time.Now().UTC().Add(-time.Duration(hours) * time.Hour)
+					hours := 1
+					if h := req.URL.Query().Get("hours"); h != "" {
+						if v, err := strconv.Atoi(h); err == nil && v >= 0 {
+							hours = v
+						}
+					}
+					if hours == 0 {
+						from = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+					} else {
+						from = time.Now().UTC().Add(-time.Duration(hours) * time.Hour)
+					}
+					to = time.Now().UTC()
 				}
-				to := time.Now().UTC()
 				page := 1
 				if p := req.URL.Query().Get("page"); p != "" {
 					if v, err := strconv.Atoi(p); err == nil && v > 0 {
@@ -1557,6 +1584,45 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				Get("/queues", queueStatusHandler.ServeStatus)
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).
 				Get("/queues/{worker}/jobs", queueStatusHandler.ServeJobs)
+		})
+
+		// Phase-2 / Status API — operator-grade /api/v1/status/* endpoints.
+		// Stable contract for external integrations (Grafana, Uptime Kuma,
+		// Home Assistant, etc.). The SPA's System Status page also subscribes
+		// to /status/live (SSE) so it can drop polling. Inherits the parent
+		// /api/v1 ForwardAuth gate.
+		ver := opt.AppVersion
+		if ver == "" {
+			ver = "dev"
+		}
+		incidentsRepo := database.NewIncidentRepo(db)
+		incidentsHandler := NewIncidentsHandler(incidentsRepo)
+		statusV1 := NewStatusV1Handler(StatusV1Config{
+			Health:           health,
+			AppVersion:       ver,
+			MaintenanceState: maintenanceProvider,
+			IncidentStore:    incidentsHandler,
+			StartedAt:        startTime,
+		})
+		r.Route("/status", func(r chi.Router) {
+			r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/", statusV1.Overall)
+			r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/components", statusV1.Components)
+			r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/resources", statusV1.Resources)
+			r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/uptime", statusV1.Uptime)
+			// SSE endpoint — no per-IP rate limit because it's a long-lived
+			// connection. The connection itself acts as the throttle.
+			r.Get("/live", statusV1.Live)
+			// Incidents CRUD + timeline append.
+			r.Route("/incidents", func(r chi.Router) {
+				r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/", incidentsHandler.List)
+				r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/", incidentsHandler.Create)
+				r.Route("/{id}", func(r chi.Router) {
+					r.With(httprate.LimitByIP(120, 1*time.Minute)).Get("/", incidentsHandler.Get)
+					r.With(httprate.LimitByIP(60, 1*time.Minute)).Patch("/", incidentsHandler.Patch)
+					r.With(httprate.LimitByIP(60, 1*time.Minute)).Post("/updates", incidentsHandler.AppendUpdate)
+					r.With(httprate.LimitByIP(30, 1*time.Minute)).Delete("/", incidentsHandler.Delete)
+				})
+			})
 		})
 
 		// Per-user activity feed (Phase-40 / Prompt 49 — Recent Activity Discoverability).

@@ -16,9 +16,11 @@ import {
 import { StatCard, Timeline } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer } from '@/components/motion';
+import { RangePicker } from '@/components/forms';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlBatch, useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useCommandHistory, type CommandLogEntry } from '@/api/hooks/useCommands';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import {
@@ -101,12 +103,12 @@ export default function CommandHistoryPage() {
   const { t } = useTranslation();
   usePageTitle(t('commandHistory.title', 'Command History'));
 
-  // Vehicle selection
-  const { data: vehicles } = useVehicles();
-  const vehicleList = vehicles ?? [];
-  const [selectedVehicleId] = useUrlString('vehicle_id', '');
-  const activeVehicleId =
-    selectedVehicleId || (vehicleList.length > 0 ? String(vehicleList[0].id) : undefined);
+  // Vehicle selection: useSelectedVehicle reads ?vehicle_id from the URL
+  // (deep-links from notifications), persists across pages via localStorage,
+  // and falls back to the first vehicle. We mirror picker changes back to
+  // the URL so /command-history?vehicle_id=N stays bookmarkable.
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const activeVehicleId = vehicleId != null ? String(vehicleId) : undefined;
 
   // Data
   const { data: commands, isLoading, error } = useCommandHistory(activeVehicleId);
@@ -144,12 +146,27 @@ export default function CommandHistoryPage() {
     if (page !== 1) setPage(1);
   };
   const handleVehicleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setUrl({ vehicle_id: e.target.value, page: null });
+    const n = Number(e.target.value);
+    if (Number.isFinite(n) && n > 0) {
+      setVehicleId(n);
+      setUrl({ vehicle_id: e.target.value, page: null });
+    }
   };
 
   // Filtered commands
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'command-history.range',
+    defaultPresetId: 'all',
+  });
   const filtered = useMemo(() => {
     let result = allCommands;
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    result = result.filter((c) => {
+      if (!c.created_at) return false;
+      const t = new Date(c.created_at).getTime();
+      return t >= startMs && t <= endMs;
+    });
     if (statusFilter !== 'all') {
       result = result.filter((c) => c.status === statusFilter);
     }
@@ -162,7 +179,7 @@ export default function CommandHistoryPage() {
       );
     }
     return result;
-  }, [allCommands, statusFilter, deferredSearchQuery]);
+  }, [allCommands, start, end, statusFilter, deferredSearchQuery]);
 
   // Pagination
   const paginatedCommands = useMemo(
@@ -234,13 +251,35 @@ export default function CommandHistoryPage() {
       loading={isLoading}
       error={error ?? undefined}
       actions={
-        <Link
-          to="/commands"
-          className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-        >
-          <Gamepad2 className="h-3.5 w-3.5" />
-          {t('commandHistory.backToCommands', 'Commands')}
-        </Link>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {vehicles.length > 0 && (
+            <ControlSelect
+              options={vehicles.map((v) => ({
+                value: String(v.id),
+                label: v.display_name || `Vehicle ${v.id}`,
+              }))}
+              value={activeVehicleId ?? ''}
+              onChange={handleVehicleChange}
+              aria-label={t('commandHistory.selectVehicle', 'Select vehicle')}
+            />
+          )}
+          <RangePicker
+            value={{ start, end }}
+            onChange={(r) => {
+              setRange(r);
+              if (page !== 1) setPage(1);
+            }}
+            align="end"
+            triggerTestId="command-history-range"
+          />
+          <Link
+            to="/commands"
+            className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            <Gamepad2 className="h-3.5 w-3.5" />
+            {t('commandHistory.backToCommands', 'Commands')}
+          </Link>
+        </div>
       }
     >
       {/* ── Section 1: Stats ────────────────────────────────────────────── */}
@@ -278,20 +317,6 @@ export default function CommandHistoryPage() {
         <GlassPanel className="p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              {/* Vehicle selector */}
-              {vehicleList.length > 1 && (
-                <ControlSelect
-                  options={vehicleList.map((v) => ({
-                    value: String(v.id),
-                    label: v.display_name || `Vehicle ${v.id}`,
-                  }))}
-                  value={activeVehicleId ?? ''}
-                  onChange={handleVehicleChange}
-                  aria-label={t('commandHistory.selectVehicle', 'Select vehicle')}
-                  className="min-w-[140px] rounded-lg border-0 bg-white/[0.04] px-3 py-1.5 text-xs text-[var(--text-secondary)] ring-1 ring-white/[0.08] dark:bg-white/[0.04]"
-                />
-              )}
-
               {/* Status filter */}
               <TabNav tabs={statusTabs} active={statusFilter} onChange={handleStatusChange} />
             </div>

@@ -518,3 +518,204 @@ describe('CommandPalette keyboard navigation', () => {
     expect(getSelectedRowIndex()).toBe(-1)
   })
 })
+
+// ─── Scope-prefix filters (>, /, @, :) ──────────────────────────────────────
+
+describe('CommandPalette scope prefixes', () => {
+  function getRowLabels(): string[] {
+    return Array.from(
+      document.querySelectorAll<HTMLElement>('button[data-palette-row] span.font-medium'),
+    ).map(el => el.textContent ?? '')
+  }
+
+  it('"> " filters results to vehicle commands only (no pages, no settings)', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '>' } })
+
+    // After the prefix is recognized the chip replaces the prefix char and
+    // the input value becomes the (empty) scoped term, so the placeholder
+    // switches to the commands variant.
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Search commands/i)).toBeInTheDocument()
+    })
+
+    // Only command-type rows remain — no page labels like "Drives" or
+    // settings like "Theme: Dark" should appear.
+    await waitFor(() => {
+      const labels = getRowLabels()
+      expect(labels.length).toBeGreaterThan(0)
+      expect(labels).not.toContain('Drives')
+      expect(labels).not.toContain('Theme: Dark')
+    })
+
+    // And at least one well-known vehicle command IS present
+    expect(screen.getByText('Wake Up Vehicle')).toBeInTheDocument()
+  })
+
+  it('"/ " filters to navigation pages only', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '/' } })
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Search pages…/i)).toBeInTheDocument()
+    })
+
+    await waitFor(() => {
+      const labels = getRowLabels()
+      expect(labels.length).toBeGreaterThan(0)
+      // Drives is a page, should show
+      expect(labels).toContain('Drives')
+      // Wake Up is a vehicle command, should NOT show
+      expect(labels).not.toContain('Wake Up Vehicle')
+    })
+  })
+
+  it('"@ " filters to vehicle-switch entries only (and shows nothing else)', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '@' } })
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Switch vehicle/i)).toBeInTheDocument()
+    })
+
+    // Vehicle 1 is the persisted default after provider boot, so the only
+    // switchable entry is Model Y.
+    await waitFor(() => {
+      expect(screen.getByText(/Switch to Model Y/i)).toBeInTheDocument()
+    })
+
+    const labels = getRowLabels()
+    expect(labels).not.toContain('Drives')
+    expect(labels).not.toContain('Wake Up Vehicle')
+  })
+
+  it('": theme" filters to theme registry actions only', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: ':theme' } })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Theme: Dark/)).toBeInTheDocument()
+    })
+    const labels = getRowLabels()
+    expect(labels).not.toContain('Drives')
+    expect(labels).not.toContain('Wake Up Vehicle')
+  })
+
+  it('shows a chip with the active scope label and clears it on click', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '>' } })
+
+    const chip = await waitFor(() =>
+      document.querySelector<HTMLElement>('[data-palette-scope-chip="command"]'),
+    )
+    expect(chip).not.toBeNull()
+    expect(chip!.textContent).toMatch(/Commands/)
+
+    // Click the chip → scope clears, default placeholder returns
+    fireEvent.click(chip!)
+    await waitFor(() => {
+      expect(document.querySelector('[data-palette-scope-chip]')).toBeNull()
+      expect(screen.getByPlaceholderText(/Search pages, commands/i)).toBeInTheDocument()
+    })
+  })
+
+  it('Backspace on an empty scoped term clears the chip', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '>' } })
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-palette-scope-chip="command"]')).not.toBeNull()
+    })
+
+    const scoped = screen.getByPlaceholderText(/Search commands/i) as HTMLInputElement
+    fireEvent.keyDown(scoped, { key: 'Backspace' })
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-palette-scope-chip]')).toBeNull()
+      expect(screen.getByPlaceholderText(/Search pages, commands/i)).toBeInTheDocument()
+    })
+  })
+
+  it('first ESC with active scope clears the scope; palette stays open', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '>wake' } })
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-palette-scope-chip="command"]')).not.toBeNull()
+    })
+
+    // First ESC — scope clears but palette stays open
+    fireEvent.keyDown(window, { key: 'Escape' })
+    await waitFor(() => {
+      expect(document.querySelector('[data-palette-scope-chip]')).toBeNull()
+    })
+    expect(screen.getByPlaceholderText(/Search pages, commands/i)).toBeInTheDocument()
+
+    // Second ESC closes the palette
+    fireEvent.keyDown(window, { key: 'Escape' })
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText(/Search pages, commands/i)).not.toBeInTheDocument()
+    })
+  })
+
+  it('renders the prefix-hint chip strip on the empty landing state', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    const hints = document.querySelector('[data-palette-scope-hints]')
+    expect(hints).not.toBeNull()
+    // All four prefixes are rendered as kbd elements inside the hint strip
+    const kbds = Array.from(hints!.querySelectorAll('kbd')).map(k => k.textContent)
+    expect(kbds).toEqual(['>', '/', '@', ':'])
+  })
+
+  it('clicking a hint chip pre-fills the matching prefix', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    const hints = document.querySelector('[data-palette-scope-hints]')!
+    const buttons = Array.from(hints.querySelectorAll<HTMLButtonElement>('button'))
+    // The "/" hint is the second one
+    const pageHint = buttons.find(b => b.textContent?.includes('Pages'))
+    expect(pageHint).toBeDefined()
+    fireEvent.click(pageHint!)
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Search pages…/i)).toBeInTheDocument()
+    })
+  })
+})

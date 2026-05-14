@@ -2,6 +2,7 @@ import { motion } from '@/components/motion';
 import { useTranslation } from 'react-i18next';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { fmtNumber } from '@/lib/numberFormat';
 import type { YearReview } from '@/api/types';
 import { Calendar, Clock } from 'lucide-react';
 
@@ -83,7 +84,7 @@ export function PatternsSlide({ data }: Props) {
           className="flex justify-between text-center"
         >
           <div className="flex-1">
-            <p className="text-3xl font-bold text-white">{data.avg_drives_per_week.toFixed(1)}</p>
+            <p className="text-3xl font-bold text-white">{fmtNumber(data.avg_drives_per_week, 1)}</p>
             <p className="text-xs text-[var(--text-muted)]">{t('yearReview.drivesWeek', 'drives/week')}</p>
           </div>
           <div className="flex-1">

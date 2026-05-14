@@ -100,10 +100,19 @@ const AutomationListPage = lazy(() => import('./features/automations/pages/Autom
 const AutomationBuilderPage = lazy(() => import('./features/automations/pages/AutomationBuilderPage'))
 
 // Notifications & Alerts
-const Alerts = lazy(() => import('./features/notifications/pages/AlertsPage'))
+const AlertsListPage = lazy(() => import('./features/notifications/pages/AlertsListPage'))
 const AlertStudio = lazy(() => import('./features/notifications/pages/AlertStudioPage'))
 const AlertRulesPage = lazy(() => import('./features/notifications/pages/AlertRulesPage'))
-const Notifications = lazy(() => import('./features/notifications/pages/NotificationsPage'))
+const InboxPage = lazy(() => import('./features/notifications/pages/InboxPage'))
+const ArchivedPage = lazy(() => import('./features/notifications/pages/ArchivedPage'))
+const ChannelsPage = lazy(() => import('./features/notifications/pages/ChannelsPage'))
+const WebhooksPage = lazy(() => import('./features/notifications/pages/WebhooksPage'))
+const BrowserNotificationsPage = lazy(() => import('./features/notifications/pages/BrowserNotificationsPage'))
+const QuietHoursPage = lazy(() => import('./features/notifications/pages/QuietHoursPage'))
+const LegacyAlertsRedirect = lazy(() => import('./features/notifications/components/LegacyAlertsRedirect'))
+const LegacyNotificationsRedirect = lazy(() => import('./features/notifications/components/LegacyNotificationsRedirect'))
+const LegacyAlertRulesRedirect = lazy(() => import('./features/notifications/components/LegacyAlertRulesRedirect'))
+const LegacyAlertStudioRedirect = lazy(() => import('./features/notifications/components/LegacyAlertStudioRedirect'))
 
 // Telemetry & Signals
 const SignalExplorer = lazy(() => import('./features/telemetry/pages/SignalExplorerPage'))
@@ -111,17 +120,22 @@ const SignalLogViewer = lazy(() => import('./features/telemetry/pages/SignalLogV
 const SignalDiff = lazy(() => import('./features/telemetry/pages/SignalDiffPage'))
 const SignalGapDetector = lazy(() => import('./features/telemetry/pages/SignalGapDetectorPage'))
 const LiveSignalMonitor = lazy(() => import('./features/telemetry/pages/LiveSignalMonitorPage'))
+const SignalsWorkspace = lazy(() => import('./features/telemetry/pages/SignalsWorkspacePage'))
 const MQTTInspector = lazy(() => import('./features/telemetry/pages/MQTTInspectorPage'))
 
 // Diagnostics
 const AnomalyDashboard = lazy(() => import('./features/diagnostics/pages/AnomalyDashboardPage'))
 
 // Admin & DevTools
-const Admin = lazy(() => import('./features/admin/pages/AdminPage'))
+const NotificationsAudit = lazy(() => import('./features/notifications/pages/AuditLogPage'))
 const DevTools = lazy(() => import('./features/admin/pages/DevToolsPage'))
 const APIKeysPage = lazy(() => import('./features/admin/pages/APIKeysPage'))
 const ApiLogs = lazy(() => import('./features/admin/pages/ApiLogsPage'))
 const FleetAPI = lazy(() => import('./features/admin/pages/FleetAPIPage'))
+const TeslaFeatureFlags = lazy(() => import('./features/admin/pages/TeslaFeatureFlagsPage'))
+const TeslaRegion = lazy(() => import('./features/admin/pages/TeslaRegionPage'))
+const TeslaOrders = lazy(() => import('./features/admin/pages/TeslaOrdersPage'))
+const GasPriceAutoPoll = lazy(() => import('./features/admin/pages/GasPriceAutoPollPage'))
 const SecurityAccess = lazy(() => import('./features/admin/pages/SecurityAccessPage'))
 const BackupRestore = lazy(() => import('./features/admin/pages/BackupRestorePage'))
 const ApiPlayground = lazy(() => import('./features/admin/pages/ApiPlaygroundPage'))
@@ -131,6 +145,8 @@ const FleetTelemetryCoverage = lazy(() => import('./features/admin/pages/FleetTe
 
 // System & Ops
 const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
+const IncidentTimeline = lazy(() => import('./features/system/pages/IncidentTimelinePage'))
+const StatusApiDocs = lazy(() => import('./features/system/pages/StatusApiDocsPage'))
 const DataExport = lazy(() => import('./features/system/pages/DataExportPage'))
 const ExportsPage = lazy(() => import('./features/exports/pages/ExportsPage'))
 const DataRepair = lazy(() => import('./features/system/pages/DataRepairPage'))
@@ -139,7 +155,6 @@ const StateMachineDebugger = lazy(() => import('./features/system/pages/StateMac
 const Commands = lazy(() => import('./features/system/pages/CommandsPage'))
 const CommandHistory = lazy(() => import('./features/system/pages/CommandHistoryPage'))
 const Chatbot = lazy(() => import('./features/system/pages/ChatbotPage'))
-const Changelog = lazy(() => import('./features/system/pages/ChangelogPage'))
 const Roadmap = lazy(() => import('./features/system/pages/RoadmapPage'))
 const TeslaAccount = lazy(() => import('./features/system/pages/TeslaAccountPage'))
 
@@ -148,6 +163,13 @@ const MyActivity = lazy(() => import('./features/system/pages/MyActivityPage'))
 
 // Settings
 const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
+// Account-level security pages promoted out of Settings (Phase-50 split):
+//   /account/2fa       — Two-factor authentication enrollment / disable
+//   /account/sessions  — Active browser/device sessions + revoke
+//   /account/privacy   — Recently viewed pages + cookies / analytics consent
+const TwoFactorAuth = lazy(() => import('./features/settings/pages/TwoFactorAuthPage'))
+const ActiveSessions = lazy(() => import('./features/settings/pages/ActiveSessionsPage'))
+const Privacy = lazy(() => import('./features/settings/pages/PrivacyPage'))
 
 // Onboarding (Phase 40 / Prompt 18 — first-run experience)
 const Onboarding = lazy(() => import('./features/onboarding/pages/OnboardingPage'))
@@ -297,15 +319,28 @@ export default function App() {
         <Route path="automations/list" element={<SafeRoute name="AutomationList"><AutomationListPage /></SafeRoute>} />
         <Route path="automations/new" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
         <Route path="automations/:id/edit" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
-        <Route path="alerts" element={<SafeRoute name="Alerts"><Alerts /></SafeRoute>} />
-        <Route path="alert-studio" element={<SafeRoute name="AlertStudio"><AlertStudio /></SafeRoute>} />
-        <Route path="alert-rules" element={<SafeRoute name="AlertRules"><AlertRulesPage /></SafeRoute>} />
+        <Route path="alerts" element={<SafeRoute name="LegacyAlertsRedirect"><LegacyAlertsRedirect /></SafeRoute>} />
+        <Route path="alert-studio" element={<SafeRoute name="LegacyAlertStudioRedirect"><LegacyAlertStudioRedirect /></SafeRoute>} />
+        <Route path="alert-rules" element={<SafeRoute name="LegacyAlertRulesRedirect"><LegacyAlertRulesRedirect /></SafeRoute>} />
+        <Route path="notifications" element={<SafeRoute name="LegacyNotificationsRedirect"><LegacyNotificationsRedirect /></SafeRoute>} />
+        <Route path="notifications/inbox" element={<SafeRoute name="NotificationsInbox"><InboxPage /></SafeRoute>} />
+        <Route path="notifications/archived" element={<SafeRoute name="NotificationsArchived"><ArchivedPage /></SafeRoute>} />
+        <Route path="notifications/alerts" element={<SafeRoute name="NotificationsAlerts"><AlertsListPage /></SafeRoute>} />
+        <Route path="notifications/channels" element={<SafeRoute name="NotificationsChannels"><ChannelsPage /></SafeRoute>} />
+        <Route path="notifications/webhooks" element={<SafeRoute name="NotificationsWebhooks"><WebhooksPage /></SafeRoute>} />
+        <Route path="notifications/browser" element={<SafeRoute name="NotificationsBrowser"><BrowserNotificationsPage /></SafeRoute>} />
+        <Route path="notifications/quiet-hours" element={<SafeRoute name="NotificationsQuietHours"><QuietHoursPage /></SafeRoute>} />
+        <Route path="notifications/rules" element={<SafeRoute name="NotificationsRules"><AlertRulesPage /></SafeRoute>} />
+        <Route path="notifications/studio" element={<SafeRoute name="NotificationsStudio"><AlertStudio /></SafeRoute>} />
+        <Route path="notifications/audit" element={<SafeRoute name="NotificationsAudit"><NotificationsAudit /></SafeRoute>} />
         <Route path="geofences" element={<SafeRoute name="Geofences"><Geofences /></SafeRoute>} />
         <Route path="settings" element={<SafeRoute name="Settings"><Settings /></SafeRoute>} />
+        <Route path="account/2fa" element={<SafeRoute name="TwoFactorAuth"><TwoFactorAuth /></SafeRoute>} />
+        <Route path="account/sessions" element={<SafeRoute name="ActiveSessions"><ActiveSessions /></SafeRoute>} />
+        <Route path="account/privacy" element={<SafeRoute name="Privacy"><Privacy /></SafeRoute>} />
         <Route path="drives/:id" element={<SafeRoute name="DriveDetail"><DriveDetail /></SafeRoute>} />
         <Route path="drives/:id/replay" element={<SafeRoute name="TripReplay"><TripReplay /></SafeRoute>} />
         <Route path="charging/:id" element={<SafeRoute name="ChargeDetail"><ChargeDetail /></SafeRoute>} />
-        <Route path="notifications" element={<SafeRoute name="Notifications"><Notifications /></SafeRoute>} />
         <Route path="chatbot" element={<SafeRoute name="Chatbot"><Chatbot /></SafeRoute>} />
         <Route path="tire-pressure" element={<SafeRoute name="TirePressure"><TirePressure /></SafeRoute>} />
         <Route path="software-updates" element={<SafeRoute name="SoftwareUpdates"><SoftwareUpdates /></SafeRoute>} />
@@ -321,19 +356,25 @@ export default function App() {
         <Route path="statistics" element={<SafeRoute name="Statistics"><Statistics /></SafeRoute>} />
         <Route path="lifetime-stats" element={<SafeRoute name="LifetimeStats"><LifetimeStats /></SafeRoute>} />
         <Route path="system-status" element={<SafeRoute name="SystemStatus"><SystemStatus /></SafeRoute>} />
+        <Route path="system-status/incidents/:id" element={<SafeRoute name="IncidentTimeline"><IncidentTimeline /></SafeRoute>} />
+        <Route path="docs/status-api" element={<SafeRoute name="StatusApiDocs"><StatusApiDocs /></SafeRoute>} />
         <Route path="roadmap" element={<SafeRoute name="Roadmap"><Roadmap /></SafeRoute>} />
         <Route path="api-keys" element={<SafeRoute name="APIKeys"><APIKeysPage /></SafeRoute>} />
-        <Route path="changelog" element={<SafeRoute name="Changelog"><Changelog /></SafeRoute>} />
         <Route path="compare" element={<Navigate to="/period-compare" replace />} />
         <Route path="period-compare" element={<SafeRoute name="PeriodCompare"><PeriodCompare /></SafeRoute>} />
-        <Route path="admin" element={<SafeRoute name="Admin"><Admin /></SafeRoute>} />
+        <Route path="admin" element={<Navigate to="/system-status" replace />} />
         <Route path="admin/feedback" element={<SafeRoute name="FeedbackQueue"><FeedbackQueue /></SafeRoute>} />
         <Route path="admin/telemetry/coverage" element={<SafeRoute name="FleetTelemetryCoverage"><FleetTelemetryCoverage /></SafeRoute>} />
         <Route path="api-logs" element={<SafeRoute name="ApiLogs"><ApiLogs /></SafeRoute>} />
         <Route path="fleet-api" element={<SafeRoute name="FleetAPI"><FleetAPI /></SafeRoute>} />
+        <Route path="tesla-features" element={<SafeRoute name="TeslaFeatureFlags"><TeslaFeatureFlags /></SafeRoute>} />
+        <Route path="tesla-region" element={<SafeRoute name="TeslaRegion"><TeslaRegion /></SafeRoute>} />
+        <Route path="tesla-orders" element={<SafeRoute name="TeslaOrders"><TeslaOrders /></SafeRoute>} />
+        <Route path="gas-price" element={<SafeRoute name="GasPriceAutoPoll"><GasPriceAutoPoll /></SafeRoute>} />
         <Route path="dev-tools" element={<SafeRoute name="DevTools"><DevTools /></SafeRoute>} />
         <Route path="api-playground" element={<SafeRoute name="ApiPlayground"><ApiPlayground /></SafeRoute>} />
         <Route path="redis-signals" element={<SafeRoute name="RedisSignalViewer"><RedisSignalViewer /></SafeRoute>} />
+        <Route path="signals" element={<SafeRoute name="SignalsWorkspace"><SignalsWorkspace /></SafeRoute>} />
         <Route path="signal-explorer" element={<SafeRoute name="SignalExplorer"><SignalExplorer /></SafeRoute>} />
         <Route path="signal-log" element={<SafeRoute name="SignalLogViewer"><SignalLogViewer /></SafeRoute>} />
         <Route path="live-monitor" element={<SafeRoute name="LiveSignalMonitor"><LiveSignalMonitor /></SafeRoute>} />

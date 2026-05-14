@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -6,18 +6,19 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Select } from '@/components/ui';
+import { GlassPanel, Badge } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner, EmptyState } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion';
+import { VehicleSelect } from '@/components/forms';
 import {
   ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, Legend, ReferenceLine,
 } from '@/components/charts';
 
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -127,9 +128,8 @@ export default function TemperatureImpactPage() {
   );
 
   /* ---- vehicles ---- */
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState('');
-  const vehicleId = selectedVehicle || String(vehicles?.[0]?.id ?? '');
+  const { vehicleId: selectedId } = useSelectedVehicle();
+  const vehicleId = selectedId != null ? String(selectedId) : '';
 
   /* ---- temperature data ---- */
   const { data: points, isLoading, error: dataError } = useQuery({
@@ -227,17 +227,7 @@ export default function TemperatureImpactPage() {
   }, [stats, t]);
 
   /* ---- vehicle selector action ---- */
-  const vehicleSelector =
-    vehicles && vehicles.length > 1 ? (
-      <Select
-        options={vehicles.map((v) => ({
-          value: String(v.id),
-          label: v.display_name || v.vin,
-        }))}
-        value={vehicleId}
-        onChange={(e) => setSelectedVehicle(e.target.value)}
-      />
-    ) : undefined;
+  const vehicleSelector = <VehicleSelect />;
 
   // hasData removed
   const bestLabel = stats?.best?.label;

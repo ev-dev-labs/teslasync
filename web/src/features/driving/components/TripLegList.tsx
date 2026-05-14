@@ -3,6 +3,7 @@ import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useTranslation } from 'react-i18next';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
 import { MapPin, Zap, Clock, ArrowRight } from 'lucide-react';
 import type { TripLeg, TripChargeStop } from '@/types/driving';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
@@ -14,7 +15,8 @@ interface TripLegListProps {
 
 export function TripLegList({ legs, chargeStops }: TripLegListProps) {
   const { t } = useTranslation();
-  const { unitPrefs } = useUnits();
+  const { unitPrefs, formatEnergy } = useUnits();
+  const { formatCurrency } = useFormatting();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
 
   const distanceUnit = unitPrefs.distance;
@@ -70,7 +72,7 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
                 </div>
                 <div>
                   <span className="text-[var(--text-muted)] text-xs">{t('tripPlanner.legs.energy', 'Energy')}</span>
-                  <p className="text-[var(--text-primary)] font-medium">{(leg.energy_wh / 1000).toFixed(1)} kWh</p>
+                  <p className="text-[var(--text-primary)] font-medium">{formatEnergy(leg.energy_wh, { precision: 1 })}</p>
                 </div>
                 <div>
                   <span className="text-[var(--text-muted)] text-xs">{t('tripPlanner.legs.soc', 'Battery')}</span>
@@ -99,8 +101,8 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
                     <span>
                       {Math.round(stops[idx].charge_from_soc)}% → {Math.round(stops[idx].charge_to_soc)}%
                     </span>
-                    <span>{(stops[idx].energy_wh / 1000).toFixed(1)} kWh</span>
-                    <span className="text-emerald-400">${stops[idx].cost.toFixed(2)}</span>
+                    <span>{formatEnergy(stops[idx].energy_wh, { precision: 1 })}</span>
+                    <span className="text-emerald-400">{formatCurrency(stops[idx].cost)}</span>
                   </div>
                   {stops[idx].is_recommended && (
                     <p className="text-xs text-[var(--text-muted)] mt-1 italic">

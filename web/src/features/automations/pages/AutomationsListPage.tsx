@@ -253,7 +253,7 @@ export default function AutomationsListPage() {
       subtitle={t('automations.subtitle', 'Automate vehicle actions with typed triggers, conditions, and action chains')}
       loading={isLoading}
       actions={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <UiInput
             ref={importInputRef}
             type="file"

@@ -189,7 +189,7 @@ export function NotificationBellPopover({ className }: NotificationBellPopoverPr
       // Blocked Path fallback — the popover anchored at the right edge
       // would clip on viewports < 640 px. Treat the bell like the
       // pre-popover NavLink and navigate to the full page instead.
-      navigate('/notifications')
+      navigate('/notifications/inbox')
       return
     }
     setOpen((v) => !v)
@@ -465,7 +465,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
                   <li key={log.id}>
                     <button
                       type="button"
-                      onClick={() => onNavigate('/notifications')}
+                      onClick={() => onNavigate('/notifications/inbox')}
                       className="group flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.04] focus-visible:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500"
                     >
                       <span
@@ -521,7 +521,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
           </button>
           <button
             type="button"
-            onClick={() => onNavigate('/notifications')}
+            onClick={() => onNavigate('/notifications/inbox')}
             className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-cyan-300 hover:bg-white/[0.06] hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <span>{t('notifications.bellPopover.viewAll', 'View all')}</span>

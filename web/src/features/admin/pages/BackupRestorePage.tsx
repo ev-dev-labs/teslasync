@@ -14,6 +14,11 @@ import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { request, getApiBase } from '@/api/client';
 import { Icons } from '@/lib/icons';
+// Settings JSON bundle export/import — reused from features/settings to
+// give the dedicated /backup page a single canonical home for "backup &
+// restore" surfaces (was previously also rendered as <section id="backup">
+// inside SettingsPage, which read as a duplicate of this page).
+import { SettingsExportImport } from '@/features/settings/components/SettingsExportImport';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -714,6 +719,18 @@ export default function BackupRestorePage() {
             </>
           )}
         </GlassPanel>
+      </FadeIn>
+
+      {/* ---- portable settings JSON bundle ----
+          Lightweight "stash to git" export/import for the configuration
+          subset (general settings, alert rules, geofences, quiet-hours).
+          Distinct from the operational backup runs above — those are
+          full-database snapshots driven by scheduled providers, this is
+          a portable JSON bundle for fresh-install transfer. */}
+      <FadeIn delay={0.3}>
+        <div className="mt-6">
+          <SettingsExportImport />
+        </div>
       </FadeIn>
 
       {/* ---- create / edit config modal ---- */}

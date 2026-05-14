@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Download, AlertTriangle, Package } from 'lucide-react';
 import { Modal, Button, Badge, CopyButton } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { MiniGridPreview } from './MiniGridPreview';
 import { toUrlSafeBase64, buildMinimalExport } from '../hooks/validateImport';
 import type { SavedDashboard } from '../widgets/types';
@@ -16,6 +17,7 @@ interface ExportModalProps {
 
 export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModalProps) {
   const { t } = useTranslation('dashboard');
+  const { formatDate } = useDateFormat();
 
   const dashboardJson = useMemo(
     () => JSON.stringify(dashboard, null, 2),
@@ -76,7 +78,7 @@ export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModa
             </div>
             <p className="text-xs text-[var(--text-muted)]">
               {t('export.updated', 'Updated {{date}}', {
-                date: new Date(dashboard.updatedAt).toLocaleDateString(),
+              date: formatDate(dashboard.updatedAt),
               })}
             </p>
           </div>

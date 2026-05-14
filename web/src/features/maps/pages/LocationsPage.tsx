@@ -14,9 +14,11 @@ import { GlassPanel, Select, Pagination } from '@/components/ui';
 import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
+import { SearchInput, FilterBar, ActiveFilterChips, RangePicker, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import {
   ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -39,8 +41,6 @@ interface VisitedLocation {
   last_visited: string | null;
 }
 
-interface Vehicle { id: number; vin: string; display_name: string }
-
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function LocationsPage() {
@@ -48,22 +48,41 @@ export default function LocationsPage() {
   usePageTitle(t('Locations'));
   const { formatDuration } = useUnits();
 
-  const { data: vehicles } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
-  const [selectedVehicle, setSelectedVehicle] = useUrlNumber('vehicle_id', 0);
-  const vehicleId = selectedVehicle > 0 ? selectedVehicle : (vehicles?.[0]?.id ?? null);
+  const [, setUrlVehicleId] = useUrlNumber('vehicle_id', 0);
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const onPickVehicle = (id: number) => {
+    setVehicleId(id);
+    setUrlVehicleId(id);
+  };
   const [page, setPage] = useUrlNumber('page', 1);
   const pageSize = 50;
   const [search, setSearch] = useUrlString('q', '');
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'locations.range',
+    defaultPresetId: 'all',
+  });
 
   const locationsQuery = useQuery({
     queryKey: ['visited-locations', vehicleId, page, pageSize],
     queryFn: () => request<VisitedLocation[]>(`/locations?vehicle_id=${vehicleId}&limit=${pageSize}&offset=${(page - 1) * pageSize}`),
     enabled: vehicleId !== null,
   });
-  const { data: locations, isLoading, error } = locationsQuery;
+  const { data: rawLocations, isLoading, error } = locationsQuery;
+
+  // Client-side filter by `last_visited` within the picked range. Backend
+  // /locations does not yet accept from/to so visit_count and
+  // total_duration_s remain LIFETIME aggregates — we only narrow which
+  // places are listed (those last visited in the window).
+  const locations = useMemo(() => {
+    if (!rawLocations?.length) return rawLocations;
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    return rawLocations.filter((l) => {
+      if (!l.last_visited) return false;
+      const t = new Date(l.last_visited).getTime();
+      return t >= startMs && t <= endMs;
+    });
+  }, [rawLocations, start, end]);
 
   const locationSearchFields = useMemo(
     () => ['address_name'] as const satisfies ReadonlyArray<keyof VisitedLocation>,
@@ -111,15 +130,24 @@ export default function LocationsPage() {
       loading={isLoading}
       error={error as Error | null}
       actions={
-        <div className="flex items-center gap-3">
-          <DataFreshnessAuto query={locationsQuery} />
-          {vehicles && vehicles.length > 1 ? (
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {vehicles.length > 0 && (
             <Select
               value={String(vehicleId ?? '')}
-              onChange={e => setSelectedVehicle(Number(e.target.value))}
+              onChange={e => onPickVehicle(Number(e.target.value))}
               options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
             />
-          ) : null}
+          )}
+          <RangePicker
+            value={{ start, end }}
+            onChange={(r) => {
+              setRange(r);
+              setPage(1);
+            }}
+            align="end"
+            triggerTestId="locations-range"
+          />
+          <DataFreshnessAuto query={locationsQuery} />
         </div>
       }
     >

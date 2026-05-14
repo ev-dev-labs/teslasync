@@ -26,7 +26,7 @@ export function DriveStatCards({ drive, stats }: DriveStatCardsProps) {
 
   const distanceUnit = unitPrefs.distance;
   const speedUnit = unitPrefs.speed;
-  const { formatEnergyCost, currencySymbol, costPerDistanceUnit } = useFormatting();
+  const { formatEnergyCost, formatCurrency, costPerDistanceUnit } = useFormatting();
 
   return (
     <>
@@ -43,7 +43,7 @@ export function DriveStatCards({ drive, stats }: DriveStatCardsProps) {
           <StaggerItem><IconStatCard icon={DollarSign} color="#10b981" value={formatEnergyCost(stats.energyWh / 1000)} label={t('driveDetail.tripCost', 'Trip Cost')} /></StaggerItem>
         )}
         {stats.energyWh > 0 && drive.distanceM > 0 && (
-          <StaggerItem><IconStatCard icon={TrendingDown} color="#06b6d4" value={`${currencySymbol}${(costPerDistanceUnit(stats.energyWh / 1000, drive.distanceM) ?? 0).toFixed(3)}`} label={t('driveDetail.costPerUnit', { unit: distanceUnit, defaultValue: 'Cost / {{unit}}' })} /></StaggerItem>
+          <StaggerItem><IconStatCard icon={TrendingDown} color="#06b6d4" value={formatCurrency(costPerDistanceUnit(stats.energyWh / 1000, drive.distanceM) ?? 0, 3)} label={t('driveDetail.costPerUnit', { unit: distanceUnit, defaultValue: 'Cost / {{unit}}' })} /></StaggerItem>
         )}
       </StaggerContainer>
 

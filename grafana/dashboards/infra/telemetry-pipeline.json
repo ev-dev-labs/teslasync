@@ -924,9 +924,9 @@
       "tags": [],
       "targetBlank": false,
       "title": "Next ▶",
-      "tooltip": "TeslaSync - API Performance",
+      "tooltip": "TeslaSync - Trace Explorer (Tempo TraceQL)",
       "type": "link",
-      "url": "/d/teslasync-infra-api-perf"
+      "url": "/d/teslasync-infra-trace-explorer"
     }
   ]
 }

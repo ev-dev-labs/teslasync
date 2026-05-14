@@ -6,6 +6,7 @@ import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/dateFormat'
+import { useDateFormat } from '@/hooks/useDateFormat'
 import { ShoppingCart, RefreshCw, Info, Package, Calendar } from 'lucide-react'
 
 function orderStatusVariant(status: string | undefined | null): 'info' | 'success' | 'warning' | 'danger' | 'neutral' {
@@ -26,14 +27,10 @@ function formatOrderStatus(status: string | undefined | null): string {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-function formatDeliveryDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })
-}
-
 export function ActiveOrdersSection() {
   const { t } = useTranslation('settings')
   const toast = useToast()
+  const { formatDate: formatDeliveryDate } = useDateFormat()
   const { data: ordersData } = useTeslaUserOrders()
   const ordersRefresh = useRefreshTeslaOrders()
 

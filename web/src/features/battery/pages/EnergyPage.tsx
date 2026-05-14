@@ -1,10 +1,10 @@
-import { useState, useMemo, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Zap, Leaf, Fuel, Sun, Moon, ArrowRight, Activity } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, Select, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, DataTable, type Column } from '@/components/ui';
 import {
   RadialGauge, ChartContainer, ChartLegend, ChartTooltip, ChartGradient,
   chartGrid, axisTickSm, renderAnnotationLines,
@@ -16,12 +16,14 @@ import {
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, QueryError, EmptyState, ChartBlockSkeleton, StatGridSkeleton, PageHeaderSkeleton } from '@/components/feedback';
 import { Currency, SavedViewMenu } from '@/components/data-display';
-import { DateRangeFilter } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 
 import { useEnergyStats } from '@/api/hooks/useEnergy';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
-import { useVehicles, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
+import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
@@ -132,6 +134,7 @@ export default function EnergyPage() {
   const { t } = useTranslation();
   usePageTitle(t('energy.title', 'Energy'));
   const { unitPrefs } = useUnits();
+  const { formatCurrency } = useFormatting();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
 
   const distanceUnit = unitPrefs.distance;
@@ -140,9 +143,7 @@ export default function EnergyPage() {
   const savedView = useSavedViewUrl();
 
   /* ── Vehicle selector ─────────────────────────────────────────── */
-  const { data: vehicles } = useVehicles();
-  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
-  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const { vehicleId } = useSelectedVehicle();
 
   /* ── Date range ───────────────────────────────────────────────── */
   const defaultStartDate = useMemo(() => {
@@ -151,8 +152,8 @@ export default function EnergyPage() {
     return d.toISOString().split('T')[0];
   }, []);
   const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate, setStartDate] = useUrlString('from', defaultStartDate);
-  const [endDate, setEndDate] = useUrlString('to', defaultEndDate);
+  const [startDate] = useUrlString('from', defaultStartDate);
+  const [endDate] = useUrlString('to', defaultEndDate);
   const setRangeBatch = useUrlBatch();
 
   /* Phase-46 / Prompt 67 — URL-persisted hidden-series state for the
@@ -303,7 +304,7 @@ export default function EnergyPage() {
     {
       key: 'cost',
       header: t('energy.table.cost_decimal', 'Cost'),
-      render: (s) => <>{typeof s.cost_decimal === 'number' ? `$${fmtNumber(s.cost_decimal)}` : '—'}</>,
+      render: (s) => <>{typeof s.cost_decimal === 'number' ? formatCurrency(s.cost_decimal) : '—'}</>,
     },
     {
       key: 'perKwh',
@@ -311,12 +312,12 @@ export default function EnergyPage() {
       render: (s) => (
         <span className="text-[var(--text-muted)]">
           {typeof s.cost_decimal === 'number' && s.total_energy_added_wh > 0
-            ? `$${fmtNumber(s.cost_decimal / s.total_energy_added_wh)}`
+            ? formatCurrency(s.cost_decimal / s.total_energy_added_wh)
             : '—'}
         </span>
       ),
     },
-  ], [t]);
+  ], [t, formatCurrency]);
 
   /* ── Loading short-circuit (Phase-45 / Prompt 18) ─────────────── */
   if (isLoading) {
@@ -331,20 +332,12 @@ export default function EnergyPage() {
       error={statsError as Error | null}
       actions={
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          {vehicles && vehicles.length > 1 && (
-            <Select
-              value={String(vehicleId ?? '')}
-              onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-              options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-              className="text-sm"
-            />
-          )}
-          <DateRangeFilter
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-            onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+          <VehicleSelect />
+          <RangePicker
+            value={{ start: startDate, end: endDate }}
+            onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+            align="end"
+            triggerTestId="energy-range"
           />
           <SavedViewMenu
             route="/energy"
@@ -402,12 +395,12 @@ export default function EnergyPage() {
       {/* ── Quick Metrics Strip ─────────────────────────────────── */}
       <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
         {[
-          { label: t('energy.metric.costPerDist', { unit: distanceUnit, defaultValue: 'Cost per {{unit}}' }), value: `$${fmtNumber(totalDistance > 0 ? totalCost / toDistanceDisplay(totalDistance) : 0)}`, color: 'text-neon-cyan' },
-          { label: t('energy.metric.costPerKwh', 'Cost per kWh'), value: `$${fmtNumber(costPerKwh ?? 0)}`, color: 'text-neon-green' },
+          { label: t('energy.metric.costPerDist', { unit: distanceUnit, defaultValue: 'Cost per {{unit}}' }), value: formatCurrency(totalDistance > 0 ? totalCost / toDistanceDisplay(totalDistance) : 0), color: 'text-neon-cyan' },
+          { label: t('energy.metric.costPerKwh', 'Cost per kWh'), value: formatCurrency(costPerKwh ?? 0), color: 'text-neon-green' },
           { label: t('energy.metric.totalDistance', 'Total Distance'), value: `${fmtInt(toDistanceDisplay(totalDistance ?? 0))} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
           { label: t('energy.metric.sessions', 'Sessions'), value: `${sessions?.length ?? 0}`, color: 'text-neon-purple' },
-          { label: t('energy.metric.monthlyEst', 'Monthly Est.'), value: `$${fmtNumber(monthlyProjectedCost ?? 0)}`, color: 'text-neon-amber' },
-          { label: t('energy.metric.yearlyEst', 'Yearly Est.'), value: `$${fmtNumber(yearlyProjectedCost ?? 0)}`, color: 'text-neon-red' },
+          { label: t('energy.metric.monthlyEst', 'Monthly Est.'), value: formatCurrency(monthlyProjectedCost ?? 0), color: 'text-neon-amber' },
+          { label: t('energy.metric.yearlyEst', 'Yearly Est.'), value: formatCurrency(yearlyProjectedCost ?? 0), color: 'text-neon-red' },
         ].map((m) => (
           <StaggerItem key={m.label}>
             <GlassPanel className="p-3 text-center">

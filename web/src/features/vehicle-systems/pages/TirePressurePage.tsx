@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -6,7 +6,9 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, Badge, DataTable, type Column } from '@/components/ui';
+import { RangePicker, VehicleSelect } from '@/components/forms';
+import { useRangeState } from '@/hooks/useRangeState';
 import { MetricCard } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
@@ -117,12 +119,7 @@ const STATUS_LABELS: Record<PressureStatus, string> = {
   critical: 'Critical',
 };
 
-const TIME_RANGE_OPTIONS = [
-  { value: 7, label: '7 Days' },
-  { value: 30, label: '30 Days' },
-  { value: 90, label: '90 Days' },
-  { value: 365, label: 'All' },
-] as const;
+const PRESET_IDS = ['7d', '30d', '90d', 'mtd', 'ytd', 'all'];
 
 function getTirePressureValue(
   reading: TirePressureReading,
@@ -205,7 +202,10 @@ export default function TirePressurePage() {
 
   // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
   const { vehicleId: activeVehicleId } = useSelectedVehicle();
-  const [timeRange, setTimeRange] = useState(30);
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'tire-pressure.range',
+    defaultPresetId: '30d',
+  });
 
   /* ---- API queries ---- */
 
@@ -223,17 +223,11 @@ export default function TirePressurePage() {
   });
 
   const { data: history, isLoading: loadingHistory, error: historyError } = useQuery({
-    queryKey: ['tire-pressure-history', activeVehicleId, timeRange],
-    queryFn: () => {
-      const end = new Date();
-      const start = new Date();
-      start.setDate(start.getDate() - Number(timeRange));
-      const startStr = start.toISOString().split('T')[0];
-      const endStr = end.toISOString().split('T')[0];
-      return request<TirePressureReading[]>(
-        `/tire-pressure?vehicle_id=${activeVehicleId}&start=${startStr}&end=${endStr}`,
-      );
-    },
+    queryKey: ['tire-pressure-history', activeVehicleId, start, end],
+    queryFn: () =>
+      request<TirePressureReading[]>(
+        `/tire-pressure?vehicle_id=${activeVehicleId}&start=${start}&end=${end}`,
+      ),
     enabled: activeVehicleId !== null,
   });
 
@@ -333,6 +327,18 @@ export default function TirePressurePage() {
       subtitle={t('tirePressure.subtitle', 'Monitor tire pressure readings and history')}
       loading={isLoading}
       error={latestError as Error | null}
+      actions={
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <VehicleSelect ariaLabel={t('tirePressure.selectVehicle', 'Select vehicle')} className="w-44" />
+          <RangePicker
+            value={{ start, end }}
+            onChange={setRange}
+            presetIds={PRESET_IDS}
+            align="end"
+            triggerTestId="tire-pressure-range"
+          />
+        </div>
+      }
     >
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
@@ -452,28 +458,11 @@ export default function TirePressurePage() {
         {/* Pressure History Chart */}
         <GlassPanel className="mb-6 p-5">
           <FadeIn delay={0.2}>
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Gauge className="h-5 w-5 text-cyan-400" />
-                <Badge variant="info" size="sm">
-                  {t('Pressure History')}
-                </Badge>
-              </div>
-
-              <div className="flex gap-1">
-                {TIME_RANGE_OPTIONS.map((opt) => (
-                  <Button
-                    key={opt.value}
-                    variant={
-                      timeRange === opt.value ? 'secondary' : 'ghost'
-                    }
-                    size="sm"
-                    onClick={() => setTimeRange(opt.value)}
-                  >
-                    {t(opt.label)}
-                  </Button>
-                ))}
-              </div>
+            <div className="mb-4 flex items-center gap-2">
+              <Gauge className="h-5 w-5 text-cyan-400" />
+              <Badge variant="info" size="sm">
+                {t('Pressure History')}
+              </Badge>
             </div>
 
             {loadingHistory ? (

@@ -58,12 +58,14 @@ import {
   TOTP_RATE_LIMITED_CODE,
   TOTP_ENROLLMENT_EXPIRED_CODE,
 } from '@/api/hooks/useTOTP'
+import { useDateFormat } from '@/hooks/useDateFormat'
 import type { TOTPEnrollment } from '@/api/types'
 
 type DialogStep = 'enroll' | 'backupCodes' | 'closed'
 
 export function TOTPEnrollmentSection() {
   const { t } = useTranslation('settings')
+  const { formatDateTime } = useDateFormat()
 
   const status = useTOTPStatus()
   const enrollMut = useTOTPEnroll()
@@ -272,7 +274,7 @@ export function TOTPEnrollmentSection() {
                   </Text>
                   <Text variant="bodySm">
                     {lastUsedAt
-                      ? new Date(lastUsedAt).toLocaleString()
+                      ? formatDateTime(lastUsedAt)
                       : t('totp.lastUsed.never', 'Never')}
                   </Text>
                 </div>

@@ -1,0 +1,114 @@
+[
+  {
+    "id": "signal-default",
+    "name": "Default (recommended)",
+    "description": "Leave blank to use the smart op-aware default for this rule's operator.",
+    "template": "",
+    "kind": "signal",
+    "tags": ["default", "recommended"]
+  },
+  {
+    "id": "signal-concise",
+    "name": "Concise",
+    "description": "Just the rule name and the triggering value.",
+    "template": "{{RuleName}}: {{Value}}",
+    "kind": "signal",
+    "tags": ["concise"]
+  },
+  {
+    "id": "signal-with-vehicle",
+    "name": "Concise (vehicle prefix)",
+    "description": "Vehicle name, rule name, and current value.",
+    "template": "{{VehicleName}} · {{RuleName}}: {{Value}}",
+    "kind": "signal",
+    "tags": ["concise"]
+  },
+  {
+    "id": "signal-threshold-cmp",
+    "name": "Threshold comparison",
+    "description": "Best for <, <=, >, >= rules — adds the threshold for context.",
+    "template": "{{SignalName}} is {{Value}} (threshold {{Threshold}})",
+    "kind": "signal",
+    "tags": ["verbose", "threshold"]
+  },
+  {
+    "id": "signal-range",
+    "name": "Range check",
+    "description": "Best for between / outside rules.",
+    "template": "{{SignalName}} = {{Value}} · expected {{Min}}–{{Max}}",
+    "kind": "signal",
+    "tags": ["range"]
+  },
+  {
+    "id": "signal-suppress",
+    "name": "Title-only (suppress body)",
+    "description": "Pair with \"Send title\" off for a body-only notification, or leave on for a title-only one. Useful for state-change rules.",
+    "template": " ",
+    "kind": "signal",
+    "tags": ["minimal"]
+  },
+  {
+    "id": "signal-fun-celebration",
+    "name": "Fun · celebration 🎉",
+    "description": "A little personality for milestone alerts.",
+    "template": "🎉 {{VehicleName}} just hit {{Value}} on {{RuleName}}!",
+    "kind": "signal",
+    "tags": ["fun"]
+  },
+  {
+    "id": "signal-fun-warning",
+    "name": "Fun · gentle nudge",
+    "description": "A friendlier tone for soft thresholds.",
+    "template": "Heads up: {{VehicleName}}'s {{SignalName}} is {{Value}} — keep an eye on it.",
+    "kind": "signal",
+    "tags": ["fun", "verbose"]
+  },
+  {
+    "id": "signal-fun-fire",
+    "name": "Fun · dramatic 🚨",
+    "description": "Critical-severity alerts that deserve a louder shout.",
+    "template": "🚨 {{Severity}}: {{VehicleName}} — {{RuleName}}. Value was {{Value}} (limit {{Threshold}}).",
+    "kind": "signal",
+    "tags": ["fun", "verbose"]
+  },
+  {
+    "id": "computed-default",
+    "name": "Default (recommended)",
+    "description": "Leave blank to use the op-aware default for this metric's operator.",
+    "template": "",
+    "kind": "computed_metric",
+    "tags": ["default", "recommended"]
+  },
+  {
+    "id": "computed-concise",
+    "name": "Concise",
+    "description": "Just the metric ID and the rolled-up value.",
+    "template": "{{MetricID}}: {{MetricValue}} over {{MetricWindow}}",
+    "kind": "computed_metric",
+    "tags": ["concise"]
+  },
+  {
+    "id": "computed-pct-change",
+    "name": "Percent change",
+    "description": "Best for %_change_> / %_change_< rules — calls out the delta and prior value.",
+    "template": "{{MetricID}} changed {{MetricChangePct}}% (from {{MetricPrevValue}} to {{MetricValue}}) over {{MetricWindow}}",
+    "kind": "computed_metric",
+    "tags": ["verbose", "percent"]
+  },
+  {
+    "id": "computed-with-vehicle",
+    "name": "With vehicle prefix",
+    "description": "Adds the vehicle name as a prefix.",
+    "template": "{{VehicleName}} · {{MetricID}} = {{MetricValue}} (window {{MetricWindow}})",
+    "kind": "computed_metric",
+    "tags": ["verbose"]
+  },
+  {
+    "id": "computed-fun",
+    "name": "Fun · plain-English",
+    "description": "Slightly chattier wording for non-technical recipients.",
+    "template": "Hey — {{VehicleName}}'s {{MetricID}} averaged {{MetricValue}} over the last {{MetricWindow}}.",
+    "kind": "computed_metric",
+    "tags": ["fun"]
+  }
+]

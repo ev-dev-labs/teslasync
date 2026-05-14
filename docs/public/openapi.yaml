@@ -4260,7 +4260,7 @@ paths:
     post:
       operationId: submitExportJob
       summary: Submit async export job
-      description: Submits an asynchronous export job for large datasets. CSV exports are v2-only and use SI canonical filenames and columns: teslasync-drives-v2.csv, teslasync-charging-v2.csv, teslasync-trips-v2.csv. Drive headers include distance_m, duration_s, max_speed_mps; trip headers include total_distance_m, total_energy_wh, total_duration_s.
+      description: "Submits an asynchronous export job for large datasets. CSV exports are v2-only and use SI canonical filenames and columns: teslasync-drives-v2.csv, teslasync-charging-v2.csv, teslasync-trips-v2.csv. Drive headers include distance_m, duration_s, max_speed_mps; trip headers include total_distance_m, total_energy_wh, total_duration_s."
       tags: [Export]
       requestBody:
         required: true

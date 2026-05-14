@@ -88,3 +88,6 @@ ENGINEERING_GUIDELINES.md
 scripts/check-loc.js
 /.github/prompts
 /.github/prompts/db-refactor/logs
+
+# Redesign working notes (Phase 50+ /charging redesign)
+REDESIGN-NOTES.md

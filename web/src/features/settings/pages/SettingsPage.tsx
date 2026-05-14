@@ -11,51 +11,40 @@ import { restartChecklist } from '@/features/onboarding/checklist'
 import { useToast } from '@/components/feedback/Toast'
 import { EditConflictBanner } from '@/components/feedback'
 import { useEditLease } from '@/hooks/useEditLease'
-import { cn } from '@/lib/cn'
-import { Zap, ExternalLink, Download, PlayCircle, Rocket } from 'lucide-react'
+import { ExternalLink, Download, PlayCircle, Rocket } from 'lucide-react'
 
 import {
-  TeslaAccountSection,
-  FeatureToggles,
-  RegionSettings,
-  ActiveOrdersSection,
   GeneralSettings,
-  GasPriceSettings,
-  NotificationSettings,
-  QuietHoursPanel,
   AppearanceSettings,
   AdvancedSettings,
   SettingsSearch,
 } from '../components'
-// Phase-46 / Prompt 35 — TOTPEnrollmentSection is intentionally
-// imported directly, NOT through the `../components` barrel, so the
-// barrel index.ts can stay outside the prompt's allowed-files regex.
-import { TOTPEnrollmentSection } from '../components/TOTPEnrollmentSection'
-// Phase-46 / Prompt 36 — Settings export/import. Same direct-import
-// rationale as TOTPEnrollmentSection above; the components barrel
-// is not in the prompt's allowed-files regex.
-import { SettingsExportImport } from '../components/SettingsExportImport'
-// Phase-46 / Prompt 37 — Webhook channels. Direct import for the
-// same reason: the `../components` barrel is outside this prompt's
-// allowed-files regex.
-import { WebhookChannelsSection } from '../components/WebhookChannelsSection'
-// Phase-46 / Prompt 42 — Active sessions / device management. Same
-// direct-import rationale: barrel is outside the prompt's
-// allowed-files regex.
-import { ActiveSessionsSection } from '../components/ActiveSessionsSection'
+// Phase-46 / Prompt 36 — Settings export/import has moved to the
+// dedicated Backup & Restore page (/backup) so the DATA category owns
+// every backup/restore surface. The component is still imported there
+// from features/settings/components.
+// Phase-46 / Prompt 42 — ActiveSessionsSection moved to its own page
+// (ActiveSessionsPage). Direct import retained for the same reason.
+//
 // Phase-46 / Prompt 50 — Reset to defaults. Same direct-import
 // rationale as above; the components barrel is outside the prompt's
 // allowed-files regex.
 import { ResetSection } from '../components/ResetSection'
-// Phase-46 / Prompt 70 — Privacy section (now expanded with cookie /
-// GDPR consent management). Direct import for the same barrel-scope
-// rationale.
-import { PrivacySection } from '../components/PrivacySection'
+// Phase-46 / Prompt 70 — PrivacySection moved to its own page
+// (PrivacyPage at /account/privacy). Browser-local privacy controls
+// (recently viewed pages, cookies / GDPR consent) now live under the
+// Account side-nav category alongside 2FA and Active Sessions.
+//
+// Tesla integration redirect cluster (Tesla Account, Feature Flags,
+// Region & API, Active Orders, Gas Price Auto-Poll) and the Fleet API
+// link card were removed: every target is reachable from the
+// Integrations side-nav group, so the in-page placeholders were just
+// duplicate redirects.
 
 export default function SettingsPage() {
   const { t } = useTranslation('settings')
   usePageTitle(t('title', 'Settings'))
-  const { data: settings, isLoading } = useSettings()
+  const { isLoading } = useSettings()
   const toast = useToast()
   const location = useLocation()
 
@@ -96,76 +85,22 @@ export default function SettingsPage() {
         resourceLabel={t('editConflict.resource.settings', 'Your settings')}
       />
 
-      <section id="tesla-account">
-        <TeslaAccountSection />
-      </section>
-      <section id="features">
-        <FeatureToggles />
-      </section>
-      <section id="region">
-        <RegionSettings />
-      </section>
-      <section id="orders">
-        <ActiveOrdersSection />
-      </section>
-
-      {/* Fleet API Settings — link */}
-      <FadeIn delay={0.05}>
-        <a href="/fleet-api" className="block">
-          <GlassPanel className="p-5 flex items-center gap-4 hover:border-[var(--border-subtle)] transition-colors cursor-pointer group">
-            <div className={cn(
-              'flex h-10 w-10 items-center justify-center rounded-xl ring-1',
-              settings?.api_suspended
-                ? 'bg-neon-red/10 text-neon-red ring-neon-red/20'
-                : 'bg-neon-green/10 text-neon-green ring-neon-green/20'
-            )}>
-              <Zap className="h-5 w-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('fleet.title', 'Fleet API Settings')}</h2>
-              <p className="text-xs text-[var(--text-muted)]">
-                {settings?.api_suspended
-                  ? t('fleet.suspended', 'API polling is suspended')
-                  : t('fleet.description', 'Manage polling, endpoint toggles, and telemetry capture')}
-              </p>
-            </div>
-            <ExternalLink className="h-4 w-4 text-[var(--text-muted)] group-hover:text-neon-cyan transition-colors shrink-0" />
-          </GlassPanel>
-        </a>
-      </FadeIn>
+      {/* Tesla integration redirect cluster + Fleet API link card were
+          removed in favor of the Integrations side-nav group. Every
+          target page (/tesla-account, /tesla-features, /tesla-region,
+          /tesla-orders, /gas-price, /fleet-api) is reachable from the
+          sidebar, and Cmd-K palette entries in searchIndex.ts already
+          point directly at those pages, so the in-page placeholders
+          were duplicate redirects with no remaining purpose. */}
 
       <section id="general">
         <GeneralSettings />
       </section>
-      <section id="gas-price">
-        <GasPriceSettings />
-      </section>
-      <section id="notifications">
-        <NotificationSettings />
-      </section>
-      <section id="webhooks">
-        <WebhookChannelsSection />
-      </section>
-      <section id="quiet-hours">
-        <QuietHoursPanel />
-      </section>
       <section id="appearance">
         <AppearanceSettings />
       </section>
-      <section id="security">
-        <TOTPEnrollmentSection />
-      </section>
-      <section id="sessions">
-        <ActiveSessionsSection />
-      </section>
       <section id="advanced">
         <AdvancedSettings />
-      </section>
-      <section id="privacy">
-        <PrivacySection />
-      </section>
-      <section id="backup">
-        <SettingsExportImport />
       </section>
       <section id="reset">
         <ResetSection />

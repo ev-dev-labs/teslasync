@@ -12,10 +12,17 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
+
+// alertmsgMaxTemplateLength mirrors alertmsg.MaxTemplateLength at the
+// handler boundary so we keep the import path stable even if the
+// package later vendors the constant elsewhere. Defined here as a
+// package-level reference rather than copied so the two stay in sync.
+var alertmsgMaxTemplateLength = alertmsg.MaxTemplateLength
 
 const (
 	maxAlertRequestBodyBytes = 1 << 20
@@ -28,15 +35,18 @@ var forbiddenAlertRuleFields = map[string]struct{}{
 	"conditions":      {},
 	"expression":      {},
 	"for_duration_s":  {},
-	"msg_template":    {},
 	"notify_channels": {},
 	"type":            {},
 	"threshold":       {},
 	"rule_def":        {},
 }
 
+// forbiddenAlertTestFields used to reject `msg_template` along with
+// the other legacy CEP fields. Phase-50 / ADR-005 RESTORED
+// `msg_template` as a typed TEXT column on `alert_rules`, so the
+// alertTestRequest now accepts it (and `include_title`) and the
+// rejection list collapses to just the other obsolete CEP keys.
 var forbiddenAlertTestFields = map[string]struct{}{
-	"msg_template":    {},
 	"notify_channels": {},
 }
 
@@ -292,6 +302,27 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 		existing.EscalationSeverity = body.EscalationSeverity
 	}
 
+	// Phase-50 / ADR-005 — per-rule message template + include-title
+	// toggle. An explicit `null` or whitespace-only `msg_template`
+	// clears the override (router falls back to the op-aware default).
+	// `include_title` is a bool, so we just copy through whatever the
+	// client sent.
+	if fieldPresent(fields, "msg_template") {
+		normalized, err := normalizeMsgTemplate(body.MsgTemplate)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		existing.MsgTemplate = normalized
+	}
+	if fieldPresent(fields, "include_title") {
+		if body.IncludeTitle == nil {
+			writeError(w, http.StatusBadRequest, "include_title must be a boolean")
+			return
+		}
+		existing.IncludeTitle = *body.IncludeTitle
+	}
+
 	// Computed-metric fields (kind switching is handled below).
 	if fieldPresent(fields, "metric_id") {
 		existing.MetricID = body.MetricID
@@ -416,7 +447,17 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		MaxFiresPerResolution: body.MaxFiresPerResolution,
 		EscalationAfterMin:    body.EscalationAfterMin,
 		EscalationSeverity:    body.EscalationSeverity,
+		// Phase-50 / ADR-005 — IncludeTitle defaults to TRUE when the
+		// client omits the key so legacy create-rule payloads keep the
+		// pre-Phase-50 behaviour (transports include the bold header).
+		IncludeTitle: body.IncludeTitle == nil || *body.IncludeTitle,
 	}
+	normalizedTmpl, err := normalizeMsgTemplate(body.MsgTemplate)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	rule.MsgTemplate = normalizedTmpl
 	kind, err := validateAlertRuleKind(body.Kind)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -541,6 +582,16 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 	if message == "" {
 		message = "This is a test notification from Alert Studio"
 	}
+	// Phase-50 / ADR-005: when the editor sends a draft `msg_template`,
+	// preview against IT instead of the legacy free-form `message`.
+	// This lets the "Send Test" button on the Alert Studio form render
+	// the actual template the user typed, including `{{...}}`
+	// substitutions against live signals (handled below).
+	if body.MsgTemplate != nil {
+		if tmpl := strings.TrimSpace(*body.MsgTemplate); tmpl != "" {
+			message = tmpl
+		}
+	}
 	channelIDs, allChannels, err := validateAlertTestTarget(body.Target)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -557,7 +608,7 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 			}
 			raw := liveSignalValuesToRaw(values)
 			if len(raw) > 0 {
-				message = renderTemplate(message, raw)
+				message = alertmsg.Substitute(message, raw)
 				break
 			}
 		}
@@ -565,6 +616,10 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 
 	const severity = "info"
 	title := "[TEST] Test Rule"
+	// Phase-50 / ADR-005: include_title=false suppresses the transport
+	// bold-header but keeps the canonical title for notification_logs
+	// + the SSE toast, matching the production dispatch path.
+	suppressTransportTitle := body.IncludeTitle != nil && !*body.IncludeTitle
 
 	// Create a notification log entry
 	nlog := &models.NotificationLog{
@@ -600,11 +655,12 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			req := &notification.Request{
-				ChannelType: ch.Type,
-				Config:      ch.Config,
-				Title:       title,
-				Message:     message,
-				ChannelID:   ch.ID,
+				ChannelType:            ch.Type,
+				Config:                 ch.Config,
+				Title:                  title,
+				Message:                message,
+				ChannelID:              ch.ID,
+				SuppressTransportTitle: suppressTransportTitle,
 			}
 			if pubErr := notification.Publish(h.mqttClient, req); pubErr == nil {
 				dispatched++
@@ -618,11 +674,12 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 				req := &notification.Request{
-					ChannelType: ch.Type,
-					Config:      ch.Config,
-					Title:       title,
-					Message:     message,
-					ChannelID:   ch.ID,
+					ChannelType:            ch.Type,
+					Config:                 ch.Config,
+					Title:                  title,
+					Message:                message,
+					ChannelID:              ch.ID,
+					SuppressTransportTitle: suppressTransportTitle,
 				}
 				if pubErr := notification.Publish(h.mqttClient, req); pubErr == nil {
 					dispatched++
@@ -635,6 +692,10 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 		// operator picked a specific channel; sending it to every device too
 		// would be surprising. The dispatcher is a no-op when VAPID is not
 		// configured, so this stays safe in dev installs.
+		//
+		// SuppressTransportTitle is intentionally NOT honored for web
+		// push — its title field is required (validated by
+		// internal/webpush).
 		pushReq := &notification.Request{
 			ChannelType: notification.ChannelTypeWebPush,
 			Config: map[string]string{
@@ -710,6 +771,33 @@ func validateUpdateAlertSeverity(severity string) (string, error) {
 		return "", errors.New("severity must be info, warn, or critical")
 	}
 	return validateAlertSeverity(severity)
+}
+
+// normalizeMsgTemplate canonicalises a raw client-supplied msg_template
+// value before it is persisted. The contract (Phase-50 / ADR-005):
+//
+//   - nil pointer        -> nil (no template; renderer uses defaults)
+//   - whitespace-only    -> nil (treat as "clear the override")
+//   - non-empty          -> trimmed copy, length-validated
+//
+// Length is capped at alertmsg.MaxTemplateLength to keep downstream
+// transports inside their per-channel limits. The check uses runes
+// (not bytes) so a multi-byte template (emoji, accented characters)
+// is measured by visible length.
+func normalizeMsgTemplate(raw *string) (*string, error) {
+	if raw == nil {
+		return nil, nil
+	}
+	trimmed := strings.TrimSpace(*raw)
+	if trimmed == "" {
+		return nil, nil
+	}
+	if r := []rune(trimmed); len(r) > alertmsgMaxTemplateLength {
+		return nil, fmt.Errorf("msg_template is too long (%d > %d characters)", len(r), alertmsgMaxTemplateLength)
+	}
+	// Persist the trimmed form so DB equality matches the rendered form.
+	out := trimmed
+	return &out, nil
 }
 
 func validateAlertSeverity(severity string) (string, error) {

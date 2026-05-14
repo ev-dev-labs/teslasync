@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
+import { VehicleSelect } from '@/components/forms';
 import { GlassPanel, Badge, Button } from '@/components/ui';
 import {
   RadialGauge, ChartContainer, ChartTooltip, ChartGradient,
@@ -414,6 +415,7 @@ export default function BatteryHealthPage() {
       subtitle={t('battery.subtitle', 'Degradation tracking, prediction, charging habits & longevity insights')}
       actions={
         <span className="flex items-center gap-3">
+          <VehicleSelect />
           <LiveIndicator variant="compact" />
         </span>
       }

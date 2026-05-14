@@ -17,6 +17,7 @@ export { PageLoader } from './PageLoader';
 export { PageLoadSkeleton } from './PageLoadSkeleton';
 export { QueryError } from './QueryError';
 export { AlertBanner } from './AlertBanner';
+export { InlineCallout, type InlineCalloutProps, type CalloutVariant } from './InlineCallout';
 export { DraftRecoveryBanner, type DraftRecoveryBannerProps } from './DraftRecoveryBanner';
 export { DraftRestorePrompt } from './DraftRestorePrompt';
 export { OfflineBanner } from './OfflineBanner';

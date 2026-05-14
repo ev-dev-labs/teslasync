@@ -5,22 +5,11 @@ import { Badge, DataTable, type Column } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useNotificationStats, useNotificationLogs } from '@/api/hooks/useNotifications';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
 import type { NotificationLog } from '@/api/types';
-
-function formatLogTime(isoStr: string): string {
-  const d = new Date(isoStr);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1) return 'Just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHrs = Math.floor(diffMin / 60);
-  if (diffHrs < 24) return `${diffHrs}h ago`;
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
 
 const STATUS_VARIANT: Record<string, 'success' | 'danger' | 'warning'> = {
   sent: 'success',
@@ -30,6 +19,19 @@ const STATUS_VARIANT: Record<string, 'success' | 'danger' | 'warning'> = {
 
 export default function NotificationStatsWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { formatDateTime } = useDateFormat();
+
+  function formatLogTime(isoStr: string): string {
+    const d = new Date(isoStr);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMin = Math.floor(diffMs / 60_000);
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHrs = Math.floor(diffMin / 60);
+    if (diffHrs < 24) return `${diffHrs}h ago`;
+    return formatDateTime(isoStr);
+  }
 
   const {
     data: stats,

@@ -32,6 +32,7 @@ import { EmptyState, Spinner } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { useOptionalToast } from '@/components/feedback/Toast';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import {
   formatDiagnosticReportText,
   useRunDiagnostic,
@@ -85,15 +86,6 @@ function statusIcon(status: DiagnosticCheckStatus) {
     default:
       return <XCircle className="h-5 w-5" aria-hidden />;
   }
-}
-
-function formatGeneratedAt(ts: string): string {
-  // RFC3339 → user's locale. Falls back to the raw string if the
-  // browser can't parse it (defensive — Go's time.Time.MarshalJSON
-  // is reliable, but a future schema bump could land first).
-  const d = new Date(ts);
-  if (Number.isNaN(d.getTime())) return ts;
-  return d.toLocaleString();
 }
 
 function downloadFilename(reportTs: string, template: string): string {
@@ -161,6 +153,7 @@ function CheckCard({ check }: { check: DiagnosticCheck }) {
 
 function OverallHero({ report }: { report: DiagnosticReport }) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const { variant, Icon } = overallTone(report.overall_status);
   return (
     <GlassPanel className="p-5" data-testid="diagnostic-overall">
@@ -186,7 +179,7 @@ function OverallHero({ report }: { report: DiagnosticReport }) {
             </Heading>
             <Caption className="block">
               {t('diagnostic.lastRun', {
-                when: formatGeneratedAt(report.generated_at),
+                when: formatDateTime(report.generated_at),
               })}
             </Caption>
           </div>

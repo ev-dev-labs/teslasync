@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useBackupRuns } from '@/api/hooks/useAdmin';
 import { cn } from '@/lib/cn';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
@@ -55,21 +56,9 @@ function fmtRelativeTime(iso: string | null): string {
   return `${days}d ago`;
 }
 
-/** Format ISO timestamp as short locale date/time. */
-function fmtShortTime(iso: string | null): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
 export default function BackupMonitorWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { formatDateTime: fmtShortTime } = useDateFormat();
   const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } =
     useBackupRuns();
 

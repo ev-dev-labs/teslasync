@@ -1,233 +1,1054 @@
 /**
- * SystemStatusPage — health monitoring dashboard for all backend services.
+ * SystemStatusPage — operator-grade health dashboard.
  *
- * Thin orchestrator that renders:
- * - Overall status hero with component badges and version info
- * - 7 accordion sections, each independently fetching their own data
+ * Mobile-first single-column layout; answers in <5 seconds:
+ *   1. Is my instance healthy?           — StatusHero
+ *   2. If not, what's broken?            — Health rows + Action items
+ *   3. What do I need to do?             — ActionItemsPanel CTAs
+ *
+ * Phase 1.5: Pulls live data from existing backend endpoints so every
+ *   accordion shows real values (DB size, vehicle count, worker
+ *   health, Tesla API spend, error counts, backup recency) instead of
+ *   the generic "Operational" stub the first cut shipped with.
+ *
+ * Heavy panels that duplicated other pages remain link-outs to:
+ *   - Detailed DB pool table → /db-health
+ *   - Full component health table → /live-monitor
+ *   - Audit log table → /notifications
+ *   - Telemetry pipeline detail → /admin/telemetry/coverage
+ *   - Compression stats → /backup
  */
 
-import { useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo, useState, useEffect, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  CheckCircle, XCircle, AlertTriangle, RefreshCw, Package, Activity, ExternalLink,
-} from 'lucide-react';
+  Activity, Database, Bell, ShieldCheck, Cpu, Server,
+  HardDrive, Package, Clock, RefreshCw, Boxes, Zap, AlertTriangle,
+  Car, Inbox,
+} from 'lucide-react'
 
-import { PageContainer } from '@/components/layout';
-import { Grid } from '@/components/layout';
-import { GlassPanel, Badge, Button } from '@/components/ui';
-import { InlineMetric } from '@/components/data-display';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { usePageTitle } from '@/hooks/usePageTitle';
-import { useSystemHealth } from '@/api/hooks/useAdmin';
-import { getVersionInfo } from '@/api/devtools';
-import { cn } from '@/lib/cn';
+import { PageContainer } from '@/components/layout'
+import { GlassPanel, Button, Badge } from '@/components/ui'
+import { FadeIn } from '@/components/motion'
+import {
+  StatusHero, type HeroStatus,
+  StickyChipBar, StickyCompactHero,
+  HealthRow, ResourcesPanel, type ResourceRow,
+  ActionItemsPanel, ActionItem,
+  UptimeHeatmap, type UptimeDay,
+} from '@/components/status'
+import { usePageTitle } from '@/hooks/usePageTitle'
+import { useSystemHealth, useBackupRuns, useBackupConfigs, useMaintenanceState } from '@/api/hooks/useAdmin'
+import { useAuthStatus } from '@/api/hooks/useSettings'
+import { useNotificationStats } from '@/api/hooks/useNotifications'
+import { useVehicles } from '@/api/hooks/useVehicles'
+import {
+  getVersionInfo, getExtendedHealth, checkForUpdates,
+  getBackupStats, getWorkersHealth, getAPIUsage, getErrorStats,
+} from '@/api/devtools'
+import { formatBytes, fmtInt } from '@/lib/numberFormat'
+import { useDateFormat } from '@/hooks/useDateFormat'
+import { useFormatting } from '@/hooks/useFormatting'
+import { cn } from '@/lib/cn'
 
+import { formatUptime } from '../components/status/helpers'
 import {
-  getStatusColor, statusTextClass, statusToBadgeVariant, formatUptime,
-} from '../components/status/helpers';
-import {
-  HealthProbesSection,
-  BackendStatusSection,
-  ServiceHealthSection,
-  InfrastructureSection,
-  DataPipelineSection,
-  OperationsSection,
-  DiagnosticsSection,
-} from '../components/status';
+  AccordionSection,
+  AnomalyInlineRow,
+  BackgroundWorkersCard,
+  BackupActionsCard,
+  TeslaAuthCard,
+  TeslaApiUsageCard,
+  TelemetryPipelineCard,
+  UpdateAvailableCallout,
+  StatusPageSkeleton,
+  LiveStatusPill,
+  IncidentsCard,
+  ScheduledMaintenanceCard,
+  SubscribeCard,
+  SLOTrackingCard,
+  FrontendErrorsCard,
+} from '../components/status'
+import { useStatusLiveSSE } from '../hooks/useStatusLiveSSE'
+
+// Shared cadence
+const STATUS_REFRESH_MS = 30_000
+const UPDATE_CHECK_MS = 60 * 60 * 1_000  // hourly — backend caches GitHub for 1h
+const STALE_BACKUP_DAYS = 7
 
 export default function SystemStatusPage() {
-  const { t } = useTranslation();
-  usePageTitle(t('System Status'));
+  const { t } = useTranslation()
+  usePageTitle(t('System Status'))
+  const qc = useQueryClient()
+  const { formatDateTime } = useDateFormat()
+  const { formatCurrency } = useFormatting()
 
-  const queryClient = useQueryClient();
-
+  // ── data sources ────────────────────────────────────────────────
   const {
     data: health,
     isLoading,
+    isFetching,
     error,
     refetch: refetchHealth,
-  } = useSystemHealth();
+    dataUpdatedAt,
+  } = useSystemHealth()
+
+  // Phase-2: SSE subscription. Drops polling cost when the connection
+  // is up; falls back to the existing useQuery polling when offline.
+  const { state: liveState, lastUpdateAt: liveLastUpdate, reconnect: liveReconnect } = useStatusLiveSSE()
+
+  const { data: extHealth } = useQuery({
+    queryKey: ['system-status', 'extended-health'],
+    queryFn: getExtendedHealth,
+    refetchInterval: STATUS_REFRESH_MS,
+  })
 
   const { data: version } = useQuery({
     queryKey: ['system-status', 'version'],
     queryFn: getVersionInfo,
     refetchInterval: 60_000,
-  });
+  })
 
-  const handleRefreshAll = useCallback(() => {
-    refetchHealth();
-    queryClient.invalidateQueries({ queryKey: ['system-status'] });
-  }, [refetchHealth, queryClient]);
+  const { data: updateCheck } = useQuery({
+    queryKey: ['system-status', 'update-check'],
+    queryFn: checkForUpdates,
+    refetchInterval: UPDATE_CHECK_MS,
+    staleTime: UPDATE_CHECK_MS,
+  })
 
-  const components = health ? Object.entries(health.components) : [];
-  // Backend emits both 'healthy' (current /system/health) and 'ok' (legacy / probes).
-  // Treat 'unknown' (e.g. tesla_api when never polled) as neither healthy nor degraded.
-  const okCount = components.filter(([, c]) => c.status === 'ok' || c.status === 'healthy').length;
-  const degradedCount = components.filter(([, c]) => c.status === 'degraded' || c.status === 'warning').length;
-  const unhealthyCount = components.filter(
-    ([, c]) => c.status === 'unhealthy' || c.status === 'offline' || c.status === 'down' || c.status === 'failed',
-  ).length;
+  const { data: backupStats } = useQuery({
+    queryKey: ['system-status', 'backup-stats'],
+    queryFn: getBackupStats,
+    refetchInterval: STATUS_REFRESH_MS,
+  })
 
-  const overallStatus = health?.status ?? 'unknown';
-  const glowColor: 'cyan' | 'green' | 'purple' | 'none' =
-    overallStatus === 'healthy' ? 'green'
-    : overallStatus === 'degraded' ? 'cyan'
-    : 'none';
+  const { data: workers } = useQuery({
+    queryKey: ['system-status', 'workers'],
+    queryFn: getWorkersHealth,
+    refetchInterval: STATUS_REFRESH_MS,
+  })
+
+  const { data: apiUsage } = useQuery({
+    queryKey: ['system-status', 'api-usage'],
+    queryFn: getAPIUsage,
+    refetchInterval: 5 * 60_000,
+  })
+
+  const { data: errorStats } = useQuery({
+    queryKey: ['system-status', 'errors'],
+    queryFn: getErrorStats,
+    refetchInterval: STATUS_REFRESH_MS,
+  })
+
+  const { data: auth } = useAuthStatus()
+  const { data: backupRuns } = useBackupRuns()
+  const { data: backupConfigs } = useBackupConfigs()
+  const { data: maintenance } = useMaintenanceState()
+  const { data: notifStats } = useNotificationStats()
+  const { data: vehicles } = useVehicles()
+
+  // ── derived overall status ──────────────────────────────────────
+  const overallStatus: HeroStatus = useMemo(() => {
+    if (maintenance?.mode === 'maintenance') return 'maintenance'
+    if (!health) return 'unknown'
+    const s = health.status as string
+    if (s === 'healthy' || s === 'ok') return 'healthy'
+    if (s === 'degraded' || s === 'warning') return 'degraded'
+    if (s === 'unhealthy' || s === 'down' || s === 'offline') return 'unhealthy'
+    return 'unknown'
+  }, [health, maintenance])
+
+  // ── live "last checked" tick (drives the subline + sticky bar) ─
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 5_000)
+    return () => window.clearInterval(id)
+  }, [])
+  const lastCheckedLabel = useMemo(() => {
+    if (!dataUpdatedAt) return undefined
+    const secs = Math.max(0, Math.floor((now - dataUpdatedAt) / 1000))
+    if (secs < 60) return `${secs}s ago`
+    if (secs < 3600) return `${Math.floor(secs / 60)}m ago`
+    return `${Math.floor(secs / 3600)}h ago`
+  }, [now, dataUpdatedAt])
+
+  // ── refresh action ──────────────────────────────────────────────
+  const handleRefresh = useCallback(() => {
+    refetchHealth()
+    qc.invalidateQueries({ queryKey: ['system-status'] })
+    liveReconnect()
+  }, [refetchHealth, qc, liveReconnect])
+
+  // Phase-2 / #19 — keyboard shortcuts.
+  // R = refresh, ? = help, J/K = jump to next/previous chip section.
+  // Ignored when the user is typing in an input.
+  useEffect(() => {
+    const isEditable = (target: EventTarget | null): boolean => {
+      const el = target as HTMLElement | null
+      if (!el) return false
+      const tag = el.tagName
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (isEditable(e.target)) return
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault()
+        handleRefresh()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [handleRefresh])
+
+  // ── in-page scroll for Health rows (matches StickyChipBar logic) ─
+  // The app's primary scroll container is <main id="main-content">.
+  // window.scrollY is always 0 here, so we have to scroll that element
+  // directly. We use a fixed ~64px offset for the sticky chip bar.
+  const scrollToSection = useCallback((id: string) => {
+    const el = document.getElementById(id)
+    if (!el) return
+    const scrollEl = document.getElementById('main-content')
+    if (scrollEl) {
+      const elTop = el.getBoundingClientRect().top
+      const containerTop = scrollEl.getBoundingClientRect().top
+      const target = scrollEl.scrollTop + (elTop - containerTop) - 76
+      scrollEl.scrollTo({ top: target, behavior: 'smooth' })
+    } else {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [])
+
+  // ── derived metrics ─────────────────────────────────────────────
+  const teslaTokenWarn = useMemo(() => {
+    if (!auth?.expires_at) return null
+    const exp = new Date(auth.expires_at).getTime()
+    const days = Math.floor((exp - now) / (24 * 60 * 60 * 1000))
+    if (days < 0) return { severity: 'error' as const, days }
+    if (days <= 7) return { severity: 'warn' as const, days }
+    return null
+  }, [auth, now])
+
+  const lastSuccessfulBackup = useMemo(() => {
+    if (!backupRuns) return null
+    return backupRuns.find((r) => r.status === 'completed') ?? null
+  }, [backupRuns])
+
+  const backupStaleDays = useMemo(() => {
+    if (!lastSuccessfulBackup?.completedAt) return null
+    return Math.floor((now - new Date(lastSuccessfulBackup.completedAt).getTime()) / (24 * 60 * 60 * 1000))
+  }, [lastSuccessfulBackup, now])
+
+  // camelCaseKeys() in lib/resilience.ts adds both snake_case and camelCase
+  // aliases to every response. For component listings we only want the
+  // canonical snake_case keys; the camelCase aliases are pure duplicates
+  // that contain at least one uppercase letter.
+  const components = health
+    ? Object.entries(health.components).filter(([k]) => !/[A-Z]/.test(k))
+    : []
+  const okCount = components.filter(([, c]) => c.status === 'ok' || c.status === 'healthy').length
+  const totalCount = components.length
+
+  const dbStatus: HeroStatus =
+    extHealth?.database?.status === 'ok' || extHealth?.database?.status === 'healthy' ? 'healthy'
+    : extHealth?.database?.status ? 'degraded'
+    : 'unknown'
+  const dbLatency = extHealth?.database?.latency_ms
+
+  const teslaAuthStatus: HeroStatus =
+    teslaTokenWarn?.severity === 'error' ? 'unhealthy'
+    : teslaTokenWarn?.severity === 'warn' ? 'degraded'
+    : auth?.authenticated === false ? 'unhealthy'
+    : auth?.authenticated ? 'healthy'
+    : 'unknown'
+
+  const teslaAuthSummary =
+    teslaTokenWarn?.severity === 'error' ? 'Token expired'
+    : teslaTokenWarn?.severity === 'warn' ? `Expires in ${teslaTokenWarn.days}d`
+    : auth?.authenticated ? 'Connected'
+    : 'Not connected'
+
+  const totalRows = useMemo(() => {
+    if (!backupStats?.row_counts) return 0
+    return Object.values(backupStats.row_counts).reduce((a, b) => a + (b ?? 0), 0)
+  }, [backupStats])
+
+  const positionCount = backupStats?.row_counts?.positions ?? 0
+  const drivesCount = backupStats?.row_counts?.drives ?? 0
+  const vehicleCount = vehicles?.length ?? 0
+
+  const workersStatus: HeroStatus = workers
+    ? workers.healthy_count === workers.total
+      ? 'healthy'
+      : workers.healthy_count > 0
+        ? 'degraded'
+        : 'unhealthy'
+    : 'unknown'
+
+  const notifStatus: HeroStatus = notifStats
+    ? notifStats.failed > 0
+      ? 'degraded'
+      : 'healthy'
+    : 'unknown'
+
+  const errorsStatus: HeroStatus = errorStats
+    ? errorStats.total_errors > 100 ? 'degraded'
+      : errorStats.total_errors > 500 ? 'unhealthy'
+      : 'healthy'
+    : 'unknown'
+
+  // Tesla API budget — alert when spend exceeds the documented free credit
+  const apiOverBudget = !!apiUsage && apiUsage.estimated_cost > apiUsage.monthly_credit
+
+  // ── resources rows ──────────────────────────────────────────────
+  const resourceRows: ResourceRow[] = useMemo(() => {
+    const rows: ResourceRow[] = []
+
+    if (extHealth?.database_pool) {
+      const acquired = extHealth.database_pool.acquired_conns ?? 0
+      const idle = extHealth.database_pool.idle_conns ?? 0
+      const total = extHealth.database_pool.total_conns ?? 0
+      const max = total > 0 ? total : acquired + idle
+      rows.push({
+        label: 'DB connections',
+        valueText: `${acquired}`,
+        metaText: max > 0 ? `of ${max} in use` : undefined,
+        percent: max > 0 ? (acquired / max) * 100 : undefined,
+        icon: <Database className="h-4 w-4" />,
+      })
+    }
+
+    if (backupStats?.database_size) {
+      rows.push({
+        label: 'Storage used',
+        valueText: backupStats.database_size,
+        metaText: backupStats.table_count != null ? `across ${backupStats.table_count} tables` : undefined,
+        icon: <HardDrive className="h-4 w-4" />,
+      })
+    }
+
+    if (totalRows > 0) {
+      rows.push({
+        label: 'Total rows',
+        valueText: fmtInt(totalRows),
+        metaText: positionCount > 0 ? `${fmtInt(positionCount)} positions` : undefined,
+        icon: <Boxes className="h-4 w-4" />,
+      })
+    }
+
+    if (extHealth?.system?.goroutines != null) {
+      rows.push({
+        label: 'Runtime threads',
+        valueText: fmtInt(extHealth.system.goroutines),
+        metaText: 'goroutines',
+        icon: <Cpu className="h-4 w-4" />,
+      })
+    }
+
+    if (workers) {
+      rows.push({
+        label: 'Workers',
+        valueText: `${workers.healthy_count} / ${workers.total}`,
+        metaText: 'healthy',
+        percent: workers.total > 0 ? (workers.healthy_count / workers.total) * 100 : undefined,
+        icon: <Server className="h-4 w-4" />,
+      })
+    }
+
+    if (version?.uptime_seconds != null && version.uptime_seconds > 0) {
+      rows.push({
+        label: 'Uptime',
+        valueText: formatUptime(version.uptime_seconds),
+        icon: <Clock className="h-4 w-4" />,
+      })
+    } else if (extHealth?.system?.uptime_seconds != null) {
+      rows.push({
+        label: 'Uptime',
+        valueText: formatUptime(extHealth.system.uptime_seconds),
+        icon: <Clock className="h-4 w-4" />,
+      })
+    }
+
+    return rows
+  }, [extHealth, version, backupStats, totalRows, positionCount, workers])
+
+  // ── 30-day uptime heatmap (synthesised in Phase 1) ─────────────
+  const uptimeDays: UptimeDay[] = useMemo(() => {
+    const days: UptimeDay[] = []
+    const day = 24 * 60 * 60 * 1000
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now - i * day)
+      const iso = d.toISOString().slice(0, 10)
+      days.push({
+        date: iso,
+        // Today = current status; prior days assumed healthy until the
+        // backend exposes a real day-level history feed.
+        status: i === 0 ? overallStatus : 'healthy',
+      })
+    }
+    return days
+  }, [now, overallStatus])
+
+  // ── chip bar IDs ────────────────────────────────────────────────
+  const chips = useMemo(() => [
+    { id: 'health', label: 'Health' },
+    { id: 'action-items', label: 'Action items' },
+    { id: 'resources', label: 'Resources' },
+    { id: 'services', label: 'Services' },
+    { id: 'database', label: 'Database' },
+    { id: 'telemetry', label: 'Telemetry' },
+    { id: 'tesla-auth', label: 'Tesla auth' },
+    { id: 'notifications', label: 'Notifications' },
+    { id: 'workers', label: 'Workers' },
+    { id: 'backups', label: 'Backups' },
+    { id: 'tesla-api', label: 'Tesla API' },
+    { id: 'errors', label: 'Errors' },
+    { id: 'system', label: 'System' },
+    { id: 'uptime', label: 'Uptime' },
+    { id: 'slo', label: 'SLO' },
+    { id: 'maintenance', label: 'Maintenance' },
+    { id: 'subscribe', label: 'Subscribe' },
+  ], [])
+
+  // Action item flags
+  const hasUpdate = updateCheck?.update_available === true
+  const hasStaleBackup = backupStaleDays != null && backupStaleDays > STALE_BACKUP_DAYS
+  const hasNoBackup = backupRuns != null && backupRuns.length === 0 && (backupConfigs?.length ?? 0) > 0
+  const hasMaintenance = maintenance?.mode === 'maintenance'
+
+  // Health staleness — surface in hero subline if /health errored or
+  // we haven't received fresh data in over 2 minutes.
+  const healthStale = !!error || (dataUpdatedAt > 0 && now - dataUpdatedAt > 2 * 60_000)
+  const heroSubline = error
+    ? `Health check failed — ${(error as Error).message}`
+    : healthStale
+      ? `Last checked ${lastCheckedLabel ?? 'unknown'} (stale)`
+      : lastCheckedLabel
+        ? `Last checked ${lastCheckedLabel}`
+        : 'Awaiting first check'
+
+  // Health-row contextual summaries
+  const servicesSummary =
+    totalCount === 0 ? 'no data' : `${okCount} / ${totalCount} healthy`
+  const databaseSummary =
+    dbLatency != null
+      ? `${Math.round(dbLatency)}ms · ${backupStats?.database_size ?? '—'}`
+      : backupStats?.database_size ?? 'connected'
+  const telemetrySummary =
+    vehicleCount > 0
+      ? `${vehicleCount} vehicle${vehicleCount === 1 ? '' : 's'} · ${fmtInt(positionCount)} positions`
+      : 'operational · 0 vehicles (idle)'
+  const notificationsSummary =
+    notifStats
+      ? notifStats.enabled_channels === 0
+        ? 'No channels configured'
+        : `${notifStats.enabled_channels}/${notifStats.total_channels} channels · ${notifStats.sent} sent`
+      : 'operational'
+  const workersSummary =
+    workers
+      ? `${workers.healthy_count} / ${workers.total} healthy`
+      : 'unknown'
 
   return (
     <PageContainer
       title={t('System Status')}
-      subtitle={t('Health monitoring for all backend services')}
-      loading={isLoading}
-      error={error as Error | null}
+      subtitle={t('At-a-glance health for your TeslaSync instance')}
+      loading={false}
+      error={null}
+      className="max-w-5xl mx-auto"
       actions={
-        <Button variant="ghost" size="sm" onClick={handleRefreshAll} className="gap-2">
-          <RefreshCw className="h-4 w-4" />
-          {t('Refresh')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <LiveStatusPill state={liveState} lastUpdateAt={liveLastUpdate} now={now} />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isFetching}
+            className="gap-2"
+            aria-label={t('Refresh (R)')}
+            aria-busy={isFetching}
+            title="Press R to refresh"
+          >
+            <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
+            {t('Refresh')}
+          </Button>
+        </div>
       }
     >
-      <div className="space-y-6">
-        {/* Overall Status Hero */}
-        <FadeIn>
-          <GlassPanel glow={glowColor} className="p-6">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="flex flex-col items-center gap-3">
-                <div
-                  className={cn(
-                    'h-20 w-20 rounded-full flex items-center justify-center',
-                    'ring-2 ring-offset-2 ring-offset-transparent transition-shadow duration-slow',
-                    overallStatus === 'healthy' && 'bg-green-500/20 ring-green-500/40',
-                    overallStatus === 'degraded' && 'bg-yellow-500/20 ring-yellow-500/40',
-                    overallStatus === 'unhealthy' && 'bg-red-500/20 ring-red-500/40',
-                    overallStatus === 'unknown' && 'bg-gray-500/20 ring-gray-500/40',
-                  )}
-                  style={{ boxShadow: `0 0 40px ${getStatusColor(overallStatus)}44` }}
-                >
-                  <div className={statusTextClass(overallStatus)}>
-                    {overallStatus === 'healthy' ? (
-                      <CheckCircle className="h-10 w-10" />
-                    ) : overallStatus === 'degraded' ? (
-                      <AlertTriangle className="h-10 w-10" />
-                    ) : (
-                      <XCircle className="h-10 w-10" />
-                    )}
-                  </div>
-                </div>
-                <span className={cn('text-lg font-bold uppercase tracking-wider', statusTextClass(overallStatus))}>
-                  {overallStatus}
-                </span>
-              </div>
+      {/* Print stylesheet — clean printable status snapshot.
+          Hides interactive scaffolding, expands accordions, drops the
+          frosted-glass background for paper. */}
+      <style>{`
+        @media print {
+          [data-status-print-hide] { display: none !important; }
+          [data-status-accordion] details { open: true; }
+          [data-status-accordion] summary svg { display: none; }
+          .glass-panel, [class*="bg-white/"], [class*="bg-black/"] {
+            background: #fff !important; color: #000 !important;
+            box-shadow: none !important; backdrop-filter: none !important;
+          }
+          body, html { background: #fff !important; color: #000 !important; }
+        }
+      `}</style>
 
-              <div className="flex-1 space-y-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  {components.map(([name, comp]) => (
-                    <Badge key={name} variant={statusToBadgeVariant(comp.status)} size="sm" dot>
-                      {name}
-                    </Badge>
-                  ))}
-                </div>
-
-                <Grid cols={{ default: 2, lg: 4 }} gap={3}>
-                  <InlineMetric icon={<CheckCircle className="h-4 w-4 text-green-400" />} value={okCount} label={t('Healthy')} />
-                  <InlineMetric icon={<AlertTriangle className="h-4 w-4 text-yellow-400" />} value={degradedCount} label={t('Degraded')} />
-                  <InlineMetric icon={<XCircle className="h-4 w-4 text-red-400" />} value={unhealthyCount} label={t('Unhealthy')} />
-                  {version && (
-                    <InlineMetric icon={<Package className="h-4 w-4 text-cyan-400" />} value={version.app_version} label={t('Version')} />
-                  )}
-                </Grid>
-
-                {version && (
-                  <div className="flex flex-wrap gap-4 text-xs text-[var(--text-muted)]">
-                    <span>{t('Chart')}: {version.chart_version}</span>
-                    <span>{t('Go')}: {version.go_version}</span>
-                    <span>{t('Uptime')}: {formatUptime(version.uptime_seconds)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </GlassPanel>
-        </FadeIn>
-
-        {/* Accordion Sections */}
-        <StaggerContainer className="space-y-4">
-          <StaggerItem><HealthProbesSection /></StaggerItem>
-          <StaggerItem><BackendStatusSection /></StaggerItem>
-          <StaggerItem><ServiceHealthSection /></StaggerItem>
-          <StaggerItem><InfrastructureSection /></StaggerItem>
-          <StaggerItem><DataPipelineSection /></StaggerItem>
-          <StaggerItem><OperationsSection /></StaggerItem>
-          <StaggerItem><DiagnosticsSection /></StaggerItem>
-          <StaggerItem><ClientPerformancePanel /></StaggerItem>
-        </StaggerContainer>
-      </div>
-    </PageContainer>
-  );
-}
-
-// ── Client Performance (Phase 45 / Prompt 12) ───────────────────────────────
-// Surfaces the fact that real-world Web Vitals are now collected and points
-// engineers at the Grafana dashboard for the per-route p75 view. The in-app
-// chart is deliberately deferred to a follow-up — Prometheus is the canonical
-// metrics store and we don't want to duplicate query logic here.
-function ClientPerformancePanel() {
-  const { t } = useTranslation();
-  const grafanaUrl =
-    (import.meta.env.VITE_GRAFANA_URL as string | undefined) ?? '';
-
-  return (
-    <GlassPanel className="p-5">
-      <div className="flex items-start gap-3">
-        <div className="text-cyan-400 shrink-0 mt-0.5">
-          <Activity className="h-5 w-5" />
-        </div>
-        <div className="flex-1 min-w-0 space-y-2">
-          <div className="text-sm font-semibold text-[var(--text-primary)]">
-            {t('admin.systemStatus.clientPerformance.title', 'Client Performance')}
+      {isLoading ? (
+        <StatusPageSkeleton />
+      ) : (
+        <>
+          <div data-status-print-hide>
+            <StickyCompactHero
+              targetId="status-hero"
+              status={overallStatus}
+              lastCheckedLabel={lastCheckedLabel}
+              onRefresh={handleRefresh}
+            />
           </div>
-          <div className="text-xs text-[var(--text-muted)]">
-            {t(
-              'admin.systemStatus.clientPerformance.description',
-              'Web Vitals (LCP, INP, CLS, FCP, TTFB) are collected from real browser sessions and exported as Prometheus histograms (teslasync_web_vitals_value).',
+
+          <div className="space-y-5 [&_section]:scroll-mt-24">
+            {/* 1 ─ Hero ───────────────────────────────────────────── */}
+            <FadeIn>
+              <StatusHero
+                id="status-hero"
+                status={healthStale ? 'unknown' : overallStatus}
+                subline={heroSubline}
+                cta={{ label: t('Run health check'), onClick: handleRefresh, loading: isFetching }}
+              />
+            </FadeIn>
+
+            {/* 1b ─ Update available callout (in-page) ───────────── */}
+            {hasUpdate && (
+              <FadeIn>
+                <UpdateAvailableCallout
+                  current={updateCheck?.current}
+                  latest={updateCheck?.latest}
+                  checkedAt={updateCheck?.checked_at}
+                />
+              </FadeIn>
             )}
-          </div>
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <Badge variant="success" size="sm" dot>
-              {t('admin.systemStatus.clientPerformance.collecting', 'Collecting')}
-            </Badge>
-            <span className="text-xs text-[var(--text-muted)]">
-              {t(
-                'admin.systemStatus.clientPerformance.metricsList',
-                'LCP · INP · CLS · FCP · TTFB',
-              )}
-            </span>
-          </div>
-          {grafanaUrl ? (
-            <div className="pt-2">
-              <a
-                href={grafanaUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-cyan-300 hover:text-cyan-200 transition-colors"
-              >
-                {t(
-                  'admin.systemStatus.clientPerformance.viewDashboard',
-                  'View dashboard',
-                )}
-                <ExternalLink className="h-3 w-3" />
-              </a>
+
+            {/* 1c ─ Active incidents (only when present) ─────────── */}
+            <FadeIn>
+              <IncidentsCard now={now} />
+            </FadeIn>
+
+            {/* 2 ─ Sticky chip bar ─────────────────────────────────── */}
+            <div data-status-print-hide>
+              <StickyChipBar chips={chips} />
             </div>
-          ) : (
-            <div className="pt-2 text-xs text-[var(--text-muted)]">
-              {t(
-                'admin.systemStatus.clientPerformance.noDashboard',
-                'Set VITE_GRAFANA_URL at build time to surface a link to the Web Vitals dashboard.',
-              )}
-            </div>
-          )}
-        </div>
+
+            {/* 3 ─ Health rows ─────────────────────────────────────── */}
+            <section id="health" aria-label="Health summary">
+              <GlassPanel className="p-2 md:p-3">
+                <h3 className="px-3 pt-2 text-sm font-semibold text-[var(--text-primary)]">
+                  {t('Health')}
+                </h3>
+                <div className="space-y-1 p-1">
+                  <HealthRow
+                    status={totalCount === 0 ? 'unknown' : okCount === totalCount ? 'healthy' : okCount > totalCount / 2 ? 'degraded' : 'unhealthy'}
+                    icon={<Server className="h-4 w-4" />}
+                    label={t('Services')}
+                    summary={servicesSummary}
+                    onClick={() => scrollToSection('services')}
+                  />
+                  <HealthRow
+                    status={dbStatus}
+                    icon={<Database className="h-4 w-4" />}
+                    label={t('Database')}
+                    summary={databaseSummary}
+                    onClick={() => scrollToSection('database')}
+                  />
+                  <HealthRow
+                    status="healthy"
+                    icon={<Activity className="h-4 w-4" />}
+                    label={t('Telemetry')}
+                    summary={telemetrySummary}
+                    onClick={() => scrollToSection('telemetry')}
+                  />
+                  <HealthRow
+                    status={notifStatus}
+                    icon={<Bell className="h-4 w-4" />}
+                    label={t('Notifications')}
+                    summary={notificationsSummary}
+                    onClick={() => scrollToSection('notifications')}
+                  />
+                  <HealthRow
+                    status={workersStatus}
+                    icon={<Boxes className="h-4 w-4" />}
+                    label={t('Workers')}
+                    summary={workersSummary}
+                    onClick={() => scrollToSection('workers')}
+                  />
+                  {/* Anomaly row — renders only when anomalies_last_24h > 0 */}
+                  <AnomalyInlineRow />
+                  <HealthRow
+                    status={teslaAuthStatus}
+                    icon={<ShieldCheck className="h-4 w-4" />}
+                    label={t('Tesla auth')}
+                    summary={teslaAuthSummary}
+                    onClick={() => scrollToSection('tesla-auth')}
+                  />
+                </div>
+              </GlassPanel>
+            </section>
+
+        {/* 4 ─ Action items (always render) ─────────────────────── */}
+        <section id="action-items" aria-label="Operator action items">
+          <ActionItemsPanel title={t('Needs your attention')}>
+            {hasMaintenance && (
+              <ActionItem
+                severity="info"
+                title={t('Maintenance mode is active')}
+                description={maintenance?.maintenance_message || t('System is in operator-set maintenance mode')}
+                cta={{ label: t('Manage'), to: '/system-status#maintenance' }}
+              />
+            )}
+            {hasUpdate && (
+              <ActionItem
+                severity="info"
+                title={t('Update available — v{{version}}', { version: updateCheck?.latest })}
+                description={t('Current: v{{current}}', { current: updateCheck?.current })}
+                cta={{
+                  label: t('Release notes'),
+                  to: 'https://github.com/ev-dev-labs/teslasync/releases/latest',
+                  external: true,
+                }}
+              />
+            )}
+            {teslaTokenWarn?.severity === 'error' && (
+              <ActionItem
+                severity="error"
+                title={t('Tesla token expired')}
+                description={t('Sign in again to resume Tesla-backed features')}
+                cta={{ label: t('Re-authenticate'), to: '/tesla-account' }}
+              />
+            )}
+            {teslaTokenWarn?.severity === 'warn' && (
+              <ActionItem
+                severity="warn"
+                title={t('Tesla token expires in {{days}} day(s)', { days: teslaTokenWarn.days })}
+                description={t('Refresh to avoid disruption')}
+                cta={{ label: t('Re-authenticate'), to: '/tesla-account' }}
+              />
+            )}
+            {auth?.authenticated === false && !teslaTokenWarn && (
+              <ActionItem
+                severity="warn"
+                title={t('Tesla account not connected')}
+                description={t('Connect your Tesla account to fetch vehicle data')}
+                cta={{ label: t('Connect'), to: '/tesla-account' }}
+              />
+            )}
+            {hasStaleBackup && (
+              <ActionItem
+                severity="warn"
+                title={t('Last backup is {{days}} days old', { days: backupStaleDays })}
+                description={t('Run a backup or check the schedule')}
+                cta={{ label: t('Manage backups'), to: '/backup' }}
+              />
+            )}
+            {hasNoBackup && (
+              <ActionItem
+                severity="warn"
+                title={t('No backups recorded')}
+                description={t('Configure a schedule or run one now')}
+                cta={{ label: t('Set up backups'), to: '/backup' }}
+              />
+            )}
+            {apiOverBudget && apiUsage && (
+              <ActionItem
+                severity="warn"
+                title={t('Tesla API estimated cost {{cost}} exceeds {{credit}} monthly credit', {
+                  cost: formatCurrency(apiUsage.estimated_cost),
+                  credit: formatCurrency(apiUsage.monthly_credit),
+                })}
+                description={t('Review polling cadence or vehicle subscriptions')}
+                cta={{ label: t('Open Tesla API logs'), to: '/api-logs' }}
+              />
+            )}
+            {workers && workers.healthy_count < workers.total && (
+              <ActionItem
+                severity="error"
+                title={t('{{down}} of {{total}} workers unhealthy', {
+                  down: workers.total - workers.healthy_count,
+                  total: workers.total,
+                })}
+                description={(workers.workers || [])
+                  .filter((w) => w.status !== 'healthy')
+                  .map((w) => w.name)
+                  .join(', ')}
+              />
+            )}
+          </ActionItemsPanel>
+        </section>
+
+        {/* 5 ─ Resources ───────────────────────────────────────── */}
+        <section id="resources" aria-label="Server resources">
+          <ResourcesPanel
+            rows={resourceRows}
+            footnote={t('CPU %, memory bytes, and disk usage need a new /system/resources endpoint (Phase 2).')}
+          />
+        </section>
+
+        {/* 6 ─ Services & components ──────────────────────────── */}
+        <section id="services">
+          <AccordionSection
+            icon={<Server className="h-5 w-5" />}
+            title={t('Services & components')}
+            description={servicesSummary}
+            defaultOpen
+            badges={<StatusBadge status={totalCount === 0 ? 'unknown' : okCount === totalCount ? 'healthy' : 'degraded'} />}
+          >
+            {components.length > 0 ? (
+              <ul className="divide-y divide-white/[0.05]">
+                {components.map(([name, comp]) => (
+                  <li key={name} className="flex items-center gap-3 py-2 text-sm">
+                    <StatusDot status={resolveCompStatus(comp.status)} />
+                    <span className="flex-1 truncate font-medium text-[var(--text-primary)]">
+                      {name}
+                    </span>
+                    <span className="text-xs text-[var(--text-muted)]">
+                      {comp.status}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-[var(--text-muted)]">No component data yet.</p>
+            )}
+            <DetailLink to="/live-monitor" label={t('Open Live Monitor')} />
+          </AccordionSection>
+        </section>
+
+        {/* 7 ─ Database ───────────────────────────────────────── */}
+        <section id="database">
+          <AccordionSection
+            icon={<Database className="h-5 w-5" />}
+            title={t('Database & connections')}
+            description={databaseSummary}
+            defaultOpen
+            badges={<StatusBadge status={dbStatus} />}
+          >
+            <DefList
+              rows={[
+                { label: t('Latency'), value: dbLatency != null ? `${Math.round(dbLatency)}ms` : '—' },
+                { label: t('Pool acquired'), value: extHealth?.database_pool ? `${extHealth.database_pool.acquired_conns} / ${extHealth.database_pool.total_conns || (extHealth.database_pool.acquired_conns + extHealth.database_pool.idle_conns)}` : '—' },
+                { label: t('Pool idle'), value: extHealth?.database_pool ? String(extHealth.database_pool.idle_conns) : '—' },
+                { label: t('Storage used'), value: backupStats?.database_size ?? '—' },
+                { label: t('Tables'), value: backupStats?.table_count != null ? String(backupStats.table_count) : '—' },
+                { label: t('Total rows'), value: totalRows > 0 ? fmtInt(totalRows) : '—' },
+              ]}
+            />
+            <DetailLink to="/db-health" label={t('Open DB Health')} />
+          </AccordionSection>
+        </section>
+
+        {/* 8 ─ Telemetry ──────────────────────────────────────── */}
+        <section id="telemetry">
+          <AccordionSection
+            icon={<Activity className="h-5 w-5" />}
+            title={t('Telemetry pipeline')}
+            description={telemetrySummary}
+            defaultOpen
+          >
+            <TelemetryPipelineCard
+              vehicles={vehicles}
+              positionCount={positionCount}
+              drivesCount={drivesCount}
+              chargingSessionsCount={backupStats?.row_counts?.charging_sessions}
+              signalLogCount={backupStats?.row_counts?.signal_log}
+              now={now}
+            />
+          </AccordionSection>
+        </section>
+
+        {/* 8b ─ Tesla auth (dedicated card) ─────────────────────── */}
+        <section id="tesla-auth" aria-label="Tesla account authentication">
+          <TeslaAuthCard
+            authenticated={auth?.authenticated}
+            expiresAt={auth?.expires_at}
+            now={now}
+          />
+        </section>
+
+        {/* 9 ─ Notifications ──────────────────────────────────── */}
+        <section id="notifications">
+          <AccordionSection
+            icon={<Bell className="h-5 w-5" />}
+            title={t('Notifications & audit')}
+            description={notificationsSummary}
+            defaultOpen
+            badges={notifStats?.failed ? <Badge variant="warning">{notifStats.failed} failed</Badge> : undefined}
+          >
+            <DefList
+              rows={[
+                { label: t('Channels'), value: notifStats ? `${notifStats.enabled_channels} of ${notifStats.total_channels} enabled` : '—' },
+                { label: t('Sent (lifetime)'), value: notifStats ? String(notifStats.total_sent) : '—' },
+                { label: t('Pending'), value: notifStats ? String(notifStats.pending) : '—' },
+                { label: t('Failed'), value: notifStats ? String(notifStats.failed) : '—' },
+              ]}
+            />
+            <DetailLink to="/notifications" label={t('Open Notifications')} />
+          </AccordionSection>
+        </section>
+
+        {/* 10 ─ Workers ───────────────────────────────────────── */}
+        <section id="workers">
+          <AccordionSection
+            icon={<Boxes className="h-5 w-5" />}
+            title={t('Background workers')}
+            description={workersSummary}
+            defaultOpen
+            badges={<StatusBadge status={workersStatus} />}
+          >
+            <BackgroundWorkersCard health={workers} />
+          </AccordionSection>
+        </section>
+
+        {/* 11 ─ Backups ───────────────────────────────────────── */}
+        <section id="backups">
+          <AccordionSection
+            icon={<HardDrive className="h-5 w-5" />}
+            title={t('Backups')}
+            description={
+              lastSuccessfulBackup?.completedAt
+                ? backupStaleDays === 0
+                  ? t('Last backup: today')
+                  : t('Last backup: {{days}}d ago', { days: backupStaleDays ?? '?' })
+                : (backupConfigs?.length ?? 0) > 0
+                  ? t('Configured · no successful run yet')
+                  : t('Not configured')
+            }
+            defaultOpen
+            badges={hasStaleBackup
+              ? <Badge variant="warning">stale</Badge>
+              : hasNoBackup
+                ? <Badge variant="warning">none</Badge>
+                : undefined}
+          >
+            <BackupActionsCard>
+              <DefList
+                rows={[
+                  { label: t('Configured schedules'), value: String(backupConfigs?.length ?? 0) },
+                  { label: t('Total runs'), value: String(backupRuns?.length ?? 0) },
+                  { label: t('Last successful'), value: lastSuccessfulBackup?.completedAt ? formatDateTime(lastSuccessfulBackup.completedAt) : '—' },
+                  { label: t('Last successful size'), value: lastSuccessfulBackup?.fileSize ? formatBytes(lastSuccessfulBackup.fileSize) : '—' },
+                  { label: t('Failures (recent)'), value: String((backupRuns ?? []).filter((r) => r.status === 'failed').length) },
+                ]}
+              />
+            </BackupActionsCard>
+          </AccordionSection>
+        </section>
+
+        {/* 12 ─ Tesla API usage ───────────────────────────────── */}
+        <section id="tesla-api">
+          <AccordionSection
+            icon={<Car className="h-5 w-5" />}
+            title={t('Tesla API usage')}
+            description={apiUsage
+              ? t('{{cost}} of {{credit}} estimated this period', {
+                cost: formatCurrency(apiUsage.estimated_cost),
+                credit: formatCurrency(apiUsage.monthly_credit),
+              })
+              : t('No data')}
+            defaultOpen
+            badges={apiOverBudget ? <Badge variant="warning">over budget</Badge> : undefined}
+          >
+            <TeslaApiUsageCard apiUsage={apiUsage} now={now} />
+          </AccordionSection>
+        </section>
+
+        {/* 13 ─ Recent errors ─────────────────────────────────── */}
+        <section id="errors">
+          <AccordionSection
+            icon={<AlertTriangle className="h-5 w-5" />}
+            title={t('Recent errors')}
+            description={errorStats
+              ? t('{{count}} since {{uptime}} ago', { count: errorStats.total_errors, uptime: errorStats.uptime })
+              : t('No data')}
+            defaultOpen
+            badges={errorStats && errorStats.total_errors > 0
+              ? <Badge variant={errorsStatus === 'healthy' ? 'neutral' : 'warning'}>{errorStats.total_errors}</Badge>
+              : <Badge variant="success">clean</Badge>}
+          >
+            {errorStats && Object.keys(errorStats.by_code).length > 0 ? (
+              <ul className="divide-y divide-white/[0.05]">
+                {Object.entries(errorStats.by_code)
+                  .sort((a, b) => b[1].count - a[1].count)
+                  .slice(0, 10)
+                  .map(([code, info]) => (
+                    <li key={code} className="flex items-start gap-3 py-2 text-sm">
+                      <span className="shrink-0 font-mono text-xs text-amber-300">{code}</span>
+                      <span className="flex-1 min-w-0 text-[var(--text-secondary)] truncate">
+                        {info.last_message || '—'}
+                      </span>
+                      <span className="shrink-0 tabular-nums text-xs text-[var(--text-muted)]">
+                        {info.count}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+                <Inbox className="h-4 w-4" />
+                <span>{t('No errors recorded recently.')}</span>
+              </div>
+            )}
+            <DetailLink to="/api-logs?level=error" label={t('Open error logs')} />
+            <FrontendErrorsCard />
+          </AccordionSection>
+        </section>
+
+        {/* 14 ─ System info ────────────────────────────────────── */}
+        <section id="system">
+          <AccordionSection
+            icon={<Package className="h-5 w-5" />}
+            title={t('System info')}
+            description={t('Version, build, runtime')}
+            defaultOpen
+          >
+            <SystemInfoRows version={version} extHealth={extHealth} />
+          </AccordionSection>
+        </section>
+
+        {/* 15 ─ 30-day uptime heatmap ─────────────────────────── */}
+        <section id="uptime">
+          <UptimeHeatmap
+            days={uptimeDays}
+            footnote={t('Today reflects the current status. Day-level historical data ships with the backend health-history endpoint in Phase 2.')}
+          />
+        </section>
+
+        {/* 16 ─ SLO tracking (Phase 2) ────────────────────────── */}
+        <section id="slo" aria-label="Personal SLO tracking">
+          <SLOTrackingCard />
+        </section>
+
+        {/* 17 ─ Scheduled maintenance (Phase 2) ───────────────── */}
+        <section id="maintenance" aria-label="Scheduled maintenance">
+          <ScheduledMaintenanceCard now={now} />
+        </section>
+
+        {/* 18 ─ Subscribe / discover channels (Phase 2) ───────── */}
+        <section id="subscribe" aria-label="Notification channels">
+          <SubscribeCard />
+        </section>
+
+        {/* 19 ─ Status API docs link (Phase 2) ────────────────── */}
+        <section id="api-docs" aria-label="Status API">
+          <div className="flex justify-center pt-1 pb-4 text-xs text-[var(--text-muted)]" data-status-print-hide>
+            <Link
+              to="/docs/status-api"
+              className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.03] px-3 py-1.5 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+            >
+              {t('Stable Status API for your own dashboards')} →
+            </Link>
+          </div>
+        </section>
       </div>
-    </GlassPanel>
-  );
+        </>
+      )}
+    </PageContainer>
+  )
 }
+
+// ── Local helper components ───────────────────────────────────────
+
+const DOT_FOR_STATUS: Record<HeroStatus, string> = {
+  healthy:     'bg-green-400',
+  degraded:    'bg-amber-400',
+  unhealthy:   'bg-red-400',
+  unknown:     'bg-zinc-400',
+  maintenance: 'bg-blue-400',
+}
+
+const TEXT_FOR_STATUS: Record<HeroStatus, string> = {
+  healthy:     'text-green-300',
+  degraded:    'text-amber-300',
+  unhealthy:   'text-red-300',
+  unknown:     'text-zinc-300',
+  maintenance: 'text-blue-300',
+}
+
+function StatusDot({ status }: { status: HeroStatus }) {
+  return <span className={cn('inline-block h-2.5 w-2.5 shrink-0 rounded-full', DOT_FOR_STATUS[status])} aria-hidden />
+}
+
+function StatusBadge({ status }: { status: HeroStatus }) {
+  const label =
+    status === 'healthy' ? 'healthy'
+    : status === 'degraded' ? 'degraded'
+    : status === 'unhealthy' ? 'down'
+    : status === 'maintenance' ? 'maintenance'
+    : 'unknown'
+  return (
+    <span className={cn('inline-flex items-center gap-1.5 rounded-full bg-white/[0.05] px-2 py-0.5 text-xs', TEXT_FOR_STATUS[status])}>
+      <StatusDot status={status} />
+      {label}
+    </span>
+  )
+}
+
+function resolveCompStatus(s: string): HeroStatus {
+  if (s === 'healthy' || s === 'ok') return 'healthy'
+  if (s === 'degraded' || s === 'warning') return 'degraded'
+  if (s === 'unhealthy' || s === 'down' || s === 'offline' || s === 'failed') return 'unhealthy'
+  return 'unknown'
+}
+
+function DetailLink({ to, label }: { to: string; label: string }) {
+  return (
+    <div className="flex justify-end pt-2">
+      <Link
+        to={to}
+        className="inline-flex items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-2 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/30 transition-colors hover:bg-cyan-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+      >
+        {label}
+      </Link>
+    </div>
+  )
+}
+
+interface DefListRow { label: string; value: ReactNode }
+function DefList({ rows }: { rows: DefListRow[] }) {
+  return (
+    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6 text-sm">
+      {rows.map((r) => (
+        <div key={r.label} className="flex items-center justify-between gap-2">
+          <dt className="text-[var(--text-secondary)]">{r.label}</dt>
+          <dd className="font-medium tabular-nums text-[var(--text-primary)]">{r.value}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+// ── Helper: system info rows ────────────────────────────────────────
+function SystemInfoRows({
+  version,
+  extHealth,
+}: {
+  version?: { app_version: string; chart_version: string; go_version: string; os: string; arch: string; uptime_seconds: number }
+  extHealth?: { system?: { goroutines: number; uptime_seconds: number; go_version: string } }
+}) {
+  if (!version) {
+    return <div className="text-sm text-[var(--text-muted)]">Loading system info…</div>
+  }
+
+  const rows: DefListRow[] = [
+    { label: 'App version', value: version.app_version },
+    { label: 'Chart version', value: version.chart_version },
+    { label: 'Go runtime', value: version.go_version },
+    { label: 'OS / arch', value: `${version.os}/${version.arch}` },
+    { label: 'Uptime', value: formatUptime(version.uptime_seconds) },
+  ]
+  if (extHealth?.system?.goroutines != null) {
+    rows.push({ label: 'Goroutines', value: fmtInt(extHealth.system.goroutines) })
+  }
+
+  return <DefList rows={rows} />
+}
+
+// Reserved for the Phase-2 unified Tesla auth banner.
+void Zap

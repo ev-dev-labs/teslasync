@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
@@ -8,10 +10,11 @@ import { KVList, StatusBadge } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
 import { VehicleTwin, VehiclePaintPicker } from '@/components/vehicles';
-import { Select } from '@/components/ui';
+import { VehicleSelect } from '@/components/forms';
 import { buildTwinState, parseWindowState } from '@/lib/vehicleState';
+import { deriveVehicleStatus } from '@/api/types';
+import type { VehicleStatus } from '@/api/types';
 import { Info, Car } from 'lucide-react';
-import { useState } from 'react';
 
 const REFRESH_INTERVAL = 5_000;
 
@@ -26,11 +29,11 @@ function windowLabel(state: ReturnType<typeof parseWindowState>): string {
 
 export default function DigitalTwinPage() {
   const { t } = useTranslation();
+  const { formatTime } = useDateFormat();
   usePageTitle(t('digitalTwin.title', 'Digital Twin'));
 
-  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
-  const [selectedIdx, setSelectedIdx] = useState(0);
-  const vehicle = (vehicles ?? [])[selectedIdx];
+  const { vehicle } = useSelectedVehicle();
+  const { isLoading: vehiclesLoading } = useVehicles();
   const vehicleId = vehicle?.id ?? 0;
 
   const { data: securityData } = useSecurityLatest(vehicleId, REFRESH_INTERVAL);
@@ -43,13 +46,20 @@ export default function DigitalTwinPage() {
     [securityData, vehicleState, chargingData],
   );
 
-  const vehicleOptions = useMemo(
-    () => (vehicles ?? []).map((v, i) => ({
-      value: String(i),
-      label: v.display_name || v.vin || `Vehicle ${v.id}`,
-    })),
-    [vehicles],
-  );
+  // Derive a single source-of-truth status for the badge. The previous
+  // logic only recognized the literal strings 'online' / 'asleep' from
+  // /vehicles/{id}/state and silently fell through to 'offline' for
+  // everything else — including the very common cases where the vehicle
+  // was actually driving or charging, or where the state endpoint had
+  // not yet hydrated but security/charging streams were already flowing.
+  const badgeStatus = useMemo<VehicleStatus>(() => {
+    if (twinState.isCharging) return 'charging';
+    if (twinState.isDriving) return 'driving';
+    const fromState = deriveVehicleStatus(vehicleState);
+    if (fromState !== 'offline') return fromState;
+    if (vehicleStateData?.live || securityData || chargingData) return 'online';
+    return 'offline';
+  }, [twinState.isCharging, twinState.isDriving, vehicleState, vehicleStateData?.live, securityData, chargingData]);
 
   const doorItems = useMemo(() => [
     { label: t('digitalTwin.doorDriverFront', 'Driver Front'), value: twinState.doors.driverFront === null ? '—' : twinState.doors.driverFront ? t('common.open', 'Open') : t('common.closed', 'Closed') },
@@ -83,20 +93,8 @@ export default function DigitalTwinPage() {
       title={t('digitalTwin.title', 'Digital Twin')}
       subtitle={t('digitalTwin.subtitle', 'Real-time vehicle physical state')}
       loading={vehiclesLoading}
+      actions={<VehicleSelect />}
     >
-      {/* Vehicle selector (when multiple vehicles) */}
-      {vehicleOptions.length > 1 && (
-        <FadeIn>
-          <div className="mb-4 max-w-xs">
-            <Select
-              options={vehicleOptions}
-              value={String(selectedIdx)}
-              onChange={(val) => setSelectedIdx(Number(val))}
-            />
-          </div>
-        </FadeIn>
-      )}
-
       {!vehicle && !vehiclesLoading ? (
         <GlassPanel className="p-8">
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Car className="h-8 w-8" />} message={t('digitalTwin.noVehicles', 'No vehicles found. Add a vehicle to see its digital twin.')} />
@@ -124,7 +122,7 @@ export default function DigitalTwinPage() {
               ) : null}
               {twinState.lastUpdated && (
                 <p className="text-center text-xs text-[var(--text-muted)] mt-4">
-                  {t('digitalTwin.lastUpdated', 'Last updated')}: {new Date(twinState.lastUpdated).toLocaleTimeString()}
+                  {t('digitalTwin.lastUpdated', 'Last updated')}: {formatTime(twinState.lastUpdated)}
                 </p>
               )}
             </GlassPanel>
@@ -169,9 +167,7 @@ export default function DigitalTwinPage() {
                 <KVList items={securityItems} columns={2} />
                 {vehicle && (
                   <div className="mt-3 pt-3 border-t border-[var(--border-subtle)]">
-                    <StatusBadge
-                      status={vehicleState?.is_charging ? 'charging' : vehicleState?.state === 'online' ? 'online' : vehicleState?.state === 'asleep' ? 'asleep' : 'offline'}
-                    />
+                    <StatusBadge status={badgeStatus} />
                   </div>
                 )}
               </GlassPanel>

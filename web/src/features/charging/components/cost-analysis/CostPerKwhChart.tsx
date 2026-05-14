@@ -7,7 +7,7 @@ import {
   ResponsiveContainer, AREA_DEFAULTS,
 } from '@/components/charts';
 import { useChartPalette } from '@/hooks/useChartPalette';
-import { fmtNumber } from '@/lib/numberFormat';
+import { useFormatting } from '@/hooks/useFormatting';
 
 interface CostPerKwhChartProps {
   data: { date: string; costPerKwh: number }[];
@@ -16,6 +16,7 @@ interface CostPerKwhChartProps {
 export function CostPerKwhChart({ data }: CostPerKwhChartProps) {
   const { t } = useTranslation();
   const palette = useChartPalette();
+  const { formatCurrency } = useFormatting();
 
   return (
     <GlassPanel className="p-4">
@@ -30,7 +31,7 @@ export function CostPerKwhChart({ data }: CostPerKwhChartProps) {
             <XAxis dataKey="date" {...axisTickSm} />
             <YAxis
               {...axisTickSm}
-              tickFormatter={(v: number) => `$${fmtNumber(v, 2)}`}
+              tickFormatter={(v: number) => formatCurrency(v, 2)}
             />
             <Tooltip content={<ChartTooltip />} />
             <Line

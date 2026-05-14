@@ -131,6 +131,24 @@ export const alertRuleSchema = z
     metric_window: z.string().trim().max(60).optional().nullable(),
     metric_threshold: z.number().finite().optional().nullable(),
     metric_op: z.enum(COMPUTED_METRIC_OPS).optional().nullable(),
+    /**
+     * Phase-50 / ADR-014 — per-rule notification body template.
+     * `null` (or omission) means "use the op-aware default rendered
+     * by internal/alertmsg". A whitespace-only string is normalised
+     * to null by the backend. Max 1024 chars; transports cap it
+     * lower in practice.
+     */
+    msg_template: z
+      .string()
+      .max(1024, 'Message template must be 1024 characters or fewer')
+      .optional()
+      .nullable(),
+    /**
+     * Phase-50 / ADR-014 — when FALSE, transports that render a
+     * separate title field (Discord/Slack/Telegram/ntfy/webhook)
+     * deliver body-only notifications. Defaults to TRUE.
+     */
+    include_title: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     // Phase-49 / Slice 0009 — escalation pair invariants. Run first

@@ -13,7 +13,7 @@ import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatRelative } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import type { VehicleTelemetry } from '@/types/telemetry';
 
@@ -37,7 +37,10 @@ function formatUptime(seconds: number): string {
 /*  Vehicle table columns                                              */
 /* ------------------------------------------------------------------ */
 
-function buildVehicleColumns(t: (key: string, fallback: string) => string): Column<VehicleTelemetry>[] {
+function buildVehicleColumns(
+  t: (key: string, fallback: string) => string,
+  formatRelative: (value: string | Date | null | undefined) => string,
+): Column<VehicleTelemetry>[] {
   return [
     {
       key: 'vin',
@@ -93,6 +96,7 @@ function buildVehicleColumns(t: (key: string, fallback: string) => string): Colu
 
 export default function MQTTInspectorPage() {
   const { t } = useTranslation();
+  const { formatTime, formatRelative } = useDateFormat();
   usePageTitle(t('mqtt.title', 'MQTT Inspector'));
 
   const { data: status, isLoading, error } = useMQTTStatus();
@@ -111,10 +115,10 @@ export default function MQTTInspectorPage() {
     const delta = prevTotalRef.current !== null ? totalSignals - prevTotalRef.current : 0;
     prevTotalRef.current = totalSignals;
     if (delta >= 0) {
-      const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const now = formatTime(new Date())
       setThroughputHistory((prev) => [...prev, { time: now, signals: Math.max(delta, 0) }].slice(-60));
     }
-  }, [totalSignals]);
+  }, [totalSignals, formatTime]);
 
   const staleVehicles = useMemo(
     () => vehicles.filter((v) => {
@@ -124,14 +128,14 @@ export default function MQTTInspectorPage() {
     [vehicles],
   );
 
-  const vehicleColumns = useMemo(() => buildVehicleColumns(t), [t]);
+  const vehicleColumns = useMemo(() => buildVehicleColumns(t, formatRelative), [t, formatRelative]);
 
   return (
     <PageContainer
       title={t('mqtt.title', 'MQTT Inspector')}
       subtitle={t('mqtt.subtitle', 'MQTT connection status and streaming telemetry')}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <span className="text-xs text-[var(--text-muted)]">
             <RefreshCw className="inline h-3 w-3 mr-1" />
             {t('mqtt.refreshInterval', 'Refreshes every 5s')}

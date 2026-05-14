@@ -182,5 +182,43 @@
       "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ span.kind = \"client\" && span.http.url =~ \".*tesla.*\" && span.duration > 2s }", "limit": 30, "refId": "A" }],
       "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }
     }
+  ],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync - Critical Flow Latency (Phase-44 instrumented)",
+      "type": "link",
+      "url": "/d/teslasync-infra-critical-flows"
+    },
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "⚡ TeslaSync",
+      "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync - Fleet Telemetry Server",
+      "type": "link",
+      "url": "/d/teslasync-infra-fleet-telemetry"
+    }
   ]
 }

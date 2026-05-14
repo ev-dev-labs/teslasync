@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useFormatting } from '@/hooks/useFormatting';
 import { Zap } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import {
@@ -14,6 +15,7 @@ interface ChargerTypeBreakdownProps {
 
 export function ChargerTypeBreakdown({ data, totalCost }: ChargerTypeBreakdownProps) {
   const { t } = useTranslation();
+  const { formatCurrency } = useFormatting();
 
   return (
     <GlassPanel className="p-4">
@@ -69,7 +71,7 @@ export function ChargerTypeBreakdown({ data, totalCost }: ChargerTypeBreakdownPr
                       {entry.name}
                     </span>
                     <span className="text-[var(--text-muted)]">
-                      ${fmtNumber(entry.cost, 2)} · {fmtInt(entry.sessions)}{' '}
+                      {formatCurrency(entry.cost, 2)} · {fmtInt(entry.sessions)}{' '}
                       {t('costAnalysis.chargerType.sessions', 'sessions')}
                     </span>
                   </div>
@@ -88,7 +90,7 @@ export function ChargerTypeBreakdown({ data, totalCost }: ChargerTypeBreakdownPr
                     </span>
                     <span>
                       {entry.energy > 0
-                        ? `$${fmtNumber(entry.cost / entry.energy, 3)}/kWh`
+                        ? `${formatCurrency(entry.cost / entry.energy, 3)}/kWh`
                         : '—'}
                     </span>
                     <span>{fmtNumber(pct, 1)}%</span>

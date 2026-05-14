@@ -959,9 +959,9 @@
       "tags": [],
       "targetBlank": false,
       "title": "◀ Prev",
-      "tooltip": "TeslaSync - Sessions & Business Metrics",
+      "tooltip": "TeslaSync - SLO / Error Budget Board",
       "type": "link",
-      "url": "/d/teslasync-infra-sessions"
+      "url": "/d/teslasync-infra-slo-burn"
     },
     {
       "asDropdown": true,

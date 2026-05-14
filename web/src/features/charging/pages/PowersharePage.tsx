@@ -1,17 +1,17 @@
-import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Zap, Power, Clock, Home, AlertCircle, Info } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
-import { GlassPanel, Badge, Select } from '@/components/ui';
+import { GlassPanel, Badge } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { EmptyState } from '@/components/feedback';
+import { VehicleSelect } from '@/components/forms';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { fmtNumber } from '@/lib/numberFormat';
 import { latestNumeric, latestText } from '@/lib/signalObservation';
 
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSignalObservations } from '@/api/hooks/useTelemetry';
 import type { BadgeVariant } from '@/types/fsm';
 
@@ -45,20 +45,8 @@ export default function PowersharePage() {
   const { t } = useTranslation();
   usePageTitle(t('powershare.title', 'Powershare'));
 
-  const { data: vehicles } = useVehicles();
-  const [vehicleIdStr, setVehicleIdStr] = useState<string>('');
-
-  const vehicleOptions = useMemo(
-    () =>
-      (vehicles ?? []).map((v) => ({
-        value: String(v.id),
-        label: v.display_name ?? `Vehicle ${v.id}`,
-      })),
-    [vehicles],
-  );
-
-  const effectiveId = vehicleIdStr || vehicleOptions[0]?.value || '';
-  const vehicleId = effectiveId ? Number(effectiveId) : undefined;
+  const { vehicleId: selectedId } = useSelectedVehicle();
+  const vehicleId = selectedId ?? undefined;
 
   const { data: statusObs } = useSignalObservations(vehicleId, {
     signal_name: 'PowershareStatus',
@@ -101,16 +89,7 @@ export default function PowersharePage() {
         'powershare.subtitle',
         'Monitor your vehicle’s bidirectional power sharing — status, output, remaining runtime, and stop conditions.',
       )}
-      actions={
-        vehicleOptions.length > 1 ? (
-          <Select
-            value={effectiveId}
-            onChange={(e) => setVehicleIdStr(e.target.value)}
-            options={vehicleOptions}
-            aria-label={t('powershare.selectVehicle', 'Select vehicle')}
-          />
-        ) : null
-      }
+      actions={<VehicleSelect />}
     >
       {/* Status row */}
       <FadeIn>

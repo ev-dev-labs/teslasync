@@ -13,8 +13,9 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
+import { SearchInput, FilterBar, ActiveFilterChips, RangePicker, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlEnum, useUrlString } from '@/hooks/useUrlState';
 import {
   useTeslaChargingHistory,
@@ -25,8 +26,11 @@ import {
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
+import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { formatCurrencyValue, currencyCodeFromSymbol } from '@/lib/currencyFormat';
 import { cn } from '@/lib/cn';
 
 /** Compute duration in minutes between two ISO timestamps */
@@ -63,6 +67,9 @@ const gridCols = { default: 1, sm: 2, lg: 4 } as const;
 export default function TeslaChargingHistoryPage() {
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
+  const { settings, locale } = useSettings();
+  const { formatCurrency } = useFormatting();
+  const userCurrency = currencyCodeFromSymbol(settings.currency_symbol);
   usePageTitle(t('tesla_charging.title', 'Tesla Charging History'));
 
   const { data: vehicles } = useVehicles();
@@ -71,7 +78,22 @@ export default function TeslaChargingHistoryPage() {
   const { data: response, isLoading, error } = useTeslaChargingHistory(selectedVin || undefined);
   const refreshMutation = useRefreshTeslaChargingHistory();
 
-  const entries = response?.entries ?? [];
+  const allEntries = response?.entries ?? [];
+  // Range filter (client-side) on charge_start_datetime.
+  const { start, end, setRange } = useRangeState({
+    persistKey: 'tesla-charging-history.range',
+    defaultPresetId: 'all',
+  });
+  const entries = useMemo(() => {
+    if (!allEntries.length) return allEntries;
+    const startMs = new Date(`${start}T00:00:00`).getTime();
+    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    return allEntries.filter((e) => {
+      if (!e.charge_start_datetime) return false;
+      const t = new Date(e.charge_start_datetime).getTime();
+      return t >= startMs && t <= endMs;
+    });
+  }, [allEntries, start, end]);
   const summary = response?.summary ?? { total_sessions: 0, total_wh: null, total_spend: null, avg_cost_per_kwh: null };
 
   const vehicleOptions = useMemo(() => {
@@ -137,7 +159,7 @@ export default function TeslaChargingHistoryPage() {
       render: (row) => (
         <span className="text-sm font-medium text-emerald-400">
           {row.total_due != null
-            ? `${row.currency_code ?? '$'}${fmtNumber(row.total_due, 2)}`
+            ? formatCurrencyValue(row.total_due, row.currency_code ?? userCurrency, locale, 2, { useGrouping: true })
             : '—'}
         </span>
       ),
@@ -270,35 +292,42 @@ export default function TeslaChargingHistoryPage() {
       loading={isLoading}
       error={error as Error | null}
       copyLink
+      actions={
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <Select
+            options={vehicleOptions}
+            value={selectedVin}
+            onChange={(e) => setSelectedVin(e.target.value)}
+            aria-label={t('tesla_charging.selectVehicle', 'Select vehicle')}
+            className="w-44"
+          />
+          <RangePicker
+            value={{ start, end }}
+            onChange={setRange}
+            align="end"
+            triggerTestId="tesla-charging-history-range"
+          />
+          <Button
+            onClick={handleRefresh}
+            disabled={refreshMutation.isPending}
+            variant="primary"
+            icon={<RefreshCw className={cn('h-4 w-4', refreshMutation.isPending && 'animate-spin')} />}
+          >
+            {refreshMutation.isPending
+              ? t('tesla_charging.refreshing', 'Syncing...')
+              : t('tesla_charging.refresh', 'Refresh from Tesla')}
+          </Button>
+        </div>
+      }
     >
-      {/* Controls bar */}
-      <FadeIn>
-        <GlassPanel className="p-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <Select
-              options={vehicleOptions}
-              value={selectedVin}
-              onChange={(e) => setSelectedVin(e.target.value)}
-              className="w-56"
-            />
-            <Button
-              onClick={handleRefresh}
-              disabled={refreshMutation.isPending}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className={cn('h-4 w-4', refreshMutation.isPending && 'animate-spin')} />
-              {refreshMutation.isPending
-                ? t('tesla_charging.refreshing', 'Syncing...')
-                : t('tesla_charging.refresh', 'Refresh from Tesla')}
-            </Button>
-            {response && entries.length > 0 && (
-              <span className="ml-auto text-xs text-[var(--text-muted)]">
-                {t('tesla_charging.lastSync', 'Last synced')}: {formatDateTime(entries[0]?.fetched_at)}
-              </span>
-            )}
-          </div>
-        </GlassPanel>
-      </FadeIn>
+      {/* Last-sync line — shows when data is present so users know freshness */}
+      {response && entries.length > 0 && entries[0]?.fetched_at && (
+        <FadeIn>
+          <p className="text-xs text-[var(--text-muted)]">
+            {t('tesla_charging.lastSync', 'Last synced')}: {formatDateTime(entries[0].fetched_at)}
+          </p>
+        </FadeIn>
+      )}
 
       {/* Summary stats */}
       <FadeIn delay={0.05}>
@@ -323,7 +352,7 @@ export default function TeslaChargingHistoryPage() {
             <StaggerItem>
               <StatCard
                 label={t('tesla_charging.stats.spend', 'Total Spend')}
-                value={summary.total_spend != null ? `$${fmtNumber(summary.total_spend, 2)}` : '—'}
+                value={summary.total_spend != null ? formatCurrency(summary.total_spend, 2) : '—'}
                 icon={<DollarSign className="h-5 w-5 text-emerald-400" />}
                 loading={isLoading}
               />
@@ -331,7 +360,7 @@ export default function TeslaChargingHistoryPage() {
             <StaggerItem>
               <StatCard
                 label={t('tesla_charging.stats.avgCost', 'Avg Cost/kWh')}
-                value={summary.avg_cost_per_kwh != null ? `$${fmtNumber(summary.avg_cost_per_kwh, 3)}` : '—'}
+                value={summary.avg_cost_per_kwh != null ? formatCurrency(summary.avg_cost_per_kwh, 3) : '—'}
                 icon={<TrendingUp className="h-5 w-5 text-purple-400" />}
                 loading={isLoading}
               />
@@ -360,7 +389,7 @@ export default function TeslaChargingHistoryPage() {
                 </defs>
                 {chartGrid}
                 <XAxis dataKey="month" tick={axisTickSm} />
-                <YAxis tick={axisTickSm} tickFormatter={(v: number) => `$${v}`} />
+                <YAxis tick={axisTickSm} tickFormatter={(v: number) => formatCurrency(v, 0)} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="total" fill="url(#spendGrad)" radius={[4, 4, 0, 0]} />
               </BarChart>

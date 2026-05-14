@@ -74,10 +74,9 @@ export function GeneralSettings() {
   const settingsMut = useSaveSettings()
 
   // Persist form drafts to localStorage so a long edit session survives a tab
-  // close, an SW reload, or an auth redirect. The optional google_maps_api_key
-  // field is a client-side public-tier integration key (comparable to the theme
-  // setting) — not a server credential. If a true secret is ever added to this
-  // form, switch that field to a separate non-persisted useState.
+  // close, an SW reload, or an auth redirect. None of the persisted fields are
+  // server credentials — keep it that way; if a true secret is ever added to
+  // this form, switch that field to a separate non-persisted useState.
   const {
     value: form,
     setValue: setForm,
@@ -388,21 +387,6 @@ export function GeneralSettings() {
                   className="w-full px-3 py-2.5 text-sm"
                   placeholder={t('app.mpgPlaceholder', 'Average MPG of equivalent gas car')}
                 />
-              </SettingField>
-
-              <SettingField label={t('app.googleMapsApiKey', 'Google Maps API Key')}>
-                <Input
-                  type="password"
-                  value={form.google_maps_api_key || ''}
-                  onChange={e => setForm({ ...form, google_maps_api_key: e.target.value })}
-                  className="w-full px-3 py-2.5 text-sm"
-                  placeholder={t('app.googleMapsPlaceholder', 'Enter your Google Maps API key')}
-                />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                  {t('app.googleMapsHint', 'Optional — enables satellite views, Places autocomplete, and enhanced geocoding.')}{' '}
-                  {t('app.getKeyAt', 'Get a key at')}{' '}
-                  <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="text-cyan-300 hover:underline">console.cloud.google.com</a>
-                </p>
               </SettingField>
             </div>
           </>

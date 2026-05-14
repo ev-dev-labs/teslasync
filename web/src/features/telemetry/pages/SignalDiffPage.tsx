@@ -1,10 +1,19 @@
+/**
+ * SignalDiffPage — compare signal values between two snapshots in time.
+ *
+ * Refactored to compose the shared `SignalCompareControls` +
+ * `SignalDiffTable`. The category-prefix list and date-presets now live
+ * in `SignalCompareControls.tsx` so this page and the unified workspace
+ * stay in lockstep.
+ */
+
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { GitCompare, Bell, Pin, PinOff } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel, Button, HelpTooltip, Input, Select, CopyButton, Badge } from '@/components/ui';
+import { GlassPanel, Select, CopyButton, Badge } from '@/components/ui';
 import { StatCard, BulkActionsToolbar, SavedViewMenu } from '@/components/data-display';
 import type { BulkAction } from '@/components/data-display/BulkActionsToolbar';
 import { Skeleton } from '@/components/feedback';
@@ -20,149 +29,14 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { downloadCSV, objectsToCSV } from '@/lib/csvExport';
-import { cn } from '@/lib/cn';
+
 import { SignalDiffTable } from '../components/SignalDiffTable';
-
-/* ────────────────────────────────────────────────────────────── */
-/*  Helpers — local datetime <-> ISO conversions                   */
-/* ────────────────────────────────────────────────────────────── */
-
-function toLocalDatetimeInput(date: Date): string {
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function isoOrEmpty(localValue: string): string {
-  if (!localValue) return '';
-  const d = new Date(localValue);
-  return Number.isNaN(d.getTime()) ? '' : d.toISOString();
-}
-
-/* ────────────────────────────────────────────────────────────── */
-/*  Category chips — derived from signal-name prefixes             */
-/* ────────────────────────────────────────────────────────────── */
-
-const CATEGORY_PREFIXES: Array<{ id: string; labelKey: string; defaultLabel: string; matches: (name: string) => boolean }> = [
-  {
-    id: 'battery',
-    labelKey: 'signalDiff.cat.battery',
-    defaultLabel: 'Battery',
-    matches: (n) => /battery|charge|soc|range|kwh/i.test(n),
-  },
-  {
-    id: 'drive',
-    labelKey: 'signalDiff.cat.drive',
-    defaultLabel: 'Drive',
-    matches: (n) => /speed|odometer|gear|drive|brake|throttle|steering/i.test(n),
-  },
-  {
-    id: 'climate',
-    labelKey: 'signalDiff.cat.climate',
-    defaultLabel: 'Climate',
-    matches: (n) => /climate|hvac|cabin|seat|temp/i.test(n),
-  },
-  {
-    id: 'security',
-    labelKey: 'signalDiff.cat.security',
-    defaultLabel: 'Security',
-    matches: (n) => /lock|sentry|alarm|valet|guard/i.test(n),
-  },
-  {
-    id: 'motor',
-    labelKey: 'signalDiff.cat.motor',
-    defaultLabel: 'Motor',
-    matches: (n) => /motor|inverter|torque|rpm/i.test(n),
-  },
-  {
-    id: 'tire',
-    labelKey: 'signalDiff.cat.tire',
-    defaultLabel: 'Tire',
-    matches: (n) => /tpms|tire|pressure/i.test(n),
-  },
-  {
-    id: 'media',
-    labelKey: 'signalDiff.cat.media',
-    defaultLabel: 'Media',
-    matches: (n) => /media|audio|volume|playback/i.test(n),
-  },
-  {
-    id: 'safety',
-    labelKey: 'signalDiff.cat.safety',
-    defaultLabel: 'Safety',
-    matches: (n) => /airbag|seatbelt|fcw|aeb|safety/i.test(n),
-  },
-];
-
-/* ────────────────────────────────────────────────────────────── */
-/*  Date presets                                                   */
-/* ────────────────────────────────────────────────────────────── */
-
-type PresetId =
-  | 'now-vs-1h'
-  | 'now-vs-1d'
-  | 'last-drive'
-  | 'before-after-charge'
-  | 'today-vs-yesterday';
-
-interface DatePreset {
-  id: PresetId;
-  labelKey: string;
-  defaultLabel: string;
-  compute: () => { atA: Date; atB: Date };
-}
-
-const PRESETS: DatePreset[] = [
-  {
-    id: 'now-vs-1h',
-    labelKey: 'signalDiff.preset.nowVs1h',
-    defaultLabel: 'Now vs 1h ago',
-    compute: () => {
-      const now = new Date();
-      return { atA: new Date(now.getTime() - 3600 * 1000), atB: now };
-    },
-  },
-  {
-    id: 'now-vs-1d',
-    labelKey: 'signalDiff.preset.nowVs1d',
-    defaultLabel: 'Now vs 1 day ago',
-    compute: () => {
-      const now = new Date();
-      return { atA: new Date(now.getTime() - 86400 * 1000), atB: now };
-    },
-  },
-  {
-    id: 'before-after-charge',
-    labelKey: 'signalDiff.preset.beforeAfterCharge',
-    defaultLabel: 'Before vs after last charge',
-    compute: () => {
-      const now = new Date();
-      // Best-effort approximation; the page will hint users to pick exact times when needed.
-      return { atA: new Date(now.getTime() - 4 * 3600 * 1000), atB: now };
-    },
-  },
-  {
-    id: 'last-drive',
-    labelKey: 'signalDiff.preset.lastDrive',
-    defaultLabel: 'Last drive start vs end',
-    compute: () => {
-      const now = new Date();
-      return { atA: new Date(now.getTime() - 90 * 60 * 1000), atB: new Date(now.getTime() - 5 * 60 * 1000) };
-    },
-  },
-  {
-    id: 'today-vs-yesterday',
-    labelKey: 'signalDiff.preset.todayVsYesterday',
-    defaultLabel: 'Today vs yesterday (same time)',
-    compute: () => {
-      const now = new Date();
-      return { atA: new Date(now.getTime() - 86400 * 1000), atB: now };
-    },
-  },
-];
-
-/* ────────────────────────────────────────────────────────────── */
-/*  Page                                                           */
-/* ────────────────────────────────────────────────────────────── */
+import {
+  SignalCompareControls,
+  CATEGORY_PREFIXES,
+  isoOrEmpty,
+  toLocalDatetimeInput,
+} from '../components/SignalCompareControls';
 
 export default function SignalDiffPage() {
   const { t } = useTranslation();
@@ -170,20 +44,19 @@ export default function SignalDiffPage() {
   usePageTitle(t('signalDiff.title', 'Signal Diff'));
   const { currentQuery, apply } = useSavedViewUrl();
 
-  /* ─── Vehicle picker ─── */
+  // Vehicle picker — kept page-local (not the global VehicleSelect) so
+  // saved views can pin to a specific car independent of global selection.
   const { data: vehicles } = useVehicles();
   const [vehicleIdParam, setVehicleIdParam] = useUrlNumber('vehicle', 0);
   const vehicleId = vehicleIdParam || vehicles?.[0]?.id || 0;
 
   useEffect(() => {
-    // Once the vehicles list arrives, ensure the URL reflects the resolved
-    // default vehicle so saved views can pin to a specific car.
     if (!vehicleIdParam && vehicles && vehicles.length > 0) {
       setVehicleIdParam(vehicles[0].id);
     }
   }, [vehicleIdParam, vehicles, setVehicleIdParam]);
 
-  /* ─── Window inputs ─── */
+  // Window inputs (URL-synced)
   const defaultAtA = useMemo(
     () => toLocalDatetimeInput(new Date(Date.now() - 3600 * 1000)),
     [],
@@ -192,36 +65,19 @@ export default function SignalDiffPage() {
   const [atA, setAtA] = useUrlString('a', defaultAtA);
   const [atB, setAtB] = useUrlString('b', defaultAtB);
 
-  const applyPreset = useCallback(
-    (id: PresetId) => {
-      const preset = PRESETS.find((p) => p.id === id);
-      if (!preset) return;
-      const { atA: a, atB: b } = preset.compute();
-      setAtA(toLocalDatetimeInput(a));
-      setAtB(toLocalDatetimeInput(b));
-    },
-    [setAtA, setAtB],
-  );
-
-  /* ─── Filters ─── */
+  // Filters
   const [signalFilter, setSignalFilter] = useUrlString('q', '');
   const [activeCategoryRaw, setActiveCategoryRaw] = useUrlString('cat', '');
   const activeCategory = activeCategoryRaw || null;
   const setActiveCategory = useCallback(
-    (next: string | null | ((prev: string | null) => string | null)) => {
-      if (typeof next === 'function') {
-        setActiveCategoryRaw((prev) => next(prev || null) ?? '');
-      } else {
-        setActiveCategoryRaw(next ?? '');
-      }
-    },
+    (next: string | null) => setActiveCategoryRaw(next ?? ''),
     [setActiveCategoryRaw],
   );
 
-  /* ─── Selection state ─── */
+  // Selection state
   const [selectedSignals, setSelectedSignals] = useState<string[]>([]);
 
-  /* ─── Pinned-signal state via pinned_items (item_type='widget') ─── */
+  // Pinned-signal state via pinned_items (item_type='widget')
   const pinContext = `signal-diff:vehicle:${vehicleId}`;
   const { data: pinnedItems = [] } = usePinned('widget', pinContext);
   const pinnedSignals = useMemo(() => {
@@ -235,14 +91,14 @@ export default function SignalDiffPage() {
   }, [pinnedItems]);
   const togglePin = useTogglePin('widget');
 
-  /* ─── Available signals catalog (for the filter chips) ─── */
+  // Available signals for the diff fetch
   const { data: availableSignals } = useSignals(vehicleId);
-  const signalsCsv = useMemo(() => {
-    if (!availableSignals || availableSignals.length === 0) return '';
-    return availableSignals.join(',');
-  }, [availableSignals]);
+  const signalsCsv = useMemo(
+    () => (availableSignals && availableSignals.length > 0 ? availableSignals.join(',') : ''),
+    [availableSignals],
+  );
 
-  /* ─── Server-side diff hook ─── */
+  // Server-side diff
   const atAIso = isoOrEmpty(atA);
   const atBIso = isoOrEmpty(atB);
   const { data: diffResp, isLoading, error } = useSignalDiffServer(
@@ -253,7 +109,6 @@ export default function SignalDiffPage() {
     { enabled: vehicleId > 0 && Boolean(atAIso) && Boolean(atBIso) },
   );
 
-  /* ─── Filtered rows ─── */
   const allRows: SignalDiffRow[] = diffResp?.data ?? [];
   const filteredRows = useMemo(() => {
     let rows = allRows;
@@ -267,10 +122,9 @@ export default function SignalDiffPage() {
     }
     return rows;
   }, [allRows, signalFilter, activeCategory]);
-
   const filterActive = signalFilter.trim().length > 0 || activeCategory != null;
 
-  /* ─── Bulk actions ─── */
+  // Bulk actions
   const bulkActions: BulkAction[] = useMemo(
     () => [
       {
@@ -281,11 +135,7 @@ export default function SignalDiffPage() {
           for (const id of ids) {
             const name = String(id);
             if (pinnedSignals.has(name)) continue;
-            await togglePin.mutateAsync({
-              itemId: `signal:${name}`,
-              context: pinContext,
-              pin: true,
-            });
+            await togglePin.mutateAsync({ itemId: `signal:${name}`, context: pinContext, pin: true });
           }
         },
       },
@@ -297,11 +147,7 @@ export default function SignalDiffPage() {
           for (const id of ids) {
             const name = String(id);
             if (!pinnedSignals.has(name)) continue;
-            await togglePin.mutateAsync({
-              itemId: `signal:${name}`,
-              context: pinContext,
-              pin: false,
-            });
+            await togglePin.mutateAsync({ itemId: `signal:${name}`, context: pinContext, pin: false });
           }
         },
       },
@@ -336,13 +182,12 @@ export default function SignalDiffPage() {
     [filteredRows, navigate, pinContext, pinnedSignals, togglePin, vehicleId, t],
   );
 
-  /* ─── Permalink/copy URL ─── */
+  // Permalink
   const permalinkUrl = useMemo(() => {
     if (typeof window === 'undefined') return '';
     return `${window.location.origin}${window.location.pathname}?${currentQuery}`;
   }, [currentQuery]);
 
-  /* ─── Vehicle options ─── */
   const vehicleOptions = useMemo(
     () => (vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin })),
     [vehicles],
@@ -353,132 +198,51 @@ export default function SignalDiffPage() {
       title={t('signalDiff.title', 'Signal Diff')}
       subtitle={t('signalDiff.subtitle', 'Compare signal values between two snapshots in time')}
       actions={
-        <div className="flex items-center gap-2">
-          <SavedViewMenu
-            route="/telemetry/signal-diff"
-            currentQuery={currentQuery}
-            onApply={apply}
-          />
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <SavedViewMenu route="/telemetry/signal-diff" currentQuery={currentQuery} onApply={apply} />
           {permalinkUrl ? (
             <CopyButton text={permalinkUrl} label={t('signalDiff.share', 'Share')} size="sm" />
           ) : null}
         </div>
       }
     >
-      {/* ─── Inputs ─── */}
-      <FadeIn>
-        <GlassPanel className="p-4 sm:p-5 space-y-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div>
-              <span className="mb-1.5 block text-xs text-[var(--text-muted)]">
-                {t('signalDiff.vehicle', 'Vehicle')}
-              </span>
+      <SignalCompareControls
+        atA={atA}
+        atB={atB}
+        onChangeA={setAtA}
+        onChangeB={setAtB}
+        search={signalFilter}
+        onSearchChange={setSignalFilter}
+        category={activeCategory}
+        onCategoryChange={setActiveCategory}
+        topSlot={
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 md:items-end">
+            <label className="space-y-1">
+              <span className="block text-xs text-[var(--text-muted)]">{t('signalDiff.vehicle', 'Vehicle')}</span>
               <Select
                 value={String(vehicleId || '')}
                 onChange={(e) => setVehicleIdParam(Number(e.target.value))}
                 options={vehicleOptions}
               />
-            </div>
-            <div>
-              <span className="mb-1.5 flex items-center gap-1 text-xs text-cyan-300">
-                {t('signalDiff.windowA', 'Window A')}
-                <HelpTooltip
-                  i18nKey="help.signal.snapshot"
-                  defaultValue="A snapshot is a point-in-time view of every signal value at a single timestamp. Falls back to signal_log within the last 30 days when the live layer doesn't have it."
-                  ariaLabel={t('help.signal.snapshot.aria', { defaultValue: 'More info about signal snapshots' })}
-                />
-              </span>
-              <Input type="datetime-local" value={atA} onChange={(e) => setAtA(e.target.value)} />
-            </div>
-            <div>
-              <span className="mb-1.5 flex items-center gap-1 text-xs text-amber-300">
-                {t('signalDiff.windowB', 'Window B')}
-                <HelpTooltip
-                  i18nKey="help.signal.diff"
-                  defaultValue="Server-side comparison between two snapshots. Unchanged signals are omitted from the result to reduce noise."
-                  ariaLabel={t('help.signal.diff.aria', { defaultValue: 'More info about signal diffs' })}
-                />
-              </span>
-              <Input type="datetime-local" value={atB} onChange={(e) => setAtB(e.target.value)} />
-            </div>
+            </label>
           </div>
+        }
+      />
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-[var(--text-muted)]">
-              {t('signalDiff.presetsLabel', 'Quick presets:')}
-            </span>
-            {PRESETS.map((p) => (
-              <Button key={p.id} variant="secondary" size="sm" onClick={() => applyPreset(p.id)}>
-                {t(p.labelKey, p.defaultLabel)}
-              </Button>
-            ))}
-          </div>
-
-          <div className="flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-1 items-center gap-2">
-              <Input
-                type="search"
-                placeholder={t('signalDiff.filterPlaceholder', 'Filter signals…')}
-                value={signalFilter}
-                onChange={(e) => setSignalFilter(e.target.value)}
-                className="max-w-sm"
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {CATEGORY_PREFIXES.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() =>
-                    setActiveCategory((prev) => (prev === c.id ? null : c.id))
-                  }
-                  className={cn(
-                    'rounded-full border px-2.5 py-1 text-[11px] uppercase tracking-wide transition-colors',
-                    activeCategory === c.id
-                      ? 'border-blue-400/40 bg-blue-500/15 text-blue-200'
-                      : 'border-[var(--border-subtle)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]',
-                  )}
-                >
-                  {t(c.labelKey, c.defaultLabel)}
-                </button>
-              ))}
-              {activeCategory ? (
-                <Button variant="ghost" size="sm" onClick={() => setActiveCategory(null)}>
-                  {t('signalDiff.clearCategory', 'Clear')}
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        </GlassPanel>
-      </FadeIn>
-
-      {/* ─── Stats ─── */}
       <FadeIn delay={0.05}>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard
-            label={t('signalDiff.totalChanged', 'Changed signals')}
-            value={isLoading ? '—' : String(allRows.length)}
-          />
-          <StatCard
-            label={t('signalDiff.visible', 'Visible after filter')}
-            value={isLoading ? '—' : String(filteredRows.length)}
-          />
-          <StatCard
-            label={t('signalDiff.pinnedCount', 'Pinned')}
-            value={String(pinnedSignals.size)}
-          />
+          <StatCard label={t('signalDiff.totalChanged', 'Changed signals')} value={isLoading ? '—' : String(allRows.length)} />
+          <StatCard label={t('signalDiff.visible', 'Visible after filter')} value={isLoading ? '—' : String(filteredRows.length)} />
+          <StatCard label={t('signalDiff.pinnedCount', 'Pinned')} value={String(pinnedSignals.size)} />
           <StatCard
             label={t('signalDiff.windowSpan', 'Window span')}
-            value={
-              atAIso && atBIso
-                ? `${Math.abs(new Date(atBIso).getTime() - new Date(atAIso).getTime()) / 1000} s`
-                : '—'
-            }
+            value={atAIso && atBIso
+              ? `${Math.abs(new Date(atBIso).getTime() - new Date(atAIso).getTime()) / 1000} s`
+              : '—'}
           />
         </div>
       </FadeIn>
 
-      {/* ─── Bulk-actions toolbar ─── */}
       <BulkActionsToolbar
         selectedIds={selectedSignals}
         total={filteredRows.length}
@@ -486,7 +250,6 @@ export default function SignalDiffPage() {
         actions={bulkActions}
       />
 
-      {/* ─── Diff table ─── */}
       <FadeIn delay={0.1}>
         <GlassPanel className="p-4 sm:p-5">
           {error ? (
@@ -496,9 +259,7 @@ export default function SignalDiffPage() {
           ) : null}
           {isLoading && !diffResp ? (
             <div className="space-y-2">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} height={36} />
-              ))}
+              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={36} />)}
             </div>
           ) : allRows.length === 0 && !filterActive && atAIso && atBIso ? (
             <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
@@ -520,16 +281,10 @@ export default function SignalDiffPage() {
           )}
           {pinnedSignals.size > 0 ? (
             <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--border-subtle)] pt-3">
-              <span className="text-xs text-[var(--text-muted)]">
-                {t('signalDiff.pinnedLabel', 'Pinned:')}
-              </span>
-              {Array.from(pinnedSignals)
-                .sort()
-                .map((s) => (
-                  <Badge key={s} variant="neutral">
-                    {s}
-                  </Badge>
-                ))}
+              <span className="text-xs text-[var(--text-muted)]">{t('signalDiff.pinnedLabel', 'Pinned:')}</span>
+              {Array.from(pinnedSignals).sort().map((s) => (
+                <Badge key={s} variant="neutral">{s}</Badge>
+              ))}
             </div>
           ) : null}
         </GlassPanel>

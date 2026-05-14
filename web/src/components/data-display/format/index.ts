@@ -13,3 +13,4 @@ export { Percentage } from './Percentage';
 export { FormattedNumber } from './Number';
 export { Duration } from './Duration';
 export type { DurationVariant } from './Duration';
+export { Range, useRangeLabel } from './Range';

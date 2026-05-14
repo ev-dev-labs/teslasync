@@ -14,7 +14,7 @@ import {
 } from '@/components/charts';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
-import { DateRangeFilter } from '@/components/forms/DateRangeFilter';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
@@ -82,8 +82,8 @@ export default function EfficiencyPage() {
     return d.toISOString().split('T')[0];
   }, []);
   const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate, setStartDate] = useUrlString('from', defaultStartDate);
-  const [endDate, setEndDate] = useUrlString('to', defaultEndDate);
+  const [startDate] = useUrlString('from', defaultStartDate);
+  const [endDate] = useUrlString('to', defaultEndDate);
   const setRangeBatch = useUrlBatch();
 
   /* ---- Filtered drives ---- */
@@ -216,22 +216,22 @@ export default function EfficiencyPage() {
       subtitle={t('efficiency.subtitle', 'Energy consumption and driving efficiency analysis')}
       error={null}
       actions={
-        <SavedViewMenu
-          route="/efficiency"
-          currentQuery={savedView.currentQuery}
-          onApply={savedView.apply}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <VehicleSelect />
+          <RangePicker
+            value={{ start: startDate, end: endDate }}
+            onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+            align="end"
+            triggerTestId="efficiency-range"
+          />
+          <SavedViewMenu
+            route="/efficiency"
+            currentQuery={savedView.currentQuery}
+            onApply={savedView.apply}
+          />
+        </div>
       }
     >
-      {/* Date filter */}
-      <FadeIn>
-        <DateRangeFilter
-          startDate={startDate} endDate={endDate}
-          onStartDateChange={setStartDate} onEndDateChange={setEndDate}
-          onRangeChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
-        />
-      </FadeIn>
-
       {/* Hero gauges */}
       <FadeIn>
         <GlassPanel className="p-4 sm:p-6">

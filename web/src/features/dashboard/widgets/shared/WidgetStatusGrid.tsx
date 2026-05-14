@@ -41,10 +41,12 @@ const statusStyles: Record<StatusCell['status'], { bg: string; dot: string }> = 
   },
 };
 
-const colsClass: Record<2 | 3 | 4, string> = {
+// Container-query class table — collapses based on widget rendered width.
+// See WidgetStatGrid for the same approach.
+const containerColsClass: Record<2 | 3 | 4, string> = {
   2: 'grid-cols-2',
-  3: 'grid-cols-3',
-  4: 'grid-cols-4',
+  3: 'grid-cols-1 @xs:grid-cols-2 @sm:grid-cols-3',
+  4: 'grid-cols-2 @sm:grid-cols-4',
 };
 
 export function WidgetStatusGrid({
@@ -61,7 +63,7 @@ export function WidgetStatusGrid({
   const resolvedCols = compact ? 2 : cols;
 
   return (
-    <div className={cn('grid gap-2', colsClass[resolvedCols])}>
+    <div className={cn('grid gap-2', containerColsClass[resolvedCols])}>
       {cells.map((cell) => {
         const style = statusStyles[cell.status];
         return (
