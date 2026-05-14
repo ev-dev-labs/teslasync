@@ -263,3 +263,161 @@ describe('AISettings — validate endpoint exercised end-to-end', () => {
     })
   })
 })
+
+describe('AISettings — F1↔F2 provider config schema (namespaced shape)', () => {
+  // Phase-50 fix: the F1 backend (ParseProviderConfig in
+  // internal/ai/provider/config.go) expects ai_provider_config in
+  // the namespaced shape:
+  //
+  //   { default: 'ollama', ollama: { base_url, model, api_key }, ... }
+  //
+  // The pre-fix F2 UI wrote a flat shape which caused every AI
+  // call to fall back to DefaultLocalBaseURL = http://localhost:11434
+  // (unreachable from inside the API container). These tests pin
+  // the canonical contract end-to-end.
+
+  it('reads the namespaced shape: form fields populate from cfg[default]', () => {
+    renderPanel({
+      ...baseSettings,
+      ai_mode: 'local',
+      ai_provider_config: {
+        default: 'ollama',
+        ollama: {
+          base_url: 'http://192.168.1.10:11434',
+          model: 'qwen2.5:7b',
+        },
+      } as Record<string, unknown>,
+    })
+    const baseUrl = screen.getByTestId('ai-provider-base-url') as HTMLInputElement
+    const model = screen.getByTestId('ai-provider-model') as HTMLInputElement
+    expect(baseUrl.value).toBe('http://192.168.1.10:11434')
+    expect(model.value).toBe('qwen2.5:7b')
+  })
+
+  it('reads the legacy flat shape as a backward-compat fallback', () => {
+    // Defensive: if a row somehow escapes the 000208 migration
+    // (e.g. an unmigrated export bundle re-imported), the UI must
+    // still render so the user can re-save and renest.
+    renderPanel({
+      ...baseSettings,
+      ai_mode: 'local',
+      ai_provider_config: {
+        provider: 'ollama',
+        base_url: 'http://legacy.example:11434',
+        model: 'legacy-model',
+      } as Record<string, unknown>,
+    })
+    const baseUrl = screen.getByTestId('ai-provider-base-url') as HTMLInputElement
+    const model = screen.getByTestId('ai-provider-model') as HTMLInputElement
+    expect(baseUrl.value).toBe('http://legacy.example:11434')
+    expect(model.value).toBe('legacy-model')
+  })
+
+  it('writes the namespaced shape on Save and preserves other providers', async () => {
+    mockedRequest.mockImplementation(async (_path, init) => {
+      // The PUT /settings call returns the merged document; the
+      // happy-path response just echoes the body.
+      const body = JSON.parse(String((init as RequestInit).body))
+      return body
+    })
+    renderPanel({
+      ...baseSettings,
+      ai_mode: 'local',
+      ai_provider_config: {
+        default: 'openai',
+        // Pre-existing OpenAI config from a prior session — must
+        // survive a save that targets Ollama.
+        openai: {
+          base_url: 'https://api.openai.com',
+          model: 'gpt-4o-mini',
+          api_key: 'sk-preserved',
+        },
+      } as Record<string, unknown>,
+    })
+
+    // User switches to Ollama and enters new fields.
+    const providerSelect = screen.getByTestId(
+      'ai-provider-select',
+    ) as HTMLSelectElement
+    fireEvent.change(providerSelect, { target: { value: 'ollama' } })
+    fireEvent.change(screen.getByTestId('ai-provider-base-url'), {
+      target: { value: 'http://192.168.68.218:11434' },
+    })
+    fireEvent.change(screen.getByTestId('ai-provider-model'), {
+      target: { value: 'qwen2.5:7b' },
+    })
+
+    fireEvent.click(screen.getByTestId('ai-settings-save'))
+
+    await waitFor(() => {
+      expect(mockedRequest).toHaveBeenCalled()
+    })
+
+    // Find the /settings PUT (the validate call is a different path).
+    const putCall = mockedRequest.mock.calls.find(
+      (c) => c[0] === '/settings' && (c[1] as RequestInit | undefined)?.method === 'PUT',
+    )
+    expect(putCall).toBeTruthy()
+    const sentBody = JSON.parse(String((putCall![1] as RequestInit).body))
+
+    // 1. Namespaced shape — no top-level provider/base_url/model.
+    expect(sentBody.ai_provider_config.provider).toBeUndefined()
+    expect(sentBody.ai_provider_config.base_url).toBeUndefined()
+    expect(sentBody.ai_provider_config.model).toBeUndefined()
+
+    // 2. `default` names the selected provider.
+    expect(sentBody.ai_provider_config.default).toBe('ollama')
+
+    // 3. The selected provider's sub-object carries the form fields.
+    expect(sentBody.ai_provider_config.ollama).toEqual({
+      base_url: 'http://192.168.68.218:11434',
+      model: 'qwen2.5:7b',
+    })
+
+    // 4. Other providers' configs survive the save (multi-provider
+    //    preservation). The user can swap back to OpenAI without
+    //    re-entering the key.
+    expect(sentBody.ai_provider_config.openai).toEqual({
+      base_url: 'https://api.openai.com',
+      model: 'gpt-4o-mini',
+      api_key: 'sk-preserved',
+    })
+  })
+
+  it('strips legacy top-level keys when re-saving a legacy snapshot', async () => {
+    mockedRequest.mockImplementation(async (_path, init) => {
+      const body = JSON.parse(String((init as RequestInit).body))
+      return body
+    })
+    renderPanel({
+      ...baseSettings,
+      ai_mode: 'local',
+      ai_provider_config: {
+        // Pre-fix legacy snapshot still in the cache.
+        provider: 'ollama',
+        base_url: 'http://legacy:11434',
+        model: 'legacy-model',
+      } as Record<string, unknown>,
+    })
+
+    fireEvent.click(screen.getByTestId('ai-settings-save'))
+
+    await waitFor(() => {
+      expect(mockedRequest).toHaveBeenCalled()
+    })
+
+    const putCall = mockedRequest.mock.calls.find(
+      (c) => c[0] === '/settings' && (c[1] as RequestInit | undefined)?.method === 'PUT',
+    )
+    const sent = JSON.parse(String((putCall![1] as RequestInit).body))
+    expect(sent.ai_provider_config.provider).toBeUndefined()
+    expect(sent.ai_provider_config.base_url).toBeUndefined()
+    expect(sent.ai_provider_config.model).toBeUndefined()
+    expect(sent.ai_provider_config.default).toBe('ollama')
+    expect(sent.ai_provider_config.ollama).toBeDefined()
+    expect(
+      (sent.ai_provider_config.ollama as Record<string, unknown>).base_url,
+    ).toBe('http://legacy:11434')
+  })
+})
+

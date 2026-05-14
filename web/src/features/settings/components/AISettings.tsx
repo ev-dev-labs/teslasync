@@ -27,7 +27,7 @@
  *                                numbers via /ai/usage)
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sparkles } from 'lucide-react'
 import {
@@ -62,9 +62,8 @@ function isAiMode(value: unknown): value is AiMode {
 }
 
 /**
- * Pulls a `string` out of the loosely-typed `ai_provider_config`
- * (declared `Record<string, unknown>` in `AppSettings`). Returns
- * the supplied fallback when the key is missing or non-string.
+ * Pulls a `string` out of a loosely-typed JSON object. Returns the
+ * supplied fallback when the key is missing or non-string.
  */
 function readProviderString(
   cfg: Record<string, unknown> | undefined,
@@ -74,6 +73,55 @@ function readProviderString(
   if (cfg == null) return fallback
   const v = cfg[key]
   return typeof v === 'string' ? v : fallback
+}
+
+/**
+ * Drills into the namespaced `ai_provider_config` and returns one
+ * provider's typed sub-entry. The canonical shape (per F1 contract
+ * in `internal/ai/provider/config.go::ParseProviderConfig`) is:
+ *
+ *   {
+ *     "default":   "ollama",
+ *     "ollama":    { "base_url": "...", "model": "...", "api_key": "..." },
+ *     "openai":    { "base_url": "...", "model": "...", "api_key": "..." },
+ *     ...
+ *   }
+ *
+ * Migration `000208_ai_provider_config_renest.up.sql` converts the
+ * legacy flat shape `{ provider, base_url, model }` to this shape on
+ * the next API boot, so SPA reads can assume the namespaced form.
+ */
+function readProviderConfigEntry(
+  cfg: Record<string, unknown> | undefined,
+  providerName: string,
+): Record<string, unknown> | undefined {
+  if (cfg == null || providerName === '') return undefined
+  const entry = cfg[providerName]
+  return entry != null && typeof entry === 'object' && !Array.isArray(entry)
+    ? (entry as Record<string, unknown>)
+    : undefined
+}
+
+/**
+ * Strips the four legacy top-level keys that the pre-fix SPA used
+ * to write directly onto `ai_provider_config`. Defense-in-depth in
+ * case migration 000208 missed a row (e.g. a settings export/import
+ * round-trip from a legacy snapshot). The canonical namespaced
+ * shape never has these keys at top level — they live under
+ * `[providerName]`.
+ */
+const LEGACY_TOP_LEVEL_KEYS = ['provider', 'base_url', 'model', 'api_key'] as const
+
+function stripLegacyTopLevelKeys(
+  cfg: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  if (cfg == null) return {}
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(cfg)) {
+    if ((LEGACY_TOP_LEVEL_KEYS as readonly string[]).includes(k)) continue
+    out[k] = v
+  }
+  return out
 }
 
 /**
@@ -128,13 +176,24 @@ export function AISettings() {
   const [features, setFeatures] = useState<Record<AiFeatureId, boolean>>(() =>
     normaliseFeatureMap(settings?.ai_features),
   )
-  const [provider, setProvider] = useState<AIProviderDraft>(() => ({
-    provider: readProviderString(settings?.ai_provider_config, 'provider', 'ollama'),
-    base_url: readProviderString(settings?.ai_provider_config, 'base_url', ''),
-    model: readProviderString(settings?.ai_provider_config, 'model', ''),
-    api_key: '',
-    cost_cap_cents: settings?.ai_cost_cap_cents ?? 0,
-  }))
+  const [provider, setProvider] = useState<AIProviderDraft>(() => {
+    const cfg = settings?.ai_provider_config
+    // F1 contract: read the user's "current" provider name from the
+    // `default` key (legacy flat shape stored it as `provider` —
+    // migration 000208 converts that on the next API boot, so we
+    // fall back to it here only for the unmigrated edge case).
+    const providerName =
+      readProviderString(cfg, 'default', '') ||
+      readProviderString(cfg, 'provider', 'ollama')
+    const entry = readProviderConfigEntry(cfg, providerName) ?? cfg
+    return {
+      provider: providerName,
+      base_url: readProviderString(entry, 'base_url', ''),
+      model: readProviderString(entry, 'model', ''),
+      api_key: '',
+      cost_cap_cents: settings?.ai_cost_cap_cents ?? 0,
+    }
+  })
   // ADR-015 §I7 — when the user re-enables AI and the server still
   // has an `ai_features_archived` snapshot, surface it as an
   // explicit "Restore previous selection?" prompt. Dismissed
@@ -161,17 +220,22 @@ export function AISettings() {
     if (settings == null) return
     setMode(serverMode)
     setFeatures(normaliseFeatureMap(settings.ai_features))
+    const cfg = settings.ai_provider_config
+    const providerName =
+      readProviderString(cfg, 'default', '') ||
+      readProviderString(cfg, 'provider', 'ollama')
+    const entry = readProviderConfigEntry(cfg, providerName) ?? cfg
     setProvider({
-      provider: readProviderString(settings.ai_provider_config, 'provider', 'ollama'),
-      base_url: readProviderString(settings.ai_provider_config, 'base_url', ''),
-      model: readProviderString(settings.ai_provider_config, 'model', ''),
+      provider: providerName,
+      base_url: readProviderString(entry, 'base_url', ''),
+      model: readProviderString(entry, 'model', ''),
       // ADR-015 §I9 — never pre-populate the key when the server's
       // mode is off. The server already redacts in that case but we
       // double-guard here to make the invariant local-state safe.
       api_key:
         serverMode === 'off'
           ? ''
-          : readProviderString(settings.ai_provider_config, 'api_key', ''),
+          : readProviderString(entry, 'api_key', ''),
       cost_cap_cents: settings.ai_cost_cap_cents ?? 0,
     })
     setRestoreDismissed(false)
@@ -221,14 +285,27 @@ export function AISettings() {
     saveAi.mutate({
       ai_mode: mode,
       ai_features: features,
+      // F1 contract: namespaced shape. The `default` key names the
+      // currently-selected provider; each provider has its own
+      // sub-object so users can pre-configure multiple providers and
+      // swap between them without losing prior credentials. We
+      // strip any legacy top-level keys (`provider`/`base_url`/etc.)
+      // that a pre-fix snapshot may still carry — migration 000208
+      // handles this at rest but defense-in-depth keeps the wire
+      // format clean across export/import round-trips.
       ai_provider_config: {
-        provider: provider.provider,
-        base_url: provider.base_url,
-        model: provider.model,
-        // Only forward a non-empty key; an empty string would clobber
-        // a previously-saved key (the server treats empty as
-        // explicit clear).
-        api_key: provider.api_key.trim() === '' ? undefined : provider.api_key,
+        ...stripLegacyTopLevelKeys(settings?.ai_provider_config),
+        default: provider.provider,
+        [provider.provider]: {
+          base_url: provider.base_url,
+          model: provider.model,
+          // Only forward a non-empty key; an empty string would clobber
+          // a previously-saved key (the server treats empty as
+          // explicit clear).
+          ...(provider.api_key.trim() === ''
+            ? {}
+            : { api_key: provider.api_key }),
+        },
       },
       ai_cost_cap_cents: provider.cost_cap_cents,
     })
@@ -237,6 +314,38 @@ export function AISettings() {
   function handleFeatureToggle(id: AiFeatureId, value: boolean) {
     setFeatures((prev) => ({ ...prev, [id]: value }))
   }
+
+  /**
+   * Wraps the AIProviderSection `onChange` so a provider-name switch
+   * pulls the new provider's stored base_url / model from the
+   * namespaced config (multi-provider preservation per F1 contract).
+   * Non-provider edits flow through unchanged.
+   *
+   * The api_key is intentionally NOT pre-filled on switch: the server
+   * redacts on read (ADR-015 §I9) and the UX semantics treat an
+   * empty key field as "leave existing key unchanged". Showing a key
+   * we can't actually see would be misleading.
+   */
+  const handleProviderChange = useCallback(
+    (next: AIProviderDraft) => {
+      if (next.provider === provider.provider) {
+        setProvider(next)
+        return
+      }
+      const newEntry = readProviderConfigEntry(
+        settings?.ai_provider_config,
+        next.provider,
+      )
+      setProvider({
+        provider: next.provider,
+        base_url: readProviderString(newEntry, 'base_url', ''),
+        model: readProviderString(newEntry, 'model', ''),
+        api_key: '',
+        cost_cap_cents: next.cost_cap_cents,
+      })
+    },
+    [provider.provider, settings?.ai_provider_config],
+  )
 
   function handleRestoreConfirm() {
     if (settings?.ai_features_archived == null) return
@@ -346,7 +455,7 @@ export function AISettings() {
           <AIProviderSection
             value={provider}
             isCloud={isCloud}
-            onChange={setProvider}
+            onChange={handleProviderChange}
           />
         )}
 
