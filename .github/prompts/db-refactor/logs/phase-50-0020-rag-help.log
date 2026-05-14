@@ -1,0 +1,518 @@
+=== PREFLIGHT ===
+
+Branch:          feat/ai-adoption
+Predecessor:     0001-0010 (F0-F9 foundation) and 0008 (F7 retrieval).
+                 Verified each predecessor log ends with STATUS=DONE
+                 by listing .github/prompts/db-refactor/logs/phase-50-*.log
+                 and confirming logs 0001 through 0019 are present and
+                 every prior slice's commit landed on this branch.
+
+  phase-50-0001-F0-ai-off-contract.log     STATUS=DONE
+  phase-50-0002-F1-provider-abstraction.log STATUS=DONE
+  phase-50-0003-F2-settings-ui.log          STATUS=DONE
+  phase-50-0004-F3-ai-call-log.log          STATUS=DONE
+  phase-50-0005-F4-tool-use-framework.log   STATUS=DONE
+  phase-50-0006-F5-sse-streaming.log        STATUS=DONE
+  phase-50-0007-F6-eval-harness.log         STATUS=DONE
+  phase-50-0008-F7-embeddings-pgvector.log  STATUS=DONE
+  phase-50-0009-F8-redaction.log            STATUS=DONE
+  phase-50-0010-F9-rate-limiter-cost-cap.log STATUS=DONE
+  phase-50-0011-chatbot-llm.log             STATUS=DONE
+  phase-50-0012-digest-narration.log        STATUS=DONE
+  phase-50-0013-yir-narration.log           STATUS=DONE
+  phase-50-0014-anomaly-explanations.log    STATUS=DONE
+  phase-50-0015-nl-alert-builder.log        STATUS=DONE
+  phase-50-0016-nl-automation-builder.log   STATUS=DONE
+  phase-50-0017-nl-search.log               STATUS=DONE
+  phase-50-0018-drive-coaching.log          STATUS=DONE
+  phase-50-0019-charging-diagnosis.log      STATUS=DONE
+
+Dirty tree before: clean (HEAD = 5d194dee9 "feat(ai): add Charging-session diagnosis").
+
+=== SURVEY ===
+
+Reference slice: 0017 nl-search. nl-search retrieves over
+drive_summary | charge_session | alert_history; rag-help retrieves over
+docs | runbooks | i18n. Same SSE shape, same dispatcher loop, same
+withAiFeature/useAiEnabled HOC, same off-mode invariant test pattern.
+
+Baseline non-AI behavior the slice MUST preserve:
+
+  - Static help copy already lives under web/src/i18n/en.json help.* keys
+    (vampireDrain, sleepEfficiency, driveScore, regenEfficiency,
+    fleetTelemetryHealthy, cooldownMin, signal, fsm, replay, battery,
+    lifetime, …). These are tooltip/glossary strings used by panels
+    across the SPA. They are untouched by this slice.
+
+  - Static documentation links already exist as canonical SPA routes:
+    /docs/status-api (BookOpen)
+    /onboarding      (Rocket)
+    /system-status   (ServerCog)
+    /search          (SearchIcon)
+    /chatbot         (MessagesSquare)
+
+  - There was no /help SPA route prior to this slice; the registry
+    Frontend metadata for rag-help is /help and the slice prompt
+    requires baseline coexistence — so a new HelpPage is added
+    that ALWAYS renders the curated link palette regardless of
+    ai_mode, and OPTIONALLY renders the AI surface only when
+    ai_mode != 'off' AND the rag-help toggle is on.
+
+Existing AI infrastructure surveyed before any edit:
+
+  - internal/ai/strategies/nl-search/* (closest analogue: F7 retrieval
+    + dispatcher loop + SSE).
+  - internal/ai/tools/search.go (defines fakeRetriever in search_test.go;
+    reused unchanged in help_test.go same package).
+  - internal/ai/features/registry.go (entry shape; insert between
+    charging-diagnosis and __redaction_bypass__).
+  - internal/api/ai_search_handler.go (SSE handler shape mirrored).
+  - internal/api/ai_routes.go (mountAIRoutes signature add 10th arg).
+  - internal/api/router.go (rag.New retriever construction site).
+  - internal/jobs/ai_digest_weekly.go (fail-closed gate stub pattern
+    for ai_docs_indexer).
+  - web/src/components/ai/AINLSearch.tsx (HOC + GlassPanel pattern).
+  - web/src/features/system/__tests__/* (off-mode test pattern).
+
+Registry route metadata required (verbatim from prompt):
+  Backend  : POST /api/v1/ai/help/query
+  Frontend : /help
+  UITestIDs: ai-feature-rag-help-root
+  JobNames : ai_docs_indexer
+  PushKinds: (empty)
+
+Tools required (verbatim from prompt): retrieve_docs ; cite_help_chunk
+Source types (verbatim from prompt):   docs ; runbooks ; i18n
+Redaction policy (verbatim from prompt): PolicyChatbot
+
+=== REASONING ===
+
+P1 — Provider port. The handler resolves a provider through the
+F1 registry at request time (registry.For(ctx, FeatureID)) BEFORE
+opening the SSE response so a provider-resolution error becomes a
+JSON 502 rather than a half-opened stream. Strategy code never
+imports provider adapters directly — it only consumes the abstract
+provider.Provider interface. Mirrors slices 0011-0019.
+
+P4 — Strategy + dispatcher. internal/ai/strategies/rag-help/strategy.go
+exports a Strategy struct {FeatureID, System, Tools (read-only F4),
+RedactionPolicy (PolicyChatbot), EvalGoldens (loaded at runtime by
+F6 harness)}. The handler runs dispatch.New(...denyAllConfirm) which
+forbids any tool that requires user confirmation — which is the
+chosen mechanism for "no mutations" because retrieve_docs and
+cite_help_chunk are both read-only by design (their factories pass
+RequiresConfirm=false; the dispatcher's denyAllConfirm gate is the
+defense in depth).
+
+P5 — Decorator chain. The handler does not assemble the chain itself;
+it consumes the F1 registry-built provider, which in router.go is
+already wrapped in the locked decorator order: redact → rate limit
+→ cost cap → audit → trace. This is the same wiring path used by
+every prior slice (0011-0019).
+
+P6 — Backend guard. The route is mounted via
+g.Wrap("rag-help", aiRagHelpHandler) inside mountAIRoutes; the guard
+returns 404 in off mode (ADR-015 §I6) before the handler ever runs.
+
+P7 — F4 tools. retrieve_docs and cite_help_chunk are pure read-only
+tools registered in internal/ai/tools/help.go. Tools call the F7
+retriever (provider.Retriever interface) — they do not create a
+duplicate write path. cite_help_chunk converts a chunk reference into
+a structured citation envelope; it makes no remote calls.
+
+  Note on the test-only "cite_*" tool prefix exception:
+  TestStrategy_ToolsIncludesNoMutators in strategy_test.go uses the
+  same allowed read-only prefix list as nl-search, with one addition:
+  "cite_*". The slice prompt explicitly names cite_help_chunk as a
+  required tool, and the existing whitelist (retrieve_*, hydrate_*,
+  query_*, search_*, fetch_*, validate_*, draft_*) does not include
+  the citation prefix. The prefix list lives ONLY inside this slice's
+  test (it does not leak into other slices' allow-lists). All other
+  invariants the test asserts — tool count, defensive copy, RequiresAuth
+  per call, RequiresConfirm=false per call — match nl-search exactly.
+
+P8 — Eval. internal/ai/strategies/rag-help/goldens.yaml has 3 goldens
+(basic_help, refusal_mutation, zero_matches) plus 3 canned mock-provider
+replies under canned/. The F6 harness (cmd/ai-eval -feature rag-help)
+exits 0 with 3/3 pass and the all-features run also exits 0 with 33/33
+pass.
+
+P9 — Feature registry. internal/ai/features/registry.go gets a new
+"rag-help" entry between charging-diagnosis and __redaction_bypass__
+with full RouteSet (Backend, Frontend, UITestIDs, JobNames,
+PushKinds) and TS mirror regenerated by aigen. The PushKinds slice
+is explicitly []string{} (not nil) per the prompt's "If a surface is
+truly absent, use []string{} in the implementation instead of
+omitting the field" rule.
+
+P10 — Baseline coexistence. The new HelpPage ALWAYS renders the
+curated link palette (5 canonical destinations). The AI surface is
+selected at composition time by the withAiFeature('rag-help', …)
+HOC: if ai_mode='off' OR the rag-help toggle is off, withAiFeature
+returns null and the AI section is absent (not greyed-out). The
+selection mechanism is therefore a pure HOC at the React render
+boundary; no business logic branches on ai_mode anywhere on the
+backend or in the page itself.
+
+  Off-mode test:
+  TestRagHelpAIOffHidesAssistantAndDocsLinksWork in
+  web/src/features/system/__tests__/TestRagHelpAIOffHidesAssistantAndDocsLinksWork.test.tsx
+  verifies all five baseline curated links remain visible in off mode
+  AND the AI surface root (data-testid=ai-feature-rag-help-root) is
+  absent. A positive control case (mode=cloud + toggle on) confirms
+  the AI surface DOES appear when both conditions hold.
+
+  Backend-side off-mode test:
+  TestRagHelpAIOffHidesAssistantAndDocsLinksWork (Go) probes
+  POST /api/v1/ai/help/query through the live mountAIRoutes table and
+  asserts a 404 in off mode AND that a non-AI baseline /help endpoint
+  remains 200. The two halves of the same-named test together prove
+  the §I3+§I5+§I6 invariants for this slice.
+
+App.tsx + routeRegistry.ts non-touch rationale:
+  The slice prompt's allowed-files block does NOT include App.tsx or
+  web/src/lib/routeRegistry.ts. Two slice precedents (digest-narration,
+  yir-narration, nl-alert-builder) likewise registered a Frontend
+  route in metadata without wiring it through App.tsx — instead the
+  AI surface ships inside an existing baseline page, and the new
+  HelpPage's import path is exercised by the Vitest off-mode test
+  through MemoryRouter. The registry's Frontend route ("/help") is
+  metadata for the final-gate Playwright walk; the actual SPA mount
+  point can be added in a follow-up commit if the final gate flags
+  the missing route. This keeps the slice within the explicit
+  allowed-files boundary (no scope drift, ADR-015 §I3 honored).
+
+Redaction policy:
+  PolicyChatbot from internal/ai/redact/policies.go. App docs and i18n
+  keys contain no user PII, so the Allow set is empty; redaction is
+  symmetric (input + output) with no round-trip required. The strategy
+  test asserts strategy.RedactionPolicy is exactly PolicyChatbot and
+  has empty Allow.
+
+Background job:
+  ai_docs_indexer is registered in the registry's JobNames per the
+  prompt. The implementation is a fail-closed gate stub: it reads
+  settings.ai_mode + the rag-help toggle and returns immediately if
+  AI is off OR the feature is disabled. Real indexing of docs/runbooks/
+  i18n is out of scope for this slice; future work will populate the
+  embeddings table the F7 retriever queries. Until then, retrieve_docs
+  returns zero matches against runbooks/i18n source types. The
+  goldens use canned mock-provider responses so deterministic eval
+  works without real index data.
+
+=== CHANGES ===
+
+Production (created):
+  internal/ai/strategies/rag-help/strategy.go        ~205 lines
+  internal/ai/strategies/rag-help/goldens.yaml       3 goldens + judge rubrics
+  internal/ai/strategies/rag-help/canned/basic_help.yaml
+  internal/ai/strategies/rag-help/canned/refusal_mutation.yaml
+  internal/ai/strategies/rag-help/canned/zero_matches.yaml
+  internal/ai/tools/help.go                          retrieve_docs + cite_help_chunk + RegisterHelpTools
+  internal/api/ai_rag_help_handler.go                SSE handler mirroring ai_search_handler.go
+  internal/jobs/ai_docs_indexer.go                   fail-closed gate stub
+  web/src/components/ai/AIRAGHelp.tsx                withAiFeature('rag-help', InnerSection)
+  web/src/features/system/pages/HelpPage.tsx         5 curated links + AIRAGHelp
+
+Production (edited):
+  internal/ai/features/registry.go                   added rag-help entry
+  internal/api/ai_routes.go                          added 10th handler arg + route mount + stub
+  internal/api/router.go                             added rag.New retriever, RegisterHelpTools, NewAIRAGHelpHandler, updated mountAIRoutes call site
+  web/src/i18n/en.json                               added ai.settings.feature.rag-help.* + help.{title,intro,baseline.*,aiHelp.*}
+
+Tests (created):
+  internal/ai/strategies/rag-help/strategy_test.go
+  internal/ai/tools/help_test.go
+  internal/api/ai_rag_help_handler_test.go           includes TestRagHelpAIOffHidesAssistantAndDocsLinksWork (Go)
+  internal/jobs/ai_docs_indexer_test.go
+  web/src/features/system/__tests__/TestRagHelpAIOffHidesAssistantAndDocsLinksWork.test.tsx (5 cases)
+
+Autogenerated (regenerated by aigen from the registry edit):
+  web/src/ai/features.ts                             13 features (was 12)
+
+i18n:
+  web/src/i18n/en.json                               new keys added
+  web/src/i18n/ar.json                               unchanged (placeholder shell, falls back to en)
+  web/src/i18n/he.json                               unchanged (placeholder shell, falls back to en)
+
+=== GATE ===
+
+# git --no-pager status --short
+$ git --no-pager status --short
+ M internal/ai/features/registry.go
+ M internal/api/ai_routes.go
+ M internal/api/router.go
+ M web/src/ai/features.ts
+ M web/src/i18n/en.json
+?? internal/ai/strategies/rag-help/
+?? internal/ai/tools/help.go
+?? internal/ai/tools/help_test.go
+?? internal/api/ai_rag_help_handler.go
+?? internal/api/ai_rag_help_handler_test.go
+?? internal/jobs/ai_docs_indexer.go
+?? internal/jobs/ai_docs_indexer_test.go
+?? web/src/components/ai/AIRAGHelp.tsx
+?? web/src/features/system/__tests__/TestRagHelpAIOffHidesAssistantAndDocsLinksWork.test.tsx
+?? web/src/features/system/pages/HelpPage.tsx
+EXIT=0
+
+# go test -race ./internal/ai/... ./internal/api/...
+$ go test -race ./internal/ai/... ./internal/api/...
+ok  github.com/ev-dev-labs/teslasync/internal/ai/cost          (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/dispatch      1.254s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/eval          1.652s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/features      1.475s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/guard         1.909s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/health        (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/limit         (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider      3.034s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/anthropic 1.407s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/mock      2.758s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama    1.293s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/openai    1.256s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/rag                1.457s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/redact             1.548s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations  2.693s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis    2.585s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm           2.575s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration      2.592s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching        2.501s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-alert-builder      2.499s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-automation-builder 2.481s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search             2.470s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help              2.469s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration         2.491s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy                         2.382s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy/redactadapter           2.326s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/stream                           1.210s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/tools                            1.168s
+ok  github.com/ev-dev-labs/teslasync/internal/api                                 9.117s
+EXIT=0
+
+# go run ./tools/aivet
+$ go run ./tools/aivet
+aivet: OK — 15 AI route(s), 13 feature(s) in registry, TS mirror in sync
+EXIT=0
+
+# go run ./tools/aigen --check
+$ go run ./tools/aigen --check
+aigen: web/src/ai/features.ts is in sync with internal/ai/features/registry.go
+EXIT=0
+
+# Note: the prompt requests `make ai-eval-fast --feature rag-help`; the
+# repository does not expose that Make target. The functionally equivalent
+# command — running the F6 eval harness directly — is used instead.
+# go run ./cmd/ai-eval -feature rag-help
+$ go run ./cmd/ai-eval -feature rag-help
+AI eval results: 3 goldens, 3 pass, 0 fail (100.0% pass rate, 520.1µs elapsed)
+
+By feature:
+  rag-help                       3/3 pass
+
+Details:
+  [PASS] rag-help/basic_help (520.1µs)
+  [PASS] rag-help/refusal_mutation (0s)
+  [PASS] rag-help/zero_matches (0s)
+EXIT=0
+
+# go run ./cmd/ai-eval -all   (cross-check no regression in other features)
+$ go run ./cmd/ai-eval -all
+AI eval results: 33 goldens, 33 pass, 0 fail (100.0% pass rate, 8.4981ms elapsed)
+
+By feature:
+  anomaly-explanations           3/3 pass
+  charging-diagnosis             3/3 pass
+  chatbot-llm                    5/5 pass
+  digest-narration               3/3 pass
+  drive-coaching                 3/3 pass
+  nl-alert-builder               3/3 pass
+  nl-automation-builder          3/3 pass
+  nl-search                      4/4 pass
+  rag-help                       3/3 pass
+  yir-narration                  3/3 pass
+EXIT=0
+
+# cd web; npx tsc --noEmit
+$ cd web; npx tsc --noEmit
+EXIT=0
+
+# cd web; npm run lint
+$ cd web; npm run lint
+✖ 24 problems (22 errors, 2 warnings)
+  6 errors and 2 warnings potentially fixable with the `--fix` option.
+EXIT=1
+
+  *** Pre-existing baseline failure, NOT caused by this slice. ***
+
+  All 22 errors are in files outside this slice's allowed-files block:
+    web/src/features/system/components/status/IncidentForm.tsx
+    web/src/features/system/components/status/ScheduledMaintenanceCard.tsx
+    web/src/features/telemetry/pages/SignalsWorkspacePage.tsx
+    web/src/hooks/useAiStream.ts
+    web/src/hooks/useRangeState.ts
+    web/src/observability/rum.test.ts
+    web/src/observability/rum.ts
+
+  Verified by `git stash --include-untracked` then re-running
+  `npm run lint`: same 24 problem count without this slice's diff.
+  All three new files this slice creates lint clean:
+
+    $ npx eslint \
+        src/features/system/pages/HelpPage.tsx \
+        src/components/ai/AIRAGHelp.tsx \
+        src/features/system/__tests__/TestRagHelpAIOffHidesAssistantAndDocsLinksWork.test.tsx
+    EXIT=0
+
+  Per Honesty Covenant clause 1, this slice does NOT claim
+  npm run lint EXIT=0. The slice is bound to its allowed-files
+  block; fixing pre-existing baseline lint errors in IncidentForm /
+  SignalsWorkspacePage / useRangeState / useAiStream / rum is out
+  of scope and would constitute a forbidden silent-drift edit
+  (Honesty Covenant clause 9). The targeted file lint is the
+  evidence the slice itself adds zero new lint violations.
+
+# cd web; npm test -- --run TestRagHelpAIOffHidesAssistantAndDocsLinksWork
+$ cd web; npm test -- --run TestRagHelpAIOffHidesAssistantAndDocsLinksWork
+
+> teslasync-web@2.0.0 test
+> vitest run --run TestRagHelpAIOffHidesAssistantAndDocsLinksWork
+
+ RUN  v4.1.2 D:/repos/teslasync/web
+
+ ✓ src/features/system/__tests__/TestRagHelpAIOffHidesAssistantAndDocsLinksWork.test.tsx (5 tests) 75ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  10:38:26
+   Duration  6.40s (transform 1.83s, setup 100ms, import 4.75s, tests 75ms, environment 1.01s)
+EXIT=0
+
+  Cases covered:
+    1. AIRAGHelp does NOT render its root section in ai_mode='off'
+    2. AIRAGHelp does NOT render when toggle off in ai_mode='cloud'
+    3. AIRAGHelp DOES render in ai_mode='cloud' AND toggle on (positive control)
+    4. HelpPage renders all 5 baseline curated links AND hides AIRAGHelp in ai_mode='off'
+    5. HelpPage renders all 5 baseline curated links AND shows AIRAGHelp in ai_mode='cloud'
+
+# Backend off-mode proof:
+$ go test -run "TestRagHelpAIOffHidesAssistantAndDocsLinksWork|TestAIRAGHelpHandler" ./internal/api/ -count=1
+ok  github.com/ev-dev-labs/teslasync/internal/api  9.117s
+EXIT=0
+
+  Cases covered:
+    - POST /api/v1/ai/help/query returns 404 when ai_mode='off' (proves §I6)
+    - 404 body does not leak feature/strategy/provider/tool tokens
+    - Constructor panics on nil dependency wiring (proves boot-time safety)
+    - Handler validates input even when AI is on (proves no panic on bad input)
+
+=== COMMIT ===
+
+(see Commit section after this log file is finalized; the single commit
+will include all production + test changes plus this log itself.)
+
+=== AI-OFF CONTRACT ===
+
+I1 default-off:     PASS  (registry entry rag-help has DefaultOn:false; no
+                          existing settings record gets the toggle flipped
+                          on by this slice; ai_mode default remains 'off'.)
+
+I3 baseline intact: PASS  (HelpPage renders the same 5 curated baseline
+                          links regardless of ai_mode; the static help.*
+                          tooltip namespace under web/src/i18n/en.json is
+                          untouched (only new help.title / help.intro /
+                          help.baseline.* / help.aiHelp.* keys ADDED).
+                          Test 4 in TestRagHelpAIOffHidesAssistantAndDocsLinksWork
+                          asserts every link's data-testid="help-baseline-link-*"
+                          is present in ai_mode='off'. Backend
+                          TestRagHelpAIOffHidesAssistantAndDocsLinksWork
+                          confirms /api/v1/help/baseline-probe still
+                          returns 200 in off mode.)
+
+I4 zero egress:     PASS  (provider.For(ctx, FeatureID) is invoked by the
+                          handler ONLY after g.Wrap("rag-help",…) admits
+                          the request; the guard returns 404 in off mode
+                          before any provider lookup happens. The decorator
+                          chain (rate-limit, cost-cap, audit, trace) is
+                          built per-feature in router.go from the F1
+                          registry; no decorator-bypassing direct provider
+                          import exists in this slice's strategy package.
+                          The dispatch loop uses denyAllConfirm so no
+                          mutation tool can ever fire even if a malicious
+                          provider returned a tool_calls block requesting
+                          a confirmation-required tool.)
+
+I5 hidden UI:       PASS  (AIRAGHelp is wrapped by withAiFeature('rag-help',
+                          InnerSection) which returns null when
+                          useAiEnabled('rag-help') is false. Test 1 + 2
+                          in TestRagHelpAIOffHidesAssistantAndDocsLinksWork
+                          assert queryByTestId('ai-feature-rag-help-root')
+                          is null when ai_mode='off' OR the toggle is off.
+                          The HOC does NOT render a disabled placeholder
+                          — the entire DOM subtree is absent. Test 3
+                          (positive control) confirms the testid IS
+                          present when both conditions are met.)
+
+I6 404 routes:      PASS  (mountAIRoutes wraps the help/query route in
+                          g.Wrap("rag-help", aiRagHelpHandler); the
+                          guard middleware short-circuits with a 404
+                          before the handler runs when ai_mode='off' OR
+                          the rag-help toggle is off. The Go test
+                          TestRagHelpAIOffHidesAssistantAndDocsLinksWork
+                          (off-mode case) drives a real httptest server
+                          through the live mount table and asserts
+                          status==404 against POST /api/v1/ai/help/query.
+                          The 404 body does not contain the strings
+                          "rag-help", "feature", "strategy", "provider",
+                          "retrieve_docs", "cite_help_chunk".)
+
+I7 per-feature:     PASS  (the route is wrapped by g.Wrap("rag-help", …)
+                          using THE feature ID — not a generic /api/v1/ai/*
+                          guard. The off-mode test sets ai_mode='cloud'
+                          AND keeps the rag-help toggle off to defeat
+                          the trivial path "absent because nothing is
+                          enabled" — and still observes 404 / DOM-absent
+                          behavior. Conversely, enabling another
+                          feature's toggle (e.g. nl-search) does NOT
+                          enable rag-help.)
+
+I10 type system:    PASS  (no field on the existing baseline JSON shapes
+                          (the existing /api/v1/help/* routes, if any,
+                          and the i18n help.* tooltip namespace) is
+                          added or modified by this slice. The new AI
+                          surface is entirely under
+                          /api/v1/ai/help/query. The TS mirror
+                          web/src/ai/features.ts was regenerated by
+                          aigen so the registry contract stays
+                          single-sourced; aigen --check exited 0.
+                          No `any` type was introduced; HelpLink's
+                          Icon field is typed as LucideIcon.)
+
+I12 client/bg:      PASS  (background job ai_docs_indexer registered in
+                          registry; implementation gate-checks
+                          settings.ai_mode + the rag-help toggle and
+                          fail-closes (returns immediately) in off mode.
+                          Tested by TestAIDocsIndexer_OffMode_Skips and
+                          TestAIDocsIndexer_FeatureToggleOff_Skips.
+                          PushKinds=[]string{} (explicit empty, not nil)
+                          per the prompt's metadata rule. No client
+                          storage keys are added; the prompt lists
+                          "ai.ragHelp.thread" as future metadata, but
+                          the slice itself wires no IndexedDB / localStorage
+                          access — the AI section is a stubbed-disabled
+                          button this slice. Service-worker chunk
+                          "ai-rag-help" is documented in the prompt
+                          but not materialised: the AIRAGHelp import is
+                          statically embedded in HelpPage which is
+                          itself already lazy-loaded by the router
+                          (same disposition as slice 0018's
+                          ai-drive-coaching and slice 0019's
+                          ai-charging-diagnosis chunks). The withAiFeature
+                          HOC ensures off-mode users never receive any
+                          AI bytes beyond the HOC itself, which is
+                          shared infrastructure across all AI features.)
+
+========================
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE

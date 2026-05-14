@@ -1,0 +1,17 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_help_retrieve_zero_1
+        name: retrieve_docs
+        arguments: '{"query": "holographic windshield projection display configuration", "source_types": ["docs", "runbooks"], "k": 5}'
+    input_tokens: 56
+    output_tokens: 40
+  - finish_reason: stop
+    content: |
+      I found no documentation matching that query. The feature you
+      asked about is not part of the documented surface. Try
+      rephrasing with the actual feature name, or check the static
+      help links on this page (Documentation, Onboarding, System
+      Status, Search) for related topics.
+    input_tokens: 124
+    output_tokens: 72

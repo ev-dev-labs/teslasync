@@ -1,0 +1,20 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_help_retrieve_basic_1
+        name: retrieve_docs
+        arguments: '{"query": "how to enable web push notifications", "source_types": ["docs", "i18n"], "k": 5}'
+    input_tokens: 52
+    output_tokens: 36
+  - finish_reason: stop
+    content: |
+      To enable web push notifications, open the Settings page and
+      navigate to the Notifications section. Toggle "Browser
+      notifications" on, then accept the browser's permission prompt
+      when it appears.
+
+      Citations:
+      - docs: notifications/web-push.md
+      - i18n: settings.notifications.browserPush
+    input_tokens: 142
+    output_tokens: 76

@@ -75,6 +75,9 @@ import (
 //   - aiChargingDiagnosis: the real LLM-backed handler for the per-charging-
 //                  session diagnosis (Phase-50 / N5, slice 0019). Same
 //                  nil fallback pattern.
+//   - aiRagHelp  : the real LLM-backed handler for the RAG-backed app
+//                  help assistant (Phase-50 / N6, slice 0020). Same
+//                  nil fallback pattern.
 func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
@@ -89,6 +92,7 @@ func mountAIRoutes(
 	aiSearch *AISearchHandler,
 	aiDriveCoach *AIDriveCoachHandler,
 	aiChargingDiagnosis *AIChargingDiagnosisHandler,
+	aiRagHelp *AIRAGHelpHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// chatbot-llm (Phase-50 / U1, slice 0011 wires the real
@@ -216,6 +220,23 @@ func mountAIRoutes(
 		}
 		r.Post("/charging/{sessionID}/diagnose", g.Wrap("charging-diagnosis", chargingDiagnosisHandler))
 
+		// rag-help (Phase-50 / N6, slice 0020). Same
+		// stub-fallback pattern as the other AI handlers — a nil
+		// handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode. The
+		// route lives under /ai/help/... (parallel to the
+		// deterministic /help SPA page that ships curated docs
+		// links + tooltips + i18n help copy as the canonical
+		// off-mode baseline) so the AI surface is namespaced and
+		// can be removed in one route block if the feature is
+		// ever decommissioned.
+		var ragHelpHandler http.HandlerFunc = aiRagHelpStubHandler
+		if aiRagHelp != nil {
+			ragHelpHandler = aiRagHelp.ServeHTTP
+		}
+		r.Post("/help/query", g.Wrap("rag-help", ragHelpHandler))
+
 		// ai-provider-health (Phase-50 / F1, slice 0002).
 		// Ops-only diagnostic. Triple-gated:
 		//   guard.Wrap (mode + feature toggle) → RequireSudo → handler.
@@ -293,4 +314,12 @@ func aiDriveCoachStubHandler(w http.ResponseWriter, _ *http.Request) {
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiChargingDiagnosisStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai charging diagnosis is not yet implemented")
+}
+
+// aiRagHelpStubHandler mirrors aiChargingDiagnosisStubHandler for
+// the N6 slice (Phase-50 / 0020 rag-help). Reachable only when
+// AIRAGHelpHandler is nil at construction; the off-mode 404
+// invariant is held by the guard, not the stub.
+func aiRagHelpStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai rag help is not yet implemented")
 }

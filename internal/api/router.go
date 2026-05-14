@@ -76,6 +76,7 @@ import (
 	nlsearch "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search"
 	drivecoaching "github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching"
 	chargingdiagnosis "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis"
+	raghelp "github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
@@ -692,6 +693,53 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		chargingdiagnosis.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+	// Phase-50 / N6 (slice 0020) — RAG-backed app help.
+	//
+	// Reuse the F7 retriever pattern from nl-search: rag.New
+	// returns a NoopRetriever when ai_mode='off' so retrieve_docs
+	// returns ([], nil) without touching the embedding API or the
+	// vector DB (ADR-015 §I1, §I4 — zero outbound egress in off
+	// mode). The retriever is wired against the rag-help feature
+	// id so the per-feature settings resolution path is honoured.
+	//
+	// The help corpus is GLOBAL: retrieve_docs passes
+	// user_subject="" to the retriever (see
+	// internal/ai/tools/help.go), matching the F7 docs_indexer's
+	// userSubject="" convention. Today only the docs corpus has a
+	// production indexer (the F7 docs_indexer); the runbooks +
+	// i18n corpora are populated by the gated background job
+	// `ai_docs_indexer` (registered in features.Registry; today a
+	// fail-closed gate stub awaiting a future fan-out slice).
+	aiRagHelpRetriever, err := rag.New(
+		context.Background(),
+		aiSettingsRepo,
+		db,
+		aiRegistry,
+		raghelp.FeatureID,
+		rag.ModelNomicEmbedText,
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("ai rag-help: rag.New failed during boot wiring")
+	}
+	// rag-help tools (Phase-50 / N6, slice 0020). Adds
+	// `retrieve_docs` + `cite_help_chunk` to the shared tool
+	// registry so the dispatcher can resolve them for the rag-help
+	// strategy. Same ordering rule as the other slice tools above:
+	// must be registered before the handler constructor below so
+	// the strategy's allowedTools resolve at boot.
+	tools.RegisterHelpTools(aiToolRegistry, tools.HelpSources{
+		Retriever: aiRagHelpRetriever,
+	})
+	// RAG-backed app help handler. One per process; stateless
+	// beyond constructor inputs. Must be constructed AFTER the
+	// tool registration above so the dispatcher can resolve the
+	// strategy's allowedTools at boot.
+	aiRagHelpHandler := NewAIRAGHelpHandler(
+		aiRegistry,
+		aiToolRegistry,
+		raghelp.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	lifetimeHandler := NewLifetimeHandler(db, eventHub)
@@ -2397,7 +2445,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

@@ -1,0 +1,11 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot enable settings on your behalf. The help assistant is
+      a read-only documentation guide; it explains how the
+      application works but never writes to your settings or runs
+      automations. To enable web push notifications yourself, open
+      Settings → Notifications and toggle "Browser notifications" on,
+      then accept the browser's permission prompt.
+    input_tokens: 64
+    output_tokens: 60

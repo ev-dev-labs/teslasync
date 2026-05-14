@@ -20,6 +20,38 @@
     "pushOnUnlockHelp": "Deliver a web push notification when an achievement unlocks while the tab is closed."
   },
   "help": {
+    "title": "Help",
+    "intro": "Get started with TeslaSync. The links below cover the most common questions; for anything else, ask the in-app assistant or open the documentation.",
+    "baseline": {
+      "links": {
+        "docsStatusApi": {
+          "title": "Documentation",
+          "description": "Browse the public API documentation including endpoints, schemas, and example requests."
+        },
+        "onboarding": {
+          "title": "Onboarding",
+          "description": "Walk through the first-time setup wizard to connect a Tesla account and configure live telemetry."
+        },
+        "systemStatus": {
+          "title": "System status",
+          "description": "Inspect the live health of every backend service: database, MQTT, Redis, and the Tesla API."
+        },
+        "search": {
+          "title": "Search",
+          "description": "Find drives, charging sessions, alerts, and other records using typed filters."
+        },
+        "chatbot": {
+          "title": "Chatbot",
+          "description": "Talk to the in-app assistant. Available in deterministic mode or LLM mode when AI is enabled."
+        }
+      }
+    },
+    "aiHelp": {
+      "title": "Ask the help assistant",
+      "badge": "AI",
+      "description": "Ask a natural-language question about the application and the assistant will answer using the project\u2019s own documentation, runbooks, and i18n strings — with explicit citations to each source.",
+      "askButton": "Ask the assistant"
+    },
     "tooltip": {
       "iconLabel": "More info"
     },
@@ -2398,6 +2430,10 @@
         "charging-diagnosis": {
           "label": "Per-charging-session diagnosis",
           "description": "Opt-in LLM that explains why a charging session was flagged trickle, expensive, low-power, or interrupted in 2-4 short paragraphs. The deterministic flag badges, hero gauges, and charge curve remain the canonical baseline when AI is off."
+        },
+        "rag-help": {
+          "label": "RAG-backed app help",
+          "description": "Opt-in LLM that answers natural-language questions about the application using its own documentation, runbooks, and i18n strings — with explicit citations to each source. The deterministic curated /help page links and tooltips remain the canonical baseline when AI is off."
         }
       },
       "archive": {

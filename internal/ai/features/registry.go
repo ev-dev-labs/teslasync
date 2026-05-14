@@ -645,6 +645,49 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / N6 (slice 0020) — RAG-backed app help.
+	//
+	// `rag-help` is the opt-in LLM-narrated app help assistant. The
+	// AI route POST /api/v1/ai/help/query opens a one-shot SSE
+	// stream backed by the dispatcher loop: the LLM calls
+	// retrieve_docs across the curated docs|runbooks|i18n corpora
+	// (F7 rag.Retriever scoped to the GLOBAL user_subject="" rows
+	// the F7 docs_indexer writes), optionally calls cite_help_chunk
+	// to format a citation envelope, and narrates a concise answer
+	// with explicit citations.
+	//
+	// The deterministic baseline rendered by the SPA route /help —
+	// curated links into the existing /docs/* + /system-status +
+	// /chatbot + /search + /onboarding pages plus the existing
+	// in-app tooltips and i18n help copy — is unchanged when AI is
+	// off (ADR-015 §I3, §I5, §I6). Off-mode users never see the AI
+	// surface at all; the deterministic curated links remain the
+	// canonical help path.
+	//
+	// JobNames: `ai_docs_indexer` is the gated background job that
+	// keeps the help corpus embeddings fresh. Today it is a fail-
+	// closed gate stub (mirrors the pattern from ai_digest_weekly
+	// and ai_year_in_review_pregen); a future slice wires the
+	// actual fan-out across curated docs/runbooks/i18n sources.
+	// The job MUST be listed here so the final-gate proves it has
+	// no scheduled invocation when ai_mode='off'.
+	"rag-help": {
+		ID:          "rag-help",
+		Name:        "RAG-backed app help",
+		Description: "Opt-in LLM-narrated answers to natural-language application help questions, grounded in the application's own documentation, runbooks, and i18n strings via the F7 RAG retriever. The deterministic curated /help page links + tooltips + i18n help copy remain the canonical baseline when AI is off.",
+		Tier:        "N",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/help/query"},
+			Frontend:  []string{"/help"},
+			UITestIDs: []string{"ai-feature-rag-help-root"},
+			JobNames:  []string{"ai_docs_indexer"},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as
