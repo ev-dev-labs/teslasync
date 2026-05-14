@@ -1,0 +1,6 @@
+replies:
+  - finish_reason: stop
+    content: |
+      Based on your current charge, you can drive about 310 miles on a full charge.
+    input_tokens: 24
+    output_tokens: 14
