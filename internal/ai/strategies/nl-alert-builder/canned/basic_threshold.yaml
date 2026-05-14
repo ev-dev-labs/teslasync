@@ -1,0 +1,23 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_alert_draft_basic_1
+        name: draft_alert_rule
+        arguments: '{"vehicle_id": 1, "name": "Battery below 20%", "signal_name": "battery_level", "op": "<", "value_num": 20, "severity": "warn", "cooldown_min": 30, "trigger_mode": "once"}'
+    input_tokens: 48
+    output_tokens: 36
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_alert_validate_basic_1
+        name: validate_alert_rule
+        arguments: '{"name": "Battery below 20%", "signal_name": "battery_level", "op": "<", "value_num": 20, "severity": "warn", "cooldown_min": 30, "trigger_mode": "once", "all_vehicles": false, "vehicle_ids": [1]}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      I drafted an alert that fires when battery_level drops below 20% on
+      vehicle 1, severity warn, 30-minute cooldown, trigger once per
+      resolution. Review the draft in the side panel and click Save to
+      create it.
+    input_tokens: 142
+    output_tokens: 56

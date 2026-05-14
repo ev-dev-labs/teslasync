@@ -47,6 +47,7 @@ import { ComputedMetricEditor } from '../components/ComputedMetricEditor'
 import { AlertMessageEditor } from '../components/AlertMessageEditor'
 import { recommendedTriggerMode } from '../lib/recommendedTriggerMode'
 import { Icons } from '@/lib/icons';
+import { AINLAlertBuilder } from '@/components/ai/AINLAlertBuilder'
 
 // Phase-49 / Slice 0008 — editor-only tri-state. Backend column stays
 // strict ('once' | 'repeat'); 'unset' exists purely so a brand-new
@@ -1294,6 +1295,19 @@ export default function AlertStudio() {
         </>
       }
     >
+      {/* ── Phase-50 / N1: opt-in AI natural-language alert builder ── */}
+      {/* Renders only when ai_mode != 'off' AND the                    */}
+      {/* nl-alert-builder toggle is on. The withAiFeature HOC inside   */}
+      {/* AINLAlertBuilder enforces the gate; the manual AlertStudio    */}
+      {/* form below remains the canonical baseline in off mode         */}
+      {/* (ADR-015 §I3). The component PROPOSES drafts only — saving    */}
+      {/* still flows through the typed handler below                   */}
+      {/* (ADR-015 §I3 baseline-intact + this slice's PROPOSE-only      */}
+      {/* contract).                                                    */}
+      <FadeIn delay={0.04}>
+        <AINLAlertBuilder />
+      </FadeIn>
+
       {showTemplates && (
         <FadeIn>
           <GlassPanel className="p-5">

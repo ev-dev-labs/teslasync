@@ -60,6 +60,9 @@ import (
 //   - aiAnomaly  : the real LLM-backed handler for the anomaly
 //                  explanation narration (Phase-50 / U4, slice 0014).
 //                  Same nil fallback pattern.
+//   - aiAlert    : the real LLM-backed handler for the natural-language
+//                  alert builder (Phase-50 / N1, slice 0015). Same nil
+//                  fallback pattern.
 func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
@@ -69,6 +72,7 @@ func mountAIRoutes(
 	aiDigest *AIDigestHandler,
 	aiYIR *AIYearReviewHandler,
 	aiAnomaly *AIAnomalyHandler,
+	aiAlert *AIAlertHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// chatbot-llm (Phase-50 / U1, slice 0011 wires the real
@@ -115,6 +119,21 @@ func mountAIRoutes(
 		}
 		r.Post("/anomalies/explain", g.Wrap("anomaly-explanations", anomalyHandler))
 
+		// nl-alert-builder (Phase-50 / N1, slice 0015). Same
+		// stub-fallback pattern as the other AI handlers — a nil
+		// handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode. Note
+		// the route lives under /ai/alerts/... (parallel to the
+		// canonical /alerts/rules typed handler) so the AI
+		// surface is namespaced and can be removed in one route
+		// block if the feature is ever decommissioned.
+		var alertHandler http.HandlerFunc = aiAlertStubHandler
+		if aiAlert != nil {
+			alertHandler = aiAlert.ServeHTTP
+		}
+		r.Post("/alerts/rules/draft", g.Wrap("nl-alert-builder", alertHandler))
+
 		// ai-provider-health (Phase-50 / F1, slice 0002).
 		// Ops-only diagnostic. Triple-gated:
 		//   guard.Wrap (mode + feature toggle) → RequireSudo → handler.
@@ -152,4 +171,12 @@ func aiYIRStubHandler(w http.ResponseWriter, _ *http.Request) {
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiAnomalyStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai anomaly explanation is not yet implemented")
+}
+
+// aiAlertStubHandler mirrors aiAnomalyStubHandler for the N1 slice
+// (Phase-50 / 0015 nl-alert-builder). Reachable only when
+// AIAlertHandler is nil at construction; the off-mode 404 invariant
+// is held by the guard, not the stub.
+func aiAlertStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai alert builder is not yet implemented")
 }

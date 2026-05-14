@@ -71,6 +71,7 @@ import (
 	digestnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration"
 	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
 	anomalyexplanations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations"
+	nlalertbuilder "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-alert-builder"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
 	// New hexagonal architecture packages
@@ -566,6 +567,29 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		anomalyexplanations.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+	// Phase-50 / N1 (slice 0015) — Natural-language alert builder.
+	// Register the slice's PROPOSE-only typed tools on the SAME
+	// process-wide registry so the dispatcher can resolve
+	// `draft_alert_rule` + `validate_alert_rule` for the
+	// nl-alert-builder strategy. Registered AFTER
+	// RegisterAnomalyTools so the registry's alphabetical Names
+	// list grows deterministically.
+	//
+	// AIAlertRuleValidator is a thin wrapper around the unexported
+	// validateAlertRule function in alert_handler_rules.go — same
+	// code path the canonical POST /api/v1/alerts/rules handler
+	// uses. Drafts accepted by the AI tool are byte-equivalent to
+	// drafts accepted by the canonical handler (ADR-015 §I3
+	// baseline-intact).
+	tools.RegisterAlertBuilderTools(aiToolRegistry, tools.AlertBuilderSources{
+		Validator: NewAIAlertRuleValidator(),
+	})
+	aiAlertHandler := NewAIAlertHandler(
+		aiRegistry,
+		aiToolRegistry,
+		nlalertbuilder.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	lifetimeHandler := NewLifetimeHandler(db, eventHub)
@@ -2271,7 +2295,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

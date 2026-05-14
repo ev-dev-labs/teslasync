@@ -2366,6 +2366,10 @@
         "anomaly-explanations": {
           "label": "Anomaly explanation narration",
           "description": "Opt-in LLM narration that explains already-detected anomalies in plain language. The deterministic detector and safe-range explanations remain the baseline when AI is off."
+        },
+        "nl-alert-builder": {
+          "label": "Natural-language alert builder",
+          "description": "Opt-in LLM that drafts alert rules from a plain-language description. Drafts are typed AlertRule proposals that you review and save through the standard form; the manual AlertStudio remains the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -6496,6 +6500,12 @@
     "alertStudio": {
       "title": "Alert Studio",
       "subtitle": "Create custom rules from Fleet Telemetry signals",
+      "aiBuilder": {
+        "title": "Draft from natural language",
+        "description": "Describe the alert you want and get a typed AlertRule draft you can review and save below.",
+        "badge": "AI",
+        "draftButton": "Draft alert"
+      },
       "rules": {
         "untitled": "Untitled",
         "countOne": "1 rule",

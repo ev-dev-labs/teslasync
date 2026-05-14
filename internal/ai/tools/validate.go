@@ -114,9 +114,29 @@ func validateValue(v reflect.Value, t reflect.Type, path string) error {
 
 // applyRulesRuntime is the value-side counterpart of applySingleRule
 // — it checks the constraints rather than emitting them.
+//
+// `omitempty` (a standard go-playground/validator keyword that the
+// schema generator silently ignores) short-circuits the rest of the
+// rules when the value is its zero value. This matches the
+// convention LLM-facing tools rely on for optional fields whose
+// presence-OR-absence is acceptable but whose value MUST be drawn
+// from a constrained set when present (e.g. trigger_mode in the
+// nl-alert-builder slice).
 func applyRulesRuntime(v reflect.Value, t reflect.Type, tag, path string) error {
 	pre, post := parseValidateTag(tag)
+	// omitempty: skip every other pre-dive rule when the value is
+	// its zero value. The convention mirrors the canonical
+	// go-playground/validator semantics so a tool author who knows
+	// the validator library is not surprised here.
 	for _, r := range pre {
+		if r.Name == "omitempty" && isZero(v) {
+			return nil
+		}
+	}
+	for _, r := range pre {
+		if r.Name == "omitempty" {
+			continue
+		}
 		if err := checkRule(v, t, r, path); err != nil {
 			return err
 		}
@@ -136,6 +156,12 @@ func applyRulesRuntime(v reflect.Value, t reflect.Type, tag, path string) error 
 			elem := v.Index(i)
 			elemPath := fmt.Sprintf("%s[%d]", path, i)
 			for _, r := range post {
+				if r.Name == "omitempty" {
+					if isZero(elem) {
+						break
+					}
+					continue
+				}
 				if err := checkRule(elem, t.Elem(), r, elemPath); err != nil {
 					return err
 				}

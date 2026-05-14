@@ -332,6 +332,64 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / N1 (slice 0015) — Natural-language alert builder.
+	//
+	// Adds opt-in LLM-assisted DRAFTING of AlertRule DTOs from a
+	// natural-language description of the desired alert. The strategy
+	// is propose-only: the AI produces a typed AlertRule draft via the
+	// F4 `draft_alert_rule` + `validate_alert_rule` tools and the user
+	// then explicitly clicks Save in the existing AlertStudioPage —
+	// the actual mutation flows through the existing
+	// POST /api/v1/alerts/rules typed handler, which is unchanged.
+	//
+	// The deterministic AlertStudioPage form + validateAlertRule
+	// validator at `internal/api/alert_handler_rules.go` remain the
+	// canonical baseline for any user with `ai_mode='off'`; this
+	// feature only wires the AI surface that lives alongside it.
+	//
+	// Backend: POST /api/v1/ai/alerts/rules/draft is mounted by
+	// mountAIRoutes in `internal/api/ai_routes.go` via guard.Wrap so
+	// off-mode requests return 404 BEFORE the handler runs (ADR-015
+	// §I6). The endpoint streams a draft AlertRule DTO via SSE —
+	// the response is a STRUCTURED PROPOSAL the frontend renders
+	// for the user to confirm or edit before saving through the
+	// canonical alerts handler. No state is mutated by this route.
+	//
+	// Frontend: the canonical host route declared by the slice prompt
+	// is `/alerts/studio` — the AI section actually renders inside
+	// the existing /notifications/studio page (the only AlertStudio
+	// page in the SPA today; lives under `web/src/features/notifications/...`
+	// because the legacy `alert-studio` and `alerts` paths redirect
+	// to it). The off-mode invariant test
+	// (`TestNLAlertBuilderAIOffHidesPanelAndManualFormWorks.test.tsx`)
+	// proves that the wrapped component carrying
+	// `ai-feature-nl-alert-builder-root` is absent from the DOM in
+	// off mode and the manual form continues to work. The pattern
+	// (canonical host route in the registry, real render path
+	// elsewhere) mirrors the digest-narration / yir-narration /
+	// anomaly-explanations entries above.
+	//
+	// Background / Push: this slice ships zero new jobs and zero new
+	// push kinds — alert drafting is request/response, on demand from
+	// the AlertStudio page. The empty arrays are explicit so
+	// CoverageOK passes.
+	"nl-alert-builder": {
+		ID:          "nl-alert-builder",
+		Name:        "Natural-language alert builder",
+		Description: "Opt-in LLM assistant that drafts typed AlertRule DTOs from a plain-language description. The deterministic AlertStudio form + validators remain the baseline when AI is off; saving still flows through the existing typed alerts handler.",
+		Tier:        "N",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/alerts/rules/draft"},
+			Frontend:  []string{"/alerts/studio"},
+			UITestIDs: []string{"ai-feature-nl-alert-builder-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

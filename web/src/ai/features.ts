@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "chatbot-llm" | "digest-narration" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "chatbot-llm" | "digest-narration" | "nl-alert-builder" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -91,6 +91,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-digest-narration-root"] as const),
   }),
+  "nl-alert-builder": Object.freeze({
+    id: "nl-alert-builder",
+    name: "Natural-language alert builder",
+    description: "Opt-in LLM assistant that drafts typed AlertRule DTOs from a plain-language description. The deterministic AlertStudio form + validators remain the baseline when AI is off; saving still flows through the existing typed alerts handler.",
+    tier: "N",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-nl-alert-builder-root"] as const),
+  }),
   "yir-narration": Object.freeze({
     id: "yir-narration",
     name: "Year-in-review narration",
@@ -111,6 +122,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "anomaly-explanations",
   "chatbot-llm",
   "digest-narration",
+  "nl-alert-builder",
   "yir-narration",
 ] as const);
 
