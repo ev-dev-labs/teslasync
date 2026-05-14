@@ -1,0 +1,518 @@
+Phase-50 / Prompt 0005 — F4: Tool-Use Framework
+
+=== PREFLIGHT ===
+
+Branch: feat/ai-adoption
+HEAD before slice: 1ace0b326 feat(ai): F3 ai_call_log + audit decorator + shared UsageCard
+Working tree before slice: clean (only files added during this slice are listed in the
+COMMIT section below).
+
+Predecessor logs verified:
+
+  phase-50-0001-F0-ai-off-contract.log         STATUS=DONE
+  phase-50-0002-F1-provider-abstraction.log    STATUS=DONE
+  phase-50-0003-F2-settings-ui.log             STATUS=DONE
+  phase-50-0004-F3-ai-call-log.log             STATUS=DONE
+
+All four foundational slices on which F4 depends are present and complete.
+F4's prompt header lists "Depends-on: F0, F1" — F2 and F3 are also present
+which gives the registry, settings panel, and audit log this slice's
+new infrastructure plugs into.
+
+ADR-015 read: yes — every invariant cited in the AI-OFF CONTRACT footer
+is verified against the corresponding paragraph of the ADR document.
+
+=== SURVEY ===
+
+What I inspected before editing:
+
+1. Existing AI infrastructure (read-only):
+   - internal/ai/cost          — cost tables (F1)
+   - internal/ai/features      — feature registry (F0/F2/F3)
+   - internal/ai/guard         — Guard.Wrap off-mode 404 layer (F0)
+   - internal/ai/provider      — port + four adapters incl. Mock (F1/F3)
+   - internal/ai/provider/audit.go     — async audit drainer (F3)
+
+   Result: F4 plugs in cleanly without changing F0–F3 code. The provider
+   package already declares Tool, ToolCall, ToolSpec, Capabilities,
+   ChatRequest, ChatResponse, Chunk, FinishStop|ToolCalls|Length|
+   ContentFilter, RoleSystem|User|Assistant|Tool — F4 only consumes them.
+
+2. Repository surfaces the 12 starter tools wrap:
+   - VehicleRepo.GetAll(ctx) ([]*models.Vehicle, error)
+   - VehicleRepo.GetByID(ctx, id int64) (*models.Vehicle, error)
+   - DriveRepo.GetByVehicle(ctx, vehicleID int64, limit, offset int, st, et time.Time)
+   - DriveRepo.GetByID(ctx, id int64) (*models.Drive, error)
+   - ChargingRepo (same shape as DriveRepo)
+   - AlertRuleRepo.GetAll(ctx) ([]*models.AlertRule, error)
+   - GeofenceRepo.GetAll(ctx) ([]*models.Geofence, error)
+   - NotificationRepo.GetLogs(ctx, limit, offset int) ([]*models.NotificationLog, error)
+
+   Result: every starter tool wraps an existing repo method. NO NEW SQL
+   IS WRITTEN by this slice. The R2 mitigation is preserved by giving
+   each Tool a typed Input DTO with `validate:"..."` tags from which
+   the schema generator AND the runtime validator both reflect.
+
+3. Migration slot allocation:
+   `Get-ChildItem migrations -Filter '000*.up.sql' | Sort-Object Name | Select-Object -Last 5`
+   →  000200, 000201, 000202, 000203 are taken.
+   Slot 000204 is the next free slot. Prompt 0005 hardcodes 000199 but
+   that slot is taken by si_aware_convert_functions; F0..F3 occupy
+   000201..000203. F4 takes 000204 — same slot-variance documentation
+   precedent as F0..F3.
+
+4. Test pattern: `internal/database/ai_call_log_repo_test.go` already
+   defines a `dsnOrSkip(t)` helper that picks DATABASE_URL then
+   TESLASYNC_TEST_DSN then `t.Skip(...)`. F4's continuations test reuses
+   it (same package).
+
+5. Frontend scaffolding:
+   - web/src/components/ui/ConfirmDialog.tsx (existing, generic) —
+     destructive-action-flavored. F4 ships a DISTINCT
+     web/src/components/ai/ConfirmDialog.tsx for the AI tool-use flavor
+     (tool name + JSON args, no destructive wording).
+   - web/src/components/ai/withAiFeature.test.tsx — vitest pattern for
+     this directory.
+   - The Modal/Button shared components support all the props
+     AiConfirmDialog needs (open/onClose, variant primary|secondary,
+     loading prop, disabled prop).
+
+=== REASONING ===
+
+P2 ("tool-use as the only mutation path") and P4 ("strategy") are the
+two foundational patterns this slice realises. The design preserves
+ADR-015 by making every AI surface gated and auditable.
+
+Key design decisions:
+
+(a) Tool interface is owned in `internal/ai/tools` so any AI feature can
+    register a tool without import-cycling against dispatch/strategy.
+    Method shape (Name/Description/InputSchema/OutputSchema/Mutates/
+    RequiredScope/Validate/Execute) matches the prompt's D5.1 verbatim.
+
+(b) Schema generation reads `validate:"..."` struct tags via reflection
+    (R2 mitigation). The same tag set drives runtime validation
+    (`tools.ValidateStruct[T]`). Both halves walk a shared `parseValidateTag`
+    rule map so a constraint added to one half MUST appear in the other —
+    otherwise `TestEverySchemaMatchesHandlerValidation` breaks. The fuzz
+    pin actually caught a real divergence during development:
+    `query_drives_recent.limit` was tagged `gte=1,lte=100` (no `required`)
+    but the validator rejected zero values. The fix was to make `limit`
+    `required` explicitly so schema and validator agree. A real R2 catch.
+
+(c) Strategy interface is shipped INTERFACE ONLY per the prompt. The
+    `RedactionPolicy` and `EvalGoldens` return types are placeholder
+    interfaces with non-exported markers (`policyMarker`, `goldenMarker`)
+    so no code outside the strategy package can synthesise a "wrong"
+    policy. F8 will widen `RedactionPolicy` with an `Apply(...)` method;
+    F6 will widen `EvalGolden` with concrete fields. Both extensions are
+    backwards-compatible because the placeholder is an interface.
+
+(d) Dispatcher (D5.5) is split across three files for readability:
+    `dispatch.go` (the Run loop), `continuation.go` (paused-state shape),
+    `stream.go` (StreamWriter interface + a CaptureWriter for tests).
+    The chat loop is the obvious one: provider.Chat → optional tool
+    calls → validate → optional confirm → execute → repeat → stop OR
+    MaxIterations. Streaming (Provider.Stream) lands with F5; F4 calls
+    Chat() and forwards the response content as a single delta so the
+    contract is testable.
+
+(e) Confirm flow (D5.5 second half) uses a `ConfirmFn` callback. In
+    production the wiring will wrap an SSE round-trip:
+    dispatcher emits a confirm_request frame → frontend renders
+    AiConfirmDialog → user clicks → frontend POSTs the decision →
+    callback returns. In tests the callback is a synchronous fake.
+    The continuation TABLE (`ai_chat_continuations`) persists state for
+    runs that span the SSE boundary so a network blip between
+    "user clicked Confirm" and "dispatcher resumed" is recoverable.
+
+(f) Migration slot 000204 (NOT 000199 as the prompt header suggests).
+    Slot 000199 is occupied by `si_aware_convert_functions` from
+    Phase-48; F0..F3 occupy 000201..000203. The slot-variance precedent
+    is set by F0..F3's logs.
+
+(g) 12 starter tools wrap REPOS not handlers. Handlers are HTTP-bound
+    (parse URL params, write JSON, manage status codes); repos are
+    where the actual data access lives. The R2 mitigation still holds:
+    each tool defines a NEW typed Input DTO in the tools package with
+    `validate:"..."` tags; both the schema generator and the runtime
+    validator reflect from those tags. Nothing about the tool→repo
+    boundary opens a new SQL surface — every method called is a
+    pre-existing typed repo method.
+
+(h) Mutating tools are NOT shipped in this slice. Per the prompt:
+    "Mutating tools are NOT shipped in this slice — they belong with
+    the features that use them (N1, N2, etc.)." All 12 builtins return
+    `Mutates() == false`. The dispatcher's confirm-flow code paths are
+    therefore exercised ONLY by tests (using `pingTool{mutates:true}`).
+    `TestBuiltinsHaveNoMutators` pins this contract.
+
+(i) Continuations table cleanup: `CleanupExpired` is a repo method, NOT
+    a worker tick. The methodology document allows a "wired by the next
+    worker-touching slice" deferral. The architecture doc and the
+    inline `// 24h cleanup` comment make the deferral explicit.
+
+(j) The ESLint AI-import rule from F0 only blocks `internal/ai/provider`
+    imports outside designated AI surfaces. New `internal/ai/{tools,
+    strategy,dispatch}` packages are already inside `internal/ai/...`
+    so the rule allows them. No ESLint changes needed.
+
+=== CHANGES ===
+
+Production code (Go) added:
+  internal/ai/tools/doc.go              — package overview + ADR-015 invariants
+  internal/ai/tools/tool.go             — Tool interface + Definition struct
+  internal/ai/tools/schema.go           — Generate(reflect.Type) JSON-Schema
+  internal/ai/tools/validate.go         — ValidateStruct[T] + ValidationError
+  internal/ai/tools/registry.go         — Registry (Register/Get/Names/All/Specs/Filter/Definitions)
+  internal/ai/tools/builtins.go         — 12 starter tools + 8 narrow source interfaces
+  internal/ai/strategy/strategy.go      — Strategy interface + placeholder Policy/Golden
+  internal/ai/dispatch/dispatch.go      — Dispatcher + Run + tool-call validation gate
+  internal/ai/dispatch/continuation.go  — ContinuationState + Marshal/Unmarshal
+  internal/ai/dispatch/stream.go        — StreamWriter interface + CaptureWriter
+  internal/database/ai_chat_continuations_repo.go — Save/Load/Delete/CleanupExpired
+
+Test code (Go) added:
+  internal/ai/tools/schema_test.go              — 11 schema-generation tests
+  internal/ai/tools/registry_test.go            — 8 registry contract tests
+  internal/ai/tools/builtins_test.go            — 11 per-tool behaviour tests
+  internal/ai/tools/fuzz_schema_test.go         — TestEverySchemaMatchesHandlerValidation +
+                                                   round-trip pin tests (R2 mitigation)
+  internal/ai/strategy/strategy_test.go         — interface implementability + marker pin
+  internal/ai/dispatch/dispatch_test.go         — 11 dispatcher behaviour tests covering
+                                                   simple chat, single tool call, multi-step
+                                                   chain, max-iter cutoff, confirm pause,
+                                                   confirm denied, confirm approved,
+                                                   strategy-allowlist enforcement, validation-
+                                                   failure surfacing, provider error,
+                                                   missing-tool detection, continuation
+                                                   round-trip
+  internal/database/ai_chat_continuations_repo_test.go — 4 pure-Go validators + 2 live-DB
+                                                          (DSN-skipped) round-trip tests
+
+Migrations:
+  migrations/000204_ai_chat_continuations.up.sql   — table + indexes + check + comments
+  migrations/000204_ai_chat_continuations.down.sql — drops indexes then table
+
+Frontend:
+  web/src/components/ai/ConfirmDialog.tsx          — AiConfirmDialog (Modal+Button)
+  web/src/components/ai/__tests__/ConfirmDialog.test.tsx — 8 vitest cases
+
+Documentation:
+  docs/architecture/ai-tool-use.md                 — architecture overview + 5 rules
+
+NOT changed by this slice:
+  - internal/api/router.go (no new HTTP routes — the dispatcher is
+    consumed by F5 at the SSE endpoint level and feature-specific
+    handlers in later slices)
+  - internal/ai/features/registry.go (no new features added — F4 ships
+    infrastructure, not a feature)
+  - web/src/ai/features.ts (regenerated by aigen; no change because no
+    new features registered)
+  - .github/prompts/* (no methodology edits)
+  - All non-AI directories.
+
+=== GATE ===
+
+Command transcripts. Each block ends with EXIT=<int> on its own line
+(the trailing exit status of the immediately-preceding command).
+
+(1) Full Go build:
+$ cd D:\repos\teslasync; go build ./...
+EXIT=0
+
+(2) tools, dispatch, strategy unit tests with -race:
+$ cd D:\repos\teslasync; go test -race ./internal/ai/tools/ ./internal/ai/dispatch/ ./internal/ai/strategy/ -count=1
+ok  github.com/ev-dev-labs/teslasync/internal/ai/tools 2.539s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/dispatch 2.531s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy 2.517s
+EXIT=0
+
+(2a) Critical test — schema/validator equivalence pin:
+$ cd D:\repos\teslasync; go test -race ./internal/ai/tools/ -run TestEverySchemaMatchesHandlerValidation -count=1 -v
+=== RUN   TestEverySchemaMatchesHandlerValidation
+--- PASS: TestEverySchemaMatchesHandlerValidation (0.00s)
+    --- PASS: query_alerts_active
+    --- PASS: query_alerts_recent
+    --- PASS: query_battery_status
+    --- PASS: query_charge_detail
+    --- PASS: query_charges_recent
+    --- PASS: query_drive_detail
+    --- PASS: query_drives_recent
+    --- PASS: query_efficiency_period
+    --- PASS: query_geofences_list
+    --- PASS: query_vehicle_count
+    --- PASS: query_vehicle_location
+    --- PASS: query_vehicle_state
+PASS
+ok  github.com/ev-dev-labs/teslasync/internal/ai/tools 2.421s
+EXIT=0
+
+(3) Continuations DB tests against live DB (DATABASE_URL set):
+$ cd D:\repos\teslasync; $env:DATABASE_URL="postgres://teslasync:teslasync@localhost:5432/teslasync?sslmode=disable"; go test ./internal/database/ -run Continuations -count=1
+ok  github.com/ev-dev-labs/teslasync/internal/database  0.188s
+EXIT=0
+
+(3a) Continuations test verbose breakdown:
+$ ... -v output ...
+--- PASS: TestContinuationsRepo_Save_RejectsEmptyID (0.00s)
+--- PASS: TestContinuationsRepo_Save_RejectsEmptyFeatureID (0.00s)
+--- PASS: TestContinuationsRepo_Save_RejectsEmptyState (0.00s)
+--- PASS: TestContinuationsRepo_Load_EmptyIDIsNotFound (0.00s)
+--- PASS: TestContinuationsRepo_DefaultTTL (0.00s)
+--- PASS: TestContinuationsRepo_RoundTrip (0.06s)
+--- PASS: TestContinuationsRepo_RoundTrip_ExpiredRowNotResumable (0.03s)
+PASS
+
+(4) Migration smoke (down then up of 000204):
+$ migrate -path migrations -database $env:DATABASE_URL down 1
+204/d ai_chat_continuations (15.3406ms)
+$ migrate -path migrations -database $env:DATABASE_URL up 1
+204/u ai_chat_continuations (17.0264ms)
+EXIT=0
+
+(5) TypeScript noEmit:
+$ cd D:\repos\teslasync\web; npx tsc --noEmit
+(no output)
+EXIT=0
+
+(6) Vitest — AiConfirmDialog:
+$ cd D:\repos\teslasync\web; npx vitest run src/components/ai/__tests__/ConfirmDialog.test.tsx
+ ✓ src/components/ai/__tests__/ConfirmDialog.test.tsx (8 tests) 99ms
+   ✓ AiConfirmDialog (8)
+     ✓ renders nothing when open=false 15ms
+     ✓ renders tool name and pretty-printed args when open 41ms
+     ✓ calls onConfirm when the approve button is clicked 9ms
+     ✓ calls onCancel when the cancel button is clicked 8ms
+     ✓ disables both buttons while loading 7ms
+     ✓ renders empty {} when args is null 5ms
+     ✓ shows the read-only intro for non-mutating tools 7ms
+     ✓ shows the mutating intro for mutating tools 4ms
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+EXIT=0
+
+(7) aigen sync check:
+$ cd D:\repos\teslasync; go run ./tools/aigen --check
+aigen: web/src/ai/features.ts is in sync with internal/ai/features registry
+EXIT=0
+
+(8) aivet:
+$ cd D:\repos\teslasync; go run ./tools/aivet
+aivet: OK — 5 AI route(s), 3 feature(s) in registry, TS mirror in sync
+EXIT=0
+
+=== COMMIT ===
+
+git status before commit (only allowed-files changes present):
+  ?? docs/architecture/ai-tool-use.md
+  ?? internal/ai/dispatch/
+  ?? internal/ai/strategy/
+  ?? internal/ai/tools/
+  ?? internal/database/ai_chat_continuations_repo.go
+  ?? internal/database/ai_chat_continuations_repo_test.go
+  ?? migrations/000204_ai_chat_continuations.down.sql
+  ?? migrations/000204_ai_chat_continuations.up.sql
+  ?? web/src/components/ai/ConfirmDialog.tsx
+  ?? web/src/components/ai/__tests__/ConfirmDialog.test.tsx
+
+All paths fall inside the slice's "Allowed files" list:
+  ✓ internal/ai/tools/**
+  ✓ internal/ai/strategy/**
+  ✓ internal/ai/dispatch/**
+  ✓ internal/database/ai_chat_continuations_repo.go (+ test)
+  ✓ migrations/000204_ai_chat_continuations.up.sql, .down.sql
+  ✓ web/src/components/ai/ConfirmDialog.tsx (+ test)
+  ✓ docs/architecture/ai-tool-use.md
+
+(The prompt's allowed list says "migrations/000199_*"; F4 uses
+slot 000204 because 000199..000203 are already taken; documented in
+=== REASONING === decision (f). Same precedent as F0..F3.)
+
+git add (production + tests + log) transcript:
+
+$ git add internal/ai/tools internal/ai/strategy internal/ai/dispatch \
+          internal/database/ai_chat_continuations_repo.go \
+          internal/database/ai_chat_continuations_repo_test.go \
+          migrations/000204_ai_chat_continuations.up.sql \
+          migrations/000204_ai_chat_continuations.down.sql \
+          web/src/components/ai/ConfirmDialog.tsx \
+          web/src/components/ai/__tests__/ConfirmDialog.test.tsx \
+          docs/architecture/ai-tool-use.md
+$ git add -f .github/prompts/db-refactor/logs/phase-50-0005-F4-tool-use-framework.log
+
+(`-f` is required because /.github/prompts/db-refactor/logs is in
+.gitignore at line 90 — the same precedent is set by F0..F3 logs which
+are committed but ignored. The Phase-50 methodology treats slice logs
+as committed branch inputs.)
+
+git commit transcript:
+[feat/ai-adoption 11e61bdd] feat(ai): F4 tool-use framework — registry, schema generator, dispatcher, continuations
+ 24 files changed, 5226 insertions(+)
+ create mode 100644 .github/prompts/db-refactor/logs/phase-50-0005-F4-tool-use-framework.log
+ create mode 100644 docs/architecture/ai-tool-use.md
+ create mode 100644 internal/ai/dispatch/continuation.go
+ create mode 100644 internal/ai/dispatch/dispatch.go
+ create mode 100644 internal/ai/dispatch/dispatch_test.go
+ create mode 100644 internal/ai/dispatch/stream.go
+ create mode 100644 internal/ai/strategy/strategy.go
+ create mode 100644 internal/ai/strategy/strategy_test.go
+ create mode 100644 internal/ai/tools/builtins.go
+ create mode 100644 internal/ai/tools/builtins_test.go
+ create mode 100644 internal/ai/tools/doc.go
+ create mode 100644 internal/ai/tools/fuzz_schema_test.go
+ create mode 100644 internal/ai/tools/registry.go
+ create mode 100644 internal/ai/tools/registry_test.go
+ create mode 100644 internal/ai/tools/schema.go
+ create mode 100644 internal/ai/tools/schema_test.go
+ create mode 100644 internal/ai/tools/tool.go
+ create mode 100644 internal/ai/tools/validate.go
+ create mode 100644 internal/database/ai_chat_continuations_repo.go
+ create mode 100644 internal/database/ai_chat_continuations_repo_test.go
+ create mode 100644 migrations/000204_ai_chat_continuations.down.sql
+ create mode 100644 migrations/000204_ai_chat_continuations.up.sql
+ create mode 100644 web/src/components/ai/ConfirmDialog.tsx
+ create mode 100644 web/src/components/ai/__tests__/ConfirmDialog.test.tsx
+
+Working tree clean post-commit:
+$ git status --short
+(no output)
+EXIT=0
+
+=== AI-OFF CONTRACT ===
+
+ADR-015 invariant evidence (only invariants this slice touches):
+
+I1 (default-off):
+  PASS — F4 adds NEW packages (internal/ai/{tools,strategy,dispatch})
+         and a NEW table (ai_chat_continuations) but registers ZERO
+         feature toggles, ZERO HTTP routes, and zero SSE endpoints.
+         The feature registry is unchanged: aivet reports
+         "3 feature(s) in registry" (chatbot-llm, ai-provider-health,
+         __usage__) — same count as before. So no new AI surface
+         is reachable in any deployment, regardless of ai_mode.
+  EVIDENCE: aigen --check reports "in sync" (no regenerate needed);
+            aivet reports "5 AI route(s), 3 feature(s)" (counts
+            preserved from F3). git diff internal/ai/features/
+            registry.go is empty. git diff internal/api/router.go
+            is empty.
+
+I3 (baseline intact):
+  PASS — Zero non-AI files modified by this slice. The new
+         internal/ai/* packages are unreachable from non-AI code
+         paths. The new ai_chat_continuations table is empty until
+         a mutating tool actually pauses (no mutating tools shipped
+         here). The new docs/architecture/ai-tool-use.md is doc-only.
+  EVIDENCE: git diff in `=== COMMIT ===` lists 10 paths, all
+            within internal/ai/, internal/database/ai_chat_*,
+            migrations/000204_*, web/src/components/ai/, and
+            docs/architecture/. No baseline page, repo, handler,
+            or model is touched.
+
+I4 (zero outbound egress):
+  PASS — F4 ships infrastructure that COULD be used to make outbound
+         calls (the Dispatcher invokes provider.Provider.Chat) but
+         the dispatcher is not wired into any HTTP route this slice
+         registers. Every test uses a scriptedProvider or Mock —
+         no network code path is reachable.
+         Furthermore: the 12 starter tools are READ-ONLY and call
+         only LOCAL repos (PostgreSQL via the existing pgx pool).
+         No tool initiates an outbound HTTP request.
+  EVIDENCE: grep -r "http.Get\|http.Post\|net/http" internal/ai/tools/
+            internal/ai/dispatch/ internal/ai/strategy/ returns
+            no production-code matches. The CaptureWriter and
+            scripted provider in tests are pure in-memory.
+
+I5 (hidden UI):
+  PASS — AiConfirmDialog is shipped but NOT mounted by any page in
+         this slice. It will be consumed by per-feature pages (N1,
+         N2, ...) which themselves are gated by withAiFeature. Until
+         a parent component renders it with open=true, the dialog
+         is dead weight. The Modal it wraps respects open=false by
+         returning null.
+  EVIDENCE: grep -r "AiConfirmDialog" web/src/ outside the
+            component file + its test returns no matches. No new
+            <withAiFeature> wrappers exist; no new pages exist.
+
+I6 (404 routes preserved):
+  PASS — Zero new HTTP routes added. aivet reports the same 5 AI
+         route count as the baseline. The dispatcher's eventual SSE
+         endpoint is F5's responsibility; F4 ships only the
+         in-process plumbing.
+  EVIDENCE: aivet output: "OK — 5 AI route(s), 3 feature(s) in
+            registry, TS mirror in sync".
+
+I8 (audit survives downgrade):
+  PASS — The new ai_chat_continuations table holds dispatcher state
+         for paused mutating-tool calls. Rows have a 24h hard
+         expiry but they are NOT cascade-deleted on subject removal;
+         user_subject is a TEXT column with no FK (matching the
+         ai_call_log convention from F3). An operator running the
+         CleanupExpired tick sees stale rows GC'd by time, not by
+         user removal — so a forensic "what conversation did this
+         user almost run?" query against expires_at>now() always
+         returns whatever's still in flight.
+  EVIDENCE: migrations/000204 has no FOREIGN KEY clause anywhere;
+            grep "REFERENCES" migrations/000204_*.sql returns no
+            matches.
+
+I9 (provenance visible):
+  PASS — AiConfirmDialog renders the tool name + JSON arguments
+         emitted by the LLM verbatim in a <pre> block. The user
+         sees exactly what is about to happen before approving.
+         Test "renders tool name and pretty-printed args when open"
+         asserts the JSON renders with field names + values intact.
+  EVIDENCE: vitest case "renders tool name and pretty-printed
+            args when open" expects("rule_id": 42) AND
+            ("threshold": 80). The component code passes
+            `JSON.stringify(args ?? {}, null, 2)` to the <pre>
+            so no transformation occurs.
+
+I10 (per-feature isolation in dispatcher):
+  PASS — Strategy.Tools() is a hard whitelist enforced by the
+         dispatcher BEFORE the LLM sees the tool catalogue. Even
+         if an LLM hallucinates a tool the strategy didn't declare,
+         the dispatcher returns
+         "tool ... not allowed for this strategy" rather than
+         executing. Test
+         TestDispatcher_ToolNotInStrategyAllowlistRejected pins
+         this contract.
+  EVIDENCE: dispatch_test.go::TestDispatcher_ToolNotInStrategyAllowlistRejected
+            scripts an LLM that proposes "echo" while the strategy
+            only allows "ping"; the test asserts the result is a
+            tool_error event and execution does not occur.
+
+R1 (write-path corruption):
+  N/A — F4 writes nothing to existing typed tables. The only NEW
+        table is ai_chat_continuations whose payload is opaque
+        JSONB containing dispatcher state; it is read back only by
+        the dispatcher itself.
+
+R2 (schema drift between schema and validator):
+  PASS — TestEverySchemaMatchesHandlerValidation runs over every
+         registered builtin tool and asserts the JSON-Schema
+         declared "required" + additionalProperties=false constraints
+         AGREE with the runtime validator's accept/reject decisions.
+         The fuzz test caught a real divergence during development
+         (limit=0 accepted by schema, rejected by validator) and the
+         fix (adding `required` to the limit tag in three tools)
+         was applied before the gate was claimed green.
+  EVIDENCE: fuzz_schema_test.go::TestEverySchemaMatchesHandlerValidation
+            runs 12 sub-tests, all passing.
+
+R5 (P2 — LLM cannot write raw SQL):
+  PASS — The dispatcher refuses to call db.Exec on the LLM's behalf.
+         The LLM's only path to mutation is through tool.Execute;
+         tool.Validate runs first; mutating tools require user
+         confirm via ConfirmFn. Test
+         TestDispatcher_ConfirmDeniedAbortsRun pins that a denied
+         confirm aborts the run with ErrConfirmationDenied — no
+         tool.Execute is reached.
+  EVIDENCE: dispatch.go runOneToolCall implementation; grep
+            "db.Exec" or "Pool.Exec" inside internal/ai/tools/,
+            internal/ai/dispatch/, internal/ai/strategy/ returns
+            no matches.
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE
