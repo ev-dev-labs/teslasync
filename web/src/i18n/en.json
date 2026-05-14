@@ -1365,6 +1365,12 @@
         "success": "Settings saved",
         "error": "Failed to save settings"
       },
+      "ai": {
+        "save": {
+          "success": "AI settings saved",
+          "error": "Failed to save AI settings"
+        }
+      },
       "auth": {
         "url": {
           "success": "Auth URL generated",
@@ -2299,6 +2305,69 @@
       "debugger": {
         "title": "FSM Debugger",
         "description": "Timeline, source-layer badges, freeze/step controls, and shareable permalinks."
+      }
+    }
+  },
+  "ai": {
+    "settings": {
+      "title": "AI features",
+      "subtitle": "Optional. AI is off by default; nothing is enabled until you opt in here.",
+      "modeLegend": "AI mode",
+      "save": "Save AI settings",
+      "saving": "Saving…",
+      "bannerOff": "AI features are off. Your app works fully without them. Enable a mode above to opt in.",
+      "mode": {
+        "off": "Off (default)",
+        "offHint": "No AI features. The app works fully without them.",
+        "local": "Local-only",
+        "localHint": "Use a private model on your network (e.g. Ollama). No data leaves your install.",
+        "cloud": "Cloud",
+        "cloudHint": "Use a cloud provider (e.g. OpenAI). Requires an API key."
+      },
+      "provider": {
+        "label": "Provider configuration",
+        "providerLabel": "Provider",
+        "baseUrl": "Base URL",
+        "baseUrlHint": "Must resolve to a private network address (loopback, RFC1918, link-local, or ULA).",
+        "model": "Model",
+        "apiKey": "API key",
+        "apiKeyPlaceholder": "sk-…  (leave blank to keep current)",
+        "apiKeyHint": "Stored encrypted. Never displayed once saved.",
+        "costCap": "Daily cost cap (USD)",
+        "costCapHint": "Daily cap on cloud spending. 0 disables the cap.",
+        "localExplainer": "Local-only mode never sends data outside your network. The validator pins the resolved IP at save time to defend against later DNS rebinding.",
+        "validateOptional": "Validation is optional but recommended — it catches mis-typed URLs and confirms the model is reachable."
+      },
+      "validate": {
+        "button": "Validate",
+        "running": "Validating…",
+        "success": "OK — provider reachable",
+        "successPinned": "OK — pinned to {{ip}}",
+        "failure": "Validation failed"
+      },
+      "feature": {
+        "legend": "Per-feature opt-in (all default off)",
+        "ai-provider-health": {
+          "label": "AI provider health (ops)",
+          "description": "Diagnostic endpoint that reports the active AI provider and its capabilities. Off by default; enable only for ops debugging."
+        },
+        "chatbot-llm": {
+          "label": "LLM chatbot",
+          "description": "Conversational fleet assistant powered by an LLM. Falls back to the heuristic chatbot when AI is off."
+        }
+      },
+      "archive": {
+        "title": "Restore previous AI selection?",
+        "description": "You previously had these features enabled. Re-enable them now?",
+        "restore": "Restore selection",
+        "decline": "No thanks"
+      },
+      "usage": {
+        "title": "Usage today",
+        "tokensIn": "Tokens in",
+        "tokensOut": "Tokens out",
+        "cost": "Estimated cost",
+        "placeholder": "Usage populates as features run. Live numbers arrive in a follow-up update."
       }
     }
   },

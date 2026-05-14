@@ -72,10 +72,11 @@ func settingsDefaults() *models.Settings {
 		// freshly built from defaults must satisfy `AIMode=='off'`
 		// AND `AIFeatures` must be a non-nil empty map so callers can
 		// safely lookup feature IDs without a nil-map panic.
-		AIMode:           "off",
-		AIFeatures:       map[string]bool{},
-		AIProviderConfig: map[string]any{},
-		AICostCapCents:   0,
+		AIMode:             "off",
+		AIFeatures:         map[string]bool{},
+		AIProviderConfig:   map[string]any{},
+		AICostCapCents:     0,
+		AIFeaturesArchived: map[string]bool{},
 	}
 }
 
@@ -251,6 +252,13 @@ func applySettingsRow(s *models.Settings, key, _ string, vText *string, vNum *fl
 		if vNum != nil {
 			s.AICostCapCents = int(*vNum)
 		}
+	case "ai_features_archived":
+		if len(vJSON) > 0 {
+			m := map[string]bool{}
+			if err := json.Unmarshal(vJSON, &m); err == nil {
+				s.AIFeaturesArchived = m
+			}
+		}
 	}
 }
 
@@ -371,9 +379,18 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *models.Settings) error {
 	if err != nil {
 		return fmt.Errorf("settings upsert ai_provider_config marshal: %w", err)
 	}
+	// Phase-50 / 0003 / F2 — archived per-feature opt-in map. The
+	// settings handler is responsible for writing this on a mode→off
+	// flip; the repo just persists whatever it receives so a typed
+	// round-trip stays a no-op.
+	aiArchivedJSON, err := marshalJSONOrEmpty(s.AIFeaturesArchived)
+	if err != nil {
+		return fmt.Errorf("settings upsert ai_features_archived marshal: %w", err)
+	}
 	jsonbRows := []rowJSONB{
 		{"ai_features", aiFeaturesJSON},
 		{"ai_provider_config", aiProviderJSON},
+		{"ai_features_archived", aiArchivedJSON},
 	}
 
 	for _, rw := range textRows {

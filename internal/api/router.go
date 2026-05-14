@@ -1056,6 +1056,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Put("/settings/polling-config", settingsHandler.UpdatePollingConfig)
 			r.Get("/settings/dashboard-layouts", settingsHandler.GetDashboardLayouts)
 			r.Put("/settings/dashboard-layouts", settingsHandler.UpdateDashboardLayouts)
+			// Phase-50 / 0003 / F2 — pre-flight provider config
+			// validation for the Settings → AI form. Lives on the
+			// settings sub-tree (NOT under /api/v1/ai/*) because
+			// users call it WHILE opting in (ai_mode='off' at the
+			// moment of the call); the /api/v1/ai/* sub-tree 404s
+			// in off mode by ADR-015 §I6. Auth-only — no sudo —
+			// because the worst-case write the call enables is
+			// the same one /settings allows already.
+			r.Post("/settings/ai/validate-config", AISettingsValidateHandler())
 			// Phase-46 / Prompt 36 — JSON bundle export + import.
 			// Export is read-only; import is sudo-gated because a
 			// large alert-rule replay or bulk geofence rewrite is a

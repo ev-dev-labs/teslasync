@@ -458,6 +458,16 @@ type Settings struct {
 	// AICostCapCents is the daily AI cost cap in cents. 0 = unset
 	// (rate limiter still applies). Slice F9 enforces this.
 	AICostCapCents int `json:"ai_cost_cap_cents"`
+
+	// AIFeaturesArchived is the snapshot of AIFeatures preserved at
+	// the moment ai_mode was set to 'off'. Per ADR-015 §I7, flipping
+	// the top-level mode off clears AIFeatures so a subsequent
+	// re-enable cannot silently restore previously-on features. The
+	// archive lets the F2 Settings UI surface an explicit "Restore
+	// previous selection?" panel — restore is never silent. Cleared
+	// to {} once the user explicitly Confirms or Declines the
+	// restore. Default: empty map. (Phase-50 / 0003 / F2.)
+	AIFeaturesArchived map[string]bool `json:"ai_features_archived,omitempty"`
 }
 
 // Embedding mirrors the post-migration `embeddings` schema (pgvector-backed).

@@ -346,6 +346,18 @@ export interface AppSettings {
    * the cost-tracker slice F9.
    */
   ai_cost_cap_cents?: number
+  /**
+   * Phase-50 / F2 — snapshot of the per-feature opt-in map preserved
+   * at the moment `ai_mode` was set to `'off'`. Per ADR-015 §I7 the
+   * mode→off transition CLEARS `ai_features` so a subsequent
+   * re-enable cannot silently restore the prior selection. The
+   * archive lets the Settings → AI panel offer an explicit
+   * "Restore previous selection?" suggestion — restore is never
+   * silent. The backend redacts this field whenever
+   * `ai_mode === 'off'` (same rationale as `ai_provider_config`),
+   * so consumers must handle `undefined` gracefully.
+   */
+  ai_features_archived?: Record<string, boolean>
 }
 
 /** Per-endpoint toggle config for Tesla Fleet API calls. */
