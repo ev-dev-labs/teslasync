@@ -113,6 +113,109 @@ Routes: features.RouteSet{
 
 If a surface is truly absent, use `[]string{}` in the implementation instead of omitting the field.
 
+<!-- BEGIN: W1 INLINE WIRING ADDENDUM (auto-inserted) -->
+## SPA wiring (P11/P12 ΓÇö inline, do NOT defer to W1)
+
+This slice MUST ship the SPA component **wired end-to-end** to the
+backend route. The "render disabled placeholder, defer wiring to W1"
+pattern is forbidden by methodology principles **P11 (Wired-or-absent)**
+and **P12 (No placeholder buttons)**. Slice 0065 (W1) installs those
+principles + the `aivet` enforcement rule; the **wiring itself lands
+here**, in this slice's commit.
+
+The wired component MUST:
+
+1. Import `useAiStream` from `@/hooks/useAiStream` (already shipped).
+2. Render through `AiOutputPanel` from `@/components/ai/AiOutputPanel`
+   (already shipped) for **narrative** render contracts. For
+   **proposal** or **suggestion** render contracts, render the typed
+   draft inside the AI panel with an "Apply to form" / "Use this
+   draft" action that copies the draft into the baseline form's
+   state. The AI panel NEVER persists state directly; the baseline
+   form's existing Save button remains the sole write path
+   (ADR-015 ┬ºI3 + ┬ºI8 propose-only contract).
+3. Have a primary action button whose `disabled` prop is a **computed**
+   expression, e.g.
+   `aiStream.state === 'streaming' || aiStream.state === 'paused-confirm' || <feature-guard>`.
+   Literal `disabled` or `disabled={true}` is forbidden (Rule W1-A).
+4. Call `useAiStream({ url, body, onEvent })` unconditionally at the
+   top of the component (Hooks rules ΓÇö no early returns above the hook
+   call). For this slice the registered backend endpoint is
+   **`POST /api/v1/ai/system/data-repair/draft`**, so the SPA `url` is **`/ai/system/data-repair/draft`**
+   (the backend path after stripping the `/api/v1` prefix).
+5. Handle each `AiStreamEvent` variant per render contract:
+   - `delta` ΓåÆ append `ev.text` to the displayed output (narrative)
+     or accumulate (proposal/suggestion).
+   - `tool_call` ΓåÆ surface the F4 `<ConfirmDialog>` when applicable.
+   - `tool_result` ΓåÆ parse the typed payload, render inside the AI
+     panel (proposal/suggestion only).
+   - `confirm_request` ΓåÆ open the confirm dialog and POST
+     `/api/v1/ai/_internal/continue` with `{continuation_id}` on
+     confirm.
+   - `done` ΓåÆ mark stream complete; refetch list queries if needed.
+   - `error` ΓåÆ surface `ev.message`, `ev.banner_level`,
+     `ev.retry_after_s` via the existing `ai.errors.<bannerLevel>`
+     i18n key. On `banner_level === 'baseline'`, fall back to the
+     baseline rendering at the same surface and tag the output as
+     baseline-sourced.
+6. On unmount, on `useAiEnabled('data-repair-suggestions')` flip to `false`, on
+   route/session change, AND on user-initiated cancel: call
+   `aiStream.cancel()` and reset all local stream state in a
+   dedicated `useEffect` with explicit deps. Do not coalesce these
+   effects.
+7. Double-submit guard: while `aiStream.state` is `streaming` or
+   `paused-confirm`, the primary action handler is a no-op.
+8. **No** "future slice", "coming soon", "wiring lands", or "would
+   call POST" comments or placeholder strings in the shipped file.
+   `aivet` Rule W1-A (added by slice 0065) backstops this; the
+   final gate fails if any are present.
+
+### User-prefs / units (cross-cutting, no per-slice work required)
+
+User display preferences (Miles/Fahrenheit/PSI/Rated/decimal precision/
+locale/currency) flow into every `/api/v1/ai/*` request automatically:
+
+- `userPrefsMiddleware` (in `internal/api/ai_routes.go`) reads the
+  user's Application settings once per request and seeds a
+  `dispatch.UserPrefs` value into the request context.
+- The dispatcher appends a second system message instructing the
+  model to narrate in the user's display units, with explicit
+  SI ΓåÆ display conversion formulas.
+
+This slice MUST NOT duplicate that plumbing in its strategy or
+handler. If this slice adds a new tool that surfaces a Celsius
+value (or any other SI-canonical value where a display-unit
+conversion is non-trivial), it MUST also emit the pre-computed
+display-unit field alongside ΓÇö see `cToFPtr` in
+`internal/ai/tools/drive_coaching.go` for the temperature
+precedent (`outside_temp_avg_c` + `outside_temp_avg_f` emitted
+together). Tools must NOT rely on the LLM to do arithmetic on
+negative or fractional values.
+
+### New on-mode wiring test (required)
+
+Add `TestDataRepairSuggestionsAIOnWiredCallsRoute` (or the feature-specific variant implied by this
+slice's existing test naming) proving:
+
+- With `ai_mode='local'` and the `data-repair-suggestions` toggle on, invoking
+  the primary action enqueues **exactly one** POST against the
+  registered backend route `POST /api/v1/ai/system/data-repair/draft` and consumes the SSE
+  stream (use the existing mock-provider harness from F6).
+- The first `delta` event's text is rendered inside the AI panel
+  via the `data-testid="ai-feature-data-repair-suggestions-root"` marker.
+- A second click while `aiStream.state === 'streaming'` is a no-op
+  (double-submit guard).
+- For proposal / suggestion render contracts: clicking "Apply to
+  form" copies the typed draft into the baseline form's state, AND
+  clicking the baseline Save button is what triggers the typed
+  write handler (spy on the baseline mutation hook, not the AI
+  stream).
+- The existing off-mode test `TestDataRepairSuggestionsAIOffManualRunbookWorks` continues to pass
+  unchanged ΓÇö wiring MUST NOT regress the off-mode absence
+  invariant.
+
+<!-- END: W1 INLINE WIRING ADDENDUM -->
+
 ## Action Steps
 
 1. In `=== PREFLIGHT ===`, verify every predecessor listed in Depends-on has a log ending in STATUS=DONE. If any predecessor is missing or blocked, stop after writing a BLOCKED log.
@@ -136,6 +239,9 @@ If a surface is truly absent, use `[]string{}` in the implementation instead of 
 6. Eval: add at least 3 goldens and deterministic mock-provider canned outputs.
 7. Tests: add baseline parity and off-mode invariant tests named above.
 8. Log: include the ADR-015 compliance footer with concrete evidence.
+<!-- BEGIN: W1 INLINE TASK -->
+9. SPA wiring: ship the AI component wired end-to-end to the backend route via `useAiStream`. No placeholder strings, no literal-disabled buttons. Add the on-mode wiring test alongside the existing off-mode test.
+<!-- END: W1 INLINE TASK -->
 
 ## Allowed files
 
@@ -174,6 +280,16 @@ Also run a focused off-mode proof and paste evidence:
 # Expected: baseline route/page behavior still works with ai_mode='off'
 ~~~
 
+<!-- BEGIN: W1 INLINE VERIFICATION -->
+~~~powershell
+# W1 inline self-check: this slice's shipped AI component MUST NOT
+# carry any placeholder/deferral strings. Pre-W1 components may still
+# show non-zero counts, but this slice's component MUST be 0.
+Select-String -Path 'web/src/components/ai/AI*.tsx' -Pattern 'future slice|coming soon|wiring lands|would call POST' | Measure-Object | Select-Object -ExpandProperty Count
+# Expected: 0 across this slice's allowed files. After slice 0065 lands, the project-wide count MUST stay at 0 forever.
+~~~
+<!-- END: W1 INLINE VERIFICATION -->
+
 ## Gate
 
 The slice is DONE only if:
@@ -184,6 +300,10 @@ The slice is DONE only if:
 4. `features.CoverageOK()` and `tools/aivet` prove registry route coverage.
 5. The strategy has at least 3 goldens and eval runs through the F6 harness.
 6. `git status --short` contains only allowed files before commit.
+<!-- BEGIN: W1 INLINE GATE -->
+7. The slice's SPA component imports `useAiStream`, references the registered backend endpoint, has zero placeholder strings, and the on-mode wiring test passes.
+<!-- END: W1 INLINE GATE -->
+
 
 Any failure means `STATUS=BLOCKED` and only the log may be committed.
 
