@@ -68,7 +68,7 @@ describe('withAiFeature — render-gate behaviour', () => {
     const Wrapped = withAiFeature('chatbot-llm', Inner);
     const { container } = render(<Wrapped label="hi" />);
     expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByTestId('ai-feature-chatbot-llm')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('ai-feature-chatbot-llm-root')).not.toBeInTheDocument();
   });
 
   it('renders null when the per-feature flag is false even with mode=cloud', () => {
@@ -87,7 +87,7 @@ describe('withAiFeature — render-gate behaviour', () => {
     const Wrapped = withAiFeature('chatbot-llm', Inner);
     render(<Wrapped label="hi" />);
 
-    const host = screen.getByTestId('ai-feature-chatbot-llm');
+    const host = screen.getByTestId('ai-feature-chatbot-llm-root');
     expect(host).toBeInTheDocument();
     expect(host).toHaveAttribute('data-ai-feature', 'chatbot-llm');
     expect(host).toHaveTextContent('chat-hi');

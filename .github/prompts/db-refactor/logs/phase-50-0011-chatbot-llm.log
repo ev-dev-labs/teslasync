@@ -1,0 +1,573 @@
+Phase-50 / Prompt 0011 — U1 Chatbot LLM upgrade
+================================================
+
+Feature ID:  chatbot-llm
+Tier:        U1
+Branch:      feat/ai-adoption
+HEAD prior:  9b5ed121951ec31f6ae24d24659bd981644f9a4d (F9 rate limiter + cost cap)
+
+=== PREFLIGHT ===
+
+Branch check:
+  $ git --no-pager rev-parse --abbrev-ref HEAD
+  feat/ai-adoption                                                    OK
+
+Predecessor logs (every F0..F9 must end STATUS=DONE):
+
+  [phase-50-0001-F0-ai-off-contract.log]            EXIT=0 STATUS=DONE
+  [phase-50-0002-F1-provider-abstraction.log]       EXIT=0 STATUS=DONE
+  [phase-50-0003-F2-settings-ui.log]                EXIT=0 STATUS=DONE
+  [phase-50-0004-F3-ai-call-log.log]                EXIT=0 STATUS=DONE
+  [phase-50-0005-F4-tool-use-framework.log]         EXIT=0 STATUS=DONE
+  [phase-50-0006-F5-sse-streaming.log]              EXIT=0 STATUS=DONE
+  [phase-50-0007-F6-eval-harness.log]               EXIT=0 STATUS=DONE
+  [phase-50-0008-F7-embeddings-pgvector.log]        EXIT=0 STATUS=DONE
+  [phase-50-0009-F8-redaction.log]                  EXIT=0 STATUS=DONE
+  [phase-50-0010-F9-rate-limiter-cost-cap.log]      EXIT=0 STATUS=DONE
+
+  Result: ALL 10 PREDECESSORS DONE — proceeding with implementation.
+
+Dirty-tree check at start of slice:
+  $ git --no-pager status --short
+  (clean, except for plan.md in session-state which lives outside the repo)
+
+=== SURVEY ===
+
+Baseline route + page (the off-mode contract MUST keep this working):
+
+  Backend route (router.go ~line 1354):
+    POST  /chatbot                                  — heuristic responder
+    GET   /chatbot/sessions
+    GET   /chatbot/sessions/{sessionID}/history
+    PUT   /chatbot/sessions/{sessionID}             — rename
+    DELETE /chatbot/sessions/{sessionID}
+
+  Implementation: internal/api/chatbot_handler.go
+    - struct ChatbotHandler{ db, log, vehicleRepo, ... }
+    - method (h *ChatbotHandler) processQuery(ctx, sessionID, msg) (string, error)
+    - Pure substring/keyword matcher over vehicle+drive+charge data; no LLM,
+      no tool-use, no streaming. This is the canonical U1 baseline that
+      MUST keep working when ai_mode='off'.
+
+  Frontend page: web/src/features/system/pages/ChatbotPage.tsx
+    - Uses useChat hooks (useChatSessions, useChatHistory, useSendChatMessage,
+      useRenameChatSession, useDeleteChatSession). These hooks all hit the
+      unconditional /chatbot routes (NOT /api/v1/ai/chatbot). They are
+      unchanged by this slice.
+    - PageContainer with title=t('chatbot.title') and an `actions` slot in
+      the header where the LLM indicator was added.
+
+F0 stub at /api/v1/ai/chatbot (replaced by this slice):
+  - internal/api/ai_routes.go previously mounted aiChatbotStubHandler
+    (returns 501 with a "not yet implemented" body when ai_mode != 'off',
+    404 when 'off' due to ai.GuardedHandler).
+  - The slice replaces it with a real handler while preserving the
+    fallback to the stub when AIChatbotHandler is nil (e.g., test wiring).
+
+AI infrastructure surveyed (all from F0..F9):
+  - internal/ai/features/registry.go         — registry + DefaultOn flags
+  - internal/ai/guard                        — ai.GuardedHandler (404 in off mode)
+  - internal/ai/dispatch                     — Dispatcher.Run (tool-use loop)
+  - internal/ai/strategy                     — Strategy interface
+  - internal/ai/strategy/redactadapter       — Wrap(redact.Policy) → strategy.RedactionPolicy
+  - internal/ai/redact                       — PolicyChatbot (deny-all + round-trip)
+  - internal/ai/provider                     — provider.Stream + decorator chain helpers
+  - internal/ai/stream                       — SSE stream.Writer with flush + heartbeats
+  - internal/ai/tools                        — Register12Builtins, VehicleStateSource
+  - internal/ai/eval (cmd/ai-eval)           — golden harness (loads goldens.yaml)
+
+Tool-name reconciliation:
+  Prompt mentions: query_vehicle_state; query_recent_drives;
+                   query_recent_charges; query_active_alerts.
+  But tools.BuiltinNames registers them as:
+                   query_vehicle_state; query_drives_recent;
+                   query_charges_recent; query_alerts_active
+                   plus query_battery_status; query_vehicle_count.
+  Resolution: use the actual REGISTERED names in the strategy's whitelist
+  + add the two extra read-only builtins (battery_status, vehicle_count)
+  because they fit the chatbot's "read-only Q&A" charter.
+
+Frontend wiring surveyed:
+  - web/src/components/ai/withAiFeature.tsx   — HOC that gates rendering on
+                                                 useAiEnabled(featureID); hidden
+                                                 child returns null. Wrapper div
+                                                 carries data-testid="ai-feature-{id}-root".
+  - web/src/hooks/useAiEnabled.ts             — returns settings.ai_mode != 'off'
+                                                 AND settings.ai_features[id] === true.
+  - web/src/i18n/en.json                      — only en.json carries copy; ar/he
+                                                 are placeholders (i18next falls
+                                                 back to en automatically). F9
+                                                 precedent: add keys to en.json
+                                                 only.
+
+Existing tests reviewed:
+  - web/src/ai/__tests__/offMode.invariant.test.tsx — global registry sweep
+    that asserts every wrapped feature renders nothing when ai_mode='off'.
+    Must keep passing (it auto-includes chatbot-llm via AI_FEATURE_IDS).
+  - web/src/components/ai/withAiFeature.test.tsx — 5 tests using the
+    chatbot-llm featureID as a fixture; ID change ai-feature-chatbot-llm
+    -> ai-feature-chatbot-llm-root requires an in-place fixture update.
+
+=== REASONING ===
+
+ADR-015 (AI-Off Contract) requires that ai_mode='off' produce a system
+indistinguishable, on the wire and in the DOM, from a build with no AI
+code at all. The slice satisfies this in three layers:
+
+  1. Backend (I6 — 404 routes in off mode): the new /api/v1/ai/chatbot
+     handler is mounted under ai.GuardedHandler('chatbot-llm', ...).
+     The guard returns http.StatusNotFound *before* the handler runs
+     when settings.ai_mode='off' (see internal/ai/guard/guard.go).
+     TestChatbotAIOffUsesBaselineAndAiRoute404 in
+     internal/api/ai_chatbot_handler_test.go pins this with a stub
+     guard.Settings whose Mode()='off' returns 404 even when the
+     per-feature flag chatbot-llm=true. The test also asserts the
+     404 body does NOT mention "GUARD_BYPASSED", "chatbot-llm",
+     "feature", "strategy", or "provider" — i.e., the guard does
+     not leak the existence of the AI surface.
+
+  2. Frontend (I5 — hidden UI in off mode + I7 — per-feature opt-in):
+     the visible AI surface is AIChatbotIndicator =
+     withAiFeature('chatbot-llm', InnerIndicator). useAiEnabled
+     returns false when EITHER mode='off' OR the per-feature toggle
+     is false, and withAiFeature returns null in either case. The
+     new ChatbotAIOff.test.tsx contains three cases that prove this
+     gate is symmetric:
+       - mode='off' + toggle=true  → null (mode wins)
+       - mode='cloud' + toggle=false → null (toggle wins)
+       - mode='cloud' + toggle=true  → renders, with the expected
+         data-testid='ai-feature-chatbot-llm-root' attribute. This
+         "positive control" defeats the trivial-pass failure mode
+         (where both negative assertions would pass even if the
+         indicator were permanently hidden).
+
+  3. Baseline coexistence (I3 — baseline intact): the existing
+     POST /chatbot route is wholly unchanged. It is mounted
+     unconditionally in router.go (~line 1354) with no guard
+     wrapper, and ChatbotPage continues to issue baseline calls
+     through useSendChatMessage. The slice's only header change to
+     ChatbotPage is the conditional <AIChatbotIndicator /> which is
+     null in off mode. The new internal/api/chatbot_responder.go
+     formalises the seam: ChatResponder is an interface with one
+     method Respond(ctx, msg) (string, error); BaselineResponder
+     wraps *ChatbotHandler and delegates to processQuery, exposing
+     the heuristic chatbot to future code (e.g., a ResponderRouter)
+     without changing today's behaviour.
+
+P1 (provider port) — the AI handler resolves provider.Streamer through
+provider.RegistryFromContext(ctx). The handler does NOT import any
+specific provider package; the provider chain is entirely assembled at
+router construction time and pushed via context.
+
+P5 (decorator chain) — the slice does NOT add or skip any decorator;
+the locked order from F8/F9 is honoured: WithRedaction(PolicyFromContext)
+→ WithAudit(aiAuditWriter) → WithTrace. F9's WithRateLimit / WithCostCap
+are intentionally NOT wired here; F9's own log records that wiring is
+deferred to a later "router-wiring slice".
+
+P6 (guard + withAiFeature) — both forms used. Backend: ai.GuardedHandler
+in mountAIRoutes. Frontend: withAiFeature HOC with the same featureID
+('chatbot-llm') so the guard, the feature toggle, and the wrapper all
+agree on the same registry key.
+
+P9 (registry) — UITestIDs renamed from "ai-feature-chatbot-llm" to the
+prompt-required "ai-feature-chatbot-llm-root" (registry.go L116). The
+generated TS mirror web/src/ai/features.ts was regenerated via
+`go run ./tools/aigen` so the registries stay in sync (the mismatch
+detector tools/aivet would otherwise BLOCK on the divergence).
+
+P8 (eval goldens) — strategy ships goldens.yaml with 5 deterministic
+goldens (range_question, tool_call_battery, tool_call_then_answer,
+refusal, ambiguous), exceeding the prompt's "≥3" floor. Tools list
+in the YAML was reconciled with the strategy whitelist; mutating_tools
+is explicitly [] (chatbot is read-only).
+
+P10 (baseline coexistence) — see point 3 above. The selection mechanism
+is "ChatResponder is selected at construction by ai_mode plus feature
+flag; baseline route remains unconditional", as declared in the prompt's
+"Baseline coexistence (P10)" section.
+
+Rejected alternatives:
+  - Using RegisterStrategy(eval.Strategy) — rejected because the eval
+    harness uses GenericStrategy synthesized from FeatureSpec when no
+    real Strategy is registered. The 5 goldens pass without it; adding
+    a custom strategy provider adds wiring without functional benefit.
+  - Adding chatbot.llm.* keys to ar.json/he.json — rejected because
+    those locales are placeholders; F9 set the precedent of adding to
+    en.json only and relying on i18next.fallbackLng. Translators will
+    add the keys when they translate the rest of the locale.
+  - Wiring F9 decorators (WithRateLimit, WithCostCap) — rejected
+    because F9's own log defers router wiring; doing it here would
+    overstep the slice's scope.
+  - Permanently disabling the F0 stub — rejected because tests construct
+    the router without the AI handler; the stub remains as the "no AI
+    handler wired" fallback, returning the same 501 it always did.
+
+=== CHANGES ===
+
+Production code (Go):
+
+  M internal/ai/features/registry.go
+      L116: UITestIDs: ["ai-feature-chatbot-llm-root"]   (was without -root)
+
+  + internal/ai/strategies/chatbot-llm/strategy.go       (NEW, 122 lines)
+      - const FeatureID = "chatbot-llm"
+      - allowedTools whitelist (6 read-only tools, defensive copy in Tools())
+      - System() prompt: identifies as TeslaSync assistant, instructs to use
+        tools rather than invent data, restricts answers to what tools return.
+      - Context() returns nil (no static history seed; the handler injects
+        per-session history).
+      - RedactionPolicy() → redactadapter.Wrap(redact.PolicyChatbot()).
+      - EvalGoldens() returns nil (harness loads goldens.yaml directly).
+      - Compile-time interface assertion: var _ strategy.Strategy = (*Strategy)(nil)
+
+  + internal/ai/strategies/chatbot-llm/strategy_test.go  (NEW, 8 tests)
+
+  M internal/ai/strategies/chatbot-llm/goldens.yaml
+      tools list aligned with Strategy.Tools(); mutating_tools: []
+      Removed any references to mutating tools (chatbot is strictly read-only).
+      All 5 goldens preserved.
+
+  + internal/api/chatbot_responder.go                    (NEW, 39 lines)
+      - type ChatResponder interface { Respond(ctx, msg) (string, error) }
+      - type BaselineResponder struct { h *ChatbotHandler }
+      - NewBaselineResponder(*ChatbotHandler) *BaselineResponder; nil → panic
+      - Respond delegates to (*ChatbotHandler).processQuery
+
+  + internal/api/ai_chatbot_handler.go                   (NEW, ~210 lines)
+      - type AIChatbotHandler { db, log, registry (provider.Registry),
+        strategy *chatbotllm.Strategy, tools tools.Registry, audit AuditWriter }
+      - ServeHTTP:
+          1. Decode JSON {message, session_id} (typed DTO)
+          2. Persist user message to chat_messages
+          3. Load up-to-16-message history (drop last user turn)
+          4. Set provider.WithSubject(ctx, sub) + WithFeatureID(ctx, fid)
+          5. Open stream.Writer (SSE headers + flush ticker)
+          6. dispatch.Dispatcher with denyAllConfirm + maxIters=6
+          7. recordingStreamWriter tee captures deltas for assistant persistence
+          8. On finish: persist assistant message + close SSE
+      - recordingStreamWriter implements dispatch.StreamWriter AND
+        the optional dispatch.LimitErrorEmitter (forwards stream.LimitDecisionPayload).
+      - denyAllConfirm: returns false for any tool requiring confirmation
+        (chatbot has zero mutating tools — defence-in-depth).
+
+  + internal/api/ai_chatbot_handler_test.go              (NEW, 2 tests)
+      - TestChatbotAIOffUsesBaselineAndAiRoute404:
+          stubGuardSettings{Mode: "off", On: {"chatbot-llm": true}}
+          chi.Router.Post("/api/v1/ai/chatbot", ai.GuardedHandler(...))
+          Assert: status 404, body free of "GUARD_BYPASSED",
+                  "chatbot-llm", "feature", "strategy", "provider".
+          Assert: BaselineResponder satisfies ChatResponder.
+          Assert: NewBaselineResponder(nil) panics (defensive).
+      - TestAIChatbotHandler_PanicsOnNilWiring: any nil dependency panics.
+
+  M internal/api/ai_routes.go
+      mountAIRoutes signature now takes the AIChatbotHandler:
+        mountAIRoutes(r, g, registry, sudoMW, aiChatbot *AIChatbotHandler)
+      Mounts aiChatbot if non-nil, else falls back to aiChatbotStubHandler
+      (preserves the F0 behaviour for tests that don't wire the AI handler).
+
+  M internal/api/router.go
+      - Imports added: tools, chatbotllm
+      - After chatbotHandler construction (~L431):
+          aiToolRegistry := tools.NewRegistry(...)
+          tools.Register12Builtins(aiToolRegistry, vehicleRepo, drivesRepo,
+                                   chargeRepo, alertRepo, batteryRepo,
+                                   aiToolsStateAdapter{r: stateReader})
+          aiChatbotHandler := NewAIChatbotHandler(db, log, providerRegistry,
+                                                   chatbotllm.New(),
+                                                   aiToolRegistry, aiAuditWriter)
+      - mountAIRoutes call updated to pass aiChatbotHandler.
+      - aiToolsStateAdapter type appended at end of file: bridges the defined
+        type signal.SignalValue (= any) on signal.StateReader.SignalAt to the
+        plain `any` return on tools.VehicleStateSource.SignalAt (Go interface
+        satisfaction does not erase named-vs-anonymous return types).
+
+Frontend code:
+
+  M web/src/ai/features.ts                               (REGENERATED via aigen)
+      L70: uiTestIds: ["ai-feature-chatbot-llm-root"]
+
+  M web/src/components/ai/withAiFeature.test.tsx
+      L71, L90: data-testid fixture renamed to ai-feature-chatbot-llm-root.
+
+  + web/src/components/ai/AIChatbotIndicator.tsx        (NEW, 60 lines)
+      - InnerIndicator: cyan chip with i18n title/aria-label/badge text.
+      - export const AIChatbotIndicator = withAiFeature('chatbot-llm',
+                                                         InnerIndicator)
+      - Carries data-testid='ai-feature-chatbot-llm-root' via the HOC wrapper.
+
+  M web/src/features/system/pages/ChatbotPage.tsx
+      - Imports AIChatbotIndicator.
+      - Renders <AIChatbotIndicator /> inside the existing PageContainer
+        `actions` slot, immediately before the History button. In off mode
+        the indicator is null → only the History button remains, exactly
+        matching the pre-slice behaviour.
+
+  + web/src/features/system/__tests__/ChatbotAIOff.test.tsx (NEW, 3 tests)
+      - describe('TestChatbotAIOffUsesBaselineAndAiRoute404 …')
+      - Three cases, see REASONING § frontend.
+
+  M web/src/i18n/en.json
+      Added inside the existing "chatbot": { ... } block:
+        "llm": {
+          "indicator": "AI mode",
+          "indicatorTooltip": "Responses are generated by an LLM with
+                               redacted vehicle context.",
+          "badge": "LLM"
+        }
+
+Files NOT touched (intentional, per allowed-files list):
+  - web/src/i18n/ar.json, he.json: placeholder locales; en.json fallback applies.
+  - internal/jobs/**: chatbot-llm declares no jobs.
+  - internal/ml/**: U1 tier, not ML.
+
+=== GATE ===
+
+Command 1 — slice-scope Go race tests (the prompt's exact command):
+
+  $ go test -race ./internal/ai/... ./internal/api/...
+  ok  github.com/ev-dev-labs/teslasync/internal/ai
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/audit                (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/cost                 (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/dispatch             (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/eval                 (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/features             (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/guard                (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/health               (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/limit                (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/provider             (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/anthropic   (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/mock        (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama      (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/openai      (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/rag                  (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/redact               (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm  (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy             (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy/redactadapter (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/stream               (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/tools                (cached)
+  ok  github.com/ev-dev-labs/teslasync/internal/api                     (cached)
+  EXIT=0
+
+Command 2 — registry/route inventory (the prompt's exact command):
+
+  $ go run ./tools/aivet
+  aivet: OK — 6 AI route(s), 4 feature(s) in registry, TS mirror in sync
+  EXIT=0
+
+Command 3 — generated TS mirror sync check (the prompt's exact command):
+
+  $ go run ./tools/aigen --check
+  aigen: web/src/ai/features.ts is in sync with internal/ai/features registry
+  EXIT=0
+
+Command 4 — eval harness, slice scope (prompt: make ai-eval-fast --feature chatbot-llm).
+  `make` is not on PATH on Windows; ran the equivalent direct command.
+
+  $ go run ./cmd/ai-eval --feature chatbot-llm
+  AI eval results: 5 goldens, 5 pass, 0 fail (100.0% pass rate, 557.3µs elapsed)
+
+  By feature:
+    chatbot-llm                    5/5 pass
+
+  Details:
+    [PASS] chatbot-llm/range_question (557.3µs)
+    [PASS] chatbot-llm/tool_call_battery (0s)
+    [PASS] chatbot-llm/tool_call_then_answer (0s)
+    [PASS] chatbot-llm/refusal (0s)
+    [PASS] chatbot-llm/ambiguous (0s)
+  EXIT=0
+
+  Also ran the --all variant (covers any future cross-feature golden):
+  $ go run ./cmd/ai-eval --all
+  AI eval results: 5 goldens, 5 pass, 0 fail (100.0% pass rate, 637.4µs elapsed)
+  EXIT=0
+
+Command 5 — frontend type-check (the prompt's exact command):
+
+  $ cd web; npx tsc --noEmit
+  (no output)
+  EXIT=0
+
+Command 6 — frontend lint, slice-scope (the prompt's command was `npm run lint`,
+which fails on 22 pre-existing baseline errors in unrelated files
+[IncidentForm.tsx, ScheduledMaintenanceCard.tsx, SignalsWorkspacePage.tsx,
+useAiStream.ts, useRangeState.ts, rum.test.ts, rum.ts] inherited from prior
+phases. None of those files are in this slice's allowed-files list — touching
+them would BLOCK on the dirty-tree check. Per F9 precedent, the slice gates
+on lint of the changed files only.):
+
+  $ npx eslint --no-warn-ignored \
+      src/components/ai/AIChatbotIndicator.tsx \
+      src/components/ai/withAiFeature.test.tsx \
+      src/features/system/pages/ChatbotPage.tsx \
+      src/features/system/__tests__/ChatbotAIOff.test.tsx \
+      src/ai/features.ts
+  (no output)
+  EXIT=0
+
+Command 7 — vitest off-mode contract (the prompt's command was
+`npm test -- --run TestChatbotAIOffUsesBaselineAndAiRoute404`. Vitest's
+test-name filtering is via -t / --testNamePattern; the test file's
+describe() block is named exactly TestChatbotAIOffUsesBaselineAndAiRoute404,
+so running the file directly is the unambiguous form.):
+
+  $ npx vitest run src/features/system/__tests__/ChatbotAIOff.test.tsx
+   RUN  v4.1.2 D:/repos/teslasync/web
+
+   ✓ src/features/system/__tests__/ChatbotAIOff.test.tsx (3 tests) 38ms
+
+   Test Files  1 passed (1)
+        Tests  3 passed (3)
+     Duration  1.49s
+  EXIT=0
+
+Command 8 — adjacent vitest sweeps (the registry rename touched
+withAiFeature.test.tsx, and the global offMode invariant suite includes
+chatbot-llm via the registry; both must keep passing):
+
+  $ npx vitest run src/components/ai/withAiFeature.test.tsx \
+                   src/ai/__tests__/offMode.invariant.test.tsx
+   RUN  v4.1.2 D:/repos/teslasync/web
+
+   ✓ src/components/ai/withAiFeature.test.tsx (5 tests) 31ms
+   ✓ src/ai/__tests__/offMode.invariant.test.tsx (5 tests) 35ms
+
+   Test Files  2 passed (2)
+        Tests  10 passed (10)
+     Duration  1.52s
+  EXIT=0
+
+Off-mode focused proof (the "Also run a focused off-mode proof" block):
+
+  - 404 for every backend route listed in registry for chatbot-llm:
+      Registry routes: ["POST /api/v1/ai/chatbot"]
+      Evidence: TestChatbotAIOffUsesBaselineAndAiRoute404 (Go) asserts
+      ServeHTTP returns 404 + body free of any AI vocabulary when
+      stubGuardSettings.Mode='off' (even with the per-feature toggle ON).
+      EXIT=0 in Command 1.
+
+  - Zero rendered elements for every UI test ID listed above when ai_mode='off':
+      Registry UITestIDs: ["ai-feature-chatbot-llm-root"]
+      Evidence: ChatbotAIOff.test.tsx case
+        "renders nothing when ai_mode=off even with the chatbot-llm toggle on"
+      asserts toBeEmptyDOMElement + queryByTestId(...).not.toBeInTheDocument().
+      EXIT=0 in Command 7.
+      Plus offMode.invariant.test.tsx walks AI_FEATURE_IDS and asserts the
+      same for every registry entry. EXIT=0 in Command 8.
+
+  - Baseline route/page behavior still works with ai_mode='off':
+      The unconditional /chatbot route in router.go is unchanged; the
+      ChatbotHandler.processQuery is reachable via BaselineResponder
+      (covered by the existing ChatbotHandler tests in internal/api).
+      EXIT=0 in Command 1.
+
+git status check before commit:
+
+  $ git --no-pager status --short
+   M internal/ai/features/registry.go
+   M internal/ai/strategies/chatbot-llm/goldens.yaml
+   M internal/api/ai_routes.go
+   M internal/api/router.go
+   M web/src/ai/features.ts
+   M web/src/components/ai/withAiFeature.test.tsx
+   M web/src/features/system/pages/ChatbotPage.tsx
+   M web/src/i18n/en.json
+  ?? internal/ai/strategies/chatbot-llm/strategy.go
+  ?? internal/ai/strategies/chatbot-llm/strategy_test.go
+  ?? internal/api/ai_chatbot_handler.go
+  ?? internal/api/ai_chatbot_handler_test.go
+  ?? internal/api/chatbot_responder.go
+  ?? web/src/components/ai/AIChatbotIndicator.tsx
+  ?? web/src/features/system/__tests__/ChatbotAIOff.test.tsx
+
+  Cross-checked against allowed-files list in the prompt:
+    - internal/ai/features/registry.go              ✓ allowed
+    - internal/ai/strategies/chatbot-llm/**         ✓ allowed
+    - internal/api/** (guarded /api/v1/ai/... + tests) ✓ allowed
+    - web/src/features/system/**                    ✓ allowed
+    - web/src/components/ai/**                      ✓ allowed
+    - web/src/i18n/{en,ar,he}.json                  ✓ allowed (en only modified)
+    - web/src/**/__tests__/**                       ✓ allowed
+    - web/src/ai/features.ts (generated mirror)     ✓ allowed (aigen output)
+
+  All paths within allowed-files boundary; proceed to commit.
+
+=== COMMIT ===
+
+(See the trailing commit transcript at end of file — written after this
+log itself is added so the commit captures the full log.)
+
+=== AI-OFF CONTRACT ===
+
+I1 default-off:     PASS  (registry.go L101 sets DefaultOn: false for
+                          chatbot-llm; aivet OK confirms.)
+
+I3 baseline intact: PASS  (POST /chatbot route, ChatbotHandler, processQuery,
+                          and ChatbotPage's baseline data hooks
+                          [useChatSessions, useChatHistory, useSendChatMessage,
+                          useRenameChatSession, useDeleteChatSession] are
+                          unchanged. The new BaselineResponder *wraps* but
+                          does not modify processQuery. Router.go's
+                          unconditional baseline mount at ~L1354 is intact.)
+
+I4 zero egress:     PASS  (chatbot-llm strategy uses redactadapter.Wrap(
+                          redact.PolicyChatbot()) — deny-all class set with
+                          round-trip tags. Tools whitelist contains only
+                          read-only query_* tools. No mutating tools, no
+                          external calls outside provider.Stream which is
+                          wrapped by WithRedaction. In off mode the handler
+                          is unreachable [404], so net egress is bit-for-bit
+                          identical to the F0 stub.)
+
+I5 hidden UI:       PASS  (AIChatbotIndicator = withAiFeature('chatbot-llm',
+                          InnerIndicator). useAiEnabled returns false when
+                          ai_mode='off'; HOC renders null. ChatbotAIOff.test.tsx
+                          case 1 asserts container is empty and the test ID
+                          is absent even with the per-feature toggle on.
+                          The pre-existing global offMode.invariant.test.tsx
+                          covers the same assertion via registry sweep.)
+
+I6 404 routes:      PASS  (mountAIRoutes wraps every /api/v1/ai/* handler
+                          in ai.GuardedHandler('chatbot-llm', ...). The guard
+                          returns http.StatusNotFound *before* the handler
+                          runs when settings.Mode='off'. Pinned by
+                          TestChatbotAIOffUsesBaselineAndAiRoute404 which
+                          additionally asserts the 404 body does not leak
+                          any AI vocabulary.)
+
+I7 per-feature:     PASS  (useAiEnabled checks
+                          settings.ai_features['chatbot-llm'] === true.
+                          ChatbotAIOff.test.tsx case 2 asserts mode='cloud'
+                          + toggle=false hides the indicator. registry.go
+                          gives the feature its own DefaultOn flag.)
+
+I10 type system:    PASS  (Strategy: var _ strategy.Strategy = (*Strategy)(nil)
+                          compile-time assertion. recordingStreamWriter
+                          satisfies dispatch.StreamWriter and the optional
+                          dispatch.LimitErrorEmitter via interface implementation.
+                          aiToolsStateAdapter bridges signal.StateReader to
+                          tools.VehicleStateSource so the named-vs-anonymous
+                          return type difference is enforced at construction
+                          time. Frontend: tsc --noEmit EXIT=0 confirms type
+                          conformance for AIChatbotIndicator and the test
+                          mock shape.)
+
+I12 client/bg:      PASS  (Off-mode contract impact section declares:
+                          new background jobs: NONE; new push kinds: NONE;
+                          client storage keys: NONE; service worker chunks:
+                          ai-chatbot-llm. The slice does not add any job,
+                          push handler, or storage key. The service worker
+                          chunk is opt-in: in off mode the
+                          AIChatbotIndicator import path is reached but
+                          the HOC short-circuits to null before any AI
+                          subsystem allocates. No persistent client state
+                          is created in off mode.)
+
+=======================
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE

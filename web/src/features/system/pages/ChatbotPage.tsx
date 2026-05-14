@@ -33,6 +33,10 @@ import {
 } from '../components/chatbot/ChatMessageItem';
 import { SessionList } from '../components/chatbot/SessionList';
 import { SuggestedPrompts } from '../components/chatbot/SuggestedPrompts';
+// Phase-50 / 0011 — U1 Chatbot LLM upgrade. Visible AI surface
+// rendered conditionally via withAiFeature('chatbot-llm', …); absent
+// in off mode (ADR-015 §I5 + §I6).
+import { AIChatbotIndicator } from '@/components/ai/AIChatbotIndicator';
 
 /**
  * Chatbot page (Phase 40 / Prompt 56).
@@ -304,6 +308,7 @@ export default function ChatbotPage() {
       subtitle={t('chatbot.subtitle', 'Ask anything about your Tesla fleet')}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
+          <AIChatbotIndicator />
           <Button
             onClick={() => setShowSessions((s) => !s)}
             variant="ghost"

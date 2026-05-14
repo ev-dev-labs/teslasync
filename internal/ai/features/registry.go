@@ -113,7 +113,7 @@ var Registry = map[string]Feature{
 		Routes: RouteSet{
 			Backend:   []string{"POST /api/v1/ai/chatbot"},
 			Frontend:  []string{"/chatbot"},
-			UITestIDs: []string{"ai-feature-chatbot-llm"},
+			UITestIDs: []string{"ai-feature-chatbot-llm-root"},
 			JobNames:  []string{},
 			PushKinds: []string{},
 		},

@@ -67,7 +67,7 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsRag: true,
     needsTools: true,
     needsStream: true,
-    uiTestIds: Object.freeze(["ai-feature-chatbot-llm"] as const),
+    uiTestIds: Object.freeze(["ai-feature-chatbot-llm-root"] as const),
   }),
 });
 

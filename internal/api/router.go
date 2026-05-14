@@ -64,6 +64,12 @@ import (
 	aiollama "github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama"
 	aiopenai "github.com/ev-dev-labs/teslasync/internal/ai/provider/openai"
 
+	// Phase-50 / 0011 — U1 Chatbot LLM upgrade. The chatbot strategy +
+	// the shared tool registry are constructed at boot and shared with
+	// the AI chatbot HTTP handler.
+	chatbotllm "github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+
 	// New hexagonal architecture packages
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
@@ -423,6 +429,38 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	notifScheduleHandler := NewNotificationScheduleHandler(db)
 	quietHoursHandler := NewQuietHoursHandler(database.NewQuietHoursRepo(db), cfg)
 	chatbotHandler := NewChatbotHandler(db, vehicleSvc, stateReader, liveStateReader)
+
+	// Phase-50 / 0011 — U1 Chatbot LLM upgrade. Construct the
+	// shared tool registry + the chatbot strategy + the AI HTTP
+	// handler. The tool registry is process-wide (one per boot)
+	// and shared across every future AI feature handler; the
+	// strategy is per-feature and is paired with the dispatcher
+	// inside the AI handler.
+	//
+	// Sources are the existing typed repos. ai/tools.VehicleStateSource
+	// expects SignalAt(...) (any, error); signal.StateReader returns
+	// (signal.SignalValue, error) and signal.SignalValue is a defined
+	// type whose underlying type is any — Go interface satisfaction is
+	// by identity, so a small wrapping adapter (aiToolsStateAdapter
+	// below) bridges the two without leaking types across packages.
+	aiToolRegistry := tools.NewRegistry()
+	tools.Register12Builtins(aiToolRegistry, tools.Sources{
+		Vehicles:      database.NewVehicleRepo(db),
+		VehicleState:  aiToolsStateAdapter{r: stateReader},
+		Drives:        database.NewDriveRepo(db),
+		Charges:       database.NewChargingRepo(db),
+		AlertRules:    database.NewAlertRuleRepo(db),
+		Notifications: database.NewNotificationRepo(db),
+		Geofences:     database.NewGeofenceRepo(db),
+		Efficiency:    database.NewDriveRepo(db),
+	})
+	aiChatbotHandler := NewAIChatbotHandler(
+		database.NewChatRepo(db),
+		aiRegistry,
+		aiToolRegistry,
+		chatbotllm.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
 	tirePressureHandler := NewTirePressureHandler(stateReader, liveStateReader)
 	motorHandler := NewMotorHandler(stateReader, liveStateReader)
 	driveDynamicsHandler := NewDriveDynamicsHandler(stateReader, liveStateReader)
@@ -2171,7 +2209,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg))
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//
@@ -2388,4 +2426,24 @@ func (a aiSettingsReader) AIProviderConfig(ctx context.Context) (map[string]any,
 		return map[string]any{}, nil
 	}
 	return s.AIProviderConfig, nil
+}
+
+// aiToolsStateAdapter bridges signal.StateReader (whose SignalAt
+// returns signal.SignalValue, a defined type whose underlying type
+// is any) to ai/tools.VehicleStateSource (whose SignalAt returns
+// any). Go interface satisfaction is by type identity, not
+// underlying-type compatibility, so a tiny wrapper is the minimal
+// safe bridge.
+//
+// The adapter forwards the call verbatim; the implicit conversion
+// from SignalValue to any is the entire bridge. Any future change
+// to either signature will surface here as a compile error before
+// the AI handler ships.
+type aiToolsStateAdapter struct {
+	r signal.StateReader
+}
+
+// SignalAt implements ai/tools.VehicleStateSource.
+func (a aiToolsStateAdapter) SignalAt(ctx context.Context, vehicleID int64, name string, at time.Time) (any, error) {
+	return a.r.SignalAt(ctx, vehicleID, name, at)
 }
