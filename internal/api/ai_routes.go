@@ -84,6 +84,9 @@ import (
 //   - aiSpeedProfileInsights: the real LLM-backed handler for the per-drive
 //                  speed-profile insights narrative (Phase-50 / D2,
 //                  slice 0022). Same nil fallback pattern.
+//   - aiRouteEfficiencySuggestions: the real LLM-backed handler for the
+//                  route-efficiency suggestions narrative (Phase-50 / D3,
+//                  slice 0023). Same nil fallback pattern.
 func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
@@ -101,6 +104,7 @@ func mountAIRoutes(
 	aiRagHelp *AIRAGHelpHandler,
 	aiDriveSearch *AIDriveSearchHandler,
 	aiSpeedProfileInsights *AISpeedProfileInsightsHandler,
+	aiRouteEfficiencySuggestions *AIRouteEfficiencySuggestionsHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// chatbot-llm (Phase-50 / U1, slice 0011 wires the real
@@ -284,6 +288,29 @@ func mountAIRoutes(
 		}
 		r.Post("/drives/{driveID}/speed-profile/insights", g.Wrap("speed-profile-insights", speedProfileInsightsHandler))
 
+		// route-efficiency-suggestions (Phase-50 / D3, slice 0023).
+		// Same stub-fallback pattern as the other AI handlers — a
+		// nil handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode. The
+		// route lives under /ai/routes/{routeID}/efficiency/... so
+		// the AI surface is namespaced and can be removed in one
+		// route block if the feature is ever decommissioned. The
+		// routeID URL param is parsed + validated by the handler
+		// as a positive int64 anchor (the deterministic
+		// /analytics/route-efficiency baseline groups by
+		// start_place/end_place without a stable primary key, so
+		// the routeID is opaque metadata the LLM embeds in its
+		// user message; the read tool query_route_efficiency
+		// returns the per-route aggregates the LLM narrates).
+		// 0 / negative / non-numeric values are rejected with a
+		// 400 BEFORE opening the SSE stream.
+		var routeEfficiencySuggestionsHandler http.HandlerFunc = aiRouteEfficiencySuggestionsStubHandler
+		if aiRouteEfficiencySuggestions != nil {
+			routeEfficiencySuggestionsHandler = aiRouteEfficiencySuggestions.ServeHTTP
+		}
+		r.Post("/routes/{routeID}/efficiency/suggest", g.Wrap("route-efficiency-suggestions", routeEfficiencySuggestionsHandler))
+
 		// ai-provider-health (Phase-50 / F1, slice 0002).
 		// Ops-only diagnostic. Triple-gated:
 		//   guard.Wrap (mode + feature toggle) → RequireSudo → handler.
@@ -386,4 +413,13 @@ func aiDriveSearchStubHandler(w http.ResponseWriter, _ *http.Request) {
 // not the stub.
 func aiSpeedProfileInsightsStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai speed-profile insights is not yet implemented")
+}
+
+// aiRouteEfficiencySuggestionsStubHandler mirrors
+// aiSpeedProfileInsightsStubHandler for the D3 slice (Phase-50 /
+// 0023 route-efficiency-suggestions). Reachable only when
+// AIRouteEfficiencySuggestionsHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiRouteEfficiencySuggestionsStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai route-efficiency suggestions is not yet implemented")
 }

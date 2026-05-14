@@ -125,3 +125,37 @@ func PolicySpeedProfileInsights() Policy {
 		Mode:  ModeRedactedTags,
 	}
 }
+
+// PolicyRouteEfficiencySuggestions is the policy for the
+// route-efficiency suggestions narrative (slice D3, prompt 0023).
+// Allows ClassVehicleName so the suggestions can address the user's
+// car by name when it discusses route-level habits ("Roadie's home
+// → work commute averages 165 Wh/km"). Place names and street
+// addresses — which are the natural identifier of a "route" — flow
+// through the F8 redactor as round-trip ClassStreetAddr tags: the
+// provider sees `<addr id='1'/> → <addr id='2'/>`, and the
+// addresses are restored only in the final SSE frame returned to
+// the same authenticated user who issued the request. This keeps
+// the provider transcript free of personally identifying location
+// strings while preserving the user-facing narration ("From your
+// usual Home → Work commute…"). Lat/long pairs are likewise tagged
+// (ClassLatLong) and never exposed in cleartext to the provider.
+//
+// Mirrors PolicyDigest / PolicyYearInReview / PolicyDriveCoaching /
+// PolicyChargingDiagnosis / PolicySpeedProfileInsights's allow-list
+// intentionally: every per-feature narrator that names the user's
+// car shares the same allow-list shape. They are kept as DISTINCT
+// policy constructors (rather than aliasing) so per-slice
+// allow-list drift can happen without cross-slice collateral damage
+// — a future change to charging diagnosis's allow-list does not
+// bleed across to route-efficiency suggestions.
+//
+// Slice prompt mandate (verbatim): "Allowed classes: ClassVehicleName
+// only; locations are tagged and restored only to same user.
+// Round-trip required: yes."
+func PolicyRouteEfficiencySuggestions() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}

@@ -1,0 +1,13 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot suggest changes for another user's commute or
+      vehicle from inside this request — this surface only sees
+      the routes and drives that belong to the vehicle you have
+      access to here (vehicle 1, Roadie). If your friend would
+      like a route-efficiency suggestion, they can open the same
+      page on their own account and request it there. I'm happy
+      to keep suggesting improvements for Roadie's routes in
+      this conversation.
+    input_tokens: 80
+    output_tokens: 64

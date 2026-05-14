@@ -794,6 +794,69 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / D3 (slice 0023) — Route-efficiency suggestions.
+	//
+	// Backend: POST /api/v1/ai/routes/{routeID}/efficiency/suggest.
+	// The AI handler streams SSE frames from the dispatch loop; the
+	// two declared tools are retrieve_route_chunks (the F7 RAG
+	// retriever scoped to the calling user_subject over the
+	// per-feature allowlist {drive_summary, route_efficiency,
+	// weather_context}; only drive_summary is wired into the F7
+	// indexer today, the other two are reserved by string for the
+	// future ai_route_indexer slice) and query_route_efficiency
+	// (returns SI-canonical aggregates over the user's top
+	// repeat-driven routes for ONE vehicle, mirroring the
+	// deterministic /api/v1/analytics/route-efficiency baseline
+	// shape via the same drives table — no new SQL). Both are
+	// read-only; PolicyRouteEfficiencySuggestions tags every
+	// location class (lat/long, street addr, place name) so a
+	// leaked transcript reveals only the vehicle name. The route
+	// is mounted under guard.Wrap so it returns 404 when
+	// ai_mode='off' OR when the per-feature toggle is off.
+	//
+	// Frontend: the AI suggestions panel attaches to
+	// /analytics/route-efficiency — the canonical Route Efficiency
+	// page that already renders the deterministic RouteCards,
+	// kWh/100mi metric bars, and per-route best/worst summaries.
+	// Those baseline panels remain the canonical path for any
+	// user with ai_mode='off'. The wrapped
+	// AIRouteEfficiencySuggestions component carrying
+	// `ai-feature-route-efficiency-suggestions-root` is absent
+	// from the DOM when AI is off — see the off-mode invariant
+	// test `TestRouteEfficiencySuggestionsAIOffShowsMetricsOnly.test.tsx`.
+	//
+	// Background: ai_route_indexer is a fail-closed stub that
+	// re-checks ai_mode + per-feature toggle on every tick and
+	// returns Skipped=1 whenever either gate is off. The future
+	// indexer body that will populate the route_efficiency /
+	// weather_context corpora replaces the stub body without
+	// touching the registry. Mirrors the slice 0021
+	// ai_drive_indexer fail-closed pattern.
+	//
+	// Push kinds: zero — the panel is request/response on demand.
+	// Explicit `[]string{}` so CoverageOK passes.
+	//
+	// NeedsRAG=true because retrieve_route_chunks calls the F7
+	// retriever; NeedsTools=true because the strategy invokes two
+	// read-only tools; NeedsStream=true because the handler
+	// streams SSE frames from the dispatch loop.
+	"route-efficiency-suggestions": {
+		ID:          "route-efficiency-suggestions",
+		Name:        "Route-efficiency suggestions",
+		Description: "Opt-in LLM-narrated suggestions for lower-consumption habits and route choices, grounded in the user's repeat-driven routes via the F7 RAG retriever plus a typed read-only route-aggregation tool. The deterministic RouteCards and kWh/100mi metric bars on /analytics/route-efficiency remain the canonical baseline when AI is off; precise route coordinates and street addresses remain tagged by the per-feature redaction policy so only the vehicle name may be narrated.",
+		Tier:        "D",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/routes/{routeID}/efficiency/suggest"},
+			Frontend:  []string{"/analytics/route-efficiency"},
+			UITestIDs: []string{"ai-feature-route-efficiency-suggestions-root"},
+			JobNames:  []string{"ai_route_indexer"},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

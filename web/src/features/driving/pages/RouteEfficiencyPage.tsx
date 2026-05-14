@@ -19,6 +19,7 @@ import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { useRouteEfficiency } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { AIRouteEfficiencySuggestions } from '@/components/ai/AIRouteEfficiencySuggestions';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -185,6 +186,15 @@ export default function RouteEfficiencyPage() {
           </div>
         </GlassPanel>
       </FadeIn>
+
+      {/*
+        Phase-50 / 0023 — AI route-efficiency suggestions.
+        Hidden by withAiFeature when ai_mode='off' OR the
+        per-feature toggle is off. Rendered above the comparison
+        chart so the narrative sits next to the figures it's
+        narrating, not below the fold.
+      */}
+      <AIRouteEfficiencySuggestions vehicleId={vehicleIdStr} />
 
       {/* Route efficiency comparison chart */}
       {chartData.length > 1 && (

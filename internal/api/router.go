@@ -79,6 +79,7 @@ import (
 	raghelp "github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help"
 	nldrivesearchreplay "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-drive-search-replay"
 	speedprofileinsights "github.com/ev-dev-labs/teslasync/internal/ai/strategies/speed-profile-insights"
+	routeefficiencysuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/route-efficiency-suggestions"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
@@ -821,6 +822,54 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		speedprofileinsights.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+	// Phase-50 / D3 (slice 0023) — Route-efficiency suggestions.
+	// Build the per-feature F7 retriever scoped to the
+	// route-efficiency-suggestions feature id. The retriever
+	// embeds queries with the local nomic-embed-text model and
+	// fans out across the user_subject's chunks in `signal_log`
+	// (the embedding store; the retriever scopes by user_subject
+	// at the SQL boundary). Only the drive_summary corpus is
+	// populated today; route_efficiency + weather_context are
+	// forward-compat reservations per the slice prompt — the
+	// gated background job `ai_route_indexer` is the future
+	// fan-out point and is registered in features.Registry as a
+	// fail-closed gate stub today.
+	aiRouteEfficiencyRetriever, err := rag.New(
+		context.Background(),
+		aiSettingsRepo,
+		db,
+		aiRegistry,
+		routeefficiencysuggestions.FeatureID,
+		rag.ModelNomicEmbedText,
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("ai route-efficiency suggestions: rag.New failed during boot wiring")
+	}
+	// route-efficiency-suggestions tools (Phase-50 / D3, slice 0023).
+	// Adds `retrieve_route_chunks` + `query_route_efficiency` to
+	// the shared tool registry so the dispatcher can resolve them
+	// for the route-efficiency-suggestions strategy. Same ordering
+	// rule as the other slice tools above: must be registered
+	// before the handler constructor below so the strategy's
+	// allowedTools resolve at boot. query_route_efficiency calls
+	// DriveRepo.GetByVehicle and derives the per-route aggregates
+	// in-memory mirroring the deterministic
+	// /api/v1/analytics/route-efficiency baseline shape — no new
+	// SQL is written by this slice.
+	tools.RegisterRouteEfficiencySuggestionsTools(aiToolRegistry, tools.RouteEfficiencySuggestionsSources{
+		Retriever: aiRouteEfficiencyRetriever,
+		Drives:    database.NewDriveRepo(db),
+	})
+	// Route-efficiency-suggestions handler. One per process;
+	// stateless beyond constructor inputs. Must be constructed
+	// AFTER the tool registration above so the dispatcher can
+	// resolve the strategy's allowedTools at boot.
+	aiRouteEfficiencySuggestionsHandler := NewAIRouteEfficiencySuggestionsHandler(
+		aiRegistry,
+		aiToolRegistry,
+		routeefficiencysuggestions.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	lifetimeHandler := NewLifetimeHandler(db, eventHub)
@@ -2526,7 +2575,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

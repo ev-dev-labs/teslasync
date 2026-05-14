@@ -2442,6 +2442,10 @@
         "speed-profile-insights": {
           "label": "Speed-profile insights",
           "description": "Opt-in LLM that interprets a drive's speed regime distribution — city / suburban / highway buckets, outliers, and a high-level route context envelope — in a few short sentences. The deterministic SpeedHistogramChart and summary metrics on the drive detail page remain the canonical baseline when AI is off."
+        },
+        "route-efficiency-suggestions": {
+          "label": "Route-efficiency suggestions",
+          "description": "Opt-in LLM that suggests lower-consumption habits and route choices grounded in your own route history — dominant route, kWh/100mi figure, and one or two concrete, non-mutating ideas to try yourself. The deterministic route comparison cards and kWh/100mi metrics on the Route Efficiency page remain the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -6334,6 +6338,12 @@
     "mostDrivenLabel": "Most Driven Route",
     "col": {
       "route": "Route"
+    },
+    "aiSuggestions": {
+      "title": "Route-efficiency suggestions",
+      "description": "Get a short plain-language suggestion for lower-consumption habits and route choices grounded in your own historical route data — the dominant route, its kWh/100mi figure, a comparison across your other routes, and one or two concrete, non-mutating ideas you can try yourself.",
+      "badge": "AI",
+      "generateButton": "Generate suggestions"
     }
   },
   "speedProfile": {

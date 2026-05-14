@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "charging-diagnosis" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "speed-profile-insights" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "charging-diagnosis" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "route-efficiency-suggestions" | "speed-profile-insights" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -168,6 +168,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-rag-help-root"] as const),
   }),
+  "route-efficiency-suggestions": Object.freeze({
+    id: "route-efficiency-suggestions",
+    name: "Route-efficiency suggestions",
+    description: "Opt-in LLM-narrated suggestions for lower-consumption habits and route choices, grounded in the user's repeat-driven routes via the F7 RAG retriever plus a typed read-only route-aggregation tool. The deterministic RouteCards and kWh/100mi metric bars on /analytics/route-efficiency remain the canonical baseline when AI is off; precise route coordinates and street addresses remain tagged by the per-feature redaction policy so only the vehicle name may be narrated.",
+    tier: "D",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-route-efficiency-suggestions-root"] as const),
+  }),
   "speed-profile-insights": Object.freeze({
     id: "speed-profile-insights",
     name: "Speed-profile insights",
@@ -206,6 +217,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "nl-drive-search-replay",
   "nl-search",
   "rag-help",
+  "route-efficiency-suggestions",
   "speed-profile-insights",
   "yir-narration",
 ] as const);
