@@ -474,6 +474,9 @@ func TestAggregateRouteEfficiency_NilMetricsWhenMissingSource(t *testing.T) {
 	if routes[0]["ambient_temp_c_avg"] != nil {
 		t.Errorf("ambient_temp_c_avg = %v, want nil", routes[0]["ambient_temp_c_avg"])
 	}
+	if routes[0]["ambient_temp_f_avg"] != nil {
+		t.Errorf("ambient_temp_f_avg = %v, want nil", routes[0]["ambient_temp_f_avg"])
+	}
 	if routes[0]["avg_kwh_per_100mi"] != nil {
 		t.Errorf("avg_kwh_per_100mi = %v, want nil", routes[0]["avg_kwh_per_100mi"])
 	}

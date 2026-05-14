@@ -260,6 +260,7 @@ func TestQueryDriveTelemetrySummary_ExecuteHappyPath(t *testing.T) {
 		t.Errorf("envelope[battery_consumed_pct] = %v, want 15", envelope["battery_consumed_pct"])
 	}
 	wantFloat("outside_temp_avg_c", 18.5, 0.001)
+	wantFloat("outside_temp_avg_f", 65.3, 0.001) // (18.5 × 9/5) + 32 = 65.3
 	if got, ok := envelope["ended_status"].(string); !ok || got != "completed" {
 		t.Errorf("envelope[ended_status] = %v, want %q", envelope["ended_status"], "completed")
 	}
@@ -297,7 +298,7 @@ func TestQueryDriveTelemetrySummary_NilAggregatesPropagateAsNull(t *testing.T) {
 		"energy_used_wh", "regen_energy_wh",
 		"regen_share_pct", "kwh_per_100km",
 		"start_battery_pct", "end_battery_pct", "battery_consumed_pct",
-		"outside_temp_avg_c", "ended_status",
+		"outside_temp_avg_c", "outside_temp_avg_f", "ended_status",
 	} {
 		if envelope[key] != nil {
 			t.Errorf("envelope[%q] = %v (%T), want nil", key, envelope[key], envelope[key])

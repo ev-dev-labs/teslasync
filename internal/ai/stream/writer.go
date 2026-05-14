@@ -333,6 +333,13 @@ func (w *Writer) WriteDoneFull(finishReason string, usageIn, usageOut int) error
 		Usage:        usageStats{In: usageIn, Out: usageOut},
 	})
 	w.shutdown()
+	// CRITICAL: block until the consume goroutine has drained the
+	// channel and exited. Without this, the handler returns while
+	// consume is still calling Flush on the http.ResponseWriter,
+	// and once net/http tears the response down, Flush dereferences
+	// a nil bufio.Writer underlying writer and panics. See
+	// docs/ai-stream-shutdown.md for the full analysis.
+	<-w.consumerDone
 	return err
 }
 
@@ -358,6 +365,7 @@ func (w *Writer) WriteError(err error) error {
 	}
 	sendErr := w.Send(EventError, errorPayload{Message: msg})
 	w.shutdown()
+	<-w.consumerDone
 	return sendErr
 }
 
@@ -422,6 +430,7 @@ func (w *Writer) WriteLimitError(message string, payload LimitDecisionPayload) e
 		BaselineAvailable: payload.BaselineAvailable,
 	})
 	w.shutdown()
+	<-w.consumerDone
 	return sendErr
 }
 

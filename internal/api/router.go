@@ -136,7 +136,26 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Use(ErrorTrackingMiddleware(errorTracker)) // Centralized error aggregation
 	r.Use(PrometheusMiddleware)                  // Legacy {method,path,status} HTTP metrics (kept for back-compat dashboards)
 	r.Use(MetricsMiddleware)                     // RED metrics: http_requests_total / http_request_errors_total / http_request_duration_seconds with status_class
-	r.Use(chimw.Compress(5))
+	// Conditionally apply chi's Compress middleware. We MUST bypass it for
+	// Server-Sent Events: chi v5.0.12's compressor wraps the response writer
+	// and calls .Flush() on its internal encoder. When the response Content-
+	// Type is text/event-stream the encoder is never engaged (per chi's
+	// default content-type allowlist), but the wrapper still dereferences
+	// the nil encoder on Flush, triggering a nil-pointer panic in the
+	// stream consumer goroutine. Bypassing for /api/v1/ai/* is sufficient
+	// since those are the only SSE producers; everything else gets gzip
+	// as before.
+	compressMW := chimw.Compress(5)
+	r.Use(func(next http.Handler) http.Handler {
+		wrapped := compressMW(next)
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			if strings.HasPrefix(req.URL.Path, "/api/v1/ai/") {
+				next.ServeHTTP(w, req)
+				return
+			}
+			wrapped.ServeHTTP(w, req)
+		})
+	})
 
 	// CORS ╬ô├ç├╢ use explicit origins in production. The wildcard is kept for
 	// development convenience but paired with AllowCredentials=false to comply
@@ -2690,7 +2709,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

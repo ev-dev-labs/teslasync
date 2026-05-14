@@ -208,6 +208,18 @@ func (a *Adapter) relayStream(ctx context.Context, body io.ReadCloser, out chan<
 		if frame.Message.Content != "" {
 			send(ctx, out, provider.Chunk{Delta: frame.Message.Content})
 		}
+		// Ollama emits a fully-formed tool_call on its terminal frame
+		// (not piecewise like OpenAI). Forward each as a ToolDelta so
+		// dispatchers in F5 streaming mode can route them; the
+		// non-streaming Chat path mirrors this via toChatResponse.
+		for _, tc := range frame.Message.ToolCalls {
+			tcCopy := provider.ToolCall{
+				ID:        tc.ID,
+				Name:      tc.Function.Name,
+				Arguments: tc.Function.Arguments,
+			}
+			send(ctx, out, provider.Chunk{ToolDelta: &tcCopy})
+		}
 		if frame.Done {
 			send(ctx, out, provider.Chunk{Done: true})
 			return
@@ -228,21 +240,43 @@ func send(ctx context.Context, out chan<- provider.Chunk, c provider.Chunk) {
 // --- wire types --------------------------------------------------------
 
 type ollamaChatRequest struct {
-	Model    string              `json:"model"`
-	Messages []ollamaMsg         `json:"messages"`
-	Tools    []provider.ToolSpec `json:"tools,omitempty"`
-	Stream   bool                `json:"stream"`
-	Options  map[string]any      `json:"options,omitempty"`
+	Model    string           `json:"model"`
+	Messages []ollamaMsg      `json:"messages"`
+	Tools    []ollamaWireTool `json:"tools,omitempty"`
+	Stream   bool             `json:"stream"`
+	Options  map[string]any   `json:"options,omitempty"`
+}
+
+// ollamaWireTool is the OpenAI-style tool-declaration envelope that
+// Ollama's /api/chat expects. Sending bare {name, description,
+// parameters} causes qwen2.5-class models to return tool_calls with an
+// empty function.name field (the model can no longer match the call to
+// the declared tool), which downstream surfaces as the dispatcher
+// rejecting every invocation with `tool "" not allowed for this
+// strategy`. The wrapper format is the same shape OpenAI and Anthropic
+// emit, so the registry's [provider.ToolSpec] is portable to any
+// adapter once each adapter wraps it correctly.
+type ollamaWireTool struct {
+	Type     string             `json:"type"`
+	Function ollamaWireToolFunc `json:"function"`
+}
+
+type ollamaWireToolFunc struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description,omitempty"`
+	Parameters  json.RawMessage `json:"parameters"`
 }
 
 type ollamaMsg struct {
-	Role      string               `json:"role"`
-	Content   string               `json:"content"`
-	ToolCalls []ollamaToolCallWire `json:"tool_calls,omitempty"`
-	Name      string               `json:"name,omitempty"`
+	Role       string               `json:"role"`
+	Content    string               `json:"content"`
+	ToolCalls  []ollamaToolCallWire `json:"tool_calls,omitempty"`
+	Name       string               `json:"name,omitempty"`
+	ToolCallID string               `json:"tool_call_id,omitempty"`
 }
 
 type ollamaToolCallWire struct {
+	ID       string `json:"id,omitempty"`
 	Function struct {
 		Name      string          `json:"name"`
 		Arguments json.RawMessage `json:"arguments"`
@@ -276,11 +310,17 @@ func encodeChatRequest(cfg provider.ProviderConfig, req provider.ChatRequest, st
 	}
 	wireMsgs := make([]ollamaMsg, 0, len(req.Messages))
 	for _, m := range req.Messages {
-		wm := ollamaMsg{Role: m.Role, Content: m.Content, Name: m.Name}
+		wm := ollamaMsg{
+			Role:       m.Role,
+			Content:    m.Content,
+			Name:       m.Name,
+			ToolCallID: m.ToolID,
+		}
 		if m.Tool != nil {
-			wm.ToolCalls = []ollamaToolCallWire{{}}
-			wm.ToolCalls[0].Function.Name = m.Tool.Name
-			wm.ToolCalls[0].Function.Arguments = m.Tool.Arguments
+			tc := ollamaToolCallWire{ID: m.Tool.ID}
+			tc.Function.Name = m.Tool.Name
+			tc.Function.Arguments = m.Tool.Arguments
+			wm.ToolCalls = []ollamaToolCallWire{tc}
 		}
 		wireMsgs = append(wireMsgs, wm)
 	}
@@ -291,15 +331,29 @@ func encodeChatRequest(cfg provider.ProviderConfig, req provider.ChatRequest, st
 	if req.MaxTokens > 0 {
 		opts["num_predict"] = req.MaxTokens
 	}
+	wireTools := make([]ollamaWireTool, 0, len(req.Tools))
+	for _, t := range req.Tools {
+		wireTools = append(wireTools, ollamaWireTool{
+			Type: "function",
+			Function: ollamaWireToolFunc{
+				Name:        t.Name,
+				Description: t.Description,
+				Parameters:  t.Parameters,
+			},
+		})
+	}
 	wire := ollamaChatRequest{
 		Model:    model,
 		Messages: wireMsgs,
-		Tools:    req.Tools,
+		Tools:    wireTools,
 		Stream:   stream,
 		Options:  opts,
 	}
 	if len(opts) == 0 {
 		wire.Options = nil
+	}
+	if len(wireTools) == 0 {
+		wire.Tools = nil
 	}
 	return json.Marshal(wire)
 }
@@ -320,6 +374,7 @@ func (r *ollamaChatResponse) toChatResponse() *provider.ChatResponse {
 	}
 	for _, tc := range r.Message.ToolCalls {
 		out.ToolCalls = append(out.ToolCalls, provider.ToolCall{
+			ID:        tc.ID,
 			Name:      tc.Function.Name,
 			Arguments: tc.Function.Arguments,
 		})

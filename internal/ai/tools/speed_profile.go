@@ -75,6 +75,7 @@
 //	  "duration_s":        int64,
 //	  "distance_m":        float64,
 //	  "outside_temp_avg_c":  float64 | null,
+//	  "outside_temp_avg_f":  float64 | null,   // pre-computed °F = (°C × 9/5) + 32
 //	  "start_battery_pct":   int16   | null,
 //	  "end_battery_pct":     int16   | null,
 //	  "battery_consumed_pct":int16   | null,  // derived: start - end
@@ -437,6 +438,7 @@ func buildDriveContext(d *models.Drive) map[string]any {
 	// row by ADR-001 / Phase-42 (column dropped) and surfacing it
 	// would mislead the LLM about its availability.
 	out["outside_temp_avg_c"] = derefFloat64Ptr(d.OutsideTempAvgC)
+	out["outside_temp_avg_f"] = cToFPtr(d.OutsideTempAvgC)
 	out["ended_status"] = derefStringPtr(d.EndedStatus)
 
 	// Privacy: presence-only flags. The actual strings + lat/lon

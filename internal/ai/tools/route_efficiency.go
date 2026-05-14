@@ -547,9 +547,12 @@ func aggregateRouteEfficiency(drives []*models.Drive) map[string]any {
 			row["avg_speed_mps"] = nil
 		}
 		if a.tempCN > 0 {
-			row["ambient_temp_c_avg"] = roundN(a.tempCSum/float64(a.tempCN), 2)
+			tempC := a.tempCSum / float64(a.tempCN)
+			row["ambient_temp_c_avg"] = roundN(tempC, 2)
+			row["ambient_temp_f_avg"] = roundN(tempC*9.0/5.0+32.0, 2)
 		} else {
 			row["ambient_temp_c_avg"] = nil
+			row["ambient_temp_f_avg"] = nil
 		}
 		if a.avgKwhN > 0 {
 			row["avg_kwh_per_100mi"] = roundN(a.avgKwhSum/float64(a.avgKwhN), 2)

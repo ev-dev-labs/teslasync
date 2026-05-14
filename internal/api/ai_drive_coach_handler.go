@@ -218,9 +218,7 @@ func (h *AIDriveCoachHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	// injection — keeping the drive_id as the sole identifier
 	// removes that vector entirely.
 	userMsg := fmt.Sprintf(
-		"Coach drive %d. Call query_drive_detail and "+
-			"query_drive_telemetry_summary first, then narrate the result strictly from "+
-			"their replies in 2-4 short paragraphs.",
+		"Coach drive %d. Call query_drive_detail and query_drive_telemetry_summary first, then narrate.",
 		driveID,
 	)
 

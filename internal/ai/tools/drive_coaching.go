@@ -52,6 +52,7 @@
 //	  "end_battery_pct":       int16   | null,
 //	  "battery_consumed_pct":  int16   | null,  // derived: start_pct - end_pct
 //	  "outside_temp_avg_c":    float64 | null,
+//	  "outside_temp_avg_f":    float64 | null,  // pre-computed °F = (°C × 9/5) + 32
 //	  "ended_status":          string  | null,
 //	}
 //
@@ -230,9 +231,23 @@ func summariseDriveForCoaching(d *models.Drive) map[string]any {
 	// row by ADR-001 / Phase-42 (column dropped) and surfacing it
 	// would mislead the LLM about its availability.
 	out["outside_temp_avg_c"] = derefFloat64Ptr(d.OutsideTempAvgC)
+	out["outside_temp_avg_f"] = cToFPtr(d.OutsideTempAvgC)
 	out["ended_status"] = derefStringPtr(d.EndedStatus)
 
 	return out
+}
+
+// cToFPtr returns the Fahrenheit conversion of *p, or typed nil any
+// when p is nil. Provided alongside derefFloat64Ptr so every tool
+// that surfaces a Celsius reading can ALSO emit a pre-computed
+// Fahrenheit field — letting the LLM lift whichever the user prefers
+// without doing arithmetic (a known weak point on small local models,
+// especially with negative temperatures).
+func cToFPtr(p *float64) any {
+	if p == nil {
+		return nil
+	}
+	return (*p)*9.0/5.0 + 32.0
 }
 
 // derefFloat64Ptr returns the deref'd value or the typed nil any so

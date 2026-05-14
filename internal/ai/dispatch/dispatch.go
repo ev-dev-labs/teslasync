@@ -242,12 +242,36 @@ func (d *Dispatcher) Run(ctx context.Context, s strategy.Strategy, in strategy.S
 	if sys := s.System(); sys != "" {
 		msgs = append(msgs, provider.Message{Role: provider.RoleSystem, Content: sys})
 	}
+	// Inject the user's display-unit preferences (Miles vs km,
+	// °F vs °C, decimal precision, currency, locale) as a SECOND
+	// system message right after the strategy's prompt. The
+	// userPrefsMiddleware in package api populates ctx once per
+	// request from the global Settings repo; tests and code paths
+	// that do not install prefs see a zero UserPrefs and the
+	// dispatcher skips this step (UserPrefs.SystemMessage returns
+	// "" for the zero value). See dispatch/prefs.go for the
+	// full rationale.
+	if prefs, ok := UserPrefsFromContext(ctx); ok {
+		if hint := prefs.SystemMessage(); hint != "" {
+			msgs = append(msgs, provider.Message{Role: provider.RoleSystem, Content: hint})
+		}
+	}
 	ctxMsgs, err := s.Context(ctx, in)
 	if err != nil {
 		return fmt.Errorf("dispatch: strategy context: %w", err)
 	}
 	msgs = append(msgs, ctxMsgs...)
 	msgs = append(msgs, in.History...)
+	// Append the synthesised "current turn" user message. Every AI
+	// handler in this codebase passes the per-request prompt via
+	// StrategyInput.LastMessage (see ai_drive_coach_handler.go and
+	// peers); without this step the model only sees the system
+	// prompt + context and hallucinates a reply with no anchor.
+	// Empty LastMessage is allowed (e.g. resume-after-confirmation
+	// paths where History already terminates with a user turn).
+	if in.LastMessage != "" {
+		msgs = append(msgs, provider.Message{Role: provider.RoleUser, Content: in.LastMessage})
+	}
 
 	// 3) Loop: chat → on tool_call validate+execute → repeat.
 	for iter := 0; iter < d.maxIterations; iter++ {

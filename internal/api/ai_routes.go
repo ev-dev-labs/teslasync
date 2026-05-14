@@ -24,9 +24,12 @@ package api
 import (
 	"net/http"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
 )
 
 // mountAIRoutes registers every /api/v1/ai/* route through the guard.
@@ -103,6 +106,7 @@ func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
 	registry *provider.Registry,
+	settingsRepo *database.SettingsRepo,
 	sudoMW func(http.Handler) http.Handler,
 	aiChatbot *AIChatbotHandler,
 	aiDigest *AIDigestHandler,
@@ -123,6 +127,16 @@ func mountAIRoutes(
 	aiBatteryHealth *AIBatteryHealthHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
+		// Phase-50 / units honour — install the global Application
+		// settings as dispatcher UserPrefs on every /ai/* request.
+		// Resolved once per request (cheap key/value Get on the
+		// settings table). The dispatcher's Run reads the prefs
+		// from ctx and injects a short "narrate in MILES/MPH/°F…"
+		// system message right after the strategy's prompt so the
+		// LLM's prose matches the user's UI without any per-handler
+		// or per-strategy plumbing. See dispatch/prefs.go for the
+		// full design notes.
+		r.Use(userPrefsMiddleware(settingsRepo))
 		// chatbot-llm (Phase-50 / U1, slice 0011 wires the real
 		// handler). Earlier slices used a 501 stub; the stub is
 		// retained for nil-handler defensive wiring so a misordered
@@ -560,4 +574,55 @@ func aiSmartChargeScheduleStubHandler(w http.ResponseWriter, _ *http.Request) {
 // invariant is held by the guard, not the stub.
 func aiBatteryHealthStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai battery health forecast narrative is not yet implemented")
+}
+
+// userPrefsMiddleware reads the global Application settings on every
+// /api/v1/ai/* request and installs the resulting [dispatch.UserPrefs]
+// on the request context. The dispatcher's Run consults that ctx and
+// prepends a SHORT "narrate in MILES/MPH/°F/PSI/$/locale" system
+// message right after the strategy's prompt, ensuring every LLM
+// response uses the same units the rest of the UI already does.
+//
+// Failure modes are deliberately silent: if the settings repo is nil
+// (test wiring) or the Get call errors (DB unreachable, schema drift,
+// etc.) the middleware logs at debug and proceeds without installing
+// prefs. The dispatcher treats a missing ctx value as "no hint" and
+// behaves exactly as it did before this middleware existed, so the
+// AI features still work — they just won't honour units that request.
+// That's the conservative choice: an outage in the settings table
+// must NOT take down AI narration entirely.
+//
+// Performance: Settings.Get is a single SELECT against the very small
+// `settings` key/value table (well under 50 rows) executed once per
+// AI request. The LLM call that follows is the dominant cost by 3-5
+// orders of magnitude, so the Get is not on the critical path.
+func userPrefsMiddleware(settingsRepo *database.SettingsRepo) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if settingsRepo == nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+			s, err := settingsRepo.Get(r.Context())
+			if err != nil || s == nil {
+				if err != nil {
+					log.Debug().Err(err).Msg("ai: user prefs middleware: settings fetch failed, proceeding without unit hint")
+				}
+				next.ServeHTTP(w, r)
+				return
+			}
+			prefs := dispatch.UserPrefs{
+				UnitOfLength:     s.UnitOfLength,
+				UnitOfTemp:       s.UnitOfTemp,
+				UnitOfPressure:   s.UnitOfPressure,
+				PreferredRange:   s.PreferredRange,
+				CurrencySymbol:   s.CurrencySymbol,
+				DecimalPrecision: s.DecimalPrecision,
+				Locale:           s.Locale,
+				Language:         s.Language,
+			}
+			ctx := dispatch.WithUserPrefs(r.Context(), prefs)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }
