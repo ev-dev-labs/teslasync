@@ -82,8 +82,7 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	plan, ok := ratePlans[req.RatePlanID]
-	if !ok {
+	if _, ok := ratePlans[req.RatePlanID]; !ok {
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("unknown rate plan: %s", req.RatePlanID))
 		return
 	}
@@ -98,19 +97,7 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Defaults
-	if req.MaxAmps <= 0 {
-		req.MaxAmps = 32
-	}
-	if req.MaxAmps > 80 {
-		req.MaxAmps = 80
-	}
-	if req.BatteryCapacity <= 0 {
-		req.BatteryCapacity = 75.0
-	}
-	if req.ChargerVoltage <= 0 {
-		req.ChargerVoltage = 240
-	}
+	applyOptimizeRequestDefaults(&req)
 
 	// Get current SOC from the canonical state reader (signal_log-backed).
 	ctx := r.Context()
@@ -129,9 +116,103 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	if currentSOC >= req.TargetSOC {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("current SOC (%d%%) already meets target (%d%%)", currentSOC, req.TargetSOC))
+	// Delegate the pure-functional planning to computeSchedule so the
+	// Phase-50 AI smart-charge-schedule slice's draft_charge_schedule
+	// tool can call exactly the same code path. computeSchedule returns
+	// either a typed user-facing error (mapped to 400) or a fully
+	// populated *optimizeResponse with PlanID=0 (the caller persists
+	// + fills in PlanID).
+	resp, err := h.computeSchedule(ctx, req, departBy, currentSOC, time.Now().UTC())
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
+	}
+
+	// Persist draft plan. The AI handler does NOT call into this
+	// branch — it only proposes via computeSchedule and lets the user
+	// save through the canonical Apply / SmartChargePage Save buttons.
+	planRepo := database.NewChargePlanRepo(h.db)
+	estKwh := resp.KWhNeeded
+	estCost := resp.Schedule.EstCost
+	chargeNowCost := resp.Comparison.ChargeNowCost
+	savings := resp.Comparison.Savings
+	dbPlan := &database.ChargePlan{
+		VehicleID:      req.VehicleID,
+		TargetSOC:      req.TargetSOC,
+		DepartBy:       &departBy,
+		ScheduledStart: resp.Schedule.StartTime,
+		ScheduledEnd:   resp.Schedule.EndTime,
+		RatePlan:       req.RatePlanID,
+		EstimatedKWh:   &estKwh,
+		EstimatedCost:  &estCost,
+		ChargeNowCost:  &chargeNowCost,
+		Savings:        &savings,
+		Status:         "draft",
+	}
+	if err := planRepo.Create(ctx, dbPlan); err != nil {
+		log.Error().Err(err).Msg("failed to create charge plan")
+		writeError(w, http.StatusInternalServerError, "failed to save plan")
+		return
+	}
+	resp.PlanID = dbPlan.ID
+
+	log.Info().
+		Int64("vehicle_id", req.VehicleID).
+		Int64("plan_id", dbPlan.ID).
+		Int("current_soc", currentSOC).
+		Int("target_soc", req.TargetSOC).
+		Float64("kwh_needed", resp.KWhNeeded).
+		Float64("optimized_cost", resp.Schedule.EstCost).
+		Float64("savings", resp.Comparison.Savings).
+		Msg("charge plan optimized")
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// applyOptimizeRequestDefaults populates the optional charger / battery
+// fields of an optimizeRequest. Extracted so computeSchedule and the
+// AI smart-charge tool path see the same defaults the canonical
+// Optimize handler applies.
+func applyOptimizeRequestDefaults(req *optimizeRequest) {
+	if req.MaxAmps <= 0 {
+		req.MaxAmps = 32
+	}
+	if req.MaxAmps > 80 {
+		req.MaxAmps = 80
+	}
+	if req.BatteryCapacity <= 0 {
+		req.BatteryCapacity = 75.0
+	}
+	if req.ChargerVoltage <= 0 {
+		req.ChargerVoltage = 240
+	}
+}
+
+// computeSchedule performs the pure-functional charge-plan
+// optimization: given the post-validation request, the parsed
+// departBy timestamp, the resolved currentSOC, and a "now"
+// reference, it computes the cheapest contiguous charging window
+// before departure and the cost-comparison envelope.
+//
+// computeSchedule does NOT persist anything and does NOT touch the
+// state reader. Its only side effect is allocating the response
+// envelope. The Optimize HTTP handler is the only caller that
+// persists the result; the Phase-50 smart-charge-schedule-suggestion
+// AI tool path calls computeSchedule via the AIChargeScheduleComputer
+// adapter and never persists.
+//
+// Errors returned here represent user-input / planning-feasibility
+// problems (already-at-target SOC, not-enough-time, no-valid-window)
+// and are intended to map to 400 Bad Request at the HTTP boundary.
+// Persistence and signal-store errors stay in the caller.
+func (h *ChargePlannerHandler) computeSchedule(_ context.Context, req optimizeRequest, departBy time.Time, currentSOC int, now time.Time) (*optimizeResponse, error) {
+	plan, ok := ratePlans[req.RatePlanID]
+	if !ok {
+		return nil, fmt.Errorf("unknown rate plan: %s", req.RatePlanID)
+	}
+
+	if currentSOC >= req.TargetSOC {
+		return nil, fmt.Errorf("current SOC (%d%%) already meets target (%d%%)", currentSOC, req.TargetSOC)
 	}
 
 	// Calculate charging requirements
@@ -147,13 +228,12 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Check if there's enough time before departure
-	hoursUntilDepart := departBy.Sub(time.Now().UTC()).Hours()
+	hoursUntilDepart := departBy.Sub(now).Hours()
 	if float64(durationCeilHours) > hoursUntilDepart {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf(
+		return nil, fmt.Errorf(
 			"not enough time: need %.1f hours but only %.1f hours until departure",
 			durationHours, hoursUntilDepart,
-		))
-		return
+		)
 	}
 
 	// Build per-hour rates for the relevant season
@@ -169,7 +249,6 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 		tier         string
 	}
 
-	now := time.Now().UTC()
 	nowHour := now.Hour()
 
 	// Build candidate list: all possible start hours
@@ -213,8 +292,7 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if len(candidates) == 0 {
-		writeError(w, http.StatusBadRequest, "no valid charging window found before departure")
-		return
+		return nil, fmt.Errorf("no valid charging window found before departure")
 	}
 
 	// Sort by cost ascending
@@ -240,29 +318,6 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 	}
 	bestEnd := bestStart.Add(time.Duration(float64(time.Hour) * durationHours))
 
-	// Persist draft plan
-	planRepo := database.NewChargePlanRepo(h.db)
-	estKwh := kwhNeeded
-	estCost := best.cost
-	dbPlan := &database.ChargePlan{
-		VehicleID:      req.VehicleID,
-		TargetSOC:      req.TargetSOC,
-		DepartBy:       &departBy,
-		ScheduledStart: bestStart,
-		ScheduledEnd:   bestEnd,
-		RatePlan:       req.RatePlanID,
-		EstimatedKWh:   &estKwh,
-		EstimatedCost:  &estCost,
-		ChargeNowCost:  &chargeNowCost,
-		Savings:        &savings,
-		Status:         "draft",
-	}
-	if err := planRepo.Create(ctx, dbPlan); err != nil {
-		log.Error().Err(err).Msg("failed to create charge plan")
-		writeError(w, http.StatusInternalServerError, "failed to save plan")
-		return
-	}
-
 	// Build alternatives (up to 3, excluding best)
 	var alternatives []chargeWindow
 	for i := 1; i < len(candidates) && len(alternatives) < 3; i++ {
@@ -281,8 +336,8 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 		})
 	}
 
-	resp := optimizeResponse{
-		PlanID:           dbPlan.ID,
+	return &optimizeResponse{
+		// PlanID=0 — caller fills this in after persisting.
 		CurrentSOC:       currentSOC,
 		TargetSOC:        req.TargetSOC,
 		KWhNeeded:        math.Round(kwhNeeded*100) / 100,
@@ -302,19 +357,7 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 		},
 		Alternatives: alternatives,
 		HourlyRates:  rates,
-	}
-
-	log.Info().
-		Int64("vehicle_id", req.VehicleID).
-		Int64("plan_id", dbPlan.ID).
-		Int("current_soc", currentSOC).
-		Int("target_soc", req.TargetSOC).
-		Float64("kwh_needed", kwhNeeded).
-		Float64("optimized_cost", best.cost).
-		Float64("savings", savings).
-		Msg("charge plan optimized")
-
-	writeJSON(w, http.StatusOK, resp)
+	}, nil
 }
 
 // ── Apply Endpoint ───────────────────────────────────────────

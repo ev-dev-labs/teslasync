@@ -93,6 +93,9 @@ import (
 //   - aiTripPlannerLLM: the real LLM-backed handler for the
 //                  trip-planner LLM agent (Phase-50 / D5, slice 0025).
 //                  Same nil fallback pattern.
+//   - aiSmartChargeSchedule: the real LLM-backed handler for the
+//                  smart-charge schedule suggestion (Phase-50 / C1,
+//                  slice 0026). Same nil fallback pattern.
 func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
@@ -113,6 +116,7 @@ func mountAIRoutes(
 	aiRouteEfficiencySuggestions *AIRouteEfficiencySuggestionsHandler,
 	aiAutoTripName *AIAutoTripNameHandler,
 	aiTripPlannerLLM *AITripPlannerLLMHandler,
+	aiSmartChargeSchedule *AISmartChargeScheduleHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// chatbot-llm (Phase-50 / U1, slice 0011 wires the real
@@ -234,6 +238,25 @@ func mountAIRoutes(
 		// sessionID is a chi URL param; the handler parses + validates
 		// it (positive int64) and rejects 0 / negative / non-numeric
 		// values with a 400 BEFORE opening the SSE stream.
+		//
+		// smart-charge-schedule-suggestion (Phase-50 / C1, slice
+		// 0026) is registered FIRST under /ai/charging/... so
+		// chi's radix-tree disambiguates the static
+		// /charging/schedule/draft pattern over the
+		// /charging/{sessionID}/diagnose wildcard registered
+		// immediately below. Same stub-fallback pattern — a nil
+		// handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode. The
+		// canonical baseline route at
+		// POST /api/v1/charge-planner/optimize is unchanged.
+		var smartChargeScheduleHandler http.HandlerFunc = aiSmartChargeScheduleStubHandler
+		if aiSmartChargeSchedule != nil {
+			smartChargeScheduleHandler = aiSmartChargeSchedule.ServeHTTP
+		}
+		r.Post("/charging/schedule/draft", g.Wrap("smart-charge-schedule-suggestion", smartChargeScheduleHandler))
+
+		// charging-diagnosis (Phase-50 / N4, slice 0018).
 		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
 		if aiChargingDiagnosis != nil {
 			chargingDiagnosisHandler = aiChargingDiagnosis.ServeHTTP
@@ -497,4 +520,13 @@ func aiAutoTripNameStubHandler(w http.ResponseWriter, _ *http.Request) {
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiTripPlannerLLMStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai trip-planner LLM agent is not yet implemented")
+}
+
+// aiSmartChargeScheduleStubHandler mirrors
+// aiTripPlannerLLMStubHandler for the C1 slice (Phase-50 / 0026
+// smart-charge-schedule-suggestion). Reachable only when
+// AISmartChargeScheduleHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiSmartChargeScheduleStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai smart-charge schedule suggestion is not yet implemented")
 }

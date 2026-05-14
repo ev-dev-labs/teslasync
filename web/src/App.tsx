@@ -392,6 +392,7 @@ export default function App() {
         <Route path="tesla-charging-history" element={<SafeRoute name="TeslaChargingHistory"><TeslaChargingHistory /></SafeRoute>} />
         <Route path="tesla-charging-sessions" element={<SafeRoute name="TeslaChargingSessions"><TeslaChargingSessions /></SafeRoute>} />
         <Route path="smart-charge" element={<SafeRoute name="SmartCharge"><SmartCharge /></SafeRoute>} />
+        <Route path="charging/schedule" element={<SafeRoute name="SmartCharge"><SmartCharge /></SafeRoute>} />
         <Route path="powershare" element={<SafeRoute name="Powershare"><Powershare /></SafeRoute>} />
         <Route path="battery-cells" element={<SafeRoute name="BatteryCells"><BatteryCells /></SafeRoute>} />
         <Route path="drive-score" element={<SafeRoute name="DriveScore"><DriveScore /></SafeRoute>} />

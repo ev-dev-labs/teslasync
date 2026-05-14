@@ -998,6 +998,36 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / C1 (slice 0026) — Smart-charge schedule suggestion.
+	//
+	// Opt-in LLM agent that proposes a time-of-use-optimized charge
+	// schedule by delegating to the canonical
+	// *ChargePlannerHandler.computeSchedule path so the proposed
+	// envelope is byte-equivalent to the deterministic
+	// POST /api/v1/charge-planner/optimize baseline. PROPOSE-only:
+	// the LLM has no save tool — the user reviews the proposed
+	// schedule in the AI panel and explicitly clicks the existing
+	// canonical Schedule button on the SmartChargePage UI to apply
+	// it via POST /api/v1/charge-planner/apply (unchanged
+	// baseline). Manual charge schedule settings + the heuristic
+	// optimizer remain the canonical baseline when AI is off.
+	"smart-charge-schedule-suggestion": {
+		ID:          "smart-charge-schedule-suggestion",
+		Name:        "Smart-charge schedule suggestion",
+		Description: "Opt-in LLM agent that proposes a TOU-optimized charge schedule by delegating to the canonical ChargePlannerHandler.computeSchedule path. The manual schedule form, deterministic POST /api/v1/charge-planner/optimize optimizer, and explicit Schedule button on the Smart Charge page remain the canonical baseline when AI is off; the AI never writes a schedule directly. Home/work locations remain tagged by the per-feature redaction policy so only the vehicle name may be narrated.",
+		Tier:        "C",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/charging/schedule/draft"},
+			Frontend:  []string{"/charging/schedule"},
+			UITestIDs: []string{"ai-feature-smart-charge-schedule-suggestion-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

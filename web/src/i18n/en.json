@@ -2450,6 +2450,10 @@
         "trip-planner-llm-agent": {
           "label": "Trip-planner LLM agent",
           "description": "Opt-in LLM agent that drafts a trip plan grounded in your own charging history along the corridor — origin and destination, current state of charge, minimum arrival state of charge, and one or two suggested stops drawn from places you have already charged at. The deterministic heuristic trip planner, manual form, map, and Plan button on the Trip Planner page remain the canonical baseline when AI is off."
+        },
+        "smart-charge-schedule-suggestion": {
+          "label": "Smart-charge schedule suggestion",
+          "description": "Opt-in LLM agent that proposes a time-of-use-optimized charge schedule by delegating to the canonical charge-planner optimizer — target state of charge, departure time, rate plan, and a one or two sentence narration of the proposed window. The manual schedule form, deterministic optimizer, rate timeline, and Schedule button on the Smart Charge page remain the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -4125,6 +4129,12 @@
     "subtitle": "Electricity cost trends, gas savings, and charging economics"
   },
   "chargePlanner": {
+    "aiAgent": {
+      "title": "Draft a schedule with the AI agent",
+      "description": "Ask the AI agent to propose a time-of-use-optimized charge schedule grounded in your selected rate plan and target departure. The schedule is never saved automatically \u2014 review the proposed window and click Schedule below to apply it.",
+      "badge": "AI",
+      "generateButton": "Draft a schedule"
+    },
     "noRateData": "No rate data available",
     "offPeak": "Off-Peak",
     "midPeak": "Mid-Peak",

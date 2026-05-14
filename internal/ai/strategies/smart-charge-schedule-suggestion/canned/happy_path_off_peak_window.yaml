@@ -1,0 +1,26 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_charge_schedule_off_peak_1
+        name: draft_charge_schedule
+        arguments: '{"vehicle_id": 42, "target_soc": 80, "depart_by": "2099-01-02T07:30:00Z", "rate_plan_id": "pge-ev2a", "max_amps": 32, "battery_capacity_kwh": 75}'
+    input_tokens: 64
+    output_tokens: 48
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_validate_charge_schedule_off_peak_1
+        name: validate_charge_schedule
+        arguments: '{"start_time": "2099-01-02T00:00:00Z", "end_time": "2099-01-02T05:00:00Z", "current_soc": 40, "target_soc": 80, "depart_by": "2099-01-02T07:30:00Z"}'
+    input_tokens: 140
+    output_tokens: 56
+  - finish_reason: stop
+    content: |
+      I drafted an overnight schedule for vehicle <vehicle id='42'/>
+      that charges during the cheap off_peak window the optimizer
+      identified. The structured proposal shows the start_time,
+      end_time, estimated_cost, and savings figures returned by the
+      canonical planner. Review the structured proposal in the side
+      panel and click Schedule to apply it — I never apply schedules
+      directly.
+    input_tokens: 220
+    output_tokens: 72

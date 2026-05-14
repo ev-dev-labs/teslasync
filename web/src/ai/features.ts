@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "charging-diagnosis" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "route-efficiency-suggestions" | "speed-profile-insights" | "trip-planner-llm-agent" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "charging-diagnosis" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "trip-planner-llm-agent" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -190,6 +190,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-route-efficiency-suggestions-root"] as const),
   }),
+  "smart-charge-schedule-suggestion": Object.freeze({
+    id: "smart-charge-schedule-suggestion",
+    name: "Smart-charge schedule suggestion",
+    description: "Opt-in LLM agent that proposes a TOU-optimized charge schedule by delegating to the canonical ChargePlannerHandler.computeSchedule path. The manual schedule form, deterministic POST /api/v1/charge-planner/optimize optimizer, and explicit Schedule button on the Smart Charge page remain the canonical baseline when AI is off; the AI never writes a schedule directly. Home/work locations remain tagged by the per-feature redaction policy so only the vehicle name may be narrated.",
+    tier: "C",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-smart-charge-schedule-suggestion-root"] as const),
+  }),
   "speed-profile-insights": Object.freeze({
     id: "speed-profile-insights",
     name: "Speed-profile insights",
@@ -241,6 +252,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "nl-search",
   "rag-help",
   "route-efficiency-suggestions",
+  "smart-charge-schedule-suggestion",
   "speed-profile-insights",
   "trip-planner-llm-agent",
   "yir-narration",

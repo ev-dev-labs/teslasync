@@ -1,0 +1,26 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_charge_schedule_no_savings_1
+        name: draft_charge_schedule
+        arguments: '{"vehicle_id": 42, "target_soc": 90, "depart_by": "2099-01-02T00:00:00Z", "rate_plan_id": "pge-ev2a", "max_amps": 32, "battery_capacity_kwh": 75}'
+    input_tokens: 64
+    output_tokens: 48
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_validate_charge_schedule_no_savings_1
+        name: validate_charge_schedule
+        arguments: '{"start_time": "2099-01-01T18:00:00Z", "end_time": "2099-01-01T23:00:00Z", "current_soc": 50, "target_soc": 90, "depart_by": "2099-01-02T00:00:00Z"}'
+    input_tokens: 140
+    output_tokens: 56
+  - finish_reason: stop
+    content: |
+      I drafted a schedule for vehicle <vehicle id='42'/> in the
+      requested window, but the optimizer reports the entire
+      candidate window already falls inside the off_peak tier so
+      savings are effectively zero. The structured proposal still
+      shows the start_time and end_time returned by the canonical
+      planner so you can review them. Click Schedule to apply if
+      you'd like the explicit schedule on file.
+    input_tokens: 220
+    output_tokens: 72

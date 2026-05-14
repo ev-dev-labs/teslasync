@@ -217,3 +217,34 @@ func PolicyTripPlannerLLMAgent() Policy {
 		Mode:  ModeRedactedTags,
 	}
 }
+
+// PolicySmartChargeScheduleSuggestion is the per-feature redaction
+// policy for the Phase-50 C1 smart-charge-schedule-suggestion
+// strategy. Allows ClassVehicleName only so the narration can
+// address the user's car by name (e.g. "Charge Roadie from 11pm to
+// 5am to save $4.20"); every other PII class — VIN, lat/long,
+// addresses, place names — remains tagged via round-trip markers
+// and restored only when the SSE stream is rendered to the same
+// authenticated user. The schedule proposal itself is a structured
+// envelope (start_time, end_time, target_soc, est_cost) consisting
+// of timestamps and numbers, not free-form prose, so the redactor
+// has nothing to obscure on the typed side.
+//
+// This matches the slice prompt's verbatim mandate:
+//
+//	Allowed classes: ClassVehicleName only; home/work locations
+//	remain tagged
+//	Round-trip required: yes
+//
+// Kept as a distinct identifier from PolicyDigest /
+// PolicyTripPlannerLLMAgent / PolicyRouteEfficiencySuggestions /
+// PolicyAutoTripNaming / PolicySpeedProfileInsights /
+// PolicyChargingDiagnosis / PolicyDriveCoaching so a future
+// per-feature change to one slice's allow-list does not bleed
+// across the others — every feature is independently auditable.
+func PolicySmartChargeScheduleSuggestion() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}

@@ -82,6 +82,7 @@ import (
 	routeefficiencysuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/route-efficiency-suggestions"
 	autotripnaming "github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-trip-naming"
 	tripplannerllmagent "github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-planner-llm-agent"
+	smartchargeschedulesuggestion "github.com/ev-dev-labs/teslasync/internal/ai/strategies/smart-charge-schedule-suggestion"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
@@ -955,6 +956,32 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		tripplannerllmagent.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+
+	// smart-charge-schedule-suggestion tools (Phase-50 / C1, slice
+	// 0026). Adds `draft_charge_schedule` and
+	// `validate_charge_schedule` to the shared tool registry. Both
+	// are PROPOSE-only / READ-only — draft_charge_schedule delegates
+	// to the canonical ChargePlannerHandler.computeSchedule path
+	// via a narrow ChargeScheduleComputer port satisfied by
+	// AIChargeScheduleComputer; validate_charge_schedule is pure-Go
+	// arithmetic on the typed envelope. The dispatcher's deny-all
+	// confirm gate is therefore never triggered; the actual
+	// schedule persistence flows through the existing canonical
+	// Schedule button in the SmartChargePage UI (unchanged
+	// baseline).
+	tools.RegisterSmartChargeScheduleSuggestionTools(aiToolRegistry, tools.SmartChargeScheduleSuggestionSources{
+		Planner: NewAIChargeScheduleComputer(chargePlannerHandler),
+	})
+	// smart-charge-schedule-suggestion handler. One per process;
+	// stateless beyond constructor inputs. Must be constructed
+	// AFTER the tool registration above so the dispatcher can
+	// resolve the strategy's allowedTools at boot.
+	aiSmartChargeScheduleHandler := NewAISmartChargeScheduleHandler(
+		aiRegistry,
+		aiToolRegistry,
+		smartchargeschedulesuggestion.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
@@ -2636,7 +2663,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//
