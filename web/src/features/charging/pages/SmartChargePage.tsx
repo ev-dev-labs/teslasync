@@ -121,7 +121,14 @@ export default function SmartChargePage() {
     >
       {/* ── AI Smart-Charge Schedule Suggestion (opt-in, hidden when ai_mode='off') ── */}
       <FadeIn>
-        <AISmartChargeScheduleSuggestion vehicleId={vehicleIdNum} />
+        <AISmartChargeScheduleSuggestion
+          vehicleId={vehicleIdNum}
+          targetSoc={targetSoc}
+          departBy={departBy}
+          ratePlanId={ratePlanId}
+          maxAmps={maxAmps}
+          batteryCapacityKwh={batteryCapacity}
+        />
       </FadeIn>
 
       {/* ── Settings Section ── */}

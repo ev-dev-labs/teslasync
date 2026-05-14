@@ -204,7 +204,9 @@ export default function YearReviewPage() {
         affordance overlaid above the slide counter.
       */}
       <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 w-full max-w-md px-4 sm:px-0">
-        <AIYearReviewNarration />
+        <AIYearReviewNarration
+          vehicleId={vehicleIdParam ? Number(vehicleIdParam) : undefined}
+        />
       </div>
     </div>
   );

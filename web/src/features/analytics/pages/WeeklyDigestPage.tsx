@@ -93,7 +93,9 @@ export default function WeeklyDigestPage() {
             template digest above is unchanged and remains the canonical
             baseline for every user.
           */}
-          <AIDigestNarration />
+          <AIDigestNarration
+            vehicleId={selectedVehicleId ? Number(selectedVehicleId) : undefined}
+          />
         </FadeIn>
       )}
     </PageContainer>

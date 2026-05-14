@@ -31,6 +31,7 @@ import { useConfirm } from '@/hooks/useConfirm';
 import { ConfirmDialog } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useNotificationChannels } from '@/api/hooks/useNotifications';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import {
   useAutomation,
   useCreateAutomationFull,
@@ -263,6 +264,7 @@ export default function AutomationBuilderPage() {
       ? `automation/preset/${presetId}`
       : 'automation/new';
   useEditLease(leaseKey);
+  const { vehicleId: aiVehicleId } = useSelectedVehicle();
 
   usePageTitle(
     isEdit
@@ -607,7 +609,7 @@ export default function AutomationBuilderPage() {
         )}
 
         <FadeIn>
-          <AINLAutomationBuilder />
+          <AINLAutomationBuilder vehicleId={aiVehicleId ?? undefined} />
         </FadeIn>
 
         <FadeIn>

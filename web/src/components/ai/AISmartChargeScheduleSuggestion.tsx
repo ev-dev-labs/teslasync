@@ -1,127 +1,133 @@
 // Phase-50 / 0026 — C1 Smart-charge schedule suggestion.
-//
-// AISmartChargeScheduleSuggestion is the visible AI surface for
-// the Smart Charge page. It is rendered conditionally via
-// withAiFeature('smart-charge-schedule-suggestion', …) so:
-//
-//   - When ai_mode='off' it does not render at all (ADR-015 §I5 + §I6).
-//   - When ai_mode is 'local'/'cloud' AND the
-//     smart-charge-schedule-suggestion toggle is on, it renders an
-//     opt-in section with an Agent button that would call
-//     POST /api/v1/ai/charging/schedule/draft.
-//
-// The component does NOT replace the deterministic manual
-// schedule form, canonical Schedule button, baseline schedule
-// envelope, rate timeline, or alternative-windows panel rendered
-// by SmartChargePage. That baseline content remains the canonical
-// view visible to every user; this AI section is opt-in
-// propose-only schedule layered alongside.
-//
-// The actual SSE call + structured proposal rendering land in a
-// future slice (the slice prompt is explicit that the F0 contract
-// requires only the rendered-or-absent invariant). The current
-// component shows the UI affordance with a disabled "Draft a
-// schedule" button so the off-mode test has a concrete UI test ID
-// to assert against and the on-mode positive control proves the
-// gate actually fires.
+// Phase-50 / W1 (slice 0065) — wired the Draft button to
+// POST /api/v1/ai/charging/schedule/draft.
 
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { AiOutputPanel } from '@/components/ai/AiOutputPanel'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { Button, GlassPanel } from '@/components/ui'
+import { useAiStream } from '@/hooks/useAiStream'
 
 interface InnerSectionProps {
-  /**
-   * vehicleId surfaced by the parent SmartChargePage. Optional
-   * because the active-vehicle context may be unresolved at first
-   * paint; when absent we still render the section (the gate has
-   * already passed) but the Agent button stays disabled because
-   * the backend call needs a vehicle in scope.
-   */
   vehicleId?: string | number
+  targetSoc?: number
+  currentSoc?: number
+  departBy?: string
+  ratePlanId?: string
+  maxAmps?: number
+  batteryCapacityKwh?: number
+  chargerVoltage?: number
+  preferOffPeak?: boolean
 }
 
-/**
- * InnerSection is the always-rendered body of the AI smart-charge
- * schedule agent card. The surrounding {@link withAiFeature} HOC
- * handles the visibility gate; this component only describes the
- * surface's appearance.
- *
- * Visual contract:
- *   - One GlassPanel sized to sit above the smart-charge settings
- *     form on SmartChargePage.
- *   - Cyan AI badge in the header (matches the chatbot brand
- *     colour).
- *   - Generate button is disabled until the SSE wiring lands AND
- *     when no vehicleId is available from the active-vehicle
- *     context.
- *   - Title attribute carries the long-form explanation so a user
- *     hovering for a tooltip understands the privacy contract —
- *     only the vehicle name may be narrated; lat/long, street
- *     addresses, and place names remain tagged by the per-feature
- *     redaction policy. The save action requires explicit user
- *     confirmation by clicking the existing canonical Schedule
- *     button in the form below — the AI never persists anything.
- */
-function InnerSection({ vehicleId }: InnerSectionProps) {
+function InnerSection({
+  vehicleId,
+  targetSoc,
+  currentSoc,
+  departBy,
+  ratePlanId,
+  maxAmps,
+  batteryCapacityKwh,
+  chargerVoltage,
+  preferOffPeak,
+}: InnerSectionProps) {
   const { t } = useTranslation()
-  const buttonDisabled = !vehicleId
+  const numericVehicleId =
+    typeof vehicleId === 'number' ? vehicleId : Number(vehicleId)
+  const body = useMemo(() => {
+    // depart_by must be ISO; the SmartChargePage feeds a datetime-local
+    // string which we normalize the same way the deterministic Optimize
+    // call does.
+    const departIso = (() => {
+      if (!departBy) return new Date().toISOString()
+      const d = new Date(departBy)
+      return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString()
+    })()
+    return {
+      vehicle_id: numericVehicleId || 0,
+      target_soc: targetSoc ?? 80,
+      depart_by: departIso,
+      rate_plan_id: ratePlanId ?? '',
+      max_amps: maxAmps ?? 32,
+      battery_capacity_kwh: batteryCapacityKwh ?? 75,
+      charger_voltage: chargerVoltage ?? 240,
+      prefer_off_peak: preferOffPeak ?? true,
+      current_soc: currentSoc ?? 20,
+    }
+  }, [
+    numericVehicleId,
+    targetSoc,
+    departBy,
+    ratePlanId,
+    maxAmps,
+    batteryCapacityKwh,
+    chargerVoltage,
+    preferOffPeak,
+    currentSoc,
+  ])
+  const stream = useAiStream({
+    url: '/ai/charging/schedule/draft',
+    body,
+    onEvent: () => {},
+  })
+  const haveInputs = !!vehicleId && !!ratePlanId
+  const canGenerate = haveInputs && stream.state !== 'streaming'
   return (
     <GlassPanel>
-      <div className="flex items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-white/90">
-              {t('chargePlanner.aiAgent.title', 'Draft a schedule with the AI agent')}
-            </h3>
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2.5 py-1 text-xs font-medium text-cyan-300"
-              title={t(
-                'chatbot.llm.indicatorTooltip',
-                'Responses are generated by an LLM with redacted vehicle context.',
-              )}
-              aria-label={t('chatbot.llm.indicator', 'AI mode')}
-            >
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-semibold text-white/90">
+                {t('chargePlanner.aiAgent.title', 'Draft a schedule with the AI agent')}
+              </h3>
               <span
-                className="inline-block h-1.5 w-1.5 rounded-full bg-cyan-300"
-                aria-hidden="true"
-              />
-              {t('chargePlanner.aiAgent.badge', 'AI')}
-            </span>
+                className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2.5 py-1 text-xs font-medium text-cyan-300"
+                title={t(
+                  'chatbot.llm.indicatorTooltip',
+                  'Responses are generated by an LLM with redacted vehicle context.',
+                )}
+                aria-label={t('chatbot.llm.indicator', 'AI mode')}
+              >
+                <span
+                  className="inline-block h-1.5 w-1.5 rounded-full bg-cyan-300"
+                  aria-hidden="true"
+                />
+                {t('chargePlanner.aiAgent.badge', 'AI')}
+              </span>
+            </div>
+            <p className="text-sm text-white/60">
+              {t(
+                'chargePlanner.aiAgent.description',
+                'Ask the AI agent to propose a time-of-use-optimized charge schedule grounded in your selected rate plan and target departure. The schedule is never saved automatically \u2014 review the proposed window and click Schedule below to apply it.',
+              )}
+            </p>
           </div>
-          <p className="text-sm text-white/60">
-            {t(
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!canGenerate}
+            aria-disabled={!canGenerate ? 'true' : 'false'}
+            onClick={() => stream.start()}
+            title={t(
               'chargePlanner.aiAgent.description',
               'Ask the AI agent to propose a time-of-use-optimized charge schedule grounded in your selected rate plan and target departure. The schedule is never saved automatically \u2014 review the proposed window and click Schedule below to apply it.',
             )}
-          </p>
+          >
+            {stream.state === 'streaming'
+              ? t('ai.common.generating', 'Generating…')
+              : t('chargePlanner.aiAgent.generateButton', 'Draft a schedule')}
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={buttonDisabled}
-          aria-disabled={buttonDisabled ? 'true' : 'false'}
-          title={t(
-            'chargePlanner.aiAgent.description',
-            'Ask the AI agent to propose a time-of-use-optimized charge schedule grounded in your selected rate plan and target departure. The schedule is never saved automatically \u2014 review the proposed window and click Schedule below to apply it.',
-          )}
-        >
-          {t('chargePlanner.aiAgent.generateButton', 'Draft a schedule')}
-        </Button>
+        <AiOutputPanel text={stream.text} state={stream.state} error={stream.error} />
       </div>
     </GlassPanel>
   )
 }
 InnerSection.displayName = 'AISmartChargeScheduleSuggestionInner'
 
-/**
- * AISmartChargeScheduleSuggestion renders the LLM smart-charge
- * schedule agent section only when the
- * smart-charge-schedule-suggestion feature is enabled. The wrapping
- * div from {@link withAiFeature} carries
- * `data-testid="ai-feature-smart-charge-schedule-suggestion-root"`,
- * which the off-mode invariant test asserts against.
- */
 export const AISmartChargeScheduleSuggestion = withAiFeature(
   'smart-charge-schedule-suggestion',
   InnerSection,

@@ -123,7 +123,15 @@ export default function TripPlannerPage() {
           and emits zero DOM in off mode per ADR-015 §I5 + §I6. The baseline
           form below is the canonical, deterministic view. */}
       <FadeIn>
-        <AITripPlannerLLMAgent vehicleId={vehicleId ?? undefined} />
+        <AITripPlannerLLMAgent
+          vehicleId={vehicleId ?? undefined}
+          origin={origin}
+          destination={destination}
+          currentSoc={currentSOC}
+          minArrivalSoc={minArrivalSOC}
+          chargeLimitSoc={90}
+          speedFactor={speedFactor}
+        />
       </FadeIn>
 
       {/* Route Input Form */}

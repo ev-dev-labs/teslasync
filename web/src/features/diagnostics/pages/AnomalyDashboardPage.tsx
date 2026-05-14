@@ -135,7 +135,7 @@ export default function AnomalyDashboardPage() {
       {/* the deterministic detector + safe-range messages above  */}
       {/* remain the canonical baseline in off mode (ADR-015 §I3).*/}
       <FadeIn delay={0.04}>
-        <AIAnomalyExplanations />
+        <AIAnomalyExplanations vehicleId={selectedId ?? undefined} />
       </FadeIn>
 
       {/* ── Health Summary Cards ───────────────────────── */}

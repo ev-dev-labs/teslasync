@@ -1,124 +1,137 @@
 // Phase-50 / 0025 — D5 Trip planner LLM agent.
-//
-// AITripPlannerLLMAgent is the visible AI surface for the Trip
-// Planner page. It is rendered conditionally via
-// withAiFeature('trip-planner-llm-agent', …) so:
-//
-//   - When ai_mode='off' it does not render at all (ADR-015 §I5 + §I6).
-//   - When ai_mode is 'local'/'cloud' AND the trip-planner-llm-agent
-//     toggle is on, it renders an opt-in section with an Agent
-//     button that would call POST /api/v1/ai/trips/plan/draft.
-//
-// The component does NOT replace the deterministic manual form,
-// canonical Plan button, baseline plan envelope, map, or
-// charge-stop list rendered by TripPlannerPage. That baseline
-// content remains the canonical view visible to every user; this
-// AI section is opt-in propose-only planning layered alongside.
-//
-// The actual SSE call + structured proposal rendering land in a
-// future slice (the slice prompt is explicit that the F0 contract
-// requires only the rendered-or-absent invariant). The current
-// component shows the UI affordance with a disabled "Draft a plan"
-// button so the off-mode test has a concrete UI test ID to assert
-// against and the on-mode positive control proves the gate
-// actually fires.
+// Phase-50 / W1 (slice 0065) — wired the Draft button to
+// POST /api/v1/ai/trips/plan/draft.
 
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { AiOutputPanel } from '@/components/ai/AiOutputPanel'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { Button, GlassPanel } from '@/components/ui'
+import { useAiStream } from '@/hooks/useAiStream'
 
-interface InnerSectionProps {
-  /**
-   * vehicleId surfaced by the parent TripPlannerPage. Optional
-   * because the active-vehicle context may be unresolved at first
-   * paint; when absent we still render the section (the gate has
-   * already passed) but the Agent button stays disabled because
-   * the backend call needs a vehicle in scope.
-   */
-  vehicleId?: string | number
+interface TripLocationLike {
+  lat: number
+  lng: number
+  name?: string
 }
 
-/**
- * InnerSection is the always-rendered body of the AI trip-planner
- * agent card. The surrounding {@link withAiFeature} HOC handles
- * the visibility gate; this component only describes the surface's
- * appearance.
- *
- * Visual contract:
- *   - One GlassPanel sized to sit above the trip-planner form on
- *     TripPlannerPage.
- *   - Cyan AI badge in the header (matches the chatbot brand
- *     colour).
- *   - Generate button is disabled until the SSE wiring lands AND
- *     when no vehicleId is available from the active-vehicle
- *     context.
- *   - Title attribute carries the long-form explanation so a user
- *     hovering for a tooltip understands the privacy contract —
- *     only the vehicle name may be narrated; lat/long, street
- *     addresses, and place names remain tagged by the per-feature
- *     redaction policy. The save action requires explicit user
- *     confirmation by clicking the existing canonical Plan button
- *     in the form below — the AI never persists anything.
- */
-function InnerSection({ vehicleId }: InnerSectionProps) {
+interface InnerSectionProps {
+  vehicleId?: string | number
+  origin?: TripLocationLike | null
+  destination?: TripLocationLike | null
+  currentSoc?: number
+  minArrivalSoc?: number
+  chargeLimitSoc?: number
+  speedFactor?: number
+}
+
+function InnerSection({
+  vehicleId,
+  origin,
+  destination,
+  currentSoc,
+  minArrivalSoc,
+  chargeLimitSoc,
+  speedFactor,
+}: InnerSectionProps) {
   const { t } = useTranslation()
-  const buttonDisabled = !vehicleId
+  const numericVehicleId =
+    typeof vehicleId === 'number' ? vehicleId : Number(vehicleId)
+  const body = useMemo(
+    () => ({
+      vehicle_id: numericVehicleId || 0,
+      origin: origin
+        ? {
+            lat: origin.lat,
+            lng: origin.lng,
+            name: origin.name ?? '',
+          }
+        : { lat: 0, lng: 0, name: '' },
+      destination: destination
+        ? {
+            lat: destination.lat,
+            lng: destination.lng,
+            name: destination.name ?? '',
+          }
+        : { lat: 0, lng: 0, name: '' },
+      current_soc: currentSoc ?? 80,
+      charge_limit_soc: chargeLimitSoc ?? 90,
+      min_arrival_soc: minArrivalSoc ?? 20,
+      speed_factor: speedFactor ?? 1.0,
+    }),
+    [
+      numericVehicleId,
+      origin,
+      destination,
+      currentSoc,
+      chargeLimitSoc,
+      minArrivalSoc,
+      speedFactor,
+    ],
+  )
+  const stream = useAiStream({
+    url: '/ai/trips/plan/draft',
+    body,
+    onEvent: () => {},
+  })
+  const haveInputs =
+    !!vehicleId && origin != null && destination != null
+  const canGenerate = haveInputs && stream.state !== 'streaming'
   return (
     <GlassPanel>
-      <div className="flex items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-white/90">
-              {t('tripPlanner.aiAgent.title', 'Draft a plan with the AI agent')}
-            </h3>
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2.5 py-1 text-xs font-medium text-cyan-300"
-              title={t(
-                'chatbot.llm.indicatorTooltip',
-                'Responses are generated by an LLM with redacted vehicle context.',
-              )}
-              aria-label={t('chatbot.llm.indicator', 'AI mode')}
-            >
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-semibold text-white/90">
+                {t('tripPlanner.aiAgent.title', 'Draft a plan with the AI agent')}
+              </h3>
               <span
-                className="inline-block h-1.5 w-1.5 rounded-full bg-cyan-300"
-                aria-hidden="true"
-              />
-              {t('tripPlanner.aiAgent.badge', 'AI')}
-            </span>
+                className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2.5 py-1 text-xs font-medium text-cyan-300"
+                title={t(
+                  'chatbot.llm.indicatorTooltip',
+                  'Responses are generated by an LLM with redacted vehicle context.',
+                )}
+                aria-label={t('chatbot.llm.indicator', 'AI mode')}
+              >
+                <span
+                  className="inline-block h-1.5 w-1.5 rounded-full bg-cyan-300"
+                  aria-hidden="true"
+                />
+                {t('tripPlanner.aiAgent.badge', 'AI')}
+              </span>
+            </div>
+            <p className="text-sm text-white/60">
+              {t(
+                'tripPlanner.aiAgent.description',
+                'Ask the AI agent to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically \u2014 review the proposed plan and click Plan in the form below to save it.',
+              )}
+            </p>
           </div>
-          <p className="text-sm text-white/60">
-            {t(
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!canGenerate}
+            aria-disabled={!canGenerate ? 'true' : 'false'}
+            onClick={() => stream.start()}
+            title={t(
               'tripPlanner.aiAgent.description',
               'Ask the AI agent to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically \u2014 review the proposed plan and click Plan in the form below to save it.',
             )}
-          </p>
+          >
+            {stream.state === 'streaming'
+              ? t('ai.common.generating', 'Generating…')
+              : t('tripPlanner.aiAgent.generateButton', 'Draft a plan')}
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={buttonDisabled}
-          aria-disabled={buttonDisabled ? 'true' : 'false'}
-          title={t(
-            'tripPlanner.aiAgent.description',
-            'Ask the AI agent to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically \u2014 review the proposed plan and click Plan in the form below to save it.',
-          )}
-        >
-          {t('tripPlanner.aiAgent.generateButton', 'Draft a plan')}
-        </Button>
+        <AiOutputPanel text={stream.text} state={stream.state} error={stream.error} />
       </div>
     </GlassPanel>
   )
 }
 InnerSection.displayName = 'AITripPlannerLLMAgentInner'
 
-/**
- * AITripPlannerLLMAgent renders the LLM trip-planner agent section
- * only when the trip-planner-llm-agent feature is enabled. The
- * wrapping div from {@link withAiFeature} carries
- * `data-testid="ai-feature-trip-planner-llm-agent-root"`, which the
- * off-mode invariant test asserts against.
- */
 export const AITripPlannerLLMAgent = withAiFeature(
   'trip-planner-llm-agent',
   InnerSection,

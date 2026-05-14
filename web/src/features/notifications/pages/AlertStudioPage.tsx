@@ -48,6 +48,7 @@ import { AlertMessageEditor } from '../components/AlertMessageEditor'
 import { recommendedTriggerMode } from '../lib/recommendedTriggerMode'
 import { Icons } from '@/lib/icons';
 import { AINLAlertBuilder } from '@/components/ai/AINLAlertBuilder'
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 
 // Phase-49 / Slice 0008 — editor-only tri-state. Backend column stays
 // strict ('once' | 'repeat'); 'unset' exists purely so a brand-new
@@ -623,6 +624,7 @@ export default function AlertStudio() {
   const [snoozeTargetId, setSnoozeTargetId] = useState<number | null>(null)
   const { confirm: confirmDelete, dialogProps: deleteDialogProps } = useConfirm()
   const { confirm: confirmDiscard, dialogProps: discardDialogProps } = useConfirm()
+  const { vehicleId: aiVehicleId } = useSelectedVehicle()
 
   const [selectedId, setSelectedId] = useState<number | null>(null)
   // Phase-40 / Prompt 51 — multi-row selection for bulk enable/disable.
@@ -1305,7 +1307,7 @@ export default function AlertStudio() {
       {/* (ADR-015 §I3 baseline-intact + this slice's PROPOSE-only      */}
       {/* contract).                                                    */}
       <FadeIn delay={0.04}>
-        <AINLAlertBuilder />
+        <AINLAlertBuilder vehicleId={aiVehicleId ?? undefined} />
       </FadeIn>
 
       {showTemplates && (
