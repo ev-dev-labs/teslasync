@@ -96,6 +96,9 @@ import (
 //   - aiSmartChargeSchedule: the real LLM-backed handler for the
 //                  smart-charge schedule suggestion (Phase-50 / C1,
 //                  slice 0026). Same nil fallback pattern.
+//   - aiBatteryHealth: the real LLM-backed handler for the battery
+//                  health forecast narrative (Phase-50 / C2,
+//                  slice 0027). Same nil fallback pattern.
 func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
@@ -117,6 +120,7 @@ func mountAIRoutes(
 	aiAutoTripName *AIAutoTripNameHandler,
 	aiTripPlannerLLM *AITripPlannerLLMHandler,
 	aiSmartChargeSchedule *AISmartChargeScheduleHandler,
+	aiBatteryHealth *AIBatteryHealthHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// chatbot-llm (Phase-50 / U1, slice 0011 wires the real
@@ -255,6 +259,24 @@ func mountAIRoutes(
 			smartChargeScheduleHandler = aiSmartChargeSchedule.ServeHTTP
 		}
 		r.Post("/charging/schedule/draft", g.Wrap("smart-charge-schedule-suggestion", smartChargeScheduleHandler))
+
+		// battery-health-forecast-narrative (Phase-50 / C2, slice
+		// 0027) narrates the deterministic battery-health forecast
+		// the chart on /battery (BatteryHealthPage) renders. The
+		// route lives under /ai/battery/health/narrate so it is
+		// namespaced under the existing /battery SPA route family
+		// the BatteryHealthPage component mounts on. Same
+		// stub-fallback pattern — a nil handler is possible during
+		// partial wiring but the off-mode 404 invariant still holds
+		// because guard.Wrap returns 404 BEFORE the handler runs in
+		// off mode. The canonical baseline routes at
+		// GET /api/v1/analytics/battery-health and
+		// GET /api/v1/analytics/battery-degradation are unchanged.
+		var batteryHealthHandler http.HandlerFunc = aiBatteryHealthStubHandler
+		if aiBatteryHealth != nil {
+			batteryHealthHandler = aiBatteryHealth.ServeHTTP
+		}
+		r.Post("/battery/health/narrate", g.Wrap("battery-health-forecast-narrative", batteryHealthHandler))
 
 		// charging-diagnosis (Phase-50 / N4, slice 0018).
 		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
@@ -529,4 +551,13 @@ func aiTripPlannerLLMStubHandler(w http.ResponseWriter, _ *http.Request) {
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiSmartChargeScheduleStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai smart-charge schedule suggestion is not yet implemented")
+}
+
+// aiBatteryHealthStubHandler mirrors aiSmartChargeScheduleStubHandler
+// for the C2 slice (Phase-50 / 0027
+// battery-health-forecast-narrative). Reachable only when
+// AIBatteryHealthHandler is nil at construction; the off-mode 404
+// invariant is held by the guard, not the stub.
+func aiBatteryHealthStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai battery health forecast narrative is not yet implemented")
 }

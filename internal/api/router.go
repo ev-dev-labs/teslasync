@@ -83,6 +83,7 @@ import (
 	autotripnaming "github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-trip-naming"
 	tripplannerllmagent "github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-planner-llm-agent"
 	smartchargeschedulesuggestion "github.com/ev-dev-labs/teslasync/internal/ai/strategies/smart-charge-schedule-suggestion"
+	batteryhealthforecastnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/battery-health-forecast-narrative"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
@@ -982,6 +983,32 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		smartchargeschedulesuggestion.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+	// battery-health-forecast-narrative (Phase-50 / C2, slice
+	// 0027). Registers `query_battery_health_forecast` to the
+	// shared tool registry. The tool is READ-only — it composes
+	// the same package-level helpers (synthesizeBatterySnapshots,
+	// predictDegradation, computeRiskFactors,
+	// lookupVehicleCapacityWh) that back the deterministic
+	// GET /api/v1/analytics/battery-degradation handler via a
+	// narrow BatteryHealthForecaster port satisfied by
+	// AIBatteryHealthForecaster. The dispatcher's deny-all
+	// confirm gate is therefore never triggered; the
+	// deterministic chart / hero-cards / recommendations panel
+	// on /battery (BatteryHealthPage) remain the canonical
+	// baseline.
+	tools.RegisterBatteryHealthForecastNarrativeTools(aiToolRegistry, tools.BatteryHealthForecastNarrativeSources{
+		Forecaster: NewAIBatteryHealthForecaster(db, stateReader, signalLogReader),
+	})
+	// battery-health-forecast-narrative handler. One per process;
+	// stateless beyond constructor inputs. Must be constructed
+	// AFTER the tool registration above so the dispatcher can
+	// resolve the strategy's allowedTools at boot.
+	aiBatteryHealthHandler := NewAIBatteryHealthHandler(
+		aiRegistry,
+		aiToolRegistry,
+		batteryhealthforecastnarrative.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
@@ -2663,7 +2690,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

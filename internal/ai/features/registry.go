@@ -1028,6 +1028,50 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / C2 (slice 0027) — Battery health forecast narrative.
+	//
+	// Opt-in LLM narration that explains the drivers of the
+	// deterministic battery-health forecast already rendered on the
+	// /battery (BatteryHealthPage) page: current state-of-health,
+	// degradation rate, projected 80%-of-original-capacity date,
+	// charging-habit ratios (fast-charge fraction, deep-discharge
+	// count, high-SOC dwell), and the risk-factor severity table the
+	// existing /analytics/battery-degradation handler returns. The
+	// strategy is READ-ONLY: it composes the existing
+	// *database.SignalLogReader.SignalTrace + ChargeSource.GetByVehicle
+	// surfaces through a narrow [BatteryHealthForecaster] port and
+	// reuses the existing package-level helpers (synthesizeBatterySnapshots,
+	// predictDegradation, computeRiskFactors) so the AI narration is
+	// grounded in the SAME deterministic forecast model the chart
+	// uses — the slice explicitly does NOT change the forecast model.
+	// The narration only translates the typed envelope into a 2-3
+	// sentence plain-language explanation of WHY the forecast is what
+	// it is and which charging habits contribute to it.
+	//
+	// The deterministic BatteryHealthPage — hero metric cards, the
+	// "Capacity Trend & Prediction" chart, range trend, charge level
+	// distribution, insights panel, and recommendations panel —
+	// remains the canonical baseline visible to every user. The AI
+	// section is an opt-in panel layered ABOVE the hero metrics; it
+	// is HIDDEN entirely when ai_mode='off' or the per-feature toggle
+	// is off (ADR-015 §I3, §I5, §I6).
+	"battery-health-forecast-narrative": {
+		ID:          "battery-health-forecast-narrative",
+		Name:        "Battery health forecast narrative",
+		Description: "Opt-in LLM-narrated explanation of the drivers behind the deterministic battery-health forecast (state-of-health, degradation rate, projected 80% date, charging habit ratios, risk factors). The deterministic Capacity Trend & Prediction chart, hero metric cards, and recommendations panel on the Battery Health page remain the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class except the vehicle name tagged so a leaked transcript does not reveal the user's location or charging cadence in plain text.",
+		Tier:        "C",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/battery/health/narrate"},
+			Frontend:  []string{"/battery/health"},
+			UITestIDs: []string{"ai-feature-battery-health-forecast-narrative-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

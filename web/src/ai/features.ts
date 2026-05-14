@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "charging-diagnosis" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "trip-planner-llm-agent" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "charging-diagnosis" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "trip-planner-llm-agent" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -79,6 +79,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsTools: true,
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-auto-trip-naming-root"] as const),
+  }),
+  "battery-health-forecast-narrative": Object.freeze({
+    id: "battery-health-forecast-narrative",
+    name: "Battery health forecast narrative",
+    description: "Opt-in LLM-narrated explanation of the drivers behind the deterministic battery-health forecast (state-of-health, degradation rate, projected 80% date, charging habit ratios, risk factors). The deterministic Capacity Trend & Prediction chart, hero metric cards, and recommendations panel on the Battery Health page remain the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class except the vehicle name tagged so a leaked transcript does not reveal the user's location or charging cadence in plain text.",
+    tier: "C",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-battery-health-forecast-narrative-root"] as const),
   }),
   "charging-diagnosis": Object.freeze({
     id: "charging-diagnosis",
@@ -242,6 +253,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "ai-provider-health",
   "anomaly-explanations",
   "auto-trip-naming",
+  "battery-health-forecast-narrative",
   "charging-diagnosis",
   "chatbot-llm",
   "digest-narration",

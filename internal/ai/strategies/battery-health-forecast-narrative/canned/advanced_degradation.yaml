@@ -1,0 +1,20 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_battery_health_forecast_advanced_degradation_1
+        name: query_battery_health_forecast
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Vehicle <vehicle id='42'/> is at 88% state-of-health with a
+      2.8%/year slope, putting the projected 80%-of-original-capacity
+      date under three years away. The dominant drivers in the
+      forecast are the high fast-charge ratio and elevated
+      deep-discharge count returned by the canonical model — the
+      stress_level the deterministic forecast classified is the
+      elevated bucket, so reducing DC fast-charge cadence and
+      avoiding sub-20% dwell would slow the projected slope.
+    input_tokens: 220
+    output_tokens: 88

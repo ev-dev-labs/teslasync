@@ -22,6 +22,7 @@ import {
 import { MetricCard, MetricBar, LiveIndicator } from '@/components/data-display';
 import { Skeleton, EmptyState, LiveStaleDataBanner, SectionErrorBoundary, StatGridSkeleton, ChartBlockSkeleton, PageHeaderSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { AIBatteryHealthForecastNarrative } from '@/components/ai/AIBatteryHealthForecastNarrative';
 
 import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
@@ -421,6 +422,11 @@ export default function BatteryHealthPage() {
       }
     >
       <LiveStaleDataBanner />
+      {/* Phase-50 / 0027 — AI battery-health forecast narrator. Hidden when
+          ai_mode='off' or the per-feature toggle is off; baseline chart remains. */}
+      <FadeIn>
+        <AIBatteryHealthForecastNarrative vehicleId={vehicleId ?? undefined} />
+      </FadeIn>
       {/* ── 1. Health Score Hero ──────────────────────────────────── */}
       <SectionErrorBoundary name="battery:health-hero" fallbackTitle={t('battery.section.heroFailed', 'Health score panel failed to load')}>
         <FadeIn>

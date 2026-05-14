@@ -248,3 +248,37 @@ func PolicySmartChargeScheduleSuggestion() Policy {
 		Mode:  ModeRedactedTags,
 	}
 }
+
+// PolicyBatteryHealthForecastNarrative is the per-feature redaction
+// policy for the Phase-50 C2 battery-health-forecast-narrative
+// strategy. Allows ClassVehicleName only so the narration can
+// address the user's car by name (e.g. "Roadie's degradation rate
+// is 1.8%/year"); every other PII class — VIN, lat/long, addresses,
+// place names, charging-location identifiers — remains tagged via
+// round-trip markers and restored only when the SSE stream is
+// rendered to the same authenticated user. The forecast envelope
+// itself is a structured aggregate (state-of-health %, degradation
+// rate, projected dates, fast-charge ratio, deep-discharge counts)
+// consisting of numbers and bucket labels, not free-form prose, so
+// the redactor has nothing to obscure on the typed side.
+//
+// This matches the slice prompt's verbatim mandate:
+//
+//	Policy:              PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:     ClassVehicleName only; battery metrics are
+//	                     aggregate numeric DTOs
+//	Round-trip required: yes
+//
+// Kept as a distinct identifier from PolicyDigest /
+// PolicyTripPlannerLLMAgent / PolicyRouteEfficiencySuggestions /
+// PolicySmartChargeScheduleSuggestion / PolicyAutoTripNaming /
+// PolicySpeedProfileInsights / PolicyChargingDiagnosis /
+// PolicyDriveCoaching so a future per-feature change to one slice's
+// allow-list does not bleed across the others — every feature is
+// independently auditable.
+func PolicyBatteryHealthForecastNarrative() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}

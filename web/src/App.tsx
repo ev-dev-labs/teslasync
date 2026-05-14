@@ -310,6 +310,7 @@ export default function App() {
         <Route path="digital-twin" element={<SafeRoute name="DigitalTwin"><DigitalTwin /></SafeRoute>} />
         <Route path="energy" element={<SafeRoute name="Energy"><Energy /></SafeRoute>} />
         <Route path="battery" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />
+        <Route path="battery/health" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />
         <Route path="drives" element={<SafeRoute name="Drives"><Drives /></SafeRoute>} />
         <Route path="charging" element={<SafeRoute name="Charging"><Charging /></SafeRoute>} />
         <Route path="analytics" element={<SafeRoute name="Analytics"><Analytics /></SafeRoute>} />
