@@ -2358,6 +2358,10 @@
         "digest-narration": {
           "label": "Weekly digest narration",
           "description": "Opt-in LLM narration of the weekly digest. The deterministic template digest remains the baseline when AI is off."
+        },
+        "yir-narration": {
+          "label": "Year-in-review narration",
+          "description": "Opt-in LLM narration of the annual year-in-review slides. The deterministic template slides remain the baseline when AI is off."
         }
       },
       "archive": {
@@ -3147,6 +3151,12 @@
     "subtitle": "Comprehensive fleet performance insights"
   },
   "yearReview": {
+    "aiNarration": {
+      "title": "AI narration",
+      "description": "Get a short, AI-written recap of your year from the slide data above.",
+      "generateButton": "Generate narration",
+      "badge": "AI"
+    },
     "supercharger": "Supercharger",
     "dcFast": "DC Fast",
     "acOther": "AC / Other",

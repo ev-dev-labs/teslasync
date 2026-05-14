@@ -22,6 +22,27 @@ func PolicyDigest() Policy {
 	}
 }
 
+// PolicyYearInReview is the policy for the LLM-narrated year-in-review
+// slides (slice U3, prompt 0013). Allows ClassVehicleName so the
+// narration can address the user's car by name across the slide deck
+// ("This year, Roadie covered 12,500 km"). Every other PII class
+// — VIN, lat/long, addresses, etc. — is redacted to a round-trip
+// tag (`<vin id='1'/>`) and restored by the F8 redact decorator
+// before the response reaches the user.
+//
+// Mirrors PolicyDigest's allow-list intentionally: both narrators
+// share the same value proposition (name the car, never expose
+// trips/locations) and a future change to one frequently warrants
+// the same change to the other. They are kept as DISTINCT policy
+// constructors (rather than aliasing) so per-slice allow-list
+// drift can happen without cross-slice collateral damage.
+func PolicyYearInReview() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
 // PolicyAlertBuilder is the policy for the NL alert builder (slice
 // N1). Allows nothing — alert IDs and selectors flow through the F4
 // tool registry, not through prose. The LLM sees redacted text and

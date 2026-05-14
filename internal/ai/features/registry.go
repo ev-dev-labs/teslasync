@@ -226,6 +226,58 @@ var Registry = map[string]Feature{
 			PushKinds: []string{"ai_digest_ready"},
 		},
 	},
+	// Phase-50 / U3 (slice 0013) — Year-in-review narration.
+	//
+	// Adds opt-in LLM-narrated prose layered on top of the existing
+	// template year-in-review slide deck. The baseline slide renderer
+	// at web/src/features/analytics/pages/YearReviewPage.tsx (mounted
+	// at the SPA route /year-review/:year) remains the canonical
+	// baseline for any user with `ai_mode='off'`; this feature only
+	// wires the AI surface that lives alongside it.
+	//
+	// Backend: POST /api/v1/ai/analytics/year-in-review/narrate is
+	// mounted by mountAIRoutes in `internal/api/ai_routes.go` via
+	// guard.Wrap so off-mode requests return 404 BEFORE the handler
+	// runs (ADR-015 §I6).
+	//
+	// Frontend: the canonical host route declared by the slice prompt
+	// is `/analytics/year-in-review` — the AI section actually renders
+	// inside the existing /year-review/:year page so the off-mode
+	// invariant test (`YearReviewAIOff.test.tsx`) can prove that the
+	// wrapped component carrying `ai-feature-yir-narration-root` is
+	// absent from the DOM in off mode. The pattern (canonical host
+	// route in the registry, real render path elsewhere) mirrors the
+	// digest-narration entry above (slice 0012); both surfaces are
+	// rendered conditionally inside the same baseline page they
+	// narrate.
+	//
+	// Background: `ai_yir_pregen` is the cross-cutting cron the future
+	// scheduler will invoke (typically in the early days of a new year)
+	// to pre-generate narrated year-in-review slides; the job re-checks
+	// ai_mode + per-feature toggle on every tick (ADR-015 §I12 #3) and
+	// is a no-op when either is off.
+	//
+	// Push: `ai_yir_ready` is the push_subscriptions.kind delivered
+	// when a year-in-review narration completes; the future push fan-out
+	// worker filters by this kind AND the recipient's current ai_mode
+	// at delivery time (ADR-015 §I12 #2).
+	"yir-narration": {
+		ID:          "yir-narration",
+		Name:        "Year-in-review narration",
+		Description: "Opt-in LLM narration of the annual year-in-review slides. The deterministic template slides remain the baseline when AI is off.",
+		Tier:        "U",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/analytics/year-in-review/narrate"},
+			Frontend:  []string{"/analytics/year-in-review"},
+			UITestIDs: []string{"ai-feature-yir-narration-root"},
+			JobNames:  []string{"ai_yir_pregen"},
+			PushKinds: []string{"ai_yir_ready"},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

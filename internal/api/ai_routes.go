@@ -54,6 +54,9 @@ import (
 //   - aiDigest   : the real LLM-backed handler for the weekly digest
 //                  narration (Phase-50 / U2). May be nil during early
 //                  bring-up; nil falls back to the same 501 stub.
+//   - aiYIR      : the real LLM-backed handler for the year-in-review
+//                  narration (Phase-50 / U3, slice 0013). Same nil
+//                  fallback as the chatbot/digest handlers.
 func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
@@ -61,6 +64,7 @@ func mountAIRoutes(
 	sudoMW func(http.Handler) http.Handler,
 	aiChatbot *AIChatbotHandler,
 	aiDigest *AIDigestHandler,
+	aiYIR *AIYearReviewHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// chatbot-llm (Phase-50 / U1, slice 0011 wires the real
@@ -85,6 +89,17 @@ func mountAIRoutes(
 		}
 		r.Post("/digests/weekly/narrate", g.Wrap("digest-narration", digestHandler))
 
+		// yir-narration (Phase-50 / U3, slice 0013). Same
+		// stub-fallback pattern as chatbot/digest — a nil handler
+		// is possible during partial wiring but the off-mode 404
+		// invariant still holds because guard.Wrap returns 404
+		// BEFORE the handler runs in off mode.
+		var yirHandler http.HandlerFunc = aiYIRStubHandler
+		if aiYIR != nil {
+			yirHandler = aiYIR.ServeHTTP
+		}
+		r.Post("/analytics/year-in-review/narrate", g.Wrap("yir-narration", yirHandler))
+
 		// ai-provider-health (Phase-50 / F1, slice 0002).
 		// Ops-only diagnostic. Triple-gated:
 		//   guard.Wrap (mode + feature toggle) → RequireSudo → handler.
@@ -108,4 +123,11 @@ func aiChatbotStubHandler(w http.ResponseWriter, _ *http.Request) {
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiDigestStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai digest narration is not yet implemented")
+}
+
+// aiYIRStubHandler mirrors aiDigestStubHandler for the U3 slice.
+// Reachable only when AIYearReviewHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiYIRStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai year-in-review narration is not yet implemented")
 }

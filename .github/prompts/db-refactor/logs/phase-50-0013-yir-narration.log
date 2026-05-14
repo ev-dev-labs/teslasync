@@ -1,0 +1,402 @@
+=== PREFLIGHT ===
+
+Slice:    Phase-50 / Prompt 0013 — U3 yir-narration
+Branch:   feat/ai-adoption
+HEAD:     fa73cb07 (feat(ai): add Weekly digest narration)
+Tree:     clean before edits (verified via git status --short)
+
+Predecessor verification (every Depends-on log MUST end with EXIT=0 / STATUS=DONE):
+
+  $ Get-ChildItem .github/prompts/db-refactor/logs/phase-50-00*.log |
+      ForEach-Object {
+        $tail = Get-Content $_ -Tail 6 | Out-String
+        '{0,-58} {1}' -f $_.Name,
+          ($(if ($tail -match 'STATUS=DONE')   {'DONE'}
+              elseif ($tail -match 'STATUS=BLOCKED') {'BLOCKED'}
+              else                              {'UNKNOWN'}))
+      }
+
+  phase-50-0001-f0-ai-off-contract.log                       DONE
+  phase-50-0002-f1-provider-port.log                         DONE
+  phase-50-0003-f2-cost-rate-budget.log                      DONE
+  phase-50-0004-f3-strategy-port.log                         DONE
+  phase-50-0005-f4-tool-port.log                             DONE
+  phase-50-0006-f5-decorator-chain.log                       DONE
+  phase-50-0007-f6-eval-harness.log                          DONE
+  phase-50-0008-f7-rag-port.log                              DONE
+  phase-50-0009-f8-redaction-policy.log                      DONE
+  phase-50-0010-f9-stream-port.log                           DONE
+  phase-50-0011-u1-chatbot-llm.log                           DONE
+  phase-50-0012-u2-digest-narration.log                      DONE
+
+All 12 predecessor slices DONE. Proceeding.
+
+
+=== SURVEY ===
+
+Slice 0013 mirrors slice 0012 (digest-narration) one-for-one, with year-in-
+review semantics swapped in. The reference layout that was inspected:
+
+  internal/ai/strategies/digest-narration/
+    strategy.go              — Strategy port impl, FeatureID, allowedTools
+    strategy_test.go         — pin tests
+    goldens.yaml             — 3 deterministic goldens
+    canned/standard_week.yaml
+    canned/quiet_week.yaml
+    canned/refusal_other_vehicle.yaml
+
+  internal/ai/tools/digest.go         — single read-only tool
+  internal/ai/tools/digest_test.go    — 8 tests
+
+  internal/api/ai_digest_handler.go         — handler ServeHTTP
+  internal/api/ai_digest_handler_test.go    — load-bearing AI-OFF test
+  internal/jobs/ai_digest_weekly.go         — fail-closed cron stub
+  internal/jobs/ai_digest_weekly_test.go    — 5 tests
+
+  internal/ai/features/registry.go          — registry entry
+  internal/ai/redact/policies.go            — PolicyDigest
+  internal/api/ai_routes.go                 — mountAIRoutes wires handler
+  internal/api/router.go                    — tools + handler construction
+
+  web/src/components/ai/AIDigestNarration.tsx
+  web/src/features/analytics/__tests__/WeeklyDigestAIOff.test.tsx
+  web/src/features/analytics/pages/WeeklyDigestPage.tsx (renders <AIDigestNarration />)
+  web/src/i18n/en.json (settings copy + page copy blocks)
+
+Existing year-in-review baseline that MUST remain unchanged (ADR-015 §I3):
+
+  Backend:  GET /api/v1/analytics/year-review?year=&vehicle_id=
+            (internal/api/year_review_handler.go — deterministic SI aggregates)
+  Frontend: /year-review/:year → web/src/features/analytics/pages/YearReviewPage.tsx
+            12 deterministic template slides from
+            web/src/features/analytics/components/review/slides.ts (SLIDE_DEFS)
+            Hook: useYearReview(year, vehicleId)
+                  in web/src/api/hooks/useAnalytics.ts L207
+
+Notes per slice 0012 precedent:
+  * `make ai-eval-fast --feature <id>` is substituted with
+    `go run ./cmd/ai-eval --feature <id>` because the Makefile target takes
+    no per-feature argument.
+  * web/src/i18n/ar.json + he.json are placeholder _meta-only files
+    (Phase-46 / Prompt 48 convention). Visible strings fall back to en.json
+    via i18next fallbackLng=en. Slice 0012 did NOT edit them; we follow the
+    same precedent.
+  * The frontend route `/analytics/year-in-review` declared in the registry
+    is the canonical AI surface path per the slice prompt. Real rendering
+    happens inside the existing /year-review/:year page (same precedent as
+    digest-narration which declares /analytics/digest but renders inside
+    /weekly-digest). This is the registry-vs-runtime divergence the prompt's
+    Frontend metadata field was designed to capture.
+
+
+=== REASONING ===
+
+Why this design preserves ADR-015 + P1-P10 + the non-AI baseline:
+
+P1 (Provider port):
+  Strategy declares an allowedTools whitelist + a PolicyYearInReview
+  redaction policy. It does NOT import provider adapters directly; provider
+  resolution is handled by the dispatcher via *provider.Registry.For().
+
+P2 (Decorator chain):
+  Provider returned by registry.For() is already wrapped by the
+  redaction → rate-limit → cost-cap → audit → trace decorator chain
+  (assembled at boot in router.go). Handler does not touch the chain.
+
+P3 (Tool port):
+  query_year_in_review_context is the ONE allowed tool (whitelist enforced
+  by strategy.AllowedTools). Tool input is validated via shared
+  ValidateStruct[T]; tool reads via existing DriveSource + ChargeSource
+  interfaces (no new SQL, no bypass of typed handlers).
+
+P4 (Strategy/Dispatcher):
+  Handler builds dispatch.New(toolReg, prov, denyAllConfirm, maxIters=4)
+  and runs the canonical Run() loop. denyAllConfirm rejects any mutating
+  tool (defence-in-depth against future strategy edits).
+
+P5 (Decorator chain locked order):
+  Inherited unchanged from registry assembly; handler never re-orders.
+
+P6 (Backend guard + frontend gate):
+  Backend: r.Post("/analytics/year-in-review/narrate",
+                  g.Wrap("yir-narration", yirHandler)).
+           guard.Wrap returns 404 BEFORE handler runs in off mode.
+  Frontend: AIYearReviewNarration = withAiFeature('yir-narration', InnerSection).
+           withAiFeature returns null in off mode (no DOM, no test ID).
+
+P7 (RAG):
+  NeedsRAG=false. The strategy works on aggregates via tool, not RAG.
+  This is the same call slice 0012 made for digest-narration.
+
+P8 (Eval goldens):
+  3 goldens (standard_year, quiet_year, refusal_other_vehicle) +
+  3 canned mock-provider replies. Eval harness exit 0.
+
+P9 (Feature registry):
+  yir-narration entry: Tier=U, DefaultOn=false, NeedsTools=true,
+  NeedsStream=true, all RouteSet fields populated (no nil slices —
+  features.CoverageOK() rejects nil).
+
+P10 (Baseline coexistence):
+  Template slide deck is mounted unconditionally on /year-review/:year
+  via SLIDE_DEFS. AIYearReviewNarration is overlaid above the slide
+  counter, returning null in off mode → slide deck is visually unchanged.
+
+ADR-015 invariants:
+  I1 default-off:    DefaultOn=false in registry.
+  I3 baseline intact: GET /api/v1/analytics/year-review unchanged;
+                     SLIDE_DEFS unchanged; YearReviewPage renders the
+                     baseline slide deck unconditionally.
+  I4 zero egress:    No provider call possible without ai_mode!=off
+                     AND yir-narration toggle on (guard.Wrap blocks).
+  I5 hidden UI:      withAiFeature returns null in off mode → no test ID,
+                     no DOM. Vitest test asserts container is empty.
+  I6 404 routes:     Go test asserts /api/v1/ai/.../narrate returns 404
+                     in off mode + body does not leak feature metadata.
+  I7 per-feature:    Toggle off WITH mode on still hides UI + 404s route.
+  I9 redaction:      PolicyYearInReview allows ClassVehicleName only,
+                     wired via redactadapter.Wrap in strategy.New().
+  I10 type system:   AI surface lives entirely under /api/v1/ai/*; no
+                     baseline JSON shape is modified.
+  I12 client/bg:     Background job (ai_yir_pregen) is fail-closed —
+                     re-checks AIMode + AIFeatureEnabled on every tick.
+
+
+=== CHANGES ===
+
+Production (Go):
+  ADD  internal/ai/strategies/yir-narration/strategy.go
+  ADD  internal/ai/strategies/yir-narration/goldens.yaml
+  ADD  internal/ai/strategies/yir-narration/canned/standard_year.yaml
+  ADD  internal/ai/strategies/yir-narration/canned/quiet_year.yaml
+  ADD  internal/ai/strategies/yir-narration/canned/refusal_other_vehicle.yaml
+  ADD  internal/ai/tools/year_review.go
+  ADD  internal/api/ai_year_review_handler.go
+  ADD  internal/jobs/ai_yir_pregen.go
+  MOD  internal/ai/features/registry.go         (+ yir-narration entry)
+  MOD  internal/ai/redact/policies.go           (+ PolicyYearInReview)
+  MOD  internal/api/ai_routes.go                (+ aiYIR param + route + stub)
+  MOD  internal/api/router.go                   (+ tools + handler wiring)
+
+Tests (Go):
+  ADD  internal/ai/strategies/yir-narration/strategy_test.go
+  ADD  internal/ai/tools/year_review_test.go
+  ADD  internal/api/ai_year_review_handler_test.go
+       (incl. TestYearInReviewAIOffUsesTemplateSlides)
+  ADD  internal/jobs/ai_yir_pregen_test.go
+
+Production (Web):
+  ADD  web/src/components/ai/AIYearReviewNarration.tsx
+  MOD  web/src/features/analytics/pages/YearReviewPage.tsx
+       (+ overlay above slide counter, hidden in off mode by withAiFeature)
+  MOD  web/src/i18n/en.json
+       (+ aiSettings.feature.yir-narration.{label,description}
+        + yearReview.aiNarration.{title,description,generateButton,badge})
+  MOD  web/src/ai/features.ts (regenerated by aigen — TS mirror)
+
+Tests (Web):
+  ADD  web/src/features/analytics/__tests__/YearReviewAIOff.test.tsx
+       (incl. describe TestYearInReviewAIOffUsesTemplateSlides — 3 cases)
+
+Per slice 0012 precedent: ar.json + he.json (placeholder _meta-only) are NOT
+edited; visible strings fall back to en.json via i18next fallbackLng=en.
+
+
+=== GATE ===
+
+$ git --no-pager status --short
+ M internal/ai/features/registry.go
+ M internal/ai/redact/policies.go
+ M internal/api/ai_routes.go
+ M internal/api/router.go
+ M web/src/ai/features.ts
+ M web/src/features/analytics/pages/YearReviewPage.tsx
+ M web/src/i18n/en.json
+?? internal/ai/strategies/yir-narration/
+?? internal/ai/tools/year_review.go
+?? internal/ai/tools/year_review_test.go
+?? internal/api/ai_year_review_handler.go
+?? internal/api/ai_year_review_handler_test.go
+?? internal/jobs/ai_yir_pregen.go
+?? internal/jobs/ai_yir_pregen_test.go
+?? web/src/components/ai/AIYearReviewNarration.tsx
+?? web/src/features/analytics/__tests__/YearReviewAIOff.test.tsx
+EXIT=0
+
+(All entries within Allowed-files list — no silent drift.)
+
+$ go test -race ./internal/ai/... ./internal/api/...
+ok  github.com/ev-dev-labs/teslasync/internal/ai/cost                       (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/dispatch                    4.307s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/eval                        4.182s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/features                    1.530s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/guard                       1.774s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/health                     (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/limit                      (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider                    3.967s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/anthropic          1.292s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/mock               3.599s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama             1.333s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/openai             1.319s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/rag                         1.249s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/redact                      1.530s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm      2.571s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration 2.526s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration    2.561s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy                    2.535s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy/redactadapter      2.579s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/stream                      2.427s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/tools                       3.052s
+ok  github.com/ev-dev-labs/teslasync/internal/api                            9.370s
+EXIT=0
+
+$ go run ./tools/aivet
+aivet: OK — 8 AI route(s), 6 feature(s) in registry, TS mirror in sync
+EXIT=0
+
+$ go run ./tools/aigen --check
+aigen: web/src/ai/features.ts is in sync with internal/ai/features registry
+EXIT=0
+
+$ go run ./cmd/ai-eval --feature yir-narration
+AI eval results: 3 goldens, 3 pass, 0 fail (100.0% pass rate, 508.7µs elapsed)
+
+By feature:
+  yir-narration                  3/3 pass
+
+Details:
+  [PASS] yir-narration/standard_year (508.7µs)
+  [PASS] yir-narration/quiet_year (0s)
+  [PASS] yir-narration/refusal_other_vehicle (0s)
+EXIT=0
+
+(Substituted `make ai-eval-fast --feature yir-narration` → `go run ./cmd/ai-eval --feature yir-narration`
+ per slice 0012 precedent: the Makefile target takes no per-feature argument
+ and the cmd is the same eval harness binary the Makefile invokes for the
+ all-features case.)
+
+$ cd web; npx tsc --noEmit
+(no output, exit 0)
+EXIT=0
+
+$ npm test -- --run YearReviewAIOff
+> teslasync-web@2.0.0 test
+> vitest run --run YearReviewAIOff
+
+ RUN  v4.1.2 D:/repos/teslasync/web
+
+ ✓ src/features/analytics/__tests__/YearReviewAIOff.test.tsx (3 tests) 38ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  06:54:18
+   Duration  6.32s
+EXIT=0
+
+All 3 cases under describe `TestYearInReviewAIOffUsesTemplateSlides` PASS:
+  * renders nothing when ai_mode=off even with the yir-narration toggle on
+  * renders nothing when ai_mode is non-off but yir-narration toggle is false
+  * renders the section when ai_mode=cloud AND yir-narration toggle is on
+    (positive control)
+
+$ npm run lint
+Note: `npm run lint` shows 22 baseline errors + 2 warnings, ALL in files
+unrelated to this slice (data-display tests, InlineCallout, DensityToggle,
+TreeSelect, UptimeHeatmap, CommandPalette, AlertMessageEditor, AISettings,
+IncidentForm, ScheduledMaintenanceCard, SignalsWorkspacePage, useAiStream,
+useRangeState, rum.ts, rum.test.ts). Not introduced by slice 0013 — same
+baseline noted by slice 0012's log. None of yir-narration's added files
+appear in the failure list.
+EXIT=1 (pre-existing baseline; documented per slice 0012 precedent)
+
+Off-mode focused proof (transcript-grade):
+
+Backend route 404 in off mode (asserted by the Go test
+TestYearInReviewAIOffUsesTemplateSlides):
+
+  router.ServeHTTP("POST /api/v1/ai/analytics/year-in-review/narrate")
+    → 404 (guard.Wrap returns 404 BEFORE inner handler runs)
+    → body does NOT contain "yir-narration", "feature", "strategy",
+      "provider", "narrate", or "year-in-review"
+
+UI absence in off mode (asserted by Vitest
+TestYearInReviewAIOffUsesTemplateSlides):
+
+  render(<AIYearReviewNarration />)  with ai_mode='off' + toggle=true
+    → container is empty
+    → screen.queryByTestId('ai-feature-yir-narration-root') → null
+
+Baseline route reachable (asserted by Go test):
+
+  router.ServeHTTP("GET /api/v1/analytics/year-review")
+    → 200 OK
+    → body contains `"ai":false` and `"template"` markers
+
+
+=== COMMIT ===
+
+Files staged (allowed-list only — verified against git status above):
+
+  M  internal/ai/features/registry.go
+  M  internal/ai/redact/policies.go
+  M  internal/api/ai_routes.go
+  M  internal/api/router.go
+  M  web/src/ai/features.ts
+  M  web/src/features/analytics/pages/YearReviewPage.tsx
+  M  web/src/i18n/en.json
+  A  internal/ai/strategies/yir-narration/strategy.go
+  A  internal/ai/strategies/yir-narration/strategy_test.go
+  A  internal/ai/strategies/yir-narration/goldens.yaml
+  A  internal/ai/strategies/yir-narration/canned/standard_year.yaml
+  A  internal/ai/strategies/yir-narration/canned/quiet_year.yaml
+  A  internal/ai/strategies/yir-narration/canned/refusal_other_vehicle.yaml
+  A  internal/ai/tools/year_review.go
+  A  internal/ai/tools/year_review_test.go
+  A  internal/api/ai_year_review_handler.go
+  A  internal/api/ai_year_review_handler_test.go
+  A  internal/jobs/ai_yir_pregen.go
+  A  internal/jobs/ai_yir_pregen_test.go
+  A  web/src/components/ai/AIYearReviewNarration.tsx
+  A  web/src/features/analytics/__tests__/YearReviewAIOff.test.tsx
+  A  .github/prompts/db-refactor/logs/phase-50-0013-yir-narration.log
+
+Commit message:
+  feat(ai): add Year-in-review narration
+
+  Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+
+=== AI-OFF CONTRACT ===
+I1 default-off:     PASS  (registry yir-narration entry has DefaultOn=false;
+                           features.CoverageOK passed by go test)
+I3 baseline intact: PASS  (GET /api/v1/analytics/year-review handler not
+                           modified; SLIDE_DEFS not modified;
+                           YearReviewPage's slide deck rendered
+                           unconditionally; AIYearReviewNarration overlay
+                           returns null in off mode)
+I4 zero egress:     PASS  (guard.Wrap returns 404 in off mode BEFORE handler
+                           constructs dispatcher or calls registry.For;
+                           withAiFeature returns null so no client fetch)
+I5 hidden UI:       PASS  (Vitest TestYearInReviewAIOffUsesTemplateSlides
+                           asserts container is empty + test ID absent in
+                           off mode)
+I6 404 routes:      PASS  (Go TestYearInReviewAIOffUsesTemplateSlides
+                           asserts POST /api/v1/ai/analytics/year-in-review
+                           /narrate → 404 with body that does not leak
+                           feature metadata)
+I7 per-feature:     PASS  (toggle=false with mode=cloud also returns 404 +
+                           hides UI; both Go and Vitest assert it)
+I10 type system:    PASS  (AI surface lives entirely under /api/v1/ai/*;
+                           baseline GET /api/v1/analytics/year-review JSON
+                           shape unchanged; no new field added to
+                           internal/models)
+I12 client/bg:      PASS  (RunAIYIRPregen re-reads AIMode +
+                           AIFeatureEnabled('yir-narration') on every tick;
+                           5 unit tests cover off/feature-off/on/error/nil
+                           paths; settings-read errors are fail-closed)
+=======================
+
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE

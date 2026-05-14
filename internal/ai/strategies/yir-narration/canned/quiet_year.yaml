@@ -1,0 +1,14 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_yir_ctx_quiet_1
+        name: query_year_in_review_context
+        arguments: '{"vehicle_id": 1, "year": 2024}'
+    input_tokens: 32
+    output_tokens: 22
+  - finish_reason: stop
+    content: |
+      This year was a quiet one — 0 drives recorded and 0 charging sessions.
+      Roadie has been resting all year!
+    input_tokens: 70
+    output_tokens: 26

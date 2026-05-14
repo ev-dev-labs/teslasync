@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "chatbot-llm" | "digest-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "chatbot-llm" | "digest-narration" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -80,6 +80,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-digest-narration-root"] as const),
   }),
+  "yir-narration": Object.freeze({
+    id: "yir-narration",
+    name: "Year-in-review narration",
+    description: "Opt-in LLM narration of the annual year-in-review slides. The deterministic template slides remain the baseline when AI is off.",
+    tier: "U",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-yir-narration-root"] as const),
+  }),
 });
 
 export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
@@ -88,6 +99,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "ai-provider-health",
   "chatbot-llm",
   "digest-narration",
+  "yir-narration",
 ] as const);
 
 export function isKnownAiFeature(id: string): id is AiFeatureId {

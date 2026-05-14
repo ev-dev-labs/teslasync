@@ -69,6 +69,7 @@ import (
 	// the AI chatbot HTTP handler.
 	chatbotllm "github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm"
 	digestnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration"
+	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
 	// New hexagonal architecture packages
@@ -466,6 +467,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		Drives:  database.NewDriveRepo(db),
 		Charges: database.NewChargingRepo(db),
 	})
+	// Phase-50 / U3 (slice 0013) — register the yir-narration
+	// slice's read-only tool on the SAME process-wide registry so
+	// the dispatcher can resolve `query_year_in_review_context`
+	// for the yir-narration strategy. Same ordering rule: the
+	// builtins + digest tools above must register first so the
+	// pin tests continue to see the canonical sets unchanged.
+	tools.RegisterYearReviewTools(aiToolRegistry, tools.YearReviewSources{
+		Drives:  database.NewDriveRepo(db),
+		Charges: database.NewChargingRepo(db),
+	})
 	aiChatbotHandler := NewAIChatbotHandler(
 		database.NewChatRepo(db),
 		aiRegistry,
@@ -479,6 +490,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		digestnarration.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+	// Phase-50 / U3 (slice 0013) — Year-in-review narration handler.
+	// One per process; stateless beyond constructor inputs.
+	aiYIRHandler := NewAIYearReviewHandler(
+		aiRegistry,
+		aiToolRegistry,
+		yirnarration.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	tirePressureHandler := NewTirePressureHandler(stateReader, liveStateReader)
@@ -2229,7 +2248,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

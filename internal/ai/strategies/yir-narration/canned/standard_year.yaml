@@ -1,0 +1,15 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_yir_ctx_1
+        name: query_year_in_review_context
+        arguments: '{"vehicle_id": 1, "year": 2024}'
+    input_tokens: 32
+    output_tokens: 22
+  - finish_reason: stop
+    content: |
+      This year, Roadie drove 412 trips covering 12,500 km. You used 2,180 kWh
+      of energy across the road. Charging summary: 96 sessions adding 2,310 kWh
+      total. A great year on the road — keep it rolling!
+    input_tokens: 80
+    output_tokens: 48
