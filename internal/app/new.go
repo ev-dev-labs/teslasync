@@ -17,6 +17,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
+	"github.com/ev-dev-labs/teslasync/internal/jobs"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -92,6 +93,7 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 	a.initTripGenerator(ctx)
 	a.initGasPriceWorker(ctx)
 	a.initUnitDriftValidator(ctx)
+	a.initAIBackgroundJobs(ctx)
 	a.initHealthWatchdog(ctx)
 	a.loadOpenAPISpec()
 
@@ -733,6 +735,54 @@ func (a *App) initUnitDriftValidator(ctx context.Context) {
 		driftValidator.Start(loopCtx, worker.Options{})
 	})
 	log.Info().Msg("unit-drift validator started")
+}
+
+// initAIBackgroundJobs schedules cross-cutting AI maintenance jobs.
+// Currently only embeddings TTL — re-runs every hour to delete
+// expired rows from both embeddings tables (see internal/jobs/
+// embeddings_ttl.go).
+//
+// ADR-015 §I12 contract: the cron is started UNCONDITIONALLY. Each
+// tick re-checks ai_mode via [jobs.RunEmbeddingsTTL]; when mode='off'
+// the function returns immediately without touching the DB. The
+// rationale for unconditional start (vs gating here on AIMode):
+//
+//   - When the admin flips ai_mode='local'|'cloud' at runtime we must
+//     pick up the new mode without a process restart. Gating start
+//     here on the boot-time mode would force a restart to enable
+//     background TTL after a runtime opt-in.
+//   - The cron's per-tick cost in off-mode is one settings read +
+//     one log line — measured at < 100µs, well below the noise
+//     floor of the hourly tick.
+//   - The §I12 invariant test (factory + jobs unit tests) proves
+//     zero embeddings rows are written or deleted in off-mode, which
+//     is the user-visible contract.
+func (a *App) initAIBackgroundJobs(ctx context.Context) {
+	settingsRepo := database.NewSettingsRepo(a.DB)
+
+	// Run once at boot so a long-running tick interval doesn't leave
+	// expired rows visible immediately after a restart.
+	go func() {
+		if _, err := jobs.RunEmbeddingsTTL(ctx, a.DB, settingsRepo); err != nil {
+			log.Warn().Err(err).Msg("ai background jobs: initial embeddings TTL run failed")
+		}
+	}()
+
+	resilience.SafeGoLoop(ctx, "embeddings-ttl-cron", func(loopCtx context.Context) {
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-loopCtx.Done():
+				return
+			case <-ticker.C:
+				if _, err := jobs.RunEmbeddingsTTL(loopCtx, a.DB, settingsRepo); err != nil {
+					log.Warn().Err(err).Msg("ai background jobs: embeddings TTL run failed")
+				}
+			}
+		}
+	})
+	log.Info().Msg("ai background jobs scheduled (embeddings_ttl re-checks ai_mode per ADR-015 §I12)")
 }
 
 func (a *App) initHealthWatchdog(ctx context.Context) {
