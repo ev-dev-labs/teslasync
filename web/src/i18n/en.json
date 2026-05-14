@@ -2370,6 +2370,10 @@
         "nl-alert-builder": {
           "label": "Natural-language alert builder",
           "description": "Opt-in LLM that drafts alert rules from a plain-language description. Drafts are typed AlertRule proposals that you review and save through the standard form; the manual AlertStudio remains the canonical baseline when AI is off."
+        },
+        "nl-automation-builder": {
+          "label": "Natural-language automation builder",
+          "description": "Opt-in LLM that drafts automation graphs (trigger, conditions, actions) from a plain-language description. Drafts are typed proposals that you review and save through the standard builder; the manual AutomationBuilder remains the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -3359,6 +3363,12 @@
   },
   "automations": {
     "builder": {
+      "aiBuilder": {
+        "title": "Draft from natural language",
+        "description": "Describe the automation you want and get a typed graph draft you can review and save below.",
+        "badge": "AI",
+        "draftButton": "Draft automation"
+      },
       "actionType": "Action Type",
       "moveUp": "Move up",
       "moveDown": "Move down",

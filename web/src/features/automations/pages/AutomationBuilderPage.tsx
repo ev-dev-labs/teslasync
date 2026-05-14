@@ -21,6 +21,7 @@ import {
 import { AlertBanner, DraftRecoveryBanner, EmptyState, EditConflictBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { FormSection } from '@/components/forms';
+import { AINLAutomationBuilder } from '@/components/ai/AINLAutomationBuilder';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
@@ -604,6 +605,10 @@ export default function AutomationBuilderPage() {
             itemNoun={t('draft.noun.automation', 'Automation')}
           />
         )}
+
+        <FadeIn>
+          <AINLAutomationBuilder />
+        </FadeIn>
 
         <FadeIn>
           <FormSection title={t('automations.builder.general', 'General')}>

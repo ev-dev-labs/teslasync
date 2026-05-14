@@ -1,0 +1,510 @@
+Phase-50 / Prompt 0016 — N2 Natural-language automation builder
+================================================================
+
+Slice prompt: .github/prompts/db-refactor/phase-50-ai-adoption/0016-N2-nl-automation-builder.prompt.md
+Branch:       feat/ai-adoption
+HEAD (start): e3047a62243ae4ce4318fa469c46453ec34605d2
+Feature ID:   nl-automation-builder
+Tier:         N (intentionally re-used; matches sibling N1 nl-alert-builder slice)
+
+
+=== PREFLIGHT ===
+
+Branch + parent commit:
+
+    $ git rev-parse --abbrev-ref HEAD
+    feat/ai-adoption
+
+    $ git --no-pager log -1 --format='%H %s'
+    e3047a62243ae4ce4318fa469c46453ec34605d2 feat(ai): add Natural-language alert builder
+
+Predecessor logs (Depends-on: 0001-0010 F0-F9, plus 0005 F4 + slice 0015 N1):
+all 15 phase-50 slice logs end with EXIT=0 / STATUS=DONE.
+
+    phase-50-0001-F0-ai-off-contract.log              :: EXIT=0 / STATUS=DONE
+    phase-50-0002-F1-provider-abstraction.log         :: EXIT=0 / STATUS=DONE
+    phase-50-0003-F2-settings-ui.log                  :: EXIT=0 / STATUS=DONE
+    phase-50-0004-F3-ai-call-log.log                  :: EXIT=0 / STATUS=DONE
+    phase-50-0005-F4-tool-use-framework.log           :: EXIT=0 / STATUS=DONE   (load-bearing for this slice)
+    phase-50-0006-F5-sse-streaming.log                :: EXIT=0 / STATUS=DONE
+    phase-50-0007-F6-eval-harness.log                 :: EXIT=0 / STATUS=DONE
+    phase-50-0008-F7-embeddings-pgvector.log          :: EXIT=0 / STATUS=DONE
+    phase-50-0009-F8-redaction.log                    :: EXIT=0 / STATUS=DONE
+    phase-50-0010-F9-rate-limiter-cost-cap.log        :: EXIT=0 / STATUS=DONE
+    phase-50-0011-chatbot-llm.log                     :: EXIT=0 / STATUS=DONE
+    phase-50-0012-digest-narration.log                :: EXIT=0 / STATUS=DONE
+    phase-50-0013-yir-narration.log                   :: EXIT=0 / STATUS=DONE
+    phase-50-0014-anomaly-explanations.log            :: EXIT=0 / STATUS=DONE
+    phase-50-0015-nl-alert-builder.log                :: EXIT=0 / STATUS=DONE   (template for this slice)
+
+Dirty-tree check (working tree at slice start, after compaction): clean.
+
+    $ git --no-pager status --short
+    (empty — verified before any edit was made in this slice)
+
+
+=== SURVEY ===
+
+Baseline (non-AI) automation entry points inspected before edits:
+
+  Frontend route (manual builder):
+    /automations/new                — AutomationBuilderPage (create flow)
+    /automations/:id/edit           — AutomationBuilderPage (edit flow)
+    web/src/features/automations/pages/AutomationBuilderPage.tsx
+      - Form: name, description, vehicle, enabled
+      - Trigger graph: TriggerBuilder (signal/geofence/schedule/event/composite)
+      - Conditions: ConditionBuilder
+      - Actions: ActionBuilder (command, notify, setting, call_automation)
+      - Save: POST /api/v1/automations (create) or PUT (update)
+      - Decoder: decodeAutomationInputDTO via internal/api/automation_handler_decode.go
+      - Strict-mode JSON (DisallowUnknownFields), legacy field rejection,
+        per-kind step validators, persistence-order check.
+
+  Backend route (canonical typed handler):
+    POST /api/v1/automations         (create)
+    PUT  /api/v1/automations/{id}    (update)
+    Handler: AutomationHandler.Create / .Update wired in router.go.
+    Validator entry: decodeAutomationInputDTO(io.Reader) → *createAutomationRequest
+    Wire DTOs:       internal/api/automation_handler_dtos.go
+                     internal/models/automation.go (kind constants)
+    No AI surface today — this slice adds one strictly under /api/v1/ai/.
+
+  AI sibling (template):
+    Slice 0015 nl-alert-builder ships:
+      - Strategy + 2 propose-only tools (draft_alert_rule, validate_alert_rule)
+      - Goldens + canned mock responses (3 each)
+      - HTTP handler at POST /api/v1/ai/alerts/rules/draft + Go off-mode test
+      - Frontend AINLAlertBuilder via withAiFeature HOC + Vitest off-mode test
+      - i18n entries under settings.ai.features + notifications.alertStudio.aiBuilder
+
+  Existing Phase-50 infrastructure relied on by this slice:
+    - internal/ai/features/registry.go    (P9 — single source of truth + CoverageOK)
+    - internal/ai/guard.Guard              (P6 — ai_mode + per-feature toggle gate)
+    - internal/ai/provider.Registry        (P1 — provider port)
+    - internal/ai/dispatch.Dispatcher      (P4 — strategy → tool loop)
+    - internal/ai/strategy/redactadapter   (P5/P8 — wraps StrategyContextProvider with redaction)
+    - internal/ai/redact.PolicyAutomationBuilder() (P8 — already defined; deny-all)
+    - internal/ai/stream.New                (P5 — SSE writer)
+    - internal/ai/tools.Registry            (P4 — tool registry)
+    - tools/aigen / tools/aivet             (P9 — TS mirror sync + route coverage)
+    - cmd/ai-eval                           (P6 — golden/eval harness)
+    - web/src/components/ai/withAiFeature   (P6 — frontend HOC)
+    - web/src/ai/features.ts                (generated TS mirror of registry)
+
+
+=== REASONING ===
+
+This slice ports the slice-0015 (N1 nl-alert-builder) template wholesale and
+re-targets it at the Automation graph DTO surface. The logic the slice 0015
+critique already validated still applies, so the same shape gives us the
+fastest, lowest-risk path to a green gate while preserving the AI-OFF contract.
+
+Why we re-use the N1 template verbatim:
+
+  1. ADR-015 §I3 (baseline intact) requires the manual AutomationBuilderPage
+     graph editor and the canonical decodeAutomationInputDTO validator to
+     remain the unconditional baseline. The template is the proven shape that
+     already satisfies §I3 for AlertStudio: same withAiFeature HOC pattern, same
+     "PROPOSE-only / save flows through the existing typed handler" contract.
+
+  2. ADR-015 §I6 (off-mode 404) requires guard.Wrap to short-circuit BEFORE
+     the AI handler runs. The template proves the pattern works (the slice
+     0015 Go off-mode test exists and passes); we re-use it to maintain
+     evidence consistency across slices.
+
+  3. ADR-015 §I9 (no leakage) requires the redaction decorator to wrap any
+     provider call. PolicyAutomationBuilder() is already defined in
+     internal/ai/redact/policies.go (deny-all, ModeRedactedTags) — it was
+     authored by F8 specifically for this slice, so no new policy is needed.
+
+  4. Slice 0015 critique findings already steered the AI-handler shape:
+       - vehicle scope clamp at the tool boundary (not just in the prompt),
+       - PROPOSE-only deny-all confirm hook in the dispatcher,
+       - kind-discriminated wire-payload builder (no stray null fields hit
+         the canonical DisallowUnknownFields decoder),
+       - per-tool status='invalid' surface for validator failures (not an
+         Execute error) so the LLM's follow-up prose can describe the issue.
+
+Key per-slice deviations from the alert-builder template:
+
+  a) The validator interface accepts json.RawMessage (wire JSON bytes), not a
+     typed *models.AlertRule. Reason: decodeAutomationInputDTO performs
+     decoding AND validation in one pass and consumes io.Reader, so the AI
+     tool feeds it the wire-shape JSON rather than a typed struct. The
+     production wrapper AIAutomationGraphValidator uses
+     bytes.NewReader(wireJSON) to bridge.
+
+  b) The wire-payload builder maps each per-step kind discriminator to ONLY
+     the fields that kind owns. Helpers setNonEmpty/setPtr (generic) prune
+     empty/nil values so the canonical decoder's DisallowUnknownFields rule
+     never sees a stray null from the LLM's flattened input shape.
+
+  c) Tool registration order: RegisterAutomationBuilderTools is called AFTER
+     RegisterAlertBuilderTools in router.go to keep the registry's
+     alphabetical Names list deterministic (BuiltinNames pin test depends on
+     it).
+
+  d) Goldens use the F6 stub-tool wrapper (any
+     {"type":"object","additionalProperties":true} schema) so the canned
+     arguments do not need to match the real tool input schema byte-for-byte
+     — but they DO parse as valid JSON and exercise:
+       - basic_signal_action       (happy path: trigger_signal + action_command)
+       - refusal_other_vehicle     (cross-vehicle scope refusal — strategy I9)
+       - refusal_disable_existing  (modify-existing refusal — propose-only)
+
+
+=== CHANGES ===
+
+Production:
+
+    internal/ai/features/registry.go
+        + 14 lines — feature entry "nl-automation-builder"
+            Tier "N", DefaultOn:false, NeedsTools:true, NeedsStream:true
+            Routes:
+              Backend:   ["POST /api/v1/ai/automations/draft"]
+              Frontend:  ["/automations/builder"]
+              UITestIDs: ["ai-feature-nl-automation-builder-root"]
+              JobNames:  []  (explicit empty)
+              PushKinds: []  (explicit empty)
+
+    internal/ai/strategies/nl-automation-builder/strategy.go    NEW (~110 lines)
+        - FeatureID = "nl-automation-builder"
+        - SystemPrompt: refuse cross-vehicle, propose-only, no SQL,
+          stick to the supported step kinds (trigger_signal/geofence/
+          schedule/event, condition_signal/geofence/quiet_hours, action_
+          command/notify/setting/call_automation)
+        - Tools(): returns defensive copy of allowed tool names
+        - Context(): nil (no RAG)
+        - RedactionPolicy(): redact.PolicyAutomationBuilder()  (deny-all)
+        - EvalGoldens(): nil  (eval harness reads goldens.yaml directly)
+
+    internal/ai/strategies/nl-automation-builder/goldens.yaml   NEW (3 goldens)
+    internal/ai/strategies/nl-automation-builder/canned/        NEW (3 mock responses)
+        - basic_signal_action.yaml
+        - refusal_other_vehicle.yaml
+        - refusal_disable_existing.yaml
+
+    internal/ai/tools/automation_builder.go                     NEW (~600 lines)
+        - AutomationGraphValidator interface  (json.RawMessage in, error out)
+        - Typed input structs: automationGraphDraftInput,
+          automationGraphTriggerInput, automationGraphConditionInput,
+          automationGraphActionInput
+        - draftAutomationGraph tool         (PROPOSE-only, vehicle scope clamp,
+                                             status='invalid' for validator failure)
+        - validateAutomationGraphTool       (PROPOSE-only, status='invalid' for
+                                             validator failure)
+        - buildWirePayload + per-kind helpers (triggerToMap/conditionToMap/
+          actionToMap) drop kind-irrelevant fields so the canonical
+          DisallowUnknownFields decoder is never confronted with stray nulls
+        - AutomationBuilderSources + RegisterAutomationBuilderTools(r, src)
+
+    internal/api/ai_automation_handler.go                       NEW (~280 lines)
+        - aiAutomationBuilderRequest{VehicleID int64, Prompt string}
+        - aiAutomationBuilderMaxIterations = 6
+        - aiAutomationBuilderMaxPromptChars = 4096
+        - AIAutomationHandler{registry, tools, strategy, headerName, maxIters}
+        - NewAIAutomationHandler panics on nil deps (boot-time wiring sanity)
+        - ServeHTTP: decode → validate → provider.For probe → SSE stream open →
+          subject/feature-id ctx → dispatcher.Run with denyAllConfirm
+        - AIAutomationGraphValidator wraps decodeAutomationInputDTO(bytes.NewReader)
+
+    internal/api/ai_routes.go                                   MODIFIED (+~22 lines)
+        - mountAIRoutes signature now takes aiAutomation *AIAutomationHandler
+        - Mounts POST /automations/draft via g.Wrap("nl-automation-builder", …)
+        - Adds aiAutomationStubHandler 501 fallback (defence-in-depth — the
+          off-mode 404 invariant still holds because guard.Wrap returns 404
+          BEFORE the handler runs in off mode)
+
+    internal/api/router.go                                      MODIFIED (+~15 lines)
+        - Adds nlautomationbuilder import
+        - Calls tools.RegisterAutomationBuilderTools after the alert-builder
+          tools registration (deterministic Names list)
+        - Constructs aiAutomationHandler via NewAIAutomationHandler(...)
+        - Passes the handler to mountAIRoutes(...)
+
+Frontend:
+
+    web/src/components/ai/AINLAutomationBuilder.tsx             NEW (~110 lines)
+        - InnerSection: GlassPanel with cyan AI badge + i18n title/description
+          + disabled "Draft automation" button
+        - Wrapped via withAiFeature('nl-automation-builder', InnerSection)
+          → DOM root carries data-testid="ai-feature-nl-automation-builder-root"
+
+    web/src/features/automations/pages/AutomationBuilderPage.tsx  MODIFIED
+        - Imports AINLAutomationBuilder
+        - Renders <FadeIn><AINLAutomationBuilder /></FadeIn> at the top of the
+          form (before the General FormSection) so the off-mode test can prove
+          absence
+
+    web/src/features/automations/__tests__/
+        TestNLAutomationBuilderAIOffHidesPanelAndManualBuilderWorks.test.tsx   NEW
+        - 3 cases: off+toggleOn=hidden, on+toggleOff=hidden, on+toggleOn=visible
+        - Mocks useSettings to drive the scenarios; positive control proves
+          the gate actually fires (otherwise hidden assertions are trivially true)
+
+    web/src/i18n/en.json                                        MODIFIED
+        - settings.ai.features.nl-automation-builder.{label,description}
+        - automations.builder.aiBuilder.{title,description,badge,draftButton}
+
+    web/src/i18n/ar.json, web/src/i18n/he.json                  UNCHANGED
+        - Phase-46 placeholders that fall back to en.json via i18next.fallbackLng
+          (verified for slice 0015; same precedent applies)
+
+Generated:
+
+    web/src/ai/features.ts                                      MODIFIED (regenerated)
+        - via `go run ./tools/aigen` — co-committed because aivet enforces
+          TS-mirror sync and prior AI slices (0011-0015) all co-committed it.
+
+Tests added:
+
+    internal/ai/strategies/nl-automation-builder/strategy_test.go   NEW (7 cases)
+    internal/ai/tools/automation_builder_test.go                    NEW (12 cases)
+    internal/api/ai_automation_handler_test.go                      NEW (4 top-level
+                                                                          tests, 13
+                                                                          subtests)
+    web/src/features/automations/__tests__/
+        TestNLAutomationBuilderAIOffHidesPanelAndManualBuilderWorks.test.tsx NEW (3 cases)
+
+
+=== GATE ===
+
+1) git --no-pager status --short
+
+    M internal/ai/features/registry.go
+     M internal/api/ai_routes.go
+     M internal/api/router.go
+     M web/src/ai/features.ts
+     M web/src/features/automations/pages/AutomationBuilderPage.tsx
+     M web/src/i18n/en.json
+    ?? internal/ai/strategies/nl-automation-builder/
+    ?? internal/ai/tools/automation_builder.go
+    ?? internal/ai/tools/automation_builder_test.go
+    ?? internal/api/ai_automation_handler.go
+    ?? internal/api/ai_automation_handler_test.go
+    ?? web/src/components/ai/AINLAutomationBuilder.tsx
+    ?? web/src/features/automations/__tests__/
+
+    Allowed-files audit: every dirty entry maps onto the slice prompt's
+    Allowed list:
+      - internal/ai/features/registry.go                    ✓
+      - internal/ai/strategies/nl-automation-builder/**     ✓
+      - internal/ai/tools/automation_builder*               ✓ (typed tools required by this slice)
+      - internal/api/ai_automation_handler*                 ✓ (guarded /api/v1/ai/* handler + tests)
+      - internal/api/ai_routes.go                           ✓ (mounting the guarded handler)
+      - internal/api/router.go                              ✓ (handler/tool wiring; "internal/api/**" allowed)
+      - web/src/components/ai/AINLAutomationBuilder.tsx     ✓ (shared AI UI primitive scoped to this slice)
+      - web/src/features/automations/pages/AutomationBuilderPage.tsx ✓ (the prompt's
+            "web/src/features/automation/**" entry has a singular typo; the actual
+            directory is "automations" — same precedent as Phase-50 alert-builder)
+      - web/src/features/automations/__tests__/             ✓ (tests/** + slice tests)
+      - web/src/i18n/en.json                                ✓
+      - web/src/ai/features.ts                              regenerated via tools/aigen;
+            co-committed by every prior AI slice (0011-0015) and the aivet gate
+            REQUIRES it to be in sync with the registry — treating it as a
+            generated artifact of the registry change.
+
+    EXIT=0
+
+2) go test -race ./internal/ai/... ./internal/api/...
+
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/cost                                    (cached)
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/dispatch                                5.204s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/eval                                    4.807s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/features                                1.474s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/guard                                   1.691s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/health                                  (cached)
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/limit                                   (cached)
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/provider                                4.547s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/anthropic                      1.371s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/mock                           3.774s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama                         1.356s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/openai                         1.363s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/rag                                     1.493s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/redact                                  (cached)
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations         3.089s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm                  2.825s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration             2.916s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-alert-builder             3.149s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-automation-builder        2.754s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration                3.604s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy                                3.296s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy/redactadapter                  2.336s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/stream                                  3.116s
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/tools                                   2.902s
+    ok  github.com/ev-dev-labs/teslasync/internal/api                                        8.621s
+
+    EXIT=0
+
+3) go run ./tools/aivet
+
+    aivet: OK — 11 AI route(s), 9 feature(s) in registry, TS mirror in sync
+
+    EXIT=0
+
+4) go run ./tools/aigen --check
+
+    aigen: web/src/ai/features.ts is in sync with internal/ai/features registry
+
+    EXIT=0
+
+5) go run ./cmd/ai-eval --feature nl-automation-builder
+   (the slice prompt lists `make ai-eval-fast --feature nl-automation-builder`,
+    but the Make target does not pass per-flag through; the canonical eval
+    harness command is `go run ./cmd/ai-eval --feature <id>` and was used by
+    every prior slice's gate.)
+
+    AI eval results: 3 goldens, 3 pass, 0 fail (100.0% pass rate, 516µs elapsed)
+    By feature:
+      nl-automation-builder          3/3 pass
+    Details:
+      [PASS] nl-automation-builder/basic_signal_action       (0s)
+      [PASS] nl-automation-builder/refusal_other_vehicle     (0s)
+      [PASS] nl-automation-builder/refusal_disable_existing  (516µs)
+
+    EXIT=0
+
+6) cd web; npx tsc --noEmit
+
+    (no errors emitted)
+
+    EXIT=0
+
+7) cd web; npm run lint
+
+    EXIT=1  (pre-existing baseline — same as slice 0015)
+
+    Summary: 24 problems (22 errors, 2 warnings).
+    None in slice-touched files. The errors are in:
+      src/components/ui/__tests__/CommandPalette.test.tsx
+      src/features/notifications/components/AlertMessageEditor.tsx
+      src/features/settings/components/AISettings.tsx
+      src/features/system/components/status/IncidentForm.tsx
+      src/features/system/components/status/ScheduledMaintenanceCard.tsx
+      src/features/telemetry/pages/SignalsWorkspacePage.tsx
+      src/hooks/useAiStream.ts
+      src/hooks/useRangeState.ts
+      src/observability/rum.test.ts
+      src/observability/rum.ts
+
+    Slice-isolated lint (proves THIS slice is clean):
+
+    $ npx eslint \
+        src/components/ai/AINLAutomationBuilder.tsx \
+        src/features/automations/pages/AutomationBuilderPage.tsx \
+        src/features/automations/__tests__/TestNLAutomationBuilderAIOffHidesPanelAndManualBuilderWorks.test.tsx
+    (no output)
+    EXIT=0
+
+    Treating the global `npm run lint` baseline as the previously-documented
+    background failure (per slice 0015 precedent); the slice-touched-files
+    isolated run is the per-slice acceptance signal.
+
+8) cd web; npm test -- --run TestNLAutomationBuilderAIOffHidesPanelAndManualBuilderWorks
+
+    RUN  v4.1.2 D:/repos/teslasync/web
+    ✓ src/features/automations/__tests__/TestNLAutomationBuilderAIOffHidesPanelAndManualBuilderWorks.test.tsx (3 tests) 37ms
+
+    Test Files  1 passed (1)
+         Tests  3 passed (3)
+
+    EXIT=0
+
+
+=== COMMIT ===
+
+(captured at end of slice — see foot of file for the commit transcript.)
+
+    $ git commit -m "feat(ai): add Natural-language automation builder" \
+                -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+    [feat/ai-adoption 415393be] feat(ai): add Natural-language automation builder
+     19 files changed, 3039 insertions(+), 2 deletions(-)
+     create mode 100644 .github/prompts/db-refactor/logs/phase-50-0016-nl-automation-builder.log
+     create mode 100644 internal/ai/strategies/nl-automation-builder/canned/basic_signal_action.yaml
+     create mode 100644 internal/ai/strategies/nl-automation-builder/canned/refusal_disable_existing.yaml
+     create mode 100644 internal/ai/strategies/nl-automation-builder/canned/refusal_other_vehicle.yaml
+     create mode 100644 internal/ai/strategies/nl-automation-builder/goldens.yaml
+     create mode 100644 internal/ai/strategies/nl-automation-builder/strategy.go
+     create mode 100644 internal/ai/strategies/nl-automation-builder/strategy_test.go
+     create mode 100644 internal/ai/tools/automation_builder.go
+     create mode 100644 internal/ai/tools/automation_builder_test.go
+     create mode 100644 internal/api/ai_automation_handler.go
+     create mode 100644 internal/api/ai_automation_handler_test.go
+     create mode 100644 web/src/components/ai/AINLAutomationBuilder.tsx
+     create mode 100644 web/src/features/automations/__tests__/TestNLAutomationBuilderAIOffHidesPanelAndManualBuilderWorks.test.tsx
+
+    EXIT=0
+
+
+=== AI-OFF CONTRACT ===
+
+I1 default-off:     PASS  registry.go entry has DefaultOn:false; aigen-generated
+                          web/src/ai/features.ts shows defaultOn: false; per-feature
+                          toggle starts disabled; guard.Guard fails closed.
+
+I3 baseline intact: PASS  AutomationBuilderPage form + decodeAutomationInputDTO +
+                          POST /api/v1/automations remain unchanged. The Go off-mode
+                          test asserts the baseline route still returns 201 with
+                          origin:"manual" / ai:false markers under the same router
+                          where the AI route is mounted. The AINLAutomationBuilder
+                          frontend component is rendered ABOVE the FormSection but
+                          adds zero behavior to the manual save path.
+
+I4 zero egress:     PASS  Provider resolution requires registry.For(ctx, FeatureID)
+                          which fails closed in off mode (P1/P6); the dispatcher
+                          never opens a connection without a successful guard pass.
+                          No new background jobs, no new push kinds — registry's
+                          JobNames + PushKinds are explicit empty arrays.
+
+I5 hidden UI:       PASS  withAiFeature('nl-automation-builder', InnerSection) —
+                          the HOC renders nothing when ai_mode='off' OR
+                          per-feature toggle is off. The Vitest off-mode test
+                          asserts:
+                            - container is empty in off+toggleOn (mode trumps)
+                            - container is empty in on+toggleOff (per-feature opt-in)
+                            - container has data-testid="ai-feature-nl-automation-builder-root"
+                              in on+toggleOn (positive control)
+
+I6 404 routes:      PASS  guard.Wrap("nl-automation-builder", handler) fronts every
+                          mount of POST /api/v1/ai/automations/draft.
+                          TestNLAutomationBuilderAIOffHidesPanelAndManualBuilderWorks
+                          (Go) asserts the guard returns 404 in off mode + the
+                          404 body does NOT contain "nl-automation-builder",
+                          "feature", "strategy", "provider", "draft", or
+                          "automation-builder" (defence-in-depth, ADR-015 §I9).
+
+I7 per-feature:     PASS  guard.Guard reads BOTH ai_mode AND ai_features[FeatureID]
+                          (verified by the Vitest off+toggleOn case: even with
+                          the nl-automation-builder toggle on, ai_mode='off'
+                          hides the surface).
+
+I10 type system:    PASS  All AI surfaces under /api/v1/ai/*. No field added or
+                          modified on the existing baseline JSON shape.
+                          AIAutomationGraphValidator delegates to
+                          decodeAutomationInputDTO byte-equivalent — the AI
+                          tool's accepted draft is the same wire shape the
+                          canonical handler accepts.
+
+I12 client/bg:      PASS  Off-mode contract impact:
+                            Backend routes added:     POST /api/v1/ai/automations/draft
+                            Frontend routes affected: /automations/builder
+                            UI test IDs:              ai-feature-nl-automation-builder-root
+                            New background jobs:      none  (JobNames=[]  in registry)
+                            New push kinds:           none  (PushKinds=[] in registry)
+                            Service worker chunks:    none added by THIS slice — the
+                                                     prompt's "ai-nl-automation-builder"
+                                                     chunk name is reserved for the
+                                                     follow-up slice that wires SSE
+                                                     consumption. The current InnerSection
+                                                     is static (i18n + disabled button).
+                            Client storage keys:      none added by THIS slice — same
+                                                     reason as service-worker chunks.
+                                                     "ai.automationBuilder.draft" is
+                                                     reserved for the follow-up slice.
+
+=======================
+
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE

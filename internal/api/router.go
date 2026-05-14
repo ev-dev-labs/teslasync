@@ -72,6 +72,7 @@ import (
 	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
 	anomalyexplanations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations"
 	nlalertbuilder "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-alert-builder"
+	nlautomationbuilder "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-automation-builder"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
 	// New hexagonal architecture packages
@@ -590,6 +591,22 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		nlalertbuilder.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+	// Phase-50 / N2 (slice 0016) nl-automation-builder. Mirrors the
+	// alert-builder wiring above. AIAutomationGraphValidator is a
+	// thin wrapper around the unexported decodeAutomationInputDTO
+	// function in automation_handler_decode.go — same code path the
+	// canonical POST /api/v1/automations handler uses. Drafts
+	// accepted by the AI tool are byte-equivalent to drafts accepted
+	// by the canonical handler (ADR-015 §I3 baseline-intact).
+	tools.RegisterAutomationBuilderTools(aiToolRegistry, tools.AutomationBuilderSources{
+		Validator: NewAIAutomationGraphValidator(),
+	})
+	aiAutomationHandler := NewAIAutomationHandler(
+		aiRegistry,
+		aiToolRegistry,
+		nlautomationbuilder.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	lifetimeHandler := NewLifetimeHandler(db, eventHub)
@@ -2295,7 +2312,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

@@ -1,0 +1,23 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_automation_draft_basic_1
+        name: draft_automation_graph
+        arguments: '{"vehicle_id": 1, "name": "Battery low alert", "trigger": {"kind": "trigger_signal", "signal": "battery_level", "op": "<", "value_num": 20}, "conditions": [], "actions": [{"kind": "action_notify", "channel_id": 1, "template": "Battery on vehicle 1 dropped below 20%"}]}'
+    input_tokens: 56
+    output_tokens: 48
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_automation_validate_basic_1
+        name: validate_automation_graph
+        arguments: '{"vehicle_id": 1, "name": "Battery low alert", "trigger": {"kind": "trigger_signal", "signal": "battery_level", "op": "<", "value_num": 20}, "conditions": [], "actions": [{"kind": "action_notify", "channel_id": 1, "template": "Battery on vehicle 1 dropped below 20%"}]}'
+    input_tokens: 112
+    output_tokens: 56
+  - finish_reason: stop
+    content: |
+      I drafted an automation that fires when the battery_level signal
+      drops below 20% on vehicle 1 and sends a notification through the
+      configured channel. Review the draft in the side panel and click
+      Save to create it.
+    input_tokens: 168
+    output_tokens: 64

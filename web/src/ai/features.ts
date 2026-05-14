@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "chatbot-llm" | "digest-narration" | "nl-alert-builder" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "chatbot-llm" | "digest-narration" | "nl-alert-builder" | "nl-automation-builder" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -102,6 +102,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-nl-alert-builder-root"] as const),
   }),
+  "nl-automation-builder": Object.freeze({
+    id: "nl-automation-builder",
+    name: "Natural-language automation builder",
+    description: "Opt-in LLM assistant that drafts typed Automation graph DTOs (trigger + conditions + actions) from a plain-language description. The deterministic AutomationBuilder graph editor + validators remain the baseline when AI is off; saving still flows through the existing typed automations handler.",
+    tier: "N",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-nl-automation-builder-root"] as const),
+  }),
   "yir-narration": Object.freeze({
     id: "yir-narration",
     name: "Year-in-review narration",
@@ -123,6 +134,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "chatbot-llm",
   "digest-narration",
   "nl-alert-builder",
+  "nl-automation-builder",
   "yir-narration",
 ] as const);
 

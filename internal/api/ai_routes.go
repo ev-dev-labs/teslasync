@@ -63,6 +63,9 @@ import (
 //   - aiAlert    : the real LLM-backed handler for the natural-language
 //                  alert builder (Phase-50 / N1, slice 0015). Same nil
 //                  fallback pattern.
+//   - aiAutomation: the real LLM-backed handler for the natural-language
+//                  automation builder (Phase-50 / N2, slice 0016). Same
+//                  nil fallback pattern.
 func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
@@ -73,6 +76,7 @@ func mountAIRoutes(
 	aiYIR *AIYearReviewHandler,
 	aiAnomaly *AIAnomalyHandler,
 	aiAlert *AIAlertHandler,
+	aiAutomation *AIAutomationHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// chatbot-llm (Phase-50 / U1, slice 0011 wires the real
@@ -134,6 +138,21 @@ func mountAIRoutes(
 		}
 		r.Post("/alerts/rules/draft", g.Wrap("nl-alert-builder", alertHandler))
 
+		// nl-automation-builder (Phase-50 / N2, slice 0016). Same
+		// stub-fallback pattern as the other AI handlers — a nil
+		// handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode. The
+		// route lives under /ai/automations/... (parallel to the
+		// canonical /automations typed handler) so the AI surface
+		// is namespaced and can be removed in one route block if
+		// the feature is ever decommissioned.
+		var automationHandler http.HandlerFunc = aiAutomationStubHandler
+		if aiAutomation != nil {
+			automationHandler = aiAutomation.ServeHTTP
+		}
+		r.Post("/automations/draft", g.Wrap("nl-automation-builder", automationHandler))
+
 		// ai-provider-health (Phase-50 / F1, slice 0002).
 		// Ops-only diagnostic. Triple-gated:
 		//   guard.Wrap (mode + feature toggle) → RequireSudo → handler.
@@ -179,4 +198,12 @@ func aiAnomalyStubHandler(w http.ResponseWriter, _ *http.Request) {
 // is held by the guard, not the stub.
 func aiAlertStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai alert builder is not yet implemented")
+}
+
+// aiAutomationStubHandler mirrors aiAlertStubHandler for the N2 slice
+// (Phase-50 / 0016 nl-automation-builder). Reachable only when
+// AIAutomationHandler is nil at construction; the off-mode 404
+// invariant is held by the guard, not the stub.
+func aiAutomationStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai automation builder is not yet implemented")
 }

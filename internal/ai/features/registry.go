@@ -390,6 +390,70 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / N2 (slice 0016) — Natural-language automation builder.
+	//
+	// Adds opt-in LLM-assisted DRAFTING of typed Automation graph DTOs
+	// (trigger + conditions + actions) from a natural-language
+	// description. The strategy is propose-only: the AI produces a
+	// typed automation draft via the F4 `draft_automation_graph` +
+	// `validate_automation_graph` tools and the user then explicitly
+	// clicks Save in the existing AutomationBuilderPage — the actual
+	// mutation flows through the existing POST /api/v1/automations
+	// typed handler (AutomationHandler.Create wrapped by
+	// decodeAutomationInputDTO + per-step validators), which is
+	// unchanged.
+	//
+	// The deterministic AutomationBuilderPage graph editor +
+	// decodeAutomationInputDTO at
+	// `internal/api/automation_handler_decode.go` remain the
+	// canonical baseline for any user with `ai_mode='off'`; this
+	// feature only wires the AI surface that lives alongside it.
+	//
+	// Backend: POST /api/v1/ai/automations/draft is mounted by
+	// mountAIRoutes in `internal/api/ai_routes.go` via guard.Wrap so
+	// off-mode requests return 404 BEFORE the handler runs (ADR-015
+	// §I6). The endpoint streams a draft Automation DTO via SSE —
+	// the response is a STRUCTURED PROPOSAL the frontend renders
+	// for the user to confirm or edit before saving through the
+	// canonical automations handler. No state is mutated by this
+	// route.
+	//
+	// Frontend: the canonical host route declared by the slice prompt
+	// is `/automations/builder` — the AI section actually renders
+	// inside the existing AutomationBuilderPage which mounts at
+	// /automations/new and /automations/:id/edit (the only
+	// AutomationBuilder pages in the SPA today; lives under
+	// `web/src/features/automations/...`). The off-mode invariant
+	// test
+	// (`TestNLAutomationBuilderAIOffHidesPanelAndManualBuilderWorks.test.tsx`)
+	// proves that the wrapped component carrying
+	// `ai-feature-nl-automation-builder-root` is absent from the DOM
+	// in off mode and the manual graph editor continues to work.
+	// The pattern (canonical host route in the registry, real render
+	// path elsewhere) mirrors the digest-narration / yir-narration /
+	// anomaly-explanations / nl-alert-builder entries above.
+	//
+	// Background / Push: this slice ships zero new jobs and zero new
+	// push kinds — automation drafting is request/response, on demand
+	// from the AutomationBuilder page. The empty arrays are explicit
+	// so CoverageOK passes.
+	"nl-automation-builder": {
+		ID:          "nl-automation-builder",
+		Name:        "Natural-language automation builder",
+		Description: "Opt-in LLM assistant that drafts typed Automation graph DTOs (trigger + conditions + actions) from a plain-language description. The deterministic AutomationBuilder graph editor + validators remain the baseline when AI is off; saving still flows through the existing typed automations handler.",
+		Tier:        "N",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/automations/draft"},
+			Frontend:  []string{"/automations/builder"},
+			UITestIDs: []string{"ai-feature-nl-automation-builder-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as
