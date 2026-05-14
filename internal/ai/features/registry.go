@@ -143,6 +143,43 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / F3 (slice 0004) — AI Call Log + Usage Card meta-feature.
+	//
+	// `__usage__` is a SPECIAL-CASE meta-feature: it has no per-feature
+	// content of its own, only a usage/spend visualisation that the
+	// AiUsageCard consumes. It is the exception to ADR-015 §I7
+	// (per-feature opt-in) — the prompt explicitly carves it out as
+	// "gates on ai_mode != 'off' only, no per-feature toggle". The
+	// internal/api/ai_usage_handler.go layer wraps guard.Settings so
+	// AIFeatureEnabled("__usage__") returns true whenever the mode is
+	// non-off, while every other feature ID falls through to the real
+	// per-feature toggle. The double-underscore prefix marks this entry
+	// as not user-toggleable in the Settings → AI surface.
+	//
+	// The three Backend routes are mounted by mountAIUsageRoutes in
+	// internal/api/router.go. They MUST stay in lockstep with the
+	// strings here so tools/aivet's coverage check passes.
+	"__usage__": {
+		ID:          "__usage__",
+		Name:        "AI Usage Card",
+		Description: "Per-call audit log + spend visualisation for the AI provider chain. Gates on ai_mode != 'off' only.",
+		Tier:        "F",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  false,
+		NeedsStream: false,
+		Routes: RouteSet{
+			Backend: []string{
+				"GET /api/v1/ai/usage/today",
+				"GET /api/v1/ai/usage/by-feature",
+				"GET /api/v1/ai/usage/recent",
+			},
+			Frontend:  []string{},
+			UITestIDs: []string{"ai-feature-usage"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 }
 
 // IsKnown reports whether id corresponds to a registered feature. Used

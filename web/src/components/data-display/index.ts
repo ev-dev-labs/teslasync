@@ -1,4 +1,16 @@
 export { StatCard } from './StatCard';
+export {
+  UsageCard,
+  type UsageCardProps,
+  type UsageCardIntent,
+  type UsageCardBudget,
+  type UsageCardBand,
+  type UsageCardDetail,
+  type UsageCardTopList,
+  type UsageCardTopListItem,
+  type UsageCardBanner,
+  type UsageCardFooterLink,
+} from './UsageCard';
 export { KVList } from './KVList';
 export {
   Avatar,

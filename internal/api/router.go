@@ -275,8 +275,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// AIProviderConfig accessor; the inline adapter pulls the
 	// JSONB column out of Get() so F1 does not have to mutate
 	// the repo (R5 mitigation — keep settings repo single-purpose).
+	//
+	// Phase-50 / 0004 — F3 inserts the audit decorator into the
+	// chain. The async writer wraps the AICallLogRepo (which
+	// satisfies provider.AuditSink) and survives for the lifetime
+	// of the process; a buffer of 1024 absorbs short bursts and
+	// drops the oldest entry on overflow with a Prometheus counter.
+	aiCallLogRepo := database.NewAICallLogRepo(db)
+	aiAuditWriter := provider.NewAsyncAuditWriter(context.Background(), aiCallLogRepo, 1024)
 	aiRegistry := provider.NewRegistry(
 		aiSettingsReader{repo: aiSettingsRepo},
+		provider.WithAudit(aiAuditWriter),
 		provider.WithTrace,
 	)
 	aiRegistry.Register(provider.NameOllama, aiollama.Builder)
@@ -2148,6 +2157,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
 		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg))
+
+		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
+		//
+		// /api/v1/ai/usage/{today,by-feature,recent} surface the
+		// audit log written by the audit decorator above. The
+		// usage routes special-case the per-feature toggle (the
+		// __usage__ meta-feature has no toggle of its own) but
+		// still 404 in off mode (ADR-015 §I6) — the wrapper inside
+		// mountAIUsageRoutes carves out the exception precisely.
+		mountAIUsageRoutes(r, aiSettingsRepo, aiCallLogRepo, cfg.Auth.ForwardAuthHeader)
 
 		// Watch endpoints — lightweight API key auth for wearable devices
 		r.Route("/watch", func(r chi.Router) {
