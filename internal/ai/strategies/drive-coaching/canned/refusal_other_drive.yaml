@@ -1,0 +1,9 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot coach a drive that is not part of this request. I can
+      only narrate the drive currently associated with this session
+      (drive 101). If you'd like me to walk through that one instead,
+      just say the word.
+    input_tokens: 38
+    output_tokens: 42

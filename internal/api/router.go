@@ -74,6 +74,7 @@ import (
 	nlalertbuilder "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-alert-builder"
 	nlautomationbuilder "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-automation-builder"
 	nlsearch "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search"
+	drivecoaching "github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
@@ -647,6 +648,29 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		nlsearch.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+	// Phase-50 / N4 (slice 0018) — Per-drive coaching narrative.
+	// Register the slice's read-only tool on the SAME process-wide
+	// registry so the dispatcher can resolve
+	// `query_drive_telemetry_summary` for the drive-coaching
+	// strategy. Same ordering rule: builtins + digest + yir +
+	// anomaly + alert + automation + search tools above must
+	// register first so the alphabetical Names list grows
+	// deterministically (the new tool sorts AFTER
+	// `query_drive_detail` / `query_drives_recent` /
+	// `query_anomaly_context` / `query_year_in_review_context`).
+	tools.RegisterDriveCoachingTools(aiToolRegistry, tools.DriveCoachingSources{
+		Drives: database.NewDriveRepo(db),
+	})
+	// Per-drive coaching handler. One per process; stateless beyond
+	// constructor inputs. Must be constructed AFTER the tool
+	// registration above so the dispatcher can resolve the
+	// strategy's allowedTools at boot.
+	aiDriveCoachHandler := NewAIDriveCoachHandler(
+		aiRegistry,
+		aiToolRegistry,
+		drivecoaching.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	lifetimeHandler := NewLifetimeHandler(db, eventHub)
@@ -2352,7 +2376,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

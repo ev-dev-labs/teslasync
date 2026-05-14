@@ -2384,6 +2384,10 @@
         "nl-search": {
           "label": "Natural-language search",
           "description": "Opt-in LLM that searches your drives, charging sessions, and alerts from a plain-language description and narrates the matches. The typed search filters at /search remain the canonical baseline when AI is off."
+        },
+        "drive-coaching": {
+          "label": "Per-drive coaching",
+          "description": "Opt-in LLM that narrates an individual drive in 2-4 short paragraphs covering efficiency, regen use, and notable braking or acceleration moments. The deterministic per-drive stat cards, hero gauges, and energy summary remain the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -5699,7 +5703,14 @@
       "temperatureFailed": "Temperature section failed to load",
       "speedHistogramFailed": "Speed histogram failed to load",
       "powerProfileFailed": "Power profile chart failed to load",
-      "tirePressureFailed": "Tire pressure section failed to load"
+      "tirePressureFailed": "Tire pressure section failed to load",
+      "aiCoachingFailed": "AI drive coaching failed to load"
+    },
+    "aiCoaching": {
+      "title": "Drive coaching",
+      "description": "Get a 2-4 paragraph plain-language coaching summary of this drive — efficiency, regen use, and notable braking or acceleration moments — generated from the same per-drive metrics shown above.",
+      "badge": "AI",
+      "generateButton": "Generate coaching"
     },
     "vehicle": "Vehicle",
     "col": {

@@ -1,0 +1,32 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_drive_coach_aggressive_detail_1
+        name: query_drive_detail
+        arguments: '{"drive_id": 202}'
+    input_tokens: 32
+    output_tokens: 22
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_drive_coach_aggressive_summary_1
+        name: query_drive_telemetry_summary
+        arguments: '{"drive_id": 202}'
+    input_tokens: 96
+    output_tokens: 28
+  - finish_reason: stop
+    content: |
+      Roadie's drive 202 covered 22.1 km in 19 minutes — a brisker run
+      with an average speed near 70 km/h.
+
+      Energy use leaned heavy: 6.4 kWh consumed against only 0.5 kWh
+      recovered through regen, putting regen share at about 7%. Peak
+      power on this drive reached the upper end of its normal envelope,
+      which usually points to firmer accelerations and brake-led stops
+      rather than rolling deceleration.
+
+      One coaching observation the data clearly supports: lifting off
+      the throttle a little earlier into stops would let regen do more
+      of the work, and on a drive of this length that's a noticeable
+      efficiency lever — without changing where or how fast you went.
+    input_tokens: 158
+    output_tokens: 96

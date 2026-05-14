@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "chatbot-llm" | "digest-narration" | "nl-alert-builder" | "nl-automation-builder" | "nl-search" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-search" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -91,6 +91,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-digest-narration-root"] as const),
   }),
+  "drive-coaching": Object.freeze({
+    id: "drive-coaching",
+    name: "Per-drive coaching",
+    description: "Opt-in LLM-narrated 2-4 paragraph coaching summary for an individual drive. Reads from the deterministic per-drive aggregates surfaced by the existing /drives/{driveID} handler and a small typed telemetry-summary tool; the deterministic stat cards, hero gauges, and energy summary on the drive detail page remain the canonical baseline when AI is off.",
+    tier: "N",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-drive-coaching-root"] as const),
+  }),
   "nl-alert-builder": Object.freeze({
     id: "nl-alert-builder",
     name: "Natural-language alert builder",
@@ -144,6 +155,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "anomaly-explanations",
   "chatbot-llm",
   "digest-narration",
+  "drive-coaching",
   "nl-alert-builder",
   "nl-automation-builder",
   "nl-search",

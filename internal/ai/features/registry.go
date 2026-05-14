@@ -522,6 +522,64 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / N4 (slice 0018) — Per-drive coaching narrative.
+	//
+	// Backend: POST /api/v1/ai/drives/{driveID}/coach. The route is
+	// the FIRST AI surface to take its primary identifier from a chi
+	// URL path parameter (instead of a JSON body) — the AI surface
+	// attaches to a specific drive's detail page (/drives/:id), so
+	// the URL is the natural place for the drive_id. The handler
+	// (internal/api/ai_drive_coach_handler.go) parses driveID with
+	// strconv.ParseInt + a positive-integer check before opening the
+	// SSE stream, then runs the dispatch loop against the
+	// drive-coaching strategy with the locked decorator order
+	// (redact → rate-limit → cost-cap → audit → trace).
+	//
+	// Frontend: the canonical host route declared by the slice
+	// prompt is `/drives/:driveId`, but the actual app route in
+	// web/src/router/routeRegistry.ts is `/drives/:id` — we register
+	// the SAME pattern the router actually uses so the off-mode
+	// invariant test
+	// (`TestDriveCoachingAIOffShowsOnlyBaselineStats.test.tsx`)
+	// proves that the wrapped component carrying
+	// `ai-feature-drive-coaching-root` is absent from the DOM when
+	// ai_mode='off' AND the deterministic stat cards / hero gauges /
+	// energy summary / etc. on DriveDetailPage continue to render.
+	// Mirrors the host-route-vs-render-path pattern of every other
+	// N-tier feature above.
+	//
+	// Background + push: zero new background jobs and zero new push
+	// kinds — drive coaching is request/response on demand from the
+	// drive detail page. Both arrays are explicit []string{} so
+	// CoverageOK passes.
+	//
+	// NeedsRAG=false: the strategy uses ONLY the two declared tools
+	// (`query_drive_detail` + `query_drive_telemetry_summary`); it
+	// does NOT call the F7 retriever. The
+	// `drive_summary` / `route_efficiency` / `speed_profile` source
+	// types listed in the slice prompt's RAG section are not yet
+	// wired into internal/ai/rag/rag.go, and adding them would
+	// require migrations that are explicitly NOT in this slice's
+	// allowed file list. The two read-only tools fully satisfy the
+	// strategy's needs from the existing per-drive aggregates on
+	// the *models.Drive struct.
+	"drive-coaching": {
+		ID:          "drive-coaching",
+		Name:        "Per-drive coaching",
+		Description: "Opt-in LLM-narrated 2-4 paragraph coaching summary for an individual drive. Reads from the deterministic per-drive aggregates surfaced by the existing /drives/{driveID} handler and a small typed telemetry-summary tool; the deterministic stat cards, hero gauges, and energy summary on the drive detail page remain the canonical baseline when AI is off.",
+		Tier:        "N",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/drives/{driveID}/coach"},
+			Frontend:  []string{"/drives/:id"},
+			UITestIDs: []string{"ai-feature-drive-coaching-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as
