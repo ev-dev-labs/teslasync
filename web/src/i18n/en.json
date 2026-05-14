@@ -7817,7 +7817,13 @@
       "ended": "Ended",
       "drives": "Drives",
       "charges": "Charges",
-      "notFound": "Trip not found"
+      "notFound": "Trip not found",
+      "aiSuggestName": {
+        "title": "Suggest a trip name",
+        "description": "Get a short, propose-only name suggestion grounded in this trip\u2019s route context (start and end places, drive count, distance, time window). The suggestion is never saved automatically \u2014 review the proposed name in the panel and click Save to apply it.",
+        "badge": "AI",
+        "generateButton": "Suggest a name"
+      }
     },
     "title": "Trips",
     "subtitle": "Multi-drive trip reports with distance and cost tracking",

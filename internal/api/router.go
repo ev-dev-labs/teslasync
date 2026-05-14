@@ -80,6 +80,7 @@ import (
 	nldrivesearchreplay "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-drive-search-replay"
 	speedprofileinsights "github.com/ev-dev-labs/teslasync/internal/ai/strategies/speed-profile-insights"
 	routeefficiencysuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/route-efficiency-suggestions"
+	autotripnaming "github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-trip-naming"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
@@ -870,6 +871,39 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		routeefficiencysuggestions.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+
+	// Phase-50 / D4 (slice 0024) — Auto trip naming.
+	// Construct the shared TripsDetailRepo once so both the
+	// auto-trip-naming AI tool path and (eventually) the
+	// canonical /api/v1/trips/{trip_id} handler share a single
+	// read path against the trips/trip_drives schema. Today the
+	// canonical handler still builds its own repo inline at the
+	// mount point; the duplicate is intentional and short-lived —
+	// a future cleanup slice can consolidate.
+	aiAutoTripNamingDetailRepo := database.NewTripsDetailRepo(db.Pool)
+	// auto-trip-naming tools (Phase-50 / D4, slice 0024).
+	// Adds `draft_trip_name` + `validate_trip_name` to the shared
+	// tool registry. Both tools are PROPOSE-only — they construct
+	// or validate trip-name DTOs but do NOT touch the database;
+	// the dispatcher's deny-all confirm gate is therefore never
+	// triggered. The actual trip-name persistence flows through
+	// an explicit user confirmation in the TripDetailPage UI
+	// (out of scope for this slice).
+	tools.RegisterAutoTripNamingTools(aiToolRegistry, tools.AutoTripNamingSources{
+		Trips:     NewAITripSourceAdapter(aiAutoTripNamingDetailRepo),
+		Details:   aiAutoTripNamingDetailRepo,
+		Validator: NewAITripNameValidator(),
+	})
+	// Auto-trip-naming handler. One per process; stateless beyond
+	// constructor inputs. Must be constructed AFTER the tool
+	// registration above so the dispatcher can resolve the
+	// strategy's allowedTools at boot.
+	aiAutoTripNameHandler := NewAIAutoTripNameHandler(
+		aiRegistry,
+		aiToolRegistry,
+		autotripnaming.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	lifetimeHandler := NewLifetimeHandler(db, eventHub)
@@ -2575,7 +2609,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

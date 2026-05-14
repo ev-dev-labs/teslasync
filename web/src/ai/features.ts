@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "charging-diagnosis" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "route-efficiency-suggestions" | "speed-profile-insights" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "charging-diagnosis" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "route-efficiency-suggestions" | "speed-profile-insights" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -68,6 +68,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsTools: true,
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-anomaly-explanations-root"] as const),
+  }),
+  "auto-trip-naming": Object.freeze({
+    id: "auto-trip-naming",
+    name: "Auto trip naming",
+    description: "Opt-in LLM-assisted trip-name suggestions grounded in the trip's route context (start/end places, drive count, distance, time window). Propose-only: the AI produces a structured proposal via two typed read-only tools and the user explicitly confirms or edits before saving through the existing trip-update path. The deterministic TripDetailPage stat cards, KVList of metadata, and existing trip labels remain the canonical baseline when AI is off. The per-feature redaction policy keeps lat/long, street addresses, and place names tagged; only the vehicle name may be narrated.",
+    tier: "D",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-auto-trip-naming-root"] as const),
   }),
   "charging-diagnosis": Object.freeze({
     id: "charging-diagnosis",
@@ -208,6 +219,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "__usage__",
   "ai-provider-health",
   "anomaly-explanations",
+  "auto-trip-naming",
   "charging-diagnosis",
   "chatbot-llm",
   "digest-narration",

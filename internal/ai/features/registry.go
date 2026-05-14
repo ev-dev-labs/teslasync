@@ -332,6 +332,77 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / D4 (slice 0024) — Auto trip naming.
+	//
+	// Adds opt-in LLM-assisted SUGGESTION of trip names from the
+	// route context of one existing trip. The strategy is
+	// propose-only: the AI produces a structured name proposal via
+	// the F4 `draft_trip_name` + `validate_trip_name` tools and the
+	// user then explicitly confirms / edits / saves the name from
+	// the TripDetailPage UI. The actual persistence flows through
+	// the existing typed trip-update path (out of scope for this
+	// slice — the slice prompt says "while requiring explicit user
+	// confirmation before saving"). Both tools are pure DTO
+	// transforms with no DB writes.
+	//
+	// The deterministic TripDetailPage at `/trips/:id` — existing
+	// stat cards, name field, KVList of trip metadata — remains the
+	// canonical baseline for any user with `ai_mode='off'`. Manual
+	// trip naming and existing trip labels are unchanged; this
+	// feature only wires the opt-in suggestion panel that lives
+	// alongside.
+	//
+	// Backend: POST /api/v1/ai/trips/{tripID}/name/draft is mounted
+	// by mountAIRoutes in `internal/api/ai_routes.go` via guard.Wrap
+	// so off-mode requests return 404 BEFORE the handler runs
+	// (ADR-015 §I6). The endpoint streams a structured trip-name
+	// proposal envelope via SSE — the response is a STRUCTURED
+	// PROPOSAL the frontend renders for the user to confirm or
+	// edit before saving. No state is mutated by this route. The
+	// tripID URL param is parsed + validated by the handler as a
+	// positive int64; 0 / negative / non-numeric values are
+	// rejected with a 400 BEFORE opening the SSE stream.
+	//
+	// Frontend: the AI suggestion panel attaches to /trips/:id —
+	// the canonical Trip Detail page that already renders the
+	// deterministic distance / energy / efficiency / cost stat
+	// cards plus the trip metadata KVList. Those baseline panels
+	// remain the canonical path for any user with ai_mode='off'.
+	// The wrapped AIAutoTripNameSuggestion component carrying
+	// `ai-feature-auto-trip-naming-root` is absent from the DOM
+	// when AI is off — see the off-mode invariant test
+	// `TestAutoTripNamingAIOffHidesSuggestionButton.test.tsx`.
+	//
+	// Background: zero jobs. Trip-name suggestion is request /
+	// response, on demand from the trip detail page — there is no
+	// scheduled pre-render and no embedding corpus (NeedsRAG=false:
+	// the strategy reads the trip header + its constituent drives
+	// directly via typed read tools). Explicit `[]string{}` so
+	// CoverageOK passes.
+	//
+	// Push kinds: zero — the panel is request/response on demand.
+	// Explicit `[]string{}` so CoverageOK passes.
+	//
+	// NeedsRAG=false; NeedsTools=true (two propose-only tools);
+	// NeedsStream=true (the structured proposal envelope plus the
+	// optional one-line rationale are streamed back over SSE).
+	"auto-trip-naming": {
+		ID:          "auto-trip-naming",
+		Name:        "Auto trip naming",
+		Description: "Opt-in LLM-assisted trip-name suggestions grounded in the trip's route context (start/end places, drive count, distance, time window). Propose-only: the AI produces a structured proposal via two typed read-only tools and the user explicitly confirms or edits before saving through the existing trip-update path. The deterministic TripDetailPage stat cards, KVList of metadata, and existing trip labels remain the canonical baseline when AI is off. The per-feature redaction policy keeps lat/long, street addresses, and place names tagged; only the vehicle name may be narrated.",
+		Tier:        "D",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/trips/{tripID}/name/draft"},
+			Frontend:  []string{"/trips/:id"},
+			UITestIDs: []string{"ai-feature-auto-trip-naming-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / N1 (slice 0015) — Natural-language alert builder.
 	//
 	// Adds opt-in LLM-assisted DRAFTING of AlertRule DTOs from a

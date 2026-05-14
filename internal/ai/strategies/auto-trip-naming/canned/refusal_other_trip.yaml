@@ -1,0 +1,9 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot rename or save a name for a different trip — my role is to
+      propose a name only for the trip in scope for this session
+      (trip 101). If you'd like, I can suggest a name for trip 101
+      instead — just confirm and I'll draft one.
+    input_tokens: 44
+    output_tokens: 38

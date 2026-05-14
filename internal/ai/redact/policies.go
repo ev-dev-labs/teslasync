@@ -159,3 +159,38 @@ func PolicyRouteEfficiencySuggestions() Policy {
 		Mode:  ModeRedactedTags,
 	}
 }
+
+// PolicyAutoTripNaming is the policy for the per-trip auto-naming
+// narrative (slice D4, prompt 0024). Allows ClassVehicleName so the
+// suggestion can address the user's car by name when the proposed
+// name reasonably includes a vehicle reference (e.g. "Roadie's
+// October Road Trip" — only the vehicle's display name is allowed
+// through; place names are still tagged). Precise route coordinates
+// — lat/long pairs, street addresses, place names that the trip
+// happens to traverse — stay redacted by default: the proposed
+// trip name is meant to surface a concise human label like "Weekend
+// Road Trip — October 2024", NOT a turn-by-turn dossier ("Trip
+// through 4123 Oak St"). Per the slice prompt's ADR-015 §I9
+// commitment, the redaction policy allow-list mirrors
+// PolicyDigest's so a future change to one does not silently bleed
+// into the other.
+//
+// Mirrors PolicyDigest / PolicyYearInReview / PolicyDriveCoaching /
+// PolicyChargingDiagnosis / PolicySpeedProfileInsights /
+// PolicyRouteEfficiencySuggestions's allow-list intentionally: every
+// per-feature narrator that names the user's car shares the same
+// allow-list shape. They are kept as DISTINCT policy constructors
+// (rather than aliasing) so per-slice allow-list drift can happen
+// without cross-slice collateral damage — a future change to
+// charging diagnosis's allow-list does not bleed across to
+// auto-trip-naming.
+//
+// Slice prompt mandate (verbatim): "Allowed classes: ClassVehicleName
+// only; places stay tagged unless restored to same user.
+// Round-trip required: yes."
+func PolicyAutoTripNaming() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}

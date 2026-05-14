@@ -87,6 +87,9 @@ import (
 //   - aiRouteEfficiencySuggestions: the real LLM-backed handler for the
 //                  route-efficiency suggestions narrative (Phase-50 / D3,
 //                  slice 0023). Same nil fallback pattern.
+//   - aiAutoTripName: the real LLM-backed handler for the auto trip
+//                  naming suggestion (Phase-50 / D4, slice 0024). Same
+//                  nil fallback pattern.
 func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
@@ -105,6 +108,7 @@ func mountAIRoutes(
 	aiDriveSearch *AIDriveSearchHandler,
 	aiSpeedProfileInsights *AISpeedProfileInsightsHandler,
 	aiRouteEfficiencySuggestions *AIRouteEfficiencySuggestionsHandler,
+	aiAutoTripName *AIAutoTripNameHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// chatbot-llm (Phase-50 / U1, slice 0011 wires the real
@@ -311,6 +315,27 @@ func mountAIRoutes(
 		}
 		r.Post("/routes/{routeID}/efficiency/suggest", g.Wrap("route-efficiency-suggestions", routeEfficiencySuggestionsHandler))
 
+		// auto-trip-naming (Phase-50 / D4, slice 0024).
+		// Same stub-fallback pattern as the other AI handlers — a
+		// nil handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode. The
+		// route lives under /ai/trips/{tripID}/name/... so the AI
+		// surface is namespaced and can be removed in one route
+		// block if the feature is ever decommissioned. The tripID
+		// URL param is parsed + validated by the handler as a
+		// positive int64; 0 / negative / non-numeric values are
+		// rejected with a 400 BEFORE opening the SSE stream. The
+		// route is PROPOSE-only: it returns a structured trip-name
+		// proposal envelope via SSE; the actual persistence flows
+		// through an explicit user confirmation in the
+		// TripDetailPage UI (out of scope for this slice).
+		var autoTripNameHandler http.HandlerFunc = aiAutoTripNameStubHandler
+		if aiAutoTripName != nil {
+			autoTripNameHandler = aiAutoTripName.ServeHTTP
+		}
+		r.Post("/trips/{tripID}/name/draft", g.Wrap("auto-trip-naming", autoTripNameHandler))
+
 		// ai-provider-health (Phase-50 / F1, slice 0002).
 		// Ops-only diagnostic. Triple-gated:
 		//   guard.Wrap (mode + feature toggle) → RequireSudo → handler.
@@ -422,4 +447,13 @@ func aiSpeedProfileInsightsStubHandler(w http.ResponseWriter, _ *http.Request) {
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiRouteEfficiencySuggestionsStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai route-efficiency suggestions is not yet implemented")
+}
+
+// aiAutoTripNameStubHandler mirrors
+// aiRouteEfficiencySuggestionsStubHandler for the D4 slice
+// (Phase-50 / 0024 auto-trip-naming). Reachable only when
+// AIAutoTripNameHandler is nil at construction; the off-mode 404
+// invariant is held by the guard, not the stub.
+func aiAutoTripNameStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai auto trip naming is not yet implemented")
 }
