@@ -39,7 +39,9 @@ import (
 	"fmt"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
+	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
+	"github.com/ev-dev-labs/teslasync/internal/ai/strategy/redactadapter"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
@@ -171,6 +173,14 @@ func (d *Dispatcher) Run(ctx context.Context, s strategy.Strategy, in strategy.S
 	if s == nil {
 		return fmt.Errorf("dispatch: nil strategy")
 	}
+
+	// F8: install the strategy's redaction policy in ctx so the
+	// redact decorator (innermost in the provider chain) can pull
+	// it on every Chat/Stream/Embed. Strategies that have not yet
+	// migrated to redactadapter.Wrap return strategy.NoRedaction,
+	// which redactadapter.From maps to redact.DefaultPolicy
+	// (deny-all) — that is the safe default per ADR-015 §I9.
+	ctx = redact.WithPolicy(ctx, redactadapter.From(s.RedactionPolicy()))
 
 	// 1) Build the per-feature tool spec list. Strategy.Tools is
 	// the whitelist; the dispatcher refuses to expose any tool

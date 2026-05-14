@@ -44,6 +44,13 @@ import (
 	// introduces an AI route via a bare HandlerFunc.
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 
+	// Phase-50 / 0009 — F8 Redaction Layer. The decorator is the
+	// innermost wire-side wrap so every cloud call is sanitized
+	// before audit/trace see the post-redaction text. PolicyFromContext
+	// is the resolver — dispatcher.Run installs the strategy's
+	// RedactionPolicy() into ctx via the redactadapter bridge.
+	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
+
 	// Phase-50 / 0002 — F1 Provider Abstraction. The registry +
 	// adapters live behind the same hexagonal port so feature code
 	// imports only "internal/ai/provider", never the concrete
@@ -285,6 +292,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	aiAuditWriter := provider.NewAsyncAuditWriter(context.Background(), aiCallLogRepo, 1024)
 	aiRegistry := provider.NewRegistry(
 		aiSettingsReader{repo: aiSettingsRepo},
+		// Phase-50 / 0009 — F8 redaction sits INNERMOST in the
+		// chain: WithRedaction is applied first so audit/trace
+		// (above it in source order, outer at runtime) observe
+		// the post-redaction request text. The resolver
+		// (redact.PolicyFromContext) reads the per-request policy
+		// installed by dispatch.Run from Strategy.RedactionPolicy().
+		// A missing policy means deny-all — see redact.DefaultPolicy.
+		provider.WithRedaction(redact.PolicyFromContext),
 		provider.WithAudit(aiAuditWriter),
 		provider.WithTrace,
 	)
@@ -2167,6 +2182,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// still 404 in off mode (ADR-015 §I6) — the wrapper inside
 		// mountAIUsageRoutes carves out the exception precisely.
 		mountAIUsageRoutes(r, aiSettingsRepo, aiCallLogRepo, cfg.Auth.ForwardAuthHeader)
+
+		// Phase-50 / 0009 — F8 AI Admin endpoints (redaction-bypass report).
+		//
+		// /api/v1/ai/admin/redaction-bypass surfaces the
+		// per-(feature, provider) bypass summary written by the
+		// redact decorator above. Like /ai/usage, the admin route
+		// special-cases the per-feature toggle (the
+		// __redaction_bypass__ meta-feature has no toggle of its
+		// own) but still 404s in off mode (ADR-015 §I6) — the
+		// wrapper inside mountAIAdminRoutes carves out the
+		// exception precisely.
+		mountAIAdminRoutes(r, aiSettingsRepo, aiCallLogRepo)
 
 		// Watch endpoints — lightweight API key auth for wearable devices
 		r.Route("/watch", func(r chi.Router) {

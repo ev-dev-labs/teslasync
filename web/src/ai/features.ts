@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__usage__" | "ai-provider-health" | "chatbot-llm";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "chatbot-llm";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -25,6 +25,17 @@ export interface AiFeatureMeta {
 }
 
 export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.freeze({
+  "__redaction_bypass__": Object.freeze({
+    id: "__redaction_bypass__",
+    name: "AI Redaction Bypass Report",
+    description: "Per-(feature, provider) bypass summary from F8 redact decorator. Gates on ai_mode != 'off' only.",
+    tier: "F",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: false,
+    needsStream: false,
+    uiTestIds: Object.freeze(["ai-feature-redaction-bypass"] as const),
+  }),
   "__usage__": Object.freeze({
     id: "__usage__",
     name: "AI Usage Card",
@@ -61,6 +72,7 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
 });
 
 export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
+  "__redaction_bypass__",
   "__usage__",
   "ai-provider-health",
   "chatbot-llm",

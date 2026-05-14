@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
+	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
 )
 
 // AICallLogRepo provides AI audit log data access.
@@ -119,8 +120,9 @@ func (r *AICallLogRepo) Insert(ctx context.Context, rec *provider.AuditRecord) e
 			user_subject, feature_id, provider, model,
 			input_tokens, output_tokens, cost_micro_cents, latency_ms,
 			finish_reason, request_hash, redacted_digest, error,
-			started_at, finished_at
-		) VALUES ($1,$2,$3,$4, $5,$6,$7,$8, $9,$10,$11,$12, $13,$14)`
+			started_at, finished_at,
+			redacted_classes, redaction_bypass
+		) VALUES ($1,$2,$3,$4, $5,$6,$7,$8, $9,$10,$11,$12, $13,$14, $15,$16)`
 	// errorPtr is nil when Error is empty so the column receives SQL
 	// NULL rather than an empty string. The DB has `error TEXT NULL`
 	// so an empty error and a missing error are both representable;
@@ -130,11 +132,32 @@ func (r *AICallLogRepo) Insert(ctx context.Context, rec *provider.AuditRecord) e
 		e := rec.Error
 		errorPtr = &e
 	}
+	// F8 redaction meta. The redact decorator records per-call meta
+	// in a process-global sink keyed by (feature_id, request_hash);
+	// we consume it here so the columns are populated atomically with
+	// the rest of the row. A miss (Consume returns ok=false) is
+	// expected for: (a) calls that never went through the redact
+	// decorator (e.g. tests that bypass the chain), (b) calls whose
+	// meta entry was swept after the 60s TTL because the audit
+	// drainer wedged. Both cases default to {} + false, which the
+	// bypass report treats as "no signal" rather than "bypass=true".
+	classes := []string{}
+	bypass := false
+	if rec.RequestHash != "" && rec.FeatureID != "" {
+		if meta, ok := redact.ConsumeMeta(redact.MetaKey(rec.FeatureID, rec.RequestHash)); ok {
+			classes = make([]string, 0, len(meta.Classes))
+			for _, c := range meta.Classes {
+				classes = append(classes, string(c))
+			}
+			bypass = meta.Bypass
+		}
+	}
 	_, err := r.db.Pool.Exec(ctx, q,
 		rec.UserSubject, rec.FeatureID, rec.Provider, rec.Model,
 		rec.InputTokens, rec.OutputTokens, rec.CostMicroCents, rec.LatencyMs,
 		rec.FinishReason, rec.RequestHash, rec.RedactedDigest, errorPtr,
 		rec.StartedAt, rec.FinishedAt,
+		classes, bypass,
 	)
 	if err != nil {
 		return fmt.Errorf("ai_call_log insert: %w", err)
@@ -256,6 +279,70 @@ func (r *AICallLogRepo) Recent(ctx context.Context, subject string, limit int) (
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("ai_call_log Recent rows: %w", err)
+	}
+	return out, nil
+}
+
+// AIRedactionBypassRow is one entry in the F8 bypass report. Calls is
+// the total volume in the window; Bypassed is the subset where the
+// redact decorator skipped redaction (local-loopback or no policy in
+// ctx). BypassRatio is Bypassed/Calls as a fraction in [0,1] —
+// exposed pre-computed so the admin UI does not need to know the
+// total to colour-code the row.
+type AIRedactionBypassRow struct {
+	FeatureID   string  `json:"feature_id" db:"feature_id"`
+	Provider    string  `json:"provider" db:"provider"`
+	Calls       int64   `json:"calls" db:"calls"`
+	Bypassed    int64   `json:"bypassed" db:"bypassed"`
+	BypassRatio float64 `json:"bypass_ratio" db:"bypass_ratio"`
+}
+
+// RedactionBypassByFeature returns the per-(feature, provider) bypass
+// summary over the supplied window. Used by the admin bypass-report
+// endpoint to flag features whose >0% of calls bypass unexpectedly.
+//
+// The query intentionally does NOT scope to user_subject — the report
+// is a cross-tenant operator view (the admin endpoint itself is
+// gated by the admin role middleware). Cloud providers with bypass>0
+// are the high-signal anomaly because cloud calls SHOULD always be
+// redacted; local providers (Ollama) bypassing is expected.
+//
+// Result is ordered by (bypass_ratio DESC, calls DESC) so the
+// most-suspect rows surface first. Features with zero rows in the
+// window are omitted.
+func (r *AICallLogRepo) RedactionBypassByFeature(ctx context.Context, since time.Time) ([]AIRedactionBypassRow, error) {
+	const q = `
+		SELECT
+			feature_id,
+			provider,
+			COUNT(*)::BIGINT                                              AS calls,
+			COUNT(*) FILTER (WHERE redaction_bypass)::BIGINT              AS bypassed,
+			COALESCE(
+				COUNT(*) FILTER (WHERE redaction_bypass)::FLOAT / NULLIF(COUNT(*), 0),
+				0
+			)                                                              AS bypass_ratio
+		FROM ai_call_log
+		WHERE started_at >= $1
+		GROUP BY feature_id, provider
+		ORDER BY bypass_ratio DESC, calls DESC`
+	rows, err := r.db.Pool.Query(ctx, q, since.UTC())
+	if err != nil {
+		return nil, fmt.Errorf("ai_call_log RedactionBypassByFeature: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]AIRedactionBypassRow, 0)
+	for rows.Next() {
+		var rec AIRedactionBypassRow
+		if err := rows.Scan(
+			&rec.FeatureID, &rec.Provider, &rec.Calls, &rec.Bypassed, &rec.BypassRatio,
+		); err != nil {
+			return nil, fmt.Errorf("ai_call_log RedactionBypassByFeature scan: %w", err)
+		}
+		out = append(out, rec)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("ai_call_log RedactionBypassByFeature rows: %w", err)
 	}
 	return out, nil
 }

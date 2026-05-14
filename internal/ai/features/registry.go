@@ -180,6 +180,37 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
+	//
+	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as
+	// `__usage__`: it has no per-feature toggle of its own, only a
+	// cross-tenant operator visualisation that an admin consumes to
+	// verify the deny-by-default redaction stance held. The
+	// internal/api/ai_admin_handler.go layer wraps guard.Settings so
+	// AIFeatureEnabled("__redaction_bypass__") returns true whenever
+	// ai_mode != 'off', mirroring `__usage__`.
+	//
+	// The Backend route MUST stay in lockstep with mountAIAdminRoutes
+	// in internal/api/router.go so tools/aivet's coverage check passes.
+	"__redaction_bypass__": {
+		ID:          "__redaction_bypass__",
+		Name:        "AI Redaction Bypass Report",
+		Description: "Per-(feature, provider) bypass summary from F8 redact decorator. Gates on ai_mode != 'off' only.",
+		Tier:        "F",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  false,
+		NeedsStream: false,
+		Routes: RouteSet{
+			Backend: []string{
+				"GET /api/v1/ai/admin/redaction-bypass",
+			},
+			Frontend:  []string{},
+			UITestIDs: []string{"ai-feature-redaction-bypass"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 }
 
 // IsKnown reports whether id corresponds to a registered feature. Used
