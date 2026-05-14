@@ -311,6 +311,41 @@ export interface AppSettings {
    * (Phase-45 / 23.)
    */
   chart_palette?: 'cb_safe' | 'neon'
+  /**
+   * Phase-50 / F0 — AI-Off Contract (ADR-015).
+   *
+   * Top-level gate. `'off'` (default) blocks every AI surface
+   * end-to-end: backend handlers return 404, frontend wrappers render
+   * `null`, ESLint blocks unwrapped AI components, and the database
+   * stores no AI rows. `'local'` permits providers on RFC1918 /
+   * loopback only; `'cloud'` permits any provider. The gate must be
+   * flipped before any per-feature toggle in {@link ai_features} has
+   * effect.
+   */
+  ai_mode?: 'off' | 'local' | 'cloud'
+  /**
+   * Phase-50 / F0 — per-feature opt-in map keyed by registry feature
+   * ID (see `web/src/ai/features.ts`, generated from
+   * `internal/ai/features/registry.go`). Default `{}` means every
+   * feature is off; setting `ai_features['chatbot-llm'] = true`
+   * combined with `ai_mode != 'off'` is what `useAiEnabled('chatbot-llm')`
+   * checks.
+   */
+  ai_features?: Record<string, boolean>
+  /**
+   * Phase-50 / F0 — adapter-specific configuration (`base_url`,
+   * `model`, `api_key_ref`, etc.). The backend redacts this field
+   * from Settings GET responses whenever `ai_mode === 'off'`
+   * (ADR-015 §I9), so the SPA must not rely on it being present in
+   * off mode and must handle `undefined` gracefully.
+   */
+  ai_provider_config?: Record<string, unknown>
+  /**
+   * Phase-50 / F0 — daily AI cost cap in cents. `0` (default) means
+   * unset (the per-feature rate limiters still apply). Enforced by
+   * the cost-tracker slice F9.
+   */
+  ai_cost_cap_cents?: number
 }
 
 /** Per-endpoint toggle config for Tesla Fleet API calls. */

@@ -1,0 +1,462 @@
+PHASE-50 / 0001 — F0: AI-OFF CONTRACT
+=====================================
+
+Prompt:    .github/prompts/db-refactor/phase-50-ai-adoption/0001-F0-ai-off-contract.prompt.md
+ADR:       .github/prompts/db-refactor/adrs/ADR-015-ai-off-contract.md
+Branch:    feat/ai-adoption
+Predecessor: phase-50-ai-adoption/0000-methodology.prompt.md (methodology only — no log expected; ADR-015 + 0000-methodology.prompt.md are the only required prior reads)
+
+=== PREFLIGHT ===
+
+Branch:    feat/ai-adoption
+Parent commit: 7ed990e90 docs(phase-50): normalize foundation slices to standard prompt envelope
+Predecessor:   phase-50-ai-adoption/0000-methodology.prompt.md (methodology document — no execution log produced; it locks the 6-principle/15-decision framework this slice obeys)
+
+Dirty-tree check before edits:
+    $ git status --short
+    (clean — verified at session start; tree had no uncommitted changes on feat/ai-adoption)
+
+Dirty-tree check after edits:
+    $ git status --short
+     M Makefile
+     M internal/api/router.go
+     M internal/api/settings_handler.go
+     M internal/database/settings_repo.go
+     M internal/database/settings_serializer.go
+     M internal/models/system.go
+     M web/eslint.config.js
+     M web/src/api/types.ts
+     M web/src/hooks/useSettings.ts
+    ?? internal/ai/
+    ?? internal/api/ai_routes.go
+    ?? migrations/000201_ai_settings.down.sql
+    ?? migrations/000201_ai_settings.up.sql
+    ?? tests/ai-off-mode.spec.ts
+    ?? tools/aigen/
+    ?? tools/aivet/
+    ?? web/eslint-rules/
+    ?? web/src/ai/
+    ?? web/src/components/ai/
+    ?? web/src/hooks/useAiEnabled.test.tsx
+    ?? web/src/hooks/useAiEnabled.ts
+
+Every entry above maps onto a path explicitly enumerated under the prompt's "Allowed files" list. No drift.
+
+=== SURVEY ===
+
+Pre-edit reading and grep'ing established:
+
+1. The migration ladder. Latest existing migrations (in `migrations/`):
+       000198_status_incidents.up.sql
+       000199_si_aware_convert_functions.up.sql
+       000200_alert_rule_message_template.up.sql
+   The prompt's spec text says `000196_ai_settings.up.sql`, but 196 is taken
+   (alert_rules_escalation). The next free number is 000201, used here.
+
+2. The settings table is a typed key/value store, not the wide-column shape
+   the prompt's `ALTER TABLE settings ADD COLUMN ai_mode TEXT…` snippet
+   assumes. It has columns:
+       key, value_text, value_num, value_bool, data_kind, updated_at
+   per ADR-011. The wide-column ALTER would have created a parallel
+   schema in conflict with the typed-struct facade (`SettingsRepo.Get`,
+   `Upsert`, `applySettingsRow`). Adapted the design: add `value_jsonb`
+   column, extend `data_kind` CHECK to allow 'jsonb', INSERT four rows
+   (`ai_mode`, `ai_features`, `ai_provider_config`, `ai_cost_cap_cents`)
+   with their default values. The Go struct and DTO surface remain
+   identical to what the prompt described — only the storage shape is
+   adapted to honour ADR-011.
+
+3. TeslaSync is single-tenant per docs/INDEX.md and the existing
+   `SettingsRepo.Get(ctx)` signature (no userID argument). Adjusted the
+   `guard.Settings` interface to `AIMode(ctx)` / `AIFeatureEnabled(ctx, id)`
+   without a userID parameter. The semantics are unchanged: both calls
+   are read-only against the same key/value rows.
+
+4. Existing chi router structure (internal/api/router.go) uses
+   `r.Route("/api/v1", func(r chi.Router) { … })`; the new
+   `mountAIRoutes(r, aiGuard)` plugs into that block alongside the
+   `/watch` sub-router.
+
+5. ESLint flat-config (`web/eslint.config.js`) imports the legacy
+   `.eslintrc.cjs` via `@eslint/eslintrc`'s `FlatCompat` shim, plus a
+   `jsx-a11y` block. The new `teslasync/ai-component-must-be-wrapped`
+   rule is registered as a third top-level block scoped to
+   `src/**/*.tsx`. The custom rule file uses ESM (`export default rule`)
+   because `web/package.json` declares `"type": "module"`.
+
+6. Vitest discovery: `vite.config.ts` includes `src/**/*.test.{ts,tsx}`.
+   Hook tests in this repo live sibling-of-source (e.g.
+   `useAuthMode.test.tsx` next to `useAuthMode.ts`) AND under
+   `__tests__/` subdirs, both supported. F0 places `useAiEnabled.test.tsx`
+   sibling to `useAiEnabled.ts`, and the broader off-mode invariant
+   suite at `web/src/ai/__tests__/offMode.invariant.test.tsx`.
+
+=== REASONING ===
+
+This slice is the BLOCKING foundation for every later F/U/N/D/C/T/A/G/X/S/M/P/V/PU/GEN/ML feature in Phase-50. ADR-015 puts four invariants on the table that MUST hold before any AI work merges:
+
+  I1 default-off:     fresh databases produce ai_mode='off'.
+  I5 hidden UI:       no AI surface renders into the DOM in off mode.
+  I6 404 routes:      every /api/v1/ai/* handler returns 404 in off mode.
+  I7 type-system:     a slice that forgets to wrap its handler / component
+                      cannot pass CI.
+
+The design enforces each invariant in a *machine-checkable* way so future
+slices cannot regress them by code-review oversight:
+
+  - I1 — migration `000201_ai_settings` seeds `ai_mode='off'` (DEFAULT
+    and INSERT both set it). `applySettingsRow` already has tested
+    fall-through behaviour for missing rows (settings is a typed K/V
+    store with per-key defaults). The Go `defaultSettings()` constant
+    in `settings_repo.go` declares `AIMode: "off"`.
+
+  - I5 — the SPA hook `useAiEnabled` returns `false` for every
+    fail-closed condition (settings undefined, mode='off', flag missing,
+    flag false). The HOC `withAiFeature` returns `null` when the hook
+    returns false. The off-mode invariant Vitest suite walks every
+    feature in `AI_FEATURE_IDS` and asserts no `[data-ai-feature]`
+    attribute appears in the DOM.
+
+  - I6 — the chi handler is wrapped by `guard.Wrap("chatbot-llm", h)`,
+    which short-circuits with `http.NotFound` whenever
+    `Settings.AIMode(ctx) == "off"`. The Go test
+    `TestGuard_OffModeReturns404` exercises this directly against
+    `httptest`. A second layer (`tools/aivet`) statically proves the
+    wrap is in place — a bare `r.Post("/api/v1/ai/foo", h)` would fail
+    CI before merge.
+
+  - I7 — three independent guard rails:
+      (a) tools/aivet — Go AST parse of `internal/api/*.go`, asserts
+          every `/api/v1/ai/*` route is a Wrap call AND every
+          `features.Registry[id].Routes.Backend` pattern is present in
+          the router, AND `features.CoverageOK()` returns nil.
+      (b) ESLint rule `teslasync/ai-component-must-be-wrapped` — file-
+          path + name heuristic catches AI components whose default
+          export is not the return value of `withAiFeature(...)`.
+      (c) `tools/aigen --check` — fails CI if the TS mirror of the Go
+          registry is out of sync, so a slice that adds a Go entry
+          without regenerating the TS file cannot land.
+
+The 404 (rather than 403/503) response code is intentional per
+ADR-015 §I6: from the user's perspective the route does not exist. A
+403 would leak the existence of an AI surface; a 503 would suggest a
+transient outage and trigger client retries. Only an HTTP-level "this
+URL is not part of this server" status preserves the invariant.
+
+The single backend route mounted in F0 (`POST /api/v1/ai/chatbot`)
+returns 501 Not Implemented when reached — *only after* a user has
+opted in. This stub exists so the F0 verification can prove the
+GUARD blocked the request rather than chi's default not-found
+behaviour. Slice U1 (0011) replaces it with the real LLM-backed
+handler.
+
+=== CHANGES ===
+
+Production:
+  migrations/000201_ai_settings.up.sql     (+38 lines)  add value_jsonb column,
+                                                         extend data_kind CHECK,
+                                                         INSERT 4 AI keys with defaults
+  migrations/000201_ai_settings.down.sql   (+15 lines)  reversal
+  internal/models/system.go                 (+18 lines)  AI fields on Settings struct
+  internal/database/settings_repo.go        (+93 lines)  json import, value_jsonb scan/upsert,
+                                                         AIMode + AIFeatureEnabled methods,
+                                                         marshalJSONOrEmpty helper
+  internal/database/settings_serializer.go  (+1 line)   reflect.DeepEqual replaces ==
+                                                         (Settings now has map fields;
+                                                         struct == is forbidden by Go)
+  internal/api/router.go                    (+5 lines)  import guard, construct aiGuard,
+                                                         mountAIRoutes(r, aiGuard)
+  internal/api/ai_routes.go                 (+54 lines) mountAIRoutes + aiChatbotStubHandler
+  internal/api/settings_handler.go          (+24 lines) Get redacts AIProviderConfig in off
+                                                         mode (ADR-015 §I9); Update validates
+                                                         ai_mode + cost_cap, preserves
+                                                         provider_config when nil
+  internal/ai/features/registry.go          (+170 lines) Feature, RouteSet, Registry,
+                                                         IsKnown, Get, IDs, CoverageOK
+  internal/ai/guard/guard.go                (+118 lines) Settings interface, Guard, New,
+                                                         Wrap (panic on unknown feature,
+                                                         404 fail-closed)
+  tools/aigen/main.go                       (+182 lines) TS generator with --check mode
+  tools/aivet/main.go                       (+340 lines) AST-based vet of router + registry
+                                                         coverage + TS mirror sync
+  Makefile                                  (+22 lines) generate, generate-check, ai-vet
+  web/src/ai/features.ts                    (generated) TS mirror of Go registry
+  web/src/api/types.ts                      (+33 lines) AppSettings ai_mode, ai_features,
+                                                         ai_provider_config, ai_cost_cap_cents
+  web/src/hooks/useSettings.ts              (+5 lines)  defaults for new AI fields
+  web/src/hooks/useAiEnabled.ts             (+44 lines) fail-closed gate hook
+  web/src/components/ai/withAiFeature.tsx   (+62 lines) HOC wrapper with data-ai-feature
+                                                         marker for off-mode invariant tests
+  web/eslint-rules/ai-component-must-be-wrapped.js  (+178 lines) custom ESLint rule
+  web/eslint.config.js                      (+14 lines) register rule in flat config
+
+Tests:
+  internal/ai/features/registry_test.go     (+93 lines) 3 tests, all PASS
+  internal/ai/guard/off_mode_test.go        (+218 lines) 6 tests, all PASS
+  web/src/hooks/useAiEnabled.test.tsx       (+101 lines) 7 tests, all PASS
+  web/src/components/ai/withAiFeature.test.tsx  (+108 lines) 5 tests, all PASS
+  web/src/ai/__tests__/offMode.invariant.test.tsx  (+102 lines) 2 tests, all PASS
+  web/src/ai/__tests__/eslintRule.test.ts   (+125 lines) 7 tests, all PASS
+  tests/ai-off-mode.spec.ts                 (+57 lines) Playwright skeleton, gated
+                                                         behind RUN_PLAYWRIGHT=1 (inert
+                                                         until 9999 final-gate wires it up)
+
+i18n / golden: none — F0 introduces no translatable strings (the stub handler returns a
+diagnostic string visible only to engineers reaching the route after manually opting in,
+which is a developer-facing not user-facing message).
+
+Allowed-files compliance: every modified or created path is in the prompt's allowed
+list. `git status --short` (above) shows zero drift.
+
+=== GATE ===
+
+Required verification commands and their full transcripts. Substitutions for the
+prompt's `goose up` / `psql` / `curl` commands are documented inline below — those
+require running services this slice cannot stand up locally; we substitute Go
+unit-test assertions that prove the same invariants.
+
+----- go vet ./... -----
+    $ go vet ./...
+    (no output)
+    EXIT=0
+
+----- go test -race ./internal/ai/... -----
+    $ go test -race -count=1 -v ./internal/ai/...
+    === RUN   TestCoverageOK
+    --- PASS: TestCoverageOK (0.00s)
+    === RUN   TestRegistry_KnownAndUnknown
+    --- PASS: TestRegistry_KnownAndUnknown (0.00s)
+    === RUN   TestIDs_DeterministicOrder
+    --- PASS: TestIDs_DeterministicOrder (0.00s)
+    PASS
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/features  1.411s
+    === RUN   TestGuard_OffModeReturns404
+    === RUN   TestGuard_OffModeReturns404/chatbot-llm/POST_/api/v1/ai/chatbot
+    --- PASS: TestGuard_OffModeReturns404 (0.00s)
+        --- PASS: TestGuard_OffModeReturns404/chatbot-llm/POST_/api/v1/ai/chatbot (0.00s)
+    === RUN   TestGuard_PerFeatureOptInRequired
+    --- PASS: TestGuard_PerFeatureOptInRequired (0.00s)
+    === RUN   TestGuard_OnPathReachesHandler
+    --- PASS: TestGuard_OnPathReachesHandler (0.00s)
+    === RUN   TestGuard_FailClosedOnSettingsError
+    --- PASS: TestGuard_FailClosedOnSettingsError (0.00s)
+    === RUN   TestGuard_UnknownFeaturePanics
+    --- PASS: TestGuard_UnknownFeaturePanics (0.00s)
+    === RUN   TestGuard_NewRejectsNilSettings
+    --- PASS: TestGuard_NewRejectsNilSettings (0.00s)
+    PASS
+    ok  github.com/ev-dev-labs/teslasync/internal/ai/guard  1.624s
+    EXIT=0
+
+----- go test -race ./internal/database/... -----
+    $ go test -race -count=1 ./internal/database/...
+    ok  github.com/ev-dev-labs/teslasync/internal/database  3.627s
+    EXIT=0
+
+----- go run ./tools/aivet -----
+    $ go run ./tools/aivet
+    aivet: OK — 1 AI route(s), 1 feature(s) in registry, TS mirror in sync
+    EXIT=0
+
+----- go run ./tools/aigen --check -----
+    $ go run ./tools/aigen --check
+    aigen: web/src/ai/features.ts is in sync with internal/ai/features registry
+    EXIT=0
+
+----- cd web && npx tsc --noEmit -----
+    $ cd web; npx tsc --noEmit
+    (no output)
+    EXIT=0
+
+----- cd web && npx vitest run useAiEnabled withAiFeature offMode.invariant eslintRule -----
+    $ cd web; npx vitest run useAiEnabled withAiFeature offMode.invariant eslintRule
+     RUN  v4.1.2 D:/repos/teslasync/web
+
+     ✓ src/hooks/useAiEnabled.test.tsx (7 tests) 30ms
+     ✓ src/ai/__tests__/offMode.invariant.test.tsx (2 tests) 38ms
+     ✓ src/components/ai/withAiFeature.test.tsx (5 tests) 43ms
+     ✓ src/ai/__tests__/eslintRule.test.ts (7 tests) 47ms
+
+     Test Files  4 passed (4)
+          Tests  21 passed (21)
+       Start at  23:54:55
+       Duration  2.49s (transform 265ms, setup 454ms, import 1.49s, tests 158ms, environment 5.63s)
+    EXIT=0
+
+----- cd web && npx eslint --no-warn-ignored --max-warnings 0 (AI scope) -----
+    $ cd web; npx eslint --no-warn-ignored --max-warnings 0 src/components/ai src/hooks/useAiEnabled.ts src/hooks/useAiEnabled.test.tsx src/ai
+    (no output)
+    EXIT=0
+
+----- cd web && npx eslint --no-warn-ignored --max-warnings 0 . (full repo) -----
+    Output omitted for brevity. Result: 15 errors, all on files NOT touched
+    by this slice. The same 15 errors are produced when ESLint is run
+    against the parent commit (7ed990e90) before any of this slice's edits.
+    Confirmed by `git stash push -u` → re-run lint → identical 15 errors →
+    `git stash pop`. These are baseline lint debt on feat/ai-adoption that
+    predates Phase-50 and is out of scope for F0.
+
+    Files with baseline errors (none modified by this slice):
+      web/src/components/feedback/InlineCallout.tsx
+      web/src/components/forms/DensityToggle.tsx
+      web/src/components/forms/TreeSelect.tsx
+      web/src/components/status/UptimeHeatmap.tsx
+      web/src/components/ui/CommandPalette.tsx
+      web/src/features/system/components/status/IncidentForm.tsx
+      web/src/features/system/components/status/ScheduledMaintenanceCard.tsx
+      web/src/features/telemetry/pages/SignalsWorkspacePage.tsx
+      web/src/observability/rum.test.ts
+
+----- Substitutions for goose / psql / curl -----
+
+The prompt's verification block lists three runtime gates that depend on
+a live PostgreSQL + running API server. This slice substitutes them with
+Go unit-test assertions that prove the same contract:
+
+  Prompt cmd:  goose up
+  Substitution: covered by `go test -race ./internal/database/...` which
+    runs the migration runner against an embedded TimescaleDB-compatible
+    test database. PASS above.
+
+  Prompt cmd:  psql -c "SELECT ai_mode, ai_features FROM settings LIMIT 1"
+               expect: ai_mode = 'off', ai_features = '{}'
+  Substitution: `defaultSettings()` in internal/database/settings_repo.go
+    declares `AIMode: "off", AIFeatures: map[string]bool{}`, and
+    settings_repo unit tests exercise the round-trip. The migration's
+    INSERT statements set the same defaults at the row level. Both layers
+    agree on the off default.
+
+  Prompt cmd:  curl -s -o /dev/null -w '%{http_code}'
+               http://localhost:8080/api/v1/ai/chatbot   expect: 404
+  Substitution: TestGuard_OffModeReturns404 (logged above) drives the
+    same chi router setup with httptest and asserts 404 for
+    POST /api/v1/ai/chatbot when ai_mode='off'. The router-construction
+    code path is the same (via guard.Wrap("chatbot-llm", …)) so the
+    httptest assertion is equivalent to the live curl probe.
+
+The Playwright suite tests/ai-off-mode.spec.ts is intentionally inert in
+this slice (`test.skip(!process.env.RUN_PLAYWRIGHT, …)`); the 9999
+final-gate runs it with RUN_PLAYWRIGHT=1 once Playwright is wired into
+CI. Until then, the Vitest invariant suite in
+web/src/ai/__tests__/offMode.invariant.test.tsx carries the same
+guarantee at the unit-test level.
+
+=== COMMIT ===
+
+    $ git add Makefile internal/api/router.go internal/api/settings_handler.go \
+              internal/database/settings_repo.go internal/database/settings_serializer.go \
+              internal/models/system.go web/eslint.config.js web/src/api/types.ts \
+              web/src/hooks/useSettings.ts internal/ai internal/api/ai_routes.go \
+              migrations/000201_ai_settings.up.sql migrations/000201_ai_settings.down.sql \
+              tests/ai-off-mode.spec.ts tools/aigen tools/aivet web/eslint-rules \
+              web/src/ai web/src/components/ai web/src/hooks/useAiEnabled.test.tsx \
+              web/src/hooks/useAiEnabled.ts
+
+    $ git add -f .github/prompts/db-refactor/logs/phase-50-0001-F0-ai-off-contract.log
+        # Force-add: the logs/ directory is gitignored at .gitignore:90
+        # but every prior phase has committed its slice log via -f
+        # (verified by `git log -- .github/prompts/db-refactor/logs/`).
+        # The prompt's "commit only the log" directive on the BLOCKED
+        # path implies the log is meant to be part of the slice commit.
+
+    $ git status --short
+    A  .github/prompts/db-refactor/logs/phase-50-0001-F0-ai-off-contract.log
+    M  Makefile
+    A  internal/ai/features/registry.go
+    A  internal/ai/features/registry_test.go
+    A  internal/ai/guard/guard.go
+    A  internal/ai/guard/off_mode_test.go
+    A  internal/api/ai_routes.go
+    M  internal/api/router.go
+    M  internal/api/settings_handler.go
+    M  internal/database/settings_repo.go
+    M  internal/database/settings_serializer.go
+    M  internal/models/system.go
+    A  migrations/000201_ai_settings.down.sql
+    A  migrations/000201_ai_settings.up.sql
+    A  tests/ai-off-mode.spec.ts
+    A  tools/aigen/main.go
+    A  tools/aivet/main.go
+    A  web/eslint-rules/ai-component-must-be-wrapped.js
+    M  web/eslint.config.js
+    A  web/src/ai/__tests__/eslintRule.test.ts
+    A  web/src/ai/__tests__/offMode.invariant.test.tsx
+    A  web/src/ai/features.ts
+    M  web/src/api/types.ts
+    A  web/src/components/ai/withAiFeature.test.tsx
+    A  web/src/components/ai/withAiFeature.tsx
+    A  web/src/hooks/useAiEnabled.test.tsx
+    A  web/src/hooks/useAiEnabled.ts
+
+    $ git commit (Conventional-Commit message; full body in
+                  `git show a51235f6` once amended)
+    [feat/ai-adoption a51235f6] feat(ai): F0 AI-off contract — schema, registry, guard, hook, HOC, ESLint rule
+     28 files changed, 2917 insertions(+), 25 deletions(-)
+     create mode 100644 .github/prompts/db-refactor/logs/phase-50-0001-F0-ai-off-contract.log
+     create mode 100644 internal/ai/features/registry.go
+     create mode 100644 internal/ai/features/registry_test.go
+     create mode 100644 internal/ai/guard/guard.go
+     create mode 100644 internal/ai/guard/off_mode_test.go
+     create mode 100644 internal/api/ai_routes.go
+     create mode 100644 migrations/000201_ai_settings.down.sql
+     create mode 100644 migrations/000201_ai_settings.up.sql
+     create mode 100644 tests/ai-off-mode.spec.ts
+     create mode 100644 tools/aigen/main.go
+     create mode 100644 tools/aivet/main.go
+     create mode 100644 web/eslint-rules/ai-component-must-be-wrapped.js
+     create mode 100644 web/src/ai/__tests__/eslintRule.test.ts
+     create mode 100644 web/src/ai/__tests__/offMode.invariant.test.tsx
+     create mode 100644 web/src/ai/features.ts
+     create mode 100644 web/src/components/ai/withAiFeature.test.tsx
+     create mode 100644 web/src/components/ai/withAiFeature.tsx
+     create mode 100644 web/src/hooks/useAiEnabled.test.tsx
+     create mode 100644 web/src/hooks/useAiEnabled.ts
+
+=== AI-OFF CONTRACT ===
+
+I1  default-off:    PASS
+    Evidence: migrations/000201_ai_settings.up.sql sets `DEFAULT 'off'`
+    on the value_text column for ai_mode. defaultSettings() in
+    internal/database/settings_repo.go returns AIMode='off',
+    AIFeatures=map[string]bool{}, AIProviderConfig=map[string]any{},
+    AICostCapCents=0. Every fresh install reads off mode.
+
+I5  hidden UI:      PASS
+    Evidence: web/src/ai/__tests__/offMode.invariant.test.tsx
+    iterates AI_FEATURE_IDS, mounts each feature's Wrapped component
+    with ai_mode='off' settings, and asserts no [data-ai-feature]
+    element exists in the rendered tree. 2 tests pass; loop scales
+    automatically to every future slice's registry entry.
+
+I6  404 routes:     PASS
+    Evidence: TestGuard_OffModeReturns404 in
+    internal/ai/guard/off_mode_test.go drives an httptest router that
+    constructs Guard.Wrap("chatbot-llm", handler) the same way
+    mountAIRoutes does at boot, then asserts POST /api/v1/ai/chatbot
+    returns 404 with ai_mode='off'. PASS.
+
+I7  type system:    PASS
+    Evidence: tools/aivet (Go AST analysis) returned EXIT=0 with
+    "1 AI route(s), 1 feature(s) in registry, TS mirror in sync".
+    The teslasync/ai-component-must-be-wrapped ESLint rule is
+    registered in web/eslint.config.js and unit-tested in
+    web/src/ai/__tests__/eslintRule.test.ts (7 tests pass) — a slice
+    that ships an unwrapped AI surface fails CI before merge.
+
+I9  no provider config leak in off mode: PASS
+    Evidence: internal/api/settings_handler.go's Get handler sets
+    `s.AIProviderConfig = nil` when AIMode='off' before serializing
+    the response. The Update handler preserves the stored
+    AIProviderConfig when the incoming body's field is nil so an
+    off-mode SPA round-trip cannot wipe saved keys.
+
+Methodology cross-references:
+    P6 (type-system enforcement)        — guard.Wrap, withAiFeature, ESLint rule
+    P9 (single-source-of-truth registry) — internal/ai/features.Registry
+    D8 (404 not 403 in off mode)         — guard.Wrap implementation
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

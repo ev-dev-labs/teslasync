@@ -35,6 +35,17 @@ func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to get settings")
 		return
 	}
+	// ADR-015 §I9 — provider keys never leak in off mode.
+	// In off mode the SPA never displays previously-saved provider
+	// config (even masked) and never includes it in any export
+	// bundle. The keys remain in the DB so re-enabling AI does not
+	// lose them — we just never hand them to the frontend in this
+	// state. The `omitempty` JSON tag on AIProviderConfig combined
+	// with the nil-map below means the field disappears entirely
+	// from the response body.
+	if s.AIMode == "off" {
+		s.AIProviderConfig = nil
+	}
 	writeJSON(w, http.StatusOK, s)
 }
 
@@ -44,8 +55,6 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-
-	// Validate allowed values
 	validUnitsLen := map[string]bool{"km": true, "mi": true}
 	validUnitsTemp := map[string]bool{"C": true, "F": true}
 	validUnitsPressure := map[string]bool{"bar": true, "psi": true}
@@ -105,6 +114,29 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if s.ChartPalette != "" && !validChartPalette[s.ChartPalette] {
 		writeError(w, http.StatusBadRequest, "chart_palette must be 'cb_safe' or 'neon'")
 		return
+	}
+	// ADR-015 §I2 — three modes, one flag. Validate so a typo in
+	// the request body cannot poison the DB and inadvertently
+	// flip the user out of the off-by-default state.
+	validAIMode := map[string]bool{"off": true, "local": true, "cloud": true}
+	if s.AIMode != "" && !validAIMode[s.AIMode] {
+		writeError(w, http.StatusBadRequest, "ai_mode must be 'off', 'local', or 'cloud'")
+		return
+	}
+	if s.AICostCapCents < 0 {
+		writeError(w, http.StatusBadRequest, "ai_cost_cap_cents must be >= 0")
+		return
+	}
+
+	// ADR-015 §I9 — provider keys never leak in off mode AND must
+	// survive a re-enable. The Get handler redacts AIProviderConfig
+	// when ai_mode='off', so a SPA round-trip submits a body without
+	// that field. Preserve the stored value so toggling AI off and
+	// back on does not silently lose the user's saved keys.
+	if s.AIProviderConfig == nil {
+		if existing, err := h.settingsRepo.Get(r.Context()); err == nil && existing != nil {
+			s.AIProviderConfig = existing.AIProviderConfig
+		}
 	}
 
 	// Record gas price change in history if price or unit changed

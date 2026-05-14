@@ -431,6 +431,33 @@ type Settings struct {
 	// consumers re-render with the new colours when the user toggles.
 	// (Phase 45 / 23.)
 	ChartPalette string `json:"chart_palette"`
+
+	// AIMode is the top-level AI feature gate (ADR-015). One of:
+	//   - "off"   (default) — every AI surface is hidden, every
+	//                         /api/v1/ai/* route returns 404, no
+	//                         outbound AI calls are made.
+	//   - "local" — only RFC1918/loopback providers are accepted.
+	//   - "cloud" — any configured provider is allowed.
+	// Mode upgrades require an explicit user action in Settings; the
+	// backend never silently promotes the mode on update.
+	AIMode string `json:"ai_mode"`
+
+	// AIFeatures is the per-feature opt-in map keyed by canonical
+	// feature ID (see internal/ai/features/registry.go). An entry is
+	// `true` only if the user has explicitly enabled that feature.
+	// Default: empty map = every feature off (ADR-015 §I7).
+	AIFeatures map[string]bool `json:"ai_features"`
+
+	// AIProviderConfig is the adapter-specific configuration map
+	// (base_url, model, api_key_ref, …) keyed by provider ID. Per
+	// ADR-015 §I9 this MUST be redacted from the client response
+	// when AIMode == "off"; the redaction lives in the settings
+	// handler, not on the type.
+	AIProviderConfig map[string]any `json:"ai_provider_config,omitempty"`
+
+	// AICostCapCents is the daily AI cost cap in cents. 0 = unset
+	// (rate limiter still applies). Slice F9 enforces this.
+	AICostCapCents int `json:"ai_cost_cap_cents"`
 }
 
 // Embedding mirrors the post-migration `embeddings` schema (pgvector-backed).

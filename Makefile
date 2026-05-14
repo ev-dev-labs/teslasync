@@ -1,4 +1,4 @@
-.PHONY: all build build-worker build-export-worker run test lint clean docker docker-up docker-down migrate web check coverage quality pre-commit gen-tesla gen-tesla-check arch-baseline arch-check
+.PHONY: all build build-worker build-export-worker run test lint clean docker docker-up docker-down migrate web check coverage quality pre-commit gen-tesla gen-tesla-check arch-baseline arch-check generate generate-check ai-vet
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -126,6 +126,24 @@ arch-baseline:
 ## arch-check: Fail if architecture regresses against the committed baseline
 arch-check:
 	go run ./tools/archmetrics -compare tools/archmetrics/baseline.json
+
+## generate: Regenerate cross-language artefacts (TS mirror of the AI feature registry).
+##           Phase-50 / 0001 — F0 AI-Off Contract. Adding a new AI
+##           feature in internal/ai/features/registry.go MUST be
+##           followed by `make generate` so web/src/ai/features.ts
+##           stays in sync. CI fails on drift via `make generate-check`.
+generate:
+	go run ./tools/aigen
+
+## generate-check: Fail if generated artefacts drift from their generators.
+generate-check:
+	go run ./tools/aigen --check
+
+## ai-vet: Phase-50 / 0001 — enforce the AI-Off Contract at the
+##         type-system level (registry coverage + every /api/v1/ai/*
+##         route mounted via guard.Wrap). Run by CI on every PR.
+ai-vet:
+	go run ./tools/aivet
 
 ## help: Show this help message
 help:

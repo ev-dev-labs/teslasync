@@ -38,6 +38,12 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/automation"
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 
+	// Phase-50 / 0001 — F0 AI-Off Contract (ADR-015). The guard
+	// package is the only sanctioned mount point for /api/v1/ai/*
+	// routes; tools/aivet refuses to merge a router change that
+	// introduces an AI route via a bare HandlerFunc.
+	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
+
 	// New hexagonal architecture packages
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
@@ -230,6 +236,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	installAdminLogStreamTap(logTap)
 	logStreamHandler := NewAdminLogStreamHandler(logTap)
 	settingsHandler := NewSettingsHandler(db)
+
+	// Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
+	//
+	// The guard is built once here and shared across every
+	// /api/v1/ai/* route so the per-request feature-gate logic
+	// (mode != "off" AND feature toggle on) lives in exactly one
+	// place. Settings is the same SettingsRepo the rest of the
+	// app uses; the AIMode/AIFeatureEnabled methods on it are
+	// fail-closed (return "off"/false on any error).
+	aiGuard := guard.New(database.NewSettingsRepo(db))
 	// Phase-46 / Prompt 36 — settings export/import. The serializer
 	// fans out across four repos (settings, alert_rules, geofences,
 	// notification_quiet_hours); construct it once + share between
@@ -2069,6 +2085,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Suppress unused warnings
 		_ = vehicleSvc
 		_ = v1VehicleHandler
+
+		// Phase-50 / 0001 — F0 AI-Off Contract.
+		//
+		// Mount every /api/v1/ai/* route through the guard. The
+		// guard returns 404 unless ai_mode is non-off AND the
+		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
+		// installs ship with ai_mode='off' so this entire subtree
+		// is invisible until the user opts in via Settings.
+		mountAIRoutes(r, aiGuard)
 
 		// Watch endpoints — lightweight API key auth for wearable devices
 		r.Route("/watch", func(r chi.Router) {
