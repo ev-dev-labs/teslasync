@@ -1735,6 +1735,12 @@
     "filters": {
       "clear": "Clear filters"
     },
+    "aiSearch": {
+      "title": "Search with natural language",
+      "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
+      "badge": "AI",
+      "searchButton": "Search with AI"
+    },
     "tooShort": {
       "title": "Type at least 2 characters",
       "message": "Search across vehicles, drives, charging sessions, alerts, geofences, automations and more."
@@ -2374,6 +2380,10 @@
         "nl-automation-builder": {
           "label": "Natural-language automation builder",
           "description": "Opt-in LLM that drafts automation graphs (trigger, conditions, actions) from a plain-language description. Drafts are typed proposals that you review and save through the standard builder; the manual AutomationBuilder remains the canonical baseline when AI is off."
+        },
+        "nl-search": {
+          "label": "Natural-language search",
+          "description": "Opt-in LLM that searches your drives, charging sessions, and alerts from a plain-language description and narrates the matches. The typed search filters at /search remain the canonical baseline when AI is off."
         }
       },
       "archive": {

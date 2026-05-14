@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "chatbot-llm" | "digest-narration" | "nl-alert-builder" | "nl-automation-builder" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "chatbot-llm" | "digest-narration" | "nl-alert-builder" | "nl-automation-builder" | "nl-search" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -113,6 +113,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-nl-automation-builder-root"] as const),
   }),
+  "nl-search": Object.freeze({
+    id: "nl-search",
+    name: "Natural-language search",
+    description: "Opt-in LLM-assisted natural-language search across the user's drives, charging sessions, and alert history via the F7 RAG retriever. The deterministic typed search filters at /search remain the baseline when AI is off; results are still rendered via the existing typed search handler — the AI side panel only narrates and cites the retrieved chunks.",
+    tier: "N",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-nl-search-root"] as const),
+  }),
   "yir-narration": Object.freeze({
     id: "yir-narration",
     name: "Year-in-review narration",
@@ -135,6 +146,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "digest-narration",
   "nl-alert-builder",
   "nl-automation-builder",
+  "nl-search",
   "yir-narration",
 ] as const);
 

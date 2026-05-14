@@ -20,6 +20,7 @@ import { PageContainer } from '@/components/layout'
 import { GlassPanel, Input } from '@/components/ui'
 import { TimeStamp } from '@/components/data-display'
 import { EmptyState, Skeleton } from '@/components/feedback'
+import { AINLSearch } from '@/components/ai/AINLSearch'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useUrlString, useUrlArray } from '@/hooks/useUrlState'
 import { useGlobalSearch, SEARCH_MIN_QUERY_LENGTH } from '@/api/hooks/useSearch'
@@ -100,6 +101,15 @@ export default function SearchPage() {
 
   return (
     <PageContainer title={t('search.title', 'Search')}>
+      {/*
+        Phase-50 / 0017 — N3 Natural-language search across drives,
+        charges, and alerts. Rendered above the typed-filter panel
+        so the AI affordance is discoverable but never replaces the
+        canonical typed search baseline. Returns null when ai_mode is
+        'off' OR the nl-search feature toggle is off (ADR-015 §I5),
+        so users on the default install never see this surface.
+      */}
+      <AINLSearch />
       <GlassPanel className="p-4 sm:p-6">
         <Input
           type="search"

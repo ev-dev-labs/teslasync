@@ -73,6 +73,8 @@ import (
 	anomalyexplanations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations"
 	nlalertbuilder "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-alert-builder"
 	nlautomationbuilder "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-automation-builder"
+	nlsearch "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search"
+	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
 	// New hexagonal architecture packages
@@ -607,6 +609,44 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		nlautomationbuilder.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+	// Phase-50 / N3 (slice 0017) nl-search. Mirrors the
+	// alert-builder / automation-builder wiring above. The
+	// retriever is constructed via rag.New (the F7 single
+	// retrieval entry point) which fail-closes to NoopRetriever
+	// when ai_mode='off' (ADR-015 §I1, §I4 — zero outbound egress
+	// in off mode). The Hydrator is the in-package adapter
+	// aiSearchHydrator, which delegates per-source-type lookups
+	// to the existing canonical pgSearcher — same code path the
+	// typed GET /api/v1/search baseline uses (ADR-015 §I3
+	// baseline-intact: no duplicate read path is introduced by
+	// this slice).
+	aiSearchRetriever, err := rag.New(
+		context.Background(),
+		aiSettingsRepo,
+		db,
+		aiRegistry,
+		nlsearch.FeatureID,
+		rag.ModelNomicEmbedText,
+	)
+	if err != nil {
+		// rag.New only returns a non-nil error when ai_mode is on
+		// AND the model is unknown / db is nil / resolver is nil.
+		// In our wiring all three are valid and the model is
+		// hard-coded to a known constant; an error here is a boot-
+		// time misconfiguration we should fail loudly on rather
+		// than silently boot with a half-wired AI search surface.
+		log.Fatal().Err(err).Msg("ai search: rag.New failed during boot wiring")
+	}
+	tools.RegisterSearchTools(aiToolRegistry, tools.SearchSources{
+		Retriever: aiSearchRetriever,
+		Hydrator:  newAISearchHydrator(newPGSearcher(db)),
+	})
+	aiSearchHandler := NewAISearchHandler(
+		aiRegistry,
+		aiToolRegistry,
+		nlsearch.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	lifetimeHandler := NewLifetimeHandler(db, eventHub)
@@ -2312,7 +2352,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

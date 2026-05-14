@@ -66,6 +66,9 @@ import (
 //   - aiAutomation: the real LLM-backed handler for the natural-language
 //                  automation builder (Phase-50 / N2, slice 0016). Same
 //                  nil fallback pattern.
+//   - aiSearch   : the real LLM-backed handler for the natural-language
+//                  search across drives, charges, and alerts
+//                  (Phase-50 / N3, slice 0017). Same nil fallback pattern.
 func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
@@ -77,6 +80,7 @@ func mountAIRoutes(
 	aiAnomaly *AIAnomalyHandler,
 	aiAlert *AIAlertHandler,
 	aiAutomation *AIAutomationHandler,
+	aiSearch *AISearchHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// chatbot-llm (Phase-50 / U1, slice 0011 wires the real
@@ -153,6 +157,21 @@ func mountAIRoutes(
 		}
 		r.Post("/automations/draft", g.Wrap("nl-automation-builder", automationHandler))
 
+		// nl-search (Phase-50 / N3, slice 0017). Same
+		// stub-fallback pattern as the other AI handlers — a nil
+		// handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode. The
+		// route lives under /ai/search/... (parallel to the
+		// canonical /search typed handler at SearchHandler.Search)
+		// so the AI surface is namespaced and can be removed in
+		// one route block if the feature is ever decommissioned.
+		var searchHandler http.HandlerFunc = aiSearchStubHandler
+		if aiSearch != nil {
+			searchHandler = aiSearch.ServeHTTP
+		}
+		r.Post("/search/query", g.Wrap("nl-search", searchHandler))
+
 		// ai-provider-health (Phase-50 / F1, slice 0002).
 		// Ops-only diagnostic. Triple-gated:
 		//   guard.Wrap (mode + feature toggle) → RequireSudo → handler.
@@ -206,4 +225,12 @@ func aiAlertStubHandler(w http.ResponseWriter, _ *http.Request) {
 // invariant is held by the guard, not the stub.
 func aiAutomationStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai automation builder is not yet implemented")
+}
+
+// aiSearchStubHandler mirrors aiAutomationStubHandler for the N3 slice
+// (Phase-50 / 0017 nl-search). Reachable only when AISearchHandler is
+// nil at construction; the off-mode 404 invariant is held by the
+// guard, not the stub.
+func aiSearchStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai natural-language search is not yet implemented")
 }

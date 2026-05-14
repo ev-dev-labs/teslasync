@@ -454,6 +454,74 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / N3 (slice 0017) — Natural-language search across drives,
+	// charges, and alerts.
+	//
+	// Adds opt-in LLM-assisted DRAFTING of natural-language search queries
+	// that retrieve and narrate matches across the user's drive summaries,
+	// charging sessions, and alert history via the F7 RAG retriever. The
+	// strategy is propose-only and read-only: the AI fetches existing
+	// chunks via the F4 `retrieve_chunks` tool, optionally hydrates one
+	// or more cited results via `hydrate_search_result`, and narrates the
+	// answer to the user — it never writes to the database, never creates
+	// or mutates any drive/charge/alert, and never bypasses the
+	// per-tenant subject scoping built into the F7 retriever.
+	//
+	// The deterministic typed search at GET /api/v1/search served by the
+	// existing SearchHandler (`internal/api/search_handler.go`) and
+	// rendered by the SearchPage at the SPA route /search remains the
+	// canonical baseline for any user with `ai_mode='off'`. This feature
+	// only wires the AI side panel that lives alongside the typed
+	// filters.
+	//
+	// Backend: POST /api/v1/ai/search/query is mounted by mountAIRoutes
+	// in `internal/api/ai_routes.go` via guard.Wrap so off-mode requests
+	// return 404 BEFORE the handler runs (ADR-015 §I6). The endpoint
+	// streams a narrated response + cited result envelopes via SSE — the
+	// response is a STRUCTURED PROPOSAL the frontend renders alongside
+	// the typed result list. No state is mutated by this route.
+	//
+	// Frontend: the canonical host route declared by the slice prompt is
+	// `/search` — the AI section actually renders inside the existing
+	// SearchPage at `web/src/features/system/pages/SearchPage.tsx` so
+	// the off-mode invariant test
+	// (`TestNLSearchAIOffFallsBackToTypedFilters.test.tsx`) proves that
+	// the wrapped component carrying `ai-feature-nl-search-root` is
+	// absent from the DOM in off mode and the typed filter form
+	// continues to work. The pattern (canonical host route in the
+	// registry, real render path inside the existing baseline page)
+	// mirrors digest-narration / yir-narration / anomaly-explanations /
+	// nl-alert-builder / nl-automation-builder above.
+	//
+	// Background: `ai_search_indexer` is the cross-cutting cron a future
+	// scheduler will invoke to refresh the embeddings the F7 retriever
+	// reads when scoring NL queries; the job re-checks ai_mode +
+	// per-feature toggle on every tick (ADR-015 §I12 #3) and is a no-op
+	// when either is off. This slice declares the JobName so registry
+	// coverage + the off-mode walker can enforce the absence-in-off
+	// contract before the worker ships, mirroring the U2 digest-narration
+	// `ai_digest_weekly` precedent (worker landed in a follow-up slice).
+	//
+	// Push: zero new push kinds — NL search is request/response, on
+	// demand from the SearchPage. The empty array is explicit so
+	// CoverageOK passes.
+	"nl-search": {
+		ID:          "nl-search",
+		Name:        "Natural-language search",
+		Description: "Opt-in LLM-assisted natural-language search across the user's drives, charging sessions, and alert history via the F7 RAG retriever. The deterministic typed search filters at /search remain the baseline when AI is off; results are still rendered via the existing typed search handler — the AI side panel only narrates and cites the retrieved chunks.",
+		Tier:        "N",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/search/query"},
+			Frontend:  []string{"/search"},
+			UITestIDs: []string{"ai-feature-nl-search-root"},
+			JobNames:  []string{"ai_search_indexer"},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as
