@@ -77,6 +77,7 @@ import (
 	drivecoaching "github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching"
 	chargingdiagnosis "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis"
 	raghelp "github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help"
+	nldrivesearchreplay "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-drive-search-replay"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
@@ -740,6 +741,62 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		raghelp.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+	// Phase-50 / D1 (slice 0021) — Natural-language drive search and
+	// replay.
+	//
+	// Reuse the F7 retriever pattern from nl-search / rag-help:
+	// rag.New returns a NoopRetriever when ai_mode='off' so
+	// retrieve_drive_chunks returns ([], nil) without touching the
+	// embedding API or the vector DB (ADR-015 §I1, §I4 — zero
+	// outbound egress in off mode). The retriever is wired against
+	// the nl-drive-search-replay feature id so the per-feature
+	// settings resolution path is honoured.
+	//
+	// The drive corpus is per-user: retrieve_drive_chunks passes
+	// the calling user_subject from ctx to the retriever (the F7
+	// retriever scopes by user_subject at the SQL boundary). The
+	// drive_summary corpus is populated today; route_segment +
+	// location_summary are forward-compat reservations per the
+	// slice prompt — the gated background job `ai_drive_indexer`
+	// is the future fan-out point and is registered in
+	// features.Registry as a fail-closed gate stub today.
+	aiDriveSearchRetriever, err := rag.New(
+		context.Background(),
+		aiSettingsRepo,
+		db,
+		aiRegistry,
+		nldrivesearchreplay.FeatureID,
+		rag.ModelNomicEmbedText,
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("ai drive search: rag.New failed during boot wiring")
+	}
+	// nl-drive-search-replay tools (Phase-50 / D1, slice 0021).
+	// Adds `retrieve_drive_chunks` + `hydrate_drive_replay` to the
+	// shared tool registry so the dispatcher can resolve them for
+	// the nl-drive-search-replay strategy. Same ordering rule as
+	// the other slice tools above: must be registered before the
+	// handler constructor below so the strategy's allowedTools
+	// resolve at boot. The Hydrator is the in-package adapter
+	// aiDriveSearchHydrator, which delegates per-source-type
+	// lookups to the existing canonical pgSearcher — same code
+	// path the typed GET /api/v1/search baseline uses (ADR-015 §I3
+	// baseline-intact: no duplicate read path is introduced by
+	// this slice).
+	tools.RegisterDriveSearchTools(aiToolRegistry, tools.DriveSearchSources{
+		Retriever: aiDriveSearchRetriever,
+		Hydrator:  newAIDriveSearchHydrator(newPGSearcher(db)),
+	})
+	// Natural-language drive search and replay handler. One per
+	// process; stateless beyond constructor inputs. Must be
+	// constructed AFTER the tool registration above so the
+	// dispatcher can resolve the strategy's allowedTools at boot.
+	aiDriveSearchHandler := NewAIDriveSearchHandler(
+		aiRegistry,
+		aiToolRegistry,
+		nldrivesearchreplay.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	lifetimeHandler := NewLifetimeHandler(db, eventHub)
@@ -2445,7 +2502,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

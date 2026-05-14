@@ -1,0 +1,21 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_drivesearch_retrieve_replay_1
+        name: retrieve_drive_chunks
+        arguments: '{"query": "long highway drive to Phoenix", "source_types": ["drive_summary", "route_segment"], "k": 5}'
+    input_tokens: 56
+    output_tokens: 36
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_drivesearch_hydrate_replay_1
+        name: hydrate_drive_replay
+        arguments: '{"source_type": "drive_summary", "source_id": "drive-202"}'
+    input_tokens: 102
+    output_tokens: 28
+  - finish_reason: stop
+    content: |
+      The matching highway drive to Phoenix is ready — open its replay
+      at the cited replay URL to scrub through the route timeline.
+    input_tokens: 148
+    output_tokens: 32

@@ -688,6 +688,59 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / D1 (slice 0021) — Natural-language drive search and replay.
+	//
+	// Backend: POST /api/v1/ai/drives/search. The AI handler streams
+	// SSE frames from the dispatch loop; the two declared tools are
+	// retrieve_drive_chunks (F7 retriever over the drive corpora) and
+	// hydrate_drive_replay (read-only port that resolves a drive
+	// reference into a {title, subtitle, url, replay_url, when}
+	// envelope). The route is mounted under guard.Wrap so it returns
+	// 404 when ai_mode='off' OR when the per-feature toggle is off.
+	//
+	// Frontend: the AI side panel attaches to /drives — the canonical
+	// drive history page. The DrivesListPage's deterministic typed
+	// filters (range picker, vehicle select, search input, anomaly
+	// callouts) AND the existing /drives/:id/replay TripReplayPage
+	// controls remain the canonical baseline path for any user with
+	// ai_mode='off'. The wrapped AINLDriveSearch component carrying
+	// `ai-feature-nl-drive-search-replay-root` is absent from the DOM
+	// when AI is off — see the off-mode invariant test
+	// `TestNLDriveSearchReplayAIOffUsesTypedFiltersOnly.test.tsx`.
+	//
+	// Background: `ai_drive_indexer` is the gated job that keeps the
+	// drive corpora embeddings fresh. Today it is a fail-closed gate
+	// stub (mirrors `ai_docs_indexer` + `ai_search_indexer`); a
+	// future slice wires the actual fan-out across drive_summary,
+	// route_segment, and location_summary sources. The job MUST be
+	// listed here so the final-gate proves it has no scheduled
+	// invocation when ai_mode='off'.
+	//
+	// Push kinds: zero — the AI side panel is request/response on
+	// demand from the user's NL query. Explicit []string{} so
+	// CoverageOK passes.
+	//
+	// NeedsRAG=true because retrieve_drive_chunks calls the F7
+	// retriever; NeedsTools=true because the strategy invokes two
+	// read-only tools; NeedsStream=true because the handler streams
+	// SSE frames from the dispatch loop.
+	"nl-drive-search-replay": {
+		ID:          "nl-drive-search-replay",
+		Name:        "NL drive search and replay",
+		Description: "Opt-in LLM-assisted natural-language search across the calling user's drive history with one-click jump-to-replay anchors, grounded in the F7 RAG retriever over drive_summary, route_segment, and location_summary corpora. The deterministic typed filters on /drives and the existing /drives/:id/replay TripReplayPage controls remain the canonical baseline when AI is off; the AI side panel only narrates and cites already-retrieved drives with replay anchors — it never replaces the typed query path.",
+		Tier:        "D",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/drives/search"},
+			Frontend:  []string{"/drives"},
+			UITestIDs: []string{"ai-feature-nl-drive-search-replay-root"},
+			JobNames:  []string{"ai_drive_indexer"},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

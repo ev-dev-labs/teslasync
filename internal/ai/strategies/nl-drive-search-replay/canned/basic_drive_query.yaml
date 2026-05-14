@@ -1,0 +1,22 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_drivesearch_retrieve_basic_1
+        name: retrieve_drive_chunks
+        arguments: '{"query": "drives last weekend high consumption", "source_types": ["drive_summary"], "k": 5}'
+    input_tokens: 48
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_drivesearch_hydrate_basic_1
+        name: hydrate_drive_replay
+        arguments: '{"source_type": "drive_summary", "source_id": "drive-101"}'
+    input_tokens: 96
+    output_tokens: 28
+  - finish_reason: stop
+    content: |
+      I found one matching drive: a high-consumption drive on Saturday.
+      Open its replay at the cited replay URL for the full telemetry
+      timeline.
+    input_tokens: 142
+    output_tokens: 36

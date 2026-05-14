@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "charging-diagnosis" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-search" | "rag-help" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "charging-diagnosis" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -135,6 +135,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-nl-automation-builder-root"] as const),
   }),
+  "nl-drive-search-replay": Object.freeze({
+    id: "nl-drive-search-replay",
+    name: "NL drive search and replay",
+    description: "Opt-in LLM-assisted natural-language search across the calling user's drive history with one-click jump-to-replay anchors, grounded in the F7 RAG retriever over drive_summary, route_segment, and location_summary corpora. The deterministic typed filters on /drives and the existing /drives/:id/replay TripReplayPage controls remain the canonical baseline when AI is off; the AI side panel only narrates and cites already-retrieved drives with replay anchors — it never replaces the typed query path.",
+    tier: "D",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-nl-drive-search-replay-root"] as const),
+  }),
   "nl-search": Object.freeze({
     id: "nl-search",
     name: "Natural-language search",
@@ -181,6 +192,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "drive-coaching",
   "nl-alert-builder",
   "nl-automation-builder",
+  "nl-drive-search-replay",
   "nl-search",
   "rag-help",
   "yir-narration",

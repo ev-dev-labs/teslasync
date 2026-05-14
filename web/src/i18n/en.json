@@ -2434,6 +2434,10 @@
         "rag-help": {
           "label": "RAG-backed app help",
           "description": "Opt-in LLM that answers natural-language questions about the application using its own documentation, runbooks, and i18n strings — with explicit citations to each source. The deterministic curated /help page links and tooltips remain the canonical baseline when AI is off."
+        },
+        "nl-drive-search-replay": {
+          "label": "Natural-language drive search and replay",
+          "description": "Opt-in LLM that finds a drive from a plain-language description and links straight to its replay. The typed search, filter chips, range picker, and vehicle selector on the Drives page remain the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -6178,6 +6182,13 @@
     "title": "Drive History",
     "subtitle": "Trip scoring, efficiency analysis, distance patterns, and performance data",
     "searchPlaceholder": "Search drives — try \"score:D\", \"Office\", \"29.1\"",
+    "aiSearch": {
+      "title": "Find a drive in natural language",
+      "description": "Describe a drive (for example \"last Friday's trip to the coast\") and jump straight to its replay — the assistant only narrates your own drives.",
+      "badge": "AI",
+      "searchButton": "Search with AI",
+      "placeholder": "Describe a drive — for example \"last Friday's coast trip\" or \"the one with the lowest efficiency last week\""
+    },
     "noPriorData": "No drives in prior period: {{start}} – {{end}}",
     "priorPeriod": "prior period: {{start}} – {{end}}",
     "totalDrives": "Total Drives",
