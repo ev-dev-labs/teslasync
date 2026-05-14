@@ -24,6 +24,7 @@ import (
 	"net/http"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
+	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -34,13 +35,31 @@ import (
 //
 // Adding a new AI route MUST go through this function so tools/aivet
 // can statically prove every AI route is wrapped by guard.Wrap.
-func mountAIRoutes(r chi.Router, g *guard.Guard) {
+//
+// Parameters:
+//   - r        : the parent chi router (the /api/v1 subroute).
+//   - g        : the AI feature guard (mode + per-feature toggle).
+//   - registry : the provider registry (Phase-50 / F1, slice 0002).
+//   - sudoMW   : RequireSudo middleware factory baked with the live
+//     sudoStore + sudoCfg. Wrapped around ops-only routes
+//     like /_internal/health so an attacker who somehow
+//     opens the feature toggle still needs a fresh sudo
+//     token to reach the diagnostic.
+func mountAIRoutes(r chi.Router, g *guard.Guard, registry *provider.Registry, sudoMW func(http.Handler) http.Handler) {
 	r.Route("/ai", func(r chi.Router) {
 		// chatbot-llm (Phase-50 / U1, slice 0011 wires the real
 		// handler). The stub below exists so the AI-off contract
 		// has a concrete /api/v1/ai/chatbot to assert 404 against
 		// in slice F0's verification.
 		r.Post("/chatbot", g.Wrap("chatbot-llm", aiChatbotStubHandler))
+
+		// ai-provider-health (Phase-50 / F1, slice 0002).
+		// Ops-only diagnostic. Triple-gated:
+		//   guard.Wrap (mode + feature toggle) → RequireSudo → handler.
+		// Returns 404 in off mode (ADR-015 §I6 + §I9 — provider
+		// info MUST NOT leak when AI is disabled).
+		r.With(sudoMW).Get("/_internal/health",
+			g.Wrap("ai-provider-health", newAIInternalHealthHandler(registry)))
 	})
 }
 

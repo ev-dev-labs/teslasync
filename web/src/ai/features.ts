@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "chatbot-llm";
+export type AiFeatureId = "ai-provider-health" | "chatbot-llm";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -25,6 +25,17 @@ export interface AiFeatureMeta {
 }
 
 export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.freeze({
+  "ai-provider-health": Object.freeze({
+    id: "ai-provider-health",
+    name: "AI Provider Health (ops)",
+    description: "Diagnostic endpoint that reports the active AI provider and its capabilities. Off by default; enable only for ops debugging.",
+    tier: "F",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: false,
+    needsStream: false,
+    uiTestIds: Object.freeze([] as const),
+  }),
   "chatbot-llm": Object.freeze({
     id: "chatbot-llm",
     name: "LLM Chatbot",
@@ -39,6 +50,7 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
 });
 
 export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
+  "ai-provider-health",
   "chatbot-llm",
 ] as const);
 

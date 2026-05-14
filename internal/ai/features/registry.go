@@ -118,6 +118,31 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+
+	// Phase-50 / F1 (slice 0002) — provider-abstraction health probe.
+	// Ops-only diagnostic that reports the *currently active*
+	// adapter's name + capabilities so a deploy can confirm the
+	// settings-driven provider selection behaves as expected. Has no
+	// frontend surface (hence empty Frontend / UITestIDs) and is
+	// gated behind sudo + the standard ai-mode + feature toggle so a
+	// production install can leave it off and surface nothing.
+	"ai-provider-health": {
+		ID:          "ai-provider-health",
+		Name:        "AI Provider Health (ops)",
+		Description: "Diagnostic endpoint that reports the active AI provider and its capabilities. Off by default; enable only for ops debugging.",
+		Tier:        "F",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  false,
+		NeedsStream: false,
+		Routes: RouteSet{
+			Backend:   []string{"GET /api/v1/ai/_internal/health"},
+			Frontend:  []string{},
+			UITestIDs: []string{},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 }
 
 // IsKnown reports whether id corresponds to a registered feature. Used

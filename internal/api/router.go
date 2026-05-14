@@ -44,6 +44,19 @@ import (
 	// introduces an AI route via a bare HandlerFunc.
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 
+	// Phase-50 / 0002 — F1 Provider Abstraction. The registry +
+	// adapters live behind the same hexagonal port so feature code
+	// imports only "internal/ai/provider", never the concrete
+	// adapter packages. The four concrete adapter imports below are
+	// the package-init equivalents — Register() is called explicitly
+	// in NewRouter so a fresh build cannot accidentally enable a
+	// provider by virtue of an unintended import.
+	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
+	aianthropic "github.com/ev-dev-labs/teslasync/internal/ai/provider/anthropic"
+	aimock "github.com/ev-dev-labs/teslasync/internal/ai/provider/mock"
+	aiollama "github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama"
+	aiopenai "github.com/ev-dev-labs/teslasync/internal/ai/provider/openai"
+
 	// New hexagonal architecture packages
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
@@ -245,7 +258,39 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// place. Settings is the same SettingsRepo the rest of the
 	// app uses; the AIMode/AIFeatureEnabled methods on it are
 	// fail-closed (return "off"/false on any error).
-	aiGuard := guard.New(database.NewSettingsRepo(db))
+	aiSettingsRepo := database.NewSettingsRepo(db)
+	aiGuard := guard.New(aiSettingsRepo)
+
+	// Phase-50 / 0002 — F1 Provider Abstraction.
+	//
+	// The provider registry composes adapter factories with the
+	// standard decorator chain (currently only OTel WithTrace; F3
+	// adds audit, F8 adds redaction, F9 adds rate/cost cap). The
+	// registry reads settings on every For() call so a Settings
+	// save takes effect on the next request without restart.
+	//
+	// SettingsReader is satisfied by aiSettingsReader below — the
+	// existing *database.SettingsRepo already implements
+	// AIMode + AIFeatureEnabled but does not yet expose a typed
+	// AIProviderConfig accessor; the inline adapter pulls the
+	// JSONB column out of Get() so F1 does not have to mutate
+	// the repo (R5 mitigation — keep settings repo single-purpose).
+	aiRegistry := provider.NewRegistry(
+		aiSettingsReader{repo: aiSettingsRepo},
+		provider.WithTrace,
+	)
+	aiRegistry.Register(provider.NameOllama, aiollama.Builder)
+	aiRegistry.Register(provider.NameOpenAI, aiopenai.Builder)
+	aiRegistry.Register(provider.NameAnthropic, aianthropic.Builder)
+	// The mock adapter is registered so ops + the F6 eval harness
+	// can pin "default": "mock" in settings to short-circuit a
+	// flaky upstream during incident response. ADR-015 §I1 still
+	// applies — the mock builder is unreachable in off mode.
+	aiRegistry.Register(provider.NameMock, func(cfg provider.ProviderConfig) (provider.Provider, error) {
+		return aimock.New(provider.Capabilities{
+			Tools: true, Streaming: true, Embeddings: true, MaxContext: 4096,
+		}), nil
+	})
 	// Phase-46 / Prompt 36 — settings export/import. The serializer
 	// fans out across four repos (settings, alert_rules, geofences,
 	// notification_quiet_hours); construct it once + share between
@@ -2093,7 +2138,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg))
 
 		// Watch endpoints — lightweight API key auth for wearable devices
 		r.Route("/watch", func(r chi.Router) {
@@ -2258,4 +2303,34 @@ func isVehiclePhotoUploadPath(method, path string) bool {
 	// future endpoints under /vehicles/{id}/photo/X don't
 	// inherit the 12 MB limit.
 	return tail == "/photo"
+}
+
+// aiSettingsReader adapts *database.SettingsRepo to the
+// provider.SettingsReader port. The repo natively exposes
+// AIMode + AIFeatureEnabled (cheap single-row PK lookups). The
+// AIProviderConfig accessor is implemented here by calling
+// the existing typed Get() and pulling out the AIProviderConfig
+// JSONB field — keeping the repo single-purpose (R5 mitigation)
+// and avoiding a settings-repo migration in slice F1.
+type aiSettingsReader struct {
+	repo *database.SettingsRepo
+}
+
+func (a aiSettingsReader) AIMode(ctx context.Context) (string, error) {
+	return a.repo.AIMode(ctx)
+}
+
+func (a aiSettingsReader) AIFeatureEnabled(ctx context.Context, featureID string) (bool, error) {
+	return a.repo.AIFeatureEnabled(ctx, featureID)
+}
+
+func (a aiSettingsReader) AIProviderConfig(ctx context.Context) (map[string]any, error) {
+	s, err := a.repo.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s == nil || s.AIProviderConfig == nil {
+		return map[string]any{}, nil
+	}
+	return s.AIProviderConfig, nil
 }
