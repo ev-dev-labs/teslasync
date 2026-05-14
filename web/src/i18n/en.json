@@ -2362,6 +2362,10 @@
         "yir-narration": {
           "label": "Year-in-review narration",
           "description": "Opt-in LLM narration of the annual year-in-review slides. The deterministic template slides remain the baseline when AI is off."
+        },
+        "anomaly-explanations": {
+          "label": "Anomaly explanation narration",
+          "description": "Opt-in LLM narration that explains already-detected anomalies in plain language. The deterministic detector and safe-range explanations remain the baseline when AI is off."
         }
       },
       "archive": {
@@ -5562,7 +5566,13 @@
     "noAnomalies": "No anomalies detected — all systems normal.",
     "frequency": "Most Frequent Anomalies",
     "count": "Anomalies",
-    "noFrequency": "Anomaly frequency data will appear after detection runs."
+    "noFrequency": "Anomaly frequency data will appear after detection runs.",
+    "aiExplanation": {
+      "title": "AI explanation",
+      "description": "Get a plain-language explanation of the anomalies the detector has already identified above.",
+      "generateButton": "Generate explanation",
+      "badge": "AI"
+    }
   },
   "driveDetail": {
     "costSavings": "Cost & Savings",

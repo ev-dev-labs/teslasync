@@ -18,6 +18,7 @@ import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { useAnomalies, type AnomalyEntry } from '@/api/hooks/useAnomalies';
+import { AIAnomalyExplanations } from '@/components/ai/AIAnomalyExplanations';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -125,6 +126,16 @@ export default function AnomalyDashboardPage() {
             />
           </StaggerItem>
         </StaggerContainer>
+      </FadeIn>
+
+      {/* ── Phase-50 / U4: opt-in AI anomaly explanation ──── */}
+      {/* Renders only when ai_mode != 'off' AND the              */}
+      {/* anomaly-explanations toggle is on. The withAiFeature    */}
+      {/* HOC inside AIAnomalyExplanations enforces the gate;     */}
+      {/* the deterministic detector + safe-range messages above  */}
+      {/* remain the canonical baseline in off mode (ADR-015 §I3).*/}
+      <FadeIn delay={0.04}>
+        <AIAnomalyExplanations />
       </FadeIn>
 
       {/* ── Health Summary Cards ───────────────────────── */}

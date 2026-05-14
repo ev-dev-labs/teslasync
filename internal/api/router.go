@@ -70,6 +70,7 @@ import (
 	chatbotllm "github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm"
 	digestnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration"
 	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
+	anomalyexplanations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
 	// New hexagonal architecture packages
@@ -545,6 +546,28 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	costForecastHandler := NewCostForecastHandler(db)
 	chargingOptimizerHandler := NewChargingOptimizerHandler(db)
 	anomalyHandler := NewAnomalyHandler(db)
+	// Phase-50 / U4 (slice 0014) — register the anomaly-explanations
+	// slice's read-only tool on the SAME process-wide registry so
+	// the dispatcher can resolve `query_anomaly_context` for the
+	// anomaly-explanations strategy. Must register AFTER
+	// Register12Builtins + RegisterDigestTools + RegisterYearReviewTools
+	// so the BuiltinNames-pin test continues to see the canonical
+	// builtins; this call extends the registry beyond the pinned set.
+	// AnomalyHandler implements aitools.AnomalySource via
+	// (*AnomalyHandler).DetectAnomalies — see anomaly_handler.go.
+	tools.RegisterAnomalyTools(aiToolRegistry, tools.AnomalySources{
+		Anomaly: anomalyHandler,
+	})
+	// Phase-50 / U4 (slice 0014) — Anomaly explanation handler.
+	// One per process; stateless beyond constructor inputs. Must
+	// be constructed AFTER the tool registration above so the
+	// dispatcher can resolve the strategy's allowedTools at boot.
+	aiAnomalyHandler := NewAIAnomalyHandler(
+		aiRegistry,
+		aiToolRegistry,
+		anomalyexplanations.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
 	lifetimeHandler := NewLifetimeHandler(db, eventHub)
 	yearReviewHandler := NewYearReviewHandler(db)
 	chargePlannerHandler := NewChargePlannerHandler(db, teslaClient, cfg, stateReader)
@@ -2248,7 +2271,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

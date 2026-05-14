@@ -57,6 +57,9 @@ import (
 //   - aiYIR      : the real LLM-backed handler for the year-in-review
 //                  narration (Phase-50 / U3, slice 0013). Same nil
 //                  fallback as the chatbot/digest handlers.
+//   - aiAnomaly  : the real LLM-backed handler for the anomaly
+//                  explanation narration (Phase-50 / U4, slice 0014).
+//                  Same nil fallback pattern.
 func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
@@ -65,6 +68,7 @@ func mountAIRoutes(
 	aiChatbot *AIChatbotHandler,
 	aiDigest *AIDigestHandler,
 	aiYIR *AIYearReviewHandler,
+	aiAnomaly *AIAnomalyHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// chatbot-llm (Phase-50 / U1, slice 0011 wires the real
@@ -100,6 +104,17 @@ func mountAIRoutes(
 		}
 		r.Post("/analytics/year-in-review/narrate", g.Wrap("yir-narration", yirHandler))
 
+		// anomaly-explanations (Phase-50 / U4, slice 0014). Same
+		// stub-fallback pattern as chatbot/digest/yir — a nil
+		// handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode.
+		var anomalyHandler http.HandlerFunc = aiAnomalyStubHandler
+		if aiAnomaly != nil {
+			anomalyHandler = aiAnomaly.ServeHTTP
+		}
+		r.Post("/anomalies/explain", g.Wrap("anomaly-explanations", anomalyHandler))
+
 		// ai-provider-health (Phase-50 / F1, slice 0002).
 		// Ops-only diagnostic. Triple-gated:
 		//   guard.Wrap (mode + feature toggle) → RequireSudo → handler.
@@ -130,4 +145,11 @@ func aiDigestStubHandler(w http.ResponseWriter, _ *http.Request) {
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiYIRStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai year-in-review narration is not yet implemented")
+}
+
+// aiAnomalyStubHandler mirrors aiYIRStubHandler for the U4 slice.
+// Reachable only when AIAnomalyHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiAnomalyStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai anomaly explanation is not yet implemented")
 }

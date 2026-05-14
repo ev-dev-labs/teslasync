@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "chatbot-llm" | "digest-narration" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "chatbot-llm" | "digest-narration" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -58,6 +58,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: false,
     uiTestIds: Object.freeze([] as const),
   }),
+  "anomaly-explanations": Object.freeze({
+    id: "anomaly-explanations",
+    name: "Anomaly explanation narration",
+    description: "Opt-in LLM narration that explains already-detected anomalies in plain language. The deterministic detector and safe-range explanations remain the baseline when AI is off.",
+    tier: "U",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-anomaly-explanations-root"] as const),
+  }),
   "chatbot-llm": Object.freeze({
     id: "chatbot-llm",
     name: "LLM Chatbot",
@@ -97,6 +108,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "__redaction_bypass__",
   "__usage__",
   "ai-provider-health",
+  "anomaly-explanations",
   "chatbot-llm",
   "digest-narration",
   "yir-narration",

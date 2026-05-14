@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"net/http"
@@ -10,10 +11,22 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	aitools "github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // AnomalyHandler detects unusual signal values and produces health alerts.
+//
+// Phase-50 / 0014 — U4 Anomaly explanation narration.
+//
+// The detector logic (Z-score outliers, range violations, trend deltas) was
+// previously embedded inside [GetAnomalies]. It has been extracted into the
+// public method [AnomalyHandler.DetectAnomalies] so the U4 AI tool
+// `query_anomaly_context` (internal/ai/tools/anomaly.go) can reuse the
+// SAME detection code with NO new SQL written. The HTTP handler is now a
+// thin wrapper that calls DetectAnomalies + writes the response — the wire
+// shape is byte-equivalent to the pre-refactor handler (verified by
+// TestGetAnomalies_WireShapeUnchanged).
 type AnomalyHandler struct {
 	db *database.DB
 }
@@ -22,8 +35,19 @@ func NewAnomalyHandler(db *database.DB) *AnomalyHandler {
 	return &AnomalyHandler{db: db}
 }
 
+// Compile-time assertion: AnomalyHandler satisfies the AnomalySource
+// interface from internal/ai/tools/anomaly.go. A future edit that drops
+// DetectAnomalies or changes its signature breaks this build, surfacing
+// the wiring bug at compile time instead of at first AI request.
+var _ aitools.AnomalySource = (*AnomalyHandler)(nil)
+
 // ── Response types ───────────────────────────────────────────
 
+// anomalyResponse is the JSON wire shape served by GetAnomalies. The
+// shape is preserved byte-for-byte across the Phase-50/0014 refactor —
+// the frontend hook (web/src/api/hooks/useAnomalies.ts) and any
+// downstream consumers continue to see exactly the same field names,
+// types, and ordering as before.
 type anomalyResponse struct {
 	Anomalies         []anomalyEntry    `json:"anomalies"`
 	HealthSummary     map[string]string `json:"health_summary"`
@@ -107,6 +131,12 @@ var signalDisplayName = map[string]string{
 // ── Handler ──────────────────────────────────────────────────
 
 // GetAnomalies handles GET /analytics/anomalies?vehicle_id=X&days=7
+//
+// Phase-50/0014: this method is now a thin wrapper around the public
+// [AnomalyHandler.DetectAnomalies] detector. The detector returns the
+// AI-shared result type, which we translate back into the legacy
+// anomalyResponse wire shape (no field renames, no semantic changes).
+// TestGetAnomalies_WireShapeUnchanged pins this guarantee.
 func (h *AnomalyHandler) GetAnomalies(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
@@ -124,7 +154,91 @@ func (h *AnomalyHandler) GetAnomalies(w http.ResponseWriter, r *http.Request) {
 		days = d
 	}
 
-	ctx := r.Context()
+	result, err := h.DetectAnomalies(r.Context(), vehicleID, days)
+	if err != nil {
+		// DetectAnomalies preserves the pre-refactor handler's
+		// graceful-degradation contract: it logs query failures
+		// and returns a (partial or empty) result with a nil
+		// error. A non-nil error here means the contract was
+		// broken — which would itself be a regression.
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("anomaly: DetectAnomalies returned error")
+		writeError(w, http.StatusInternalServerError, "failed to detect anomalies")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, anomalyContextResultToResponse(result))
+}
+
+// anomalyContextResultToResponse converts the AI-shared
+// AnomalyContextResult back into the legacy HTTP wire shape. This is
+// the seam that lets the same detector code feed both the HTTP path
+// and the AI tool path while keeping the existing JSON byte-identical.
+//
+// Field-by-field mapping is intentional (no struct embedding) so a
+// future change to either side is loud rather than silent.
+func anomalyContextResultToResponse(r *aitools.AnomalyContextResult) anomalyResponse {
+	if r == nil {
+		// Defensive: should not happen — DetectAnomalies always
+		// returns a non-nil pointer. But if a future edit ever
+		// regresses this, the response stays well-formed instead
+		// of nil-dereferencing on field access below.
+		return anomalyResponse{
+			Anomalies:        []anomalyEntry{},
+			HealthSummary:    map[string]string{},
+			SignalsMonitored: 0,
+			AnomaliesLast7d:  0,
+			AnomaliesLast24h: 0,
+		}
+	}
+	out := anomalyResponse{
+		Anomalies:        make([]anomalyEntry, 0, len(r.Anomalies)),
+		HealthSummary:    r.HealthSummary,
+		SignalsMonitored: r.SignalsMonitored,
+		AnomaliesLast7d:  r.AnomaliesLast7d,
+		AnomaliesLast24h: r.AnomaliesLast24h,
+	}
+	for _, a := range r.Anomalies {
+		out.Anomalies = append(out.Anomalies, anomalyEntry{
+			Signal:     a.Signal,
+			Type:       a.Type,
+			Severity:   a.Severity,
+			Value:      a.Value,
+			Baseline:   a.Baseline,
+			ZScore:     a.ZScore,
+			DetectedAt: a.DetectedAt,
+			Message:    a.Message,
+		})
+	}
+	return out
+}
+
+// DetectAnomalies runs the full detection pipeline (Z-score outliers,
+// range violations, trend deltas) for one vehicle over the last `days`
+// days and returns the deduplicated, severity-sorted result.
+//
+// The method is the canonical service the HTTP handler [GetAnomalies]
+// AND the AI tool `query_anomaly_context` (internal/ai/tools/anomaly.go)
+// both call into — there is exactly ONE detector, period.
+//
+// Behavioural contract preserved across the Phase-50/0014 refactor:
+//
+//   - `days` is NOT validated here; the HTTP handler clamps to [1,30]
+//     and the AI tool's input schema does the same. Passing 0 or a
+//     negative value yields whatever Postgres returns for an empty
+//     window (no anomalies).
+//   - Per-stage query failures are LOGGED via zerolog and SWALLOWED;
+//     the method always returns a non-nil result with a nil error.
+//     This mirrors the pre-refactor handler's graceful-degradation
+//     posture: a flaky DB connection should produce an "everything
+//     looks normal" answer, not a 500. The HTTP handler relies on
+//     this contract to stay 200-OK in degraded conditions.
+//   - The output `Anomalies` slice is non-nil even when empty (the
+//     legacy handler relied on this for `json:"anomalies":[]` not
+//     `null`; preserved here so the JSON shape is byte-identical).
+//   - HealthSummary always includes the five canonical category keys
+//     (battery, tires, motors, hvac, charging) seeded to "normal" so
+//     the frontend can render the health grid without nil checks.
+func (h *AnomalyHandler) DetectAnomalies(ctx context.Context, vehicleID int64, days int) (*aitools.AnomalyContextResult, error) {
 	since := time.Now().AddDate(0, 0, -days)
 
 	var allAnomalies []anomalyEntry
@@ -173,7 +287,7 @@ func (h *AnomalyHandler) GetAnomalies(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Count last 24h and 7d
+	// Count last 24h
 	now := time.Now()
 	last24h := 0
 	for _, a := range allAnomalies {
@@ -183,23 +297,34 @@ func (h *AnomalyHandler) GetAnomalies(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writeJSON(w, http.StatusOK, anomalyResponse{
-		Anomalies:        allAnomalies,
+	// Convert to the AI-shared shape. Pre-allocating the slice with
+	// len/cap=len(allAnomalies) preserves the "empty slice, not nil"
+	// invariant that the legacy wire shape relied on.
+	out := &aitools.AnomalyContextResult{
+		Anomalies:        make([]aitools.AnomalyContextEntry, 0, len(allAnomalies)),
 		HealthSummary:    healthSummary,
 		SignalsMonitored: signalsChecked,
 		AnomaliesLast7d:  len(allAnomalies),
 		AnomaliesLast24h: last24h,
-	})
+	}
+	for _, a := range allAnomalies {
+		out.Anomalies = append(out.Anomalies, aitools.AnomalyContextEntry{
+			Signal:     a.Signal,
+			Type:       a.Type,
+			Severity:   a.Severity,
+			Value:      a.Value,
+			Baseline:   a.Baseline,
+			ZScore:     a.ZScore,
+			DetectedAt: a.DetectedAt,
+			Message:    a.Message,
+		})
+	}
+	return out, nil
 }
 
 // ── Z-score detection ────────────────────────────────────────
 
-func (h *AnomalyHandler) detectZScoreAnomalies(ctx interface {
-	Deadline() (time.Time, bool)
-	Done() <-chan struct{}
-	Err() error
-	Value(interface{}) interface{}
-}, vehicleID int64, since time.Time) ([]anomalyEntry, int) {
+func (h *AnomalyHandler) detectZScoreAnomalies(ctx context.Context, vehicleID int64, since time.Time) ([]anomalyEntry, int) {
 
 	rows, err := h.db.Pool.Query(ctx, `
 		WITH stats AS (
@@ -272,12 +397,7 @@ func (h *AnomalyHandler) detectZScoreAnomalies(ctx interface {
 
 // ── Range violation detection ────────────────────────────────
 
-func (h *AnomalyHandler) detectRangeViolations(ctx interface {
-	Deadline() (time.Time, bool)
-	Done() <-chan struct{}
-	Err() error
-	Value(interface{}) interface{}
-}, vehicleID int64, since time.Time) []anomalyEntry {
+func (h *AnomalyHandler) detectRangeViolations(ctx context.Context, vehicleID int64, since time.Time) []anomalyEntry {
 
 	var anomalies []anomalyEntry
 
@@ -329,12 +449,7 @@ func (h *AnomalyHandler) detectRangeViolations(ctx interface {
 
 // ── Trend anomaly detection ──────────────────────────────────
 
-func (h *AnomalyHandler) detectTrendAnomalies(ctx interface {
-	Deadline() (time.Time, bool)
-	Done() <-chan struct{}
-	Err() error
-	Value(interface{}) interface{}
-}, vehicleID int64) []anomalyEntry {
+func (h *AnomalyHandler) detectTrendAnomalies(ctx context.Context, vehicleID int64) []anomalyEntry {
 
 	trendSignals := []string{
 		"BatteryLevel", "PackVoltage",

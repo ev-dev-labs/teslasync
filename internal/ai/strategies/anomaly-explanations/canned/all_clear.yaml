@@ -1,0 +1,14 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_anomaly_ctx_clear_1
+        name: query_anomaly_context
+        arguments: '{"vehicle_id": 1, "days": 7}'
+    input_tokens: 32
+    output_tokens: 22
+  - finish_reason: stop
+    content: |
+      Good news — no anomalies were detected for Roadie over the last 7 days.
+      Battery, tires, motors, climate, and charging all look normal.
+    input_tokens: 60
+    output_tokens: 30

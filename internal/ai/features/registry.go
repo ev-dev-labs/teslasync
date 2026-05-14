@@ -278,6 +278,60 @@ var Registry = map[string]Feature{
 			PushKinds: []string{"ai_yir_ready"},
 		},
 	},
+	// Phase-50 / U4 (slice 0014) — Anomaly explanation narration.
+	//
+	// Adds opt-in LLM-narrated plain-language explanation of anomalies
+	// the deterministic Z-score detector has ALREADY identified. The
+	// baseline detector + static safe-range explanation strings at
+	// `internal/api/anomaly_handler.go` (rendered by
+	// `web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx`,
+	// mounted at the SPA route /anomaly-detection) remain the
+	// canonical baseline for any user with `ai_mode='off'`; this
+	// feature only wires the AI surface that lives alongside it.
+	//
+	// Detector behaviour, threshold values, and alerting routing are
+	// UNCHANGED. The strategy reads anomalies via the typed
+	// `query_anomaly_context` tool which delegates to the existing
+	// AnomalyHandler.DetectAnomalies — no new SQL, no parallel
+	// detector implementation.
+	//
+	// Backend: POST /api/v1/ai/anomalies/explain is mounted by
+	// mountAIRoutes in `internal/api/ai_routes.go` via guard.Wrap so
+	// off-mode requests return 404 BEFORE the handler runs (ADR-015
+	// §I6).
+	//
+	// Frontend: the canonical host route declared by the slice prompt
+	// is `/analytics/anomalies` — the AI section actually renders
+	// inside the existing /anomaly-detection page (the only anomaly
+	// dashboard in the SPA today; lives under
+	// `web/src/features/diagnostics/...` not `analytics/...` because
+	// the diagnostics directory is the canonical anomaly surface).
+	// The off-mode invariant test
+	// (`AnomalyDashboardAIOff.test.tsx`) proves that the wrapped
+	// component carrying `ai-feature-anomaly-explanations-root` is
+	// absent from the DOM in off mode.
+	//
+	// Background / Push: this slice ships zero new jobs and zero new
+	// push kinds — anomaly explanation is request/response, narrated
+	// on demand from the dashboard. The empty arrays are explicit so
+	// CoverageOK passes.
+	"anomaly-explanations": {
+		ID:          "anomaly-explanations",
+		Name:        "Anomaly explanation narration",
+		Description: "Opt-in LLM narration that explains already-detected anomalies in plain language. The deterministic detector and safe-range explanations remain the baseline when AI is off.",
+		Tier:        "U",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/anomalies/explain"},
+			Frontend:  []string{"/analytics/anomalies"},
+			UITestIDs: []string{"ai-feature-anomaly-explanations-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as
