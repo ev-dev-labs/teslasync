@@ -8,7 +8,7 @@ description: "Phase-50 / Prompt 0003 — F2: Settings UI for AI"
 
 | Field | Value |
 |---|---|
-| Log path | .github/prompts/db-refactor/logs/phase-50-0003-F2-settings-ui.log |
+| Log path | `.github/prompts/db-refactor/logs/phase-50-0003-F2-settings-ui.log` |
 | Depends-on | See this prompt header and Phase-50 methodology. |
 | Allowed files to change | See the **Allowed files** section below; methodology-only edits may change only Phase-50 prompt/ADR artifacts. |
 
@@ -18,11 +18,11 @@ description: "Phase-50 / Prompt 0003 — F2: Settings UI for AI"
 2. No scope narrowing - run the exact gate command, no subsets
 3. No skip-and-assume - can't run gate -> BLOCKED, never DONE
 4. No field resurrection - don't add back deleted fields to "fix" things
-5. No stubs - no eturn nil, // TODO, panic("not impl")
+5. No stubs - no `return nil`, `// TODO`, `panic("not impl")`
 6. No delegation - NO sub-agents, NO parallel, NO background tasks
 7. No predecessor bypass - verify predecessor STATUS=DONE first
 8. No commit on red - commit only the log when BLOCKED
-9. No silent drift - git status outside allowed files -> BLOCKED
+9. No silent drift - `git status` outside allowed files -> BLOCKED
 10. Log MUST contain EXIT=<int> and STATUS=<DONE|BLOCKED> on own lines
 
 ## Logging Requirements
@@ -31,14 +31,14 @@ The slice log MUST include these sections, in order:
 
 | Section | Purpose |
 |---|---|
-| === PREFLIGHT === | Branch, predecessor logs, and dirty-tree check. |
-| === SURVEY === | Files, routes, DTOs, hooks, registry entries, and baseline behavior inspected before edits. |
-| === REASONING === | Why the selected design preserves ADR-015 and the Phase-50 methodology. |
-| === CHANGES === | Summary of production, test, registry, i18n, prompt, and golden changes. |
-| === GATE === | Full command transcripts with EXIT markers. |
-| === COMMIT === | git add/commit transcript, or blocked-log-only commit transcript. |
-| === AI-OFF CONTRACT === | ADR-015 footer with evidence for every invariant this slice touches. |
-| === STATUS === | Final EXIT=<int> and STATUS=<DONE|BLOCKED> markers on their own lines. |
+| `=== PREFLIGHT ===` | Branch, predecessor logs, and dirty-tree check. |
+| `=== SURVEY ===` | Files, routes, DTOs, hooks, registry entries, and baseline behavior inspected before edits. |
+| `=== REASONING ===` | Why the selected design preserves ADR-015 and the Phase-50 methodology. |
+| `=== CHANGES ===` | Summary of production, test, registry, i18n, prompt, and golden changes. |
+| `=== GATE ===` | Full command transcripts with EXIT markers. |
+| `=== COMMIT ===` | git add/commit transcript, or blocked-log-only commit transcript. |
+| `=== AI-OFF CONTRACT ===` | ADR-015 footer with evidence for every invariant this slice touches. |
+| `=== STATUS ===` | Final `EXIT=<int>` and `STATUS=<DONE|BLOCKED>` markers on their own lines. |
 
 ## Problem
 
@@ -47,15 +47,15 @@ This Phase-50 foundation or gate prompt must preserve ADR-015: AI is additive, d
 ## Action Steps
 
 1. Read ADR-015 and this prompt before making any changes.
-2. Verify predecessor logs and branch state in === PREFLIGHT ===.
-3. Survey the current code and document the baseline in === SURVEY === before editing.
+2. Verify predecessor logs and branch state in `=== PREFLIGHT ===`.
+3. Survey the current code and document the baseline in `=== SURVEY ===` before editing.
 4. Make only the changes allowed by this prompt and preserve the non-AI baseline.
-5. Run every verification command exactly as written and paste raw output into === GATE ===.
-6. If any gate fails, stop with STATUS=BLOCKED and commit only the log.
+5. Run every verification command exactly as written and paste raw output into `=== GATE ===`.
+6. If any gate fails, stop with `STATUS=BLOCKED` and commit only the log.
 
 ## Gate
 
-The prompt is DONE only if every required verification command exits 0, the log contains EXIT=0 and STATUS=DONE on their own lines, the ADR-015 footer is present with evidence, and git status --short contains only allowed files before commit.
+The prompt is DONE only if every required verification command exits 0, the log contains `EXIT=0` and `STATUS=DONE` on their own lines, the ADR-015 footer is present with evidence, and `git status --short` contains only allowed files before commit.
 
 ## Commit
 
