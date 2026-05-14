@@ -7,6 +7,7 @@ import { SectionErrorBoundary, AlertBanner } from '@/components/feedback';
 import { ChartTimeRangeProvider } from '@/components/charts';
 import { ShareDriveDialog } from '../components/ShareDriveDialog';
 import { AIDriveCoaching } from '@/components/ai/AIDriveCoaching';
+import { AISpeedProfileInsights } from '@/components/ai/AISpeedProfileInsights';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
   useDriveDetailData,
@@ -187,6 +188,9 @@ export default function DriveDetailPage() {
                 <SpeedHistogramChart speedHistData={speedHistData} />
               </SectionErrorBoundary>
             </div>
+            <SectionErrorBoundary name="drive-detail:ai-speed-profile-insights" fallbackTitle={t('driveDetail.section.aiSpeedProfileInsightsFailed', 'AI speed-profile insights failed to load')}>
+              <AISpeedProfileInsights driveId={id} />
+            </SectionErrorBoundary>
             <SectionErrorBoundary name="drive-detail:power-profile" fallbackTitle={t('driveDetail.section.powerProfileFailed', 'Power profile chart failed to load')}>
               <PowerProfileChart chartData={chartData} stats={stats} />
             </SectionErrorBoundary>

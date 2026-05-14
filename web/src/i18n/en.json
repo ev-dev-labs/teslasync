@@ -2438,6 +2438,10 @@
         "nl-drive-search-replay": {
           "label": "Natural-language drive search and replay",
           "description": "Opt-in LLM that finds a drive from a plain-language description and links straight to its replay. The typed search, filter chips, range picker, and vehicle selector on the Drives page remain the canonical baseline when AI is off."
+        },
+        "speed-profile-insights": {
+          "label": "Speed-profile insights",
+          "description": "Opt-in LLM that interprets a drive's speed regime distribution — city / suburban / highway buckets, outliers, and a high-level route context envelope — in a few short sentences. The deterministic SpeedHistogramChart and summary metrics on the drive detail page remain the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -5754,13 +5758,20 @@
       "speedHistogramFailed": "Speed histogram failed to load",
       "powerProfileFailed": "Power profile chart failed to load",
       "tirePressureFailed": "Tire pressure section failed to load",
-      "aiCoachingFailed": "AI drive coaching failed to load"
+      "aiCoachingFailed": "AI drive coaching failed to load",
+      "aiSpeedProfileInsightsFailed": "AI speed-profile insights failed to load"
     },
     "aiCoaching": {
       "title": "Drive coaching",
       "description": "Get a 2-4 paragraph plain-language coaching summary of this drive — efficiency, regen use, and notable braking or acceleration moments — generated from the same per-drive metrics shown above.",
       "badge": "AI",
       "generateButton": "Generate coaching"
+    },
+    "aiSpeedProfile": {
+      "title": "Speed-profile insights",
+      "description": "Get a short plain-language interpretation of this drive’s speed regime distribution — city / suburban / highway buckets, outliers, and how the speed envelope compares to a typical drive — generated from the same per-drive aggregates shown in the chart.",
+      "badge": "AI",
+      "generateButton": "Generate insights"
     },
     "vehicle": "Vehicle",
     "col": {

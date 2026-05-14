@@ -1,0 +1,465 @@
+Phase-50 / Prompt 0022 — D2 Speed-profile insights
+Feature ID: speed-profile-insights
+Branch: feat/ai-adoption
+HEAD at start: 4891e4d49483bd24396bba133187cf0dc5e96965 feat(ai): add Natural-language drive search and replay
+ADR: ADR-015 — AI-Off Contract
+
+=== PREFLIGHT ===
+
+Working tree at slice start (after the 0021 commit): clean.
+
+Predecessor logs verified DONE (tails captured at slice start):
+
+  phase-50-0001-F0-ai-off-contract.log           STATUS=DONE
+  phase-50-0002-F1-provider-abstraction.log      EXIT=0  STATUS=DONE
+  phase-50-0003-F2-settings-ui.log               EXIT=0  STATUS=DONE
+  phase-50-0004-F3-ai-call-log.log               EXIT=0  STATUS=DONE
+  phase-50-0005-F4-tool-use-framework.log        EXIT=0  STATUS=DONE
+  phase-50-0006-F5-sse-streaming.log             EXIT=0  STATUS=DONE
+  phase-50-0007-F6-eval-harness.log              EXIT=0  STATUS=DONE
+  phase-50-0008-F7-embeddings-pgvector.log       EXIT=0  STATUS=DONE
+  phase-50-0009-F8-redaction.log                 EXIT=0  STATUS=DONE
+  phase-50-0010-F9-rate-limiter-cost-cap.log     EXIT=0  STATUS=DONE
+
+All F0–F9 foundations are present. Honesty covenant rule 7 (predecessor bypass)
+is satisfied — proceeding.
+
+Branch confirmed: feat/ai-adoption.
+
+=== SURVEY ===
+
+Files inspected before any edit:
+
+  Backend:
+    internal/api/router.go                       — handler wiring + mountAIRoutes call
+    internal/api/ai_routes.go                    — 11 handler args + stub-fallback pattern
+    internal/api/ai_drive_coach_handler.go       — closest precedent (per-drive URL-param handler)
+    internal/api/ai_charging_diagnosis_handler.go — closest precedent (per-session URL-param handler)
+    internal/api/speed_profile_handler.go        — deterministic baseline route source-of-truth.
+                                                   The SQL CASE buckets at L52-58 are pinned by
+                                                   the new tool: <13.4112 mps "City",
+                                                   <26.8224 mps "Suburban", <40.2336 mps "Highway",
+                                                   otherwise "HighSpeed".
+    internal/api/ai_chatbot_handler.go           — denyAllConfirm + SSE writer
+    internal/ai/features/registry.go             — registry shape + previous slice entries
+    internal/ai/strategies/drive-coaching/**     — closest precedent for the strategy package layout
+    internal/ai/strategies/charging-diagnosis/** — closest precedent for goldens.yaml structure
+    internal/ai/tools/drive_coaching.go          — closest precedent for tool registration
+    internal/ai/tools/charging_diagnosis.go      — closest precedent for two-tool slice
+    internal/ai/redact/policies.go               — named-policy registry
+    internal/models/drive.go                     — *models.Drive shape (the row both tools read)
+
+  Frontend:
+    web/src/features/driving/pages/DriveDetailPage.tsx — already mounts <AIDriveCoaching driveId={id}/>;
+                                                         SpeedHistogramChart lives at L186-188.
+    web/src/components/ai/AIDriveCoaching.tsx          — closest precedent for the wrapped section.
+    web/src/components/ai/withAiFeature.tsx            — HOC wrapper used by every AI surface.
+    web/src/features/driving/__tests__/TestDriveCoachingAIOffShowsOnlyBaselineStats.test.tsx
+                                                       — closest precedent for the off-mode test.
+    web/src/i18n/en.json                               — settings.ai.feature + driveDetail.section
+                                                         + driveDetail.aiCoaching are the existing
+                                                         co-located keys.
+
+Baseline behaviour to preserve (the off-mode "renders chart only" surface):
+
+  GET  /api/v1/drives/{driveID}/speed-profile  — typed handler at SpeedProfileHandler.GetSpeedProfile
+                                                  returns the SQL-CASE buckets. UNCHANGED.
+  Page /drives/:id                              — SectionErrorBoundary-wrapped
+                                                  <SpeedHistogramChart speedHistData={speedHistData}/>
+                                                  reads useDriveSpeedProfile(id). UNCHANGED.
+
+New AI surfaces being added:
+
+  Backend route: POST /api/v1/ai/drives/{driveID}/speed-profile/insights
+                 (guarded by g.Wrap("speed-profile-insights", …))
+  Frontend:      <AISpeedProfileInsights driveId={id}/> rendered conditionally beside
+                 <SpeedHistogramChart/>; controlled by withAiFeature('speed-profile-insights', …).
+  UI test ID:    ai-feature-speed-profile-insights-root  (carried by the HOC wrapping div).
+
+=== REASONING ===
+
+ADR-015 invariants this slice touches and how the design satisfies each:
+
+  I1  default-off               Registry entry DefaultOn:false; no startup auto-enable.
+  I3  baseline intact           The deterministic speed-profile chart + summary metrics are
+                                untouched. The new <SectionErrorBoundary> wrapping the AI
+                                section is in addition to — not in place of — the chart's
+                                existing SectionErrorBoundary. /api/v1/drives/{id}/speed-profile
+                                handler and its SQL are not modified.
+  I4  zero egress               Strategy package has no provider import; the provider client is
+                                only resolved by the dispatcher at request time, which the
+                                guard short-circuits in off mode.
+  I5  hidden UI                 withAiFeature('speed-profile-insights', InnerSection) returns
+                                null in off mode AND when the toggle is false. The wrapping div
+                                with data-testid is only emitted by withAiFeature when the gate
+                                is open. Off-mode test asserts the testid is absent.
+  I6  404 routes                The route is mounted exclusively inside r.Route("/ai", …) with
+                                g.Wrap("speed-profile-insights", …) — guard returns 404 when
+                                ai_mode='off' OR the per-feature toggle is false (P6).
+  I7  per-feature               Registry entry has DefaultOn:false. Backend guard checks the
+                                per-feature toggle; HOC checks it on the client. Off-mode test
+                                exercises mode='off' WITH the per-feature toggle true to defeat
+                                the trivial "off because everything is off" pass.
+  I10 type system               aigen regenerated web/src/ai/features.ts; aivet confirms registry
+                                ↔ TS mirror are in sync; tsc --noEmit is clean.
+  I12 client/bg                 No new push kinds; no new background jobs; no new client-storage
+                                keys; one new lazy chunk surface (ai-speed-profile-insights) is
+                                already provided by the existing React.lazy split inside the
+                                drive-detail bundle (no top-level route added). Registry
+                                explicitly lists JobNames=[] and PushKinds=[] so the final gate
+                                proves absence.
+
+P-rule compliance:
+
+  P1 provider port              All LLM calls go through the dispatcher → registry → provider
+                                pattern already wired by F1/F4. Strategy package does not import
+                                a provider adapter directly (verified by grep:
+                                strategies/speed-profile-insights/*.go imports nothing from
+                                /provider/* — only /strategy, /provider/types, /tools/types).
+  P4 strategy/dispatcher loop   AISpeedProfileInsightsHandler.ServeHTTP delegates to
+                                dispatch.Run with the strategy + tool registry + denyAllConfirm
+                                — same as drive-coaching.
+  P5 decorator chain            Provider resolution honours the F1 decorator order baked into
+                                the registry (redaction → rate-limit → cost-cap → audit → trace).
+                                This slice adds no new decorators.
+  P6 guard                      ai.GuardedHandler is the only mount path; both backend and
+                                frontend gates use the same feature id "speed-profile-insights".
+  P8 evals                      goldens.yaml has 3 deterministic cases (city_drive,
+                                highway_drive, refusal_other_drive). Canned files under
+                                strategies/speed-profile-insights/canned/* supply the mock
+                                provider replies for each.
+  P9 registry                   Registry entry lists Backend/Frontend/UITestIDs explicitly +
+                                explicit empty JobNames/PushKinds so coverage proves absence.
+  P10 baseline coexistence      SpeedProfileInsightProvider selection is purely at the React
+                                composition layer (HOC) and at the backend route layer (guard).
+                                No business-logic branch in baseline code.
+
+Tool design choices:
+
+  query_speed_profile           Returns SI aggregates from *models.Drive — distance_m, duration_s,
+                                avg/max speed mps, kWh, derived avg/max kmh + a single
+                                speed_regime string from the same SQL CASE thresholds as
+                                /api/v1/drives/{id}/speed-profile. NO new SQL — reads
+                                DriveRepo.GetByID, derives in-memory.
+  query_drive_context           Returns temporal + battery + ambient-temp envelope from the
+                                same row (started_at, ended_at, ended_status, start/end
+                                battery pct, outside temp avg c, distance_m, duration_s).
+                                Intentionally EXCLUDES start_lat/start_lon/end_lat/end_lon and
+                                start_address/end_address — only presence-flags are returned
+                                (has_start_address, has_end_address, has_route_coordinates).
+                                The test TestBuildDriveContext_ExcludesPreciseRouteData pins
+                                this privacy contract.
+
+Redaction policy choice:
+
+  PolicySpeedProfileInsights    Allow=[ClassVehicleName], Mode=ModeRedactedTags. The strategy
+                                only sees aggregates by design; the redactor is the second
+                                belt — even if a future tool ever yielded a raw address string,
+                                ClassVehicleName-only allows the vehicle nickname through and
+                                redacts every other PII class (Person, Phone, Email, Address,
+                                Lat/Lon, VIN, etc.).
+
+Frontend route registration:
+
+  Registry Frontend value:      ["/drives/:id"]
+                                The SPA route key is :id (per AppRouter.tsx and DriveDetailPage's
+                                useParams<{id:string}>()). The chi URL parameter on the backend
+                                is {driveID} (case-sensitive). The two systems do not need to
+                                share the parameter name — they only need to share the feature
+                                id used by the guard + the HOC.
+
+i18n strategy:
+
+  web/src/i18n/en.json  — added settings.ai.feature["speed-profile-insights"] (label + description),
+                          driveDetail.aiSpeedProfile (title, description, badge, generateButton),
+                          driveDetail.section.aiSpeedProfileInsightsFailed.
+  web/src/i18n/ar.json,
+  web/src/i18n/he.json  — placeholder-only locale files (status:"placeholder" in _meta).
+                          Per the established N-tier slice pattern (slices 0011–0021 left
+                          ar.json/he.json untouched for every AI-only key), i18next's
+                          configured fallbackLng="en" satisfies these locales without any
+                          edit. Documented here for the honesty covenant — this is not a
+                          missed translation, it is the project-wide convention.
+
+Verification command substitution:
+
+  The prompt's "make ai-eval-fast --feature speed-profile-insights" target does not exist in
+  the project Makefile (the same was true for slices 0018–0021). Per the precedent in
+  phase-50-0021-nl-drive-search-replay.log §GATE L263, the run is performed via the underlying
+  binary: `go run ./cmd/ai-eval -feature speed-profile-insights`. This is the same eval
+  harness the 9999 final gate invokes.
+
+=== CHANGES ===
+
+Created (production):
+  internal/ai/strategies/speed-profile-insights/strategy.go
+  internal/ai/strategies/speed-profile-insights/goldens.yaml
+  internal/ai/strategies/speed-profile-insights/canned/city_drive.yaml
+  internal/ai/strategies/speed-profile-insights/canned/highway_drive.yaml
+  internal/ai/strategies/speed-profile-insights/canned/refusal_other_drive.yaml
+  internal/ai/tools/speed_profile.go
+  internal/api/ai_speed_profile_handler.go
+  web/src/components/ai/AISpeedProfileInsights.tsx
+
+Created (tests):
+  internal/ai/strategies/speed-profile-insights/strategy_test.go
+  internal/ai/tools/speed_profile_test.go
+  internal/api/ai_speed_profile_handler_test.go
+  web/src/features/driving/__tests__/TestSpeedProfileInsightsAIOffRendersChartOnly.test.tsx
+
+Modified (registry / wiring):
+  internal/ai/features/registry.go             — new "speed-profile-insights" entry, Tier "D",
+                                                  DefaultOn:false, NeedsTools:true, NeedsStream:true,
+                                                  Backend POST /api/v1/ai/drives/{driveID}/speed-profile/insights,
+                                                  Frontend /drives/:id,
+                                                  UITestIDs [ai-feature-speed-profile-insights-root],
+                                                  JobNames [], PushKinds [] (explicit empties).
+  internal/ai/redact/policies.go               — PolicySpeedProfileInsights named-policy entry
+                                                  (Allow=[ClassVehicleName], Mode=ModeRedactedTags).
+  internal/ai/redact/policy_test.go            — added the new policy id to TestNamedPolicies.
+  internal/api/ai_routes.go                    — mountAIRoutes now takes a 12th param
+                                                  aiSpeedProfileInsights; new route + stub
+                                                  fallback wired alongside the drive-coaching
+                                                  block, identical defensive nil-fallback shape.
+  internal/api/router.go                       — imports speedprofileinsights strategy;
+                                                  registers tools.RegisterSpeedProfileInsightsTools;
+                                                  constructs aiSpeedProfileInsightsHandler;
+                                                  passes it as the new 12th positional arg to
+                                                  mountAIRoutes.
+  web/src/features/driving/pages/DriveDetailPage.tsx — imports + renders
+                                                  <AISpeedProfileInsights driveId={id}/> inside
+                                                  a SectionErrorBoundary positioned immediately
+                                                  after the speed-histogram SectionErrorBoundary,
+                                                  so the AI section is visually adjacent to the
+                                                  baseline chart it explains.
+
+Modified (i18n + generated):
+  web/src/i18n/en.json                          — settings.ai.feature["speed-profile-insights"]
+                                                  + driveDetail.aiSpeedProfile.* + the new
+                                                  section.aiSpeedProfileInsightsFailed key.
+  web/src/ai/features.ts                        — REGENERATED by `go run ./tools/aigen`.
+                                                  Adds the speed-profile-insights entry to the
+                                                  AI_FEATURES Object.freeze block and to the
+                                                  AI_FEATURE_IDS / AiFeatureId union.
+
+=== GATE ===
+
+--- git --no-pager status --short  (before commit) ---
+ M internal/ai/features/registry.go
+ M internal/ai/redact/policies.go
+ M internal/ai/redact/policy_test.go
+ M internal/api/ai_routes.go
+ M internal/api/router.go
+ M web/src/ai/features.ts
+ M web/src/features/driving/pages/DriveDetailPage.tsx
+ M web/src/i18n/en.json
+?? internal/ai/strategies/speed-profile-insights/
+?? internal/ai/tools/speed_profile.go
+?? internal/ai/tools/speed_profile_test.go
+?? internal/api/ai_speed_profile_handler.go
+?? internal/api/ai_speed_profile_handler_test.go
+?? web/src/components/ai/AISpeedProfileInsights.tsx
+?? web/src/features/driving/__tests__/TestSpeedProfileInsightsAIOffRendersChartOnly.test.tsx
+EXIT=0
+
+All paths are within the slice's allowed-files set:
+  - internal/ai/features/registry.go             ✓
+  - internal/ai/strategies/speed-profile-insights/** ✓
+  - internal/ai/tools/**                          ✓
+  - internal/api/**                               ✓ (guarded /ai/... handler + tests)
+  - web/src/features/driving/**                   ✓
+  - web/src/components/ai/**                      ✓ (shared AI UI primitive)
+  - web/src/i18n/en.json                          ✓
+  - web/src/**/__tests__/**                       ✓
+
+  Shared-infrastructure files modified by every D/N-tier AI slice (precedent: slices
+  0018, 0019, 0021 — see git log -- internal/ai/redact/policies.go web/src/ai/features.ts):
+  - internal/ai/redact/policies.go               (per-feature named policy)
+  - internal/ai/redact/policy_test.go            (named-policy regression case)
+  - web/src/ai/features.ts                       (auto-generated by tools/aigen)
+
+  These are mechanically required by the registry change and contain only the
+  speed-profile-insights additions plus the aigen regeneration; honesty covenant rule 9
+  (silent drift) is satisfied.
+
+--- go test -race ./internal/ai/... ./internal/api/... ---
+ok  github.com/ev-dev-labs/teslasync/internal/ai/cost                              (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/dispatch                          1.314s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/eval                              1.428s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/features                          1.499s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/guard                             1.637s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/health                            (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/limit                             (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider                          2.763s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/anthropic                1.181s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/mock                     2.563s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama                   1.204s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/openai                   1.203s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/rag                               1.280s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/redact                            1.544s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations   2.531s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis     2.538s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm            2.606s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration       2.586s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching         2.582s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-alert-builder       2.635s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-automation-builder  2.587s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-drive-search-replay 2.597s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search              2.576s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help               2.565s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/speed-profile-insights 2.480s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration          2.380s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy                          2.724s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy/redactadapter            2.963s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/stream                            1.279s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/tools                             1.238s
+ok  github.com/ev-dev-labs/teslasync/internal/api                                  8.565s
+EXIT=0
+
+--- go run ./tools/aivet ---
+aivet: OK — 17 AI route(s), 15 feature(s) in registry, TS mirror in sync
+EXIT=0
+
+--- go run ./tools/aigen --check ---
+(no output; clean check after the regenerate above)
+EXIT=0
+
+--- go run ./cmd/ai-eval -feature speed-profile-insights
+    (substitute for `make ai-eval-fast --feature speed-profile-insights` — see REASONING) ---
+AI eval results: 3 goldens, 3 pass, 0 fail (100.0% pass rate, 515.9µs elapsed)
+By feature:
+  speed-profile-insights         3/3 pass
+Details:
+  [PASS] speed-profile-insights/city_drive            (515.9µs)
+  [PASS] speed-profile-insights/highway_drive         (0s)
+  [PASS] speed-profile-insights/refusal_other_drive   (0s)
+EXIT=0
+
+--- cd web; npx tsc --noEmit ---
+(no output)
+EXIT=0
+
+--- cd web; npm run lint  (full repo, baseline) ---
+22 errors, 2 warnings — all in files OUTSIDE this slice's scope:
+  - src/observability/rum.ts (unused vars, unused eslint-disable directive)
+  - src/features/alerts/IncidentForm.tsx (unrelated)
+  - …plus other pre-existing baseline files unchanged by this slice.
+This matches the pre-existing baseline carried forward from phase-50-0021-nl-drive-search-replay.log
+(also 22 errors). The honesty-covenant rule 1 (no red-as-green) requires reporting EXIT=1
+literally, but the failures are not introduced by this slice. Scope-clean evidence below.
+EXIT=1  (pre-existing baseline; see scope-clean ESLint run below)
+
+--- cd web; npx eslint src/components/ai/AISpeedProfileInsights.tsx \
+                       src/features/driving/__tests__/TestSpeedProfileInsightsAIOffRendersChartOnly.test.tsx \
+                       src/features/driving/pages/DriveDetailPage.tsx  (scope-clean proof) ---
+(no output)
+EXIT=0  (every file authored or modified by this slice is lint-clean)
+
+--- cd web; npx vitest run TestSpeedProfileInsightsAIOffRendersChartOnly ---
+RUN  v4.1.2 D:/repos/teslasync/web
+ ✓ src/features/driving/__tests__/TestSpeedProfileInsightsAIOffRendersChartOnly.test.tsx (3 tests) 35ms
+Test Files  1 passed (1)
+     Tests  3 passed (3)
+  Start at  11:58:57
+  Duration  5.83s
+EXIT=0
+
+--- Focused off-mode proof for each registered backend route ---
+Backend route covered by registry for speed-profile-insights:
+  POST /api/v1/ai/drives/{driveID}/speed-profile/insights
+
+  Go test proving 404 in off mode + nil-wiring nil-fallback + bad-driveID 400:
+  internal/api/ai_speed_profile_handler_test.go
+    - TestSpeedProfileInsightsAIOffRendersChartOnly      (load-bearing off-mode proof — 404)
+    - TestNewAISpeedProfileInsightsHandlerNilDeps        (constructor panics on nil deps)
+    - TestParseSpeedProfileInsightsURL_BadDriveID        (400 before SSE opens)
+    - TestParseSpeedProfileInsightsURL_GoodDriveID       (parses positive int64)
+
+  All passed in the package-level run above (./internal/api ok 8.565s).
+
+--- Focused off-mode proof for each registered UI test ID ---
+UI test id covered by registry: ai-feature-speed-profile-insights-root
+  React test proving the test id is absent in off mode + absent when the per-feature toggle
+  is false + present in the on-mode positive control:
+    web/src/features/driving/__tests__/TestSpeedProfileInsightsAIOffRendersChartOnly.test.tsx
+    - 3/3 cases passed (off mode toggle-true; on mode toggle-false; cloud + toggle-true positive
+      control — same triangulation pattern as slice 0018).
+
+--- Focused off-mode proof for the baseline route/page ---
+Baseline /drives/:id route is unchanged. The only diff in DriveDetailPage.tsx is the addition
+of a new SectionErrorBoundary wrapping <AISpeedProfileInsights/> AFTER the existing speed-
+histogram boundary. Existing <SpeedHistogramChart speedHistData={speedHistData}/> render is
+byte-identical. In off mode withAiFeature returns null → the new boundary's child collapses
+to null → only the chart remains.
+
+=== COMMIT ===
+
+git add internal/ai/features/registry.go \
+        internal/ai/redact/policies.go \
+        internal/ai/redact/policy_test.go \
+        internal/ai/strategies/speed-profile-insights/ \
+        internal/ai/tools/speed_profile.go \
+        internal/ai/tools/speed_profile_test.go \
+        internal/api/ai_routes.go \
+        internal/api/ai_speed_profile_handler.go \
+        internal/api/ai_speed_profile_handler_test.go \
+        internal/api/router.go \
+        web/src/ai/features.ts \
+        web/src/components/ai/AISpeedProfileInsights.tsx \
+        web/src/features/driving/__tests__/TestSpeedProfileInsightsAIOffRendersChartOnly.test.tsx \
+        web/src/features/driving/pages/DriveDetailPage.tsx \
+        web/src/i18n/en.json \
+        .github/prompts/db-refactor/logs/phase-50-0022-speed-profile-insights.log
+
+git commit -m "feat(ai): add Speed-profile insights" \
+           -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+
+Result:
+[feat/ai-adoption a166456571] feat(ai): add Speed-profile insights
+ 21 files changed, 2991 insertions(+), 3 deletions(-)
+ create mode 100644 .github/prompts/db-refactor/logs/phase-50-0022-speed-profile-insights.log
+ create mode 100644 internal/ai/strategies/speed-profile-insights/canned/city_drive.yaml
+ create mode 100644 internal/ai/strategies/speed-profile-insights/canned/highway_drive.yaml
+ create mode 100644 internal/ai/strategies/speed-profile-insights/canned/refusal_other_drive.yaml
+ create mode 100644 internal/ai/strategies/speed-profile-insights/goldens.yaml
+ create mode 100644 internal/ai/strategies/speed-profile-insights/strategy.go
+ create mode 100644 internal/ai/strategies/speed-profile-insights/strategy_test.go
+ create mode 100644 internal/ai/tools/speed_profile.go
+ create mode 100644 internal/ai/tools/speed_profile_test.go
+ create mode 100644 internal/api/ai_speed_profile_handler.go
+ create mode 100644 internal/api/ai_speed_profile_handler_test.go
+ create mode 100644 web/src/components/ai/AISpeedProfileInsights.tsx
+ create mode 100644 web/src/features/driving/__tests__/TestSpeedProfileInsightsAIOffRendersChartOnly.test.tsx
+
+HEAD now: a166456571a25bf3afcc4d1b156e7305b5b2ab90  feat(ai): add Speed-profile insights
+
+=== AI-OFF CONTRACT ===
+I1 default-off:     PASS  (registry entry has DefaultOn:false; verified by tools/aivet line
+                           "15 feature(s) in registry" + aigen-regenerated AI_FEATURES["speed-profile-insights"].defaultOn = false in web/src/ai/features.ts)
+I3 baseline intact: PASS  (DriveDetailPage.tsx diff only adds a new SectionErrorBoundary around
+                           <AISpeedProfileInsights/>; SpeedHistogramChart render is byte-identical;
+                           /api/v1/drives/{driveID}/speed-profile typed handler + SQL untouched)
+I4 zero egress:     PASS  (strategy package imports no provider adapter directly; provider
+                           resolution is dispatcher-only; backend guard short-circuits before any
+                           provider call in off mode; verified at runtime by guard 404 tests in
+                           internal/api/ai_speed_profile_handler_test.go)
+I5 hidden UI:       PASS  (withAiFeature('speed-profile-insights', InnerSection) returns null
+                           when mode='off' OR per-feature toggle is false; off-mode container is
+                           empty in TestSpeedProfileInsightsAIOffRendersChartOnly)
+I6 404 routes:      PASS  (sole mount lives inside r.Route("/ai", …) with g.Wrap; in off mode
+                           ai.GuardedHandler returns 404 BEFORE any handler/SSE code runs;
+                           verified by the Go off-mode test in the package run above)
+I7 per-feature:     PASS  (off-mode test exercises mode='off' WITH per-feature toggle=true to
+                           prove mode trumps toggle; second case exercises mode='cloud' WITH
+                           toggle=false to prove toggle still gates when mode is non-off)
+I10 type system:    PASS  (tools/aivet OK; tools/aigen --check OK; tsc --noEmit clean; the TS
+                           union AiFeatureId now includes "speed-profile-insights")
+I12 client/bg:      PASS  (registry JobNames=[] PushKinds=[] explicit empties; no new push
+                           handlers; no new background jobs; no new client-storage keys; the new
+                           lazy chunk lives inside the existing /drives/:id bundle — no new
+                           top-level route)
+=======================
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE

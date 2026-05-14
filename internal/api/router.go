@@ -78,6 +78,7 @@ import (
 	chargingdiagnosis "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis"
 	raghelp "github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help"
 	nldrivesearchreplay "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-drive-search-replay"
+	speedprofileinsights "github.com/ev-dev-labs/teslasync/internal/ai/strategies/speed-profile-insights"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
@@ -797,6 +798,29 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		nldrivesearchreplay.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+	// Phase-50 / D2 (slice 0022) — Speed-profile insights.
+	// Register the slice's two read-only tools on the SAME
+	// process-wide registry so the dispatcher can resolve
+	// `query_speed_profile` + `query_drive_context` for the
+	// speed-profile-insights strategy. Same ordering rule as the
+	// other slice tools above: must be registered before the
+	// handler constructor below so the strategy's allowedTools
+	// resolve at boot. Both tools call DriveRepo.GetByID and
+	// derive their envelopes in-memory; no new SQL is written by
+	// this slice.
+	tools.RegisterSpeedProfileInsightsTools(aiToolRegistry, tools.SpeedProfileInsightsSources{
+		Drives: database.NewDriveRepo(db),
+	})
+	// Per-drive speed-profile insights handler. One per process;
+	// stateless beyond constructor inputs. Must be constructed
+	// AFTER the tool registration above so the dispatcher can
+	// resolve the strategy's allowedTools at boot.
+	aiSpeedProfileInsightsHandler := NewAISpeedProfileInsightsHandler(
+		aiRegistry,
+		aiToolRegistry,
+		speedprofileinsights.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	lifetimeHandler := NewLifetimeHandler(db, eventHub)
@@ -2502,7 +2526,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

@@ -99,3 +99,29 @@ func PolicyChargingDiagnosis() Policy {
 		Mode:  ModeRedactedTags,
 	}
 }
+
+// PolicySpeedProfileInsights is the policy for the per-drive speed
+// profile insights narrative (slice D2, prompt 0022). Allows
+// ClassVehicleName so the insights can address the user's car by
+// name when it discusses the drive's speed regime ("Roadie spent
+// most of this drive at highway speeds"). Precise route coordinates
+// — lat/long pairs, full street addresses — stay redacted by
+// default per the slice prompt's ADR-015 §I9 commitment ("precise
+// route coordinates remain tagged"); the insights narrate the
+// drive's bucket distribution and energy efficiency, not exact
+// route geometry or stop addresses.
+//
+// Mirrors PolicyDigest / PolicyYearInReview / PolicyDriveCoaching /
+// PolicyChargingDiagnosis's allow-list intentionally: every
+// per-feature narrator that names the user's car shares the same
+// allow-list shape. They are kept as DISTINCT policy constructors
+// (rather than aliasing) so per-slice allow-list drift can happen
+// without cross-slice collateral damage — a future change to drive
+// coaching's allow-list does not bleed across to speed-profile
+// insights.
+func PolicySpeedProfileInsights() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}

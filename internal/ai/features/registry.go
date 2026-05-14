@@ -741,6 +741,59 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / D2 (slice 0022) — Speed-profile insights.
+	//
+	// Backend: POST /api/v1/ai/drives/{driveID}/speed-profile/insights.
+	// The AI handler streams SSE frames from the dispatch loop; the
+	// two declared tools are query_speed_profile (returns SI-canonical
+	// aggregates plus derived speed regime classification from the
+	// existing *models.Drive struct) and query_drive_context (returns
+	// the drive's temporal + battery + temperature envelope). Both
+	// are read-only and call `DriveSource.GetByID` directly — no new
+	// SQL is added by this slice. The route is mounted under
+	// guard.Wrap so it returns 404 when ai_mode='off' OR when the
+	// per-feature toggle is off.
+	//
+	// Frontend: the AI insights panel attaches to /drives/:id — the
+	// canonical drive detail page (the SPA route is registered as
+	// `/drives/:id` not `:driveId`; the prompt's `:driveId` wording
+	// matches the BACKEND URL param, which chi exposes as `driveID`).
+	// The existing SpeedHistogramChart and deterministic summary
+	// metrics remain the canonical baseline path for any user with
+	// ai_mode='off'. The wrapped AISpeedProfileInsights component
+	// carrying `ai-feature-speed-profile-insights-root` is absent
+	// from the DOM when AI is off — see the off-mode invariant test
+	// `TestSpeedProfileInsightsAIOffRendersChartOnly.test.tsx`.
+	//
+	// Background: zero jobs. The narrative is generated on demand
+	// from the user's click on the insights panel — there is no
+	// scheduled pre-render. Explicit `[]string{}` so CoverageOK
+	// passes.
+	//
+	// Push kinds: zero — the panel is request/response on demand.
+	// Explicit `[]string{}` so CoverageOK passes.
+	//
+	// NeedsRAG=false (the strategy reads the user's own drive row
+	// directly via typed read-only tools; precise route coordinates
+	// stay tagged by the PolicySpeedProfileInsights redaction
+	// policy). NeedsTools=true. NeedsStream=true.
+	"speed-profile-insights": {
+		ID:          "speed-profile-insights",
+		Name:        "Speed-profile insights",
+		Description: "Opt-in LLM-narrated insights about a single drive's speed regime, outliers, and route context. Reads from the existing *models.Drive aggregates via two read-only tools; the deterministic SpeedHistogramChart + summary metrics on /drives/:id remain the canonical baseline when AI is off. Precise route coordinates remain tagged by the per-feature redaction policy; only the vehicle name may be narrated.",
+		Tier:        "D",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/drives/{driveID}/speed-profile/insights"},
+			Frontend:  []string{"/drives/:id"},
+			UITestIDs: []string{"ai-feature-speed-profile-insights-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

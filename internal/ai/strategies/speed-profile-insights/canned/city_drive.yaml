@@ -1,0 +1,35 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_speed_profile_insights_city_drive_1
+        name: query_speed_profile
+        arguments: '{"drive_id": 701}'
+    input_tokens: 32
+    output_tokens: 22
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_speed_profile_insights_city_drive_ctx_1
+        name: query_drive_context
+        arguments: '{"drive_id": 701}'
+    input_tokens: 96
+    output_tokens: 28
+  - finish_reason: stop
+    content: |
+      Roadie's drive 701 covered roughly 9 km in 24 minutes, with an
+      average speed of about 10 m/s (around 36 km/h, ~22 mph) and a
+      peak of just under 14 m/s (~50 km/h, ~31 mph).
+
+      The deterministic speed-profile classifier marks this as a
+      city drive: the average speed stayed well below the suburban
+      threshold and the peak never reached highway range. That
+      matches a typical urban commute with frequent stops or
+      signalled intersections — energy use was modest relative to
+      the distance covered.
+
+      One observation the aggregate supports: the kWh per 100 km
+      figure was on the higher side for the distance, which is
+      consistent with a city pattern (frequent acceleration cycles
+      from low speeds). Nothing here needs action — it's a baseline
+      reading for future comparisons on similar routes.
+    input_tokens: 142
+    output_tokens: 102

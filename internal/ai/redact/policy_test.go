@@ -60,6 +60,7 @@ func TestNamedPolicies(t *testing.T) {
 		{"alert-builder", PolicyAlertBuilder(), nil},
 		{"automation-builder", PolicyAutomationBuilder(), nil},
 		{"drive-coaching", PolicyDriveCoaching(), []PIIClass{ClassVehicleName}},
+		{"speed-profile-insights", PolicySpeedProfileInsights(), []PIIClass{ClassVehicleName}},
 	}
 	for _, c := range cases {
 		c := c
