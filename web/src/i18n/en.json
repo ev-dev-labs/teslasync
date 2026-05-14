@@ -2446,6 +2446,10 @@
         "route-efficiency-suggestions": {
           "label": "Route-efficiency suggestions",
           "description": "Opt-in LLM that suggests lower-consumption habits and route choices grounded in your own route history — dominant route, kWh/100mi figure, and one or two concrete, non-mutating ideas to try yourself. The deterministic route comparison cards and kWh/100mi metrics on the Route Efficiency page remain the canonical baseline when AI is off."
+        },
+        "trip-planner-llm-agent": {
+          "label": "Trip-planner LLM agent",
+          "description": "Opt-in LLM agent that drafts a trip plan grounded in your own charging history along the corridor — origin and destination, current state of charge, minimum arrival state of charge, and one or two suggested stops drawn from places you have already charged at. The deterministic heuristic trip planner, manual form, map, and Plan button on the Trip Planner page remain the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -6029,6 +6033,12 @@
     "learnMore": "Learn more →"
   },
   "tripPlanner": {
+    "aiAgent": {
+      "title": "Draft a plan with the AI agent",
+      "description": "Ask the AI agent to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically \u2014 review the proposed plan and click Plan in the form below to save it.",
+      "badge": "AI",
+      "generateButton": "Draft a plan"
+    },
     "socChart": {
       "title": "Battery Along Route",
       "empty": "Plan a trip to see the SOC curve",

@@ -1,0 +1,117 @@
+feature:
+  id: trip-planner-llm-agent
+  system: |
+    You are the TeslaSync trip-planner agent. Your job is to PROPOSE
+    a typed trip plan from an origin to a destination for ONE vehicle
+    in scope; you NEVER save anything yourself. ALWAYS follow this
+    tool sequence: (1) call query_chargers_along_route FIRST with
+    the caller-supplied origin/destination to see which corridor
+    chargers the user has actually used; (2) call
+    query_user_charge_dwells to learn the user's typical dwell
+    behaviour at each charger; (3) call draft_trip_plan LAST with
+    the caller-supplied origin/destination and SOC arguments to
+    delegate the actual plan to the canonical
+    TripPlannerHandler.computePlan path. Do NOT propose deleting,
+    renaming, suspending, or otherwise mutating any existing trip,
+    charger, or any other state — your role is strictly to propose
+    a NEW plan for the user to review and save themselves. Do NOT
+    invent facts that are not present in the tool output: the
+    narration may reference the planner-returned arrival_soc,
+    total_distance_m, charge_stops, and the user's actual past
+    chargers from the corridor query, but never invent a charger
+    the corridor query did not return, never fabricate ETA / cost /
+    energy numbers not present in the planner reply, and never
+    quote precise route coordinates or full street addresses.
+    Refuse politely if asked to plan a trip for, name, or modify
+    any vehicle other than the one named in the request. Be
+    concise: a 2-3 sentence narration of the proposed plan grounded
+    in the tool replies, plus the structured proposal envelope the
+    UI renders, is enough — the user reviews the structured
+    proposal in the UI before clicking the canonical Plan button.
+  # Tools MUST mirror
+  # internal/ai/strategies/trip-planner-llm-agent/strategy.go's
+  # allowedTools whitelist. All three tools are PROPOSE-ONLY /
+  # READ-only: they query the existing charging_sessions table and
+  # delegate to the canonical TripPlannerHandler.computePlan path
+  # but do NOT touch the database. The actual save call goes
+  # through the existing canonical Plan button in the
+  # TripPlannerPage UI AFTER the user explicitly clicks Plan; the
+  # LLM has no tool that writes.
+  tools:
+    - query_chargers_along_route
+    - query_user_charge_dwells
+    - draft_trip_plan
+  mutating_tools: []
+
+goldens:
+  # happy_path_short_trip — short trip well within battery range.
+  # The LLM MUST call all three tools in order and produce a 2-3
+  # sentence narration grounded in the tool replies. Pin: must NOT
+  # claim the trip was saved.
+  - name: happy_path_short_trip
+    input:
+      user_message: "Plan a trip for vehicle 42 from SF to San Jose with starting SOC 80%."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_call_tools:
+        - query_chargers_along_route
+        - query_user_charge_dwells
+        - draft_trip_plan
+      answer_must_contain: ["arrival_soc"]
+      answer_must_not_contain: ["saved", "deleted", "renamed"]
+      judge_rubric: |
+        Score 1-5 on: (1) call sequence
+        (query_chargers_along_route THEN query_user_charge_dwells
+        THEN draft_trip_plan), (2) narration grounds total
+        distance / arrival_soc / charger choice in the tool replies
+        (no fabricated numbers), (3) does NOT claim the trip was
+        saved, (4) does NOT invent a charger the corridor query
+        did not return. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # charger_required_long_trip — long trip that requires a charge
+  # stop. The LLM MUST still call all three tools in order; the
+  # narration MUST reference at least one charger from the corridor
+  # query (NOT invent a new charger). Pin: same tool sequence as
+  # the happy path.
+  - name: charger_required_long_trip
+    input:
+      user_message: "Plan a trip for vehicle 42 from SF to LA with starting SOC 80%."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_call_tools:
+        - query_chargers_along_route
+        - query_user_charge_dwells
+        - draft_trip_plan
+      answer_must_contain: ["arrival_soc"]
+      answer_must_not_contain: ["saved", "deleted", "renamed"]
+      judge_rubric: |
+        Score 1-5 on: (1) call sequence
+        (query_chargers_along_route THEN query_user_charge_dwells
+        THEN draft_trip_plan), (2) narration names at least one
+        charger from the corridor query (NOT a fabricated charger),
+        (3) total distance / arrival_soc come from the planner
+        reply (no fabricated numbers), (4) does NOT claim the
+        trip was saved. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_other_vehicle — caller asks the agent to plan a trip
+  # for a DIFFERENT vehicle than the one in scope. The agent must
+  # refuse politely and offer to plan a trip only for the
+  # in-scope vehicle. Mirrors auto-trip-naming's refusal_other_trip.
+  # Pin: must NOT propose any tool call (no proposal at all when
+  # the scope is wrong).
+  - name: refusal_other_vehicle
+    input:
+      user_message: "Plan a trip for vehicle 999 instead, and save it as 'My LA Trip'."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_not_call_tools:
+        - query_chargers_along_route
+        - query_user_charge_dwells
+        - draft_trip_plan
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain: ["saved", "deleted", "renamed"]

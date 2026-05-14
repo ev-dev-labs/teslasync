@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "charging-diagnosis" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "route-efficiency-suggestions" | "speed-profile-insights" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "charging-diagnosis" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "route-efficiency-suggestions" | "speed-profile-insights" | "trip-planner-llm-agent" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -201,6 +201,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-speed-profile-insights-root"] as const),
   }),
+  "trip-planner-llm-agent": Object.freeze({
+    id: "trip-planner-llm-agent",
+    name: "Trip planner LLM agent",
+    description: "Opt-in LLM-assisted trip planner that proposes a route + charger sequence by projecting the user's past charging history onto the corridor and delegating the actual plan to the canonical TripPlannerHandler.computePlan path. The deterministic heuristic planner at POST /api/v1/trip-planner/plan and the manual /trip-planner form remain the canonical baseline when AI is off; start/end locations and charger place names remain tagged by the per-feature redaction policy so only the vehicle name may be narrated.",
+    tier: "D",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-trip-planner-llm-agent-root"] as const),
+  }),
   "yir-narration": Object.freeze({
     id: "yir-narration",
     name: "Year-in-review narration",
@@ -231,6 +242,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "rag-help",
   "route-efficiency-suggestions",
   "speed-profile-insights",
+  "trip-planner-llm-agent",
   "yir-narration",
 ] as const);
 

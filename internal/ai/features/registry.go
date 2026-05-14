@@ -928,6 +928,76 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / D5 (slice 0025) — Trip planner LLM agent.
+	//
+	// `trip-planner-llm-agent` adds an opt-in LLM-assisted trip
+	// planner alongside the deterministic heuristic trip planner.
+	// The heuristic planner served by POST /api/v1/trip-planner/plan
+	// and rendered by /trip-planner remains the canonical baseline
+	// — opt-in toggle defaults FALSE per ADR-015 §I1 so off-mode
+	// users see the manual form + canonical Plan button only.
+	//
+	// Backend: POST /api/v1/ai/trips/plan/draft mounted from
+	// internal/api/ai_routes.go via guard.Wrap("trip-planner-llm-agent",
+	// aiTripPlannerLLMHandler.ServeHTTP) so the route returns 404
+	// when ai_mode='off' OR when the per-feature toggle is off (the
+	// AND of the global mode gate and the per-feature toggle).
+	//
+	// Tools (all PROPOSE-only / read-only; no DB write tools exist
+	// in this slice): `query_chargers_along_route` and
+	// `query_user_charge_dwells` read the existing
+	// `charging_sessions` table via the shared ChargeSource port
+	// satisfied at boot by *database.ChargingRepo (no new SQL);
+	// `draft_trip_plan` delegates to the canonical
+	// TripPlannerHandler.computePlan path via a narrow
+	// TripPlanComputer port satisfied by AITripPlanComputer
+	// (wraps *TripPlannerHandler in the same package). The AI tool
+	// produces the same SI-canonical envelope
+	// (total_distance_m, total_duration_s, total_energy_wh,
+	// arrival_soc) the deterministic baseline produces.
+	// PolicyTripPlannerLLMAgent tags every location class (lat/long,
+	// street addr, place name) so a leaked transcript reveals only
+	// the vehicle name.
+	//
+	// Frontend: the AI agent panel attaches to /trip-planner — the
+	// canonical Trip Planner page that already renders the manual
+	// form, deterministic plan envelope, and map. The form + Plan
+	// button remain the canonical path for any user with
+	// ai_mode='off'. The wrapped AITripPlannerLLMAgent component
+	// carrying `ai-feature-trip-planner-llm-agent-root` is absent
+	// from the DOM when AI is off — see the off-mode invariant test
+	// `TestTripPlannerAIOffUsesHeuristicPlanner.test.tsx`.
+	//
+	// Background: zero jobs — the agent is request/response on
+	// demand. Explicit `[]string{}` so CoverageOK passes.
+	//
+	// Push kinds: zero — the agent streams its proposal via SSE on
+	// the same HTTP request, no out-of-band push. Explicit
+	// `[]string{}`.
+	//
+	// NeedsRAG=false because the agent does NOT call the F7
+	// retriever today; corridor projection over the user's
+	// charging history is a typed query, not an embedding lookup.
+	// NeedsTools=true because the strategy invokes three read-only
+	// tools; NeedsStream=true because the handler streams SSE
+	// frames from the dispatch loop.
+	"trip-planner-llm-agent": {
+		ID:          "trip-planner-llm-agent",
+		Name:        "Trip planner LLM agent",
+		Description: "Opt-in LLM-assisted trip planner that proposes a route + charger sequence by projecting the user's past charging history onto the corridor and delegating the actual plan to the canonical TripPlannerHandler.computePlan path. The deterministic heuristic planner at POST /api/v1/trip-planner/plan and the manual /trip-planner form remain the canonical baseline when AI is off; start/end locations and charger place names remain tagged by the per-feature redaction policy so only the vehicle name may be narrated.",
+		Tier:        "D",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/trips/plan/draft"},
+			Frontend:  []string{"/trip-planner"},
+			UITestIDs: []string{"ai-feature-trip-planner-llm-agent-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

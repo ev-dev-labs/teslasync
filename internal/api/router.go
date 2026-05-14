@@ -81,6 +81,7 @@ import (
 	speedprofileinsights "github.com/ev-dev-labs/teslasync/internal/ai/strategies/speed-profile-insights"
 	routeefficiencysuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/route-efficiency-suggestions"
 	autotripnaming "github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-trip-naming"
+	tripplannerllmagent "github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-planner-llm-agent"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
@@ -930,6 +931,32 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	vehicleAccessHandler := NewVehicleAccessHandler(teslaClient, db)
 	vehicleInfoHandler := NewVehicleInfoHandler(teslaClient, db)
 	tripPlannerHandler := NewTripPlannerHandler(db, opt.CacheStore, stateReader)
+
+	// trip-planner-llm-agent tools (Phase-50 / D5, slice 0025).
+	// Adds `query_chargers_along_route`, `query_user_charge_dwells`,
+	// and `draft_trip_plan` to the shared tool registry. All three
+	// are PROPOSE-only / READ-only — the first two read the existing
+	// charging_sessions table via the shared ChargeSource port; the
+	// third delegates to the canonical TripPlannerHandler.computePlan
+	// path via a narrow TripPlanComputer port satisfied by
+	// AITripPlanComputer. The dispatcher's deny-all confirm gate is
+	// therefore never triggered; the actual trip-plan persistence
+	// flows through the existing canonical Plan button in the
+	// TripPlannerPage UI (unchanged baseline).
+	tools.RegisterTripPlannerLLMAgentTools(aiToolRegistry, tools.TripPlannerLLMAgentSources{
+		Chargers: database.NewChargingRepo(db),
+		Planner:  NewAITripPlanComputer(tripPlannerHandler),
+	})
+	// trip-planner-llm-agent handler. One per process; stateless
+	// beyond constructor inputs. Must be constructed AFTER the
+	// tool registration above so the dispatcher can resolve the
+	// strategy's allowedTools at boot.
+	aiTripPlannerLLMHandler := NewAITripPlannerLLMHandler(
+		aiRegistry,
+		aiToolRegistry,
+		tripplannerllmagent.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
 	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
 	shareHandler := NewShareHandler(db)
 	watchHandler := NewWatchHandler(db, teslaClient)
@@ -2609,7 +2636,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

@@ -90,6 +90,9 @@ import (
 //   - aiAutoTripName: the real LLM-backed handler for the auto trip
 //                  naming suggestion (Phase-50 / D4, slice 0024). Same
 //                  nil fallback pattern.
+//   - aiTripPlannerLLM: the real LLM-backed handler for the
+//                  trip-planner LLM agent (Phase-50 / D5, slice 0025).
+//                  Same nil fallback pattern.
 func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
@@ -109,6 +112,7 @@ func mountAIRoutes(
 	aiSpeedProfileInsights *AISpeedProfileInsightsHandler,
 	aiRouteEfficiencySuggestions *AIRouteEfficiencySuggestionsHandler,
 	aiAutoTripName *AIAutoTripNameHandler,
+	aiTripPlannerLLM *AITripPlannerLLMHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// chatbot-llm (Phase-50 / U1, slice 0011 wires the real
@@ -336,6 +340,35 @@ func mountAIRoutes(
 		}
 		r.Post("/trips/{tripID}/name/draft", g.Wrap("auto-trip-naming", autoTripNameHandler))
 
+		// trip-planner-llm-agent (Phase-50 / D5, slice 0025).
+		// Same stub-fallback pattern as the other AI handlers — a
+		// nil handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode. The
+		// route lives under /ai/trips/plan/draft so the AI surface
+		// is namespaced and can be removed in one route block if
+		// the feature is ever decommissioned. The JSON body
+		// (origin, destination, current_soc, optional knobs) is
+		// parsed + validated by the handler BEFORE opening the SSE
+		// stream; malformed bodies are rejected with a 400. The
+		// route is PROPOSE-only: it returns a structured trip-plan
+		// proposal envelope via SSE; the actual persistence flows
+		// through an explicit user click on the existing canonical
+		// Plan button in the TripPlannerPage UI which hits
+		// POST /api/v1/trip-planner/plan (unchanged baseline).
+		//
+		// Chi route ordering: the static "plan" segment in
+		// "/trips/plan/draft" registers BEFORE the wildcard
+		// "/trips/{tripID}/name/draft" so chi's prefix-tree match
+		// disambiguates cleanly — `/trips/plan/draft` matches the
+		// trip-planner-llm-agent route, `/trips/42/name/draft`
+		// matches the auto-trip-naming route.
+		var tripPlannerLLMHandler http.HandlerFunc = aiTripPlannerLLMStubHandler
+		if aiTripPlannerLLM != nil {
+			tripPlannerLLMHandler = aiTripPlannerLLM.ServeHTTP
+		}
+		r.Post("/trips/plan/draft", g.Wrap("trip-planner-llm-agent", tripPlannerLLMHandler))
+
 		// ai-provider-health (Phase-50 / F1, slice 0002).
 		// Ops-only diagnostic. Triple-gated:
 		//   guard.Wrap (mode + feature toggle) → RequireSudo → handler.
@@ -456,4 +489,12 @@ func aiRouteEfficiencySuggestionsStubHandler(w http.ResponseWriter, _ *http.Requ
 // invariant is held by the guard, not the stub.
 func aiAutoTripNameStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai auto trip naming is not yet implemented")
+}
+
+// aiTripPlannerLLMStubHandler mirrors aiAutoTripNameStubHandler for
+// the D5 slice (Phase-50 / 0025 trip-planner-llm-agent). Reachable
+// only when AITripPlannerLLMHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiTripPlannerLLMStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai trip-planner LLM agent is not yet implemented")
 }

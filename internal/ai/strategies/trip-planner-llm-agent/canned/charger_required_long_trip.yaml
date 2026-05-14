@@ -1,0 +1,33 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_chargers_along_route_long_1
+        name: query_chargers_along_route
+        arguments: '{"vehicle_id": 42, "origin_lat": 37.7749, "origin_lng": -122.4194, "dest_lat": 34.0522, "dest_lng": -118.2437, "corridor_km": 25, "lookback_days": 180}'
+    input_tokens: 56
+    output_tokens: 48
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_user_charge_dwells_long_1
+        name: query_user_charge_dwells
+        arguments: '{"vehicle_id": 42, "lookback_days": 180}'
+    input_tokens: 130
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_trip_plan_long_1
+        name: draft_trip_plan
+        arguments: '{"vehicle_id": 42, "origin_lat": 37.7749, "origin_lng": -122.4194, "dest_lat": 34.0522, "dest_lng": -118.2437, "current_soc": 80, "charge_limit_soc": 90, "min_arrival_soc": 20, "speed_factor": 1.0}'
+    input_tokens: 188
+    output_tokens: 72
+  - finish_reason: stop
+    content: |
+      I drafted a plan for the SF to LA trip. The canonical planner
+      reports the route is long enough to require one charge stop;
+      the corridor query found the Halfway Supercharger on the
+      user's prior history, so the planner recommends that stop.
+      Expected arrival_soc lands above the 20% minimum. Review the
+      structured proposal in the side panel and click Plan to save
+      it for vehicle <vehicle id='42'/>.
+    input_tokens: 260
+    output_tokens: 76

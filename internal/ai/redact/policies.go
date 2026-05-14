@@ -194,3 +194,26 @@ func PolicyAutoTripNaming() Policy {
 		Mode:  ModeRedactedTags,
 	}
 }
+
+// PolicyTripPlannerLLMAgent is the per-feature redaction policy for
+// the Phase-50 D5 trip-planner-llm-agent strategy. Allows
+// ClassVehicleName only; start/end locations, charger place names,
+// addresses, and lat/long pairs are tagged via round-trip markers
+// and restored only when the SSE stream is rendered to the same
+// authenticated user. This matches the slice prompt's verbatim
+// mandate:
+//
+//	Allowed classes: ClassVehicleName only; start/end locations are
+//	tagged and restored only to same user
+//	Round-trip required: yes
+//
+// Kept as a distinct identifier from PolicyAutoTripNaming /
+// PolicyRouteEfficiencySuggestions so a future per-feature change
+// to one slice's allow-list does not bleed across the others —
+// every feature is independently auditable.
+func PolicyTripPlannerLLMAgent() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}

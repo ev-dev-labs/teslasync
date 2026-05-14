@@ -63,6 +63,7 @@ func TestNamedPolicies(t *testing.T) {
 		{"speed-profile-insights", PolicySpeedProfileInsights(), []PIIClass{ClassVehicleName}},
 		{"route-efficiency-suggestions", PolicyRouteEfficiencySuggestions(), []PIIClass{ClassVehicleName}},
 		{"auto-trip-naming", PolicyAutoTripNaming(), []PIIClass{ClassVehicleName}},
+		{"trip-planner-llm-agent", PolicyTripPlannerLLMAgent(), []PIIClass{ClassVehicleName}},
 	}
 	for _, c := range cases {
 		c := c

@@ -1,0 +1,31 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_chargers_along_route_short_1
+        name: query_chargers_along_route
+        arguments: '{"vehicle_id": 42, "origin_lat": 37.7749, "origin_lng": -122.4194, "dest_lat": 37.3382, "dest_lng": -121.8863, "corridor_km": 25, "lookback_days": 180}'
+    input_tokens: 56
+    output_tokens: 48
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_user_charge_dwells_short_1
+        name: query_user_charge_dwells
+        arguments: '{"vehicle_id": 42, "lookback_days": 180}'
+    input_tokens: 124
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_trip_plan_short_1
+        name: draft_trip_plan
+        arguments: '{"vehicle_id": 42, "origin_lat": 37.7749, "origin_lng": -122.4194, "dest_lat": 37.3382, "dest_lng": -121.8863, "current_soc": 80, "charge_limit_soc": 90, "min_arrival_soc": 20, "speed_factor": 1.0}'
+    input_tokens: 180
+    output_tokens: 72
+  - finish_reason: stop
+    content: |
+      I drafted a plan for the SF to San Jose trip. The canonical
+      planner reports the route covers the total_distance_m it
+      returned with arrival_soc well above the 20% minimum, so no
+      charge stop is needed. Review the structured proposal in the
+      side panel and click Plan to save it for vehicle <vehicle id='42'/>.
+    input_tokens: 240
+    output_tokens: 64
