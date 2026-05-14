@@ -76,3 +76,26 @@ func PolicyDriveCoaching() Policy {
 		Mode:  ModeRedactedTags,
 	}
 }
+
+// PolicyChargingDiagnosis is the policy for the per-session charging
+// diagnosis narrative (slice N5, prompt 0019). Allows ClassVehicleName
+// so the diagnosis can address the user's car by name when it
+// explains a specific session ("Roadie's home AC session ran for
+// 7h 12m at 1.6 kW — that's a trickle charge"). Charging location
+// names — including the `start_place` text the user-facing UI
+// renders as a location chip — stay redacted by default per the
+// slice prompt's ADR-015 §I9 commitment ("charging location names
+// remain tagged by default"); the diagnosis narrates flag patterns,
+// not exact addresses or station names.
+//
+// Mirrors PolicyDigest / PolicyYearInReview / PolicyDriveCoaching's
+// allow-list intentionally: every per-feature narrator that names
+// the user's car shares the same allow-list shape. They are kept as
+// DISTINCT policy constructors (rather than aliasing) so per-slice
+// allow-list drift can happen without cross-slice collateral damage.
+func PolicyChargingDiagnosis() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}

@@ -1,0 +1,10 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot diagnose a different charging session than the one
+      this request is scoped to (session 501). If you'd like to
+      review session 999, please open it from the Charging list
+      and start a diagnosis from there. I'm happy to keep
+      diagnosing session 501 for you here.
+    input_tokens: 64
+    output_tokens: 56

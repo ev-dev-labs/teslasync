@@ -580,6 +580,71 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / N5 (slice 0019) — Per-charging-session diagnosis.
+	//
+	// Backend: POST /api/v1/ai/charging/{sessionID}/diagnose. The route
+	// follows the same URL-as-primary-identifier shape introduced in
+	// the N4 drive-coaching slice: the AI surface attaches to a
+	// specific charging session's detail page (/charging/:id), so
+	// {sessionID} lives in the chi URL path and the JSON body is
+	// empty. The handler (internal/api/ai_charging_diagnosis_handler.go)
+	// parses sessionID with strconv.ParseInt + a positive-integer check
+	// before opening the SSE stream, then runs the dispatch loop
+	// against the charging-diagnosis strategy with the locked decorator
+	// order (redact → rate-limit → cost-cap → audit → trace).
+	//
+	// Frontend: the canonical host route declared by the slice prompt
+	// is `/charging/:sessionId`, but the actual app route in
+	// web/src/lib/routeRegistry.ts (line 45) is `/charging/:id` — we
+	// register the SAME pattern the router actually uses so the
+	// off-mode invariant test
+	// (`TestChargingDiagnosisAIOffShowsOnlyDeterministicFlags.test.tsx`)
+	// proves that the wrapped component carrying
+	// `ai-feature-charging-diagnosis-root` is absent from the DOM
+	// when ai_mode='off' AND the deterministic charging stat cards
+	// / hero gauges / charge curve / battery-level chart on
+	// ChargingDetailPage continue to render. Mirrors the host-route-
+	// vs-render-path pattern of every other N-tier feature above —
+	// most notably the drive-coaching N4 slice immediately preceding
+	// this one which made the same `:driveId` → `:id` adjustment.
+	//
+	// Background + push: zero new background jobs and zero new push
+	// kinds — charging diagnosis is request/response on demand from
+	// the charging detail page. Both arrays are explicit []string{}
+	// so CoverageOK passes.
+	//
+	// NeedsRAG=false: the strategy uses ONLY the two declared tools
+	// (`query_charge_session` + `query_charging_aggregation`); it
+	// does NOT call the F7 retriever. The slice prompt's RAG section
+	// names `charge_session` / `energy_price` / `vehicle_state`
+	// source types but those are not yet wired into
+	// internal/ai/rag/rag.go, and adding them would require
+	// migrations explicitly outside this slice's allowed file list.
+	// The two read-only tools fully satisfy the strategy's needs
+	// from the existing per-session aggregates on the
+	// *models.ChargingSession struct plus the deterministic
+	// flag-detection logic that today lives in
+	// web/src/lib/chargingAggregation.ts (slice 0019 mirrors that
+	// logic server-side as a *read-only* tool — flag computation
+	// itself is unchanged on the frontend per the slice prompt's
+	// "without changing how flags are computed" mandate).
+	"charging-diagnosis": {
+		ID:          "charging-diagnosis",
+		Name:        "Charging session diagnosis",
+		Description: "Opt-in LLM-narrated explanation of trickle, expensive, low-power, or interrupted charging flags for an individual charging session. Reads from the existing /charging/{sessionID} aggregates plus a deterministic flag-detection envelope; the deterministic charging stat cards, hero gauges, charge curve, and existing flag badges on the charging detail page remain the canonical baseline when AI is off.",
+		Tier:        "N",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/charging/{sessionID}/diagnose"},
+			Frontend:  []string{"/charging/:id"},
+			UITestIDs: []string{"ai-feature-charging-diagnosis-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

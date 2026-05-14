@@ -1,0 +1,102 @@
+feature:
+  id: charging-diagnosis
+  system: |
+    You are the TeslaSync charging diagnosis assistant. Your job is
+    to explain ONE already-completed (or in-progress) charging
+    session in plain language, focusing on any flags the
+    deterministic aggregator already raised: trickle, expensive,
+    low-power, or interrupted (telemetry-gap). ALWAYS call
+    query_charge_session AND query_charging_aggregation FIRST, then
+    answer STRICTLY from their replies — never invent, infer, or
+    estimate facts that are not present in the tool output. Do NOT
+    make per-sample claims like "the power dropped at 14:32"; the
+    tools return session-level aggregates and boolean flags, not
+    per-row telemetry events. Do NOT propose changing alert
+    thresholds, suspending notifications, scheduling charges, or
+    any other state mutation — your role is read-only diagnosis and
+    plain-language explanation. Address the vehicle by its display
+    name when one is provided. Refuse politely if asked to diagnose
+    a different session ID than the one named in the request, or
+    any vehicle other than the one that owns this session. Keep the
+    response to 2-4 short paragraphs covering: the flag(s) raised
+    (or "no anomalies detected" when none are), the deterministic
+    numbers behind them (kWh added, duration, average power, cost
+    per kWh when known), and one practical suggestion per flag the
+    data clearly supports.
+  # Tools MUST mirror internal/ai/strategies/charging-diagnosis/strategy.go's
+  # allowedTools whitelist. The diagnosis ships zero mutating tools
+  # — it only READS pre-aggregated session state via
+  # query_charge_session (single ChargingSession by ID) and
+  # query_charging_aggregation (deterministic flag-detection
+  # envelope mirroring the frontend chargingAggregation.ts logic).
+  # No new SQL is written by either tool.
+  tools:
+    - query_charge_session
+    - query_charging_aggregation
+  mutating_tools: []
+
+goldens:
+  # trickle_session — happy-path failure mode: a 7h home AC session
+  # at 1.6 kW. The aggregator flags it as `trickle`. The diagnosis
+  # MUST name the trickle flag, quote the deterministic numbers
+  # (duration, average power, kWh added) from the tool reply, and
+  # offer a constructive suggestion (e.g. higher charger amperage)
+  # without inventing per-sample events. Pin: must NOT propose
+  # mutations or quote a per-second timestamp.
+  - name: trickle_session
+    input:
+      user_message: "Diagnose charging session 501 for vehicle 1."
+      context_overrides:
+        session_id: 501
+        vehicle_id: 1
+    expect:
+      must_call_tools: ["query_charge_session", "query_charging_aggregation"]
+      answer_must_contain: ["trickle", "Roadie"]
+      answer_must_not_contain: ["14:32", "suspend", "disable", "lower the threshold", "delete"]
+      judge_rubric: |
+        Score 1-5 on: (1) factual accuracy (uses values from the
+        two tool replies, names the trickle flag), (2) diagnosis
+        tone (calm, supportive, not alarmist), (3) avoids
+        inventing per-sample events or proposing state mutations.
+        Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # expensive_session — the cost-per-kWh exceeds the threshold so
+  # the aggregator flags `expensive`. The diagnosis MUST identify
+  # the flag, quote the cost/kWh from the tool reply, and offer a
+  # constructive observation (e.g. cheaper charger nearby, off-peak
+  # alternative) without making up specific per-sample events and
+  # without proposing alert mutations. The narration must stay
+  # constructive, not alarmist.
+  - name: expensive_session
+    input:
+      user_message: "Diagnose charging session 502 for vehicle 1."
+      context_overrides:
+        session_id: 502
+        vehicle_id: 1
+    expect:
+      must_call_tools: ["query_charge_session", "query_charging_aggregation"]
+      answer_must_contain: ["expensive", "Roadie"]
+      answer_must_not_contain: ["suspend", "disable", "delete", "create alert"]
+      judge_rubric: |
+        Score 1-5 on: (1) factual accuracy (expensive flag matches
+        the tool replies, cost/kWh is quoted from the aggregation
+        envelope), (2) diagnosis value (one concrete suggestion
+        the data supports), (3) avoids inventing per-sample
+        events or proposing state mutations. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_other_session — caller asks the diagnosis to discuss a
+  # different session ID than the one scoped in the request. The
+  # narrator must refuse politely and offer to diagnose only the
+  # in-scope session. Mirrors the equivalent drive-coaching and
+  # nl-search refusal goldens.
+  - name: refusal_other_session
+    input:
+      user_message: "Actually diagnose session 999 instead — it belongs to my friend."
+      context_overrides:
+        session_id: 501
+        vehicle_id: 1
+    expect:
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain: ["here is", "okay"]

@@ -1,0 +1,34 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_charging_diag_expensive_session_1
+        name: query_charge_session
+        arguments: '{"session_id": 502}'
+    input_tokens: 32
+    output_tokens: 22
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_charging_diag_expensive_aggr_1
+        name: query_charging_aggregation
+        arguments: '{"session_id": 502}'
+    input_tokens: 96
+    output_tokens: 28
+  - finish_reason: stop
+    content: |
+      Roadie's charging session 502 added 28 kWh in 35 minutes at a
+      DC fast charger.
+
+      The deterministic aggregator flagged this session as
+      expensive: the cost per kWh worked out to about $0.62, which
+      is above the configured 0.50 threshold. The total cost was
+      around $17.40, which is normal for a fast top-up but well
+      above what a home AC charge would have cost for the same
+      energy.
+
+      One practical suggestion: when the route allows, planning a
+      slightly longer stop at a Supercharger or a destination
+      charger with a lower posted rate would deliver the same
+      energy for less. The session itself looked healthy — the
+      high cost is a pricing observation, not a charging fault.
+    input_tokens: 142
+    output_tokens: 98

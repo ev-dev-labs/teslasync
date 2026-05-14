@@ -75,6 +75,7 @@ import (
 	nlautomationbuilder "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-automation-builder"
 	nlsearch "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search"
 	drivecoaching "github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching"
+	chargingdiagnosis "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
@@ -671,6 +672,26 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		drivecoaching.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+	// charging-diagnosis tools (Phase-50 / N5, slice 0019). Adds
+	// `query_charge_session` + `query_charging_aggregation` to the
+	// shared tool registry so the dispatcher can resolve them for
+	// the charging-diagnosis strategy. Same ordering rule as the
+	// other slice tools above: must be registered before the
+	// handler constructor below so the strategy's allowedTools
+	// resolve at boot.
+	tools.RegisterChargingDiagnosisTools(aiToolRegistry, tools.ChargingDiagnosisSources{
+		Charges: database.NewChargingRepo(db),
+	})
+	// Per-charging-session diagnosis handler. One per process;
+	// stateless beyond constructor inputs. Must be constructed
+	// AFTER the tool registration above so the dispatcher can
+	// resolve the strategy's allowedTools at boot.
+	aiChargingDiagnosisHandler := NewAIChargingDiagnosisHandler(
+		aiRegistry,
+		aiToolRegistry,
+		chargingdiagnosis.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	lifetimeHandler := NewLifetimeHandler(db, eventHub)
@@ -2376,7 +2397,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

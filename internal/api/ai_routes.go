@@ -72,6 +72,9 @@ import (
 //   - aiDriveCoach: the real LLM-backed handler for the per-drive
 //                  coaching narrative (Phase-50 / N4, slice 0018). Same
 //                  nil fallback pattern.
+//   - aiChargingDiagnosis: the real LLM-backed handler for the per-charging-
+//                  session diagnosis (Phase-50 / N5, slice 0019). Same
+//                  nil fallback pattern.
 func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
@@ -85,6 +88,7 @@ func mountAIRoutes(
 	aiAutomation *AIAutomationHandler,
 	aiSearch *AISearchHandler,
 	aiDriveCoach *AIDriveCoachHandler,
+	aiChargingDiagnosis *AIChargingDiagnosisHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// chatbot-llm (Phase-50 / U1, slice 0011 wires the real
@@ -194,6 +198,24 @@ func mountAIRoutes(
 		}
 		r.Post("/drives/{driveID}/coach", g.Wrap("drive-coaching", driveCoachHandler))
 
+		// charging-diagnosis (Phase-50 / N5, slice 0019). Same
+		// stub-fallback pattern as the other AI handlers — a nil
+		// handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode. The
+		// route lives under /ai/charging/... (parallel to the
+		// canonical /charging typed handlers at ChargingHandler)
+		// so the AI surface is namespaced and can be removed in
+		// one route block if the feature is ever decommissioned.
+		// sessionID is a chi URL param; the handler parses + validates
+		// it (positive int64) and rejects 0 / negative / non-numeric
+		// values with a 400 BEFORE opening the SSE stream.
+		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
+		if aiChargingDiagnosis != nil {
+			chargingDiagnosisHandler = aiChargingDiagnosis.ServeHTTP
+		}
+		r.Post("/charging/{sessionID}/diagnose", g.Wrap("charging-diagnosis", chargingDiagnosisHandler))
+
 		// ai-provider-health (Phase-50 / F1, slice 0002).
 		// Ops-only diagnostic. Triple-gated:
 		//   guard.Wrap (mode + feature toggle) → RequireSudo → handler.
@@ -263,4 +285,12 @@ func aiSearchStubHandler(w http.ResponseWriter, _ *http.Request) {
 // invariant is held by the guard, not the stub.
 func aiDriveCoachStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai drive coaching is not yet implemented")
+}
+
+// aiChargingDiagnosisStubHandler mirrors aiDriveCoachStubHandler for
+// the N5 slice (Phase-50 / 0019 charging-diagnosis). Reachable only
+// when AIChargingDiagnosisHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiChargingDiagnosisStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai charging diagnosis is not yet implemented")
 }

@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-search" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "charging-diagnosis" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-search" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -68,6 +68,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsTools: true,
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-anomaly-explanations-root"] as const),
+  }),
+  "charging-diagnosis": Object.freeze({
+    id: "charging-diagnosis",
+    name: "Charging session diagnosis",
+    description: "Opt-in LLM-narrated explanation of trickle, expensive, low-power, or interrupted charging flags for an individual charging session. Reads from the existing /charging/{sessionID} aggregates plus a deterministic flag-detection envelope; the deterministic charging stat cards, hero gauges, charge curve, and existing flag badges on the charging detail page remain the canonical baseline when AI is off.",
+    tier: "N",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-charging-diagnosis-root"] as const),
   }),
   "chatbot-llm": Object.freeze({
     id: "chatbot-llm",
@@ -153,6 +164,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "__usage__",
   "ai-provider-health",
   "anomaly-explanations",
+  "charging-diagnosis",
   "chatbot-llm",
   "digest-narration",
   "drive-coaching",

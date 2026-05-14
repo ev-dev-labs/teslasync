@@ -1,0 +1,257 @@
+package api
+
+// Phase-50 / 0019 — N5 Per-charging-session diagnosis.
+//
+// ai_charging_diagnosis_handler.go implements the LLM-backed
+// handler at POST /api/v1/ai/charging/{sessionID}/diagnose. The
+// flow mirrors the YIR / digest / anomaly / drive-coach
+// narration handlers — same dispatch+stream loop, no persistence
+// (one-shot diagnosis; no conversation to record):
+//
+//   URL  /api/v1/ai/charging/{sessionID}/diagnose
+//     ↓
+//   resolve provider via *provider.Registry.For("charging-diagnosis")
+//     ↓
+//   open SSE writer (internal/ai/stream.New) to the HTTP response
+//     ↓
+//   run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
+//
+// The handler is mounted from internal/api/ai_routes.go via
+// guard.Wrap("charging-diagnosis", …) so when ai_mode='off' or
+// the per-feature toggle is off the guard returns 404 BEFORE this
+// handler ever sees the request (ADR-015 §I6).
+//
+// Like the N4 drive-coach handler immediately preceding this one,
+// this handler takes its primary identifier (`sessionID`) from
+// the URL path — the AI surface attaches to a specific charging
+// session's detail page (/charging/:id) so the URL is the natural
+// place for it. There is no JSON body; an empty body is accepted.
+//
+// ADR-015 alignment:
+//
+//   - I3 baseline intact: the deterministic charging stat cards,
+//     hero gauges, charge curve, battery progress,
+//     and existing flag badges (trickle / expensive
+//     / low-power / interrupted) rendered by
+//     ChargingDetailPage at /charging/:id are
+//     unchanged. This handler is an OPT-IN add-on;
+//     off-mode users never see it.
+//   - I7 per-feature:     the route is gated by guard.Wrap("charging-diagnosis").
+//   - I9 redaction:       PolicyChargingDiagnosis (allows ClassVehicleName
+//     only; lat/long, charging-location names,
+//     and addresses stay tagged) is installed by
+//     dispatch.Run from the strategy.
+//   - I10 type system:    the AI surface lives entirely under
+//     /api/v1/ai/*; no field on the existing
+//     baseline JSON shape is added or modified
+//     by this slice.
+
+import (
+	"fmt"
+	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
+	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
+	chargingdiagnosis "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis"
+	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
+	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
+)
+
+// aiChargingDiagnosisMaxIterations bounds the dispatcher's
+// tool-loop. Charging diagnosis is at most two-tool-calls-then-
+// answer; a hard ceiling of 6 is generous for a model that
+// occasionally retries one of the tool calls before settling.
+// Mirrors aiDriveCoachMaxIterations from slice 0018.
+const aiChargingDiagnosisMaxIterations = 6
+
+// AIChargingDiagnosisHandler is the HTTP handler for
+// POST /api/v1/ai/charging/{sessionID}/diagnose.
+//
+// Stateless beyond its constructor inputs; safe for concurrent
+// use across requests. Construction is in router.go so the
+// dispatcher's tool registry + provider registry are wired once
+// at boot.
+type AIChargingDiagnosisHandler struct {
+	registry   *provider.Registry
+	tools      *tools.Registry
+	strategy   strategy.Strategy
+	headerName string
+	maxIters   int
+}
+
+// NewAIChargingDiagnosisHandler constructs the handler. All
+// non-pointer arguments are required; the constructor panics on
+// a nil so the wiring bug surfaces at boot, not at first request.
+//
+// registry:   AI provider registry (decorator chain already applied).
+// toolReg:    process-wide tool registry. MUST contain
+//
+//	query_charge_session AND query_charging_aggregation
+//	(both registered by tools.RegisterChargingDiagnosisTools
+//	in router.go).
+//
+// strat:      the charging-diagnosis Strategy (one per process).
+// headerName: forward-auth header name; used to extract subject
+//
+//	for audit.
+func NewAIChargingDiagnosisHandler(
+	registry *provider.Registry,
+	toolReg *tools.Registry,
+	strat strategy.Strategy,
+	headerName string,
+) *AIChargingDiagnosisHandler {
+	switch {
+	case registry == nil:
+		panic("api: NewAIChargingDiagnosisHandler: nil provider.Registry")
+	case toolReg == nil:
+		panic("api: NewAIChargingDiagnosisHandler: nil tools.Registry")
+	case strat == nil:
+		panic("api: NewAIChargingDiagnosisHandler: nil strategy.Strategy")
+	}
+	return &AIChargingDiagnosisHandler{
+		registry:   registry,
+		tools:      toolReg,
+		strategy:   strat,
+		headerName: headerName,
+		maxIters:   aiChargingDiagnosisMaxIterations,
+	}
+}
+
+// parseChargingDiagnosisURL extracts and validates the sessionID
+// URL parameter. Pulled out so the off-mode test and the
+// validator-only test can exercise the same parsing without
+// constructing a full handler with stub deps. The function writes
+// a 400 on failure and returns the (id, ok) pair so the caller
+// can early-return.
+//
+// sessionID MUST be a positive integer; zero or negative values
+// are rejected with a 400 because they cannot identify a real
+// charging session row.
+func parseChargingDiagnosisURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	raw := chi.URLParam(r, "sessionID")
+	if raw == "" {
+		writeError(w, http.StatusBadRequest, "sessionID URL parameter is required")
+		return 0, false
+	}
+	id, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("sessionID must be a positive integer (got %q)", raw))
+		return 0, false
+	}
+	if id <= 0 {
+		writeError(w, http.StatusBadRequest, "sessionID must be > 0")
+		return 0, false
+	}
+	return id, true
+}
+
+// ServeHTTP implements [http.Handler]. The sessionID is parsed
+// from the URL, the dispatcher is invoked, and the SSE stream is
+// closed via the dispatcher's deferred WriteDone. Every error
+// path either writes a structured frame onto the SSE stream
+// (when the writer has been opened) or a plain JSON 4xx/5xx
+// (before it has).
+func (h *AIChargingDiagnosisHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// 1) Parse + validate URL parameters. Body is intentionally
+	// ignored; this endpoint takes its only input from the URL.
+	sessionID, ok := parseChargingDiagnosisURL(w, r)
+	if !ok {
+		return
+	}
+
+	// 2) Resolve provider via the registry. Per-request resolution
+	// honours mid-flight settings changes (model swap, mode flip)
+	// without restart. A resolve failure must NOT open the SSE
+	// stream — emit JSON 502 so the frontend falls back gracefully.
+	if _, err := h.registry.For(r.Context(), chargingdiagnosis.FeatureID); err != nil {
+		log.Error().Err(err).Msg("ai charging diagnosis: provider.For failed")
+		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		return
+	}
+
+	// 3) Subject + feature-id annotations for audit/rate-limit.
+	// SubjectFromRequest returns "" if the header is absent;
+	// that's the open-mode value the audit log treats as
+	// "anonymous".
+	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
+	ctx := provider.WithSubject(r.Context(), subject)
+	ctx = provider.WithFeatureID(ctx, chargingdiagnosis.FeatureID)
+
+	// 4) Open the SSE writer. Stream.New writes the SSE response
+	// headers, starts the consumer goroutine, and returns a
+	// child ctx that cancels on stall — we pass that ctx to
+	// the dispatcher so a stalled consumer kills the upstream
+	// call.
+	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(chargingdiagnosis.FeatureID))
+	if err != nil {
+		// Non-flushable response writer (test recorder, etc.).
+		// Emit a plain JSON 500 — the SSE headers were not sent.
+		log.Error().Err(err).Msg("ai charging diagnosis: stream.New failed (non-flushable writer)")
+		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		return
+	}
+
+	// 5) Resolve the per-feature provider from the (now-annotated)
+	// context. The decorator chain reads the subject + feature-id
+	// off the ctx for audit + rate limit accounting.
+	prov, err := h.registry.For(ctx, chargingdiagnosis.FeatureID)
+	if err != nil {
+		log.Error().Err(err).Msg("ai charging diagnosis: provider.For (post-stream) failed")
+		_ = sseW.WriteError(err)
+		return
+	}
+
+	// 6) Build the dispatcher with the deny-all confirm hook. The
+	// charging-diagnosis strategy declares only read-only tools,
+	// so the confirm hook never fires — but defence-in-depth:
+	// if a future strategy edit adds a mutating tool by mistake,
+	// the dispatcher will REJECT it instead of silently mutating
+	// fleet state.
+	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
+
+	// 7) Synthesise the user message. Charging diagnosis is NOT
+	// conversational — there is no chat history. We hand the
+	// LLM a deterministic prompt that asks it to call its two
+	// tools and narrate the result.
+	//
+	// Note: vehicle_id is intentionally NOT included here. The
+	// LLM learns the vehicle from the tool reply
+	// (query_charge_session returns the *models.ChargingSession
+	// whose VehicleID field is the authoritative source).
+	// Including a user-controllable vehicle hint in the prompt
+	// would risk cross-tenant leak via prompt injection —
+	// keeping the session_id as the sole identifier removes
+	// that vector entirely.
+	userMsg := fmt.Sprintf(
+		"Diagnose charging session %d. Call query_charge_session and "+
+			"query_charging_aggregation first, then explain any flags raised "+
+			"(trickle, expensive, low-power, interrupted) strictly from their replies "+
+			"in 2-4 short paragraphs.",
+		sessionID,
+	)
+
+	// 8) Run the dispatcher. The deferred WriteDone in
+	// dispatch.Run closes the SSE stream cleanly on any path.
+	in := strategy.StrategyInput{
+		LastMessage: userMsg,
+		History:     nil,
+	}
+	if err := d.Run(ctx, h.strategy, in, sseW); err != nil {
+		// Errors are also surfaced on the SSE wire by the
+		// dispatcher's terminal frame (WriteError or
+		// EmitLimitError on the underlying writer); we just log.
+		log.Error().Err(err).
+			Int64("session_id", sessionID).
+			Msg("ai charging diagnosis: dispatcher returned error")
+	}
+}
+
+// Compile-time assertion: AIChargingDiagnosisHandler satisfies
+// http.Handler.
+var _ http.Handler = (*AIChargingDiagnosisHandler)(nil)
