@@ -68,6 +68,7 @@ import (
 	// the shared tool registry are constructed at boot and shared with
 	// the AI chatbot HTTP handler.
 	chatbotllm "github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm"
+	digestnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
 	// New hexagonal architecture packages
@@ -454,11 +455,30 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		Geofences:     database.NewGeofenceRepo(db),
 		Efficiency:    database.NewDriveRepo(db),
 	})
+	// Phase-50 / U2 (slice 0012) — register the digest-narration
+	// slice's read-only tool on the SAME process-wide registry so
+	// the dispatcher can resolve `query_weekly_digest_context` for
+	// the digest-narration strategy. Register12Builtins must run
+	// FIRST so the BuiltinNames-pin test continues to see the 12
+	// canonical builtins; this call extends the registry beyond
+	// that pinned set.
+	tools.RegisterDigestTools(aiToolRegistry, tools.DigestSources{
+		Drives:  database.NewDriveRepo(db),
+		Charges: database.NewChargingRepo(db),
+	})
 	aiChatbotHandler := NewAIChatbotHandler(
 		database.NewChatRepo(db),
 		aiRegistry,
 		aiToolRegistry,
 		chatbotllm.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+	// Phase-50 / U2 (slice 0012) — Weekly digest narration handler.
+	// One per process; stateless beyond constructor inputs.
+	aiDigestHandler := NewAIDigestHandler(
+		aiRegistry,
+		aiToolRegistry,
+		digestnarration.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	tirePressureHandler := NewTirePressureHandler(stateReader, liveStateReader)
@@ -2209,7 +2229,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

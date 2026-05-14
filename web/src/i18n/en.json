@@ -2354,6 +2354,10 @@
         "chatbot-llm": {
           "label": "LLM chatbot",
           "description": "Conversational fleet assistant powered by an LLM. Falls back to the heuristic chatbot when AI is off."
+        },
+        "digest-narration": {
+          "label": "Weekly digest narration",
+          "description": "Opt-in LLM narration of the weekly digest. The deterministic template digest remains the baseline when AI is off."
         }
       },
       "archive": {
@@ -3123,7 +3127,15 @@
       "title": "Weekly Digest",
       "selectVehicle": "Select vehicle",
       "subtitle": "Your driving and charging summary for the week",
-      "noData": "No Data"
+      "noData": "No Data",
+      "aiNarration": {
+        "title": "AI narration",
+        "description": "Get a short, AI-written recap of your week from the digest data above.",
+        "generateButton": "Generate narration",
+        "generating": "Generating…",
+        "error": "Could not generate narration. Please try again.",
+        "badge": "AI"
+      }
     },
     "title": "Fleet Analytics",
     "tabs": {

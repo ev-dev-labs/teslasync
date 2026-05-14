@@ -180,6 +180,52 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / U2 (slice 0012) — Weekly digest narration.
+	//
+	// Adds opt-in LLM-narrated prose on top of the existing template
+	// weekly digest. The baseline template renderer at
+	// web/src/features/analytics/pages/WeeklyDigestPage.tsx remains the
+	// canonical baseline for any user with `ai_mode='off'`; this
+	// feature only wires the AI surface that lives alongside it.
+	//
+	// Backend: POST /api/v1/ai/digests/weekly/narrate is mounted by
+	// mountAIRoutes inside `internal/api/ai_routes.go` via guard.Wrap
+	// so off-mode requests return 404 BEFORE the handler runs
+	// (ADR-015 §I6).
+	//
+	// Frontend: the canonical host route is `/analytics/digest`
+	// (declared per the slice prompt) — the AI section actually
+	// renders inside the existing /weekly-digest page so the off-mode
+	// invariant test (`WeeklyDigestAIOff.test.tsx`) can prove that
+	// the wrapped component carrying `ai-feature-digest-narration-root`
+	// is absent from the DOM in off mode.
+	//
+	// Background: `ai_digest_weekly` is the cross-cutting cron the
+	// future scheduler will invoke once-a-week to fan out narrated
+	// digests; the job re-checks ai_mode + per-feature toggle on every
+	// tick (ADR-015 §I12 #3) and is a no-op when either is off.
+	//
+	// Push: `ai_digest_ready` is the push_subscriptions.kind delivered
+	// when a narration completes; the future push fan-out worker
+	// filters by this kind AND the recipient's current ai_mode at
+	// delivery time (ADR-015 §I12 #2).
+	"digest-narration": {
+		ID:          "digest-narration",
+		Name:        "Weekly digest narration",
+		Description: "Opt-in LLM narration of the weekly digest. The deterministic template digest remains the baseline when AI is off.",
+		Tier:        "U",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/digests/weekly/narrate"},
+			Frontend:  []string{"/analytics/digest"},
+			UITestIDs: []string{"ai-feature-digest-narration-root"},
+			JobNames:  []string{"ai_digest_weekly"},
+			PushKinds: []string{"ai_digest_ready"},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

@@ -5,6 +5,7 @@ import { PageContainer } from '@/components/layout';
 import { Select } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { AIDigestNarration } from '@/components/ai/AIDigestNarration';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 import {
@@ -84,6 +85,15 @@ export default function WeeklyDigestPage() {
           <BatteryHealthSection metrics={metrics} />
           <AlertsSection metrics={metrics} alertPieData={alertPieData} />
           <WeekOverWeekSummary metrics={metrics} />
+          {/*
+            Phase-50 / 0012 — U2 Weekly digest narration. The AI section
+            is wrapped by withAiFeature('digest-narration', …) so it
+            renders as a no-op when ai_mode='off' OR the per-feature
+            toggle is off (ADR-015 §I5 + §I6 + §I7). The deterministic
+            template digest above is unchanged and remains the canonical
+            baseline for every user.
+          */}
+          <AIDigestNarration />
         </FadeIn>
       )}
     </PageContainer>

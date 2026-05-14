@@ -51,12 +51,16 @@ import (
 //                  May be nil during early bring-up; nil falls back to
 //                  the F0 501 stub so the off-mode 404 invariant still
 //                  holds.
+//   - aiDigest   : the real LLM-backed handler for the weekly digest
+//                  narration (Phase-50 / U2). May be nil during early
+//                  bring-up; nil falls back to the same 501 stub.
 func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
 	registry *provider.Registry,
 	sudoMW func(http.Handler) http.Handler,
 	aiChatbot *AIChatbotHandler,
+	aiDigest *AIDigestHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// chatbot-llm (Phase-50 / U1, slice 0011 wires the real
@@ -69,6 +73,17 @@ func mountAIRoutes(
 			chatbotHandler = aiChatbot.ServeHTTP
 		}
 		r.Post("/chatbot", g.Wrap("chatbot-llm", chatbotHandler))
+
+		// digest-narration (Phase-50 / U2, slice 0012). Same
+		// stub-fallback pattern as chatbot — a nil handler is
+		// possible during partial wiring but the off-mode 404
+		// invariant still holds because guard.Wrap returns 404
+		// BEFORE the handler runs in off mode.
+		var digestHandler http.HandlerFunc = aiDigestStubHandler
+		if aiDigest != nil {
+			digestHandler = aiDigest.ServeHTTP
+		}
+		r.Post("/digests/weekly/narrate", g.Wrap("digest-narration", digestHandler))
 
 		// ai-provider-health (Phase-50 / F1, slice 0002).
 		// Ops-only diagnostic. Triple-gated:
@@ -86,4 +101,11 @@ func mountAIRoutes(
 // of panicking. Ops never see this in normal operation.
 func aiChatbotStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai chatbot is not yet implemented")
+}
+
+// aiDigestStubHandler mirrors aiChatbotStubHandler for the U2 slice.
+// Reachable only when AIDigestHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiDigestStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai digest narration is not yet implemented")
 }

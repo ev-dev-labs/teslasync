@@ -1,0 +1,14 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_digest_ctx_zero_1
+        name: query_weekly_digest_context
+        arguments: '{"vehicle_id": 1, "week_offset_weeks": 0}'
+    input_tokens: 28
+    output_tokens: 18
+  - finish_reason: stop
+    content: |
+      This week was a quiet one — no drives recorded and 0 charging sessions.
+      Roadie has been resting!
+    input_tokens: 60
+    output_tokens: 24
