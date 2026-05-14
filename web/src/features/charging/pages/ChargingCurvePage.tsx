@@ -89,8 +89,6 @@ export default function ChargingCurvePage() {
     [selectedSession],
   );
 
-  const currencySymbol = '$';
-
   /* ── Render ──────────────────────────────────────────────────────────── */
 
   if (isLoading) {
@@ -186,7 +184,7 @@ export default function ChargingCurvePage() {
         </div>
 
         {/* Summary Stats */}
-        <SummaryStatsGrid stats={stats} currencySymbol={currencySymbol} />
+        <SummaryStatsGrid stats={stats} />
 
         {/* Single Session Curve + Detail Sidebar */}
         <FadeIn delay={0.1}>
@@ -195,7 +193,7 @@ export default function ChargingCurvePage() {
               <div className="lg:col-span-2">
                 <SessionCurveChart curveData={curveData} />
               </div>
-              <SessionDetailPanel session={selectedSession} currencySymbol={currencySymbol} />
+              <SessionDetailPanel session={selectedSession} />
             </div>
           ) : (
             <GlassPanel className="flex h-48 items-center justify-center" data-tour="charging-curve">

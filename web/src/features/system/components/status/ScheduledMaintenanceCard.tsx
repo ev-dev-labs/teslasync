@@ -28,6 +28,7 @@ import { CalendarClock, AlertTriangle, X } from 'lucide-react'
 import { GlassPanel, Button, Input, Badge } from '@/components/ui'
 import { useToast } from '@/components/feedback/Toast'
 import { useMaintenanceState, useUpdateMaintenance } from '@/api/hooks/useAdmin'
+import { useDateFormat } from '@/hooks/useDateFormat'
 import { cn } from '@/lib/cn'
 
 interface ScheduledMaintenanceCardProps {
@@ -40,6 +41,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
   const { data: state } = useMaintenanceState()
   const mutation = useUpdateMaintenance()
   const toast = useToast()
+  const { formatDateTime } = useDateFormat()
   const [showSchedule, setShowSchedule] = useState(false)
   const [whenLocal, setWhenLocal] = useState('')
   const [duration, setDuration] = useState('60')
@@ -68,7 +70,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
     try {
       await mutation.mutateAsync({
         mode: 'maintenance',
-        message: message.trim() || `Scheduled maintenance · ends ${new Date(endMs).toLocaleString()}`,
+        message: message.trim() || `Scheduled maintenance · ends ${formatDateTime(new Date(endMs))}`,
         until: new Date(endMs).toISOString(),
       })
       setShowSchedule(false)
@@ -119,8 +121,8 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
         {isActive && untilTs != null && (
           <p className="text-xs text-[var(--text-muted)]">
             {minutesToStart != null && minutesToStart > 0
-              ? `Active until ${new Date(untilTs).toLocaleString()} (${minutesToStart} min remaining)`
-              : `Until ${new Date(untilTs).toLocaleString()}`}
+              ? `Active until ${formatDateTime(new Date(untilTs))} (${minutesToStart} min remaining)`
+              : `Until ${formatDateTime(new Date(untilTs))}`}
           </p>
         )}
         {!isActive && !showSchedule && (

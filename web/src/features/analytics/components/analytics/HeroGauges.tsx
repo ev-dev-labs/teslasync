@@ -3,6 +3,7 @@ import { MapPin, Car, Zap, Gauge, DollarSign, Leaf } from 'lucide-react';
 import { MetricCard } from '@/components/data-display';
 import { safe } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { FleetAnalytics } from '@/api/types';
@@ -13,6 +14,7 @@ const KM_PER_MILE = 1.609344;
 export function HeroGauges({ data }: { data: FleetAnalytics | undefined }) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
+  const { formatCurrency } = useFormatting();
   const distanceUnit = unitPrefs.distance;
   const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
 
@@ -66,7 +68,7 @@ export function HeroGauges({ data }: { data: FleetAnalytics | undefined }) {
       />
       <MetricCard
         label={t('analytics.hero.gasSavings', 'Gas Savings')}
-        value={`$${fmtNumber(Math.max(gasSavings, 0), 0)}`}
+        value={formatCurrency(Math.max(gasSavings, 0), 0)}
         icon={<DollarSign className="h-4 w-4" />}
         color="green"
       />

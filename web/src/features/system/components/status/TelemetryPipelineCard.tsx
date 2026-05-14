@@ -23,6 +23,7 @@ import { Activity, Battery, Car, ExternalLink, Wifi, WifiOff } from 'lucide-reac
 
 import { getPollingStatus, type VehiclePollingStatus } from '@/api/polling'
 import type { Vehicle } from '@/api/types'
+import { fmtInt } from '@/lib/numberFormat'
 
 interface TelemetryPipelineCardProps {
   vehicles: Vehicle[] | undefined
@@ -40,7 +41,7 @@ const POLLING_REFRESH_MS = 15_000
 
 function fmtCount(n: number | undefined | null): string {
   if (n == null || !Number.isFinite(n)) return '—'
-  return n.toLocaleString()
+  return fmtInt(n)
 }
 
 // Render an absolute-clock-skew-tolerant relative time using the shared

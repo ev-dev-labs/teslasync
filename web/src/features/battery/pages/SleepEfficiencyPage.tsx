@@ -15,6 +15,7 @@ import {
 import { CHART_COLORS } from '@/lib/colors';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
@@ -40,6 +41,7 @@ export default function SleepEfficiencyPage() {
   const { t } = useTranslation();
   usePageTitle(t('sleep.title', 'Sleep Efficiency'));
   const { unitPrefs } = useUnits();
+  const { formatCurrency } = useFormatting();
   const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
 
   const tempUnit = unitPrefs.temperature;
@@ -217,7 +219,7 @@ export default function SleepEfficiencyPage() {
               <MetricCard
                 icon={<DollarSign className="h-4 w-4" />}
                 label={t('sleep.sentryMonthlyCost', 'Sentry Monthly Cost')}
-                value={`$${fmtNumber(sleep.sentry_monthly_cost)}`}
+                value={formatCurrency(sleep.sentry_monthly_cost)}
                 color="red"
                 help={{
                   i18nKey: 'help.sleepEfficiency.sentryCost',
@@ -318,7 +320,7 @@ export default function SleepEfficiencyPage() {
                       <p className="text-xs text-[var(--text-muted)]">{t('sleep.extraMonthly', 'Extra monthly')}</p>
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-rose-300">${fmtNumber(sleep.sentry_extra_monthly_cost)}</p>
+                      <p className="text-lg font-bold text-rose-300">{formatCurrency(sleep.sentry_extra_monthly_cost)}</p>
                       <p className="text-xs text-[var(--text-muted)]">{t('sleep.extraCostMo', 'Extra cost/mo')}</p>
                     </div>
                   </div>

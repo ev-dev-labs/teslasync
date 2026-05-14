@@ -8,6 +8,7 @@ import {
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { useChartPalette } from '@/hooks/useChartPalette';
+import { useFormatting } from '@/hooks/useFormatting';
 import type { MonthlyBucket } from './types';
 
 interface MonthlyCostChartProps {
@@ -18,6 +19,7 @@ interface MonthlyCostChartProps {
 export function MonthlyCostChart({ data, vehicleId }: MonthlyCostChartProps) {
   const { t } = useTranslation();
   const palette = useChartPalette();
+  const { formatCurrency } = useFormatting();
 
   return (
     <ChartContainer
@@ -47,7 +49,7 @@ export function MonthlyCostChart({ data, vehicleId }: MonthlyCostChartProps) {
               />
               <YAxis
                 {...axisTickSm}
-                tickFormatter={(v: number) => `$${v}`}
+                tickFormatter={(v: number) => formatCurrency(v, 0)}
               />
               <Tooltip content={<ChartTooltip />} />
               {renderAnnotationLines(chartAnnotations, (ts) => ts)}

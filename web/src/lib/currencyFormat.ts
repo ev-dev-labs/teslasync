@@ -142,6 +142,44 @@ export function currencySymbol(currency: string, locale: string): string {
 }
 
 /**
+ * Best-effort reverse lookup: given a currency symbol from settings
+ * (e.g. '$', '€', '£', '¥', '₹', 'kr'), guess the most-common ISO 4217
+ * code so callers can pass it to `Intl.NumberFormat`. Falls back to
+ * `'USD'` for unknown symbols.
+ *
+ * The settings panel only stores the symbol (`currency_symbol`), not
+ * the ISO code. This helper bridges that gap when the caller needs a
+ * proper Intl-formatted currency string.
+ */
+export function currencyCodeFromSymbol(symbol: string | null | undefined): string {
+  const s = (symbol ?? '').trim()
+  switch (s) {
+    case '$': return 'USD'
+    case '€': return 'EUR'
+    case '£': return 'GBP'
+    case '¥': return 'JPY'
+    case '₹': return 'INR'
+    case '₽': return 'RUB'
+    case '₩': return 'KRW'
+    case 'A$': return 'AUD'
+    case 'C$': return 'CAD'
+    case 'CHF': return 'CHF'
+    case 'kr': return 'SEK'
+    case 'R$': return 'BRL'
+    case 'R': return 'ZAR'
+    case 'NZ$': return 'NZD'
+    case 'HK$': return 'HKD'
+    case 'NT$': return 'TWD'
+    case 'S$': return 'SGD'
+    case '₺': return 'TRY'
+    case '฿': return 'THB'
+    case 'Mex$': return 'MXN'
+    case 'zł': return 'PLN'
+    default: return 'USD'
+  }
+}
+
+/**
  * Parse a user-typed string as a major-unit number for the given
  * currency/locale. Returns `null` for empty / unparseable input.
  *

@@ -48,7 +48,9 @@ import {
   getVersionInfo, getExtendedHealth, checkForUpdates,
   getBackupStats, getWorkersHealth, getAPIUsage, getErrorStats,
 } from '@/api/devtools'
-import { formatBytes } from '@/lib/numberFormat'
+import { formatBytes, fmtInt } from '@/lib/numberFormat'
+import { useDateFormat } from '@/hooks/useDateFormat'
+import { useFormatting } from '@/hooks/useFormatting'
 import { cn } from '@/lib/cn'
 
 import { formatUptime } from '../components/status/helpers'
@@ -80,6 +82,8 @@ export default function SystemStatusPage() {
   const { t } = useTranslation()
   usePageTitle(t('System Status'))
   const qc = useQueryClient()
+  const { formatDateTime } = useDateFormat()
+  const { formatCurrency } = useFormatting()
 
   // ── data sources ────────────────────────────────────────────────
   const {
@@ -328,8 +332,8 @@ export default function SystemStatusPage() {
     if (totalRows > 0) {
       rows.push({
         label: 'Total rows',
-        valueText: totalRows.toLocaleString(),
-        metaText: positionCount > 0 ? `${positionCount.toLocaleString()} positions` : undefined,
+        valueText: fmtInt(totalRows),
+        metaText: positionCount > 0 ? `${fmtInt(positionCount)} positions` : undefined,
         icon: <Boxes className="h-4 w-4" />,
       })
     }
@@ -337,7 +341,7 @@ export default function SystemStatusPage() {
     if (extHealth?.system?.goroutines != null) {
       rows.push({
         label: 'Runtime threads',
-        valueText: extHealth.system.goroutines.toLocaleString(),
+        valueText: fmtInt(extHealth.system.goroutines),
         metaText: 'goroutines',
         icon: <Cpu className="h-4 w-4" />,
       })
@@ -434,7 +438,7 @@ export default function SystemStatusPage() {
       : backupStats?.database_size ?? 'connected'
   const telemetrySummary =
     vehicleCount > 0
-      ? `${vehicleCount} vehicle${vehicleCount === 1 ? '' : 's'} · ${positionCount.toLocaleString()} positions`
+      ? `${vehicleCount} vehicle${vehicleCount === 1 ? '' : 's'} · ${fmtInt(positionCount)} positions`
       : 'operational · 0 vehicles (idle)'
   const notificationsSummary =
     notifStats
@@ -655,9 +659,9 @@ export default function SystemStatusPage() {
             {apiOverBudget && apiUsage && (
               <ActionItem
                 severity="warn"
-                title={t('Tesla API estimated cost ${{cost}} exceeds ${{credit}} monthly credit', {
-                  cost: apiUsage.estimated_cost.toFixed(2),
-                  credit: apiUsage.monthly_credit.toFixed(2),
+                title={t('Tesla API estimated cost {{cost}} exceeds {{credit}} monthly credit', {
+                  cost: formatCurrency(apiUsage.estimated_cost),
+                  credit: formatCurrency(apiUsage.monthly_credit),
                 })}
                 description={t('Review polling cadence or vehicle subscriptions')}
                 cta={{ label: t('Open Tesla API logs'), to: '/api-logs' }}
@@ -733,7 +737,7 @@ export default function SystemStatusPage() {
                 { label: t('Pool idle'), value: extHealth?.database_pool ? String(extHealth.database_pool.idle_conns) : '—' },
                 { label: t('Storage used'), value: backupStats?.database_size ?? '—' },
                 { label: t('Tables'), value: backupStats?.table_count != null ? String(backupStats.table_count) : '—' },
-                { label: t('Total rows'), value: totalRows > 0 ? totalRows.toLocaleString() : '—' },
+                { label: t('Total rows'), value: totalRows > 0 ? fmtInt(totalRows) : '—' },
               ]}
             />
             <DetailLink to="/db-health" label={t('Open DB Health')} />
@@ -828,7 +832,7 @@ export default function SystemStatusPage() {
                 rows={[
                   { label: t('Configured schedules'), value: String(backupConfigs?.length ?? 0) },
                   { label: t('Total runs'), value: String(backupRuns?.length ?? 0) },
-                  { label: t('Last successful'), value: lastSuccessfulBackup?.completedAt ? new Date(lastSuccessfulBackup.completedAt).toLocaleString() : '—' },
+                  { label: t('Last successful'), value: lastSuccessfulBackup?.completedAt ? formatDateTime(lastSuccessfulBackup.completedAt) : '—' },
                   { label: t('Last successful size'), value: lastSuccessfulBackup?.fileSize ? formatBytes(lastSuccessfulBackup.fileSize) : '—' },
                   { label: t('Failures (recent)'), value: String((backupRuns ?? []).filter((r) => r.status === 'failed').length) },
                 ]}
@@ -843,9 +847,9 @@ export default function SystemStatusPage() {
             icon={<Car className="h-5 w-5" />}
             title={t('Tesla API usage')}
             description={apiUsage
-              ? t('${{cost}} of ${{credit}} estimated this period', {
-                cost: apiUsage.estimated_cost.toFixed(2),
-                credit: apiUsage.monthly_credit.toFixed(2),
+              ? t('{{cost}} of {{credit}} estimated this period', {
+                cost: formatCurrency(apiUsage.estimated_cost),
+                credit: formatCurrency(apiUsage.monthly_credit),
               })
               : t('No data')}
             defaultOpen
@@ -1040,7 +1044,7 @@ function SystemInfoRows({
     { label: 'Uptime', value: formatUptime(version.uptime_seconds) },
   ]
   if (extHealth?.system?.goroutines != null) {
-    rows.push({ label: 'Goroutines', value: extHealth.system.goroutines.toLocaleString() })
+    rows.push({ label: 'Goroutines', value: fmtInt(extHealth.system.goroutines) })
   }
 
   return <DefList rows={rows} />

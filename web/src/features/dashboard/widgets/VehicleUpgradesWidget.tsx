@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/feedback';
 import { useVehicleUpgrades, useVehicles } from '@/api/hooks/useVehicles';
 import { useShareLinks } from '@/api/hooks/useSharing';
 import { useDrives } from '@/api/hooks/useDriving';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
@@ -55,14 +56,6 @@ function parseUpgrades(data: Record<string, unknown> | null | undefined): Parsed
   return result;
 }
 
-/** Format a date string compactly */
-function fmtDate(dateStr: string | null): string | null {
-  if (!dateStr) return null;
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return null;
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
 /** Compute days until an expiry date */
 function daysUntil(dateStr: string | null): number | null {
   if (!dateStr) return null;
@@ -73,6 +66,7 @@ function daysUntil(dateStr: string | null): number | null {
 
 export default function VehicleUpgradesWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { formatDate: fmtDate } = useDateFormat();
   const { data: vehicles } = useVehicles();
   const numericId = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const stringId = numericId > 0 ? String(numericId) : undefined;

@@ -26,8 +26,11 @@ import {
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
+import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { formatCurrencyValue, currencyCodeFromSymbol } from '@/lib/currencyFormat';
 import { cn } from '@/lib/cn';
 
 /** Compute duration in minutes between two ISO timestamps */
@@ -64,6 +67,9 @@ const gridCols = { default: 1, sm: 2, lg: 4 } as const;
 export default function TeslaChargingHistoryPage() {
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
+  const { settings, locale } = useSettings();
+  const { formatCurrency } = useFormatting();
+  const userCurrency = currencyCodeFromSymbol(settings.currency_symbol);
   usePageTitle(t('tesla_charging.title', 'Tesla Charging History'));
 
   const { data: vehicles } = useVehicles();
@@ -153,7 +159,7 @@ export default function TeslaChargingHistoryPage() {
       render: (row) => (
         <span className="text-sm font-medium text-emerald-400">
           {row.total_due != null
-            ? `${row.currency_code ?? '$'}${fmtNumber(row.total_due, 2)}`
+            ? formatCurrencyValue(row.total_due, row.currency_code ?? userCurrency, locale, 2, { useGrouping: true })
             : '—'}
         </span>
       ),
@@ -346,7 +352,7 @@ export default function TeslaChargingHistoryPage() {
             <StaggerItem>
               <StatCard
                 label={t('tesla_charging.stats.spend', 'Total Spend')}
-                value={summary.total_spend != null ? `$${fmtNumber(summary.total_spend, 2)}` : '—'}
+                value={summary.total_spend != null ? formatCurrency(summary.total_spend, 2) : '—'}
                 icon={<DollarSign className="h-5 w-5 text-emerald-400" />}
                 loading={isLoading}
               />
@@ -354,7 +360,7 @@ export default function TeslaChargingHistoryPage() {
             <StaggerItem>
               <StatCard
                 label={t('tesla_charging.stats.avgCost', 'Avg Cost/kWh')}
-                value={summary.avg_cost_per_kwh != null ? `$${fmtNumber(summary.avg_cost_per_kwh, 3)}` : '—'}
+                value={summary.avg_cost_per_kwh != null ? formatCurrency(summary.avg_cost_per_kwh, 3) : '—'}
                 icon={<TrendingUp className="h-5 w-5 text-purple-400" />}
                 loading={isLoading}
               />
@@ -383,7 +389,7 @@ export default function TeslaChargingHistoryPage() {
                 </defs>
                 {chartGrid}
                 <XAxis dataKey="month" tick={axisTickSm} />
-                <YAxis tick={axisTickSm} tickFormatter={(v: number) => `$${v}`} />
+                <YAxis tick={axisTickSm} tickFormatter={(v: number) => formatCurrency(v, 0)} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="total" fill="url(#spendGrad)" radius={[4, 4, 0, 0]} />
               </BarChart>

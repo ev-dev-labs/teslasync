@@ -44,6 +44,7 @@ import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { CHART_COLORS } from '@/lib/colors';
 import { cn } from '@/lib/cn';
 import { useInView } from '@/hooks/useInView';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 export interface SmallMultiplesChartProps<T extends Record<string, unknown> = Record<string, unknown>> {
   /** Time-ordered rows. Each row holds `timestamp` + arbitrary series keys. */
@@ -220,6 +221,7 @@ function SmallMultiplesCell({
   noData,
   onCellClick,
 }: SmallMultiplesCellProps) {
+  const { formatTime } = useDateFormat();
   const { ref, inView } = useInView<HTMLDivElement>({ rootMargin: '300px' });
   const cellInteractive = Boolean(onCellClick);
   return (
@@ -288,12 +290,7 @@ function SmallMultiplesCell({
             <XAxis
               dataKey={xKey}
               tick={{ fill: 'var(--text-muted)', fontSize: 9 }}
-              tickFormatter={(v: string) => {
-                const d = new Date(v);
-                return Number.isNaN(d.getTime())
-                  ? String(v)
-                  : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-              }}
+              tickFormatter={(v: string) => formatTime(v)}
               minTickGap={24}
               tickLine={false}
             />

@@ -3,17 +3,21 @@ import {
   useGasPriceStatus, usePollGasPrice,
   useToggleGasPrice, useUpdateGasPriceConfig,
 } from '@/api/hooks/useSettings'
+import { useFormatting } from '@/hooks/useFormatting'
+import { useSettings } from '@/hooks/useSettings'
 import { GlassPanel, Button, Select, HelpIcon } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { cn } from '@/lib/cn'
-import { fmtNumber } from '@/lib/numberFormat'
 import { formatDateTime } from '@/lib/dateFormat'
 import { SettingField } from './SettingField'
 import { Fuel, Zap, Play, Pause } from 'lucide-react'
 
 export function GasPriceSettings() {
   const { t } = useTranslation('settings')
+  const { formatCurrency } = useFormatting()
+  const { settings } = useSettings()
+  const gasUnitLabel = settings.gas_unit === 'liter' ? 'L' : 'gal'
   const toast = useToast()
   const { data: gasPriceStatus } = useGasPriceStatus()
   const gasPollMut = usePollGasPrice()
@@ -85,7 +89,7 @@ export function GasPriceSettings() {
           <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-3.5">
             <p className="text-xs font-medium uppercase tracking-wider mb-1 text-[var(--text-muted)]">{t('gas.currentPrice', 'Current Price')}</p>
             <p className="text-lg font-semibold text-[var(--text-primary)]">
-              {gasPriceStatus?.current_price ? `$${fmtNumber(gasPriceStatus.current_price)}/gal` : '—'}
+              {gasPriceStatus?.current_price ? `${formatCurrency(gasPriceStatus.current_price)}/${gasUnitLabel}` : '—'}
             </p>
           </div>
           <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-3.5">

@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/feedback';
 import { useWarrantyDetails } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
@@ -66,6 +67,7 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+  const { formatDate, locale } = useDateFormat();
 
   const distanceUnit = unitPrefs.distance;
 
@@ -129,7 +131,7 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
     items.push({
       label: t('widget.warranty.expiryDate', 'Expiry Date'),
       value: expiryDate
-        ? new Date(expiryDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+        ? formatDate(expiryDate)
         : null,
       badge: { text: statusLabel(daysRemaining, t), variant },
     });
@@ -173,7 +175,7 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
         items.push({
           label: t(cov.labelKey, cov.fallback),
           value: covExpiry
-            ? new Date(covExpiry).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+            ? new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(new Date(covExpiry))
             : t('widget.warranty.included', 'Included'),
           badge: {
             text: covActive
@@ -186,7 +188,7 @@ export default function WarrantyStatusWidget({ size }: WidgetProps) {
     }
 
     return items;
-  }, [warrantyData, expiryDate, daysRemaining, variant, mileageLimitMi, currentMileageMi, toDistanceDisplay, distanceUnit, t]);
+  }, [warrantyData, expiryDate, daysRemaining, variant, mileageLimitMi, currentMileageMi, toDistanceDisplay, distanceUnit, t, formatDate, locale]);
 
   const shellProps = {
     loading: isLoading,

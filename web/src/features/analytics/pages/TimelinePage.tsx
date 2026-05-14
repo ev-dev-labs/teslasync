@@ -23,7 +23,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUrlString } from '@/hooks/useUrlState';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+import { fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
@@ -419,7 +419,7 @@ export default function TimelinePage() {
                       backgroundColor:
                         STATE_COLORS[row.state] ?? STATE_COLORS.offline,
                     }}
-                    title={`${row.state}: ${formatDurationFromSeconds(row.total_seconds)} (${row.percentage.toFixed(1)}%)`}
+                    title={`${row.state}: ${formatDurationFromSeconds(row.total_seconds)} (${fmtPercent(row.percentage, 1)})`}
                   />
                 );
               })}

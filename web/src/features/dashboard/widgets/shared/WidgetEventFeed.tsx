@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TimelineItem } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 export interface EventFeedItem {
   id: string | number;
@@ -24,23 +25,6 @@ interface WidgetEventFeedProps {
   emptyIcon?: ReactNode;
 }
 
-function formatRelativeTime(isoStr: string): string {
-  const d = new Date(isoStr);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1) return 'Just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHrs = Math.floor(diffMin / 60);
-  if (diffHrs < 24) return `${diffHrs}h ago`;
-  return d.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
 export function WidgetEventFeed({
   items,
   maxItems,
@@ -49,6 +33,19 @@ export function WidgetEventFeed({
   emptyIcon,
 }: WidgetEventFeedProps) {
   const { t } = useTranslation('dashboard');
+  const { formatDateTime } = useDateFormat();
+
+  function formatRelativeTime(isoStr: string): string {
+    const d = new Date(isoStr);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMin = Math.floor(diffMs / 60_000);
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHrs = Math.floor(diffMin / 60);
+    if (diffHrs < 24) return `${diffHrs}h ago`;
+    return formatDateTime(isoStr);
+  }
 
   const limit = maxItems ?? (compact ? 3 : 10);
 

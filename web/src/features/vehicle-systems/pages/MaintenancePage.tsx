@@ -340,7 +340,7 @@ function ItemsSkeleton() {
 export default function MaintenancePage() {
   const { t } = useTranslation();
   usePageTitle(t('Maintenance'));
-  const { currencySymbol } = useFormatting();
+  const { formatCurrency } = useFormatting();
 
   // ── Vehicle selection (global) ─────────────────────────────────────────
   const { vehicleId } = useSelectedVehicle();
@@ -570,17 +570,17 @@ export default function MaintenancePage() {
                 <div className="grid grid-cols-3 gap-3">
                   <MetricCard
                     label={t('Total Spent')}
-                    value={`${currencySymbol}${fmtNumber(costStats.totalCost, 0)}`}
+                    value={formatCurrency(costStats.totalCost, 0)}
                     color="green"
                   />
                   <MetricCard
                     label={t('Annual Est.')}
-                    value={`${currencySymbol}${fmtNumber(costStats.annualCost, 0)}/yr`}
+                    value={`${formatCurrency(costStats.annualCost, 0)}/yr`}
                     color="cyan"
                   />
                   <MetricCard
                     label={t('Avg / Service')}
-                    value={`${currencySymbol}${fmtNumber(costStats.avgPerService, 0)}`}
+                    value={formatCurrency(costStats.avgPerService, 0)}
                     color="purple"
                   />
                 </div>

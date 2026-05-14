@@ -6,6 +6,7 @@ import { AlertTriangle, Database, ServerCrash, Radio, Zap } from 'lucide-react'
 import { GlassPanel, Badge, Button } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
 import { type ApiError } from '@/lib/resilience'
+import { useDateFormat } from '@/hooks/useDateFormat'
 import {
   getRedisSignalKeys,
   type RedisSignalsMeta,
@@ -57,6 +58,7 @@ export function RedisDiagnosticEmptyState({
   onSelectVehicle,
 }: RedisDiagnosticEmptyStateProps) {
   const { t } = useTranslation()
+  const { formatDateTime } = useDateFormat()
 
   const { data: keysData, isError: keysQueryError } = useQuery({
     queryKey: ['redis-signal-keys'],
@@ -209,7 +211,7 @@ export function RedisDiagnosticEmptyState({
             ? t(
                 'redis.diagnostic.noTelemetry.bodyStale',
                 'Last L1 entry was {{date}}. The 7-day Redis TTL has likely expired. Wait for the next telemetry push or warm the cache from the cold-path reader.',
-                { date: lastSeenL1.toLocaleString() },
+                { date: formatDateTime(lastSeenL1) },
               )
             : t(
                 'redis.diagnostic.noTelemetry.bodyAbsent',
@@ -312,6 +314,7 @@ function DiagnosticBanner({
 
 function DiagnosticMetaList({ meta }: { meta: RedisSignalsMeta }) {
   const { t } = useTranslation()
+  const { formatDateTime } = useDateFormat()
   return (
     <dl className="grid grid-cols-1 gap-x-4 gap-y-1 text-xs text-[var(--text-secondary)] sm:grid-cols-2">
       <Row label={t('redis.diagnostic.meta.mode', 'Live store mode')}>
@@ -325,10 +328,10 @@ function DiagnosticMetaList({ meta }: { meta: RedisSignalsMeta }) {
       <Row label={t('redis.diagnostic.meta.l1Count', 'L1 signals')}>{meta.l1_signal_count}</Row>
       <Row label={t('redis.diagnostic.meta.l2Count', 'L2 fields (raw)')}>{meta.redis_field_count}</Row>
       <Row label={t('redis.diagnostic.meta.l1LastSeen', 'L1 last seen')}>
-        {meta.l1_last_seen_at ? new Date(meta.l1_last_seen_at).toLocaleString() : '—'}
+        {meta.l1_last_seen_at ? formatDateTime(meta.l1_last_seen_at) : '—'}
       </Row>
       <Row label={t('redis.diagnostic.meta.l2LastSeen', 'L2 last seen')}>
-        {meta.l2_last_seen_at ? new Date(meta.l2_last_seen_at).toLocaleString() : '—'}
+        {meta.l2_last_seen_at ? formatDateTime(meta.l2_last_seen_at) : '—'}
       </Row>
       {meta.vehicle_vin && (
         <Row label={t('redis.diagnostic.meta.vin', 'VIN')}>

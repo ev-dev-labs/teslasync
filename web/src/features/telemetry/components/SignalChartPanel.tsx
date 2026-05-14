@@ -42,6 +42,7 @@ import {
 } from '@/components/charts';
 import { CHART_COLORS } from '@/lib/colors';
 import { fmtInt } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
 import type { SignalStat } from '../hooks/useLiveSignalStream';
 
@@ -92,6 +93,7 @@ export function SignalChartPanel({
   className,
 }: SignalChartPanelProps) {
   const { t } = useTranslation();
+  const { formatTime } = useDateFormat();
 
   const useRightAxis = useMemo(() => {
     if (!stats || stats.length < 2) return false;
@@ -151,7 +153,7 @@ export function SignalChartPanel({
                 <XAxis
                   dataKey="timestamp"
                   tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                  tickFormatter={(v: string) => new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  tickFormatter={(v: string) => formatTime(v)}
                 />
                 <YAxis yAxisId="left" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                 {useRightAxis ? (

@@ -4,6 +4,7 @@ import { cn } from '@/lib/cn';
 import { GlassPanel } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { useFormatting } from '@/hooks/useFormatting';
 import type { SummaryStats } from './types';
 
 function SummaryCard({
@@ -36,11 +37,11 @@ function SummaryCard({
 
 interface SummaryStatsGridProps {
   stats: SummaryStats | null;
-  currencySymbol: string;
 }
 
-export default function SummaryStatsGrid({ stats, currencySymbol }: SummaryStatsGridProps) {
+export default function SummaryStatsGrid({ stats }: SummaryStatsGridProps) {
   const { t } = useTranslation();
+  const { formatCurrency } = useFormatting();
 
   return (
     <FadeIn delay={0.05}>
@@ -71,7 +72,7 @@ export default function SummaryStatsGrid({ stats, currencySymbol }: SummaryStats
         />
         <SummaryCard
           label={t('charging.curve.totalCost', 'Total Cost')}
-          value={`${currencySymbol}${fmtNumber(stats?.totalCost ?? 0)}`}
+          value={formatCurrency(stats?.totalCost ?? 0)}
         />
       </div>
     </FadeIn>

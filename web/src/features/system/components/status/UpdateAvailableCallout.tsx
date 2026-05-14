@@ -12,6 +12,7 @@
 
 import { Sparkles, ExternalLink } from 'lucide-react'
 import { GlassPanel } from '@/components/ui'
+import { useDateFormat } from '@/hooks/useDateFormat'
 
 interface UpdateAvailableCalloutProps {
   current: string | undefined
@@ -20,6 +21,7 @@ interface UpdateAvailableCalloutProps {
 }
 
 export function UpdateAvailableCallout({ current, latest, checkedAt }: UpdateAvailableCalloutProps) {
+  const { formatDateTime } = useDateFormat()
   return (
     <GlassPanel
       className="overflow-hidden border border-cyan-400/20 bg-cyan-500/[0.06]"
@@ -38,7 +40,7 @@ export function UpdateAvailableCallout({ current, latest, checkedAt }: UpdateAva
           <p className="text-xs text-[var(--text-secondary)] mt-0.5">
             {current ? `You're running v${current}. ` : ''}Review the release notes before upgrading your deployment.
             {checkedAt && (
-              <span className="text-[var(--text-muted)]"> · Last checked {new Date(checkedAt).toLocaleString()}</span>
+              <span className="text-[var(--text-muted)]"> · Last checked {formatDateTime(checkedAt)}</span>
             )}
           </p>
         </div>

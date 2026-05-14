@@ -9,6 +9,7 @@ import { FadeIn } from '@/components/motion';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { useAnalyticsSummary } from '@/api/hooks/useAnalytics';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtInt } from '@/lib/numberFormat';
@@ -20,6 +21,7 @@ export default function QuickStatsPage() {
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
   const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useAnalyticsSummary(30);
   const { unitPrefs } = useUnits();
+  const { formatCurrency } = useFormatting();
 
   const isLoading = vehiclesLoading || analyticsLoading;
   const error = vehiclesError || analyticsError;
@@ -77,7 +79,7 @@ export default function QuickStatsPage() {
             />
             <MetricCard
               label={t('quickStats.cost', 'Total Cost')}
-              value={`$${fmtInt(analytics?.totalCost ?? 0)}`}
+              value={formatCurrency(analytics?.totalCost ?? 0, 0)}
               color="purple"
             />
           </div>

@@ -1173,7 +1173,7 @@ export default function ClimateControlPage() {
                   tick={axisTick}
                   tickFormatter={(v: string) => formatTime(v)}
                 />
-                <YAxis tick={axisTick} unit="°C" />
+                <YAxis tick={axisTick} unit={tempUnit} />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend />
                 <Line

@@ -3,9 +3,40 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
 import { TimeStamp } from '../TimeStamp';
 import { useTimeFormatPreference } from '@/hooks/useTimeFormatPreference';
+import {
+  formatDate,
+  formatDateTime,
+  formatTime,
+  formatDateShort,
+  formatDateWithDay,
+  formatRelative,
+  formatRelativeTime,
+  formatRelativeDays,
+} from '@/lib/dateFormat';
 
 vi.mock('@/hooks/useTimeFormatPreference', () => ({
   useTimeFormatPreference: vi.fn(),
+}));
+
+// `<TimeStamp>` now reads locale + tz via `useDateFormat()`, which in turn
+// subscribes to `useSettings()` (TanStack Query) and `useTimezone()` (router).
+// The component's behavior under test is the relative/absolute branching
+// and the tooltip swap, NOT the locale/tz plumbing — so we mock the hook
+// to return the pure lib helpers and keep the test render-tree minimal.
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({
+    opts: {},
+    tz: 'UTC',
+    locale: 'en-US',
+    formatDate,
+    formatDateTime,
+    formatTime,
+    formatDateShort,
+    formatDateWithDay,
+    formatRelative,
+    formatRelativeTime,
+    formatRelativeDays,
+  }),
 }));
 
 const mockedPref = vi.mocked(useTimeFormatPreference);

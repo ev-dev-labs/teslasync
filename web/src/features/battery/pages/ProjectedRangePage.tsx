@@ -109,7 +109,7 @@ function interpolateRange(
 export default function ProjectedRangePage() {
   const { t } = useTranslation();
   usePageTitle(t('range.title', 'Projected Range'));
-  const { formatEnergy } = useUnits();
+  const { formatEnergy, formatTemperature, formatSpeed, formatDistance } = useUnits();
 
   // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
   const { vehicleId: globalVehicleId } = useSelectedVehicle();
@@ -249,11 +249,10 @@ export default function ProjectedRangePage() {
                     </div>
                     {s.is_current && <Badge variant="success" size="sm">{t('range.current', 'Current')}</Badge>}
                   </div>
-                  <p className="text-2xl font-bold text-[var(--text-primary)] tabular-nums">{fmtNumber(s.range_km, 0)} <span className="text-sm font-normal text-[var(--text-muted)]">km</span></p>
-                  <p className="text-xs text-[var(--text-muted)]">{fmtNumber(s.range_mi, 0)} mi</p>
+                  <p className="text-2xl font-bold text-[var(--text-primary)] tabular-nums">{formatDistance(s.range_km * 1000, { precision: 0 })}</p>
                   <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-[var(--text-muted)]">
-                    <span>{s.speed_kmh} km/h</span>
-                    <span>{s.temp_c}°C</span>
+                    <span>{formatSpeed(s.speed_kmh / 3.6, { precision: 0 })}</span>
+                    <span>{formatTemperature(s.temp_c, { precision: 0 })}</span>
                     <span>{fmtNumber(s.efficiency_wh_km)} Wh/km</span>
                     {s.sample_count > 0 && <span>({s.sample_count} drives)</span>}
                   </div>
@@ -356,10 +355,10 @@ export default function ProjectedRangePage() {
             <div className="lg:col-span-2 flex items-center justify-center">
               {whatIfResult ? (
                 <div className="text-center">
-                  <p className="text-4xl font-bold text-cyan-300 tabular-nums">{fmtNumber(whatIfResult.rangeKm, 0)} <span className="text-lg font-normal text-[var(--text-muted)]">km</span></p>
+                  <p className="text-4xl font-bold text-cyan-300 tabular-nums">{formatDistance(whatIfResult.rangeKm * 1000, { precision: 0 })}</p>
                   <p className="text-sm text-[var(--text-muted)] mt-1">{fmtNumber(whatIfResult.effWhKm)} Wh/km</p>
                   <p className="text-xs text-[var(--text-muted)] mt-1">
-                    {t('range.whatIfConditions', 'at {{speed}} km/h, {{temp}}°C', { speed: whatIfSpeed, temp: whatIfTemp })}
+                    {t('range.whatIfConditions', 'at {{speed}}, {{temp}}', { speed: formatSpeed(whatIfSpeed / 3.6, { precision: 0 }), temp: formatTemperature(whatIfTemp, { precision: 0 }) })}
                   </p>
                 </div>
               ) : (

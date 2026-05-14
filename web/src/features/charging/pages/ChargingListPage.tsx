@@ -97,7 +97,7 @@ export default function ChargingListPage() {
     (km: number) => convertDistanceFromSI(km, unitPrefs.distance),
     [unitPrefs.distance],
   );
-  const { formatCurrency } = useFormatting();
+  const { formatCurrency, currencySymbol } = useFormatting();
 
   /* ── URL state ───────────────────────────────────────────────── */
   const defaultStartDate = useMemo(() => {
@@ -154,7 +154,10 @@ export default function ChargingListPage() {
   );
 
   /* ── Collection counts (computed BEFORE filter) ──────────────── */
-  const anomalies = useMemo(() => detectChargingAnomalies(dateFilteredSessions), [dateFilteredSessions]);
+  const anomalies = useMemo(
+    () => detectChargingAnomalies(dateFilteredSessions, undefined, currencySymbol),
+    [dateFilteredSessions, currencySymbol],
+  );
   const anomalyById = useMemo(() => {
     const m = new Map<number, ChargingAnomaly>();
     for (const a of anomalies) m.set(a.session.id, a);

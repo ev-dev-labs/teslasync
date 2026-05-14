@@ -21,6 +21,7 @@ import {
   type DateGroup,
 } from '@/lib/drivesAggregation';
 import { numericToGrade, type ScoreGradeInfo } from '@/lib/scoreScale';
+import { fmtNumber } from '@/lib/numberFormat';
 
 export { priorPeriod, localDayKey, parseLocalDay, groupByDate };
 export type { DateGroup };
@@ -302,10 +303,16 @@ const DEFAULT_THRESHOLDS: Required<AnomalyThresholds> = {
  *
  * Returns the anomalies in original session order so the caller can
  * intersperse them in the date-grouped list without sorting.
+ *
+ * @param currencySymbol  Symbol used in the "Expensive charge" message;
+ *                        defaults to '$' for backward-compat. Pass the
+ *                        value from `useFormatting().currencySymbol` so
+ *                        non-USD users see their preferred symbol.
  */
 export function detectChargingAnomalies(
   sessions: readonly ChargingSession[],
   thresholds: AnomalyThresholds = {},
+  currencySymbol: string = '$',
 ): ChargingAnomaly[] {
   const cfg = { ...DEFAULT_THRESHOLDS, ...thresholds };
   const out: ChargingAnomaly[] = [];
@@ -342,7 +349,7 @@ export function detectChargingAnomalies(
       out.push({
         session: s,
         kind: 'bad_power',
-        message: `Low power for DC (${power.toFixed(1)} kW)`,
+        message: `Low power for DC (${fmtNumber(power, 1)} kW)`,
         actionLabel: 'View curve',
       });
       continue;
@@ -351,7 +358,7 @@ export function detectChargingAnomalies(
       out.push({
         session: s,
         kind: 'expensive',
-        message: `Expensive charge ($${cpk.toFixed(2)}/kWh)`,
+        message: `Expensive charge (${currencySymbol}${fmtNumber(cpk, 2)}/kWh)`,
         actionLabel: 'Compare',
       });
       continue;
@@ -360,7 +367,7 @@ export function detectChargingAnomalies(
       out.push({
         session: s,
         kind: 'trickle',
-        message: `Trickle charge (${power.toFixed(1)} kW for ${formatDurationShort(dur)})`,
+        message: `Trickle charge (${fmtNumber(power, 1)} kW for ${formatDurationShort(dur)})`,
         actionLabel: 'View curve',
       });
       continue;

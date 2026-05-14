@@ -9,6 +9,7 @@ import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtInt } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -36,17 +37,9 @@ function buildChartData(
     .sort((a, b) => a.time.localeCompare(b.time));
 }
 
-function formatTime(ts: string): string {
-  try {
-    const d = new Date(ts);
-    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return ts;
-  }
-}
-
 export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { formatDateTime: formatTime } = useDateFormat();
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
@@ -161,7 +154,7 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
                 tick={tick}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={formatTime}
+                tickFormatter={(v: string) => formatTime(v)}
               />
               <YAxis
                 tick={tick}
@@ -177,7 +170,7 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
                   borderRadius: 8,
                   fontSize: 12,
                 }}
-                labelFormatter={formatTime}
+                labelFormatter={(v: string) => formatTime(v)}
                 formatter={(value: number, name: string) => {
                   const label =
                     name === 'inside'

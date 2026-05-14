@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/feedback';
 import { useChargePlans, useRatePlans } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFormatting } from '@/hooks/useFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetDetailCard, type DetailEntry } from './shared';
@@ -44,33 +45,12 @@ function badgeVariant(status: string): 'success' | 'warning' | 'danger' | 'neutr
   }
 }
 
-function formatTime(iso: string | null): string {
-  if (!iso) return '—';
-  try {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return iso;
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return iso;
-  }
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—';
-  try {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  } catch {
-    return iso;
-  }
-}
-
 export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { formatCurrency } = useFormatting();
+  const { formatTime, formatDateShort: formatDate } = useDateFormat();
 
   const {
     data: plans,
@@ -158,7 +138,7 @@ export default function ChargePlansWidget({ vehicleId, size }: WidgetProps) {
     });
 
     return items;
-  }, [activePlan, t, formatCurrency]);
+  }, [activePlan, t, formatCurrency, formatTime, formatDate]);
 
   const rateEntries: DetailEntry[] = useMemo(() => {
     return safeRates.map((rp) => ({

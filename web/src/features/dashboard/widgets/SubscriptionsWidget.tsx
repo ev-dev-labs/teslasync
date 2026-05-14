@@ -4,6 +4,7 @@ import { CreditCard } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useVehicleSubscriptions, useVehicles } from '@/api/hooks/useVehicles';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
@@ -23,14 +24,6 @@ function daysUntil(dateStr: string | null): number | null {
   if (isNaN(expiry.getTime())) return null;
   const now = new Date();
   return Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-/** Format a date string for display */
-function fmtDate(dateStr: string | null): string | null {
-  if (!dateStr) return null;
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return null;
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 /** Known subscription types to extract from the data envelope */
@@ -118,6 +111,7 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
   const { data: vehicles } = useVehicles();
   const numericId = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const stringId = numericId > 0 ? String(numericId) : undefined;
+  const { formatDate: fmtDate } = useDateFormat();
 
   const {
     data: envelope,
@@ -156,7 +150,7 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
         variant: sub.active ? 'success' as const : 'error' as const,
       },
     }));
-  }, [parsed, t]);
+  }, [parsed, t, fmtDate]);
 
   const shellProps = {
     loading: isLoading,

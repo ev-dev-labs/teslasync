@@ -24,6 +24,7 @@ import { useFleetAnalytics, useMileageStats, useStateSummary } from '@/api/hooks
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
@@ -85,6 +86,7 @@ export default function StatisticsPage() {
   const { t } = useTranslation();
   usePageTitle(t('statistics.title', 'Statistics'));
   const { unitPrefs } = useUnits();
+  const { formatCurrency } = useFormatting();
   const distanceUnit = unitPrefs.distance;
   const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
   // backend `total_distance` and `vehicle_comparison[].distance` are SI km;
@@ -212,7 +214,7 @@ export default function StatisticsPage() {
               <MetricCard label={t('statistics.totalDistance', 'Total Distance')} value={`${fmtInt(fromKm(stats.total_distance))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
               <MetricCard label={t('statistics.totalDrives', 'Total Drives')} value={fmtInt(stats.total_drives)} icon={<TrendingUp className="h-4 w-4" />} color="green" />
               <MetricCard label={t('statistics.totalEnergy', 'Total Energy')} value={`${fmtNumber(stats.energy_used)} kWh`} icon={<Zap className="h-4 w-4" />} color="amber" />
-              <MetricCard label={t('statistics.totalCost', 'Total Cost')} value={`$${fmtInt(stats.total_cost)}`} icon={<DollarSign className="h-4 w-4" />} color="red" />
+              <MetricCard label={t('statistics.totalCost', 'Total Cost')} value={formatCurrency(stats.total_cost, 0)} icon={<DollarSign className="h-4 w-4" />} color="red" />
               <MetricCard label={t('statistics.co2Saved', 'CO₂ Saved')} value={`${fmtNumber(stats.co2_saved)} kg`} icon={<Leaf className="h-4 w-4" />} color="green" />
             </div>
           </FadeIn>
@@ -222,7 +224,7 @@ export default function StatisticsPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <MetricCard label={t('statistics.avgDriveDistance', 'Avg Drive Distance')} value={`${fmtNumber(fromKm(avgDriveDistance))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
               <MetricCard label={t('statistics.avgEfficiency', 'Avg Efficiency')} value={`${fmtNumber(whPerKmToDisplay(stats.avg_efficiency))} ${efficiencyUnit}`} icon={<Gauge className="h-4 w-4" />} color="green" />
-              <MetricCard label={t('statistics.costPerKm', 'Cost per km')} value={stats.total_distance > 0 ? `$${fmtNumber(stats.total_cost / stats.total_distance, 3)}` : '—'} icon={<DollarSign className="h-4 w-4" />} color="amber" />
+              <MetricCard label={t('statistics.costPerKm', 'Cost per km')} value={stats.total_distance > 0 ? formatCurrency(stats.total_cost / stats.total_distance, 3) : '—'} icon={<DollarSign className="h-4 w-4" />} color="amber" />
             </div>
           </FadeIn>
 

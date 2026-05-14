@@ -18,7 +18,9 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Activity, TrendingUp, AlertTriangle, ExternalLink, Zap, Clock } from 'lucide-react'
 import { useApiLogStats } from '@/api/hooks/useAdmin'
+import { useFormatting } from '@/hooks/useFormatting'
 import type { APIUsage } from '@/api/types'
+import { fmtInt, fmtPercent } from '@/lib/numberFormat'
 
 interface TeslaApiUsageCardProps {
   apiUsage: APIUsage | undefined
@@ -36,14 +38,9 @@ function endOfMonth(now: number): Date {
   return new Date(d.getFullYear(), d.getMonth() + 1, 1)
 }
 
-function fmtMoney(n: number, decimals = 2): string {
-  if (!Number.isFinite(n)) return '—'
-  return `$${n.toFixed(decimals)}`
-}
-
 function fmtCount(n: number): string {
   if (!Number.isFinite(n)) return '—'
-  return n.toLocaleString()
+  return fmtInt(n)
 }
 
 // camelCaseKeys() in lib/resilience.ts mirrors snake_case JSON to BOTH
@@ -74,6 +71,7 @@ function dedupeMap(m: Record<string, number> | undefined): Array<[string, number
 
 export function TeslaApiUsageCard({ apiUsage, now }: TeslaApiUsageCardProps) {
   const { data: logStats } = useApiLogStats()
+  const { formatCurrency } = useFormatting()
 
   const derived = useMemo(() => {
     if (!apiUsage) return null
@@ -144,10 +142,10 @@ export function TeslaApiUsageCard({ apiUsage, now }: TeslaApiUsageCardProps) {
       <div className="space-y-2">
         <div className="flex items-baseline justify-between text-sm">
           <span className="font-medium text-[var(--text-primary)]">
-            {fmtMoney(apiUsage.estimated_cost)} of {fmtMoney(apiUsage.monthly_credit)}
+            {formatCurrency(apiUsage.estimated_cost)} of {formatCurrency(apiUsage.monthly_credit)}
           </span>
           <span className={overBudget ? 'text-red-400 font-semibold tabular-nums' : 'text-[var(--text-muted)] tabular-nums'}>
-            {derived.pctOfBudget.toFixed(0)}% of monthly credit
+            {fmtPercent(derived.pctOfBudget, 0)} of monthly credit
           </span>
         </div>
         <div
@@ -182,7 +180,7 @@ export function TeslaApiUsageCard({ apiUsage, now }: TeslaApiUsageCardProps) {
             <span className="text-xs font-normal text-[var(--text-muted)]">requests</span>
           </div>
           <div className="text-xs text-[var(--text-muted)] tabular-nums">
-            {fmtMoney(derived.dailyAvgCost)}/day avg
+            {formatCurrency(derived.dailyAvgCost)}/day avg
           </div>
         </div>
 
@@ -195,7 +193,7 @@ export function TeslaApiUsageCard({ apiUsage, now }: TeslaApiUsageCardProps) {
             <span className="text-xs font-normal text-[var(--text-muted)]">requests</span>
           </div>
           <div className="text-xs text-[var(--text-muted)] tabular-nums">
-            {fmtMoney(derived.last24hBurn)}/day burn
+            {formatCurrency(derived.last24hBurn)}/day burn
           </div>
         </div>
 
@@ -211,10 +209,10 @@ export function TeslaApiUsageCard({ apiUsage, now }: TeslaApiUsageCardProps) {
             <TrendingUp className="h-3.5 w-3.5" /> Forecast EOM
           </div>
           <div className="mt-1 font-semibold tabular-nums text-[var(--text-primary)]">
-            {fmtMoney(derived.forecastFromMtd)}
+            {formatCurrency(derived.forecastFromMtd)}
           </div>
           <div className="text-xs text-[var(--text-muted)] tabular-nums">
-            recent rate: {fmtMoney(derived.forecastFromRecent)}
+            recent rate: {formatCurrency(derived.forecastFromRecent)}
           </div>
         </div>
       </div>
@@ -247,7 +245,7 @@ export function TeslaApiUsageCard({ apiUsage, now }: TeslaApiUsageCardProps) {
                   : 'text-[var(--text-primary)]')
             }
           >
-            {errorPct != null ? `${errorPct.toFixed(1)}%` : '—'}
+            {errorPct != null ? fmtPercent(errorPct, 1) : '—'}
             {logStats?.errorCount != null && (
               <span className="ml-1 text-xs text-[var(--text-muted)]">
                 ({fmtCount(logStats.errorCount)})
@@ -304,8 +302,8 @@ export function TeslaApiUsageCard({ apiUsage, now }: TeslaApiUsageCardProps) {
           <div>
             <div className="font-semibold">Over monthly credit</div>
             <div className="text-xs text-red-300/80">
-              Spend has exceeded the {fmtMoney(apiUsage.monthly_credit)} monthly credit by{' '}
-              {fmtMoney(apiUsage.estimated_cost - apiUsage.monthly_credit)}. Review polling cadence
+              Spend has exceeded the {formatCurrency(apiUsage.monthly_credit)} monthly credit by{' '}
+              {formatCurrency(apiUsage.estimated_cost - apiUsage.monthly_credit)}. Review polling cadence
               or vehicle subscriptions.
             </div>
           </div>

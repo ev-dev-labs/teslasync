@@ -8,6 +8,7 @@ import {
 import { GlassPanel } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { fmtNumber } from '@/lib/numberFormat'
+import { useFormatting } from '@/hooks/useFormatting'
 import { trendColor } from '@/lib/colors'
 import type {
   Drive, ChargingSession, EnergyStats, BatteryReport,
@@ -55,7 +56,7 @@ const TREND_ICON: Record<Trend, { Icon: React.ElementType; color: string }> = {
 
 // ─── Analysis helpers ─────────────────────────────────────────
 
-function analyzeChargingCost(sessions: ChargingSession[]): Insight | null {
+function analyzeChargingCost(sessions: ChargingSession[], formatCurrency: (amount: number, decimals?: number) => string): Insight | null {
   const withCost = sessions.filter(s => s.cost != null && s.charge_energy_added > 0)
   if (withCost.length < 2) return null
 
@@ -72,7 +73,7 @@ function analyzeChargingCost(sessions: ChargingSession[]): Insight | null {
   const homeCost = home.length > 0 ? avgCost(home) : null
   const scCost = supercharger.length > 0 ? avgCost(supercharger) : null
 
-  let description = `Your average charging cost is $${fmtNumber(overall, 2)}/kWh.`
+  let description = `Your average charging cost is ${formatCurrency(overall, 2)}/kWh.`
   let trend: Trend = 'neutral'
   let trendGood = true
 
@@ -268,7 +269,7 @@ function analyzeDrivingPatterns(drives: Drive[]): Insight | null {
   }
 }
 
-function analyzeCostSavings(energy: EnergyStats): Insight | null {
+function analyzeCostSavings(energy: EnergyStats, formatCurrency: (amount: number, decimals?: number) => string): Insight | null {
   if (energy.total_energy_used_kwh <= 0) return null
 
   // Average gas car: 8.5 L/100km, avg gas price ~$1.50/L
@@ -282,7 +283,7 @@ function analyzeCostSavings(energy: EnergyStats): Insight | null {
     id: 'cost-savings',
     icon: Leaf,
     title: 'EV Cost Savings',
-    description: `You've saved approximately $${fmtNumber(savings, 0)} vs. gasoline based on ${fmtNumber(energy.total_energy_used_kwh, 0)} kWh consumed over ${fmtNumber(energy.total_distance_km, 0)} km. That's also ${fmtNumber(energy.co2_saved_kg, 0)} kg of CO₂ saved!`,
+    description: `You've saved approximately ${formatCurrency(savings, 0)} vs. gasoline based on ${fmtNumber(energy.total_energy_used_kwh, 0)} kWh consumed over ${fmtNumber(energy.total_distance_km, 0)} km. That's also ${fmtNumber(energy.co2_saved_kg, 0)} kg of CO₂ saved!`,
     trend: 'up',
     trendGood: true,
     severity: 'success',
@@ -319,11 +320,12 @@ function analyzeRangeOptimization(energy: EnergyStats, battery?: BatteryReport):
 // ─── Main component ───────────────────────────────────────────
 
 export function InsightsEngine({ data }: { data: InsightData }) {
+  const { formatCurrency } = useFormatting()
   const insights = useMemo(() => {
     const results: Insight[] = []
 
     if (data.chargingSessions?.length) {
-      const c = analyzeChargingCost(data.chargingSessions)
+      const c = analyzeChargingCost(data.chargingSessions, formatCurrency)
       if (c) results.push(c)
     }
     if (data.drives?.length) {
@@ -347,7 +349,7 @@ export function InsightsEngine({ data }: { data: InsightData }) {
       if (p) results.push(p)
     }
     if (data.energyStats) {
-      const s = analyzeCostSavings(data.energyStats)
+      const s = analyzeCostSavings(data.energyStats, formatCurrency)
       if (s) results.push(s)
     }
     if (data.energyStats) {
@@ -356,7 +358,7 @@ export function InsightsEngine({ data }: { data: InsightData }) {
     }
 
     return results
-  }, [data])
+  }, [data, formatCurrency])
 
   if (insights.length === 0) return null
 

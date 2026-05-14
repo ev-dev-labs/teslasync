@@ -9,6 +9,7 @@ import { UserCell } from '@/components/data-display'
 import { Icons } from '@/lib/icons'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useFeedbackList, useUpdateFeedback } from '@/api/hooks/useFeedback'
+import { useDateFormat } from '@/hooks/useDateFormat'
 import type {
   FeedbackCategory,
   FeedbackEntry,
@@ -28,6 +29,7 @@ const PAGE_SIZE = 25
 export default function FeedbackQueuePage() {
   const { t } = useTranslation()
   usePageTitle(t('feedback.queue.title', 'Feedback queue'))
+  const { formatDateTime } = useDateFormat()
 
   const [statusFilter, setStatusFilter] = useState<'' | FeedbackStatus>('')
   const [categoryFilter, setCategoryFilter] = useState<'' | FeedbackCategory>('')
@@ -69,7 +71,7 @@ export default function FeedbackQueuePage() {
       {
         key: 'created_at',
         header: t('feedback.queue.col.created', 'Created'),
-        render: (row: FeedbackEntry) => new Date(row.created_at).toLocaleString(),
+        render: (row: FeedbackEntry) => formatDateTime(row.created_at),
         sortable: true,
       },
       {
@@ -132,7 +134,7 @@ export default function FeedbackQueuePage() {
           ),
       },
     ],
-    [t],
+    [t, formatDateTime],
   )
 
   const renderExpanded = (row: FeedbackEntry) => (

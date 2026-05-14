@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { PageContainer } from '@/components/layout';
@@ -28,6 +29,7 @@ function windowLabel(state: ReturnType<typeof parseWindowState>): string {
 
 export default function DigitalTwinPage() {
   const { t } = useTranslation();
+  const { formatTime } = useDateFormat();
   usePageTitle(t('digitalTwin.title', 'Digital Twin'));
 
   const { vehicle } = useSelectedVehicle();
@@ -120,7 +122,7 @@ export default function DigitalTwinPage() {
               ) : null}
               {twinState.lastUpdated && (
                 <p className="text-center text-xs text-[var(--text-muted)] mt-4">
-                  {t('digitalTwin.lastUpdated', 'Last updated')}: {new Date(twinState.lastUpdated).toLocaleTimeString()}
+                  {t('digitalTwin.lastUpdated', 'Last updated')}: {formatTime(twinState.lastUpdated)}
                 </p>
               )}
             </GlassPanel>

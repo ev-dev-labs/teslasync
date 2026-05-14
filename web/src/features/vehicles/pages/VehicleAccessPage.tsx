@@ -6,7 +6,7 @@ import { RefreshCw, UserPlus, UserMinus, XCircle, Users, Mail, Shield } from 'lu
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Button, Badge, CopyButton, DataTable, ConfirmDialog, type Column } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
-import { StatusBadge } from '@/components/data-display';
+import { StatusBadge, TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
@@ -130,11 +130,7 @@ export default function VehicleAccessPage() {
     {
       key: 'expires',
       header: t('vehicleAccess.invitations.expires', 'Expires'),
-      render: (row) => (
-        <span className="text-[var(--text-secondary)]">
-          {row.expires_at ? new Date(row.expires_at).toLocaleString() : '—'}
-        </span>
-      ),
+      render: (row) => <TimeStamp value={row.expires_at} />,
     },
     {
       key: 'link',

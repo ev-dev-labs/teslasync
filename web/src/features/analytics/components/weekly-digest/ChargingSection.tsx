@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useFormatting } from '@/hooks/useFormatting';
 import { Zap, Activity, Fuel } from 'lucide-react';
 import { GlassPanel, Badge } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
@@ -19,6 +20,7 @@ interface ChargingSectionProps {
 
 export function ChargingSection({ metrics, dailyEnergyData }: ChargingSectionProps) {
   const { t } = useTranslation();
+  const { formatCurrency } = useFormatting();
 
   return (
     <FadeIn delay={0.15}>
@@ -72,7 +74,7 @@ export function ChargingSection({ metrics, dailyEnergyData }: ChargingSectionPro
           />
           <MiniStat
             label={t('analytics.weeklyDigest.totalCost', 'Total Cost')}
-            value={`$${fmtNumber(metrics.chargingCost, 2)}`}
+            value={formatCurrency(metrics.chargingCost, 2)}
             icon={<Fuel className="h-4 w-4" />}
           />
         </span>

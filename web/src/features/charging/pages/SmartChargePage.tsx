@@ -21,6 +21,9 @@ import { FadeIn } from '@/components/motion';
 import { EmptyState, Spinner } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useFormatting } from '@/hooks/useFormatting';
+import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
 import {
   useOptimizeCharge,
   useApplySchedule,
@@ -29,23 +32,6 @@ import {
 } from '@/api/hooks/useCharging';
 import { RateTimeline } from '../components/RateTimeline';
 import type { OptimizeChargeResponse } from '@/types/charging';
-
-function formatTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return '—';
-  }
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return '—';
-  }
-}
 
 const defaultDepartBy = () => {
   const d = new Date();
@@ -57,6 +43,8 @@ const defaultDepartBy = () => {
 export default function SmartChargePage() {
   const { t } = useTranslation();
   usePageTitle(t('chargePlanner.title', 'Smart Charge'));
+  const { formatTime, formatDateTime: formatDate } = useDateFormat();
+  const { formatCurrency } = useFormatting();
 
   // Data hooks
   const { vehicleId: selectedId } = useSelectedVehicle();
@@ -233,26 +221,26 @@ export default function SmartChargePage() {
           <Grid cols={{ default: 1, md: 3 }} gap={4}>
             <StatCard
               label={t('chargePlanner.chargeNowCost', 'Charge Now')}
-              value={`$${result.comparison.charge_now_cost.toFixed(2)}`}
+              value={formatCurrency(result.comparison.charge_now_cost)}
               icon={<DollarSign className="h-5 w-5 text-red-400" />}
               sublabel={t('chargePlanner.currentRate', 'At current rates')}
             />
             <StatCard
               label={t('chargePlanner.optimizedCost', 'Optimized Cost')}
-              value={`$${result.comparison.optimized_cost.toFixed(2)}`}
+              value={formatCurrency(result.comparison.optimized_cost)}
               icon={<TrendingDown className="h-5 w-5 text-emerald-400" />}
-              sublabel={`${result.schedule.rate_tier} · ${result.schedule.rate_cents_kwh.toFixed(1)}¢/kWh`}
+              sublabel={`${result.schedule.rate_tier} · ${fmtNumber(result.schedule.rate_cents_kwh, 1)}¢/kWh`}
             />
             <StatCard
               label={t('chargePlanner.savings', 'Savings')}
-              value={`$${result.comparison.savings.toFixed(2)}`}
+              value={formatCurrency(result.comparison.savings)}
               icon={<BatteryCharging className="h-5 w-5 text-cyan-400" />}
               trend={{
                 direction: result.comparison.savings > 0 ? 'down' : 'flat',
-                value: `${result.comparison.savings_percent.toFixed(0)}%`,
+                value: fmtPercent(result.comparison.savings_percent, 0),
                 positive: result.comparison.savings > 0,
               }}
-              sublabel={`${result.kwh_needed.toFixed(1)} kWh · ~${result.estimated_duration_hours.toFixed(1)}h`}
+              sublabel={`${fmtNumber(result.kwh_needed, 1)} kWh · ~${fmtNumber(result.estimated_duration_hours, 1)}h`}
             />
           </Grid>
         </FadeIn>
@@ -326,7 +314,7 @@ export default function SmartChargePage() {
                         {formatTime(alt.start_time)} — {formatTime(alt.end_time)}
                       </span>
                       <span className="text-[var(--text-muted)]">{alt.rate_tier}</span>
-                      <span className="text-[var(--text-primary)] font-medium">${alt.estimated_cost.toFixed(2)}</span>
+                      <span className="text-[var(--text-primary)] font-medium">{formatCurrency(alt.estimated_cost)}</span>
                     </div>
                   ))}
                 </div>
@@ -363,10 +351,10 @@ export default function SmartChargePage() {
                     </div>
                     <div className="py-2 border-b border-[var(--border-subtle)]">{p.rate_plan}</div>
                     <div className="py-2 border-b border-[var(--border-subtle)] text-right">
-                      {p.estimated_cost != null ? `$${p.estimated_cost.toFixed(2)}` : '—'}
+                      {p.estimated_cost != null ? formatCurrency(p.estimated_cost) : '—'}
                     </div>
                     <div className="py-2 border-b border-[var(--border-subtle)] text-right text-emerald-400">
-                      {p.savings != null && p.savings > 0 ? `$${p.savings.toFixed(2)}` : '—'}
+                      {p.savings != null && p.savings > 0 ? formatCurrency(p.savings) : '—'}
                     </div>
                     <div className="py-2 border-b border-[var(--border-subtle)]">
                       <span className={

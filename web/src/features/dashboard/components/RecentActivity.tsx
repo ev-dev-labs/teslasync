@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useFormatting } from '@/hooks/useFormatting';
 import { Activity, Route, Zap, Clock, BatteryCharging, TrendingUp } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Timeline } from '@/components/data-display/Timeline';
@@ -37,6 +38,7 @@ export function RecentActivity({
   toEfficiencyDisplay, distanceUnit, efficiencyUnit,
 }: RecentActivityProps) {
   const { t } = useTranslation('dashboard');
+  const { formatCurrency } = useFormatting();
 
   // Build unified activity timeline
   const activityItems: { type: string; title: string; subtitle: string; time: Date }[] = [];
@@ -52,7 +54,7 @@ export function RecentActivity({
     activityItems.push({
       type: 'charge',
       title: `${fmtNumber(s.total_energy_added_wh ?? 0, 1)} kWh ${t('activity.charged', 'charged')}`,
-      subtitle: `${s.start_soc_pct ?? '?'}% → ${s.end_soc_pct ?? '?'}%${typeof s.cost === 'number' ? ` · $${fmtNumber(s.cost, 2)}` : ''}`,
+      subtitle: `${s.start_soc_pct ?? '?'}% → ${s.end_soc_pct ?? '?'}%${typeof s.cost === 'number' ? ` · ${formatCurrency(s.cost, 2)}` : ''}`,
       time: new Date(s.started_at),
     }),
   );

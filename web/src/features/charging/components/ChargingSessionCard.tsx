@@ -13,6 +13,7 @@ import {
   TimeStamp,
 } from '@/components/data-display';
 import { useTranslation } from 'react-i18next';
+import { useFormatting } from '@/hooks/useFormatting';
 import { formatDurationMinutes } from '@/lib/dateFormat';
 import { fmtNumber, fmtWithUnit, fmtInt } from '@/lib/numberFormat';
 import type { ChargingSession } from '@/api/types';
@@ -59,6 +60,7 @@ export function ChargingSessionCard({
   density = 'comfortable',
 }: ChargingSessionCardProps) {
   const { t } = useTranslation('charging');
+  const { formatCurrency } = useFormatting();
   const cat = getChargerCategory(session.charger_type);
   const chargerLabels: Record<ChargerCategory, string> = {
     supercharger: t('chargerTypes.supercharger', 'Supercharger'),
@@ -170,12 +172,12 @@ export function ChargingSessionCard({
       {typeof session.cost_decimal === 'number' && session.cost_decimal > 0 && (
         <InlineMetric
           icon={<DollarSign className="h-3 w-3" />}
-          value={`$${fmtNumber(session.cost_decimal)}`}
+          value={formatCurrency(session.cost_decimal)}
           className="text-emerald-300"
         />
       )}
       {cpk != null && (
-        <span className="text-[var(--text-muted)]">(${fmtNumber(cpk)}/kWh)</span>
+        <span className="text-[var(--text-muted)]">({formatCurrency(cpk, 2)}/kWh)</span>
       )}
       {typeof milesGained === 'number' && milesGained > 0 && (
         <span className="flex items-center gap-1 text-purple-300">

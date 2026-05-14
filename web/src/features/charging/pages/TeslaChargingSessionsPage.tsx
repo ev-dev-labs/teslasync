@@ -23,8 +23,11 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
+import { useSettings } from '@/hooks/useSettings';
+import { useFormatting } from '@/hooks/useFormatting';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { formatCurrencyValue, currencyCodeFromSymbol } from '@/lib/currencyFormat';
 import { cn } from '@/lib/cn';
 
 const LazyMap = lazy(() => import('./TeslaChargingSessionsMap'));
@@ -56,6 +59,9 @@ const gridCols = { default: 1, sm: 2, lg: 5 } as const;
 export default function TeslaChargingSessionsPage() {
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
+  const { settings, locale } = useSettings();
+  const { formatCurrency } = useFormatting();
+  const userCurrency = currencyCodeFromSymbol(settings.currency_symbol);
   usePageTitle(t('tesla_sessions.title', 'Fleet Charging Sessions'));
 
   const { data: vehicles } = useVehicles();
@@ -176,7 +182,7 @@ export default function TeslaChargingSessionsPage() {
       render: (row) => (
         <span className="text-sm font-medium text-emerald-400">
           {row.total_cost != null
-            ? `${row.currency_code ?? '$'}${fmtNumber(row.total_cost, 2)}`
+            ? formatCurrencyValue(row.total_cost, row.currency_code ?? userCurrency, locale, 2, { useGrouping: true })
             : '—'}
         </span>
       ),
@@ -188,7 +194,9 @@ export default function TeslaChargingSessionsPage() {
       header: t('tesla_sessions.col.rate', 'Rate/kWh'),
       render: (row) => (
         <span className="text-sm text-[var(--text-secondary)]">
-          {row.per_kwh_rate != null ? `$${fmtNumber(row.per_kwh_rate, 3)}` : '—'}
+          {row.per_kwh_rate != null
+            ? formatCurrencyValue(row.per_kwh_rate, row.currency_code ?? userCurrency, locale, 3, { useGrouping: true })
+            : '—'}
         </span>
       ),
       defaultVisible: false,
@@ -364,7 +372,7 @@ export default function TeslaChargingSessionsPage() {
             <StaggerItem>
               <StatCard
                 label={t('tesla_sessions.stats.cost_decimal', 'Total Cost')}
-                value={summary.total_cost != null ? `$${fmtNumber(summary.total_cost, 2)}` : '—'}
+                value={summary.total_cost != null ? formatCurrency(summary.total_cost, 2) : '—'}
                 icon={<DollarSign className="h-5 w-5 text-emerald-400" />}
                 loading={isLoading}
               />
@@ -372,7 +380,7 @@ export default function TeslaChargingSessionsPage() {
             <StaggerItem>
               <StatCard
                 label={t('tesla_sessions.stats.avgCost', 'Avg Cost/kWh')}
-                value={summary.avg_cost_per_kwh != null ? `$${fmtNumber(summary.avg_cost_per_kwh, 3)}` : '—'}
+                value={summary.avg_cost_per_kwh != null ? formatCurrency(summary.avg_cost_per_kwh, 3) : '—'}
                 icon={<TrendingUp className="h-5 w-5 text-purple-400" />}
                 loading={isLoading}
               />
@@ -410,7 +418,7 @@ export default function TeslaChargingSessionsPage() {
                 </defs>
                 {chartGrid}
                 <XAxis dataKey="month" tick={axisTickSm} />
-                <YAxis tick={axisTickSm} tickFormatter={(v: number) => `$${v}`} />
+                <YAxis tick={axisTickSm} tickFormatter={(v: number) => formatCurrency(v, 0)} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="total" fill="url(#sessionCostGrad)" radius={[4, 4, 0, 0]} />
               </BarChart>

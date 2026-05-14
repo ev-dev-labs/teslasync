@@ -8,16 +8,10 @@ import { useTrips } from '@/api/hooks/useTrips';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDurationRange } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  });
-}
 
 export default function TripSummaryWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
@@ -25,6 +19,7 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
 
   const distanceUnit = unitPrefs.distance;
+  const { formatDateShort: formatDate } = useDateFormat();
 
   const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useTrips({
     limit: 5,

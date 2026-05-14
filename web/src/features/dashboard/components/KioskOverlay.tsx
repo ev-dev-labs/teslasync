@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Button as UiButton } from '@/components/ui';
 import type { KioskConfig } from '../hooks/useKioskMode';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 interface KioskOverlayProps {
   config: KioskConfig;
@@ -23,6 +24,7 @@ export function KioskOverlay({
   onExit,
 }: KioskOverlayProps) {
   const { t } = useTranslation();
+  const { formatTime, formatDateWithDay } = useDateFormat();
   const [now, setNow] = useState(new Date());
   const [showExit, setShowExit] = useState(false);
 
@@ -89,14 +91,10 @@ export function KioskOverlay({
           )}
         >
           <div className="text-2xl text-[var(--text-muted)] tabular-nums">
-            {now.toLocaleTimeString()}
+            {formatTime(now)}
           </div>
           <div className="text-xs text-[var(--text-muted)]">
-            {now.toLocaleDateString(undefined, {
-              weekday: 'short',
-              month: 'short',
-              day: 'numeric',
-            })}
+            {formatDateWithDay(now)}
           </div>
         </div>
       )}

@@ -30,6 +30,7 @@ import {
   type IncidentSeverity,
   type IncidentStatus,
 } from '@/api/hooks/useIncidents'
+import { useDateFormat } from '@/hooks/useDateFormat'
 
 const SEVERITY_TONE: Record<IncidentSeverity, { Icon: typeof AlertCircle; cls: string }> = {
   minor:    { Icon: AlertCircle,   cls: 'text-amber-300' },
@@ -51,12 +52,6 @@ const STATUS_LABEL: Record<IncidentStatus, string> = {
   resolved:      'Resolved',
 }
 
-function fmtAbs(iso: string): string {
-  const t = Date.parse(iso)
-  if (!Number.isFinite(t)) return iso
-  return new Date(t).toLocaleString()
-}
-
 function fmtDuration(startIso: string, endIso?: string): string {
   const s = Date.parse(startIso)
   const e = endIso ? Date.parse(endIso) : Date.now()
@@ -72,6 +67,7 @@ export default function IncidentTimelinePage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const toast = useToast()
+  const { formatDateTime: fmtAbs } = useDateFormat()
   const numericId = useMemo(() => {
     const n = Number(id)
     return Number.isFinite(n) && n > 0 ? n : null

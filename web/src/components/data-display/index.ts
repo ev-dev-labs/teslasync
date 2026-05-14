@@ -108,5 +108,7 @@ export {
   Percentage,
   FormattedNumber,
   Duration,
+  Range,
+  useRangeLabel,
 } from './format';
 export type { DateTimeVariant, DurationVariant } from './format';

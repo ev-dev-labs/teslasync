@@ -5,6 +5,7 @@ import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
 import { fmtNumber, fmtWithUnit } from '@/lib/numberFormat'
+import { useUnits } from '@/hooks/useUnits'
 import type { ChargingTelemetry } from '@/api/types'
 
 interface EnergyChargingPanelProps {
@@ -13,6 +14,7 @@ interface EnergyChargingPanelProps {
 
 export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelProps) {
   const { t } = useTranslation()
+  const { formatSpeed } = useUnits()
 
   return (
     <GlassPanel className="p-6 h-full">
@@ -103,7 +105,7 @@ export function EnergyChargingPanel({ chargingTelemetry }: EnergyChargingPanelPr
             </span>
             <span className="text-sm font-mono text-[var(--text-primary)]">
               {chargingTelemetry.range_added_meters_per_hour != null
-                ? `${fmtNumber(chargingTelemetry.range_added_meters_per_hour)} mph`
+                ? formatSpeed(chargingTelemetry.range_added_meters_per_hour / 3600)
                 : '—'}
             </span>
           </div>

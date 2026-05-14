@@ -55,6 +55,7 @@ import {
 import { usePinned } from '@/api/hooks/usePinned';
 import type { Alert } from '@/api/types';
 import { Icons } from '@/lib/icons';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { AcknowledgeAlertDialog } from '@/features/admin/components/AcknowledgeAlertDialog';
 import { AlertDetailTimeline } from '@/features/admin/components/AlertDetailTimeline';
 import { Modal } from '@/components/ui/Modal';
@@ -85,6 +86,7 @@ export default function AlertsListPage() {
   usePageTitle(t('Alerts'));
   const toast = useToast();
   const savedView = useSavedViewUrl();
+  const { locale } = useDateFormat();
 
   const [filter, setFilter] = useUrlEnum<'all' | 'unread' | 'critical'>(
     'filter',
@@ -200,20 +202,20 @@ export default function AlertsListPage() {
     const now = Date.now();
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now - i * 86400000);
-      const key = d.toLocaleDateString(undefined, { weekday: 'short' });
+      const key = new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(d);
       days[key] = { info: 0, warning: 0, critical: 0 };
     }
     alerts.forEach(a => {
       const d = new Date(a.created_at);
       if (now - d.getTime() > 7 * 86400000) return;
-      const key = d.toLocaleDateString(undefined, { weekday: 'short' });
+      const key = new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(d);
       const sev = a.severity as AlertSeverity;
       if (days[key] && (sev === 'info' || sev === 'warning' || sev === 'critical')) {
         days[key][sev]++;
       }
     });
     return Object.entries(days).map(([day, v]) => ({ day, ...v }));
-  }, [alerts]);
+  }, [alerts, locale]);
 
   const weekAlertCount = useMemo(() =>
     alertsByDay.reduce((s, d) => s + d.info + d.warning + d.critical, 0),

@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { formatDurationMs } from '@/lib/dateFormat';
+import { fmtPercent } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -143,7 +144,7 @@ export function AutomationActivityFeed({
           {historyStats && historyStats.total_executions > 0 && (
             <div className="flex items-center gap-3 text-xs text-[var(--text-secondary)]">
               <span>{historyStats.total_executions} {t('automations.totalRuns', 'total')}</span>
-              <span className="text-green-400">{historyStats.success_rate.toFixed(0)}% {t('automations.successRate', 'success')}</span>
+              <span className="text-green-400">{fmtPercent(historyStats.success_rate, 0)} {t('automations.successRate', 'success')}</span>
               <span>{formatDurationMs(historyStats.avg_duration_ms)} {t('automations.avgDuration', 'avg')}</span>
             </div>
           )}

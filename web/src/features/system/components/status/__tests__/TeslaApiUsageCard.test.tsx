@@ -6,6 +6,18 @@ import { TeslaApiUsageCard } from '../TeslaApiUsageCard'
 import type { APIUsage } from '@/api/types'
 import type { APICallLogStats } from '@/types/admin'
 
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({
+    formatCurrency: (amount: number, decimals = 2) =>
+      `$${Number(amount).toFixed(decimals)}`,
+    formatEnergyCost: (kwh: number) => `$${(kwh * 0.12).toFixed(2)}`,
+    currencySymbol: '$',
+    costPerKwh: 0.12,
+    costPerDistanceUnit: () => null,
+    estimateGasCost: () => null,
+  }),
+}))
+
 const mockLogStats: { data: APICallLogStats | undefined } = { data: undefined }
 
 vi.mock('@/api/hooks/useAdmin', () => ({

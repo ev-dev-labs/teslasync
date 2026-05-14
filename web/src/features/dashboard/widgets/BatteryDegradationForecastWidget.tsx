@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/feedback';
 import { useBatteryDegradation } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { fmtNumber } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetTipCards, type TipItem } from './shared';
 import type { WidgetProps } from './types';
@@ -40,19 +41,12 @@ function scoreToImpact(score: number): 'high' | 'medium' | 'low' {
   return 'low';
 }
 
-/** Format a projected date string for display */
-function formatProjectedDate(dateStr: string | null, locale: string): string {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString(locale, { year: 'numeric', month: 'short' });
-}
-
 export default function BatteryDegradationForecastWidget({ vehicleId, size }: WidgetProps) {
-  const { t, i18n } = useTranslation('dashboard');
+  const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
   const idStr = id != null ? String(id) : null;
+  const { locale } = useDateFormat();
 
   const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } =
     useBatteryDegradation(idStr);
@@ -62,7 +56,9 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
   const rate = data?.degradation_rate_pct_per_month ?? 0;
   const tier = useMemo(() => healthTier(rate), [rate]);
   const currentHealthPct = data?.current_health_pct ?? data?.current_health ?? null;
-  const projectedDate = formatProjectedDate(data?.projected_80pct_date ?? null, i18n.language);
+  const projectedDate = data?.projected_80pct_date
+    ? new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short' }).format(new Date(data.projected_80pct_date))
+    : '—';
 
   const riskFactors = data?.risk_factors ?? [];
   const recommendations = data?.recommendations ?? [];

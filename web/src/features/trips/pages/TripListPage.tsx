@@ -11,6 +11,7 @@ import { FadeIn } from '@/components/motion';
 import { useTrips } from '@/api/hooks/useTrips';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
 import {
   convertDistanceFromSI,
   type DistanceUnitPref,
@@ -59,6 +60,7 @@ export default function TripListPage() {
   const setRangeBatch = useUrlBatch();
 
   const { unitPrefs } = useUnits();
+  const { formatCurrency } = useFormatting();
   // useSettings retained for the legacy efficiencyUnit label string only.
 
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
@@ -176,13 +178,13 @@ export default function TripListPage() {
             />
             <MetricCard
               label={t('trips.stats.cost', 'Total Cost')}
-              value={`$${fmtNumber(totalCost)}`}
+              value={formatCurrency(totalCost)}
               icon={<DollarSign className="h-4 w-4" />}
               color="green"
               subtitle={
                 totalDistDisplay > 0
-                  ? `$${fmtNumber((totalCost / totalDistDisplay) * 100)}/100${unitPrefs.distance}`
-                  : '$0'
+                  ? `${formatCurrency((totalCost / totalDistDisplay) * 100)}/100${unitPrefs.distance}`
+                  : formatCurrency(0)
               }
             />
             <MetricCard
@@ -295,6 +297,7 @@ interface TripRowProps {
 
 function TripRow({ trip, distancePref, efficiencyUnit }: TripRowProps) {
   const { t } = useTranslation();
+  const { formatCurrency } = useFormatting();
 
   const whPerKm = trip.total_distance_m > 0
     ? (trip.total_energy_wh / (trip.total_distance_m / 1000))
@@ -349,7 +352,7 @@ function TripRow({ trip, distancePref, efficiencyUnit }: TripRowProps) {
         {trip.total_cost > 0 && (
           <div>
             <p className="text-sm font-bold text-emerald-400">
-              ${fmtNumber(trip.total_cost)}
+              {formatCurrency(trip.total_cost)}
             </p>
             <p className="text-[10px] text-[var(--text-muted)]">{t('trips.row.cost', 'cost')}</p>
           </div>

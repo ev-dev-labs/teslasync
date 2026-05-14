@@ -29,7 +29,7 @@ import {
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { request } from '@/api/client';
 
 /* ── Types ─────────────────────────────────────────────────────── */
@@ -441,7 +441,7 @@ export default function MediaPlayerPage() {
             label={t('Volume Step', 'Volume Step')}
             value={
               latest?.audio_volume_increment != null
-                ? latest.audio_volume_increment.toFixed(2)
+                ? fmtNumber(latest.audio_volume_increment, 2)
                 : '—'
             }
             icon={<Volume2 className="h-5 w-5" />}

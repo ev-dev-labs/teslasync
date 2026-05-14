@@ -15,6 +15,8 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useCostBreakdown } from '@/api/hooks/useAnalytics';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
+import { useSettings } from '@/hooks/useSettings';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
@@ -24,7 +26,13 @@ export default function TrueCostPage() {
   const { t } = useTranslation();
   usePageTitle(t('tco.title', 'Total Cost of Ownership'));
   const { unitPrefs, formatEnergy } = useUnits();
+  const { formatCurrency } = useFormatting();
+  const { settings } = useSettings();
   const distanceUnit = unitPrefs.distance;
+  const gasUnit = settings.gas_unit ?? 'gallon';
+  const gasUnitLabel = gasUnit === 'liter'
+    ? t('common.unit.liter', 'L')
+    : t('common.unit.gallon', 'gal');
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
@@ -32,7 +40,7 @@ export default function TrueCostPage() {
   const tcoQuery = useCostBreakdown(vehicleIdStr);
   const { data: tco, isLoading, error } = tcoQuery;
 
-  const fmtCurrency = (v: number) => `$${fmtNumber(v)}`;
+  const fmtCurrency = (v: number) => formatCurrency(v);
 
   const monthlyBreakdown = tco?.monthly_breakdown ?? [];
 
@@ -79,7 +87,7 @@ export default function TrueCostPage() {
                 </div>
                 <p className="text-2xl font-bold text-rose-300">{fmtCurrency(tco.equivalent_gas_cost)}</p>
                 <p className="text-xs text-[var(--text-muted)] mt-1">
-                  @ ${tco.gas_price}/{t('tco.gal', 'gal')} · {tco.gas_efficiency_mpg} MPG
+                  @ {formatCurrency(tco.gas_price)}/{gasUnitLabel} · {tco.gas_efficiency_mpg} MPG
                 </p>
               </GlassPanel>
             </StaggerItem>
@@ -133,7 +141,7 @@ export default function TrueCostPage() {
                       </defs>
                       {chartGrid}
                       <XAxis dataKey="month" tick={axisTick} tickLine={false} axisLine={false} />
-                      <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v}`} />
+                      <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatCurrency(v, 0)} />
                       <Tooltip content={<ChartTooltip />} />
                       <Area
                         type="monotone"
@@ -171,7 +179,7 @@ export default function TrueCostPage() {
                     ]}>
                       {chartGrid}
                       <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={false} />
-                      <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${fmtNumber(v, 3)}`} />
+                      <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatCurrency(v, 3)} />
                       <Tooltip content={<ChartTooltip />} />
                       <Bar dataKey="cost" name={t('tco.costKm', 'Cost/km')} radius={[6, 6, 0, 0]} animationDuration={800} />
                     </BarChart>
@@ -204,7 +212,7 @@ export default function TrueCostPage() {
                       <BarChart data={monthlyBreakdown}>
                         {chartGrid}
                         <XAxis dataKey="month" tick={axisTick} tickLine={false} axisLine={false} />
-                        <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v}`} />
+                        <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatCurrency(v, 0)} />
                         <Tooltip content={<ChartTooltip />} />
                         <Legend wrapperStyle={{ fontSize: 11 }} />
                         <Bar dataKey="ev_cost" name={t('tco.evCost', 'EV Cost')} fill="#00f0ff" radius={[4, 4, 0, 0]} animationDuration={800} />

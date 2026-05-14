@@ -251,7 +251,7 @@ export default function DrivesListPage() {
     (whPerKm: number) => unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm,
     [unitPrefs.distance],
   );
-  const { formatEnergyCost, costPerKwh } = useFormatting();
+  const { formatEnergyCost, costPerKwh, formatCurrency } = useFormatting();
 
   /* URL-persisted UI state */
   const [sortBy, setSortBy] = useUrlEnum<'date' | 'distance' | 'efficiency'>(
@@ -445,10 +445,10 @@ export default function DrivesListPage() {
       formatTick: (v) => fmtInt(v) },
     { key: 'cost',       label: t('drives.metric.cost', 'Cost'),             chart: 'bar',  color: '#ef4444', accent: 'red',
       getValue: (p) => p.value * costPerKwh,
-      formatValue: (v) => `$${fmtNumber(v, 2)}`,
+      formatValue: (v) => formatCurrency(v, 2),
       // Compact axis label so the Y-axis doesn't show "$0.0833" on each tick.
-      formatTick: (v) => `$${fmtNumber(v, 2)}` },
-  ], [t, toDistanceDisplay, toEfficiencyDisplay, distanceUnit, efficiencyUnit, costPerKwh]);
+      formatTick: (v) => formatCurrency(v, 2) },
+  ], [t, toDistanceDisplay, toEfficiencyDisplay, distanceUnit, efficiencyUnit, costPerKwh, formatCurrency]);
 
   /** X-axis tick formatter for the trend chart — render `2026-04-24` as
    *  "Apr 24" using the vehicle's tz so the axis label matches the row

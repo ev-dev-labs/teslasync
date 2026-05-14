@@ -12,8 +12,8 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUrlString, useUrlBatch } from '@/hooks/useUrlState';
-import { formatDateShort } from '@/lib/dateFormat';
 import { convertDistanceFromSI, convertTempFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 
 import {
@@ -39,6 +39,7 @@ import {
 
 export default function DrivetrainHealthPage() {
   const { t } = useTranslation();
+  const { formatTime, formatDateShort } = useDateFormat();
   usePageTitle(t('drivetrain.title', 'Drivetrain Health'));
 
   const { vehicleId } = useSelectedVehicle();
@@ -100,7 +101,7 @@ export default function DrivetrainHealthPage() {
         outsideTemp: d.outsideTempAvgC ?? null,
         distance: toDistanceDisplay(d.distanceM),
       }));
-  }, [drives, startDate, endDate, toDistanceDisplay]);
+  }, [drives, startDate, endDate, toDistanceDisplay, formatDateShort]);
 
   const tempTrendData = useMemo(() => chartData.filter((d) => d.outsideTemp !== null), [chartData]);
 
@@ -123,7 +124,7 @@ export default function DrivetrainHealthPage() {
     const history = motorHistory ?? [];
     if (history.length === 0) return [];
     return history.map((s) => ({
-      time: s.ts ? new Date(s.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+      time: s.ts ? formatTime(s.ts) : '',
       stator: s.motor_temp_c_front != null ? toTemperatureDisplay(s.motor_temp_c_front) : null,
       statorRel: s.motor_temp_c_rear != null ? toTemperatureDisplay(s.motor_temp_c_rear) : null,
       statorRer: s.inverter_temp_c != null ? toTemperatureDisplay(s.inverter_temp_c) : null,
@@ -131,7 +132,7 @@ export default function DrivetrainHealthPage() {
       speed: null, // no direct power signal in motor pivot; field unused by charts
       axle: s.motor_rpm_front ?? s.motor_rpm_rear ?? null,
     }));
-  }, [motorHistory, toTemperatureDisplay, toSpeedDisplay]);
+  }, [motorHistory, toTemperatureDisplay, toSpeedDisplay, formatTime]);
 
   return (
     <PageContainer

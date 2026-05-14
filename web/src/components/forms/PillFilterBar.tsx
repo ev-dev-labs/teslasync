@@ -1,5 +1,6 @@
 import { useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import { fmtInt } from '@/lib/numberFormat';
 
 /**
  * Single pill descriptor for {@link PillFilterBar}.
@@ -184,7 +185,7 @@ export function PillFilterBar({
                   selected ? 'opacity-80' : 'opacity-60',
                 )}
               >
-                ({item.count.toLocaleString()})
+                ({fmtInt(item.count)})
               </span>
             )}
           </button>

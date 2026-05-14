@@ -10,6 +10,7 @@ import { useMotorHistory } from '@/api/hooks/useVehicles';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -48,20 +49,12 @@ function buildChartData(
     .sort((a, b) => a.time.localeCompare(b.time));
 }
 
-function formatTime(ts: string): string {
-  try {
-    const d = new Date(ts);
-    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return ts;
-  }
-}
-
 /** Danger-zone threshold in Celsius (100°C) — converted to display unit for rendering. */
 const DANGER_TEMP_C = 100;
 
 export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { formatDateTime: formatTime } = useDateFormat();
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { unitPrefs } = useUnits();
@@ -181,7 +174,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                 tick={tick}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={formatTime}
+                tickFormatter={(v: string) => formatTime(v)}
               />
               {/* Left Y-axis — Torque (Nm) */}
               <YAxis
@@ -212,7 +205,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                   borderRadius: 8,
                   fontSize: 12,
                 }}
-                labelFormatter={formatTime}
+                labelFormatter={(v: string) => formatTime(v)}
                 formatter={(value: number, name: string) => {
                   if (name === 'torque') {
                     return [`${fmtNumber(value, 0)} Nm`, t('widget.motorHistory.torque', 'Torque')];

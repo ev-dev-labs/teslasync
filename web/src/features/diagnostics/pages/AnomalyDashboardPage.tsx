@@ -9,7 +9,7 @@ import {
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge } from '@/components/ui';
 import { VehicleSelect } from '@/components/forms';
-import { StatCard } from '@/components/data-display';
+import { StatCard, TimeStamp } from '@/components/data-display';
 import {
   ChartTooltip, axisTickSm, CHART_COLORS,
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -200,7 +200,7 @@ export default function AnomalyDashboardPage() {
                     <div className="flex items-center gap-4 mt-2 text-[10px] text-[var(--text-muted)]">
                       <span>{t('anomaly.value', 'Value')}: {fmtNumber(a.value, 2)}</span>
                       <span>{t('anomaly.baseline', 'Baseline')}: {fmtNumber(a.baseline, 2)}</span>
-                      <span>{new Date(a.detected_at).toLocaleString()}</span>
+                      <TimeStamp value={a.detected_at} />
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />

@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import type { ChargingSession } from '@/api/types';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber, fmtWithUnit } from '@/lib/numberFormat';
+import { fmtWithUnit } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui';
+import { useFormatting } from '@/hooks/useFormatting';
 import { getChargerLabel } from './helpers';
 import { durationMinutes } from './helpers';
 
@@ -23,11 +24,11 @@ function SessionDetailRow({
 
 interface SessionDetailPanelProps {
   session: ChargingSession;
-  currencySymbol: string;
 }
 
-export default function SessionDetailPanel({ session, currencySymbol }: SessionDetailPanelProps) {
+export default function SessionDetailPanel({ session }: SessionDetailPanelProps) {
   const { t } = useTranslation();
+  const { formatCurrency } = useFormatting();
 
   return (
     <GlassPanel className="space-y-1 p-5">
@@ -67,7 +68,7 @@ export default function SessionDetailPanel({ session, currencySymbol }: SessionD
       {session.cost_decimal != null && (
         <SessionDetailRow
           label={t('charging.curve.cost_decimal', 'Cost')}
-          value={`${currencySymbol}${fmtNumber(session.cost_decimal)}`}
+          value={formatCurrency(session.cost_decimal)}
         />
       )}
       {session.start_place && (

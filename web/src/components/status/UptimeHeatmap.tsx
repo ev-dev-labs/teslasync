@@ -13,6 +13,7 @@
 import { useMemo } from 'react'
 import { GlassPanel, Tooltip } from '@/components/ui'
 import { cn } from '@/lib/cn'
+import { fmtPercent } from '@/lib/numberFormat'
 import type { HeroStatus } from './StatusHero'
 
 export interface UptimeDay {
@@ -75,7 +76,7 @@ export function UptimeHeatmap({
             : uptimePct >= 95 ? 'text-amber-400'
             : 'text-red-400',
           )}>
-            {uptimePct.toFixed(2)}% uptime
+            {fmtPercent(uptimePct, 2)} uptime
           </span>
         )}
       </div>

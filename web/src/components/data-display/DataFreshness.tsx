@@ -4,6 +4,7 @@ import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { cn } from '@/lib/cn';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 /**
  * `<DataFreshness>` — query-result-driven freshness chip.
@@ -119,6 +120,7 @@ export function DataFreshness({
 }: DataFreshnessProps) {
   const { t } = useTranslation();
   const { reduce } = useMotionPreference();
+  const { formatTime } = useDateFormat();
   const [, setTick] = useState(0);
 
   // Re-render every second to keep relative time accurate
@@ -167,7 +169,7 @@ export function DataFreshness({
     ? t('freshness.updatingTooltip', 'Updating…')
     : updatedAt
       ? t('freshness.lastUpdated', 'Last updated: {{time}}', {
-          time: new Date(updatedAt).toLocaleTimeString(),
+          time: formatTime(new Date(updatedAt)),
         })
       : t('freshness.neverUpdated', 'Never updated');
 

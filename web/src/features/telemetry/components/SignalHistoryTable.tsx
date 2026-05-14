@@ -19,6 +19,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { GlassPanel, Badge, DataTable, Pagination, type Column } from '@/components/ui';
 import { EmptyState, Skeleton } from '@/components/feedback';
@@ -71,6 +72,7 @@ export function SignalHistoryTable({
   className,
 }: SignalHistoryTableProps) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const [expandedKeys, setExpandedKeys] = useState<(string | number)[]>([]);
 
   const renderExpanded = useCallback((r: SignalLogEntry) => (
@@ -84,7 +86,7 @@ export function SignalHistoryTable({
       key: 'time',
       header: t('Timestamp'),
       render: (r) => (
-        <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{new Date(r.created_at).toLocaleString()}</span>
+        <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{formatDateTime(r.created_at)}</span>
       ),
       visibleOnMobile: true,
     },
@@ -128,7 +130,7 @@ export function SignalHistoryTable({
         return <Badge variant={TYPE_BADGE_VARIANT[vt] ?? 'neutral'} size="sm">{vt}</Badge>;
       },
     },
-  ], [selectedSignals, t]);
+  ], [selectedSignals, t, formatDateTime]);
 
   return (
     <FadeIn>

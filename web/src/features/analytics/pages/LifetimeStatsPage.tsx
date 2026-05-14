@@ -18,30 +18,25 @@ import { useLifetimeStats } from '@/api/hooks/useAnalytics';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
 import { AchievementBadge } from '../components/AchievementBadge';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 const SECONDS_PER_HOUR = 3600;
 const METERS_PER_KM = 1000;
-
-/* ── Helpers ──────────────────────────────────────────────────────── */
-
-function fmtDate(d: string | null): string {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString(undefined, {
-    year: 'numeric', month: 'short', day: 'numeric',
-  });
-}
 
 /* ── Page ─────────────────────────────────────────────────────────── */
 
 export default function LifetimeStatsPage() {
   const { t } = useTranslation();
+  const { formatDate: fmtDate } = useDateFormat();
   usePageTitle(t('lifetime.title', 'Lifetime Stats'));
   const { unitPrefs } = useUnits();
+  const { formatCurrency } = useFormatting();
   const distanceUnit = unitPrefs.distance;
   const speedUnit = unitPrefs.speed;
   // backend `total_distance_km` and `longest_drive_record.value` are SI km;
@@ -177,7 +172,7 @@ export default function LifetimeStatsPage() {
           />
           <StatCard
             label={t('lifetime.totalSavings', 'Total Savings')}
-            value={`$${fmtNumber(stats?.total_savings ?? 0, 0)}`}
+            value={formatCurrency(stats?.total_savings ?? 0, 0)}
             icon={<DollarSign className="h-4 w-4" />}
             sublabel={t('lifetime.vsGas', 'vs gasoline')}
           />
@@ -479,6 +474,7 @@ function SavingsBar({ evCost, gasCost, savings, co2Kg }: {
 function RecordCard({ title, value, date, icon }: {
   title: string; value: string; date: string | null | undefined; icon: React.ReactNode;
 }) {
+  const { formatDate: fmtDate } = useDateFormat();
   return (
     <div className="flex items-center gap-4 rounded-lg bg-white/[0.03] p-4">
       {icon}

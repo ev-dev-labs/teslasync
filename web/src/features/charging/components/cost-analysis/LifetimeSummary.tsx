@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useFormatting } from '@/hooks/useFormatting';
 import { TrendingUp } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
@@ -20,6 +21,7 @@ function LifetimeMetric({ label, value }: { label: string; value: string }) {
 
 export function LifetimeSummary({ lifetimeMetrics, coreStats }: LifetimeSummaryProps) {
   const { t } = useTranslation();
+  const { formatCurrency } = useFormatting();
 
   return (
     <GlassPanel glow="cyan" className="p-4">
@@ -31,7 +33,7 @@ export function LifetimeSummary({ lifetimeMetrics, coreStats }: LifetimeSummaryP
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
           <LifetimeMetric
             label={t('costAnalysis.lifetime.totalSpent', 'Total Spent')}
-            value={`$${fmtNumber(coreStats.totalCost, 2)}`}
+            value={formatCurrency(coreStats.totalCost, 2)}
           />
           <LifetimeMetric
             label={t('costAnalysis.lifetime.totalEnergy', 'Total Energy')}
@@ -43,7 +45,7 @@ export function LifetimeSummary({ lifetimeMetrics, coreStats }: LifetimeSummaryP
           />
           <LifetimeMetric
             label={t('costAnalysis.lifetime.avgSessionCost', 'Avg Session Cost')}
-            value={`$${fmtNumber(lifetimeMetrics.avgSessionCost, 2)}`}
+            value={formatCurrency(lifetimeMetrics.avgSessionCost, 2)}
           />
           <LifetimeMetric
             label={t('costAnalysis.lifetime.avgEnergy', 'Avg Energy / Session')}

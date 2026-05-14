@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
+import { fmtNumber } from '@/lib/numberFormat';
 import type { YearReview } from '@/api/types';
 
 interface Props {
@@ -80,7 +81,7 @@ function getStatConfig(
         decimals: 0,
         unit: distanceUnit,
         comparison: earthLaps >= 0.01
-          ? t('yearReview.distanceComparison', { percent: (earthLaps * 100).toFixed(1), defaultValue: "That's {{percent}}% around the Earth!" })
+          ? t('yearReview.distanceComparison', { percent: fmtNumber(earthLaps * 100, 1), defaultValue: "That's {{percent}}% around the Earth!" })
           : t('yearReview.distanceSmall', 'Every kilometer counts!'),
       };
     }

@@ -3,6 +3,8 @@ import {
   DollarSign, Zap, TrendingDown, Car, Fuel,
 } from 'lucide-react';
 import { StaggerContainer, StaggerItem } from '@/components/motion';
+import { useFormatting } from '@/hooks/useFormatting';
+import { useSettings } from '@/hooks/useSettings';
 import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import { StatBox } from './StatBox';
 import type { CoreStats } from './types';
@@ -21,6 +23,9 @@ export function CostSummaryCards({
   isMiles,
 }: CostSummaryCardsProps) {
   const { t } = useTranslation();
+  const { formatCurrency } = useFormatting();
+  const { settings } = useSettings();
+  const gasUnitLabel = settings.gas_unit === 'liter' ? 'L' : 'gal';
 
   return (
     <StaggerContainer>
@@ -29,7 +34,7 @@ export function CostSummaryCards({
           <StatBox
             icon={<DollarSign className="h-5 w-5 text-cyan-400" />}
             label={t('costAnalysis.stats.totalCost', 'Total Cost')}
-            value={`$${fmtNumber(coreStats?.totalCost ?? 0, 2)}`}
+            value={formatCurrency(coreStats?.totalCost ?? 0, 2)}
             sub={`${fmtInt(coreStats?.count ?? 0)} ${t('costAnalysis.stats.sessions', 'sessions')}`}
             glow="cyan"
           />
@@ -38,7 +43,7 @@ export function CostSummaryCards({
           <StatBox
             icon={<Zap className="h-5 w-5 text-yellow-400" />}
             label={t('costAnalysis.stats.avgPerKwh', 'Avg $/kWh')}
-            value={`$${fmtNumber(coreStats?.avgCostPerKwh ?? 0, 3)}`}
+            value={formatCurrency(coreStats?.avgCostPerKwh ?? 0, 3)}
             sub={t('costAnalysis.stats.blendedRate', 'blended rate')}
           />
         </StaggerItem>
@@ -46,7 +51,7 @@ export function CostSummaryCards({
           <StatBox
             icon={<Car className="h-5 w-5 text-blue-400" />}
             label={t('costAnalysis.stats.costPerDist', { unit: isMiles ? 'Mile' : 'km', defaultValue: 'Cost Per {{unit}}' })}
-            value={`$${fmtNumber(coreStats?.costPerDist ?? 0, 3)}`}
+            value={formatCurrency(coreStats?.costPerDist ?? 0, 3)}
             sub={`per ${distanceUnit}`}
           />
         </StaggerItem>
@@ -63,8 +68,8 @@ export function CostSummaryCards({
           <StatBox
             icon={<Fuel className="h-5 w-5 text-red-400" />}
             label={t('costAnalysis.stats.gasSavings', 'Gas Savings $')}
-            value={`$${fmtNumber(coreStats?.savings ?? 0, 2)}`}
-            sub={`vs $${fmtNumber(gasPrice, 2)}/gal`}
+            value={formatCurrency(coreStats?.savings ?? 0, 2)}
+            sub={`vs ${formatCurrency(gasPrice, 2)}/${gasUnitLabel}`}
             glow="green"
           />
         </StaggerItem>

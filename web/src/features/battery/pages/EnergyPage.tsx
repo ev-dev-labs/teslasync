@@ -23,6 +23,7 @@ import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
@@ -133,6 +134,7 @@ export default function EnergyPage() {
   const { t } = useTranslation();
   usePageTitle(t('energy.title', 'Energy'));
   const { unitPrefs } = useUnits();
+  const { formatCurrency } = useFormatting();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
 
   const distanceUnit = unitPrefs.distance;
@@ -302,7 +304,7 @@ export default function EnergyPage() {
     {
       key: 'cost',
       header: t('energy.table.cost_decimal', 'Cost'),
-      render: (s) => <>{typeof s.cost_decimal === 'number' ? `$${fmtNumber(s.cost_decimal)}` : '—'}</>,
+      render: (s) => <>{typeof s.cost_decimal === 'number' ? formatCurrency(s.cost_decimal) : '—'}</>,
     },
     {
       key: 'perKwh',
@@ -310,12 +312,12 @@ export default function EnergyPage() {
       render: (s) => (
         <span className="text-[var(--text-muted)]">
           {typeof s.cost_decimal === 'number' && s.total_energy_added_wh > 0
-            ? `$${fmtNumber(s.cost_decimal / s.total_energy_added_wh)}`
+            ? formatCurrency(s.cost_decimal / s.total_energy_added_wh)
             : '—'}
         </span>
       ),
     },
-  ], [t]);
+  ], [t, formatCurrency]);
 
   /* ── Loading short-circuit (Phase-45 / Prompt 18) ─────────────── */
   if (isLoading) {
@@ -393,12 +395,12 @@ export default function EnergyPage() {
       {/* ── Quick Metrics Strip ─────────────────────────────────── */}
       <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
         {[
-          { label: t('energy.metric.costPerDist', { unit: distanceUnit, defaultValue: 'Cost per {{unit}}' }), value: `$${fmtNumber(totalDistance > 0 ? totalCost / toDistanceDisplay(totalDistance) : 0)}`, color: 'text-neon-cyan' },
-          { label: t('energy.metric.costPerKwh', 'Cost per kWh'), value: `$${fmtNumber(costPerKwh ?? 0)}`, color: 'text-neon-green' },
+          { label: t('energy.metric.costPerDist', { unit: distanceUnit, defaultValue: 'Cost per {{unit}}' }), value: formatCurrency(totalDistance > 0 ? totalCost / toDistanceDisplay(totalDistance) : 0), color: 'text-neon-cyan' },
+          { label: t('energy.metric.costPerKwh', 'Cost per kWh'), value: formatCurrency(costPerKwh ?? 0), color: 'text-neon-green' },
           { label: t('energy.metric.totalDistance', 'Total Distance'), value: `${fmtInt(toDistanceDisplay(totalDistance ?? 0))} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
           { label: t('energy.metric.sessions', 'Sessions'), value: `${sessions?.length ?? 0}`, color: 'text-neon-purple' },
-          { label: t('energy.metric.monthlyEst', 'Monthly Est.'), value: `$${fmtNumber(monthlyProjectedCost ?? 0)}`, color: 'text-neon-amber' },
-          { label: t('energy.metric.yearlyEst', 'Yearly Est.'), value: `$${fmtNumber(yearlyProjectedCost ?? 0)}`, color: 'text-neon-red' },
+          { label: t('energy.metric.monthlyEst', 'Monthly Est.'), value: formatCurrency(monthlyProjectedCost ?? 0), color: 'text-neon-amber' },
+          { label: t('energy.metric.yearlyEst', 'Yearly Est.'), value: formatCurrency(yearlyProjectedCost ?? 0), color: 'text-neon-red' },
         ].map((m) => (
           <StaggerItem key={m.label}>
             <GlassPanel className="p-3 text-center">

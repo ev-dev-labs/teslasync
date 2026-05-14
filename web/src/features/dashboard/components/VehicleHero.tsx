@@ -11,6 +11,7 @@ import { FreshnessIndicator } from '@/components/data-display';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { Vehicle, VehicleState } from '../types';
 
 interface VehicleHeroProps {
@@ -35,6 +36,7 @@ export function VehicleHero({
   lastFetchedAt,
 }: VehicleHeroProps) {
   const { t } = useTranslation('dashboard');
+  const { formatTime } = useDateFormat();
   const status = (state?.state ?? 'offline') as string;
 
   return (
@@ -114,8 +116,7 @@ export function VehicleHero({
                     </p>
                     {state.time_to_full_charge > 0 && (
                       <p className="text-[10px] text-[var(--text-secondary)]">
-                        {t('hero.doneAt', 'Done')} ~{new Date(Date.now() + state.time_to_full_charge * 3_600_000)
-                          .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {t('hero.doneAt', 'Done')} ~{formatTime(new Date(Date.now() + state.time_to_full_charge * 3_600_000))}
                       </p>
                     )}
                   </div>

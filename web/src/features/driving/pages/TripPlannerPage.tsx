@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
+import { useFormatting } from '@/hooks/useFormatting';
 import { PageContainer, Grid } from '@/components/layout';
 import {
   GlassPanel, Button as ControlButton, Select as ControlSelect, Slider,
@@ -30,11 +31,13 @@ import {
 import { request } from '@/api/client';
 import type { TripLocation, TripPlan, TripPlanRequest } from '@/types/driving';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { fmtNumber } from '@/lib/numberFormat';
 
 export default function TripPlannerPage() {
   const { t } = useTranslation();
   usePageTitle(t('tripPlanner.title', 'Trip Planner'));
-  const { unitPrefs } = useUnits();
+  const { unitPrefs, formatEnergy } = useUnits();
+  const { formatCurrency } = useFormatting();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
 
   const distanceUnit = unitPrefs.distance;
@@ -254,12 +257,12 @@ export default function TripPlannerPage() {
             />
             <StatCard
               label={t('tripPlanner.stats.energy', 'Energy')}
-              value={`${(route.total_energy_wh / 1000).toFixed(1)} kWh`}
+              value={formatEnergy(route.total_energy_wh, { precision: 1 })}
               icon={<Battery className="h-4 w-4" />}
             />
             <StatCard
               label={t('tripPlanner.stats.cost', 'Est. Cost')}
-              value={route.estimated_cost > 0 ? `$${route.estimated_cost.toFixed(2)}` : t('common.free', 'Free')}
+              value={route.estimated_cost > 0 ? formatCurrency(route.estimated_cost) : t('common.free', 'Free')}
               icon={<DollarSign className="h-4 w-4" />}
             />
           </Grid>
@@ -292,7 +295,7 @@ export default function TripPlannerPage() {
                 {weather.avg_temp_c != null && (
                   <p className="text-xs text-[var(--text-muted)] mt-1">
                     {t('tripPlanner.weather.factor', 'Efficiency factor: {{factor}}×', {
-                      factor: weather.efficiency_factor.toFixed(2),
+                      factor: fmtNumber(weather.efficiency_factor, 2),
                     })}
                   </p>
                 )}

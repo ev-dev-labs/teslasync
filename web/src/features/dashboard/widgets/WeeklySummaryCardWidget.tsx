@@ -7,7 +7,7 @@ import { useWeeklyDigest } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { UNITS } from '@/lib/constants';
 import { WidgetShell } from './WidgetShell';
@@ -24,7 +24,7 @@ function trendOf(
   if (Math.abs(pct) < 1) return { direction: 'flat', value: '~0%' };
   const direction = pct > 0 ? 'up' : 'down';
   const positive = lowerIsPositive ? pct < 0 : pct > 0;
-  return { direction, value: `${Math.abs(pct).toFixed(0)}%`, positive };
+  return { direction, value: fmtPercent(Math.abs(pct), 0), positive };
 }
 
 export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps) {

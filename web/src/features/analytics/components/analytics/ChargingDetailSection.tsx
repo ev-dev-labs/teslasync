@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useFormatting } from '@/hooks/useFormatting';
 import { DollarSign } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
@@ -11,12 +12,13 @@ import {
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { fmtInt } from '@/lib/numberFormat';
 import type { FleetAnalytics } from '@/api/types';
 import { SectionTitle } from './helpers';
 
 export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefined }) {
   const { t } = useTranslation();
+  const { formatCurrency } = useFormatting();
 
   const ca = data?.charging_analytics;
   const brands = ca?.charger_brands ?? [];
@@ -90,25 +92,25 @@ export function ChargingDetailSection({ data }: { data: FleetAnalytics | undefin
           <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
             <MetricCard
               label={t('analytics.charging.minCost', 'Min Cost')}
-              value={`$${fmtNumber(safe(costStats.min), 2)}`}
+              value={formatCurrency(safe(costStats.min), 2)}
               icon={<DollarSign className="h-4 w-4" />}
               color="green"
             />
             <MetricCard
               label={t('analytics.charging.avgCost', 'Avg Cost')}
-              value={`$${fmtNumber(safe(costStats.avg), 2)}`}
+              value={formatCurrency(safe(costStats.avg), 2)}
               icon={<DollarSign className="h-4 w-4" />}
               color="cyan"
             />
             <MetricCard
               label={t('analytics.charging.medianCost', 'Median Cost')}
-              value={`$${fmtNumber(safe(costStats.median), 2)}`}
+              value={formatCurrency(safe(costStats.median), 2)}
               icon={<DollarSign className="h-4 w-4" />}
               color="purple"
             />
             <MetricCard
               label={t('analytics.charging.maxCost', 'Max Cost')}
-              value={`$${fmtNumber(safe(costStats.max), 2)}`}
+              value={formatCurrency(safe(costStats.max), 2)}
               icon={<DollarSign className="h-4 w-4" />}
               color="amber"
             />

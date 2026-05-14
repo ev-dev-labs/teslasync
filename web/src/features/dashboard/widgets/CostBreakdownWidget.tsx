@@ -10,7 +10,6 @@ import { useCostBreakdown } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetRankedList, type RankedItem } from './shared';
 import { WidgetBigNumber } from './shared';
 import { WidgetShell } from './WidgetShell';
@@ -27,11 +26,11 @@ interface DonutSegment {
 function CostTooltip({
   active,
   payload,
-  currencySymbol,
+  formatCurrency,
 }: {
   active?: boolean;
   payload?: Array<{ payload: DonutSegment }>;
-  currencySymbol: string;
+  formatCurrency: (amount: number, decimals?: number) => string;
 }) {
   if (!active || !payload?.[0]) return null;
   const seg = payload[0].payload;
@@ -45,7 +44,7 @@ function CostTooltip({
         <span className="text-[var(--text-primary)]">{seg.name}</span>
       </div>
       <div className="mt-1 text-[var(--text-secondary)]">
-        {currencySymbol}{fmtNumber(seg.value, 2)}
+        {formatCurrency(seg.value, 2)}
       </div>
     </div>
   );
@@ -195,7 +194,7 @@ export default function CostBreakdownWidget({ vehicleId, size }: WidgetProps) {
                   ))}
                 </Pie>
                 <Tooltip
-                  content={<CostTooltip currencySymbol={currencySymbol} />}
+                  content={<CostTooltip formatCurrency={formatCurrency} />}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -222,7 +221,7 @@ export default function CostBreakdownWidget({ vehicleId, size }: WidgetProps) {
                 unit: distanceUnit,
               })}
               value={costPerDist > 0
-                ? `${currencySymbol}${fmtNumber(costPerDist, 3)}`
+                ? formatCurrency(costPerDist, 3)
                 : '—'
               }
               icon={<Fuel className="h-3.5 w-3.5" />}

@@ -3,11 +3,10 @@ import { CircleDot } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useLatestTirePressure } from '@/api/hooks/useVehicles';
-import { useUnits } from '@/hooks/useUnits';
+import { usePressureFormat } from '@/hooks/usePressureFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import { convertPressureFromSI } from '@/lib/unitConversion';
 
 /** Pressure thresholds in bar for color coding */
 const THRESHOLD = {
@@ -98,10 +97,7 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { data: tireData, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useLatestTirePressure(id, 10_000);
-  const { unitPrefs } = useUnits();
-  const toPressureDisplay = (value: number) => convertPressureFromSI(value, unitPrefs.pressure);
-
-  const pressureUnit = unitPrefs.pressure;
+  const { pressureUnit, toPressureValue } = usePressureFormat();
 
   const isCompact = size.cols <= 1;
 
@@ -115,8 +111,10 @@ export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProp
   const allNormal = tires.every((tire) => tire.status === 'green');
   const hasWarning = tires.some((tire) => tire.status !== 'green');
 
-  const formatPressure = (val: number | null): string =>
-    val != null ? `${fmtNumber(toPressureDisplay(val), 1)}` : '—';
+  const formatPressure = (val: number | null): string => {
+    const v = toPressureValue(val);
+    return v != null ? `${fmtNumber(v, 1)}` : '—';
+  };
 
   // Most recent reading time across all tires
   const latestReading = tireData

@@ -5,6 +5,7 @@ import { SourceLayerBadge, type SignalSource } from '@/components/data-display';
 import { StateBadge } from '@/features/system/components/StateBadge';
 import { cn } from '@/lib/cn';
 import { formatRelative } from '@/lib/dateFormat';
+import { fmtInt } from '@/lib/numberFormat';
 import type { FSMTransition } from '@/types/fsm';
 import type { SignalSnapshotResponse } from '@/api/hooks/useTelemetry';
 
@@ -195,7 +196,7 @@ export function SnapshotInspector({
           <div>
             <Caption>{t('debugger.inspector.duration', 'Duration')}</Caption>
             <div className="mt-1 text-[var(--text-primary)]">
-              {(typeof transition.details?.duration_in_state_ms === 'number' ? transition.details.duration_in_state_ms.toLocaleString() : null) ?? '—'} ms
+              {(typeof transition.details?.duration_in_state_ms === 'number' ? fmtInt(transition.details.duration_in_state_ms) : null) ?? '—'} ms
             </div>
           </div>
         </div>

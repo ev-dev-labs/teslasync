@@ -23,6 +23,7 @@ import { FadeIn } from '@/components/motion';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -210,6 +211,8 @@ const insightIconClass = {
 export default function BatteryCellsPage() {
   const { t } = useTranslation();
   usePageTitle(t('battery.cells.title', 'Battery Cells'));
+  const { formatTemperature, unitPrefs } = useUnits();
+  const tempUnit = unitPrefs.temperature;
 
   const [showHeatmap, setShowHeatmap] = useState(true);
 
@@ -755,25 +758,25 @@ export default function BatteryCellsPage() {
             <Grid cols={{ default: 2, md: 4 }} gap={4}>
               <MetricCard
                 label={t('battery.cells.temp.avg', 'Avg Temperature')}
-                value={`${fmtNumber(data.avg_temperature, 1)}°C`}
+                value={formatTemperature(data.avg_temperature, { precision: 1 })}
                 icon={<Thermometer className="h-5 w-5" />}
                 color="green"
               />
               <MetricCard
                 label={t('battery.cells.temp.min', 'Min Temperature')}
-                value={`${fmtNumber(data.min_temperature, 1)}°C`}
+                value={formatTemperature(data.min_temperature, { precision: 1 })}
                 icon={<ArrowDownRight className="h-5 w-5" />}
                 color="cyan"
               />
               <MetricCard
                 label={t('battery.cells.temp.max', 'Max Temperature')}
-                value={`${fmtNumber(data.max_temperature, 1)}°C`}
+                value={formatTemperature(data.max_temperature, { precision: 1 })}
                 icon={<ArrowUpRight className="h-5 w-5" />}
                 color="amber"
               />
               <MetricCard
                 label={t('battery.cells.temp.spread', 'Temp Spread')}
-                value={`${fmtNumber(data.temp_spread, 1)}°C`}
+                value={`${fmtNumber(tempUnit === '°F' ? data.temp_spread * 1.8 : data.temp_spread, 1)}${tempUnit}`}
                 icon={<Activity className="h-5 w-5" />}
                 color={data.temp_spread > 5 ? 'red' : data.temp_spread > 3 ? 'amber' : 'green'}
               />
@@ -866,7 +869,7 @@ export default function BatteryCellsPage() {
               (data?.temp_spread ?? 0) > 5 ? 'text-rose-300' :
               (data?.temp_spread ?? 0) > 3 ? 'text-amber-300' : 'text-emerald-300'
             )}>
-              {fmtNumber(data?.temp_spread ?? 0, 1)}<span className="text-sm">°C</span>
+              {fmtNumber(tempUnit === '°F' ? (data?.temp_spread ?? 0) * 1.8 : (data?.temp_spread ?? 0), 1)}<span className="text-sm">{tempUnit}</span>
             </p>
           </GlassPanel>
           <GlassPanel className="p-4 text-center">
