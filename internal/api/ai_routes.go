@@ -148,6 +148,7 @@ func mountAIRoutes(
 	aiLifetimeStatsQA *AILifetimeStatsQAHandler,
 	aiIncidentTimelineSummarizer *AIIncidentTimelineSummarizerHandler,
 	aiDataRepairSuggestions *AIDataRepairSuggestionsHandler,
+	aiSignalExplorerNlFilter *AISignalExplorerNlFilterHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -427,6 +428,27 @@ func mountAIRoutes(
 			dataRepairSuggestionsHandler = aiDataRepairSuggestions.ServeHTTP
 		}
 		r.Post("/system/data-repair/draft", g.Wrap("data-repair-suggestions", dataRepairSuggestionsHandler))
+
+		// signal-explorer-nl-filter (Phase-50 / S3, slice 0044).
+		// Opt-in LLM that translates a natural-language filter
+		// request into a typed SignalFilter DTO the
+		// SignalExplorerPage at /signals/explorer can apply.
+		// PROPOSE-ONLY: the user reviews the typed proposal in
+		// the AI side panel and clicks the Apply button to copy
+		// the draft into the baseline filter form; the LLM never
+		// edits filter state directly. Same stub-fallback pattern
+		// as the other AI handlers — a nil handler is possible
+		// during partial wiring but the off-mode 404 invariant
+		// still holds because guard.Wrap returns 404 BEFORE the
+		// handler runs in off mode. The canonical baseline routes
+		// at GET /api/v1/signals/{vehicleID}/available and
+		// GET /api/v1/signals/{vehicleID}/{signalName}/history
+		// are unchanged.
+		var signalExplorerNlFilterHandler http.HandlerFunc = aiSignalExplorerNlFilterStubHandler
+		if aiSignalExplorerNlFilter != nil {
+			signalExplorerNlFilterHandler = aiSignalExplorerNlFilter.ServeHTTP
+		}
+		r.Post("/signals/filter/draft", g.Wrap("signal-explorer-nl-filter", signalExplorerNlFilterHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1201,6 +1223,15 @@ func aiIncidentTimelineSummarizerStubHandler(w http.ResponseWriter, _ *http.Requ
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiDataRepairSuggestionsStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai data-repair suggestions is not yet implemented")
+}
+
+// aiSignalExplorerNlFilterStubHandler mirrors
+// aiDataRepairSuggestionsStubHandler for the S3 slice (Phase-50 /
+// 0044 signal-explorer-nl-filter). Reachable only when
+// AISignalExplorerNlFilterHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiSignalExplorerNlFilterStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai signal-explorer nl filter is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

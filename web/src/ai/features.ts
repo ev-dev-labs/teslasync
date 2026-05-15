@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -377,6 +377,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-route-efficiency-suggestions-root"] as const),
   }),
+  "signal-explorer-nl-filter": Object.freeze({
+    id: "signal-explorer-nl-filter",
+    name: "Signal explorer natural-language filter",
+    description: "Opt-in LLM that translates a natural-language filter request into a typed SignalFilter DTO the deterministic SignalExplorerPage at /signals/explorer can apply. PROPOSE-ONLY: routes through two propose-only tools (draft_signal_filter + validate_signal_filter) bound to the per-vehicle signal catalog the handler installs server-side. The user reviews the typed proposal in the AI side panel and clicks Apply to copy the draft into the baseline filter form; the LLM never edits filter state directly. The deterministic SignalSelector + RangePicker + per-page controls at /signals/explorer remain the canonical baseline when AI is off. Per-feature redaction policy is PolicyChatbot (deny-by-default; every PII class redacted to a round-trip tag) so a leaked transcript reveals nothing about VINs, vehicle names, or coordinates. Per-request scope binding installs the per-vehicle signal catalog snapshot in ctx and refuses any out-of-catalog signal proposal to defend against prompt-injection exfiltration via operator-authored prompts.",
+    tier: "S",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-signal-explorer-nl-filter-root"] as const),
+  }),
   "smart-charge-schedule-suggestion": Object.freeze({
     id: "smart-charge-schedule-suggestion",
     name: "Smart-charge schedule suggestion",
@@ -489,6 +500,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "rag-help",
   "range-prediction-model",
   "route-efficiency-suggestions",
+  "signal-explorer-nl-filter",
   "smart-charge-schedule-suggestion",
   "speed-profile-insights",
   "suggest-new-geofences",
