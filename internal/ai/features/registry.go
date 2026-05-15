@@ -1872,6 +1872,54 @@ var Registry = map[string]Feature{
 			PushKinds: []string{"ai_ml_anomaly_ready"},
 		},
 	},
+
+	// range-prediction-model — Phase-50 / 0063 (ML2).
+	//
+	// Opt-in LLM narrator over a per-vehicle deterministic learned
+	// range model: the trainer at internal/ml/range computes per-bucket
+	// (temp_bucket × speed_bucket) Wh/km mean / stddev / p5 / p95
+	// from drives in the recent window, with per-bucket fallback to
+	// the static HeuristicWhPerKm curve (mirroring api/range_projection_handler_compute.go's
+	// defaultEfficiency formula, pinned by the parity test) when fewer
+	// than mlrange.DefaultMinSamplesPerBucket=5 drives exist. The
+	// LLM narrates the diff between the proposed learned envelope and
+	// the currently-effective heuristic baseline.
+	//
+	// The deterministic Projected Range page at /projected-range
+	// (RangeProjectionHandler at /api/v1/vehicles/{id}/range/projection)
+	// remains the canonical baseline when AI is off — this slice does
+	// NOT replace it.
+	//
+	// JobNames: ["ai_ml_range_trainer"] — slice 0063 does not ship
+	// the job; the trainer is request-scoped today. The job name is
+	// registered for forward-compat so the off-mode coverage walker
+	// can prove its absence in off mode and so a future job-tier
+	// slice does NOT widen the off-mode surface when it lands.
+	//
+	// PushKinds: ["ai_ml_range_ready"] — gated push-event kind
+	// registered for forward-compat for the same reason.
+	//
+	// Frontend: ["/analytics/range"] — the slice prompt requires this
+	// route. The canonical Projected Range page lives at
+	// /projected-range; App.tsx exposes /analytics/range as an alias
+	// route that mounts the same page (see web/src/App.tsx).
+	"range-prediction-model": {
+		ID:          "range-prediction-model",
+		Name:        "Range prediction model",
+		Description: "Opt-in LLM narrator that EXPLAINS the per-bucket (temp_bucket × speed_bucket) learned range envelope (mean Wh/km plus stddev/p5/p95 per bucket; linear-fallback to the static heuristic curve per bucket when fewer than 5 drives exist in the recent window) for one vehicle. The deterministic Projected Range page with the static heuristic curve remains the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class tagged so a leaked transcript does not reveal vehicle identity beyond the user-supplied vehicle_id.",
+		Tier:        "ML2",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/ml/range/train"},
+			Frontend:  []string{"/analytics/range"},
+			UITestIDs: []string{"ai-feature-range-prediction-model-root"},
+			JobNames:  []string{"ai_ml_range_trainer"},
+			PushKinds: []string{"ai_ml_range_ready"},
+		},
+	},
 }
 
 // IsKnown reports whether id corresponds to a registered feature. Used

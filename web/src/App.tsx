@@ -357,6 +357,14 @@ export default function App() {
         <Route path="timeline" element={<SafeRoute name="Timeline"><Timeline /></SafeRoute>} />
         <Route path="mileage" element={<SafeRoute name="Mileage"><Mileage /></SafeRoute>} />
         <Route path="projected-range" element={<SafeRoute name="ProjectedRange"><ProjectedRange /></SafeRoute>} />
+        {/* Phase-50 / 0063 alias: the slice prompt registered the AI feature
+            `range-prediction-model` against frontend route `/analytics/range`;
+            the canonical app path stays `/projected-range` for back-compat,
+            but mounting the same page at `/analytics/range` lets the
+            registry's RouteSet.Frontend entry land users on the deterministic
+            baseline (which also hosts the opt-in AIRangePrediction section
+            when AI mode is on and the toggle is enabled). */}
+        <Route path="analytics/range" element={<SafeRoute name="ProjectedRange"><ProjectedRange /></SafeRoute>} />
         <Route path="efficiency" element={<SafeRoute name="Efficiency"><Efficiency /></SafeRoute>} />
         <Route path="trips" element={<SafeRoute name="Trips"><Trips /></SafeRoute>} />
         <Route path="trips/:id" element={<SafeRoute name="TripDetail"><TripDetail /></SafeRoute>} />

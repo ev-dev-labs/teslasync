@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "inbox-auto-categorization" | "learned-per-vehicle-anomaly-baselines" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "inbox-auto-categorization" | "learned-per-vehicle-anomaly-baselines" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -289,6 +289,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-rag-help-root"] as const),
   }),
+  "range-prediction-model": Object.freeze({
+    id: "range-prediction-model",
+    name: "Range prediction model",
+    description: "Opt-in LLM narrator that EXPLAINS the per-bucket (temp_bucket × speed_bucket) learned range envelope (mean Wh/km plus stddev/p5/p95 per bucket; linear-fallback to the static heuristic curve per bucket when fewer than 5 drives exist in the recent window) for one vehicle. The deterministic Projected Range page with the static heuristic curve remains the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class tagged so a leaked transcript does not reveal vehicle identity beyond the user-supplied vehicle_id.",
+    tier: "ML2",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-range-prediction-model-root"] as const),
+  }),
   "route-efficiency-suggestions": Object.freeze({
     id: "route-efficiency-suggestions",
     name: "Route-efficiency suggestions",
@@ -393,6 +404,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "nl-search",
   "preheat-precool-recommender",
   "rag-help",
+  "range-prediction-model",
   "route-efficiency-suggestions",
   "smart-charge-schedule-suggestion",
   "speed-profile-insights",

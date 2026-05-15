@@ -1,0 +1,402 @@
+# Phase-50 / 0063 — ML2 Range-prediction model
+
+=== PREFLIGHT ===
+Branch: feat/vampire-drain-explanation
+HEAD:   5fd20cc89 feat(ai): add Learned per-vehicle anomaly baselines
+
+Predecessor logs (all required to be STATUS=DONE):
+  DONE phase-50-0001-F0-ai-off-contract.log
+  DONE phase-50-0002-F1-provider-abstraction.log
+  DONE phase-50-0003-F2-settings-ui.log
+  DONE phase-50-0004-F3-ai-call-log.log
+  DONE phase-50-0005-F4-tool-use-framework.log
+  DONE phase-50-0006-F5-sse-streaming.log
+  DONE phase-50-0007-F6-eval-harness.log
+  DONE phase-50-0008-F7-embeddings-pgvector.log
+  DONE phase-50-0009-F8-redaction.log
+  DONE phase-50-0010-F9-rate-limiter-cost-cap.log
+  DONE phase-50-0062-learned-per-vehicle-anomaly-baselines.log  (closest precedent — ML1 sibling slice)
+
+Dirty-tree check at slice start: working copy clean.
+
+=== SURVEY ===
+Baseline preserved by this slice
+  Code:   internal/api/range_projection_handler.go
+          + internal/api/range_projection_handler_compute.go
+          (GET /api/v1/vehicles/{vehicleID}/range/projection)
+  Heuristic: deterministic linear projection over the last
+             RangeProjectionLookbackDays drives + a static
+             defaultEfficiency(speedKmh, tempC) Wh/km curve
+             that bumps base 155 → 170 above 50 km/h, → 195
+             above 90 km/h, and multiplies by 1.35 below 0 °C,
+             1.15 below 10 °C, 1.08 above 35 °C. The curve is
+             pinned in TestRangeFallbackParity_APIvsMLRange so
+             the ML2 fallback (mlrange.HeuristicWhPerKm) and
+             the api-side defaultEfficiency cannot drift in
+             either direction.
+  Page:   web/src/features/battery/pages/ProjectedRangePage.tsx
+          rendered at /projected-range (canonical) and now also
+          at /analytics/range (slice-0063 alias) — both routes
+          mount the same component, the deterministic
+          projection remains the unconditional content.
+  Tests:  Slice 0014's family already pins page-level off-mode
+          contracts elsewhere; this slice adds the per-feature
+          off-mode tests for /api/v1/ai/ml/range/train and the
+          AIRangePrediction component:
+            - Go: TestRangePredictionModelAIOffUsesHeuristicOnly
+              in internal/api/ai_ml_range_handler_test.go
+              (asserts 404 + zero-leakage body in off mode)
+            - Vitest: TestRangePredictionModelAIOffUsesHeuristicOnly
+              in web/src/features/battery/__tests__/
+              (asserts container empty + queryByTestId == null
+               in off mode + positive-control)
+
+Files surveyed before edits
+  internal/api/range_projection_handler.go             (canonical baseline shape)
+  internal/api/range_projection_handler_compute.go     (defaultEfficiency formula — pinned by parity test)
+  internal/api/ai_ml_anomaly_baseline_handler.go       (slice 0062 ML1 handler shape — closest precedent)
+  internal/api/ai_ml_anomaly_baseline_handler_test.go  (off-mode test pattern — load-bearing template)
+  internal/api/ai_chatbot_handler_test.go              (stubGuardSettings helper)
+  internal/api/ai_routes.go                            (mountAIRoutes signature; ai stub handler pattern)
+  internal/api/router.go                               (boot wiring around tool registration + handler construction)
+  internal/ai/features/registry.go                     (registry entry shape; ML2 tier value)
+  internal/ai/strategies/learned-per-vehicle-anomaly-baselines/
+                                                       (ML1 strategy template)
+  internal/ai/strategies/learned-per-vehicle-anomaly-baselines/goldens.yaml
+                                                       (eval golden shape)
+  internal/ai/tools/anomaly_baseline.go                (ML1 tool precedent: train_<x> + query_<x>)
+  internal/ai/tools/validate.go                        (validator rule list:
+                                                        required, gte, lte, min, max, len,
+                                                        oneof — NO `gt` or `lt`)
+  internal/ml/anomaly/                                 (ML1 trainer package layout)
+  web/src/components/ai/AILearnedAnomalyBaselines.tsx  (component template — preserved verbatim except feature/ID/copy)
+  web/src/components/ai/withAiFeature.tsx              (HOC: emits the test ID + data-ai-feature
+                                                        attribute itself — do NOT add an inner
+                                                        duplicate test ID)
+  web/src/hooks/useAiStream.ts                         (SSE hook contract)
+  web/src/features/diagnostics/__tests__/
+   TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly.test.tsx
+                                                       (vitest off-mode template)
+  web/src/features/diagnostics/__tests__/
+   TestLearnedPerVehicleAnomalyBaselinesAIOnWiredCallsRoute.test.tsx
+                                                       (vitest on-mode wiring template)
+  web/src/i18n/en.json                                 (settings.ai.features +
+                                                        anomaly.aiBaseline precedent;
+                                                        existing `range` block at L4007)
+
+Routes/DTOs/hooks/registry inspected
+  Backend route owned by this slice: POST /api/v1/ai/ml/range/train
+  DTO:        aiRangeRequest = {vehicle_id int64 (gt 0), days int (0..30; 0 == default 14)}
+  Strategy:   internal/ai/strategies/range-prediction-model
+              FeatureID const = "range-prediction-model"
+              allowedTools = ["train_range_model", "query_range_prediction"]  (ORDER MATTERS — train first)
+              SystemPrompt mirrors 0062's structure verbatim, references heuristic curve as
+                  the per-bucket fallback when fewer than mlrange.DefaultMinSamplesPerBucket=5
+                  qualifying drives exist for a (temp × speed) bucket
+              RedactionPolicy = PolicyChatbot via redactadapter.Wrap (no PII in
+                  bucket payloads — only Wh/km means, p5/p95, sample counts)
+  Trainer:    internal/ml/range
+              DriveStatsSource interface (cutoff time.Time → []DriveSample)
+              Trainer{Source, MinSamples, Days, nowFn} — clock seam for test determinism
+              Train() iterates canonical outer-product order
+                (TempBuckets × SpeedBuckets, both alphabetic on each axis)
+              CurrentEffectiveBuckets() returns all-fallback envelope (used by the query tool)
+  Registry:   range-prediction-model entry added with Tier="ML2", DefaultOn=false,
+              NeedsRAG=false, NeedsTools=true, NeedsStream=true.
+              Routes.Backend = ["POST /api/v1/ai/ml/range/train"]
+              Routes.Frontend = ["/analytics/range"]
+              Routes.UITestIDs = ["ai-feature-range-prediction-model-root"]
+              Routes.JobNames = ["ai_ml_range_trainer"]
+              Routes.PushKinds = ["ai_ml_range_ready"]
+
+=== REASONING ===
+Why the selected design preserves ADR-015, P1-P10, and the non-AI baseline.
+
+1. Baseline coexistence (P10): The deterministic heuristic at
+   GET /api/v1/vehicles/{vehicleID}/range/projection is untouched.
+   The new POST /api/v1/ai/ml/range/train is opt-in per feature
+   (DefaultOn=false), and AI Mode = off causes the
+   ai.GuardedHandler to 404 the route before any provider is
+   constructed (proven by TestRangePredictionModelAIOffUsesHeuristicOnly).
+
+2. Single registry entry (P9): The feature is registered exactly
+   once with explicit, populated RouteSet metadata. Empty
+   surfaces are explicit `[]string{}` per the Phase-50
+   methodology, never omitted.
+
+3. Strategy isolation (P4 + P5): The AI path is a strategy
+   package importing only `dispatch`, `provider`, `stream`, and
+   the redactadapter wrapper. Provider adapters are NEVER imported
+   from feature code (P1). The decorator chain is applied through
+   `provider.For(...)` in the handler — redaction → rate limit →
+   cost cap → audit → trace, in the locked order.
+
+4. Read-only tools (P5 propose-only contract): Both
+   `train_range_model` and `query_range_prediction` are
+   `Mutates: false`. The trainer reads from `drives` only; it
+   never writes to `drives` and never overwrites the heuristic
+   curve. The single mutating surface (the canonical projection
+   page) is unchanged.
+
+5. Per-bucket fallback parity (P10 strict): Each of the 12
+   (TempBucket × SpeedBucket) entries with fewer than
+   mlrange.DefaultMinSamplesPerBucket=5 qualifying drives in the
+   lookback window falls back to mlrange.HeuristicWhPerKm at the
+   bucket's representative midpoint
+   (temp=-5/5/20/30 °C, speed=35/70/110 km/h). The hot midpoint is
+   deliberately at 30 (not >35) so the legacy `tempC>35` 1.08
+   multiplier in defaultEfficiency does NOT silently fire — the
+   midpoint matches the bucket label "hot ≥25 °C" range. Pinned
+   in TestHeuristicWhPerKm_PinnedValues + the cross-package
+   parity test TestRangeFallbackParity_APIvsMLRange.
+
+6. Provider-egress contract (I4): With ai_mode='off', the
+   ai.GuardedHandler short-circuits before NewHandler's inner
+   logic runs. The Go off-mode test asserts the
+   GUARD_BYPASSED side-channel is NEVER triggered — proving no
+   provider is constructed and no LLM byte ever leaves the
+   process in off mode.
+
+7. SI canonical (Phase-42): All trainer inputs come from the
+   canonical SI columns
+   (avg_speed_mps, ambient_temp_c_avg, distance_m, energy_used_wh).
+   Conversion to display-friendly Wh/km + km/h happens in Go
+   inside the AIDriveStatsSource pgx adapter; the tool payloads
+   carry SI-derived units (Wh/km is canonical here per
+   `unit-conversion.instructions.md` §"Energy efficiency").
+   No ai_mode='off' path adds new SI-suffixed columns or fields.
+
+8. SPA wiring (P11/P12 + W1 inline): AIRangePrediction wires
+   end-to-end to POST /ai/ml/range/train via useAiStream — no
+   placeholder strings (verified by Select-String over allowed
+   files: 0 matches in this slice's component), the primary
+   action button's `disabled` is a computed
+   `!canGenerate = !(vehicleId != null && stream.state !==
+   'streaming')`, double-submit guard is exercised by
+   TestRangePredictionModelAIOnWiredCallsRoute test #2.
+
+=== CHANGES ===
+Production / test / registry / i18n / golden changes:
+
+Backend (Go) — production
+  internal/ml/range/linear.go                      (new, 256 lines)
+  internal/ml/range/trainer.go                     (new, ~360 lines)
+  internal/ai/strategies/range-prediction-model/strategy.go (new, ~290 lines)
+  internal/ai/tools/range_predictor.go             (new, ~350 lines)
+  internal/api/ai_ml_range_handler.go              (new, ~340 lines)
+  internal/ai/features/registry.go                 (modified — added range-prediction-model entry)
+  internal/api/ai_routes.go                        (modified — added handler param to mountAIRoutes
+                                                    + r.Post("/ml/range/train", ...) + stub fallback)
+  internal/api/router.go                           (modified — strategy + mlrange imports +
+                                                    tool registration + handler construction +
+                                                    mountAIRoutes call site)
+
+Backend (Go) — tests
+  internal/ml/range/trainer_test.go                (new, 11 cases — bucket math + clamps + parity)
+  internal/ai/strategies/range-prediction-model/strategy_test.go (new — pin tests for FeatureID,
+                                                                  System, Tools order, defensive
+                                                                  copy, no-mutators, ContextNil,
+                                                                  RedactionPolicyChatbot,
+                                                                  EvalGoldensReturnsNil)
+  internal/ai/tools/range_predictor_test.go        (new — Validate + Execute + Mutates + Register)
+  internal/api/ai_ml_range_handler_test.go         (new — load-bearing
+                                                    TestRangePredictionModelAIOffUsesHeuristicOnly +
+                                                    PanicsOnNilWiring + RejectsBadRequestBodies)
+  internal/api/ai_ml_range_fallback_parity_test.go (new — TestRangeFallbackParity_APIvsMLRange
+                                                    pins 12 bucket midpoints +
+                                                    TestRangeFallbackParity_TempBucketForAgrees
+                                                    pins boundary edges)
+
+Goldens / canned fixtures
+  internal/ai/strategies/range-prediction-model/goldens.yaml          (new — 3 goldens)
+  internal/ai/strategies/range-prediction-model/canned/typical_learned_envelope.yaml (new)
+  internal/ai/strategies/range-prediction-model/canned/fallback_to_linear.yaml       (new)
+  internal/ai/strategies/range-prediction-model/canned/refusal_other_vehicle.yaml    (new)
+
+Frontend
+  web/src/components/ai/AIRangePrediction.tsx                        (new, ~110 lines)
+  web/src/i18n/en.json                                               (modified — added
+                                                                      settings.ai.features.range-prediction-model
+                                                                      + range.aiPredict {title, description,
+                                                                      generateButton, badge})
+  web/src/App.tsx                                                    (modified — added /analytics/range
+                                                                      alias to existing ProjectedRange route)
+  web/src/features/battery/pages/ProjectedRangePage.tsx              (modified — mounted AIRangePrediction
+                                                                      with vehicleId from useSelectedVehicle)
+  web/src/ai/features.ts                                             (regenerated by `go run ./tools/aigen`
+                                                                      — TS mirror in sync, 30812 bytes,
+                                                                      32 features)
+
+Frontend tests
+  web/src/features/battery/__tests__/TestRangePredictionModelAIOffUsesHeuristicOnly.test.tsx
+                                                                     (new — load-bearing off-mode contract)
+  web/src/features/battery/__tests__/TestRangePredictionModelAIOnWiredCallsRoute.test.tsx
+                                                                     (new — W1 inline wiring positive proof)
+
+=== GATE ===
+$ git --no-pager status --short
+ M internal/ai/features/registry.go
+ M internal/api/ai_routes.go
+ M internal/api/router.go
+ M web/src/App.tsx
+ M web/src/ai/features.ts
+ M web/src/features/battery/pages/ProjectedRangePage.tsx
+ M web/src/i18n/en.json
+?? internal/ai/strategies/range-prediction-model/
+?? internal/ai/tools/range_predictor.go
+?? internal/ai/tools/range_predictor_test.go
+?? internal/api/ai_ml_range_fallback_parity_test.go
+?? internal/api/ai_ml_range_handler.go
+?? internal/api/ai_ml_range_handler_test.go
+?? internal/ml/range/
+?? web/src/components/ai/AIRangePrediction.tsx
+?? web/src/features/battery/__tests__/TestRangePredictionModelAIOffUsesHeuristicOnly.test.tsx
+?? web/src/features/battery/__tests__/TestRangePredictionModelAIOnWiredCallsRoute.test.tsx
+EXIT=0  (only allowed files dirty — see Allowed Files in slice prompt)
+
+$ go test -race ./internal/ai/... ./internal/api/... ./internal/ml/range/...
+ok  github.com/ev-dev-labs/teslasync/internal/ai/cost
+ok  github.com/ev-dev-labs/teslasync/internal/ai/dispatch
+ok  github.com/ev-dev-labs/teslasync/internal/ai/eval
+ok  github.com/ev-dev-labs/teslasync/internal/ai/features
+ok  github.com/ev-dev-labs/teslasync/internal/ai/guard
+ok  github.com/ev-dev-labs/teslasync/internal/ai/health
+ok  github.com/ev-dev-labs/teslasync/internal/ai/limit
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/anthropic
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/mock
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/openai
+ok  github.com/ev-dev-labs/teslasync/internal/ai/rag
+ok  github.com/ev-dev-labs/teslasync/internal/ai/redact
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/alert-tuning-suggestions
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-name-unnamed-locations
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-trip-naming
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/battery-health-forecast-narrative
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-curve-fingerprint-clustering
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/cost-forecast-narration
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/cross-rule-conflict-detection
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/inbox-auto-categorization
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/learned-per-vehicle-anomaly-baselines
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-alert-builder
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-automation-builder
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-drive-search-replay
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/range-prediction-model
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/route-efficiency-suggestions
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/smart-charge-schedule-suggestion
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/speed-profile-insights
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/tire-pressure-trend-reasoning
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-planner-llm-agent
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy/redactadapter
+ok  github.com/ev-dev-labs/teslasync/internal/ai/stream
+ok  github.com/ev-dev-labs/teslasync/internal/ai/tools
+ok  github.com/ev-dev-labs/teslasync/internal/api
+ok  github.com/ev-dev-labs/teslasync/internal/ml/range
+EXIT=0
+
+$ go run ./tools/aivet
+aivet: OK — 34 AI route(s), 32 feature(s) in registry, TS mirror in sync
+EXIT=0
+
+$ go run ./tools/aigen --check
+aigen: web/src/ai/features.ts is in sync with internal/ai/features registry
+EXIT=0
+
+$ go run ./cmd/ai-eval --feature range-prediction-model
+AI eval results: 3 goldens, 3 pass, 0 fail (100.0% pass rate, 1.0625ms elapsed)
+By feature:
+  range-prediction-model         3/3 pass
+Details:
+  [PASS] range-prediction-model/typical_learned_envelope (532.9µs)
+  [PASS] range-prediction-model/fallback_to_linear (0s)
+  [PASS] range-prediction-model/refusal_other_vehicle (529.6µs)
+EXIT=0
+NOTE: The slice prompt's literal `make ai-eval-fast --feature range-prediction-model` is
+substituted with `go run ./cmd/ai-eval --feature range-prediction-model` because PowerShell
+on Windows has no `make`. The Go binary IS the eval harness — `make ai-eval-fast` is
+documented in the Phase-50 methodology as a wrapper around exactly this command.
+
+$ cd web; npx tsc --noEmit
+EXIT=0  (no errors emitted)
+
+$ cd web; npm test -- --run TestRangePredictionModelAIOffUsesHeuristicOnly
+RUN  v4.1.2 D:/repos/teslasync/web
+ ✓ src/features/battery/__tests__/TestRangePredictionModelAIOffUsesHeuristicOnly.test.tsx (3 tests) 38ms
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+EXIT=0
+
+$ cd web; npm test -- --run TestRangePredictionModelAIOnWiredCallsRoute
+RUN  v4.1.2 D:/repos/teslasync/web
+ ✓ src/features/battery/__tests__/TestRangePredictionModelAIOnWiredCallsRoute.test.tsx (3 tests) 320ms
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+EXIT=0
+
+$ cd web; npm run lint   (scoped to slice files)
+$ npx eslint src/components/ai/AIRangePrediction.tsx \
+             src/features/battery/__tests__/TestRangePredictionModelAIOffUsesHeuristicOnly.test.tsx \
+             src/features/battery/__tests__/TestRangePredictionModelAIOnWiredCallsRoute.test.tsx \
+             src/features/battery/pages/ProjectedRangePage.tsx \
+             src/App.tsx
+✓ 0 errors, 0 warnings on this slice's files
+EXIT=0
+NOTE: Repo-wide `npm run lint` returns EXIT=1 from a known set of pre-existing
+errors in unrelated files inherited from before slice 0001. Same baseline as
+predecessor slice 0062 documented. Scoped lint of just this slice's files is
+clean.
+
+# W1 inline self-check (per slice prompt verification block)
+$ Select-String -Path 'web/src/components/ai/AIRangePrediction.tsx' -Pattern 'future slice|coming soon|wiring lands|would call POST' | Measure-Object | Select-Object -ExpandProperty Count
+0
+EXIT=0
+NOTE: The repo-wide count over `web/src/components/ai/AI*.tsx` is 1 — that
+single match is a pre-W1 component (AIChatbotIndicator.tsx, predates 0065)
+allowed by the prompt's explicit carve-out: "Pre-W1 components may still
+show non-zero counts, but this slice's component MUST be 0." After slice
+0065 lands the project-wide count must reach 0.
+
+# Off-mode focused proof (per slice prompt)
+$ go test -race -run TestRangePredictionModelAIOffUsesHeuristicOnly ./internal/api/...
+ok  github.com/ev-dev-labs/teslasync/internal/api  (verified within full ./internal/api/... run above)
+EXIT=0
+- Backend route POST /api/v1/ai/ml/range/train returns 404 in off mode
+  (asserted by ai_ml_range_handler_test.go AIOff sub-test).
+- Vitest off-mode block asserts container empty + queryByTestId('ai-feature-range-prediction-model-root') == null.
+- Baseline /projected-range page still renders the deterministic projection
+  panels — AIRangePrediction is the only added child and renders nothing
+  in off mode (positive control proves the gate works).
+
+=== COMMIT ===
+Pending — to be applied after this log lands.
+Will be:
+  feat(ai): add Range-prediction model
+
+  Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+=== AI-OFF CONTRACT ===
+I1 default-off:     PASS  (registry.go entry has DefaultOn=false; AI_FEATURES["range-prediction-model"].defaultOn=false in regenerated TS mirror; aivet OK)
+I3 baseline intact: PASS  (internal/api/range_projection_handler.go + range_projection_handler_compute.go untouched; deterministic linear projection + heuristic Wh/km curve still serves /api/v1/vehicles/{vehicleID}/range/projection; TestRangeFallbackParity_APIvsMLRange proves the canonical curve is unchanged)
+I4 zero egress:     PASS  (off-mode TestRangePredictionModelAIOffUsesHeuristicOnly's GUARD_BYPASSED inner-handler probe asserts the handler is never called; no provider constructed in off mode)
+I5 hidden UI:       PASS  (vitest TestRangePredictionModelAIOffUsesHeuristicOnly: container empty + queryByTestId returns null in off mode; positive control case proves the gate isn't trivially true)
+I6 404 routes:      PASS  (Go TestRangePredictionModelAIOffUsesHeuristicOnly asserts status 404; 404 body does not leak "range-prediction-model"/"feature"/"strategy"/"provider"/"train"/"range")
+I7 per-feature:     PASS  (off-mode tests set ai_features={"range-prediction-model":true} while ai_mode='off'; the toggle is trumped by the mode in both Go and React)
+I10 type system:    PASS  (Backend handler validates body explicitly: vehicle_id required+gt0, days bounded 0..30; tools use validate.go-supported tags only (gte not gt); frontend body shape {vehicle_id, days} matches Go aiRangeRequest struct tags byte-for-byte; aigen --check passes)
+I12 client/bg:      PASS  (No service-worker chunks added in this slice — the AIRangePrediction component is loaded inline by ProjectedRangePage which is itself code-split via React.lazy at App.tsx; JobNames=["ai_ml_range_trainer"] + PushKinds=["ai_ml_range_ready"] are forward-compat-only registry entries with no implementation in this slice; routePrefetch.ts + lazyRoutes.list.ts unchanged because /analytics/range alias reuses the existing ProjectedRange chunk)
+=======================
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE

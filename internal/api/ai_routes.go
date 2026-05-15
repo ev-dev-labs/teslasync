@@ -140,6 +140,7 @@ func mountAIRoutes(
 	aiCrossRuleConflict *AICrossRuleConflictHandler,
 	aiAutoNameUnnamedLocations *AIAutoNameUnnamedLocationsHandler,
 	aiLearnedAnomalyBaselines *AILearnedAnomalyBaselineHandler,
+	aiRangePrediction *AIRangePredictionHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -549,6 +550,28 @@ func mountAIRoutes(
 		}
 		r.Post("/ml/anomaly-baselines/train", g.Wrap("learned-per-vehicle-anomaly-baselines", learnedAnomalyBaselinesHandler))
 
+		// range-prediction-model (Phase-50 / ML2, slice 0063).
+		// Opt-in LLM narrator that EXPLAINS the per-bucket
+		// (temp_bucket × speed_bucket) LEARNED range envelope (mean
+		// Wh/km plus stddev / p5 / p95 per bucket; linear-fallback
+		// to the static heuristic curve per bucket when fewer than
+		// mlrange.DefaultMinSamplesPerBucket drives exist in the
+		// recent `drives` window) for ONE vehicle. The deterministic
+		// Projected Range page with the static heuristic curve
+		// served by GET /api/v1/vehicles/{vehicleID}/range/projection
+		// (rendered via the SPA route /projected-range and the
+		// /analytics/range alias) remains the canonical baseline
+		// visible to every off-mode user. Same stub-fallback pattern
+		// as 0062 — a nil handler is possible during partial wiring
+		// but the off-mode 404 invariant still holds because
+		// guard.Wrap returns 404 BEFORE the handler runs in off
+		// mode (ADR-015 §I3 + §I6).
+		var rangePredictionHandler http.HandlerFunc = aiRangePredictionStubHandler
+		if aiRangePrediction != nil {
+			rangePredictionHandler = aiRangePrediction.ServeHTTP
+		}
+		r.Post("/ml/range/train", g.Wrap("range-prediction-model", rangePredictionHandler))
+
 		// charging-diagnosis (Phase-50 / N4, slice 0018).
 		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
 		if aiChargingDiagnosis != nil {
@@ -931,6 +954,15 @@ func aiAutoNameUnnamedLocationsStubHandler(w http.ResponseWriter, _ *http.Reques
 // not the stub.
 func aiLearnedAnomalyBaselinesStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai learned per-vehicle anomaly baselines is not yet implemented")
+}
+
+// aiRangePredictionStubHandler mirrors aiLearnedAnomalyBaselinesStubHandler
+// for the ML2 slice (Phase-50 / 0063 range-prediction-model).
+// Reachable only when AIRangePredictionHandler is nil at
+// construction; the off-mode 404 invariant is held by the guard,
+// not the stub.
+func aiRangePredictionStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai range prediction model is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

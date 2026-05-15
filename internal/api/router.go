@@ -95,9 +95,11 @@ import (
 	crossruleconflictdetection "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cross-rule-conflict-detection"
 	autonameunnamedlocations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-name-unnamed-locations"
 	learnedanomalybaselines "github.com/ev-dev-labs/teslasync/internal/ai/strategies/learned-per-vehicle-anomaly-baselines"
+	rangepredictionmodel "github.com/ev-dev-labs/teslasync/internal/ai/strategies/range-prediction-model"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
+	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
 
 	// New hexagonal architecture packages
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
@@ -1357,6 +1359,30 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		learnedanomalybaselines.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+
+	// range-prediction-model (Phase-50 / ML2, slice 0063) tools —
+	// train_range_model + query_range_prediction. Both READ-only;
+	// the trainer reads the `drives` table via the AIDriveStatsSource
+	// adapter (SI columns: distance_m, energy_used_wh, avg_speed_mps,
+	// ambient_temp_c_avg per migration 000185) and returns a
+	// per-bucket learned envelope (mean Wh/km plus stddev / p5 / p95)
+	// with linear-fallback to the static heuristic curve per bucket
+	// when fewer than mlrange.DefaultMinSamplesPerBucket=5 drives
+	// exist in the lookback window. Tools registered BEFORE the
+	// handler is constructed so the dispatcher can resolve the
+	// strategy's allowedTools at boot.
+	tools.RegisterRangePredictorTools(aiToolRegistry, tools.RangePredictorSources{
+		Trainer: mlrange.NewTrainer(NewAIDriveStatsSource(db)),
+	})
+	// range-prediction-model handler. One per process; stateless
+	// beyond constructor inputs. Must be constructed AFTER the tool
+	// registration above.
+	aiRangePredictionHandler := NewAIRangePredictionHandler(
+		aiRegistry,
+		aiToolRegistry,
+		rangepredictionmodel.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
@@ -3038,7 +3064,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiLearnedAnomalyBaselinesHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

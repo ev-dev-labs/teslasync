@@ -19,6 +19,7 @@ import {
 } from '@/components/charts';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { AIRangePrediction } from '@/components/ai/AIRangePrediction';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -181,6 +182,20 @@ export default function ProjectedRangePage() {
             <MetricCard label={t('range.healthFactor', 'Health Factor')} value={`${fmtNumber((data?.health_factor ?? 1) * 100, 1)}%`} icon={<Shield className="h-4 w-4" />} color="green" />
           </StaggerItem>
         </StaggerContainer>
+      </FadeIn>
+
+      {/* ── Phase-50 / 0063 (ML2): opt-in learned per-vehicle range ── */}
+      {/* model. Renders only when ai_mode != 'off' AND the              */}
+      {/* range-prediction-model toggle is on. The withAiFeature HOC     */}
+      {/* inside AIRangePrediction enforces the gate; the deterministic  */}
+      {/* heuristic Wh/km curve + linear projection rendered below       */}
+      {/* remains the canonical baseline in off mode AND is the          */}
+      {/* per-bucket fallback for the learned trainer when fewer than 5  */}
+      {/* qualifying drives exist for a (temp × speed) bucket in the     */}
+      {/* lookback window (ADR-015 §I3 + slice-0063 trainer fallback     */}
+      {/* contract).                                                     */}
+      <FadeIn delay={0.045}>
+        <AIRangePrediction vehicleId={globalVehicleId ?? undefined} />
       </FadeIn>
 
       {/* ── Gauge + Projection Curve ───────────────── */}

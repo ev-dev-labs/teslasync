@@ -2508,6 +2508,10 @@
         "learned-per-vehicle-anomaly-baselines": {
           "label": "Learned per-vehicle anomaly baselines",
           "description": "Opt-in statistical model that computes per-signal mean, stddev, and p5/p95 from this vehicle's recent signal history (default 14 days, capped at 30) and proposes a learned anomaly envelope, falling back per-signal to the static safe-range envelope when fewer than 30 samples exist in the lookback window. Read-only: the trainer never writes to signal_log, never overwrites the deterministic safe-range table, and the AI narration walks the user through the learned vs. static comparison via two typed tools (train_anomaly_baseline then query_anomaly_baseline). The deterministic Z-score detector + static safeRanges map at /anomaly-detection remain the canonical baseline when AI is off."
+        },
+        "range-prediction-model": {
+          "label": "Range-prediction model",
+          "description": "Opt-in statistical model that computes per-bucket (temperature × speed) mean Wh/km from this vehicle's recent drives (default 14 days, capped at 30) and proposes a learned range envelope, falling back per-bucket to the deterministic linear projection when fewer than 5 qualifying drives exist in the lookback window. Read-only: the trainer never writes to drives, never overwrites the heuristic curve, and the AI narration walks the user through the learned vs. heuristic comparison via two typed tools (train_range_model then query_range_prediction). The deterministic linear projection + heuristic Wh/km curve at /projected-range remain the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -4002,6 +4006,12 @@
   },
   "range": {
     "title": "Projected Range",
+    "aiPredict": {
+      "title": "Learn per-vehicle range model",
+      "description": "Compute per-bucket (temperature × speed) learned Wh/km from this vehicle's recent drives and walk through how each bucket compares to the static heuristic curve the projection uses today.",
+      "generateButton": "Train range model",
+      "badge": "AI"
+    },
     "tip": {
       "speed": "Keep speed under 110 km/h for optimal efficiency.",
       "precondition": "Pre-condition the cabin while still plugged in.",

@@ -1,0 +1,39 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_train_range_model_fallback_to_linear_1
+        name: train_range_model
+        arguments: '{"vehicle_id": 7, "days": 7}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_range_prediction_fallback_to_linear_1
+        name: query_range_prediction
+        arguments: '{"vehicle_id": 7}'
+    input_tokens: 96
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      City — for vehicle <vehicle id='7'/> mild/city and cold/city
+      both returned source="linear_fallback" with sample_count below
+      the 5-drive floor: this 7-day window simply doesn't have
+      enough drives yet for a learned envelope, so the trainer falls
+      back to the static 155 / 178 Wh/km heuristic (the same Wh/km
+      the deterministic projection already uses). Once the vehicle
+      accumulates more drives this would refine.
+
+      Suburban — same story: mild/suburban and cold/suburban both
+      reported source="linear_fallback" with low sample_count. The
+      proposed envelope therefore matches the static 170 / 196 Wh/km
+      heuristic for now; nothing has changed for the projection.
+
+      Highway — mild/highway / cold/highway / freezing/highway all
+      returned source="linear_fallback" with sample_count well below
+      5 for this vehicle this window. The currently-effective
+      projection continues to use the static highway heuristic
+      (195 Wh/km mild rising to 263 Wh/km freezing) and the
+      proposed envelope is identical to it for now. No learned
+      refinement is in scope until more drives land.
+    input_tokens: 240
+    output_tokens: 168
