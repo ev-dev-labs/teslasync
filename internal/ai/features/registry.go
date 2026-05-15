@@ -1384,6 +1384,80 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / 0033 (T3) — Tire pressure trend reasoning.
+	//
+	// `tire-pressure-trend-reasoning` is an opt-in LLM narrator
+	// that explains the recent trend in this vehicle's four corner
+	// tire pressures (front-left, front-right, rear-left,
+	// rear-right) plus their seasonality and the most likely
+	// driver of any deviation from the deterministic
+	// thresholds the canonical /tire-pressure page already
+	// renders. The narration is strictly grounded in the SAME
+	// signal_log change feed (TpmsPressure* signals plus
+	// OutsideTemp) the existing GET /api/v1/tire-pressure +
+	// /api/v1/tire-pressure/latest handlers expose — the AI
+	// surface adds prose explanation, not new aggregation, and
+	// never modifies the deterministic thresholds.
+	//
+	// Backend: POST /api/v1/ai/tire-pressure/trends/explain is the
+	// single AI route for this slice. It is mounted under guard.Wrap
+	// so it returns 404 when ai_mode='off' OR the per-feature toggle
+	// is off (ADR-015 §I6 + §I7).
+	//
+	// Frontend: /vehicle-systems/tires is the registry's logical
+	// path for the tire-pressure analytics page. The actual SPA
+	// route is mounted at /tire-pressure in App.tsx (mirrors how
+	// cabin-temperature-impact-narrative is registered as
+	// /analytics/temperature-impact while App.tsx mounts
+	// /temperature-impact); the registry stores the canonical
+	// vehicle-systems-area path for documentation + off-mode
+	// walker semantics.
+	//
+	// UI test ID: ai-feature-tire-pressure-trend-reasoning-root is
+	// the data-testid the withAiFeature HOC stamps on the gated
+	// wrapper. Off-mode tests assert it is absent; on-mode tests
+	// assert it is present + receives the first SSE delta.
+	//
+	// NeedsRAG: false — the narrator has a single read-only tool
+	// (query_tire_pressure_trend) that returns a deterministic
+	// envelope from the signal_log change feed; there is no
+	// per-event embedding retrieval. The slice prompt's
+	// "source types: tire_pressure;climate_state" describes the
+	// data domains the tool reads from (TpmsPressure* and
+	// OutsideTemp signals via signal.StateReader.Timeline), NOT
+	// an embeddings-backed retrieval surface — F7 is not invoked.
+	//
+	// NeedsTools: true — the narrator MUST call
+	// query_tire_pressure_trend before narrating (system prompt
+	// enforces tool-first behaviour).
+	//
+	// NeedsStream: true — the response is SSE-streamed via the
+	// shared stream.Writer so the SPA can render delta tokens live.
+	//
+	// JobNames: explicitly empty (no background job is registered
+	// for this slice). features.CoverageOK rejects nil; the empty
+	// slice is the affirmative "no surface" signal.
+	//
+	// PushKinds: explicitly empty (no notification/push channel
+	// surface). features.CoverageOK rejects nil; the empty slice
+	// is the affirmative "no surface" signal.
+	"tire-pressure-trend-reasoning": {
+		ID:          "tire-pressure-trend-reasoning",
+		Name:        "Tire pressure trend reasoning",
+		Description: "Opt-in LLM narrator that explains the recent 30-day trend in this vehicle's four corner tire pressures (front-left, front-right, rear-left, rear-right), the seasonality the change feed shows when paired with the same outside ambient temperature signal, and the most likely driver of any deviation from the deterministic soft-low / normal-min / normal-max / soft-high thresholds the canonical Tire Pressure page already shows. The narration may quote the per-tire latest, average, min, max, and rate-of-change-per-day, the soft and normal threshold band edges, the deterministic likely-cause hints the tool returns (cold-weather correlation, slow-leak signature, all-tires-trending suggesting weather rather than puncture), and the deterministic insights the tool returns; it never invents alternate thresholds, never reclassifies a tire as critical when the deterministic helper says low, and explicitly surfaces that the rate-of-change projection is a descriptive linear extrapolation rather than a predictive model. The deterministic Tire Pressure page (4-tire radial gauges, soft/hard warning banner, summary metric cards, pressure history chart, history table) remains the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class except the vehicle name tagged so a leaked transcript reveals neither the user's typical commute corridor nor the place names where a pressure event occurred.",
+		Tier:        "T",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/tire-pressure/trends/explain"},
+			Frontend:  []string{"/vehicle-systems/tires"},
+			UITestIDs: []string{"ai-feature-tire-pressure-trend-reasoning-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

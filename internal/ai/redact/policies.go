@@ -414,6 +414,43 @@ func PolicyPreheatPrecoolRecommender() Policy {
 	}
 }
 
+// PolicyTirePressureTrendReasoning is the per-feature redaction policy for
+// the Phase-50 / 0033 — T3 tire-pressure-trend-reasoning slice. It mirrors
+// PolicyDigest (allow ClassVehicleName only, ModeRedactedTags so the LLM
+// sees [LOCATION] / [STREET_ADDR] / [SCHEDULE] tags rather than raw
+// values).
+//
+// Threat model: the deterministic tire-pressure trend envelope is
+// vehicle-scoped and aggregates the four corner pressures (front-left,
+// front-right, rear-left, rear-right) over the last 30 days plus the
+// last-known outside ambient temperature read from the same signal-log
+// change feed. The numeric pressure values are user-visible telemetry
+// (the four-tire gauges on /tire-pressure already render them), so we
+// do NOT classify them as PII; the threat is that a leaked transcript
+// could otherwise expose the user's typical commute corridor or the
+// places where pressure dropped below the soft-low threshold (parking
+// at a winter trailhead, etc.). ClassLocation / ClassStreetAddr /
+// ClassSchedule MUST stay tagged so the narration cannot reveal where
+// or when the pressure event occurred. Allowing ClassVehicleName lets
+// the narration say "Roadie's front-left tire is trending low" instead
+// of "[VEHICLE]" — display-name leakage is acceptable and is the only
+// PII class the slice prompt's verbatim mandate permits:
+//
+//	Policy:              PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:     ClassVehicleName only; pressure values are
+//	                     user-visible telemetry
+//	Round-trip required: yes
+//
+// Kept as a distinct identifier from every prior per-feature policy so a
+// future per-feature change to one slice's allow-list does not bleed
+// across the others — every feature is independently auditable.
+func PolicyTirePressureTrendReasoning() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
 // PolicyCabinTemperatureImpactNarrative is the per-feature redaction policy
 // for the Phase-50 / 0032 — T2 cabin-temperature-impact-narrative slice. It
 // mirrors PolicyDigest (allow ClassVehicleName only, ModeRedactedTags so

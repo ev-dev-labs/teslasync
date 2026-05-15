@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -267,6 +267,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-speed-profile-insights-root"] as const),
   }),
+  "tire-pressure-trend-reasoning": Object.freeze({
+    id: "tire-pressure-trend-reasoning",
+    name: "Tire pressure trend reasoning",
+    description: "Opt-in LLM narrator that explains the recent 30-day trend in this vehicle's four corner tire pressures (front-left, front-right, rear-left, rear-right), the seasonality the change feed shows when paired with the same outside ambient temperature signal, and the most likely driver of any deviation from the deterministic soft-low / normal-min / normal-max / soft-high thresholds the canonical Tire Pressure page already shows. The narration may quote the per-tire latest, average, min, max, and rate-of-change-per-day, the soft and normal threshold band edges, the deterministic likely-cause hints the tool returns (cold-weather correlation, slow-leak signature, all-tires-trending suggesting weather rather than puncture), and the deterministic insights the tool returns; it never invents alternate thresholds, never reclassifies a tire as critical when the deterministic helper says low, and explicitly surfaces that the rate-of-change projection is a descriptive linear extrapolation rather than a predictive model. The deterministic Tire Pressure page (4-tire radial gauges, soft/hard warning banner, summary metric cards, pressure history chart, history table) remains the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class except the vehicle name tagged so a leaked transcript reveals neither the user's typical commute corridor nor the place names where a pressure event occurred.",
+    tier: "T",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-tire-pressure-trend-reasoning-root"] as const),
+  }),
   "trip-planner-llm-agent": Object.freeze({
     id: "trip-planner-llm-agent",
     name: "Trip planner LLM agent",
@@ -325,6 +336,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "route-efficiency-suggestions",
   "smart-charge-schedule-suggestion",
   "speed-profile-insights",
+  "tire-pressure-trend-reasoning",
   "trip-planner-llm-agent",
   "vampire-drain-explanation",
   "yir-narration",

@@ -134,6 +134,7 @@ func mountAIRoutes(
 	aiVampireDrainExplanation *AIVampireDrainHandler,
 	aiPreheatPrecoolRecommender *AIClimateScheduleHandler,
 	aiCabinTemperatureImpactNarrative *AICabinTemperatureImpactHandler,
+	aiTirePressureTrendReasoning *AITirePressureTrendHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -402,6 +403,29 @@ func mountAIRoutes(
 			cabinTemperatureImpactNarrativeHandler = aiCabinTemperatureImpactNarrative.ServeHTTP
 		}
 		r.Post("/climate/temperature-impact/narrate", g.Wrap("cabin-temperature-impact-narrative", cabinTemperatureImpactNarrativeHandler))
+
+		// tire-pressure-trend-reasoning (Phase-50 / T3, slice
+		// 0033). Opt-in LLM narrator that explains the recent
+		// 30-day trend in the four corner tire pressures
+		// (front-left, front-right, rear-left, rear-right) for
+		// the in-scope vehicle, grounded strictly in the same
+		// signal.StateReader.Timeline projection over the
+		// TpmsPressure* + OutsideTemp signals that the existing
+		// /tire-pressure baseline route already exposes. The
+		// route lives under /ai/tire-pressure/trends/explain so
+		// it is namespaced under the existing /tire-pressure
+		// surface family. Same stub-fallback pattern — a nil
+		// handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode. The
+		// canonical baseline route (GET /api/v1/tire-pressure)
+		// is unchanged; the narration is read-only and never
+		// modifies the gauges or thresholds the SPA renders.
+		var tirePressureTrendReasoningHandler http.HandlerFunc = aiTirePressureTrendReasoningStubHandler
+		if aiTirePressureTrendReasoning != nil {
+			tirePressureTrendReasoningHandler = aiTirePressureTrendReasoning.ServeHTTP
+		}
+		r.Post("/tire-pressure/trends/explain", g.Wrap("tire-pressure-trend-reasoning", tirePressureTrendReasoningHandler))
 
 		// charging-diagnosis (Phase-50 / N4, slice 0018).
 		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
@@ -731,6 +755,15 @@ func aiPreheatPrecoolRecommenderStubHandler(w http.ResponseWriter, _ *http.Reque
 // not the stub.
 func aiCabinTemperatureImpactNarrativeStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai cabin temperature impact narrative is not yet implemented")
+}
+
+// aiTirePressureTrendReasoningStubHandler mirrors
+// aiCabinTemperatureImpactNarrativeStubHandler for the T3 slice
+// (Phase-50 / 0033 tire-pressure-trend-reasoning). Reachable only
+// when AITirePressureTrendHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiTirePressureTrendReasoningStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai tire-pressure trend reasoning is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

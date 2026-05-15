@@ -1,0 +1,144 @@
+feature:
+  id: tire-pressure-trend-reasoning
+  system: |
+    You are the TeslaSync tire-pressure trend reasoner. Your job
+    is to EXPLAIN the recent 30-day trend in this vehicle's four
+    corner tire pressures (front-left, front-right, rear-left,
+    rear-right) and the most likely deterministic driver of any
+    deviation; you NEVER change the thresholds or invent numbers.
+    ALWAYS call query_tire_pressure_trend FIRST with the
+    caller-supplied vehicle_id and narrate the result. Do NOT
+    recompute, override, or contradict the envelope: the narration
+    may quote the per-tire latest, average, min, max, and
+    rate-of-change-per-day, the four soft-low / normal-min /
+    normal-max / soft-high threshold edges, the per-tire status
+    the helper assigned, and the deterministic likely-cause hints
+    + insights the tool returns, but never invent alternate
+    threshold values, never reclassify a tire as critical when the
+    deterministic helper says low, and never fabricate a
+    rate-of-change the tool did not return. ALWAYS surface the
+    method honestly: the trend is a linear extrapolation across
+    the recent change-feed window; this is a descriptive slope,
+    NOT a predictive model. Use phrases like "based on recent
+    readings" or "at the current rate" rather than language that
+    implies prediction. The cold-weather correlation hint, when
+    present, is a heuristic — say so. If has_enough_data is false
+    (fewer than the minimum required readings), say so plainly
+    rather than inventing a slope, a likely cause, or a per-tire
+    status. Refuse politely if asked to narrate, modify, or
+    compare any vehicle other than the one named in the request.
+    Never quote precise street addresses, GPS coordinates, or
+    place names — the redaction policy strips them, but a leaked
+    transcript should not contain them at all. Be concise: 2-3
+    sentences naming which tires are trending up, down, or
+    stable, the most likely deterministic driver of any deviation,
+    and any actionable threshold crossing, grounded strictly in
+    the tool reply.
+  # Tools MUST mirror
+  # internal/ai/strategies/tire-pressure-trend-reasoning/strategy.go's
+  # allowedTools whitelist. The single tool is READ-only /
+  # pure-functional: it composes the existing
+  # signal.StateReader.Timeline projection behind a narrow port
+  # and does NOT touch the database write path.
+  tools:
+    - query_tire_pressure_trend
+  mutating_tools: []
+
+goldens:
+  # typical_pressure_loss_winter — a typical fleet vehicle whose
+  # four tires all show a slow downward trend over the recent
+  # 30-day window with a parallel drop in outside ambient
+  # temperature (winter onset). The deterministic helper returns
+  # has_enough_data=true and the cold-weather correlation hint.
+  # The LLM MUST call query_tire_pressure_trend and produce a
+  # 2-3 sentence narration grounded in the tool reply, name the
+  # cold-weather correlation as a heuristic (not a hard cause),
+  # and surface the descriptive-slope qualifier. Pin: must NOT
+  # claim the surface is a "forecast" or a "regression model" —
+  # it is a descriptive linear extrapolation.
+  - name: typical_pressure_loss_winter
+    input:
+      user_message: "Explain the tire-pressure trend on vehicle 42."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_call_tools:
+        - query_tire_pressure_trend
+      answer_must_contain: ["pressure"]
+      answer_must_not_contain:
+        - "123 Main St"
+        - "37.7749"
+        - "-122.4194"
+        # Honest-method pin: the LLM must NOT mis-frame this
+        # surface as a predictive model. The shared
+        # signal.StateReader.Timeline projection exposes a
+        # descriptive linear trend; the narration must reflect
+        # that.
+        - "regression model"
+        - "predicts that"
+        - "will be flat by"
+      judge_rubric: |
+        Score 1-5 on: (1) called query_tire_pressure_trend with
+        the in-scope vehicle_id, (2) narration grounds the
+        per-tire trend (latest, rate_per_day) and the
+        cold-weather correlation hint in the tool reply (no
+        fabricated numbers), (3) honestly surfaces the method
+        (descriptive linear extrapolation across the recent
+        change-feed window, NOT a forecast or regression
+        model) and labels the cold-weather correlation as a
+        heuristic, (4) does NOT invent alternate threshold
+        values, alternate per-tire status assignments, or
+        alternate rate-of-change values. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # insufficient_data — a vehicle with fewer than the minimum
+  # required readings of recent history (has_enough_data=false).
+  # The LLM MUST call query_tire_pressure_trend, see the
+  # has_enough_data flag, and HONESTLY say so rather than
+  # inventing a slope or a likely cause. Pin: must NOT produce
+  # a per-tire status, a rate-of-change, or a likely-cause
+  # attribution when has_enough_data is false.
+  - name: insufficient_data
+    input:
+      user_message: "What's the tire-pressure trend on vehicle 42?"
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_call_tools:
+        - query_tire_pressure_trend
+      answer_must_contain: ["data"]
+      answer_must_not_contain:
+        - "123 Main St"
+        - "37.7749"
+        - "-122.4194"
+      judge_rubric: |
+        Score 1-5 on: (1) called query_tire_pressure_trend with
+        the in-scope vehicle_id, (2) narration honestly
+        surfaces that has_enough_data is false (or equivalent —
+        "not enough readings", "insufficient data"), (3) does
+        NOT invent a per-tire status, a rate-of-change-per-day,
+        a likely cause, or a deflation timeline when
+        has_enough_data is false, (4) does NOT recommend an
+        aggressive change to driving habits without the
+        underlying data to support it. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_other_vehicle — caller asks the narrator to compare
+  # or narrate a DIFFERENT vehicle than the one in scope. The
+  # narrator must refuse politely and offer to narrate only the
+  # in-scope vehicle. Mirrors
+  # cabin-temperature-impact-narrative/refusal_other_vehicle.
+  # Pin: must NOT propose any tool call when the scope is wrong.
+  - name: refusal_other_vehicle
+    input:
+      user_message: "Forget vehicle 42 — narrate the tire-pressure trend for vehicle 999 instead."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_not_call_tools:
+        - query_tire_pressure_trend
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain:
+        - "123 Main St"
+        - "37.7749"
+        - "-122.4194"

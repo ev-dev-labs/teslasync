@@ -1,0 +1,187 @@
+// Phase-50 / 0033 — T3 Tire-pressure trend reasoning.
+// Phase-50 / W1 inline wiring (per slice prompt 0033) — wired the
+// Narrate button to POST /api/v1/ai/tire-pressure/trends/explain
+// via the canonical useAiStream hook. The slice methodology forbids
+// shipping the visual affordance without end-to-end SSE wiring; this
+// component lands both in one commit so the on-mode wiring test
+// (TestTirePressureTrendReasoningAIOnWiredCallsRoute) can prove the
+// button actually opens an SSE stream against the registered backend
+// route.
+//
+// AITirePressureTrendReasoning is the visible AI surface for the
+// Tire Pressure vehicle-systems page. It is rendered conditionally
+// via withAiFeature('tire-pressure-trend-reasoning', …) so:
+//
+//   - When ai_mode='off' it does not render at all (ADR-015 §I5 + §I6).
+//   - When ai_mode is 'local'/'cloud' AND the
+//     tire-pressure-trend-reasoning toggle is on, it renders an
+//     opt-in section with a Narrate button that POSTs to
+//     /api/v1/ai/tire-pressure/trends/explain. The SSE response
+//     stream accumulates into the shared AiOutputPanel.
+//
+// The component does NOT replace the deterministic four-corner
+// radial gauges, the warning banner, the summary metric cards,
+// the pressure history chart, or the history table rendered by
+// TirePressurePage. That baseline content remains the canonical
+// view visible to every user; this AI section is opt-in read-only
+// narration layered alongside.
+//
+// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+//   - useAiStream is called unconditionally at the top of the body
+//     (Hooks-rules safe).
+//   - The Narrate button's disabled prop is a COMPUTED expression
+//     (`!canGenerate`), never a literal `disabled` or
+//     `disabled={true}`.
+//   - Double-submit protection: stream.start() is a no-op while
+//     state === 'streaming' (the hook coalesces; the button is
+//     also visually disabled to mirror the state machine).
+//   - The streamed text accumulates into AiOutputPanel which
+//     renders the SSE delta stream as-it-arrives.
+//
+// ADR-015 alignment:
+//   - I3 baseline intact: this component never replaces the
+//     deterministic tire-pressure gauges, warning banner, summary
+//     cards, history chart, or history table; it adds an opt-in
+//     narrative section alongside.
+//   - I5 hidden UI:       the withAiFeature HOC returns null when
+//     the feature is not enabled, so the section is entirely
+//     absent from the DOM in off mode.
+//   - I6 404 routes:      the backend route is guard-wrapped and
+//     returns 404 in off mode; useAiStream surfaces that as
+//     state='error' for the user, but the component is never
+//     rendered in off mode at all because of I5.
+
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+
+import { AiOutputPanel } from '@/components/ai/AiOutputPanel'
+import { withAiFeature } from '@/components/ai/withAiFeature'
+import { Button, GlassPanel } from '@/components/ui'
+import { useAiStream } from '@/hooks/useAiStream'
+
+interface InnerSectionProps {
+  /**
+   * vehicleId surfaced by the parent TirePressurePage. Optional
+   * because the active-vehicle context may be unresolved at
+   * first paint; when absent we still render the section (the
+   * gate has already passed) but the Narrate button stays
+   * disabled because the backend call needs a vehicle in
+   * scope.
+   */
+  vehicleId?: string | number
+}
+
+/**
+ * InnerSection is the always-rendered body of the AI
+ * tire-pressure trend reasoning card. The surrounding
+ * {@link withAiFeature} HOC handles the visibility gate; this
+ * component only describes the surface's appearance.
+ *
+ * Visual contract:
+ *   - One GlassPanel sized to sit above the four-corner radial
+ *     gauges on TirePressurePage.
+ *   - Cyan AI badge in the header (matches the chatbot brand
+ *     colour).
+ *   - Narrate button is disabled while a stream is open OR when
+ *     no vehicleId is available from the active-vehicle
+ *     context.
+ *   - Title attribute carries the long-form explanation so a
+ *     user hovering for a tooltip understands the privacy
+ *     contract — only the vehicle name may be narrated; the
+ *     per-corner pressures + thresholds are the same the gauges
+ *     show. The narrator never changes the deterministic
+ *     thresholds — it only explains them.
+ */
+function InnerSection({ vehicleId }: InnerSectionProps) {
+  const { t } = useTranslation()
+  const numericVehicleId =
+    typeof vehicleId === 'number' ? vehicleId : Number(vehicleId)
+  // The handler-side parser validates vehicle_id > 0; we
+  // mirror that here to keep the button disabled when the
+  // parent has not yet resolved the active vehicle. The hook
+  // is called unconditionally with the current body so the
+  // dependency graph stays stable regardless of vehicleId
+  // resolution.
+  const body = useMemo(() => {
+    const out: { vehicle_id: number } = {
+      vehicle_id: Number.isFinite(numericVehicleId) ? numericVehicleId : 0,
+    }
+    return out
+  }, [numericVehicleId])
+  const stream = useAiStream({
+    url: '/ai/tire-pressure/trends/explain',
+    body,
+    onEvent: () => {},
+  })
+  const haveInputs = Number.isFinite(numericVehicleId) && numericVehicleId > 0
+  const canGenerate = haveInputs && stream.state !== 'streaming'
+  return (
+    <GlassPanel>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-semibold text-white/90">
+                {t(
+                  'tirePressure.aiTrendReasoning.title',
+                  'Narrate the 30-day tire-pressure trend',
+                )}
+              </h3>
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2.5 py-1 text-xs font-medium text-cyan-300"
+                title={t(
+                  'chatbot.llm.indicatorTooltip',
+                  'Responses are generated by an LLM with redacted vehicle context.',
+                )}
+                aria-label={t('chatbot.llm.indicator', 'AI mode')}
+              >
+                <span
+                  className="inline-block h-1.5 w-1.5 rounded-full bg-cyan-300"
+                  aria-hidden="true"
+                />
+                {t('tirePressure.aiTrendReasoning.badge', 'AI')}
+              </span>
+            </div>
+            <p className="text-sm text-white/60">
+              {t(
+                'tirePressure.aiTrendReasoning.description',
+                'Ask the AI narrator to explain the recent 30-day trend in this vehicle\u2019s four corner tire pressures \u2014 which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.',
+              )}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!canGenerate}
+            aria-disabled={!canGenerate ? 'true' : 'false'}
+            onClick={() => stream.start()}
+            title={t(
+              'tirePressure.aiTrendReasoning.description',
+              'Ask the AI narrator to explain the recent 30-day trend in this vehicle\u2019s four corner tire pressures \u2014 which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.',
+            )}
+          >
+            {stream.state === 'streaming'
+              ? t('ai.common.generating', 'Generating\u2026')
+              : t('tirePressure.aiTrendReasoning.generateButton', 'Narrate trend')}
+          </Button>
+        </div>
+        <AiOutputPanel text={stream.text} state={stream.state} error={stream.error} />
+      </div>
+    </GlassPanel>
+  )
+}
+InnerSection.displayName = 'AITirePressureTrendReasoningInner'
+
+/**
+ * AITirePressureTrendReasoning renders the LLM tire-pressure
+ * trend reasoning section only when the
+ * tire-pressure-trend-reasoning feature is enabled. The
+ * wrapping div from {@link withAiFeature} carries
+ * `data-testid="ai-feature-tire-pressure-trend-reasoning-root"`,
+ * which the off-mode invariant test asserts against.
+ */
+export const AITirePressureTrendReasoning = withAiFeature(
+  'tire-pressure-trend-reasoning',
+  InnerSection,
+)
+AITirePressureTrendReasoning.displayName = 'AITirePressureTrendReasoning'

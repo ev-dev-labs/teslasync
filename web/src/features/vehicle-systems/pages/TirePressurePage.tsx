@@ -27,6 +27,7 @@ import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
+import { AITirePressureTrendReasoning } from '@/components/ai/AITirePressureTrendReasoning';
 
 /* ------------------------------------------------------------------ */
 /*  Types (snake_case from backend)                                    */
@@ -347,6 +348,10 @@ export default function TirePressurePage() {
       )}
 
       <FadeIn>
+        <div className="mb-6">
+          <AITirePressureTrendReasoning vehicleId={activeVehicleId ?? undefined} />
+        </div>
+
         {/* Warning banner */}
         {hasWarning && (
           <GlassPanel

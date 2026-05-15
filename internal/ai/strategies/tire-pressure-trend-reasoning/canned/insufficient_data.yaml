@@ -1,0 +1,22 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_tire_pressure_trend_insufficient_data_1
+        name: query_tire_pressure_trend
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Tire-pressure trend for vehicle <vehicle id='42'/>: there is
+      not enough recent change-feed data to build a reliable
+      per-tire trend yet — the deterministic helper returned
+      has_enough_data = false, so I will not invent a
+      rate-of-change, a per-tire status, a likely cause, or a
+      deflation timeline. Once the vehicle has logged a few more
+      TpmsPressure emissions across the recent window (the
+      deterministic minimum is on the tool's
+      min_required_readings field), the trend reasoner can
+      return a meaningful breakdown.
+    input_tokens: 240
+    output_tokens: 96
