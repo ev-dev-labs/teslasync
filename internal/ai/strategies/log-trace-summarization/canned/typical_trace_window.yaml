@@ -1,0 +1,23 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_trace_window_typical_trace_window_1
+        name: query_trace_window
+        arguments: '{"from_unix": 1700000000, "to_unix": 1700001800}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      The window is dominated by trace-span activity rather
+      than free-form log lines. The deterministic envelope
+      reports a notable count of trace spans concentrated
+      around the database reconciliation operation, whose
+      mean duration is the highest of any operation in the
+      window. Log-event volume is comparatively light, with
+      info-level entries outnumbering warn and error entries
+      and no recurring error template surfacing. No further
+      root-cause inference is supportable from the in-record
+      envelope alone — drill into the deterministic SSE log
+      tail below for the surrounding raw context.
+    input_tokens: 240
+    output_tokens: 96

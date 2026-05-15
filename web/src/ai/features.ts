@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -267,6 +267,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-lifetime-stats-qa-root"] as const),
   }),
+  "log-trace-summarization": Object.freeze({
+    id: "log-trace-summarization",
+    name: "Log and trace summarization",
+    description: "Opt-in LLM summarizer that condenses a recent redacted log / trace window into a 3-6 sentence factual summary by routing through two read-only tools: query_trace_window (a typed deterministic TraceWindowEnvelope: window bounds, log-event counts by level, top recurring log-event templates with counts, trace-span count, top trace-span operations with mean duration; the slice ships with a deterministic empty source adapter because the operator-facing log surface is stream-only and has no historical log persistence beyond zerolog's stdout — a future slice that wires a log-history reader can do so behind the same per-request scope binding without widening the contract) and the OPTIONAL retrieve_log_chunks (F7 retrieval restricted to {log_event, trace_span} source types) for per-event context. The deterministic LiveLogsPage SSE-backed log tail with manual level + grep + vehicle filters remains the canonical baseline when AI is off. Per-feature redaction policy is PolicyChatbot (deny-by-default; every PII class redacted to a round-trip tag) so a leaked transcript reveals nothing about IPs, hostnames, ports, tokens, stack-trace fragments, or any value zerolog wrote into a structured field. Per-request scope binding installs the URL supplied (from_unix, to_unix, vehicle_id?) tuple in ctx and refuses any LLM-supplied window outside that tuple to defend against prompt-injection exfiltration via operator-authored log messages.",
+    tier: "S4",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-log-trace-summarization-root"] as const),
+  }),
   "ml-charging-curve-clustering": Object.freeze({
     id: "ml-charging-curve-clustering",
     name: "Charging-curve clustering model",
@@ -490,6 +501,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "incident-timeline-summarizer",
   "learned-per-vehicle-anomaly-baselines",
   "lifetime-stats-qa",
+  "log-trace-summarization",
   "ml-charging-curve-clustering",
   "nl-alert-builder",
   "nl-automation-builder",

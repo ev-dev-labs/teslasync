@@ -2519,6 +2519,102 @@ var Registry = map[string]Feature{
 			PushKinds: []string{"ai_ml_range_ready"},
 		},
 	},
+
+	// Phase-50 / 0045 — S4 Log and trace summarization.
+	//
+	// Opt-in LLM summarizer that condenses a recent redacted log /
+	// trace window for the operator-facing live-logs surface into a
+	// 3-6 sentence factual summary by routing through two read-only
+	// tools:
+	//
+	//   - query_trace_window — returns a typed deterministic
+	//     TraceWindowEnvelope (window bounds, log-event count by
+	//     level, top recurring log-event templates with counts,
+	//     trace-span count, top trace-span operations with mean
+	//     duration). The slice ships with a deterministic empty
+	//     source adapter (the operator-facing log surface is
+	//     stream-only — there is no historical log persistence
+	//     beyond zerolog's stdout); the adapter installs the bound
+	//     window in ctx via tools.WithScopedLogTraceWindow so a
+	//     future slice that wires a log-history reader does NOT
+	//     widen the per-request scope contract.
+	//
+	//   - retrieve_log_chunks — F7 retrieval restricted to the
+	//     per-feature source-type allowlist {log_event, trace_span}.
+	//     Both source types are reserved for forward-compatibility
+	//     — a future slice will index per-window log-event and
+	//     trace-span chunks. Until then, retrieve_log_chunks called
+	//     with either source type simply returns zero chunks for
+	//     that corpus; the strategy's goldens already cover the
+	//     zero-matches narration and the system prompt instructs
+	//     the LLM to answer gracefully when zero chunks are
+	//     returned.
+	//
+	// The deterministic LiveLogsPage at /live-logs (the
+	// authenticated SSE-backed log tail with manual level + grep +
+	// vehicle filters) is the canonical baseline when AI is off.
+	// The registry's Frontend route metadata is `/system/logs`
+	// (the slice prompt's documented coverage anchor); the AI
+	// section is rendered inside the canonical LiveLogsPage when
+	// the feature is enabled — same coverage-anchor pattern used
+	// by incident-timeline-summarizer and signal-explorer-nl-filter.
+	//
+	// Routes:
+	//   - Backend: POST /api/v1/ai/system/logs/summarize
+	//     (gated by guard.Wrap("log-trace-summarization"); 404 in
+	//     off mode).
+	//   - Frontend: /system/logs (registry metadata only;
+	//     summary surface is rendered inside the canonical
+	//     LiveLogsPage at /live-logs when the feature is enabled
+	//     — the registry route is the coverage anchor for off-mode
+	//     walker tests).
+	//   - UITestIDs: ai-feature-log-trace-summarization-root
+	//     (auto-applied by withAiFeature HOC reading
+	//     meta.uiTestIds[0]).
+	//
+	// NeedsRAG: true — the OPTIONAL secondary tool routes through
+	// the F7 rag.Retriever entry point.
+	// NeedsTools: true — query_trace_window + retrieve_log_chunks.
+	// NeedsStream: true — the dispatcher streams delta+done frames
+	// to the SPA via internal/ai/stream.
+	//
+	// Per-feature redaction policy is PolicyChatbot (deny-by-default;
+	// every PII class redacted to a round-trip tag) so a leaked
+	// transcript reveals nothing about IPs, hostnames, ports, tokens,
+	// stack-trace fragments, or any value zerolog wrote into a
+	// structured field. Per-request scope binding installs the URL
+	// supplied (from_unix, to_unix, vehicle_id?) tuple in ctx via
+	// tools.WithScopedLogTraceWindow and refuses any LLM-supplied
+	// window outside that tuple to defend against prompt-injection
+	// exfiltration via operator-authored log messages.
+	//
+	// JobNames: ["ai_log_trace_indexer"] — gated indexer stub
+	// registered for forward-compat. The slice ships the gated
+	// no-op stub at internal/jobs/ai_log_trace_indexer.go so the
+	// off-mode coverage walker can prove its absence in off mode
+	// and so a future slice that wires the real indexer fan-out
+	// does NOT widen the off-mode surface when it lands.
+	//
+	// PushKinds: explicitly empty (no notification/push channel
+	// surface). features.CoverageOK rejects nil; the empty slice
+	// is the affirmative "no surface" signal.
+	"log-trace-summarization": {
+		ID:          "log-trace-summarization",
+		Name:        "Log and trace summarization",
+		Description: "Opt-in LLM summarizer that condenses a recent redacted log / trace window into a 3-6 sentence factual summary by routing through two read-only tools: query_trace_window (a typed deterministic TraceWindowEnvelope: window bounds, log-event counts by level, top recurring log-event templates with counts, trace-span count, top trace-span operations with mean duration; the slice ships with a deterministic empty source adapter because the operator-facing log surface is stream-only and has no historical log persistence beyond zerolog's stdout — a future slice that wires a log-history reader can do so behind the same per-request scope binding without widening the contract) and the OPTIONAL retrieve_log_chunks (F7 retrieval restricted to {log_event, trace_span} source types) for per-event context. The deterministic LiveLogsPage SSE-backed log tail with manual level + grep + vehicle filters remains the canonical baseline when AI is off. Per-feature redaction policy is PolicyChatbot (deny-by-default; every PII class redacted to a round-trip tag) so a leaked transcript reveals nothing about IPs, hostnames, ports, tokens, stack-trace fragments, or any value zerolog wrote into a structured field. Per-request scope binding installs the URL supplied (from_unix, to_unix, vehicle_id?) tuple in ctx and refuses any LLM-supplied window outside that tuple to defend against prompt-injection exfiltration via operator-authored log messages.",
+		Tier:        "S4",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/system/logs/summarize"},
+			Frontend:  []string{"/system/logs"},
+			UITestIDs: []string{"ai-feature-log-trace-summarization-root"},
+			JobNames:  []string{"ai_log_trace_indexer"},
+			PushKinds: []string{},
+		},
+	},
 }
 
 // IsKnown reports whether id corresponds to a registered feature. Used

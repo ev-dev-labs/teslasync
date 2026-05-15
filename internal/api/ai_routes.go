@@ -149,6 +149,7 @@ func mountAIRoutes(
 	aiIncidentTimelineSummarizer *AIIncidentTimelineSummarizerHandler,
 	aiDataRepairSuggestions *AIDataRepairSuggestionsHandler,
 	aiSignalExplorerNlFilter *AISignalExplorerNlFilterHandler,
+	aiLogTraceSummarization *AILogTraceSummarizationHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -449,6 +450,24 @@ func mountAIRoutes(
 			signalExplorerNlFilterHandler = aiSignalExplorerNlFilter.ServeHTTP
 		}
 		r.Post("/signals/filter/draft", g.Wrap("signal-explorer-nl-filter", signalExplorerNlFilterHandler))
+
+		// log-trace-summarization (Phase-50 / S4, slice 0045).
+		// Opt-in LLM that summarizes a recent redacted log/trace
+		// window for the operator-facing live-logs surface into a
+		// 3-6 sentence factual summary. PROPOSE-ONLY: the user
+		// reviews the summary in the AI side panel and continues
+		// to use the deterministic SSE log tail below for raw
+		// inspection. Same stub-fallback pattern as the other AI
+		// handlers — a nil handler is possible during partial
+		// wiring but the off-mode 404 invariant still holds
+		// because guard.Wrap returns 404 BEFORE the handler runs
+		// in off mode. The canonical baseline route at
+		// GET /api/v1/admin/logs/stream is unchanged.
+		var logTraceSummarizationHandler http.HandlerFunc = aiLogTraceSummarizationStubHandler
+		if aiLogTraceSummarization != nil {
+			logTraceSummarizationHandler = aiLogTraceSummarization.ServeHTTP
+		}
+		r.Post("/system/logs/summarize", g.Wrap("log-trace-summarization", logTraceSummarizationHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1232,6 +1251,15 @@ func aiDataRepairSuggestionsStubHandler(w http.ResponseWriter, _ *http.Request) 
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiSignalExplorerNlFilterStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai signal-explorer nl filter is not yet implemented")
+}
+
+// aiLogTraceSummarizationStubHandler mirrors
+// aiSignalExplorerNlFilterStubHandler for the S4 slice (Phase-50
+// / 0045 log-trace-summarization). Reachable only when
+// AILogTraceSummarizationHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiLogTraceSummarizationStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai log-trace summarization is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

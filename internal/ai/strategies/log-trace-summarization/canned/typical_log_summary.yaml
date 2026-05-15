@@ -1,0 +1,25 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_trace_window_typical_log_summary_1
+        name: query_trace_window
+        arguments: '{"from_unix": 1700000000, "to_unix": 1700001800}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      The 30-minute window contains a moderate volume of log
+      activity dominated by info-level messages with a small
+      number of warn-level entries and a single error-level
+      entry around the mid-point. The top recurring template
+      surfaced by the deterministic envelope is a routine
+      "telemetry batch flushed" info message, with the
+      lone error tied to a transient queue back-pressure
+      event. Trace-span activity is light: a handful of
+      spans, with the dominant operation being the periodic
+      reconciliation tick. No further root-cause inference
+      is supportable from the in-record envelope alone —
+      use the deterministic SSE log tail below for raw
+      inspection of the surrounding context.
+    input_tokens: 240
+    output_tokens: 96

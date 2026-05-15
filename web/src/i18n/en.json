@@ -2542,6 +2542,10 @@
         "range-prediction-model": {
           "label": "Range-prediction model",
           "description": "Opt-in statistical model that computes per-bucket (temperature × speed) mean Wh/km from this vehicle's recent drives (default 14 days, capped at 30) and proposes a learned range envelope, falling back per-bucket to the deterministic linear projection when fewer than 5 qualifying drives exist in the lookback window. Read-only: the trainer never writes to drives, never overwrites the heuristic curve, and the AI narration walks the user through the learned vs. heuristic comparison via two typed tools (train_range_model then query_range_prediction). The deterministic linear projection + heuristic Wh/km curve at /projected-range remain the canonical baseline when AI is off."
+        },
+        "log-trace-summarization": {
+          "label": "Log and trace summarization",
+          "description": "Opt-in LLM narrator that summarizes one in-scope window of redacted log events and trace spans into a 3-6 sentence factual paragraph — what level breakdown the window held, which message templates dominated, which trace operations ran (with mean latency), and any structural signals worth investigating — by routing through two read-only tools that quote the same deterministic envelope the operator can already inspect manually. The narrator never invents log lines and never speculates about root cause. Per-request scope binding rejects any cross-window tool call to defend against prompt-injection exfiltration via operator-authored log messages. The deterministic SSE-backed live log table, level / grep / vehicle filter controls, pause/resume, and copy-to-clipboard / download controls on the Live Logs page remain the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -8976,6 +8980,13 @@
     "error": {
       "title": "Could not connect to log stream",
       "hint": "Check your network and admin permissions, then click Reconnect."
+    },
+    "aiSummary": {
+      "title": "AI log/trace summary",
+      "badge": "AI",
+      "description": "Get a 3-6 sentence factual summary of the recent log and trace window. The narrator is grounded in a redacted envelope of the same window the table below shows; it never invents log lines and never speculates about root cause.",
+      "button": "Summarize",
+      "emptyHint": "Waiting for a valid log window…"
     },
     "filename": "teslasync-logs-{{ts}}.txt",
     "level": {

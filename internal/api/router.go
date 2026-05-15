@@ -91,6 +91,7 @@ import (
 	incidenttimelinesummarizer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/incident-timeline-summarizer"
 	datarepairsuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/data-repair-suggestions"
 	signalexplorernlfilter "github.com/ev-dev-labs/teslasync/internal/ai/strategies/signal-explorer-nl-filter"
+	logtracesummarization "github.com/ev-dev-labs/teslasync/internal/ai/strategies/log-trace-summarization"
 	vampiredrainexplanation "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation"
 	preheatprecoolrecommender "github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender"
 	cabintemperatureimpactnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative"
@@ -1304,6 +1305,54 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiToolRegistry,
 		signalexplorernlfilter.New(),
 		NewAISignalCatalogSource(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+
+	// log-trace-summarization (Phase-50 / S4, slice 0045).
+	// The shared rag.Retriever is constructed per-feature so the
+	// rate-limit + cost-cap decorators on the embedding provider
+	// apply per-strategy. The retriever uses the same
+	// nomic-embed-text 768-dim physical table as the other RAG
+	// slices; the per-feature source-type allowlist
+	// {log_event, trace_span} is enforced in retrieve_log_chunks's
+	// Validate. Both source types are reserved as strings (not
+	// promoted to rag.Source* constants) for forward-compat
+	// without widening the F7 contract — a future indexer slice
+	// will land the actual log-event / trace-span chunk indexing.
+	aiLogTraceRetriever, err := rag.New(
+		context.Background(),
+		aiSettingsRepo,
+		db,
+		aiRegistry,
+		logtracesummarization.FeatureID,
+		rag.ModelNomicEmbedText,
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("ai log-trace-summarization: rag.New failed during boot wiring")
+	}
+	// log-trace-summarization tools (Phase-50 / S4, slice 0045).
+	// Adds `query_trace_window` + `retrieve_log_chunks` to the
+	// shared tool registry so the dispatcher can resolve them for
+	// the log-trace-summarization strategy. Same ordering rule as
+	// the other slice tools above: must be registered before the
+	// handler constructor below so the strategy's allowedTools
+	// resolve at boot. The TraceWindow source is a deterministic
+	// EMPTY adapter — the operator-facing log surface is
+	// stream-only and has no historical reader yet; the strategy's
+	// goldens cover the zero-data path.
+	tools.RegisterLogTraceSummarizerTools(aiToolRegistry, tools.LogTraceSummarizerSources{
+		Retriever:   aiLogTraceRetriever,
+		TraceWindow: NewAILogTraceWindowSource(),
+	})
+	// log-trace-summarization handler. One per process; stateless
+	// beyond constructor inputs. Must be constructed AFTER the
+	// tool registration above so the dispatcher can resolve the
+	// strategy's allowedTools at boot.
+	aiLogTraceSummarizationHandler := NewAILogTraceSummarizationHandler(
+		aiRegistry,
+		aiToolRegistry,
+		logtracesummarization.New(),
+		NewAILogTraceWindowSource(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
@@ -3324,7 +3373,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiSuggestNewGeofencesHandler, aiGeofenceAwareAutomationHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler, aiPeriodCompareNarrationHandler, aiLifetimeStatsQAHandler, aiIncidentTimelineSummarizerHandler, aiDataRepairSuggestionsHandler, aiSignalExplorerNlFilterHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiSuggestNewGeofencesHandler, aiGeofenceAwareAutomationHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler, aiPeriodCompareNarrationHandler, aiLifetimeStatsQAHandler, aiIncidentTimelineSummarizerHandler, aiDataRepairSuggestionsHandler, aiSignalExplorerNlFilterHandler, aiLogTraceSummarizationHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//
