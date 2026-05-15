@@ -1717,6 +1717,76 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / 0037 — G1 Auto-name unnamed locations.
+	//
+	// `auto-name-unnamed-locations` is the LLM-backed assistant at
+	// POST /api/v1/ai/locations/{locationID}/name/draft that
+	// PROPOSES a concise, human-readable name for ONE existing
+	// visited location. It is propose-only: the AI reads the
+	// visited-location aggregate (visit_count, total_duration_s,
+	// last_visited, address_name) via the typed
+	// draft_location_name + validate_location_name tool pair, and
+	// the user reviews the proposal in the LocationsPage UI before
+	// clicking the existing baseline Save / geofence-create
+	// affordance. The AI itself never persists.
+	//
+	// Tier "G" reflects the "Geo / Locations" tier — auto-name-
+	// unnamed-locations is the first feature in this tier; future
+	// G-tier slices (location categorisation, address normalisation,
+	// etc.) will join it. CoverageOK accepts any non-empty Tier
+	// string; the value is plumbed into the SettingsPage groupings
+	// only.
+	//
+	// Backend route: POST /api/v1/ai/locations/{locationID}/name/draft
+	// is mounted in mountAIRoutes (internal/api/ai_routes.go) under
+	// guard.Wrap("auto-name-unnamed-locations", …) so an
+	// off-mode probe returns 404 BEFORE the handler ever sees the
+	// request (ADR-015 §I6). The handler is constructed in
+	// internal/api/router.go from the same provider.Registry +
+	// tools.Registry the rest of the AI surface uses.
+	//
+	// Frontend route: /locations is the canonical visited-locations
+	// page. The AI affordance lives in
+	// web/src/components/ai/AIAutoNameUnnamedLocations.tsx, mounted
+	// per visited-location row inside LocationsPage when the row's
+	// address_name is unnamed (empty / "Unknown" / coordinate-shaped).
+	//
+	// UI test ID: ai-feature-auto-name-unnamed-locations-root is the
+	// data-testid the withAiFeature HOC stamps on the gated wrapper.
+	// Off-mode tests assert it is absent; on-mode tests assert it
+	// renders.
+	//
+	// JobNames: []string{} explicitly — auto-name-unnamed-locations
+	// is request-scoped only; no background job, no Redis queue, no
+	// scheduled task. Mirrors auto-trip-naming's empty job list.
+	//
+	// PushKinds: []string{} explicitly — there is no
+	// notifications.kind for "AI proposed a location name". The user
+	// only sees the proposal inside the SPA when they explicitly
+	// open the LocationsPage.
+	//
+	// Service worker chunks: ai-auto-name-unnamed-locations is the
+	// dynamic-import name the SPA's lazy loader uses for the
+	// AIAutoNameUnnamedLocations component. Documented in the slice
+	// prompt's Off-mode contract impact section so the W1 wired-or-
+	// absent invariant has a known chunk name to audit against.
+	"auto-name-unnamed-locations": {
+		ID:          "auto-name-unnamed-locations",
+		Name:        "Auto-name unnamed locations",
+		Description: "Opt-in LLM-assisted location-name proposals grounded in the visited-location's visit pattern (current address_name, visit_count, total_duration_s, last_visited). Propose-only: the AI produces a structured proposal via two typed read-only tools (draft_location_name then validate_location_name) and the user explicitly confirms or edits before saving through the existing baseline geofence-create / location-rename path. The deterministic visited-location stat cards, frequency bar charts, and existing list rendered by LocationsPage at /locations remain the canonical baseline when AI is off. The per-feature redaction policy keeps lat/long, street addresses, and place names tagged; only the vehicle name may be narrated.",
+		Tier:        "G",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/locations/{locationID}/name/draft"},
+			Frontend:  []string{"/locations"},
+			UITestIDs: []string{"ai-feature-auto-name-unnamed-locations-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

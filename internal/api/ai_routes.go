@@ -138,6 +138,7 @@ func mountAIRoutes(
 	aiAlertTuning *AIAlertTuningHandler,
 	aiInboxCategorize *AIInboxCategorizationHandler,
 	aiCrossRuleConflict *AICrossRuleConflictHandler,
+	aiAutoNameUnnamedLocations *AIAutoNameUnnamedLocationsHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -504,6 +505,27 @@ func mountAIRoutes(
 		}
 		r.Post("/alerts/rules/conflicts", g.Wrap("cross-rule-conflict-detection", crossRuleConflictHandler))
 
+		// auto-name-unnamed-locations (Phase-50 / G1, slice 0037).
+		// Opt-in LLM that PROPOSES a concise, human-readable name
+		// for ONE existing visited location. Same propose-only
+		// invariant as auto-trip-naming (slice 0024) — the AI
+		// reads the visited-location aggregate via the typed
+		// draft_location_name + validate_location_name tool pair
+		// and the user reviews the structured proposal in the
+		// LocationsPage UI before clicking the existing baseline
+		// Save / geofence-create affordance. The AI itself never
+		// persists. Same stub-fallback pattern — a nil handler is
+		// possible during partial wiring but the off-mode 404
+		// invariant still holds because guard.Wrap returns 404
+		// BEFORE the handler runs in off mode. The canonical
+		// baseline route (GET /api/v1/locations) is unchanged
+		// (ADR-015 §I3 + §I8).
+		var autoNameUnnamedLocationsHandler http.HandlerFunc = aiAutoNameUnnamedLocationsStubHandler
+		if aiAutoNameUnnamedLocations != nil {
+			autoNameUnnamedLocationsHandler = aiAutoNameUnnamedLocations.ServeHTTP
+		}
+		r.Post("/locations/{locationID}/name/draft", g.Wrap("auto-name-unnamed-locations", autoNameUnnamedLocationsHandler))
+
 		// charging-diagnosis (Phase-50 / N4, slice 0018).
 		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
 		if aiChargingDiagnosis != nil {
@@ -868,6 +890,15 @@ func aiInboxCategorizationStubHandler(w http.ResponseWriter, _ *http.Request) {
 // not the stub.
 func aiCrossRuleConflictStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai cross-rule conflict detection is not yet implemented")
+}
+
+// aiAutoNameUnnamedLocationsStubHandler mirrors aiCrossRuleConflictStubHandler
+// for the G1 slice (Phase-50 / 0037 auto-name-unnamed-locations).
+// Reachable only when AIAutoNameUnnamedLocationsHandler is nil at
+// construction; the off-mode 404 invariant is held by the guard,
+// not the stub.
+func aiAutoNameUnnamedLocationsStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai auto-name-unnamed-locations is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

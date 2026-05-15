@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "inbox-auto-categorization" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "inbox-auto-categorization" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -79,6 +79,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsTools: true,
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-anomaly-explanations-root"] as const),
+  }),
+  "auto-name-unnamed-locations": Object.freeze({
+    id: "auto-name-unnamed-locations",
+    name: "Auto-name unnamed locations",
+    description: "Opt-in LLM-assisted location-name proposals grounded in the visited-location's visit pattern (current address_name, visit_count, total_duration_s, last_visited). Propose-only: the AI produces a structured proposal via two typed read-only tools (draft_location_name then validate_location_name) and the user explicitly confirms or edits before saving through the existing baseline geofence-create / location-rename path. The deterministic visited-location stat cards, frequency bar charts, and existing list rendered by LocationsPage at /locations remain the canonical baseline when AI is off. The per-feature redaction policy keeps lat/long, street addresses, and place names tagged; only the vehicle name may be narrated.",
+    tier: "G",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-auto-name-unnamed-locations-root"] as const),
   }),
   "auto-trip-naming": Object.freeze({
     id: "auto-trip-naming",
@@ -352,6 +363,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "ai-provider-health",
   "alert-tuning-suggestions",
   "anomaly-explanations",
+  "auto-name-unnamed-locations",
   "auto-trip-naming",
   "battery-health-forecast-narrative",
   "cabin-temperature-impact-narrative",

@@ -484,3 +484,33 @@ func PolicyCabinTemperatureImpactNarrative() Policy {
 		Mode:  ModeRedactedTags,
 	}
 }
+
+// PolicyAutoNameUnnamedLocations is the per-feature redaction policy
+// for the Phase-50 G1 auto-name-unnamed-locations strategy. Allows
+// ClassVehicleName only — the proposed location name MAY reference
+// the user's vehicle (e.g. "Roadie's home") but every other PII
+// class — VIN, lat/long, addresses, place names — remains tagged
+// via round-trip markers and restored only when the SSE stream is
+// rendered to the same authenticated user. This matches the slice
+// prompt's verbatim mandate:
+//
+//	Policy:              PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:     ClassVehicleName only; coordinates and
+//	                     addresses stay tagged unless restored to
+//	                     same user
+//	Round-trip required: yes
+//
+// Kept as a distinct identifier from PolicyAutoTripNaming and every
+// prior per-feature policy so a future per-feature change to one
+// slice's allow-list does not bleed across the others — every
+// feature is independently auditable. The auto-name-unnamed-locations
+// surface is structurally close to auto-trip-naming (both propose
+// human-readable labels for an existing aggregate without
+// persisting), but they are independent slices and their allow-lists
+// are independently auditable.
+func PolicyAutoNameUnnamedLocations() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}

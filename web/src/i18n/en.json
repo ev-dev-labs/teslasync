@@ -2500,6 +2500,10 @@
         "cross-rule-conflict-detection": {
           "label": "Cross-rule conflict detection",
           "description": "Opt-in LLM that reads the typed AlertRule definitions in the current scope (optionally narrowed by vehicle, signal name, enabled-only, or an explicit rule-id list) and surfaces structural conflicts within a closed taxonomy of two kinds: redundant_duplicate (byte-identical predicate plus overlapping vehicle scope, both enabled) and overlapping_threshold (same signal_name, overlapping vehicle scope, predicate intervals overlap on numeric ops). Each surfaced conflict carries metadata flags for severity_mismatch, cooldown_mismatch, trigger_mode_mismatch, and subsumes — informational only, never a new conflict kind. Descriptive structural overlap analysis only — explicitly NOT a prediction — and never edits, merges, or deletes rules; the user clicks Review rule {id} to navigate the AlertStudio editor and applies any change manually. The deterministic AlertStudio rule list and per-rule validation remain the canonical baseline when AI is off."
+        },
+        "auto-name-unnamed-locations": {
+          "label": "Auto-name unnamed locations",
+          "description": "Opt-in LLM-assisted location-name proposals grounded in the visited-location's visit pattern (current address_name, visit_count, total_duration_s, last_visited). Propose-only: the AI produces a structured proposal via two typed read-only tools (draft_location_name then validate_location_name) and the user explicitly confirms or edits before saving through the existing baseline geofence-create / location-rename path. The deterministic visited-location stat cards, frequency bar charts, and existing list rendered by LocationsPage at /locations remain the canonical baseline when AI is off. The per-feature redaction policy keeps lat/long, street addresses, and place names tagged; only the vehicle name may be narrated."
         }
       },
       "archive": {
@@ -9418,6 +9422,17 @@
     },
     "empty": {
       "cta": "View drives"
+    },
+    "aiAutoName": {
+      "title": "Suggest a name for this location",
+      "description": "Propose a concise, human-readable name for this visited location based on its visit pattern. Review only — the AI never saves the name; you confirm and save via the existing baseline form.",
+      "badge": "AI",
+      "currentLabel": "Current label",
+      "proposalLabel": "Proposed name",
+      "rejectedLabel": "Proposal rejected by validator",
+      "suggestButton": "Suggest name",
+      "applyButton": "Apply to form",
+      "applied": "Suggested name ready to save:"
     }
   },
   "alertRules": {
