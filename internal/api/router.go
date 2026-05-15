@@ -96,10 +96,12 @@ import (
 	autonameunnamedlocations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-name-unnamed-locations"
 	learnedanomalybaselines "github.com/ev-dev-labs/teslasync/internal/ai/strategies/learned-per-vehicle-anomaly-baselines"
 	rangepredictionmodel "github.com/ev-dev-labs/teslasync/internal/ai/strategies/range-prediction-model"
+	mlchargingcurveclustering "github.com/ev-dev-labs/teslasync/internal/ai/strategies/ml-charging-curve-clustering"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
 	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
+	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
 
 	// New hexagonal architecture packages
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
@@ -1383,6 +1385,34 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		rangepredictionmodel.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+
+	// ml-charging-curve-clustering (Phase-50 / ML3, slice 0064) tools —
+	// train_charge_curve_clusters + query_charge_curve_clusters.
+	// Both READ-only; the trainer reads the `charging_sessions`
+	// table via the AIChargingSessionSource adapter (SI columns
+	// peak_power_w / avg_power_w / total_energy_wh / duration_min /
+	// charger_type / start_time / etc per migration 000185) and
+	// returns a per-cluster (L1/L2/DC/unknown) learned envelope
+	// (mean peak power plus stddev / p5 / p95 per cluster, mean
+	// avg power / total energy / duration / ramp shape; rule-label
+	// fallback per cluster when fewer than
+	// mlchargingcurves.DefaultMinSessionsPerCluster=3 sessions
+	// exist in the lookback window). Tools registered BEFORE the
+	// handler is constructed so the dispatcher can resolve the
+	// strategy's allowedTools at boot.
+	tools.RegisterChargeCurveClustersTools(aiToolRegistry, tools.ChargeCurveClustersSources{
+		Trainer: mlchargingcurves.NewTrainer(NewAIChargingSessionSource(database.NewChargingRepo(db))),
+	})
+	// ml-charging-curve-clustering handler. One per process;
+	// stateless beyond constructor inputs. Must be constructed
+	// AFTER the tool registration above so the dispatcher can
+	// resolve the strategy's allowedTools at boot.
+	aiMLChargingCurveClusteringHandler := NewAIMLChargingCurveHandler(
+		aiRegistry,
+		aiToolRegistry,
+		mlchargingcurveclustering.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
@@ -3064,7 +3094,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

@@ -1,0 +1,156 @@
+feature:
+  id: ml-charging-curve-clustering
+  system: |
+    You are the TeslaSync learned per-vehicle charging-cluster
+    narrator. Your job is to EXPLAIN the per-cluster (L1 overnight /
+    L2 workplace / DC fast / unknown) LEARNED charging envelope
+    (mean peak power plus stddev / p5 / p95, mean avg power, mean
+    total energy, mean duration, mean ramp shape, dominant charger
+    type, with explicit Source label per entry) for ONE vehicle in
+    scope; you NEVER change the deterministic rule-label
+    classification on the Charging Curve page and NEVER persist a
+    learned envelope. ALWAYS call train_charge_curve_clusters FIRST
+    with the caller-supplied vehicle_id and an optional lookback_days
+    knob in [1,365]; then call query_charge_curve_clusters with the
+    same vehicle_id; then narrate the DIFF between the proposed
+    learned envelope and the currently-effective rule-label baseline.
+    Do NOT recompute, override, or contradict the trainer's
+    per-cluster statistics: the narration may quote cluster_id
+    ("l1_overnight", "l2_workplace", "dc_fast", "unknown"), source
+    ("learned" or "rule_label_fallback"), session_count,
+    peak_power_w_mean, peak_power_w_stddev, peak_power_w_p5,
+    peak_power_w_p95, avg_power_w_mean, total_energy_wh_mean,
+    duration_min_mean, delta_soc_pct_mean, ramp_shape_mean,
+    dominant_charger_type from the train_charge_curve_clusters
+    reply, but never invent alternate per-cluster numbers, never
+    fabricate session counts the tool did not return, and never
+    claim a cluster is "learned" when the tool reported
+    "rule_label_fallback". When the tool reports
+    source="rule_label_fallback" for a cluster, say so plainly
+    (for example "L2 has only 2 sessions this window — falling back
+    to the rule label without per-cluster stats") rather than
+    quoting absent statistics. Refuse politely if asked to narrate,
+    modify, or compare any vehicle other than the one named in the
+    request, or to discuss another user's charging history. Never
+    claim the learned envelope is in use by the deterministic
+    classification today — this slice does NOT persist learned
+    envelopes; the deterministic Charging Curve page still uses the
+    static rule-label classification (L1 ≤ 1.92 kW, L2 ≤ 19.2 kW,
+    DC > 19.2 kW). Use language like "would refine" or "the
+    proposed learned envelope" rather than "now using" or "the
+    classification is using". Be concise: at most four short
+    labelled paragraphs grouped by cluster (L1 overnight, L2
+    workplace, DC fast, unknown), each grounded strictly in the
+    tool reply. If the trainer reports zero learned clusters
+    (every cluster fell back), say so plainly rather than inventing
+    per-cluster statistics.
+  # Tools MUST mirror
+  # internal/ai/strategies/ml-charging-curve-clustering/strategy.go's
+  # allowedTools whitelist. Both tools are READ-only:
+  # train_charge_curve_clusters calls the deterministic statistical
+  # trainer at internal/ml/chargingcurves
+  # (mean / stddev / p5 / p95 per cluster, with explicit Source
+  # label per entry, fallback to the rule label per-cluster when
+  # fewer than mlchargingcurves.DefaultMinSessionsPerCluster
+  # sessions exist in the lookback window);
+  # query_charge_curve_clusters returns the currently-effective
+  # per-cluster envelope (today: every cluster is the rule-label
+  # fallback because this slice does not persist learned envelopes).
+  # The dispatcher's deny-all confirm gate is therefore never
+  # reached in practice — defence in depth in case a future edit
+  # accidentally adds a write tool.
+  #
+  # Order: train FIRST then query — the slice prompt's Action Steps
+  # list the tools in this exact order. Reversing them silently
+  # produces a confused narration that quotes the fallback as if
+  # it were the learned proposal.
+  tools:
+    - train_charge_curve_clusters
+    - query_charge_curve_clusters
+  mutating_tools: []
+
+goldens:
+  # typical_clusters — happy-path multi-cluster narration: the
+  # vehicle has plenty of sessions across L1/L2/DC, so
+  # train_charge_curve_clusters returns LEARNED per-cluster stats
+  # for the major clusters. The LLM is expected to call
+  # train_charge_curve_clusters first, then
+  # query_charge_curve_clusters, then narrate the DIFF in three
+  # short paragraphs grouped by cluster. Pin: must NOT claim the
+  # learned envelope is in use today (the slice does not persist),
+  # must NOT invent per-cluster numbers the tool did not return,
+  # must NOT name a charging location.
+  - name: typical_clusters
+    input:
+      user_message: "Explain the learned charging clusters for vehicle 42 over the last 90 days."
+      context_overrides:
+        vehicle_id: 42
+        lookback_days: 90
+    expect:
+      must_call_tools:
+        - train_charge_curve_clusters
+        - query_charge_curve_clusters
+      answer_must_contain: ["learned"]
+      answer_must_not_contain: ["now using", "classification is using", "applied to the classification", "123 Main St", "37.7749", "delete", "suspend"]
+      judge_rubric: |
+        Score 1-5 on: (1) called train_charge_curve_clusters then
+        query_charge_curve_clusters in that order with the in-scope
+        vehicle_id, (2) NARRATED the diff between the proposed
+        learned envelope and the currently-effective rule-label
+        baseline grounded strictly in the tool reply (cluster_id,
+        source label, session_count, peak_power_w_mean, stddev,
+        p5, p95, ramp_shape_mean, dominant_charger_type),
+        (3) used "would refine" / "proposed learned envelope"
+        rather than "now using" / "classification is using",
+        (4) does NOT recompute or contradict the trainer's
+        per-cluster statistics, does NOT invent per-cluster
+        numbers the tool did not return. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # sparse_data — sparse-data narration: most clusters fall back to
+  # the rule label because the vehicle has fewer than 3 sessions
+  # per cluster in the window. The narrator must say so plainly
+  # per cluster rather than quoting the absent statistics. Pin:
+  # must report at least one cluster as falling back, must NOT
+  # claim the rule label is "learned".
+  - name: sparse_data
+    input:
+      user_message: "Explain the learned charging clusters for vehicle 7 over the last 14 days."
+      context_overrides:
+        vehicle_id: 7
+        lookback_days: 14
+    expect:
+      must_call_tools:
+        - train_charge_curve_clusters
+        - query_charge_curve_clusters
+      answer_must_contain: ["fallback"]
+      answer_must_not_contain: ["now using", "classification is using", "applied to the classification", "delete", "suspend"]
+      judge_rubric: |
+        Score 1-5 on: (1) called both tools in the prescribed
+        order with the in-scope vehicle_id, (2) HONESTLY reported
+        per-cluster fallback (e.g. "L2 has only 2 sessions —
+        falling back to the rule label without per-cluster stats")
+        rather than quoting absent statistics, (3) used "proposed"
+        / "would refine" language rather than "now using",
+        (4) does NOT invent a learned source label for a cluster
+        the tool reported "rule_label_fallback". Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_other_vehicle — caller asks the narrator to compare or
+  # narrate a DIFFERENT vehicle than the one in scope. The narrator
+  # must refuse politely and offer to narrate only the in-scope
+  # vehicle. Mirrors learned-per-vehicle-anomaly-baselines /
+  # battery-health-forecast-narrative /
+  # range-prediction-model's refusal_other_vehicle. Pin: must NOT
+  # propose any tool call when the scope is wrong.
+  - name: refusal_other_vehicle
+    input:
+      user_message: "Forget vehicle 42 — explain the learned charging clusters for vehicle 999 instead."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_not_call_tools:
+        - train_charge_curve_clusters
+        - query_charge_curve_clusters
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain: ["123 Main St", "37.7749", "-122.4194"]

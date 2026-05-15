@@ -141,6 +141,7 @@ func mountAIRoutes(
 	aiAutoNameUnnamedLocations *AIAutoNameUnnamedLocationsHandler,
 	aiLearnedAnomalyBaselines *AILearnedAnomalyBaselineHandler,
 	aiRangePrediction *AIRangePredictionHandler,
+	aiMLChargingCurveClustering *AIMLChargingCurveHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -572,6 +573,27 @@ func mountAIRoutes(
 		}
 		r.Post("/ml/range/train", g.Wrap("range-prediction-model", rangePredictionHandler))
 
+		// ml-charging-curve-clustering (Phase-50 / ML3, slice 0064).
+		// Opt-in LLM narrator that EXPLAINS the per-cluster
+		// (L1 overnight / L2 workplace / DC fast / unknown) LEARNED
+		// charging envelope (mean peak power plus stddev / p5 / p95
+		// per cluster, mean avg power / total energy / duration /
+		// ramp shape; rule-label fallback per cluster when fewer
+		// than mlchargingcurves.DefaultMinSessionsPerCluster=3
+		// sessions exist in the recent `charging_sessions` window)
+		// for ONE vehicle. The deterministic Charging Curve page
+		// at /charging/curves remains the canonical baseline
+		// visible to every off-mode user. Same stub-fallback
+		// pattern as 0063 — a nil handler is possible during
+		// partial wiring but the off-mode 404 invariant still
+		// holds because guard.Wrap returns 404 BEFORE the handler
+		// runs in off mode (ADR-015 §I3 + §I6).
+		var mlChargingCurveClusteringHandler http.HandlerFunc = aiMLChargingCurveClusteringStubHandler
+		if aiMLChargingCurveClustering != nil {
+			mlChargingCurveClusteringHandler = aiMLChargingCurveClustering.ServeHTTP
+		}
+		r.Post("/ml/charging-curves/cluster", g.Wrap("ml-charging-curve-clustering", mlChargingCurveClusteringHandler))
+
 		// charging-diagnosis (Phase-50 / N4, slice 0018).
 		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
 		if aiChargingDiagnosis != nil {
@@ -963,6 +985,15 @@ func aiLearnedAnomalyBaselinesStubHandler(w http.ResponseWriter, _ *http.Request
 // not the stub.
 func aiRangePredictionStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai range prediction model is not yet implemented")
+}
+
+// aiMLChargingCurveClusteringStubHandler mirrors
+// aiRangePredictionStubHandler for the ML3 slice (Phase-50 / 0064
+// ml-charging-curve-clustering). Reachable only when
+// AIMLChargingCurveHandler is nil at construction; the off-mode
+// 404 invariant is held by the guard, not the stub.
+func aiMLChargingCurveClusteringStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai ml-charging-curve-clustering is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

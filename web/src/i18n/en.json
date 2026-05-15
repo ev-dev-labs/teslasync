@@ -909,6 +909,12 @@
       "badge": "AI",
       "generateButton": "Explain clusters"
     },
+    "aiMlClustering": {
+      "title": "Learn per-vehicle charging-curve clusters",
+      "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging Curve page today.",
+      "badge": "AI",
+      "generateButton": "Train charging-curve clusters"
+    },
     "gauges": {
       "sessions": "Sessions",
       "energy": "Energy",

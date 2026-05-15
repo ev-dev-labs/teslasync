@@ -1873,6 +1873,71 @@ var Registry = map[string]Feature{
 		},
 	},
 
+	// ml-charging-curve-clustering — Phase-50 / 0064 (ML3).
+	//
+	// Opt-in LLM narrator over a per-vehicle deterministic learned
+	// charging-curve clustering model: the trainer at
+	// internal/ml/chargingcurves computes per-cluster
+	// (L1 overnight / L2 workplace / DC fast / unknown) charging
+	// envelope (mean peak power plus stddev / p5 / p95, mean avg
+	// power, mean total energy, mean duration, mean ramp shape,
+	// dominant charger type) from charging_sessions in the recent
+	// window, with per-cluster fallback to the deterministic L1/L2/DC
+	// rule label (mirroring the SPA helpers.ts and the C3 sibling
+	// classifier in internal/ai/tools/charge_curve_clustering.go,
+	// pinned by the parity test
+	// internal/api/ai_ml_charging_curve_parity_test.go) when fewer
+	// than mlchargingcurves.DefaultMinSessionsPerCluster=3 sessions
+	// exist. The LLM narrates the diff between the proposed learned
+	// envelope and the currently-effective rule-label baseline.
+	//
+	// The deterministic Charging Curve page at /charging/curves
+	// (alias of /charging-curve, mounted by App.tsx) and its
+	// rule-based session labels in
+	// web/src/features/charging/components/charging-curve/helpers.ts
+	// remain the canonical baseline when AI is off — this slice does
+	// NOT replace them.
+	//
+	// Sibling distinction: this is the ML3-tier *statistical clustering*
+	// model. The C3-tier *charging-curve-fingerprint-clustering* slice
+	// 0028 is a separate LLM narrator over the C3 aggregator's output
+	// (per-cluster averages, no stddev/p5/p95, no learned-vs-fallback
+	// label). Both surfaces coexist on /charging/curves with
+	// independent per-feature toggles and independent test IDs; they
+	// can be enabled together or independently.
+	//
+	// JobNames: ["ai_ml_charge_curve_trainer"] — slice 0064 does
+	// not ship the job; the trainer is request-scoped today. The
+	// job name is registered for forward-compat so the off-mode
+	// coverage walker can prove its absence in off mode and so a
+	// future job-tier slice does NOT widen the off-mode surface
+	// when it lands.
+	//
+	// PushKinds: ["ai_ml_charge_curve_ready"] — gated push-event
+	// kind registered for forward-compat for the same reason.
+	//
+	// Frontend: ["/charging/curves"] — the slice prompt requires
+	// this route. App.tsx exposes /charging/curves as an alias of
+	// the canonical /charging-curve route (added by slice 0028 for
+	// the C3 sibling).
+	"ml-charging-curve-clustering": {
+		ID:          "ml-charging-curve-clustering",
+		Name:        "Charging-curve clustering model",
+		Description: "Opt-in LLM narrator that EXPLAINS the per-cluster (L1 overnight / L2 workplace / DC fast / unknown) learned charging envelope (mean peak power plus stddev/p5/p95 per cluster, mean avg power / total energy / duration / ramp shape; rule-label fallback per cluster when fewer than 3 sessions exist in the recent window) for one vehicle. The deterministic Charging Curve page with the rule-label classification remains the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class tagged so a leaked transcript does not reveal vehicle identity beyond the user-supplied vehicle_id.",
+		Tier:        "ML3",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/ml/charging-curves/cluster"},
+			Frontend:  []string{"/charging/curves"},
+			UITestIDs: []string{"ai-feature-ml-charging-curve-clustering-root"},
+			JobNames:  []string{"ai_ml_charge_curve_trainer"},
+			PushKinds: []string{"ai_ml_charge_curve_ready"},
+		},
+	},
+
 	// range-prediction-model — Phase-50 / 0063 (ML2).
 	//
 	// Opt-in LLM narrator over a per-vehicle deterministic learned

@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "inbox-auto-categorization" | "learned-per-vehicle-anomaly-baselines" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "inbox-auto-categorization" | "learned-per-vehicle-anomaly-baselines" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -223,6 +223,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-learned-per-vehicle-anomaly-baselines-root"] as const),
   }),
+  "ml-charging-curve-clustering": Object.freeze({
+    id: "ml-charging-curve-clustering",
+    name: "Charging-curve clustering model",
+    description: "Opt-in LLM narrator that EXPLAINS the per-cluster (L1 overnight / L2 workplace / DC fast / unknown) learned charging envelope (mean peak power plus stddev/p5/p95 per cluster, mean avg power / total energy / duration / ramp shape; rule-label fallback per cluster when fewer than 3 sessions exist in the recent window) for one vehicle. The deterministic Charging Curve page with the rule-label classification remains the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class tagged so a leaked transcript does not reveal vehicle identity beyond the user-supplied vehicle_id.",
+    tier: "ML3",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-ml-charging-curve-clustering-root"] as const),
+  }),
   "nl-alert-builder": Object.freeze({
     id: "nl-alert-builder",
     name: "Natural-language alert builder",
@@ -398,6 +409,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "drive-coaching",
   "inbox-auto-categorization",
   "learned-per-vehicle-anomaly-baselines",
+  "ml-charging-curve-clustering",
   "nl-alert-builder",
   "nl-automation-builder",
   "nl-drive-search-replay",

@@ -1,0 +1,40 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_train_charge_curve_clusters_typical_clusters_1
+        name: train_charge_curve_clusters
+        arguments: '{"vehicle_id": 42, "lookback_days": 90}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_charge_curve_clusters_typical_clusters_1
+        name: query_charge_curve_clusters
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 96
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      L1 overnight — for vehicle <vehicle id='42'/> the proposed
+      learned envelope on the L1 cluster is tight around a mean
+      peak power near 1.7 kW with a small stddev (the trainer
+      reported source="learned" with enough sessions to learn).
+      The currently-effective rule-label baseline only knows "this
+      cluster is L1"; the proposed learned envelope would refine
+      it with a typical peak / avg / energy band.
+
+      L2 workplace — L2 returned source="learned" with a clean
+      mean peak around 7 kW and a ramp_shape_mean close to 1
+      (steady, holds near peak). The proposed learned envelope
+      would refine the rule-label baseline here too. None of this
+      is in use by the deterministic Charging Curve page today.
+
+      DC fast — DC returned source="learned" with a wider mean
+      peak band (around 50 kW) and a lower ramp_shape_mean
+      (taper kicks in early). The proposed learned envelope would
+      refine the bare rule label with the typical taper shape;
+      the deterministic classification still uses the static
+      L1/L2/DC labels (this slice does not persist learned
+      envelopes).
+    input_tokens: 240
+    output_tokens: 192
