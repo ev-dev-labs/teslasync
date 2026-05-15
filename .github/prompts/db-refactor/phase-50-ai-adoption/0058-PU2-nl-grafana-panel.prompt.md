@@ -215,6 +215,102 @@ slice's existing test naming) proving:
   invariant.
 
 <!-- END: W1 INLINE WIRING ADDENDUM -->
+<!-- BEGIN: HX (Helix UX) ADDENDUM (auto-inserted) -->
+## Helix UX scaffolding (Phase-50/HX — inline, MANDATORY)
+
+This slice MUST render its primary AI surface through the shared
+`AIFeatureCard` scaffold (`web/src/components/ai/AIFeatureCard.tsx`),
+NOT a bespoke GlassPanel + Button + AiOutputPanel composition. The
+scaffold was extracted from 38 pre-existing AI feature cards
+(commit `7c125573f`) to guarantee visual, accessibility, and i18n
+consistency across every Helix surface.
+
+The wired component MUST:
+
+1. **Scaffold:** import `AIFeatureCard` from
+   `@/components/ai/AIFeatureCard` and render the entire feature
+   surface through it. Do NOT roll a per-feature `<GlassPanel>` +
+   `<Button>` + `<AiOutputPanel>` composition. The card owns the
+   header, AI badge, description, optional empty-state hint, action
+   button, streaming label, and AiOutputPanel placement. If a second
+   surface (e.g. a typed-proposal preview, a domain-specific results
+   list) is needed, render it via the card's `children` slot — never
+   wrap a second `GlassPanel` around the card.
+
+2. **Universal CTA — visible label is painted by the card.**
+   `AIFeatureCard` paints the visible button text as
+   "Ask Helix" (idle) / "Helix is thinking…" (streaming) with the
+   `HelixMark` brand glyph and the cyan glass treatment. The
+   per-feature action verb (e.g. "Suggest triage", "Summarize logs")
+   is passed to the card via the **`buttonLabel`** prop and surfaces
+   ONLY in the button's `aria-label` (read as
+   `"${askHelixLabel} · ${buttonLabel}"`) and `title` (hover
+   tooltip). Do NOT pass `"Ask Helix"` as `buttonLabel` — the
+   accessible name would lose the per-feature context and existing
+   role-name assertions would break. **Pass the per-feature verb.**
+
+3. **Test regexes MUST be unanchored.** Because the accessible name
+   reads `"Ask Helix · <buttonLabel>"`, anchored regexes
+   (`/^Suggest$/i`) will not match. Locate the CTA via
+   `getByRole('button', { name: /Suggest/i })` (no `^`/`$`).
+   The on-mode wiring test
+   (`TestNlGrafanaPanelAIOnWiredCallsRoute`)
+   added by the W1 addendum above MUST use this unanchored form.
+
+4. **Brand glyph for assistant identity.** Use `HelixMark` from
+   `@/components/branding/HelixMark` for ANY Helix/assistant identity
+   slot this slice introduces (avatars, inline chat author marks,
+   panel headers, status icons that represent "the AI talking").
+   Do NOT use lucide `Bot`, generic sparkle icons, or feature-specific
+   bespoke icons for these slots. Lucide `Bot` may still be used in
+   non-AI contexts (e.g. "Bot Token" in notification provider
+   settings); the rule is scoped to assistant-identity slots only.
+
+5. **`AIThinkingDots` for streaming affordances OUTSIDE the card.**
+   `AIFeatureCard` already renders `AIThinkingDots` inside its action
+   button label while `stream.state === 'streaming'` (the dots are
+   `aria-hidden`). If this slice surfaces a separate "thinking"
+   indicator anywhere else (e.g. an inline chat row, a status pill),
+   import `AIThinkingDots` from
+   `@/components/ai/AIThinkingIndicator` rather than re-rolling the
+   pulse animation.
+
+6. **Helix-branded i18n copy.** Every USER-VISIBLE string this slice
+   adds (empty/loading/error states, captions, hints, panel titles,
+   menu labels) says "Helix" not "AI". Examples:
+   `"helix.askHelix"` / `"helix.thinking"` / `"helix.usage.today"`.
+   Registry `Name` / `Description` fields in
+   `internal/ai/features/registry.go` are NOT user-facing in the
+   same way — `CoverageOK()` only checks `Name != ""` and does not
+   constrain the prose. Prefer Helix-branded copy when the registry
+   entry surfaces in Settings → AI; technical / operator-only entries
+   may keep accurate "AI ..." terminology.
+
+### `AIFeatureCard` prop affordances (use them, don't sidestep them)
+
+The scaffold supports the slice render contracts already in scope:
+
+| Prop | When to use it |
+|---|---|
+| `inputSlot` | NL/prompt-input features (textarea, search box, NL-SQL editor). Pass the input via `inputSlot`; the card renders the action button beneath it (`buttonPlacement` is auto-set to `below`). |
+| `children` | Typed-proposal previews, domain-specific result widgets, conflict lists — anything that renders between the action button and the AiOutputPanel. |
+| `buttonPlacement='below'` | Header text too long to share a row, or feature renders extra context between header and button. |
+| `emptyHint` | Per-feature "what's missing" text shown beneath the description when `canStart === false` (e.g. "Select a feedback row first."). |
+| `onAction` | Override `stream.start` only when the slice needs to reset local state before firing (e.g. clear a captured conflicts list). The default is `stream.start`. |
+
+### `canStart` MUST encode every busy/guard state
+
+The card disables the action button when `!canStart || stream.state === 'streaming'`.
+The slice's `canStart` expression MUST also be `false` while
+`stream.state === 'paused-confirm'` (when the slice uses the F4
+confirm-pause flow), and while any feature-specific guard is unmet
+(`driveId === undefined`, no row selected, AI feature toggle off via
+`useAiEnabled`). This preserves the W1 double-submit invariant ON
+TOP of the scaffold — the card disables for streaming, the slice
+disables for everything else.
+
+<!-- END: HX (Helix UX) ADDENDUM -->
+
 
 ## Action Steps
 
@@ -242,6 +338,9 @@ slice's existing test naming) proving:
 <!-- BEGIN: W1 INLINE TASK -->
 9. SPA wiring: ship the AI component wired end-to-end to the backend route via `useAiStream`. No placeholder strings, no literal-disabled buttons. Add the on-mode wiring test alongside the existing off-mode test.
 <!-- END: W1 INLINE TASK -->
+<!-- BEGIN: HX (Helix UX) TASK -->
+10. Helix UX scaffold: render the AI surface through `AIFeatureCard`. Pass the per-feature verb as `buttonLabel` (NOT "Ask Helix"). Use `HelixMark` for assistant-identity glyphs; use `AIThinkingDots` for any thinking affordance outside the card. User-visible i18n copy says "Helix" not "AI". Tests locating the CTA use unanchored regexes.
+<!-- END: HX (Helix UX) TASK -->
 
 ## Allowed files
 
@@ -303,6 +402,9 @@ The slice is DONE only if:
 <!-- BEGIN: W1 INLINE GATE -->
 7. The slice's SPA component imports `useAiStream`, references the registered backend endpoint, has zero placeholder strings, and the on-mode wiring test passes.
 <!-- END: W1 INLINE GATE -->
+<!-- BEGIN: HX (Helix UX) GATE -->
+8. The slice's SPA component imports `AIFeatureCard` from `@/components/ai/AIFeatureCard` and renders its primary AI surface through it; the per-feature verb is passed via `buttonLabel`; assistant-identity glyphs use `HelixMark` (not lucide `Bot`); on-mode wiring tests use unanchored role-name regexes; user-visible i18n copy added by this slice contains no `"AI "` prefix in a Helix-narrative position.
+<!-- END: HX (Helix UX) GATE -->
 
 
 Any failure means `STATUS=BLOCKED` and only the log may be committed.

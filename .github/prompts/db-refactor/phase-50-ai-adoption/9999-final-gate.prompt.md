@@ -53,9 +53,73 @@ This Phase-50 foundation or gate prompt must preserve ADR-015: AI is additive, d
 5. Run every verification command exactly as written and paste raw output into `=== GATE ===`.
 6. If any gate fails, stop with `STATUS=BLOCKED` and commit only the log.
 
+<!-- BEGIN: HX (Helix UX) FINAL-GATE ADDENDUM -->
+## Helix UX (HX) project-wide invariants
+
+After all per-feature slices have landed, the final gate MUST also
+prove the Helix UX scaffold contract (Phase-50/HX, see any per-slice
+prompt under "## Helix UX scaffolding") holds project-wide. These
+checks supplement, but do not replace, the existing W1 wiring gates.
+
+Run these targeted scans (no broad `"AI"` bans — feature verbs and
+domain text legitimately contain the substring):
+
+~~~powershell
+# 1. Every non-internal AI feature component imports the shared
+#    AIFeatureCard scaffold. Components that legitimately render
+#    a non-card affordance (chat surfaces, voice/watch surfaces,
+#    image-generation surfaces) are exempt; list them in
+#    `web/src/components/ai/__hx_scaffold_exemptions.ts`.
+$wired = Get-ChildItem 'web/src/components/ai/AI*.tsx' |
+  Where-Object { $_.Name -notmatch '^(AIFeatureCard|AIThinkingIndicator|AIChatbotIndicator|AiLimitBanner|AiOutputPanel|ConfirmDialog)\.tsx$' }
+$missing = $wired | ForEach-Object {
+  if (-not (Select-String -Path $_.FullName -Pattern "from '@/components/ai/AIFeatureCard'" -Quiet)) { $_.Name }
+}
+# Expected: $missing is empty OR every entry is in the exemption list.
+
+# 2. The HelixMark glyph owns assistant-identity slots — lucide
+#    `Bot` MUST NOT appear in components/ai/* or in the Avatar
+#    bot-kind path. Other Bot usages (e.g. notification "Bot
+#    Token" labels) are fine.
+Select-String -Path 'web/src/components/ai/*.tsx','web/src/components/data-display/Avatar.tsx' -Pattern "from 'lucide-react'.*\bBot\b|\bimport \{.*\bBot\b.*\} from 'lucide-react'" |
+  Measure-Object | Select-Object -ExpandProperty Count
+# Expected: 0
+
+# 3. AIFeatureCard paints the universal CTA. Verify the card emits
+#    the literal "helix.askHelix" / "helix.thinking" i18n keys
+#    (or their resolved English strings "Ask Helix" / "Helix is
+#    thinking…").
+Select-String -Path 'web/src/components/ai/AIFeatureCard.tsx' -Pattern 'helix\.askHelix|Ask Helix' |
+  Measure-Object | Select-Object -ExpandProperty Count
+Select-String -Path 'web/src/components/ai/AIFeatureCard.tsx' -Pattern 'helix\.thinking|Helix is thinking' |
+  Measure-Object | Select-Object -ExpandProperty Count
+# Expected: both > 0.
+
+# 4. Targeted stale-copy scan: legacy "AI calls today" / "AI usage"
+#    strings are gone (the rebrand replaced them with the Helix-
+#    branded equivalents). New slices MUST NOT re-introduce them.
+Select-String -Path 'web/src/**/*.tsx','web/src/i18n/*.json' -Pattern '"AI calls today"|"AI usage"|"No AI calls"|"AI is thinking"' |
+  Measure-Object | Select-Object -ExpandProperty Count
+# Expected: 0
+
+# 5. Tests locate the universal CTA via unanchored regexes — no
+#    test in the repo asserts on `/^Ask Helix$/i` (which would be
+#    fragile against the per-feature aria-label suffix).
+Select-String -Path 'web/src/**/__tests__/AI*.tsx','web/src/**/*.test.tsx' -Pattern "/\^Ask Helix\$/" |
+  Measure-Object | Select-Object -ExpandProperty Count
+# Expected: 0
+~~~
+
+If a slice legitimately needs a non-card AI surface (chat bubbles,
+voice-mode mic, image-gen previews, watch-face responses), add it to
+`web/src/components/ai/__hx_scaffold_exemptions.ts` with a one-line
+comment explaining the affordance. The final-gate scan reads that
+exemption list when computing the `$missing` set above.
+<!-- END: HX (Helix UX) FINAL-GATE ADDENDUM -->
+
 ## Gate
 
-The prompt is DONE only if every required verification command exits 0, the log contains `EXIT=0` and `STATUS=DONE` on their own lines, the ADR-015 footer is present with evidence, and `git status --short` contains only allowed files before commit.
+The prompt is DONE only if every required verification command exits 0, the log contains `EXIT=0` and `STATUS=DONE` on their own lines, the ADR-015 footer is present with evidence, the Helix UX (HX) project-wide invariants above all hold, and `git status --short` contains only allowed files before commit.
 
 ## Commit
 
