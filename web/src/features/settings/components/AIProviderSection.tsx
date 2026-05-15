@@ -94,22 +94,52 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
 
   async function runValidate() {
     setValidateBanner(null)
-    const result = await validate.mutateAsync({
-      mode: isCloud ? 'cloud' : 'local',
-      provider: value.provider,
-      base_url: value.base_url,
-    })
+    // Build the request payload. For local mode only mode + base_url
+    // matter (the validator is provider-agnostic). For cloud mode we
+    // send the full configuration so the backend can build a real
+    // adapter and run a 1-token chat probe — empty fields fall back
+    // to the saved per-provider entry server-side, so editing one
+    // field doesn't force the user to re-state the rest.
+    const result = await validate.mutateAsync(
+      isCloud
+        ? {
+            mode: 'cloud',
+            provider: value.provider,
+            base_url: value.base_url,
+            // Only forward api_key when the user actually typed one;
+            // empty string lets the backend fall back to the saved
+            // (encrypted) value rather than clobbering it with "".
+            ...(value.api_key.trim() === ''
+              ? {}
+              : { api_key: value.api_key }),
+            model: value.model,
+            api_version: value.api_version,
+            flavor: value.flavor,
+            deployment: value.deployment,
+            embedding_model: value.embedding_model,
+            embedding_deployment: value.embedding_deployment,
+          }
+        : {
+            mode: 'local',
+            provider: value.provider,
+            base_url: value.base_url,
+          },
+    )
     if (result.ok) {
-      setValidateBanner({
-        kind: 'ok',
-        message: result.pinned_ip
+      const okMessage = result.pinned_ip
+        ? t(
+            'ai.settings.validate.successPinned',
+            'OK — pinned to {{ip}}',
+            { ip: result.pinned_ip },
+          )
+        : result.probed_model
           ? t(
-              'ai.settings.validate.successPinned',
-              'OK — pinned to {{ip}}',
-              { ip: result.pinned_ip },
+              'ai.settings.validate.successProbed',
+              'OK — {{model}} reachable',
+              { model: result.probed_model },
             )
-          : t('ai.settings.validate.success', 'OK — provider reachable'),
-      })
+          : t('ai.settings.validate.success', 'OK — provider reachable')
+      setValidateBanner({ kind: 'ok', message: okMessage })
       return
     }
     setValidateBanner({ kind: 'fail', message: result.message })
@@ -353,6 +383,49 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
               'Daily cap on cloud spending. 0 disables the cap.',
             )}
           />
+
+          {/*
+           * Cloud Validate. Sends a 1-token chat probe to the
+           * configured upstream so the user can confirm api_key +
+           * URL + flavor + deployment all line up before saving.
+           * Empty api_key is allowed — the backend falls back to
+           * the previously-saved (encrypted) key, which keeps the
+           * UX reasonable when the user is editing a non-secret
+           * field. The button stays enabled even with an empty
+           * api_key field for that reason; the backend returns a
+           * precise `missing_api_key` code when neither side has
+           * one.
+           */}
+          <Stack gap={2} direction="row">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={runValidate}
+              disabled={validate.isPending}
+              data-testid="ai-provider-validate-cloud"
+            >
+              {validate.isPending
+                ? t('ai.settings.validate.running', 'Validating…')
+                : t(
+                    'ai.settings.validate.cloudButton',
+                    'Validate connection',
+                  )}
+            </Button>
+            {validateBanner && (
+              <span
+                role="status"
+                className={
+                  validateBanner.kind === 'ok'
+                    ? 'text-xs text-emerald-300'
+                    : 'text-xs text-rose-300'
+                }
+                data-testid="ai-provider-validate-banner"
+                data-validate-kind={validateBanner.kind}
+              >
+                {validateBanner.message}
+              </span>
+            )}
+          </Stack>
         </>
       )}
 

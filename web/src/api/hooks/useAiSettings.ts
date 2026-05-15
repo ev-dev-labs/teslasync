@@ -34,12 +34,24 @@ import type { AppSettings } from '@/api/types'
  * Validation request body posted to the backend.
  *
  * Mirrors `validateConfigRequest` in
- * `internal/api/ai_settings_validate_handler.go`.
+ * `internal/api/ai_settings_validate_handler.go`. Cloud mode uses the
+ * extended set (api_key / model / api_version / flavor / deployment /
+ * embedding_*); local mode only consults `mode` + `base_url`. All
+ * cloud fields are optional and fall back to the saved per-provider
+ * entry server-side, so editing one field doesn't force the user to
+ * re-state the rest.
  */
 export interface ValidateAiProviderRequest {
   mode: 'off' | 'local' | 'cloud'
   provider?: string
   base_url?: string
+  api_key?: string
+  model?: string
+  api_version?: string
+  flavor?: string
+  deployment?: string
+  embedding_model?: string
+  embedding_deployment?: string
 }
 
 /**
@@ -47,13 +59,16 @@ export interface ValidateAiProviderRequest {
  * `ok: true` on a 200; the optional `pinned_ip` is populated only
  * when the local validator resolved a hostname (literal IPs and
  * the loopback short-circuit return an empty string upstream which
- * we surface as `undefined`).
+ * we surface as `undefined`). For cloud mode `probed_model` echoes
+ * the model the probe actually exercised so the UI can render
+ * "OK — gpt-4o reachable".
  */
 export interface ValidateAiProviderSuccess {
   ok: true
   mode: 'local' | 'cloud'
   base_url: string
   pinned_ip?: string
+  probed_model?: string
   note?: string
 }
 
@@ -65,18 +80,43 @@ export interface ValidateAiProviderSuccess {
  *
  * Known reasons (mirror constants in
  * `internal/api/ai_settings_validate_handler.go`):
- *   - `not_local`  — base URL resolved to a public address.
- *   - `invalid`    — malformed URL, DNS failure, or other generic
- *                    rejection from the local validator.
- *   - `bad_mode`   — request body had `mode='off'` or unknown.
- *   - `bad_request`— body was malformed JSON.
- *   - `unknown`    — fallback when the server omitted the code.
+ *   - `not_local`         — base URL resolved to a public address.
+ *   - `invalid`           — malformed URL, DNS failure, or other
+ *                           generic rejection from the local
+ *                           validator.
+ *   - `bad_mode`          — request body had `mode='off'` or
+ *                           unknown mode.
+ *   - `bad_request`       — body was malformed JSON.
+ *   - `unknown_provider`  — cloud probe hit a provider name with
+ *                           no registered adapter.
+ *   - `missing_api_key`   — cloud probe needs an API key (request
+ *                           omitted it AND no saved key fallback).
+ *   - `missing_base_url`  — Azure flavor needs a resource endpoint.
+ *   - `missing_deployment`— Azure OpenAI Service flavor needs a
+ *                           deployment name (or model) to route to.
+ *   - `unauthorized`      — provider returned 401/403 (bad key).
+ *   - `not_found`         — provider returned 404 (bad URL or
+ *                           deployment slug).
+ *   - `upstream_error`    — provider returned 5xx, 429, or transport
+ *                           failure (provider-side problem, not the
+ *                           user's config).
+ *   - `timeout`           — probe exceeded the 30s budget.
+ *   - `unknown`           — fallback when the server omitted the
+ *                           code.
  */
 export type ValidateAiProviderReason =
   | 'not_local'
   | 'invalid'
   | 'bad_mode'
   | 'bad_request'
+  | 'unknown_provider'
+  | 'missing_api_key'
+  | 'missing_base_url'
+  | 'missing_deployment'
+  | 'unauthorized'
+  | 'not_found'
+  | 'upstream_error'
+  | 'timeout'
   | 'unknown'
 
 export interface ValidateAiProviderFailure {
@@ -146,6 +186,14 @@ function reasonFromCode(code: string | undefined): ValidateAiProviderReason {
     case 'invalid':
     case 'bad_mode':
     case 'bad_request':
+    case 'unknown_provider':
+    case 'missing_api_key':
+    case 'missing_base_url':
+    case 'missing_deployment':
+    case 'unauthorized':
+    case 'not_found':
+    case 'upstream_error':
+    case 'timeout':
       return code
     default:
       return 'unknown'
