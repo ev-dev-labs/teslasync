@@ -45,6 +45,7 @@ const (
 	ProviderOllama    = "ollama"
 	ProviderOpenAI    = "openai"
 	ProviderAnthropic = "anthropic"
+	ProviderAzure     = "azure"
 	ProviderMock      = "mock"
 )
 
@@ -120,6 +121,32 @@ func init() {
 			"claude-3-5-sonnet-20240620": {InputMicroCentsPerMillion: 3_000_000, OutputMicroCentsPerMillion: 15_000_000},
 			"claude-3-5-haiku-20241022":  {InputMicroCentsPerMillion: 800_000, OutputMicroCentsPerMillion: 4_000_000},
 			"claude-3-opus-20240229":     {InputMicroCentsPerMillion: 15_000_000, OutputMicroCentsPerMillion: 75_000_000},
+		},
+
+		// Azure — https://azure.microsoft.com/en-us/pricing/details/cognitive-services/openai-service/
+		// (2026 review). Azure OpenAI Service rates align 1:1 with
+		// public OpenAI rates for the same model identifiers; the
+		// Azure AI Foundry / Inference API hosts non-OpenAI models
+		// (Llama, Mistral, Phi, etc.) which carry their own rates.
+		// Settings UI labels the value the user types as "Model"
+		// (the actual model identifier, e.g. "gpt-4o-mini") with
+		// the Azure deployment name held in a separate Deployment
+		// field — that split keeps cost lookups intact when a user
+		// names their deployment something idiosyncratic.
+		ProviderAzure: {
+			"gpt-4o-mini":                   {InputMicroCentsPerMillion: 150_000, OutputMicroCentsPerMillion: 600_000},
+			"gpt-4o":                        {InputMicroCentsPerMillion: 2_500_000, OutputMicroCentsPerMillion: 10_000_000},
+			"gpt-4-turbo":                   {InputMicroCentsPerMillion: 10_000_000, OutputMicroCentsPerMillion: 30_000_000},
+			"gpt-35-turbo":                  {InputMicroCentsPerMillion: 500_000, OutputMicroCentsPerMillion: 1_500_000},
+			"gpt-3.5-turbo":                 {InputMicroCentsPerMillion: 500_000, OutputMicroCentsPerMillion: 1_500_000},
+			"text-embedding-3-small":        {InputMicroCentsPerMillion: 20_000, OutputMicroCentsPerMillion: 0},
+			"text-embedding-3-large":        {InputMicroCentsPerMillion: 130_000, OutputMicroCentsPerMillion: 0},
+			"meta-llama-3.1-8b-instruct":    {InputMicroCentsPerMillion: 30_000, OutputMicroCentsPerMillion: 100_000},
+			"meta-llama-3.1-70b-instruct":   {InputMicroCentsPerMillion: 580_000, OutputMicroCentsPerMillion: 1_750_000},
+			"mistral-large-2407":            {InputMicroCentsPerMillion: 3_000_000, OutputMicroCentsPerMillion: 9_000_000},
+			"mistral-small-2409":            {InputMicroCentsPerMillion: 100_000, OutputMicroCentsPerMillion: 300_000},
+			"phi-3.5-mini-instruct":         {InputMicroCentsPerMillion: 13_000, OutputMicroCentsPerMillion: 52_000},
+			"cohere-command-r-plus-08-2024": {InputMicroCentsPerMillion: 250_000, OutputMicroCentsPerMillion: 1_000_000},
 		},
 	}
 }

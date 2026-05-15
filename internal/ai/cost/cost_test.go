@@ -197,7 +197,7 @@ func TestHasRate(t *testing.T) {
 // asserts the exact set we expect to ship with.
 func TestKnownProvidersAndModels(t *testing.T) {
 	t.Parallel()
-	wantProviders := []string{"anthropic", "mock", "ollama", "openai"}
+	wantProviders := []string{"anthropic", "azure", "mock", "ollama", "openai"}
 	got := KnownProviders()
 	if !equal(got, wantProviders) {
 		t.Fatalf("KnownProviders() = %v, want %v", got, wantProviders)
@@ -216,6 +216,18 @@ func TestKnownProvidersAndModels(t *testing.T) {
 	}
 	if got := ModelsFor("anthropic"); !equal(got, wantAnthropic) {
 		t.Fatalf("ModelsFor(anthropic) = %v, want %v", got, wantAnthropic)
+	}
+
+	wantAzure := []string{
+		"cohere-command-r-plus-08-2024",
+		"gpt-3.5-turbo", "gpt-35-turbo", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini",
+		"meta-llama-3.1-70b-instruct", "meta-llama-3.1-8b-instruct",
+		"mistral-large-2407", "mistral-small-2409",
+		"phi-3.5-mini-instruct",
+		"text-embedding-3-large", "text-embedding-3-small",
+	}
+	if got := ModelsFor("azure"); !equal(got, wantAzure) {
+		t.Fatalf("ModelsFor(azure) = %v, want %v", got, wantAzure)
 	}
 
 	if got := ModelsFor("ollama"); len(got) != 0 {

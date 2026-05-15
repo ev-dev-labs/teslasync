@@ -2,9 +2,16 @@
 //
 // The wire format is the OpenAI Chat Completions / Embeddings API
 // (https://platform.openai.com/docs/api-reference). Any server that
-// implements the same surface — vLLM, LiteLLM, Together, Groq, Azure
-// OpenAI, Cloudflare Workers AI — works through this adapter unchanged
+// implements the same surface — vLLM, LiteLLM, Together, Groq,
+// Cloudflare Workers AI — works through this adapter unchanged
 // because the only thing that varies is the cfg.BaseURL.
+//
+// Azure has its own dedicated adapter
+// ([github.com/ev-dev-labs/teslasync/internal/ai/provider/azure])
+// because Azure OpenAI Service routes by deployment-name in the URL
+// path, uses an `api-key` header instead of `Authorization: Bearer`,
+// and requires an `api-version` query parameter — three departures
+// that this package does not cover.
 package openai
 
 import (

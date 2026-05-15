@@ -60,6 +60,7 @@ import (
 	// provider by virtue of an unintended import.
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	aianthropic "github.com/ev-dev-labs/teslasync/internal/ai/provider/anthropic"
+	aiazure "github.com/ev-dev-labs/teslasync/internal/ai/provider/azure"
 	aimock "github.com/ev-dev-labs/teslasync/internal/ai/provider/mock"
 	aiollama "github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama"
 	aiopenai "github.com/ev-dev-labs/teslasync/internal/ai/provider/openai"
@@ -372,6 +373,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	aiRegistry.Register(provider.NameOllama, aiollama.Builder)
 	aiRegistry.Register(provider.NameOpenAI, aiopenai.Builder)
 	aiRegistry.Register(provider.NameAnthropic, aianthropic.Builder)
+	aiRegistry.Register(provider.NameAzure, aiazure.Builder)
 	// The mock adapter is registered so ops + the F6 eval harness
 	// can pin "default": "mock" in settings to short-circuit a
 	// flaky upstream during incident response. ADR-015 §I1 still

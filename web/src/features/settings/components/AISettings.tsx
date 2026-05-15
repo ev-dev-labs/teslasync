@@ -192,6 +192,15 @@ export function AISettings() {
       model: readProviderString(entry, 'model', ''),
       api_key: '',
       cost_cap_cents: settings?.ai_cost_cap_cents ?? 0,
+      api_version: readProviderString(entry, 'api_version', ''),
+      flavor: readProviderString(entry, 'flavor', ''),
+      deployment: readProviderString(entry, 'deployment', ''),
+      embedding_model: readProviderString(entry, 'embedding_model', ''),
+      embedding_deployment: readProviderString(
+        entry,
+        'embedding_deployment',
+        '',
+      ),
     }
   })
   // ADR-015 §I7 — when the user re-enables AI and the server still
@@ -237,6 +246,15 @@ export function AISettings() {
           ? ''
           : readProviderString(entry, 'api_key', ''),
       cost_cap_cents: settings.ai_cost_cap_cents ?? 0,
+      api_version: readProviderString(entry, 'api_version', ''),
+      flavor: readProviderString(entry, 'flavor', ''),
+      deployment: readProviderString(entry, 'deployment', ''),
+      embedding_model: readProviderString(entry, 'embedding_model', ''),
+      embedding_deployment: readProviderString(
+        entry,
+        'embedding_deployment',
+        '',
+      ),
     })
     setRestoreDismissed(false)
     // Intentionally depend on the JSON snapshot, not the object
@@ -293,12 +311,41 @@ export function AISettings() {
       // that a pre-fix snapshot may still carry — migration 000208
       // handles this at rest but defense-in-depth keeps the wire
       // format clean across export/import round-trips.
+      //
+      // Merge (not replace) the per-provider sub-object: a partial
+      // form (e.g. one without the api_version input visible)
+      // must NOT clobber provider-specific keys the user set
+      // previously. The form state owns api_version / flavor /
+      // deployment / embedding_* explicitly so they round-trip on
+      // every save.
       ai_provider_config: {
         ...stripLegacyTopLevelKeys(settings?.ai_provider_config),
         default: provider.provider,
         [provider.provider]: {
+          ...(readProviderConfigEntry(
+            settings?.ai_provider_config,
+            provider.provider,
+          ) ?? {}),
           base_url: provider.base_url,
           model: provider.model,
+          // Optional / provider-specific fields are only emitted
+          // when non-empty so a config that doesn't use them
+          // doesn't grow noise keys.
+          ...(provider.api_version.trim() === ''
+            ? {}
+            : { api_version: provider.api_version }),
+          ...(provider.flavor.trim() === ''
+            ? {}
+            : { flavor: provider.flavor }),
+          ...(provider.deployment.trim() === ''
+            ? {}
+            : { deployment: provider.deployment }),
+          ...(provider.embedding_model.trim() === ''
+            ? {}
+            : { embedding_model: provider.embedding_model }),
+          ...(provider.embedding_deployment.trim() === ''
+            ? {}
+            : { embedding_deployment: provider.embedding_deployment }),
           // Only forward a non-empty key; an empty string would clobber
           // a previously-saved key (the server treats empty as
           // explicit clear).
@@ -342,6 +389,15 @@ export function AISettings() {
         model: readProviderString(newEntry, 'model', ''),
         api_key: '',
         cost_cap_cents: next.cost_cap_cents,
+        api_version: readProviderString(newEntry, 'api_version', ''),
+        flavor: readProviderString(newEntry, 'flavor', ''),
+        deployment: readProviderString(newEntry, 'deployment', ''),
+        embedding_model: readProviderString(newEntry, 'embedding_model', ''),
+        embedding_deployment: readProviderString(
+          newEntry,
+          'embedding_deployment',
+          '',
+        ),
       })
     },
     [provider.provider, settings?.ai_provider_config],

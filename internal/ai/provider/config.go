@@ -13,6 +13,7 @@ const (
 	NameOllama    = "ollama"
 	NameOpenAI    = "openai"
 	NameAnthropic = "anthropic"
+	NameAzure     = "azure"
 	NameMock      = "mock"
 )
 
@@ -45,6 +46,24 @@ const (
 
 	// DefaultCloudEmbeddingModel is PD3 (cloud half).
 	DefaultCloudEmbeddingModel = "text-embedding-3-small"
+
+	// DefaultAzureAPIVersion is the Azure API version the adapter
+	// sends when the user has not pinned one in settings. Azure
+	// exposes versioned APIs separately from the underlying model
+	// — picking a stable, GA-aligned version here keeps the adapter
+	// working without per-deploy edits.
+	DefaultAzureAPIVersion = "2024-10-21"
+)
+
+// Azure flavor literals — selects the Azure inference surface the
+// adapter targets. AzureFlavorOpenAI keeps the Azure OpenAI Service
+// routing (deployment-name in URL, no model in body); AzureFlavorFoundry
+// uses the modern Azure AI Inference / Foundry API (multi-vendor,
+// model-in-body routing).
+const (
+	AzureFlavorOpenAI  = "openai"
+	AzureFlavorFoundry = "foundry"
+	DefaultAzureFlavor = AzureFlavorOpenAI
 )
 
 // AI mode literals. Mirrors the validated set in
@@ -79,6 +98,32 @@ type ProviderConfig struct {
 	Model          string `json:"model,omitempty"`
 	EmbeddingModel string `json:"embedding_model,omitempty"`
 	APIKey         string `json:"api_key,omitempty"`
+
+	// APIVersion is the wire-format API version some adapters need
+	// to send as a query parameter. Currently consumed by the Azure
+	// adapter (see [NameAzure]); other adapters ignore it. Empty
+	// falls back to [DefaultAzureAPIVersion] for Azure.
+	APIVersion string `json:"api_version,omitempty"`
+
+	// Flavor selects between sub-surfaces of a single provider name.
+	// Currently consumed by the Azure adapter, where it switches
+	// between [AzureFlavorOpenAI] (Azure OpenAI Service —
+	// deployment-name routing) and [AzureFlavorFoundry] (Azure AI
+	// Foundry / Inference API — multi-vendor unified endpoint).
+	// Other adapters ignore it. Empty falls back to
+	// [DefaultAzureFlavor] for Azure.
+	Flavor string `json:"flavor,omitempty"`
+
+	// Deployment is the Azure chat deployment name when the
+	// underlying URL routes by deployment (Azure OpenAI Service).
+	// Empty falls back to [Model] so a user whose deployment is
+	// named after the model (the common case) needs only one
+	// field. Ignored by adapters that route by model identifier.
+	Deployment string `json:"deployment,omitempty"`
+
+	// EmbeddingDeployment mirrors [Deployment] for the embeddings
+	// route. Falls back to [EmbeddingModel] when empty.
+	EmbeddingDeployment string `json:"embedding_deployment,omitempty"`
 
 	// PinnedIP is set by [ValidateLocal] at config-save time so the
 	// runtime can detect DNS rebinding (R3 mitigation). Empty in
@@ -198,6 +243,19 @@ func applyDefaults(providerName string, cfg ProviderConfig) ProviderConfig {
 		}
 		if cfg.Model == "" {
 			cfg.Model = "claude-3-5-sonnet-20240620"
+		}
+	case NameAzure:
+		// Azure: BaseURL is the user's resource endpoint
+		// (https://{resource}.openai.azure.com for the OpenAI
+		// flavor, or the Foundry endpoint for that flavor).
+		// Deployment / EmbeddingDeployment fall back to Model /
+		// EmbeddingModel inside the adapter, so no defaulting is
+		// needed here. APIVersion + Flavor have stable defaults.
+		if cfg.APIVersion == "" {
+			cfg.APIVersion = DefaultAzureAPIVersion
+		}
+		if cfg.Flavor == "" {
+			cfg.Flavor = DefaultAzureFlavor
 		}
 	}
 	return cfg

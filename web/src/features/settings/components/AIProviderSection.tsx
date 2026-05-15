@@ -42,6 +42,33 @@ export interface AIProviderDraft {
   api_key: string
   /** Daily cap in cents. 0 means unset. */
   cost_cap_cents: number
+  /**
+   * Azure-only: API version query parameter. Ignored by other
+   * providers but persists in the per-provider sub-map so a user
+   * who swaps providers doesn't lose their Azure config.
+   */
+  api_version: string
+  /**
+   * Azure-only: selects between the Azure OpenAI Service surface
+   * (deployment-name routing in URL) and the Azure AI Foundry /
+   * Inference API (model-in-body routing).
+   */
+  flavor: string
+  /**
+   * Azure-only: chat deployment name. Empty → adapter falls back
+   * to `model`. Surfaced as a separate field so cost/audit can
+   * record the model identity even when the deployment is named
+   * differently.
+   */
+  deployment: string
+  /**
+   * Embedding model identifier. Used by the F7 RAG worker; not
+   * always exposed in the UI but persisted so a previous setting
+   * survives a save round-trip.
+   */
+  embedding_model: string
+  /** Azure-only embedding deployment name (analog of `deployment`). */
+  embedding_deployment: string
 }
 
 interface Props {
@@ -109,6 +136,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
               ? [
                   { value: 'openai', label: 'OpenAI' },
                   { value: 'anthropic', label: 'Anthropic' },
+                  { value: 'azure', label: 'Azure AI' },
                   { value: 'google', label: 'Google' },
                 ]
               : [
@@ -120,13 +148,100 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
         />
 
         <Input
-          label={t('ai.settings.provider.model', 'Model')}
+          label={
+            value.provider === 'azure' && value.flavor !== 'foundry'
+              ? t(
+                  'ai.settings.provider.azureModelLabel',
+                  'Model identifier (e.g. gpt-4o-mini)',
+                )
+              : t('ai.settings.provider.model', 'Model')
+          }
           placeholder={isCloud ? 'gpt-4o-mini' : 'llama3.1:8b'}
           value={value.model}
           onChange={(e) => patch({ model: e.target.value })}
           data-testid="ai-provider-model"
+          hint={
+            value.provider === 'azure' && value.flavor !== 'foundry'
+              ? t(
+                  'ai.settings.provider.azureModelHint',
+                  'Used for cost tracking. Leave Deployment blank if your Azure deployment is named the same.',
+                )
+              : undefined
+          }
         />
       </div>
+
+      {/*
+       * Azure surfaces both Azure OpenAI Service (deployment-name
+       * routing in the URL) and the Azure AI Foundry / Inference API
+       * (model-in-body multi-vendor surface). The flavor switch + the
+       * deployment / api-version inputs live behind a provider===azure
+       * guard so the existing OpenAI/Anthropic flows are unchanged.
+       */}
+      {isCloud && value.provider === 'azure' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Select
+            label={t('ai.settings.provider.azureFlavor', 'Azure surface')}
+            value={value.flavor || 'openai'}
+            onChange={(e) => patch({ flavor: e.target.value })}
+            data-testid="ai-provider-azure-flavor"
+            options={[
+              {
+                value: 'openai',
+                label: 'Azure OpenAI Service (gpt-4o, gpt-4-turbo, …)',
+              },
+              {
+                value: 'foundry',
+                label: 'Azure AI Foundry / Inference (multi-vendor)',
+              },
+            ]}
+          />
+
+          <Input
+            label={t('ai.settings.provider.azureApiVersion', 'API version')}
+            placeholder="2024-10-21"
+            value={value.api_version}
+            onChange={(e) => patch({ api_version: e.target.value })}
+            data-testid="ai-provider-azure-api-version"
+            hint={t(
+              'ai.settings.provider.azureApiVersionHint',
+              'Leave blank to use the adapter default.',
+            )}
+          />
+
+          {value.flavor !== 'foundry' && (
+            <>
+              <Input
+                label={t(
+                  'ai.settings.provider.azureDeployment',
+                  'Chat deployment name',
+                )}
+                placeholder={value.model || 'gpt-4o-mini'}
+                value={value.deployment}
+                onChange={(e) => patch({ deployment: e.target.value })}
+                data-testid="ai-provider-azure-deployment"
+                hint={t(
+                  'ai.settings.provider.azureDeploymentHint',
+                  'Leave blank to reuse the Model field.',
+                )}
+              />
+
+              <Input
+                label={t(
+                  'ai.settings.provider.azureEmbeddingDeployment',
+                  'Embedding deployment name (optional)',
+                )}
+                placeholder={value.embedding_model || 'text-embedding-3-small'}
+                value={value.embedding_deployment}
+                onChange={(e) =>
+                  patch({ embedding_deployment: e.target.value })
+                }
+                data-testid="ai-provider-azure-embedding-deployment"
+              />
+            </>
+          )}
+        </div>
+      )}
 
       {!isCloud && (
         <div className="space-y-1">
@@ -171,6 +286,23 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
             )}
           </Stack>
         </div>
+      )}
+
+      {isCloud && value.provider === 'azure' && (
+        <Input
+          label={t(
+            'ai.settings.provider.azureBaseUrl',
+            'Resource endpoint URL',
+          )}
+          placeholder="https://my-resource.openai.azure.com"
+          value={value.base_url}
+          onChange={(e) => patch({ base_url: e.target.value })}
+          data-testid="ai-provider-azure-base-url"
+          hint={t(
+            'ai.settings.provider.azureBaseUrlHint',
+            'The Azure OpenAI resource endpoint or Azure AI Foundry endpoint.',
+          )}
+        />
       )}
 
       {isCloud && (
