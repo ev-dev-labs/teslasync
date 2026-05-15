@@ -1,0 +1,628 @@
+=== PREFLIGHT ===
+
+Slice:  Phase-50 / Prompt 0065 — W1 SPA AI Feature Wiring Completion
+Branch: feat/vampire-drain-explanation
+HEAD:   9c894414a (feat(ai): add Charging-curve fingerprint clustering statistical model)
+Date:   2026-05-15 (UTC-7)
+
+--- CMD: git rev-parse --abbrev-ref HEAD ---
+feat/vampire-drain-explanation
+EXIT=0
+
+--- CMD: git status --short ---
+(empty — clean working tree)
+EXIT=0
+
+--- CMD: ls .github/prompts/db-refactor/logs/phase-50-*.log | wc -l ---
+# expected: 64 predecessor logs (0001..0064) plus 9999 final-gate
+41
+EXIT=0  (command succeeded; the COUNT is the failure)
+
+--- CMD: list of present phase-50 slice logs (predecessor + final) ---
+phase-50-0001-F0-ai-off-contract.log
+phase-50-0002-F1-provider-abstraction.log
+phase-50-0003-F2-settings-ui.log
+phase-50-0004-F3-ai-call-log.log
+phase-50-0005-F4-tool-use-framework.log
+phase-50-0006-F5-sse-streaming.log
+phase-50-0007-F6-eval-harness.log
+phase-50-0008-F7-embeddings-pgvector.log
+phase-50-0009-F8-redaction.log
+phase-50-0010-F9-rate-limiter-cost-cap.log
+phase-50-0011-chatbot-llm.log
+phase-50-0012-digest-narration.log
+phase-50-0013-yir-narration.log
+phase-50-0014-anomaly-explanations.log
+phase-50-0015-nl-alert-builder.log
+phase-50-0016-nl-automation-builder.log
+phase-50-0017-nl-search.log
+phase-50-0018-drive-coaching.log
+phase-50-0019-charging-diagnosis.log
+phase-50-0020-rag-help.log
+phase-50-0021-nl-drive-search-replay.log
+phase-50-0022-speed-profile-insights.log
+phase-50-0023-route-efficiency-suggestions.log
+phase-50-0024-auto-trip-naming.log
+phase-50-0025-trip-planner-llm-agent.log
+phase-50-0026-smart-charge-schedule-suggestion.log
+phase-50-0027-battery-health-forecast-narrative.log
+phase-50-0028-charging-curve-fingerprint-clustering.log
+phase-50-0029-cost-forecast-narration.log
+phase-50-0030-vampire-drain-explanation.log
+phase-50-0031-preheat-precool-recommender.log
+phase-50-0032-cabin-temperature-impact-narrative.log
+phase-50-0033-tire-pressure-trend-reasoning.log
+phase-50-0034-alert-tuning-suggestions.log
+phase-50-0035-inbox-auto-categorization.log
+phase-50-0036-cross-rule-conflict-detection.log
+phase-50-0037-auto-name-unnamed-locations.log
+phase-50-0062-learned-per-vehicle-anomaly-baselines.log
+phase-50-0063-range-prediction-model.log
+phase-50-0064-ml-charging-curve-clustering.log
+phase-50-9999-final-gate.log                 <-- predecessor 9999 is BLOCKED
+
+--- CMD: missing predecessor slice logs (0001..0064) ---
+0038, 0039, 0040, 0041, 0042, 0043, 0044, 0045, 0046, 0047,
+0048, 0049, 0050, 0051, 0052, 0053, 0054, 0055, 0056, 0057,
+0058, 0059, 0060, 0061
+Missing count: 24
+Predecessor coverage: 40 / 64  ==>  FAIL (expected 64 / 64 STATUS=DONE)
+
+--- CMD: corresponding prompt files for missing predecessors (the work
+         these slices were supposed to land but did not) ---
+0038-G2-suggest-new-geofences.prompt.md
+0039-G3-geofence-aware-automation-suggestions.prompt.md
+0040-X1-period-compare-narration.prompt.md
+0041-X2-lifetime-stats-qa.prompt.md
+0042-S1-incident-timeline-summarizer.prompt.md
+0043-S2-data-repair-suggestions.prompt.md
+0044-S3-signal-explorer-nl-filter.prompt.md
+0045-S4-log-trace-summarization.prompt.md
+0046-S5-feedback-queue-triage.prompt.md
+0047-S6-mqtt-sse-inspector-explanations.prompt.md
+0048-S7-state-machine-debugger-narrator.prompt.md
+0049-M1-predictive-maintenance.prompt.md
+0050-M2-tco-narration.prompt.md
+0051-M3-software-update-changelog-summarizer.prompt.md
+0052-P1-pii-redaction-shared-exports.prompt.md
+0053-P2-quiet-hours-suggestion.prompt.md
+0054-P3-safety-setting-explainer.prompt.md
+0055-V1-voice-mode.prompt.md
+0056-V2-watch-face-nl-response.prompt.md
+0057-PU1-nl-sql-playground.prompt.md
+0058-PU2-nl-grafana-panel.prompt.md
+0059-PU3-nl-dashboard-composer.prompt.md
+0060-GEN1-trip-postcard-share-card-image-generation.prompt.md
+0061-GEN2-vehicle-paint-preview.prompt.md
+
+--- CMD: STATUS check on the 40 PRESENT predecessor logs ---
+# (output of: Select-String '^STATUS=' on each phase-50 log, last hit)
+phase-50-0001..0037   STATUS=DONE  (37 / 37 PASS)
+phase-50-0062..0064   STATUS=DONE  ( 3 /  3 PASS)
+phase-50-9999         STATUS=BLOCKED (predecessor 9999 already records the
+                                      same 0038..0061 gap; see commit
+                                      fe4fcf98a "chore(ai): block phase-50
+                                      final gate - 44/64 predecessor slices
+                                      missing")
+Predecessor STATUS=DONE coverage: 40 / 40 present pass; but 24 logs absent.
+
+--- CMD: registry IDs in scope (Select-String 'ID:\s+"' on
+         internal/ai/features/registry.go) ---
+chatbot-llm                              (line  105)   USER-FACING
+ai-provider-health                       (line  130)   INTERNAL
+__usage__                                (line  163)   INTERNAL
+digest-narration                         (line  213)   USER-FACING
+yir-narration                            (line  265)   USER-FACING
+anomaly-explanations                     (line  319)   USER-FACING
+auto-trip-naming                         (line  390)   USER-FACING
+nl-alert-builder                         (line  448)   USER-FACING
+nl-automation-builder                    (line  512)   USER-FACING
+nl-search                                (line  580)   USER-FACING
+drive-coaching                           (line  638)   USER-FACING
+charging-diagnosis                       (line  703)   USER-FACING
+rag-help                                 (line  746)   USER-FACING
+nl-drive-search-replay                   (line  799)   USER-FACING
+speed-profile-insights                   (line  852)   USER-FACING
+route-efficiency-suggestions             (line  915)   USER-FACING
+trip-planner-llm-agent                   (line  985)   USER-FACING
+smart-charge-schedule-suggestion         (line 1015)   USER-FACING
+battery-health-forecast-narrative        (line 1059)   USER-FACING
+charging-curve-fingerprint-clustering    (line 1109)   USER-FACING
+cost-forecast-narration                  (line 1159)   USER-FACING
+vampire-drain-explanation                (line 1227)   USER-FACING
+preheat-precool-recommender              (line 1309)   USER-FACING
+cabin-temperature-impact-narrative       (line 1371)   USER-FACING
+tire-pressure-trend-reasoning            (line 1445)   USER-FACING
+alert-tuning-suggestions                 (line 1520)   USER-FACING
+inbox-auto-categorization                (line 1612)   USER-FACING
+cross-rule-conflict-detection            (line 1704)   USER-FACING
+auto-name-unnamed-locations              (line 1774)   USER-FACING
+__redaction_bypass__                     (line 1803)   INTERNAL
+learned-per-vehicle-anomaly-baselines    (line 1859)   USER-FACING
+ml-charging-curve-clustering             (line 1924)   USER-FACING
+range-prediction-model                   (line 1972)   USER-FACING
+
+Registry totals:
+  - 33 entries
+  - 30 user-facing entries with non-empty UITestIDs
+  -  3 internal entries excluded by SPAWiringTable spec
+       (ai-provider-health, __usage__, __redaction_bypass__)
+
+Expected user-facing entries (per the predecessor 0001..0064 plan and
+ADR-015 §I3 rendered-or-absent invariant): 30 (the 16 listed in the
+0065 prompt's authoring-time floor) + the 14 owned by missing slices
+0038..0061. Of those 14, the 0065 prompt's SPAWiringTable does NOT
+enumerate them — and the slice prompts that should have introduced
+them never ran, so the registry has nothing for the W1 contract to
+bind to:
+
+  Missing user-facing IDs (one per missing predecessor slice):
+    G2 0038  suggest-new-geofences
+    G3 0039  geofence-aware-automation-suggestions
+    X1 0040  period-compare-narration
+    X2 0041  lifetime-stats-qa
+    S1 0042  incident-timeline-summarizer
+    S2 0043  data-repair-suggestions
+    S3 0044  signal-explorer-nl-filter
+    S4 0045  log-trace-summarization
+    S5 0046  feedback-queue-triage
+    S6 0047  mqtt-sse-inspector-explanations
+    S7 0048  state-machine-debugger-narrator
+    M1 0049  predictive-maintenance
+    M2 0050  tco-narration
+    M3 0051  software-update-changelog-summarizer
+    P1 0052  pii-redaction-shared-exports
+    P2 0053  quiet-hours-suggestion
+    P3 0054  safety-setting-explainer
+    V1 0055  voice-mode
+    V2 0056  watch-face-nl-response
+    PU1 0057 nl-sql-playground
+    PU2 0058 nl-grafana-panel
+    PU3 0059 nl-dashboard-composer
+    GEN1 0060 trip-postcard-share-card-image-generation
+    GEN2 0061 vehicle-paint-preview
+
+Per Honesty Covenant rule #7 ("No predecessor bypass — verify every
+predecessor (0001-0064) STATUS=DONE first") and the prompt's Blocked
+Path ("Predecessor not DONE — if any predecessor 0001-0064 log is
+missing or has STATUS != DONE, W1 MUST block with the missing slice
+ID listed. Do NOT pick a subset of features and wire only those"),
+this slice halts at PREFLIGHT. The §2..§6 deliverables are NOT
+attempted in this run.
+
+=== SURVEY ===
+
+Although BLOCKED at PREFLIGHT, the survey commands required by the
+prompt's Evidence section are run and recorded so a future re-run
+knows the exact starting state. The survey shows that the CODE-
+WIRING portion of W1 has already partially landed in earlier
+commits, but the METHODOLOGY + STATIC-ENFORCEMENT portion has not.
+
+--- CMD: count of placeholder strings under web/src/components/ai/AI*.tsx ---
+# pattern: 'future slice|coming soon|wiring lands|would call POST'
+# (case-insensitive)
+Select-String results (file:line excerpt):
+  AIChatbotIndicator.tsx:15: "consumed by a future slice's frontend
+                             SSE hook. This slice ships only the
+                             visible AI marker..."
+Total occurrences: 1
+Note: the 0065 prompt's Evidence section says "placeholders >= 16
+before this slice, 0 after". The actual count today is 1, not 16,
+because the wiring portion of W1 already landed in commits
+789cd8478 ("feat(ai/spa): wire all AI feature components to SSE via
+useAiStream + AiOutputPanel") and c3fc46274 ("feat(ai/chatbot):
+wire ChatbotPage to /ai/chatbot SSE when AI enabled"). The lone
+remaining occurrence is a doc-comment in the chatbot INDICATOR
+component (a small badge, not the chatbot's submit path) and
+falls under the SPAWiringIndicatorOnly carve-out described in
+the 0065 prompt.
+
+--- CMD: count of files under web/src/components/ai importing
+         the canonical wiring hook ---
+# pattern: "useAiStream|useMutation"
+Select-String results: 31 files match (30 user-facing AI components
++ AiLimitBanner.tsx which only imports the AiLimitInfo type).
+Total components wired with useAiStream: 30 / 30 user-facing.
+
+--- CMD: AI component file inventory ---
+Get-ChildItem web/src/components/ai -Filter "AI*.tsx" -File | Where
+not in {test, Test, withAi, AiLimit, AiOutput, ConfirmDialog} count: 30
+
+The 30 user-facing component files, paired with their registry IDs
+(matches the 0065 prompt's SPAWiringTable authoring-time floor of
+16 entries plus 14 additional entries the predecessor slices
+0027..0064 introduced after the 0065 prompt was authored):
+
+  chatbot-llm                              -> features/system/pages/ChatbotPage.tsx (gated branch + indicator)
+  digest-narration                         -> components/ai/AIDigestNarration.tsx
+  yir-narration                            -> components/ai/AIYearReviewNarration.tsx
+  anomaly-explanations                     -> components/ai/AIAnomalyExplanations.tsx
+  auto-trip-naming                         -> components/ai/AIAutoTripNameSuggestion.tsx
+  nl-alert-builder                         -> components/ai/AINLAlertBuilder.tsx
+  nl-automation-builder                    -> components/ai/AINLAutomationBuilder.tsx
+  nl-search                                -> components/ai/AINLSearch.tsx
+  drive-coaching                           -> components/ai/AIDriveCoaching.tsx
+  charging-diagnosis                       -> components/ai/AIChargingDiagnosis.tsx
+  rag-help                                 -> components/ai/AIRAGHelp.tsx
+  nl-drive-search-replay                   -> components/ai/AINLDriveSearch.tsx
+  speed-profile-insights                   -> components/ai/AISpeedProfileInsights.tsx
+  route-efficiency-suggestions             -> components/ai/AIRouteEfficiencySuggestions.tsx
+  trip-planner-llm-agent                   -> components/ai/AITripPlannerLLMAgent.tsx
+  smart-charge-schedule-suggestion         -> components/ai/AISmartChargeScheduleSuggestion.tsx
+  battery-health-forecast-narrative        -> components/ai/AIBatteryHealthForecastNarrative.tsx
+  charging-curve-fingerprint-clustering    -> components/ai/AIChargingCurveFingerprintClustering.tsx
+  cost-forecast-narration                  -> components/ai/AICostForecastNarration.tsx
+  vampire-drain-explanation                -> components/ai/AIVampireDrainExplanation.tsx
+  preheat-precool-recommender              -> components/ai/AIPreheatPrecoolRecommender.tsx
+  cabin-temperature-impact-narrative       -> components/ai/AICabinTemperatureImpactNarrative.tsx
+  tire-pressure-trend-reasoning            -> components/ai/AITirePressureTrendReasoning.tsx
+  alert-tuning-suggestions                 -> components/ai/AIAlertTuningSuggestions.tsx
+  inbox-auto-categorization                -> components/ai/AIInboxAutoCategorization.tsx
+  cross-rule-conflict-detection            -> components/ai/AICrossRuleConflictDetection.tsx
+  auto-name-unnamed-locations              -> components/ai/AIAutoNameUnnamedLocations.tsx
+  learned-per-vehicle-anomaly-baselines    -> components/ai/AILearnedAnomalyBaselines.tsx
+  ml-charging-curve-clustering             -> components/ai/AIMLChargingCurveClustering.tsx
+  range-prediction-model                   -> components/ai/AIRangePrediction.tsx
+
+Per-file submit handler / placeholder evidence:
+  - 0 / 30 user-facing components have a literal `disabled` /
+    `disabled={true}` on a primary action button (Rule W1-A clean).
+  - 30 / 30 user-facing components import `useAiStream` from
+    '@/hooks/useAiStream' (Rule W1-B import side clean).
+  - 30 / 30 user-facing components reference the registered
+    backend route either as a string literal in the call site or
+    via a feature-local URL constant (Rule W1-B endpoint side OK
+    pending the generated `web/src/ai/spaWiring.ts` central map).
+  - The chatbot integration covers BOTH the SSE submit path
+    (useAiStream when useAiEnabled('chatbot-llm') === true) AND
+    the heuristic baseline (useSendChatMessage otherwise) inside
+    web/src/features/system/pages/ChatbotPage.tsx (6 cross-references
+    found by Select-String 'useAiEnabled|useAiStream' on that file).
+
+ChatbotPage gated-branch evidence (0065 prompt §6 Action Step 7):
+  Select-String results on web/src/features/system/pages/ChatbotPage.tsx:
+    - imports useAiEnabled
+    - imports useAiStream
+    - submitMessage branches on useAiEnabled('chatbot-llm')
+    - handleRegenerate branches on useAiEnabled('chatbot-llm')
+    - handleEditAndResend branches on useAiEnabled('chatbot-llm')
+    - on-toggle-off effect cancels the SSE
+  This satisfies action step 7's requirements when the slice runs.
+
+What HAS landed already (so a future re-run does not redo it):
+  ✓ All 30 user-facing AI components wired with useAiStream.
+  ✓ ChatbotPage gated branch (SSE on, heuristic off).
+  ✓ Shared AiOutputPanel renderer (web/src/components/ai/AiOutputPanel.tsx)
+    explicitly headered "Phase-50 / W1 (slice 0065) — shared
+    streaming-output renderer".
+  ✓ Shared AiLimitBanner consuming useAiStream's AiLimitInfo type.
+  ✓ Per-feature off-mode tests exist for the previously-suspect
+    surfaces (TestAlertTuningSuggestionsAIOffManualTuningWorks,
+    TestInboxCategorizationAIOffNoAutoLabels,
+    TestCrossRuleConflictAIOffHidesConflictPanel,
+    TestAutoNameLocationsAIOffManualNamingWorks).
+
+What HAS NOT landed (the remaining W1 deliverables, blocked by
+the missing predecessors):
+  ✗ internal/ai/features/spa_wiring.go — Go source-of-truth
+    SPAWiringTable (would have to omit the 24 missing IDs OR
+    reference 24 components that don't exist).
+  ✗ internal/ai/features/spa_wiring_test.go — SPAWiringSelfCheck
+    asserting registry/table parity (would either fail or pass
+    trivially against a partial registry — both are misleading).
+  ✗ web/src/ai/spaWiring.ts — generated TS mirror of the table.
+  ✗ tools/aigen --spa-wiring flag and generator extension.
+  ✗ tools/aivet rules W1-A and W1-B (placeholder + import checks).
+  ✗ Methodology principles P11 ("Wired-or-absent") and P12
+    ("No placeholder buttons") appended to
+    .github/prompts/db-refactor/phase-50-ai-adoption/0000-methodology.prompt.md.
+  ✗ Per-feature *AIOnWiredCallsRoute integration test matrix
+    (5 cases per feature × 30 features + chatbot extras).
+  ✗ Removal of the lone "future slice" comment in
+    AIChatbotIndicator.tsx line 15 (intentionally NOT removed in
+    this BLOCKED run; the carve-out it describes belongs in the
+    SPAWiringIndicatorOnly allowlist that the W1 source-of-truth
+    file would introduce).
+
+In short: the IMPLEMENTATION half of W1 is roughly 90% complete
+in tree (modulo the chatbot-indicator comment and the central
+endpointPath constant). The METHODOLOGY + STATIC-ENFORCEMENT half
+is 0%, and cannot land DONE while 24 features the contract is
+meant to enforce are absent from the registry.
+
+=== REASONING ===
+
+Why this slice MUST block now (in priority order):
+
+1. Honesty Covenant rule #7 — "No predecessor bypass — verify
+   every predecessor (0001-0064) STATUS=DONE first". 24 logs are
+   missing (0038..0061). Per rule #1 ("No red-as-green") and rule
+   #3 ("No skip-and-assume"), running the §2..§6 verification
+   commands against an incomplete predecessor set would either
+   fabricate a green result against a partial table or fail and
+   require BLOCKED anyway. The honest action is to BLOCK at §1.
+
+2. Prompt's Blocked Path explicit text — "Predecessor not DONE —
+   if any predecessor 0001-0064 log is missing or has STATUS !=
+   DONE, W1 MUST block with the missing slice ID listed. Do NOT
+   pick a subset of features and wire only those." The 24 IDs
+   above are the literal slice IDs the rule asks for.
+
+3. Prior final-gate precedent — phase-50-9999-final-gate.log at
+   commit fe4fcf98a already blocked for the SAME reason (44/64
+   missing then; 24/64 missing now after additional slice
+   commits). W1's contract sits one level below the final gate;
+   it cannot be DONE while the final gate is BLOCKED on the same
+   set of missing predecessors.
+
+4. SPAWiringSelfCheck would either fail or false-pass —
+   - If we author the table to enumerate ONLY the 30 user-facing
+     features currently in the registry, the self-check passes
+     trivially today and STAYS green when the missing 24 land
+     LATER without their components — a silent-drift trap.
+   - If we author the table to enumerate the 14 missing IDs as
+     well, the self-check fails immediately because the registry
+     has no entries to bind to and the component files don't
+     exist on disk.
+   Either path produces a misleading W1 STATUS. Per Covenant
+   rule #4 ("No field resurrection — don't add back deleted
+   fields to 'fix' things") and the prompt's Blocked Path bullet
+   "If the corresponding web/src/components/ai/AI*.tsx file does
+   not exist, the predecessor slice that owns that feature is
+   incomplete — block on that slice, do NOT scaffold the
+   component here", the correct answer is to BLOCK.
+
+5. The methodology + aivet rules are IDEMPOTENT and HIGH-LEVERAGE
+   on a complete registry, but LOW-LEVERAGE on a partial one —
+   adding W1-A and W1-B today would only enforce against the 30
+   present components and would silently miss the 24 that land
+   LATER. Better to land all five W1 deliverables (P11/P12,
+   spa_wiring.go, spaWiring.ts, aivet rules, self-check tests)
+   in a single commit AFTER the missing predecessors.
+
+ADR-015 invariant impact of this BLOCKED run:
+  - I3 (baseline intact): no diff = no risk. Every baseline
+    surface (POST /chatbot heuristic, manual AlertStudio form,
+    manual TripPlanner, etc.) is unchanged by this slice.
+  - I5 (off-mode absence): no diff = no risk. The 30 wired AI
+    surfaces continue to obey withAiFeature gating; the 24
+    missing surfaces simply do not exist (which is also "absent
+    in off mode" — vacuously satisfied, but not proven for the
+    on-mode positive control).
+  - I6 (404 in off mode): no diff = no risk for the 30 routes
+    that exist; the 24 routes that don't exist are not 404 — they
+    are 404 because they were never registered at all, which
+    happens to satisfy the off-mode contract by accident.
+  - I7 (no SQL bypass): no diff. The propose-only contract for
+    the 14 RenderProposal + 1 RenderSuggestion features the
+    0065 prompt enumerates is preserved — every "Apply to form"
+    button still routes through the baseline form's existing
+    Save handler.
+  - I8 (no duplicate writers): no diff. No new write paths.
+
+Methodology principles this slice WOULD codify (and which
+remain uncodified for now):
+  - P11 (Wired-or-absent): every guarded AI surface that ships
+    a backend route MUST have its frontend counterpart call that
+    route end-to-end when the feature is enabled.
+  - P12 (No placeholder buttons): shipped AI components MUST
+    NOT render an unconditionally `disabled` primary action with
+    placeholder copy.
+
+Both principles are observed in tree today by the 30 wired
+components — they just are not yet WRITTEN INTO the methodology
+and not yet ENFORCED by aivet.
+
+=== CHANGES ===
+
+Production source:        none (forbidden by this slice's Allowed-
+                          files list when blocking, and not warranted
+                          under the Blocked Path).
+Tests:                    none (would be vacuous against an
+                          incomplete registry; see REASONING #4).
+Registry / i18n / golden: none (owned by the missing feature slices).
+Static-enforcement tools: none (W1-A and W1-B would silently miss
+                          the 24 missing features when they land).
+Source-of-truth tables:   none (spa_wiring.go would be a half-
+                          truth today).
+Methodology:              none (P11 and P12 are deferred to the
+                          re-run that includes the missing slices).
+Prompt artifacts:         none (this slice does not modify the
+                          0065 prompt).
+Log:                      .github/prompts/db-refactor/logs/
+                          phase-50-0065-spa-feature-wiring.log
+                          (this file — created)
+
+Allowed-files diff vs. `git status --short`: only the log file
+above is written. No drift outside the slice's Allowed-files list.
+
+=== GATE ===
+
+Per the Blocked Path, the prompt's verification commands are NOT
+run in this attempt because the §1 precondition (predecessor
+coverage) fails. Running them against a partial registry would
+violate Covenant rule #3 ("No skip-and-assume — can't run gate
+-> BLOCKED, never DONE") by manufacturing a partial-coverage
+result.
+
+The only commands run for this slice are the §1 pre-flight + §2
+survey commands already transcribed above. Their pass/fail verdict
+is:
+
+  --- §1 Pre-flight ---
+  Predecessor log count:        40 / 64                 EXIT=1 (FAIL)
+  Predecessor STATUS=DONE check: 40 / 40 present pass    EXIT=0 (PASS)
+  Predecessor 9999 final-gate:   STATUS=BLOCKED          EXIT=1 (FAIL)
+                                  (already blocks on the same gap)
+
+  --- §2 Survey ---
+  Component file inventory:      30 / 30 user-facing     EXIT=0 (PASS)
+  useAiStream import coverage:   30 / 30 user-facing     EXIT=0 (PASS)
+  Placeholder string scan:       1 occurrence            EXIT=1 (WARN —
+                                  AIChatbotIndicator.tsx:15, falls
+                                  under SPAWiringIndicatorOnly carve-
+                                  out the W1 source-of-truth file
+                                  would introduce)
+  Literal-disabled scan:         0 occurrences           EXIT=0 (PASS)
+  ChatbotPage gated branch:      6 useAi* references     EXIT=0 (PASS)
+
+  --- §3 SPAWiringSelfCheck ---     SKIPPED (cannot author the
+                                    source-of-truth table without
+                                    entries for the 24 missing
+                                    features; see REASONING #4)
+  --- §4 aivet W1-A / W1-B ---      SKIPPED (would only enforce
+                                    against the 30 present features
+                                    and silently miss the 24 missing)
+  --- §5 Build / TS / lint ---      SKIPPED (no source diff this run)
+  --- §6 Per-feature *WiredCallsRoute
+         test matrix ---            SKIPPED (vacuous without
+                                    registry parity)
+  --- §7 npm run build ---          SKIPPED (no source diff)
+
+Aggregate gate verdict: FAIL on §1 predecessor coverage; remaining
+steps not run.
+
+=== COMMIT ===
+
+Note: the logs directory is in .gitignore (per /.gitignore lines
+83-95: ".github/prompts/*", "/.github/prompts", "/.github/prompts/
+db-refactor/logs", with explicit re-includes for the prompts
+directories but NOT for the logs directory). Predecessor logs
+0001..0064 + 9999 were force-added with `git add -f` by their
+respective slices, matching the established convention. This slice
+follows the same convention.
+
+--- CMD: git add -f .github/prompts/db-refactor/logs/phase-50-0065-spa-feature-wiring.log ---
+(see commit transcript below)
+EXIT=0
+
+--- CMD: git status --short (after add) ---
+A  .github/prompts/db-refactor/logs/phase-50-0065-spa-feature-wiring.log
+
+  --> Only the allowed log file is staged. No drift outside this
+      slice's Allowed-files list. Honesty Covenant rule #9 ("No
+      silent drift — git status outside allowed files -> BLOCKED")
+      satisfied.
+
+--- CMD: git commit (blocked-log-only) ---
+chore(ai): block phase-50/0065 W1 wiring - 24/64 predecessor slices missing
+
+Per Honesty Covenant rule #7 and the 0065 prompt's Blocked Path
+("Predecessor not DONE — W1 MUST block with the missing slice ID
+listed"), this slice halts at PREFLIGHT.
+
+Predecessor coverage: 40 / 64 (24 missing). Missing slice IDs:
+0038..0061 (G2, G3, X1, X2, S1-S7, M1-M3, P1-P3, V1-V2, PU1-PU3,
+GEN1-GEN2). The 9999 final-gate already blocks on the same gap
+(see commit fe4fcf98a). The IMPLEMENTATION half of W1 (component
+wiring with useAiStream, ChatbotPage gated branch, AiOutputPanel)
+is already largely landed by commits 789cd8478 and c3fc46274;
+the METHODOLOGY + STATIC-ENFORCEMENT half (P11/P12, spa_wiring.go,
+spaWiring.ts, aivet W1-A/W1-B, SPAWiringSelfCheck) is deferred
+to the re-run that follows the missing predecessors.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+(git commit transcript appended after running the command)
+
+Per Honesty Covenant rule #8 ("No commit on red — commit only
+the log when BLOCKED"): only this log file was committed. No
+production source, no test source, no migrations, no prompt
+edits, no tag.
+
+=== AI-OFF CONTRACT ===
+
+This slice is verification-only and was BLOCKED at pre-flight; no
+production code, configuration, or DB schema was touched. The 10
+ADR-015 invariants enumerated by the 0065 prompt's footer are
+therefore preserved trivially (no diff = no risk), but for each
+invariant we record the affirmative evidence we did gather while
+preparing this slice. Per-feature evidence is recorded for the
+30 user-facing features that DO exist; the 24 missing features
+have NO surface to evaluate (which is itself the blocker).
+
+I1  Default-off ............ UNTOUCHED (settings.ai_mode default
+                              is set by slice 0003-F2-settings-ui,
+                              log present + STATUS=DONE).
+I2  Toggle-driven .......... UNTOUCHED (per-feature toggles are
+                              owned by the F-tier slices already
+                              done; not modified here).
+I3  Baseline intact ........ UNTOUCHED — per-feature evidence:
+                              - chatbot-llm: POST /chatbot heuristic
+                                still owns the conversation when
+                                useAiEnabled('chatbot-llm') === false
+                                (verified by ChatbotPage gated
+                                branch, 6 useAi* refs).
+                              - nl-alert-builder: AlertStudio
+                                manual form unchanged (no diff).
+                              - nl-automation-builder: Automations
+                                builder manual form unchanged.
+                              - 27 other surfaces: no source diff
+                                this run, baseline routes unchanged.
+                              - 24 missing features: no surface to
+                                evaluate (not present in registry).
+I4  Audit everything ....... UNTOUCHED (audit decorator chain
+                              landed by slice 0004-F3-ai-call-log,
+                              log present + STATUS=DONE).
+I5  UI honest .............. NOT FULLY PROVEN — per-feature
+                              evidence:
+                              - 30 / 30 user-facing AI components
+                                wired through withAiFeature gate;
+                                their data-testid="ai-feature-<id>-
+                                root" elements are absent in off
+                                mode (already verified by predecessor
+                                off-mode tests in the 0011..0037 +
+                                0062..0064 logs).
+                              - 24 missing features: no UI surface
+                                exists to render, which trivially
+                                satisfies "absent in off mode" but
+                                fails the on-mode positive control
+                                (the surface MUST exist when ai_mode
+                                is on AND the feature toggle is on).
+I6  Routes 404 ............. NOT FULLY PROVEN — per-feature
+                              evidence:
+                              - 30 user-facing routes return 404 in
+                                off mode (verified by guard.Wrap
+                                landed by slice 0001-F0).
+                              - 24 missing routes: not registered
+                                AT ALL, which makes them 404 in
+                                BOTH off and on modes — the off-
+                                mode contract is satisfied by
+                                accident, the on-mode contract is
+                                violated.
+I7  No SQL bypass .......... UNTOUCHED — per-feature evidence: no
+                              new write path introduced by this
+                              slice; the 14 RenderProposal + 1
+                              RenderSuggestion features the 0065
+                              prompt enumerates continue to route
+                              their "Apply to form" actions through
+                              the baseline form's existing Save
+                              handler (no diff, no regression).
+I8  No duplicate writers ... UNTOUCHED — per-feature evidence: the
+                              propose-only contract is preserved.
+                              No mutation hook in any AI component
+                              calls a baseline write path on
+                              onSuccess (verified by survey: 30 /
+                              30 components only call useAiStream;
+                              none import baseline mutation hooks
+                              such as useUpdateAlertRule or
+                              useCreateAutomation).
+I9  Retrieval uses RAG ..... UNTOUCHED (RAG retriever landed by
+                              slice 0008-F7-embeddings-pgvector,
+                              log present + STATUS=DONE).
+I10 Type system ............ UNTOUCHED — aivet / aigen / ESLint
+                              rules unchanged this run; no AI
+                              components added; no new TS DTOs
+                              added. The W1-A and W1-B aivet
+                              rules that this slice WOULD have
+                              added are deferred (see GATE §4).
+
+Net effect on the AI-Off Contract: zero diff, zero new risk for
+the 30 wired surfaces; zero proof for the 24 missing surfaces
+(which is exactly the blocker this log records). The contract
+remains exactly as the predecessor slices 0001..0037 + 0062..0064
+left it.
+
+=== STATUS ===
+EXIT=1
+STATUS=BLOCKED
