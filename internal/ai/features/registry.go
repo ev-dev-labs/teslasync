@@ -1787,6 +1787,93 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / 0038 — G2 Suggest new geofences.
+	//
+	// `suggest-new-geofences` is the LLM-backed assistant at
+	// POST /api/v1/ai/geofences/draft that PROPOSES a typed
+	// geofence draft (centroid lat/lon + radius_m + name) for ONE
+	// existing visited location based on its visit evidence. It
+	// is propose-only: the AI reads the visited-location aggregate
+	// (current address_name, visit_count, total_duration_s,
+	// last_visited) via the typed draft_geofence + validate_geofence
+	// tool pair, and the user reviews the proposal in the
+	// GeofencesPage UI before clicking "Apply to form" — which
+	// copies the typed envelope into the existing baseline Add
+	// Geofence form — and then SAVES IT THEMSELVES via the canonical
+	// POST /api/v1/geofences write path. The AI itself never
+	// persists. The slice prompt's "without creating them
+	// autonomously" mandate is enforced by the absence of any
+	// create_/update_/delete_ tool from the strategy's whitelist
+	// (the dispatcher's deny-all confirm hook would refuse them
+	// even if one slipped in).
+	//
+	// Tier "G" reflects the "Geo / Locations" tier — joins
+	// auto-name-unnamed-locations as the second feature in this
+	// tier. CoverageOK accepts any non-empty Tier string; the
+	// value is plumbed into the SettingsPage groupings only.
+	//
+	// Backend route: POST /api/v1/ai/geofences/draft is mounted
+	// in mountAIRoutes (internal/api/ai_routes.go) under
+	// guard.Wrap("suggest-new-geofences", …) so an off-mode probe
+	// returns 404 BEFORE the handler ever sees the request
+	// (ADR-015 §I6). The handler is constructed in
+	// internal/api/router.go from the same provider.Registry +
+	// tools.Registry the rest of the AI surface uses. The route
+	// has no URL path param — the caller picks the location_id
+	// in the JSON body so the SPA can choose the in-scope visit
+	// at the moment the user clicks Suggest.
+	//
+	// Frontend route: /geofences is the canonical baseline
+	// geofences page (App.tsx). The slice prompt documents the
+	// route as `/locations/geofences`, but the SPA's actual
+	// mount point is `/geofences` — the registry MUST carry the
+	// real route so the off-mode walker can confirm the
+	// AI affordance is absent at the surface a user actually
+	// reaches.
+	//
+	// UI test ID: ai-feature-suggest-new-geofences-root is the
+	// data-testid the withAiFeature HOC stamps on the gated
+	// wrapper. Off-mode tests assert it is absent; on-mode tests
+	// assert it renders.
+	//
+	// JobNames: []string{} explicitly — suggest-new-geofences is
+	// request-scoped only; no background job, no Redis queue, no
+	// scheduled task. The slice prompt's Off-mode contract impact
+	// section names ai_location_cluster_indexer as a future-slice
+	// optional dependency, but THIS slice ships no jobs (the
+	// LLM works directly on the visited-location aggregate the
+	// existing drives-table read produces).
+	//
+	// PushKinds: []string{} explicitly — there is no
+	// notifications.kind for "AI proposed a geofence" in this
+	// slice. The user only sees the proposal inside the SPA
+	// when they explicitly open the GeofencesPage. The slice
+	// prompt names ai_geofence_suggested as a future-slice push
+	// kind, but THIS slice does not enqueue any push.
+	//
+	// Service worker chunks: ai-suggest-new-geofences is the
+	// dynamic-import name the SPA's lazy loader uses for the
+	// AISuggestNewGeofences component. Documented in the slice
+	// prompt's Off-mode contract impact section so the W1
+	// wired-or-absent invariant has a known chunk name to audit
+	// against.
+	"suggest-new-geofences": {
+		ID:          "suggest-new-geofences",
+		Name:        "Suggest new geofences",
+		Description: "Opt-in LLM-assisted geofence-suggestion proposals grounded in repeated visits to the same location (visit_count, total_duration_s, last_visited, current address_name). Propose-only: the AI produces a typed geofence draft envelope (centroid lat/lon + radius_m + name) via two typed read-only tools (draft_geofence then validate_geofence) and the user reviews + clicks 'Apply to form' before SAVING IT THEMSELVES through the existing baseline POST /api/v1/geofences write path. The deterministic geofence list, Add Geofence modal, and map rendered by GeofencesPage at /geofences remain the canonical baseline when AI is off. The per-feature redaction policy keeps lat/long and street addresses tagged; only the vehicle name may be narrated.",
+		Tier:        "G",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/geofences/draft"},
+			Frontend:  []string{"/geofences"},
+			UITestIDs: []string{"ai-feature-suggest-new-geofences-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

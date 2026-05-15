@@ -514,3 +514,42 @@ func PolicyAutoNameUnnamedLocations() Policy {
 		Mode:  ModeRedactedTags,
 	}
 }
+
+// PolicySuggestNewGeofences is the per-feature redaction policy for the
+// Phase-50 / 0038 — G2 suggest-new-geofences strategy. Allows
+// ClassVehicleName only — the proposed geofence name MAY reference the
+// user's vehicle (e.g. "Roadie's regular work stop") but every other
+// PII class — VIN, lat/long, street addresses, geocoded place names —
+// remains tagged via round-trip markers and restored only when the SSE
+// stream is rendered to the same authenticated user. This matches the
+// slice prompt's verbatim mandate:
+//
+//	Policy:              PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:     ClassVehicleName only; coordinates remain tagged
+//	                     until user confirmation
+//	Round-trip required: yes
+//
+// Kept as a distinct identifier from PolicyAutoNameUnnamedLocations and
+// every prior per-feature policy so a future per-feature change to one
+// slice's allow-list does not bleed across the others — every feature
+// is independently auditable. Although the suggest-new-geofences surface
+// is structurally close to auto-name-unnamed-locations (both propose
+// typed location-shaped artefacts grounded in visited-location
+// aggregates without persisting), they are independent slices and their
+// allow-lists are independently auditable.
+//
+// Threat model rationale: a geofence draft envelope carries a centroid
+// lat/lon pair and a radius_m, derived from the visited-location
+// aggregate's geocoded address_name. The lat/lon stays redaction-tagged
+// in any prompt context the LLM sees, so a leaked transcript reveals
+// neither the user's home/work coordinates nor the surrounding
+// place-name graph. The typed F4 tool envelope (NOT the prompt prose)
+// is what carries the centroid + radius back to the SPA, where the
+// user reviews them inside the existing baseline geofence-create form
+// before clicking Save.
+func PolicySuggestNewGeofences() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}

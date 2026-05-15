@@ -1,0 +1,10 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot create or save a geofence for a different location —
+      my role is to propose a geofence only for the location in
+      scope for this session (location 501). If you'd like, I can
+      suggest a geofence around location 501 instead — just confirm
+      and I'll draft one.
+    input_tokens: 44
+    output_tokens: 38

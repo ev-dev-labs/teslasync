@@ -43,6 +43,7 @@ import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import type { Geofence } from '@/types/location';
 import type { Position } from '@/api/types';
+import { AISuggestNewGeofences } from '@/components/ai/AISuggestNewGeofences';
 import {
   geofenceFormSchema,
   toGeofencePayload,
@@ -128,6 +129,18 @@ export default function GeofencesPage() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<number>(0);
   const [locationLoading, setLocationLoading] = useState(false);
   const [search, setSearch] = useState('');
+  // Phase-50 / 0038 — G2 suggest-new-geofences AI section state.
+  // The AI panel needs a candidate visited-location ID. We expose
+  // a small numeric input so the user can paste the ID copied from
+  // the Locations page; future slices may auto-populate this from
+  // a clustering job. The state is local to this page so the off-
+  // mode user never sees it (the AI panel itself is gated by
+  // withAiFeature).
+  const [aiLocationIdRaw, setAiLocationIdRaw] = useState('');
+  const aiLocationId = useMemo(() => {
+    const parsed = parseInt(aiLocationIdRaw, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  }, [aiLocationIdRaw]);
 
   // Bulk selection (Phase-45 / Prompt 32) — keys off geofence ids; cleared
   // when filtered list changes so users don't carry stale selections.
@@ -354,6 +367,33 @@ export default function GeofencesPage() {
     setModalOpen(true);
   }, []);
 
+  // Phase-50 / 0038 — G2 suggest-new-geofences. Apply-from-AI
+  // callback. Opens the canonical Add Geofence modal pre-filled
+  // with the typed envelope fields the LLM proposed (name +
+  // centroid lat/lon + radius). The user reviews the pre-filled
+  // form and clicks Save in the existing baseline modal — the AI
+  // panel never persists state itself (ADR-015 §I3 + §I8).
+  const applyAiDraftToForm = useCallback(
+    (draft: { name: string; latitude: number; longitude: number; radius: number }) => {
+      const next: GeofenceFormData = {
+        name: draft.name,
+        latitude: String(draft.latitude),
+        longitude: String(draft.longitude),
+        radius: String(Math.round(draft.radius)),
+        alertType: EMPTY_FORM.alertType,
+        enabled: EMPTY_FORM.enabled,
+      };
+      setEditingId(null);
+      setForm(next);
+      setInitialForm(EMPTY_FORM);
+      setFieldErrors({});
+      setFormError(null);
+      setLocationLoading(false);
+      setModalOpen(true);
+    },
+    [],
+  );
+
   const openEdit = useCallback((g: Geofence) => {
     setEditingId(g.id);
     const next: GeofenceFormData = {
@@ -530,6 +570,38 @@ export default function GeofencesPage() {
           <Skeleton height={80} />
           <Skeleton height={80} />
         </GlassPanel>
+      )}
+
+      {/* Phase-50 / 0038 — G2 AI geofence-suggestion section.
+          The AISuggestNewGeofences component is wrapped with
+          withAiFeature('suggest-new-geofences', …) so the wrapper
+          renders nothing in off mode (ADR-015 §I5). Off-mode users
+          see no surrounding chrome — the wrapper is `null` and the
+          flow shows the geofence list directly under the metric
+          row, exactly as before this slice. */}
+      {!isLoading && (
+        <FadeIn>
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
+            <Input
+              type="number"
+              min={1}
+              value={aiLocationIdRaw}
+              onChange={(e) => setAiLocationIdRaw(e.target.value)}
+              label={t(
+                'geofences.aiSuggest.pickLocation',
+                'Pick a visited location to draft a geofence around',
+              )}
+              placeholder="501"
+              className="sm:max-w-xs"
+            />
+          </div>
+          <div className="mb-6">
+            <AISuggestNewGeofences
+              locationId={aiLocationId}
+              onApplyDraft={applyAiDraftToForm}
+            />
+          </div>
+        </FadeIn>
       )}
 
       {/* Geofence List */}

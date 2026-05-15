@@ -139,6 +139,7 @@ func mountAIRoutes(
 	aiInboxCategorize *AIInboxCategorizationHandler,
 	aiCrossRuleConflict *AICrossRuleConflictHandler,
 	aiAutoNameUnnamedLocations *AIAutoNameUnnamedLocationsHandler,
+	aiSuggestNewGeofences *AISuggestNewGeofencesHandler,
 	aiLearnedAnomalyBaselines *AILearnedAnomalyBaselineHandler,
 	aiRangePrediction *AIRangePredictionHandler,
 	aiMLChargingCurveClustering *AIMLChargingCurveHandler,
@@ -528,6 +529,38 @@ func mountAIRoutes(
 			autoNameUnnamedLocationsHandler = aiAutoNameUnnamedLocations.ServeHTTP
 		}
 		r.Post("/locations/{locationID}/name/draft", g.Wrap("auto-name-unnamed-locations", autoNameUnnamedLocationsHandler))
+
+		// suggest-new-geofences (Phase-50 / G2, slice 0038).
+		// Opt-in LLM that PROPOSES a typed geofence draft (centroid
+		// lat/lon + radius_m + name) for ONE existing visited
+		// location based on its visit evidence (current
+		// address_name, visit_count, total_duration_s,
+		// last_visited). Same propose-only invariant as
+		// auto-name-unnamed-locations (slice 0037) — the AI reads
+		// the visited-location aggregate via the typed
+		// draft_geofence + validate_geofence tool pair and the
+		// user reviews the structured proposal in the
+		// GeofencesPage UI before clicking "Apply to form" (which
+		// copies the typed envelope into the existing baseline
+		// Add Geofence form) and SAVES IT THEMSELVES via the
+		// canonical POST /api/v1/geofences write path. The AI
+		// itself never persists. Same stub-fallback pattern — a
+		// nil handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode. The
+		// canonical baseline route (POST /api/v1/geofences and
+		// the rest of the geofence CRUD surface) is unchanged
+		// (ADR-015 §I3 + §I8).
+		//
+		// The route has no URL path param — the caller picks the
+		// candidate visited-location at click time and ships
+		// `{"location_id": <int64>}` in the JSON body. The
+		// handler clamps the id BEFORE opening the SSE stream.
+		var suggestNewGeofencesHandler http.HandlerFunc = aiSuggestNewGeofencesStubHandler
+		if aiSuggestNewGeofences != nil {
+			suggestNewGeofencesHandler = aiSuggestNewGeofences.ServeHTTP
+		}
+		r.Post("/geofences/draft", g.Wrap("suggest-new-geofences", suggestNewGeofencesHandler))
 
 		// learned-per-vehicle-anomaly-baselines (Phase-50 / ML1,
 		// slice 0062). Opt-in LLM narrator that EXPLAINS the
@@ -967,6 +1000,15 @@ func aiCrossRuleConflictStubHandler(w http.ResponseWriter, _ *http.Request) {
 // not the stub.
 func aiAutoNameUnnamedLocationsStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai auto-name-unnamed-locations is not yet implemented")
+}
+
+// aiSuggestNewGeofencesStubHandler mirrors aiAutoNameUnnamedLocationsStubHandler
+// for the G2 slice (Phase-50 / 0038 suggest-new-geofences).
+// Reachable only when AISuggestNewGeofencesHandler is nil at
+// construction; the off-mode 404 invariant is held by the guard,
+// not the stub.
+func aiSuggestNewGeofencesStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai suggest-new-geofences is not yet implemented")
 }
 
 // aiLearnedAnomalyBaselinesStubHandler mirrors aiAutoNameUnnamedLocationsStubHandler

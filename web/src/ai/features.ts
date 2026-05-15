@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "inbox-auto-categorization" | "learned-per-vehicle-anomaly-baselines" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "inbox-auto-categorization" | "learned-per-vehicle-anomaly-baselines" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -344,6 +344,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-speed-profile-insights-root"] as const),
   }),
+  "suggest-new-geofences": Object.freeze({
+    id: "suggest-new-geofences",
+    name: "Suggest new geofences",
+    description: "Opt-in LLM-assisted geofence-suggestion proposals grounded in repeated visits to the same location (visit_count, total_duration_s, last_visited, current address_name). Propose-only: the AI produces a typed geofence draft envelope (centroid lat/lon + radius_m + name) via two typed read-only tools (draft_geofence then validate_geofence) and the user reviews + clicks 'Apply to form' before SAVING IT THEMSELVES through the existing baseline POST /api/v1/geofences write path. The deterministic geofence list, Add Geofence modal, and map rendered by GeofencesPage at /geofences remain the canonical baseline when AI is off. The per-feature redaction policy keeps lat/long and street addresses tagged; only the vehicle name may be narrated.",
+    tier: "G",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-suggest-new-geofences-root"] as const),
+  }),
   "tire-pressure-trend-reasoning": Object.freeze({
     id: "tire-pressure-trend-reasoning",
     name: "Tire pressure trend reasoning",
@@ -420,6 +431,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "route-efficiency-suggestions",
   "smart-charge-schedule-suggestion",
   "speed-profile-insights",
+  "suggest-new-geofences",
   "tire-pressure-trend-reasoning",
   "trip-planner-llm-agent",
   "vampire-drain-explanation",

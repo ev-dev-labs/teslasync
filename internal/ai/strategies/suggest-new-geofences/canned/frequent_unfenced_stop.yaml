@@ -1,0 +1,24 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_geo_draft_frequent_1
+        name: draft_geofence
+        arguments: '{"location_id": 501, "proposed_name": "Frequent Stop — South Lake Union", "radius_m": 150}'
+    input_tokens: 48
+    output_tokens: 36
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_geo_validate_frequent_1
+        name: validate_geofence
+        arguments: '{"location_id": 501, "proposed_name": "Frequent Stop — South Lake Union", "radius_m": 150}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      I drafted a geofence "Frequent Stop — South Lake Union" with a
+      150-meter radius based on the location's high visit_count and
+      stable dwell-time pattern. Review the structured proposal in
+      the side panel and click Save in the Add Geofence form to
+      apply it to location 501.
+    input_tokens: 142
+    output_tokens: 56

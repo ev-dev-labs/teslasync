@@ -6523,6 +6523,18 @@
     "selectGeofence": "Select geofence {{name}}",
     "error": {
       "nameTooLong": "Max 120 characters"
+    },
+    "aiSuggest": {
+      "title": "Suggest a geofence for this location",
+      "description": "Propose a typed geofence draft (centroid, radius, and name) for this visited location based on its visit pattern. Review only — the AI never saves the geofence; you confirm and save via the existing baseline Add Geofence form.",
+      "badge": "AI",
+      "currentLabel": "Current label",
+      "suggestButton": "Suggest geofence",
+      "applyButton": "Apply to form",
+      "proposalLabel": "Proposed geofence",
+      "radiusLabel": "Radius",
+      "rejectedLabel": "Proposal rejected by validator",
+      "pickLocation": "Pick a visited location to draft a geofence around"
     }
   },
   "mapOverview": {

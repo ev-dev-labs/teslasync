@@ -94,6 +94,7 @@ import (
 	inboxautocategorization "github.com/ev-dev-labs/teslasync/internal/ai/strategies/inbox-auto-categorization"
 	crossruleconflictdetection "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cross-rule-conflict-detection"
 	autonameunnamedlocations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-name-unnamed-locations"
+	suggestnewgeofences "github.com/ev-dev-labs/teslasync/internal/ai/strategies/suggest-new-geofences"
 	learnedanomalybaselines "github.com/ev-dev-labs/teslasync/internal/ai/strategies/learned-per-vehicle-anomaly-baselines"
 	rangepredictionmodel "github.com/ev-dev-labs/teslasync/internal/ai/strategies/range-prediction-model"
 	mlchargingcurveclustering "github.com/ev-dev-labs/teslasync/internal/ai/strategies/ml-charging-curve-clustering"
@@ -1338,6 +1339,34 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		autonameunnamedlocations.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+
+	// Phase-50 / 0038 — G2 suggest-new-geofences tool registration.
+	// The two propose-only tools `draft_geofence` +
+	// `validate_geofence` are registered on the process-wide tool
+	// registry so the dispatcher can resolve the strategy's
+	// allowedTools at boot. We REUSE the slice-0037
+	// *AILocationSource adapter — both strategies grok the same
+	// *models.VisitedLocation aggregate (drives-table grouped on
+	// vehicle_id + end_place), so duplicating the adapter would
+	// be a wiring smell rather than an actual decoupling.
+	// AISuggestGeofenceValidator mirrors the byte-equivalent
+	// shape rules the canonical geofence_handler.go's
+	// validateGeofence enforces (1-200 chars, no control chars,
+	// no leading/trailing whitespace, radius 50-1000 meters).
+	tools.RegisterSuggestNewGeofencesTools(aiToolRegistry, tools.SuggestNewGeofencesSources{
+		Locations: NewAILocationSource(db),
+		Validator: NewAISuggestGeofenceValidator(),
+	})
+	// suggest-new-geofences handler. One per process; stateless
+	// beyond constructor inputs. Must be constructed AFTER the
+	// tool registration above so the dispatcher can resolve the
+	// strategy's allowedTools at boot.
+	aiSuggestNewGeofencesHandler := NewAISuggestNewGeofencesHandler(
+		aiRegistry,
+		aiToolRegistry,
+		suggestnewgeofences.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
@@ -3094,7 +3123,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiSuggestNewGeofencesHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//
