@@ -132,6 +132,7 @@ func mountAIRoutes(
 	aiChargingCurveClustering *AIChargingCurveClusteringHandler,
 	aiCostForecastNarration *AICostForecastNarrationHandler,
 	aiVampireDrainExplanation *AIVampireDrainHandler,
+	aiPreheatPrecoolRecommender *AIClimateScheduleHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -358,6 +359,26 @@ func mountAIRoutes(
 			vampireDrainExplanationHandler = aiVampireDrainExplanation.ServeHTTP
 		}
 		r.Post("/charging/vampire-drain/explain", g.Wrap("vampire-drain-explanation", vampireDrainExplanationHandler))
+
+		// preheat-precool-recommender (Phase-50 / T1, slice 0031).
+		// Opt-in LLM agent that proposes a preheat or precool window
+		// for the deterministic ClimateControlPage's manual climate
+		// controls baseline. The route lives under
+		// /ai/climate/schedule/draft so it is namespaced under the
+		// existing /climate SPA route alias the AIPreheatPrecoolRecommender
+		// component mounts on. Same stub-fallback pattern — a nil
+		// handler is possible during partial wiring but the off-mode
+		// 404 invariant still holds because guard.Wrap returns 404
+		// BEFORE the handler runs in off mode. The canonical baseline
+		// routes (GET /api/v1/climate/latest +
+		// GET /api/v1/vehicles/{id}/state) are unchanged; the schedule
+		// is PROPOSE-only and the user MUST click the existing manual
+		// climate controls UI to apply.
+		var preheatPrecoolRecommenderHandler http.HandlerFunc = aiPreheatPrecoolRecommenderStubHandler
+		if aiPreheatPrecoolRecommender != nil {
+			preheatPrecoolRecommenderHandler = aiPreheatPrecoolRecommender.ServeHTTP
+		}
+		r.Post("/climate/schedule/draft", g.Wrap("preheat-precool-recommender", preheatPrecoolRecommenderHandler))
 
 		// charging-diagnosis (Phase-50 / N4, slice 0018).
 		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
@@ -668,6 +689,15 @@ func aiCostForecastNarrationStubHandler(w http.ResponseWriter, _ *http.Request) 
 // invariant is held by the guard, not the stub.
 func aiVampireDrainExplanationStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai vampire-drain explanation is not yet implemented")
+}
+
+// aiPreheatPrecoolRecommenderStubHandler mirrors
+// aiVampireDrainExplanationStubHandler for the T1 slice
+// (Phase-50 / 0031 preheat-precool-recommender). Reachable only
+// when AIClimateScheduleHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiPreheatPrecoolRecommenderStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai preheat-precool recommender is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

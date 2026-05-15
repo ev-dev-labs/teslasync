@@ -1,0 +1,13 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot draft, modify, or compare a climate schedule for a
+      different vehicle — my role is to propose preheat or precool
+      schedules only for the vehicle in scope for this session
+      (vehicle <vehicle id='42'/>). If you'd like, I can draft a
+      preheat or precool window for vehicle <vehicle id='42'/>
+      instead — just confirm and I'll pull the deterministic
+      envelope and propose a schedule for you to review and Apply
+      via the manual climate controls below.
+    input_tokens: 64
+    output_tokens: 80

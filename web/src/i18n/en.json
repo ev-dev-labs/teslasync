@@ -2476,6 +2476,10 @@
         "vampire-drain-explanation": {
           "label": "Vampire-drain explanation",
           "description": "Opt-in LLM narrator that explains the deterministic vampire-drain (idle energy loss) signal — recent average / median / p95 idle drain rate per day, the worst recent idle window (start, duration, drain %, ambient temperature), and the per-event driver (Sentry on, climate on, very long parked window) most strongly correlated with elevated drain — grounded in the same numeric envelope the cards render, and honest that the per-event driver attribution is correlational rather than causal. The deterministic vampire-drain stats, per-event timeline, and typical-vs-worst cards on the Vampire Drain page remain the canonical baseline when AI is off."
+        },
+        "preheat-precool-recommender": {
+          "label": "Preheat and precool recommender",
+          "description": "Opt-in LLM agent that proposes a preheat or precool window — start time, end time, target cabin temperature, mode (preheat | precool) — by combining your typical departure timestamp with the vehicle's current cabin and outside temperatures. The proposal is structured and propose-only: review the typed draft in the AI panel and click Apply on the existing climate-controls UI to save it; the AI never creates a schedule directly. The deterministic Climate Control page (HVAC banner, status cards, efficiency panel, history table, seat-heater controls, manual departure-time heuristic) remains the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -4037,6 +4041,14 @@
       "badge": "AI",
       "description": "Ask the AI narrator to explain the deterministic vampire-drain signal — the recent average / worst idle-drain rate, the most-correlated per-event driver (Sentry, climate, long park), and whether the recent rate is in line with the typical fleet. The numbers are the same the cards below show; the narrator only explains them and surfaces the inference's correlational nature honestly.",
       "generateButton": "Narrate drain"
+    }
+  },
+  "climate": {
+    "aiPreheatPrecool": {
+      "title": "Suggest a preheat or precool schedule",
+      "badge": "AI",
+      "description": "Ask the AI recommender to draft a preheat or precool window grounded in the deterministic departure heuristic — start time, end time, mode (preheat | precool), and target cabin temperature. The temperatures are the same the panels below show; the AI never persists a schedule. Review the proposal and click Apply on the climate controls below to save it.",
+      "generateButton": "Draft schedule"
     }
   },
   "chargerTypes": {

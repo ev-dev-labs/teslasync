@@ -394,6 +394,13 @@ export default function App() {
         <Route path="anomaly-detection" element={<SafeRoute name="AnomalyDashboard"><AnomalyDashboard /></SafeRoute>} />
         <Route path="driving-dynamics" element={<SafeRoute name="DrivingDynamics"><DrivingDynamics /></SafeRoute>} />
         <Route path="climate-control" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
+        {/* Phase-50 / 0031 alias: the slice prompt registered the AI feature
+            against frontend route `/climate`; the canonical app path stays
+            `/climate-control` for back-compat, but mounting the same page at
+            `/climate` lets the registry's RouteSet.Frontend entry land users
+            on the deterministic baseline (which also hosts the opt-in
+            AIPreheatPrecoolRecommender section when AI mode is on). */}
+        <Route path="climate" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
         <Route path="security-access" element={<SafeRoute name="SecurityAccess"><SecurityAccess /></SafeRoute>} />
         <Route path="charging-curve" element={<SafeRoute name="ChargingCurve"><ChargingCurve /></SafeRoute>} />
         {/* Phase-50 / 0028 alias: the slice prompt registered the AI feature

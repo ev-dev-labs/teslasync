@@ -1,0 +1,28 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_climate_schedule_preheat_cold_morning_happy_path_1
+        name: draft_climate_schedule
+        arguments: '{"vehicle_id": 42, "depart_by": "2025-01-15T07:30:00Z", "current_cabin_temp_c": 4.0, "outside_temp_c": -2.0, "target_cabin_temp_c": 21.0}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_validate_climate_schedule_preheat_cold_morning_happy_path_2
+        name: validate_climate_schedule
+        arguments: '{"vehicle_id": 42, "start_time": "2025-01-15T07:00:00Z", "end_time": "2025-01-15T07:30:00Z", "depart_by": "2025-01-15T07:30:00Z", "mode": "preheat", "current_cabin_temp_c": 4.0, "target_cabin_temp_c": 21.0}'
+    input_tokens: 144
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      Proposed preheat for vehicle <vehicle id='42'/>: I drafted a
+      preheat window from 7:00am to 7:30am targeting a cabin
+      temperature of 21°C ahead of your 7:30am departure (cabin is
+      currently around 4°C, outside around -2°C, so the cabin needs
+      ~17°C of warming). The drafter and validator both agree the
+      window fits the depart_by boundary and the requested target
+      temperature is in the safe range. Review the proposal and
+      click Apply on the climate controls below to save it — I have
+      not persisted any schedule on your behalf.
+    input_tokens: 320
+    output_tokens: 144

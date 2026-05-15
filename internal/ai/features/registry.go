@@ -1240,6 +1240,88 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / T1 (slice 0031) — Preheat and precool recommender.
+	//
+	// preheat-precool-recommender is the first T-tier (Tools-rich) AI
+	// surface: it proposes a preheat or precool schedule grounded in
+	// the user's typical departure history and the current outside
+	// temperature, then asks the user to CONFIRM before any schedule
+	// is created. The actual schedule persistence remains an explicit
+	// user click on the existing manual climate controls baseline; the
+	// AI panel never writes a schedule directly. This matches the
+	// slice prompt's verbatim mandate: "Suggest preheat or precool
+	// schedules while requiring confirmation before creating any
+	// schedule."
+	//
+	// The deterministic ClimateControlPage (HVAC banner, climate
+	// status cards, climate efficiency panel, climate history table,
+	// seat-heater controls, and the manual departure-time heuristic
+	// that lives entirely on the SPA today) and the existing
+	// GET /api/v1/climate/latest + GET /api/v1/vehicles/{id}/state
+	// handlers remain the canonical baseline visible to every user.
+	// The AI section is a panel rendered ABOVE the deterministic
+	// content; it is HIDDEN entirely when ai_mode='off' or the
+	// per-feature toggle is off (ADR-015 §I3, §I5, §I6).
+	//
+	// Tools (PROPOSE-only — both):
+	//   - draft_climate_schedule — drafts a preheat/precool window
+	//     by combining the typical departure timestamp the caller
+	//     supplies (read off the canonical departure-history typed
+	//     hook on the SPA, NOT a parallel SQL path) with the
+	//     vehicle's current cabin & outside temperatures. Returns a
+	//     typed envelope {start_time, end_time, mode (preheat |
+	//     precool), target_cabin_temp_c, current_cabin_temp_c,
+	//     outside_temp_c, depart_by, vehicle_id}. PROPOSE-only:
+	//     the structured envelope is rendered in the AI panel; the
+	//     user reviews and clicks the existing canonical climate
+	//     controls UI to save / apply.
+	//   - validate_climate_schedule — pure-Go sanity check on the
+	//     drafted envelope: start_time < end_time, end_time <=
+	//     depart_by, target_cabin_temp_c is in a safe range, mode
+	//     matches the temperature delta. Returns {status: ok |
+	//     invalid, validation_error}. The LLM calls this AFTER
+	//     draft_climate_schedule so the narration only quotes a
+	//     window the drafter returned AND that passes the post-hoc
+	//     consistency check.
+	//
+	// Source-types (per-feature retrieval allowlist; the slice
+	// prompt mandates {climate_state, departure_history,
+	// weather_context}). None of the three is wired into the F7
+	// indexer today (slice 0008 only indexes drive_summary +
+	// charge_session); they are reserved by string for forward-
+	// compatibility — the per-feature retrieval entry point hands
+	// them to the canonical rag.Retriever and gets zero chunks
+	// today. Until then the goldens cover the zero-matches narration.
+	// NeedsRAG is therefore true so the boot wiring instantiates the
+	// per-feature retriever (rate-limit + cost-cap decorators apply
+	// per-strategy).
+	//
+	// JobNames: explicitly empty (no background indexer is registered
+	// for this slice; the future per-event embedding job is reserved
+	// by string in the strategy/tools docs but not registered as a
+	// dispatcher job entry — features.CoverageOK rejects nil; the
+	// empty slice is the affirmative "no surface" signal).
+	//
+	// PushKinds: explicitly empty (no notification/push channel
+	// surface). features.CoverageOK rejects nil; the empty slice is
+	// the affirmative "no surface" signal.
+	"preheat-precool-recommender": {
+		ID:          "preheat-precool-recommender",
+		Name:        "Preheat and precool recommender",
+		Description: "Opt-in LLM agent that proposes a preheat or precool window — start_time, end_time, target cabin temperature, mode (preheat | precool) — by combining the user's typical departure timestamp with the vehicle's current cabin and outside temperatures. The proposal is structured and PROPOSE-only: the user reviews the typed draft in the AI panel and clicks the existing canonical climate-controls UI to apply it; the AI never creates a schedule directly. The deterministic Climate Control page (HVAC banner, status cards, efficiency panel, history table, seat-heater controls, manual departure-time heuristic) remains the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class except the vehicle name tagged so a leaked transcript reveals neither the user's home address nor the workplaces they typically depart from.",
+		Tier:        "T",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/climate/schedule/draft"},
+			Frontend:  []string{"/climate"},
+			UITestIDs: []string{"ai-feature-preheat-precool-recommender-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

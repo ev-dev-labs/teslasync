@@ -379,3 +379,37 @@ func PolicyVampireDrainExplanation() Policy {
 		Mode:  ModeRedactedTags,
 	}
 }
+
+// PolicyPreheatPrecoolRecommender is the per-feature redaction policy for
+// the Phase-50 / 0031 — T1 preheat-precool-recommender slice. It mirrors
+// PolicyDigest / PolicySmartChargeScheduleSuggestion (allow ClassVehicleName
+// only, ModeRedactedTags) so the LLM sees [LOCATION] / [SCHEDULE] /
+// [STREET_ADDR] tags rather than raw values.
+//
+// Threat model: the proposed preheat / precool schedule is anchored on the
+// user's typical departure time at home or at work. ClassLocation /
+// ClassStreetAddr MUST stay tagged so a leaked transcript reveals neither
+// the user's home address nor the workplace they typically depart from.
+// ClassSchedule MUST stay tagged so the same transcript does not reveal the
+// user's daily commute pattern. Allowing ClassVehicleName lets the
+// proposal narration say "I drafted a preheat for Roadie before your 7:30am
+// departure" instead of "[VEHICLE]" — display-name leakage is acceptable
+// and is the only PII class the slice prompt's verbatim mandate permits:
+//
+//	Policy:              PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:     ClassVehicleName only; departure places remain
+//	                     tagged
+//	Round-trip required: yes
+//
+// Kept as a distinct identifier from PolicyDigest /
+// PolicySmartChargeScheduleSuggestion / PolicyVampireDrainExplanation /
+// PolicyCostForecastNarration / PolicyAutoTripNaming /
+// PolicyTripPlannerLLMAgent / PolicyDriveCoaching so a future per-feature
+// change to one slice's allow-list does not bleed across the others —
+// every feature is independently auditable.
+func PolicyPreheatPrecoolRecommender() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
