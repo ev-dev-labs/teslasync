@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bot, User } from 'lucide-react';
+import { User } from 'lucide-react';
 
+import { HelixMark } from '@/components/branding/HelixMark';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { CHART_COLORS_CB_SAFE } from '@/lib/colors';
 import { cn } from '@/lib/cn';
@@ -169,7 +170,10 @@ export function Avatar({
   // Generic glyph dimensions follow the box size, leaving ~25% padding
   // so the icon doesn't bleed against the edge.
   const glyphSize = Math.round(sizePx * 0.6);
-  const GenericIcon = kind === 'bot' ? Bot : User;
+  // `kind="bot"` is the chatbot/assistant slot — render the Helix
+  // brand mark instead of a generic bot glyph so the assistant has a
+  // consistent visual identity across every avatar surface.
+  const GenericIcon = kind === 'bot' ? HelixMark : User;
 
   // Tooltip / aria-label: name when known, otherwise the localised
   // "Unknown user" placeholder so SR users still get a meaningful

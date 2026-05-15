@@ -129,7 +129,7 @@ export default function DriveDetailPage() {
             metrics the LLM is reading from (stat cards above ↔
             narrative below ↔ deep dives further down the page).
           */}
-          <SectionErrorBoundary name="drive-detail:ai-coaching" fallbackTitle={t('driveDetail.section.aiCoachingFailed', 'AI drive coaching failed to load')}>
+          <SectionErrorBoundary name="drive-detail:ai-coaching" fallbackTitle={t('driveDetail.section.aiCoachingFailed', 'Helix drive coaching failed to load')}>
             <AIDriveCoaching driveId={id} />
           </SectionErrorBoundary>
           {hasMeaningfulDriveStats && (
@@ -188,7 +188,7 @@ export default function DriveDetailPage() {
                 <SpeedHistogramChart speedHistData={speedHistData} />
               </SectionErrorBoundary>
             </div>
-            <SectionErrorBoundary name="drive-detail:ai-speed-profile-insights" fallbackTitle={t('driveDetail.section.aiSpeedProfileInsightsFailed', 'AI speed-profile insights failed to load')}>
+            <SectionErrorBoundary name="drive-detail:ai-speed-profile-insights" fallbackTitle={t('driveDetail.section.aiSpeedProfileInsightsFailed', 'Helix speed-profile insights failed to load')}>
               <AISpeedProfileInsights driveId={id} />
             </SectionErrorBoundary>
             <SectionErrorBoundary name="drive-detail:power-profile" fallbackTitle={t('driveDetail.section.powerProfileFailed', 'Power profile chart failed to load')}>

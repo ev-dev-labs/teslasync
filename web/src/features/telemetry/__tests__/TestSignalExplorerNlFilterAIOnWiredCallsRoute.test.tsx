@@ -178,7 +178,7 @@ describe('TestSignalExplorerNlFilterAIOnWiredCallsRoute (signal-explorer-nl-filt
       });
     });
 
-    const draftButton = screen.getByRole('button', { name: /^Draft filter$/i });
+    const draftButton = screen.getByRole('button', { name: /Draft filter/i });
     expect(draftButton).not.toBeDisabled();
 
     // 3) Click — fires the SSE stream against the registered route.
@@ -265,7 +265,7 @@ describe('TestSignalExplorerNlFilterAIOnWiredCallsRoute (signal-explorer-nl-filt
       });
     });
 
-    const draftButton = screen.getByRole('button', { name: /^Draft filter$/i });
+    const draftButton = screen.getByRole('button', { name: /Draft filter/i });
 
     // First click opens the stream.
     await act(async () => {

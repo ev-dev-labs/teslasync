@@ -132,7 +132,7 @@ describe('AiUsageCard — on mode', () => {
       </Wrapper>,
     )
     await waitFor(() =>
-      expect(screen.getByText(/no ai calls yet/i)).toBeInTheDocument(),
+      expect(screen.getByText(/no helix calls yet/i)).toBeInTheDocument(),
     )
     expect(screen.getByTestId('ai-feature-usage')).toBeInTheDocument()
   })

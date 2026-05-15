@@ -8,7 +8,8 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bot, Send, Square, History as HistoryIcon } from 'lucide-react';
+import { Send, Square, History as HistoryIcon } from 'lucide-react';
+import { HelixMark } from '@/components/branding/HelixMark';
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Button, Textarea } from '@/components/ui';
@@ -40,6 +41,31 @@ import { SuggestedPrompts } from '../components/chatbot/SuggestedPrompts';
 // in off mode (ADR-015 §I5 + §I6).
 import { AIChatbotIndicator } from '@/components/ai/AIChatbotIndicator';
 
+// History sidebar visibility persists across reloads via localStorage so
+// that a desktop user who opens the History panel finds it still open
+// after a refresh. Default is hidden (matches the cleaner "focused on
+// the conversation" first-launch experience the design wants).
+const HISTORY_VISIBLE_LS_KEY = 'teslasync-chatbot-history-visible';
+
+function readStoredHistoryVisible(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(HISTORY_VISIBLE_LS_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function persistHistoryVisible(value: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(HISTORY_VISIBLE_LS_KEY, value ? 'true' : 'false');
+  } catch {
+    // localStorage unavailable (private browsing, quota, SSR) — toggle
+    // still works for the current tab, just doesn't survive reload.
+  }
+}
+
 /**
  * Chatbot page (Phase 40 / Prompt 56; Phase-50 / W1 wired-AI branch).
  *
@@ -65,20 +91,45 @@ import { AIChatbotIndicator } from '@/components/ai/AIChatbotIndicator';
  */
 export default function ChatbotPage() {
   const { t } = useTranslation();
-  usePageTitle(t('chatbot.title', 'AI Assistant'));
+  usePageTitle(t('chatbot.title', 'Helix'));
   const motion = useMotionPreference();
 
   const [sessionId, setSessionId] = useState('');
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<UIChatMessage[]>([]);
   const isMobile = useIsMobile();
-  // History panel: hidden by default on mobile (overlay drawer), open by default on desktop.
-  const [showSessions, setShowSessions] = useState(!isMobile);
-  // When the viewport breakpoint flips (rotation, resize) snap the panel to
-  // the appropriate default so we don't strand a mobile user with a 288px
-  // sidebar consuming the whole screen.
+  // History panel visibility:
+  //   - Default: hidden (cleaner first-launch focus on the conversation).
+  //   - Desktop: persists across reloads via localStorage so a user who
+  //     explicitly opens the panel finds it open again after a refresh.
+  //   - Mobile: always starts hidden (the sidebar would consume the
+  //     small viewport); flipping back to desktop restores the stored
+  //     preference.
+  const [showSessions, setShowSessionsState] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const isMobileView = window.matchMedia('(max-width: 640px)').matches;
+    if (isMobileView) return false;
+    return readStoredHistoryVisible();
+  });
+  const setShowSessions = useCallback(
+    (next: boolean | ((prev: boolean) => boolean)) => {
+      setShowSessionsState((prev) => {
+        const value = typeof next === 'function' ? next(prev) : next;
+        persistHistoryVisible(value);
+        return value;
+      });
+    },
+    [],
+  );
+  // When the viewport breakpoint flips: on mobile force-close so the
+  // sidebar doesn't consume the screen (without touching the persisted
+  // desktop preference); on desktop restore the user's stored choice.
   useEffect(() => {
-    setShowSessions(!isMobile);
+    if (isMobile) {
+      setShowSessionsState(false);
+    } else {
+      setShowSessionsState(readStoredHistoryVisible());
+    }
   }, [isMobile]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -91,10 +142,42 @@ export default function ChatbotPage() {
   // Hydrate local messages whenever the loaded history changes (switching
   // sessions or first load). Keeps the typewriter-managed local state as
   // the source of truth for the in-flight session.
+  //
+  // Race guards (matter especially when the History sidebar is open and
+  // the user starts a brand-new chat then submits):
+  //
+  //   1. While the SSE is in flight for the *current* session, the local
+  //      optimistic messages (user + streaming assistant placeholder) are
+  //      authoritative. A history GET that races with the stream can
+  //      resolve with `[]` (server hasn't persisted yet) OR with `[user]`
+  //      only (user message persisted, assistant still streaming) — in
+  //      both cases, blindly replacing local state would erase the
+  //      placeholder the SSE deltas are targeting by id and the
+  //      conversation would silently fail to display in the chat panel
+  //      while still appearing as "N msgs" in the sidebar after `done`.
+  //
+  //   2. Even outside an active stream, an empty server response paired
+  //      with non-empty local optimistic messages for the *same* sid is
+  //      almost certainly a stale read of a brand-new session — keep
+  //      local. (We compare `prev[0].session_id` to the current
+  //      sessionId so switching to a *different* session that happens to
+  //      be empty still clears the panel correctly.)
   useEffect(() => {
-    if (historyQuery.data) {
-      setMessages(historyQuery.data.map(toUIMessage));
-    }
+    if (!historyQuery.data) return;
+    const data = historyQuery.data;
+    setMessages((prev) => {
+      const firstSessionId = prev[0]?.session_id;
+      const optimisticForCurrent =
+        typeof firstSessionId === 'string' &&
+        firstSessionId === sessionIdRef.current;
+      if (optimisticForCurrent && streamingMsgIdRef.current !== null) {
+        return prev;
+      }
+      if (data.length === 0 && optimisticForCurrent) {
+        return prev;
+      }
+      return data.map(toUIMessage);
+    });
   }, [historyQuery.data]);
 
   const renameMut = useRenameChatSession();
@@ -599,8 +682,8 @@ export default function ChatbotPage() {
 
   return (
     <PageContainer
-      title={t('chatbot.title', 'AI Assistant')}
-      subtitle={t('chatbot.subtitle', 'Ask anything about your Tesla fleet')}
+      title={t('chatbot.title', 'Helix')}
+      subtitle={t('chatbot.subtitle', 'Ask Helix anything about your Tesla fleet')}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <AIChatbotIndicator />
@@ -681,12 +764,12 @@ export default function ChatbotPage() {
                 <div className="relative">
                   <div className="absolute inset-0 rounded-full bg-purple-500/10 blur-xl scale-150" />
                   <div className="relative rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-6 border border-[var(--border-subtle)]">
-                    <Bot className="h-12 w-12 text-purple-300" aria-hidden="true" />
+                    <HelixMark className="h-12 w-12 text-purple-300" aria-hidden="true" />
                   </div>
                 </div>
                 <div className="text-center space-y-2">
                   <p className="text-lg font-semibold text-[var(--text-primary)]">
-                    {t('chatbot.howCanIHelp', 'How can I help you?')}
+                    {t('chatbot.howCanIHelp', 'How can Helix help you?')}
                   </p>
                   <p className="text-sm text-[var(--text-secondary)]">
                     {t(
@@ -728,12 +811,12 @@ export default function ChatbotPage() {
               <FadeIn>
                 <div className="flex gap-3 items-start">
                   <div className="rounded-lg bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-1.5 border border-purple-500/20">
-                    <Bot className="h-4 w-4 text-purple-300" aria-hidden="true" />
+                    <HelixMark className="h-4 w-4 text-purple-300" aria-hidden="true" />
                   </div>
                   <GlassPanel className="!p-3 flex items-center gap-2">
                     <TypingDots reduceMotion={motion.reduce} />
                     <span className="text-sm text-[var(--text-secondary)]">
-                      {t('chatbot.thinking', 'Thinking…')}
+                      {t('chatbot.thinking', 'Helix is thinking…')}
                     </span>
                   </GlassPanel>
                 </div>
@@ -748,20 +831,22 @@ export default function ChatbotPage() {
               {t('chatbot.inputLabel', 'Message')}
             </VisuallyHidden>
             <div className="flex items-end gap-2 sm:gap-3">
-              <Textarea
-                ref={inputRef}
-                id="chatbot-input"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={t(
-                  'chatbot.placeholder',
-                  'Ask about your fleet…',
-                )}
-                rows={1}
-                className="flex-1 min-w-0 resize-none min-h-[40px] max-h-40"
-                aria-label={t('chatbot.inputLabel', 'Message')}
-              />
+              <div className="flex-1 min-w-0">
+                <Textarea
+                  ref={inputRef}
+                  id="chatbot-input"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={t(
+                    'chatbot.placeholder',
+                    'Ask about your fleet…',
+                  )}
+                  rows={1}
+                  className="resize-none min-h-[40px] max-h-40"
+                  aria-label={t('chatbot.inputLabel', 'Message')}
+                />
+              </div>
               {isStreaming ? (
                 <Button
                   onClick={stopAll}

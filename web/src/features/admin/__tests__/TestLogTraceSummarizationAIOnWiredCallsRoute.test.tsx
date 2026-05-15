@@ -161,7 +161,7 @@ describe('TestLogTraceSummarizationAIOnWiredCallsRoute (log-trace-summarization 
     // 2) The Summarize button is initially enabled (canSummarize
     // requires only a valid window; there is no question
     // textarea on this surface).
-    const button = screen.getByRole('button', { name: /^Summarize$/i });
+    const button = screen.getByRole('button', { name: /Summarize/i });
     expect(button).toBeInTheDocument();
     expect(button).not.toBeDisabled();
 
@@ -228,7 +228,7 @@ describe('TestLogTraceSummarizationAIOnWiredCallsRoute (log-trace-summarization 
       />,
     );
 
-    const button = screen.getByRole('button', { name: /^Summarize$/i });
+    const button = screen.getByRole('button', { name: /Summarize/i });
     await act(async () => {
       fireEvent.click(button);
     });
@@ -270,7 +270,7 @@ describe('TestLogTraceSummarizationAIOnWiredCallsRoute (log-trace-summarization 
       />,
     );
 
-    const button = screen.getByRole('button', { name: /^Summarize$/i });
+    const button = screen.getByRole('button', { name: /Summarize/i });
 
     // First click opens the stream.
     await act(async () => {
@@ -310,7 +310,7 @@ describe('TestLogTraceSummarizationAIOnWiredCallsRoute (log-trace-summarization 
 
     render(<AILogTraceSummarization />);
 
-    const button = screen.getByRole('button', { name: /^Summarize$/i });
+    const button = screen.getByRole('button', { name: /Summarize/i });
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('aria-disabled', 'true');
   });
@@ -334,7 +334,7 @@ describe('TestLogTraceSummarizationAIOnWiredCallsRoute (log-trace-summarization 
       />,
     );
     expect(
-      screen.getByRole('button', { name: /^Summarize$/i }),
+      screen.getByRole('button', { name: /Summarize/i }),
     ).toBeDisabled();
 
     // Equal window.
@@ -345,7 +345,7 @@ describe('TestLogTraceSummarizationAIOnWiredCallsRoute (log-trace-summarization 
       />,
     );
     expect(
-      screen.getByRole('button', { name: /^Summarize$/i }),
+      screen.getByRole('button', { name: /Summarize/i }),
     ).toBeDisabled();
 
     // Window > 24h (the 25-hour window is intentionally one
@@ -358,7 +358,7 @@ describe('TestLogTraceSummarizationAIOnWiredCallsRoute (log-trace-summarization 
       />,
     );
     expect(
-      screen.getByRole('button', { name: /^Summarize$/i }),
+      screen.getByRole('button', { name: /Summarize/i }),
     ).toBeDisabled();
 
     // Negative from_unix.
@@ -369,7 +369,7 @@ describe('TestLogTraceSummarizationAIOnWiredCallsRoute (log-trace-summarization 
       />,
     );
     expect(
-      screen.getByRole('button', { name: /^Summarize$/i }),
+      screen.getByRole('button', { name: /Summarize/i }),
     ).toBeDisabled();
   });
 });

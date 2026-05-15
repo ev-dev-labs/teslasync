@@ -74,7 +74,7 @@ export const BATTERY_WIDGETS: WidgetDef[] = [
   {
     id: 'projected-range',
     name: 'Projected Range',
-    description: 'AI-predicted range based on driving habits, weather, elevation',
+    description: 'Helix-predicted range based on driving habits, weather, elevation',
     icon: Navigation,
     category: 'battery',
     defaultSize: { cols: 2, rows: 2 },

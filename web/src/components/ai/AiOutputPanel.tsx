@@ -4,11 +4,12 @@
 // streamed narrative or proposal text (delta-accumulated via
 // useAiStream's built-in text accumulator) wants the same output
 // presentation: a bordered panel showing the streamed text as it
-// arrives, an animated "Generating…" affordance while the SSE is
-// open, and an inline error message if the stream ended in `error`
-// state. This helper centralises that JSX so the per-feature
-// component files only have to describe their domain-specific
-// header + body + Generate button.
+// arrives, an animated [AIThinkingIndicator] (shimmering skeleton
+// lines + bouncing-dot label) while the SSE is open and we are
+// waiting for the first delta, and an inline error message if the
+// stream ended in `error` state. This helper centralises that JSX
+// so the per-feature component files only have to describe their
+// domain-specific header + body + Generate button.
 //
 // The panel renders nothing when no stream has been started (text
 // empty AND state is idle); once a stream has run at least once,
@@ -25,6 +26,8 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { HelixMark } from '@/components/branding/HelixMark'
+import { AIThinkingIndicator } from '@/components/ai/AIThinkingIndicator'
 import type { AiStreamState } from '@/hooks/useAiStream'
 
 export interface AiOutputPanelProps {
@@ -36,8 +39,9 @@ export interface AiOutputPanelProps {
   error: string | null
   /**
    * Optional override of the body shown when the stream is open
-   * but no text has arrived yet. Default is a small "Generating…"
-   * label. Pass `null` to omit.
+   * but no text has arrived yet. Default is the animated
+   * [AIThinkingIndicator] (shimmering skeleton lines + dots).
+   * Pass `null` to omit the placeholder entirely.
    */
   pendingChild?: ReactNode | null
 }
@@ -57,13 +61,19 @@ export function AiOutputPanel({
       data-testid="ai-output-panel"
     >
       {state === 'error' ? (
-        <p className="text-sm text-red-300">
-          <span className="font-medium">{t('ai.common.errorLabel', 'AI error:')}</span>{' '}
-          {error ?? t('ai.common.errorUnknown', 'unknown')}
+        <p className="text-sm text-red-300 flex items-start gap-2">
+          <HelixMark
+            className="h-4 w-4 text-red-300 shrink-0 mt-0.5"
+            aria-hidden="true"
+          />
+          <span>
+            <span className="font-medium">{t('helix.errorLabel', 'Helix error:')}</span>{' '}
+            {error ?? t('ai.common.errorUnknown', 'unknown')}
+          </span>
         </p>
       ) : text.length === 0 && state === 'streaming' ? (
         pendingChild === undefined ? (
-          <p className="text-sm text-white/60">{t('ai.common.generating', 'Generating…')}</p>
+          <AIThinkingIndicator />
         ) : (
           pendingChild
         )

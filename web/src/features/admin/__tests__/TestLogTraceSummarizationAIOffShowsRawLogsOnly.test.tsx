@@ -256,7 +256,7 @@ describe('TestLogTraceSummarizationAIOffShowsRawLogsOnly (log-trace-summarizatio
       screen.queryByTestId('ai-feature-log-trace-summarization-root'),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: /^Summarize$/i }),
+      screen.queryByRole('button', { name: /Summarize/i }),
     ).not.toBeInTheDocument();
   });
 });

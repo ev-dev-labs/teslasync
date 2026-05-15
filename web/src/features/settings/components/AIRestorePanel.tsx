@@ -68,7 +68,7 @@ export function AIRestorePanel({ archived, onConfirm, onDecline }: Props) {
           <Subhead>
             {t(
               'ai.settings.archive.title',
-              'Restore previous AI selection?',
+              'Restore previous Helix selection?',
             )}
           </Subhead>
           <Caption>

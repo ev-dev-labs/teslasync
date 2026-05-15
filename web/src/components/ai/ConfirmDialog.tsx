@@ -85,7 +85,7 @@ export function AiConfirmDialog({
 }: AiConfirmDialogProps) {
   const { t } = useTranslation();
 
-  const title = t('ai.confirm.title', 'Approve AI action');
+  const title = t('ai.confirm.title', 'Approve Helix action');
   const intro = tool.mutates
     ? t(
         'ai.confirm.intro.mutates',

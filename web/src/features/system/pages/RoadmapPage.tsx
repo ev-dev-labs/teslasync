@@ -155,7 +155,7 @@ const roadmapItems: RoadmapEntry[] = [
     ],
   },
   {
-    title: 'AI & Predictive Analytics',
+    title: 'Helix & Predictive Analytics',
     description: 'Machine learning models for predictive insights',
     icon: Brain,
     phase: 'next',

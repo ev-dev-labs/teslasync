@@ -154,7 +154,7 @@ describe('TestFeedbackQueueTriageAIOnWiredCallsRoute (feedback-queue-triage on-m
 
     // 2) The Suggest triage button is initially enabled (canDraft
     // requires only a valid feedback id).
-    const button = screen.getByRole('button', { name: /^Suggest triage$/i });
+    const button = screen.getByRole('button', { name: /Suggest triage/i });
     expect(button).toBeInTheDocument();
     expect(button).not.toBeDisabled();
 
@@ -212,7 +212,7 @@ describe('TestFeedbackQueueTriageAIOnWiredCallsRoute (feedback-queue-triage on-m
 
     render(<AIFeedbackQueueTriage feedbackId={FEEDBACK_ID} />);
 
-    const button = screen.getByRole('button', { name: /^Suggest triage$/i });
+    const button = screen.getByRole('button', { name: /Suggest triage/i });
 
     // First click opens the stream.
     await act(async () => {
@@ -251,7 +251,7 @@ describe('TestFeedbackQueueTriageAIOnWiredCallsRoute (feedback-queue-triage on-m
 
     render(<AIFeedbackQueueTriage />);
 
-    const button = screen.getByRole('button', { name: /^Suggest triage$/i });
+    const button = screen.getByRole('button', { name: /Suggest triage/i });
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('aria-disabled', 'true');
   });
@@ -271,19 +271,19 @@ describe('TestFeedbackQueueTriageAIOnWiredCallsRoute (feedback-queue-triage on-m
     // Zero id.
     const { rerender } = render(<AIFeedbackQueueTriage feedbackId={0} />);
     expect(
-      screen.getByRole('button', { name: /^Suggest triage$/i }),
+      screen.getByRole('button', { name: /Suggest triage/i }),
     ).toBeDisabled();
 
     // Negative id.
     rerender(<AIFeedbackQueueTriage feedbackId={-1} />);
     expect(
-      screen.getByRole('button', { name: /^Suggest triage$/i }),
+      screen.getByRole('button', { name: /Suggest triage/i }),
     ).toBeDisabled();
 
     // Non-finite id.
     rerender(<AIFeedbackQueueTriage feedbackId={Number.NaN} />);
     expect(
-      screen.getByRole('button', { name: /^Suggest triage$/i }),
+      screen.getByRole('button', { name: /Suggest triage/i }),
     ).toBeDisabled();
   });
 });

@@ -105,7 +105,7 @@ export function AiUsageCardInner() {
         data-ai-feature={AI_USAGE_FEATURE_ID}
         data-testid={AI_USAGE_TEST_ID}
       >
-        <UsageCard emptyMessage="Loading AI usage…" />
+        <UsageCard emptyMessage="Loading Helix usage…" />
       </div>
     )
   }
@@ -116,7 +116,7 @@ export function AiUsageCardInner() {
         data-ai-feature={AI_USAGE_FEATURE_ID}
         data-testid={AI_USAGE_TEST_ID}
       >
-        <UsageCard emptyMessage="No AI calls yet — turn on a feature to start." />
+        <UsageCard emptyMessage="No Helix calls yet — turn on a feature to start." />
       </div>
     )
   }

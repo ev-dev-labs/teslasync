@@ -190,23 +190,23 @@ function titleForReason(t: TFunction, reason: string): string {
     case 'cost_cap_unavailable':
       return t('ai.limit.title.costCapUnavailable', 'Cost cap check unavailable');
     case 'settings_unavailable':
-      return t('ai.limit.title.settingsUnavailable', 'AI settings unavailable');
+      return t('ai.limit.title.settingsUnavailable', 'Helix settings unavailable');
     case 'burst':
-      return t('ai.limit.title.burst', 'Too many AI requests at once');
+      return t('ai.limit.title.burst', 'Too many Helix requests at once');
     case 'per_minute':
-      return t('ai.limit.title.perMinute', 'AI rate limit hit');
+      return t('ai.limit.title.perMinute', 'Helix rate limit hit');
     case 'per_day':
-      return t('ai.limit.title.perDay', 'Daily AI usage limit reached');
+      return t('ai.limit.title.perDay', 'Daily Helix usage limit reached');
     case 'input_tokens':
     case 'output_tokens':
-      return t('ai.limit.title.tokens', 'AI token quota exhausted');
+      return t('ai.limit.title.tokens', 'Helix token quota exhausted');
     case 'provider_unavailable':
-      return t('ai.limit.title.providerUnavailable', 'AI provider unavailable');
+      return t('ai.limit.title.providerUnavailable', 'Helix provider unavailable');
     case 'missing_feature_id':
     case 'unknown_feature_id':
-      return t('ai.limit.title.featureMisconfigured', 'AI feature misconfigured');
+      return t('ai.limit.title.featureMisconfigured', 'Helix feature misconfigured');
     default:
-      return t('ai.limit.title.generic', 'AI temporarily unavailable');
+      return t('ai.limit.title.generic', 'Helix temporarily unavailable');
   }
 }
 
@@ -218,54 +218,54 @@ function descriptionForReason(t: TFunction, reason: string): string {
     case 'cost_cap':
       return t(
         'ai.limit.desc.costCap',
-        'You have reached your daily AI cost limit. AI features will resume tomorrow or after you raise the cap in Settings.',
+        'You have reached your daily Helix cost limit. Helix features will resume tomorrow or after you raise the cap in Settings.',
       );
     case 'cost_cap_unavailable':
       return t(
         'ai.limit.desc.costCapUnavailable',
-        'Could not read your AI usage history. Failing closed for safety.',
+        'Could not read your Helix usage history. Failing closed for safety.',
       );
     case 'settings_unavailable':
       return t(
         'ai.limit.desc.settingsUnavailable',
-        'Could not load your AI settings. AI is paused until settings are reachable.',
+        'Could not load your Helix settings. Helix is paused until settings are reachable.',
       );
     case 'burst':
       return t(
         'ai.limit.desc.burst',
-        'Too many AI requests are in flight. The limiter is keeping the system responsive.',
+        'Too many Helix requests are in flight. The limiter is keeping the system responsive.',
       );
     case 'per_minute':
       return t(
         'ai.limit.desc.perMinute',
-        'You have sent more AI requests than allowed per minute. The window resets shortly.',
+        'You have sent more Helix requests than allowed per minute. The window resets shortly.',
       );
     case 'per_day':
       return t(
         'ai.limit.desc.perDay',
-        'You have used your daily AI request budget. The budget resets at UTC midnight.',
+        'You have used your daily Helix request budget. The budget resets at UTC midnight.',
       );
     case 'input_tokens':
     case 'output_tokens':
       return t(
         'ai.limit.desc.tokens',
-        'Your AI token quota for this minute is exhausted. Try a shorter prompt.',
+        'Your Helix token quota for this minute is exhausted. Try a shorter prompt.',
       );
     case 'provider_unavailable':
       return t(
         'ai.limit.desc.providerUnavailable',
-        'The AI provider is not responding. The system will retry automatically.',
+        'The Helix provider is not responding. The system will retry automatically.',
       );
     case 'missing_feature_id':
     case 'unknown_feature_id':
       return t(
         'ai.limit.desc.featureMisconfigured',
-        'This page is missing an AI feature registration. Please report this to your administrator.',
+        'This page is missing a Helix feature registration. Please report this to your administrator.',
       );
     default:
       return t(
         'ai.limit.desc.generic',
-        'AI features are temporarily unavailable. The non-AI baseline continues to work.',
+        'Helix features are temporarily unavailable. The non-Helix baseline continues to work.',
       );
   }
 }

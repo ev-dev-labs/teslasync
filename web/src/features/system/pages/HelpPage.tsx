@@ -110,7 +110,7 @@ const HELP_LINKS: readonly HelpLink[] = [
     titleFallback: 'Chatbot',
     descKey: 'help.baseline.links.chatbot.description',
     descFallback:
-      'Talk to the in-app assistant. Available in deterministic mode or LLM mode when AI is enabled.',
+      'Talk to the in-app assistant. Available in deterministic mode or LLM mode when Helix is enabled.',
   },
 ]
 

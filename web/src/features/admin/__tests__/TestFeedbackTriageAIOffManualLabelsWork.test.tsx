@@ -284,7 +284,7 @@ describe('TestFeedbackTriageAIOffManualLabelsWork (feedback-queue-triage AI-off 
       screen.queryByTestId('ai-feature-feedback-queue-triage-root'),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: /^Suggest triage$/i }),
+      screen.queryByRole('button', { name: /Suggest triage/i }),
     ).not.toBeInTheDocument();
   });
 });

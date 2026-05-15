@@ -43,16 +43,16 @@ describe('AiLimitBanner', () => {
   });
 
   it.each([
-    ['burst' as const, /Too many AI requests at once/i],
-    ['per_minute' as const, /AI rate limit hit/i],
-    ['per_day' as const, /Daily AI usage limit reached/i],
-    ['input_tokens' as const, /AI token quota exhausted/i],
-    ['output_tokens' as const, /AI token quota exhausted/i],
-    ['provider_unavailable' as const, /AI provider unavailable/i],
-    ['settings_unavailable' as const, /AI settings unavailable/i],
+    ['burst' as const, /Too many Helix requests at once/i],
+    ['per_minute' as const, /Helix rate limit hit/i],
+    ['per_day' as const, /Daily Helix usage limit reached/i],
+    ['input_tokens' as const, /Helix token quota exhausted/i],
+    ['output_tokens' as const, /Helix token quota exhausted/i],
+    ['provider_unavailable' as const, /Helix provider unavailable/i],
+    ['settings_unavailable' as const, /Helix settings unavailable/i],
     ['cost_cap_unavailable' as const, /Cost cap check unavailable/i],
-    ['missing_feature_id' as const, /AI feature misconfigured/i],
-    ['unknown_feature_id' as const, /AI feature misconfigured/i],
+    ['missing_feature_id' as const, /Helix feature misconfigured/i],
+    ['unknown_feature_id' as const, /Helix feature misconfigured/i],
   ])('renders the right title for reason=%s', (reason, titleRe) => {
     render(<AiLimitBanner info={makeInfo({ reason })} />);
     expect(screen.getByTestId('ai-limit-banner')).toHaveTextContent(titleRe);
@@ -61,7 +61,7 @@ describe('AiLimitBanner', () => {
   it('falls back to a generic title for an unknown reason', () => {
     render(<AiLimitBanner info={makeInfo({ reason: 'future_reason_xyz' })} />);
     expect(screen.getByTestId('ai-limit-banner')).toHaveTextContent(
-      /AI temporarily unavailable/i,
+      /Helix temporarily unavailable/i,
     );
   });
 

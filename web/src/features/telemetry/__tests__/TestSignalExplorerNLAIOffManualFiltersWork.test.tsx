@@ -261,7 +261,7 @@ describe('TestSignalExplorerNLAIOffManualFiltersWork (signal-explorer-nl-filter 
       screen.queryByTestId('ai-feature-signal-explorer-nl-filter-root'),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: /^Draft filter$/i }),
+      screen.queryByRole('button', { name: /Draft filter/i }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /^Apply to filters$/i }),

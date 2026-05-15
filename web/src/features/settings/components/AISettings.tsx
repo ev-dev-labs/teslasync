@@ -29,7 +29,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Sparkles } from 'lucide-react'
+import { HelixMark } from '@/components/branding/HelixMark'
 import {
   GlassPanel,
   IconBox,
@@ -438,14 +438,14 @@ export function AISettings() {
       >
         <div className="flex items-start gap-3">
           <IconBox color="purple">
-            <Sparkles className="h-5 w-5" />
+            <HelixMark className="h-5 w-5" aria-hidden="true" />
           </IconBox>
           <div className="flex-1 min-w-0">
-            <PanelTitle>{t('ai.settings.title', 'AI features')}</PanelTitle>
+            <PanelTitle>{t('ai.settings.title', 'Helix')}</PanelTitle>
             <Subhead>
               {t(
                 'ai.settings.subtitle',
-                'Optional. AI is off by default; nothing is enabled until you opt in here.',
+                'Optional. Helix is off by default; nothing is enabled until you opt in here.',
               )}
             </Subhead>
           </div>
@@ -453,14 +453,14 @@ export function AISettings() {
 
         <fieldset
           className="space-y-2"
-          aria-label={t('ai.settings.modeLegend', 'AI mode')}
+          aria-label={t('ai.settings.modeLegend', 'Helix mode')}
         >
           <Caption>
-            {t('ai.settings.modeLegend', 'AI mode')}
+            {t('ai.settings.modeLegend', 'Helix mode')}
           </Caption>
           <div
             role="radiogroup"
-            aria-label={t('ai.settings.modeLegend', 'AI mode')}
+            aria-label={t('ai.settings.modeLegend', 'Helix mode')}
             className="grid grid-cols-1 sm:grid-cols-3 gap-2"
           >
             <ModeRadio
@@ -471,7 +471,7 @@ export function AISettings() {
               label={t('ai.settings.mode.off', 'Off (default)')}
               description={t(
                 'ai.settings.mode.offHint',
-                'No AI features. The app works fully without them.',
+                'No Helix features. The app works fully without them.',
               )}
             />
             <ModeRadio
@@ -501,7 +501,7 @@ export function AISettings() {
             <HelperText>
               {t(
                 'ai.settings.bannerOff',
-                'AI features are off. Your app works fully without them. Enable a mode above to opt in.',
+                'Helix is off. Your app works fully without it. Enable a mode above to opt in.',
               )}
             </HelperText>
           )}
@@ -554,7 +554,7 @@ export function AISettings() {
           >
             {saveAi.isPending
               ? t('ai.settings.saving', 'Saving…')
-              : t('ai.settings.save', 'Save AI settings')}
+              : t('ai.settings.save', 'Save Helix settings')}
           </Button>
         </div>
       </GlassPanel>
@@ -662,7 +662,7 @@ function AICostCapSpendBar({ capCents }: { capCents: number }) {
     >
       <div className="flex items-baseline justify-between gap-2">
         <Caption>
-          {t('ai.settings.costCap.todayTitle', 'Today’s AI spend')}
+          {t('ai.settings.costCap.todayTitle', 'Today’s Helix spend')}
         </Caption>
         <span className={`text-xs font-medium ${textClass}`}>
           {isLoading
@@ -680,7 +680,7 @@ function AICostCapSpendBar({ capCents }: { capCents: number }) {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(pct)}
-        aria-label={t('ai.settings.costCap.barLabel', 'AI cost cap usage')}
+        aria-label={t('ai.settings.costCap.barLabel', 'Helix cost cap usage')}
       >
         <div
           className={`h-full transition-all duration-500 ${fillClass}`}
@@ -691,7 +691,7 @@ function AICostCapSpendBar({ capCents }: { capCents: number }) {
         <HelperText>
           {t(
             'ai.settings.costCap.criticalHint',
-            'Cap reached — new AI calls will be rejected until the cap resets at UTC midnight or you raise it.',
+            'Cap reached — new Helix calls will be rejected until the cap resets at UTC midnight or you raise it.',
           )}
         </HelperText>
       )}
