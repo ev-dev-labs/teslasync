@@ -150,6 +150,7 @@ func mountAIRoutes(
 	aiDataRepairSuggestions *AIDataRepairSuggestionsHandler,
 	aiSignalExplorerNlFilter *AISignalExplorerNlFilterHandler,
 	aiLogTraceSummarization *AILogTraceSummarizationHandler,
+	aiFeedbackQueueTriage *AIFeedbackQueueTriageHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -468,6 +469,28 @@ func mountAIRoutes(
 			logTraceSummarizationHandler = aiLogTraceSummarization.ServeHTTP
 		}
 		r.Post("/system/logs/summarize", g.Wrap("log-trace-summarization", logTraceSummarizationHandler))
+
+		// feedback-queue-triage (Phase-50 / S5, slice 0046).
+		// Opt-in LLM that proposes a typed
+		// {proposed_status, proposed_category, proposed_priority,
+		// rationale} envelope for one user_feedback row by
+		// routing through three propose/read-only tools
+		// (draft_feedback_triage, validate_feedback_triage, and
+		// the OPTIONAL retrieve_feedback_chunks). PROPOSE-ONLY:
+		// the user reviews the proposal in the AI side panel and
+		// continues to use the deterministic FeedbackQueuePage
+		// manual-triage controls (PATCH /api/v1/admin/feedback/{id})
+		// to apply any change. Same stub-fallback pattern as the
+		// other AI handlers — a nil handler is possible during
+		// partial wiring but the off-mode 404 invariant still
+		// holds because guard.Wrap returns 404 BEFORE the handler
+		// runs in off mode. The canonical baseline route at
+		// PATCH /api/v1/admin/feedback/{id} is unchanged.
+		var feedbackQueueTriageHandler http.HandlerFunc = aiFeedbackQueueTriageStubHandler
+		if aiFeedbackQueueTriage != nil {
+			feedbackQueueTriageHandler = aiFeedbackQueueTriage.ServeHTTP
+		}
+		r.Post("/feedback/triage/draft", g.Wrap("feedback-queue-triage", feedbackQueueTriageHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1260,6 +1283,15 @@ func aiSignalExplorerNlFilterStubHandler(w http.ResponseWriter, _ *http.Request)
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiLogTraceSummarizationStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai log-trace summarization is not yet implemented")
+}
+
+// aiFeedbackQueueTriageStubHandler mirrors
+// aiLogTraceSummarizationStubHandler for the S5 slice (Phase-50
+// / 0046 feedback-queue-triage). Reachable only when
+// AIFeedbackQueueTriageHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiFeedbackQueueTriageStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai feedback queue triage is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

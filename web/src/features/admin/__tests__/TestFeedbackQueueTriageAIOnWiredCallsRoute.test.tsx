@@ -1,0 +1,289 @@
+// Phase-50 / 0046 — S5 Feedback queue triage.
+// Phase-50 / W1 inline wiring (per slice prompt 0046) — on-mode
+// wiring test proving the "Suggest triage" button opens an SSE
+// stream against the registered backend route
+// POST /api/v1/ai/feedback/triage/draft.
+//
+// `TestFeedbackQueueTriageAIOnWiredCallsRoute` is the load-
+// bearing positive wiring proof for slice 0046's W1 inline
+// addendum. It mounts the AIFeedbackQueueTriage component with
+// ai_mode='cloud' + the per-feature toggle on, stubs global
+// fetch with a deterministic SSE byte stream, clicks the
+// "Suggest triage" button, and asserts:
+//
+//   1. Exactly ONE POST against the registered backend route
+//      `/api/v1/ai/feedback/triage/draft` is enqueued with
+//      `Content-Type: application/json` and a body containing
+//      the in-scope `feedback_id`. The path MUST match the
+//      registry entry verbatim — a typo here is invisible to the
+//      off-mode test (which only asserts absence) and would
+//      silently 404 in production.
+//   2. The first `delta` event's text renders inside the
+//      AiOutputPanel inside the gated wrapper
+//      `data-testid="ai-feature-feedback-queue-triage-root"`.
+//   3. A second click while `state === 'streaming'` is a no-op
+//      — the second fetch call is NOT enqueued (the
+//      double-submit guard inside useAiStream + the visual
+//      `disabled` mirror it from canDraft). This proves W1
+//      Rule A — the disabled prop is a computed expression that
+//      reacts to state.
+//   4. The "Suggest triage" button is `disabled` when the
+//      feedback id is missing OR invalid (zero, negative,
+//      non-finite) — proving W1 Rule A's computed-expression
+//      guarantee across multiple input states.
+//   5. The off-mode invariant test
+//      (`TestFeedbackTriageAIOffManualLabelsWork`)
+//      continues to pass unchanged — wiring MUST NOT regress the
+//      off-mode absence invariant. That assertion lives in the
+//      sibling file and is exercised independently by the npm
+//      test runner.
+//
+// The test name MUST stay
+// `TestFeedbackQueueTriageAIOnWiredCallsRoute` per the W1
+// inline addendum naming contract.
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
+
+import type { AppSettings } from '@/api/types';
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: vi.fn(),
+}));
+
+import { useSettings } from '@/hooks/useSettings';
+import { AIFeedbackQueueTriage } from '@/components/ai/AIFeedbackQueueTriage';
+
+const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>;
+
+const baseSettings: AppSettings = {
+  unit_of_length: 'km',
+  unit_of_temp: 'C',
+  unit_of_pressure: 'bar',
+  preferred_range: 'rated',
+  language: 'en',
+  base_cost_per_kwh: 0.12,
+  api_suspended: false,
+  theme: 'neon-cyan',
+  mode: 'dark',
+  custom_primary: '#00b4d8',
+  custom_accent: '#e63946',
+  gas_price_per_unit: 0,
+  gas_unit: 'gallon',
+  gas_efficiency_mpg: 25,
+  decimal_precision: 2,
+  quiet_hours_enabled: false,
+  quiet_hours_start: '22:00',
+  quiet_hours_end: '07:00',
+  alert_digest_mode: 'instant',
+};
+
+function settingsPayload(overrides: Partial<AppSettings>) {
+  return { settings: { ...baseSettings, ...overrides } };
+}
+
+function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  let i = 0;
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      if (i < chunks.length) {
+        controller.enqueue(encoder.encode(chunks[i]));
+        i++;
+      } else {
+        controller.close();
+      }
+    },
+  });
+}
+
+function sseFrame(event: string, data: unknown): string {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+const FEEDBACK_ID = 42;
+
+beforeEach(() => {
+  mockUseSettings.mockReset();
+  globalThis.fetch = vi.fn(async () => {
+    throw new Error('fetch not mocked');
+  }) as unknown as typeof globalThis.fetch;
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe('TestFeedbackQueueTriageAIOnWiredCallsRoute (feedback-queue-triage on-mode SPA wiring)', () => {
+  it('TestFeedbackQueueTriageAIOnWiredCallsRoute: clicking Suggest triage POSTs once to /api/v1/ai/feedback/triage/draft and renders the first delta', async () => {
+    mockUseSettings.mockReturnValue(
+      settingsPayload({
+        ai_mode: 'cloud',
+        ai_features: { 'feedback-queue-triage': true },
+      }),
+    );
+
+    const fetchCalls: Array<{ url: string; init: RequestInit | undefined }> = [];
+    const sseBody =
+      sseFrame('delta', {
+        text:
+          'Proposed status: triaged. Proposed category: bug. Proposed priority: normal. ' +
+          'Reasoning: report describes a reproducible drive-timeline issue with a clear ' +
+          'page route and app version, but no console errors or repeated reports.',
+      }) +
+      sseFrame('done', { finish_reason: 'stop', usage: { in: 220, out: 90 } });
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      fetchCalls.push({ url: String(input), init });
+      return new Response(makeReadableStream([sseBody]), {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' },
+      });
+    }) as unknown as typeof globalThis.fetch;
+
+    render(<AIFeedbackQueueTriage feedbackId={FEEDBACK_ID} />);
+
+    // 1) The gated wrapper renders with the registered test ID.
+    const root = screen.getByTestId(
+      'ai-feature-feedback-queue-triage-root',
+    );
+    expect(root).toBeInTheDocument();
+    expect(root).toHaveAttribute(
+      'data-ai-feature',
+      'feedback-queue-triage',
+    );
+
+    // 2) The Suggest triage button is initially enabled (canDraft
+    // requires only a valid feedback id).
+    const button = screen.getByRole('button', { name: /^Suggest triage$/i });
+    expect(button).toBeInTheDocument();
+    expect(button).not.toBeDisabled();
+
+    // 3) Click — fires the SSE stream against the registered route.
+    await act(async () => {
+      fireEvent.click(button);
+    });
+
+    // 4) Exactly one fetch must have been enqueued, against the
+    // registered backend path. The body MUST carry the in-scope
+    // feedback_id so the LLM cannot widen it to other rows.
+    await waitFor(() => expect(fetchCalls).toHaveLength(1));
+    const { url, init } = fetchCalls[0];
+    expect(url).toBe('/api/v1/ai/feedback/triage/draft');
+    expect(init?.method).toBe('POST');
+    expect(typeof init?.body).toBe('string');
+    const parsedBody = JSON.parse(init?.body as string);
+    expect(parsedBody).toEqual({
+      feedback_id: FEEDBACK_ID,
+    });
+    // Accept header must be text/event-stream — proves the SSE
+    // contract is honoured by the hook.
+    const headers = new Headers(init?.headers);
+    expect(headers.get('Accept')).toBe('text/event-stream');
+    expect(headers.get('Content-Type')).toBe('application/json');
+
+    // 5) The first delta's text renders inside the gated wrapper.
+    await waitFor(() => {
+      expect(root).toHaveTextContent(
+        'Proposed status: triaged. Proposed category: bug.',
+      );
+    });
+  });
+
+  it('TestFeedbackQueueTriageAIOnWiredCallsRoute: a second click while streaming is a no-op (double-submit guard)', async () => {
+    mockUseSettings.mockReturnValue(
+      settingsPayload({
+        ai_mode: 'cloud',
+        ai_features: { 'feedback-queue-triage': true },
+      }),
+    );
+
+    let fetchCount = 0;
+    globalThis.fetch = vi.fn(async () => {
+      fetchCount += 1;
+      return new Response(
+        new ReadableStream<Uint8Array>({
+          start() {
+            // Never enqueue, never close — keeps state='streaming'.
+          },
+        }),
+        { status: 200, headers: { 'Content-Type': 'text/event-stream' } },
+      );
+    }) as unknown as typeof globalThis.fetch;
+
+    render(<AIFeedbackQueueTriage feedbackId={FEEDBACK_ID} />);
+
+    const button = screen.getByRole('button', { name: /^Suggest triage$/i });
+
+    // First click opens the stream.
+    await act(async () => {
+      fireEvent.click(button);
+    });
+    await waitFor(() => expect(fetchCount).toBe(1));
+
+    // While streaming the button's disabled is COMPUTED from
+    // `canDraft = haveFeedback && state !== 'streaming'`. The
+    // hook's `runningRef` also coalesces duplicate start() calls,
+    // so the second click is a defence-in-depth no-op even if a
+    // future refactor accidentally drops the visual disabled.
+    await waitFor(() => expect(button).toBeDisabled());
+    await act(async () => {
+      fireEvent.click(button);
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(fetchCount).toBe(1);
+  });
+
+  it('TestFeedbackQueueTriageAIOnWiredCallsRoute: Suggest triage button is disabled when the feedback id is missing (computed, not literal)', () => {
+    // This test guards W1 Rule A from the slice prompt: the
+    // primary action button's `disabled` prop MUST be a computed
+    // expression (here: `!canDraft`), not a literal `disabled` /
+    // `disabled={true}`. We prove the dynamic behaviour by
+    // rendering the component without a feedback id and
+    // confirming the button is disabled while the gate is open
+    // — same code path, different prop input.
+    mockUseSettings.mockReturnValue(
+      settingsPayload({
+        ai_mode: 'cloud',
+        ai_features: { 'feedback-queue-triage': true },
+      }),
+    );
+
+    render(<AIFeedbackQueueTriage />);
+
+    const button = screen.getByRole('button', { name: /^Suggest triage$/i });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('TestFeedbackQueueTriageAIOnWiredCallsRoute: Suggest triage button is disabled when the feedback id is invalid (computed, not literal)', () => {
+    // Defence-in-depth: zero, negative, and non-finite ids must
+    // also disable the button. The handler-side parser rejects
+    // feedback_id <= 0; we mirror that here so the button never
+    // submits a request the backend would 400.
+    mockUseSettings.mockReturnValue(
+      settingsPayload({
+        ai_mode: 'cloud',
+        ai_features: { 'feedback-queue-triage': true },
+      }),
+    );
+
+    // Zero id.
+    const { rerender } = render(<AIFeedbackQueueTriage feedbackId={0} />);
+    expect(
+      screen.getByRole('button', { name: /^Suggest triage$/i }),
+    ).toBeDisabled();
+
+    // Negative id.
+    rerender(<AIFeedbackQueueTriage feedbackId={-1} />);
+    expect(
+      screen.getByRole('button', { name: /^Suggest triage$/i }),
+    ).toBeDisabled();
+
+    // Non-finite id.
+    rerender(<AIFeedbackQueueTriage feedbackId={Number.NaN} />);
+    expect(
+      screen.getByRole('button', { name: /^Suggest triage$/i }),
+    ).toBeDisabled();
+  });
+});

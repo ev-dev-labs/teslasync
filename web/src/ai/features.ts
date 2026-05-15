@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -211,6 +211,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsTools: true,
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-drive-coaching-root"] as const),
+  }),
+  "feedback-queue-triage": Object.freeze({
+    id: "feedback-queue-triage",
+    name: "Feedback queue triage",
+    description: "Opt-in LLM triage advisor that proposes a typed {proposed_status, proposed_category, proposed_priority, rationale} envelope for one user_feedback row by routing through three propose/read-only tools: draft_feedback_triage (loads the in-scope row via the FeedbackTriageSource port — a thin wrapper around *database.UserFeedbackRepo.Get that PII-minimizes the row into a FeedbackTriageEntry; only id / created_at / category / title / body[truncated] / page_route / app_version / status / github_issue_url are forwarded; user_email, submitter_subject, submitter_ip, recent_errors, console_tail are NOT forwarded), validate_feedback_triage (pure DTO transform asserting enum membership for status / category / priority), and the OPTIONAL retrieve_feedback_chunks (F7 retrieval restricted to {feedback_item, audit_log} source types) for per-row context. The deterministic FeedbackQueuePage manual-triage surface remains the canonical baseline when AI is off. Per-feature redaction policy is PolicyAlertBuilder (deny-by-default; every tag class redacted to a round-trip tag) so a leaked transcript reveals nothing about VINs, coordinates, or any value the user typed into the feedback body. Per-request scope binding installs the body-supplied feedback_id in ctx and refuses any LLM-supplied feedback_id outside that id to defend against prompt-injection exfiltration via user-authored feedback bodies. Only proposed_status maps onto the canonical FeedbackUpdateInput.status field; proposed_category and proposed_priority are recommendation-only chips with no persistence path.",
+    tier: "S5",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-feedback-queue-triage-root"] as const),
   }),
   "geofence-aware-automation-suggestions": Object.freeze({
     id: "geofence-aware-automation-suggestions",
@@ -496,6 +507,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "data-repair-suggestions",
   "digest-narration",
   "drive-coaching",
+  "feedback-queue-triage",
   "geofence-aware-automation-suggestions",
   "inbox-auto-categorization",
   "incident-timeline-summarizer",

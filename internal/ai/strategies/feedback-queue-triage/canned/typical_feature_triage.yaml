@@ -1,0 +1,20 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_feedback_triage_typical_feature_1
+        name: draft_feedback_triage
+        arguments: '{"feedback_id": 43, "proposed_status": "triaged", "proposed_category": "feature", "proposed_priority": "normal", "rationale": "The submitter is asking for a new comparison view between two trips, not reporting a defect. Routing as a feature request at normal priority pending product review."}'
+    input_tokens: 96
+    output_tokens: 56
+  - finish_reason: stop
+    content: |
+      Triage proposal for the in-scope feedback row: this is a feature
+      request, not a bug report, so the proposal is
+      proposed_status=triaged, proposed_category=feature, and
+      proposed_priority=normal. The rationale is grounded strictly in the
+      submitter's body — they describe a missing capability rather than a
+      defect, so a "bug" category would mis-route the row in the inbox.
+      Only the proposed_status will copy into the canonical Save form;
+      proposed_category and proposed_priority are recommendation chips.
+    input_tokens: 280
+    output_tokens: 116

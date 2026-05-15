@@ -2546,6 +2546,10 @@
         "log-trace-summarization": {
           "label": "Log and trace summarization",
           "description": "Opt-in LLM narrator that summarizes one in-scope window of redacted log events and trace spans into a 3-6 sentence factual paragraph — what level breakdown the window held, which message templates dominated, which trace operations ran (with mean latency), and any structural signals worth investigating — by routing through two read-only tools that quote the same deterministic envelope the operator can already inspect manually. The narrator never invents log lines and never speculates about root cause. Per-request scope binding rejects any cross-window tool call to defend against prompt-injection exfiltration via operator-authored log messages. The deterministic SSE-backed live log table, level / grep / vehicle filter controls, pause/resume, and copy-to-clipboard / download controls on the Live Logs page remain the canonical baseline when AI is off."
+        },
+        "feedback-queue-triage": {
+          "label": "Feedback queue triage",
+          "description": "Opt-in LLM advisor that proposes a status, category, and priority label for one in-scope user feedback row — by quoting the same redacted envelope (id, category, title, body excerpt, page route, app version, status, created_at) that an operator can already inspect manually in the queue — and routes the proposal through a closed-enum validator before the UI surfaces it as a recommendation chip. The advisor NEVER writes to user_feedback; the existing manual triage controls (status dropdown, category badge, priority chip, save button) remain the sole write path. Per-request scope binding rejects any cross-row tool call to defend against prompt-injection exfiltration via user-authored feedback text. The deterministic feedback queue table, filter / sort / search controls, per-row expansion, and manual triage controls on the Admin Feedback Queue page remain the canonical baseline when AI is off."
         }
       },
       "archive": {

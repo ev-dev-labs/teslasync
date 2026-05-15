@@ -10,6 +10,7 @@ import { Icons } from '@/lib/icons'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useFeedbackList, useUpdateFeedback } from '@/api/hooks/useFeedback'
 import { useDateFormat } from '@/hooks/useDateFormat'
+import { AIFeedbackQueueTriage } from '@/components/ai/AIFeedbackQueueTriage'
 import type {
   FeedbackCategory,
   FeedbackEntry,
@@ -397,6 +398,12 @@ function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating }: FeedbackE
           </Button>
         )}
       </div>
+
+      {/* Phase-50 / 0046 — S5 Feedback queue triage AI advisor.
+          Renders only when ai_mode is on AND the feedback-queue-triage
+          toggle is enabled. Propose-only: never persists; the manual
+          controls above remain the sole write path (ADR-015 §I3 + §I8). */}
+      <AIFeedbackQueueTriage feedbackId={row.id} />
     </div>
   )
 }
