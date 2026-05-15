@@ -135,6 +135,7 @@ func mountAIRoutes(
 	aiPreheatPrecoolRecommender *AIClimateScheduleHandler,
 	aiCabinTemperatureImpactNarrative *AICabinTemperatureImpactHandler,
 	aiTirePressureTrendReasoning *AITirePressureTrendHandler,
+	aiAlertTuning *AIAlertTuningHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -426,6 +427,28 @@ func mountAIRoutes(
 			tirePressureTrendReasoningHandler = aiTirePressureTrendReasoning.ServeHTTP
 		}
 		r.Post("/tire-pressure/trends/explain", g.Wrap("tire-pressure-trend-reasoning", tirePressureTrendReasoningHandler))
+
+		// alert-tuning-suggestions (Phase-50 / A1, slice 0034).
+		// Opt-in LLM that reads an existing alert rule + its
+		// recent firing history (last 30 days) and proposes a
+		// lower-noise typed AlertRule patch (threshold,
+		// cooldown, severity, trigger_mode). The route lives
+		// under /ai/alerts/rules/{ruleID}/tune/draft so it is
+		// namespaced under the existing /alerts/rules surface
+		// family. Same stub-fallback pattern — a nil handler is
+		// possible during partial wiring but the off-mode 404
+		// invariant still holds because guard.Wrap returns 404
+		// BEFORE the handler runs in off mode. The canonical
+		// baseline route (PUT /api/v1/alerts/rules/{ruleID}) is
+		// unchanged; the AI is propose-only and never persists
+		// — the user reviews the typed draft in AlertStudio and
+		// applies it via the canonical Save button which calls
+		// alertHandler.UpdateRule (ADR-015 §I3 + §I8).
+		var alertTuningHandler http.HandlerFunc = aiAlertTuningStubHandler
+		if aiAlertTuning != nil {
+			alertTuningHandler = aiAlertTuning.ServeHTTP
+		}
+		r.Post("/alerts/rules/{ruleID}/tune/draft", g.Wrap("alert-tuning-suggestions", alertTuningHandler))
 
 		// charging-diagnosis (Phase-50 / N4, slice 0018).
 		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
@@ -764,6 +787,15 @@ func aiCabinTemperatureImpactNarrativeStubHandler(w http.ResponseWriter, _ *http
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiTirePressureTrendReasoningStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai tire-pressure trend reasoning is not yet implemented")
+}
+
+// aiAlertTuningStubHandler mirrors
+// aiTirePressureTrendReasoningStubHandler for the A1 slice
+// (Phase-50 / 0034 alert-tuning-suggestions). Reachable only
+// when AIAlertTuningHandler is nil at construction; the off-mode
+// 404 invariant is held by the guard, not the stub.
+func aiAlertTuningStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai alert tuning suggestions is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

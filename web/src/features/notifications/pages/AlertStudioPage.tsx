@@ -48,6 +48,10 @@ import { AlertMessageEditor } from '../components/AlertMessageEditor'
 import { recommendedTriggerMode } from '../lib/recommendedTriggerMode'
 import { Icons } from '@/lib/icons';
 import { AINLAlertBuilder } from '@/components/ai/AINLAlertBuilder'
+import {
+  AIAlertTuningSuggestions,
+  type AlertRuleDraftPatch,
+} from '@/components/ai/AIAlertTuningSuggestions'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 
 // Phase-49 / Slice 0008 — editor-only tri-state. Backend column stays
@@ -1144,6 +1148,50 @@ export default function AlertStudio() {
     })
   }, [deleteRuleMut, discardDraft, setEditor])
 
+  const handleApplyAITuningPatch = useCallback(
+    (patch: AlertRuleDraftPatch) => {
+      // Phase-50 / 0034 (A1) — copy a typed AI-proposed alert
+      // patch onto the editor's local state. The AI panel never
+      // persists state directly; the user reviews the merged
+      // editor and clicks the canonical Save button next, which
+      // flows through saveRuleMut + the unguarded
+      // PUT /api/v1/alerts/rules/{id} handler (ADR-015 §I3 +
+      // §I8 propose-only contract).
+      //
+      // EditorState stores value_num / value_min / value_max as
+      // strings because <UiInput type="number"> emits strings;
+      // we convert proposed numerics to strings here so the
+      // single canonical buildSavePayload number-parsing code
+      // path runs unchanged.
+      setEditor(s => {
+        const next = { ...s }
+        if (patch.value_num != null) {
+          next.value_num = String(patch.value_num)
+        }
+        if (patch.value_min != null) {
+          next.value_min = String(patch.value_min)
+        }
+        if (patch.value_max != null) {
+          next.value_max = String(patch.value_max)
+        }
+        if (typeof patch.cooldown_min === 'number') {
+          next.cooldown_min = patch.cooldown_min
+        }
+        if (patch.severity) {
+          next.severity = patch.severity as Severity
+        }
+        if (patch.trigger_mode) {
+          next.trigger_mode = patch.trigger_mode as TriggerModeOrUnset
+        }
+        if (patch.op) {
+          next.op = patch.op as RuleOp
+        }
+        return next
+      })
+    },
+    [setEditor],
+  )
+
   const handleToggleTestChannel = useCallback((channelId: number) => {
     setTestChannelIds(current => {
       const selected = current ?? allChannelIds
@@ -1570,6 +1618,25 @@ export default function AlertStudio() {
         </div>
 
         <div className="lg:col-span-8 space-y-4">
+          {selectedId != null && (
+            // Phase-50 / 0034 (A1) — opt-in AI alert-rule tuning
+            // suggestions. Renders only when ai_mode != 'off' AND the
+            // alert-tuning-suggestions toggle is on AND a rule is
+            // selected. The withAiFeature HOC inside
+            // AIAlertTuningSuggestions enforces the gate; the manual
+            // editor below remains the canonical baseline in off
+            // mode (ADR-015 §I3). The component PROPOSES typed
+            // patches only — saving still flows through the typed
+            // handler below (ADR-015 §I3 baseline-intact + §I8
+            // propose-only contract).
+            <FadeIn delay={0.04}>
+              <AIAlertTuningSuggestions
+                ruleId={selectedId}
+                vehicleId={aiVehicleId ?? undefined}
+                onApplyDraft={handleApplyAITuningPatch}
+              />
+            </FadeIn>
+          )}
           <GlassPanel className="p-4" data-tour="alert-studio-builder">
             <div className="flex items-center gap-2 mb-4">
               <Icons.pencil className="h-4 w-4 text-neon-cyan" />

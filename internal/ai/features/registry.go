@@ -1458,6 +1458,81 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / 0034 (A1) — Alert tuning suggestions.
+	//
+	// `alert-tuning-suggestions` is an opt-in LLM that proposes a
+	// lower-noise typed AlertRule patch for an EXISTING rule based
+	// on the rule's recent firing history, then asks the user to
+	// review the patch in the AlertStudio UI and click Save. The
+	// strategy is PROPOSE-ONLY: it never writes to the database
+	// itself; the actual save flows through the existing typed
+	// PUT /api/v1/alerts/rules/{id} handler that the deterministic
+	// AlertStudio form already uses. The deterministic Alert
+	// Studio (manual threshold tuning + the existing alert
+	// analytics dashboard) remains the canonical baseline when AI
+	// is off (ADR-015 §I3).
+	//
+	// Backend: POST /api/v1/ai/alerts/rules/{ruleID}/tune/draft is
+	// the single AI route for this slice. ruleID is taken from the
+	// URL path; the AI handler clamps the LLM's tool calls to
+	// that scope so a "tune rule 999 instead" prompt cannot
+	// cross-rule the proposal. The route is mounted under
+	// guard.Wrap so it returns 404 when ai_mode='off' OR the
+	// per-feature toggle is off (ADR-015 §I6 + §I7).
+	//
+	// Frontend: /alerts/studio is the canonical AlertStudio page.
+	// The AI side panel is rendered next to the editor via
+	// withAiFeature('alert-tuning-suggestions', ...) so it is
+	// completely absent from the DOM when the toggle is off
+	// (ADR-015 §I5).
+	//
+	// UI test ID: ai-feature-alert-tuning-suggestions-root is the
+	// data-testid the withAiFeature HOC stamps on the gated
+	// wrapper. Off-mode tests assert it is absent; on-mode tests
+	// assert it is present + receives the first SSE delta.
+	//
+	// NeedsRAG: false — the assistant has two propose-only tools
+	// (draft_alert_rule_patch reads the existing rule + replays
+	// the recent notification_logs firing window;
+	// validate_alert_rule runs the canonical AlertRule validator
+	// over the merged shape). The slice prompt's "source types:
+	// alert_history;alert_rule" describes the data domains the
+	// tools read from (alert_rules + notification_logs), NOT an
+	// embeddings-backed retrieval surface — F7 is not invoked.
+	//
+	// NeedsTools: true — the assistant MUST call
+	// draft_alert_rule_patch FIRST and validate_alert_rule on the
+	// merged proposal (system prompt enforces the tool sequence).
+	//
+	// NeedsStream: true — the response is SSE-streamed via the
+	// shared stream.Writer so the SPA can render delta tokens
+	// live and surface the typed proposal envelope as soon as the
+	// tool_result arrives.
+	//
+	// JobNames: explicitly empty (no background job is registered
+	// for this slice). features.CoverageOK rejects nil; the empty
+	// slice is the affirmative "no surface" signal.
+	//
+	// PushKinds: explicitly empty (no notification/push channel
+	// surface). features.CoverageOK rejects nil; the empty slice
+	// is the affirmative "no surface" signal.
+	"alert-tuning-suggestions": {
+		ID:          "alert-tuning-suggestions",
+		Name:        "Alert tuning suggestions",
+		Description: "Opt-in LLM that proposes a lower-noise typed AlertRule patch for an existing rule based on the rule's recent firing history (sourced from notification_logs). The assistant calls draft_alert_rule_patch to compute a descriptive replay of the recent firing window through the proposed threshold + cooldown, then validate_alert_rule to confirm the merged proposal is byte-equivalent to a draft accepted by the canonical PUT /api/v1/alerts/rules/{id} handler. The narration explicitly surfaces that the projected post-patch firing count is a DESCRIPTIVE estimate from the recent firing window — NOT a forecast — and refuses to propose suspending, disabling, deleting, or loosening severity. The user reviews the typed patch in the Alert Studio UI and clicks Save to apply. The deterministic Alert Studio (manual threshold tuning + the existing alert analytics dashboard) remains the canonical baseline when AI is off. Per-feature redaction policy denies every PII class — alert IDs, signal names, and thresholds flow through the typed F4 tool envelope, not through prompt prose.",
+		Tier:        "A",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/alerts/rules/{ruleID}/tune/draft"},
+			Frontend:  []string{"/alerts/studio"},
+			UITestIDs: []string{"ai-feature-alert-tuning-suggestions-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

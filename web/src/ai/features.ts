@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -57,6 +57,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsTools: false,
     needsStream: false,
     uiTestIds: Object.freeze([] as const),
+  }),
+  "alert-tuning-suggestions": Object.freeze({
+    id: "alert-tuning-suggestions",
+    name: "Alert tuning suggestions",
+    description: "Opt-in LLM that proposes a lower-noise typed AlertRule patch for an existing rule based on the rule's recent firing history (sourced from notification_logs). The assistant calls draft_alert_rule_patch to compute a descriptive replay of the recent firing window through the proposed threshold + cooldown, then validate_alert_rule to confirm the merged proposal is byte-equivalent to a draft accepted by the canonical PUT /api/v1/alerts/rules/{id} handler. The narration explicitly surfaces that the projected post-patch firing count is a DESCRIPTIVE estimate from the recent firing window — NOT a forecast — and refuses to propose suspending, disabling, deleting, or loosening severity. The user reviews the typed patch in the Alert Studio UI and clicks Save to apply. The deterministic Alert Studio (manual threshold tuning + the existing alert analytics dashboard) remains the canonical baseline when AI is off. Per-feature redaction policy denies every PII class — alert IDs, signal names, and thresholds flow through the typed F4 tool envelope, not through prompt prose.",
+    tier: "A",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-alert-tuning-suggestions-root"] as const),
   }),
   "anomaly-explanations": Object.freeze({
     id: "anomaly-explanations",
@@ -317,6 +328,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "__redaction_bypass__",
   "__usage__",
   "ai-provider-health",
+  "alert-tuning-suggestions",
   "anomaly-explanations",
   "auto-trip-naming",
   "battery-health-forecast-narrative",

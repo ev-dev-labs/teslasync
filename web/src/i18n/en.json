@@ -2488,6 +2488,10 @@
         "tire-pressure-trend-reasoning": {
           "label": "Tire-pressure trend reasoning",
           "description": "Opt-in LLM narrator that explains the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation when all four corners trend together with a parallel ambient-temperature drop, single-corner slow-leak signature when one corner's rate is materially worse), and any actionable threshold crossing — grounded strictly in the same TpmsPressure* and OutsideTemp signal-log change feed the gauges render, and honest that the per-corner slope is a descriptive linear extrapolation rather than a forecast. The deterministic Tire Pressure page (four-corner radial gauges, soft-low/normal/soft-high threshold bands, warning banner, summary metric cards, pressure history chart, history table) remains the canonical baseline when AI is off."
+        },
+        "alert-tuning-suggestions": {
+          "label": "Alert-rule tuning suggestions",
+          "description": "Opt-in LLM that reads an existing AlertRule plus the rule's recent 30-day firing history and proposes a typed lower-noise patch (threshold, cooldown, severity, trigger-mode) — for example, raising the battery-low threshold or lengthening the cooldown when the rule has been firing 23 times a week. Surfaces a descriptive replay of the recent firing window (how often the rule would have fired under the proposed thresholds), explicitly NOT a prediction, and never persists the patch — the user reviews the typed draft inside the AlertStudio editor and clicks the canonical Save button to apply. The deterministic AlertStudio editor (manual threshold + cooldown tuning, severity selector, trigger-mode toggle, fired-history table) remains the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -6702,6 +6706,14 @@
         "description": "Describe the alert you want and get a typed AlertRule draft you can review and save below.",
         "badge": "AI",
         "draftButton": "Draft alert"
+      },
+      "aiTuning": {
+        "title": "Suggest lower-noise tuning",
+        "description": "Review recent firings and propose a typed AlertRule patch. Descriptive replay only — review before saving.",
+        "badge": "AI",
+        "suggestButton": "Suggest tuning",
+        "applyButton": "Apply to form",
+        "previewLabel": "Proposed patch (review before saving):"
       },
       "rules": {
         "untitled": "Untitled",

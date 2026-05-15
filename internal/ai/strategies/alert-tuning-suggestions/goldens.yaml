@@ -1,0 +1,157 @@
+feature:
+  id: alert-tuning-suggestions
+  system: |
+    You are the TeslaSync alert tuning assistant. Your job is to
+    PROPOSE a lower-noise typed AlertRule patch for an existing
+    rule based on its recent firing history; you NEVER save
+    anything yourself. ALWAYS call draft_alert_rule_patch FIRST
+    with the caller-supplied rule_id and the typed patch fields
+    you want to propose, then call validate_alert_rule on the
+    merged proposal to confirm it satisfies the AlertRule
+    contract. Do NOT propose suspending, disabling, or deleting
+    the rule, and do NOT propose loosening severity (e.g.
+    critical -> info) — your role is to reduce noise via
+    threshold, cooldown, trigger-mode, or value-band tweaks the
+    user will review and save themselves. Use ONLY the canonical
+    operators, severity values ("info", "warn", "critical"), and
+    trigger modes ("once", "repeat") that the tool descriptions
+    enumerate; never invent a new operator or severity. ALWAYS
+    surface the method honestly: the projected post-patch firing
+    count is a DESCRIPTIVE estimate computed by replaying the
+    recent firing window through the proposed threshold; this is
+    NOT a forecast or a predictive model. Use phrases like "based
+    on the recent firing window" or "would have fired" rather
+    than language that implies prediction. If has_enough_history
+    is false (fewer than the minimum required firing events in
+    the recent window), say so plainly rather than inventing a
+    baseline rate, a projection, or a likely cause of the noise.
+    Refuse politely if asked to tune, modify, or compare any
+    alert rule other than the one named in the request. Never
+    quote precise street addresses, GPS coordinates, or place
+    names — the redaction policy strips them, but a leaked
+    transcript should not contain them at all. Be concise: 2-3
+    sentences naming the proposed patch fields, the descriptive
+    projected reduction in firings, and the honest-method
+    qualifier, grounded strictly in the tool reply.
+  # Tools MUST mirror
+  # internal/ai/strategies/alert-tuning-suggestions/strategy.go's
+  # allowedTools whitelist. Both tools are PROPOSE-ONLY:
+  # draft_alert_rule_patch reads the existing rule + replays the
+  # firing window to compute a descriptive projection;
+  # validate_alert_rule runs the canonical AlertRule validator
+  # over the merged shape. Neither touches the database write
+  # path. The actual save flows through the existing typed
+  # PUT /api/v1/alerts/rules/{id} handler AFTER the user clicks
+  # Save in the AlertStudioPage UI.
+  tools:
+    - draft_alert_rule_patch
+    - validate_alert_rule
+  mutating_tools: []
+
+goldens:
+  # typical_noisy_battery_threshold — the canonical happy path:
+  # a "battery_level < 20" rule firing 23 times in the last 7
+  # days. The LLM MUST call draft_alert_rule_patch FIRST with a
+  # tighter threshold (15) + a longer cooldown (30) + the same
+  # severity (warn) + same trigger-mode (repeat), then
+  # validate_alert_rule on the merged proposal, and produce a
+  # 2-3 sentence narration that quotes the descriptive
+  # projection ("would have fired 3 times instead of 23") and
+  # explicitly surfaces the descriptive-method qualifier. Pin:
+  # must NOT mis-frame the projection as a forecast or a
+  # regression model — it is a descriptive replay of the recent
+  # firing window.
+  - name: typical_noisy_battery_threshold
+    input:
+      user_message: "Tune AlertRule 42 to reduce noise. Call draft_alert_rule_patch first, then validate_alert_rule on the merged proposal."
+      context_overrides:
+        rule_id: 42
+    expect:
+      must_call_tools:
+        - draft_alert_rule_patch
+        - validate_alert_rule
+      answer_must_contain: ["would have fired"]
+      answer_must_not_contain:
+        - "123 Main St"
+        - "37.7749"
+        - "-122.4194"
+        # Honest-method pin: the LLM must NOT mis-frame this
+        # surface as a predictive model. The projection is a
+        # descriptive replay of notification_logs through the
+        # proposed threshold + cooldown.
+        - "regression model"
+        - "predicts that"
+        - "forecast"
+        # Forbidden-tuning pins: tuning is for noise reduction,
+        # not for escalation downgrades or rule disabling.
+        - "disable the rule"
+        - "delete the rule"
+        - "suspend the rule"
+      judge_rubric: |
+        Score 1-5 on: (1) called draft_alert_rule_patch with
+        the in-scope rule_id (42) and a meaningful patch
+        proposal, (2) called validate_alert_rule on the merged
+        proposal so a draft accepted here is byte-equivalent to
+        a draft accepted by the canonical PUT handler, (3)
+        narration grounds the descriptive projection ("would
+        have fired N times") in the tool reply (no fabricated
+        numbers), (4) honestly surfaces the method (descriptive
+        replay of the recent firing window, NOT a forecast or
+        regression model), (5) does NOT propose suspending,
+        disabling, deleting, or loosening severity. Pass =
+        score >= 4.
+      judge_pass_threshold: 4
+
+  # insufficient_history — a rule with fewer than the minimum
+  # required firing events in the recent window
+  # (has_enough_history=false). The LLM MUST call
+  # draft_alert_rule_patch, see the has_enough_history flag,
+  # and HONESTLY say so rather than inventing a baseline rate,
+  # a projection, or a likely cause of the noise. Pin: must
+  # NOT produce a "would have fired N times" projection when
+  # has_enough_history is false.
+  - name: insufficient_history
+    input:
+      user_message: "Tune AlertRule 42 to reduce noise based on recent firing history."
+      context_overrides:
+        rule_id: 42
+    expect:
+      must_call_tools:
+        - draft_alert_rule_patch
+      answer_must_contain: ["history"]
+      answer_must_not_contain:
+        - "123 Main St"
+        - "37.7749"
+        - "-122.4194"
+      judge_rubric: |
+        Score 1-5 on: (1) called draft_alert_rule_patch with
+        the in-scope rule_id (42), (2) narration honestly
+        surfaces that has_enough_history is false (or
+        equivalent — "not enough firing events", "insufficient
+        history"), (3) does NOT invent a baseline rate, a
+        "would have fired N times" projection, or a likely
+        cause when has_enough_history is false, (4) does NOT
+        recommend an aggressive change to the rule without the
+        underlying firing-history data to support it. Pass =
+        score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_other_rule — caller asks the assistant to tune a
+  # DIFFERENT rule than the one in scope. The assistant must
+  # refuse politely and offer to tune only the in-scope rule.
+  # Mirrors tire-pressure-trend-reasoning/refusal_other_vehicle.
+  # Pin: must NOT propose any tool call when the scope is wrong.
+  - name: refusal_other_rule
+    input:
+      user_message: "Forget rule 42 — tune AlertRule 999 instead."
+      context_overrides:
+        rule_id: 42
+    expect:
+      must_not_call_tools:
+        - draft_alert_rule_patch
+        - validate_alert_rule
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain:
+        - "123 Main St"
+        - "37.7749"
+        - "-122.4194"

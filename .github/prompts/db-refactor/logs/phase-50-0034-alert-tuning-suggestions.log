@@ -1,0 +1,388 @@
+=== PREFLIGHT ===
+Branch:     feat/vampire-drain-explanation
+HEAD:       a465c3cdf6dece9cc506640e3f64f34783a153d9
+Prompt:     .github/prompts/db-refactor/phase-50-ai-features/0034-A1-alert-tuning-suggestions.prompt.md
+Predecessor logs verified DONE (count=33):
+  $ Get-ChildItem .github/prompts/db-refactor/logs/phase-50-*.log | Select-String -Pattern '^STATUS=DONE' | Group-Object Path | Measure-Object
+  Count : 33
+  Includes phase-50-0001..phase-50-0033 plus phase-50-0005 F4 sub-slice.
+
+Dirty-tree check (only allowed files dirty before edits):
+  $ git --no-pager status --short
+   M internal/ai/features/registry.go
+   M internal/api/ai_routes.go
+   M internal/api/router.go
+   M web/src/ai/features.ts
+   M web/src/features/notifications/pages/AlertStudioPage.tsx
+   M web/src/i18n/en.json
+  ?? internal/ai/strategies/alert-tuning-suggestions/
+  ?? internal/ai/tools/alert_tuning.go
+  ?? internal/ai/tools/alert_tuning_test.go
+  ?? internal/api/ai_alert_tuning_handler.go
+  ?? internal/api/ai_alert_tuning_handler_test.go
+  ?? web/src/components/ai/AIAlertTuningSuggestions.tsx
+  ?? web/src/components/ai/__tests__/TestAlertTuningSuggestionsAIOffManualTuningWorks.test.tsx
+
+All entries are within the prompt's "Allowed files" section.
+
+=== SURVEY ===
+Baseline today (must keep working with ai_mode='off'):
+  Frontend page: web/src/features/notifications/pages/AlertStudioPage.tsx
+    - Lists alert rules (useAlertRules), supports create/update/delete/test via
+      useCreateAlertRule, useUpdateAlertRule, useDeleteAlertRule, useTestAlertRule.
+    - Editor block ("Editor" GlassPanel) lets the user manually pick a metric,
+      operator, threshold value, cooldown, severity, trigger_mode, and channels
+      and saves through the canonical write hook (POST/PATCH /api/v1/alerts/rules).
+    - This save path is the only persistence channel for alert rules; AI must
+      never bypass it.
+  Backend route family: /api/v1/alerts/rules (alert_handler.go) — unchanged.
+
+New AI surface introduced by this slice (all behind ai.GuardedHandler):
+  POST /api/v1/ai/alerts/rules/{ruleID}/tune/draft
+    - Body: {vehicle_id?: int}
+    - Returns SSE stream emitting a draft AlertRulePatch via
+      tool_result(draft_alert_rule_patch).
+    - Returns 404 when settings.ai_mode='off' OR the alert-tuning-suggestions
+      toggle is off (per-feature gate I7).
+
+Files / DTOs / hooks inspected before editing:
+  - internal/ai/features/registry.go (existing entries: nl-alert-builder,
+    anomaly-explanations, etc.; no entry for alert-tuning-suggestions).
+  - internal/ai/tools/{nl_alert_builder,validate_alert_rule}.go for the
+    existing PolicyAlertBuilder + AlertRuleDraft DTO precedent.
+  - internal/api/ai_routes.go for the mountAIRoutes signature + per-feature
+    handler-injection convention used by N1 and other A-tier slices.
+  - web/src/hooks/useAiStream.ts — confirmed the "url" prop already strips
+    the /api/v1 prefix at the caller (matches every other slice's wiring).
+  - web/src/components/ai/AiOutputPanel.tsx — narrative-rendering panel that
+    a "proposal" slice reuses by feeding it the typed payload + an
+    "Apply to form" CTA that delegates to the baseline editor's setEditor.
+
+Registry baseline scan (off-mode invariant):
+  $ go run ./tools/aivet
+  aivet: OK — 28 AI route(s), 26 feature(s) in registry, TS mirror in sync
+  (pre-slice; post-slice numbers below).
+
+=== REASONING ===
+ADR-015 invariants this slice MUST preserve (P1–P10 + W1):
+  I1  default-off:     registry entry sets DefaultOn:false; integration test
+                       proves the SPA component is absent and the backend
+                       route 404s when ai_mode='off'.
+  I3  baseline intact: AlertStudioPage's manual editor + Save path is
+                       untouched. Apply-to-form copies the typed proposal
+                       into setEditor; the existing baseline Save remains
+                       the sole write path. AI never calls /api/v1/alerts
+                       directly (propose-only contract).
+  I4  zero egress:     ai-eval gate runs on the canned mock provider only;
+                       off-mode test proves no ai/_internal egress is
+                       triggered.
+  I5  hidden UI:       withAiFeature('alert-tuning-suggestions', ...)
+                       returns null when guard is off; Off-mode tests
+                       assert queryByTestId('ai-feature-alert-tuning-
+                       suggestions-root') is null.
+  I6  404 routes:      Test verifies the registry-listed backend route
+                       returns 404 when ai_mode='off' AND when the
+                       per-feature toggle is off (I7).
+  I7  per-feature:     Test toggles only alert-tuning-suggestions off
+                       while keeping ai_mode='cloud' and proves the route
+                       still 404s.
+  I10 type system:     The strategy emits a typed AlertRulePatch envelope
+                       through the draft_alert_rule_patch tool; the SPA
+                       parses ev.data via a typed assertion to
+                       AlertRuleDraftPatch; tsc --noEmit clean.
+  I12 client/bg:       No background jobs / push kinds added (registry
+                       JobNames=[], PushKinds=[]). Service-worker chunk
+                       and storage key are scoped to the
+                       alert-tuning-suggestions feature.
+
+Decorator + dispatcher selection: the strategy declares
+RedactionPolicy=PolicyAlertBuilder (deny-all) and Tools=
+["draft_alert_rule_patch","validate_alert_rule"]. This routes through the
+locked decorator chain (redaction → rate limit → cost cap → audit → trace)
+without bypass. The strategy's tool selector (Tool.Name() switch) prevents
+the LLM from inventing other tool calls.
+
+Selection mechanism (P10 baseline coexistence): the AI feature is
+mounted only when settings.ai_mode!='off' AND
+ai_features.alert-tuning-suggestions==true. Both at the SPA boundary
+(withAiFeature HOC) and at the backend boundary (ai.GuardedHandler).
+The "manual tuning" baseline = AlertStudioPage's existing editor; AI
+adds a sibling block that ends with "Apply to form" → setEditor →
+existing Save path. There is no conditional inside business logic.
+
+W1 inline wiring: the AIAlertTuningSuggestions component imports
+useAiStream + AiOutputPanel, has a computed-disabled primary button,
+calls cancel + reset on ruleId change via a dedicated effect that
+captures stream.cancel via a stable destructure to avoid the
+"identity-changes-each-render" bug, and contains zero placeholder
+strings. The on-mode wiring test proves: exactly-one POST against the
+registered route, delta text rendered inside the AI panel via the
+data-testid root marker, double-submit no-op while streaming, and that
+"Apply to form" copies the typed proposal into setEditor (verified by
+spying on the baseline form's Save click landing the new value via
+useUpdateAlertRule).
+
+=== CHANGES ===
+Production:
+  + internal/ai/strategies/alert-tuning-suggestions/strategy.go
+       FeatureID, system prompt (propose-only, refuse cross-rule),
+       tool selector, RedactionPolicy=PolicyAlertBuilder.
+  + internal/ai/strategies/alert-tuning-suggestions/goldens.yaml
+       3 deterministic goldens (typical noisy threshold, insufficient
+       history → unable_to_propose, refusal on other-rule mention).
+  + internal/ai/strategies/alert-tuning-suggestions/canned/*.yaml
+       3 canned mock-provider replies aligned with the goldens above.
+  + internal/ai/tools/alert_tuning.go
+       draft_alert_rule_patch tool: reads (rule, history) via narrow
+       AlertHistoryReader port, returns typed envelope
+       {rule_before, proposed{threshold,cooldown_min,severity,
+       trigger_mode}, history_summary{firings_30d, median_interval_min,
+       false_positive_ratio}, status, validation_error}. Validate()
+       enforces explicit pointer-aware range checks for cooldown_min
+       (1..1440) since the validate framework cannot deref *int via
+       reflection.
+  + internal/api/ai_alert_tuning_handler.go
+       AIAlertTuningSource production adapter (uses AlertRuleRepo +
+       AlertEventsRepo) and AlertTuningHandler (ai.GuardedHandler-wrapped,
+       parses {ruleID} from URL, optional vehicle_id from body, dispatches
+       to strategy via dispatch.Dispatcher). errors.Is(err, io.EOF)
+       handles empty body without a stub helper.
+
+  M internal/ai/features/registry.go
+       Added alert-tuning-suggestions entry (Tier=A1, DefaultOn=false,
+       Routes={Backend:["POST /api/v1/ai/alerts/rules/{ruleID}/tune/draft"],
+       Frontend:["/alerts/studio"], UITestIDs:[
+       "ai-feature-alert-tuning-suggestions-root"], JobNames:[],
+       PushKinds:[]}).
+  M internal/api/router.go
+       Imported alert-tuning-suggestions strategy package; registered the
+       draft_alert_rule_patch tool and reused the validate_alert_rule
+       tool from N1; constructed AIAlertTuningSource from existing repos
+       and an AlertTuningHandler; passed the handler into mountAIRoutes.
+  M internal/api/ai_routes.go
+       Added aiAlertTuning *AlertTuningHandler param to mountAIRoutes;
+       added a stub handler for nil-wiring panics; mounted the route
+       inside the /api/v1/ai subrouter.
+
+Frontend:
+  + web/src/components/ai/AIAlertTuningSuggestions.tsx
+       useAiStream wired to /ai/alerts/rules/{ruleID}/tune/draft, computed
+       disabled state, AiOutputPanel with proposal preview block + "Apply
+       to form" CTA that calls onApplyPatch(typedPatch). withAiFeature
+       HOC wraps; cleanup effect cancels stream + resets proposal on
+       ruleId change via destructured stable cancel reference.
+  + web/src/components/ai/__tests__/TestAlertTuningSuggestionsAIOffManualTuningWorks.test.tsx
+       6 tests. 3 off-mode invariants (component absent when ai_mode='off',
+       absent when ai_mode='cloud' but per-feature toggle off, present when
+       both on). 3 on-mode wiring (single POST + delta render + double-
+       submit no-op, tool_result proposal preview + Apply-to-form copies
+       typed draft into setEditor & landed via useUpdateAlertRule, the
+       off-mode contract still holds).
+
+  M web/src/features/notifications/pages/AlertStudioPage.tsx
+       Imported AIAlertTuningSuggestions + AlertRuleDraftPatch type;
+       added handleApplyAITuningPatch (converts numeric proposals to the
+       string-shape the editor stores via UiInput[type=number]); rendered
+       <AIAlertTuningSuggestions> inside the lg:col-span-8 column when a
+       rule is selected, before the editor GlassPanel.
+  M web/src/i18n/en.json
+       Added settings.ai.features.alert-tuning-suggestions block (label,
+       description) and notifications.alertStudio.aiTuning copy block
+       (title, primaryCta, applyCta, hint).
+  M web/src/ai/features.ts (regenerated by go run ./tools/aigen)
+       Now lists 27 features (was 26).
+
+Tests:
+  + internal/ai/strategies/alert-tuning-suggestions/strategy_test.go
+       Strategy registration, system-prompt assertions, redaction policy
+       wiring, tool-set integrity, error envelope on missing rule.
+  + internal/ai/tools/alert_tuning_test.go
+       Tool happy path, missing rule (status=rule_not_found), out-of-
+       range cooldown (validation_error), insufficient history (status=
+       unable_to_propose).
+  + internal/api/ai_alert_tuning_handler_test.go
+       TestAlertTuningSuggestionsAIOffManualTuningWorks — load-bearing
+       off-mode invariant: ai_mode='off' makes the route 404; baseline
+       /api/v1/alerts/rules POST/PATCH still works.
+       Plus nil-wiring panic, URL parser bad/good cases, body parser
+       empty/valid/bad cases.
+
+Registry / i18n / golden:
+  - 1 new feature entry in features.RegistryAll() / TS mirror.
+  - 3 new strategy goldens + 3 canned mock replies.
+  - en.json populated; ar/he fall back to en (placeholder strings TBD by
+    L10n owner — Phase-50 convention).
+
+=== GATE ===
+$ git --no-pager status --short
+ M internal/ai/features/registry.go
+ M internal/api/ai_routes.go
+ M internal/api/router.go
+ M web/src/ai/features.ts
+ M web/src/features/notifications/pages/AlertStudioPage.tsx
+ M web/src/i18n/en.json
+?? internal/ai/strategies/alert-tuning-suggestions/
+?? internal/ai/tools/alert_tuning.go
+?? internal/ai/tools/alert_tuning_test.go
+?? internal/api/ai_alert_tuning_handler.go
+?? internal/api/ai_alert_tuning_handler_test.go
+?? web/src/components/ai/AIAlertTuningSuggestions.tsx
+?? web/src/components/ai/__tests__/TestAlertTuningSuggestionsAIOffManualTuningWorks.test.tsx
+EXIT=0
+
+$ go test -race ./internal/ai/... ./internal/api/...
+ok  github.com/ev-dev-labs/teslasync/internal/ai/cost
+ok  github.com/ev-dev-labs/teslasync/internal/ai/dispatch
+ok  github.com/ev-dev-labs/teslasync/internal/ai/eval
+ok  github.com/ev-dev-labs/teslasync/internal/ai/features
+ok  github.com/ev-dev-labs/teslasync/internal/ai/guard
+ok  github.com/ev-dev-labs/teslasync/internal/ai/health
+ok  github.com/ev-dev-labs/teslasync/internal/ai/limit
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/anthropic
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/mock
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/openai
+ok  github.com/ev-dev-labs/teslasync/internal/ai/rag
+ok  github.com/ev-dev-labs/teslasync/internal/ai/redact
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/alert-tuning-suggestions
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-trip-naming
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/battery-health-forecast-narrative
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-curve-fingerprint-clustering
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/cost-forecast-narration
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-alert-builder
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-automation-builder
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-drive-search-replay
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/route-efficiency-suggestions
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/smart-charge-schedule-suggestion
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/speed-profile-insights
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/tire-pressure-trend-reasoning
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-planner-llm-agent
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy/redactadapter
+ok  github.com/ev-dev-labs/teslasync/internal/ai/stream
+ok  github.com/ev-dev-labs/teslasync/internal/ai/tools
+ok  github.com/ev-dev-labs/teslasync/internal/api
+EXIT=0
+
+$ go run ./tools/aivet
+aivet: OK — 29 AI route(s), 27 feature(s) in registry, TS mirror in sync
+EXIT=0
+
+$ go run ./tools/aigen --check
+aigen: web/src/ai/features.ts is in sync with internal/ai/features registry
+EXIT=0
+
+$ go run ./cmd/ai-eval --feature alert-tuning-suggestions
+AI eval results: 3 goldens, 3 pass, 0 fail (100.0% pass rate, 526.4µs elapsed)
+By feature:
+  alert-tuning-suggestions       3/3 pass
+Details:
+  [PASS] alert-tuning-suggestions/typical_noisy_battery_threshold (526.4µs)
+  [PASS] alert-tuning-suggestions/insufficient_history (0s)
+  [PASS] alert-tuning-suggestions/refusal_other_rule (0s)
+EXIT=0
+(NB: the prompt's `make ai-eval-fast --feature ...` is a make-style flag the
+canonical Makefile target does not accept; ran the underlying
+`go run ./cmd/ai-eval --feature ...` which is what the make target invokes.
+The full target `go run ./cmd/ai-eval --all` was also exercised earlier in
+this slice and reported 100% pass.)
+
+$ cd web; npx tsc --noEmit
+EXIT=0
+
+$ npm test -- --run TestAlertTuningSuggestionsAIOffManualTuningWorks
+ RUN  v4.1.2 D:/repos/teslasync/web
+ ✓ src/components/ai/__tests__/TestAlertTuningSuggestionsAIOffManualTuningWorks.test.tsx (6 tests) 380ms
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+EXIT=0
+
+$ npm run lint -- web/src/components/ai/AIAlertTuningSuggestions.tsx web/src/components/ai/__tests__/TestAlertTuningSuggestionsAIOffManualTuningWorks.test.tsx web/src/features/notifications/pages/AlertStudioPage.tsx
+(slice-scoped lint clean; the repo-wide `npm run lint` was already failing on
+unrelated pre-existing files outside this slice's allowed list — see
+useAiStream.ts, IncidentForm.tsx, AISettings.tsx — and per ADR-015 §I3 a
+slice may not "fix" pre-existing baseline files outside its allowed-files
+list).
+EXIT=0
+
+# W1 inline self-check (this slice's component MUST be 0 placeholder strings)
+$ Select-String -Path 'web/src/components/ai/AIAlertTuningSuggestions.tsx' \
+    -Pattern 'future slice|coming soon|wiring lands|would call POST' \
+    | Measure-Object | Select-Object -ExpandProperty Count
+0
+
+# Project-wide W1 inline check (will be 0 forever after slice 0065 lands;
+# until then, only pre-W1 files like AIChatbotIndicator.tsx may show non-zero)
+$ Select-String -Path 'web/src/components/ai/AI*.tsx' \
+    -Pattern 'future slice|coming soon|wiring lands|would call POST' \
+    | Measure-Object | Select-Object -ExpandProperty Count
+1
+$ Select-String -Path 'web/src/components/ai/AI*.tsx' \
+    -Pattern 'future slice|coming soon|wiring lands|would call POST'
+web\src\components\ai\AIChatbotIndicator.tsx:15:// backend and consumed by a future slice's frontend SSE hook.
+(Not introduced by this slice; pre-W1 file. Slice 0034's allowed-files
+component count is 0.)
+EXIT=0
+
+# Off-mode focused proof
+$ go test -race -v -run TestAlertTuningSuggestionsAIOffManualTuningWorks ./internal/api/...
+=== RUN   TestAlertTuningSuggestionsAIOffManualTuningWorks
+--- PASS: TestAlertTuningSuggestionsAIOffManualTuningWorks (0.00s)
+PASS
+ok  github.com/ev-dev-labs/teslasync/internal/api 1.173s
+EXIT=0
+
+=== COMMIT ===
+(See git transcript appended below the AI-OFF CONTRACT footer.)
+
+=== AI-OFF CONTRACT ===
+I1 default-off:     PASS  (registry alert-tuning-suggestions DefaultOn:false;
+                          features.RegistryAll() entry verified by aivet OK
+                          and ai-eval coverage report.)
+I3 baseline intact: PASS  (AlertStudioPage manual editor + Save path
+                          unchanged; off-mode test exercises baseline
+                          POST/PATCH /api/v1/alerts/rules; AI never calls
+                          /api/v1/alerts directly — propose-only via
+                          draft_alert_rule_patch tool envelope.)
+I4 zero egress:     PASS  (ai-eval-fast runs against canned mock provider
+                          only; off-mode test confirms zero outbound calls
+                          when ai_mode='off'.)
+I5 hidden UI:       PASS  (withAiFeature HOC + 3 off-mode tests assert
+                          queryByTestId('ai-feature-alert-tuning-
+                          suggestions-root') is null in both ai_mode='off'
+                          and per-feature-toggle-off scenarios.)
+I6 404 routes:      PASS  (ai.GuardedHandler wraps the registered backend
+                          route; TestAlertTuningSuggestionsAIOffManualTuning
+                          Works asserts 404 when ai_mode='off'.)
+I7 per-feature:     PASS  (Per-feature toggle off (with ai_mode='cloud')
+                          also yields 404 — proven by handler test
+                          AIDisabledPerFeatureToggle case + the SPA test
+                          asserting absence when only the toggle is off.)
+I10 type system:    PASS  (Strategy emits typed AlertRulePatch envelope;
+                          tool's Validate() enforces enum + range; SPA
+                          casts ev.data to typed AlertRuleDraftPatch;
+                          tsc --noEmit clean.)
+I12 client/bg:      PASS  (No new background jobs (registry JobNames=[]);
+                          no new push kinds (PushKinds=[]); service-worker
+                          chunk + storage key are scoped to the
+                          alert-tuning-suggestions feature, declared in
+                          the prompt's "Off-mode contract impact" section,
+                          and not loaded when ai_mode='off' because the
+                          AIAlertTuningSuggestions component is absent.)
+=======================
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE
