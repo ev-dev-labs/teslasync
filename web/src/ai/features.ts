@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "inbox-auto-categorization" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "inbox-auto-categorization" | "learned-per-vehicle-anomaly-baselines" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -212,6 +212,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-inbox-auto-categorization-root"] as const),
   }),
+  "learned-per-vehicle-anomaly-baselines": Object.freeze({
+    id: "learned-per-vehicle-anomaly-baselines",
+    name: "Learned per-vehicle anomaly baselines",
+    description: "Opt-in LLM narrator that EXPLAINS the per-signal learned anomaly envelope (mean/stddev/p5/p95 per signal, clamped to the static safe-range envelope; safe-range fallback per signal when fewer than 30 samples exist in the recent signal_log window) for one vehicle. The deterministic Z-score detector with static safeRanges on the Anomaly Detection page remains the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class tagged so a leaked transcript does not reveal vehicle identity beyond the user-supplied vehicle_id.",
+    tier: "ML1",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-learned-per-vehicle-anomaly-baselines-root"] as const),
+  }),
   "nl-alert-builder": Object.freeze({
     id: "nl-alert-builder",
     name: "Natural-language alert builder",
@@ -375,6 +386,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "digest-narration",
   "drive-coaching",
   "inbox-auto-categorization",
+  "learned-per-vehicle-anomaly-baselines",
   "nl-alert-builder",
   "nl-automation-builder",
   "nl-drive-search-replay",

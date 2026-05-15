@@ -1818,6 +1818,60 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
+	//
+	// Opt-in LLM narrator that EXPLAINS the per-signal learned
+	// anomaly envelope the deterministic statistical trainer at
+	// internal/ml/anomaly emits for one vehicle over a recent
+	// signal_log window (mean / stddev / p5 / p95 per signal,
+	// clamped to the static safeRanges envelope; safe-range
+	// fallback per signal when fewer than 30 samples exist in the
+	// window). The deterministic Z-score detector + static
+	// safeRanges anomaly handler at internal/api/anomaly_handler.go
+	// remain the canonical baseline visible to every off-mode user
+	// and on the Anomaly Detection page when this toggle is off.
+	//
+	// Tools:
+	//   - train_anomaly_baseline (read-only) — recomputes the
+	//     per-signal learned envelope on demand from signal_log;
+	//     returns the LearnedBaseline DTO with explicit Source per
+	//     entry ("learned" or "safe_ranges_fallback") so the
+	//     narrator can honestly report which signals fell back.
+	//   - query_anomaly_baseline (read-only) — returns the
+	//     CURRENTLY-effective per-vehicle envelope the deterministic
+	//     detector uses today (today: every signal is the static
+	//     safeRanges fallback because this slice does not persist
+	//     learned envelopes; a future job-tier slice may persist
+	//     them — see JobNames).
+	// Both tools are Mutates=false and never write to signal_log
+	// or any other table.
+	//
+	// JobNames: ["ai_ml_anomaly_trainer"] — gated daily-trainer
+	// stub registered for forward-compat. The slice does NOT ship
+	// the job; declaring it now keeps the registry the single
+	// source of truth for the off-mode coverage walker so when a
+	// future slice adds the job it does NOT widen the off-mode
+	// surface.
+	//
+	// PushKinds: ["ai_ml_anomaly_ready"] — gated push-event kind
+	// registered for forward-compat for the same reason.
+	"learned-per-vehicle-anomaly-baselines": {
+		ID:          "learned-per-vehicle-anomaly-baselines",
+		Name:        "Learned per-vehicle anomaly baselines",
+		Description: "Opt-in LLM narrator that EXPLAINS the per-signal learned anomaly envelope (mean/stddev/p5/p95 per signal, clamped to the static safe-range envelope; safe-range fallback per signal when fewer than 30 samples exist in the recent signal_log window) for one vehicle. The deterministic Z-score detector with static safeRanges on the Anomaly Detection page remains the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class tagged so a leaked transcript does not reveal vehicle identity beyond the user-supplied vehicle_id.",
+		Tier:        "ML1",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/ml/anomaly-baselines/train"},
+			Frontend:  []string{"/analytics/anomalies"},
+			UITestIDs: []string{"ai-feature-learned-per-vehicle-anomaly-baselines-root"},
+			JobNames:  []string{"ai_ml_anomaly_trainer"},
+			PushKinds: []string{"ai_ml_anomaly_ready"},
+		},
+	},
 }
 
 // IsKnown reports whether id corresponds to a registered feature. Used

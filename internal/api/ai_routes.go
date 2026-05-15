@@ -139,6 +139,7 @@ func mountAIRoutes(
 	aiInboxCategorize *AIInboxCategorizationHandler,
 	aiCrossRuleConflict *AICrossRuleConflictHandler,
 	aiAutoNameUnnamedLocations *AIAutoNameUnnamedLocationsHandler,
+	aiLearnedAnomalyBaselines *AILearnedAnomalyBaselineHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -526,6 +527,28 @@ func mountAIRoutes(
 		}
 		r.Post("/locations/{locationID}/name/draft", g.Wrap("auto-name-unnamed-locations", autoNameUnnamedLocationsHandler))
 
+		// learned-per-vehicle-anomaly-baselines (Phase-50 / ML1,
+		// slice 0062). Opt-in LLM narrator that EXPLAINS the
+		// per-signal LEARNED anomaly envelope (mean / stddev / p5 /
+		// p95 per signal, clamped to the static safe-range envelope;
+		// safe-range fallback per signal when fewer than
+		// anomaly.DefaultMinSamples observations exist in the
+		// recent signal_log window) for ONE vehicle. The
+		// deterministic Z-score detector with static safeRanges
+		// served by GET /api/v1/vehicles/{vehicleID}/anomalies
+		// (rendered via the SPA route /anomaly-detection and the
+		// /analytics/anomalies alias) remains the canonical
+		// baseline visible to every off-mode user. Same
+		// stub-fallback pattern — a nil handler is possible during
+		// partial wiring but the off-mode 404 invariant still
+		// holds because guard.Wrap returns 404 BEFORE the handler
+		// runs in off mode (ADR-015 §I3 + §I6).
+		var learnedAnomalyBaselinesHandler http.HandlerFunc = aiLearnedAnomalyBaselinesStubHandler
+		if aiLearnedAnomalyBaselines != nil {
+			learnedAnomalyBaselinesHandler = aiLearnedAnomalyBaselines.ServeHTTP
+		}
+		r.Post("/ml/anomaly-baselines/train", g.Wrap("learned-per-vehicle-anomaly-baselines", learnedAnomalyBaselinesHandler))
+
 		// charging-diagnosis (Phase-50 / N4, slice 0018).
 		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
 		if aiChargingDiagnosis != nil {
@@ -899,6 +922,15 @@ func aiCrossRuleConflictStubHandler(w http.ResponseWriter, _ *http.Request) {
 // not the stub.
 func aiAutoNameUnnamedLocationsStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai auto-name-unnamed-locations is not yet implemented")
+}
+
+// aiLearnedAnomalyBaselinesStubHandler mirrors aiAutoNameUnnamedLocationsStubHandler
+// for the ML1 slice (Phase-50 / 0062 learned-per-vehicle-anomaly-baselines).
+// Reachable only when AILearnedAnomalyBaselineHandler is nil at
+// construction; the off-mode 404 invariant is held by the guard,
+// not the stub.
+func aiLearnedAnomalyBaselinesStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai learned per-vehicle anomaly baselines is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

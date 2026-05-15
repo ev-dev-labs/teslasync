@@ -1,0 +1,40 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_train_anomaly_baseline_typical_learned_envelope_1
+        name: train_anomaly_baseline
+        arguments: '{"vehicle_id": 42, "days": 14}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_anomaly_baseline_typical_learned_envelope_1
+        name: query_anomaly_baseline
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 96
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Battery — for vehicle <vehicle id='42'/> the proposed learned
+      envelope on BatteryLevel and PackVoltage tightens around the
+      cluster the trainer observed this window (mean and stddev
+      reported by train_anomaly_baseline grounded the bounds; both
+      signals carry source="learned"). The currently-effective
+      detector still uses the wider static safe-range envelope, so
+      these would tighten if applied — they are NOT in use today.
+
+      Thermal — ModuleTempMax / ModuleTempMin / DiStatorTempF /
+      DiStatorTempR also returned source="learned": the proposed
+      learned upper for ModuleTempMax sits noticeably below the
+      static ceiling, which is what you'd expect for a vehicle that
+      hasn't seen a hot-stress trip in this window. The proposed
+      learned envelope would tighten the detector here.
+
+      Tires — TpmsPressureFl / Fr / Rl / Rr also returned
+      source="learned" with a tight band around the user's set
+      pressure. The currently-effective baseline uses the wider
+      static [2.0, 3.5] bar window. The proposed learned envelope
+      would tighten the detector for tires too, but it is NOT in
+      use today.
+    input_tokens: 240
+    output_tokens: 144

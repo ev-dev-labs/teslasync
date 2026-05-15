@@ -392,6 +392,15 @@ export default function App() {
         <Route path="db-health" element={<SafeRoute name="DBHealthDashboard"><DBHealthDashboard /></SafeRoute>} />
         <Route path="mqtt-inspector" element={<SafeRoute name="MQTTInspector"><MQTTInspector /></SafeRoute>} />
         <Route path="anomaly-detection" element={<SafeRoute name="AnomalyDashboard"><AnomalyDashboard /></SafeRoute>} />
+        {/* Phase-50 / 0062 alias: the slice prompt registered the AI feature
+            `learned-per-vehicle-anomaly-baselines` against frontend route
+            `/analytics/anomalies`; the canonical app path stays
+            `/anomaly-detection` for back-compat, but mounting the same page
+            at `/analytics/anomalies` lets the registry's RouteSet.Frontend
+            entry land users on the deterministic baseline (which also hosts
+            the opt-in AILearnedAnomalyBaselines section when AI mode is on
+            and the toggle is enabled). */}
+        <Route path="analytics/anomalies" element={<SafeRoute name="AnomalyDashboard"><AnomalyDashboard /></SafeRoute>} />
         <Route path="driving-dynamics" element={<SafeRoute name="DrivingDynamics"><DrivingDynamics /></SafeRoute>} />
         <Route path="climate-control" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
         {/* Phase-50 / 0031 alias: the slice prompt registered the AI feature

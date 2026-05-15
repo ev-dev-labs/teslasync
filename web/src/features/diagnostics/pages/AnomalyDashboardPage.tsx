@@ -19,6 +19,7 @@ import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { useAnomalies, type AnomalyEntry } from '@/api/hooks/useAnomalies';
 import { AIAnomalyExplanations } from '@/components/ai/AIAnomalyExplanations';
+import { AILearnedAnomalyBaselines } from '@/components/ai/AILearnedAnomalyBaselines';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -136,6 +137,20 @@ export default function AnomalyDashboardPage() {
       {/* remain the canonical baseline in off mode (ADR-015 §I3).*/}
       <FadeIn delay={0.04}>
         <AIAnomalyExplanations vehicleId={selectedId ?? undefined} />
+      </FadeIn>
+
+      {/* ── Phase-50 / 0062 (ML1): opt-in learned per-vehicle ── */}
+      {/* anomaly baselines. Renders only when ai_mode != 'off'   */}
+      {/* AND the learned-per-vehicle-anomaly-baselines toggle is */}
+      {/* on. The withAiFeature HOC inside                        */}
+      {/* AILearnedAnomalyBaselines enforces the gate; the static */}
+      {/* safeRanges + Z-score detector above remains the         */}
+      {/* canonical baseline in off mode AND is the per-signal    */}
+      {/* fallback for the learned trainer when fewer than 30     */}
+      {/* samples exist for a signal in the lookback window       */}
+      {/* (ADR-015 §I3 + slice-0062 trainer fallback contract).   */}
+      <FadeIn delay={0.045}>
+        <AILearnedAnomalyBaselines vehicleId={selectedId ?? undefined} />
       </FadeIn>
 
       {/* ── Health Summary Cards ───────────────────────── */}

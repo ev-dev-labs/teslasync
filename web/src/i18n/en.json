@@ -2504,6 +2504,10 @@
         "auto-name-unnamed-locations": {
           "label": "Auto-name unnamed locations",
           "description": "Opt-in LLM-assisted location-name proposals grounded in the visited-location's visit pattern (current address_name, visit_count, total_duration_s, last_visited). Propose-only: the AI produces a structured proposal via two typed read-only tools (draft_location_name then validate_location_name) and the user explicitly confirms or edits before saving through the existing baseline geofence-create / location-rename path. The deterministic visited-location stat cards, frequency bar charts, and existing list rendered by LocationsPage at /locations remain the canonical baseline when AI is off. The per-feature redaction policy keeps lat/long, street addresses, and place names tagged; only the vehicle name may be narrated."
+        },
+        "learned-per-vehicle-anomaly-baselines": {
+          "label": "Learned per-vehicle anomaly baselines",
+          "description": "Opt-in statistical model that computes per-signal mean, stddev, and p5/p95 from this vehicle's recent signal history (default 14 days, capped at 30) and proposes a learned anomaly envelope, falling back per-signal to the static safe-range envelope when fewer than 30 samples exist in the lookback window. Read-only: the trainer never writes to signal_log, never overwrites the deterministic safe-range table, and the AI narration walks the user through the learned vs. static comparison via two typed tools (train_anomaly_baseline then query_anomaly_baseline). The deterministic Z-score detector + static safeRanges map at /anomaly-detection remain the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -5749,6 +5753,12 @@
       "title": "AI explanation",
       "description": "Get a plain-language explanation of the anomalies the detector has already identified above.",
       "generateButton": "Generate explanation",
+      "badge": "AI"
+    },
+    "aiBaseline": {
+      "title": "Learn per-vehicle baseline",
+      "description": "Compute statistical anomaly bounds (mean, stddev, p5/p95) from this vehicle's recent signal history and walk through how each signal compares to the static safe-range fallback.",
+      "generateButton": "Train baseline",
       "badge": "AI"
     }
   },
