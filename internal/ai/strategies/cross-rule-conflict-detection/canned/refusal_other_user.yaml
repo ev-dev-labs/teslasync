@@ -1,0 +1,12 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot analyze, compare, or list alert rules belonging
+      to a different user — my role is to surface structural
+      conflicts only for the rule set in scope for this
+      session. If you'd like, I can analyze the rule set you
+      have visible right now (rule_ids in scope for this
+      request) — just confirm and I'll call query_alert_rules
+      followed by detect_rule_conflicts on the in-scope set.
+    input_tokens: 64
+    output_tokens: 64

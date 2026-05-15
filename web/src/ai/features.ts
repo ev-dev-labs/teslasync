@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "digest-narration" | "drive-coaching" | "inbox-auto-categorization" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "inbox-auto-categorization" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -156,6 +156,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsTools: true,
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-cost-forecast-narration-root"] as const),
+  }),
+  "cross-rule-conflict-detection": Object.freeze({
+    id: "cross-rule-conflict-detection",
+    name: "Cross-rule conflict detection",
+    description: "Opt-in LLM that reads the caller's alert_rules definitions and surfaces structural conflicts (rule-pair definitions that overlap or are byte-identical) so the user can review them via the existing baseline AlertStudio editor. The assistant calls query_alert_rules FIRST to fetch the typed rule envelope for the in-scope set, then detect_rule_conflicts on the SAME set so the conflict report is byte-equivalent to the deterministic structural detector. Conflict kinds are drawn from a closed taxonomy: redundant_duplicate (byte-identical predicate + same vehicle scope) and overlapping_threshold (same signal_name, overlapping vehicle scope, predicate intervals overlap). Severity / cooldown / trigger-mode mismatches surface as METADATA flags on a conflict, NOT as standalone conflict kinds. The narration explicitly surfaces that the report is a STRUCTURAL OVERLAP ANALYSIS of the current rule definitions — NOT a runtime firing prediction or a claim that one rule shadows another — and refuses to invent conflict kinds outside the closed taxonomy. The user reviews the typed envelope inline and clicks 'Review rule' on each conflict to navigate to the offending rule in the canonical AlertStudio sidebar list — the AI never edits, merges, deletes, or auto-disables any rule; the existing baseline PUT /api/v1/alerts/rules/{id} + validateAlertRule path remains the canonical write surface. Per-feature redaction policy denies every PII class — alert IDs, signal names, and notification text flow through the typed F4 tool envelope, not through prompt prose.",
+    tier: "A",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-cross-rule-conflict-detection-root"] as const),
   }),
   "digest-narration": Object.freeze({
     id: "digest-narration",
@@ -348,6 +359,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "charging-diagnosis",
   "chatbot-llm",
   "cost-forecast-narration",
+  "cross-rule-conflict-detection",
   "digest-narration",
   "drive-coaching",
   "inbox-auto-categorization",

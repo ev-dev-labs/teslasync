@@ -1,0 +1,26 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_alert_rules_no_conflicts_clean_set_1
+        name: query_alert_rules
+        arguments: '{"rule_ids": [3, 4]}'
+    input_tokens: 80
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_detect_rule_conflicts_no_conflicts_clean_set_1
+        name: detect_rule_conflicts
+        arguments: '{"rule_ids": [3, 4]}'
+    input_tokens: 320
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      For <vehicle id='1'/>, no structural conflicts were found
+      between rules 3 and 4 — their predicates target different
+      signal_names, so their definitions do not overlap. This
+      is a structural overlap analysis of the current rule
+      definitions; severity, cooldown, and trigger-mode
+      differences alone are surfaced as metadata on a conflict
+      and are not standalone conflict kinds.
+    input_tokens: 320
+    output_tokens: 96

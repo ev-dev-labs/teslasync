@@ -52,6 +52,7 @@ import {
   AIAlertTuningSuggestions,
   type AlertRuleDraftPatch,
 } from '@/components/ai/AIAlertTuningSuggestions'
+import { AICrossRuleConflictDetection } from '@/components/ai/AICrossRuleConflictDetection'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 
 // Phase-49 / Slice 0008 — editor-only tri-state. Backend column stays
@@ -1618,6 +1619,27 @@ export default function AlertStudio() {
         </div>
 
         <div className="lg:col-span-8 space-y-4">
+          {(rules?.length ?? 0) >= 2 && (
+            // Phase-50 / 0036 (A3) — opt-in AI cross-rule conflict
+            // detection. Renders only when ai_mode != 'off' AND the
+            // cross-rule-conflict-detection toggle is on AND the
+            // current rule set has at least two rules to compare.
+            // The withAiFeature HOC inside AICrossRuleConflictDetection
+            // enforces the gate; the manual editor below remains the
+            // canonical baseline in off mode (ADR-015 §I3). The
+            // component DETECTS structural conflicts only and surfaces
+            // a "Review rule {id}" hand-off into the existing
+            // selection state — saving still flows through the typed
+            // handler below (ADR-015 §I3 baseline-intact + §I8
+            // propose-only contract).
+            <FadeIn delay={0.02}>
+              <AICrossRuleConflictDetection
+                ruleIds={(rules ?? []).map((r) => r.id)}
+                vehicleId={aiVehicleId ?? undefined}
+                onSelectRule={setSelectedId}
+              />
+            </FadeIn>
+          )}
           {selectedId != null && (
             // Phase-50 / 0034 (A1) — opt-in AI alert-rule tuning
             // suggestions. Renders only when ai_mode != 'off' AND the

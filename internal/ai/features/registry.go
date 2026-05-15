@@ -1625,6 +1625,98 @@ var Registry = map[string]Feature{
 			PushKinds: []string{"ai_alert_category_suggested"},
 		},
 	},
+	// Phase-50 / 0036 — A3 Cross-rule conflict detection.
+	//
+	// `cross-rule-conflict-detection` is the LLM-backed assistant
+	// at POST /api/v1/ai/alerts/rules/conflicts that READS the
+	// caller's alert_rules definitions and surfaces structural
+	// conflicts (rule-pair definitions that overlap or are
+	// byte-identical) so the user can review them via the
+	// existing baseline AlertStudio editor. The assistant calls
+	// query_alert_rules FIRST to fetch the typed rule envelope
+	// for the in-scope set, then detect_rule_conflicts on the
+	// SAME set so the conflict report is byte-equivalent to the
+	// deterministic structural detector that lives in
+	// internal/ai/tools/cross_rule_conflict.go's DetectRuleConflicts.
+	// The user reviews the typed envelope inline and clicks
+	// "Review rule" on each conflict to navigate to the offending
+	// rule in the canonical AlertStudio sidebar list — the AI
+	// never edits, merges, deletes, or auto-disables any rule;
+	// the existing baseline PUT /api/v1/alerts/rules/{id}
+	// + validateAlertRule path remains the canonical write
+	// surface (ADR-015 §I3).
+	//
+	// Backend: POST /api/v1/ai/alerts/rules/conflicts is the
+	// single AI route for this slice. The body carries the
+	// optional vehicle_id / signal_name / rule_ids /
+	// enabled_only / limit filter so the tool's deterministic
+	// detector scopes to the same rule set the SPA's AlertStudio
+	// rule list would have produced. The route is mounted under
+	// guard.Wrap so it returns 404 when ai_mode='off' OR the
+	// per-feature toggle is off (ADR-015 §I6 + §I7).
+	//
+	// Frontend: /alerts/studio is the canonical AlertStudio host
+	// route in the registry metadata; the page actually mounts
+	// at /notifications/studio (the legacy /alerts/studio path
+	// is a no-op redirect) — same convention slice 0034 +
+	// 0035 use. The AI conflict panel is rendered above the
+	// rule editor via withAiFeature('cross-rule-conflict-
+	// detection', ...) so it is completely absent from the DOM
+	// when the toggle is off (ADR-015 §I5).
+	//
+	// UI test ID: ai-feature-cross-rule-conflict-detection-root
+	// is the data-testid the withAiFeature HOC stamps on the
+	// gated wrapper. Off-mode tests assert it is absent; on-
+	// mode tests assert it is present + receives the first SSE
+	// delta.
+	//
+	// NeedsRAG: false — the assistant has two propose-only tools
+	// (query_alert_rules reads alert_rules via the
+	// CrossRuleConflictSource port; detect_rule_conflicts runs
+	// the pure-functional structural conflict detector over the
+	// same rule set). The slice prompt's "source types:
+	// alert_rule;automation_rule" describes the data domains the
+	// tools read from (alert_rules), NOT an embeddings-backed
+	// retrieval surface — F7 is not invoked for A3.
+	//
+	// NeedsTools: true — the assistant MUST call query_alert_rules
+	// FIRST and detect_rule_conflicts SECOND on the same rule
+	// set (system prompt enforces the tool sequence).
+	//
+	// NeedsStream: true — the response is SSE-streamed via the
+	// shared stream.Writer so the SPA can render delta tokens
+	// live and surface the typed conflict envelope as soon as
+	// the tool_result arrives.
+	//
+	// JobNames + PushKinds: explicitly empty arrays. This slice
+	// adds NO background job (the detector is per-request, not
+	// scheduled) and NO push notification (the conflict surface
+	// is a passive in-page panel; the user reviews it via the
+	// SPA, not via push).
+	//
+	// Service worker chunks: ai-cross-rule-conflict-detection
+	// is the dynamic-import name the SPA's lazy loader uses for
+	// the AICrossRuleConflictDetection component. Documented in
+	// the slice prompt's Off-mode contract impact section so the
+	// W1 wired-or-absent invariant has a known chunk name to
+	// audit against.
+	"cross-rule-conflict-detection": {
+		ID:          "cross-rule-conflict-detection",
+		Name:        "Cross-rule conflict detection",
+		Description: "Opt-in LLM that reads the caller's alert_rules definitions and surfaces structural conflicts (rule-pair definitions that overlap or are byte-identical) so the user can review them via the existing baseline AlertStudio editor. The assistant calls query_alert_rules FIRST to fetch the typed rule envelope for the in-scope set, then detect_rule_conflicts on the SAME set so the conflict report is byte-equivalent to the deterministic structural detector. Conflict kinds are drawn from a closed taxonomy: redundant_duplicate (byte-identical predicate + same vehicle scope) and overlapping_threshold (same signal_name, overlapping vehicle scope, predicate intervals overlap). Severity / cooldown / trigger-mode mismatches surface as METADATA flags on a conflict, NOT as standalone conflict kinds. The narration explicitly surfaces that the report is a STRUCTURAL OVERLAP ANALYSIS of the current rule definitions — NOT a runtime firing prediction or a claim that one rule shadows another — and refuses to invent conflict kinds outside the closed taxonomy. The user reviews the typed envelope inline and clicks 'Review rule' on each conflict to navigate to the offending rule in the canonical AlertStudio sidebar list — the AI never edits, merges, deletes, or auto-disables any rule; the existing baseline PUT /api/v1/alerts/rules/{id} + validateAlertRule path remains the canonical write surface. Per-feature redaction policy denies every PII class — alert IDs, signal names, and notification text flow through the typed F4 tool envelope, not through prompt prose.",
+		Tier:        "A",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/alerts/rules/conflicts"},
+			Frontend:  []string{"/alerts/studio"},
+			UITestIDs: []string{"ai-feature-cross-rule-conflict-detection-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

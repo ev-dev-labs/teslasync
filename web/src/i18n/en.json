@@ -2496,6 +2496,10 @@
         "inbox-auto-categorization": {
           "label": "Inbox auto-categorization",
           "description": "Opt-in LLM that reads recent notification-log rows for the requested vehicle plus severity filter, buckets them into a closed taxonomy of nine categories (battery, charging, climate, tire, security, connectivity, maintenance, noise, other) using a deterministic substring mapper over the alert rule's signal name, and proposes which category buckets dominate the inbox over the recent window. Surfaces a descriptive count over the chosen window — explicitly NOT a forecast — and never assigns labels to rows; the user reviews the typed proposal inside the inbox panel and clicks Apply categories as filter to copy the proposed rule_id list into the existing URL-backed inbox filter. The deterministic inbox (manual severity / vehicle / rule_id filters, free-text search, day-grouped + threaded views, bulk actions) remains the canonical baseline when AI is off."
+        },
+        "cross-rule-conflict-detection": {
+          "label": "Cross-rule conflict detection",
+          "description": "Opt-in LLM that reads the typed AlertRule definitions in the current scope (optionally narrowed by vehicle, signal name, enabled-only, or an explicit rule-id list) and surfaces structural conflicts within a closed taxonomy of two kinds: redundant_duplicate (byte-identical predicate plus overlapping vehicle scope, both enabled) and overlapping_threshold (same signal_name, overlapping vehicle scope, predicate intervals overlap on numeric ops). Each surfaced conflict carries metadata flags for severity_mismatch, cooldown_mismatch, trigger_mode_mismatch, and subsumes — informational only, never a new conflict kind. Descriptive structural overlap analysis only — explicitly NOT a prediction — and never edits, merges, or deletes rules; the user clicks Review rule {id} to navigate the AlertStudio editor and applies any change manually. The deterministic AlertStudio rule list and per-rule validation remain the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -6726,6 +6730,18 @@
         "suggestButton": "Suggest tuning",
         "applyButton": "Apply to form",
         "previewLabel": "Proposed patch (review before saving):"
+      },
+      "aiConflicts": {
+        "title": "Detect cross-rule conflicts",
+        "description": "Surface structural overlaps between your alert rule definitions. Review only — the AI never edits, merges, or deletes rules.",
+        "badge": "AI",
+        "detectButton": "Detect conflicts",
+        "reviewButton": "Review rule",
+        "emptyMessage": "No structural conflicts found in the current rule set.",
+        "kind": {
+          "redundant_duplicate": "Redundant duplicate",
+          "overlapping_threshold": "Overlapping threshold"
+        }
       },
       "rules": {
         "untitled": "Untitled",

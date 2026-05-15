@@ -137,6 +137,7 @@ func mountAIRoutes(
 	aiTirePressureTrendReasoning *AITirePressureTrendHandler,
 	aiAlertTuning *AIAlertTuningHandler,
 	aiInboxCategorize *AIInboxCategorizationHandler,
+	aiCrossRuleConflict *AICrossRuleConflictHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -477,6 +478,31 @@ func mountAIRoutes(
 			inboxCategorizationHandler = aiInboxCategorize.ServeHTTP
 		}
 		r.Post("/alerts/inbox/categorize", g.Wrap("inbox-auto-categorization", inboxCategorizationHandler))
+
+		// cross-rule-conflict-detection (Phase-50 / A3, slice 0036).
+		// Opt-in LLM that READS the caller's alert_rules and
+		// surfaces structural conflicts (rule-pair definitions
+		// that overlap or are byte-identical) so the user can
+		// review them via the existing baseline AlertStudio
+		// editor. The route lives under
+		// /ai/alerts/rules/conflicts so it is namespaced under
+		// the existing /alerts surface family. Same stub-fallback
+		// pattern — a nil handler is possible during partial
+		// wiring but the off-mode 404 invariant still holds
+		// because guard.Wrap returns 404 BEFORE the handler runs
+		// in off mode. The canonical baseline routes
+		// (GET /api/v1/alerts/rules + PUT /api/v1/alerts/rules/{id})
+		// are unchanged; the AI is propose-only and never
+		// persists — the user reviews the typed conflict cards
+		// in AlertStudio and clicks "Review rule" which selects
+		// the offending rule in the canonical sidebar list, then
+		// edits it via the canonical typed editor + Save button
+		// (ADR-015 §I3 + §I8).
+		var crossRuleConflictHandler http.HandlerFunc = aiCrossRuleConflictStubHandler
+		if aiCrossRuleConflict != nil {
+			crossRuleConflictHandler = aiCrossRuleConflict.ServeHTTP
+		}
+		r.Post("/alerts/rules/conflicts", g.Wrap("cross-rule-conflict-detection", crossRuleConflictHandler))
 
 		// charging-diagnosis (Phase-50 / N4, slice 0018).
 		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
@@ -833,6 +859,15 @@ func aiAlertTuningStubHandler(w http.ResponseWriter, _ *http.Request) {
 // not the stub.
 func aiInboxCategorizationStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai inbox auto-categorization is not yet implemented")
+}
+
+// aiCrossRuleConflictStubHandler mirrors aiInboxCategorizationStubHandler
+// for the A3 slice (Phase-50 / 0036 cross-rule-conflict-detection).
+// Reachable only when AICrossRuleConflictHandler is nil at
+// construction; the off-mode 404 invariant is held by the guard,
+// not the stub.
+func aiCrossRuleConflictStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai cross-rule conflict detection is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every
