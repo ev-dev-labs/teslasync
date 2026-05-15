@@ -2483,6 +2483,10 @@
           "label": "Period compare narration",
           "description": "Opt-in LLM narrator that explains the deterministic period-over-period analytics on the Period Compare page — which one or two metrics moved most between Period A and Period B, with directional phrasing keyed to the percent_change sign, and explicit honesty about zero-baseline windows and best-effort cost figures. The deterministic Period A vs Period B metric cards, side-by-side bar chart, comparison table, and insights panel remain the canonical baseline when AI is off."
         },
+        "lifetime-stats-qa": {
+          "label": "Lifetime stats Q&A",
+          "description": "Opt-in LLM Q&A surface that answers natural-language questions about your all-time stats — total drives, total distance, charging savings, achievements, personal records, ownership timeline — by routing through two read-only tools that quote the same deterministic envelope the Lifetime Stats dashboard renders. The narrator never invents numbers and is honest about zero-data vehicles. The deterministic Lifetime Stats hero card, key-stats grid, achievements gallery, fun-facts cards, personal-records panel, and ownership timeline remain the canonical baseline when AI is off."
+        },
         "vampire-drain-explanation": {
           "label": "Vampire-drain explanation",
           "description": "Opt-in LLM narrator that explains the deterministic vampire-drain (idle energy loss) signal — recent average / median / p95 idle drain rate per day, the worst recent idle window (start, duration, drain %, ambient temperature), and the per-event driver (Sentry on, climate on, very long parked window) most strongly correlated with elevated drain — grounded in the same numeric envelope the cards render, and honest that the per-event driver attribution is correlational rather than causal. The deterministic vampire-drain stats, per-event timeline, and typical-vs-worst cards on the Vampire Drain page remain the canonical baseline when AI is off."
@@ -3095,6 +3099,14 @@
     "title": "Lifetime Stats",
     "allVehicles": "All Vehicles",
     "subtitle": "Your all-time driving achievements and milestones",
+    "aiQA": {
+      "title": "Ask about your lifetime stats",
+      "description": "Ask the AI a natural-language question about your all-time stats — total distance, charging savings, achievements, personal records. Answers are grounded in the same deterministic envelope the dashboard below shows; the narrator never invents numbers.",
+      "badge": "AI",
+      "placeholder": "e.g. How far have I driven in total? How much have I saved on fuel?",
+      "askButton": "Ask",
+      "inputLabel": "Your question"
+    },
     "heroSubtitle": "driven across {{drives}} drives",
     "earthCompare": "That's {{x}}x around the Earth!",
     "since": "Tracking since {{date}} ({{days}} days)",

@@ -1,0 +1,12 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot answer questions about a different vehicle — my
+      role is to answer lifetime-stats questions only for the
+      vehicle in scope for this session
+      (vehicle <vehicle id='42'/>). If you'd like, I can answer
+      the same question for vehicle <vehicle id='42'/> instead —
+      just confirm and I'll pull the deterministic lifetime
+      envelope.
+    input_tokens: 48
+    output_tokens: 64

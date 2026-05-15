@@ -87,6 +87,7 @@ import (
 	chargingcurvefingerprintclustering "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-curve-fingerprint-clustering"
 	costforecastnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cost-forecast-narration"
 	periodcomparenarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/period-compare-narration"
+	lifetimestatsqa "github.com/ev-dev-labs/teslasync/internal/ai/strategies/lifetime-stats-qa"
 	vampiredrainexplanation "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation"
 	preheatprecoolrecommender "github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender"
 	cabintemperatureimpactnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative"
@@ -1150,6 +1151,53 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		periodcomparenarration.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+
+	// lifetime-stats-qa (Phase-50 / X2, slice 0041).
+	// The shared rag.Retriever is constructed per-feature so the
+	// rate-limit + cost-cap decorators on the embedding provider
+	// apply per-strategy. The retriever uses the same
+	// nomic-embed-text 768-dim physical table as the other RAG
+	// slices; the per-feature source-type allowlist
+	// {analytics_lifetime, drive_summary, charge_session} is
+	// enforced in retrieve_analytics_chunks's Validate. The
+	// `analytics_lifetime` source type is reserved as a string
+	// (not promoted to a rag.Source* constant) for forward-compat
+	// without widening the F7 contract.
+	aiAnalyticsRetriever, err := rag.New(
+		context.Background(),
+		aiSettingsRepo,
+		db,
+		aiRegistry,
+		lifetimestatsqa.FeatureID,
+		rag.ModelNomicEmbedText,
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("ai lifetime-stats-qa: rag.New failed during boot wiring")
+	}
+	// lifetime-stats-qa tools (Phase-50 / X2, slice 0041).
+	// Adds `query_lifetime_stats` + `retrieve_analytics_chunks` to
+	// the shared tool registry so the dispatcher can resolve them
+	// for the lifetime-stats-qa strategy. Same ordering rule as
+	// the other slice tools above: must be registered before the
+	// handler constructor below so the strategy's allowedTools
+	// resolve at boot. query_lifetime_stats composes the SAME
+	// api.ComputeLifetimeStats helper that backs the canonical
+	// baseline GET /api/v1/analytics/lifetime handler — no new
+	// SQL is written by this slice.
+	tools.RegisterLifetimeStatsQATools(aiToolRegistry, tools.LifetimeStatsQASources{
+		Retriever:     aiAnalyticsRetriever,
+		LifetimeStats: NewAILifetimeStatsSource(db),
+	})
+	// lifetime-stats-qa handler. One per process; stateless beyond
+	// constructor inputs. Must be constructed AFTER the tool
+	// registration above so the dispatcher can resolve the
+	// strategy's allowedTools at boot.
+	aiLifetimeStatsQAHandler := NewAILifetimeStatsQAHandler(
+		aiRegistry,
+		aiToolRegistry,
+		lifetimestatsqa.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
@@ -3170,7 +3218,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiSuggestNewGeofencesHandler, aiGeofenceAwareAutomationHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler, aiPeriodCompareNarrationHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiSuggestNewGeofencesHandler, aiGeofenceAwareAutomationHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler, aiPeriodCompareNarrationHandler, aiLifetimeStatsQAHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

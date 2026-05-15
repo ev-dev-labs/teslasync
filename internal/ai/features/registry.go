@@ -2027,6 +2027,62 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / 0041 — X2 Lifetime stats Q&A.
+	//
+	// Opt-in LLM Q&A surface that answers natural-language questions
+	// about ONE vehicle's all-time stats by routing through TWO
+	// read-only tools: query_lifetime_stats (the deterministic
+	// envelope ALSO served by the canonical
+	// GET /api/v1/analytics/lifetime handler — total drives, total
+	// distance, charge sessions, savings, achievements, personal
+	// records, ownership timeline) and the OPTIONAL secondary
+	// retrieve_analytics_chunks (F7 retrieval restricted to
+	// {analytics_lifetime, drive_summary, charge_session} source
+	// types) for additional per-event context. The deterministic
+	// Lifetime Stats hero card, key-stats grid, achievements gallery,
+	// fun-facts cards, personal-records panel, and ownership timeline
+	// at /lifetime-stats remain the canonical baseline when AI is
+	// off. Per-feature redaction policy is PolicyChatbot
+	// (deny-by-default; every PII class redacted to a round-trip
+	// tag including vehicle name) so a leaked transcript reveals
+	// nothing about the user's vehicle, location, or charger
+	// addresses.
+	//
+	// Routes:
+	//   - Backend: POST /api/v1/ai/analytics/lifetime/qa (gated by
+	//     guard.Wrap("lifetime-stats-qa"); 404 in off mode).
+	//   - Frontend: /analytics/lifetime (Navigate alias to the
+	//     canonical /lifetime-stats page; the Q&A panel is rendered
+	//     inside that page only when the feature is enabled).
+	//   - UITestIDs: ai-feature-lifetime-stats-qa-root (auto-applied
+	//     by withAiFeature HOC reading meta.uiTestIds[0]).
+	//
+	// NeedsRAG: true — the OPTIONAL secondary tool routes through
+	// the F7 rag.Retriever entry point.
+	// NeedsTools: true — query_lifetime_stats + retrieve_analytics_chunks.
+	// NeedsStream: true — the dispatcher streams delta+done frames
+	// to the SPA via internal/ai/stream.
+	//
+	// JobNames / PushKinds: explicitly empty (no background job, no
+	// notification/push channel surface). features.CoverageOK rejects
+	// nil; the empty slice is the affirmative "no surface" signal.
+	"lifetime-stats-qa": {
+		ID:          "lifetime-stats-qa",
+		Name:        "Lifetime stats Q&A",
+		Description: "Opt-in LLM Q&A surface that answers natural-language questions about one vehicle's all-time stats by routing through two read-only tools: query_lifetime_stats (the deterministic envelope ALSO served by the canonical GET /api/v1/analytics/lifetime handler — total drives, total distance, charge sessions, savings, achievements, personal records, ownership timeline) and the OPTIONAL retrieve_analytics_chunks (F7 retrieval restricted to {analytics_lifetime, drive_summary, charge_session} source types) for per-event context. The deterministic Lifetime Stats hero card, key-stats grid, achievements gallery, fun-facts cards, personal-records panel, and ownership timeline at /lifetime-stats remain the canonical baseline when AI is off. Per-feature redaction policy is PolicyChatbot (deny-by-default; every PII class redacted to a round-trip tag including vehicle name) so a leaked transcript reveals nothing about the user's vehicle, location, or charger addresses.",
+		Tier:        "X",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/analytics/lifetime/qa"},
+			Frontend:  []string{"/analytics/lifetime"},
+			UITestIDs: []string{"ai-feature-lifetime-stats-qa-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

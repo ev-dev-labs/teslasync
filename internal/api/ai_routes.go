@@ -145,6 +145,7 @@ func mountAIRoutes(
 	aiRangePrediction *AIRangePredictionHandler,
 	aiMLChargingCurveClustering *AIMLChargingCurveHandler,
 	aiPeriodCompareNarration *AIPeriodCompareNarrationHandler,
+	aiLifetimeStatsQA *AILifetimeStatsQAHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -366,6 +367,24 @@ func mountAIRoutes(
 			periodCompareNarrationHandler = aiPeriodCompareNarration.ServeHTTP
 		}
 		r.Post("/analytics/period-compare/narrate", g.Wrap("period-compare-narration", periodCompareNarrationHandler))
+
+		// lifetime-stats-qa (Phase-50 / X2, slice 0041) answers
+		// natural-language questions about the deterministic
+		// lifetime stats the SPA's LifetimeStatsPage already
+		// renders from GET /api/v1/analytics/lifetime. The route
+		// lives under /ai/analytics/lifetime/qa so it is namespaced
+		// under the /analytics family alongside the other analytics
+		// AI surfaces. Same stub-fallback pattern as the other AI
+		// handlers — a nil handler is possible during partial
+		// wiring but the off-mode 404 invariant still holds because
+		// guard.Wrap returns 404 BEFORE the handler runs in off
+		// mode. The canonical baseline route at
+		// GET /api/v1/analytics/lifetime is unchanged.
+		var lifetimeStatsQAHandler http.HandlerFunc = aiLifetimeStatsQAStubHandler
+		if aiLifetimeStatsQA != nil {
+			lifetimeStatsQAHandler = aiLifetimeStatsQA.ServeHTTP
+		}
+		r.Post("/analytics/lifetime/qa", g.Wrap("lifetime-stats-qa", lifetimeStatsQAHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1113,6 +1132,15 @@ func aiMLChargingCurveClusteringStubHandler(w http.ResponseWriter, _ *http.Reque
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiPeriodCompareNarrationStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai period compare narration is not yet implemented")
+}
+
+// aiLifetimeStatsQAStubHandler mirrors
+// aiPeriodCompareNarrationStubHandler for the X2 slice (Phase-50 /
+// 0041 lifetime-stats-qa). Reachable only when
+// AILifetimeStatsQAHandler is nil at construction; the off-mode
+// 404 invariant is held by the guard, not the stub.
+func aiLifetimeStatsQAStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai lifetime stats qa is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

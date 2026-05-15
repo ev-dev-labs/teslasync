@@ -1,0 +1,16 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_lifetime_stats_zero_data_vehicle_1
+        name: query_lifetime_stats
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Vehicle <vehicle id='42'/> has no recorded drives yet, so
+      there is no longest-drive figure to share. Once a drive is
+      logged, the deterministic lifetime envelope will return a
+      meaningful personal-record entry.
+    input_tokens: 240
+    output_tokens: 80

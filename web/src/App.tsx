@@ -371,6 +371,7 @@ export default function App() {
         <Route path="trip-planner" element={<SafeRoute name="TripPlanner"><TripPlanner /></SafeRoute>} />
         <Route path="statistics" element={<SafeRoute name="Statistics"><Statistics /></SafeRoute>} />
         <Route path="lifetime-stats" element={<SafeRoute name="LifetimeStats"><LifetimeStats /></SafeRoute>} />
+        <Route path="analytics/lifetime" element={<Navigate to="/lifetime-stats" replace />} />
         <Route path="system-status" element={<SafeRoute name="SystemStatus"><SystemStatus /></SafeRoute>} />
         <Route path="system-status/incidents/:id" element={<SafeRoute name="IncidentTimeline"><IncidentTimeline /></SafeRoute>} />
         <Route path="docs/status-api" element={<SafeRoute name="StatusApiDocs"><StatusApiDocs /></SafeRoute>} />

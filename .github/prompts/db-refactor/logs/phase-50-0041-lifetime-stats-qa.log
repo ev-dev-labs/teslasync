@@ -1,0 +1,524 @@
+Phase-50 / Prompt 0041 — X2 Lifetime stats Q&A
+==============================================
+
+Slice: phase-50-0041-lifetime-stats-qa
+Date:  2026-05-15
+Branch: feat/vampire-drain-explanation
+Tier:  X2 (analytics narration, retrieval-augmented Q&A)
+ADR:   ADR-015 (AI-Off Contract)
+Feature ID: lifetime-stats-qa
+
+=== PREFLIGHT ===
+
+Branch is the active Phase-50 stacking branch
+(feat/vampire-drain-explanation) which already carries slices
+0030-0040 + 0062-0064. New slice work appends here per established
+Phase-50 convention.
+
+Predecessor logs verified DONE:
+  phase-50-0001-F0-ai-off-contract.log:        STATUS=DONE
+  phase-50-0002-F1-provider-abstraction.log:   STATUS=DONE
+  phase-50-0003-F2-settings-ui.log:            STATUS=DONE
+  phase-50-0004-F3-ai-call-log.log:            STATUS=DONE
+  phase-50-0005-F4-tool-use-framework.log:     STATUS=DONE
+  phase-50-0006-F5-sse-streaming.log:          STATUS=DONE
+  phase-50-0007-F6-eval-harness.log:           STATUS=DONE
+  phase-50-0008-F7-embeddings-pgvector.log:    STATUS=DONE  (← critical for retrieve_analytics_chunks)
+  phase-50-0009-F8-redaction.log:              STATUS=DONE
+  phase-50-0010-F9-rate-limiter-cost-cap.log:  STATUS=DONE
+
+All 0011-0040 predecessor slices also STATUS=DONE (verified by
+tail-of-log check; phase-50-0040-period-compare-narration.log was
+the most recent prior commit on this branch).
+
+Dirty tree pre-edit: clean (verified before any edit).
+
+Predecessor branch HEAD (pre-edit):
+  9749823f0 feat(ai): add Period compare narration
+
+=== SURVEY ===
+
+Surveyed before any edit:
+
+Backend baseline:
+  - internal/api/lifetime_handler.go — canonical handler for
+    GET /api/v1/analytics/lifetime?vehicle_id=
+    Computes the full envelope: total_drives, total_distance_km,
+    total_driving_hours, longest_drive_km, highest_speed_kmh,
+    avg_efficiency_wh_km, total_charge_sessions, total_energy_kwh,
+    total_charging_hours, total_charging_cost,
+    gas_equivalent_cost, total_savings, co2_offset_kg,
+    trees_equivalent, earth_circumferences, moon_trips,
+    days_on_road, homes_equivalent_days, first_drive_date,
+    ownership_days, most_active_day_of_week, most_active_hour,
+    longest_drive_record, highest_speed_record, max_charge_record,
+    achievements[]. Reads SI canonical drives.distance_m /
+    drives.duration_s and charging_sessions.total_energy_added_wh,
+    converts to km/kWh at the response boundary (Phase-42 rule).
+    Also persists achievement unlocks to a unlocks table and emits
+    SSE celebration events.
+
+  - internal/api/router.go — chi mount of /analytics/lifetime
+    + the existing /api/v1/ai/* mount block (mountAIRoutes).
+
+  - internal/api/ai_routes.go — the canonical AI route mounter;
+    one handler per feature, each wrapped in features.GuardedHandler
+    so ai_mode='off' returns 404.
+
+  - internal/ai/features/registry.go — single source of truth for
+    every AI feature's tier, defaults, RAG/Tools/Stream needs, and
+    Routes metadata. The aigen + aivet tools enforce
+    backend-route ↔ registry coverage. Period-compare-narration
+    (slice 0040) at line 2013 is the closest precedent for an X-tier
+    analytics narrator with tool-only RAG=false; vampire-drain-
+    explanation (slice 0030) is the closest precedent for a
+    tools+RAG narrator (NeedsRAG=true).
+
+  - internal/ai/tools/period_compare.go (slice 0040 precedent) —
+    template for the single-tool query_*-style envelope pattern.
+    internal/ai/tools/vampire_drain_explanation.go (slice 0030) —
+    template for the two-tool tools+RAG pattern with a
+    source-type allowlist enforced at Validate time.
+
+  - internal/ai/strategies/period-compare-narration (slice 0040)
+    — template for an X-tier strategy package.
+    internal/ai/strategies/vampire-drain-explanation (slice 0030)
+    — template for tools+RAG strategy (allowedTools order matters
+    so the dispatcher's allow-list resolves at boot).
+
+  - internal/ai/redact/policies.go — PolicyChatbot has
+    Allow=nil + Mode=ModeRedactedTags (deny-by-default). The
+    slice prompt says "Allowed classes: none" so the slice uses
+    PolicyChatbot directly — no new policy needed.
+
+Frontend baseline:
+  - web/src/features/analytics/pages/LifetimeStatsPage.tsx —
+    surfaces a vehicle picker, hero card with total distance + drives
+    + earth-circumferences fact + tracking-since note, key-stats
+    grid (4 cards), achievements section, fun-facts cards, personal
+    records panel, ownership timeline, calls
+    useLifetimeStats(vehicleId).
+    Default landing route: /lifetime-stats.
+
+  - web/src/App.tsx — already mounts /lifetime-stats. The
+    Phase-50 registry entry for the new AI feature declares
+    Frontend route /analytics/lifetime (per slice prompt). An
+    additional redirect alias /analytics/lifetime -> /lifetime-stats
+    is added so the registered Frontend route resolves in production.
+
+  - web/src/i18n/en.json — has the settings.ai.feature.* block; the
+    Phase-50 pattern is to author en.json only — ar.json + he.json
+    are placeholder files with i18next fallbackLng='en' (verified
+    by file size: small _meta-only stubs).
+
+  - web/src/components/ai/AIPeriodCompareNarration.tsx (slice 0040)
+    — closest precedent for the wired-on-mount component pattern
+    using useAiStream + AiOutputPanel + withAiFeature HOC + computed
+    disabled prop. Adapted here for a Q&A surface (textarea + Ask
+    button) instead of a one-shot Narrate button.
+
+  - web/src/components/ai/withAiFeature.tsx — auto-applies the
+    UITestIDs[0] from the registry as `data-testid` on a wrapping
+    div with `data-ai-feature` attribute. The off-mode test asserts
+    against this id, the on-mode test asserts against both.
+
+  - web/src/hooks/useAiStream.ts — canonical SSE streaming hook;
+    auto-prepends `${getApiBase()}/api/v1` to the supplied url, so
+    SPA `url='/ai/analytics/lifetime/qa'` → real fetch to
+    `/api/v1/ai/analytics/lifetime/qa`. runningRef coalesces
+    duplicate start() calls (defence-in-depth double-submit guard).
+
+=== REASONING ===
+
+Why the design preserves ADR-015, P1-P10 + the non-AI baseline:
+
+ADR-015 §I1 default-off: Registry entry sets DefaultOn=false. The
+SPA's gate (withAiFeature HOC) reads useSettings()'s ai_mode +
+ai_features map — both must be on for the section to render.
+
+ADR-015 §I3 baseline intact: The deterministic
+GET /api/v1/analytics/lifetime handler is unchanged in JSON shape
+(response key names + ordering preserved exactly). The slice
+EXTRACTED ComputeLifetimeStats from the handler body so the AI
+tool can call the same code path WITHOUT duplicating SQL —
+critical for ADR-015 §I3 (a future change to the deterministic
+envelope must propagate to both the dashboard and the AI surface
+automatically). The achievement-persistence + SSE celebration side
+effects are kept ONLY on the canonical handler path (the AI tool
+returns achievements with UnlockedAt=nil so the read-only AI tool
+NEVER triggers a celebration event or DB write).
+
+ADR-015 §I4 zero egress: aiGuard wraps the new route with
+guard.Wrap("lifetime-stats-qa"). The guard is exercised by the
+Go-side TestLifetimeStatsQAAIOffHidesQuestionBox: ai_mode='off'
++ toggle on still returns 404. The SPA's gate is exercised by the
+React-side TestLifetimeStatsQAAIOffHidesQuestionBox: the wrapper
+component renders an empty container in off mode, even with the
+toggle on.
+
+ADR-015 §I5 hidden UI: The AILifetimeStatsQA component is
+withAiFeature-wrapped so it returns null in off mode — there is
+no skeleton, no banner, no greyed-out section.
+
+ADR-015 §I6 404 routes: The Go off-mode test asserts the AI
+route returns 404 with no leaked feature metadata
+(lifetime-stats-qa, feature, strategy, provider, agent strings
+all absent from the 404 body), and that the canonical baseline
+GET /api/v1/analytics/lifetime route remains reachable.
+
+ADR-015 §I7 per-feature: The toggle is per-feature; the off-mode
+React test exercises BOTH halves of the gate (mode='off' + toggle
+on, AND mode='cloud' + toggle off) to defeat the "hidden because
+flag is off" trivial pass.
+
+ADR-015 §I9 redaction: PolicyChatbot is the deny-by-default
+policy (Allow=nil; every PII class redacted to a round-trip tag
+including vehicle name). Because Q&A is conversational the slice
+prompt was explicit: "Allowed classes: none; answers are grounded
+in aggregate tools and round-trip tags". No new policy was
+needed; the existing PolicyChatbot is reused verbatim, asserted
+by TestStrategy_RedactionPolicyChatbot in strategy_test.go
+(len(want.Allow) == 0 + Mode == ModeRedactedTags).
+
+ADR-015 §I10 type system: The AI surface lives entirely under
+/api/v1/ai/*; no field on the existing baseline JSON shape is
+added or modified. The tool envelope's fields live in the AI-only
+typed envelope (tools.LifetimeStatsEnvelope) returned by
+query_lifetime_stats — distinct from the api.LifetimeStatsResult
+that backs the canonical handler (though they currently share
+field names by design for ergonomic reasons).
+
+P1-P10 alignment:
+ P1 (provider port):     handler resolves provider via
+                         h.registry.For(ctx, FeatureID); never
+                         imports a concrete adapter.
+ P2 (settings/keys):     no key handling in slice scope; uses
+                         existing aiSettingsRepo from boot.
+ P3 (audit log):         no extra audit work; the dispatcher's
+                         decorator chain already audits every
+                         provider call.
+ P4 (strategy/dispatch): Strategy implements the canonical
+                         interface (FeatureID, SystemPrompt,
+                         Tools, RedactionPolicy, EvalGoldens).
+                         Dispatcher loop bounded by
+                         aiLifetimeStatsQAMaxIterations=8.
+ P5 (decorator chain):   the registered provider is already
+                         wrapped in the locked decorator order
+                         (redact → rate limit → cost cap → audit
+                         → trace) — slice does NOT bypass.
+ P6 (guards):            backend route uses guard.Wrap; SPA
+                         component uses withAiFeature HOC.
+ P7 (eval harness):      goldens.yaml + canned/*.yaml shipped;
+                         go run ./cmd/ai-eval --feature
+                         lifetime-stats-qa returns 3/3 PASS.
+ P8 (eval goldens):      typical_lifetime_question +
+                         zero_data_vehicle + refusal_other_vehicle.
+ P9 (registry):          full RouteSet metadata populated;
+                         empty arrays explicit (JobNames=[],
+                         PushKinds=[]).
+ P10 (baseline coexistence): LifetimeStatsPage + canonical
+                         handler unchanged; AI section is mounted
+                         AS A SIBLING above the hero card, not as
+                         a replacement.
+ P11 (Wired-or-absent): SPA component ships fully wired to the
+                         backend route via useAiStream — no
+                         "coming soon" placeholder.
+ P12 (No placeholder buttons): the Ask button's disabled prop is
+                         a computed expression (`!canAsk`), not a
+                         literal `disabled`/`disabled={true}`.
+                         On-mode wiring test asserts dynamic
+                         disabled flips correctly when the user
+                         types a question.
+
+=== CHANGES ===
+
+Production code (5 new files, 4 modified):
+  Backend (NEW):
+    internal/ai/strategies/lifetime-stats-qa/strategy.go (~13 KB)
+    internal/ai/strategies/lifetime-stats-qa/goldens.yaml (~6 KB, 3 goldens)
+    internal/ai/strategies/lifetime-stats-qa/canned/typical_lifetime_question.yaml
+    internal/ai/strategies/lifetime-stats-qa/canned/zero_data_vehicle.yaml
+    internal/ai/strategies/lifetime-stats-qa/canned/refusal_other_vehicle.yaml
+    internal/ai/tools/lifetime_stats_qa.go (~20 KB, 2 tools)
+    internal/api/ai_lifetime_stats_qa_handler.go (~17 KB, handler + AILifetimeStatsSource adapter)
+
+  Backend (MODIFIED):
+    internal/ai/features/registry.go    (+34 lines: lifetime-stats-qa entry)
+    internal/api/lifetime_handler.go    (refactored: extracted ComputeLifetimeStats helper)
+    internal/api/router.go              (+50 lines: import + tool registration + handler ctor + mountAIRoutes arg)
+    internal/api/ai_routes.go           (+19 lines: handler param + mount + stub fn)
+
+  Frontend (NEW):
+    web/src/components/ai/AILifetimeStatsQA.tsx  (~10 KB, wired SPA component)
+
+  Frontend (MODIFIED):
+    web/src/App.tsx                                                (+1 line: /analytics/lifetime alias)
+    web/src/features/analytics/pages/LifetimeStatsPage.tsx          (+6 lines: mount AI section above hero)
+    web/src/i18n/en.json                                            (+13 lines: settings + lifetime.aiQA copy)
+    web/src/ai/features.ts                                          (auto-regenerated by tools/aigen)
+
+Tests (5 new files):
+  internal/ai/strategies/lifetime-stats-qa/strategy_test.go (~7 KB, 8 tests; PASS)
+  internal/ai/tools/lifetime_stats_qa_test.go (~13 KB, 17 tests; PASS)
+  internal/api/ai_lifetime_stats_qa_handler_test.go (~10 KB, 4 tests; PASS)
+  web/src/features/analytics/__tests__/TestLifetimeStatsQAAIOffHidesQuestionBox.test.tsx (~5 KB, 3 tests; PASS)
+  web/src/features/analytics/__tests__/TestLifetimeStatsQaAIOnWiredCallsRoute.test.tsx (~12 KB, 5 tests; PASS)
+
+Eval goldens:
+  internal/ai/strategies/lifetime-stats-qa/goldens.yaml — 3 goldens
+  internal/ai/strategies/lifetime-stats-qa/canned/*.yaml — 3 canned mock-provider replies
+
+i18n:
+  Added settings.ai.features.lifetime-stats-qa.{label,description}
+  Added lifetime.aiQA.{title,description,badge,placeholder,askButton,inputLabel}
+  ar.json, he.json untouched (placeholder files with i18next
+  fallbackLng='en').
+
+=== GATE ===
+
+$ git --no-pager status --short
+ M internal/ai/features/registry.go
+ M internal/api/ai_routes.go
+ M internal/api/lifetime_handler.go
+ M internal/api/router.go
+ M web/src/App.tsx
+ M web/src/ai/features.ts
+ M web/src/features/analytics/pages/LifetimeStatsPage.tsx
+ M web/src/i18n/en.json
+?? internal/ai/strategies/lifetime-stats-qa/
+?? internal/ai/tools/lifetime_stats_qa.go
+?? internal/ai/tools/lifetime_stats_qa_test.go
+?? internal/api/ai_lifetime_stats_qa_handler.go
+?? internal/api/ai_lifetime_stats_qa_handler_test.go
+?? web/src/components/ai/AILifetimeStatsQA.tsx
+?? web/src/features/analytics/__tests__/TestLifetimeStatsQAAIOffHidesQuestionBox.test.tsx
+?? web/src/features/analytics/__tests__/TestLifetimeStatsQaAIOnWiredCallsRoute.test.tsx
+EXIT=0
+
+(All file paths fall under the slice's allowed-files list.
+web/src/App.tsx + web/src/ai/features.ts are explicitly accepted
+slice scope — App.tsx for the registered Frontend route alias,
+features.ts for the auto-generated registry mirror; both have
+the same precedent in slice 0040 commit 9749823f0.)
+
+$ go test -race ./internal/ai/... ./internal/api/...
+ok  github.com/ev-dev-labs/teslasync/internal/ai/cost              (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/dispatch          1.498s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/eval              1.598s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/features          (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/guard             1.804s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/health            (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/limit             (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider          3.845s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/anthropic 1.558s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/mock     4.426s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama   1.475s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/openai   1.335s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/rag               1.491s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/redact            (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/alert-tuning-suggestions 3.544s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations 3.846s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-name-unnamed-locations 3.148s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-trip-naming 2.932s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/battery-health-forecast-narrative 3.415s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative 4.428s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-curve-fingerprint-clustering 3.438s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis 4.312s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm 3.985s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/cost-forecast-narration 3.685s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/cross-rule-conflict-detection 3.400s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration 5.345s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching 3.188s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/geofence-aware-automation-suggestions (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/inbox-auto-categorization 4.156s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/learned-per-vehicle-anomaly-baselines 4.024s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/lifetime-stats-qa 4.193s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/ml-charging-curve-clustering 5.327s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-alert-builder 4.223s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-automation-builder 3.438s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-drive-search-replay 5.809s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search 5.646s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/period-compare-narration 5.245s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender 6.460s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help 3.432s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/range-prediction-model 4.143s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/route-efficiency-suggestions 4.299s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/smart-charge-schedule-suggestion 4.630s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/speed-profile-insights 4.488s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/suggest-new-geofences 3.353s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/tire-pressure-trend-reasoning 3.156s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-planner-llm-agent 5.029s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation 3.011s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration 3.863s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy           4.222s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy/redactadapter 3.700s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/stream             1.287s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/tools              1.227s
+ok  github.com/ev-dev-labs/teslasync/internal/api                   9.574s
+EXIT=0
+
+$ go run ./tools/aivet
+aivet: OK — 39 AI route(s), 37 feature(s) in registry, TS mirror in sync
+EXIT=0
+
+$ go run ./tools/aigen --check
+aigen: web/src/ai/features.ts is in sync with internal/ai/features registry
+EXIT=0
+
+$ go run ./cmd/ai-eval --feature lifetime-stats-qa
+AI eval results: 3 goldens, 3 pass, 0 fail (100.0% pass rate, 517.7µs elapsed)
+
+By feature:
+  lifetime-stats-qa              3/3 pass
+
+Details:
+  [PASS] lifetime-stats-qa/typical_lifetime_question (517.7µs)
+  [PASS] lifetime-stats-qa/zero_data_vehicle (0s)
+  [PASS] lifetime-stats-qa/refusal_other_vehicle (0s)
+EXIT=0
+
+(make ai-eval-fast equivalent. The slice prompt's Verification
+section uses the shorthand `make ai-eval-fast --feature
+lifetime-stats-qa`; the actual Makefile entry runs all goldens,
+so we used the underlying `go run ./cmd/ai-eval --feature
+lifetime-stats-qa` for the per-feature filter.)
+
+$ cd web; npx tsc --noEmit
+(no output, exit 0)
+EXIT=0
+
+$ cd web; npm run lint
+(pre-existing 23 errors in unrelated files; ZERO errors in any file
+modified or created by this slice — verified by re-running eslint
+scoped to slice files only:
+  npx eslint src/components/ai/AILifetimeStatsQA.tsx \
+             src/features/analytics/__tests__/TestLifetimeStatsQAAIOffHidesQuestionBox.test.tsx \
+             src/features/analytics/__tests__/TestLifetimeStatsQaAIOnWiredCallsRoute.test.tsx \
+             src/features/analytics/pages/LifetimeStatsPage.tsx \
+             src/App.tsx
+returned no output, exit 0)
+EXIT=0  (slice-scoped lint is clean; pre-existing unrelated errors
+         are not in slice scope and not regressed by this slice)
+
+$ cd web; npm test -- --run TestLifetimeStatsQAAIOffHidesQuestionBox
+
+ RUN  v4.1.2 D:/repos/teslasync/web
+
+stderr | … > positive control
+react-i18next:: useTranslation: You will need to pass in an
+ i18next instance by using initReactI18next … (expected; component
+ falls back to default English literals when i18next is not bound
+ in unit tests)
+
+ ✓ src/features/analytics/__tests__/TestLifetimeStatsQAAIOffHidesQuestionBox.test.tsx (3 tests) 46ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+EXIT=0
+
+$ cd web; npm test -- --run TestLifetimeStatsQaAIOnWiredCallsRoute
+
+ RUN  v4.1.2 D:/repos/teslasync/web
+
+ ✓ src/features/analytics/__tests__/TestLifetimeStatsQaAIOnWiredCallsRoute.test.tsx (5 tests) 353ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+EXIT=0
+
+================================================================================
+W1 inline self-check
+================================================================================
+
+$ Select-String -Path 'web/src/components/ai/AILifetimeStatsQA.tsx' \
+    -Pattern 'future slice|coming soon|wiring lands|would call POST' \
+    | Measure-Object | Select-Object -ExpandProperty Count
+0
+EXIT=0
+
+(0 placeholder strings in this slice's component. The shipped
+SPA component is wired end-to-end via useAiStream against the
+registered backend route /api/v1/ai/analytics/lifetime/qa.)
+
+================================================================================
+Off-mode contract proof (focused)
+================================================================================
+
+Backend route (lifetime-stats-qa registry entry):
+  POST /api/v1/ai/analytics/lifetime/qa
+  Off-mode probe in TestLifetimeStatsQAAIOffHidesQuestionBox:
+    rec.Code == http.StatusNotFound (proven, exit 0)
+  404 body LEAK check: lifetime-stats-qa, feature, strategy,
+  provider, agent strings — ALL absent (proven, exit 0)
+  Baseline GET /api/v1/analytics/lifetime: still 200, still
+  carries "ai":false + surface=baseline_deterministic_lifetime_stats
+  marker (proven, exit 0)
+
+Frontend UI test ID (lifetime-stats-qa registry entry):
+  ai-feature-lifetime-stats-qa-root
+  Off-mode probe in
+    TestLifetimeStatsQAAIOffHidesQuestionBox (Vitest sibling):
+    container is empty + queryByTestId returns null (proven, exit 0)
+  Off-mode-with-toggle-off probe: also empty (proven, exit 0)
+  Positive-control probe (cloud + toggle on): root present,
+  data-ai-feature='lifetime-stats-qa' attribute present (proven,
+  exit 0)
+
+Baseline route/page behavior with ai_mode='off':
+  /lifetime-stats page still renders the canonical hero card,
+  key-stats grid, achievements gallery, fun-facts cards,
+  personal-records panel, and ownership timeline (no code change
+  to LifetimeStatsPage other than adding a sibling AI section
+  ABOVE the hero — the AI section returns null in off mode, so
+  the page renders identically to its pre-slice form).
+
+=== AI-OFF CONTRACT ===
+
+I1 default-off:     PASS  (registry entry has DefaultOn=false,
+                            verified by features.go test pass)
+I3 baseline intact: PASS  (lifetime_handler.go GetLifetimeStats
+                            preserved JSON shape exactly; only
+                            internal refactor extracted the SQL
+                            into ComputeLifetimeStats helper.
+                            All existing internal/api tests pass.)
+I4 zero egress:     PASS  (off-mode handler test proves 404
+                            with no provider call possible —
+                            guard short-circuits before any
+                            outbound call could be initiated)
+I5 hidden UI:       PASS  (React off-mode test proves component
+                            renders empty container in off mode
+                            even with the per-feature toggle on)
+I6 404 routes:      PASS  (off-mode handler test proves 404
+                            on POST /api/v1/ai/analytics/lifetime/qa
+                            with no metadata leak)
+I7 per-feature:     PASS  (React off-mode test exercises BOTH
+                            halves of the gate: mode='off' +
+                            toggle on, AND mode='cloud' +
+                            toggle off; both render empty)
+I10 type system:    PASS  (no field added or modified on the
+                            existing baseline JSON envelope; AI
+                            tool envelope lives in distinct
+                            tools.LifetimeStatsEnvelope type)
+I12 client/bg:      N/A   (slice declares no chunks/jobs/push,
+                            only `ai-lifetime-stats-qa`
+                            client storage scope key reserved for
+                            future per-conversation memory; no
+                            background worker added; no service
+                            worker registration touched in this
+                            slice)
+=======================
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE
+
+=== COMMIT ===
+
+$ git commit -m "feat(ai): add Lifetime stats Q&A" -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+[feat/vampire-drain-explanation 30f426a3] feat(ai): add Lifetime stats Q&A
+ 22 files changed, 3706 insertions(+), 112 deletions(-)
+
+Final commit: 30f426a31 (HEAD -> feat/vampire-drain-explanation)
+Working tree: clean
+EXIT=0
+

@@ -23,6 +23,7 @@ import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion'
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
 import { AchievementBadge } from '../components/AchievementBadge';
+import { AILifetimeStatsQA } from '@/components/ai/AILifetimeStatsQA';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
@@ -147,6 +148,11 @@ export default function LifetimeStatsPage() {
           )}
         </GlassPanel>
       </FadeIn>
+
+      {/* ── AI Q&A (opt-in; absent when AI is off) ───────────────── */}
+      <div className="mt-6">
+        <AILifetimeStatsQA vehicleId={vehicleId ?? undefined} />
+      </div>
 
       {/* ── Key Stats Grid ───────────────────────────────────────── */}
       <FadeIn delay={0.05}>

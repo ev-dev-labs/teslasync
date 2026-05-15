@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "learned-per-vehicle-anomaly-baselines" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -234,6 +234,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-learned-per-vehicle-anomaly-baselines-root"] as const),
   }),
+  "lifetime-stats-qa": Object.freeze({
+    id: "lifetime-stats-qa",
+    name: "Lifetime stats Q&A",
+    description: "Opt-in LLM Q&A surface that answers natural-language questions about one vehicle's all-time stats by routing through two read-only tools: query_lifetime_stats (the deterministic envelope ALSO served by the canonical GET /api/v1/analytics/lifetime handler — total drives, total distance, charge sessions, savings, achievements, personal records, ownership timeline) and the OPTIONAL retrieve_analytics_chunks (F7 retrieval restricted to {analytics_lifetime, drive_summary, charge_session} source types) for per-event context. The deterministic Lifetime Stats hero card, key-stats grid, achievements gallery, fun-facts cards, personal-records panel, and ownership timeline at /lifetime-stats remain the canonical baseline when AI is off. Per-feature redaction policy is PolicyChatbot (deny-by-default; every PII class redacted to a round-trip tag including vehicle name) so a leaked transcript reveals nothing about the user's vehicle, location, or charger addresses.",
+    tier: "X",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-lifetime-stats-qa-root"] as const),
+  }),
   "ml-charging-curve-clustering": Object.freeze({
     id: "ml-charging-curve-clustering",
     name: "Charging-curve clustering model",
@@ -443,6 +454,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "geofence-aware-automation-suggestions",
   "inbox-auto-categorization",
   "learned-per-vehicle-anomaly-baselines",
+  "lifetime-stats-qa",
   "ml-charging-curve-clustering",
   "nl-alert-builder",
   "nl-automation-builder",
