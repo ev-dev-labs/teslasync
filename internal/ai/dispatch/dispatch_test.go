@@ -20,6 +20,10 @@ type scriptedProvider struct {
 	calls int
 	resps []*provider.ChatResponse
 	err   error
+	// requests captures every ChatRequest that flowed into Chat,
+	// in order. Used by regression tests that need to assert on
+	// the message history the dispatcher built up across turns.
+	requests []provider.ChatRequest
 }
 
 func newScripted(resps ...*provider.ChatResponse) *scriptedProvider {
@@ -31,6 +35,7 @@ func (s *scriptedProvider) Name() string { return "scripted" }
 func (s *scriptedProvider) Chat(ctx context.Context, req provider.ChatRequest) (*provider.ChatResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.requests = append(s.requests, req)
 	if s.err != nil {
 		return nil, s.err
 	}
@@ -424,5 +429,83 @@ func TestContinuationState_RoundTrip(t *testing.T) {
 	}
 	if len(out.Messages) != 1 {
 		t.Errorf("Messages round-trip lost: %v", out)
+	}
+}
+
+// TestDispatcher_AssistantToolCallRoundTrip is a regression test for
+// the strict-provider failure surfaced when Azure / OpenAI rejected
+// iter 1 of a multi-turn dispatch with:
+//
+//	azure chat status 400: Invalid value for 'content':
+//	expected a string, got null. param: messages.[N].content
+//
+// Root cause: the dispatcher appended `resp.Message` to the
+// conversation history but the proposed tool calls lived on the
+// separate `resp.ToolCalls` field, so the assistant message that
+// went back into iter 1's request had neither content nor
+// tool_calls. Strict OpenAI-spec providers reject that.
+//
+// Fix: dispatch.go copies `resp.ToolCalls` onto `asst.ToolCalls`
+// (plural, on provider.Message) before appending. This test
+// asserts the next request the provider sees DOES carry the
+// proposed tool_calls so it can re-emit them on the wire.
+func TestDispatcher_AssistantToolCallRoundTrip(t *testing.T) {
+	t.Parallel()
+	p := newScripted(
+		&provider.ChatResponse{
+			Message: provider.Message{Role: provider.RoleAssistant},
+			ToolCalls: []provider.ToolCall{{
+				ID:        "call_42",
+				Name:      "ping",
+				Arguments: json.RawMessage(`{}`),
+			}},
+			FinishReason: provider.FinishToolCalls,
+		},
+		&provider.ChatResponse{
+			Message:      provider.Message{Role: provider.RoleAssistant, Content: "ok"},
+			FinishReason: provider.FinishStop,
+		},
+	)
+	r := tools.NewRegistry()
+	r.Register(&pingTool{})
+	d := New(r, p, nil, 0)
+	w := NewCaptureWriter()
+
+	if err := d.Run(context.Background(), fakeStrategy{tools: []string{"ping"}}, strategy.StrategyInput{}, w); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if got := len(p.requests); got < 2 {
+		t.Fatalf("provider request count = %d, want >= 2", got)
+	}
+
+	iter1 := p.requests[1].Messages
+	var asst *provider.Message
+	for i := range iter1 {
+		m := &iter1[i]
+		if m.Role == provider.RoleAssistant && len(m.ToolCalls) > 0 {
+			asst = m
+			break
+		}
+	}
+	if asst == nil {
+		t.Fatalf("iter 1 messages did not contain an assistant turn with ToolCalls; got %#v", iter1)
+	}
+	if len(asst.ToolCalls) != 1 {
+		t.Fatalf("assistant turn ToolCalls len = %d, want 1", len(asst.ToolCalls))
+	}
+	if asst.ToolCalls[0].ID != "call_42" || asst.ToolCalls[0].Name != "ping" {
+		t.Errorf("round-tripped ToolCall = %+v, want {ID:call_42 Name:ping}", asst.ToolCalls[0])
+	}
+
+	var foundTool bool
+	for _, m := range iter1 {
+		if m.Role == provider.RoleTool && m.ToolID == "call_42" {
+			foundTool = true
+			break
+		}
+	}
+	if !foundTool {
+		t.Errorf("iter 1 missing tool result for call_42; messages=%#v", iter1)
 	}
 }

@@ -236,13 +236,32 @@ func encodeMessagesRequest(cfg provider.ProviderConfig, req provider.ChatRequest
 				ToolUseID: m.ToolID,
 				Content:   json.RawMessage(jsonString(m.Content)),
 			})
-		} else if m.Tool != nil {
-			blocks = append(blocks, anthropicWireBlock{
-				Type:  "tool_use",
-				ID:    m.Tool.ID,
-				Name:  m.Tool.Name,
-				Input: m.Tool.Arguments,
-			})
+		} else if m.Tool != nil || len(m.ToolCalls) > 0 {
+			// Anthropic encodes assistant tool proposals as one
+			// `tool_use` block per call. Emit text first if the
+			// model also produced commentary alongside the call.
+			if m.Content != "" {
+				blocks = append(blocks, anthropicWireBlock{Type: "text", Text: m.Content})
+			}
+			// Legacy singular field (pre-Phase-50 callers / tests).
+			if m.Tool != nil {
+				blocks = append(blocks, anthropicWireBlock{
+					Type:  "tool_use",
+					ID:    m.Tool.ID,
+					Name:  m.Tool.Name,
+					Input: m.Tool.Arguments,
+				})
+			}
+			// Plural tool_calls — round-tripped from prior turn
+			// by dispatch.go (see provider.Message.ToolCalls).
+			for _, mc := range m.ToolCalls {
+				blocks = append(blocks, anthropicWireBlock{
+					Type:  "tool_use",
+					ID:    mc.ID,
+					Name:  mc.Name,
+					Input: mc.Arguments,
+				})
+			}
 		} else {
 			blocks = append(blocks, anthropicWireBlock{Type: "text", Text: m.Content})
 		}

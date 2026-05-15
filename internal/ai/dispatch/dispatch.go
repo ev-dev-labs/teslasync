@@ -325,8 +325,18 @@ func (d *Dispatcher) Run(ctx context.Context, s strategy.Strategy, in strategy.S
 		}
 
 		// Append the assistant's tool-call message to history so
-		// the next provider call sees the proposal.
-		msgs = append(msgs, resp.Message)
+		// the next provider call sees the proposal. Carry the
+		// proposed tool calls into the message itself so provider
+		// encoders can re-emit them on the wire — strict providers
+		// (OpenAI / Azure) reject the next turn with
+		// `messages.[N].content: expected string, got null` when
+		// the assistant message lacks both content AND tool_calls.
+		// Ollama is more lenient but the same fix is harmless there.
+		asst := resp.Message
+		if len(resp.ToolCalls) > 0 {
+			asst.ToolCalls = append([]provider.ToolCall(nil), resp.ToolCalls...)
+		}
+		msgs = append(msgs, asst)
 
 		// Process each proposed tool call serially. (Parallel
 		// execution is intentionally not supported in F4 — every

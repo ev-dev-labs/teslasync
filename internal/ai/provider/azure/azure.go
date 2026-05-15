@@ -398,8 +398,15 @@ type azureChatRequest struct {
 }
 
 type azureWireMsg struct {
-	Role       string              `json:"role"`
-	Content    string              `json:"content,omitempty"`
+	Role string `json:"role"`
+	// Content is intentionally NOT `omitempty`: an assistant
+	// message that proposes tool_calls is allowed to have empty
+	// content per the OpenAI/Azure spec, but the field MUST be
+	// present in the JSON payload — otherwise Azure rejects the
+	// next turn with `messages.[N].content: expected a string,
+	// got null`. Always emitting `"content": ""` is valid for all
+	// roles (system / user / assistant / tool).
+	Content    string              `json:"content"`
 	Name       string              `json:"name,omitempty"`
 	ToolCallID string              `json:"tool_call_id,omitempty"`
 	ToolCalls  []azureWireToolCall `json:"tool_calls,omitempty"`
@@ -463,10 +470,23 @@ func encodeChatRequest(req provider.ChatRequest, modelInBody string, stream bool
 	wireMsgs := make([]azureWireMsg, 0, len(req.Messages))
 	for _, m := range req.Messages {
 		wm := azureWireMsg{Role: m.Role, Content: m.Content, Name: m.Name, ToolCallID: m.ToolID}
+		// Legacy singular tool field — still honored for callers
+		// (mostly tests + pre-Phase-50 code) that built Message
+		// values by hand.
 		if m.Tool != nil {
 			tc := azureWireToolCall{ID: m.Tool.ID, Type: "function"}
 			tc.Function.Name = m.Tool.Name
 			tc.Function.Arguments = string(m.Tool.Arguments)
+			wm.ToolCalls = append(wm.ToolCalls, tc)
+		}
+		// Plural tool_calls — what dispatch.go now copies from
+		// resp.ToolCalls into the assistant message before
+		// appending to history. This is the round-trip path that
+		// makes multi-iteration tool dispatching work.
+		for _, mc := range m.ToolCalls {
+			tc := azureWireToolCall{ID: mc.ID, Type: "function"}
+			tc.Function.Name = mc.Name
+			tc.Function.Arguments = string(mc.Arguments)
 			wm.ToolCalls = append(wm.ToolCalls, tc)
 		}
 		wireMsgs = append(wireMsgs, wm)

@@ -491,3 +491,71 @@ func TestBuildURL_TrailingSlashSafe(t *testing.T) {
 		t.Fatalf("Chat: %v", err)
 	}
 }
+
+// TestEncodeChatRequest_AssistantToolCallRoundTrip is a wire-level
+// regression test for the bug that caused Azure to reject iter 1 of
+// a tool-using dispatch with:
+//
+//	azure chat status 400: Invalid value for 'content':
+//	expected a string, got null. param: messages.[N].content
+//
+// After dispatch.go copies resp.ToolCalls onto Message.ToolCalls
+// (plural), the encoder MUST:
+//  1. emit `"content": ""` (NOT omit the field) for the assistant
+//     message that proposes tool calls, because Azure's strict
+//     OpenAI-spec enforcement rejects a missing content field, AND
+//  2. emit the proposed tool_calls array so the next provider turn
+//     sees the full pairing required when a tool result follows.
+func TestEncodeChatRequest_AssistantToolCallRoundTrip(t *testing.T) {
+	t.Parallel()
+	req := provider.ChatRequest{
+		Messages: []provider.Message{
+			{Role: provider.RoleSystem, Content: "be brief"},
+			{Role: provider.RoleUser, Content: "what is 2+2"},
+			{
+				Role: provider.RoleAssistant,
+				ToolCalls: []provider.ToolCall{{
+					ID:        "call_abc",
+					Name:      "calc",
+					Arguments: json.RawMessage(`{"expr":"2+2"}`),
+				}},
+			},
+			{
+				Role:    provider.RoleTool,
+				ToolID:  "call_abc",
+				Content: `{"result":4}`,
+			},
+		},
+	}
+	body, err := encodeChatRequest(req, "", false)
+	if err != nil {
+		t.Fatalf("encodeChatRequest: %v", err)
+	}
+	var decoded struct {
+		Messages []map[string]any `json:"messages"`
+	}
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if len(decoded.Messages) != 4 {
+		t.Fatalf("messages len = %d, want 4: %s", len(decoded.Messages), body)
+	}
+	asst := decoded.Messages[2]
+	if _, present := asst["content"]; !present {
+		t.Errorf("assistant message missing 'content' key (must be present, even if empty); got %s", body)
+	}
+	if got, want := asst["content"], any(""); got != want {
+		t.Errorf("assistant content = %#v, want empty string; body=%s", got, body)
+	}
+	tcs, ok := asst["tool_calls"].([]any)
+	if !ok || len(tcs) != 1 {
+		t.Fatalf("assistant tool_calls missing or wrong shape: %#v; body=%s", asst["tool_calls"], body)
+	}
+	tc, _ := tcs[0].(map[string]any)
+	if tc["id"] != "call_abc" {
+		t.Errorf("tool_calls[0].id = %#v, want call_abc", tc["id"])
+	}
+	if fn, _ := tc["function"].(map[string]any); fn["name"] != "calc" {
+		t.Errorf("tool_calls[0].function.name = %#v, want calc", fn["name"])
+	}
+}

@@ -35,7 +35,23 @@ type Message struct {
 	Content string    `json:"content"`
 	Name    string    `json:"name,omitempty"`
 	ToolID  string    `json:"tool_id,omitempty"`
-	Tool    *ToolCall `json:"tool,omitempty"`
+	// Tool is the legacy single-tool-call carrier kept for callers
+	// that built provider.Message values by hand (test fixtures and
+	// pre-Phase-50 code). New code should use [ToolCalls] (plural)
+	// because OpenAI / Azure / Anthropic all allow an assistant
+	// message to propose multiple tool calls in one turn, and the
+	// dispatcher must round-trip every one of them through the
+	// conversation history (otherwise the next provider turn fails
+	// with `messages.[N].content: expected string, got null` —
+	// strict providers reject an assistant message that has neither
+	// content nor tool_calls).
+	Tool *ToolCall `json:"tool,omitempty"`
+	// ToolCalls is the plural slice the dispatcher uses to copy
+	// `ChatResponse.ToolCalls` back into the assistant message
+	// before appending it to the conversation log. Each provider's
+	// encoder iterates over both [Tool] (legacy) and [ToolCalls]
+	// (new) so callers can use either; dispatch sets ToolCalls.
+	ToolCalls []ToolCall `json:"tool_calls,omitempty"`
 }
 
 // ToolCall is the structural representation of a model-proposed tool

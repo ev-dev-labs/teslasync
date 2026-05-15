@@ -217,8 +217,15 @@ type openAIChatRequest struct {
 }
 
 type openAIWireMsg struct {
-	Role       string               `json:"role"`
-	Content    string               `json:"content,omitempty"`
+	Role string `json:"role"`
+	// Content is intentionally NOT `omitempty`: an assistant
+	// message that proposes tool_calls is allowed to have empty
+	// content per the OpenAI spec, but the field MUST be present
+	// in the JSON payload — otherwise OpenAI rejects the next
+	// turn with `messages.[N].content: expected a string, got
+	// null`. Always emitting `"content": ""` is valid for all
+	// roles. (See azure.go for the same rationale.)
+	Content    string               `json:"content"`
 	Name       string               `json:"name,omitempty"`
 	ToolCallID string               `json:"tool_call_id,omitempty"`
 	ToolCalls  []openAIWireToolCall `json:"tool_calls,omitempty"`
@@ -277,10 +284,19 @@ func encodeChatRequest(cfg provider.ProviderConfig, req provider.ChatRequest, st
 	wireMsgs := make([]openAIWireMsg, 0, len(req.Messages))
 	for _, m := range req.Messages {
 		wm := openAIWireMsg{Role: m.Role, Content: m.Content, Name: m.Name, ToolCallID: m.ToolID}
+		// Legacy singular tool field (pre-Phase-50 callers / tests).
 		if m.Tool != nil {
 			tc := openAIWireToolCall{ID: m.Tool.ID, Type: "function"}
 			tc.Function.Name = m.Tool.Name
 			tc.Function.Arguments = string(m.Tool.Arguments)
+			wm.ToolCalls = append(wm.ToolCalls, tc)
+		}
+		// Plural tool_calls — round-tripped from the prior
+		// assistant turn by dispatch.go (see provider.Message).
+		for _, mc := range m.ToolCalls {
+			tc := openAIWireToolCall{ID: mc.ID, Type: "function"}
+			tc.Function.Name = mc.Name
+			tc.Function.Arguments = string(mc.Arguments)
 			wm.ToolCalls = append(wm.ToolCalls, tc)
 		}
 		wireMsgs = append(wireMsgs, wm)

@@ -316,11 +316,27 @@ func encodeChatRequest(cfg provider.ProviderConfig, req provider.ChatRequest, st
 			Name:       m.Name,
 			ToolCallID: m.ToolID,
 		}
+		// Legacy singular tool field — kept for backward
+		// compatibility with callers / tests that built Message
+		// values by hand before Phase 50 introduced the plural
+		// form. Ollama itself is lenient about a missing
+		// tool_calls array on the wire (unlike OpenAI / Azure)
+		// but the round-trip is structurally the same as those
+		// providers — see provider.Message.ToolCalls and
+		// internal/ai/dispatch/dispatch.go.
 		if m.Tool != nil {
 			tc := ollamaToolCallWire{ID: m.Tool.ID}
 			tc.Function.Name = m.Tool.Name
 			tc.Function.Arguments = m.Tool.Arguments
-			wm.ToolCalls = []ollamaToolCallWire{tc}
+			wm.ToolCalls = append(wm.ToolCalls, tc)
+		}
+		// Plural tool_calls — set by dispatch.go when copying
+		// resp.ToolCalls onto the assistant history message.
+		for _, mc := range m.ToolCalls {
+			tc := ollamaToolCallWire{ID: mc.ID}
+			tc.Function.Name = mc.Name
+			tc.Function.Arguments = mc.Arguments
+			wm.ToolCalls = append(wm.ToolCalls, tc)
 		}
 		wireMsgs = append(wireMsgs, wm)
 	}
