@@ -1,0 +1,11 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot summarize a different incident — my role is to
+      summarize the timeline only for the incident in scope for
+      this session (incident <id='7'/>). If you'd like, I can
+      summarize the timeline for incident <id='7'/> instead —
+      just confirm and I'll pull the deterministic incident
+      envelope.
+    input_tokens: 48
+    output_tokens: 64

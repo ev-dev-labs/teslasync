@@ -146,6 +146,7 @@ func mountAIRoutes(
 	aiMLChargingCurveClustering *AIMLChargingCurveHandler,
 	aiPeriodCompareNarration *AIPeriodCompareNarrationHandler,
 	aiLifetimeStatsQA *AILifetimeStatsQAHandler,
+	aiIncidentTimelineSummarizer *AIIncidentTimelineSummarizerHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -385,6 +386,25 @@ func mountAIRoutes(
 			lifetimeStatsQAHandler = aiLifetimeStatsQA.ServeHTTP
 		}
 		r.Post("/analytics/lifetime/qa", g.Wrap("lifetime-stats-qa", lifetimeStatsQAHandler))
+
+		// incident-timeline-summarizer (Phase-50 / S1, slice 0042).
+		// Opt-in LLM summarizer that condenses the deterministic
+		// per-incident timeline the SPA's IncidentTimelinePage
+		// already renders from GET /api/v1/status/incidents/{id}.
+		// The route lives under /ai/system/incidents/{incidentID}/
+		// summarize so it is namespaced under the existing /system
+		// family and the URL incidentID matches the chi pattern of
+		// the canonical baseline path. Same stub-fallback pattern
+		// as the other AI handlers — a nil handler is possible
+		// during partial wiring but the off-mode 404 invariant
+		// still holds because guard.Wrap returns 404 BEFORE the
+		// handler runs in off mode. The canonical baseline route at
+		// GET /api/v1/status/incidents/{id} is unchanged.
+		var incidentTimelineSummarizerHandler http.HandlerFunc = aiIncidentTimelineSummarizerStubHandler
+		if aiIncidentTimelineSummarizer != nil {
+			incidentTimelineSummarizerHandler = aiIncidentTimelineSummarizer.ServeHTTP
+		}
+		r.Post("/system/incidents/{incidentID}/summarize", g.Wrap("incident-timeline-summarizer", incidentTimelineSummarizerHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1141,6 +1161,15 @@ func aiPeriodCompareNarrationStubHandler(w http.ResponseWriter, _ *http.Request)
 // 404 invariant is held by the guard, not the stub.
 func aiLifetimeStatsQAStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai lifetime stats qa is not yet implemented")
+}
+
+// aiIncidentTimelineSummarizerStubHandler mirrors
+// aiLifetimeStatsQAStubHandler for the S1 slice (Phase-50 / 0042
+// incident-timeline-summarizer). Reachable only when
+// AIIncidentTimelineSummarizerHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiIncidentTimelineSummarizerStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai incident timeline summarizer is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

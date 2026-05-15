@@ -2083,6 +2083,76 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / 0042 — S1 Incident timeline summarizer.
+	//
+	// Opt-in LLM summarizer that condenses ONE incident's
+	// chronological timeline into a 3-6 sentence factual summary by
+	// routing through TWO read-only tools: query_incident_timeline
+	// (the deterministic envelope ALSO served by the canonical
+	// GET /api/v1/status/incidents/{id} handler — id, title,
+	// description, severity, status, source, affected_components,
+	// started_at, resolved_at, total_updates count, and the full
+	// chronological updates list with at/status/message/author) and
+	// the OPTIONAL secondary retrieve_system_chunks (F7 retrieval
+	// restricted to {system_event, audit_log} source types) for
+	// additional per-event context. The deterministic incident
+	// timeline list, append-update form, and lifecycle controls at
+	// /system-status/incidents/:id remain the canonical baseline
+	// when AI is off. Per-feature redaction policy is PolicyChatbot
+	// (deny-by-default; every PII class redacted to a round-trip
+	// tag) so a leaked transcript reveals nothing about IPs,
+	// hostnames, ports, tokens, or any value an operator pasted
+	// into an incident update message.
+	//
+	// Per-request scope binding: the AI handler installs the URL-
+	// supplied incidentID in the request context via
+	// tools.WithScopedIncidentID; query_incident_timeline rejects
+	// any LLM-supplied incident_id that does not match. This is
+	// defence-in-depth against prompt-injection exfiltration via
+	// operator-authored incident text — even if the LLM tries to
+	// summarize a different incident, the scope check refuses the
+	// call before any cross-incident timeline data is loaded into
+	// the model's context.
+	//
+	// Routes:
+	//   - Backend: POST /api/v1/ai/system/incidents/{incidentID}/summarize
+	//     (gated by guard.Wrap("incident-timeline-summarizer"); 404
+	//     in off mode).
+	//   - Frontend: /system/incidents (registry metadata only;
+	//     summary surface is rendered inside the canonical
+	//     IncidentTimelinePage at /system-status/incidents/:id when
+	//     the feature is enabled — the registry route is the
+	//     coverage anchor for off-mode walker tests).
+	//   - UITestIDs: ai-feature-incident-timeline-summarizer-root
+	//     (auto-applied by withAiFeature HOC reading
+	//     meta.uiTestIds[0]).
+	//
+	// NeedsRAG: true — the OPTIONAL secondary tool routes through
+	// the F7 rag.Retriever entry point.
+	// NeedsTools: true — query_incident_timeline + retrieve_system_chunks.
+	// NeedsStream: true — the dispatcher streams delta+done frames
+	// to the SPA via internal/ai/stream.
+	//
+	// JobNames / PushKinds: explicitly empty (no background job, no
+	// notification/push channel surface). features.CoverageOK rejects
+	// nil; the empty slice is the affirmative "no surface" signal.
+	"incident-timeline-summarizer": {
+		ID:          "incident-timeline-summarizer",
+		Name:        "Incident timeline summarizer",
+		Description: "Opt-in LLM summarizer that condenses one incident's chronological timeline into a 3-6 sentence factual summary by routing through two read-only tools: query_incident_timeline (the deterministic envelope ALSO served by the canonical GET /api/v1/status/incidents/{id} handler — id, title, description, severity, status, source, affected_components, started_at, resolved_at, total_updates count, and the full chronological updates list with at/status/message/author) and the OPTIONAL retrieve_system_chunks (F7 retrieval restricted to {system_event, audit_log} source types) for per-event context. The deterministic incident timeline list, append-update form, and lifecycle controls at /system-status/incidents/:id remain the canonical baseline when AI is off. Per-feature redaction policy is PolicyChatbot (deny-by-default; every PII class redacted to a round-trip tag) so a leaked transcript reveals nothing about IPs, hostnames, ports, tokens, or any value an operator pasted into an incident update message. Per-request scope binding rejects any cross-incident tool call to defend against prompt-injection exfiltration via operator-authored text.",
+		Tier:        "S",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/system/incidents/{incidentID}/summarize"},
+			Frontend:  []string{"/system/incidents"},
+			UITestIDs: []string{"ai-feature-incident-timeline-summarizer-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

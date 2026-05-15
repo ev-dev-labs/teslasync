@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -222,6 +222,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsTools: true,
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-inbox-auto-categorization-root"] as const),
+  }),
+  "incident-timeline-summarizer": Object.freeze({
+    id: "incident-timeline-summarizer",
+    name: "Incident timeline summarizer",
+    description: "Opt-in LLM summarizer that condenses one incident's chronological timeline into a 3-6 sentence factual summary by routing through two read-only tools: query_incident_timeline (the deterministic envelope ALSO served by the canonical GET /api/v1/status/incidents/{id} handler — id, title, description, severity, status, source, affected_components, started_at, resolved_at, total_updates count, and the full chronological updates list with at/status/message/author) and the OPTIONAL retrieve_system_chunks (F7 retrieval restricted to {system_event, audit_log} source types) for per-event context. The deterministic incident timeline list, append-update form, and lifecycle controls at /system-status/incidents/:id remain the canonical baseline when AI is off. Per-feature redaction policy is PolicyChatbot (deny-by-default; every PII class redacted to a round-trip tag) so a leaked transcript reveals nothing about IPs, hostnames, ports, tokens, or any value an operator pasted into an incident update message. Per-request scope binding rejects any cross-incident tool call to defend against prompt-injection exfiltration via operator-authored text.",
+    tier: "S",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-incident-timeline-summarizer-root"] as const),
   }),
   "learned-per-vehicle-anomaly-baselines": Object.freeze({
     id: "learned-per-vehicle-anomaly-baselines",
@@ -453,6 +464,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "drive-coaching",
   "geofence-aware-automation-suggestions",
   "inbox-auto-categorization",
+  "incident-timeline-summarizer",
   "learned-per-vehicle-anomaly-baselines",
   "lifetime-stats-qa",
   "ml-charging-curve-clustering",

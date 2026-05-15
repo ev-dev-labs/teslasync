@@ -1,0 +1,21 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_incident_timeline_typical_incident_summary_1
+        name: query_incident_timeline
+        arguments: '{"incident_id": 7}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Incident <id='7'/> ("Telemetry ingest queue backlog") was
+      opened on 2024-03-15 at high severity and is now resolved.
+      Across 5 timeline updates, the on-call rotation moved the
+      incident from investigating to identified to monitoring
+      and finally to resolved. The most material transition was
+      at 14:32 UTC when the queue depth returned below the alert
+      threshold, after which the incident was closed within the
+      hour. Full resolution time was approximately 2 hours and
+      18 minutes from the initial open.
+    input_tokens: 240
+    output_tokens: 96
