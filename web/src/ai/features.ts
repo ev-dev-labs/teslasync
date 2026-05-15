@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "charging-diagnosis" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "trip-planner-llm-agent" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "trip-planner-llm-agent" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -90,6 +90,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsTools: true,
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-battery-health-forecast-narrative-root"] as const),
+  }),
+  "charging-curve-fingerprint-clustering": Object.freeze({
+    id: "charging-curve-fingerprint-clustering",
+    name: "Charging-curve fingerprint clustering",
+    description: "Opt-in LLM narrator that names and explains the deterministic charging-curve fingerprint clusters for one vehicle. The deterministic charging-curve charts and per-session labels on the Charging Curves page remain the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class except the vehicle name tagged so a leaked transcript does not reveal the user's home charger address or the supercharger network they frequent.",
+    tier: "C",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-charging-curve-fingerprint-clustering-root"] as const),
   }),
   "charging-diagnosis": Object.freeze({
     id: "charging-diagnosis",
@@ -254,6 +265,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "anomaly-explanations",
   "auto-trip-naming",
   "battery-health-forecast-narrative",
+  "charging-curve-fingerprint-clustering",
   "charging-diagnosis",
   "chatbot-llm",
   "digest-narration",

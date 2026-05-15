@@ -282,3 +282,39 @@ func PolicyBatteryHealthForecastNarrative() Policy {
 		Mode:  ModeRedactedTags,
 	}
 }
+
+// PolicyChargingCurveFingerprintClustering is the per-feature
+// redaction policy for the Phase-50 / 0028 C3
+// charging-curve-fingerprint-clustering surface (LLM names and
+// explains the deterministic charging-curve fingerprint clusters
+// for one vehicle).
+//
+// The slice prompt's redaction stanza is the source of truth:
+//
+//	Policy:               PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:      ClassVehicleName only; charging location remains tagged
+//	Round-trip required:  yes
+//
+// The policy therefore mirrors PolicyDigest (Allow=ClassVehicleName,
+// Mode=ModeRedactedTags) so the LLM can name "Roadie" but every
+// charging-location identifier (start_place place names, lat/lng,
+// street addresses, charger network labels) is converted to a
+// round-trip tag before the provider call and only restored in the
+// final SSE frame returned to the same authenticated user. A leaked
+// transcript therefore reveals neither the user's home charger
+// address nor the L3 supercharger they routinely visit.
+//
+// Kept as a distinct identifier from PolicyDigest /
+// PolicyTripPlannerLLMAgent / PolicyRouteEfficiencySuggestions /
+// PolicySmartChargeScheduleSuggestion / PolicyAutoTripNaming /
+// PolicySpeedProfileInsights / PolicyChargingDiagnosis /
+// PolicyDriveCoaching / PolicyBatteryHealthForecastNarrative so a
+// future per-feature change to one slice's allow-list does not
+// bleed across the others — every feature is independently
+// auditable.
+func PolicyChargingCurveFingerprintClustering() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}

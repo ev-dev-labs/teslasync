@@ -22,6 +22,7 @@ import {
 } from '../components/charging-curve';
 import { sessionLabel, generateChargingCurve, avg, durationMinutes } from '../components/charging-curve/helpers';
 import type { SummaryStats } from '../components/charging-curve/types';
+import { AIChargingCurveFingerprintClustering } from '@/components/ai/AIChargingCurveFingerprintClustering';
 
 export default function ChargingCurvePage() {
   const { t } = useTranslation();
@@ -141,6 +142,14 @@ export default function ChargingCurvePage() {
               )}
             </p>
           </GlassPanel>
+
+          {/* AI charging-curve fingerprint cluster narrator (Phase-50 / 0028).
+              Rendered inside the empty-data branch as well so the section is
+              present whenever the per-feature toggle is on; the inner Explain
+              button stays disabled until a vehicle is in scope. */}
+          <FadeIn delay={0.05}>
+            <AIChargingCurveFingerprintClustering vehicleId={vehicleId ?? undefined} />
+          </FadeIn>
         </div>
       </FadeIn>
     );
@@ -166,6 +175,14 @@ export default function ChargingCurvePage() {
       }
     >
       <div className="space-y-6">
+        {/* AI charging-curve fingerprint cluster narrator (Phase-50 / 0028).
+            Rendered above the deterministic charts so the user sees the
+            opt-in narrative section without scrolling; the deterministic
+            curves below remain the canonical view per ADR-015 §I3. */}
+        <FadeIn delay={0.05}>
+          <AIChargingCurveFingerprintClustering vehicleId={vehicleId ?? undefined} />
+        </FadeIn>
+
         {/* Session Selector */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Select

@@ -84,6 +84,7 @@ import (
 	tripplannerllmagent "github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-planner-llm-agent"
 	smartchargeschedulesuggestion "github.com/ev-dev-labs/teslasync/internal/ai/strategies/smart-charge-schedule-suggestion"
 	batteryhealthforecastnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/battery-health-forecast-narrative"
+	chargingcurvefingerprintclustering "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-curve-fingerprint-clustering"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
@@ -1028,6 +1029,57 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		batteryhealthforecastnarrative.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+
+	// charging-curve-fingerprint-clustering (Phase-50 / C3, slice
+	// 0028). The shared rag.Retriever is constructed per-feature
+	// so the rate-limit + cost-cap decorators on the embedding
+	// provider apply per-strategy. The retriever uses the same
+	// nomic-embed-text 768-dim physical table as the other RAG
+	// slices; the per-feature source-type allowlist
+	// {charge_curve, charge_session} is enforced in
+	// retrieve_charge_curve_chunks's Validate. The feature is
+	// registered as needing `ai_charge_curve_indexer` (gated
+	// indexer stub — see internal/jobs/ai_charge_curve_indexer.go);
+	// the F7 indexer fan-out point for `charge_curve` is reserved
+	// by string but not yet wired to any embedding job.
+	aiChargeCurveRetriever, err := rag.New(
+		context.Background(),
+		aiSettingsRepo,
+		db,
+		aiRegistry,
+		chargingcurvefingerprintclustering.FeatureID,
+		rag.ModelNomicEmbedText,
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("ai charging-curve-fingerprint-clustering: rag.New failed during boot wiring")
+	}
+	// charging-curve-fingerprint-clustering tools (Phase-50 / C3,
+	// slice 0028). Adds `retrieve_charge_curve_chunks` +
+	// `query_charge_curve_features` to the shared tool registry so
+	// the dispatcher can resolve them for the
+	// charging-curve-fingerprint-clustering strategy. Same
+	// ordering rule as the other slice tools above: must be
+	// registered before the handler constructor below so the
+	// strategy's allowedTools resolve at boot.
+	// query_charge_curve_features calls ChargingRepo.GetByVehicle
+	// and derives the per-cluster fingerprint envelope in-memory
+	// mirroring the deterministic L1/L2/DC bucketing the SPA's
+	// helpers.ts already applies — no new SQL is written by this
+	// slice.
+	tools.RegisterChargingCurveFingerprintClusteringTools(aiToolRegistry, tools.ChargingCurveFingerprintClusteringSources{
+		Retriever: aiChargeCurveRetriever,
+		Charges:   database.NewChargingRepo(db),
+	})
+	// charging-curve-fingerprint-clustering handler. One per
+	// process; stateless beyond constructor inputs. Must be
+	// constructed AFTER the tool registration above so the
+	// dispatcher can resolve the strategy's allowedTools at boot.
+	aiChargingCurveClusteringHandler := NewAIChargingCurveClusteringHandler(
+		aiRegistry,
+		aiToolRegistry,
+		chargingcurvefingerprintclustering.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
@@ -2709,7 +2761,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

@@ -1,0 +1,35 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_retrieve_charge_curve_chunks_dc_fast_supercharger_1
+        name: retrieve_charge_curve_chunks
+        arguments: '{"query": "DC fast supercharger versus L2 home cluster fingerprints", "source_types": ["charge_curve", "charge_session"], "k": 6}'
+    input_tokens: 72
+    output_tokens: 36
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_charge_curve_features_dc_fast_supercharger_1
+        name: query_charge_curve_features
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 96
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Overnight L2 home charging — vehicle <vehicle id='42'/> shows
+      a dominant L2 cluster: the largest session_count, peak power
+      around the wall connector regime, and a ramp_shape close to
+      one (the curve holds near its peak through the session). The
+      dominant_charger_type returned for this cluster is the wall
+      connector and total_energy_wh_avg is consistent with full
+      overnight top-ups.
+
+      Road-trip DC fast charging — a smaller but distinct DC fast
+      cluster appears alongside it: peak_power_w_avg sits an order
+      of magnitude higher than the L2 cluster, ramp_shape is
+      noticeably lower (the curve tapers as the deterministic
+      bucketing predicts for DC fast), and the dominant_charger_type
+      returned by the tool is the supercharger family. The
+      session_count is much smaller, matching the road-trip-only
+      cadence reflected in the deterministic envelope.
+    input_tokens: 320
+    output_tokens: 168

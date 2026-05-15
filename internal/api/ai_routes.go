@@ -102,6 +102,10 @@ import (
 //   - aiBatteryHealth: the real LLM-backed handler for the battery
 //                  health forecast narrative (Phase-50 / C2,
 //                  slice 0027). Same nil fallback pattern.
+//   - aiChargingCurveClustering: the real LLM-backed handler for
+//                  the charging-curve fingerprint clustering
+//                  narrator (Phase-50 / C3, slice 0028). Same nil
+//                  fallback pattern.
 func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
@@ -125,6 +129,7 @@ func mountAIRoutes(
 	aiTripPlannerLLM *AITripPlannerLLMHandler,
 	aiSmartChargeSchedule *AISmartChargeScheduleHandler,
 	aiBatteryHealth *AIBatteryHealthHandler,
+	aiChargingCurveClustering *AIChargingCurveClusteringHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -291,6 +296,24 @@ func mountAIRoutes(
 			batteryHealthHandler = aiBatteryHealth.ServeHTTP
 		}
 		r.Post("/battery/health/narrate", g.Wrap("battery-health-forecast-narrative", batteryHealthHandler))
+
+		// charging-curve-fingerprint-clustering (Phase-50 / C3,
+		// slice 0028) names and explains the deterministic
+		// charging-curve fingerprint clusters the SPA's
+		// helpers.ts already classifies. The route lives under
+		// /ai/charging/curves/clusters/explain so it is namespaced
+		// under the existing /charging family the
+		// ChargingCurvePage component renders. Same stub-fallback
+		// pattern — a nil handler is possible during partial
+		// wiring but the off-mode 404 invariant still holds
+		// because guard.Wrap returns 404 BEFORE the handler runs
+		// in off mode. The canonical baseline route at
+		// GET /api/v1/charging is unchanged.
+		var chargingCurveClusteringHandler http.HandlerFunc = aiChargingCurveClusteringStubHandler
+		if aiChargingCurveClustering != nil {
+			chargingCurveClusteringHandler = aiChargingCurveClustering.ServeHTTP
+		}
+		r.Post("/charging/curves/clusters/explain", g.Wrap("charging-curve-fingerprint-clustering", chargingCurveClusteringHandler))
 
 		// charging-diagnosis (Phase-50 / N4, slice 0018).
 		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
@@ -574,6 +597,15 @@ func aiSmartChargeScheduleStubHandler(w http.ResponseWriter, _ *http.Request) {
 // invariant is held by the guard, not the stub.
 func aiBatteryHealthStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai battery health forecast narrative is not yet implemented")
+}
+
+// aiChargingCurveClusteringStubHandler mirrors
+// aiBatteryHealthStubHandler for the C3 slice (Phase-50 / 0028
+// charging-curve-fingerprint-clustering). Reachable only when
+// AIChargingCurveClusteringHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiChargingCurveClusteringStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai charging-curve fingerprint clustering is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

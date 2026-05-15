@@ -1072,6 +1072,56 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / 0028 — C3 Charging-curve fingerprint clustering.
+	//
+	// Opt-in LLM narrator that NAMES each deterministic
+	// charging-curve cluster and EXPLAINS what makes the sessions in
+	// it cohere for one vehicle in scope. The statistical clustering
+	// mechanics (k-means, fingerprint similarity, etc.) are owned by
+	// the ML3 sibling slice — this C3 surface ONLY adds a
+	// human-readable narrator over the already-computed buckets.
+	//
+	// The deterministic ChargingCurvePage charts (SummaryStatsGrid,
+	// SessionCurveChart, SessionComparisonChart, ChargerTypeChart,
+	// SpeedTrendChart, TimeToChargeSection) and the existing client-
+	// side `sessionLabel` heuristic in
+	// web/src/features/charging/components/charging-curve/helpers.ts
+	// remain the canonical baseline visible to every user. The AI
+	// section is a panel rendered ABOVE the deterministic tabs; it
+	// is HIDDEN entirely when ai_mode='off' or the per-feature
+	// toggle is off (ADR-015 §I3, §I5, §I6).
+	//
+	// Tools: retrieve_charge_curve_chunks (F7 RAG retrieval over the
+	// per-feature source-type allowlist {charge_curve, charge_session})
+	// + query_charge_curve_features (deterministic per-cluster
+	// envelope derived in-memory from the user's existing
+	// charging_sessions rows; no new SQL).
+	//
+	// JobNames: ["ai_charge_curve_indexer"] — gated indexer stub
+	// registered for forward-compat. Skipped (Skipped=1) whenever
+	// ai_mode='off' or charging-curve-fingerprint-clustering is off,
+	// matching the F7/I12 contract.
+	//
+	// PushKinds: explicitly empty (no notification/push channel
+	// surface). features.CoverageOK rejects nil; the empty slice is
+	// the affirmative "no surface" signal.
+	"charging-curve-fingerprint-clustering": {
+		ID:          "charging-curve-fingerprint-clustering",
+		Name:        "Charging-curve fingerprint clustering",
+		Description: "Opt-in LLM narrator that names and explains the deterministic charging-curve fingerprint clusters for one vehicle. The deterministic charging-curve charts and per-session labels on the Charging Curves page remain the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class except the vehicle name tagged so a leaked transcript does not reveal the user's home charger address or the supercharger network they frequent.",
+		Tier:        "C",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/charging/curves/clusters/explain"},
+			Frontend:  []string{"/charging/curves"},
+			UITestIDs: []string{"ai-feature-charging-curve-fingerprint-clustering-root"},
+			JobNames:  []string{"ai_charge_curve_indexer"},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

@@ -1,0 +1,27 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_retrieve_charge_curve_chunks_typical_l2_home_1
+        name: retrieve_charge_curve_chunks
+        arguments: '{"query": "L2 home charging cluster fingerprints", "source_types": ["charge_curve", "charge_session"], "k": 5}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_charge_curve_features_typical_l2_home_1
+        name: query_charge_curve_features
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 96
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Overnight L2 home charging — vehicle <vehicle id='42'/> spends
+      most of its plug-in time on a wall connector cluster: this is
+      the dominant fingerprint by session_count, with a steady L2
+      peak power and a ramp_shape close to one (the curve holds near
+      its peak rather than tapering early). The dominant_charger_type
+      returned by the deterministic envelope is the wall connector,
+      and the total_energy_wh_avg per session matches a typical
+      overnight top-up rather than a quick splash.
+    input_tokens: 240
+    output_tokens: 96

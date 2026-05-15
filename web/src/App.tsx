@@ -389,6 +389,12 @@ export default function App() {
         <Route path="climate-control" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
         <Route path="security-access" element={<SafeRoute name="SecurityAccess"><SecurityAccess /></SafeRoute>} />
         <Route path="charging-curve" element={<SafeRoute name="ChargingCurve"><ChargingCurve /></SafeRoute>} />
+        {/* Phase-50 / 0028 alias: the slice prompt registered the AI feature
+            against frontend route `/charging/curves`; the canonical app path
+            stays `/charging-curve` for back-compat, but mounting the same
+            page at `/charging/curves` lets the registry's RouteSet.Frontend
+            entry land users on the deterministic baseline. */}
+        <Route path="charging/curves" element={<SafeRoute name="ChargingCurve"><ChargingCurve /></SafeRoute>} />
         <Route path="cost-analysis" element={<SafeRoute name="CostAnalysis"><CostAnalysis /></SafeRoute>} />
         <Route path="tesla-charging-history" element={<SafeRoute name="TeslaChargingHistory"><TeslaChargingHistory /></SafeRoute>} />
         <Route path="tesla-charging-sessions" element={<SafeRoute name="TeslaChargingSessions"><TeslaChargingSessions /></SafeRoute>} />

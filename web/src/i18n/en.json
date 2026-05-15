@@ -903,6 +903,12 @@
       "noMatches": "No sessions match your filters",
       "noMatchesDescription": "Try clearing the search or charger filter to see more sessions."
     },
+    "aiClustering": {
+      "title": "Explain the charging-curve cluster fingerprints",
+      "description": "Ask the AI narrator to name and explain each deterministic charging-curve cluster fingerprint. The narrator never changes the cluster bucketing — it grounds every sentence in the same per-cluster numbers the curves below render.",
+      "badge": "AI",
+      "generateButton": "Explain clusters"
+    },
     "gauges": {
       "sessions": "Sessions",
       "energy": "Energy",
@@ -2458,6 +2464,10 @@
         "battery-health-forecast-narrative": {
           "label": "Battery health forecast narrative",
           "description": "Opt-in LLM narrator that explains the deterministic battery-health forecast — current state of health, projected degradation slope, dominant charging-habit drivers, and the top one or two risk factors — grounded in the same numeric envelope the chart renders. The deterministic Capacity Trend & Prediction chart, hero metric cards, insights, and recommendations on the Battery Health page remain the canonical baseline when AI is off."
+        },
+        "charging-curve-fingerprint-clustering": {
+          "label": "Charging-curve fingerprint clustering",
+          "description": "Opt-in LLM narrator that names and explains each deterministic charging-curve cluster fingerprint — peak power tier (L1 / L2 / DC fast), session count per cluster, ramp shape, dominant charger type, and total energy per session — grounded in the same per-cluster envelope the curves render. The deterministic charging-curve charts, per-session labels, and distribution panel on the Charging Curve page remain the canonical baseline when AI is off."
         }
       },
       "archive": {
