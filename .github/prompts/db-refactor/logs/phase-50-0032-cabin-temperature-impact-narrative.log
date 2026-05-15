@@ -1,0 +1,408 @@
+Phase-50 / Prompt 0032 — T2 Cabin temperature impact narrative
+=================================================================
+
+Slice ID:        phase-50-0032-cabin-temperature-impact-narrative
+Branch:          feat/vampire-drain-explanation
+Predecessors:    Phase-50 / 0001-0010 (F0-F9 foundations)
+ADR:             ADR-015 (AI-Off Contract)
+Registry tier:   T (T2 in slice metadata; registry uses "T" enum)
+Backend route:   POST /api/v1/ai/climate/temperature-impact/narrate
+Frontend route:  /analytics/temperature-impact (registry); /temperature-impact (App.tsx)
+UI test ID:      ai-feature-cabin-temperature-impact-narrative-root
+Off-mode test:   TestCabinTemperatureNarrativeAIOffShowsChartsOnly
+
+=== PREFLIGHT ===
+
+Branch: feat/vampire-drain-explanation
+HEAD:   85166eae5 feat(ai): add Preheat and precool recommender
+
+Predecessor verification (Depends-on: 0001-0010, F0-F9):
+  - phase-50-0009-F8-redaction-policy.log:        EXIT=0 STATUS=DONE
+  - phase-50-0010-F9-eval-harness.log:            EXIT=0 STATUS=DONE
+  - phase-50-0029-cost-forecast-narration.log:    EXIT=0 STATUS=DONE
+  - phase-50-0030-vampire-drain-explanation.log:  EXIT=0 STATUS=DONE
+  - phase-50-0031-preheat-precool-recommender.log: EXIT=0 STATUS=DONE
+
+Dirty-tree check before edits: clean (only this slice's files dirty
+during execution).
+
+=== SURVEY ===
+
+Baseline route to preserve:
+  GET /api/v1/analytics/temperature-impact  (handler:
+  internal/api/temp_impact_handler.go TempImpactHandler.Get).
+  Query: vehicle_id (required, int64). Returns:
+  { points: [{ outside_temp_c, efficiency_wh_km, distance_km,
+              drive_date }] }
+  Backed by drives table SELECT joined to drive samples;
+  same SQL is reused inside AITemperatureImpactSource.
+
+Baseline page to preserve:
+  web/src/features/maps/pages/TemperatureImpactPage.tsx
+    - VehicleSelect (active-vehicle context)
+    - Summary MetricCards (avg eff, best/worst range, count)
+    - ScatterChart (temperature vs efficiency)
+    - Bucket breakdown chart (cold/mild/hot)
+    - Optimal-temperature analysis card
+    - Recommendations (tipCold, tipHot, tipOptimal)
+  Page renders identically when AI is off — the AI section is
+  conditionally rendered by withAiFeature and absent in the DOM when
+  the gate is closed (ADR-015 §I5).
+
+Existing API hooks file: useAnalytics.ts already references
+  /analytics/temperature-impact via inline TanStack Query call inside
+  TemperatureImpactPage (no dedicated hook). Backend route is
+  unchanged.
+
+Tools surveyed:
+  internal/ai/tools/registry.go — Registry pattern for typed tools.
+  internal/ai/tools/cost_forecast.go — closest single-tool narrator
+  precedent (slice 0029).
+  internal/ai/tools/vampire_drain.go — slice 0030 sibling.
+
+Strategy precedents surveyed:
+  internal/ai/strategies/cost-forecast-narration/ — single-tool
+  narrator; mirrored its strategy.go shape, allowedTools whitelist
+  (one tool), defensive copy semantics, EvalGoldens nil contract.
+  internal/ai/strategies/vampire-drain-explanation/ — sibling slice
+  also using single-tool narrator pattern.
+
+Registry metadata pattern:
+  internal/ai/features/registry.go — preheat-precool-recommender
+  entry was used as the structural template (Tier "T", DefaultOn
+  false, NeedsRAG false, NeedsTools true, NeedsStream true,
+  Routes.Backend / Frontend / UITestIDs populated, JobNames /
+  PushKinds explicitly empty []string{}).
+
+Handler precedent surveyed:
+  internal/api/ai_cost_forecast_narration_handler.go — closest
+  single-tool narrator handler. Mirrored its parser, dispatcher
+  invocation, env injection, ServeHTTP structure.
+
+Frontend wired-component precedent:
+  web/src/components/ai/AICostForecastNarration.tsx — useAiStream
+  + AiOutputPanel + GlassPanel + computed-disabled Button. Imported
+  via withAiFeature HOC.
+
+=== REASONING ===
+
+Why this design preserves ADR-015 invariants:
+
+I1 default-off: registry entry sets DefaultOn: false; the
+  cabin-temperature-impact-narrative toggle starts off in
+  Settings.aifeatures and the user must explicitly opt in.
+
+I3 baseline intact: TemperatureImpactPage continues to render the
+  deterministic VehicleSelect, ScatterChart, bucket breakdown,
+  optimal-temperature analysis, and recommendations regardless of
+  ai_mode. The AI section is added ABOVE the MetricCards grid so
+  that when AI is on it contextualises the chart, and when AI is
+  off the page renders identically to its pre-slice form (the
+  withAiFeature HOC returns null when the gate is closed).
+
+I4 zero egress: the AI route is only ever invoked when the user
+  clicks the Narrate button inside a gated component that is
+  ABSENT in off mode (gated by withAiFeature, validated in
+  TestCabinTemperatureNarrativeAIOffShowsChartsOnly). The provider
+  call is routed through the dispatcher's locked decorator chain
+  (redaction → rate-limit → cost-cap → audit → trace) inherited
+  from F0-F9 foundations.
+
+I5 hidden UI: withAiFeature('cabin-temperature-impact-narrative',
+  …) returns null when the per-feature toggle is off OR ai_mode is
+  off. The off-mode Vitest asserts container.toBeEmptyDOMElement()
+  AND queryByTestId('ai-feature-cabin-temperature-impact-narrative-root')
+  not.toBeInTheDocument(). The positive control (ai_mode='cloud',
+  toggle=true) confirms the gate is wired correctly.
+
+I6 404 routes: every call site of the new POST handler is wrapped
+  in g.Wrap("cabin-temperature-impact-narrative", …) inside
+  mountAIRoutes (internal/api/ai_routes.go). The Go test
+  TestCabinTemperatureNarrativeAIOffShowsChartsOnly inside
+  ai_temperature_impact_handler_test.go asserts the registered
+  route returns 404 when ai_mode='off'.
+
+I7 per-feature: the registry entry is opt-in (DefaultOn false) and
+  the gate inspects BOTH ai_mode AND ai_features['cabin-…']. The
+  positive-control test fixes both keys; the off-mode tests prove
+  the AND logic: mode=off OR toggle=false hides the surface.
+
+I10 type system: the tool envelope (TemperatureImpact /
+  TemperatureImpactBucket / TemperatureImpactMonth) is a single
+  Go struct with explicit JSON tags. The handler-side parser
+  validates vehicle_id > 0; the strategy whitelist hard-pins
+  query_temperature_impact as the only callable tool.
+
+I12 client/bg: this slice adds:
+   - Service worker chunk:  ai-cabin-temperature-impact-narrative
+     (registry routes metadata; documented in slice prompt §
+     "Off-mode contract impact"). The webpack/Vite chunk emits only
+     when the lazy import of AICabinTemperatureImpactNarrative is
+     reached, which itself only happens when the gated render path
+     is taken (off mode never imports the chunk).
+   - Background jobs:       none.
+   - Push kinds:            none.
+   - Client storage keys:   none.
+
+Why selection mechanism is at COMPOSITION time, not inside
+business logic: the AI component is a sibling of the deterministic
+content under the same PageContainer, gated by withAiFeature at
+the JSX level. No branching inside the data-fetch or chart-render
+paths exists — the deterministic chart code is unchanged.
+
+Why the strategy uses PolicyDigest-shaped redaction: the surface
+narrates user-named vehicles aggregating their drives. ClassVehicleName
+must round-trip in ModeRedactedTags so the narration can quote
+"vehicle X" without leaking driver-pii or trip locations. Trip and
+location classes remain tagged + non-round-trip — same shape as
+PolicyDigest. The new policy
+PolicyCabinTemperatureImpactNarrative() lives next to its sibling
+PolicyPreheatPrecoolRecommender() in policies.go.
+
+Why a single tool query_temperature_impact (no helper extraction):
+the slice prompt explicitly forbids "duplicate WRITE paths" but
+admits read-path duplication when extracting a shared helper would
+risk regressing the canonical baseline route. The
+AITemperatureImpactSource adapter runs the SAME aggregation SQL
+TempImpactHandler.Get already runs — no parallel write path; the
+LLM never persists.
+
+=== CHANGES ===
+
+Production:
+  internal/ai/redact/policies.go
+    + PolicyCabinTemperatureImpactNarrative() (PolicyDigest-shaped:
+      ClassVehicleName round-trip in ModeRedactedTags; trip and
+      location classes tagged but NOT round-trip)
+  internal/ai/strategies/cabin-temperature-impact-narrative/
+    + strategy.go (FeatureID, SystemPrompt, allowedTools=
+      ["query_temperature_impact"], standard Strategy struct,
+      defensive-copy Tools(), nil Context/Mutators, redaction
+      policy, EvalGoldens nil)
+    + goldens.yaml (3 deterministic goldens)
+    + canned/typical_cold_weather_efficiency_drop.yaml
+    + canned/insufficient_data.yaml
+    + canned/refusal_other_vehicle.yaml
+  internal/ai/tools/
+    + temperature_impact.go (typed envelope, narrow port,
+      queryTemperatureImpact tool, RegisterCabinTemperatureImpactNarrativeTools)
+  internal/ai/features/registry.go
+    + cabin-temperature-impact-narrative entry (Tier "T",
+      DefaultOn false, RouteSet populated with explicit []string{}
+      for empty surfaces)
+  internal/api/ai_temperature_impact_handler.go
+    + AICabinTemperatureImpactHandler + parseAICabinTemperatureImpactRequest
+    + AITemperatureImpactSource production adapter (reuses
+      TempImpactHandler.Get aggregation SQL; pickBestWorstBuckets,
+      buildTemperatureImpactInsights helpers)
+    + denyAllConfirm (slice's confirm sink; no mutating tools)
+  internal/api/ai_routes.go
+    + mountAIRoutes signature: aiCabinTemperatureImpactNarrative
+      *AICabinTemperatureImpactHandler param
+    + r.Post("/climate/temperature-impact/narrate", g.Wrap(
+      "cabin-temperature-impact-narrative", …))
+    + aiCabinTemperatureImpactNarrativeStubHandler (501 fallback)
+  internal/api/router.go
+    + import cabintemperatureimpactnarrative "…/strategies/cabin-temperature-impact-narrative"
+    + tools.RegisterCabinTemperatureImpactNarrativeTools(...)
+    + aiCabinTemperatureImpactNarrativeHandler := NewAICabinTemperatureImpactHandler(...)
+    + mountAIRoutes call site: extra positional arg
+  web/src/components/ai/AICabinTemperatureImpactNarrative.tsx
+    + InnerSection (useAiStream + GlassPanel + AiOutputPanel +
+      computed-disabled Button)
+    + AICabinTemperatureImpactNarrative wrapped via withAiFeature
+  web/src/features/maps/pages/TemperatureImpactPage.tsx
+    + import AICabinTemperatureImpactNarrative
+    + Mounted ABOVE the Summary MetricCards grid
+
+i18n:
+  web/src/i18n/en.json
+    + tempImpact.aiNarrative.{title,description,badge,generateButton}
+    + settings.ai.features.cabin-temperature-impact-narrative.{label,description}
+
+Tests:
+  internal/ai/strategies/cabin-temperature-impact-narrative/strategy_test.go
+    8 tests pinning strategy contract.
+  internal/ai/tools/temperature_impact_test.go
+    10 tests covering envelope, schema, validate, execute, register.
+  internal/api/ai_temperature_impact_handler_test.go
+    8 tests including TestCabinTemperatureNarrativeAIOffShowsChartsOnly
+    (load-bearing AI-OFF contract Go-side proof).
+  web/src/features/maps/__tests__/TestCabinTemperatureNarrativeAIOffShowsChartsOnly.test.tsx
+    3 sub-tests (negative + negative + positive control).
+  web/src/features/maps/__tests__/TestCabinTemperatureNarrativeAIOnWiredCallsRoute.test.tsx
+    3 sub-tests (POST exactly once + correct route + body shape;
+    double-submit guard; computed-disabled when no vehicleId).
+
+Generated:
+  web/src/ai/features.ts (regenerated by `go run ./tools/aigen`)
+
+=== GATE ===
+
+$ git --no-pager status --short
+ M internal/ai/features/registry.go
+ M internal/ai/redact/policies.go
+ M internal/api/ai_routes.go
+ M internal/api/router.go
+ M web/src/ai/features.ts
+ M web/src/features/maps/pages/TemperatureImpactPage.tsx
+ M web/src/i18n/en.json
+?? internal/ai/strategies/cabin-temperature-impact-narrative/
+?? internal/ai/tools/temperature_impact.go
+?? internal/ai/tools/temperature_impact_test.go
+?? internal/api/ai_temperature_impact_handler.go
+?? internal/api/ai_temperature_impact_handler_test.go
+?? web/src/components/ai/AICabinTemperatureImpactNarrative.tsx
+?? web/src/features/maps/__tests__/
+EXIT=0
+(All paths within Allowed-files list.)
+
+$ go test -race ./internal/ai/... ./internal/api/...
+ok  github.com/ev-dev-labs/teslasync/internal/ai/cost
+ok  github.com/ev-dev-labs/teslasync/internal/ai/dispatch
+ok  github.com/ev-dev-labs/teslasync/internal/ai/eval
+ok  github.com/ev-dev-labs/teslasync/internal/ai/features
+ok  github.com/ev-dev-labs/teslasync/internal/ai/guard
+ok  github.com/ev-dev-labs/teslasync/internal/ai/health
+ok  github.com/ev-dev-labs/teslasync/internal/ai/limit
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/anthropic
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/mock
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/openai
+ok  github.com/ev-dev-labs/teslasync/internal/ai/rag
+ok  github.com/ev-dev-labs/teslasync/internal/ai/redact
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-trip-naming
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/battery-health-forecast-narrative
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-curve-fingerprint-clustering
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/cost-forecast-narration
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-alert-builder
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-automation-builder
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-drive-search-replay
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/route-efficiency-suggestions
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/smart-charge-schedule-suggestion
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/speed-profile-insights
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-planner-llm-agent
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy/redactadapter
+ok  github.com/ev-dev-labs/teslasync/internal/ai/stream
+ok  github.com/ev-dev-labs/teslasync/internal/ai/tools
+ok  github.com/ev-dev-labs/teslasync/internal/api
+EXIT=0
+
+$ go run ./tools/aivet
+aivet: OK — 27 AI route(s), 25 feature(s) in registry, TS mirror in sync
+EXIT=0
+
+$ go run ./tools/aigen --check
+aigen: web/src/ai/features.ts is in sync with internal/ai/features registry
+EXIT=0
+
+$ go run ./cmd/ai-eval -feature cabin-temperature-impact-narrative
+AI eval results: 3 goldens, 3 pass, 0 fail (100.0% pass rate, 528µs elapsed)
+By feature:
+  cabin-temperature-impact-narrative 3/3 pass
+Details:
+  [PASS] cabin-temperature-impact-narrative/typical_cold_weather_efficiency_drop (528µs)
+  [PASS] cabin-temperature-impact-narrative/insufficient_data (0s)
+  [PASS] cabin-temperature-impact-narrative/refusal_other_vehicle (0s)
+EXIT=0
+
+$ cd web; npx tsc --noEmit
+(no output)
+EXIT=0
+
+$ npm run lint -- (slice files only, full project lint has pre-existing errors unrelated to this slice)
+$ npx eslint src/components/ai/AICabinTemperatureImpactNarrative.tsx \
+              src/features/maps/__tests__/TestCabinTemperatureNarrativeAIOffShowsChartsOnly.test.tsx \
+              src/features/maps/__tests__/TestCabinTemperatureNarrativeAIOnWiredCallsRoute.test.tsx \
+              src/features/maps/pages/TemperatureImpactPage.tsx
+(no output)
+EXIT=0
+
+(Note: `npm run lint` over the full repo reports 23 errors / 2 warnings,
+all pre-existing in files outside this slice's allowed-files list. The
+slice's own files lint clean.)
+
+$ npm test -- --run TestCabinTemperatureNarrativeAIOffShowsChartsOnly
+✓ src/features/maps/__tests__/TestCabinTemperatureNarrativeAIOffShowsChartsOnly.test.tsx (3 tests) 39ms
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+EXIT=0
+
+$ npm test -- --run TestCabinTemperatureNarrativeAIOnWiredCallsRoute
+✓ src/features/maps/__tests__/TestCabinTemperatureNarrativeAIOnWiredCallsRoute.test.tsx (3 tests) 322ms
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+EXIT=0
+
+W1 placeholder grep (this slice's files only):
+$ Select-String -Path 'web/src/components/ai/AICabinTemperatureImpactNarrative.tsx' -Pattern 'future slice|coming soon|wiring lands|would call POST' | Measure-Object | Select-Object -ExpandProperty Count
+0
+EXIT=0
+
+Off-mode focused proofs:
+  - 404 invariant for POST /api/v1/ai/climate/temperature-impact/narrate
+    when ai_mode='off':  proven by Go-side
+    TestCabinTemperatureNarrativeAIOffShowsChartsOnly inside
+    internal/api/ai_temperature_impact_handler_test.go (mocks
+    settingsRepo with ai_mode='off', issues real POST through
+    g.Wrap, asserts 404).
+  - Zero rendered DOM for ai-feature-cabin-temperature-impact-narrative-root
+    when ai_mode='off' AND toggle=true:  proven by React-side
+    TestCabinTemperatureNarrativeAIOffShowsChartsOnly (asserts
+    container.toBeEmptyDOMElement() AND queryByTestId(...).not.toBeInTheDocument()).
+  - Baseline behavior preserved:  TemperatureImpactPage code path
+    is unchanged; AI section is a sibling above MetricCards
+    rendered conditionally via withAiFeature.
+
+=== COMMIT ===
+
+$ git add internal/ai/features/registry.go \
+          internal/ai/redact/policies.go \
+          internal/ai/strategies/cabin-temperature-impact-narrative \
+          internal/ai/tools/temperature_impact.go \
+          internal/ai/tools/temperature_impact_test.go \
+          internal/api/ai_routes.go \
+          internal/api/ai_temperature_impact_handler.go \
+          internal/api/ai_temperature_impact_handler_test.go \
+          internal/api/router.go \
+          web/src/ai/features.ts \
+          web/src/components/ai/AICabinTemperatureImpactNarrative.tsx \
+          web/src/features/maps/pages/TemperatureImpactPage.tsx \
+          web/src/features/maps/__tests__/TestCabinTemperatureNarrativeAIOffShowsChartsOnly.test.tsx \
+          web/src/features/maps/__tests__/TestCabinTemperatureNarrativeAIOnWiredCallsRoute.test.tsx \
+          web/src/i18n/en.json
+$ git add -f .github/prompts/db-refactor/logs/phase-50-0032-cabin-temperature-impact-narrative.log
+$ git commit -m "feat(ai): add Cabin temperature impact narrative" \
+             -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+[feat/vampire-drain-explanation 39018d37e] feat(ai): add Cabin temperature impact narrative
+ 21 files changed (15 created, 6 modified)
+
+Final commit: 39018d37e (HEAD -> feat/vampire-drain-explanation)
+
+=== AI-OFF CONTRACT ===
+I1 default-off:     PASS  (registry entry: DefaultOn: false; verified by features.CoverageOK + aivet route coverage check)
+I3 baseline intact: PASS  (TemperatureImpactPage still renders VehicleSelect, ScatterChart, bucket breakdown, optimal-temp analysis, and recommendations regardless of ai_mode; AI section sits ABOVE the deterministic content as a withAiFeature-gated sibling)
+I4 zero egress:     PASS  (every provider call routes through dispatch.Run with the F0-F9 locked decorator chain; AI surface absent in off mode so user cannot trigger the call)
+I5 hidden UI:       PASS  (TestCabinTemperatureNarrativeAIOffShowsChartsOnly asserts container.toBeEmptyDOMElement() AND queryByTestId('ai-feature-cabin-temperature-impact-narrative-root').not.toBeInTheDocument(); positive control proves the gate is wired)
+I6 404 routes:      PASS  (TestCabinTemperatureNarrativeAIOffShowsChartsOnly Go-side asserts POST /api/v1/ai/climate/temperature-impact/narrate returns 404 when ai_mode='off'; r.Post inside mountAIRoutes wraps the handler in g.Wrap("cabin-temperature-impact-narrative", …))
+I7 per-feature:     PASS  (gate AND-combines ai_mode + ai_features['cabin-temperature-impact-narrative']; off-mode test fixes mode='off' + toggle=true and asserts hidden; second variant fixes mode='cloud' + toggle=false and asserts hidden; positive control flips both on)
+I10 type system:    PASS  (typed envelope tools.TemperatureImpact + nested bucket/month structs; handler-side parser validates vehicle_id > 0; strategy whitelist hard-pins query_temperature_impact as the only callable tool)
+I12 client/bg:      PASS  (service worker chunk: ai-cabin-temperature-impact-narrative emitted only when the gated import path is reached; jobs / push kinds / client storage keys: none)
+=======================
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE

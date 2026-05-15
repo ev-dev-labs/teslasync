@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -90,6 +90,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsTools: true,
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-battery-health-forecast-narrative-root"] as const),
+  }),
+  "cabin-temperature-impact-narrative": Object.freeze({
+    id: "cabin-temperature-impact-narrative",
+    name: "Cabin temperature impact narrative",
+    description: "Opt-in LLM narrator that explains how outside ambient temperature affects the in-scope vehicle's driving efficiency and range, grounded strictly in the same deterministic bucketed-efficiency + monthly seasonal-trend aggregates the existing /temperature-impact analytics page already renders. The narration may quote bucket labels, the avg_battery_pct_per_100km of the best and worst bucket, the rolling 12-month avg_temp_c paired with avg_efficiency, and the deterministic insights the tool returns; it never invents alternate bucket boundaries, never reclassifies the best/worst bucket, and explicitly surfaces the descriptive-aggregate (NOT forecast / regression) nature of the surface. The deterministic temperature-impact charts (scatter, bucket bars, optimal-range panel, seasonal trend, tips) remain the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class except the vehicle name tagged so a leaked transcript reveals neither the user's typical route start/end nor the schedule the recent-drives sample might surface.",
+    tier: "T",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-cabin-temperature-impact-narrative-root"] as const),
   }),
   "charging-curve-fingerprint-clustering": Object.freeze({
     id: "charging-curve-fingerprint-clustering",
@@ -298,6 +309,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "anomaly-explanations",
   "auto-trip-naming",
   "battery-health-forecast-narrative",
+  "cabin-temperature-impact-narrative",
   "charging-curve-fingerprint-clustering",
   "charging-diagnosis",
   "chatbot-llm",

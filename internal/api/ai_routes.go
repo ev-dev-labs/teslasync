@@ -133,6 +133,7 @@ func mountAIRoutes(
 	aiCostForecastNarration *AICostForecastNarrationHandler,
 	aiVampireDrainExplanation *AIVampireDrainHandler,
 	aiPreheatPrecoolRecommender *AIClimateScheduleHandler,
+	aiCabinTemperatureImpactNarrative *AICabinTemperatureImpactHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -379,6 +380,28 @@ func mountAIRoutes(
 			preheatPrecoolRecommenderHandler = aiPreheatPrecoolRecommender.ServeHTTP
 		}
 		r.Post("/climate/schedule/draft", g.Wrap("preheat-precool-recommender", preheatPrecoolRecommenderHandler))
+
+		// cabin-temperature-impact-narrative (Phase-50 / T2, slice
+		// 0032). Opt-in LLM narrator that explains how outside
+		// ambient temperature affects driving efficiency and range
+		// for the in-scope vehicle, grounded strictly in the same
+		// deterministic bucketed-efficiency + monthly seasonal-trend
+		// aggregates the existing /temperature-impact analytics page
+		// already renders. The route lives under
+		// /ai/climate/temperature-impact/narrate so it is namespaced
+		// under the existing /climate AI surface family. Same
+		// stub-fallback pattern — a nil handler is possible during
+		// partial wiring but the off-mode 404 invariant still holds
+		// because guard.Wrap returns 404 BEFORE the handler runs in
+		// off mode. The canonical baseline route
+		// (GET /api/v1/analytics/temperature-impact) is unchanged;
+		// the narration is read-only and never modifies the
+		// aggregates the chart renders.
+		var cabinTemperatureImpactNarrativeHandler http.HandlerFunc = aiCabinTemperatureImpactNarrativeStubHandler
+		if aiCabinTemperatureImpactNarrative != nil {
+			cabinTemperatureImpactNarrativeHandler = aiCabinTemperatureImpactNarrative.ServeHTTP
+		}
+		r.Post("/climate/temperature-impact/narrate", g.Wrap("cabin-temperature-impact-narrative", cabinTemperatureImpactNarrativeHandler))
 
 		// charging-diagnosis (Phase-50 / N4, slice 0018).
 		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
@@ -698,6 +721,16 @@ func aiVampireDrainExplanationStubHandler(w http.ResponseWriter, _ *http.Request
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiPreheatPrecoolRecommenderStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai preheat-precool recommender is not yet implemented")
+}
+
+// aiCabinTemperatureImpactNarrativeStubHandler mirrors
+// aiPreheatPrecoolRecommenderStubHandler for the T2 slice
+// (Phase-50 / 0032 cabin-temperature-impact-narrative). Reachable
+// only when AICabinTemperatureImpactHandler is nil at
+// construction; the off-mode 404 invariant is held by the guard,
+// not the stub.
+func aiCabinTemperatureImpactNarrativeStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai cabin temperature impact narrative is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

@@ -1322,6 +1322,68 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / 0032 (T2) — Cabin temperature impact narrative.
+	//
+	// `cabin-temperature-impact-narrative` is an opt-in LLM narrator
+	// that explains HOW outside ambient temperature affects driving
+	// efficiency and range for the in-scope vehicle. The narration is
+	// strictly grounded in the SAME deterministic temperature-impact
+	// aggregates that the existing GET
+	// /api/v1/analytics/temperature-impact handler already exposes —
+	// the AI surface adds prose explanation, not new aggregation.
+	//
+	// Backend: POST /api/v1/ai/climate/temperature-impact/narrate is the
+	// single AI route for this slice. It is mounted under guard.Wrap
+	// so it returns 404 when ai_mode='off' OR the per-feature toggle
+	// is off (ADR-015 §I6 + §I7).
+	//
+	// Frontend: /analytics/temperature-impact is the registry's logical
+	// path for the temperature-impact analytics page. The actual SPA
+	// route is mounted at /temperature-impact in App.tsx (mirrors how
+	// route-efficiency-suggestions is registered as /analytics/route-
+	// efficiency while App.tsx mounts /route-efficiency); the registry
+	// stores the canonical analytics-area path for documentation +
+	// off-mode walker semantics.
+	//
+	// UI test ID: ai-feature-cabin-temperature-impact-narrative-root is
+	// the data-testid the withAiFeature HOC stamps on the gated
+	// wrapper. Off-mode tests assert it is absent; on-mode tests
+	// assert it is present + receives the first SSE delta.
+	//
+	// NeedsRAG: false — the narrator has a single read-only tool
+	// (query_temperature_impact) that returns a deterministic
+	// envelope; there is no per-event embedding retrieval.
+	//
+	// NeedsTools: true — the narrator MUST call query_temperature_impact
+	// before narrating (system prompt enforces tool-first behaviour).
+	//
+	// NeedsStream: true — the response is SSE-streamed via the shared
+	// stream.Writer so the SPA can render delta tokens live.
+	//
+	// JobNames: explicitly empty (no background job is registered for
+	// this slice). features.CoverageOK rejects nil; the empty slice is
+	// the affirmative "no surface" signal.
+	//
+	// PushKinds: explicitly empty (no notification/push channel
+	// surface). features.CoverageOK rejects nil; the empty slice is
+	// the affirmative "no surface" signal.
+	"cabin-temperature-impact-narrative": {
+		ID:          "cabin-temperature-impact-narrative",
+		Name:        "Cabin temperature impact narrative",
+		Description: "Opt-in LLM narrator that explains how outside ambient temperature affects the in-scope vehicle's driving efficiency and range, grounded strictly in the same deterministic bucketed-efficiency + monthly seasonal-trend aggregates the existing /temperature-impact analytics page already renders. The narration may quote bucket labels, the avg_battery_pct_per_100km of the best and worst bucket, the rolling 12-month avg_temp_c paired with avg_efficiency, and the deterministic insights the tool returns; it never invents alternate bucket boundaries, never reclassifies the best/worst bucket, and explicitly surfaces the descriptive-aggregate (NOT forecast / regression) nature of the surface. The deterministic temperature-impact charts (scatter, bucket bars, optimal-range panel, seasonal trend, tips) remain the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class except the vehicle name tagged so a leaked transcript reveals neither the user's typical route start/end nor the schedule the recent-drives sample might surface.",
+		Tier:        "T",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/climate/temperature-impact/narrate"},
+			Frontend:  []string{"/analytics/temperature-impact"},
+			UITestIDs: []string{"ai-feature-cabin-temperature-impact-narrative-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

@@ -1,0 +1,11 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot narrate or compare the cabin temperature impact for a
+      different vehicle — my role is to explain the temperature impact
+      only for the vehicle in scope for this session
+      (vehicle <vehicle id='42'/>). If you'd like, I can narrate the
+      cabin temperature impact for vehicle <vehicle id='42'/> instead —
+      just confirm and I'll pull the deterministic aggregate envelope.
+    input_tokens: 48
+    output_tokens: 48

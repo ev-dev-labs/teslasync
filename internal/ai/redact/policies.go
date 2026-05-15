@@ -413,3 +413,37 @@ func PolicyPreheatPrecoolRecommender() Policy {
 		Mode:  ModeRedactedTags,
 	}
 }
+
+// PolicyCabinTemperatureImpactNarrative is the per-feature redaction policy
+// for the Phase-50 / 0032 — T2 cabin-temperature-impact-narrative slice. It
+// mirrors PolicyDigest (allow ClassVehicleName only, ModeRedactedTags so
+// the LLM sees [LOCATION] / [STREET_ADDR] / [SCHEDULE] tags rather than
+// raw values).
+//
+// Threat model: the deterministic temperature-impact aggregates are
+// vehicle-scoped and bucket every recent drive by ambient cabin temperature
+// — the buckets and monthly trend are pure aggregates, but the per-drive
+// scatter context the LLM may quote includes drive_date timestamps which
+// can correlate to commute patterns. ClassLocation / ClassStreetAddr MUST
+// stay tagged so a leaked transcript reveals neither the user's typical
+// route start/end nor any place name the recent-drives sample might
+// surface. ClassSchedule MUST stay tagged so the same transcript does not
+// reveal the user's daily commute schedule. Allowing ClassVehicleName lets
+// the narration say "Roadie loses ~7% efficiency below 0°C" instead of
+// "[VEHICLE]" — display-name leakage is acceptable and is the only PII
+// class the slice prompt's verbatim mandate permits:
+//
+//	Policy:              PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:     ClassVehicleName only; trip and location details
+//	                     remain tagged
+//	Round-trip required: yes
+//
+// Kept as a distinct identifier from every prior per-feature policy so a
+// future per-feature change to one slice's allow-list does not bleed
+// across the others — every feature is independently auditable.
+func PolicyCabinTemperatureImpactNarrative() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}

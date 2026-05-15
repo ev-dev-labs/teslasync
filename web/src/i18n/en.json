@@ -2480,6 +2480,10 @@
         "preheat-precool-recommender": {
           "label": "Preheat and precool recommender",
           "description": "Opt-in LLM agent that proposes a preheat or precool window — start time, end time, target cabin temperature, mode (preheat | precool) — by combining your typical departure timestamp with the vehicle's current cabin and outside temperatures. The proposal is structured and propose-only: review the typed draft in the AI panel and click Apply on the existing climate-controls UI to save it; the AI never creates a schedule directly. The deterministic Climate Control page (HVAC banner, status cards, efficiency panel, history table, seat-heater controls, manual departure-time heuristic) remains the canonical baseline when AI is off."
+        },
+        "cabin-temperature-impact-narrative": {
+          "label": "Cabin temperature impact narrative",
+          "description": "Opt-in LLM narrator that explains how outside ambient temperature affects this vehicle's driving efficiency — which temperature bucket runs most efficiently, the relative consumption gap between the best and worst bucket, and the 12-month seasonal trend (cold-weather dip vs mild-weather recovery) — grounded strictly in the same bucketed-efficiency aggregates and monthly seasonal trend the chart renders, and honest that the surface is a descriptive aggregate of recent drives rather than a forecast or regression model. The deterministic Temperature Impact page (bucketed-efficiency chart, monthly seasonal trend, summary metric cards, recent drives table) remains the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -6542,7 +6546,13 @@
     "tipsTitle": "Recommendations",
     "tipOptimal": "Best efficiency observed in the {{range}} range",
     "optimalDesc": "Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drives.",
-    "optimalDelta": "Compared to the worst range ({{worst}}), you save {{delta}} {{unit}} on average."
+    "optimalDelta": "Compared to the worst range ({{worst}}), you save {{delta}} {{unit}} on average.",
+    "aiNarrative": {
+      "title": "Narrate the cabin-temperature impact",
+      "description": "Ask the AI narrator to explain how outside ambient temperature affects this vehicle's efficiency — which temperature bucket runs most efficiently, how cold-weather months compare with mild-weather months, and what the seasonal pattern in the chart implies. The bucket and monthly numbers are the same the chart below shows; the narrator only explains them and is honest that these are descriptive aggregates of recent drives, not a forecast.",
+      "badge": "AI",
+      "generateButton": "Narrate impact"
+    }
   },
   "notifications": {
     "title": "Notifications",

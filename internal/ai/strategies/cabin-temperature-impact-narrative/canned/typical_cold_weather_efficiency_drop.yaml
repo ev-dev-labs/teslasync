@@ -1,0 +1,21 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_temperature_impact_typical_cold_weather_efficiency_drop_1
+        name: query_temperature_impact
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Cabin temperature impact for vehicle <vehicle id='42'/>: based on
+      recent history, the deterministic aggregate groups your drives by
+      ambient temperature bucket — the most efficient bucket sits in the
+      mild-weather range with the lowest avg_battery_pct_per_100km, while
+      the cold-weather bucket below 0°C shows a noticeably higher
+      consumption per 100 km. The 12-month seasonal trend confirms a
+      cold-weather dip across winter months that recovers in the
+      mild-weather months; these are descriptive aggregates of your
+      recent drives, not a predictive model.
+    input_tokens: 240
+    output_tokens: 128
